@@ -1,0 +1,584 @@
+# PDV Importados — Cursor Rules
+# Sistema de PDV para lojas de importados, lojas chinesas e atacarejos
+# Stack: Next.js 15 + Supabase + shadcn/ui + TypeScript
+# Target: Mercado de lojas de importados e comunidade chinesa no Brasil
+
+## IDENTIDADE DO PROJETO
+
+Você está desenvolvendo o **PDV Importados** — um sistema de ponto de venda
+feito especificamente para lojas de importados, lojas chinesas, atacarejos e
+distribuidoras pequenas no Brasil.
+
+Diferenciais centrais do produto:
+1. Atacado automático por faixa de quantidade (sem configuração complexa)
+2. Interface bilíngue: Português (operador) + Mandarim/中文 (gestor/dono)
+3. Suporte nativo a produtos sem nota fiscal
+4. Onboarding em menos de 30 minutos
+5. Roda no browser (PWA) — sem instalação, sem dependência de TI local
+
+---
+
+## STACK OBRIGATÓRIO — NUNCA SUGERIR ALTERNATIVAS SEM JUSTIFICATIVA
+
+```
+Frontend:    Next.js 15 (App Router) + TypeScript + Tailwind CSS
+UI:          shadcn/ui (componentes) + Geist font (Vercel)
+Banco:       Supabase (PostgreSQL gerenciado + Auth + RLS)
+Deploy:      Vercel
+i18n:        next-intl (pt + zh-CN)
+Estado:      Zustand (carrinho PDV) + React Query / TanStack Query (server state)
+Impressão:   CSS @media print (cupom não fiscal 80mm)
+Offline:     Service Worker + IndexedDB (fila de vendas offline)
+Icons:       Lucide React
+Forms:       React Hook Form + Zod
+```
+
+**Proibido sugerir** (a menos que o dev peça explicitamente):
+- Java / Spring Boot
+- Electron / Tauri (PWA resolve com menor custo)
+- Redux (Zustand é suficiente)
+- Prisma standalone (usar Supabase client direto)
+- Next Auth (usar Supabase Auth)
+
+---
+
+## ARQUITETURA DE PASTAS (seguir rigorosamente)
+
+```
+src/
+├── app/
+│   ├── (auth)/
+│   │   ├── login/page.tsx
+│   │   └── layout.tsx
+│   ├── (pdv)/                    ← rota do operador (sempre PT)
+│   │   ├── caixa/page.tsx        ← tela principal do PDV
+│   │   └── layout.tsx
+│   ├── (gerente)/                ← rota do gestor (PT ou ZH)
+│   │   ├── dashboard/page.tsx
+│   │   ├── produtos/page.tsx
+│   │   ├── precos/page.tsx
+│   │   ├── relatorios/page.tsx
+│   │   └── layout.tsx
+│   └── api/
+│       └── webhooks/
+├── components/
+│   ├── pdv/                      ← componentes exclusivos do caixa
+│   │   ├── ScanInput.tsx
+│   │   ├── Carrinho.tsx
+│   │   ├── ItemCarrinho.tsx
+│   │   ├── PainelPagamento.tsx
+│   │   └── CupomImpressao.tsx
+│   ├── gerente/                  ← componentes do painel gerencial
+│   └── ui/                       ← shadcn/ui (gerado, não editar)
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts             ← browser client
+│   │   ├── server.ts             ← server client (SSR)
+│   │   └── types.ts              ← tipos gerados pelo Supabase CLI
+│   ├── pricing/
+│   │   ├── PricingService.ts     ← motor de preço atacado (Strategy)
+│   │   └── strategies/
+│   │       ├── DefaultStrategy.ts
+│   │       ├── ProductWholesaleStrategy.ts
+│   │       └── CategoryWholesaleStrategy.ts
+│   ├── i18n/
+│   │   ├── pt.json
+│   │   ├── zh.json
+│   │   └── config.ts
+│   └── validators/
+│       ├── produto.schema.ts     ← Zod schemas
+│       ├── venda.schema.ts
+│       └── regra-preco.schema.ts
+├── hooks/
+│   ├── useCarrinho.ts            ← Zustand store do carrinho
+│   ├── usePricing.ts             ← aplica regras de preço
+│   ├── useBarcodeScan.ts         ← hook de leitura de código de barras
+│   └── useKeyboardPDV.ts         ← atalhos F2/F3/F7/F9/ESC
+├── stores/
+│   └── carrinhoStore.ts          ← Zustand
+└── types/
+    ├── database.ts               ← tipos do banco
+    └── pdv.ts                    ← tipos de domínio
+```
+
+---
+
+## MODELO DE DADOS (Supabase / PostgreSQL)
+
+### Tabelas principais — usar EXATAMENTE esses nomes
+
+```sql
+-- Usuários (extends Supabase auth.users)
+usuarios (
+  id UUID PRIMARY KEY references auth.users,
+  nome TEXT NOT NULL,
+  perfil TEXT NOT NULL CHECK (perfil IN ('OPERADOR', 'GERENTE', 'DONO')),
+  idioma_preferido TEXT NOT NULL DEFAULT 'pt' CHECK (idioma IN ('pt', 'zh')),
+  ativo BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+)
+
+-- Categorias com hierarquia
+categorias (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL,
+  categoria_pai_id UUID REFERENCES categorias(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+)
+
+-- Produtos
+produtos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo_barras TEXT UNIQUE,             -- null OK (gerado depois)
+  nome TEXT NOT NULL,
+  categoria_id UUID REFERENCES categorias(id),
+  preco_varejo NUMERIC(10,2) NOT NULL,
+  preco_custo NUMERIC(10,2),
+  unidade_medida TEXT NOT NULL DEFAULT 'UN',
+  origem TEXT NOT NULL CHECK (origem IN ('china_manual','brasil_nf','brasil_sem_nf')),
+  tem_nf BOOLEAN NOT NULL DEFAULT false,
+  observacao TEXT,
+  ativo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+-- Estoque separado do produto
+estoque (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  produto_id UUID UNIQUE REFERENCES produtos(id),
+  quantidade_atual NUMERIC(10,3) NOT NULL DEFAULT 0,
+  estoque_minimo NUMERIC(10,3) NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT now()
+)
+
+-- Regras de preço atacado
+regras_preco (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipo_regra TEXT NOT NULL CHECK (tipo_regra IN ('PRODUTO','CATEGORIA')),
+  produto_id UUID REFERENCES produtos(id),
+  categoria_id UUID REFERENCES categorias(id),
+  quantidade_minima NUMERIC(10,3) NOT NULL,
+  quantidade_maxima NUMERIC(10,3),
+  tipo_desconto TEXT NOT NULL CHECK (tipo_desconto IN ('PERCENTUAL','VALOR_FIXO')),
+  valor_desconto NUMERIC(10,4) NOT NULL,
+  data_validade TIMESTAMPTZ,
+  ativo BOOLEAN NOT NULL DEFAULT true,
+  created_by UUID REFERENCES usuarios(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+)
+
+-- Caixas
+caixas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  operador_id UUID NOT NULL REFERENCES usuarios(id),
+  data_abertura TIMESTAMPTZ NOT NULL DEFAULT now(),
+  valor_inicial NUMERIC(10,2) NOT NULL DEFAULT 0,
+  data_fechamento TIMESTAMPTZ,
+  valor_fechamento NUMERIC(10,2),
+  status TEXT NOT NULL DEFAULT 'ABERTO' CHECK (status IN ('ABERTO','FECHADO'))
+)
+
+-- Movimentos de caixa
+movimentos_caixa (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  caixa_id UUID NOT NULL REFERENCES caixas(id),
+  tipo TEXT NOT NULL CHECK (tipo IN ('VENDA','SANGRIA','SUPRIMENTO','DESCONTO_MANUAL')),
+  valor NUMERIC(10,2) NOT NULL,
+  referencia_id UUID,                   -- venda_id se tipo = VENDA
+  observacao TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+)
+
+-- Vendas
+vendas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  caixa_id UUID NOT NULL REFERENCES caixas(id),
+  operador_id UUID NOT NULL REFERENCES usuarios(id),
+  data TIMESTAMPTZ NOT NULL DEFAULT now(),
+  total_bruto NUMERIC(10,2) NOT NULL,
+  total_desconto NUMERIC(10,2) NOT NULL DEFAULT 0,
+  total_liquido NUMERIC(10,2) NOT NULL,
+  forma_pagamento TEXT NOT NULL CHECK (forma_pagamento IN ('DINHEIRO','PIX','CARTAO_DEBITO','CARTAO_CREDITO')),
+  tipo_venda TEXT NOT NULL DEFAULT 'SEM_NF' CHECK (tipo_venda IN ('SEM_NF','COM_NF')),
+  numero_nf TEXT,
+  chave_nf TEXT,
+  status TEXT NOT NULL DEFAULT 'CONCLUIDA' CHECK (status IN ('CONCLUIDA','CANCELADA')),
+  created_at TIMESTAMPTZ DEFAULT now()
+)
+
+-- Itens da venda
+itens_venda (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  venda_id UUID NOT NULL REFERENCES vendas(id),
+  produto_id UUID NOT NULL REFERENCES produtos(id),
+  quantidade NUMERIC(10,3) NOT NULL,
+  preco_unitario_original NUMERIC(10,2) NOT NULL,   -- preço varejo na hora da venda
+  preco_unitario NUMERIC(10,2) NOT NULL,            -- preço efetivamente cobrado
+  desconto_unitario NUMERIC(10,2) NOT NULL DEFAULT 0,
+  tipo_preco TEXT NOT NULL CHECK (tipo_preco IN ('VAREJO','ATACADO','MANUAL'))
+)
+```
+
+### Row Level Security (RLS) — SEMPRE ativar
+Cada loja terá seu próprio projeto Supabase isolado no MVP.
+RLS policies devem garantir que usuários só acessem dados da própria loja.
+
+---
+
+## MOTOR DE PREÇO ATACADO (PricingService)
+
+### Interface obrigatória
+
+```typescript
+// src/lib/pricing/PricingService.ts
+
+export interface ItemCarrinho {
+  produtoId: string
+  nome: string
+  quantidade: number
+  precoVariejo: number
+  categoriaId?: string
+}
+
+export interface ResultadoPreco {
+  precoUnitario: number
+  precoOriginal: number
+  descontoUnitario: number
+  tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL'
+  regraAplicada?: string
+}
+
+export interface RegraPreco {
+  id: string
+  tipoRegra: 'PRODUTO' | 'CATEGORIA'
+  produtoId?: string
+  categoriaId?: string
+  quantidadeMinima: number
+  quantidadeMaxima?: number
+  tipoDesconto: 'PERCENTUAL' | 'VALOR_FIXO'
+  valorDesconto: number
+  dataValidade?: string
+}
+```
+
+### Regra de negócio crítica — NUNCA IGNORAR
+
+Quando o operador muda a quantidade de um item E o total do carrinho
+para aquele produto cruza um limiar de faixa de preço:
+**TODOS os itens daquele produto no carrinho devem ser recalculados.**
+
+Exemplo:
+- Cliente tem 9x Cabo USB (varejo R$10)
+- Adiciona mais 1 → agora tem 10x
+- Sistema deve recalcular TODOS os 10 como atacado (R$8)
+- Não apenas o último item adicionado
+
+Prioridade de regras: PRODUTO > CATEGORIA > DEFAULT(varejo)
+
+---
+
+## SISTEMA DE IDIOMAS (i18n)
+
+### Regra de ouro
+- Perfil OPERADOR → idioma fixo: `pt` (não pode trocar)
+- Perfil GERENTE e DONO → usa `idioma_preferido` do usuário
+- Toggle de idioma visível SOMENTE em rotas de `(gerente)`
+- PDV (caixa) é SEMPRE em português
+
+### Arquivos de tradução obrigatórios
+
+```json
+// src/lib/i18n/pt.json — exemplo de estrutura
+{
+  "dashboard": {
+    "titulo": "Painel de controle",
+    "vendas_hoje": "Vendas do dia",
+    "total_vendido": "Total vendido",
+    "num_vendas": "Nº de vendas",
+    "ticket_medio": "Ticket médio",
+    "caixa_aberto": "Caixa aberto",
+    "caixa_fechado": "Caixa fechado"
+  },
+  "relatorios": {
+    "titulo": "Relatórios",
+    "mais_vendidos": "Produtos mais vendidos",
+    "estoque_baixo": "Estoque baixo",
+    "produto": "Produto",
+    "quantidade": "Quantidade",
+    "valor": "Valor",
+    "tipo": "Tipo",
+    "atacado": "Atacado",
+    "varejo": "Varejo",
+    "estoque_atual": "Estoque atual",
+    "minimo": "Mínimo"
+  },
+  "produtos": {
+    "titulo": "Produtos",
+    "novo": "Novo produto",
+    "sem_nf": "Sem nota fiscal",
+    "com_nf": "Com nota fiscal",
+    "origem_china": "Importado China",
+    "origem_brasil": "Nacional"
+  }
+}
+```
+
+```json
+// src/lib/i18n/zh.json — mandarim simplificado
+{
+  "dashboard": {
+    "titulo": "控制面板",
+    "vendas_hoje": "今日销售",
+    "total_vendido": "总销售额",
+    "num_vendas": "销售笔数",
+    "ticket_medio": "平均客单价",
+    "caixa_aberto": "收银台开启",
+    "caixa_fechado": "收银台关闭"
+  },
+  "relatorios": {
+    "titulo": "报告",
+    "mais_vendidos": "热销商品",
+    "estoque_baixo": "库存不足",
+    "produto": "商品",
+    "quantidade": "数量",
+    "valor": "金额",
+    "tipo": "类型",
+    "atacado": "批发",
+    "varejo": "零售",
+    "estoque_atual": "当前库存",
+    "minimo": "最低库存"
+  },
+  "produtos": {
+    "titulo": "商品管理",
+    "novo": "新增商品",
+    "sem_nf": "无发票",
+    "com_nf": "有发票",
+    "origem_china": "中国进口",
+    "origem_brasil": "巴西本土"
+  }
+}
+```
+
+---
+
+## TELA DO PDV (caixa) — REGRAS DE UX CRÍTICAS
+
+### Comportamento do campo de scan
+- Campo sempre focado ao carregar a tela
+- Enter ou leitura de código de barras dispara busca
+- Se produto não encontrado → abre modal "Cadastro rápido"
+- Busca por nome ativa com F2 (exibe lista)
+- Limpar campo após adicionar item
+
+### Atalhos de teclado obrigatórios
+```
+F2         → busca por nome
+F3         → altera quantidade do item selecionado
+F7         → cancela item selecionado (pede motivo)
+F9         → abre painel de pagamento
+ESC        → fecha modais / cancela venda (confirmação)
+↑ ↓        → navega entre itens do carrinho
++/-        → incrementa/decrementa quantidade do item selecionado
+```
+
+Implementar com hook `useKeyboardPDV.ts` usando `useEffect + keydown`.
+NUNCA usar `onKeyPress` (deprecated).
+
+### Tag visual de atacado
+- Item com `tipoPreco === 'ATACADO'`: mostrar badge verde com "ATAC ×{qtde}"
+- Item com `tipoPreco === 'MANUAL'`: mostrar badge laranja com "DESC"
+- Preço original riscado quando atacado ativo
+- Animação sutil ao entrar em vigor (transição de cor 200ms)
+
+### Cupom não fiscal — layout para impressora 80mm
+```css
+@media print {
+  body * { visibility: hidden; }
+  #cupom, #cupom * { visibility: visible; }
+  #cupom {
+    position: absolute;
+    left: 0; top: 0;
+    width: 72mm;
+    font-family: 'Courier New', monospace;
+    font-size: 10pt;
+  }
+}
+```
+
+---
+
+## DESIGN SYSTEM
+
+### Cores do produto
+```css
+/* Usar variáveis CSS — compatível com dark mode do shadcn */
+--pdv-green: hsl(158 84% 37%);       /* atacado / sucesso */
+--pdv-green-bg: hsl(158 84% 95%);
+--pdv-amber: hsl(37 92% 43%);        /* alertas / varejo destaque */
+--pdv-amber-bg: hsl(37 92% 95%);
+--pdv-scan: hsl(217 91% 60%);        /* accent principal */
+```
+
+### Fonte
+- Interface: Geist Sans (padrão Vercel, importar via `next/font/google`)
+- Valores monetários e códigos: Geist Mono
+- Mandarim: sistema usa `font-family: 'Noto Sans SC', sans-serif` quando idioma = zh
+
+### Componentes shadcn/ui recomendados para instalar
+```bash
+npx shadcn@latest add button input table badge card dialog
+npx shadcn@latest add dropdown-menu separator scroll-area
+npx shadcn@latest add toast sheet command
+```
+
+`Command` é o componente para busca de produto por nome (F2).
+
+---
+
+## PADRÕES DE CÓDIGO
+
+### TypeScript
+- `strict: true` sempre
+- Sem `any` — usar `unknown` e fazer type guard
+- Props de componentes React: sempre interface nomeada, nunca inline
+- Server Components por padrão; `'use client'` apenas quando necessário
+
+### Naming conventions
+```typescript
+// Componentes: PascalCase
+export function ItemCarrinho({ item }: ItemCarrinhoProps) {}
+
+// Hooks: camelCase com "use"
+export function useCarrinho() {}
+
+// Tipos/interfaces: PascalCase
+interface RegraPreco {}
+type TipoPreco = 'VAREJO' | 'ATACADO' | 'MANUAL'
+
+// Constantes: SCREAMING_SNAKE_CASE
+const MAX_ITENS_CARRINHO = 999
+
+// Funções utilitárias: camelCase
+function calcularDesconto(preco: number, regra: RegraPreco): number {}
+
+// Tabelas Supabase: snake_case (plural)
+// produtos, regras_preco, itens_venda
+
+// Variáveis de ambiente: NEXT_PUBLIC_ para client, sem prefixo para server
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+### Server Actions (Next.js 15)
+Usar Server Actions para mutações de dados. Não criar API routes separadas
+para operações simples de CRUD. API routes apenas para webhooks e integrações.
+
+```typescript
+// src/app/(gerente)/produtos/actions.ts
+'use server'
+import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+
+export async function criarProduto(data: NovoProdutoInput) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('produtos').insert(data)
+  if (error) throw new Error(error.message)
+  revalidatePath('/gerente/produtos')
+}
+```
+
+### Tratamento de erros
+- Server Actions retornam `{ success: true, data }` ou `{ success: false, error: string }`
+- Nunca deixar `console.error` em produção — usar logger estruturado
+- Toast para erros do usuário, nunca alert()
+
+---
+
+## OFFLINE / PWA
+
+### Estratégia de sincronização
+1. Produtos são cacheados no IndexedDB ao abrir o caixa
+2. Vendas offline entram em fila no IndexedDB
+3. Ao reconectar: processar fila em ordem, exibir banner de sync
+4. Se conflito de estoque offline: registrar venda e alertar gerente
+
+### Service Worker
+- Cache de assets estáticos: cache-first
+- Cache de produtos: stale-while-revalidate (30min)
+- API calls de venda: network-first com fallback offline
+
+---
+
+## PERFORMANCE
+
+- Imagens de produto: Next.js `<Image>` com lazy loading
+- Listas longas de produto: virtualização com `@tanstack/react-virtual`
+- Busca de produto: debounce 150ms, mínimo 2 caracteres
+- Cálculo de preço: executar no cliente (Zustand), não fazer round-trip ao servidor
+- Meta: resposta visual < 50ms para scan de produto
+
+---
+
+## SEGURANÇA
+
+- Nunca expor `SUPABASE_SERVICE_ROLE_KEY` no cliente
+- RLS policies ativas em TODAS as tabelas
+- Desconto manual requer perfil GERENTE ou DONO
+- Cancelamento de venda requer perfil GERENTE ou DONO
+- Senhas: gerenciadas pelo Supabase Auth (bcrypt automático)
+- CORS: configurar no Supabase dashboard para domínio do cliente
+
+---
+
+## VARIÁVEIS DE AMBIENTE
+
+```bash
+# .env.local
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+NEXT_PUBLIC_APP_NAME="PDV Importados"
+NEXT_PUBLIC_DEFAULT_LANG=pt
+```
+
+---
+
+## COMANDOS DO PROJETO
+
+```bash
+# Setup inicial
+npm install
+npx supabase init
+npx supabase db push          # aplica migrations
+npx supabase gen types typescript --local > src/lib/supabase/types.ts
+
+# Desenvolvimento
+npm run dev                   # Next.js em localhost:3000
+npx supabase start            # Supabase local (opcional)
+
+# Build
+npm run build
+npm run start
+
+# Deploy
+vercel --prod                 # deploy production
+```
+
+---
+
+## O QUE ESTE SISTEMA NÃO FAZ (MVP)
+
+Não implementar as seguintes features sem autorização explícita:
+- Emissão de NF-e / integração fiscal
+- Integração com maquininha de cartão
+- E-commerce / loja online
+- Multi-filial / multi-estoque
+- Módulo financeiro / contas a pagar
+- CRM / cadastro de clientes
+- Integração com fornecedores
+- Importação de XML de NF-e
+
+Essas features são v2+. Manter o código preparado para extensão
+(tipos com campos opcionais, enums extensíveis) mas não implementar.

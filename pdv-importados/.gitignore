@@ -1,0 +1,19 @@
+# Dependências e build
+node_modules/
+.next/
+out/
+dist/
+
+# Ambiente — nunca commitar segredos
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# IDE / OS
+.idea/
+.DS_Store
+Thumbs.db

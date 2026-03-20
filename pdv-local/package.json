@@ -1,0 +1,29 @@
+{
+  "name": "pdv-local",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PDV desktop local-first (Tauri + React) para loja de importados",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri dev",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.1",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react-swc": "^3.7.0",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.4"
+  }
+}

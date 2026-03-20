@@ -1,0 +1,55 @@
+import { describe, expect, it } from 'vitest'
+import {
+  buildMapaProdutoChaves,
+  resolverProdutoNoCatalogo,
+  variantesChaveLeitura,
+  type ProdutoCacheLite,
+} from './catalogoLookup'
+
+const produto: ProdutoCacheLite = {
+  id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  nome: 'Café Premium 500g',
+  codigo_barras: '0078901234567',
+  preco_varejo: 19.9,
+  categoria_id: null,
+  ativo: true,
+}
+
+describe('variantesChaveLeitura', () => {
+  it('remove zeros à esquerda nos dígitos', () => {
+    expect(variantesChaveLeitura('0078901234567')).toContain('78901234567')
+  })
+
+  it('aceita leitura com sufixo numérico extra (prefixo EAN)', () => {
+    const longa = '00789012345679999'
+    expect(variantesChaveLeitura(longa)).toContain('0078901234567')
+  })
+})
+
+describe('resolverProdutoNoCatalogo', () => {
+  it('resolve por código normalizado mesmo com zeros à esquerda na leitura', () => {
+    const mapa = buildMapaProdutoChaves([produto])
+    const cat = [produto]
+    expect(
+      resolverProdutoNoCatalogo('78901234567', mapa, cat)?.id
+    ).toBe(produto.id)
+  })
+
+  it('resolve por UUID', () => {
+    const mapa = buildMapaProdutoChaves([produto])
+    expect(
+      resolverProdutoNoCatalogo(
+        'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        mapa,
+        [produto]
+      )?.nome
+    ).toBe('Café Premium 500g')
+  })
+
+  it('resolve por várias palavras no nome', () => {
+    const mapa = buildMapaProdutoChaves([produto])
+    expect(
+      resolverProdutoNoCatalogo('café 500', mapa, [produto])?.id
+    ).toBe(produto.id)
+  })
+})

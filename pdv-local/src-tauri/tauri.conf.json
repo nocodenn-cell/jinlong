@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PDV Local",
+  "version": "0.1.0",
+  "identifier": "com.fastproduct.pdv.local",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:4173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "PDV Local - Caixa",
+        "width": 1280,
+        "height": 720,
+        "resizable": true
+      }
+    ]
+  }
+}
+

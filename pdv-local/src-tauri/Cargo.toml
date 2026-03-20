@@ -1,0 +1,27 @@
+[package]
+name = "pdv-local"
+version = "0.1.0"
+description = "PDV desktop local-first para loja de importados"
+authors = ["Você <you@example.com>"]
+edition = "2021"
+
+[lib]
+name = "pdv_local_lib"
+path = "src/lib.rs"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "pdv-local"
+path = "src/main.rs"
+
+[dependencies]
+tauri = { version = "2.5.6", features = ["devtools"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+uuid = { version = "1.8", features = ["v4", "serde"] }
+reqwest = { version = "0.12.7", features = ["json", "rustls-tls", "blocking"] }
+dotenvy = "0.15.7"
+
+[build-dependencies]
+tauri-build = { version = "=2.5.6", features = [] }

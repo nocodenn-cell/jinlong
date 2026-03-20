@@ -1,0 +1,46 @@
+# Monorepo fastproduct — ignora dependências e artefatos em qualquer subpasta
+
+**/node_modules/
+**/.next/
+**/out/
+**/dist/
+**/build/
+
+# Ambiente (nunca commitar)
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# Logs e cache
+*.log
+npm-debug.log*
+.turbo/
+.vercel/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Playwright
+**/test-results/
+**/playwright-report/
+**/playwright/.cache/
+
+# Tauri / Rust
+**/target/
+pdv-local/src-tauri/gen/
+
+# Supabase CLI temporários
+**/supabase/.temp/
+
+# TypeScript build info
+**/*.tsbuildinfo
+
+# Supabase CLI tempor�rios
+**/supabase/.temp/
+
+# TypeScript build info
+**/*.tsbuildinfo
