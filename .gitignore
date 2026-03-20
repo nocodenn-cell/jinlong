@@ -1,4 +1,4 @@
-# Monorepo fastproduct — ignora dependências e artefatos em qualquer subpasta
+# Monorepo fastproduct - ignora dependencias e artefatos em qualquer subpasta
 
 **/node_modules/
 **/.next/
@@ -33,13 +33,7 @@ Thumbs.db
 **/target/
 pdv-local/src-tauri/gen/
 
-# Supabase CLI temporários
-**/supabase/.temp/
-
-# TypeScript build info
-**/*.tsbuildinfo
-
-# Supabase CLI tempor�rios
+# Supabase CLI temporarios
 **/supabase/.temp/
 
 # TypeScript build info

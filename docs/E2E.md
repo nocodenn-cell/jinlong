@@ -50,4 +50,4 @@ Configure os secrets no GitHub (ou no provedor de CI). Testes que dependem de cr
 ## Notas sobre o app
 
 - Rota de login: **`/login`** (sem `/pt/`).
-- **`middleware.ts`** redireciona usuários sem sessão de `/gerente/*` e `/caixa` para `/login` (query `next` com o path original).
+- **`middleware.ts`:** sem sessão → `/login?next=...`. Com sessão: **OPERADOR** não acessa `/gerente/*` (vai para `/caixa`); **GERENTE/DONO** não acessa `/caixa` (vai para `/gerente/produtos`). Testes de gerente precisam de usuário com perfil adequado.

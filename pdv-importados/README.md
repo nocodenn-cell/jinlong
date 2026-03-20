@@ -21,7 +21,7 @@ Sistema de ponto de venda para lojas de importados no Brasil (Next.js 15, App Ro
 - Next.js 15 (App Router), TypeScript, Tailwind
 - Supabase (Auth + Postgres)
 - Zustand (onde aplicável)
-- `next-intl` pode estar nas dependências; o fluxo principal de mensagens do painel é **`getMessages` + JSON** em `src/lib/i18n/`.
+- Mensagens do painel: **`getMessages` + JSON** em `src/lib/i18n/` (trilingue).
 
 ## Estrutura (resumo)
 

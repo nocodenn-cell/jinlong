@@ -1,0 +1,45 @@
+# CI: build + test do app web (monorepo)
+name: CI pdv-importados
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'pdv-importados/**'
+      - '.github/workflows/ci-pdv-importados.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'pdv-importados/**'
+      - '.github/workflows/ci-pdv-importados.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pdv-importados
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: pdv-importados/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+        run: npm run build

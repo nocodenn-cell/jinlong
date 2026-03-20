@@ -32,6 +32,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  /** Preserva cookies da sessao (ex.: refresh do Supabase) ao redirecionar. */
+  const redirectWithSession = (target: URL, cookieSource: NextResponse) => {
+    const redir = NextResponse.redirect(target)
+    cookieSource.cookies.getAll().forEach((cookie) => {
+      redir.cookies.set(cookie)
+    })
+    return redir
+  }
+
   if (!supabaseConfigOk(supabaseUrl, supabaseAnonKey)) {
     if (isProtected) {
       return redirectLogin()
@@ -77,6 +86,32 @@ export async function middleware(request: NextRequest) {
 
   if (isProtected && !user) {
     return redirectLogin()
+  }
+
+  if (isProtected && user) {
+    const { data: row } = await supabase
+      .from('usuarios')
+      .select('perfil')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const perfil = typeof row?.perfil === 'string' ? row.perfil : 'OPERADOR'
+    const gerenteOuDono = perfil === 'GERENTE' || perfil === 'DONO'
+    const caixaRoute = pathname === '/caixa' || pathname.startsWith('/caixa/')
+    const gerenteRoute = pathname.startsWith('/gerente')
+
+    if (gerenteRoute && !gerenteOuDono) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/caixa'
+      url.search = ''
+      return redirectWithSession(url, response)
+    }
+    if (caixaRoute && gerenteOuDono) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/gerente/produtos'
+      url.search = ''
+      return redirectWithSession(url, response)
+    }
   }
 
   return response

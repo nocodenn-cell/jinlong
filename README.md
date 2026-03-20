@@ -35,6 +35,7 @@ npm run tauri
 
 ## Documentação
 
+- [Roadmap](docs/ROADMAP.md)
 - [Testes E2E (Playwright)](docs/E2E.md)
 - [Deploy na Vercel](docs/DEPLOY_VERCEL.md)
 - [Supabase — variáveis](pdv-importados/docs/SUPABASE_ENV.md)

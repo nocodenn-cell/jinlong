@@ -1,6 +1,6 @@
 # Prompt sessão autônoma — fastproduct **v3 (adaptada ao repo)**
 
-**Estado verificado (mar/2026):** `pdv-importados` sem pasta `pages/`; login em **`/login`**; `next.config.js` sem `i18n`; existe **`middleware.ts`** protegendo `/gerente/*` e `/caixa` (redirect + query `next`); Edge **`sync-outbox`** com **`Deno.serve`**, **`events`**, **`payload_json`**, **`X-SYNC-KEY`**; SQLite **`outbox`** em **`pdv-local/src-tauri/src/db.rs`**; migrations até **`007_estoque_baixa_idempotente.sql`**.
+**Estado verificado (mar/2026):** `pdv-importados` sem pasta `pages/`; login em **`/login`**; `next.config.js` sem `i18n`; existe **`middleware.ts`** (sessao + **perfil**: OPERADOR vs GERENTE/DONO, query `next`); Edge **`sync-outbox`** com **`Deno.serve`**, **`events`**, **`payload_json`**, **`X-SYNC-KEY`**; SQLite **`outbox`** em **`pdv-local/src-tauri/src/db.rs`**; migrations até **`007_estoque_baixa_idempotente.sql`**.
 
 **Correções aplicadas vs o rascunho v3 que você colou:**
 
