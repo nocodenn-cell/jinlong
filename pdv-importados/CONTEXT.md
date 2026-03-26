@@ -135,6 +135,11 @@ Essas features são v2+. O código deve ser extensível, mas não implementado.
 
 ---
 
+## Monorepo (fastproduct)
+
+- **pdv-importados** (esta pasta): Next.js web — rotas **`/login`**, **`/caixa`**, **`/gerente/*`** sem prefixo de idioma na URL.
+- **pdv-local**: Tauri + SQLite; sync via Edge `sync-outbox`. Não duplicar lógica de desktop dentro do Next.
+
 ## Setup Rápido
 
 ```bash
@@ -147,14 +152,24 @@ npm install
 cp .env.example .env.local
 # Preencher NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# 3. Rode as migrations
+# 3. Rode as migrations (CLI na pasta backend/ do monorepo)
+cd ../backend
 npx supabase db push
+cd ../pdv-importados
 
-# 4. Gere os tipos TypeScript
-npx supabase gen types typescript --local > src/lib/supabase/types.ts
+# 3b. Auth + public.usuarios para dev/E2E (precisa SUPABASE_SERVICE_ROLE_KEY + SEED_DEV_PASSWORD no .env.local)
+# npm run seed:dev-users   # ver docs/SEED_DEV_E2E.md
+
+# 4. Gere os tipos TypeScript (opcional; ainda a partir de backend/)
+cd ../backend
+npx supabase gen types typescript --local > ../pdv-importados/lib/supabase/types.ts
+cd ../pdv-importados
 
 # 5. Inicie o dev
 npm run dev
+
+# 6. Smoke HTTP (outro terminal, com dev rodando)
+npm run smoke:http
 ```
 
 ---

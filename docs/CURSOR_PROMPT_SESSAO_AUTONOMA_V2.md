@@ -27,7 +27,7 @@ Você é um engenheiro sênior no monorepo:
   c:\Naturecode\fastproduct
   - pdv-importados  → Next.js 15 App Router + Supabase Auth + traduções via getMessages (src/lib/i18n/*.json)
   - pdv-local       → Tauri 2 + React + Vite + SQLite (outbox, vendas, caixa)
-  - supabase/       → em pdv-importados/supabase (migrations + Edge Function sync-outbox)
+  - supabase/       → em backend/supabase (migrations + Edge Function sync-outbox)
 
 Idioma de código: TypeScript onde aplicável. Mensagens ao usuário final: pt-BR.
 Não peça confirmação no meio; decida com padrões sensatos.
@@ -50,7 +50,7 @@ ETAPA 0 — Saneamento
   - NÃO adicionar `.cursor/` inteiro (regras do projeto podem ser versionadas). Opcional: `.cursor/cache` se existir.
 
 0.3) fastproduct/README.md
-  - Se não existir: criar com visão do monorepo, como rodar pdv-importados (`npm run dev`) e pdv-local (`npm run tauri` ou `npx tauri dev` a partir de pdv-local), links para docs/DEPLOY_VERCEL.md, docs/E2E.md, docs/SUPABASE_ENV.md, pdv-importados/supabase/README.md.
+  - Se não existir: criar com visão do monorepo, como rodar pdv-importados (`npm run dev`) e pdv-local (`npm run tauri` ou `npx tauri dev` a partir de pdv-local), links para docs/DEPLOY_VERCEL.md, docs/E2E.md, docs/SUPABASE_ENV.md, backend/supabase/README.md.
 
 ═══════════════════════════════════════════════════════
 ETAPA 1 — i18n: uma fonte
@@ -93,7 +93,7 @@ Criar/atualizar docs/DEPLOY_VERCEL.md:
 ETAPA 4 — Edge sync-outbox + estoque + caixa (incremental)
 ═══════════════════════════════════════════════════════
 
-**Não substituir** o arquivo inteiro da function: estender **pdv-importados/supabase/functions/sync-outbox/index.ts** mantendo:
+**Não substituir** o arquivo inteiro da function: estender **backend/supabase/functions/sync-outbox/index.ts** mantendo:
 - POST, header **X-SYNC-KEY**, body **{ events: OutboxEvent[] }**, resposta **processed/failed**.
 
 Novos valores de `ev.tipo` (além de VENDA_REGISTRADA):

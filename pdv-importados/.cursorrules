@@ -21,85 +21,48 @@ Diferenciais centrais do produto:
 ## STACK OBRIGATÓRIO — NUNCA SUGERIR ALTERNATIVAS SEM JUSTIFICATIVA
 
 ```
-Frontend:    Next.js 15 (App Router) + TypeScript + Tailwind CSS
-UI:          shadcn/ui (componentes) + Geist font (Vercel)
-Banco:       Supabase (PostgreSQL gerenciado + Auth + RLS)
-Deploy:      Vercel
-i18n:        getMessages + JSON em src/lib/i18n (pt, zh, zh-HK); sem next-intl nas rotas
-Estado:      Zustand (carrinho PDV) + React Query / TanStack Query (server state)
-Impressão:   CSS @media print (cupom não fiscal 80mm)
-Offline:     Service Worker + IndexedDB (fila de vendas offline)
-Icons:       Lucide React
-Forms:       React Hook Form + Zod
+pdv-importados (web — NUNCA misturar com Tauri aqui):
+  Next.js 15 (App Router) + TypeScript + Tailwind
+  UI: shadcn/ui + Lucide
+  Banco: Supabase (Postgres + Auth + RLS) via @supabase/ssr
+  Deploy: Vercel
+  i18n: getMessages() + src/lib/i18n/*.json (pt, zh, zh-HK) — sem next-intl; URLs SEM [locale] (/login, /caixa, /gerente/produtos)
+  Estado: Zustand (carrinho em stores/carrinhoStore.ts) + core/pricing
+  Domínio compartilhado: core/ (pricing, cart types)
+
+pdv-local (desktop — pasta irmã no monorepo fastproduct):
+  Tauri 2 + React + Vite + SQLite + sync → Edge sync-outbox
 ```
 
 **Proibido sugerir** (a menos que o dev peça explicitamente):
 - Java / Spring Boot
-- Electron / Tauri (PWA resolve com menor custo)
-- Redux (Zustand é suficiente)
+- Electron no lugar do Tauri **para o PDV desktop** (no monorepo o desktop é **Tauri em pdv-local**; em **pdv-importados** não embutir Tauri/Electron)
+- Redux (Zustand é suficiente no web)
 - Prisma standalone (usar Supabase client direto)
 - Next Auth (usar Supabase Auth)
+- next-intl como padrão de rotas (projeto não usa /pt/...)
 
 ---
 
-## ARQUITETURA DE PASTAS (seguir rigorosamente)
+## ARQUITETURA DE PASTAS — pdv-importados (estado real)
 
 ```
-src/
-├── app/
-│   ├── (auth)/
-│   │   ├── login/page.tsx
-│   │   └── layout.tsx
-│   ├── (pdv)/                    ← rota do operador (sempre PT)
-│   │   ├── caixa/page.tsx        ← tela principal do PDV
-│   │   └── layout.tsx
-│   ├── (gerente)/                ← rota do gestor (PT ou ZH)
-│   │   ├── dashboard/page.tsx
-│   │   ├── produtos/page.tsx
-│   │   ├── precos/page.tsx
-│   │   ├── relatorios/page.tsx
-│   │   └── layout.tsx
-│   └── api/
-│       └── webhooks/
-├── components/
-│   ├── pdv/                      ← componentes exclusivos do caixa
-│   │   ├── ScanInput.tsx
-│   │   ├── Carrinho.tsx
-│   │   ├── ItemCarrinho.tsx
-│   │   ├── PainelPagamento.tsx
-│   │   └── CupomImpressao.tsx
-│   ├── gerente/                  ← componentes do painel gerencial
-│   └── ui/                       ← shadcn/ui (gerado, não editar)
-├── lib/
-│   ├── supabase/
-│   │   ├── client.ts             ← browser client
-│   │   ├── server.ts             ← server client (SSR)
-│   │   └── types.ts              ← tipos gerados pelo Supabase CLI
-│   ├── pricing/
-│   │   ├── PricingService.ts     ← motor de preço atacado (Strategy)
-│   │   └── strategies/
-│   │       ├── DefaultStrategy.ts
-│   │       ├── ProductWholesaleStrategy.ts
-│   │       └── CategoryWholesaleStrategy.ts
-│   ├── i18n/
-│   │   ├── pt.json
-│   │   ├── zh.json
-│   │   └── config.ts
-│   └── validators/
-│       ├── produto.schema.ts     ← Zod schemas
-│       ├── venda.schema.ts
-│       └── regra-preco.schema.ts
-├── hooks/
-│   ├── useCarrinho.ts            ← Zustand store do carrinho
-│   ├── usePricing.ts             ← aplica regras de preço
-│   ├── useBarcodeScan.ts         ← hook de leitura de código de barras
-│   └── useKeyboardPDV.ts         ← atalhos F2/F3/F7/F9/ESC
-├── stores/
-│   └── carrinhoStore.ts          ← Zustand
-└── types/
-    ├── database.ts               ← tipos do banco
-    └── pdv.ts                    ← tipos de domínio
+app/                    ← App Router na RAIZ (não usar src/app em paralelo)
+  login/, caixa/, gerente/, page.tsx, layout.tsx, globals.css
+components/ui/         ← shadcn
+lib/
+  supabase/             ← client.ts, server.ts (canônico)
+  adapters/
+stores/
+  carrinhoStore.ts      ← Zustand + @/core/pricing
+src/lib/
+  i18n/                 ← pt.json, zh.json, zh-HK.json, getMessages.ts
+  idioma/               ← usuarioIdioma, normalizeIdioma
+core/                   ← domínio (pricing, cart, sync docs)
+middleware.ts           ← auth + perfil (OPERADOR ↔ GERENTE/DONO)
 ```
+
+Rotas públicas/protegidas: ver middleware.ts. Não há `/gerente/dashboard` no MVP atual — painel principal: `/gerente/produtos`.
 
 ---
 

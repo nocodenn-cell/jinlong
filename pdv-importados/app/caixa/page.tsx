@@ -1,48 +1,17 @@
 "use client"
 
-import { useState, useEffect, useCallback, FormEvent } from 'react'
-import { useCarrinhoStore } from '@/src/stores/carrinhoStore'
-import type { RegraPreco } from '@/core/pricing/types'
-
-// Catálogo mock local — apenas para testar o fluxo do PDV
-const CATALOGO_MOCK = {
-  '789000000001': {
-    id: 'prod-cabo-usb',
-    nome: 'Cabo USB-C 1m',
-    precoVariejo: 6,
-    categoriaId: 'cat-cabos',
-  },
-  '789000000002': {
-    id: 'prod-mouse',
-    nome: 'Mouse sem fio',
-    precoVariejo: 35,
-    categoriaId: 'cat-perifericos',
-  },
-  '789000000003': {
-    id: 'prod-fone',
-    nome: 'Fone Bluetooth',
-    precoVariejo: 28,
-    categoriaId: 'cat-fones',
-  },
-} as const
-
-// Regras de preço mock — simulando atacado por categoria
-const REGRAS_MOCK: RegraPreco[] = [
-  {
-    id: 'regra-cabos-10-mais',
-    tipoRegra: 'CATEGORIA',
-    categoriaId: 'cat-cabos',
-    quantidadeMinima: 10,
-    quantidadeMaxima: undefined,
-    tipoDesconto: 'PERCENTUAL',
-    valorDesconto: 15,
-    ativo: true,
-  },
-]
+import { useState, useEffect, useCallback, FormEvent } from "react"
+import { useCarrinhoStore } from "@/stores/carrinhoStore"
+import {
+  carregarRegrasPrecoCaixa,
+  buscarProdutoParaCaixa,
+} from "@/app/caixa/actions"
 
 export default function CaixaPage() {
-  const [codigo, setCodigo] = useState('')
+  const [codigo, setCodigo] = useState("")
   const [mensagem, setMensagem] = useState<string | null>(null)
+  const [carregandoRegras, setCarregandoRegras] = useState(true)
+  const [buscando, setBuscando] = useState(false)
 
   const {
     itens,
@@ -58,36 +27,84 @@ export default function CaixaPage() {
     limparCarrinho,
   } = useCarrinhoStore()
 
-  // Carrega regras mock uma vez na montagem (efeito colateral → useEffect)
   useEffect(() => {
-    setRegras(REGRAS_MOCK)
+    let cancelado = false
+    ;(async () => {
+      setCarregandoRegras(true)
+      const res = await carregarRegrasPrecoCaixa()
+      if (cancelado) return
+      if (res.ok) {
+        setRegras(res.regras)
+        setMensagem(null)
+      } else {
+        setMensagem(`Regras de preço: ${res.error}`)
+        setRegras([])
+      }
+      setCarregandoRegras(false)
+    })()
+    return () => {
+      cancelado = true
+    }
   }, [setRegras])
 
   const handleAdicionar = useCallback(
-    (e: FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault()
       const trimmed = codigo.trim()
       if (!trimmed) return
 
-      const produto = CATALOGO_MOCK[trimmed as keyof typeof CATALOGO_MOCK]
-      if (!produto) {
-        setMensagem('Produto não encontrado no catálogo de teste.')
-        return
-      }
-
-      adicionarItem({
-        id: `${produto.id}-${Date.now()}`,
-        produtoId: produto.id,
-        nome: produto.nome,
-        quantidade: 1,
-        precoVariejo: produto.precoVariejo,
-        categoriaId: produto.categoriaId,
-      })
-
-      setCodigo('')
+      setBuscando(true)
       setMensagem(null)
+
+      try {
+        const res = await buscarProdutoParaCaixa(trimmed)
+
+        if (!res.ok) {
+          setMensagem(res.error)
+          setBuscando(false)
+          return
+        }
+
+        if (res.status === "nao_encontrado") {
+          setMensagem("Produto não encontrado (código ou nome).")
+          setBuscando(false)
+          return
+        }
+
+        if (res.status === "ambiguo") {
+          setMensagem(res.mensagem)
+          setBuscando(false)
+          return
+        }
+
+        const p = res.produto
+        const avisoEstoque =
+          p.quantidade_estoque !== null && p.quantidade_estoque < 1
+            ? " Atenção: estoque baixo ou zero."
+            : ""
+
+        adicionarItem({
+          id: `${p.id}-${Date.now()}`,
+          produtoId: p.id,
+          nome: p.nome,
+          quantidade: 1,
+          precoVariejo: p.preco_varejo,
+          categoriaId: p.categoria_id ?? undefined,
+        })
+
+        setCodigo("")
+        if (avisoEstoque) {
+          setMensagem(`Adicionado.${avisoEstoque}`)
+        } else {
+          setMensagem(null)
+        }
+      } catch {
+        setMensagem("Falha ao buscar produto. Verifique a conexão.")
+      } finally {
+        setBuscando(false)
+      }
     },
-    [codigo, adicionarItem]
+    [codigo, adicionarItem],
   )
 
   const handleAlterarQuantidade = useCallback(
@@ -95,19 +112,19 @@ export default function CaixaPage() {
       if (Number.isNaN(quantidade)) return
       alterarQuantidade(itemId, quantidade)
     },
-    [alterarQuantidade]
+    [alterarQuantidade],
   )
 
   const handleRemover = useCallback(
     (itemId: string) => {
       removerItem(itemId)
     },
-    [removerItem]
+    [removerItem],
   )
 
   const handleNovoCupom = useCallback(() => {
     limparCarrinho()
-    setCodigo('')
+    setCodigo("")
     setMensagem(null)
   }, [limparCarrinho])
 
@@ -115,14 +132,18 @@ export default function CaixaPage() {
     <div className="min-h-screen bg-slate-900 text-slate-50 flex flex-col">
       <header className="px-6 py-3 border-b border-slate-800 flex items-center justify-between">
         <div className="text-sm">
-          <div className="font-semibold">PDV · Caixa 01 · Operador Demo</div>
+          <div className="font-semibold">PDV · Caixa</div>
           <div className="text-xs text-slate-400">
-            {new Date().toLocaleString('pt-BR')}
+            {new Date().toLocaleString("pt-BR")}
           </div>
         </div>
         <div className="text-xs text-slate-400 text-right">
           <div>F5 Dinheiro · F9 PIX · F10 Cartão (placeholder)</div>
-          <div>Simulação local, sem Supabase</div>
+          <div>
+            Catálogo Supabase · regras em{" "}
+            <code className="text-slate-500">regras_preco</code>
+            {carregandoRegras ? " · carregando regras…" : ""}
+          </div>
         </div>
       </header>
 
@@ -132,14 +153,16 @@ export default function CaixaPage() {
             autoFocus
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
-            placeholder="Código de barras ou nome do produto..."
-            className="flex-1 rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="Código de barras ou parte do nome do produto..."
+            disabled={buscando || carregandoRegras}
+            className="flex-1 rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
           />
           <button
             type="submit"
-            className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
+            disabled={buscando || carregandoRegras}
+            className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold disabled:opacity-50"
           >
-            Adicionar (Enter)
+            {buscando ? "Buscando…" : "Adicionar (Enter)"}
           </button>
           <button
             type="button"
@@ -166,8 +189,9 @@ export default function CaixaPage() {
           <div className="flex-1 overflow-auto">
             {itens.length === 0 ? (
               <div className="h-full flex items-center justify-center text-sm text-slate-500">
-                Nenhum item no carrinho. Escaneie um código ou digite e pressione
-                Enter.
+                Nenhum item no carrinho. Escaneie um código cadastrado em{" "}
+                <span className="mx-1 font-mono text-slate-400">produtos</span> ou
+                digite parte do nome (Enter).
               </div>
             ) : (
               <ul className="divide-y divide-slate-800 text-sm">
@@ -179,7 +203,7 @@ export default function CaixaPage() {
                     <div className="flex flex-col">
                       <span className="font-medium">{item.nome}</span>
                       <span className="text-xs text-slate-500">
-                        Cód: {item.produtoId}
+                        ID: {item.produtoId}
                       </span>
                     </div>
 
@@ -191,7 +215,7 @@ export default function CaixaPage() {
                         onChange={(e) =>
                           handleAlterarQuantidade(
                             item.id,
-                            Number(e.target.value)
+                            Number(e.target.value),
                           )
                         }
                         className="w-16 text-right bg-slate-800 border border-slate-700 rounded px-1 py-0.5 text-xs"
@@ -206,33 +230,33 @@ export default function CaixaPage() {
                     </div>
 
                     <div className="text-right tabular-nums">
-                      R${' '}
-                      {item.resultado.precoOriginal.toLocaleString('pt-BR', {
+                      R${" "}
+                      {item.resultado.precoOriginal.toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
                     </div>
 
                     <div className="text-right tabular-nums">
-                      R${' '}
+                      R${" "}
                       {(
                         item.resultado.precoUnitario * item.quantidade
-                      ).toLocaleString('pt-BR', {
+                      ).toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
                     </div>
 
                     <div className="text-right">
-                      {item.resultado.tipoPreco === 'ATACADO' && (
+                      {item.resultado.tipoPreco === "ATACADO" && (
                         <span className="inline-flex items-center justify-end rounded-full bg-emerald-600/15 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
                           ATACADO
                         </span>
                       )}
-                      {item.resultado.tipoPreco === 'VAREJO' && (
+                      {item.resultado.tipoPreco === "VAREJO" && (
                         <span className="inline-flex items-center justify-end rounded-full bg-slate-700/40 border border-slate-500/40 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
                           VAREJO
                         </span>
                       )}
-                      {item.resultado.tipoPreco === 'MANUAL' && (
+                      {item.resultado.tipoPreco === "MANUAL" && (
                         <span className="inline-flex items-center justify-end rounded-full bg-amber-600/20 border border-amber-500/50 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
                           MANUAL
                         </span>
@@ -253,14 +277,17 @@ export default function CaixaPage() {
             <div className="text-right text-xs text-slate-300">
               <div>Bruto</div>
               <div className="text-base font-semibold tabular-nums">
-                R$ {totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R${" "}
+                {totalBruto.toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
               </div>
             </div>
             <div className="text-right text-xs text-emerald-300">
-              <div>Descontos (atacado/manuel)</div>
+              <div>Descontos (atacado/manual)</div>
               <div className="text-base font-semibold tabular-nums">
-                - R${' '}
-                {totalDesconto.toLocaleString('pt-BR', {
+                - R${" "}
+                {totalDesconto.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
                 })}
               </div>
@@ -268,8 +295,8 @@ export default function CaixaPage() {
             <div className="text-right">
               <div className="text-xs text-slate-400">Total a pagar</div>
               <div className="text-2xl font-bold tabular-nums text-emerald-400">
-                R${' '}
-                {totalLiquido.toLocaleString('pt-BR', {
+                R${" "}
+                {totalLiquido.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
                 })}
               </div>
@@ -280,4 +307,3 @@ export default function CaixaPage() {
     </div>
   )
 }
-

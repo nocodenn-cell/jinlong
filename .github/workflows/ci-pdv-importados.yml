@@ -6,11 +6,13 @@ on:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
+      - 'backend/**'
       - '.github/workflows/ci-pdv-importados.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
+      - 'backend/**'
       - '.github/workflows/ci-pdv-importados.yml'
 
 jobs:

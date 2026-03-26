@@ -27,14 +27,36 @@ export function LoginForm() {
     e.preventDefault()
     setErro('')
     setLoading(true)
-    const supabase = createClient()
+    let supabase
+    try {
+      supabase = createClient()
+    } catch (cfgErr) {
+      const msg =
+        cfgErr instanceof Error ? cfgErr.message : 'Configure Supabase em .env.local e reinicie o dev.'
+      setErro(msg)
+      setLoading(false)
+      return
+    }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    })
+    let authError
+    try {
+      const res = await supabase.auth.signInWithPassword({
+        email,
+        password: senha,
+      })
+      authError = res.error
+    } catch (netErr) {
+      // fetch falhou (rede, URL errada, bloqueio, projeto pausado, etc.)
+      const hint =
+        netErr instanceof TypeError && netErr.message === 'Failed to fetch'
+          ? ' Não foi possível contatar o Supabase (rede, URL em NEXT_PUBLIC_SUPABASE_URL ou extensão do navegador).'
+          : ''
+      setErro(`Falha de conexão com o servidor de autenticação.${hint}`)
+      setLoading(false)
+      return
+    }
 
-    if (error) {
+    if (authError) {
       setErro('Email ou senha incorretos')
       setLoading(false)
       return
@@ -50,13 +72,25 @@ export function LoginForm() {
       return
     }
 
-    const { data: u } = await supabase
+    const { data: u, error: perfilErr } = await supabase
       .from('usuarios')
       .select('perfil')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    const padraoPerfil = u?.perfil === 'OPERADOR' ? '/caixa' : '/gerente/produtos'
+    if (perfilErr) {
+      setErro('Não foi possível carregar seu perfil. Verifique a tabela usuarios no Supabase.')
+      setLoading(false)
+      return
+    }
+
+    if (!u) {
+      setErro('Usuário sem cadastro em usuarios. Crie a linha no banco com o mesmo id do Auth.')
+      setLoading(false)
+      return
+    }
+
+    const padraoPerfil = u.perfil === 'OPERADOR' ? '/caixa' : '/gerente/produtos'
     const destino = destinoAposLogin(searchParams.get('next'), padraoPerfil)
 
     router.push(destino)

@@ -9,6 +9,7 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 - Edge `sync-outbox` (venda, caixa, movimento) + migration estoque idempotente (`007`)
 - Playwright (porta dedicada) + Vitest
 - Documentacao: E2E, Vercel, Supabase env, TAURI_SYNC
+- Migrations e Edge Functions em **`backend/supabase/`** (pasta única de backend Supabase no monorepo)
 
 ## Curto prazo
 

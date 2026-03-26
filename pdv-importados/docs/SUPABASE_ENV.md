@@ -26,10 +26,14 @@ Este arquivo **não contém segredos** — só o que colocar em cada variável e
 - O usuário precisa existir em **Authentication → Users** com o e-mail e senha que você usa.
 - Precisa existir linha em **`public.usuarios`** com `id` = UUID do usuário do Auth (e `perfil` adequado).
 
+### Seed automático (dev / E2E)
+
+Com **`SUPABASE_SERVICE_ROLE_KEY`** no `.env.local`, rode `npm run seed:dev-users` para criar **GERENTE** e **OPERADOR** de teste e as linhas em `usuarios`. Detalhes: [SEED_DEV_E2E.md](./SEED_DEV_E2E.md).
+
 ## Edge Function `sync-outbox` (PDV local)
 
 - Secrets **não** vão no `.env.local` do Next: use `npx supabase secrets set ...` ou o painel **Edge Functions → Secrets**.
-- Ver `supabase/README.md`.
+- Ver [backend/supabase/README.md](../../backend/supabase/README.md).
 
 ## Segurança
 

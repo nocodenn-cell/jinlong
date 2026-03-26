@@ -1,8 +1,8 @@
 # Exemplo: definir secrets da Edge Function no Supabase (rode no seu PC, NÃO commite).
 # Substitua os placeholders pelos valores do Dashboard. Nunca cole service_role em repositório.
 #
-#   cd pdv-importados
-#   .\scripts\supabase-edge-secrets.example.ps1
+#   cd backend
+#   ..\pdv-importados\scripts\supabase-edge-secrets.example.ps1
 #
 # Requer: npx supabase link (projeto já vinculado)
 
@@ -15,4 +15,4 @@ $ErrorActionPreference = 'Stop'
 # npx supabase secrets set SYNC_KEY="(gere um segredo forte)"
 
 Write-Host "Copie este script para fora do git (ex.: supabase-secrets.local.ps1) e preencha os valores." -ForegroundColor Yellow
-Write-Host "Documentação: supabase/README.md" -ForegroundColor Cyan
+Write-Host "Documentação: backend/supabase/README.md" -ForegroundColor Cyan

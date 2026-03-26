@@ -33,11 +33,11 @@ Não colocar `SYNC_KEY` na Vercel: o segredo da sincronização PDV local → Su
 supabase secrets set SYNC_KEY=seu-valor-secreto --project-ref <ref>
 ```
 
-Detalhes: `pdv-importados/supabase/README.md` e `pdv-importados/docs/SUPABASE_ENV.md`.
+Detalhes: `backend/supabase/README.md` e `pdv-importados/docs/SUPABASE_ENV.md`.
 
 ### Banco (migrations)
 
-Após alterações em `pdv-importados/supabase/migrations/`, aplicar no projeto Supabase (CLI `db push` / migrações linkadas ou **SQL Editor**). Ex.: `007_estoque_baixa_idempotente.sql` (RPC `decrementar_estoque_idempotente`) é necessária para baixa de estoque na Edge `sync-outbox`.
+Após alterações em `backend/supabase/migrations/`, aplicar no projeto Supabase (CLI `db push` a partir da pasta **`backend`** / migrações linkadas ou **SQL Editor**). Ex.: `007_estoque_baixa_idempotente.sql` (RPC `decrementar_estoque_idempotente`) é necessária para baixa de estoque na Edge `sync-outbox`.
 
 ## Verificação pós-deploy
 

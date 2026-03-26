@@ -8,7 +8,7 @@ Cole o bloco abaixo **inteiro** no Cursor (Composer / Agent) em uma nova convers
 ---
 
 ```
-Você é um dev sênior. Trabalhe no monorepo `c:\Naturecode\fastproduct` (pdv-importados, pdv-local, supabase em pdv-importados).
+Você é um dev sênior. Trabalhe no monorepo `c:\Naturecode\fastproduct` (pdv-importados, pdv-local, backend Supabase em `backend/`).
 
 ## 0) Verificação rápida
 - Confirme se `pdv-importados/next.config.js` NÃO contém `experimental.appDir` (Next 15). Se ainda existir `experimental: { appDir }`, remova o bloco `experimental` inteiro.
@@ -39,10 +39,10 @@ Hoje existem `pdv-importados/messages/*.json` e `pdv-importados/src/lib/i18n/*.j
   - Build command / root: se monorepo, `cd pdv-importados && npm install && npm run build` ou projeto Vercel apontando para `pdv-importados`.
 
 ## 4) Produto — sync caixa na Edge + estoque (visão MVP)
-- **Edge:** **estender** `pdv-importados/supabase/functions/sync-outbox/index.ts` sem quebrar o contrato atual: **`Deno.serve`**, header **`X-SYNC-KEY`**, corpo **`{ events: ... }`** com `payload_json` (string) como já usado pelo PDV local.
+- **Edge:** **estender** `backend/supabase/functions/sync-outbox/index.ts` sem quebrar o contrato atual: **`Deno.serve`**, header **`X-SYNC-KEY`**, corpo **`{ events: ... }`** com `payload_json` (string) como já usado pelo PDV local.
 - **Caixa:** novos tipos além de `VENDA_REGISTRADA`: ex. `CAIXA_ABERTO`, `CAIXA_FECHADO`, `MOVIMENTO_CAIXA` → `public.caixas` / `public.movimentos_caixa`. Idempotência por id do evento/registro local.
 - **Rust (`pdv-local`):** enfileirar na tabela **`outbox`** (schema SQLite existente), em **`src-tauri/src/db.rs`** (ou módulo já responsável pela sync) — não inventar `sync_queue` sem alinhar ao schema.
-- **Estoque:** MVP sugerido na Edge após venda OK: RPC ou transação idempotente com `venda_id`; **nova migration** com número **posterior** às já existentes em `supabase/migrations/` (não reutilizar `003_` se já houver).
+- **Estoque:** MVP sugerido na Edge após venda OK: RPC ou transação idempotente com `venda_id`; **nova migration** com número **posterior** às já existentes em `backend/supabase/migrations/` (não reutilizar `003_` se já houver).
 - Atualizar `TAURI_SYNC.md` / `pdv-local/README.md` com a matriz evento → tabela.
 
 ## 5) Qualidade

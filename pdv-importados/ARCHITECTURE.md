@@ -17,6 +17,6 @@
 
 ## Imports recomendados
 
-- Motor de preço: `@/core/pricing/PricingService` ou `@/lib/pricing/PricingService` (facade).
+- Motor de preço: `@/core/pricing/PricingService`.
 - Tipos de carrinho: `@/core/cart/types`.
 - Novo caso de uso produto: `criarProdutoComEstoque` + `createProdutoRepository(supabase)`.

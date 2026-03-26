@@ -41,7 +41,7 @@ Depois ajuste:
 
 ### Sincronização de vendas (caixa + operador)
 
-- Aplique as migrations no Supabase com **`npx supabase db push`** a partir da pasta **`pdv-importados`** (não de `pdv-local`). Na primeira vez: `npx supabase link --project-ref <Reference ID>`. Detalhes em `../pdv-importados/supabase/README.md`.
+- Aplique as migrations no Supabase com **`npx supabase db push`** a partir da pasta **`backend`** na raiz do monorepo (não de `pdv-local`). Na primeira vez: `npx supabase link --project-ref <Reference ID>`. Detalhes em `../backend/supabase/README.md`.
 - O payload da outbox inclui `caixa_id`, `troco_inicial_caixa` e `operador_id` (UUID válido).
 - A função `sync-outbox` cria `public.caixas` com o mesmo `id` da sessão local, se ainda não existir, e grava `vendas.caixa_id` / `vendas.operador_id` quando forem UUIDs válidos.
 - Opcional: defina `PDV_OPERADOR_ID` no `.env` (UUID de `public.usuarios`) para preencher operador sem UI de login.

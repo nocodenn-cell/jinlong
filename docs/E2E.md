@@ -2,6 +2,17 @@
 
 Os testes ficam em `pdv-importados/e2e/` e usam `pdv-importados/playwright.config.ts`.
 
+## Smoke HTTP rapido
+
+Com o app em `npm run dev` (porta 3000 por padrao):
+
+```bash
+cd pdv-importados
+npm run smoke:http
+```
+
+Outra porta: `SMOKE_BASE_URL=http://localhost:3009 npm run smoke:http`
+
 ## Rodar localmente
 
 ```bash
@@ -42,6 +53,18 @@ npm run test:e2e:report
 | `PLAYWRIGHT_TEST_PASSWORD` | Para suite gerente | Senha do usuário de teste |
 
 Sem `PLAYWRIGHT_TEST_*`, os testes do arquivo `gerente.spec.ts` são **pulados** no `beforeEach`.
+
+### Criar usuário de teste no Supabase
+
+O login exige linha em **`public.usuarios`** com o mesmo UUID do Auth. Para gerar **Auth + `usuarios`** de uma vez (recomendado):
+
+```bash
+cd pdv-importados
+# .env.local: SUPABASE_SERVICE_ROLE_KEY + SEED_DEV_PASSWORD (ou use PLAYWRIGHT_TEST_PASSWORD)
+npm run seed:dev-users
+```
+
+Documentação completa: [SEED_DEV_E2E](../pdv-importados/docs/SEED_DEV_E2E.md). Alinhe `PLAYWRIGHT_TEST_EMAIL` ao e-mail do **gerente** (padrão do seed: `e2e-gerente@localhost.test`).
 
 ## CI
 

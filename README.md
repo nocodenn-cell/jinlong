@@ -8,7 +8,7 @@ PDV para lojas de importados no Brasil, com interface em **português**, **普�
 |-------|-----------|
 | `pdv-importados/` | Next.js 15 (App Router), Supabase Auth, painel web gerente + login |
 | `pdv-local/` | Tauri 2 + React + Vite + SQLite (PDV desktop, outbox de sync) |
-| `pdv-importados/supabase/` | Migrations PostgreSQL e Edge Functions (ex.: `sync-outbox`) |
+| `backend/` | **Backend Supabase** — migrations PostgreSQL, Edge Functions (ex.: `sync-outbox`) |
 | `docs/` | Documentação do monorepo (prompts Cursor, E2E, deploy) |
 
 ## Como rodar
@@ -36,10 +36,13 @@ npm run tauri
 ## Documentação
 
 - [Roadmap](docs/ROADMAP.md)
+- [Segurança — dependências](pdv-importados/docs/SECURITY.md)
 - [Testes E2E (Playwright)](docs/E2E.md)
 - [Deploy na Vercel](docs/DEPLOY_VERCEL.md)
 - [Supabase — variáveis](pdv-importados/docs/SUPABASE_ENV.md)
-- [Supabase CLI / migrations](pdv-importados/supabase/README.md)
+- [Seed dev/E2E — Auth + usuarios](pdv-importados/docs/SEED_DEV_E2E.md)
+- [Backend Supabase — visão geral](backend/README.md)
+- [Supabase CLI / migrations](backend/supabase/README.md)
 
 ## Prompts para o Cursor
 

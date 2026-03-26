@@ -31,12 +31,12 @@ Você é um engenheiro sênior. Monorepo: c:\Naturecode\fastproduct
 
 - pdv-importados → Next.js 15 App Router, Supabase Auth, textos via getMessages + src/lib/i18n/*.json (URLs sem [locale])
 - pdv-local → Tauri 2 + React + Vite; SQLite com tabela outbox (Rust: src-tauri/src/db.rs)
-- Edge Functions → pdv-importados/supabase/functions (Deno.serve)
+- Edge Functions → backend/supabase/functions (Deno.serve)
 
 Regras:
 1) Não peça confirmação — decida e execute.
 2) Antes de criar arquivo, leia se já existe.
-3) Antes de nova migration, liste pdv-importados/supabase/migrations/*.sql e use o próximo número (hoje: após 006 → 007).
+3) Antes de nova migration, liste backend/supabase/migrations/*.sql e use o próximo número (hoje: após 006 → 007).
 4) Mensagens ao usuário final: pt-BR.
 5) Ao final, imprima "## Entrega" no formato especificado no final deste prompt.
 
@@ -59,7 +59,7 @@ ETAPA 0 — Saneamento
   Se não existir, criar: descrição PDV bilíngue (PT / 普通话 / 廣東話), estrutura, como rodar:
   - cd pdv-importados && npm run dev
   - cd pdv-local && npx tauri dev (ou npm run tauri dev conforme package.json)
-  Links: docs/DEPLOY_VERCEL.md, docs/E2E.md, docs/SUPABASE_ENV.md (se existir), pdv-importados/supabase/README.md
+  Links: docs/DEPLOY_VERCEL.md, docs/E2E.md, docs/SUPABASE_ENV.md (se existir), backend/supabase/README.md
 
 ════════════════════════════════════════════════════════
 ETAPA 1 — i18n uma fonte
@@ -108,7 +108,7 @@ Criar documentação em português (mesma pasta de docs escolhida acima ou pdv-i
 ETAPA 4 — sync-outbox + estoque + caixa (incremental)
 ════════════════════════════════════════════════════════
 
-4.1) Ler pdv-importados/supabase/functions/sync-outbox/index.ts INTEIRO.
+4.1) Ler backend/supabase/functions/sync-outbox/index.ts INTEIRO.
 Manter: Deno.serve, X-SYNC-KEY, parse body.events, resposta { ok, processed, failed }, lógica atual de VENDA_REGISTRADA (ensureCaixaPdv, vendas, descontos_venda, itens best-effort).
 
 Estender:

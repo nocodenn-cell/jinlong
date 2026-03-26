@@ -42,7 +42,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Build: `npm run build` · Testes: `npm test` · E2E: `npm run test:e2e`
+Build: `npm run build` · Testes: `npm test` · E2E: `npm run test:e2e` · Smoke HTTP (com `npm run dev` ativo): `npm run smoke:http` · Seed Auth + `usuarios`: `npm run seed:dev-users` ([docs/SEED_DEV_E2E.md](docs/SEED_DEV_E2E.md))
+
+Lista de comandos (cola rápida): [COMANDOS.md](COMANDOS.md).
 
 ## Deploy
 
