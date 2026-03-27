@@ -75,6 +75,26 @@
   "gerente": {
     "titulo_painel": "经理面板"
   },
+  "estoque": {
+    "titulo": "库存",
+    "subtitulo": "查看数量、调整最低库存并优先处理预警商品。",
+    "nav_todos": "总览",
+    "nav_baixo": "低于最低",
+    "col_produto": "商品",
+    "col_codigo": "条码",
+    "col_atual": "当前库存",
+    "col_minimo": "最低库存",
+    "col_unidade": "单位",
+    "col_deficit": "缺口",
+    "col_ajuste": "调整",
+    "atualizar": "保存",
+    "inicializar_estoque": "创建库存记录",
+    "sem_linha": "尚无库存记录。",
+    "vazio_baixo": "没有活跃商品低于最低库存。",
+    "vazio_geral": "没有活跃商品。",
+    "badge_alerta": "低于最低",
+    "dica_baixo": "要修改数量，请在总览中为每个商品保存。"
+  },
   "caixa": {
     "titulo": "收银台",
     "abrir": "开启收银台",

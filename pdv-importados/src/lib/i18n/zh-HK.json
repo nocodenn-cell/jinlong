@@ -75,6 +75,26 @@
   "gerente": {
     "titulo_painel": "經理面板"
   },
+  "estoque": {
+    "titulo": "庫存",
+    "subtitulo": "檢視數量、調整最低庫存並優先處理預警商品。",
+    "nav_todos": "總覽",
+    "nav_baixo": "低於最低",
+    "col_produto": "商品",
+    "col_codigo": "條碼",
+    "col_atual": "當前庫存",
+    "col_minimo": "最低庫存",
+    "col_unidade": "單位",
+    "col_deficit": "缺口",
+    "col_ajuste": "調整",
+    "atualizar": "儲存",
+    "inicializar_estoque": "建立庫存紀錄",
+    "sem_linha": "尚無庫存紀錄。",
+    "vazio_baixo": "沒有活躍商品低於最低庫存。",
+    "vazio_geral": "沒有活躍商品。",
+    "badge_alerta": "低於最低",
+    "dica_baixo": "要修改數量，請在總覽中為每個商品儲存。"
+  },
   "caixa": {
     "titulo": "收銀台",
     "abrir": "開啟收銀台",

@@ -75,6 +75,26 @@
   "gerente": {
     "titulo_painel": "Painel do Gerente"
   },
+  "estoque": {
+    "titulo": "Estoque",
+    "subtitulo": "Consulte quantidades, ajuste o mínimo e priorize itens críticos.",
+    "nav_todos": "Visão geral",
+    "nav_baixo": "Abaixo do mínimo",
+    "col_produto": "Produto",
+    "col_codigo": "Código",
+    "col_atual": "Quantidade atual",
+    "col_minimo": "Estoque mínimo",
+    "col_unidade": "Unidade",
+    "col_deficit": "Déficit",
+    "col_ajuste": "Ajuste",
+    "atualizar": "Salvar",
+    "inicializar_estoque": "Criar registro de estoque",
+    "sem_linha": "Sem registro de estoque.",
+    "vazio_baixo": "Nenhum produto ativo está abaixo do mínimo.",
+    "vazio_geral": "Nenhum produto ativo cadastrado.",
+    "badge_alerta": "Abaixo do mínimo",
+    "dica_baixo": "Para alterar quantidades, use a visão geral e salve por produto."
+  },
   "caixa": {
     "titulo": "Caixa",
     "abrir": "Abrir caixa",

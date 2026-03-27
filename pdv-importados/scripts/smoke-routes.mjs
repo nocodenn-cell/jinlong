@@ -11,6 +11,7 @@ const cases = [
   { path: '/', expectRedirect: true, name: 'raiz -> login' },
   { path: '/login', ok: [200], name: 'login' },
   { path: '/gerente/produtos', expectRedirect: true, name: 'gerente sem auth' },
+  { path: '/gerente/estoque', expectRedirect: true, name: 'estoque gerente sem auth' },
   { path: '/caixa', expectRedirect: true, name: 'caixa sem auth' },
 ]
 

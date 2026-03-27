@@ -41,9 +41,12 @@ export default async function GerenteLayout({
           <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
             {m.gerente.titulo_painel}
           </div>
-          <nav style={{ display: 'flex', gap: 12, fontSize: 13 }}>
+          <nav style={{ display: 'flex', gap: 12, fontSize: 13, flexWrap: 'wrap' }}>
             <Link href="/gerente/produtos" style={{ color: '#111827' }}>
               {m.produtos.titulo}
+            </Link>
+            <Link href="/gerente/estoque" style={{ color: '#111827' }}>
+              {m.estoque.titulo}
             </Link>
           </nav>
         </div>

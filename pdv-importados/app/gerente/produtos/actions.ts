@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { createProdutoRepository } from '@/lib/adapters/supabase/produtoRepository'
 import {
   criarProdutoComEstoque,
@@ -20,27 +21,6 @@ const NovoProdutoSchema = z.object({
 type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string }
-
-async function assertGerenteOuDono(): Promise<
-  { ok: true } | { ok: false; error: string }
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'Não autenticado' }
-
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('perfil')
-    .eq('id', user.id)
-    .single()
-
-  if (!usuario || !['GERENTE', 'DONO'].includes(usuario.perfil)) {
-    return { ok: false, error: 'Sem permissão' }
-  }
-  return { ok: true }
-}
 
 export async function criarProduto(
   input: unknown
