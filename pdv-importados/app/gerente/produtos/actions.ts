@@ -12,7 +12,17 @@ import {
 
 const NovoProdutoSchema = z.object({
   nome: z.string().min(2),
-  codigo_barras: z.string().min(3),
+  codigo_barras: z
+    .string()
+    .optional()
+    .transform((s) => {
+      const t = (s ?? '').trim()
+      return t.length === 0 ? null : t
+    })
+    .refine(
+      (s) => s === null || s.length >= 3,
+      'Código de barras: mínimo 3 caracteres ou deixe em branco'
+    ),
   preco_varejo: z.coerce.number().positive(),
   origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf']),
   tem_nf: z.coerce.boolean(),

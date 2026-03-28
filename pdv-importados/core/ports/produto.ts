@@ -6,7 +6,8 @@ export type OrigemProduto = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
 
 export interface NovoProdutoInput {
   nome: string
-  codigo_barras: string
+  /** Opcional no cadastro rápido; persiste NULL se vazio (único só quando informado). */
+  codigo_barras: string | null
   preco_varejo: number
   origem: OrigemProduto
   tem_nf: boolean

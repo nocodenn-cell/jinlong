@@ -8,6 +8,11 @@ Cliente de **caixa local-first** que vai rodar em Windows (Tauri) e conversar co
 - `src-tauri/` — App desktop Tauri 2.
 - `tsconfig.json` — alias `@core/*` apontando para `../pdv-importados/core/*` (iremos evoluir isso para um pacote compartilhado).
 
+## comandos Tauri (sync)
+
+- **`sync_outbox_real_cmd`** — envia a outbox para a Edge `sync-outbox` (usa `SYNC_*` no `.env`).
+- **`sync_outbox`** — modo **simulado** (marca enviado sem HTTP); só para testes internos, não use como substituto do real em produção.
+
 ## Como rodar (depois de instalar Rust + Tauri toolchain)
 
 ```bash
@@ -42,6 +47,7 @@ Depois ajuste:
 ### Sincronização de vendas (caixa + operador)
 
 - Aplique as migrations no Supabase com **`npx supabase db push`** a partir da pasta **`backend`** na raiz do monorepo (não de `pdv-local`). Na primeira vez: `npx supabase link --project-ref <Reference ID>`. Detalhes em `../backend/supabase/README.md`.
+- **Retry / DLQ:** falhas por evento na Edge aplicam backoff e, após `OUTBOX_MAX_SYNC_FAILURES` (padrão 12), o item fica `ERRO` até **Repor na fila** no app. Ver `../pdv-importados/core/sync/TAURI_SYNC.md`.
 - O payload da outbox inclui `caixa_id`, `troco_inicial_caixa` e `operador_id` (UUID válido).
 - A função `sync-outbox` cria `public.caixas` com o mesmo `id` da sessão local, se ainda não existir, e grava `vendas.caixa_id` / `vendas.operador_id` quando forem UUIDs válidos.
 - Opcional: defina `PDV_OPERADOR_ID` no `.env` (UUID de `public.usuarios`) para preencher operador sem UI de login.

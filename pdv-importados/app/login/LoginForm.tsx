@@ -90,7 +90,7 @@ export function LoginForm() {
       return
     }
 
-    const padraoPerfil = u.perfil === 'OPERADOR' ? '/caixa' : '/gerente/produtos'
+    const padraoPerfil = u.perfil === 'OPERADOR' ? '/caixa' : '/gerente'
     const destino = destinoAposLogin(searchParams.get('next'), padraoPerfil)
 
     router.push(destino)

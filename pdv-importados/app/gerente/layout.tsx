@@ -42,11 +42,23 @@ export default async function GerenteLayout({
             {m.gerente.titulo_painel}
           </div>
           <nav style={{ display: 'flex', gap: 12, fontSize: 13, flexWrap: 'wrap' }}>
+            <Link href="/gerente" style={{ color: '#111827' }}>
+              {m.gerente.inicio}
+            </Link>
             <Link href="/gerente/produtos" style={{ color: '#111827' }}>
               {m.produtos.titulo}
             </Link>
             <Link href="/gerente/estoque" style={{ color: '#111827' }}>
               {m.estoque.titulo}
+            </Link>
+            <Link href="/gerente/vendas" style={{ color: '#111827' }}>
+              {m.gerente.nav_vendas}
+            </Link>
+            <Link href="/gerente/caixas" style={{ color: '#111827' }}>
+              {m.gerente.nav_caixas}
+            </Link>
+            <Link href="/gerente/relatorios" style={{ color: '#111827' }}>
+              {m.gerente.nav_relatorios}
             </Link>
           </nav>
         </div>

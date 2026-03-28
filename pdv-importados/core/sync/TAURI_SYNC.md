@@ -36,6 +36,11 @@ Implementação Rust: `pdv-local/src-tauri/src/db.rs` (`sync_outbox_real`, `outb
 - Migration `007_estoque_baixa_idempotente.sql`: tabela `estoque_baixas` + função `decrementar_estoque_idempotente`.
 - Reenvio do mesmo evento de venda não duplica baixa para o par `(venda_id, produto_id)`.
 
-## Retentativas
+## Retentativas (outbox)
 
-- Eventos com erro na Edge são marcados com `outbox_marcar_erro` (`status`, `tentativas`, `last_error`). Não há limite fixo “3 tentativas” no código atual — revisar antes de documentar política rígida.
+Colunas em `outbox` (SQLite): `falhas_consecutivas`, `next_retry_at`, `last_error`, `tentativas`, `status`.
+
+- Resposta **`failed`** por item na Edge: incrementa `falhas_consecutivas`. Se **abaixo** de `OUTBOX_MAX_SYNC_FAILURES` (padrão **12**, configurável no `.env`), o item permanece **`PENDENTE`** com **`next_retry_at`** = `datetime('now', '+Δs')` (backoff **15s → 30s → … até 1h**). Só entra na lista enviada quando `next_retry_at` já passou (`outbox_listar_pendentes`).
+- Ao atingir o máximo: **`ERRO`** (DLQ); não reenvia até **`outbox_reprocessar_dlq`** (comando Tauri + botão **Repor na fila** no PDV).
+- Sucesso na Edge: `ENVIADO`, zera `falhas_consecutivas` e `next_retry_at`.
+- Falha **HTTP de todo o lote** (timeout, 5xx, corpo inválido): os itens **não** são atualizados → seguem **`PENDENTE`** e serão tentados no próximo ciclo (timer 15s com caixa aberto).

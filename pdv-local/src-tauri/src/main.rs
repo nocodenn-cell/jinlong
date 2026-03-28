@@ -4,9 +4,10 @@ mod db;
 
 use db::{
     abrir_caixa_local, catalogo_local_get, fechar_caixa_local, get_caixa_atual,
-    diagnostics, init_db, outbox_pendentes, pdv_config_local_get, registrar_movimento_caixa_local,
-    registrar_venda_local, sync_catalogo_real, sync_outbox_real, sync_outbox_simulado,
-    sync_pdv_config_real, Diagnostics, RegistrarVendaInput,
+    diagnostics, init_db, outbox_pendentes, outbox_reprocessar_dlq, outbox_resumo,
+    pdv_config_local_get, registrar_movimento_caixa_local, registrar_venda_local, sync_catalogo_real,
+    sync_outbox_real, sync_outbox_simulado, sync_pdv_config_real, Diagnostics, OutboxResumo,
+    RegistrarVendaInput,
 };
 
 fn load_env_files() {
@@ -49,6 +50,16 @@ fn sync_outbox_real_cmd(app: tauri::AppHandle, limite: Option<i64>) -> Result<i6
 #[tauri::command]
 fn get_diagnostics(app: tauri::AppHandle) -> Result<Diagnostics, String> {
     diagnostics(&app)
+}
+
+#[tauri::command]
+fn outbox_resumo_cmd(app: tauri::AppHandle) -> Result<OutboxResumo, String> {
+    outbox_resumo(&app)
+}
+
+#[tauri::command]
+fn outbox_reprocessar_dlq_cmd(app: tauri::AppHandle) -> Result<i64, String> {
+    outbox_reprocessar_dlq(&app)
 }
 
 #[tauri::command]
@@ -118,6 +129,8 @@ fn main() {
             sync_outbox,
             sync_outbox_real_cmd,
             get_diagnostics,
+            outbox_resumo_cmd,
+            outbox_reprocessar_dlq_cmd,
 
             // Caixa local
             load_caixa_atual_cmd,

@@ -108,7 +108,7 @@ export async function middleware(request: NextRequest) {
     }
     if (caixaRoute && gerenteOuDono) {
       const url = request.nextUrl.clone()
-      url.pathname = '/gerente/produtos'
+      url.pathname = '/gerente'
       url.search = ''
       return redirectWithSession(url, response)
     }

@@ -13,15 +13,16 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 
 ## Curto prazo
 
-- [ ] Aplicar todas as migrations no projeto Supabase de producao (incl. `007`)
+- [ ] Aplicar todas as migrations no projeto Supabase de producao (incl. `007`, `008` RLS `descontos_venda`)
 - [ ] Secrets `SYNC_KEY` + envs PDV local (`SYNC_ENDPOINT`, `SYNC_KEY`)
 - [ ] CI: opcional job Playwright com secrets de teste
-- [ ] `npm audit` / atualizacao de dependencias criticas
+- [x] `npm audit` / atualizacao de dependencias criticas (pdv-importados + pdv-local)
 
 ## Medio prazo
 
-- [ ] Painel gerente: mais telas (estoque, vendas, caixas) consumindo Supabase
-- [ ] Politica de retry da outbox (limite, DLQ, metricas)
+- [x] Painel gerente: estoque, vendas, caixas, relatórios, início (`/gerente`) — consumindo Supabase
+- [x] Politica de retry da outbox (limite, backoff, DLQ, UI reprocessar) — `pdv-local`
+- [ ] Metricas / observabilidade desktop (opcional)
 - [ ] Reuso explicito de `core/` no `pdv-local` (pricing, tipos)
 - [ ] Observabilidade: logs estruturados na Edge
 

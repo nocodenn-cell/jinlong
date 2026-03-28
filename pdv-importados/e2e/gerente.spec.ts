@@ -17,6 +17,17 @@ test.describe('Painel do gerente', () => {
     await page.waitForURL(/\/(caixa|gerente)/, { timeout: 20_000 })
   })
 
+  test('painel inicial /gerente carrega', async ({ page }) => {
+    await page.goto('/gerente')
+    await expect(page).toHaveURL(/\/gerente\/?$/)
+    await expect(page.locator('main h1').first()).toBeVisible()
+  })
+
+  test('página de estoque carrega', async ({ page }) => {
+    await page.goto('/gerente/estoque')
+    await expect(page.getByRole('heading', { name: 'Estoque' })).toBeVisible()
+  })
+
   test('página de produtos carrega', async ({ page }) => {
     await page.goto('/gerente/produtos')
     await expect(page.getByRole('heading', { name: 'Produtos' })).toBeVisible()

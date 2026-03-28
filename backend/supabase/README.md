@@ -6,12 +6,13 @@ As migrations e Edge Functions do projeto ficam em **`backend/supabase/`** (past
 
 1. Abra o terminal na pasta **`backend`** (raiz do repositório: `fastproduct/backend`).
 
-2. **Uma vez por máquina**, vincule o projeto (o *project ref* aparece em  
-   Supabase Dashboard → Project Settings → General → Reference ID):
+2. **Uma vez por máquina**, vincule o projeto. O *project ref* aparece em  
+   Supabase Dashboard → Project Settings → General → Reference ID (~20 caracteres).  
+   **Não** use o texto `SEU_PROJECT_REF` — substitua pelo valor real.
 
 ```powershell
 cd C:\Naturecode\fastproduct\backend
-npx supabase link --project-ref SEU_PROJECT_REF
+npx supabase link --project-ref abcdefghijklmnopqrst
 ```
 
 Informe a **senha do banco** quando o CLI pedir (Database password no dashboard).

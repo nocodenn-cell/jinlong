@@ -44,7 +44,36 @@ pub struct Diagnostics {
     pub db_path: String,
     pub sync_endpoint_set: bool,
     pub sync_key_set: bool,
+    /// Todos com `status = PENDENTE` (inclui os que aguardam `next_retry_at`).
     pub outbox_pendentes: i64,
+    /// Prontos para envio agora (pendente e sem backoff futuro).
+    pub outbox_prontos_sync: i64,
+    pub outbox_em_backoff: i64,
+    /// `status = ERRO` — exigem ação manual ou reprocessamento.
+    pub outbox_dlq: i64,
+}
+
+#[derive(Serialize)]
+pub struct OutboxResumo {
+    pub pendentes_total: i64,
+    pub prontos_sync: i64,
+    pub em_backoff: i64,
+    pub dlq: i64,
+}
+
+fn outbox_max_falhas_consecutivas() -> i64 {
+    std::env::var("OUTBOX_MAX_SYNC_FAILURES")
+        .ok()
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(12)
+        .max(1)
+}
+
+/// Backoff após falha `n` (1-based): 15s, 30s, … até teto 1h.
+fn backoff_segundos_apos_falha(n: i64) -> i64 {
+    let n = n.max(1);
+    let exp = (n - 1).min(8) as u32;
+    (15i64 * (1i64 << exp)).min(3600)
 }
 
 #[derive(Serialize)]
@@ -230,6 +259,11 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
         "ALTER TABLE pdv_config_cache ADD COLUMN max_desconto_gerente_percentual REAL NOT NULL DEFAULT 30",
         [],
     );
+    let _ = conn.execute(
+        "ALTER TABLE outbox ADD COLUMN falhas_consecutivas INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
+    let _ = conn.execute("ALTER TABLE outbox ADD COLUMN next_retry_at TEXT", []);
 
     Ok(())
 }
@@ -874,15 +908,65 @@ pub fn outbox_pendentes(app: &tauri::AppHandle) -> Result<i64, String> {
     Ok(count)
 }
 
+fn contagem_outbox(conn: &Connection, sql: &str) -> Result<i64, String> {
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let n: i64 = stmt
+        .query_row([], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    Ok(n)
+}
+
+pub fn outbox_resumo(app: &tauri::AppHandle) -> Result<OutboxResumo, String> {
+    init_db(app)?;
+    let path = db_path(app)?;
+    let conn = Connection::open(path).map_err(|e| e.to_string())?;
+    let pendentes_total = contagem_outbox(&conn, "SELECT COUNT(1) FROM outbox WHERE status = 'PENDENTE'")?;
+    let prontos_sync = contagem_outbox(
+        &conn,
+        "SELECT COUNT(1) FROM outbox WHERE status = 'PENDENTE' \
+         AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))",
+    )?;
+    let em_backoff = contagem_outbox(
+        &conn,
+        "SELECT COUNT(1) FROM outbox WHERE status = 'PENDENTE' \
+         AND next_retry_at IS NOT NULL AND next_retry_at > datetime('now')",
+    )?;
+    let dlq = contagem_outbox(&conn, "SELECT COUNT(1) FROM outbox WHERE status = 'ERRO'")?;
+    Ok(OutboxResumo {
+        pendentes_total,
+        prontos_sync,
+        em_backoff,
+        dlq,
+    })
+}
+
+/// Volta itens da DLQ (`ERRO`) para a fila (`PENDENTE`) com contadores zerados.
+pub fn outbox_reprocessar_dlq(app: &tauri::AppHandle) -> Result<i64, String> {
+    init_db(app)?;
+    let path = db_path(app)?;
+    let conn = Connection::open(path).map_err(|e| e.to_string())?;
+    let n = conn
+        .execute(
+            "UPDATE outbox SET status = 'PENDENTE', falhas_consecutivas = 0, \
+             next_retry_at = NULL, last_error = NULL WHERE status = 'ERRO'",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(n as i64)
+}
+
 pub fn diagnostics(app: &tauri::AppHandle) -> Result<Diagnostics, String> {
     init_db(app)?;
     let db = db_path(app)?;
-    let pend = outbox_pendentes(app)?;
+    let resumo = outbox_resumo(app)?;
     Ok(Diagnostics {
         db_path: db.to_string_lossy().to_string(),
         sync_endpoint_set: std::env::var("SYNC_ENDPOINT").is_ok(),
         sync_key_set: std::env::var("SYNC_KEY").is_ok(),
-        outbox_pendentes: pend,
+        outbox_pendentes: resumo.pendentes_total,
+        outbox_prontos_sync: resumo.prontos_sync,
+        outbox_em_backoff: resumo.em_backoff,
+        outbox_dlq: resumo.dlq,
     })
 }
 
@@ -896,6 +980,7 @@ pub fn outbox_listar_pendentes(app: &tauri::AppHandle, limite: i64) -> Result<Ve
             "SELECT id, tipo, payload_json, created_at
              FROM outbox
              WHERE status = 'PENDENTE'
+               AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
              ORDER BY created_at ASC
              LIMIT ?1",
         )
@@ -931,7 +1016,9 @@ pub fn outbox_marcar_enviado(app: &tauri::AppHandle, ids: &[String]) -> Result<i
             "UPDATE outbox
              SET status = 'ENVIADO',
                  tentativas = tentativas + 1,
-                 last_error = NULL
+                 last_error = NULL,
+                 falhas_consecutivas = 0,
+                 next_retry_at = NULL
              WHERE id = ?1",
             params![id],
         )
@@ -942,19 +1029,50 @@ pub fn outbox_marcar_enviado(app: &tauri::AppHandle, ids: &[String]) -> Result<i
     Ok(afetados)
 }
 
-pub fn outbox_marcar_erro(app: &tauri::AppHandle, id: &str, erro: &str) -> Result<(), String> {
+/// Falha retornada pela Edge para um evento específico: retry com backoff ou DLQ após N falhas.
+pub fn outbox_marcar_falha_item_sync(app: &tauri::AppHandle, id: &str, erro: &str) -> Result<(), String> {
     init_db(app)?;
+    let max = outbox_max_falhas_consecutivas();
     let path = db_path(app)?;
     let conn = Connection::open(path).map_err(|e| e.to_string())?;
-    conn.execute(
-        "UPDATE outbox
-         SET status = 'ERRO',
-             tentativas = tentativas + 1,
-             last_error = ?2
-         WHERE id = ?1",
-        params![id, erro],
-    )
-    .map_err(|e| e.to_string())?;
+
+    let falhas_atual: i64 = conn
+        .query_row(
+            "SELECT COALESCE(falhas_consecutivas, 0) FROM outbox WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Outbox id não encontrado: {id} — {e}"))?;
+
+    let novo = falhas_atual + 1;
+
+    if novo >= max {
+        conn.execute(
+            "UPDATE outbox SET
+               status = 'ERRO',
+               tentativas = tentativas + 1,
+               falhas_consecutivas = ?1,
+               last_error = ?2,
+               next_retry_at = NULL
+             WHERE id = ?3",
+            params![novo, erro, id],
+        )
+        .map_err(|e| e.to_string())?;
+    } else {
+        let secs = backoff_segundos_apos_falha(novo);
+        let modifier = format!("+{secs} seconds");
+        conn.execute(
+            "UPDATE outbox SET
+               status = 'PENDENTE',
+               tentativas = tentativas + 1,
+               falhas_consecutivas = ?1,
+               last_error = ?2,
+               next_retry_at = datetime('now', ?3)
+             WHERE id = ?4",
+            params![novo, erro, modifier, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
@@ -983,7 +1101,8 @@ pub fn sync_outbox_simulado(app: &tauri::AppHandle, limite: i64) -> Result<i64, 
     let mut enviados: i64 = 0;
     for id in ids {
         tx.execute(
-            "UPDATE outbox SET status = 'ENVIADO', tentativas = tentativas + 1, last_error = NULL WHERE id = ?1",
+            "UPDATE outbox SET status = 'ENVIADO', tentativas = tentativas + 1, last_error = NULL, \
+             falhas_consecutivas = 0, next_retry_at = NULL WHERE id = ?1",
             params![id],
         )
         .map_err(|e| e.to_string())?;
@@ -1056,7 +1175,7 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
 
     // Marcar falhas como ERRO (não aborta o sync)
     for f in parsed.failed {
-        let _ = outbox_marcar_erro(app, &f.id, &f.error);
+        let _ = outbox_marcar_falha_item_sync(app, &f.id, &f.error);
     }
 
     Ok(enviados)

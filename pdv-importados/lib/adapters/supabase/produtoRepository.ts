@@ -13,7 +13,7 @@ export function createProdutoRepository(
         .from('produtos')
         .insert({
           nome: input.nome,
-          codigo_barras: input.codigo_barras,
+          codigo_barras: input.codigo_barras?.trim() || null,
           preco_varejo: input.preco_varejo,
           origem: input.origem,
           tem_nf: input.tem_nf,

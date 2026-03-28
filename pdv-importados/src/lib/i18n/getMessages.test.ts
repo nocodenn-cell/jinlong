@@ -18,5 +18,11 @@ describe('getMessages', () => {
     expect(m.dashboard.total_vendido).toBe('總營業額')
     expect(m.comum.carregando).toBe('載入中...')
   })
+
+  it('inclui chaves do painel estoque (paridade i18n)', () => {
+    expect(getMessages('pt').estoque.titulo).toBe('Estoque')
+    expect(getMessages('zh').estoque.titulo).toBe('库存')
+    expect(getMessages('zh-HK').estoque.titulo).toBe('庫存')
+  })
 })
 

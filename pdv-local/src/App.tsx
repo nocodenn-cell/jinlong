@@ -29,6 +29,13 @@ type CatalogoLocalInvoke = {
   regras?: RegraPrecoCacheLite[]
 }
 
+type OutboxResumo = {
+  pendentes_total: number
+  prontos_sync: number
+  em_backoff: number
+  dlq: number
+}
+
 export function App() {
   const [status] = useState<'online' | 'offline'>('offline')
   const [codigo, setCodigo] = useState('')
@@ -72,6 +79,9 @@ export function App() {
   const [sincronizandoCatalogo, setSincronizandoCatalogo] = useState(false)
 
   const [caixaAtualId, setCaixaAtualId] = useState<string | null>(null)
+
+  const [outboxResumo, setOutboxResumo] = useState<OutboxResumo | null>(null)
+  const [reprocessandoDlq, setReprocessandoDlq] = useState(false)
 
   const [gerenteId, setGerenteId] = useState(defaultPdvConfig.gerenteId)
   const [gerenteSenhaSha256, setGerenteSenhaSha256] = useState(
@@ -137,6 +147,23 @@ export function App() {
       setSincronizandoCatalogo(false)
     }
   }, [tauriDisponivel, aplicarCacheCatalogo])
+
+  const refreshOutboxResumo = useCallback(async () => {
+    if (!tauriDisponivel) return
+    try {
+      const r = await invoke<OutboxResumo>('outbox_resumo_cmd')
+      setOutboxResumo(r)
+    } catch {
+      setOutboxResumo(null)
+    }
+  }, [tauriDisponivel])
+
+  useEffect(() => {
+    if (!tauriDisponivel) return
+    void refreshOutboxResumo()
+    const id = window.setInterval(() => void refreshOutboxResumo(), 12000)
+    return () => window.clearInterval(id)
+  }, [tauriDisponivel, refreshOutboxResumo])
 
   useEffect(() => {
     // O Tauri injeta `window.__TAURI__` depois do primeiro render.
@@ -266,12 +293,13 @@ export function App() {
           // Sem bloquear o caixa offline
         })
         .finally(() => {
+          void refreshOutboxResumo()
           running = false
         })
     }, 15000)
 
     return () => window.clearInterval(t)
-  }, [tauriDisponivel, caixaAtualId])
+  }, [tauriDisponivel, caixaAtualId, refreshOutboxResumo])
 
   function adicionarDoCatalogo() {
     const trimmed = codigo.trim()
@@ -385,6 +413,84 @@ export function App() {
           </div>
         </div>
       </header>
+
+      {tauriDisponivel &&
+        outboxResumo &&
+        (outboxResumo.dlq > 0 || outboxResumo.pendentes_total > 0) && (
+          <div
+            style={{
+              padding: '0.45rem 1.5rem',
+              fontSize: 13,
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor:
+                outboxResumo.dlq > 0
+                  ? '#fef2f2'
+                  : outboxResumo.em_backoff > 0
+                    ? '#fffbeb'
+                    : '#eff6ff',
+              color: outboxResumo.dlq > 0 ? '#991b1b' : '#374151',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            {outboxResumo.dlq > 0 ? (
+              <>
+                <strong>{outboxResumo.dlq}</strong>
+                <span>
+                  evento(s) parados após várias falhas de sync (DLQ). Repor na fila para
+                  tentar de novo.
+                </span>
+                <button
+                  type="button"
+                  disabled={reprocessandoDlq}
+                  onClick={() => {
+                    void (async () => {
+                      setReprocessandoDlq(true)
+                      try {
+                        await invoke('outbox_reprocessar_dlq_cmd')
+                        await invoke('sync_outbox_real_cmd', { limite: 50 })
+                        await refreshOutboxResumo()
+                        setMensagem(
+                          'Eventos repostos na fila. Sync executada em seguida.'
+                        )
+                      } catch (e) {
+                        setMensagem(`Falha ao reprocessar fila: ${String(e)}`)
+                      } finally {
+                        setReprocessandoDlq(false)
+                      }
+                    })()
+                  }}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: 8,
+                    border: '1px solid #dc2626',
+                    background: reprocessandoDlq ? '#fecaca' : '#ffffff',
+                    color: '#991b1b',
+                    cursor: reprocessandoDlq ? 'default' : 'pointer',
+                  }}
+                >
+                  {reprocessandoDlq ? 'Processando…' : 'Repor na fila'}
+                </button>
+              </>
+            ) : (
+              <>
+                <span>
+                  Fila de sync: <strong>{outboxResumo.prontos_sync}</strong> pronto(s)
+                </span>
+                {outboxResumo.em_backoff > 0 ? (
+                  <span style={{ color: '#92400e' }}>
+                    · <strong>{outboxResumo.em_backoff}</strong> aguardando intervalo (retry
+                    com backoff)
+                  </span>
+                ) : null}
+              </>
+            )}
+          </div>
+        )}
 
       {!tauriDisponivel && (
         <div
@@ -984,8 +1090,10 @@ export function App() {
                   limparCarrinho()
                   try {
                     await invoke('sync_outbox_real_cmd', { limite: 50 })
+                    await refreshOutboxResumo()
                     setMensagem('Venda registrada e sincronizada (quando possível).')
                   } catch {
+                    await refreshOutboxResumo()
                     setMensagem('Venda registrada localmente. Sincronização pendente.')
                   }
                 } catch (e) {

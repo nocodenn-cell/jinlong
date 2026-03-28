@@ -69,6 +69,9 @@ export default async function ProdutosPage() {
             placeholder={m.produtos.codigo_barras}
             style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
           />
+          <span style={{ fontSize: 12, color: '#6b7280' }}>
+            {m.produtos.codigo_barras_opcional}
+          </span>
           <input
             name="preco_varejo"
             type="number"
