@@ -68,7 +68,11 @@ Documentação completa: [SEED_DEV_E2E](../pdv-importados/docs/SEED_DEV_E2E.md).
 
 ## CI
 
-Configure os secrets no GitHub (ou no provedor de CI). Testes que dependem de credenciais de gerente não falham o job se estiverem skip — para cobertura completa, defina as variáveis de teste.
+O workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml) roda **build + lint + Vitest** em todo PR.
+
+O job **Playwright** é **opcional**: crie a variável de repositório **`ENABLE_PLAYWRIGHT_E2E`** = `true` e defina os secrets **`PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL`**, **`PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY`** (e, para `gerente.spec.ts`, **`PLAYWRIGHT_TEST_EMAIL`** / **`PLAYWRIGHT_TEST_PASSWORD`**). No CI o Playwright sobe o Next com **`PLAYWRIGHT_E2E_WITH_DEV=1`** (ver `playwright.config.ts`).
+
+Testes que dependem de credenciais de gerente são **pulados** se `PLAYWRIGHT_TEST_*` estiverem ausentes.
 
 ## Notas sobre o app
 

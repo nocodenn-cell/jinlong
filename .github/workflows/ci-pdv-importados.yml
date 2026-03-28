@@ -45,3 +45,39 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
         run: npm run build
+
+  # Opcional: defina variável de repositório ENABLE_PLAYWRIGHT_E2E=true e os secrets abaixo no GitHub.
+  # PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL, PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY
+  # (opcional p/ gerente.spec) PLAYWRIGHT_TEST_EMAIL, PLAYWRIGHT_TEST_PASSWORD
+  e2e-playwright:
+    needs: build-and-test
+    if: ${{ vars.ENABLE_PLAYWRIGHT_E2E == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pdv-importados
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: pdv-importados/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E
+        env:
+          CI: true
+          PLAYWRIGHT_E2E_WITH_DEV: '1'
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+        run: npm run test:e2e

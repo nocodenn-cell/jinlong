@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 
@@ -30,7 +31,39 @@ export default async function GerenteCaixasPage() {
           ← {m.gerente.inicio}
         </Link>
       </div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 20 }}>{m.gerente.nav_caixas}</h1>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{m.gerente.nav_caixas}</h1>
+        <ExportCsvButton
+          label={m.gerente.exportar_csv}
+          filename="gerente-caixas.csv"
+          columns={[
+            { key: 'data_abertura', header: m.gerente.col_data },
+            { key: 'status', header: m.gerente.col_status },
+            { key: 'valor_inicial', header: m.gerente.col_valor_inicial },
+            { key: 'valor_fechamento', header: m.gerente.col_valor_fechamento },
+            { key: 'id', header: m.gerente.col_caixa },
+          ]}
+          rows={
+            caixas?.map((c) => ({
+              data_abertura: c.data_abertura ? new Date(c.data_abertura).toISOString() : '',
+              status: c.status,
+              valor_inicial: Number(c.valor_inicial),
+              valor_fechamento:
+                c.valor_fechamento != null ? Number(c.valor_fechamento) : '',
+              id: c.id,
+            })) ?? []
+          }
+        />
+      </div>
 
       <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
         <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>

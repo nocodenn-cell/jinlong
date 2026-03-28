@@ -6,16 +6,19 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 
 - Auth Supabase, `/login` com `next` seguro
 - Rotas `/gerente/*` e `/caixa` protegidas; **middleware por perfil** (OPERADOR apenas `/caixa`; GERENTE/DONO apenas area `/gerente` na URL)
-- Edge `sync-outbox` (venda, caixa, movimento) + migration estoque idempotente (`007`)
+- Edge `sync-outbox` (venda, caixa, movimento) + RPC estoque (`007`) + `GRANT authenticated` p/ caixa web (`009`); logs JSON na function
+- Caixa web: **Finalizar venda** → `vendas` / `itens_venda` + RPC estoque (Server Action)
 - Playwright (porta dedicada) + Vitest
 - Documentacao: E2E, Vercel, Supabase env, TAURI_SYNC
 - Migrations e Edge Functions em **`backend/supabase/`** (pasta única de backend Supabase no monorepo)
 
 ## Curto prazo
 
-- [ ] Aplicar todas as migrations no projeto Supabase de producao (incl. `007`, `008` RLS `descontos_venda`)
-- [ ] Secrets `SYNC_KEY` + envs PDV local (`SYNC_ENDPOINT`, `SYNC_KEY`)
-- [ ] CI: opcional job Playwright com secrets de teste
+- [ ] **P0 operacional** — checklist: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) (migrations, Edge, `.env` desktop, teste venda → nuvem)
+- **Pausado até haver projeto Supabase “real” da loja:** validação ponta a ponta da **outbox**, **prova desktop → nuvem** e **secrets + Tauri alinhados ao ref** — ver caixa “Escopo adiado” no checklist.
+- [ ] Aplicar todas as migrations em **cada** ambiente Supabase usado (dev/staging/prod) — SQL auxiliar: `backend/supabase/scripts/verify_p0_producao.sql`
+- [ ] Secrets `SYNC_KEY` + envs PDV local (`SYNC_ENDPOINT`, `SYNC_KEY`) — quando fechar o P0 no ambiente oficial
+- [x] CI: build + lint + Vitest em PR; job Playwright **opcional** (`vars.ENABLE_PLAYWRIGHT_E2E` + secrets — ver `ci-pdv-importados.yml`)
 - [x] `npm audit` / atualizacao de dependencias criticas (pdv-importados + pdv-local)
 
 ## Medio prazo
@@ -23,11 +26,11 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 - [x] Painel gerente: estoque, vendas, caixas, relatórios, início (`/gerente`) — consumindo Supabase
 - [x] Politica de retry da outbox (limite, backoff, DLQ, UI reprocessar) — `pdv-local`
 - [ ] Metricas / observabilidade desktop (opcional)
-- [ ] Reuso explicito de `core/` no `pdv-local` (pricing, tipos)
-- [ ] Observabilidade: logs estruturados na Edge
+- [x] Reuso de `core/` no `pdv-local` via alias `@core` (comentário em `vite.config.ts`; `cartStore` já importa pricing/tipos)
+- [x] Observabilidade: logs estruturados na Edge (`sync-outbox`, uma linha JSON por evento)
 
 ## Longo prazo
 
 - [ ] Multi-loja / filiais
-- [ ] Relatorios e exportacao
+- [x] Export CSV nas telas do gerente (vendas, estoque, produtos, caixas, relatórios)
 - [ ] Atualizacoes automaticas do app Tauri

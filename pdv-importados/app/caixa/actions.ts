@@ -1,8 +1,15 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPreco'
 import type { RegraPreco } from '@/core/pricing/types'
+import {
+  finalizarVendaInputSchema,
+  roundMoney2,
+  totaisFromItens,
+  totalsMatchDeclared,
+} from '@/app/caixa/finalizarVendaValidation'
 
 export type ProdutoCaixaDTO = {
   id: string
@@ -160,6 +167,97 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro ao buscar produto'
+    return { ok: false, error: msg }
+  }
+}
+
+export type FinalizarVendaCaixaResult =
+  | { ok: true; vendaId: string }
+  | { ok: false; error: string }
+
+/**
+ * Persiste venda + itens no Supabase e aplica baixa de estoque via RPC
+ * `decrementar_estoque_idempotente` (migration 007 + GRANT 009 para `authenticated`).
+ */
+export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaCaixaResult> {
+  const parsed = finalizarVendaInputSchema.safeParse(raw)
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map((e) => e.message).join('; ')
+    return { ok: false, error: `Dados inválidos: ${msg}` }
+  }
+  const input = parsed.data
+  const computed = totaisFromItens(input.itens)
+  if (!totalsMatchDeclared(computed, input)) {
+    return {
+      ok: false,
+      error: 'Totais do carrinho não batem com os itens. Atualize a página e tente de novo.',
+    }
+  }
+
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const { data: caixaExistente } = await supabase
+      .from('caixas')
+      .select('id')
+      .eq('operador_id', user.id)
+      .eq('status', 'ABERTO')
+      .maybeSingle()
+
+    let caixaId: string | null = caixaExistente?.id ?? null
+    if (!caixaId) {
+      const { data: novo, error: caixaErr } = await supabase
+        .from('caixas')
+        .insert({ operador_id: user.id, valor_inicial: 0, status: 'ABERTO' })
+        .select('id')
+        .single()
+      if (caixaErr) return { ok: false, error: `Caixa: ${caixaErr.message}` }
+      caixaId = novo.id
+    }
+
+    const vendaId = crypto.randomUUID()
+    const { error: vErr } = await supabase.from('vendas').insert({
+      id: vendaId,
+      caixa_id: caixaId,
+      operador_id: user.id,
+      total_bruto: roundMoney2(input.totalBruto),
+      total_desconto: roundMoney2(input.totalDesconto),
+      total_liquido: roundMoney2(input.totalLiquido),
+      forma_pagamento: input.formaPagamento,
+      status: 'CONCLUIDA',
+    })
+    if (vErr) return { ok: false, error: vErr.message }
+
+    const itensRows = input.itens.map((i) => ({
+      venda_id: vendaId,
+      produto_id: i.produtoId,
+      quantidade: i.quantidade,
+      preco_unitario_original: roundMoney2(i.precoOriginal),
+      preco_unitario: roundMoney2(i.precoUnitario),
+      desconto_unitario: roundMoney2(i.descontoUnitario),
+      tipo_preco: i.tipoPreco,
+    }))
+
+    const { error: iErr } = await supabase.from('itens_venda').insert(itensRows)
+    if (iErr) return { ok: false, error: `Itens: ${iErr.message}` }
+
+    for (const i of input.itens) {
+      const { error: rpcErr } = await supabase.rpc('decrementar_estoque_idempotente', {
+        p_produto_id: i.produtoId,
+        p_quantidade: i.quantidade,
+        p_venda_id: vendaId,
+      })
+      if (rpcErr) return { ok: false, error: `Estoque: ${rpcErr.message}` }
+    }
+
+    revalidatePath('/gerente/vendas')
+    return { ok: true, vendaId }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro ao finalizar venda'
     return { ok: false, error: msg }
   }
 }

@@ -4,6 +4,10 @@ import { defineConfig, devices } from '@playwright/test'
 const e2ePort = process.env.PLAYWRIGHT_TEST_PORT ?? '3009'
 const defaultBase = `http://localhost:${e2ePort}`
 
+/** No CI, sobe Next localmente quando `PLAYWRIGHT_E2E_WITH_DEV=1` (ver workflow opcional). */
+const ciWithLocalServer =
+  process.env.CI === 'true' && process.env.PLAYWRIGHT_E2E_WITH_DEV === '1'
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
@@ -14,13 +18,14 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: `npx next dev -p ${e2ePort}`,
-        url: defaultBase,
-        // Evita servidor antigo sem o middleware atual (defina PLAYWRIGHT_REUSE_SERVER=1 para reutilizar)
-        reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
-        timeout: 120_000,
-      },
+  webServer:
+    ciWithLocalServer || !process.env.CI
+      ? {
+          command: `npx next dev -p ${e2ePort}`,
+          url: defaultBase,
+          reuseExistingServer:
+            !ciWithLocalServer && process.env.PLAYWRIGHT_REUSE_SERVER === '1',
+          timeout: 120_000,
+        }
+      : undefined,
 })

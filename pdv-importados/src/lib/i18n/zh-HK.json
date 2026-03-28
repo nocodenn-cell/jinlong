@@ -99,7 +99,8 @@
     "col_num_vendas": "筆數",
     "col_ticket": "客單價",
     "col_qtde": "數量",
-    "col_valor": "銷售額"
+    "col_valor": "銷售額",
+    "exportar_csv": "匯出 CSV"
   },
   "estoque": {
     "titulo": "庫存",

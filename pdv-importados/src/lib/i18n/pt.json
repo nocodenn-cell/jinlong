@@ -99,7 +99,8 @@
     "col_num_vendas": "Nº vendas",
     "col_ticket": "Ticket médio",
     "col_qtde": "Quantidade",
-    "col_valor": "Valor faturado"
+    "col_valor": "Valor faturado",
+    "exportar_csv": "Exportar CSV"
   },
   "estoque": {
     "titulo": "Estoque",

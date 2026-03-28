@@ -35,6 +35,8 @@ npm run tauri
 
 ## Documentação
 
+- [**P0 checklist** — migrations, deploy Edge, secrets, teste ponta a ponta](docs/P0_CHECKLIST_OPERACIONAL.md)
+- [**Circuito operacional** — deploy Edge, secrets, teste desktop → nuvem, caixa web vs desktop](docs/CIRCUITO_OPERACIONAL.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Segurança — dependências](pdv-importados/docs/SECURITY.md)
 - [Testes E2E (Playwright)](docs/E2E.md)

@@ -26,6 +26,13 @@ type SyncResponse = {
   failed: { id: string; error: string }[];
 };
 
+/** Log estruturado (uma linha JSON) para observabilidade em runtime Deno. */
+function logJson(payload: Record<string, unknown>) {
+  console.log(
+    JSON.stringify({ ts: new Date().toISOString(), svc: "sync-outbox", ...payload }),
+  );
+}
+
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -161,7 +168,14 @@ async function aplicarBaixaEstoquePorItem(
       },
     );
     if (rpcErr) {
-      console.error("ERRO_RPC_ESTOQUE:", rpcErr.message);
+      logJson({
+        level: "error",
+        stage: "rpc_estoque",
+        event: "decrementar_estoque_idempotente",
+        venda_id: vendaId,
+        produto_id: i.produto_id,
+        error: rpcErr.message,
+      });
     }
   }
 }
@@ -260,11 +274,21 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
         .insert(itens);
 
       if (itensErr && !String(itensErr.message).includes("duplicate key")) {
-        console.error("ERRO_ITENS_BEST_EFFORT:", itensErr.message);
+        logJson({
+          level: "error",
+          stage: "insert_itens_venda",
+          venda_id: payload.venda_id,
+          error: itensErr.message,
+        });
       }
     }
   } catch (itensE) {
-    console.error("ERRO_ITENS_BEST_EFFORT_THROW:", String(itensE));
+    logJson({
+      level: "error",
+      stage: "insert_itens_venda_throw",
+      venda_id: payload.venda_id,
+      error: String(itensE),
+    });
   }
 
   await aplicarBaixaEstoquePorItem(
@@ -279,18 +303,26 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
+    logJson({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED" });
     return jsonResponse(405, { ok: false, error: "METHOD_NOT_ALLOWED" });
   }
 
   const syncKey = Deno.env.get("SYNC_KEY");
   const gotKey = req.headers.get("X-SYNC-KEY");
   if (!syncKey || !gotKey || gotKey !== syncKey) {
+    logJson({
+      level: "warn",
+      stage: "auth",
+      error: "UNAUTHORIZED",
+      hint: "SYNC_KEY ausente ou divergente",
+    });
     return jsonResponse(401, { ok: false, error: "UNAUTHORIZED" });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceRole) {
+    logJson({ level: "error", stage: "env", error: "MISSING_SUPABASE_ENV" });
     return jsonResponse(500, {
       ok: false,
       error: "MISSING_SUPABASE_ENV",
@@ -305,14 +337,24 @@ Deno.serve(async (req) => {
   try {
     body = (await req.json()) as SyncRequest;
   } catch {
+    logJson({ level: "warn", stage: "body", error: "INVALID_JSON" });
     return jsonResponse(400, { ok: false, error: "INVALID_JSON" });
   }
+
+  const batchSize = body.events?.length ?? 0;
+  logJson({ level: "info", stage: "batch_start", event_count: batchSize });
 
   const processed: string[] = [];
   const failed: { id: string; error: string }[] = [];
 
   for (const ev of body.events ?? []) {
     try {
+      logJson({
+        level: "info",
+        stage: "event_begin",
+        event_id: ev.id,
+        tipo: ev.tipo,
+      });
       switch (ev.tipo) {
         case "VENDA_REGISTRADA":
           await processVenda(supabase, ev);
@@ -330,10 +372,31 @@ Deno.serve(async (req) => {
           throw new Error(`TIPO_DESCONHECIDO: ${ev.tipo}`);
       }
       processed.push(ev.id);
+      logJson({
+        level: "info",
+        stage: "event_ok",
+        event_id: ev.id,
+        tipo: ev.tipo,
+      });
     } catch (e) {
-      failed.push({ id: ev.id, error: String(e) });
+      const err = String(e);
+      failed.push({ id: ev.id, error: err });
+      logJson({
+        level: "error",
+        stage: "event_failed",
+        event_id: ev.id,
+        tipo: ev.tipo,
+        error: err,
+      });
     }
   }
+
+  logJson({
+    level: "info",
+    stage: "batch_done",
+    processed: processed.length,
+    failed: failed.length,
+  });
 
   const resp: SyncResponse = { ok: true, processed, failed };
   return jsonResponse(200, resp);

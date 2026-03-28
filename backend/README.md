@@ -45,4 +45,4 @@ npx supabase status
 
 Útil para testar migrations e API localmente; variáveis (`API URL`, keys) aparecem no output do `status`.
 
-Detalhes: [supabase/README.md](./supabase/README.md).
+Detalhes: [supabase/README.md](./supabase/README.md). **Deploy da Edge, secrets e teste desktop → nuvem:** [docs/CIRCUITO_OPERACIONAL.md](../docs/CIRCUITO_OPERACIONAL.md).

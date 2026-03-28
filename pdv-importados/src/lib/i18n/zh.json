@@ -99,7 +99,8 @@
     "col_num_vendas": "笔数",
     "col_ticket": "客单价",
     "col_qtde": "数量",
-    "col_valor": "销售额"
+    "col_valor": "销售额",
+    "exportar_csv": "导出 CSV"
   },
   "estoque": {
     "titulo": "库存",

@@ -15,4 +15,4 @@ $ErrorActionPreference = 'Stop'
 # npx supabase secrets set SYNC_KEY="(gere um segredo forte)"
 
 Write-Host "Copie este script para fora do git (ex.: supabase-secrets.local.ps1) e preencha os valores." -ForegroundColor Yellow
-Write-Host "Documentação: backend/supabase/README.md" -ForegroundColor Cyan
+Write-Host "Documentação: docs/CIRCUITO_OPERACIONAL.md e backend/supabase/README.md" -ForegroundColor Cyan

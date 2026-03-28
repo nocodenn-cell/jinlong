@@ -5,13 +5,25 @@ import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
   carregarRegrasPrecoCaixa,
   buscarProdutoParaCaixa,
+  finalizarVendaCaixa,
 } from "@/app/caixa/actions"
+import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+
+const FORMAS: { value: FinalizarVendaInput["formaPagamento"]; label: string }[] = [
+  { value: "DINHEIRO", label: "Dinheiro" },
+  { value: "PIX", label: "PIX" },
+  { value: "CARTAO_DEBITO", label: "Cartão débito" },
+  { value: "CARTAO_CREDITO", label: "Cartão crédito" },
+]
 
 export default function CaixaPage() {
   const [codigo, setCodigo] = useState("")
   const [mensagem, setMensagem] = useState<string | null>(null)
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [buscando, setBuscando] = useState(false)
+  const [finalizando, setFinalizando] = useState(false)
+  const [formaPagamento, setFormaPagamento] =
+    useState<FinalizarVendaInput["formaPagamento"]>("DINHEIRO")
 
   const {
     itens,
@@ -128,6 +140,49 @@ export default function CaixaPage() {
     setMensagem(null)
   }, [limparCarrinho])
 
+  const handleFinalizar = useCallback(async () => {
+    if (itens.length === 0 || finalizando) return
+    setFinalizando(true)
+    setMensagem(null)
+    try {
+      const payload: FinalizarVendaInput = {
+        formaPagamento,
+        totalBruto,
+        totalDesconto,
+        totalLiquido,
+        itens: itens.map((i) => ({
+          produtoId: i.produtoId,
+          quantidade: i.quantidade,
+          precoOriginal: i.resultado.precoOriginal,
+          precoUnitario: i.resultado.precoUnitario,
+          descontoUnitario: i.resultado.descontoUnitario,
+          tipoPreco: i.resultado.tipoPreco,
+        })),
+      }
+      const res = await finalizarVendaCaixa(payload)
+      if (res.ok) {
+        limparCarrinho()
+        setMensagem(
+          `Venda registrada no servidor (id ${res.vendaId.slice(0, 8)}…). Estoque atualizado.`,
+        )
+      } else {
+        setMensagem(res.error)
+      }
+    } catch {
+      setMensagem("Falha ao finalizar. Verifique conexão e permissões (RPC estoque — migration 009).")
+    } finally {
+      setFinalizando(false)
+    }
+  }, [
+    finalizando,
+    formaPagamento,
+    itens,
+    limparCarrinho,
+    totalBruto,
+    totalDesconto,
+    totalLiquido,
+  ])
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-50 flex flex-col">
       <header className="px-6 py-3 border-b border-slate-800 flex items-center justify-between">
@@ -137,12 +192,19 @@ export default function CaixaPage() {
             {new Date().toLocaleString("pt-BR")}
           </div>
         </div>
-        <div className="text-xs text-slate-400 text-right">
+        <div className="text-xs text-slate-400 text-right max-w-md">
           <div>F5 Dinheiro · F9 PIX · F10 Cartão (placeholder)</div>
           <div>
             Catálogo Supabase · regras em{" "}
             <code className="text-slate-500">regras_preco</code>
             {carregandoRegras ? " · carregando regras…" : ""}
+          </div>
+          <div className="mt-1 text-slate-300/90 border border-slate-600/40 rounded px-2 py-1 bg-slate-950/50">
+            <strong>Finalizar venda</strong> grava <code className="text-slate-500">vendas</code> /{" "}
+            <code className="text-slate-500">itens_venda</code> e chama a RPC de estoque (migrations{" "}
+            <code className="text-slate-500">007</code> + <code className="text-slate-500">009</code>
+            ). O PDV desktop continua válido via outbox. Ver{" "}
+            <code className="text-slate-500">docs/CIRCUITO_OPERACIONAL.md</code>.
           </div>
         </div>
       </header>
@@ -269,9 +331,43 @@ export default function CaixaPage() {
           </div>
         </section>
 
-        <footer className="mt-2 flex items-center justify-between text-sm">
-          <div className="text-xs text-slate-400">
-            {totalItens} itens · {totalUnidades} unidades
+        <footer className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between text-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-xs text-slate-400 flex items-center gap-2">
+              Pagamento
+              <select
+                value={formaPagamento}
+                onChange={(e) =>
+                  setFormaPagamento(
+                    e.target.value as FinalizarVendaInput["formaPagamento"],
+                  )
+                }
+                disabled={finalizando || itens.length === 0}
+                className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-xs text-slate-100"
+              >
+                {FORMAS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => void handleFinalizar()}
+              disabled={
+                finalizando ||
+                itens.length === 0 ||
+                buscando ||
+                carregandoRegras
+              }
+              className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold disabled:opacity-50"
+            >
+              {finalizando ? "Finalizando…" : "Finalizar venda"}
+            </button>
+            <span className="text-xs text-slate-400">
+              {totalItens} itens · {totalUnidades} unidades
+            </span>
           </div>
           <div className="flex items-end gap-8">
             <div className="text-right text-xs text-slate-300">

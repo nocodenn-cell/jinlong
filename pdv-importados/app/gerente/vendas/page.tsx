@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 
@@ -28,7 +29,38 @@ export default async function GerenteVendasPage() {
           ← {m.gerente.inicio}
         </Link>
       </div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 20 }}>{m.gerente.nav_vendas}</h1>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{m.gerente.nav_vendas}</h1>
+        <ExportCsvButton
+          label={m.gerente.exportar_csv}
+          filename="gerente-vendas.csv"
+          columns={[
+            { key: 'data', header: m.gerente.col_data },
+            { key: 'total_liquido', header: m.gerente.col_total },
+            { key: 'forma_pagamento', header: m.gerente.col_forma },
+            { key: 'status', header: m.gerente.col_status },
+            { key: 'caixa_id', header: m.gerente.col_caixa },
+          ]}
+          rows={
+            vendas?.map((v) => ({
+              data: v.data ? new Date(v.data).toISOString() : '',
+              total_liquido: Number(v.total_liquido),
+              forma_pagamento: v.forma_pagamento,
+              status: v.status,
+              caixa_id: v.caixa_id ?? '',
+            })) ?? []
+          }
+        />
+      </div>
 
       <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
         <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>

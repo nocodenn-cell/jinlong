@@ -1,5 +1,7 @@
 # Sincronização PDV local (Tauri) ↔ Supabase
 
+**Operação completa (deploy Edge, secrets, checklist de teste, caixa web vs desktop):** [`docs/CIRCUITO_OPERACIONAL.md`](../../../docs/CIRCUITO_OPERACIONAL.md) (raiz do monorepo).
+
 ## Fluxo
 
 ```

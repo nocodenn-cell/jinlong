@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // Domínio compartilhado com o Next (`pdv-importados/core`) — pricing, tipos de carrinho, sync.
       '@core': resolve(__dirname, '../pdv-importados/core'),
     },
   },

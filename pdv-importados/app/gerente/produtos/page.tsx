@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { criarProduto, alternarAtivoProduto } from './actions'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
@@ -119,9 +120,44 @@ export default async function ProdutosPage() {
           padding: '16px',
         }}
       >
-        <h2 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '12px' }}>
-          {m.produtos.lista_produtos}
-        </h2>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            marginBottom: 12,
+          }}
+        >
+          <h2 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>
+            {m.produtos.lista_produtos}
+          </h2>
+          <ExportCsvButton
+            label={m.gerente.exportar_csv}
+            filename="gerente-produtos.csv"
+            columns={[
+              { key: 'id', header: 'id' },
+              { key: 'nome', header: m.produtos.nome },
+              { key: 'codigo_barras', header: m.produtos.codigo_barras },
+              { key: 'preco_varejo', header: m.produtos.preco_varejo },
+              { key: 'origem', header: m.produtos.origem_label },
+              { key: 'tem_nf', header: m.produtos.tem_nf },
+              { key: 'ativo', header: m.produtos.status },
+            ]}
+            rows={
+              (produtos as ProdutoRow[] | null)?.map((p) => ({
+                id: p.id,
+                nome: p.nome,
+                codigo_barras: p.codigo_barras ?? '',
+                preco_varejo: Number(p.preco_varejo),
+                origem: p.origem,
+                tem_nf: p.tem_nf ? '1' : '0',
+                ativo: p.ativo ? '1' : '0',
+              })) ?? []
+            }
+          />
+        </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
             <thead>

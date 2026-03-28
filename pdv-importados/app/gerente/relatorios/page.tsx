@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 
@@ -83,7 +84,30 @@ export default async function GerenteRelatoriosPage() {
 
       {sec(
         m.gerente.sec_vendas_dia,
-        <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <ExportCsvButton
+              label={m.gerente.exportar_csv}
+              filename="relatorio-vendas-dia.csv"
+              columns={[
+                { key: 'dia', header: m.gerente.col_dia },
+                { key: 'num_vendas', header: m.gerente.col_num_vendas },
+                { key: 'total_liquido', header: m.relatorios.valor },
+                { key: 'ticket_medio', header: m.gerente.col_ticket },
+                { key: 'total_desconto', header: 'total_desconto' },
+              ]}
+              rows={
+                (porDia as VendaDia[] | null)?.map((row) => ({
+                  dia: row.dia ? new Date(row.dia).toISOString() : '',
+                  num_vendas: row.num_vendas,
+                  total_liquido: Number(row.total_liquido),
+                  ticket_medio: Number(row.ticket_medio),
+                  total_desconto: Number(row.total_desconto),
+                })) ?? []
+              }
+            />
+          </div>
+          <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
           <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
@@ -116,11 +140,37 @@ export default async function GerenteRelatoriosPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {sec(
         m.gerente.sec_top_produtos,
-        <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <ExportCsvButton
+              label={m.gerente.exportar_csv}
+              filename="relatorio-top-produtos.csv"
+              columns={[
+                { key: 'id', header: 'id' },
+                { key: 'nome', header: m.relatorios.produto },
+                { key: 'origem', header: m.relatorios.origem },
+                { key: 'total_quantidade', header: m.gerente.col_qtde },
+                { key: 'total_valor', header: m.gerente.col_valor },
+                { key: 'num_vendas', header: m.gerente.col_num_vendas },
+              ]}
+              rows={
+                (top as TopProd[] | null)?.map((row) => ({
+                  id: row.id,
+                  nome: row.nome,
+                  origem: row.origem,
+                  total_quantidade: row.total_quantidade,
+                  total_valor: row.total_valor,
+                  num_vendas: row.num_vendas,
+                })) ?? []
+              }
+            />
+          </div>
+          <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
           <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
@@ -151,11 +201,35 @@ export default async function GerenteRelatoriosPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {sec(
         m.gerente.sec_estoque_baixo,
-        <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <ExportCsvButton
+              label={m.gerente.exportar_csv}
+              filename="relatorio-estoque-baixo.csv"
+              columns={[
+                { key: 'nome', header: m.relatorios.produto },
+                { key: 'codigo_barras', header: 'codigo_barras' },
+                { key: 'quantidade_atual', header: m.relatorios.estoque_atual },
+                { key: 'estoque_minimo', header: m.relatorios.minimo },
+                { key: 'deficit', header: m.relatorios.deficit },
+              ]}
+              rows={
+                (baixo as EstBaixo[] | null)?.map((row) => ({
+                  nome: row.nome,
+                  codigo_barras: row.codigo_barras ?? '',
+                  quantidade_atual: row.quantidade_atual,
+                  estoque_minimo: row.estoque_minimo,
+                  deficit: row.deficit,
+                })) ?? []
+              }
+            />
+          </div>
+          <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
           <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
@@ -186,6 +260,7 @@ export default async function GerenteRelatoriosPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   )
