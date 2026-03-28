@@ -68,7 +68,7 @@ Documentação completa: [SEED_DEV_E2E](../pdv-importados/docs/SEED_DEV_E2E.md).
 
 ## CI
 
-O workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml) roda **build + lint + Vitest** em todo PR.
+O workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml) roda **build + lint + Vitest** quando há mudanças em `pdv-importados/`. Alterações só em `backend/` disparam [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) (`deno check` na Edge `sync-outbox`).
 
 O job **Playwright** é **opcional**: crie a variável de repositório **`ENABLE_PLAYWRIGHT_E2E`** = `true` e defina os secrets **`PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL`**, **`PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY`** (e, para `gerente.spec.ts`, **`PLAYWRIGHT_TEST_EMAIL`** / **`PLAYWRIGHT_TEST_PASSWORD`**). No CI o Playwright sobe o Next com **`PLAYWRIGHT_E2E_WITH_DEV=1`** (ver `playwright.config.ts`).
 

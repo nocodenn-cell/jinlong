@@ -220,13 +220,14 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     }
 
     const vendaId = crypto.randomUUID()
+    // Sempre persistir totais derivados dos itens (fonte de verdade), não os números crus do cliente.
     const { error: vErr } = await supabase.from('vendas').insert({
       id: vendaId,
       caixa_id: caixaId,
       operador_id: user.id,
-      total_bruto: roundMoney2(input.totalBruto),
-      total_desconto: roundMoney2(input.totalDesconto),
-      total_liquido: roundMoney2(input.totalLiquido),
+      total_bruto: computed.totalBruto,
+      total_desconto: computed.totalDesconto,
+      total_liquido: computed.totalLiquido,
       forma_pagamento: input.formaPagamento,
       status: 'CONCLUIDA',
     })

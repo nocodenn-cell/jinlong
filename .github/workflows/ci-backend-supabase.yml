@@ -1,0 +1,27 @@
+# Validação mínima do backend Supabase (Edge em Deno). Migrations SQL não têm linter no CI — revisão humana + db push.
+name: CI backend Supabase
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend-supabase.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend-supabase.yml'
+
+jobs:
+  edge-sync-outbox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Edge Function sync-outbox
+        run: deno check backend/supabase/functions/sync-outbox/index.ts

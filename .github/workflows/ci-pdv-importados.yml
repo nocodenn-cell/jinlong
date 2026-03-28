@@ -1,4 +1,4 @@
-# CI: build + test do app web (monorepo)
+# CI do app Next em pdv-importados (lint, Vitest, build). Não valida migrations SQL nem Edge — ver ci-backend-supabase.yml.
 name: CI pdv-importados
 
 on:
@@ -6,13 +6,11 @@ on:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
-      - 'backend/**'
       - '.github/workflows/ci-pdv-importados.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
-      - 'backend/**'
       - '.github/workflows/ci-pdv-importados.yml'
 
 jobs:

@@ -46,3 +46,7 @@ npx supabase status
 Útil para testar migrations e API localmente; variáveis (`API URL`, keys) aparecem no output do `status`.
 
 Detalhes: [supabase/README.md](./supabase/README.md). **Deploy da Edge, secrets e teste desktop → nuvem:** [docs/CIRCUITO_OPERACIONAL.md](../docs/CIRCUITO_OPERACIONAL.md).
+
+## CI
+
+Em PRs que alterem `backend/`, o workflow [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) executa **`deno check`** em `supabase/functions/sync-outbox/index.ts`. **Migrations SQL** não têm passo automático no CI — use revisão e `db push` / staging.
