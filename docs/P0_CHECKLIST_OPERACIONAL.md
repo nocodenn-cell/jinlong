@@ -4,19 +4,24 @@ Use este arquivo como **lista de verificação** em **cada** projeto Supabase (e
 
 Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 
-### Escopo adiado até o P0 “de verdade” (projeto Supabase real)
+## Ordem sugerida (fechar o P0 sem pular dependência)
 
-Pode-se continuar desenvolvendo no repositório **sem** executar agora:
+1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** para relatórios, `p_tz` IANA e `relatorio_settings` / env `RELATORIO_TIMEZONE`).
+2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI).
+3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_*` do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
+4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
+   - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC) e **010** (leitura `estoque_baixas` para gerente).
+   - **§4 (com desktop):** além disso, **§3** (`pdv-local/.env` + `SYNC_*`) → catálogo → venda no Tauri → sync → mesma checagem no Supabase e na web.
+5. Marcar os checkboxes deste arquivo para o ambiente (piloto/produção) que você chama de **oficial**.
 
-- **Validar sync real da outbox** (eventos saindo do SQLite e sendo processados pela Edge em ambiente oficial).
-- **Provar venda desktop → nuvem** (uma venda fechada no Tauri aparecendo em `vendas` / `itens_venda` no Postgres do projeto de loja).
-- **Ajustar secrets e `.env` do Tauri com o projeto real** (`SYNC_KEY`, `SYNC_ENDPOINT`, service role, mesmo `ref` da web).
+### O que é obrigatório em qualquer piloto
 
-Esses três itens **são o núcleo** das seções **2–4** abaixo quando o ambiente já for o **oficial** (piloto/produção). Até lá, deixe os checkboxes em aberto por decisão consciente — não são falha do código local.
+- **§1** e **§5** sempre.  
+- **§2 e §3** só se você for usar o **PDV desktop** e a **outbox** contra a Edge.
 
 ---
 
-## 1. Migrations 001 → 009 no banco remoto
+## 1. Migrations 001 → 010 no banco remoto
 
 **No PC (pasta `backend`, com `supabase link` apontando para o ambiente certo):**
 
@@ -25,7 +30,7 @@ cd C:\Naturecode\fastproduct\backend
 npx supabase migration list
 ```
 
-- Coluna **Remote** deve listar `001` … `009` sem lacunas. A **`009`** concede `GRANT EXECUTE` na RPC `decrementar_estoque_idempotente` para o papel **`authenticated`** (caixa web com Server Action).
+- Coluna **Remote** deve listar `001` … `010` sem lacunas. A **`009`** concede `GRANT EXECUTE` na RPC `decrementar_estoque_idempotente` para o papel **`authenticated`** (caixa web com Server Action). A **`010`** adiciona `SELECT` em **`estoque_baixas`** para **GERENTE/DONO** (detalhe da venda na web).
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  
@@ -35,8 +40,12 @@ npx supabase migration list
 - Função **`decrementar_estoque_idempotente`** existente.
 - Tabela **`estoque_baixas`** existente.
 
-- [ ] **001–009** aplicadas no projeto **produção**
-- [ ] **001–009** aplicadas em **staging/dev** (se existirem)
+- [ ] **001–010** aplicadas no projeto **produção**
+- [ ] **001–010** aplicadas em **staging/dev** (se existirem)
+
+**Migrations 011–013 (relatórios na web):** RPCs `relatorio_*_periodo` com **`p_tz`** validado; tabela **`relatorio_settings`** (fusos IANA); env **`RELATORIO_TIMEZONE`** no servidor prevalece sobre a tabela. O `verify_p0_producao.sql` inclui checagem na seção **5**.
+
+- [ ] **011**, **012** e **013** aplicadas onde o gerente usa relatórios com intervalo de datas
 
 ---
 
@@ -99,6 +108,17 @@ Arquivo **não versionado**; copie de `.env.example` e preencha com valores **re
 
 - [ ] Passos 1–6 OK no ambiente **oficial** de loja/piloto
 
+### 4b. Teste mínimo só com caixa web (sem desktop / sem outbox)
+
+Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não estão prontos.
+
+1. Login como **OPERADOR** → `/caixa` (regras de preço e produtos carregando).
+2. Incluir 1 item e **Finalizar venda** (forma de pagamento à escolha).
+3. No Supabase: linhas em `vendas`, `itens_venda`; estoque coerente com a **007**.
+4. Login **GERENTE/DONO** → `/gerente/vendas` — mesma venda na lista.
+
+- [ ] Passos 1–4 OK (piloto **web-only**)
+
 ---
 
 ## 5. Web (`pdv-importados`)
@@ -112,9 +132,9 @@ Arquivo **não versionado**; copie de `.env.example` e preencha com valores **re
 
 | Área | Ferramenta |
 |------|------------|
-| Migrations | `npx supabase migration list` + `verify_p0_producao.sql` (inclui checagens até 009 — caixa web / RPC) |
+| Migrations | `npx supabase migration list` + `verify_p0_producao.sql` (010 = P0; **011–013** = relatórios + `p_tz` / settings, seção 5) |
 | Edge | `functions deploy` + secrets |
 | Desktop | `.env` + teste de venda |
 | Web | `.env.local` / Vercel + `/gerente/vendas` |
 
-Quando **todos** os itens `[ ]` estiverem marcados para o ambiente de **produção**, o P0 operacional está fechado para esse projeto.
+O P0 operacional está **fechado** para um ambiente quando: **§1** e **§5** estão OK e você marcou **§4** *ou* **§4b**; e, se usar desktop, **§2** e **§3** também estão OK.

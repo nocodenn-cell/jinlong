@@ -114,6 +114,7 @@ export default async function GerenteInicioPage() {
               <th style={{ padding: 10 }}>{m.gerente.col_total}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_forma}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_status}</th>
+              <th style={{ padding: 10 }}>{m.gerente.col_detalhes}</th>
             </tr>
           </thead>
           <tbody>
@@ -135,11 +136,16 @@ export default async function GerenteInicioPage() {
                 </td>
                 <td style={{ padding: 10 }}>{v.forma_pagamento}</td>
                 <td style={{ padding: 10 }}>{v.status}</td>
+                <td style={{ padding: 10 }}>
+                  <Link href={`/gerente/vendas/${v.id}`} style={{ color: '#2563eb', fontSize: 13 }}>
+                    {m.gerente.ver_detalhes}
+                  </Link>
+                </td>
               </tr>
             ))}
             {(!ultimas || ultimas.length === 0) && (
               <tr>
-                <td colSpan={4} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={5} style={{ padding: 16, color: '#6b7280' }}>
                   {m.gerente.nenhuma_venda}
                 </td>
               </tr>

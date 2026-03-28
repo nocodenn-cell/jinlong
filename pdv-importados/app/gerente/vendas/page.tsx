@@ -71,6 +71,7 @@ export default async function GerenteVendasPage() {
               <th style={{ padding: 10 }}>{m.gerente.col_forma}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_status}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_caixa}</th>
+              <th style={{ padding: 10 }}>{m.gerente.col_detalhes}</th>
             </tr>
           </thead>
           <tbody>
@@ -95,11 +96,16 @@ export default async function GerenteVendasPage() {
                 <td style={{ padding: 10, fontSize: 12, fontFamily: 'monospace' }}>
                   {v.caixa_id ? String(v.caixa_id).slice(0, 8) + '…' : '—'}
                 </td>
+                <td style={{ padding: 10 }}>
+                  <Link href={`/gerente/vendas/${v.id}`} style={{ color: '#2563eb', fontSize: 13 }}>
+                    {m.gerente.ver_detalhes}
+                  </Link>
+                </td>
               </tr>
             ))}
             {(!vendas || vendas.length === 0) && (
               <tr>
-                <td colSpan={5} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={6} style={{ padding: 16, color: '#6b7280' }}>
                   {m.gerente.nenhuma_venda}
                 </td>
               </tr>
