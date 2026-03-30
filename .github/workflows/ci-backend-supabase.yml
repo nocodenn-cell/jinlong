@@ -1,4 +1,4 @@
-# Validação mínima do backend Supabase (Edge em Deno). Migrations SQL não têm linter no CI — revisão humana + db push.
+# Validação mínima do backend Supabase: type-check da Edge + smoke das migrations em Postgres (stub auth).
 name: CI backend Supabase
 
 on:
@@ -14,6 +14,46 @@ on:
       - '.github/workflows/ci-backend-supabase.yml'
 
 jobs:
+  migrations-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Stub auth + apply migrations in order
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f backend/supabase/scripts/ci_stub_supabase_auth.sql
+          for f in $(ls -1 backend/supabase/migrations/*.sql | sort); do
+            echo "--- $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+          echo "OK: todas as migrations aplicaram sem erro."
+
   edge-sync-outbox:
     runs-on: ubuntu-latest
     steps:

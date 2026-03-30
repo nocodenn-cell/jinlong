@@ -37,6 +37,10 @@ npx supabase functions deploy sync-outbox
 
 Configure os secrets da function (`SYNC_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) no Dashboard ou via CLI (veja `../pdv-importados/scripts/supabase-edge-secrets.example.ps1` a partir da pasta `backend`).
 
+## CI — smoke de migrations
+
+No GitHub Actions, o workflow **CI backend Supabase** aplica todas as migrations em ordem sobre PostgreSQL 15 com um stub mínimo de `auth` (`backend/supabase/scripts/ci_stub_supabase_auth.sql`). Isso **não** substitui `supabase db push` no projeto real; só pega erros de SQL/ordem cedo.
+
 ## Segurança (obrigatório)
 
 - **Nunca** commite `.env.local`, `.env` com chaves reais, nem scripts com JWTs.
