@@ -203,6 +203,10 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
     }>;
   };
 
+  if (!Array.isArray(payload.itens) || payload.itens.length === 0) {
+    throw new Error("ERRO_VENDA_SEM_ITENS: payload.itens vazio");
+  }
+
   await ensureCaixaPdv(
     supabase,
     payload.caixa_id,
@@ -210,85 +214,33 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
     payload.troco_inicial_caixa ?? null,
   );
 
-  const vendaRow: Record<string, unknown> = {
-    id: payload.venda_id,
-    total_bruto: payload.total_bruto,
-    total_desconto: payload.total_desconto,
-    total_liquido: payload.total_liquido,
-    forma_pagamento: payload.forma_pagamento,
-    status: "CONCLUIDA",
-  };
-  if (isUuid(payload.caixa_id)) {
-    vendaRow.caixa_id = String(payload.caixa_id).trim();
-  }
-  if (isUuid(payload.operador_id)) {
-    vendaRow.operador_id = String(payload.operador_id).trim();
-  }
+  const caixaId = isUuid(payload.caixa_id) ? String(payload.caixa_id).trim() : null;
+  const operadorId = isUuid(payload.operador_id)
+    ? String(payload.operador_id).trim()
+    : null;
 
-  const { error: vendaErr } = await supabase.from("vendas").insert(vendaRow);
+  const { error: rpcVendaErr } = await supabase.rpc("registrar_venda_com_itens", {
+    p_venda_id: payload.venda_id,
+    p_caixa_id: caixaId,
+    p_operador_id: operadorId,
+    p_forma_pagamento: payload.forma_pagamento,
+    p_total_bruto: payload.total_bruto,
+    p_total_desconto: payload.total_desconto,
+    p_total_liquido: payload.total_liquido,
+    p_itens: payload.itens ?? [],
+    p_desconto_gerente_percentual: payload.desconto_gerente_percentual ?? null,
+    p_desconto_gerente_valor: payload.desconto_gerente_valor ?? null,
+    p_gerente_id: payload.gerente_id ?? null,
+  });
 
-  if (vendaErr && !String(vendaErr.message).includes("duplicate key")) {
-    throw new Error(`ERRO_VENDA: ${vendaErr.message}`);
-  }
-
-  if (
-    payload.desconto_gerente_percentual != null &&
-    payload.desconto_gerente_valor != null
-  ) {
-    const { error: descontosErr } = await supabase
-      .from("descontos_venda")
-      .upsert(
-        {
-          venda_id: payload.venda_id,
-          gerente_id: payload.gerente_id ?? null,
-          desconto_percentual: payload.desconto_gerente_percentual,
-          desconto_valor: payload.desconto_gerente_valor,
-        },
-        { onConflict: "venda_id" },
-      );
-
-    if (descontosErr) {
-      throw new Error(`ERRO_DESCONTO_GERENTE: ${descontosErr.message}`);
-    }
-  }
-
-  try {
-    const itens = (payload.itens ?? []).map((i) => {
-      const desconto_unitario = Math.max(0, i.preco_original - i.preco_unitario);
-      const tipo_preco = i.preco_unitario < i.preco_original ? "ATACADO" : "VAREJO";
-      return {
-        ...(i.item_id ? { id: i.item_id } : {}),
-        venda_id: payload.venda_id,
-        produto_id: i.produto_id,
-        quantidade: i.quantidade,
-        preco_unitario_original: i.preco_original,
-        preco_unitario: i.preco_unitario,
-        desconto_unitario: desconto_unitario,
-        tipo_preco,
-      };
-    });
-
-    if (itens.length > 0) {
-      const { error: itensErr } = await supabase
-        .from("itens_venda")
-        .insert(itens);
-
-      if (itensErr && !String(itensErr.message).includes("duplicate key")) {
-        logJson({
-          level: "error",
-          stage: "insert_itens_venda",
-          venda_id: payload.venda_id,
-          error: itensErr.message,
-        });
-      }
-    }
-  } catch (itensE) {
+  if (rpcVendaErr) {
     logJson({
       level: "error",
-      stage: "insert_itens_venda_throw",
+      stage: "rpc_registrar_venda_com_itens",
       venda_id: payload.venda_id,
-      error: String(itensE),
+      error: rpcVendaErr.message,
     });
+    throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
   }
 
   await aplicarBaixaEstoquePorItem(
