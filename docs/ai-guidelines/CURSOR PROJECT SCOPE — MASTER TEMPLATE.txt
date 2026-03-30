@@ -1,0 +1,296 @@
+# 🧠 CURSOR PROJECT SCOPE — MASTER TEMPLATE
+> Cole este arquivo no início de todo projeto. O Cursor deve seguir este protocolo do zero ao deploy.
+
+---
+
+## 👤 CONTEXTO DO TIME
+
+- **Equipe:** Solo developer + AI (você é meu co-piloto técnico, não meu assistente)
+- **Regra #1:** Nunca me dê passos vagos. Se algo precisa ser feito, me dê o comando exato, o código exato, o arquivo exato.
+- **Regra #2:** Se houver ambiguidade, pergunte antes de agir. Uma pergunta boa vale mais que código errado.
+- **Regra #3:** Não refatore sem avisar. Não delete sem perguntar. Não assuma contexto que não foi dado.
+- **Regra #4:** Sempre que terminar uma fase, faça um resumo do que foi feito e aponte o próximo passo.
+
+---
+
+## 📋 FASE 0 — DEFINIÇÃO DO PROJETO
+
+> Antes de escrever qualquer linha de código, responda comigo estas perguntas:
+
+### O que estamos construindo?
+```
+NOME DO PROJETO: _______________
+DESCRIÇÃO EM 1 FRASE: _______________
+PROBLEMA QUE RESOLVE: _______________
+QUEM USA: _______________
+```
+
+### Qual o MVP (Mínimo Produto Viável)?
+```
+FEATURE #1 (core, sem ela não existe produto): _______________
+FEATURE #2: _______________
+FEATURE #3: _______________
+FORA DO MVP (não tocar até o MVP estar live): _______________
+```
+
+### Qual o modelo de negócio / objetivo final?
+```
+[ ] Uso pessoal / interno
+[ ] SaaS com assinatura
+[ ] Produto open source
+[ ] Ferramenta para vender/freelance
+[ ] Outro: _______________
+```
+
+### Checklist antes de começar
+- [ ] Problema claramente definido
+- [ ] MVP com no máximo 3 features core
+- [ ] Tecnologia escolhida e justificada
+- [ ] Onde vai ser hospedado (definido antes de codar)
+- [ ] Domínio ou URL pensado (mesmo que placeholder)
+
+---
+
+## 🏗️ FASE 1 — ARQUITETURA & STACK
+
+> Defina a stack ANTES de codar. Mudar no meio é retrabalho.
+
+### Template de decisão de stack
+
+```
+FRONTEND: _______________   (ex: Next.js, React, Vue, HTML puro)
+BACKEND:  _______________   (ex: Node/Express, FastAPI, Supabase, Firebase)
+BANCO:    _______________   (ex: PostgreSQL, SQLite, MongoDB, Supabase)
+AUTH:     _______________   (ex: Clerk, NextAuth, Supabase Auth, JWT manual)
+HOSTING:  _______________   (ex: Vercel, Railway, Fly.io, VPS, Render)
+DOMÍNIO:  _______________
+CI/CD:    _______________   (ex: GitHub Actions, Vercel auto-deploy)
+```
+
+### Estrutura de pastas padrão
+O Cursor deve criar e manter esta estrutura desde o início:
+
+```
+/projeto
+  /src
+    /components       ← componentes reutilizáveis
+    /pages (ou /app)  ← rotas
+    /lib              ← funções utilitárias, helpers
+    /hooks            ← custom hooks (se React)
+    /services         ← chamadas a APIs externas
+    /types            ← tipos TypeScript
+    /styles           ← CSS global, tokens
+  /public             ← assets estáticos
+  /tests              ← testes
+  /docs               ← documentação mínima
+  .env.example        ← SEMPRE versionar o .env.example, NUNCA o .env
+  README.md
+```
+
+### Regras de arquitetura
+- **Separação de responsabilidades:** lógica de negócio fora de componentes de UI
+- **Sem magic numbers:** constantes nomeadas em arquivo de config
+- **Sem hardcode de URLs/chaves:** tudo em variáveis de ambiente
+- **Um componente = uma responsabilidade**
+
+---
+
+## 🔄 FASE 2 — WORKFLOW DE DESENVOLVIMENTO
+
+### Fluxo de trabalho por feature
+
+```
+Para cada nova feature, seguir EXATAMENTE esta ordem:
+
+1. SPEC: descrever o comportamento esperado em português antes de codar
+2. CODE: implementar
+3. TEST: testar manualmente (e automaticamente se possível)
+4. COMMIT: commit atômico com mensagem clara
+5. REVIEW: revisar com o Cursor antes de fechar a feature
+```
+
+### Padrão de commits (Conventional Commits)
+```
+feat: adiciona autenticação com Google
+fix: corrige validação de email no cadastro
+refactor: extrai lógica de pagamento para service
+docs: atualiza README com instruções de deploy
+chore: atualiza dependências
+test: adiciona testes para módulo de auth
+```
+
+### Gestão de estado e progresso
+
+Manter um arquivo `PROGRESSO.md` na raiz com:
+```markdown
+## Status atual
+- [x] Feature A — concluída
+- [ ] Feature B — em andamento
+- [ ] Feature C — não iniciada
+
+## Bloqueios
+- Nenhum
+
+## Próximos passos
+1. ...
+2. ...
+```
+
+### Regras de desenvolvimento
+- **Commits frequentes:** a cada feature pequena ou bugfix, commitar
+- **Branches:** `main` (produção), `dev` (desenvolvimento), `feature/nome-da-feature`
+- **Nunca codar direto na main**
+- **Sempre que pedir ao Cursor para implementar algo, ele deve confirmar o plano antes de executar**
+
+---
+
+## 🧪 FASE 3 — TESTES
+
+> Não precisa de cobertura de 100%. Precisa de confiança para deployar.
+
+### O que testar obrigatoriamente
+```
+[ ] Happy path das features core (o fluxo principal funciona)
+[ ] Casos de erro óbvios (input vazio, usuário não autenticado, API fora)
+[ ] Fluxo de autenticação completo (login, logout, sessão expirada)
+[ ] Formulários críticos (validação, envio, feedback de erro)
+```
+
+### Estratégia mínima viável de testes
+- **Unit tests:** funções de lógica de negócio pura (`/lib`, `/services`)
+- **Integration tests:** fluxos completos de API
+- **Manual testing checklist:** antes de cada deploy, rodar checklist manual
+
+### Checklist de QA pré-deploy
+```
+[ ] Funciona no desktop (Chrome/Firefox)
+[ ] Funciona no mobile
+[ ] Variáveis de ambiente configuradas no servidor
+[ ] Sem console.log de debug no código
+[ ] Sem credenciais hardcodadas
+[ ] .env não está no repositório
+[ ] Formulários validam input corretamente
+[ ] Erros têm feedback visual para o usuário
+[ ] Loading states implementados nas ações assíncronas
+```
+
+---
+
+## 🚀 FASE 4 — DEPLOY & CI/CD
+
+### Pipeline mínimo de deploy
+
+```
+Push para branch dev
+  → Testes automáticos rodam (se configurado)
+  → Preview deploy (Vercel/Netlify preview)
+  → Review manual
+  → Merge para main
+  → Deploy automático para produção
+```
+
+### Checklist de primeiro deploy
+```
+[ ] Repositório no GitHub criado e commitado
+[ ] Serviço de hosting conectado ao repositório
+[ ] Variáveis de ambiente configuradas NO SERVIDOR (não no código)
+[ ] Domínio/URL configurado
+[ ] HTTPS ativo
+[ ] Banco de dados em produção provisionado (separado do dev)
+[ ] Logs acessíveis
+[ ] Teste smoke pós-deploy (abrir o app e fazer o fluxo principal)
+```
+
+### Ambientes obrigatórios
+```
+LOCAL:      desenvolvimento na máquina, banco local ou sandbox
+STAGING:    cópia de produção para testar antes de ir ao ar (opcional mas recomendado)
+PRODUÇÃO:   o real, com dados reais, com usuários reais
+```
+
+---
+
+## 📦 FASE 5 — FINALIZAÇÃO & ENTREGA
+
+### README.md mínimo obrigatório
+```markdown
+# Nome do Projeto
+
+O que é: (1 frase)
+
+## Como rodar localmente
+1. Clone o repositório
+2. Copie .env.example para .env e preencha
+3. npm install
+4. npm run dev
+
+## Como deployar
+(passos específicos do projeto)
+
+## Estrutura do projeto
+(breve descrição das pastas principais)
+
+## Decisões técnicas relevantes
+(por que escolheu esta stack, trade-offs)
+```
+
+### Definition of Done (DoD) — uma feature só está "pronta" quando:
+```
+[ ] Código implementado e funcionando
+[ ] Testado manualmente no fluxo completo
+[ ] Sem erros no console
+[ ] Commitado com mensagem descritiva
+[ ] PROGRESSO.md atualizado
+[ ] Documentação mínima atualizada se necessário
+```
+
+### Definition of Done — o PROJETO está "pronto" quando:
+```
+[ ] Todas as features do MVP funcionando em produção
+[ ] URL pública acessível
+[ ] README completo
+[ ] Sem dados sensíveis no repositório
+[ ] Monitoramento básico ativo (pelo menos uptime check)
+[ ] Você consegue explicar o que o projeto faz em 30 segundos
+```
+
+---
+
+## 🤖 INSTRUÇÕES PERMANENTES PARA O CURSOR
+
+```
+Você é meu co-piloto técnico neste projeto. Siga estas regras em TODA a conversa:
+
+1. SEMPRE pergunte antes de refatorar código existente
+2. SEMPRE mostre o plano antes de implementar algo complexo
+3. NUNCA delete código sem confirmar
+4. NUNCA assuma que uma variável de ambiente existe — pergunte como está configurada
+5. Quando eu pedir uma feature, quebre em passos menores e confirme antes de codar
+6. Se perceber dívida técnica, SINALIZE mas não corrija sem permissão
+7. Ao terminar qualquer bloco de trabalho, liste: o que foi feito, o que falta, e algum risco técnico se houver
+8. Se o problema tiver mais de uma solução, apresente as opções com trade-offs antes de implementar
+9. Mantenha o PROGRESSO.md atualizado após cada feature concluída
+10. Quando houver erro, não só corrija — explique o porquê do erro para eu aprender
+```
+
+---
+
+## ⚠️ ARMADILHAS COMUNS — EVITAR A TODO CUSTO
+
+```
+❌ Começar a codar sem definir o MVP
+❌ Escolher tecnologia por hype, não por necessidade
+❌ Deixar autenticação e segurança para "depois"
+❌ Não versionar desde o início (git init no primeiro arquivo)
+❌ Acumular features antes de testar o core
+❌ Hardcodar secrets no código
+❌ Não ter um ambiente separado de produção
+❌ Escopo creep: adicionar features antes de terminar as essenciais
+❌ Refatorar antes de funcionar ("funciona feio" bate "bonito quebrado"）
+❌ Deixar o deploy para o final (deployar cedo, deployar frequente)
+```
+
+---
+
+*Template versão 1.0 — Solo Dev + AI Workflow*
+*Adapte conforme necessário, mas não pule fases.*
