@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Supabase Edge Function: sync-outbox
 // Recebe eventos do PDV local (outbox) e persiste no Postgres.
 // Segurança (MVP): segredo compartilhado X-SYNC-KEY + service role no ambiente da Function.
@@ -6,8 +5,7 @@
 // Contrato do body: { events: { id, tipo, payload_json, created_at }[] }
 // Resposta: { ok, processed, failed }
 
-// @ts-ignore - Import via URL for Deno/Supabase Edge Runtime.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 type OutboxEvent = {
   id: string;
@@ -25,6 +23,169 @@ type SyncResponse = {
   processed: string[];
   failed: { id: string; error: string }[];
 };
+
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === "object" && x !== null && !Array.isArray(x);
+}
+
+/** Valida o body HTTP e normaliza `created_at` ausente. */
+function parseSyncRequest(raw: unknown): SyncRequest {
+  if (!isRecord(raw) || !Array.isArray(raw.events)) {
+    throw new Error("INVALID_BODY");
+  }
+  const events: OutboxEvent[] = [];
+  for (const item of raw.events) {
+    if (!isRecord(item)) throw new Error("INVALID_EVENT");
+    const { id, tipo, payload_json, created_at } = item;
+    if (typeof id !== "string" || typeof tipo !== "string" ||
+      typeof payload_json !== "string") {
+      throw new Error("INVALID_EVENT_FIELDS");
+    }
+    events.push({
+      id,
+      tipo,
+      payload_json,
+      created_at: typeof created_at === "string" ? created_at : "",
+    });
+  }
+  return { events };
+}
+
+type VendaItemPayload = {
+  item_id?: string;
+  produto_id: string;
+  nome?: string;
+  quantidade: number;
+  preco_original: number;
+  preco_unitario: number;
+};
+
+type VendaPayload = {
+  venda_id: string;
+  caixa_id?: string | null;
+  operador_id?: string | null;
+  troco_inicial_caixa?: number | null;
+  forma_pagamento: string;
+  total_bruto: number;
+  total_desconto: number;
+  total_liquido: number;
+  desconto_gerente_percentual?: number | null;
+  desconto_gerente_valor?: number | null;
+  gerente_id?: string | null;
+  itens: VendaItemPayload[];
+};
+
+function parseVendaPayload(raw: unknown): VendaPayload {
+  if (!isRecord(raw)) throw new Error("PAYLOAD_VENDA_INVALIDO");
+
+  const venda_id = raw.venda_id;
+  if (typeof venda_id !== "string" || !isUuid(venda_id)) {
+    throw new Error("PAYLOAD_VENDA_ID_INVALIDO");
+  }
+
+  const forma_pagamento = raw.forma_pagamento;
+  if (typeof forma_pagamento !== "string" || !forma_pagamento.trim()) {
+    throw new Error("PAYLOAD_FORMA_PAGAMENTO_INVALIDA");
+  }
+
+  for (const key of ["total_bruto", "total_desconto", "total_liquido"] as const) {
+    const v = raw[key];
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+      throw new Error(`PAYLOAD_TOTAL_INVALIDO:${key}`);
+    }
+  }
+
+  const itensRaw = raw.itens;
+  if (!Array.isArray(itensRaw) || itensRaw.length === 0) {
+    throw new Error("ERRO_VENDA_SEM_ITENS: payload.itens vazio");
+  }
+
+  const itens: VendaItemPayload[] = [];
+  for (const it of itensRaw) {
+    if (!isRecord(it)) throw new Error("ITEM_VENDA_INVALIDO");
+    const produto_id = it.produto_id;
+    if (typeof produto_id !== "string" || !isUuid(produto_id)) {
+      throw new Error("ITEM_PRODUTO_ID_INVALIDO");
+    }
+    const quantidade = Number(it.quantidade);
+    const preco_original = Number(it.preco_original);
+    const preco_unitario = Number(it.preco_unitario);
+    if (!Number.isFinite(quantidade) || quantidade <= 0) {
+      throw new Error("ITEM_QUANTIDADE_INVALIDA");
+    }
+    if (!Number.isFinite(preco_original) || !Number.isFinite(preco_unitario)) {
+      throw new Error("ITEM_PRECO_INVALIDO");
+    }
+    const nome = it.nome;
+    const item_id = it.item_id;
+    const item: VendaItemPayload = {
+      produto_id,
+      quantidade,
+      preco_original,
+      preco_unitario,
+    };
+    if (typeof nome === "string") item.nome = nome;
+    if (typeof item_id === "string" && isUuid(item_id)) item.item_id = item_id;
+    itens.push(item);
+  }
+
+  const payload: VendaPayload = {
+    venda_id,
+    forma_pagamento: forma_pagamento.trim(),
+    total_bruto: raw.total_bruto as number,
+    total_desconto: raw.total_desconto as number,
+    total_liquido: raw.total_liquido as number,
+    itens,
+  };
+
+  if ("caixa_id" in raw) {
+    const caixa_id = raw.caixa_id;
+    if (caixa_id === null) payload.caixa_id = null;
+    else if (typeof caixa_id === "string") payload.caixa_id = caixa_id;
+    else throw new Error("PAYLOAD_CAIXA_ID_INVALIDO");
+  }
+  if ("operador_id" in raw) {
+    const operador_id = raw.operador_id;
+    if (operador_id === null) payload.operador_id = null;
+    else if (typeof operador_id === "string") payload.operador_id = operador_id;
+    else throw new Error("PAYLOAD_OPERADOR_ID_INVALIDO");
+  }
+
+  const troco = raw.troco_inicial_caixa;
+  if (troco === null || troco === undefined) {
+    payload.troco_inicial_caixa = null;
+  } else if (typeof troco === "number" && Number.isFinite(troco)) {
+    payload.troco_inicial_caixa = troco;
+  } else {
+    throw new Error("PAYLOAD_TROCO_CAIXA_INVALIDO");
+  }
+
+  const dgPct = raw.desconto_gerente_percentual;
+  const dgVal = raw.desconto_gerente_valor;
+  if (dgPct != null) {
+    if (typeof dgPct !== "number" || !Number.isFinite(dgPct)) {
+      throw new Error("PAYLOAD_DESCONTO_GERENTE_INVALIDO");
+    }
+    payload.desconto_gerente_percentual = dgPct;
+  }
+  if (dgVal != null) {
+    if (typeof dgVal !== "number" || !Number.isFinite(dgVal)) {
+      throw new Error("PAYLOAD_DESCONTO_GERENTE_INVALIDO");
+    }
+    payload.desconto_gerente_valor = dgVal;
+  }
+
+  const gerente_id = raw.gerente_id;
+  if (gerente_id === null || gerente_id === undefined) {
+    payload.gerente_id = null;
+  } else if (typeof gerente_id === "string") {
+    payload.gerente_id = gerente_id;
+  } else {
+    throw new Error("PAYLOAD_GERENTE_ID_INVALIDO");
+  }
+
+  return payload;
+}
 
 /** Log estruturado (uma linha JSON) para observabilidade em runtime Deno. */
 function logJson(payload: Record<string, unknown>) {
@@ -135,7 +296,14 @@ async function processMovimentoCaixa(supabase: SupabaseAdmin, ev: OutboxEvent) {
   if (p.tipo !== "SANGRIA" && p.tipo !== "SUPRIMENTO") {
     throw new Error(`TIPO_MOVIMENTO_INVALIDO: ${p.tipo}`);
   }
-  const row: Record<string, unknown> = {
+  const row: {
+    id: string;
+    caixa_id: string;
+    tipo: string;
+    valor: number;
+    observacao: string | null;
+    created_at?: string;
+  } = {
     id: p.id,
     caixa_id: p.caixa_id,
     tipo: p.tipo,
@@ -181,31 +349,13 @@ async function aplicarBaixaEstoquePorItem(
 }
 
 async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
-  const payload = JSON.parse(ev.payload_json) as {
-    venda_id: string;
-    caixa_id?: string | null;
-    operador_id?: string | null;
-    troco_inicial_caixa?: number | null;
-    forma_pagamento: string;
-    total_bruto: number;
-    total_desconto: number;
-    total_liquido: number;
-    desconto_gerente_percentual?: number | null;
-    desconto_gerente_valor?: number | null;
-    gerente_id?: string | null;
-    itens: Array<{
-      item_id?: string;
-      produto_id: string;
-      nome: string;
-      quantidade: number;
-      preco_original: number;
-      preco_unitario: number;
-    }>;
-  };
-
-  if (!Array.isArray(payload.itens) || payload.itens.length === 0) {
-    throw new Error("ERRO_VENDA_SEM_ITENS: payload.itens vazio");
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(ev.payload_json);
+  } catch {
+    throw new Error("PAYLOAD_VENDA_JSON_INVALIDO");
   }
+  const payload = parseVendaPayload(parsedJson);
 
   await ensureCaixaPdv(
     supabase,
@@ -287,10 +437,15 @@ Deno.serve(async (req) => {
 
   let body: SyncRequest;
   try {
-    body = (await req.json()) as SyncRequest;
-  } catch {
-    logJson({ level: "warn", stage: "body", error: "INVALID_JSON" });
-    return jsonResponse(400, { ok: false, error: "INVALID_JSON" });
+    body = parseSyncRequest(await req.json());
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logJson({ level: "warn", stage: "body", error: msg });
+    return jsonResponse(400, {
+      ok: false,
+      error: "INVALID_REQUEST",
+      detail: msg,
+    });
   }
 
   const batchSize = body.events?.length ?? 0;
