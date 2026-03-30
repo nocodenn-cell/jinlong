@@ -1,13 +1,24 @@
 import { test, expect } from '@playwright/test'
+import {
+  assertGerenteCredentialsInCi,
+  assertSupabasePublicEnvInCi,
+  hasGerenteTestUser,
+} from './helpers/env'
 
 const LOGIN_PATH = '/login'
-const hasTestUser =
-  Boolean(process.env.PLAYWRIGHT_TEST_EMAIL) && Boolean(process.env.PLAYWRIGHT_TEST_PASSWORD)
 
 test.describe('Painel do gerente', () => {
+  test.beforeAll(() => {
+    assertSupabasePublicEnvInCi()
+    assertGerenteCredentialsInCi()
+  })
+
   test.beforeEach(async ({ page }, testInfo) => {
-    if (!hasTestUser) {
-      testInfo.skip(true, 'Defina PLAYWRIGHT_TEST_EMAIL e PLAYWRIGHT_TEST_PASSWORD')
+    if (!hasGerenteTestUser()) {
+      testInfo.skip(
+        true,
+        'Local: defina PLAYWRIGHT_TEST_EMAIL e PLAYWRIGHT_TEST_PASSWORD (e Supabase público) para estes fluxos.',
+      )
       return
     }
     await page.goto(LOGIN_PATH)
