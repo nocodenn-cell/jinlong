@@ -1,0 +1,21 @@
+---
+description: Segurança de segredos e variáveis de ambiente
+alwaysApply: true
+---
+
+# Segredos e credenciais
+
+- Nunca hardcodar credenciais, tokens, segredos ou endpoints sensíveis no código versionado.
+- Nunca incluir `service_role`, passwords ou secrets reais em arquivos versionados.
+- Se houver vazamento acidental, orientar rotação de credenciais e saneamento do histórico.
+
+# Variáveis de ambiente
+
+- Em `.env.example`, usar apenas placeholders (ex.: `https://SEU-REF.supabase.co`, `COLE_AQUI`).
+- Manter segredos somente em `.env.local`, `.env` local ou secret manager do ambiente.
+- Ao criar nova variável de ambiente, atualizar o `.env.example`.
+
+# Checklist ao editar `.env.example`
+
+- Confirmar que os valores não permitem acesso real.
+- Manter comentários de orientação para reduzir erro de configuração.

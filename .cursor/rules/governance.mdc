@@ -1,0 +1,24 @@
+---
+description: Governança de execução para solo dev no monorepo
+alwaysApply: true
+---
+
+# Governança do projeto
+
+- Trate o repositório como monorepo com módulos independentes (`backend`, `pdv-importados`, `pdv-local`, `front`).
+- Limite mudanças ao módulo solicitado e evite efeitos colaterais em áreas não pedidas.
+- Preserve compatibilidade entre `pdv-importados` (painel/importação) e `pdv-local` (sync/offline).
+
+# Protocolo de implementação
+
+- Em pedido ambíguo, faça até 2 perguntas objetivas antes de implementar.
+- Em mudanças com trade-offs relevantes, apresente opções curtas com prós e contras.
+- Em tarefas de impacto amplo, descreva plano breve antes de executar.
+- Prefira mudanças pequenas, verificáveis e com baixo acoplamento.
+
+# Mudanças sensíveis e qualidade
+
+- Não remover código, arquivos ou comportamento sem confirmação explícita.
+- Não refatorar áreas não solicitadas; sinalizar dívida técnica separadamente.
+- Validar risco de regressão em autenticação, sincronização e importação de dados.
+- Ao concluir, informar: o que foi feito, riscos/impactos e próximo passo.
