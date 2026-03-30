@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Governança do projeto
 
-- Trate o repositório como monorepo com módulos independentes (`backend`, `pdv-importados`, `pdv-local`, `front`).
+- Trate o repositório como monorepo com módulos independentes (`backend`, `pdv-importados`, `pdv-local`).
 - Limite mudanças ao módulo solicitado e evite efeitos colaterais em áreas não pedidas.
 - Preserve compatibilidade entre `pdv-importados` (painel/importação) e `pdv-local` (sync/offline).
 

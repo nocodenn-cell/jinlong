@@ -9,7 +9,7 @@ PDV para lojas de importados no Brasil, com interface em **português**, **普�
 | `pdv-importados/` | Next.js 15 (App Router), Supabase Auth, painel web gerente + login |
 | `pdv-local/` | Tauri 2 + React + Vite + SQLite (PDV desktop, outbox de sync) |
 | `backend/` | **Backend Supabase** — migrations PostgreSQL, Edge Functions (ex.: `sync-outbox`) |
-| `docs/` | Documentação do monorepo (prompts Cursor, E2E, deploy) |
+| `docs/` | Documentação do monorepo (deploy, E2E, release, prompts) |
 
 ## Como rodar
 
@@ -36,6 +36,7 @@ npm run tauri
 ## Documentação
 
 - [**P0 checklist** — migrations, deploy Edge, secrets, teste ponta a ponta](docs/P0_CHECKLIST_OPERACIONAL.md)
+- [**Ambientes e release** — dev/staging/prod, credenciais PDV local, gates](docs/AMBIENTES_E_RELEASE.md)
 - [**Circuito operacional** — deploy Edge, secrets, teste desktop → nuvem, caixa web vs desktop](docs/CIRCUITO_OPERACIONAL.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Segurança — dependências](pdv-importados/docs/SECURITY.md)
@@ -46,6 +47,8 @@ npm run tauri
 - [Backend Supabase — visão geral](backend/README.md)
 - [Supabase CLI / migrations](backend/supabase/README.md)
 
-## Prompts para o Cursor
+## Prompts / IA no repositório
 
-Ver `docs/CURSOR_PROMPT_SESSAO_AUTONOMA_V3.md` (sessão autônoma recomendada).
+- **Sessão autônoma (única fonte):** [`docs/CURSOR_PROMPT_SESSAO_AUTONOMA_CANONICO.md`](docs/CURSOR_PROMPT_SESSAO_AUTONOMA_CANONICO.md)
+- **Regras ativas do Cursor (automáticas):** `.cursor/rules/governance.mdc` e `.cursor/rules/security.mdc`
+- Referência de pastas no app web: `pdv-importados/.cursorrules` (contexto do módulo; não substitui as regras da raiz)

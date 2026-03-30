@@ -1,23 +1,18 @@
-# AI Guidelines: documentacao vs regra ativa
+# AI Guidelines: documentação vs regra ativa
 
-Este diretorio guarda **documentacao de referencia** para colaboracao com IA.
-Os arquivos aqui nao sao interpretados automaticamente pelo Cursor como regras obrigatorias.
+Este diretório guarda **só a explicação** de como trabalhamos com IA no monorepo (sem templates genéricos duplicados — removidos para reduzir ruído).
 
-## Diferenca importante
+## Diferença importante
 
-- Documentacao (este diretorio):
-  - serve como guia de processo, templates e contexto;
-  - depende de leitura explicita durante a sessao.
-
-- Regra ativa (`.cursor/rules/*.mdc`):
-  - e carregada automaticamente pelo Cursor;
-  - influencia o comportamento do agente durante implementacao.
+- **Documentação aqui e em `docs/*.md`:** guia de processo; depende de leitura explícita.
+- **Regra ativa (`.cursor/rules/*.mdc`):** carregada automaticamente pelo Cursor.
 
 ## Fonte de verdade operacional
 
-Para comportamento automatico do agente, considerar sempre:
+1. `.cursor/rules/governance.mdc`
+2. `.cursor/rules/security.mdc`
+3. Prompt único para sessões autônomas: **`docs/CURSOR_PROMPT_SESSAO_AUTONOMA_CANONICO.md`**
 
-- `.cursor/rules/governance.mdc`
-- `.cursor/rules/security.mdc`
+Em conflito entre `docs/` e `.cursor/rules`, prevalece **`.cursor/rules`**.
 
-Quando houver divergencia entre este diretorio e `.cursor/rules`, prevalece `.cursor/rules`.
+**Contexto do app web (opcional):** `pdv-importados/.cursorrules` (identidade produto + árvore de pastas).

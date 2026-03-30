@@ -6,7 +6,7 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 
 - Auth Supabase, `/login` com `next` seguro
 - Rotas `/gerente/*` e `/caixa` protegidas; **middleware por perfil** (OPERADOR apenas `/caixa`; GERENTE/DONO apenas area `/gerente` na URL)
-- Edge `sync-outbox` (venda, caixa, movimento) + RPC estoque (`007`) + `GRANT authenticated` p/ caixa web (`009`); logs JSON na function
+- Edge `sync-outbox` (venda, caixa, movimento) + RPC estoque (`007`) + `GRANT authenticated` p/ caixa web (`009`); logs JSON na function; RPC transacional **`014`** (`registrar_venda_com_itens`) + type-check Deno no CI
 - Caixa web: **Finalizar venda** → `vendas` / `itens_venda` + RPC estoque (Server Action)
 - Playwright (porta dedicada) + Vitest
 - Documentacao: E2E, Vercel, Supabase env, TAURI_SYNC
@@ -19,7 +19,7 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 - [ ] **P0 operacional** — roteiro linear: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) (§1 migrations + verify SQL → §2 Edge se usar desktop → §5 web; teste **§4b web-only** ou **§4** com desktop)
 - [ ] Aplicar migrations **001–013** em **cada** ambiente Supabase usado (dev/staging/prod) — `verify_p0_producao.sql` (011–013 = relatórios + fuso configurável)
 - [ ] Secrets `SYNC_KEY` + `pdv-local/.env` — **obrigatório** só no piloto com **desktop**; web-only dispensa §2–§3
-- [x] CI: build + lint + Vitest em PR; job Playwright **opcional** (`vars.ENABLE_PLAYWRIGHT_E2E` + secrets — ver `ci-pdv-importados.yml`)
+- [x] CI: build + lint + Vitest em PR; job Playwright **opcional** (`vars.ENABLE_PLAYWRIGHT_E2E` + secrets — ver `ci-pdv-importados.yml`); E2E sem skip silencioso quando `CI=true`; **smoke migrations** Postgres (`ci-backend-supabase`); **CI pdv-local**
 - [x] `npm audit` / atualizacao de dependencias criticas (pdv-importados + pdv-local)
 
 ## Medio prazo
