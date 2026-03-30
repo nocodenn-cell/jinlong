@@ -2,7 +2,8 @@
 
 Use este arquivo como **lista de verificação** em **cada** projeto Supabase (ex.: dev, staging, produção) e na **máquina do PDV desktop**.
 
-Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
+Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).  
+**Ambientes (dev/staging/prod), credenciais do PDV local e gates de release:** [AMBIENTES_E_RELEASE.md](./AMBIENTES_E_RELEASE.md).
 
 ## Ordem sugerida (fechar o P0 sem pular dependência)
 

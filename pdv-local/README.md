@@ -36,7 +36,9 @@ Depois ajuste:
 - `SYNC_ENDPOINT` → `https://<projeto>.supabase.co/functions/v1/sync-outbox`
 - `SYNC_KEY` → o mesmo valor configurado nos secrets da Edge Function `sync-outbox`.
 - `SUPABASE_URL` → `https://<projeto>.supabase.co`
-- `SUPABASE_SERVICE_ROLE_KEY` → `service_role` do Supabase (MVP).
+- `SUPABASE_SERVICE_ROLE_KEY` → `service_role` do Supabase (**MVP** do sync de catálogo; privilégio total — máquina confiável e rotação se vazamento).
+
+**Credenciais e ambientes (dev/staging/prod):** ver `../docs/AMBIENTES_E_RELEASE.md` — direção para reduzir `service_role` no desktop (login operador / RPC dedicada).
 
 ## Próximos passos
 
