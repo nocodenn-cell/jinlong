@@ -147,3 +147,17 @@ WHERE tablename = 'estoque_baixas'
 
 -- 8) Função validar-gerente + tabela de auditoria de tokens (migration 018)
 SELECT to_regclass('public.tokens_desconto_gerente') AS tabela_tokens_desconto_gerente;
+
+-- 9) Rate-limit por escopo em validar-gerente (migration 022)
+SELECT to_regclass('public.gerente_auth_rate_limits') AS tabela_gerente_auth_rate_limits;
+
+SELECT has_table_privilege('service_role', 'public.gerente_auth_rate_limits', 'SELECT') AS rl_service_role_select;
+SELECT has_table_privilege('service_role', 'public.gerente_auth_rate_limits', 'INSERT') AS rl_service_role_insert;
+SELECT has_table_privilege('service_role', 'public.gerente_auth_rate_limits', 'UPDATE') AS rl_service_role_update;
+
+-- 10) Finalização transacional com token de gerente (migration 023)
+SELECT has_function_privilege(
+  'authenticated',
+  'public.finalizar_venda_transacional(uuid, uuid, text, numeric, numeric, numeric, jsonb, text, numeric)',
+  'EXECUTE'
+) AS finalizar_venda_tx_token__authenticated_execute;

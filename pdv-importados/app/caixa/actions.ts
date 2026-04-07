@@ -2,8 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { assertSupabasePublicEnv } from '@/lib/supabase/env'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPreco'
 import type { RegraPreco } from '@/core/pricing/types'
+import { pricingService } from '@/core/pricing/PricingService'
+import type { ItemCarrinho } from '@/core/cart/types'
 import {
   finalizarVendaInputSchema,
   roundMoney2,
@@ -175,6 +178,133 @@ export type FinalizarVendaCaixaResult =
   | { ok: true; vendaId: string }
   | { ok: false; error: string }
 
+export type ValidarGerenteDescontoResult =
+  | { ok: true; token: string; expiraEm: string; maxDescontoPercentual: number }
+  | { ok: false; error: string; scope?: string; lockUntil?: string }
+
+type ItemAutoritativo = {
+  produtoId: string
+  quantidade: number
+  precoOriginal: number
+  precoUnitario: number
+  descontoUnitario: number
+  tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL'
+}
+
+export async function validarGerenteDesconto(input: {
+  senha: string
+  lojaId?: string
+  deviceFingerprint?: string
+}): Promise<ValidarGerenteDescontoResult> {
+  const senha = input.senha.trim()
+  if (!senha) return { ok: false, error: 'Senha do gerente é obrigatória.' }
+  if (senha.length > 128) return { ok: false, error: 'Senha inválida (máx. 128 caracteres).' }
+
+  try {
+    const supabase = await createClient()
+    const {
+      data: { session },
+      error: sessionErr,
+    } = await supabase.auth.getSession()
+
+    if (sessionErr || !session?.access_token) {
+      return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    }
+
+    const { url } = assertSupabasePublicEnv()
+    const response = await fetch(`${url}/functions/v1/validar-gerente`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        'x-device-fingerprint': (input.deviceFingerprint ?? '').trim().toLowerCase().slice(0, 200),
+      },
+      body: JSON.stringify({
+        senha,
+        loja_id: input.lojaId?.trim() || undefined,
+      }),
+    })
+
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
+    if (!response.ok || payload.ok !== true) {
+      return {
+        ok: false,
+        error:
+          typeof payload.error === 'string'
+            ? payload.error
+            : `Falha ao validar gerente (${response.status}).`,
+        scope: typeof payload.scope === 'string' ? payload.scope : undefined,
+        lockUntil: typeof payload.lock_until === 'string' ? payload.lock_until : undefined,
+      }
+    }
+
+    return {
+      ok: true,
+      token: String(payload.token ?? ''),
+      expiraEm: String(payload.expira_em ?? ''),
+      maxDescontoPercentual: Number(payload.max_desconto_percentual ?? 0),
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro ao validar gerente'
+    return { ok: false, error: msg }
+  }
+}
+
+async function recalcularItensNoServidor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  itensInput: Array<{ produtoId: string; quantidade: number }>,
+): Promise<{ ok: true; itens: ItemAutoritativo[] } | { ok: false; error: string }> {
+  const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
+  const { data: produtosRows, error: prodErr } = await supabase
+    .from('produtos')
+    .select('id, nome, preco_varejo, categoria_id, ativo')
+    .in('id', produtosIds)
+    .eq('ativo', true)
+
+  if (prodErr) return { ok: false, error: `Produtos: ${prodErr.message}` }
+  const produtos = new Map((produtosRows ?? []).map((p) => [p.id, p]))
+  if (produtos.size !== produtosIds.length) {
+    return { ok: false, error: 'Há itens inválidos/inativos no carrinho. Atualize e tente novamente.' }
+  }
+
+  const { data: regrasRows, error: regrasErr } = await supabase
+    .from('regras_preco')
+    .select(
+      'id, tipo_regra, produto_id, categoria_id, quantidade_minima, quantidade_maxima, tipo_desconto, valor_desconto, data_validade, ativo',
+    )
+    .eq('ativo', true)
+  if (regrasErr) return { ok: false, error: `Regras: ${regrasErr.message}` }
+  const regras = (regrasRows as RegraPrecoRow[] | null)?.map(mapRegraPrecoRow) ?? []
+
+  const quantidadePorProduto = itensInput.reduce<Record<string, number>>((acc, item) => {
+    acc[item.produtoId] = (acc[item.produtoId] ?? 0) + item.quantidade
+    return acc
+  }, {})
+
+  const itens: ItemAutoritativo[] = []
+  for (const i of itensInput) {
+    const p = produtos.get(i.produtoId)!
+    const itemCarrinho: ItemCarrinho = {
+      id: crypto.randomUUID(),
+      produtoId: p.id,
+      nome: p.nome,
+      quantidade: i.quantidade,
+      precoVariejo: Number(p.preco_varejo),
+      categoriaId: p.categoria_id ?? undefined,
+    }
+    const preco = pricingService.calcularPreco(itemCarrinho, regras, quantidadePorProduto[i.produtoId])
+    itens.push({
+      produtoId: i.produtoId,
+      quantidade: i.quantidade,
+      precoOriginal: roundMoney2(preco.precoOriginal),
+      precoUnitario: roundMoney2(preco.precoUnitario),
+      descontoUnitario: roundMoney2(preco.descontoUnitario),
+      tipoPreco: preco.tipoPreco,
+    })
+  }
+  return { ok: true, itens }
+}
+
 /**
  * Persiste venda + itens no Supabase e aplica baixa de estoque via RPC
  * `decrementar_estoque_seguro` (migrations 016–017: atômico + validação de operador).
@@ -186,14 +316,6 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     return { ok: false, error: `Dados inválidos: ${msg}` }
   }
   const input = parsed.data
-  const computed = totaisFromItens(input.itens)
-  if (!totalsMatchDeclared(computed, input)) {
-    return {
-      ok: false,
-      error: 'Totais do carrinho não batem com os itens. Atualize a página e tente de novo.',
-    }
-  }
-
   try {
     const supabase = await createClient()
     const {
@@ -201,9 +323,34 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
+    const itensCliente = input.itens.map((i) => ({ produtoId: i.produtoId, quantidade: i.quantidade }))
+    const recalc = await recalcularItensNoServidor(supabase, itensCliente)
+    if (!recalc.ok) return { ok: false, error: recalc.error }
+    const itensAut = recalc.itens
+
+    const computedBase = totaisFromItens(itensAut)
+    const gerentePercentual = input.descontoGerentePercentual ?? null
+    const hasDescontoGerente = !!input.descontoGerenteToken && gerentePercentual !== null
+    const descontoGerenteValor = hasDescontoGerente
+      ? roundMoney2((computedBase.totalLiquido * gerentePercentual) / 100)
+      : 0
+    const computedFinal = {
+      totalBruto: computedBase.totalBruto,
+      totalDesconto: roundMoney2(computedBase.totalDesconto + descontoGerenteValor),
+      totalLiquido: roundMoney2(computedBase.totalLiquido - descontoGerenteValor),
+    }
+
+    if (!totalsMatchDeclared(computedFinal, input)) {
+      return {
+        ok: false,
+        error:
+          'Os preços/regras do carrinho mudaram. Reabra o caixa e tente novamente para recalcular.',
+      }
+    }
+
     // Pré-checagem de estoque (melhor UX; a RPC 016/017 é a fonte de verdade sob concorrência)
     const estoquesInsuficientes: string[] = []
-    for (const item of input.itens) {
+    for (const item of itensAut) {
       const { data: estoqueData, error: estqErr } = await supabase
         .from('estoque')
         .select('quantidade_atual, produtos!inner(nome)')
@@ -250,70 +397,27 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     }
 
     const vendaId = crypto.randomUUID()
-    // Sempre persistir totais derivados dos itens (fonte de verdade), não os números crus do cliente.
-    const { error: vErr } = await supabase.from('vendas').insert({
-      id: vendaId,
-      caixa_id: caixaId,
-      operador_id: user.id,
-      total_bruto: computed.totalBruto,
-      total_desconto: computed.totalDesconto,
-      total_liquido: computed.totalLiquido,
-      forma_pagamento: input.formaPagamento,
-      status: 'CONCLUIDA',
-    })
-    if (vErr) return { ok: false, error: vErr.message }
-
-    const itensRows = input.itens.map((i) => ({
-      venda_id: vendaId,
+    const itensRpc = itensAut.map((i) => ({
+      item_id: crypto.randomUUID(),
       produto_id: i.produtoId,
       quantidade: i.quantidade,
-      preco_unitario_original: roundMoney2(i.precoOriginal),
+      preco_original: roundMoney2(i.precoOriginal),
       preco_unitario: roundMoney2(i.precoUnitario),
-      desconto_unitario: roundMoney2(i.descontoUnitario),
       tipo_preco: i.tipoPreco,
     }))
 
-    const { error: iErr } = await supabase.from('itens_venda').insert(itensRows)
-    if (iErr) return { ok: false, error: `Itens: ${iErr.message}` }
-
-    for (const i of input.itens) {
-      // Usa a nova RPC segura com controle de concorrência
-      const { data: estoqueResult, error: rpcErr } = await supabase.rpc(
-        'decrementar_estoque_seguro',
-        {
-          p_produto_id: i.produtoId,
-          p_quantidade: i.quantidade,
-          p_venda_id: vendaId,
-        },
-      )
-
-      if (rpcErr) {
-        return { ok: false, error: `Estoque: ${rpcErr.message}` }
-      }
-
-      // Verifica resultado da RPC
-      if (!estoqueResult || !Array.isArray(estoqueResult) || estoqueResult.length === 0) {
-        return { ok: false, error: 'Estoque: resposta inválida do servidor' }
-      }
-
-      const result = estoqueResult[0] as { sucesso: boolean; mensagem: string; estoque_atual: number }
-
-      if (!result.sucesso) {
-        // Traduz mensagens técnicas para mensagens amigáveis ao usuário
-        const mensagensErro: Record<string, string> = {
-          ESTOQUE_INSUFICIENTE: `Estoque insuficiente para o produto. Disponível: ${result.estoque_atual ?? 0}`,
-          PRODUTO_NAO_ENCONTRADO_NO_ESTOQUE: 'Produto não encontrado no estoque',
-          CONCORRENCIA_DETECTADA: 'Conflito de estoque detectado. Tente novamente.',
-          BAIXA_JA_EXISTE: 'Este item já foi processado.',
-          SESSAO_INVALIDA: 'Sessão inválida. Faça login novamente.',
-          VENDA_NAO_AUTORIZADA: 'Operação não autorizada para esta venda.',
-        }
-        return {
-          ok: false,
-          error: `Estoque: ${mensagensErro[result.mensagem] ?? result.mensagem}`,
-        }
-      }
-    }
+    const { error: txErr } = await supabase.rpc('finalizar_venda_transacional', {
+      p_venda_id: vendaId,
+      p_caixa_id: caixaId,
+      p_forma_pagamento: input.formaPagamento,
+      p_total_bruto: computedFinal.totalBruto,
+      p_total_desconto: computedFinal.totalDesconto,
+      p_total_liquido: computedFinal.totalLiquido,
+      p_itens: itensRpc,
+      p_desconto_gerente_token: input.descontoGerenteToken ?? null,
+      p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
+    })
+    if (txErr) return { ok: false, error: `Venda: ${txErr.message}` }
 
     revalidatePath('/gerente/vendas')
     return { ok: true, vendaId }

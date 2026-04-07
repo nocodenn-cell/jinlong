@@ -9,10 +9,12 @@ import {
 const itemBase = {
   produtoId: '550e8400-e29b-41d4-a716-446655440000',
   quantidade: 2,
+}
+
+const itemPrecificadoBase = {
   precoOriginal: 10,
   precoUnitario: 9,
-  descontoUnitario: 1,
-  tipoPreco: 'VAREJO' as const,
+  quantidade: 2,
 }
 
 describe('finalizarVendaValidation', () => {
@@ -22,14 +24,14 @@ describe('finalizarVendaValidation', () => {
   })
 
   it('totaisFromItens soma itens', () => {
-    const t = totaisFromItens([itemBase])
+    const t = totaisFromItens([itemPrecificadoBase])
     expect(t.totalBruto).toBe(20)
     expect(t.totalLiquido).toBe(18)
     expect(t.totalDesconto).toBe(2)
   })
 
   it('totalsMatchDeclared aceita totais declarados coerentes', () => {
-    const itens = [itemBase]
+    const itens = [itemPrecificadoBase]
     const computed = totaisFromItens(itens)
     expect(
       totalsMatchDeclared(computed, {
@@ -41,7 +43,7 @@ describe('finalizarVendaValidation', () => {
   })
 
   it('totalsMatchDeclared rejeita divergência', () => {
-    const itens = [itemBase]
+    const itens = [itemPrecificadoBase]
     const computed = totaisFromItens(itens)
     expect(
       totalsMatchDeclared(computed, {

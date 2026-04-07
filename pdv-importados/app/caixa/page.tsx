@@ -6,8 +6,10 @@ import {
   carregarRegrasPrecoCaixa,
   buscarProdutoParaCaixa,
   finalizarVendaCaixa,
+  validarGerenteDesconto,
 } from "@/app/caixa/actions"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 
 const FORMAS: { value: FinalizarVendaInput["formaPagamento"]; label: string }[] = [
   { value: "DINHEIRO", label: "Dinheiro" },
@@ -22,6 +24,11 @@ export default function CaixaPage() {
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [buscando, setBuscando] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
+  const [validandoGerente, setValidandoGerente] = useState(false)
+  const [gerenteValidadoAte, setGerenteValidadoAte] = useState<string | null>(null)
+  const [gerenteToken, setGerenteToken] = useState<string | null>(null)
+  const [maxDescontoGerentePercentual, setMaxDescontoGerentePercentual] = useState<number>(0)
+  const [descontoGerentePercentual, setDescontoGerentePercentual] = useState<number>(0)
   const [formaPagamento, setFormaPagamento] =
     useState<FinalizarVendaInput["formaPagamento"]>("DINHEIRO")
 
@@ -138,6 +145,10 @@ export default function CaixaPage() {
     limparCarrinho()
     setCodigo("")
     setMensagem(null)
+    setGerenteValidadoAte(null)
+    setGerenteToken(null)
+    setMaxDescontoGerentePercentual(0)
+    setDescontoGerentePercentual(0)
   }, [limparCarrinho])
 
   const handleFinalizar = useCallback(async () => {
@@ -148,20 +159,29 @@ export default function CaixaPage() {
       const payload: FinalizarVendaInput = {
         formaPagamento,
         totalBruto,
-        totalDesconto,
-        totalLiquido,
+        totalDesconto:
+          descontoGerentePercentual > 0
+            ? Math.round((totalDesconto + (totalLiquido * descontoGerentePercentual) / 100) * 100) / 100
+            : totalDesconto,
+        totalLiquido:
+          descontoGerentePercentual > 0
+            ? Math.round((totalLiquido - (totalLiquido * descontoGerentePercentual) / 100) * 100) / 100
+            : totalLiquido,
+        descontoGerenteToken: descontoGerentePercentual > 0 ? gerenteToken ?? undefined : undefined,
+        descontoGerentePercentual:
+          descontoGerentePercentual > 0 ? descontoGerentePercentual : undefined,
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
-          precoOriginal: i.resultado.precoOriginal,
-          precoUnitario: i.resultado.precoUnitario,
-          descontoUnitario: i.resultado.descontoUnitario,
-          tipoPreco: i.resultado.tipoPreco,
         })),
       }
       const res = await finalizarVendaCaixa(payload)
       if (res.ok) {
         limparCarrinho()
+        setGerenteValidadoAte(null)
+        setGerenteToken(null)
+        setMaxDescontoGerentePercentual(0)
+        setDescontoGerentePercentual(0)
         setMensagem(
           `Venda registrada no servidor (id ${res.vendaId.slice(0, 8)}…). Estoque atualizado.`,
         )
@@ -169,19 +189,74 @@ export default function CaixaPage() {
         setMensagem(res.error)
       }
     } catch {
-      setMensagem("Falha ao finalizar. Verifique conexão e permissões (RPC estoque — migration 009).")
+      setMensagem(
+        'Falha ao finalizar. Verifique conexão e permissões (RPC transacional/estoque seguro — migrations 020 + 016/017).',
+      )
     } finally {
       setFinalizando(false)
     }
   }, [
+    descontoGerentePercentual,
     finalizando,
     formaPagamento,
+    gerenteToken,
     itens,
     limparCarrinho,
     totalBruto,
     totalDesconto,
     totalLiquido,
   ])
+
+  const valorDescontoGerente =
+    descontoGerentePercentual > 0
+      ? Math.round((totalLiquido * descontoGerentePercentual) * 100) / 10000
+      : 0
+  const totalLiquidoComGerente = Math.round((totalLiquido - valorDescontoGerente) * 100) / 100
+
+  const handleValidarGerente = useCallback(async () => {
+    if (validandoGerente) return
+    const senha = window.prompt("Senha do gerente para autorizar desconto:")
+    if (senha === null) return
+    if (!senha.trim()) {
+      setMensagem("Senha do gerente é obrigatória.")
+      return
+    }
+
+    setValidandoGerente(true)
+    setMensagem(null)
+    try {
+      const res = await validarGerenteDesconto({
+        senha,
+        deviceFingerprint: getDeviceFingerprint(),
+      })
+      if (!res.ok) {
+        const lockInfo = res.lockUntil ? ` (bloqueado até ${new Date(res.lockUntil).toLocaleString("pt-BR")})` : ""
+        setMensagem(`Validação de gerente falhou: ${res.error}${lockInfo}`)
+        return
+      }
+      setGerenteValidadoAte(res.expiraEm)
+      setGerenteToken(res.token)
+      setMaxDescontoGerentePercentual(res.maxDescontoPercentual)
+      const entrada = window.prompt(
+        `Percentual de desconto do gerente (máx. ${res.maxDescontoPercentual.toFixed(1)}%):`,
+        "5",
+      )
+      const percentual = Number((entrada ?? "").replace(",", "."))
+      if (!Number.isFinite(percentual) || percentual <= 0 || percentual > res.maxDescontoPercentual) {
+        setMensagem("Percentual inválido para desconto de gerente.")
+        setDescontoGerentePercentual(0)
+        return
+      }
+      setDescontoGerentePercentual(Math.round(percentual * 100) / 100)
+      setMensagem(
+        `Gerente validado. Desconto de ${percentual.toFixed(2)}% aplicado (expira ${new Date(res.expiraEm).toLocaleTimeString("pt-BR")}).`,
+      )
+    } catch {
+      setMensagem("Falha ao validar gerente. Verifique a conexão.")
+    } finally {
+      setValidandoGerente(false)
+    }
+  }, [validandoGerente])
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-50 flex flex-col">
@@ -200,9 +275,11 @@ export default function CaixaPage() {
             {carregandoRegras ? " · carregando regras…" : ""}
           </div>
           <div className="mt-1 text-slate-300/90 border border-slate-600/40 rounded px-2 py-1 bg-slate-950/50">
-            <strong>Finalizar venda</strong> grava <code className="text-slate-500">vendas</code> /{" "}
-            <code className="text-slate-500">itens_venda</code> e chama a RPC de estoque (migrations{" "}
-            <code className="text-slate-500">007</code> + <code className="text-slate-500">009</code>
+            <strong>Finalizar venda</strong> usa RPC transacional{" "}
+            <code className="text-slate-500">finalizar_venda_transacional</code> (migration{" "}
+            <code className="text-slate-500">020</code>) com baixa por{" "}
+            <code className="text-slate-500">decrementar_estoque_seguro</code> (migrations{" "}
+            <code className="text-slate-500">016</code> / <code className="text-slate-500">017</code>
             ). O PDV desktop continua válido via outbox. Ver{" "}
             <code className="text-slate-500">docs/CIRCUITO_OPERACIONAL.md</code>.
           </div>
@@ -354,6 +431,14 @@ export default function CaixaPage() {
             </label>
             <button
               type="button"
+              onClick={() => void handleValidarGerente()}
+              disabled={validandoGerente}
+              className="px-4 py-2 rounded-md bg-amber-700 hover:bg-amber-600 text-sm font-semibold disabled:opacity-50"
+            >
+              {validandoGerente ? "Validando gerente…" : "Validar gerente (desconto)"}
+            </button>
+            <button
+              type="button"
               onClick={() => void handleFinalizar()}
               disabled={
                 finalizando ||
@@ -368,6 +453,12 @@ export default function CaixaPage() {
             <span className="text-xs text-slate-400">
               {totalItens} itens · {totalUnidades} unidades
             </span>
+            {gerenteValidadoAte && (
+              <span className="text-xs text-amber-300">
+                Gerente validado até {new Date(gerenteValidadoAte).toLocaleTimeString("pt-BR")} · desconto{" "}
+                {descontoGerentePercentual.toFixed(2)}% (máx. {maxDescontoGerentePercentual.toFixed(2)}%)
+              </span>
+            )}
           </div>
           <div className="flex items-end gap-8">
             <div className="text-right text-xs text-slate-300">
@@ -388,11 +479,22 @@ export default function CaixaPage() {
                 })}
               </div>
             </div>
+            {descontoGerentePercentual > 0 && (
+              <div className="text-right text-xs text-amber-300">
+                <div>Desconto gerente ({descontoGerentePercentual.toFixed(2)}%)</div>
+                <div className="text-base font-semibold tabular-nums">
+                  - R${" "}
+                  {valorDescontoGerente.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                  })}
+                </div>
+              </div>
+            )}
             <div className="text-right">
               <div className="text-xs text-slate-400">Total a pagar</div>
               <div className="text-2xl font-bold tabular-nums text-emerald-400">
                 R${" "}
-                {totalLiquido.toLocaleString("pt-BR", {
+                {totalLiquidoComGerente.toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
                 })}
               </div>

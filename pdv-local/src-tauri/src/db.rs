@@ -1135,6 +1135,27 @@ struct SyncFailed {
 /// Configuração via variáveis de ambiente:
 /// - SYNC_ENDPOINT: ex. https://<project>.supabase.co/functions/v1/sync-outbox
 /// - SYNC_KEY: segredo compartilhado (header X-SYNC-KEY)
+/// - DEVICE_FINGERPRINT: opcional (fallback automático quando ausente)
+fn device_fingerprint_local() -> String {
+    if let Ok(v) = std::env::var("DEVICE_FINGERPRINT") {
+        let normalized = v.trim().to_lowercase();
+        if !normalized.is_empty() {
+            return normalized.chars().take(200).collect();
+        }
+    }
+
+    let host = std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "unknown-host".to_string());
+    let user = std::env::var("USERNAME")
+        .or_else(|_| std::env::var("USER"))
+        .unwrap_or_else(|_| "unknown-user".to_string());
+    format!("desktop-{}-{}", user.trim().to_lowercase(), host.trim().to_lowercase())
+        .chars()
+        .take(200)
+        .collect()
+}
+
 pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, String> {
     let endpoint = std::env::var("SYNC_ENDPOINT")
         .map_err(|_| "Falta SYNC_ENDPOINT no ambiente do app".to_string())?;
@@ -1147,10 +1168,12 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
     }
 
     let client = reqwest::blocking::Client::new();
+    let device_fingerprint = device_fingerprint_local();
     let res = client
         .post(endpoint)
         .header("Content-Type", "application/json")
         .header("X-SYNC-KEY", sync_key)
+        .header("x-device-fingerprint", device_fingerprint)
         .json(&SyncRequest { events })
         .send()
         .map_err(|e| format!("Falha HTTP ao sincronizar: {e}"))?;

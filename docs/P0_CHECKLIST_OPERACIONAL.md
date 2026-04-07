@@ -4,10 +4,12 @@ Use este arquivo como **lista de verificação** em **cada** projeto Supabase (e
 
 Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).  
 **Ambientes (dev/staging/prod), credenciais do PDV local e gates de release:** [AMBIENTES_E_RELEASE.md](./AMBIENTES_E_RELEASE.md).
+**Fonte única para fechamento de segurança:** [SECURANCA_CHECKLIST_FECHAMENTO.md](./SECURANCA_CHECKLIST_FECHAMENTO.md).
+**Fechamento de governança (P2):** [P2_GOVERNANCA_RLS_E_PENTEST.md](./P2_GOVERNANCA_RLS_E_PENTEST.md).
 
 ## Ordem sugerida (fechar o P0 sem pular dependência)
 
-1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura; **018** tokens de gerente — ver §1b–§1e).
+1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura; **018** tokens de gerente; **022** rate-limit por escopo; **023** finalização transacional com token de gerente — ver §1b–§1e).
 2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, `X-SYNC-KEY` e chamada a `decrementar_estoque_seguro`.
 3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_*` do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
 4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
