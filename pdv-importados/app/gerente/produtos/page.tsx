@@ -17,6 +17,8 @@ type ProdutoRow = {
 export default async function ProdutosPage() {
   const { idioma } = await getUsuarioIdioma()
   const m = getMessages(idioma)
+  const locale = idioma === 'zh' ? 'zh-CN' : idioma === 'zh-HK' ? 'zh-HK' : 'pt-BR'
+  const fontClass = idioma === 'pt' ? '' : 'font-chinese'
 
   const supabase = await createClient()
   const { data: produtos } = await supabase
@@ -41,98 +43,20 @@ export default async function ProdutosPage() {
     await alternarAtivoProduto(id, !ativo)
   }
 
+  const rows = (produtos as ProdutoRow[] | null) ?? []
+
   return (
-    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '16px' }}>
-        {m.produtos.titulo}
-      </h1>
-
-      <section
-        style={{
-          border: '1px solid #e5e5e5',
-          borderRadius: '12px',
-          padding: '16px',
-          marginBottom: '24px',
-        }}
-      >
-        <h2 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '12px' }}>
-          {m.produtos.cadastro_rapido}
-        </h2>
-        <form action={handleSubmit} style={{ display: 'grid', gap: '8px' }}>
-          <input
-            name="nome"
-            placeholder={m.produtos.nome}
-            required
-            style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
-          />
-          <input
-            name="codigo_barras"
-            placeholder={m.produtos.codigo_barras}
-            style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
-          />
-          <span style={{ fontSize: 12, color: '#6b7280' }}>
-            {m.produtos.codigo_barras_opcional}
-          </span>
-          <input
-            name="preco_varejo"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder={m.produtos.preco_varejo}
-            required
-            style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
-          />
-          <select
-            name="origem"
-            defaultValue="china_manual"
-            style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
-          >
-            <option value="china_manual">{m.produtos.origem_china}</option>
-            <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-            <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
-          </select>
-          <label style={{ fontSize: '13px' }}>
-            <input type="checkbox" name="tem_nf" /> {m.produtos.tem_nf}
-          </label>
-          <button
-            type="submit"
-            style={{
-              marginTop: '4px',
-              padding: '10px',
-              borderRadius: '8px',
-              border: 'none',
-              background: '#111827',
-              color: '#fff',
-              fontSize: '14px',
-              cursor: 'pointer',
-              alignSelf: 'flex-start',
-            }}
-          >
-            {m.comum.salvar}
-          </button>
-        </form>
-      </section>
-
-      <section
-        style={{
-          border: '1px solid #e5e5e5',
-          borderRadius: '12px',
-          padding: '16px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            marginBottom: 12,
-          }}
-        >
-          <h2 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>
-            {m.produtos.lista_produtos}
-          </h2>
+    <div className={`min-h-screen bg-slate-50 px-4 py-4 md:px-6 ${fontClass}`}>
+      <div className="mx-auto w-full max-w-7xl space-y-4">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-lg md:text-xl font-semibold text-slate-900">{m.produtos.titulo}</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {idioma === 'pt'
+                ? 'Gestão de catálogo com visão densa para operação diária.'
+                : '高密度商品管理视图，适合日常运营。'}
+            </p>
+          </div>
           <ExportCsvButton
             label={m.gerente.exportar_csv}
             filename="gerente-produtos.csv"
@@ -145,73 +69,161 @@ export default async function ProdutosPage() {
               { key: 'tem_nf', header: m.produtos.tem_nf },
               { key: 'ativo', header: m.produtos.status },
             ]}
-            rows={
-              (produtos as ProdutoRow[] | null)?.map((p) => ({
-                id: p.id,
-                nome: p.nome,
-                codigo_barras: p.codigo_barras ?? '',
-                preco_varejo: Number(p.preco_varejo),
-                origem: p.origem,
-                tem_nf: p.tem_nf ? '1' : '0',
-                ativo: p.ativo ? '1' : '0',
-              })) ?? []
-            }
+            rows={rows.map((p) => ({
+              id: p.id,
+              nome: p.nome,
+              codigo_barras: p.codigo_barras ?? '',
+              preco_varejo: Number(p.preco_varejo),
+              origem: p.origem,
+              tem_nf: p.tem_nf ? '1' : '0',
+              ativo: p.ativo ? '1' : '0',
+            }))}
           />
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                <th style={{ padding: '8px' }}>{m.produtos.nome}</th>
-                <th style={{ padding: '8px' }}>{m.produtos.codigo_barras}</th>
-                <th style={{ padding: '8px' }}>{m.produtos.preco_varejo}</th>
-                <th style={{ padding: '8px' }}>{m.produtos.origem_label}</th>
-                <th style={{ padding: '8px' }}>{m.produtos.tem_nf}</th>
-                <th style={{ padding: '8px' }}>{m.produtos.status}</th>
-                <th style={{ padding: '8px' }}>{m.produtos.acoes}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(produtos as ProdutoRow[] | null)?.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #f3f3f3' }}>
-                  <td style={{ padding: '8px' }}>{p.nome}</td>
-                  <td style={{ padding: '8px' }}>{p.codigo_barras ?? '-'}</td>
-                  <td style={{ padding: '8px' }}>
-                    R$ {p.preco_varejo.toFixed(2).replace('.', ',')}
-                  </td>
-                  <td style={{ padding: '8px' }}>{p.origem}</td>
-                  <td style={{ padding: '8px' }}>{p.tem_nf ? 'Sim' : 'Não'}</td>
-                  <td style={{ padding: '8px' }}>{p.ativo ? 'Ativo' : 'Inativo'}</td>
-                  <td style={{ padding: '8px' }}>
-                    <form action={async () => handleToggleAtivo(p.id, p.ativo)}>
-                      <button
-                        type="submit"
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '999px',
-                          border: '1px solid #ddd',
-                          fontSize: '12px',
-                          background: p.ativo ? '#fee2e2' : '#dcfce7',
-                          cursor: 'pointer',
-                        }}
+        </header>
+
+        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-3 py-2.5">
+            <h2 className="text-sm font-semibold text-slate-800">{m.produtos.cadastro_rapido}</h2>
+          </div>
+          <form action={handleSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-2.5 p-3">
+            <input
+              name="nome"
+              placeholder={m.produtos.nome}
+              required
+              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 md:col-span-2"
+            />
+            <input
+              name="codigo_barras"
+              placeholder={m.produtos.codigo_barras}
+              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            <input
+              name="preco_varejo"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder={m.produtos.preco_varejo}
+              required
+              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            <select
+              name="origem"
+              defaultValue="china_manual"
+              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="china_manual">{m.produtos.origem_china}</option>
+              <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
+              <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
+            </select>
+            <button
+              type="submit"
+              className="h-9 rounded-md bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700"
+            >
+              {m.comum.salvar}
+            </button>
+            <label className="md:col-span-6 inline-flex items-center gap-2 text-xs text-slate-600">
+              <input type="checkbox" name="tem_nf" className="h-3.5 w-3.5 rounded border-slate-300" />
+              {m.produtos.tem_nf}
+              <span className="text-slate-400">· {m.produtos.codigo_barras_opcional}</span>
+            </label>
+          </form>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-slate-200 px-3 py-2.5">
+            <h2 className="text-sm font-semibold text-slate-800">{m.produtos.lista_produtos}</h2>
+          </div>
+
+          <div className="border-b border-slate-200 bg-slate-50/80 p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <input
+              disabled
+              placeholder={m.produtos.buscar}
+              className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500"
+            />
+            <select disabled className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500">
+              <option>{m.produtos.origem_label}</option>
+            </select>
+            <select disabled className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500">
+              <option>{m.produtos.status}</option>
+            </select>
+            <select disabled className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500">
+              <option>{m.produtos.tem_nf}</option>
+            </select>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-xs">
+              <thead className="bg-slate-100/70 text-slate-600 border-b border-slate-200">
+                <tr className="text-left">
+                  <th className="px-3 py-2 font-medium">ID</th>
+                  <th className="px-3 py-2 font-medium">{m.produtos.nome}</th>
+                  <th className="px-3 py-2 font-medium">{m.produtos.codigo_barras}</th>
+                  <th className="px-3 py-2 font-medium text-right">{m.produtos.preco_varejo}</th>
+                  <th className="px-3 py-2 font-medium">{m.produtos.origem_label}</th>
+                  <th className="px-3 py-2 font-medium">{m.produtos.tem_nf}</th>
+                  <th className="px-3 py-2 font-medium">{m.produtos.status}</th>
+                  <th className="px-3 py-2 font-medium text-center">{m.produtos.acoes}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-800">
+                {rows.map((p) => (
+                  <tr key={p.id} className="hover:bg-blue-50/50 transition-colors group">
+                    <td className="px-3 py-2 font-mono text-[11px] text-slate-500">{p.id.slice(0, 8)}</td>
+                    <td className="px-3 py-2 text-slate-900 font-medium leading-relaxed">{p.nome}</td>
+                    <td className="px-3 py-2 text-slate-600 font-mono">{p.codigo_barras ?? '-'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900">
+                      {Number(p.preco_varejo).toLocaleString(locale, {
+                        style: 'currency',
+                        currency: 'BRL',
+                      })}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">{p.origem}</td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={
+                          p.tem_nf
+                            ? 'inline-flex rounded border px-2 py-0.5 text-[11px] border-blue-200 bg-blue-50 text-blue-700'
+                            : 'inline-flex rounded border px-2 py-0.5 text-[11px] border-amber-200 bg-amber-50 text-amber-700'
+                        }
                       >
-                        {p.ativo ? m.produtos.inativar : m.produtos.ativar}
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-              {(!produtos || produtos.length === 0) && (
-                <tr>
-                  <td colSpan={7} style={{ padding: '12px', fontSize: '13px', color: '#6b7280' }}>
-                    {m.produtos.nenhum_produto_cadastrado}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                        {p.tem_nf ? m.comum.sim : m.comum.nao}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={
+                          p.ativo
+                            ? 'inline-flex rounded border px-2 py-0.5 text-[11px] border-blue-200 bg-blue-50 text-blue-700'
+                            : 'inline-flex rounded border px-2 py-0.5 text-[11px] border-slate-200 bg-slate-100 text-slate-600'
+                        }
+                      >
+                        {p.ativo ? m.produtos.ativo : m.produtos.inativo}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <form action={async () => handleToggleAtivo(p.id, p.ativo)}>
+                        <button
+                          type="submit"
+                          className="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 opacity-60 group-hover:opacity-100 transition"
+                        >
+                          {p.ativo ? m.produtos.inativar : m.produtos.ativar}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-4 text-xs text-slate-500">
+                      {m.produtos.nenhum_produto_cadastrado}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
