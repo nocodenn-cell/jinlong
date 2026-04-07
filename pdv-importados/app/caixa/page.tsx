@@ -46,6 +46,13 @@ export default function CaixaPage() {
     limparCarrinho,
   } = useCarrinhoStore()
 
+  const limparEstadoDescontoGerente = useCallback(() => {
+    setGerenteValidadoAte(null)
+    setGerenteToken(null)
+    setMaxDescontoGerentePercentual(0)
+    setDescontoGerentePercentual(0)
+  }, [])
+
   useEffect(() => {
     let cancelado = false
     ;(async () => {
@@ -145,14 +152,37 @@ export default function CaixaPage() {
     limparCarrinho()
     setCodigo("")
     setMensagem(null)
-    setGerenteValidadoAte(null)
-    setGerenteToken(null)
-    setMaxDescontoGerentePercentual(0)
-    setDescontoGerentePercentual(0)
-  }, [limparCarrinho])
+    limparEstadoDescontoGerente()
+  }, [limparCarrinho, limparEstadoDescontoGerente])
+
+  useEffect(() => {
+    if (!gerenteValidadoAte) return
+
+    const expiraEmMs = Date.parse(gerenteValidadoAte)
+    if (!Number.isFinite(expiraEmMs)) {
+      limparEstadoDescontoGerente()
+      return
+    }
+
+    const checkExpiracao = () => {
+      if (Date.now() >= expiraEmMs) {
+        limparEstadoDescontoGerente()
+        setMensagem("Token de gerente expirado. Valide novamente para aplicar desconto.")
+      }
+    }
+
+    checkExpiracao()
+    const timer = window.setInterval(checkExpiracao, 1000)
+    return () => window.clearInterval(timer)
+  }, [gerenteValidadoAte, limparEstadoDescontoGerente])
 
   const handleFinalizar = useCallback(async () => {
     if (itens.length === 0 || finalizando) return
+    if (gerenteValidadoAte && Date.now() >= Date.parse(gerenteValidadoAte)) {
+      limparEstadoDescontoGerente()
+      setMensagem("Token de gerente expirado. Valide novamente para aplicar desconto.")
+      return
+    }
     setFinalizando(true)
     setMensagem(null)
     try {
@@ -178,10 +208,7 @@ export default function CaixaPage() {
       const res = await finalizarVendaCaixa(payload)
       if (res.ok) {
         limparCarrinho()
-        setGerenteValidadoAte(null)
-        setGerenteToken(null)
-        setMaxDescontoGerentePercentual(0)
-        setDescontoGerentePercentual(0)
+        limparEstadoDescontoGerente()
         setMensagem(
           `Venda registrada no servidor (id ${res.vendaId.slice(0, 8)}…). Estoque atualizado.`,
         )
@@ -199,8 +226,10 @@ export default function CaixaPage() {
     descontoGerentePercentual,
     finalizando,
     formaPagamento,
+    gerenteValidadoAte,
     gerenteToken,
     itens,
+    limparEstadoDescontoGerente,
     limparCarrinho,
     totalBruto,
     totalDesconto,
@@ -209,7 +238,7 @@ export default function CaixaPage() {
 
   const valorDescontoGerente =
     descontoGerentePercentual > 0
-      ? Math.round((totalLiquido * descontoGerentePercentual) * 100) / 10000
+      ? Math.round(((totalLiquido * descontoGerentePercentual) / 100) * 100) / 100
       : 0
   const totalLiquidoComGerente = Math.round((totalLiquido - valorDescontoGerente) * 100) / 100
 

@@ -72,6 +72,7 @@ SELECT HAS_FUNCTION_PRIVILEGE(
 - [ ] **Rate-limit por escopo**: bloqueio por `USER`, `IP`, `DEVICE` e `GLOBAL` confirmado.
 - [ ] **Role indevida**: JWT `authenticated` não executa `registrar_venda_com_itens`.
 - [ ] **Governança P2**: auditoria RLS + pentest curto concluídos conforme [P2_GOVERNANCA_RLS_E_PENTEST.md](./P2_GOVERNANCA_RLS_E_PENTEST.md).
+- [ ] **Smoke 023**: executar [backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql) e anexar evidência.
 
 ## 5) Pendências para “segurança avançada” (não bloqueante do fechamento MVP)
 
