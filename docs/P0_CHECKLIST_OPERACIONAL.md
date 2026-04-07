@@ -13,6 +13,7 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 **Smoke adicional 023 (desconto gerente por token):**
 
 - Rodar [`backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql`](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql) no SQL Editor.
+- Alternativa operacional (copy/paste por ambiente): [`backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql`](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql).
 - Esperado: cenário **token válido** conclui e consome token; **expirado** e **já usado** falham com erro esperado.
 2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, `X-SYNC-KEY` e chamada a `decrementar_estoque_seguro`.
 3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_*` do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
