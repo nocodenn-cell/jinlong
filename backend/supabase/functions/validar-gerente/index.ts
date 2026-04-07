@@ -4,6 +4,7 @@
 //
 // Contrato:
 // POST /functions/v1/validar-gerente
+// Header: Authorization: Bearer <jwt> (usuário autenticado)
 // Body: { senha: string, loja_id?: string }
 // Response: { ok: true, token: string, expira_em: string } | { ok: false, error: string }
 
@@ -46,11 +47,27 @@ function logJson(payload: Record<string, unknown>) {
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "authorization, content-type",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+    },
   });
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "authorization, content-type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      },
+    });
+  }
+
   if (req.method !== "POST") {
     logJson({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED" });
     return jsonResponse(405, { ok: false, error: "METHOD_NOT_ALLOWED" });
@@ -75,6 +92,10 @@ Deno.serve(async (req) => {
   if (typeof senha !== "string" || !senha) {
     return jsonResponse(400, { ok: false, error: "SENHA_OBRIGATORIA" });
   }
+  const senhaNormalizada = senha.trim();
+  if (!senhaNormalizada || senhaNormalizada.length > 128) {
+    return jsonResponse(400, { ok: false, error: "SENHA_INVALIDA_FORMATO" });
+  }
 
   // Configurações do Supabase (service role para acessar pdv_config)
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -90,11 +111,32 @@ Deno.serve(async (req) => {
   });
 
   try {
+    const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
+    const bearer =
+      authHeader && authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length).trim()
+        : "";
+    if (!bearer) {
+      logJson({ level: "warn", stage: "auth", error: "MISSING_BEARER" });
+      return jsonResponse(401, { ok: false, error: "UNAUTHORIZED" });
+    }
+
+    const { data: authData, error: authErr } = await supabase.auth.getUser(bearer);
+    if (authErr || !authData.user) {
+      logJson({
+        level: "warn",
+        stage: "auth",
+        error: "INVALID_BEARER",
+        detail: authErr?.message ?? null,
+      });
+      return jsonResponse(401, { ok: false, error: "UNAUTHORIZED" });
+    }
+
     // Busca configuração do PDV (senha hash e limite de desconto)
     const { data: config, error: configError } = await supabase
       .from("pdv_config")
       .select("gerente_senha_sha256, max_desconto_gerente_percentual")
-      .eq("id", "default")
+      .eq("id", 1)
       .maybeSingle();
 
     if (configError) {
@@ -116,7 +158,7 @@ Deno.serve(async (req) => {
     }
 
     // Calcula hash da senha fornecida
-    const senhaHash = await sha256Hex(senha);
+    const senhaHash = await sha256Hex(senhaNormalizada);
 
     // Comparação timing-safe
     if (!timingSafeEqualStr(senhaHash, config.gerente_senha_sha256)) {
@@ -139,6 +181,7 @@ Deno.serve(async (req) => {
       expira_em: expiraEm,
       usado: false,
       loja_id: typeof loja_id === "string" ? loja_id : null,
+      criado_por: authData.user.id,
     });
 
     if (insertError) {

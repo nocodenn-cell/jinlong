@@ -144,3 +144,6 @@ SELECT indexname
 FROM pg_indexes
 WHERE tablename = 'estoque_baixas'
   AND indexname = 'estoque_baixas_venda_produto_unique';
+
+-- 8) Função validar-gerente + tabela de auditoria de tokens (migration 018)
+SELECT to_regclass('public.tokens_desconto_gerente') AS tabela_tokens_desconto_gerente;

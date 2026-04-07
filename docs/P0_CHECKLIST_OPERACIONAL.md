@@ -7,7 +7,7 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 
 ## Ordem sugerida (fechar o P0 sem pular dependência)
 
-1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura — ver §1b–§1d).
+1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura; **018** tokens de gerente — ver §1b–§1e).
 2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, `X-SYNC-KEY` e chamada a `decrementar_estoque_seguro`.
 3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_*` do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
 4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
@@ -31,7 +31,7 @@ cd C:\Naturecode\fastproduct\backend
 npx supabase migration list
 ```
 
-- Coluna **Remote** deve listar `001` … `017` sem lacunas (até onde o ambiente usa). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura.
+- Coluna **Remote** deve listar `001` … `018` sem lacunas (até onde o ambiente usa). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`.
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  
@@ -98,6 +98,12 @@ A **017** reforça a RPC **016**: papel **authenticated** só decrementa se `p_v
 
 - [ ] **017** aplicada após **016** em todos os ambientes
 - [ ] **sync-outbox** redeployada se ainda estiver em versão anterior à que chama `decrementar_estoque_seguro`
+
+### 1e. Migration 018 (tokens de desconto de gerente)
+
+A **018** cria `tokens_desconto_gerente`, usada pela Edge `validar-gerente` para registrar tokens temporários com auditoria.
+
+- [ ] **018** aplicada em todos os ambientes que usam `validar-gerente`
 
 ---
 
