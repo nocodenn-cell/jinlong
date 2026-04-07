@@ -4,9 +4,12 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { pricingService } from '@/core/pricing/PricingService'
-import type { ItemCarrinho } from '@/core/cart/types'
-import type { RegraPreco, ResultadoPreco } from '@/core/pricing/types'
+import {
+  pricingService,
+  type ItemCarrinho,
+  type RegraPreco,
+  type ResultadoPreco,
+} from '@/lib/pricing/PricingService'
 
 export interface ItemCarrinhoComPreco extends ItemCarrinho {
   resultado: ResultadoPreco

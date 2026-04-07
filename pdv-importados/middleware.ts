@@ -19,6 +19,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isProtected =
     pathname.startsWith('/gerente') ||
+    pathname.startsWith('/admin') ||
     pathname === '/caixa' ||
     pathname.startsWith('/caixa/')
 
@@ -99,8 +100,9 @@ export async function middleware(request: NextRequest) {
     const gerenteOuDono = perfil === 'GERENTE' || perfil === 'DONO'
     const caixaRoute = pathname === '/caixa' || pathname.startsWith('/caixa/')
     const gerenteRoute = pathname.startsWith('/gerente')
+    const adminRoute = pathname.startsWith('/admin')
 
-    if (gerenteRoute && !gerenteOuDono) {
+    if ((gerenteRoute || adminRoute) && !gerenteOuDono) {
       const url = request.nextUrl.clone()
       url.pathname = '/caixa'
       url.search = ''
@@ -118,5 +120,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/gerente/:path*', '/caixa', '/caixa/:path*'],
+  matcher: ['/gerente/:path*', '/admin/:path*', '/caixa', '/caixa/:path*'],
 }

@@ -1,51 +1,84 @@
-# PDV Importados — frontend web
+# PDV Importados - Frontend
 
-Sistema de ponto de venda para lojas de importados no Brasil (Next.js 15, App Router).
-
-## Idiomas e rotas
-
-- **Traduções:** `src/lib/i18n/*.json` carregadas por `getMessages()` — editar apenas essa pasta (ver `src/lib/i18n/README.md`).
-- **URLs sem prefixo de locale:** o painel não usa `/pt/...`; o idioma vem do perfil do usuário (Supabase) + cookie/ações de servidor.
-- **Rota de login:** `/login` (`app/login/page.tsx`).
-- **Middleware:** `middleware.ts` exige sessão Supabase em `/gerente/*` e `/caixa`; anônimos são redirecionados para `/login?next=...`. Dados continuam protegidos por RLS.
-
-> O bloco `i18n` foi removido de `next.config.js` (era legado do Pages Router; este projeto não usa `pages/` para rotas).
+Sistema de ponto de venda para lojas de importados no Brasil, desenvolvido com Next.js 15.
 
 ## Funcionalidades
 
-- Login (Supabase Auth) e painel gerente (produtos, idioma PT / 普通话 / 廣東話)
-- Integração com Supabase (catálogo, usuários)
+- **Interface PDV**: Adição de produtos por código de barras, carrinho interativo
+- **Preços Atacado**: Cálculo automático de descontos baseado em regras por produto/categoria
+- **Offline-First**: Funciona sem internet, sincroniza quando disponível
+- **Bilíngue**: Português para operadores, Mandarim para donos
+- **PWA**: Instalável como app nativo
 
 ## Tecnologias
 
-- Next.js 15 (App Router), TypeScript, Tailwind
-- Supabase (Auth + Postgres)
-- Zustand (onde aplicável)
-- Mensagens do painel: **`getMessages` + JSON** em `src/lib/i18n/` (trilingue).
+- Next.js 15 (App Router)
+- TypeScript
+- Tailwind CSS + shadcn/ui
+- Zustand (gerenciamento de estado)
+- next-intl (internacionalização)
+- Supabase (banco + auth)
 
-## Estrutura (resumo)
+## Estrutura
 
 ```
-app/
-  login/          → /login
-  gerente/        → painel gerente
-  caixa/          → PDV caixa (quando habilitado)
-src/lib/i18n/     → pt.json, zh.json, zh-HK.json (fonte de tradução)
+├── app/
+│   ├── [locale]/
+│   │   ├── layout.tsx    # Layout com i18n
+│   │   └── page.tsx      # Página principal PDV
+│   └── globals.css       # Estilos globais
+├── components/
+│   ├── ui/               # Componentes shadcn/ui
+│   ├── PDV.tsx           # Componente principal
+│   └── LanguageSwitcher.tsx
+├── lib/
+│   ├── pricing/          # Lógica de preços
+│   └── utils.ts
+├── stores/               # Zustand stores
+├── messages/             # Traduções i18n
+└── public/               # Assets estáticos
 ```
 
 ## Desenvolvimento
 
-```bash
-npm install
-cp .env.example .env.local
-# Preencher NEXT_PUBLIC_SUPABASE_* — ver docs/SUPABASE_ENV.md
-npm run dev
-```
+1. Instalar dependências:
+   ```bash
+   npm install
+   ```
 
-Build: `npm run build` · Testes: `npm test` · E2E: `npm run test:e2e` · Smoke HTTP (com `npm run dev` ativo): `npm run smoke:http` · Seed Auth + `usuarios`: `npm run seed:dev-users` ([docs/SEED_DEV_E2E.md](docs/SEED_DEV_E2E.md))
+2. Configurar variáveis de ambiente:
+   ```bash
+   cp .env.example .env.local
+   # Editar com chaves do Supabase
+   ```
 
-Lista de comandos (cola rápida): [COMANDOS.md](COMANDOS.md).
+3. Executar em desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+
+4. Build para produção:
+   ```bash
+   npm run build
+   npm start
+   ```
 
 ## Deploy
 
-Ver documentação na raiz do monorepo: `../docs/DEPLOY_VERCEL.md`.
+- **Vercel**: Deploy automático com preview
+- **PWA**: Instalável em dispositivos móveis
+- **Offline**: Service Worker para cache básico
+
+## Regras de Preço
+
+- **Produto específico**: Ex: 5+ unidades de produto X = 10% desconto
+- **Categoria**: Ex: 3+ itens da categoria Eletrônicos = R$5 desconto fixo
+- **Recálculo automático**: Ao mudar quantidade, todos os itens são recalculados
+
+## Próximos Passos
+
+- Integração completa com Supabase
+- Autenticação de usuários
+- Gestão de produtos e regras
+- Relatórios e dashboards
+- Sincronização offline/online

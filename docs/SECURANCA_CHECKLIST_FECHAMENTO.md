@@ -78,7 +78,7 @@ SELECT HAS_FUNCTION_PRIVILEGE(
 ## 5) Pendências para “segurança avançada” (não bloqueante do fechamento MVP)
 
 - [ ] Migrar hash de senha de gerente de `SHA-256` para `ARGON2ID`/`BCRYPT`.
-- [ ] Remover `SUPABASE_SERVICE_ROLE_KEY` do `pdv-local` (seguir `PLANO_RETIRADA_SERVICE_ROLE_PDV_LOCAL.md`).
+- [ ] Garantir rollout da sincronização via Edge (`SYNC_KEY`) em todos os ambientes (sem `service_role` no `pdv-local/.env`).
 - [ ] Adicionar anti-replay forte no sync (HMAC + timestamp + nonce).
 
 ---

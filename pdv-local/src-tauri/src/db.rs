@@ -1,12 +1,17 @@
 use rusqlite::{params, Connection};
 use rusqlite::OptionalExtension;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 
 use serde::Deserialize;
 use tauri::Manager;
 use serde_json::json;
 use serde::Serialize;
+
+type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Deserialize)]
 pub struct ItemVendaInput {
@@ -29,6 +34,7 @@ pub struct RegistrarVendaInput {
     pub desconto_gerente_percentual: Option<f64>,
     pub desconto_gerente_valor: Option<f64>,
     pub gerente_id: Option<String>,
+    pub desconto_gerente_token: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -382,6 +388,7 @@ pub fn registrar_venda_local(
       "desconto_gerente_percentual": input.desconto_gerente_percentual,
       "desconto_gerente_valor": input.desconto_gerente_valor,
       "gerente_id": input.gerente_id,
+      "desconto_gerente_token": input.desconto_gerente_token,
       "itens": itens_payload
     })
     .to_string();
@@ -711,73 +718,138 @@ struct PdvConfigSupabaseRow {
     max_desconto_gerente_percentual: f64,
 }
 
-fn supabase_auth_headers(service_role_key: &str) -> Result<reqwest::header::HeaderMap, String> {
+#[derive(Deserialize)]
+struct EdgeCatalogoResponse {
+    ok: bool,
+    #[serde(default)]
+    produtos: Vec<ProdutoSupabaseRow>,
+    #[serde(default)]
+    regras: Vec<RegraPrecoSupabaseRow>,
+    error: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct EdgePdvConfigResponse {
+    ok: bool,
+    config: Option<PdvConfigSupabaseRow>,
+    error: Option<String>,
+}
+
+fn endpoint_with_op(endpoint: &str, op: &str) -> String {
+    if endpoint.contains('?') {
+        format!("{endpoint}&op={op}")
+    } else {
+        format!("{endpoint}?op={op}")
+    }
+}
+
+fn sync_endpoint_and_key() -> Result<(String, String), String> {
+    let endpoint = std::env::var("SYNC_ENDPOINT")
+        .map_err(|_| "Falta SYNC_ENDPOINT no ambiente do app".to_string())?;
+    let sync_key =
+        std::env::var("SYNC_KEY").map_err(|_| "Falta SYNC_KEY no ambiente do app".to_string())?;
+    Ok((endpoint, sync_key))
+}
+
+fn canonical_path_with_query(raw_url: &str) -> Result<String, String> {
+    let url = reqwest::Url::parse(raw_url).map_err(|e| format!("URL inválida: {e}"))?;
+    let mut out = url.path().to_string();
+    if let Some(q) = url.query() {
+        out.push('?');
+        out.push_str(q);
+    }
+    Ok(out)
+}
+
+fn unix_ts_now() -> Result<i64, String> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .map_err(|e| format!("Relógio do sistema inválido: {e}"))
+}
+
+fn build_request_signature(
+    sync_key: &str,
+    ts: i64,
+    nonce: &str,
+    body: &str,
+) -> Result<String, String> {
+    let message = format!("{ts}.{nonce}.{body}");
+    let mut mac = HmacSha256::new_from_slice(sync_key.as_bytes())
+        .map_err(|e| format!("Falha ao inicializar assinatura HMAC: {e}"))?;
+    mac.update(message.as_bytes());
+    let bytes = mac.finalize().into_bytes();
+    Ok(hex::encode(bytes))
+}
+
+fn signed_headers_for_request(
+    sync_key: &str,
+    body: &str,
+    device_fingerprint: &str,
+) -> Result<reqwest::header::HeaderMap, String> {
+    let ts = unix_ts_now()?;
+    let nonce = Uuid::new_v4().to_string();
+    let signature = build_request_signature(sync_key, ts, &nonce, body)?;
+
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
-        "apikey",
-        reqwest::header::HeaderValue::from_str(service_role_key).map_err(|e| e.to_string())?,
+        "X-SYNC-KEY",
+        reqwest::header::HeaderValue::from_str(sync_key).map_err(|e| e.to_string())?,
     );
     headers.insert(
-        "Authorization",
-        reqwest::header::HeaderValue::from_str(&format!("Bearer {}", service_role_key))
-            .map_err(|e| e.to_string())?,
+        "x-device-fingerprint",
+        reqwest::header::HeaderValue::from_str(device_fingerprint).map_err(|e| e.to_string())?,
     );
+    headers.insert(
+        "X-SYNC-TS",
+        reqwest::header::HeaderValue::from_str(&ts.to_string()).map_err(|e| e.to_string())?,
+    );
+    headers.insert(
+        "X-SYNC-NONCE",
+        reqwest::header::HeaderValue::from_str(&nonce).map_err(|e| e.to_string())?,
+    );
+    headers.insert(
+        "X-SYNC-SIGNATURE",
+        reqwest::header::HeaderValue::from_str(&signature).map_err(|e| e.to_string())?,
+    );
+
     Ok(headers)
 }
 
 pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDto, String> {
     init_db(app)?;
-    let supabase_url = std::env::var("SUPABASE_URL")
-        .map_err(|_| "Falta SUPABASE_URL no ambiente".to_string())?;
-    let service_role = std::env::var("SUPABASE_SERVICE_ROLE_KEY")
-        .map_err(|_| "Falta SUPABASE_SERVICE_ROLE_KEY no ambiente".to_string())?;
-
-    let headers = supabase_auth_headers(&service_role)?;
+    let (endpoint, sync_key) = sync_endpoint_and_key()?;
     let client = reqwest::blocking::Client::new();
+    let catalogo_url = endpoint_with_op(&endpoint, "catalogo");
+    let headers = signed_headers_for_request(
+        &sync_key,
+        "",
+        &device_fingerprint_local(),
+    )?;
 
-    let produtos_url = format!(
-        "{}/rest/v1/produtos?select=id,nome,codigo_barras,preco_varejo,categoria_id,ativo,origem,tem_nf&limit=100000&order=nome.asc",
-        supabase_url
-    );
-
-    let regras_url = format!(
-        "{}/rest/v1/regras_preco?select=id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo&ativo=eq.true&limit=100000",
-        supabase_url
-    );
-
-    let produtos_resp = client
-        .get(produtos_url)
-        .headers(headers.clone())
-        .send()
-        .map_err(|e| format!("Falha ao buscar produtos: {e}"))?;
-    let produtos_status = produtos_resp.status();
-    if !produtos_status.is_success() {
-        let body = produtos_resp.text().unwrap_or_default();
-        return Err(format!(
-            "Produtos Supabase erro ({}) {}",
-            produtos_status, body
-        ));
-    }
-    let produtos_rows: Vec<ProdutoSupabaseRow> = produtos_resp
-        .json()
-        .map_err(|e| format!("Falha ao parsear produtos: {e}"))?;
-
-    let regras_resp = client
-        .get(regras_url)
+    let resp = client
+        .get(catalogo_url)
         .headers(headers)
         .send()
-        .map_err(|e| format!("Falha ao buscar regras: {e}"))?;
-    let regras_status = regras_resp.status();
-    if !regras_status.is_success() {
-        let body = regras_resp.text().unwrap_or_default();
+        .map_err(|e| format!("Falha ao sincronizar catálogo na Edge: {e}"))?;
+    let status = resp.status();
+    let body = resp
+        .text()
+        .map_err(|e| format!("Falha ao ler resposta do catálogo: {e}"))?;
+    if !status.is_success() {
+        return Err(format!("Catálogo Edge erro ({status}): {body}"));
+    }
+    let parsed: EdgeCatalogoResponse = serde_json::from_str(&body)
+        .map_err(|e| format!("Resposta inválida do catálogo: {e}. Body={body}"))?;
+    if !parsed.ok {
         return Err(format!(
-            "Regras Supabase erro ({}) {}",
-            regras_status, body
+            "Catálogo Edge retornou ok=false: {}",
+            parsed.error.unwrap_or_else(|| "erro desconhecido".to_string())
         ));
     }
-    let regras_rows: Vec<RegraPrecoSupabaseRow> = regras_resp
-        .json()
-        .map_err(|e| format!("Falha ao parsear regras: {e}"))?;
+
+    let produtos_rows = parsed.produtos;
+    let regras_rows = parsed.regras;
 
     let produtos_len = produtos_rows.len();
     let regras_len = regras_rows.len();
@@ -841,40 +913,37 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
 
 pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCacheDto>, String> {
     init_db(app)?;
-    let supabase_url = std::env::var("SUPABASE_URL")
-        .map_err(|_| "Falta SUPABASE_URL no ambiente".to_string())?;
-    let service_role = std::env::var("SUPABASE_SERVICE_ROLE_KEY")
-        .map_err(|_| "Falta SUPABASE_SERVICE_ROLE_KEY no ambiente".to_string())?;
-
-    let headers = supabase_auth_headers(&service_role)?;
+    let (endpoint, sync_key) = sync_endpoint_and_key()?;
     let client = reqwest::blocking::Client::new();
-
-    let config_url = format!(
-        "{}/rest/v1/pdv_config?select=gerente_id,gerente_senha_sha256,max_desconto_gerente_percentual&id=eq.1",
-        supabase_url
-    );
+    let config_url = endpoint_with_op(&endpoint, "pdv_config");
+    let headers = signed_headers_for_request(
+        &sync_key,
+        "",
+        &device_fingerprint_local(),
+    )?;
 
     let resp = client
         .get(config_url)
         .headers(headers)
         .send()
-        .map_err(|e| format!("Falha ao buscar pdv_config: {e}"))?;
+        .map_err(|e| format!("Falha ao sincronizar pdv_config na Edge: {e}"))?;
 
     let status = resp.status();
+    let body = resp
+        .text()
+        .map_err(|e| format!("Falha ao ler resposta de pdv_config: {e}"))?;
     if !status.is_success() {
-        let body = resp.text().unwrap_or_default();
-        // Se ainda não existe tabela no Supabase, devolvemos None (fallback no front).
-        if status == reqwest::StatusCode::NOT_FOUND || status == reqwest::StatusCode::BAD_REQUEST
-        {
-            return Ok(None);
-        }
-        return Err(format!("pdv_config Supabase erro ({}) {}", status, body));
+        return Err(format!("pdv_config Edge erro ({status}): {body}"));
     }
-
-    let rows: Vec<PdvConfigSupabaseRow> = resp
-        .json()
-        .map_err(|e| format!("Falha ao parsear pdv_config: {e}"))?;
-    let row = match rows.into_iter().next() {
+    let parsed: EdgePdvConfigResponse = serde_json::from_str(&body)
+        .map_err(|e| format!("Resposta inválida de pdv_config: {e}. Body={body}"))?;
+    if !parsed.ok {
+        return Err(format!(
+            "pdv_config Edge retornou ok=false: {}",
+            parsed.error.unwrap_or_else(|| "erro desconhecido".to_string())
+        ));
+    }
+    let row = match parsed.config {
         Some(r) => r,
         None => return Ok(None),
     };
@@ -1169,12 +1238,18 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
 
     let client = reqwest::blocking::Client::new();
     let device_fingerprint = device_fingerprint_local();
+    let body = serde_json::to_string(&SyncRequest { events })
+        .map_err(|e| format!("Falha ao serializar payload de sync: {e}"))?;
+    let headers = signed_headers_for_request(
+        &sync_key,
+        &body,
+        &device_fingerprint,
+    )?;
     let res = client
         .post(endpoint)
         .header("Content-Type", "application/json")
-        .header("X-SYNC-KEY", sync_key)
-        .header("x-device-fingerprint", device_fingerprint)
-        .json(&SyncRequest { events })
+        .headers(headers)
+        .body(body)
         .send()
         .map_err(|e| format!("Falha HTTP ao sincronizar: {e}"))?;
 
@@ -1202,5 +1277,62 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
     }
 
     Ok(enviados)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        backoff_segundos_apos_falha, build_request_signature, canonical_path_with_query,
+        endpoint_with_op,
+    };
+
+    #[test]
+    fn backoff_cresce_exponencialmente_e_respeita_teto() {
+        assert_eq!(backoff_segundos_apos_falha(1), 15);
+        assert_eq!(backoff_segundos_apos_falha(2), 30);
+        assert_eq!(backoff_segundos_apos_falha(3), 60);
+        assert_eq!(backoff_segundos_apos_falha(4), 120);
+        assert_eq!(backoff_segundos_apos_falha(20), 3600);
+    }
+
+    #[test]
+    fn endpoint_with_op_adiciona_query_param_corretamente() {
+        let base = "https://example.supabase.co/functions/v1/sync-outbox";
+        assert_eq!(
+            endpoint_with_op(base, "catalogo"),
+            "https://example.supabase.co/functions/v1/sync-outbox?op=catalogo"
+        );
+
+        let com_query = "https://example.supabase.co/functions/v1/sync-outbox?debug=1";
+        assert_eq!(
+            endpoint_with_op(com_query, "pdv_config"),
+            "https://example.supabase.co/functions/v1/sync-outbox?debug=1&op=pdv_config"
+        );
+    }
+
+    #[test]
+    fn canonical_path_with_query_funciona() {
+        let path = canonical_path_with_query(
+            "https://example.supabase.co/functions/v1/sync-outbox?op=catalogo&debug=1",
+        )
+        .expect("path deve ser válido");
+        assert_eq!(path, "/functions/v1/sync-outbox?op=catalogo&debug=1");
+    }
+
+    #[test]
+    fn assinatura_hmac_muda_com_nonce_e_corpo() {
+        let key = "segredo-de-teste";
+        let ts = 1_770_000_000i64;
+        let sig1 = build_request_signature(key, ts, "nonce-a", "{\"events\":[]}")
+            .expect("assinatura 1");
+        let sig2 = build_request_signature(key, ts, "nonce-b", "{\"events\":[]}")
+            .expect("assinatura 2");
+        let sig3 = build_request_signature(key, ts, "nonce-a", "{\"events\":[1]}")
+            .expect("assinatura 3");
+
+        assert_ne!(sig1, sig2);
+        assert_ne!(sig1, sig3);
+        assert_eq!(sig1.len(), 64);
+    }
 }
 

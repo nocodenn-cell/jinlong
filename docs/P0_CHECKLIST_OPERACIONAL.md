@@ -154,8 +154,6 @@ Arquivo **não versionado**; copie de `.env.example` e preencha com valores **re
 
 | Variável                    | Deve ser                                                             |
 | --------------------------- | -------------------------------------------------------------------- |
-| `SUPABASE_URL`              | Mesmo host que `NEXT_PUBLIC_SUPABASE_URL` do Next (projeto oficial). |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role desse projeto (MVP; máquina confiável).                 |
 | `SYNC_ENDPOINT`             | `https://<ref>.supabase.co/functions/v1/sync-outbox`                 |
 | `SYNC_KEY`                  | **Idêntico** ao `SYNC_KEY` dos secrets da Edge.                      |
 

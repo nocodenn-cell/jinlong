@@ -1,24 +1,8 @@
 import type { Metadata } from 'next'
-import { Inter, Noto_Sans_SC, Noto_Sans_TC } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
-
-const notoSansSC = Noto_Sans_SC({
-  weight: ['400', '500', '600'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-noto-sc',
-  preload: false,
-})
-
-const notoSansTC = Noto_Sans_TC({
-  weight: ['400', '500', '600'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-noto-tc',
-  preload: false,
-})
 
 export const metadata: Metadata = {
   title: 'PDV Importados',
@@ -31,10 +15,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html
-      lang="pt"
-      className={`${inter.className} ${notoSansSC.variable} ${notoSansTC.variable}`}
-    >
+    <html lang="pt">
       <body className={inter.className}>{children}</body>
     </html>
   )

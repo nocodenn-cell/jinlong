@@ -60,6 +60,9 @@ export default async function GerenteLayout({
             <Link href="/gerente/relatorios" style={{ color: '#111827' }}>
               {m.gerente.nav_relatorios}
             </Link>
+            <Link href="/admin/dashboard" style={{ color: '#111827' }}>
+              Admin
+            </Link>
           </nav>
         </div>
 

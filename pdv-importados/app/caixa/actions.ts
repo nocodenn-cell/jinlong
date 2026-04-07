@@ -406,17 +406,39 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
       tipo_preco: i.tipoPreco,
     }))
 
-    const { error: txErr } = await supabase.rpc('finalizar_venda_transacional', {
-      p_venda_id: vendaId,
-      p_caixa_id: caixaId,
-      p_forma_pagamento: input.formaPagamento,
-      p_total_bruto: computedFinal.totalBruto,
-      p_total_desconto: computedFinal.totalDesconto,
-      p_total_liquido: computedFinal.totalLiquido,
-      p_itens: itensRpc,
-      p_desconto_gerente_token: input.descontoGerenteToken ?? null,
-      p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
-    })
+    const useUnifiedSalesFlow = process.env.USE_UNIFIED_SALES_FLOW === 'true'
+    const strictManagerDiscountAuth = process.env.STRICT_MANAGER_DISCOUNT_AUTH === 'true'
+    const rpcName = useUnifiedSalesFlow
+      ? 'finalizar_venda_transacional_canonica_v2'
+      : 'finalizar_venda_transacional'
+
+    const rpcParams = useUnifiedSalesFlow
+      ? {
+          p_venda_id: vendaId,
+          p_caixa_id: caixaId,
+          p_operador_id: user.id,
+          p_forma_pagamento: input.formaPagamento,
+          p_total_bruto: computedFinal.totalBruto,
+          p_total_desconto: computedFinal.totalDesconto,
+          p_total_liquido: computedFinal.totalLiquido,
+          p_itens: itensRpc,
+          p_desconto_gerente_token: input.descontoGerenteToken ?? null,
+          p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
+          p_strict_manager_discount_auth: strictManagerDiscountAuth,
+        }
+      : {
+          p_venda_id: vendaId,
+          p_caixa_id: caixaId,
+          p_forma_pagamento: input.formaPagamento,
+          p_total_bruto: computedFinal.totalBruto,
+          p_total_desconto: computedFinal.totalDesconto,
+          p_total_liquido: computedFinal.totalLiquido,
+          p_itens: itensRpc,
+          p_desconto_gerente_token: input.descontoGerenteToken ?? null,
+          p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
+        }
+
+    const { error: txErr } = await supabase.rpc(rpcName, rpcParams)
     if (txErr) return { ok: false, error: `Venda: ${txErr.message}` }
 
     revalidatePath('/gerente/vendas')

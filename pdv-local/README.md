@@ -35,10 +35,10 @@ Depois ajuste:
 
 - `SYNC_ENDPOINT` → `https://<projeto>.supabase.co/functions/v1/sync-outbox`
 - `SYNC_KEY` → o mesmo valor configurado nos secrets da Edge Function `sync-outbox`.
-- `SUPABASE_URL` → `https://<projeto>.supabase.co`
-- `SUPABASE_SERVICE_ROLE_KEY` → `service_role` do Supabase (**MVP** do sync de catálogo; privilégio total — máquina confiável e rotação se vazamento).
+- A mesma Edge `sync-outbox` atende `GET ?op=catalogo` e `GET ?op=pdv_config` com autenticação `X-SYNC-KEY`.
+- **Não** é mais necessário `SUPABASE_SERVICE_ROLE_KEY` no `pdv-local/.env`.
 
-**Credenciais e ambientes (dev/staging/prod):** ver `../docs/AMBIENTES_E_RELEASE.md` — direção para reduzir `service_role` no desktop (login operador / RPC dedicada).
+**Credenciais e ambientes (dev/staging/prod):** ver `../docs/AMBIENTES_E_RELEASE.md` (boas práticas de rotação de segredo e isolamento por ambiente).
 
 ## Próximos passos
 

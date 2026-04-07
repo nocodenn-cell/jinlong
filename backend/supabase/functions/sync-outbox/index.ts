@@ -40,6 +40,33 @@ function timingSafeEqualStr(a: string, b: string): boolean {
 }
 
 const MAX_EVENTS_PER_REQUEST = 200;
+const MAX_CLOCK_SKEW_SECONDS = 5 * 60;
+const NONCE_TTL_SECONDS = 10 * 60;
+
+function hexOfBytes(bytes: Uint8Array): string {
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return hexOfBytes(new Uint8Array(signature));
+}
+
+function buildSignaturePayload(
+  ts: string,
+  nonce: string,
+  body: string,
+): string {
+  return `${ts}.${nonce}.${body}`;
+}
 
 /** Valida o body HTTP e normaliza `created_at` ausente. */
 function parseSyncRequest(raw: unknown): SyncRequest {
@@ -87,6 +114,7 @@ type VendaPayload = {
   total_liquido: number;
   desconto_gerente_percentual?: number | null;
   desconto_gerente_valor?: number | null;
+  desconto_gerente_token?: string | null;
   gerente_id?: string | null;
   itens: VendaItemPayload[];
 };
@@ -198,6 +226,17 @@ function parseVendaPayload(raw: unknown): VendaPayload {
     payload.gerente_id = gerente_id;
   } else {
     throw new Error("PAYLOAD_GERENTE_ID_INVALIDO");
+  }
+
+  if ("desconto_gerente_token" in raw) {
+    const token = raw.desconto_gerente_token;
+    if (token === null || token === undefined) {
+      payload.desconto_gerente_token = null;
+    } else if (typeof token === "string" && token.trim()) {
+      payload.desconto_gerente_token = token.trim();
+    } else {
+      throw new Error("PAYLOAD_DESCONTO_GERENTE_TOKEN_INVALIDO");
+    }
   }
 
   return payload;
@@ -424,6 +463,8 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
     throw new Error("PAYLOAD_VENDA_JSON_INVALIDO");
   }
   const payload = parseVendaPayload(parsedJson);
+  const useUnifiedSalesFlow = Deno.env.get("USE_UNIFIED_SALES_FLOW") === "true";
+  const strictManagerDiscountAuth = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
 
   await ensureCaixaPdv(
     supabase,
@@ -436,6 +477,48 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
   const operadorId = isUuid(payload.operador_id)
     ? String(payload.operador_id).trim()
     : null;
+
+  const hasManagerDiscount = (payload.desconto_gerente_percentual ?? 0) > 0 ||
+    (payload.desconto_gerente_valor ?? 0) > 0;
+  if (strictManagerDiscountAuth && hasManagerDiscount && !payload.desconto_gerente_token) {
+    throw new Error("GERENTE_TOKEN_OBRIGATORIO");
+  }
+
+  if (useUnifiedSalesFlow) {
+    const itensCanonicos = (payload.itens ?? []).map((i) => ({
+      item_id: i.item_id,
+      produto_id: i.produto_id,
+      quantidade: i.quantidade,
+      preco_original: i.preco_original,
+      preco_unitario: i.preco_unitario,
+      tipo_preco: i.preco_unitario < i.preco_original ? "ATACADO" : "VAREJO",
+    }));
+
+    const { error: rpcUnifiedErr } = await supabase.rpc("finalizar_venda_transacional_canonica_v2", {
+      p_venda_id: payload.venda_id,
+      p_caixa_id: caixaId,
+      p_operador_id: operadorId,
+      p_forma_pagamento: payload.forma_pagamento,
+      p_total_bruto: payload.total_bruto,
+      p_total_desconto: payload.total_desconto,
+      p_total_liquido: payload.total_liquido,
+      p_itens: itensCanonicos,
+      p_desconto_gerente_token: payload.desconto_gerente_token ?? null,
+      p_desconto_gerente_percentual: payload.desconto_gerente_percentual ?? null,
+      p_strict_manager_discount_auth: strictManagerDiscountAuth,
+    });
+
+    if (rpcUnifiedErr) {
+      logJson({
+        level: "error",
+        stage: "rpc_finalizar_venda_transacional_canonica_v2",
+        venda_id: payload.venda_id,
+        error: rpcUnifiedErr.message,
+      });
+      throw new Error(`ERRO_RPC_FINALIZAR_VENDA_CANONICA: ${rpcUnifiedErr.message}`);
+    }
+    return;
+  }
 
   const { error: rpcVendaErr } = await supabase.rpc("registrar_venda_com_itens", {
     p_venda_id: payload.venda_id,
@@ -471,41 +554,147 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
   );
 }
 
-Deno.serve(async (req) => {
-  if (req.method !== "POST") {
-    logJson({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED" });
-    return jsonResponse(405, { ok: false, error: "METHOD_NOT_ALLOWED" });
-  }
-
+function getSupabaseAdminClient() {
   const syncKey = Deno.env.get("SYNC_KEY");
-  const gotKey = req.headers.get("X-SYNC-KEY");
-  if (!syncKey || !gotKey || !timingSafeEqualStr(gotKey, syncKey)) {
-    logJson({
-      level: "warn",
-      stage: "auth",
-      error: "UNAUTHORIZED",
-      hint: "SYNC_KEY ausente ou divergente",
-    });
-    return jsonResponse(401, { ok: false, error: "UNAUTHORIZED" });
-  }
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRole) {
-    logJson({ level: "error", stage: "env", error: "MISSING_SUPABASE_ENV" });
-    return jsonResponse(500, {
-      ok: false,
-      error: "MISSING_SUPABASE_ENV",
-    });
+  if (!syncKey || !supabaseUrl || !serviceRole) {
+    return null;
+  }
+  return {
+    syncKey,
+    supabase: createClient(supabaseUrl, serviceRole, {
+      auth: { persistSession: false },
+    }),
+  };
+}
+
+async function persistNonce(
+  supabase: SupabaseAdmin,
+  nonce: string,
+  deviceFingerprint: string,
+  requestTs: number,
+): Promise<boolean> {
+  // Limpeza oportunista para manter tabela pequena sem job dedicado.
+  if (Math.random() < 0.03) {
+    const nowIso = new Date().toISOString();
+    await supabase.from("sync_request_nonces").delete().lt("expires_at", nowIso);
   }
 
-  const supabase = createClient(supabaseUrl, serviceRole, {
-    auth: { persistSession: false },
+  const expiresAt = new Date((requestTs + NONCE_TTL_SECONDS) * 1000).toISOString();
+  const { error } = await supabase.from("sync_request_nonces").insert({
+    nonce,
+    device_fingerprint: deviceFingerprint,
+    request_ts: requestTs,
+    expires_at: expiresAt,
   });
+  if (!error) return true;
+  const msg = String(error.message ?? "");
+  if (error.code === "23505" || msg.includes("duplicate key")) {
+    return false;
+  }
+  throw new Error(`ERRO_NONCE_PERSIST: ${msg}`);
+}
 
+async function authorizeSync(
+  req: Request,
+  syncKey: string,
+  supabase: SupabaseAdmin,
+  rawBody: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const gotKey = req.headers.get("X-SYNC-KEY");
+  const ts = req.headers.get("X-SYNC-TS");
+  const nonce = req.headers.get("X-SYNC-NONCE");
+  const signature = req.headers.get("X-SYNC-SIGNATURE");
+  const device = req.headers.get("x-device-fingerprint") ?? "unknown-device";
+
+  if (!gotKey || !timingSafeEqualStr(gotKey, syncKey)) {
+    return { ok: false, error: "UNAUTHORIZED" };
+  }
+  if (!ts || !nonce || !signature) {
+    return { ok: false, error: "MISSING_SIGNATURE_HEADERS" };
+  }
+  if (!isUuid(nonce)) {
+    return { ok: false, error: "INVALID_NONCE" };
+  }
+  const tsNum = Number(ts);
+  if (!Number.isFinite(tsNum)) {
+    return { ok: false, error: "INVALID_TIMESTAMP" };
+  }
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - tsNum) > MAX_CLOCK_SKEW_SECONDS) {
+    return { ok: false, error: "TIMESTAMP_OUT_OF_WINDOW" };
+  }
+
+  const payload = buildSignaturePayload(
+    ts,
+    nonce,
+    rawBody,
+  );
+  const expectedSig = await hmacSha256Hex(syncKey, payload);
+  if (!timingSafeEqualStr(signature.toLowerCase(), expectedSig.toLowerCase())) {
+    return { ok: false, error: "INVALID_SIGNATURE" };
+  }
+
+  const nonceAccepted = await persistNonce(supabase, nonce, device, tsNum);
+  if (!nonceAccepted) {
+    return { ok: false, error: "REPLAY_DETECTED" };
+  }
+
+  return { ok: true };
+}
+
+async function handleCatalogoSync(supabase: SupabaseAdmin) {
+  const [produtosRes, regrasRes] = await Promise.all([
+    supabase
+      .from("produtos")
+      .select("id,nome,codigo_barras,preco_varejo,categoria_id,ativo,origem,tem_nf")
+      .order("nome", { ascending: true })
+      .limit(100000),
+    supabase
+      .from("regras_preco")
+      .select(
+        "id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo",
+      )
+      .eq("ativo", true)
+      .limit(100000),
+  ]);
+
+  if (produtosRes.error) {
+    throw new Error(`ERRO_CATALOGO_PRODUTOS: ${produtosRes.error.message}`);
+  }
+  if (regrasRes.error) {
+    throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
+  }
+
+  return jsonResponse(200, {
+    ok: true,
+    produtos: produtosRes.data ?? [],
+    regras: regrasRes.data ?? [],
+  });
+}
+
+async function handlePdvConfigSync(supabase: SupabaseAdmin) {
+  const { data, error, status } = await supabase
+    .from("pdv_config")
+    .select("gerente_id,gerente_senha_sha256,max_desconto_gerente_percentual")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) {
+    if (status === 404 || status === 400) {
+      return jsonResponse(200, { ok: true, config: null });
+    }
+    throw new Error(`ERRO_PDV_CONFIG: ${error.message}`);
+  }
+
+  return jsonResponse(200, { ok: true, config: data ?? null });
+}
+
+async function handleOutboxBatch(supabase: SupabaseAdmin, rawBody: string) {
   let body: SyncRequest;
   try {
-    body = parseSyncRequest(await req.json());
+    body = parseSyncRequest(JSON.parse(rawBody));
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     logJson({ level: "warn", stage: "body", error: msg });
@@ -575,4 +764,48 @@ Deno.serve(async (req) => {
 
   const resp: SyncResponse = { ok: true, processed, failed };
   return jsonResponse(200, resp);
+}
+
+Deno.serve(async (req) => {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    logJson({ level: "error", stage: "env", error: "MISSING_SUPABASE_ENV" });
+    return jsonResponse(500, {
+      ok: false,
+      error: "MISSING_SUPABASE_ENV",
+    });
+  }
+
+  const url = new URL(req.url);
+  const op = url.searchParams.get("op");
+  const rawBody = req.method === "POST" ? await req.text() : "";
+
+  const auth = await authorizeSync(req, admin.syncKey, admin.supabase, rawBody);
+  if (!auth.ok) {
+    logJson({
+      level: "warn",
+      stage: "auth",
+      error: auth.error,
+      op,
+    });
+    return jsonResponse(401, { ok: false, error: auth.error });
+  }
+
+  try {
+    if (req.method === "GET" && op === "catalogo") {
+      return await handleCatalogoSync(admin.supabase);
+    }
+    if (req.method === "GET" && op === "pdv_config") {
+      return await handlePdvConfigSync(admin.supabase);
+    }
+    if (req.method === "POST") {
+      return await handleOutboxBatch(admin.supabase, rawBody);
+    }
+    logJson({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED", op });
+    return jsonResponse(405, { ok: false, error: "METHOD_NOT_ALLOWED" });
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    logJson({ level: "error", stage: "runtime", op, error: err });
+    return jsonResponse(500, { ok: false, error: err });
+  }
 });

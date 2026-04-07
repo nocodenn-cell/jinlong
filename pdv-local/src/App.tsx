@@ -313,7 +313,7 @@ export function App() {
     if (!produto) {
       if (produtosCatalogo.length === 0) {
         setMensagem(
-          'Catálogo local vazio. Confira o .env (SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY) e use «Sincronizar catálogo».'
+          'Catálogo local vazio. Confira o .env (SYNC_ENDPOINT e SYNC_KEY), faça deploy da Edge e use «Sincronizar catálogo».'
         )
       } else {
         setMensagem(
@@ -519,8 +519,8 @@ export function App() {
           <strong>Catálogo vazio.</strong> Copie{' '}
           <code style={{ fontSize: 12 }}>pdv-local/.env.example</code> para{' '}
           <code style={{ fontSize: 12 }}>.env</code>, preencha{' '}
-          <code style={{ fontSize: 12 }}>SUPABASE_URL</code> e{' '}
-          <code style={{ fontSize: 12 }}>SUPABASE_SERVICE_ROLE_KEY</code>, reinicie o
+          <code style={{ fontSize: 12 }}>SYNC_ENDPOINT</code> e{' '}
+          <code style={{ fontSize: 12 }}>SYNC_KEY</code>, reinicie o
           app e clique em <strong>Sincronizar catálogo</strong>.
           {ultimoErroSincCatalogo && (
             <div style={{ marginTop: 6, fontSize: 12, color: '#b45309' }}>

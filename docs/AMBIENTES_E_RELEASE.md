@@ -22,21 +22,19 @@ Referências: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md), [CIR
 
 ### Situação atual (MVP)
 
-- **Sincronizar catálogo** e **pdv_config** usam a REST API com **`SUPABASE_SERVICE_ROLE_KEY`** (bypass de RLS), porque as políticas atuais exigem `authenticated` e o desktop ainda não propaga JWT do operador em todas as rotinas.
-- **Sync de vendas** usa **`SYNC_ENDPOINT` + `SYNC_KEY`** (Edge `sync-outbox`); a Edge continua usando service role **só no servidor**, nunca no app web.
+- **Sincronizar catálogo**, **pdv_config** e **outbox de vendas** usam a Edge `sync-outbox` com **`SYNC_ENDPOINT` + `SYNC_KEY`**.
+- A `service_role` permanece somente no ambiente da Edge Function (servidor), nunca no app web nem no `pdv-local/.env`.
 
-### Riscos e mitigações (sem mudar código ainda)
+### Riscos e mitigações
 
 - Tratar a máquina do PDV como **ambiente confiável**; restringir perfis de Windows e disco.
-- **Rotacionar** `service_role` se houver suspeita de vazamento (Dashboard → API → rotate).
+- **Rotacionar** `SYNC_KEY` se houver suspeita de vazamento e redeployar a Edge.
 - Manter **`SYNC_KEY`** forte e igual ao secret da Edge; nunca versionar.
 
-### Direção recomendada (menos `service_role` no cliente)
+### Direção recomendada (próximo passo de segurança)
 
 1. **Login operador no Tauri** + uso do **access token** do Supabase nas chamadas REST (papel `authenticated`), com RLS protegendo os dados **ou**
-2. **RPC / Edge dedicada** com corpo assinado (ex.: `SYNC_KEY` ou JWT) retornando só o necessário para catálogo, sem expor service role no desktop.
-
-Até lá, documentar no `.env` da loja que **`SUPABASE_SERVICE_ROLE_KEY` é privilégio total** e deve ser tratado como segredo de infraestrutura.
+2. **Anti-replay forte** no sync (assinatura HMAC por payload, timestamp e nonce), reduzindo risco de reuso de requisições com `SYNC_KEY`.
 
 ---
 
