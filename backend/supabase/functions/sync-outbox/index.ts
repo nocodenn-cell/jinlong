@@ -28,10 +28,26 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
+/** Comparação em tempo constante (evita leak por timing no X-SYNC-KEY). */
+function timingSafeEqualStr(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ba = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ba.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ba.length; i++) diff |= ba[i] ^ bb[i];
+  return diff === 0;
+}
+
+const MAX_EVENTS_PER_REQUEST = 200;
+
 /** Valida o body HTTP e normaliza `created_at` ausente. */
 function parseSyncRequest(raw: unknown): SyncRequest {
   if (!isRecord(raw) || !Array.isArray(raw.events)) {
     throw new Error("INVALID_BODY");
+  }
+  if (raw.events.length > MAX_EVENTS_PER_REQUEST) {
+    throw new Error(`TOO_MANY_EVENTS: máximo ${MAX_EVENTS_PER_REQUEST}`);
   }
   const events: OutboxEvent[] = [];
   for (const item of raw.events) {
@@ -323,28 +339,80 @@ async function aplicarBaixaEstoquePorItem(
   vendaId: string,
   itens: Array<{ produto_id: string; quantidade: number }>,
 ) {
+  const errosEstoque: string[] = [];
+
   for (const i of itens ?? []) {
     if (!isUuid(i.produto_id)) continue;
     const qty = Number(i.quantidade);
     if (!Number.isFinite(qty) || qty <= 0) continue;
-    const { error: rpcErr } = await supabase.rpc(
-      "decrementar_estoque_idempotente",
+
+    // Usa a nova RPC segura com controle de concorrência
+    const { data: estoqueResult, error: rpcErr } = await supabase.rpc(
+      "decrementar_estoque_seguro",
       {
         p_produto_id: i.produto_id.trim(),
         p_quantidade: qty,
         p_venda_id: vendaId,
       },
     );
+
     if (rpcErr) {
+      const erroMsg = `Produto ${i.produto_id}: ${rpcErr.message}`;
+      errosEstoque.push(erroMsg);
       logJson({
         level: "error",
         stage: "rpc_estoque",
-        event: "decrementar_estoque_idempotente",
+        event: "decrementar_estoque_seguro",
         venda_id: vendaId,
         produto_id: i.produto_id,
         error: rpcErr.message,
       });
+      continue;
     }
+
+    // Verifica resultado da RPC
+    if (!estoqueResult || !Array.isArray(estoqueResult) || estoqueResult.length === 0) {
+      const erroMsg = `Produto ${i.produto_id}: resposta inválida do servidor`;
+      errosEstoque.push(erroMsg);
+      logJson({
+        level: "error",
+        stage: "rpc_estoque",
+        event: "decrementar_estoque_seguro",
+        venda_id: vendaId,
+        produto_id: i.produto_id,
+        error: "resposta_invalida",
+      });
+      continue;
+    }
+
+    const result = estoqueResult[0] as {
+      sucesso: boolean;
+      mensagem: string;
+      estoque_atual: number | null;
+    };
+
+    if (!result.sucesso) {
+      const erroMsg = `Produto ${i.produto_id}: ${result.mensagem}`;
+      errosEstoque.push(erroMsg);
+      logJson({
+        level: "error",
+        stage: "rpc_estoque",
+        event: "decrementar_estoque_seguro",
+        venda_id: vendaId,
+        produto_id: i.produto_id,
+        mensagem: result.mensagem,
+        estoque_atual: result.estoque_atual,
+      });
+    }
+  }
+
+  // Se houver erros críticos de estoque, lança exceção para falhar o sync
+  // (exceto BAIXA_JA_EXISTE que é idempotente)
+  const errosCriticos = errosEstoque.filter(
+    (e) => !e.includes("BAIXA_JA_EXISTE")
+  );
+  if (errosCriticos.length > 0) {
+    throw new Error(`ERRO_ESTOQUE: ${errosCriticos.join("; ")}`);
   }
 }
 
@@ -411,7 +479,7 @@ Deno.serve(async (req) => {
 
   const syncKey = Deno.env.get("SYNC_KEY");
   const gotKey = req.headers.get("X-SYNC-KEY");
-  if (!syncKey || !gotKey || gotKey !== syncKey) {
+  if (!syncKey || !gotKey || !timingSafeEqualStr(gotKey, syncKey)) {
     logJson({
       level: "warn",
       stage: "auth",

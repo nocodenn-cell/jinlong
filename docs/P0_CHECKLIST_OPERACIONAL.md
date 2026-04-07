@@ -7,11 +7,11 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 
 ## Ordem sugerida (fechar o P0 sem pular dependência)
 
-1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** para relatórios, `p_tz` IANA e `relatorio_settings` / env `RELATORIO_TIMEZONE`).
-2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI).
+1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura — ver §1b–§1d).
+2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, `X-SYNC-KEY` e chamada a `decrementar_estoque_seguro`.
 3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_*` do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
 4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
-   - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC) e **010** (leitura `estoque_baixas` para gerente).
+   - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC legada) e **010** (leitura `estoque_baixas` para gerente); caixa web usa **016** `decrementar_estoque_seguro` quando aplicada.
    - **§4 (com desktop):** além disso, **§3** (`pdv-local/.env` + `SYNC_*`) → catálogo → venda no Tauri → sync → mesma checagem no Supabase e na web.
 5. Marcar os checkboxes deste arquivo para o ambiente (piloto/produção) que você chama de **oficial**.
 
@@ -31,22 +31,73 @@ cd C:\Naturecode\fastproduct\backend
 npx supabase migration list
 ```
 
-- Coluna **Remote** deve listar `001` … `010` sem lacunas. A **`009`** concede `GRANT EXECUTE` na RPC `decrementar_estoque_idempotente` para o papel **`authenticated`** (caixa web com Server Action). A **`010`** adiciona `SELECT` em **`estoque_baixas`** para **GERENTE/DONO** (detalhe da venda na web).
+- Coluna **Remote** deve listar `001` … `017` sem lacunas (até onde o ambiente usa). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura.
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  
 [`backend/supabase/scripts/verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql)
 
 - `descontos_venda` com **RLS ativo** e policies `descontos_venda_*`.
-- Função **`decrementar_estoque_idempotente`** existente.
-- Tabela **`estoque_baixas`** existente.
+- Função `decrementar_estoque_idempotente` existente (legado; caixa/Edge preferem **016**).
+- Tabela `estoque_baixas` existente.
 
 - [ ] **001–010** aplicadas no projeto **produção**
 - [ ] **001–010** aplicadas em **staging/dev** (se existirem)
 
-**Migrations 011–013 (relatórios na web):** RPCs `relatorio_*_periodo` com **`p_tz`** validado; tabela **`relatorio_settings`** (fusos IANA); env **`RELATORIO_TIMEZONE`** no servidor prevalece sobre a tabela. O `verify_p0_producao.sql` inclui checagem na seção **5**.
+**Migrations 011–013 (relatórios na web):** RPCs `relatorio_*_periodo` com `p_tz` validado; tabela `relatorio_settings` (fusos IANA); env `RELATORIO_TIMEZONE` no servidor prevalece sobre a tabela. O `verify_p0_producao.sql` inclui checagem na seção **5**.
 
 - [ ] **011**, **012** e **013** aplicadas onde o gerente usa relatórios com intervalo de datas
+
+### 1b. Migrations 014 e 015 (outbox + segurança)
+
+Ordem: `db push` (aplica **014** depois **015**) → em seguida `functions deploy sync-outbox` (limite de 200 eventos por POST + `X-SYNC-KEY` em tempo constante).
+
+- **014** — RPC `registrar_venda_com_itens` usada pela Edge no sync de vendas do PDV local.
+- **015** — `registrar_venda_com_itens` **somente** `service_role`; `decrementar_estoque_idempotente` valida operador na venda para JWT `authenticated`.
+
+Smoke rápido após **015**:
+
+- **Web (§4b):** uma venda no `/caixa` deve concluir sem erro de RPC.
+- **Desktop (§4):** sync da outbox após venda de teste; no Dashboard, `vendas` / `itens_venda` coerentes.
+
+No SQL Editor, rode a seção **6** de [`verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql) para confirmar privilégios.
+
+- [ ] **014** e **015** aplicadas em **produção** (e staging/dev, se existirem)
+- [ ] **sync-outbox** redeployada após **015**
+
+### 1c. Migration 016 (estoque atômico - controle de concorrência)
+
+A migration **016** cria a RPC `decrementar_estoque_seguro` que resolve **race conditions** no estoque quando dois caixas vendem o mesmo item simultaneamente.
+
+**Mudanças principais:**
+- Nova RPC `decrementar_estoque_seguro` com `SELECT FOR UPDATE` (bloqueio pessimista)
+- Coluna `version` na tabela `estoque` (controle de concorrência otimista)
+- Índice único em `estoque_baixas(venda_id, produto_id)` (garantia extra contra duplicatas)
+- Retorno estruturado: `{ sucesso, mensagem, estoque_atual }`
+
+**Mensagens de erro da nova RPC:**
+- `ESTOQUE_INSUFICIENTE` — Quantidade solicitada maior que disponível
+- `PRODUTO_NAO_ENCONTRADO_NO_ESTOQUE` — Produto não existe na tabela estoque
+- `CONCORRENCIA_DETECTADA` — Outra transação modificou o estoque simultaneamente
+- `BAIXA_JA_EXISTE` — Baixa já registrada (idempotente)
+
+**Smoke test após 016:**
+
+- **Web (§4b):** uma venda com múltiplos itens deve concluir sem erro de estoque
+- **Desktop (§4):** sync de venda com vários itens; verificar se todas as baixas foram registradas
+- Teste de concorrência: simular dois caixas tentando vender o último item (um deve receber erro de estoque insuficiente)
+
+No SQL Editor, rode a seção **7** de [`verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql) para confirmar a RPC e a coluna `version`.
+
+- [ ] **016** aplicada em **produção** (e staging/dev, se existirem)
+- [ ] **sync-outbox** redeployada após **016** (usa `decrementar_estoque_seguro`)
+
+### 1d. Migration 017 (auth em `decrementar_estoque_seguro`)
+
+A **017** reforça a RPC **016**: papel **authenticated** só decrementa se `p_venda_id` for de venda do **mesmo** `auth.uid()`; **service_role** (Edge) sem essa checagem.
+
+- [ ] **017** aplicada após **016** em todos os ambientes
+- [ ] **sync-outbox** redeployada se ainda estiver em versão anterior à que chama `decrementar_estoque_seguro`
 
 ---
 
@@ -61,11 +112,13 @@ npx supabase functions deploy sync-outbox
 
 **Secrets** (Dashboard → Edge Functions → `sync-outbox` → Secrets **ou** CLI):
 
-| Secret | Conteúdo |
-|--------|----------|
-| `SUPABASE_URL` | `https://<ref>.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role do **mesmo** projeto |
-| `SYNC_KEY` | Segredo forte (guarde também no PDV local) |
+
+| Secret                      | Conteúdo                                   |
+| --------------------------- | ------------------------------------------ |
+| `SUPABASE_URL`              | `https://<ref>.supabase.co`                |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role do **mesmo** projeto          |
+| `SYNC_KEY`                  | Segredo forte (guarde também no PDV local) |
+
 
 ```powershell
 npx supabase secrets set SUPABASE_URL="https://SEU_REF.supabase.co"
@@ -85,12 +138,14 @@ npx supabase secrets set SYNC_KEY="(segredo forte)"
 
 Arquivo **não versionado**; copie de `.env.example` e preencha com valores **reais**.
 
-| Variável | Deve ser |
-|----------|----------|
-| `SUPABASE_URL` | Mesmo host que `NEXT_PUBLIC_SUPABASE_URL` do Next (projeto oficial). |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role desse projeto (MVP; máquina confiável). |
-| `SYNC_ENDPOINT` | `https://<ref>.supabase.co/functions/v1/sync-outbox` |
-| `SYNC_KEY` | **Idêntico** ao `SYNC_KEY` dos secrets da Edge. |
+
+| Variável                    | Deve ser                                                             |
+| --------------------------- | -------------------------------------------------------------------- |
+| `SUPABASE_URL`              | Mesmo host que `NEXT_PUBLIC_SUPABASE_URL` do Next (projeto oficial). |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role desse projeto (MVP; máquina confiável).                 |
+| `SYNC_ENDPOINT`             | `https://<ref>.supabase.co/functions/v1/sync-outbox`                 |
+| `SYNC_KEY`                  | **Idêntico** ao `SYNC_KEY` dos secrets da Edge.                      |
+
 
 - [ ] `.env` presente na raiz de `pdv-local`
 - [ ] Reinício do app Tauri após alteração
@@ -131,11 +186,13 @@ Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não e
 
 ## Resumo
 
-| Área | Ferramenta |
-|------|------------|
-| Migrations | `npx supabase migration list` + `verify_p0_producao.sql` (010 = P0; **011–013** = relatórios + `p_tz` / settings, seção 5) |
-| Edge | `functions deploy` + secrets |
-| Desktop | `.env` + teste de venda |
-| Web | `.env.local` / Vercel + `/gerente/vendas` |
+
+| Área       | Ferramenta                                                                                                                 |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Migrations | `npx supabase migration list` + `verify_p0_producao.sql` (010 = P0; **011–013** relatórios; **014–017** sync + estoque seguro) |
+| Edge       | `functions deploy` + secrets                                                                                               |
+| Desktop    | `.env` + teste de venda                                                                                                    |
+| Web        | `.env.local` / Vercel + `/gerente/vendas`                                                                                  |
+
 
 O P0 operacional está **fechado** para um ambiente quando: **§1** e **§5** estão OK e você marcou **§4** *ou* **§4b**; e, se usar desktop, **§2** e **§3** também estão OK.

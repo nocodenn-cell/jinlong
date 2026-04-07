@@ -24,11 +24,14 @@ AS $$
   SELECT 'authenticated'::text
 $$;
 
--- Papel usado em GRANT ... TO authenticated nas migrations (existente no Supabase).
+-- Papéis usados em GRANT nas migrations (existentes no Supabase).
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
     CREATE ROLE authenticated NOLOGIN NOINHERIT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role NOLOGIN NOINHERIT;
   END IF;
 END
 $$;

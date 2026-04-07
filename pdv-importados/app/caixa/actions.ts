@@ -177,7 +177,7 @@ export type FinalizarVendaCaixaResult =
 
 /**
  * Persiste venda + itens no Supabase e aplica baixa de estoque via RPC
- * `decrementar_estoque_idempotente` (migration 007 + GRANT 009 para `authenticated`).
+ * `decrementar_estoque_seguro` (migrations 016–017: atômico + validação de operador).
  */
 export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaCaixaResult> {
   const parsed = finalizarVendaInputSchema.safeParse(raw)
@@ -200,6 +200,36 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    // Pré-checagem de estoque (melhor UX; a RPC 016/017 é a fonte de verdade sob concorrência)
+    const estoquesInsuficientes: string[] = []
+    for (const item of input.itens) {
+      const { data: estoqueData, error: estqErr } = await supabase
+        .from('estoque')
+        .select('quantidade_atual, produtos!inner(nome)')
+        .eq('produto_id', item.produtoId)
+        .maybeSingle()
+
+      if (estqErr || !estoqueData) {
+        estoquesInsuficientes.push(
+          `Produto sem linha de estoque (id ${item.produtoId.slice(0, 8)}…).`,
+        )
+      } else if (Number(estoqueData.quantidade_atual) < item.quantidade) {
+        const p = estoqueData.produtos
+        const nomeProduto =
+          (Array.isArray(p) ? p[0]?.nome : (p as { nome?: string } | null)?.nome) ?? 'Produto'
+        estoquesInsuficientes.push(
+          `${nomeProduto}: solicitado ${item.quantidade}, disponível ${estoqueData.quantidade_atual}`,
+        )
+      }
+    }
+
+    if (estoquesInsuficientes.length > 0) {
+      return {
+        ok: false,
+        error: `Estoque insuficiente:\n${estoquesInsuficientes.join('\n')}`,
+      }
+    }
 
     const { data: caixaExistente } = await supabase
       .from('caixas')
@@ -247,12 +277,42 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     if (iErr) return { ok: false, error: `Itens: ${iErr.message}` }
 
     for (const i of input.itens) {
-      const { error: rpcErr } = await supabase.rpc('decrementar_estoque_idempotente', {
-        p_produto_id: i.produtoId,
-        p_quantidade: i.quantidade,
-        p_venda_id: vendaId,
-      })
-      if (rpcErr) return { ok: false, error: `Estoque: ${rpcErr.message}` }
+      // Usa a nova RPC segura com controle de concorrência
+      const { data: estoqueResult, error: rpcErr } = await supabase.rpc(
+        'decrementar_estoque_seguro',
+        {
+          p_produto_id: i.produtoId,
+          p_quantidade: i.quantidade,
+          p_venda_id: vendaId,
+        },
+      )
+
+      if (rpcErr) {
+        return { ok: false, error: `Estoque: ${rpcErr.message}` }
+      }
+
+      // Verifica resultado da RPC
+      if (!estoqueResult || !Array.isArray(estoqueResult) || estoqueResult.length === 0) {
+        return { ok: false, error: 'Estoque: resposta inválida do servidor' }
+      }
+
+      const result = estoqueResult[0] as { sucesso: boolean; mensagem: string; estoque_atual: number }
+
+      if (!result.sucesso) {
+        // Traduz mensagens técnicas para mensagens amigáveis ao usuário
+        const mensagensErro: Record<string, string> = {
+          ESTOQUE_INSUFICIENTE: `Estoque insuficiente para o produto. Disponível: ${result.estoque_atual ?? 0}`,
+          PRODUTO_NAO_ENCONTRADO_NO_ESTOQUE: 'Produto não encontrado no estoque',
+          CONCORRENCIA_DETECTADA: 'Conflito de estoque detectado. Tente novamente.',
+          BAIXA_JA_EXISTE: 'Este item já foi processado.',
+          SESSAO_INVALIDA: 'Sessão inválida. Faça login novamente.',
+          VENDA_NAO_AUTORIZADA: 'Operação não autorizada para esta venda.',
+        }
+        return {
+          ok: false,
+          error: `Estoque: ${mensagensErro[result.mensagem] ?? result.mensagem}`,
+        }
+      }
     }
 
     revalidatePath('/gerente/vendas')

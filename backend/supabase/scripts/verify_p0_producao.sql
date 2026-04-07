@@ -1,6 +1,7 @@
 -- Verificação rápida P0 (cole no SQL Editor do Supabase do ambiente que você chama de produção).
--- Esperado: migrations 001…010 (P0) + 011–013 (relatórios, dia civil, p_tz + relatorio_settings), RLS descontos_venda + estoque_baixas,
--- RPC de estoque, tabela estoque_baixas, RPCs relatorio_*_periodo (date + p_tz após 013).
+-- Esperado: migrations 001…010 (P0) + 011–013 (relatórios) + 014–015 (RPCs/sync) + 016–017 (estoque atômico + auth),
+-- RLS descontos_venda + estoque_baixas, RPCs de estoque, tabela estoque_baixas,
+-- RPCs relatorio_*_periodo (date + p_tz após 013), seção 6 após migration 015/016.
 
 -- 1) Histórico de migrations aplicadas (Supabase hosted; colunas podem variar por versão)
 SELECT *
@@ -79,3 +80,67 @@ SELECT has_function_privilege(
   'public.relatorio_top_produtos_periodo(date, date, integer, text)',
   'EXECUTE'
 ) AS authenticated_relatorio_top_produtos;
+
+-- 6) Hardening migration 015 — privilégios das RPCs críticas
+-- Esperado: authenticated NÃO executa registrar_venda_com_itens; service_role SIM.
+-- decrementar_estoque_idempotente: authenticated e service_role executam.
+
+-- Conferir manualmente: registrar_venda_com_itens só para service_role (authenticated = false, service_role = true).
+SELECT has_function_privilege(
+  'authenticated',
+  'public.registrar_venda_com_itens(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, numeric, numeric, text)',
+  'EXECUTE'
+) AS registrar_venda__authenticated_execute;
+
+SELECT has_function_privilege(
+  'service_role',
+  'public.registrar_venda_com_itens(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, numeric, numeric, text)',
+  'EXECUTE'
+) AS registrar_venda__service_role_execute;
+
+-- Ambos true após 015 (caixa web + Edge).
+SELECT has_function_privilege(
+  'authenticated',
+  'public.decrementar_estoque_idempotente(uuid, numeric, uuid)',
+  'EXECUTE'
+) AS decrementar_estoque__authenticated_execute;
+
+SELECT has_function_privilege(
+  'service_role',
+  'public.decrementar_estoque_idempotente(uuid, numeric, uuid)',
+  'EXECUTE'
+) AS decrementar_estoque__service_role_execute;
+
+-- 7) Verificação migration 016 — RPC decrementar_estoque_seguro (com controle de concorrência)
+-- Esta RPC deve existir e ter permissões para authenticated e service_role
+
+SELECT proname AS rotina
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND proname = 'decrementar_estoque_seguro';
+
+-- Verifica privilégios da nova RPC segura
+SELECT has_function_privilege(
+  'authenticated',
+  'public.decrementar_estoque_seguro(uuid, numeric, uuid)',
+  'EXECUTE'
+) AS decrementar_estoque_seguro__authenticated_execute;
+
+SELECT has_function_privilege(
+  'service_role',
+  'public.decrementar_estoque_seguro(uuid, numeric, uuid)',
+  'EXECUTE'
+) AS decrementar_estoque_seguro__service_role_execute;
+
+-- Verifica coluna version na tabela estoque (controle de concorrência otimista)
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'estoque'
+  AND column_name = 'version';
+
+-- Verifica índice único em estoque_baixas
+SELECT indexname
+FROM pg_indexes
+WHERE tablename = 'estoque_baixas'
+  AND indexname = 'estoque_baixas_venda_produto_unique';

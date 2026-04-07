@@ -44,8 +44,8 @@ Até lá, documentar no `.env` da loja que **`SUPABASE_SERVICE_ROLE_KEY` é priv
 
 Marque explicitamente (PR ou checklist interno):
 
-- [ ] **Migrations:** `migration list` remoto sem lacunas; smoke CI (`ci-backend-supabase` → job *migrations-smoke*) verde no commit.
-- [ ] **Edge:** `sync-outbox` deployada com os **três** secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SYNC_KEY`) do projeto **alvo**.
+- [ ] **Migrations:** `migration list` remoto sem lacunas (incl. **014–017** onde houver sync desktop e caixa com `decrementar_estoque_seguro`); smoke CI (`ci-backend-supabase` → job *migrations-smoke*) verde no commit.
+- [ ] **Edge:** `sync-outbox` deployada com os **três** secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SYNC_KEY`) do projeto **alvo**; redeploy após mudanças na função (batch, `X-SYNC-KEY`, RPC de estoque).
 - [ ] **Web:** `NEXT_PUBLIC_*` do mesmo `ref`; build sem erros; smoke manual em `/login` e fluxo crítico (ver P0 §4 ou §4b).
 - [ ] **Desktop (se aplicável):** `.env` da loja com `SYNC_*` e `SUPABASE_*` do **ambiente alvo**; uma venda de teste + linha em `vendas` no projeto certo.
 - [ ] **Rollback:** saber versão anterior da Edge (`functions deploy` / histórico) e ter `SYNC_KEY` anterior se precisar reverter secrets em conjunto.

@@ -1,4 +1,6 @@
-// stores/carrinhoStore.ts — estado do carrinho PDV (Zustand + core/pricing)
+// stores/carrinhoStore.ts
+// Estado do carrinho do PDV — Zustand
+// Sempre recalcular todos os itens ao mudar quantidade
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -14,12 +16,14 @@ interface CarrinhoState {
   itens: ItemCarrinhoComPreco[]
   regras: RegraPreco[]
 
+  // Totais calculados
   totalBruto: number
   totalDesconto: number
   totalLiquido: number
   totalItens: number
   totalUnidades: number
 
+  // Ações
   setRegras: (regras: RegraPreco[]) => void
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (itemId: string) => void
@@ -31,11 +35,11 @@ interface CarrinhoState {
 function calcularTotais(itens: ItemCarrinhoComPreco[]) {
   const totalBruto = itens.reduce(
     (acc, item) => acc + item.resultado.precoOriginal * item.quantidade,
-    0,
+    0
   )
   const totalLiquido = itens.reduce(
     (acc, item) => acc + item.resultado.precoUnitario * item.quantidade,
-    0,
+    0
   )
   const totalDesconto = totalBruto - totalLiquido
 
@@ -61,6 +65,7 @@ export const useCarrinhoStore = create<CarrinhoState>()(
 
       setRegras: (regras) => {
         set({ regras })
+        // Recalcular preços com as novas regras
         const { itens } = get()
         if (itens.length > 0) {
           const itensRecalculados = pricingService.recalcularCarrinho(itens, regras)
@@ -71,31 +76,26 @@ export const useCarrinhoStore = create<CarrinhoState>()(
       adicionarItem: (novoItem) => {
         const { itens, regras } = get()
 
+        // Verifica se já existe item do mesmo produto
         const itemExistente = itens.find((i) => i.produtoId === novoItem.produtoId)
 
         let novosItens: ItemCarrinho[]
 
         if (itemExistente) {
+          // Incrementa quantidade do item existente
           novosItens = itens.map((i) =>
             i.produtoId === novoItem.produtoId
               ? { ...i, quantidade: i.quantidade + novoItem.quantidade }
-              : i,
+              : i
           )
         } else {
           novosItens = [
             ...itens,
-            {
-              ...novoItem,
-              resultado: {
-                precoUnitario: novoItem.precoVariejo,
-                precoOriginal: novoItem.precoVariejo,
-                descontoUnitario: 0,
-                tipoPreco: 'VAREJO' as const,
-              },
-            },
+            { ...novoItem, resultado: { precoUnitario: novoItem.precoVariejo, precoOriginal: novoItem.precoVariejo, descontoUnitario: 0, tipoPreco: 'VAREJO' as const } },
           ]
         }
 
+        // CRÍTICO: recalcular TODOS os itens (pode cruzar faixa de atacado)
         const itensRecalculados = pricingService.recalcularCarrinho(novosItens, regras)
         set({ itens: itensRecalculados, ...calcularTotais(itensRecalculados) })
       },
@@ -114,8 +114,11 @@ export const useCarrinhoStore = create<CarrinhoState>()(
         }
 
         const { itens, regras } = get()
-        const novoItens = itens.map((i) => (i.id === itemId ? { ...i, quantidade } : i))
+        const novoItens = itens.map((i) =>
+          i.id === itemId ? { ...i, quantidade } : i
+        )
 
+        // CRÍTICO: recalcular TODOS (não só o item alterado)
         const itensRecalculados = pricingService.recalcularCarrinho(novoItens, regras)
         set({ itens: itensRecalculados, ...calcularTotais(itensRecalculados) })
       },
@@ -150,9 +153,10 @@ export const useCarrinhoStore = create<CarrinhoState>()(
     }),
     {
       name: 'pdv-carrinho',
+      // Não persistir regras de preço (sempre buscar fresh do servidor)
       partialize: (state) => ({
         itens: state.itens,
       }),
-    },
-  ),
+    }
+  )
 )
