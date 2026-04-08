@@ -30,6 +30,8 @@ DECLARE
   v_preco_4 numeric(10,2);
   v_count int;
 BEGIN
+  -- Prioriza OPERADOR ativo; fallback para qualquer usuário ativo (ex.: GERENTE/DONO)
+  -- para não bloquear homologação em ambientes sem operador seedado.
   SELECT u.id
   INTO v_operador_id
   FROM public.usuarios u
@@ -39,7 +41,22 @@ BEGIN
   LIMIT 1;
 
   IF v_operador_id IS NULL THEN
-    RAISE EXCEPTION 'SMOKE_ABORT: NÃO HÁ OPERADOR ATIVO EM public.usuarios';
+    SELECT u.id
+    INTO v_operador_id
+    FROM public.usuarios u
+    WHERE u.ativo = true
+    ORDER BY
+      CASE u.perfil
+        WHEN 'GERENTE' THEN 1
+        WHEN 'DONO' THEN 2
+        ELSE 3
+      END,
+      u.created_at
+    LIMIT 1;
+  END IF;
+
+  IF v_operador_id IS NULL THEN
+    RAISE EXCEPTION 'SMOKE_ABORT: NÃO HÁ USUÁRIO ATIVO EM public.usuarios';
   END IF;
 
   SELECT p.id, p.preco_varejo INTO v_prod_1, v_preco_1
