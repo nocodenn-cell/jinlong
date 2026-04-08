@@ -4,11 +4,16 @@ export interface PdvConfig {
   gerenteId: string
 }
 
-// Fallback local: caso ainda não exista configuração no Supabase/cache SQLite (sync `pdv_config`).
-// O hash deve coincidir com `public.pdv_config` após primeira sync; em produção troque a senha no banco.
+/**
+ * SHA-256 hex de um segredo interno fixo (migration 005/026 + `public.pdv_config`).
+ * Não corresponde a senha digitável comum; serve até existir hash real após sync ou UPDATE no Postgres.
+ */
+export const PDV_CONFIG_GERENTE_HASH_SENTINEL =
+  'b70ce4bad0e8696e32bf9742941625d2579a2fe1b4ec0883374b4268a6435ed1'
+
+// Fallback React antes do SQLite/Edge preencherem o cache.
 export const defaultPdvConfig: PdvConfig = {
-  gerenteSenhaSha256: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
+  gerenteSenhaSha256: PDV_CONFIG_GERENTE_HASH_SENTINEL,
   maxDescontoGerentePercentual: 30,
   gerenteId: 'gerente-local-1',
 }
-

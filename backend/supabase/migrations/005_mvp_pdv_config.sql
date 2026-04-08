@@ -10,13 +10,13 @@ create table if not exists public.pdv_config (
   max_desconto_gerente_percentual numeric(10,4) not null default 30
 );
 
--- Seed inicial (dev): alinhado ao fallback em `pdv-local` até existir `pdv_config` na nuvem.
--- Em produção, atualize `gerente_senha_sha256` (e remova credenciais fracas) via painel/SQL após o primeiro deploy.
+-- Seed inicial: hash sentinela (sem senha humana pública). Alinhado a `PDV_CONFIG_GERENTE_HASH_SENTINEL` no pdv-local.
+-- Defina senha real com UPDATE em `gerente_senha_sha256` antes do piloto em produção.
 insert into public.pdv_config (id, gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual)
 values (
   1,
   'gerente-local-1',
-  '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
+  'b70ce4bad0e8696e32bf9742941625d2579a2fe1b4ec0883374b4268a6435ed1',
   30
 )
 on conflict (id) do update

@@ -3,7 +3,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { useCartStore } from './stores/cartStore'
 import type { ItemCarrinho } from '@core/cart/types'
 import type { RegraPreco } from '@core/pricing/types'
-import { defaultPdvConfig } from './config/pdvConfig'
+import {
+  defaultPdvConfig,
+  PDV_CONFIG_GERENTE_HASH_SENTINEL,
+} from './config/pdvConfig'
 import {
   buildMapaProdutoChaves,
   produtosCatalogoAtivos,
@@ -910,6 +913,12 @@ export function App() {
                       maxClamp = r.max_desconto_percentual
                     }
                   } catch {
+                    if (gerenteSenhaSha256 === PDV_CONFIG_GERENTE_HASH_SENTINEL) {
+                      setMensagem(
+                        'Senha do gerente não configurada no servidor: defina `gerente_senha_sha256` em `public.pdv_config`, faça sync de pdv_config (com rede) ou tente de novo online.'
+                      )
+                      return
+                    }
                     const senhaSha = await sha256Hex(senha)
                     if (senhaSha !== gerenteSenhaSha256) {
                       setMensagem('Senha de gerente inválida.')
@@ -920,6 +929,12 @@ export function App() {
                     )
                   }
                 } else {
+                  if (gerenteSenhaSha256 === PDV_CONFIG_GERENTE_HASH_SENTINEL) {
+                    setMensagem(
+                      'Configure a senha do gerente no Supabase (`pdv_config`) e sincronize o app; validação local indisponível até haver hash real no cache.'
+                    )
+                    return
+                  }
                   const senhaSha = await sha256Hex(senha)
                   if (senhaSha !== gerenteSenhaSha256) {
                     setMensagem('Senha de gerente inválida.')
