@@ -105,6 +105,24 @@ Verificação SQL: [`backend/supabase/scripts/verify_p0_producao.sql`](../backen
 
 Se a persistência na nuvem falhar, ver logs da Edge (Dashboard) e coluna `last_error` na **outbox** local (SQLite) para eventos em DLQ.
 
+### Botão único de homologação (PowerShell)
+
+Para rodar em sequência **smoke operacional SQL** + **verify_p0_producao.sql** + **diagnóstico anti-replay**:
+
+```powershell
+cd C:\Naturecode\fastproduct\backend
+.\scripts\homologacao-p0-runner.ps1 -UseLinkedDb
+```
+
+Flags úteis:
+
+- `-UseLocalDb` (em vez de linked)
+- `-SkipSmokeSql`
+- `-SkipVerifySql`
+- `-SkipAntiReplay`
+- `-ValidarGerenteSenha "..."` (opcional)
+- `-OutputDir ".\artifacts"`
+
 ---
 
 ## 4. Referências
