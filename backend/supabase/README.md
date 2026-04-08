@@ -44,6 +44,14 @@ No GitHub Actions, o workflow **CI backend Supabase** aplica todas as migrations
 
 No mesmo workflow há o job `anti-replay-diagnostic-gate` (runner Windows + PowerShell). Configure **somente no GitHub** (Settings → Secrets and variables → Actions) os secrets **`SYNC_ENDPOINT`** (URL da função `sync-outbox`) e **`SYNC_KEY`** (igual ao secret da Edge). Com eles definidos, o CI executa `scripts/sync-outbox-anti-replay-diagnostic.ps1`; em **PR interno** que altera `sync-outbox` ou esse script, a ausência dos secrets faz o gate falhar (forks não recebem esses secrets — comportamento esperado).
 
+## Smoke operacional completo (SQL)
+
+Para simular o ciclo de operação (compra/entrada de estoque, vendas por forma de pagamento, desconto, cancelamento, sangria/suprimento e fechamento de caixa), execute no SQL Editor:
+
+- `backend/supabase/scripts/smoke_operacao_fluxo_completo.sql`
+
+O script é de teste, cria dados fictícios e valida automaticamente os resultados (lança erro se algum passo falhar).
+
 ## Segurança (obrigatório)
 
 - **Nunca** commite `.env.local`, `.env` com chaves reais, nem scripts com JWTs.
