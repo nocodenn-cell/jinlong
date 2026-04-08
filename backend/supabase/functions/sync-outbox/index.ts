@@ -267,6 +267,22 @@ function isUuid(s: string | null | undefined): s is string {
   );
 }
 
+function parseCsvLowerSet(raw: string | null | undefined): Set<string> {
+  return new Set(
+    (raw ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.length > 0),
+  );
+}
+
+function shouldUseUnifiedSalesFlow(deviceFingerprint: string | null | undefined): boolean {
+  if (Deno.env.get("USE_UNIFIED_SALES_FLOW") === "true") return true;
+  const canarySet = parseCsvLowerSet(Deno.env.get("CANARY_DEVICE_FINGERPRINTS"));
+  const device = (deviceFingerprint ?? "").trim().toLowerCase();
+  return !!device && canarySet.has(device);
+}
+
 type SupabaseAdmin = ReturnType<typeof createClient>;
 
 /**
@@ -455,7 +471,11 @@ async function aplicarBaixaEstoquePorItem(
   }
 }
 
-async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
+async function processVenda(
+  supabase: SupabaseAdmin,
+  ev: OutboxEvent,
+  useUnifiedSalesFlow: boolean,
+) {
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(ev.payload_json);
@@ -463,7 +483,6 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
     throw new Error("PAYLOAD_VENDA_JSON_INVALIDO");
   }
   const payload = parseVendaPayload(parsedJson);
-  const useUnifiedSalesFlow = Deno.env.get("USE_UNIFIED_SALES_FLOW") === "true";
   const strictManagerDiscountAuth = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
 
   await ensureCaixaPdv(
@@ -485,6 +504,12 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
   }
 
   if (useUnifiedSalesFlow) {
+    logJson({
+      level: "info",
+      stage: "venda_flow",
+      flow: "unified_v2",
+      venda_id: payload.venda_id,
+    });
     const itensCanonicos = (payload.itens ?? []).map((i) => ({
       item_id: i.item_id,
       produto_id: i.produto_id,
@@ -519,6 +544,13 @@ async function processVenda(supabase: SupabaseAdmin, ev: OutboxEvent) {
     }
     return;
   }
+
+  logJson({
+    level: "info",
+    stage: "venda_flow",
+    flow: "legacy_registrar_venda_com_itens",
+    venda_id: payload.venda_id,
+  });
 
   const { error: rpcVendaErr } = await supabase.rpc("registrar_venda_com_itens", {
     p_venda_id: payload.venda_id,
@@ -691,7 +723,11 @@ async function handlePdvConfigSync(supabase: SupabaseAdmin) {
   return jsonResponse(200, { ok: true, config: data ?? null });
 }
 
-async function handleOutboxBatch(supabase: SupabaseAdmin, rawBody: string) {
+async function handleOutboxBatch(
+  supabase: SupabaseAdmin,
+  rawBody: string,
+  deviceFingerprint: string | null,
+) {
   let body: SyncRequest;
   try {
     body = parseSyncRequest(JSON.parse(rawBody));
@@ -706,7 +742,14 @@ async function handleOutboxBatch(supabase: SupabaseAdmin, rawBody: string) {
   }
 
   const batchSize = body.events?.length ?? 0;
+  const useUnifiedForBatch = shouldUseUnifiedSalesFlow(deviceFingerprint);
   logJson({ level: "info", stage: "batch_start", event_count: batchSize });
+  logJson({
+    level: "info",
+    stage: "batch_flags",
+    use_unified_sales_flow: useUnifiedForBatch,
+    device_fingerprint: (deviceFingerprint ?? "unknown").slice(0, 200),
+  });
 
   const processed: string[] = [];
   const failed: { id: string; error: string }[] = [];
@@ -721,7 +764,7 @@ async function handleOutboxBatch(supabase: SupabaseAdmin, rawBody: string) {
       });
       switch (ev.tipo) {
         case "VENDA_REGISTRADA":
-          await processVenda(supabase, ev);
+          await processVenda(supabase, ev, useUnifiedForBatch);
           break;
         case "CAIXA_ABERTO":
           await processCaixaAberto(supabase, ev);
@@ -778,6 +821,7 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const op = url.searchParams.get("op");
+  const deviceFingerprint = req.headers.get("x-device-fingerprint");
   const rawBody = req.method === "POST" ? await req.text() : "";
 
   const auth = await authorizeSync(req, admin.syncKey, admin.supabase, rawBody);
@@ -799,7 +843,7 @@ Deno.serve(async (req) => {
       return await handlePdvConfigSync(admin.supabase);
     }
     if (req.method === "POST") {
-      return await handleOutboxBatch(admin.supabase, rawBody);
+      return await handleOutboxBatch(admin.supabase, rawBody, deviceFingerprint);
     }
     logJson({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED", op });
     return jsonResponse(405, { ok: false, error: "METHOD_NOT_ALLOWED" });
