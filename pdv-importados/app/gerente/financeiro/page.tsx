@@ -7,6 +7,8 @@ import {
   criarTituloReceber,
   enfileirarDocFiscalStub,
   liquidarTitulo,
+  processarFilaFiscalAgora,
+  reprocessarDocumentoFiscal,
 } from './actions'
 
 export default async function FinanceiroPage() {
@@ -20,6 +22,11 @@ export default async function FinanceiroPage() {
     .in('status', ['ABERTO', 'PARCIAL'])
     .order('created_at', { ascending: false })
     .limit(50)
+  const { data: docsFiscais } = await supabase
+    .from('documentos_fiscais_pendentes')
+    .select('id, venda_id, tipo_doc, status, tentativas, ultimo_erro, created_at, updated_at')
+    .order('created_at', { ascending: false })
+    .limit(30)
 
   async function submitCliente(formData: FormData) {
     'use server'
@@ -57,6 +64,16 @@ export default async function FinanceiroPage() {
   async function submitFiscal(formData: FormData) {
     'use server'
     await enfileirarDocFiscalStub(String(formData.get('venda_id')))
+  }
+
+  async function submitProcessarFila() {
+    'use server'
+    await processarFilaFiscalAgora(30)
+  }
+
+  async function submitReprocessar(formData: FormData) {
+    'use server'
+    await reprocessarDocumentoFiscal(String(formData.get('documento_id')))
   }
 
   return (
@@ -103,6 +120,11 @@ export default async function FinanceiroPage() {
 
         <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Fila fiscal (stub)</h2>
+          <form action={submitProcessarFila} style={{ marginBottom: 12 }}>
+            <button type="submit" style={{ padding: 8, borderRadius: 8, background: '#111827', color: '#fff', border: 'none' }}>
+              Processar fila fiscal agora
+            </button>
+          </form>
           <form action={submitFiscal} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input name="venda_id" required placeholder="UUID da venda" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
             <button type="submit" style={{ padding: 8, borderRadius: 8, background: '#374151', color: '#fff', border: 'none' }}>
@@ -153,6 +175,52 @@ export default async function FinanceiroPage() {
               <tr>
                 <td colSpan={4} style={{ padding: 12, color: '#6b7280' }}>
                   Nenhum título em aberto.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <section style={{ marginTop: 24, border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Documentos fiscais</h2>
+        <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
+              <th style={{ padding: 8 }}>Status</th>
+              <th style={{ padding: 8 }}>Venda</th>
+              <th style={{ padding: 8 }}>Tipo</th>
+              <th style={{ padding: 8 }}>Tentativas</th>
+              <th style={{ padding: 8 }}>Erro</th>
+              <th style={{ padding: 8 }}>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(docsFiscais ?? []).map((d) => (
+              <tr key={d.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                <td style={{ padding: 8 }}>{d.status}</td>
+                <td style={{ padding: 8, fontFamily: 'monospace' }}>{String(d.venda_id).slice(0, 8)}...</td>
+                <td style={{ padding: 8 }}>{d.tipo_doc}</td>
+                <td style={{ padding: 8 }}>{Number(d.tentativas ?? 0)}</td>
+                <td style={{ padding: 8, color: '#b91c1c' }}>{d.ultimo_erro ?? '—'}</td>
+                <td style={{ padding: 8 }}>
+                  {(d.status === 'ERRO' || d.status === 'PENDENTE') ? (
+                    <form action={submitReprocessar}>
+                      <input type="hidden" name="documento_id" value={d.id} />
+                      <button type="submit" style={{ padding: '4px 8px', fontSize: 12 }}>
+                        Reprocessar
+                      </button>
+                    </form>
+                  ) : (
+                    <span style={{ color: '#6b7280' }}>—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {(!docsFiscais || docsFiscais.length === 0) && (
+              <tr>
+                <td colSpan={6} style={{ padding: 12, color: '#6b7280' }}>
+                  Nenhum documento fiscal na fila.
                 </td>
               </tr>
             )}

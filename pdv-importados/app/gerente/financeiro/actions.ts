@@ -89,3 +89,57 @@ export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
   revalidatePath('/gerente/financeiro')
   return { success: true, data: null }
 }
+
+export async function reprocessarDocumentoFiscal(documento_id: string): Promise<R> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('fiscal_reprocessar_documento', {
+    p_documento_id: documento_id,
+  })
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/gerente/financeiro')
+  return { success: true, data: null }
+}
+
+export async function processarFilaFiscalAgora(limit = 20): Promise<R<{ emitted: number; failed: number }>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const endpoint = process.env.FISCAL_WORKER_ENDPOINT
+  const key = process.env.FISCAL_WORKER_KEY
+  if (!endpoint || !key) {
+    return { success: false, error: 'FISCAL_WORKER_ENDPOINT/FISCAL_WORKER_KEY não configurados.' }
+  }
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-FISCAL-WORKER-KEY': key,
+      },
+      body: JSON.stringify({ limit }),
+      cache: 'no-store',
+    })
+    const payload = (await res.json().catch(() => ({}))) as {
+      ok?: boolean
+      emitted?: unknown[]
+      failed?: unknown[]
+      error?: string
+    }
+    if (!res.ok || !payload?.ok) {
+      return { success: false, error: payload?.error ?? `Erro HTTP ${res.status}` }
+    }
+    revalidatePath('/gerente/financeiro')
+    return {
+      success: true,
+      data: {
+        emitted: Array.isArray(payload.emitted) ? payload.emitted.length : 0,
+        failed: Array.isArray(payload.failed) ? payload.failed.length : 0,
+      },
+    }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Falha ao processar fila fiscal.' }
+  }
+}

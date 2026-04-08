@@ -165,9 +165,9 @@ RETURN;
 END IF;
 
   -- Registra a baixa para histórico e idempotência
-INSERT INTO public.estoque_baixas (venda_id, produto_id, quantidade)
-VALUES (p_venda_id, p_produto_id, p_quantidade)
-  ON CONFLICT DO NOTHING;
+INSERT INTO public.estoque_baixas (venda_id, produto_id)
+VALUES (p_venda_id, p_produto_id)
+  ON CONFLICT (venda_id, produto_id) DO NOTHING;
 
 RETURN QUERY SELECT TRUE, 'SUCESSO'::TEXT, (v_quantidade_atual - p_quantidade);
 END;
