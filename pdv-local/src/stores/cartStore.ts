@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ItemCarrinho } from '@core/cart/types'
-import type { RegraPreco, ResultadoPreco } from '@core/pricing/types'
+import type { PricingContext, RegraPreco, ResultadoPreco } from '@core/pricing/types'
+import { DEFAULT_PRICING_CONTEXT } from '@core/pricing/types'
 import { pricingService } from '@core/pricing/PricingService'
 import { defaultPdvConfig } from '../config/pdvConfig'
 
@@ -12,6 +13,7 @@ export interface ItemCarrinhoComPreco extends ItemCarrinho {
 interface CartState {
   itens: ItemCarrinhoComPreco[]
   regras: RegraPreco[]
+  pricingCtx: PricingContext
   totalBruto: number
   totalDesconto: number
   totalLiquido: number
@@ -26,7 +28,7 @@ interface CartState {
   // Config dinâmica (carregada via cache local)
   maxDescontoGerentePercentual: number
 
-  setRegras: (regras: RegraPreco[]) => void
+  setRegras: (regras: RegraPreco[], ctx?: PricingContext) => void
   adicionarItem: (item: ItemCarrinho) => void
   alterarQuantidade: (itemId: string, quantidade: number) => void
   removerItem: (itemId: string) => void
@@ -83,6 +85,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       itens: [],
       regras: [],
+      pricingCtx: DEFAULT_PRICING_CONTEXT,
       totalBruto: 0,
       totalDesconto: 0,
       totalLiquido: 0,
@@ -93,11 +96,12 @@ export const useCartStore = create<CartState>()(
       descontoGerenteToken: null,
       maxDescontoGerentePercentual: defaultPdvConfig.maxDescontoGerentePercentual,
 
-      setRegras: (regras) => {
-        set({ regras })
+      setRegras: (regras, ctx) => {
+        const pricingCtx = ctx ?? get().pricingCtx
+        set({ regras, pricingCtx })
         const { itens, descontoGerentePercentual } = get()
         if (itens.length > 0) {
-          const itensRecalc = pricingService.recalcularCarrinho(itens, regras)
+          const itensRecalc = pricingService.recalcularCarrinho(itens, regras, pricingCtx)
           set({
             itens: itensRecalc,
             ...calcularTotaisComGerente(itensRecalc, descontoGerentePercentual),
@@ -106,7 +110,7 @@ export const useCartStore = create<CartState>()(
       },
 
       adicionarItem: (novoItem) => {
-        const { itens, regras, descontoGerentePercentual } = get()
+        const { itens, regras, pricingCtx, descontoGerentePercentual } = get()
         const existente = itens.find((i) => i.produtoId === novoItem.produtoId)
         let novosItens: ItemCarrinho[]
 
@@ -131,7 +135,11 @@ export const useCartStore = create<CartState>()(
           ]
         }
 
-        const itensRecalc = pricingService.recalcularCarrinho(novosItens, regras)
+        const itensRecalc = pricingService.recalcularCarrinho(
+          novosItens,
+          regras,
+          pricingCtx,
+        )
         set({
           itens: itensRecalc,
           ...calcularTotaisComGerente(itensRecalc, descontoGerentePercentual),
@@ -143,11 +151,11 @@ export const useCartStore = create<CartState>()(
           get().removerItem(itemId)
           return
         }
-        const { itens, regras, descontoGerentePercentual } = get()
+        const { itens, regras, pricingCtx, descontoGerentePercentual } = get()
         const novos = itens.map((i) =>
           i.id === itemId ? { ...i, quantidade } : i
         )
-        const itensRecalc = pricingService.recalcularCarrinho(novos, regras)
+        const itensRecalc = pricingService.recalcularCarrinho(novos, regras, pricingCtx)
         set({
           itens: itensRecalc,
           ...calcularTotaisComGerente(itensRecalc, descontoGerentePercentual),
@@ -155,9 +163,9 @@ export const useCartStore = create<CartState>()(
       },
 
       removerItem: (itemId) => {
-        const { itens, regras, descontoGerentePercentual } = get()
+        const { itens, regras, pricingCtx, descontoGerentePercentual } = get()
         const filtrados = itens.filter((i) => i.id !== itemId)
-        const itensRecalc = pricingService.recalcularCarrinho(filtrados, regras)
+        const itensRecalc = pricingService.recalcularCarrinho(filtrados, regras, pricingCtx)
         set({
           itens: itensRecalc,
           ...calcularTotaisComGerente(itensRecalc, descontoGerentePercentual),

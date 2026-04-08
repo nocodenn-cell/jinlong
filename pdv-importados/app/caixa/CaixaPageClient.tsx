@@ -80,7 +80,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       const res = await carregarRegrasPrecoCaixa()
       if (cancelado) return
       if (res.ok) {
-        setRegras(res.regras)
+        setRegras(res.regras, res.pricingContext)
         setMensagem(null)
       } else {
         setMensagem(`${m.caixa.regras_erro_prefixo} ${res.error}`)
@@ -135,6 +135,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           nome: p.nome,
           quantidade: 1,
           precoVariejo: p.preco_varejo,
+          precoAtacado: p.preco_atacado,
           categoriaId: p.categoria_id ?? undefined,
         })
 

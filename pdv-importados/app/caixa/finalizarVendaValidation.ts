@@ -5,6 +5,7 @@ export const FORMAS_PAGAMENTO_CAIXA = [
   'PIX',
   'CARTAO_DEBITO',
   'CARTAO_CREDITO',
+  'FIADO',
 ] as const
 
 export const itemFinalizarVendaSchema = z.object({

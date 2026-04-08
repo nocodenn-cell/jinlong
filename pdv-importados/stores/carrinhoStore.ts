@@ -9,7 +9,11 @@ import {
   type ItemCarrinho,
   type RegraPreco,
   type ResultadoPreco,
-} from '@/lib/pricing/PricingService'
+} from '@/core/pricing'
+import {
+  DEFAULT_PRICING_CONTEXT,
+  type PricingContext,
+} from '@/core/pricing/types'
 
 export interface ItemCarrinhoComPreco extends ItemCarrinho {
   resultado: ResultadoPreco
@@ -18,6 +22,7 @@ export interface ItemCarrinhoComPreco extends ItemCarrinho {
 interface CarrinhoState {
   itens: ItemCarrinhoComPreco[]
   regras: RegraPreco[]
+  pricingCtx: PricingContext
 
   // Totais calculados
   totalBruto: number
@@ -27,7 +32,7 @@ interface CarrinhoState {
   totalUnidades: number
 
   // Ações
-  setRegras: (regras: RegraPreco[]) => void
+  setRegras: (regras: RegraPreco[], ctx?: PricingContext) => void
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (itemId: string) => void
   alterarQuantidade: (itemId: string, quantidade: number) => void
@@ -60,24 +65,30 @@ export const useCarrinhoStore = create<CarrinhoState>()(
     (set, get) => ({
       itens: [],
       regras: [],
+      pricingCtx: DEFAULT_PRICING_CONTEXT,
       totalBruto: 0,
       totalDesconto: 0,
       totalLiquido: 0,
       totalItens: 0,
       totalUnidades: 0,
 
-      setRegras: (regras) => {
-        set({ regras })
+      setRegras: (regras, ctx) => {
+        const pricingCtx = ctx ?? get().pricingCtx
+        set({ regras, pricingCtx })
         // Recalcular preços com as novas regras
         const { itens } = get()
         if (itens.length > 0) {
-          const itensRecalculados = pricingService.recalcularCarrinho(itens, regras)
+          const itensRecalculados = pricingService.recalcularCarrinho(
+            itens,
+            regras,
+            pricingCtx,
+          )
           set({ itens: itensRecalculados, ...calcularTotais(itensRecalculados) })
         }
       },
 
       adicionarItem: (novoItem) => {
-        const { itens, regras } = get()
+        const { itens, regras, pricingCtx } = get()
 
         // Verifica se já existe item do mesmo produto
         const itemExistente = itens.find((i) => i.produtoId === novoItem.produtoId)
@@ -99,14 +110,22 @@ export const useCarrinhoStore = create<CarrinhoState>()(
         }
 
         // CRÍTICO: recalcular TODOS os itens (pode cruzar faixa de atacado)
-        const itensRecalculados = pricingService.recalcularCarrinho(novosItens, regras)
+        const itensRecalculados = pricingService.recalcularCarrinho(
+          novosItens,
+          regras,
+          pricingCtx,
+        )
         set({ itens: itensRecalculados, ...calcularTotais(itensRecalculados) })
       },
 
       removerItem: (itemId) => {
-        const { itens, regras } = get()
+        const { itens, regras, pricingCtx } = get()
         const novoItens = itens.filter((i) => i.id !== itemId)
-        const itensRecalculados = pricingService.recalcularCarrinho(novoItens, regras)
+        const itensRecalculados = pricingService.recalcularCarrinho(
+          novoItens,
+          regras,
+          pricingCtx,
+        )
         set({ itens: itensRecalculados, ...calcularTotais(itensRecalculados) })
       },
 
@@ -116,13 +135,17 @@ export const useCarrinhoStore = create<CarrinhoState>()(
           return
         }
 
-        const { itens, regras } = get()
+        const { itens, regras, pricingCtx } = get()
         const novoItens = itens.map((i) =>
           i.id === itemId ? { ...i, quantidade } : i
         )
 
         // CRÍTICO: recalcular TODOS (não só o item alterado)
-        const itensRecalculados = pricingService.recalcularCarrinho(novoItens, regras)
+        const itensRecalculados = pricingService.recalcularCarrinho(
+          novoItens,
+          regras,
+          pricingCtx,
+        )
         set({ itens: itensRecalculados, ...calcularTotais(itensRecalculados) })
       },
 

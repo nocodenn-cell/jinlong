@@ -2,22 +2,49 @@
  * Motor de preço atacado — Strategy Pattern.
  * Sem dependência de React, Next ou Supabase (copiável para PDV local / Tauri).
  */
-import type { ItemCarrinho } from '@/core/cart/types'
-import type { RegraPreco, ResultadoPreco } from '@/core/pricing/types'
+import type { ItemCarrinho } from '../cart/types'
+import type { PricingContext, RegraPreco, ResultadoPreco } from './types'
+import { DEFAULT_PRICING_CONTEXT } from './types'
 
 interface PriceStrategy {
   calcular(
     item: ItemCarrinho,
     regras: RegraPreco[],
-    quantidadeTotal: number
+    quantidadeTotal: number,
+    ctx: PricingContext,
   ): ResultadoPreco | null
+}
+
+/** Atacado explícito no cadastro do produto (acima da quantidade mínima configurada). */
+class PrecoAtacadoCatalogoStrategy implements PriceStrategy {
+  calcular(
+    item: ItemCarrinho,
+    _regras: RegraPreco[],
+    quantidadeTotal: number,
+    ctx: PricingContext,
+  ): ResultadoPreco | null {
+    const pa =
+      item.precoAtacado !== undefined && item.precoAtacado !== null
+        ? Number(item.precoAtacado)
+        : null
+    if (pa === null || Number.isNaN(pa) || pa < 0) return null
+    if (quantidadeTotal < ctx.quantidadeMinimaAtacadoPadrao) return null
+    const pv = item.precoVariejo
+    return {
+      precoUnitario: Math.round(pa * 100) / 100,
+      precoOriginal: pv,
+      descontoUnitario: Math.round((pv - pa) * 100) / 100,
+      tipoPreco: 'ATACADO',
+    }
+  }
 }
 
 class ProductWholesaleStrategy implements PriceStrategy {
   calcular(
     item: ItemCarrinho,
     regras: RegraPreco[],
-    quantidadeTotal: number
+    quantidadeTotal: number,
+    _ctx: PricingContext,
   ): ResultadoPreco | null {
     const regrasDoP = regras
       .filter(
@@ -44,7 +71,8 @@ class CategoryWholesaleStrategy implements PriceStrategy {
   calcular(
     item: ItemCarrinho,
     regras: RegraPreco[],
-    quantidadeTotal: number
+    quantidadeTotal: number,
+    _ctx: PricingContext,
   ): ResultadoPreco | null {
     if (!item.categoriaId) return null
 
@@ -70,7 +98,7 @@ class CategoryWholesaleStrategy implements PriceStrategy {
 }
 
 class DefaultPriceStrategy implements PriceStrategy {
-  calcular(item: ItemCarrinho): ResultadoPreco {
+  calcular(item: ItemCarrinho, _r: RegraPreco[], _q: number, _ctx: PricingContext): ResultadoPreco {
     return {
       precoUnitario: item.precoVariejo,
       precoOriginal: item.precoVariejo,
@@ -85,6 +113,7 @@ export class PricingService {
 
   constructor() {
     this.strategies = [
+      new PrecoAtacadoCatalogoStrategy(),
       new ProductWholesaleStrategy(),
       new CategoryWholesaleStrategy(),
       new DefaultPriceStrategy(),
@@ -94,10 +123,11 @@ export class PricingService {
   calcularPreco(
     item: ItemCarrinho,
     regras: RegraPreco[],
-    quantidadeTotal: number
+    quantidadeTotal: number,
+    ctx: PricingContext = DEFAULT_PRICING_CONTEXT,
   ): ResultadoPreco {
     for (const strategy of this.strategies) {
-      const resultado = strategy.calcular(item, regras, quantidadeTotal)
+      const resultado = strategy.calcular(item, regras, quantidadeTotal, ctx)
       if (resultado !== null) return resultado
     }
     return {
@@ -110,7 +140,8 @@ export class PricingService {
 
   recalcularCarrinho(
     carrinho: ItemCarrinho[],
-    regras: RegraPreco[]
+    regras: RegraPreco[],
+    ctx: PricingContext = DEFAULT_PRICING_CONTEXT,
   ): Array<ItemCarrinho & { resultado: ResultadoPreco }> {
     const quantidadesPorProduto = carrinho.reduce<Record<string, number>>(
       (acc, item) => {
@@ -125,7 +156,8 @@ export class PricingService {
       resultado: this.calcularPreco(
         item,
         regras,
-        quantidadesPorProduto[item.produtoId] ?? item.quantidade
+        quantidadesPorProduto[item.produtoId] ?? item.quantidade,
+        ctx,
       ),
     }))
   }

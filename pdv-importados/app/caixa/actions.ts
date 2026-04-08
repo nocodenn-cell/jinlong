@@ -13,19 +13,22 @@ import {
   totaisFromItens,
   totalsMatchDeclared,
 } from '@/app/caixa/finalizarVendaValidation'
+import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '@/core/pricing/types'
 
 export type ProdutoCaixaDTO = {
   id: string
   nome: string
   codigo_barras: string | null
   preco_varejo: number
+  preco_atacado: number | null
   categoria_id: string | null
   /** Estoque atual (se houver linha em `estoque`) */
   quantidade_estoque: number | null
 }
 
 export type CarregarRegrasResult =
-  | { ok: true; regras: RegraPreco[] }
+  | { ok: true; regras: RegraPreco[]; pricingContext: PricingContext }
   | { ok: false; error: string }
 
 export type BuscarProdutoResult =
@@ -45,30 +48,36 @@ function mapProdutoRow(
     nome: string
     codigo_barras: string | null
     preco_varejo: number | string
+    preco_atacado?: number | string | null
     categoria_id: string | null
   },
   quantidade_estoque: number | null,
 ): ProdutoCaixaDTO {
+  const pa = r.preco_atacado
   return {
     id: r.id,
     nome: r.nome,
     codigo_barras: r.codigo_barras,
     preco_varejo: Number(r.preco_varejo),
+    preco_atacado: pa === null || pa === undefined ? null : Number(pa),
     categoria_id: r.categoria_id,
     quantidade_estoque,
   }
 }
 
-const PRODUTO_COLS = 'id, nome, codigo_barras, preco_varejo, categoria_id' as const
+const PRODUTO_COLS =
+  'id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id' as const
 
 async function quantidadeEstoque(
   supabase: Awaited<ReturnType<typeof createClient>>,
   produtoId: string,
+  lojaId: string,
 ): Promise<number | null> {
   const { data } = await supabase
     .from('estoque')
     .select('quantidade_atual')
     .eq('produto_id', produtoId)
+    .eq('loja_id', lojaId)
     .maybeSingle()
   if (!data || data.quantidade_atual === undefined || data.quantidade_atual === null) {
     return null
@@ -98,8 +107,22 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
       return { ok: false, error: error.message }
     }
 
+    const { data: cfg } = await supabase
+      .from('pdv_config')
+      .select('quantidade_minima_atacado_padrao')
+      .eq('id', 1)
+      .maybeSingle()
+
+    const minAtacado = cfg?.quantidade_minima_atacado_padrao
+      ? Number(cfg.quantidade_minima_atacado_padrao)
+      : DEFAULT_PRICING_CONTEXT.quantidadeMinimaAtacadoPadrao
+
     const regras = (data as RegraPrecoRow[] | null)?.map(mapRegraPrecoRow) ?? []
-    return { ok: true, regras }
+    return {
+      ok: true,
+      regras,
+      pricingContext: { quantidadeMinimaAtacadoPadrao: minAtacado },
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro ao carregar regras'
     return { ok: false, error: msg }
@@ -118,6 +141,8 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
+    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+
     const t = termo.trim()
     if (!t) return { ok: true, status: 'nao_encontrado' }
 
@@ -130,7 +155,7 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
 
     if (errCodigo) return { ok: false, error: errCodigo.message }
     if (porCodigo) {
-      const q = await quantidadeEstoque(supabase, porCodigo.id)
+      const q = await quantidadeEstoque(supabase, porCodigo.id, lojaId)
       return {
         ok: true,
         status: 'encontrado',
@@ -162,7 +187,7 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
     }
 
     const row = lista[0]
-    const q = await quantidadeEstoque(supabase, row.id)
+    const q = await quantidadeEstoque(supabase, row.id, lojaId)
     return {
       ok: true,
       status: 'encontrado',
@@ -257,7 +282,7 @@ async function recalcularItensNoServidor(
   const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
   const { data: produtosRows, error: prodErr } = await supabase
     .from('produtos')
-    .select('id, nome, preco_varejo, categoria_id, ativo')
+    .select('id, nome, preco_varejo, preco_atacado, categoria_id, ativo')
     .in('id', produtosIds)
     .eq('ativo', true)
 
@@ -276,6 +301,17 @@ async function recalcularItensNoServidor(
   if (regrasErr) return { ok: false, error: `Regras: ${regrasErr.message}` }
   const regras = (regrasRows as RegraPrecoRow[] | null)?.map(mapRegraPrecoRow) ?? []
 
+  const { data: cfg } = await supabase
+    .from('pdv_config')
+    .select('quantidade_minima_atacado_padrao')
+    .eq('id', 1)
+    .maybeSingle()
+  const pricingCtx: PricingContext = {
+    quantidadeMinimaAtacadoPadrao: cfg?.quantidade_minima_atacado_padrao
+      ? Number(cfg.quantidade_minima_atacado_padrao)
+      : DEFAULT_PRICING_CONTEXT.quantidadeMinimaAtacadoPadrao,
+  }
+
   const quantidadePorProduto = itensInput.reduce<Record<string, number>>((acc, item) => {
     acc[item.produtoId] = (acc[item.produtoId] ?? 0) + item.quantidade
     return acc
@@ -284,15 +320,22 @@ async function recalcularItensNoServidor(
   const itens: ItemAutoritativo[] = []
   for (const i of itensInput) {
     const p = produtos.get(i.produtoId)!
+    const pa = p.preco_atacado
     const itemCarrinho: ItemCarrinho = {
       id: crypto.randomUUID(),
       produtoId: p.id,
       nome: p.nome,
       quantidade: i.quantidade,
       precoVariejo: Number(p.preco_varejo),
+      precoAtacado: pa === null || pa === undefined ? null : Number(pa),
       categoriaId: p.categoria_id ?? undefined,
     }
-    const preco = pricingService.calcularPreco(itemCarrinho, regras, quantidadePorProduto[i.produtoId])
+    const preco = pricingService.calcularPreco(
+      itemCarrinho,
+      regras,
+      quantidadePorProduto[i.produtoId],
+      pricingCtx,
+    )
     itens.push({
       produtoId: i.produtoId,
       quantidade: i.quantidade,
@@ -322,6 +365,8 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
 
     const itensCliente = input.itens.map((i) => ({ produtoId: i.produtoId, quantidade: i.quantidade }))
     const recalc = await recalcularItensNoServidor(supabase, itensCliente)
@@ -355,6 +400,7 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
         .from('estoque')
         .select('quantidade_atual, produtos!inner(nome)')
         .eq('produto_id', item.produtoId)
+        .eq('loja_id', lojaId)
         .maybeSingle()
 
       if (estqErr || !estoqueData) {
@@ -389,7 +435,12 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     if (!caixaId) {
       const { data: novo, error: caixaErr } = await supabase
         .from('caixas')
-        .insert({ operador_id: user.id, valor_inicial: 0, status: 'ABERTO' })
+        .insert({
+          operador_id: user.id,
+          loja_id: lojaId,
+          valor_inicial: 0,
+          status: 'ABERTO',
+        })
         .select('id')
         .single()
       if (caixaErr) return { ok: false, error: `Caixa: ${caixaErr.message}` }

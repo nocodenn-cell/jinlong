@@ -81,6 +81,9 @@ export default async function GerenteInicioPage() {
         {[
           { href: '/gerente/produtos', label: m.produtos.titulo },
           { href: '/gerente/estoque', label: m.estoque.titulo },
+          { href: '/gerente/recebimento', label: 'Recebimento' },
+          { href: '/gerente/transferencias', label: 'Transferências' },
+          { href: '/gerente/financeiro', label: 'Financeiro' },
           { href: '/gerente/vendas', label: m.gerente.nav_vendas },
           { href: '/gerente/caixas', label: m.gerente.nav_caixas },
           { href: '/gerente/relatorios', label: m.gerente.nav_relatorios },

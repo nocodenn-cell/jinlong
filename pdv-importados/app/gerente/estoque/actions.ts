@@ -4,10 +4,25 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
   | { success: false; error: string }
+
+async function lojaIdDoUsuarioLogado(): Promise<string | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabase
+    .from('usuarios')
+    .select('loja_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+}
 
 const AtualizarEstoqueSchema = z.object({
   produto_id: z.string().uuid(),
@@ -34,6 +49,9 @@ export async function atualizarEstoqueProduto(
   }
 
   const supabase = await createClient()
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Sessão inválida' }
+
   const { error } = await supabase
     .from('estoque')
     .update({
@@ -41,6 +59,7 @@ export async function atualizarEstoqueProduto(
       estoque_minimo: parsed.data.estoque_minimo,
     })
     .eq('produto_id', parsed.data.produto_id)
+    .eq('loja_id', lojaId)
 
   if (error) {
     return { success: false, error: error.message }
@@ -63,8 +82,12 @@ export async function garantirLinhaEstoque(input: unknown): Promise<ActionResult
   }
 
   const supabase = await createClient()
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Sessão inválida' }
+
   const { error } = await supabase.from('estoque').insert({
     produto_id: parsed.data.produto_id,
+    loja_id: lojaId,
     quantidade_atual: 0,
     estoque_minimo: 0,
   })

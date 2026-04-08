@@ -9,5 +9,7 @@ export interface ItemCarrinho {
   quantidade: number
   /** preço base varejo do produto */
   precoVariejo: number
+  /** preço atacado do catálogo (opcional); exige quantidade mínima em `PricingContext` */
+  precoAtacado?: number | null
   categoriaId?: string
 }

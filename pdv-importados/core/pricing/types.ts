@@ -9,6 +9,15 @@ export interface ResultadoPreco {
   regraAplicadaId?: string
 }
 
+/** Parâmetros globais do motor de preço (ex.: mínimo para usar `preco_atacado` do produto). */
+export interface PricingContext {
+  quantidadeMinimaAtacadoPadrao: number
+}
+
+export const DEFAULT_PRICING_CONTEXT: PricingContext = {
+  quantidadeMinimaAtacadoPadrao: 6,
+}
+
 export interface RegraPreco {
   id: string
   tipoRegra: 'PRODUTO' | 'CATEGORIA'

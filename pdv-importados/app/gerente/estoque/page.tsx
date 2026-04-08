@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { atualizarEstoqueProduto, garantirLinhaEstoque } from './actions'
 
 type EstoqueRow = {
@@ -16,7 +17,7 @@ type ProdutoComEstoque = {
   nome: string
   codigo_barras: string | null
   unidade_medida: string
-  estoque: EstoqueRow | EstoqueRow[] | null
+  estoque: EstoqueRow | null
 }
 
 type EstoqueBaixoRow = {
@@ -24,6 +25,7 @@ type EstoqueBaixoRow = {
   nome: string
   codigo_barras: string | null
   origem: string
+  loja_nome?: string | null
   quantidade_atual: number
   estoque_minimo: number
   deficit: number
@@ -48,6 +50,19 @@ export default async function EstoqueGerentePage({
   const m = getMessages(idioma)
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  let lojaId = LOJA_MATRIZ_ID
+  if (user) {
+    const { data: urow } = await supabase
+      .from('usuarios')
+      .select('loja_id, perfil')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (urow?.loja_id) lojaId = urow.loja_id as string
+  }
+
   let produtos: ProdutoComEstoque[] | null = null
   let estoqueBaixo: EstoqueBaixoRow[] | null = null
 
@@ -55,18 +70,28 @@ export default async function EstoqueGerentePage({
     const { data } = await supabase
       .from('v_estoque_baixo')
       .select(
-        'id, nome, codigo_barras, origem, quantidade_atual, estoque_minimo, deficit'
+        'id, nome, codigo_barras, origem, loja_id, loja_nome, quantidade_atual, estoque_minimo, deficit',
       )
+      .eq('loja_id', lojaId)
     estoqueBaixo = data as EstoqueBaixoRow[] | null
   } else {
-    const { data } = await supabase
+    const { data: plist } = await supabase
       .from('produtos')
-      .select(
-        'id, nome, codigo_barras, unidade_medida, estoque(id, quantidade_atual, estoque_minimo)'
-      )
+      .select('id, nome, codigo_barras, unidade_medida')
       .eq('ativo', true)
       .order('nome', { ascending: true })
-    produtos = data as ProdutoComEstoque[] | null
+
+    const { data: estRows } = await supabase
+      .from('estoque')
+      .select('id, produto_id, quantidade_atual, estoque_minimo')
+      .eq('loja_id', lojaId)
+
+    const estMap = new Map((estRows ?? []).map((e) => [e.produto_id as string, e]))
+    produtos =
+      plist?.map((p) => ({
+        ...p,
+        estoque: estMap.get(p.id) ?? null,
+      })) ?? null
   }
 
   async function submitAtualizar(formData: FormData) {

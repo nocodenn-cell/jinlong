@@ -143,7 +143,12 @@ function Invoke-DiagnosticRequest {
     Method            = $Method
     Uri               = $Url
     Headers           = $Headers
-    SkipHttpErrorCheck = $true
+  }
+
+  # Compatibilidade: SkipHttpErrorCheck existe no PowerShell 7+, mas não no Windows PowerShell 5.1.
+  $iwrCmd = Get-Command Invoke-WebRequest -ErrorAction SilentlyContinue
+  if ($null -ne $iwrCmd -and $iwrCmd.Parameters.ContainsKey("SkipHttpErrorCheck")) {
+    $requestParams["SkipHttpErrorCheck"] = $true
   }
 
   if ($Method -eq "POST") {

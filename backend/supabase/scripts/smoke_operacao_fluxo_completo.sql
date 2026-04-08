@@ -4,7 +4,7 @@
 -- MOVIMENTOS DE CAIXA (SUPRIMENTO/SANGRIA) E FECHAMENTO DE CAIXA.
 --
 -- PRÉ-REQUISITOS:
--- - MIGRATIONS APLICADAS ATÉ 027.
+-- - MIGRATIONS APLICADAS ATÉ 035 (lojas + estoque por loja).
 -- - PELO MENOS 1 USUÁRIO OPERADOR EM public.usuarios.
 -- - PELO MENOS 4 PRODUTOS ATIVOS COM ESTOQUE > 0.
 --
@@ -12,6 +12,7 @@
 
 DO $$
 DECLARE
+  v_loja_matriz uuid := 'a0000001-0000-4000-8000-000000000001'::uuid;
   v_operador_id uuid;
   v_auth_user_id uuid;
   v_caixa_id uuid := gen_random_uuid();
@@ -78,7 +79,7 @@ BEGIN
 
   SELECT p.id, p.preco_varejo INTO v_prod_1, v_preco_1
   FROM public.produtos p
-  JOIN public.estoque e ON e.produto_id = p.id
+  JOIN public.estoque e ON e.produto_id = p.id AND e.loja_id = v_loja_matriz
   WHERE p.ativo = true
     AND e.quantidade_atual > 5
   ORDER BY p.nome
@@ -86,7 +87,7 @@ BEGIN
 
   SELECT p.id, p.preco_varejo INTO v_prod_2, v_preco_2
   FROM public.produtos p
-  JOIN public.estoque e ON e.produto_id = p.id
+  JOIN public.estoque e ON e.produto_id = p.id AND e.loja_id = v_loja_matriz
   WHERE p.ativo = true
     AND e.quantidade_atual > 5
     AND p.id <> v_prod_1
@@ -95,7 +96,7 @@ BEGIN
 
   SELECT p.id, p.preco_varejo INTO v_prod_3, v_preco_3
   FROM public.produtos p
-  JOIN public.estoque e ON e.produto_id = p.id
+  JOIN public.estoque e ON e.produto_id = p.id AND e.loja_id = v_loja_matriz
   WHERE p.ativo = true
     AND e.quantidade_atual > 5
     AND p.id NOT IN (v_prod_1, v_prod_2)
@@ -104,7 +105,7 @@ BEGIN
 
   SELECT p.id, p.preco_varejo INTO v_prod_4, v_preco_4
   FROM public.produtos p
-  JOIN public.estoque e ON e.produto_id = p.id
+  JOIN public.estoque e ON e.produto_id = p.id AND e.loja_id = v_loja_matriz
   WHERE p.ativo = true
     AND e.quantidade_atual > 5
     AND p.id NOT IN (v_prod_1, v_prod_2, v_prod_3)
@@ -124,7 +125,8 @@ BEGIN
   -- "COMPRA" (ENTRADA DE ESTOQUE) FICTÍCIA
   UPDATE public.estoque
   SET quantidade_atual = quantidade_atual + 20
-  WHERE produto_id = v_prod_1;
+  WHERE produto_id = v_prod_1
+    AND loja_id = v_loja_matriz;
 
   -- MOVIMENTOS DE CAIXA
   INSERT INTO public.movimentos_caixa (caixa_id, tipo, valor, observacao)

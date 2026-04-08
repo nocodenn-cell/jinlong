@@ -11,6 +11,7 @@ const FORMAS: FinalizarVendaInput["formaPagamento"][] = [
   "PIX",
   "CARTAO_DEBITO",
   "CARTAO_CREDITO",
+  "FIADO",
 ]
 
 type Props = {

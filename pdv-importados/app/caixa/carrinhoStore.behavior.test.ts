@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useCarrinhoStore } from '@/stores/carrinhoStore'
+import { DEFAULT_PRICING_CONTEXT } from '@/core/pricing/types'
 
 const memoryStorage = (() => {
   const data = new Map<string, string>()
@@ -32,6 +33,7 @@ function resetCarrinhoStore() {
   useCarrinhoStore.setState({
     itens: [],
     regras: [],
+    pricingCtx: DEFAULT_PRICING_CONTEXT,
     totalBruto: 0,
     totalDesconto: 0,
     totalLiquido: 0,

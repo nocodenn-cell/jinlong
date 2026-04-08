@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_PRICING_CONTEXT } from '@core/pricing/types'
 import { defaultPdvConfig } from '../config/pdvConfig'
 import { useCartStore } from './cartStore'
 
@@ -33,6 +34,7 @@ function resetCartStore() {
   useCartStore.setState({
     itens: [],
     regras: [],
+    pricingCtx: DEFAULT_PRICING_CONTEXT,
     totalBruto: 0,
     totalDesconto: 0,
     totalLiquido: 0,

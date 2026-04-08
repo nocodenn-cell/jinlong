@@ -9,6 +9,8 @@ export interface NovoProdutoInput {
   /** Opcional no cadastro rápido; persiste NULL se vazio (único só quando informado). */
   codigo_barras: string | null
   preco_varejo: number
+  /** Preço atacado opcional (catálogo); exige quantidade mínima em pdv_config. */
+  preco_atacado?: number | null
   origem: OrigemProduto
   tem_nf: boolean
 }
