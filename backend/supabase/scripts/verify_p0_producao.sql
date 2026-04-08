@@ -1,7 +1,7 @@
 -- Verificação rápida P0 (cole no SQL Editor do Supabase do ambiente que você chama de produção).
 -- Esperado: migrations 001…010 (P0) + 011–013 (relatórios) + 014–015 (RPCs/sync) + 016–017 (estoque atômico + auth),
 -- RLS descontos_venda + estoque_baixas, RPCs de estoque, tabela estoque_baixas,
--- RPCs relatorio_*_periodo (date + p_tz após 013), seção 6 após migration 015/016.
+-- RPCs relatorio_*_periodo (date + p_tz após 013), anti-replay 024 e RPC canônica 025.
 
 -- 1) Histórico de migrations aplicadas (Supabase hosted; colunas podem variar por versão)
 SELECT *
@@ -161,3 +161,32 @@ SELECT has_function_privilege(
   'public.finalizar_venda_transacional(uuid, uuid, text, numeric, numeric, numeric, jsonb, text, numeric)',
   'EXECUTE'
 ) AS finalizar_venda_tx_token__authenticated_execute;
+
+-- 11) Anti-replay sync-outbox (migration 024)
+SELECT to_regclass('public.sync_request_nonces') AS tabela_sync_request_nonces;
+
+SELECT c.relname, c.relrowsecurity AS rls_ativo
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relname = 'sync_request_nonces';
+
+SELECT has_table_privilege('service_role', 'public.sync_request_nonces', 'SELECT') AS nonce_service_role_select;
+SELECT has_table_privilege('service_role', 'public.sync_request_nonces', 'INSERT') AS nonce_service_role_insert;
+SELECT has_table_privilege('service_role', 'public.sync_request_nonces', 'DELETE') AS nonce_service_role_delete;
+SELECT has_table_privilege('authenticated', 'public.sync_request_nonces', 'SELECT') AS nonce_authenticated_select;
+SELECT has_table_privilege('authenticated', 'public.sync_request_nonces', 'INSERT') AS nonce_authenticated_insert;
+SELECT has_table_privilege('authenticated', 'public.sync_request_nonces', 'DELETE') AS nonce_authenticated_delete;
+
+-- 12) RPC canônica v2 (migration 025)
+SELECT has_function_privilege(
+  'authenticated',
+  'public.finalizar_venda_transacional_canonica_v2(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, text, numeric, boolean)',
+  'EXECUTE'
+) AS finalizar_venda_canonica_v2__authenticated_execute;
+
+SELECT has_function_privilege(
+  'service_role',
+  'public.finalizar_venda_transacional_canonica_v2(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, text, numeric, boolean)',
+  'EXECUTE'
+) AS finalizar_venda_canonica_v2__service_role_execute;

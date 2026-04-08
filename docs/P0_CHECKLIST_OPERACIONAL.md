@@ -9,7 +9,7 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 
 ## Ordem sugerida (fechar o P0 sem pular dependência)
 
-1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura; **018** tokens de gerente; **022** rate-limit por escopo; **023** finalização transacional com token de gerente — ver §1b–§1e).
+1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura; **018** tokens de gerente; **022** rate-limit por escopo; **023** finalização transacional com token de gerente; **024** anti-replay por nonce; **025** RPC canônica v2 — ver §1b–§1f).
 **Smoke adicional 023 (desconto gerente por token):**
 
 - Rodar [`backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql`](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql) no SQL Editor.
@@ -38,7 +38,7 @@ cd C:\Naturecode\fastproduct\backend
 npx supabase migration list
 ```
 
-- Coluna **Remote** deve listar `001` … `018` sem lacunas (até onde o ambiente usa). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`.
+- Coluna **Remote** deve listar `001` … `025` sem lacunas (até onde o ambiente usa). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`. **024**: tabela `sync_request_nonces` (anti-replay HMAC). **025**: `finalizar_venda_transacional_canonica_v2` (fluxo unificado).
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  
@@ -112,6 +112,17 @@ A **018** cria `tokens_desconto_gerente`, usada pela Edge `validar-gerente` para
 
 - [ ] **018** aplicada em todos os ambientes que usam `validar-gerente`
 
+### 1f. Migrations 024 e 025 (anti-replay + fluxo unificado canônico)
+
+- **024** cria `sync_request_nonces` (RLS ativo) para bloquear replay por `nonce`, com acesso apenas para `service_role`.
+- **025** cria `finalizar_venda_transacional_canonica_v2` para rollout progressivo do fluxo unificado.
+
+Valide no SQL Editor com [`verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql) (seções 11+).
+
+- [ ] **024** aplicada em todos os ambientes que usam `sync-outbox`
+- [ ] **025** aplicada em todos os ambientes que usam rollout canário/unificado
+- [ ] `verify_p0_producao.sql` executado e evidenciado (print/log) no ambiente oficial
+
 ---
 
 ## 2. Edge Function `sync-outbox`
@@ -141,6 +152,7 @@ npx supabase secrets set SYNC_KEY="(segredo forte)"
 
 - [ ] Function **deployada** na versão atual do repositório
 - [ ] **Três** secrets definidos e iguais à intenção do `.env` local (item 3)
+- [ ] Diagnóstico anti-replay executado com sucesso (`backend/scripts/sync-outbox-anti-replay-diagnostic.ps1`)
 
 **Painel:** Edge Functions → `sync-outbox` → confirmar **Deployed** e URL típica  
 `https://<ref>.supabase.co/functions/v1/sync-outbox`
@@ -195,12 +207,20 @@ Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não e
 
 ---
 
+## 6. CI / gate em PR (backend)
+
+- [ ] Workflow `CI backend Supabase` executa smoke de migrations + `deno check` da Edge.
+- [ ] Job de diagnóstico anti-replay habilitado com secrets (`SYNC_ENDPOINT`, `SYNC_KEY`) em CI.
+- [ ] PR interno com mudança em `backend/supabase/functions/sync-outbox/**` sem esses secrets deve falhar no gate (ou justificar override no repositório).
+
+---
+
 ## Resumo
 
 
 | Área       | Ferramenta                                                                                                                 |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Migrations | `npx supabase migration list` + `verify_p0_producao.sql` (010 = P0; **011–013** relatórios; **014–017** sync + estoque seguro) |
+| Migrations | `npx supabase migration list` + `verify_p0_producao.sql` (010 = P0; **011–013** relatórios; **014–017** sync + estoque seguro; **024–025** anti-replay + fluxo unificado) |
 | Edge       | `functions deploy` + secrets                                                                                               |
 | Desktop    | `.env` + teste de venda                                                                                                    |
 | Web        | `.env.local` / Vercel + `/gerente/vendas`                                                                                  |

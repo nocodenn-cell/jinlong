@@ -65,3 +65,37 @@ jobs:
 
       - name: Type-check Edge Function sync-outbox
         run: deno check backend/supabase/functions/sync-outbox/index.ts
+
+  anti-replay-diagnostic-gate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect sync-outbox changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            sync_outbox:
+              - 'backend/supabase/functions/sync-outbox/**'
+              - 'backend/scripts/sync-outbox-anti-replay-diagnostic.ps1'
+
+      - name: Validate required secrets for PR gate
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && steps.changes.outputs.sync_outbox == 'true'
+        shell: pwsh
+        env:
+          SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
+          SYNC_KEY: ${{ secrets.SYNC_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SYNC_ENDPOINT) -or [string]::IsNullOrWhiteSpace($env:SYNC_KEY)) {
+            throw "PR gate bloqueado: configure secrets SYNC_ENDPOINT e SYNC_KEY para validar anti-replay."
+          }
+
+      - name: Run anti-replay diagnostic (when secrets are configured)
+        if: ${{ secrets.SYNC_ENDPOINT != '' && secrets.SYNC_KEY != '' }}
+        shell: pwsh
+        env:
+          SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
+          SYNC_KEY: ${{ secrets.SYNC_KEY }}
+        run: |
+          ./backend/scripts/sync-outbox-anti-replay-diagnostic.ps1 -OutputJson
