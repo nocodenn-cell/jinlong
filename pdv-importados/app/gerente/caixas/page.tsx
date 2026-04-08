@@ -10,6 +10,17 @@ function localeFromIdioma(idioma: string) {
   return 'pt-BR'
 }
 
+function round2(v: number): number {
+  return Math.round(v * 100) / 100
+}
+
+function currency(value: number, locale: string): string {
+  return value.toLocaleString(locale, {
+    style: 'currency',
+    currency: 'BRL',
+  })
+}
+
 export default async function GerenteCaixasPage() {
   const { idioma } = await getUsuarioIdioma()
   const m = getMessages(idioma)
@@ -19,10 +30,41 @@ export default async function GerenteCaixasPage() {
   const { data: caixas } = await supabase
     .from('caixas')
     .select(
-      'id, operador_id, data_abertura, data_fechamento, valor_inicial, valor_fechamento, status'
+      'id, operador_id, data_abertura, data_fechamento, valor_inicial, valor_fechamento, fechamento_diferenca, fechamento_observacao, status'
     )
     .order('data_abertura', { ascending: false })
     .limit(80)
+
+  const caixasList = caixas ?? []
+  const caixasIds = caixasList.map((c) => c.id)
+
+  const valorSistemaPorCaixa = new Map<string, number>()
+  if (caixasIds.length > 0) {
+    const { data: vendasDinheiro } = await supabase
+      .from('vendas')
+      .select('caixa_id, total_liquido')
+      .in('caixa_id', caixasIds)
+      .eq('forma_pagamento', 'DINHEIRO')
+      .eq('status', 'CONCLUIDA')
+
+    for (const row of vendasDinheiro ?? []) {
+      const atual = valorSistemaPorCaixa.get(row.caixa_id) ?? 0
+      valorSistemaPorCaixa.set(row.caixa_id, atual + Number(row.total_liquido ?? 0))
+    }
+
+    const { data: movimentos } = await supabase
+      .from('movimentos_caixa')
+      .select('caixa_id, tipo, valor')
+      .in('caixa_id', caixasIds)
+      .in('tipo', ['SUPRIMENTO', 'SANGRIA'])
+
+    for (const row of movimentos ?? []) {
+      const atual = valorSistemaPorCaixa.get(row.caixa_id) ?? 0
+      const valor = Number(row.valor ?? 0)
+      const delta = row.tipo === 'SUPRIMENTO' ? valor : -valor
+      valorSistemaPorCaixa.set(row.caixa_id, atual + delta)
+    }
+  }
 
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
@@ -50,17 +92,31 @@ export default async function GerenteCaixasPage() {
             { key: 'status', header: m.gerente.col_status },
             { key: 'valor_inicial', header: m.gerente.col_valor_inicial },
             { key: 'valor_fechamento', header: m.gerente.col_valor_fechamento },
+            { key: 'valor_sistema_dinheiro', header: 'Sistema (dinheiro)' },
+            { key: 'diferenca', header: m.caixa.diferenca },
+            { key: 'motivo_fechamento', header: 'Motivo fechamento' },
             { key: 'id', header: m.gerente.col_caixa },
           ]}
           rows={
-            caixas?.map((c) => ({
-              data_abertura: c.data_abertura ? new Date(c.data_abertura).toISOString() : '',
-              status: c.status,
-              valor_inicial: Number(c.valor_inicial),
-              valor_fechamento:
-                c.valor_fechamento != null ? Number(c.valor_fechamento) : '',
-              id: c.id,
-            })) ?? []
+            caixasList.map((c) => {
+              const valorSistemaBase = valorSistemaPorCaixa.get(c.id) ?? 0
+              const valorSistemaDinheiro = round2(Number(c.valor_inicial ?? 0) + valorSistemaBase)
+              const valorFechamento = c.valor_fechamento != null ? Number(c.valor_fechamento) : null
+              const diferencaCalculada =
+                valorFechamento != null ? round2(valorFechamento - valorSistemaDinheiro) : null
+              const diferenca =
+                c.fechamento_diferenca != null ? Number(c.fechamento_diferenca) : diferencaCalculada
+              return {
+                data_abertura: c.data_abertura ? new Date(c.data_abertura).toISOString() : '',
+                status: c.status,
+                valor_inicial: Number(c.valor_inicial),
+                valor_fechamento: valorFechamento ?? '',
+                valor_sistema_dinheiro: valorSistemaDinheiro,
+                diferenca: diferenca ?? '',
+                motivo_fechamento: c.fechamento_observacao ?? '',
+                id: c.id,
+              }
+            })
           }
         />
       </div>
@@ -73,12 +129,30 @@ export default async function GerenteCaixasPage() {
               <th style={{ padding: 10 }}>{m.gerente.col_status}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_valor_inicial}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_valor_fechamento}</th>
+              <th style={{ padding: 10 }}>Sistema (dinheiro)</th>
+              <th style={{ padding: 10 }}>{m.caixa.diferenca}</th>
+              <th style={{ padding: 10 }}>Motivo fechamento</th>
               <th style={{ padding: 10 }}>{m.gerente.col_caixa}</th>
             </tr>
           </thead>
           <tbody>
-            {caixas?.map((c) => (
-              <tr key={c.id} style={{ borderTop: '1px solid #f3f4f6' }}>
+            {caixasList.map((c) => {
+              const valorSistemaBase = valorSistemaPorCaixa.get(c.id) ?? 0
+              const valorSistemaDinheiro = round2(Number(c.valor_inicial ?? 0) + valorSistemaBase)
+              const valorFechamento = c.valor_fechamento != null ? Number(c.valor_fechamento) : null
+              const diferencaCalculada =
+                valorFechamento != null ? round2(valorFechamento - valorSistemaDinheiro) : null
+              const diferenca =
+                c.fechamento_diferenca != null ? Number(c.fechamento_diferenca) : diferencaCalculada
+              const temDivergencia = diferenca != null && Math.abs(diferenca) >= 0.01
+              return (
+              <tr
+                key={c.id}
+                style={{
+                  borderTop: '1px solid #f3f4f6',
+                  background: temDivergencia ? '#fff7ed' : undefined,
+                }}
+              >
                 <td style={{ padding: 10 }}>
                   {c.data_abertura
                     ? new Date(c.data_abertura).toLocaleString(locale, {
@@ -89,27 +163,30 @@ export default async function GerenteCaixasPage() {
                 </td>
                 <td style={{ padding: 10 }}>{c.status}</td>
                 <td style={{ padding: 10 }}>
-                  {Number(c.valor_inicial).toLocaleString(locale, {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
+                  {currency(Number(c.valor_inicial), locale)}
                 </td>
                 <td style={{ padding: 10 }}>
                   {c.valor_fechamento != null
-                    ? Number(c.valor_fechamento).toLocaleString(locale, {
-                        style: 'currency',
-                        currency: 'BRL',
-                      })
+                    ? currency(Number(c.valor_fechamento), locale)
                     : '—'}
+                </td>
+                <td style={{ padding: 10 }}>{currency(valorSistemaDinheiro, locale)}</td>
+                <td style={{ padding: 10, color: temDivergencia ? '#b45309' : undefined }}>
+                  {diferenca != null
+                    ? `${diferenca > 0 ? '+' : ''}${currency(diferenca, locale)}`
+                    : '—'}
+                </td>
+                <td style={{ padding: 10, maxWidth: 240, color: '#374151' }}>
+                  {c.fechamento_observacao ?? '—'}
                 </td>
                 <td style={{ padding: 10, fontSize: 12, fontFamily: 'monospace' }}>
                   {String(c.id).slice(0, 8)}…
                 </td>
               </tr>
-            ))}
-            {(!caixas || caixas.length === 0) && (
+            )})}
+            {caixasList.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={8} style={{ padding: 16, color: '#6b7280' }}>
                   {m.gerente.nenhum_caixa}
                 </td>
               </tr>

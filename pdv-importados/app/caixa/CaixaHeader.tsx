@@ -11,9 +11,29 @@ type Props = {
   m: Mensagens
   idioma: Idioma
   carregandoRegras: boolean
+  caixaStatus:
+    | {
+        aberto: true
+        dataAbertura: string
+        valorInicial: number
+        valorSistemaDinheiro: number
+      }
+    | { aberto: false }
+    | null
+  processandoCaixa: boolean
+  onAbrirCaixa: () => void
+  onFecharCaixa: () => void
 }
 
-export function CaixaHeader({ m, idioma, carregandoRegras }: Props) {
+export function CaixaHeader({
+  m,
+  idioma,
+  carregandoRegras,
+  caixaStatus,
+  processandoCaixa,
+  onAbrirCaixa,
+  onFecharCaixa,
+}: Props) {
   const [mostrarTecnico, setMostrarTecnico] = useState(false)
 
   useEffect(() => {
@@ -70,6 +90,46 @@ export function CaixaHeader({ m, idioma, carregandoRegras }: Props) {
       </div>
 
       <div className="text-xs text-slate-400 sm:text-right sm:max-w-xl min-w-0">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          {caixaStatus?.aberto ? (
+            <>
+              <span className="rounded-md border border-emerald-600/40 bg-emerald-900/20 px-2 py-1 text-emerald-300">
+                Caixa aberto
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-amber-600/60 bg-amber-900/20 text-amber-200 hover:bg-amber-800/30"
+                onClick={onFecharCaixa}
+                disabled={processandoCaixa}
+              >
+                {processandoCaixa ? `${m.caixa.fechar}...` : m.caixa.fechar}
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-emerald-600/60 bg-emerald-900/20 text-emerald-200 hover:bg-emerald-800/30"
+              onClick={onAbrirCaixa}
+              disabled={processandoCaixa}
+            >
+              {processandoCaixa ? `${m.caixa.abrir}...` : m.caixa.abrir}
+            </Button>
+          )}
+        </div>
+        {caixaStatus?.aberto && (
+          <div className="mt-1 text-[11px] text-slate-300">
+            Abertura:{' '}
+            {new Date(caixaStatus.dataAbertura).toLocaleString(
+              idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN',
+            )}{' '}
+            · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)} · Sistema (dinheiro): R${' '}
+            {caixaStatus.valorSistemaDinheiro.toFixed(2)}
+          </div>
+        )}
         <div>{m.caixa.atalhos_placeholder}</div>
         <div className="mt-1">
           {m.caixa.regras_catalogo}{" "}

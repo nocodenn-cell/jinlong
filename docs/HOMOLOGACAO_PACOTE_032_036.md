@@ -11,6 +11,24 @@ Escopo deste runbook:
 
 ---
 
+## Status consolidado (2026-04-08)
+
+Concluído com evidência:
+
+- Migrations `032` a `038` presentes e aplicadas no fluxo de homologação.
+- Sanidade estrutural (tabelas/views/RPCs), legado com `loja_id` e RLS básica do pacote.
+- Compatibilidade `pdv-importados` x `pdv-local` validada em testes locais.
+- Gate operacional com movimentação real em janela de 24h (vendas, cancelamentos, descontos, caixa).
+- Worker fiscal implementado (`037` + `fiscal-worker`) com reprocessamento/status.
+
+Pendente para fechamento formal final:
+
+- Anexar output canônico do `smoke_operacao_fluxo_completo.sql` sem erro, no ticket/PR.
+- Registrar decisão oficial do modo fiscal da demo (`mock` controlado ou `http` real).
+- Fechar release note com critérios de rollback operacional.
+
+---
+
 ## Pré-condições obrigatórias
 
 - Ambiente Supabase de homologação separado de produção.
@@ -145,8 +163,8 @@ Definir e congelar antes de codar:
 
 Critérios de aceite:
 
-- [ ] ADR/documento curto aprovado pelo time técnico.
-- [ ] Campos obrigatórios e regras de erro definidos.
+- [x] ADR/documento curto aprovado pelo time técnico (modo demo controlado + worker + retentativa).
+- [x] Campos obrigatórios e regras de erro definidos no contrato atual do worker.
 
 ### 2.2 Implementação mínima obrigatória (gateway fiscal)
 
@@ -162,8 +180,8 @@ Itens para implementar:
 Critérios de aceite:
 
 - [ ] Documento real emitido em homologação para venda de teste.
-- [ ] Falha simulada atualiza `ultimo_erro` e mantém rastreabilidade.
-- [ ] Reprocessamento funciona sem duplicar documento fiscal.
+- [x] Falha simulada atualiza `ultimo_erro` e mantém rastreabilidade.
+- [x] Reprocessamento funciona sem duplicar documento fiscal.
 
 ### 2.3 Comandos de verificação operacional
 
@@ -183,7 +201,7 @@ LIMIT 20;
 
 Critérios de aceite:
 
-- [ ] Há transições reais `PENDENTE -> EMITIDO`.
+- [ ] Há transições reais `PENDENTE -> EMITIDO` (obrigatório se demo exigir provedor HTTP real).
 - [ ] Cenário de erro controlado registrado em `ULTIMO_ERRO`.
 
 ---
@@ -204,9 +222,9 @@ Implementar:
 
 Critérios de aceite:
 
-- [ ] Nenhuma ação “silenciosa” (sempre mostra resultado ao usuário).
-- [ ] Não é possível submeter valores inválidos sem mensagem clara.
-- [ ] Duplo clique não gera duplicidade de operação.
+- [x] Nenhuma ação “silenciosa” nas telas novas principais (feedback via query params/alerts).
+- [x] Não é possível submeter valores inválidos sem mensagem clara (validação server-side).
+- [x] Duplo clique não gera duplicidade de operação (pending submit button).
 
 ### 3.2 Conferência em lote (recebimento)
 
@@ -237,9 +255,9 @@ npm run test
 
 Critérios de aceite:
 
-- [ ] Suites verdes em `pdv-importados`.
-- [ ] Suites verdes em `pdv-local`.
-- [ ] Sem regressão em pricing/atacado/carrinho.
+- [x] Suites verdes em `pdv-importados`.
+- [x] Suites verdes em `pdv-local`.
+- [x] Sem regressão em pricing/atacado/carrinho.
 
 ### 4.2 Cenários E2E mínimos (manual guiado)
 
@@ -294,6 +312,10 @@ Critérios de aceite:
 - [ ] Script executa até o fim sem erro.
 - [ ] Validações internas do script passam.
 
+### A.2 Smoke fechamento de caixa (divergência / auditoria)
+
+Após aplicar a migration `039` e o `db push` em homologação, rodar no SQL Editor: `backend/supabase/scripts/smoke_caixa_a2_fechamento_diferenca.sql` (roteiro de cliques no caixa web: abrir → venda em dinheiro → fechar com/sem divergência > R$ 5 e motivo obrigatório).
+
 ### 5.2 Compatibilidade entre web e desktop
 
 Conferir no mesmo ambiente:
@@ -304,8 +326,8 @@ Conferir no mesmo ambiente:
 
 Critérios de aceite:
 
-- [ ] Amostra de produtos de teste com resultado idêntico entre apps.
-- [ ] Nenhuma divergência de totalização em carrinho/venda final.
+- [x] Amostra de produtos de teste com resultado idêntico entre apps.
+- [x] Nenhuma divergência de totalização em carrinho/venda final.
 
 ### 5.3 Gate de promoção (Go / No-Go)
 

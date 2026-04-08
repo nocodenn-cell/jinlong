@@ -141,17 +141,27 @@ Deno.serve(async (req) => {
     // ignora e usa limit default
   }
 
+  const providerMode = (Deno.env.get("FISCAL_PROVIDER_MODE") ?? "mock").toLowerCase();
+  const providerUrl = Deno.env.get("FISCAL_PROVIDER_URL") ?? "";
+  const providerToken = Deno.env.get("FISCAL_PROVIDER_TOKEN") ?? null;
+  const timeoutMsRaw = Number(Deno.env.get("FISCAL_PROVIDER_TIMEOUT_MS") ?? "10000");
+  const timeoutMs = Number.isFinite(timeoutMsRaw) && timeoutMsRaw > 0
+    ? Math.floor(timeoutMsRaw)
+    : 10000;
+
+  if (providerMode !== "mock" && providerMode !== "http") {
+    return json(500, { ok: false, error: "INVALID_PROVIDER_MODE" });
+  }
+  if (providerMode === "http" && !providerUrl.trim()) {
+    return json(500, { ok: false, error: "MISSING_PROVIDER_URL" });
+  }
+
   const { data: docs, error: claimErr } = await supabase.rpc("fiscal_claim_documentos", {
     p_limit: limit,
   });
   if (claimErr) {
     return json(500, { ok: false, error: `CLAIM_ERROR:${claimErr.message}` });
   }
-
-  const providerMode = (Deno.env.get("FISCAL_PROVIDER_MODE") ?? "mock").toLowerCase();
-  const providerUrl = Deno.env.get("FISCAL_PROVIDER_URL") ?? "";
-  const providerToken = Deno.env.get("FISCAL_PROVIDER_TOKEN") ?? null;
-  const timeoutMs = Number(Deno.env.get("FISCAL_PROVIDER_TIMEOUT_MS") ?? "10000");
 
   const processed: string[] = [];
   const emitted: string[] = [];

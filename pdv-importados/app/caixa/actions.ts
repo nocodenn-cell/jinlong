@@ -203,6 +203,32 @@ export type FinalizarVendaCaixaResult =
   | { ok: true; vendaId: string }
   | { ok: false; error: string }
 
+export type CaixaStatusOperadorResult =
+  | {
+      ok: true
+      aberto: true
+      caixaId: string
+      dataAbertura: string
+      valorInicial: number
+      valorSistemaDinheiro: number
+    }
+  | { ok: true; aberto: false }
+  | { ok: false; error: string }
+
+export type AbrirCaixaOperadorResult =
+  | { ok: true; caixaId: string }
+  | { ok: false; error: string }
+
+export type FecharCaixaOperadorResult =
+  | {
+      ok: true
+      caixaId: string
+      valorSistemaDinheiro: number
+      valorContado: number
+      diferenca: number
+    }
+  | { ok: false; error: string }
+
 export type ValidarGerenteDescontoResult =
   | { ok: true; token: string; expiraEm: string; maxDescontoPercentual: number }
   | { ok: false; error: string; scope?: string; lockUntil?: string }
@@ -214,6 +240,213 @@ type ItemAutoritativo = {
   precoUnitario: number
   descontoUnitario: number
   tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL'
+}
+
+const LIMITE_DIVERGENCIA_FECHAMENTO = 5
+
+function parseMoneyInput(v: number): number | null {
+  if (!Number.isFinite(v)) return null
+  if (v < 0) return null
+  return roundMoney2(v)
+}
+
+async function calcularValorSistemaDinheiroCaixa(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  caixaId: string,
+): Promise<number> {
+  const { data: vendasRows, error: vendasErr } = await supabase
+    .from('vendas')
+    .select('total_liquido')
+    .eq('caixa_id', caixaId)
+    .eq('forma_pagamento', 'DINHEIRO')
+    .eq('status', 'CONCLUIDA')
+
+  if (vendasErr) {
+    throw new Error(`Vendas: ${vendasErr.message}`)
+  }
+
+  const { data: movimentosRows, error: movErr } = await supabase
+    .from('movimentos_caixa')
+    .select('tipo, valor')
+    .eq('caixa_id', caixaId)
+    .in('tipo', ['SUPRIMENTO', 'SANGRIA'])
+
+  if (movErr) {
+    throw new Error(`Movimentos: ${movErr.message}`)
+  }
+
+  const totalVendasDinheiro = (vendasRows ?? []).reduce(
+    (acc, row) => acc + Number(row.total_liquido ?? 0),
+    0,
+  )
+  const totalSuprimento = (movimentosRows ?? [])
+    .filter((m) => m.tipo === 'SUPRIMENTO')
+    .reduce((acc, m) => acc + Number(m.valor ?? 0), 0)
+  const totalSangria = (movimentosRows ?? [])
+    .filter((m) => m.tipo === 'SANGRIA')
+    .reduce((acc, m) => acc + Number(m.valor ?? 0), 0)
+
+  const { data: caixaRow, error: caixaErr } = await supabase
+    .from('caixas')
+    .select('valor_inicial')
+    .eq('id', caixaId)
+    .single()
+
+  if (caixaErr) {
+    throw new Error(`Caixa: ${caixaErr.message}`)
+  }
+
+  return roundMoney2(
+    Number(caixaRow.valor_inicial ?? 0) + totalVendasDinheiro + totalSuprimento - totalSangria,
+  )
+}
+
+export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorResult> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const { data: caixaAberto, error } = await supabase
+      .from('caixas')
+      .select('id, data_abertura, valor_inicial')
+      .eq('operador_id', user.id)
+      .eq('status', 'ABERTO')
+      .order('data_abertura', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) return { ok: false, error: `Caixa: ${error.message}` }
+    if (!caixaAberto) return { ok: true, aberto: false }
+
+    const valorSistemaDinheiro = await calcularValorSistemaDinheiroCaixa(supabase, caixaAberto.id)
+    return {
+      ok: true,
+      aberto: true,
+      caixaId: caixaAberto.id,
+      dataAbertura: caixaAberto.data_abertura,
+      valorInicial: Number(caixaAberto.valor_inicial ?? 0),
+      valorSistemaDinheiro,
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro ao consultar status do caixa'
+    return { ok: false, error: msg }
+  }
+}
+
+export async function abrirCaixaOperador(valorInicial: number): Promise<AbrirCaixaOperadorResult> {
+  const valorInicialSanitizado = parseMoneyInput(valorInicial)
+  if (valorInicialSanitizado === null) {
+    return { ok: false, error: 'Valor inicial inválido.' }
+  }
+
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const { data: caixaAberto, error: caixaAbertoErr } = await supabase
+      .from('caixas')
+      .select('id')
+      .eq('operador_id', user.id)
+      .eq('status', 'ABERTO')
+      .order('data_abertura', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (caixaAbertoErr) return { ok: false, error: `Caixa: ${caixaAbertoErr.message}` }
+    if (caixaAberto) return { ok: false, error: 'Já existe um caixa aberto para este operador.' }
+
+    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+    const { data: novo, error: insertErr } = await supabase
+      .from('caixas')
+      .insert({
+        operador_id: user.id,
+        loja_id: lojaId,
+        valor_inicial: valorInicialSanitizado,
+        status: 'ABERTO',
+      })
+      .select('id')
+      .single()
+
+    if (insertErr) return { ok: false, error: `Caixa: ${insertErr.message}` }
+    revalidatePath('/caixa')
+    revalidatePath('/gerente/caixas')
+    return { ok: true, caixaId: novo.id }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro ao abrir caixa'
+    return { ok: false, error: msg }
+  }
+}
+
+export async function fecharCaixaOperador(input: {
+  valorContado: number
+  motivo?: string
+}): Promise<FecharCaixaOperadorResult> {
+  const valorContado = parseMoneyInput(input.valorContado)
+  if (valorContado === null) return { ok: false, error: 'Valor contado inválido.' }
+  const motivo = (input.motivo ?? '').trim()
+  if (motivo.length > 500) {
+    return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
+  }
+
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const { data: caixaAberto, error: caixaErr } = await supabase
+      .from('caixas')
+      .select('id')
+      .eq('operador_id', user.id)
+      .eq('status', 'ABERTO')
+      .order('data_abertura', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (caixaErr) return { ok: false, error: `Caixa: ${caixaErr.message}` }
+    if (!caixaAberto) return { ok: false, error: 'Não há caixa aberto para fechar.' }
+
+    const valorSistemaDinheiro = await calcularValorSistemaDinheiroCaixa(supabase, caixaAberto.id)
+    const diferenca = roundMoney2(valorContado - valorSistemaDinheiro)
+    if (Math.abs(diferenca) > LIMITE_DIVERGENCIA_FECHAMENTO && motivo.length < 5) {
+      return {
+        ok: false,
+        error: `Diferença acima de R$ ${LIMITE_DIVERGENCIA_FECHAMENTO.toFixed(2)} exige motivo (mín. 5 caracteres).`,
+      }
+    }
+
+    const { error: updateErr } = await supabase
+      .from('caixas')
+      .update({
+        status: 'FECHADO',
+        data_fechamento: new Date().toISOString(),
+        valor_fechamento: valorContado,
+        fechamento_diferenca: diferenca,
+        fechamento_observacao: motivo || null,
+      })
+      .eq('id', caixaAberto.id)
+
+    if (updateErr) return { ok: false, error: `Caixa: ${updateErr.message}` }
+
+    revalidatePath('/caixa')
+    revalidatePath('/gerente/caixas')
+    revalidatePath('/gerente/vendas')
+    return {
+      ok: true,
+      caixaId: caixaAberto.id,
+      valorSistemaDinheiro,
+      valorContado,
+      diferenca,
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro ao fechar caixa'
+    return { ok: false, error: msg }
+  }
 }
 
 export async function validarGerenteDesconto(input: {
@@ -424,28 +657,22 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
       }
     }
 
-    const { data: caixaExistente } = await supabase
+    const { data: caixaExistente, error: caixaAbertoErr } = await supabase
       .from('caixas')
       .select('id')
       .eq('operador_id', user.id)
       .eq('status', 'ABERTO')
+      .order('data_abertura', { ascending: false })
+      .limit(1)
       .maybeSingle()
-
-    let caixaId: string | null = caixaExistente?.id ?? null
-    if (!caixaId) {
-      const { data: novo, error: caixaErr } = await supabase
-        .from('caixas')
-        .insert({
-          operador_id: user.id,
-          loja_id: lojaId,
-          valor_inicial: 0,
-          status: 'ABERTO',
-        })
-        .select('id')
-        .single()
-      if (caixaErr) return { ok: false, error: `Caixa: ${caixaErr.message}` }
-      caixaId = novo.id
+    if (caixaAbertoErr) return { ok: false, error: `Caixa: ${caixaAbertoErr.message}` }
+    if (!caixaExistente) {
+      return {
+        ok: false,
+        error: 'Caixa fechado. Abra o caixa antes de finalizar a venda.',
+      }
     }
+    const caixaId = caixaExistente.id
 
     const vendaId = crypto.randomUUID()
     const itensRpc = itensAut.map((i) => ({

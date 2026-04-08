@@ -6,6 +6,9 @@ import {
   carregarRegrasPrecoCaixa,
   buscarProdutoParaCaixa,
   finalizarVendaCaixa,
+  abrirCaixaOperador,
+  fecharCaixaOperador,
+  obterStatusCaixaOperador,
   validarGerenteDesconto,
 } from "@/app/caixa/actions"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
@@ -39,6 +42,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [buscando, setBuscando] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
+  const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
   const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
   const [gerenteValidadoAte, setGerenteValidadoAte] = useState<string | null>(null)
@@ -49,6 +53,17 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     useState<number>(0)
   const [formaPagamento, setFormaPagamento] =
     useState<FinalizarVendaInput["formaPagamento"]>("DINHEIRO")
+  const [caixaStatus, setCaixaStatus] = useState<
+    | {
+        aberto: true
+        caixaId: string
+        dataAbertura: string
+        valorInicial: number
+        valorSistemaDinheiro: number
+      }
+    | { aberto: false }
+    | null
+  >(null)
 
   const {
     itens,
@@ -73,6 +88,25 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setDescontoGerentePercentual(0)
   }, [])
 
+  const recarregarStatusCaixa = useCallback(async () => {
+    const status = await obterStatusCaixaOperador()
+    if (!status.ok) {
+      setMensagem(status.error)
+      return
+    }
+    if (status.aberto) {
+      setCaixaStatus({
+        aberto: true,
+        caixaId: status.caixaId,
+        dataAbertura: status.dataAbertura,
+        valorInicial: status.valorInicial,
+        valorSistemaDinheiro: status.valorSistemaDinheiro,
+      })
+    } else {
+      setCaixaStatus({ aberto: false })
+    }
+  }, [])
+
   useEffect(() => {
     let cancelado = false
     ;(async () => {
@@ -92,6 +126,10 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       cancelado = true
     }
   }, [setRegras, m.caixa.regras_erro_prefixo])
+
+  useEffect(() => {
+    void recarregarStatusCaixa()
+  }, [recarregarStatusCaixa])
 
   const handleAdicionar = useCallback(
     async (e: FormEvent) => {
@@ -176,6 +214,91 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     limparEstadoDescontoGerente()
   }, [limparCarrinho, limparEstadoDescontoGerente])
 
+  const parseValorMonetario = useCallback((raw: string | null): number | null => {
+    if (raw == null) return null
+    const normalizado = raw.trim().replace(",", ".")
+    if (!normalizado) return null
+    const parsed = Number(normalizado)
+    if (!Number.isFinite(parsed) || parsed < 0) return null
+    return Math.round(parsed * 100) / 100
+  }, [])
+
+  const handleAbrirCaixa = useCallback(async () => {
+    if (processandoCaixa) return
+    const raw = window.prompt(`${m.caixa.valor_inicial}:`, "0")
+    const valorInicial = parseValorMonetario(raw)
+    if (valorInicial === null) {
+      setMensagem("Valor inicial inválido.")
+      return
+    }
+
+    setProcessandoCaixa(true)
+    setMensagem(null)
+    try {
+      const res = await abrirCaixaOperador(valorInicial)
+      if (!res.ok) {
+        setMensagem(res.error)
+        return
+      }
+      setMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`)
+      await recarregarStatusCaixa()
+    } finally {
+      setProcessandoCaixa(false)
+    }
+  }, [m.caixa.valor_inicial, parseValorMonetario, processandoCaixa, recarregarStatusCaixa])
+
+  const handleFecharCaixa = useCallback(async () => {
+    if (processandoCaixa) return
+    if (itens.length > 0) {
+      setMensagem("Finalize ou limpe o cupom antes de fechar o caixa.")
+      return
+    }
+    const raw = window.prompt(`${m.caixa.valor_final}:`)
+    const valorContado = parseValorMonetario(raw)
+    if (valorContado === null) {
+      setMensagem("Valor contado inválido.")
+      return
+    }
+    const diferencaEstimada =
+      caixaStatus?.aberto
+        ? Math.round((valorContado - caixaStatus.valorSistemaDinheiro) * 100) / 100
+        : null
+    let motivo: string | undefined
+    if (diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
+      const motivoRaw = window.prompt(
+        `Diferença estimada de R$ ${diferencaEstimada.toFixed(2)}. Informe o motivo (mín. 5 caracteres):`,
+      )
+      if (!motivoRaw || motivoRaw.trim().length < 5) {
+        setMensagem("Motivo obrigatório para diferença acima de R$ 5,00.")
+        return
+      }
+      motivo = motivoRaw.trim()
+    }
+
+    setProcessandoCaixa(true)
+    setMensagem(null)
+    try {
+      const res = await fecharCaixaOperador({ valorContado, motivo })
+      if (!res.ok) {
+        setMensagem(res.error)
+        return
+      }
+      const diferencaPrefixo = res.diferenca > 0 ? "+" : ""
+      setMensagem(
+        `Caixa fechado. Sistema: R$ ${res.valorSistemaDinheiro.toFixed(2)} · Contado: R$ ${res.valorContado.toFixed(2)} · Diferença: ${diferencaPrefixo}R$ ${res.diferenca.toFixed(2)}`,
+      )
+      await recarregarStatusCaixa()
+    } finally {
+      setProcessandoCaixa(false)
+    }
+  }, [
+    itens.length,
+    m.caixa.valor_final,
+    parseValorMonetario,
+    processandoCaixa,
+    recarregarStatusCaixa,
+  ])
+
   useEffect(() => {
     if (!gerenteValidadoAte) return
 
@@ -242,6 +365,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         setMensagem(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
         )
+        await recarregarStatusCaixa()
       } else {
         setMensagem(res.error)
       }
@@ -263,6 +387,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     totalDesconto,
     totalLiquido,
     m,
+    recarregarStatusCaixa,
   ])
 
   const valorDescontoGerente =
@@ -335,7 +460,15 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   return (
     <>
       <div className="min-h-[100dvh] bg-slate-900 text-slate-50 flex flex-col">
-        <CaixaHeader m={m} idioma={idioma} carregandoRegras={carregandoRegras} />
+        <CaixaHeader
+          m={m}
+          idioma={idioma}
+          carregandoRegras={carregandoRegras}
+          caixaStatus={caixaStatus}
+          processandoCaixa={processandoCaixa}
+          onAbrirCaixa={() => void handleAbrirCaixa()}
+          onFecharCaixa={() => void handleFecharCaixa()}
+        />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2 space-y-2">
             <CaixaSearchBar
