@@ -1,13 +1,12 @@
 # Supabase (migrations + Edge Functions)
 
-As migrations e Edge Functions do projeto ficam em **`backend/supabase/`** (pasta central de backend do monorepo), não em `pdv-local`.
+As migrations e Edge Functions do projeto ficam em `**backend/supabase/**` (pasta central de backend do monorepo), não em `pdv-local`.
 
 ## `db push` (aplicar migrations no projeto remoto)
 
-1. Abra o terminal na pasta **`backend`** (raiz do repositório: `fastproduct/backend`).
-
-2. **Uma vez por máquina**, vincule o projeto. O *project ref* aparece em  
-   Supabase Dashboard → Project Settings → General → Reference ID (~20 caracteres).  
+1. Abra o terminal na pasta `**backend**` (raiz do repositório: `fastproduct/backend`).
+2. **Uma vez por máquina**, vincule o projeto. O *project ref* aparece em
+  Supabase Dashboard → Project Settings → General → Reference ID (~20 caracteres).  
    **Não** use o texto `SEU_PROJECT_REF` — substitua pelo valor real.
 
 ```powershell
@@ -17,7 +16,7 @@ npx supabase link --project-ref abcdefghijklmnopqrst
 
 Informe a **senha do banco** quando o CLI pedir (Database password no dashboard).
 
-3. Envie as migrations:
+1. Envie as migrations:
 
 ```powershell
 npx supabase db push
@@ -25,7 +24,7 @@ npx supabase db push
 
 ## Erro: "Cannot find project ref. Have you run supabase link?"
 
-- Você está na pasta errada → use **`backend`**, ou  
+- Você está na pasta errada → use `**backend**`, ou  
 - Ainda não rodou `supabase link` → passo 2 acima.
 
 ## Edge Function `sync-outbox`
@@ -46,3 +45,4 @@ No GitHub Actions, o workflow **CI backend Supabase** aplica todas as migrations
 - **Nunca** commite `.env.local`, `.env` com chaves reais, nem scripts com JWTs.
 - `SUPABASE_SERVICE_ROLE_KEY` e `SYNC_KEY` vazaram se estiveram no Git: **gere nova service role** (Dashboard → Settings → API → *rotate*) e **troque o `SYNC_KEY`** nas secrets da Edge Function e no PDV local.
 - Edge secrets ≠ variáveis do Next: use `npx supabase secrets set ...` ou o painel **Edge Functions → Secrets**, não misture com `.env.local` do Next.
+
