@@ -40,6 +40,7 @@ function resetCartStore() {
     totalUnidades: 0,
     descontoGerentePercentual: 0,
     descontoGerenteValor: 0,
+    descontoGerenteToken: null,
     maxDescontoGerentePercentual: defaultPdvConfig.maxDescontoGerentePercentual,
   })
 }

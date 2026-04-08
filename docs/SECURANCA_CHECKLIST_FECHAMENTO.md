@@ -3,6 +3,13 @@
 Use este checklist para marcar **segurança concluída** por ambiente (`dev`, `staging`, `prod`).
 Referência operacional complementar: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md).
 
+## 0) Governança do repositório (antes de merge/deploy)
+
+- [ ] Nenhum arquivo versionado contém **URL real** de projeto Supabase, **`SYNC_KEY`** ou **`service_role`** (inclui scripts, relatórios JSON e docs de runbook).
+- [ ] Relatórios de diagnóstico (ex.: anti-replay) ficam em `backend/artifacts/*.json` — pasta **ignorada pelo Git**; não adicionar esses JSONs com `git add -f`.
+- [ ] Se algo sensível **chegou a ser commitado**: tratar como **vazamento potencial** — **rotacionar** `SYNC_KEY` (secrets da Edge), revisar **API keys** no painel Supabase conforme política do time e, se aplicável, limpar histórico (`git filter-repo`/BFG) com acompanhamento de compliance.
+- [ ] Confirmar que **apenas a Edge** (e jobs server-side explícitos, ex.: seed local) usam `SUPABASE_SERVICE_ROLE_KEY`; **não** constar em `pdv-importados` (bundle cliente), `pdv-local` nem `.env` versionados.
+
 ## 1) Critérios de aceite (go/no-go)
 
 - [ ] `migration list` remoto alinhado até a última migration de segurança (`015` a `022`).

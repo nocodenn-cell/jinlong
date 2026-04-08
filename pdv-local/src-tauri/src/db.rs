@@ -67,6 +67,14 @@ pub struct OutboxResumo {
     pub dlq: i64,
 }
 
+/// Resposta de `POST ?op=validar_gerente` na Edge (desconto gerente com token para sync estrito).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidarGerentePdvDto {
+    pub token: String,
+    pub expira_em: String,
+    pub max_desconto_percentual: f64,
+}
+
 fn outbox_max_falhas_consecutivas() -> i64 {
     std::env::var("OUTBOX_MAX_SYNC_FAILURES")
         .ok()
@@ -908,6 +916,72 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
     Ok(SyncCatalogoResultDto {
         produtos_salvos: produtos_len,
         regras_salvas: regras_len,
+    })
+}
+
+#[derive(Deserialize)]
+struct ValidarGerentePdvApiResponse {
+    ok: bool,
+    token: Option<String>,
+    expira_em: Option<String>,
+    max_desconto_percentual: Option<f64>,
+    error: Option<String>,
+}
+
+/// Valida senha do gerente na Edge (`op=validar_gerente`) com o mesmo HMAC do sync-outbox.
+pub fn validar_gerente_sync(senha: String) -> Result<ValidarGerentePdvDto, String> {
+    let (endpoint, sync_key) = sync_endpoint_and_key()?;
+    let trimmed = senha.trim().to_string();
+    if trimmed.is_empty() {
+        return Err("Senha do gerente é obrigatória.".to_string());
+    }
+    if trimmed.len() > 128 {
+        return Err("Senha inválida (máx. 128 caracteres).".to_string());
+    }
+
+    let client = reqwest::blocking::Client::new();
+    let url = endpoint_with_op(&endpoint, "validar_gerente");
+    let body = serde_json::json!({ "senha": trimmed }).to_string();
+    let headers = signed_headers_for_request(&sync_key, &body, &device_fingerprint_local())?;
+
+    let res = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .headers(headers)
+        .body(body)
+        .send()
+        .map_err(|e| format!("Falha ao validar gerente na Edge: {e}"))?;
+
+    let status = res.status();
+    let text = res
+        .text()
+        .map_err(|e| format!("Falha ao ler resposta de validar gerente: {e}"))?;
+
+    let parsed: ValidarGerentePdvApiResponse = serde_json::from_str(&text).map_err(|_| {
+        format!("Resposta inválida de validar gerente ({status}): {text}")
+    })?;
+
+    if !parsed.ok {
+        let err = parsed
+            .error
+            .unwrap_or_else(|| format!("erro desconhecido (HTTP {status})"));
+        return Err(err);
+    }
+
+    let token = parsed
+        .token
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "Resposta sem token de gerente.".to_string())?;
+    let expira_em = parsed
+        .expira_em
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "Resposta sem expiração do token.".to_string())?;
+    let max_desconto_percentual = parsed.max_desconto_percentual.unwrap_or(20.0);
+
+    Ok(ValidarGerentePdvDto {
+        token,
+        expira_em,
+        max_desconto_percentual,
     })
 }
 

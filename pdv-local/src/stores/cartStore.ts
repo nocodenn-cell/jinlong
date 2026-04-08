@@ -20,6 +20,8 @@ interface CartState {
   // Desconto especial de gerente (percentual sobre o total já com atacado)
   descontoGerentePercentual: number
   descontoGerenteValor: number
+  /** Token emitido pela Edge (`op=validar_gerente`); necessário se o backend exigir auth estrita. */
+  descontoGerenteToken: string | null
 
   // Config dinâmica (carregada via cache local)
   maxDescontoGerentePercentual: number
@@ -29,7 +31,11 @@ interface CartState {
   alterarQuantidade: (itemId: string, quantidade: number) => void
   removerItem: (itemId: string) => void
   limparCarrinho: () => void
-  aplicarDescontoGerente: (percentual: number) => void
+  aplicarDescontoGerente: (
+    percentual: number,
+    token?: string | null,
+    maxClamp?: number | null
+  ) => void
   setMaxDescontoGerentePercentual: (max: number) => void
 }
 
@@ -84,6 +90,7 @@ export const useCartStore = create<CartState>()(
       totalUnidades: 0,
       descontoGerentePercentual: 0,
       descontoGerenteValor: 0,
+      descontoGerenteToken: null,
       maxDescontoGerentePercentual: defaultPdvConfig.maxDescontoGerentePercentual,
 
       setRegras: (regras) => {
@@ -167,10 +174,15 @@ export const useCartStore = create<CartState>()(
           totalUnidades: 0,
           descontoGerentePercentual: 0,
           descontoGerenteValor: 0,
+          descontoGerenteToken: null,
         }),
 
-      aplicarDescontoGerente: (percentual) => {
-        const max = get().maxDescontoGerentePercentual
+      aplicarDescontoGerente: (percentual, token = null, maxClamp = null) => {
+        const maxStore = get().maxDescontoGerentePercentual
+        const max =
+          maxClamp != null && Number.isFinite(maxClamp) && maxClamp > 0
+            ? Math.min(maxStore, maxClamp)
+            : maxStore
         const bounded = Math.max(0, Math.min(percentual, max))
         const { itens } = get()
         const totais = calcularTotaisComGerente(itens, bounded)
@@ -178,6 +190,7 @@ export const useCartStore = create<CartState>()(
           ...totais,
           descontoGerentePercentual: bounded,
           descontoGerenteValor: totais.descontoGerenteValor,
+          descontoGerenteToken: bounded > 0 ? token ?? null : null,
         })
       },
 
@@ -190,6 +203,7 @@ export const useCartStore = create<CartState>()(
           ...totais,
           descontoGerentePercentual: percentualCorrigido,
           descontoGerenteValor: totais.descontoGerenteValor,
+          descontoGerenteToken: percentualCorrigido <= 0 ? null : get().descontoGerenteToken,
         })
       },
     }),

@@ -106,7 +106,8 @@ Status final esperado: ambos os canais usam a mesma regra transacional canônica
   - **Comando:**
     - `cd C:\Naturecode\fastproduct\backend`
     - `.\scripts\sync-outbox-anti-replay-diagnostic.ps1 -OutputJson -OutputFile ".\artifacts\anti-replay-report.json"`
-  - **Métrica:** `summary.success = true` (6/6 checks)
+    - Opcional (inclui `POST ?op=validar_gerente`): definir `SYNC_DIAG_GERENTE_SENHA` no ambiente ou `-ValidarGerenteSenha` (não versionar; em CI usar secret do pipeline).
+  - **Métrica:** `summary.success = true` (6/6 checks base; 8/8 se `validar_gerente` habilitado)
   - **Rollback:** bloquear promoção de ambiente até sucesso
 
 ---
@@ -224,9 +225,10 @@ Status final esperado: ambos os canais usam a mesma regra transacional canônica
 
 ```powershell
 cd C:\Naturecode\fastproduct\backend
-npx supabase secrets set USE_UNIFIED_SALES_FLOW="false" --project-ref kbabmewnahysfvlybiak
-npx supabase secrets set STRICT_MANAGER_DISCOUNT_AUTH="false" --project-ref kbabmewnahysfvlybiak
-npx supabase secrets set CANARY_DEVICE_FINGERPRINTS="loja-01-caixa-01" --project-ref kbabmewnahysfvlybiak
+# Troque SEU_PROJECT_REF pelo ref do projeto no Dashboard (Settings → General).
+npx supabase secrets set USE_UNIFIED_SALES_FLOW="false" --project-ref SEU_PROJECT_REF
+npx supabase secrets set STRICT_MANAGER_DISCOUNT_AUTH="false" --project-ref SEU_PROJECT_REF
+npx supabase secrets set CANARY_DEVICE_FINGERPRINTS="loja-01-caixa-01" --project-ref SEU_PROJECT_REF
 ```
 
 ### Monitoração (primeiras 24h)
@@ -238,6 +240,10 @@ npx supabase secrets set CANARY_DEVICE_FINGERPRINTS="loja-01-caixa-01" --project
 
 ```powershell
 cd C:\Naturecode\fastproduct\backend
+$env:SYNC_ENDPOINT = "https://SEU-REF.supabase.co/functions/v1/sync-outbox"
+$env:SYNC_KEY = "COLE_AQUI_SYNC_KEY"
+# Opcional: dois checks extras (senha válida + senha inválida rejeitada)
+# $env:SYNC_DIAG_GERENTE_SENHA = "(senha de teste; não commite)"
 .\scripts\sync-outbox-anti-replay-diagnostic.ps1 -OutputJson -OutputFile ".\artifacts\sync-outbox-anti-replay-report.json"
 ```
 
@@ -245,9 +251,9 @@ cd C:\Naturecode\fastproduct\backend
 
 ```powershell
 cd C:\Naturecode\fastproduct\backend
-npx supabase secrets set CANARY_DEVICE_FINGERPRINTS="" --project-ref kbabmewnahysfvlybiak
-npx supabase secrets set USE_UNIFIED_SALES_FLOW="false" --project-ref kbabmewnahysfvlybiak
-npx supabase secrets set STRICT_MANAGER_DISCOUNT_AUTH="false" --project-ref kbabmewnahysfvlybiak
+npx supabase secrets set CANARY_DEVICE_FINGERPRINTS="" --project-ref SEU_PROJECT_REF
+npx supabase secrets set USE_UNIFIED_SALES_FLOW="false" --project-ref SEU_PROJECT_REF
+npx supabase secrets set STRICT_MANAGER_DISCOUNT_AUTH="false" --project-ref SEU_PROJECT_REF
 ```
 
 Resultado esperado do rollback: todo tráfego volta para caminho legado no próximo request da função.

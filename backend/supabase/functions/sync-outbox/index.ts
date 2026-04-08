@@ -1,9 +1,13 @@
 // Supabase Edge Function: sync-outbox
 // Recebe eventos do PDV local (outbox) e persiste no Postgres.
-// Segurança (MVP): segredo compartilhado X-SYNC-KEY + service role no ambiente da Function.
+// Segurança: HMAC (X-SYNC-TS, X-SYNC-NONCE, X-SYNC-SIGNATURE) + X-SYNC-KEY; anti-replay (nonce);
+// service role somente no ambiente da Function.
 //
-// Contrato do body: { events: { id, tipo, payload_json, created_at }[] }
-// Resposta: { ok, processed, failed }
+// Operações (query `op` em GET; POST `op=validar_gerente` usa body JSON { senha }):
+// - GET  ?op=catalogo | pdv_config
+// - POST ?op=validar_gerente — token de desconto gerente para PDV desktop (sem JWT)
+// - POST (sem op ou outro) — batch outbox: { events: { id, tipo, payload_json, created_at }[] }
+// Resposta batch: { ok, processed, failed }
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -284,6 +288,270 @@ function shouldUseUnifiedSalesFlow(deviceFingerprint: string | null | undefined)
 }
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
+
+/** PDV desktop: validação de senha do gerente via mesmo canal HMAC do sync (sem JWT). */
+const RATE_WINDOW_MS_GERENTE_PDV = 15 * 60 * 1000;
+const LOCK_MS_GERENTE_PDV = 15 * 60 * 1000;
+const GERENTE_PDV_IP_LIMIT = 20;
+const GERENTE_PDV_DEVICE_LIMIT = 10;
+const GERENTE_PDV_GLOBAL_LIMIT = 60;
+const UNKNOWN_IP_GERENTE = "unknown-ip";
+const UNKNOWN_DEVICE_GERENTE = "unknown-device";
+
+type GerentePdvRateCtx = {
+  scope: "IP" | "DEVICE" | "GLOBAL";
+  identifier: string;
+  limit: number;
+};
+
+type GerentePdvRateRow = {
+  failed_count: number;
+  first_attempt_at: string;
+  lock_until: string | null;
+};
+
+function normalizeGerentePdvId(value: string, fallback: string): string {
+  const normalized = value.trim().toLowerCase();
+  return normalized ? normalized.slice(0, 200) : fallback;
+}
+
+function extractClientIpGerentePdv(req: Request): string {
+  const cfIp = req.headers.get("cf-connecting-ip");
+  if (cfIp) return normalizeGerentePdvId(cfIp, UNKNOWN_IP_GERENTE);
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (!forwarded) return UNKNOWN_IP_GERENTE;
+  const firstIp = forwarded.split(",")[0] ?? "";
+  return normalizeGerentePdvId(firstIp, UNKNOWN_IP_GERENTE);
+}
+
+async function gerentePdvGetRateRow(
+  supabase: SupabaseAdmin,
+  ctx: GerentePdvRateCtx,
+): Promise<GerentePdvRateRow | null> {
+  const { data, error } = await supabase
+    .from("gerente_auth_rate_limits")
+    .select("failed_count, first_attempt_at, lock_until")
+    .eq("scope", ctx.scope)
+    .eq("identifier", ctx.identifier)
+    .maybeSingle();
+  if (error) throw new Error(`RATE_LIMIT_READ_FAILED:${ctx.scope}:${error.message}`);
+  return data as GerentePdvRateRow | null;
+}
+
+function gerentePdvIsLocked(lockUntil: string | null, nowMs: number): boolean {
+  if (!lockUntil) return false;
+  const lockMs = Date.parse(lockUntil);
+  return Number.isFinite(lockMs) && lockMs > nowMs;
+}
+
+async function gerentePdvRegisterFailure(
+  supabase: SupabaseAdmin,
+  ctx: GerentePdvRateCtx,
+  row: GerentePdvRateRow | null,
+  now: Date,
+) {
+  const nowMs = now.getTime();
+  const firstAttemptMs = row?.first_attempt_at ? Date.parse(row.first_attempt_at) : NaN;
+  const insideWindow =
+    Number.isFinite(firstAttemptMs) && nowMs - firstAttemptMs <= RATE_WINDOW_MS_GERENTE_PDV;
+
+  const failedCount = insideWindow ? (row?.failed_count ?? 0) + 1 : 1;
+  const firstAttemptAt = insideWindow && row?.first_attempt_at
+    ? row.first_attempt_at
+    : now.toISOString();
+  const lockUntil = failedCount >= ctx.limit
+    ? new Date(nowMs + LOCK_MS_GERENTE_PDV).toISOString()
+    : null;
+
+  const { error } = await supabase.from("gerente_auth_rate_limits").upsert({
+    scope: ctx.scope,
+    identifier: ctx.identifier,
+    failed_count: failedCount,
+    first_attempt_at: firstAttemptAt,
+    lock_until: lockUntil,
+    updated_at: now.toISOString(),
+  });
+  if (error) throw new Error(`RATE_LIMIT_WRITE_FAILED:${ctx.scope}:${error.message}`);
+
+  return { failedCount, lockUntil, blockedNow: !!lockUntil };
+}
+
+async function gerentePdvResetRate(
+  supabase: SupabaseAdmin,
+  ctx: GerentePdvRateCtx,
+  nowIso: string,
+) {
+  const { error } = await supabase.from("gerente_auth_rate_limits").upsert({
+    scope: ctx.scope,
+    identifier: ctx.identifier,
+    failed_count: 0,
+    first_attempt_at: nowIso,
+    lock_until: null,
+    updated_at: nowIso,
+  });
+  if (error) throw new Error(`RATE_LIMIT_RESET_FAILED:${ctx.scope}:${error.message}`);
+}
+
+function gerentePdvGenerateToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256HexGerentePdv(input: string): Promise<string> {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest("SHA-256", enc.encode(input));
+  return hexOfBytes(new Uint8Array(buf));
+}
+
+async function handleValidarGerentePdvSync(
+  supabase: SupabaseAdmin,
+  rawBody: string,
+  req: Request,
+  deviceFingerprintHeader: string | null,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return jsonResponse(400, { ok: false, error: "INVALID_JSON" });
+  }
+  if (!isRecord(body)) {
+    return jsonResponse(400, { ok: false, error: "INVALID_BODY" });
+  }
+  const senhaRaw = body.senha;
+  if (typeof senhaRaw !== "string" || !senhaRaw.trim()) {
+    return jsonResponse(400, { ok: false, error: "SENHA_OBRIGATORIA" });
+  }
+  const senhaNormalizada = senhaRaw.trim();
+  if (senhaNormalizada.length > 128) {
+    return jsonResponse(400, { ok: false, error: "SENHA_INVALIDA_FORMATO" });
+  }
+
+  const now = new Date();
+  const nowMs = now.getTime();
+  const nowIso = now.toISOString();
+  const clientIp = extractClientIpGerentePdv(req);
+  const deviceFingerprint = normalizeGerentePdvId(
+    deviceFingerprintHeader ?? "",
+    UNKNOWN_DEVICE_GERENTE,
+  );
+
+  const rateContexts: GerentePdvRateCtx[] = [
+    { scope: "IP", identifier: clientIp, limit: GERENTE_PDV_IP_LIMIT },
+    { scope: "DEVICE", identifier: deviceFingerprint, limit: GERENTE_PDV_DEVICE_LIMIT },
+    { scope: "GLOBAL", identifier: "global", limit: GERENTE_PDV_GLOBAL_LIMIT },
+  ];
+
+  try {
+    for (const ctx of rateContexts) {
+      const row = await gerentePdvGetRateRow(supabase, ctx);
+      if (gerentePdvIsLocked(row?.lock_until ?? null, nowMs)) {
+        logJson({
+          level: "warn",
+          stage: "validar_gerente_pdv",
+          event: "locked_precheck",
+          scope: ctx.scope,
+          lock_until: row?.lock_until ?? null,
+        });
+        return jsonResponse(429, {
+          ok: false,
+          error: "LOCKED_TEMPORARILY",
+          scope: ctx.scope,
+          lock_until: row?.lock_until ?? null,
+        });
+      }
+    }
+
+    const { data: config, error: configError } = await supabase
+      .from("pdv_config")
+      .select("gerente_senha_sha256, max_desconto_gerente_percentual")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (configError) {
+      logJson({ level: "error", stage: "validar_gerente_pdv", error: configError.message });
+      return jsonResponse(500, { ok: false, error: "ERRO_DB_CONFIG" });
+    }
+    if (!config || !config.gerente_senha_sha256) {
+      return jsonResponse(500, { ok: false, error: "CONFIG_NAO_ENCONTRADA" });
+    }
+
+    const senhaHash = await sha256HexGerentePdv(senhaNormalizada);
+    if (!timingSafeEqualStr(senhaHash, config.gerente_senha_sha256)) {
+      let lockScope: GerentePdvRateCtx["scope"] | null = null;
+      let lockUntil: string | null = null;
+      for (const ctx of rateContexts) {
+        const row = await gerentePdvGetRateRow(supabase, ctx);
+        const result = await gerentePdvRegisterFailure(supabase, ctx, row, now);
+        logJson({
+          level: "warn",
+          stage: "validar_gerente_pdv",
+          event: "failed_attempt",
+          scope: ctx.scope,
+          failed_count: result.failedCount,
+          lock_until: result.lockUntil,
+        });
+        if (result.blockedNow && !lockScope) {
+          lockScope = ctx.scope;
+          lockUntil = result.lockUntil;
+        }
+      }
+      if (lockScope && lockUntil) {
+        return jsonResponse(429, {
+          ok: false,
+          error: "LOCKED_TEMPORARILY",
+          scope: lockScope,
+          lock_until: lockUntil,
+        });
+      }
+      return jsonResponse(401, { ok: false, error: "SENHA_INVALIDA" });
+    }
+
+    const token = gerentePdvGenerateToken();
+    const expiraEm = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    const { error: insertError } = await supabase.from("tokens_desconto_gerente").insert({
+      token,
+      expira_em: expiraEm,
+      usado: false,
+      loja_id: null,
+      criado_por: null,
+    });
+
+    if (insertError) {
+      logJson({
+        level: "error",
+        stage: "validar_gerente_pdv",
+        error: insertError.message,
+      });
+    }
+
+    for (const ctx of rateContexts) {
+      await gerentePdvResetRate(supabase, ctx, nowIso);
+    }
+
+    logJson({
+      level: "info",
+      stage: "validar_gerente_pdv",
+      success: true,
+      ip: clientIp,
+      device: deviceFingerprint,
+    });
+
+    const maxPct = Number(config.max_desconto_gerente_percentual);
+    return jsonResponse(200, {
+      ok: true,
+      token,
+      expira_em: expiraEm,
+      max_desconto_percentual: Number.isFinite(maxPct) && maxPct > 0 ? maxPct : 20,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logJson({ level: "error", stage: "validar_gerente_pdv", error: msg });
+    return jsonResponse(500, { ok: false, error: "ERRO_INTERNO" });
+  }
+}
 
 /**
  * Garante linha em `public.caixas` com o mesmo id da sessão do PDV local
@@ -841,6 +1109,14 @@ Deno.serve(async (req) => {
     }
     if (req.method === "GET" && op === "pdv_config") {
       return await handlePdvConfigSync(admin.supabase);
+    }
+    if (req.method === "POST" && op === "validar_gerente") {
+      return await handleValidarGerentePdvSync(
+        admin.supabase,
+        rawBody,
+        req,
+        deviceFingerprint,
+      );
     }
     if (req.method === "POST") {
       return await handleOutboxBatch(admin.supabase, rawBody, deviceFingerprint);

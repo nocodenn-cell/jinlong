@@ -1,24 +1,114 @@
 param(
   [Parameter(Mandatory = $false)]
-  [string]$BaseUrl = "https://kbabmewnahysfvlybiak.supabase.co/functions/v1/sync-outbox",
+  [string]$BaseUrl = "",
 
   [Parameter(Mandatory = $false)]
-  [string]$SyncKey = "pdv-sync-2026",
+  [string]$SyncKey = "",
 
   [Parameter(Mandatory = $false)]
   [string]$Op = "catalogo",
 
   [Parameter(Mandatory = $false)]
-  [string]$DeviceFingerprint = "qa-diag-powershell"
-  ,
+  [string]$DeviceFingerprint = "qa-diag-powershell",
+
   [Parameter(Mandatory = $false)]
   [switch]$OutputJson,
+
   [Parameter(Mandatory = $false)]
-  [string]$OutputFile = ""
+  [string]$OutputFile = "",
+
+  # Opcional: senha real do gerente (pdv_config) para testar POST ?op=validar_gerente.
+  # Preferir variável de ambiente SYNC_DIAG_GERENTE_SENHA em CI para não expor no histórico do shell.
+  [Parameter(Mandatory = $false)]
+  [string]$ValidarGerenteSenha = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# Preenche SYNC_ENDPOINT / SYNC_KEY a partir de .env local (só se ainda vazios na sessão).
+function Import-SyncVarsFromDotEnv {
+  param([string[]]$CandidatePaths)
+  foreach ($filePath in $CandidatePaths) {
+    if (-not (Test-Path -LiteralPath $filePath)) {
+      continue
+    }
+    Get-Content -LiteralPath $filePath -Encoding UTF8 | ForEach-Object {
+      $line = $_.Trim()
+      if ($line -match '^\s*#' -or [string]::IsNullOrWhiteSpace($line)) {
+        return
+      }
+      $eq = $line.IndexOf('=')
+      if ($eq -lt 1) {
+        return
+      }
+      $name = $line.Substring(0, $eq).Trim()
+      if ($name -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
+        return
+      }
+      $val = $line.Substring($eq + 1).Trim()
+      if ($val.Length -ge 2) {
+        $first = $val.Substring(0, 1)
+        $last = $val.Substring($val.Length - 1, 1)
+        if (($first -eq '"' -and $last -eq '"') -or ($first -eq "'" -and $last -eq "'")) {
+          $val = $val.Substring(1, $val.Length - 2)
+        }
+      }
+      if ($name -eq 'SYNC_ENDPOINT' -and [string]::IsNullOrWhiteSpace($env:SYNC_ENDPOINT)) {
+        $env:SYNC_ENDPOINT = $val
+      }
+      if ($name -eq 'SYNC_KEY' -and [string]::IsNullOrWhiteSpace($env:SYNC_KEY)) {
+        $env:SYNC_KEY = $val
+      }
+    }
+  }
+}
+
+$backendRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent $backendRoot
+Import-SyncVarsFromDotEnv @(
+  (Join-Path $backendRoot '.env')
+  (Join-Path $backendRoot 'supabase\.env')
+  (Join-Path $repoRoot 'pdv-local\.env')
+)
+
+# Credenciais e endpoint: parâmetros, variáveis de ambiente ou .env acima (nada hardcoded no repositório).
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
+  $BaseUrl = $env:SYNC_ENDPOINT
+}
+if ([string]::IsNullOrWhiteSpace($SyncKey)) {
+  $SyncKey = $env:SYNC_KEY
+}
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
+  throw @"
+Defina a URL da função sync-outbox. Exemplos no PowerShell:
+
+  `$env:SYNC_ENDPOINT = 'https://SEU-REF.supabase.co/functions/v1/sync-outbox'
+  `$env:SYNC_KEY = '(mesmo valor do secret SYNC_KEY na Edge)'
+
+Ou parâmetros: -BaseUrl '...' -SyncKey '...'
+
+Ou crie um destes arquivos (não commite segredos): backend\.env, pdv-local\.env — com linhas SYNC_ENDPOINT= e SYNC_KEY=.
+"@
+}
+if ([string]::IsNullOrWhiteSpace($SyncKey)) {
+  throw @"
+Defina SYNC_KEY (mesmo secret configurado na Edge sync-outbox). Exemplos:
+
+  `$env:SYNC_KEY = '(segredo)'
+
+Ou: -SyncKey '...'
+
+Ou inclua SYNC_KEY= em backend\.env ou pdv-local\.env (não commite).
+"@
+}
+$BaseUrl = $BaseUrl.TrimEnd("/")
+
+$senhaGerenteDiag = $ValidarGerenteSenha
+if ([string]::IsNullOrWhiteSpace($senhaGerenteDiag) -and -not [string]::IsNullOrWhiteSpace($env:SYNC_DIAG_GERENTE_SENHA)) {
+  $senhaGerenteDiag = $env:SYNC_DIAG_GERENTE_SENHA
+}
+$runValidarGerente = -not [string]::IsNullOrWhiteSpace($senhaGerenteDiag)
 
 function New-SignatureHex {
   param(
@@ -129,6 +219,12 @@ if (-not $OutputJson) {
   Write-Host "GET URL: $getUrl"
   Write-Host "POST URL: $postUrl"
   Write-Host "Device: $DeviceFingerprint"
+  if ($runValidarGerente) {
+    Write-Host "validar_gerente: habilitado (2 checks adicionais)" -ForegroundColor DarkGray
+  }
+  else {
+    Write-Host "validar_gerente: omitido (use -ValidarGerenteSenha ou env SYNC_DIAG_GERENTE_SENHA)" -ForegroundColor DarkGray
+  }
   Write-Host ""
 }
 
@@ -273,6 +369,69 @@ $results += [pscustomobject]@{
   details = $details
 }
 
+# 7–8) Opcional: POST ?op=validar_gerente (mesmo contrato HMAC; corpo exato entra na assinatura)
+$validarGerenteUrl = "${BaseUrl}?op=validar_gerente"
+if ($runValidarGerente) {
+  $vgBodyOk = (@{ senha = $senhaGerenteDiag.Trim() } | ConvertTo-Json -Compress)
+  $tsVg1 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
+  $nonceVg1 = [guid]::NewGuid().ToString()
+  $sigVg1 = New-SignatureHex -Key $SyncKey -Ts $tsVg1 -Nonce $nonceVg1 -Body $vgBodyOk
+  $headersVg1 = @{
+    "X-SYNC-KEY"            = $SyncKey
+    "X-SYNC-TS"             = $tsVg1
+    "X-SYNC-NONCE"          = $nonceVg1
+    "X-SYNC-SIGNATURE"      = $sigVg1
+    "x-device-fingerprint"  = $DeviceFingerprint
+  }
+  $resVgOk = Invoke-DiagnosticRequest -Method "POST" -Url $validarGerenteUrl -Headers $headersVg1 -Body $vgBodyOk
+  $totalCount++
+  $checkName = "POST validar_gerente senha válida"
+  $tok = Get-BodyField -Body $resVgOk.Body -FieldName "token"
+  $condition = (
+    $resVgOk.StatusCode -eq 200 -and
+    (Get-BodyField -Body $resVgOk.Body -FieldName "ok") -eq $true -and
+    -not [string]::IsNullOrWhiteSpace([string]$tok)
+  )
+  $details = "status=$($resVgOk.StatusCode), ok=$(Get-BodyField -Body $resVgOk.Body -FieldName 'ok'), token_len=$([string]$tok).Length"
+  $okCount += [int](Assert-Result -Name $checkName -Condition $condition -Details $details)
+  $results += [pscustomobject]@{
+    name       = $checkName
+    method     = "POST"
+    passed     = $condition
+    statusCode = $resVgOk.StatusCode
+    error      = Get-BodyField -Body $resVgOk.Body -FieldName "error"
+    ok         = Get-BodyField -Body $resVgOk.Body -FieldName "ok"
+    details    = $details
+  }
+
+  $vgBodyBad = '{"senha":"__sync_diag_invalid_password__"}'
+  $tsVg2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
+  $nonceVg2 = [guid]::NewGuid().ToString()
+  $sigVg2 = New-SignatureHex -Key $SyncKey -Ts $tsVg2 -Nonce $nonceVg2 -Body $vgBodyBad
+  $headersVg2 = @{
+    "X-SYNC-KEY"            = $SyncKey
+    "X-SYNC-TS"             = $tsVg2
+    "X-SYNC-NONCE"          = $nonceVg2
+    "X-SYNC-SIGNATURE"      = $sigVg2
+    "x-device-fingerprint"  = $DeviceFingerprint
+  }
+  $resVgBad = Invoke-DiagnosticRequest -Method "POST" -Url $validarGerenteUrl -Headers $headersVg2 -Body $vgBodyBad
+  $totalCount++
+  $checkName = "POST validar_gerente senha inválida rejeitada"
+  $condition = ($resVgBad.StatusCode -eq 401 -and (Get-BodyField -Body $resVgBad.Body -FieldName "error") -eq "SENHA_INVALIDA")
+  $details = "status=$($resVgBad.StatusCode), error=$(Get-BodyField -Body $resVgBad.Body -FieldName 'error')"
+  $okCount += [int](Assert-Result -Name $checkName -Condition $condition -Details $details)
+  $results += [pscustomobject]@{
+    name       = $checkName
+    method     = "POST"
+    passed     = $condition
+    statusCode = $resVgBad.StatusCode
+    error      = Get-BodyField -Body $resVgBad.Body -FieldName "error"
+    ok         = Get-BodyField -Body $resVgBad.Body -FieldName "ok"
+    details    = $details
+  }
+}
+
 if (-not $OutputJson) {
   Write-Host ""
   Write-Host "Resultado: $okCount/$totalCount checks passaram."
@@ -283,6 +442,8 @@ $report = [pscustomobject]@{
   target = [pscustomobject]@{
     getUrl = $getUrl
     postUrl = $postUrl
+    validarGerenteUrl = $validarGerenteUrl
+    validarGerenteChecksEnabled = $runValidarGerente
     deviceFingerprint = $DeviceFingerprint
   }
   summary = [pscustomobject]@{

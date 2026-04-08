@@ -6,8 +6,8 @@ use db::{
     abrir_caixa_local, catalogo_local_get, fechar_caixa_local, get_caixa_atual,
     diagnostics, init_db, outbox_pendentes, outbox_reprocessar_dlq, outbox_resumo,
     pdv_config_local_get, registrar_movimento_caixa_local, registrar_venda_local, sync_catalogo_real,
-    sync_outbox_real, sync_outbox_simulado, sync_pdv_config_real, Diagnostics, OutboxResumo,
-    RegistrarVendaInput,
+    sync_outbox_real, sync_outbox_simulado, sync_pdv_config_real, validar_gerente_sync, Diagnostics,
+    OutboxResumo, RegistrarVendaInput, ValidarGerentePdvDto,
 };
 
 fn load_env_files() {
@@ -114,6 +114,11 @@ fn sync_pdv_config_real_cmd(app: tauri::AppHandle) -> Result<Option<db::PdvConfi
     sync_pdv_config_real(&app)
 }
 
+#[tauri::command]
+fn validar_gerente_sync_cmd(senha: String) -> Result<ValidarGerentePdvDto, String> {
+    validar_gerente_sync(senha)
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -142,7 +147,8 @@ fn main() {
             catalogo_local_get_cmd,
             sync_catalogo_real_cmd,
             pdv_config_local_get_cmd,
-            sync_pdv_config_real_cmd
+            sync_pdv_config_real_cmd,
+            validar_gerente_sync_cmd
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar aplicação Tauri");

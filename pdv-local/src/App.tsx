@@ -60,6 +60,7 @@ export function App() {
     aplicarDescontoGerente,
     descontoGerentePercentual,
     descontoGerenteValor,
+    descontoGerenteToken,
     setMaxDescontoGerentePercentual,
     maxDescontoGerentePercentual,
   } = useCartStore()
@@ -890,13 +891,49 @@ export function App() {
                 if (!itens.length) return
                 const senha = window.prompt('Senha do gerente para aplicar desconto especial:')
                 if (!senha) return
-                const senhaSha = await sha256Hex(senha)
-                if (senhaSha !== gerenteSenhaSha256) {
-                  setMensagem('Senha de gerente inválida.')
-                  return
+
+                let tokenPdv: string | null = null
+                let maxClamp: number | null = null
+
+                if (tauriDisponivel) {
+                  try {
+                    const r = await invoke<{
+                      token: string
+                      expira_em: string
+                      max_desconto_percentual: number
+                    }>('validar_gerente_sync_cmd', { senha })
+                    tokenPdv = r.token
+                    if (
+                      Number.isFinite(r.max_desconto_percentual) &&
+                      r.max_desconto_percentual > 0
+                    ) {
+                      maxClamp = r.max_desconto_percentual
+                    }
+                  } catch {
+                    const senhaSha = await sha256Hex(senha)
+                    if (senhaSha !== gerenteSenhaSha256) {
+                      setMensagem('Senha de gerente inválida.')
+                      return
+                    }
+                    setMensagem(
+                      'Validação local (sem rede). Se o servidor exigir token de gerente, a sincronização pode falhar até haver conexão.'
+                    )
+                  }
+                } else {
+                  const senhaSha = await sha256Hex(senha)
+                  if (senhaSha !== gerenteSenhaSha256) {
+                    setMensagem('Senha de gerente inválida.')
+                    return
+                  }
                 }
+
+                const maxPrompt =
+                  maxClamp != null
+                    ? Math.min(maxDescontoGerentePercentual, maxClamp)
+                    : maxDescontoGerentePercentual
+
                 const entrada = window.prompt(
-                  `Informe o desconto especial em % (máx. ${maxDescontoGerentePercentual}%):`,
+                  `Informe o desconto especial em % (máx. ${maxPrompt}%):`,
                   descontoGerentePercentual > 0 ? String(descontoGerentePercentual) : '5'
                 )
                 if (!entrada) return
@@ -905,7 +942,7 @@ export function App() {
                   setMensagem('Valor de desconto inválido.')
                   return
                 }
-                aplicarDescontoGerente(valor)
+                aplicarDescontoGerente(valor, tokenPdv, maxClamp)
                 setMensagem(`Desconto especial de ${valor.toFixed(1)}% aplicado pelo gerente.`)
               }}
             >
@@ -1078,6 +1115,8 @@ export function App() {
                         descontoGerentePercentual > 0 ? descontoGerenteValor : null,
                       gerente_id:
                         descontoGerentePercentual > 0 ? gerenteId : null,
+                      desconto_gerente_token:
+                        descontoGerentePercentual > 0 ? descontoGerenteToken : null,
                       itens: itens.map((i) => ({
                         produto_id: i.produtoId,
                         nome: i.nome,

@@ -36,6 +36,9 @@ pdv-local/src-tauri/gen/
 # Supabase CLI temporarios
 **/supabase/.temp/
 
+# Relatórios locais de diagnóstico (URLs/ambiente; nunca versionar)
+backend/artifacts/*.json
+
 # TypeScript build info
 **/*.tsbuildinfo
 .aider*
