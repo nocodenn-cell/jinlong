@@ -10,8 +10,8 @@ create table if not exists public.pdv_config (
   max_desconto_gerente_percentual numeric(10,4) not null default 30
 );
 
--- Seed com valores compatíveis com o pdv-local atual (fallback).
--- Senha default do pdv-local: "1234"
+-- Seed inicial (dev): alinhado ao fallback em `pdv-local` até existir `pdv_config` na nuvem.
+-- Em produção, atualize `gerente_senha_sha256` (e remova credenciais fracas) via painel/SQL após o primeiro deploy.
 insert into public.pdv_config (id, gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual)
 values (
   1,

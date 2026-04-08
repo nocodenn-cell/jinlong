@@ -10,12 +10,14 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 ## Ordem sugerida (fechar o P0 sem pular dependência)
 
 1. **§1** — `backend`: `supabase link` (se ainda não) → `migration list` → `db push` se faltar algo → `verify_p0_producao.sql` no SQL Editor (P0 até **010**; **011–013** relatórios; **014–015** RPCs/sync; **016–017** estoque atômico + auth na RPC segura; **018** tokens de gerente; **022** rate-limit por escopo; **023** finalização transacional com token de gerente; **024** anti-replay por nonce; **025** RPC canônica v2 — ver §1b–§1f).
+
 **Smoke adicional 023 (desconto gerente por token):**
 
 - Rodar [`backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql`](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql) no SQL Editor.
 - Alternativa operacional (copy/paste por ambiente): [`backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql`](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql).
 - Esperado: cenário **token válido** conclui e consome token; **expirado** e **já usado** falham com erro esperado.
-2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, `X-SYNC-KEY` e chamada a `decrementar_estoque_seguro`.
+
+2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, HMAC/`SYNC_KEY` e chamada a `decrementar_estoque_seguro`.
 3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_*` do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
 4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
    - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC legada) e **010** (leitura `estoque_baixas` para gerente); caixa web usa **016** `decrementar_estoque_seguro` quando aplicada.
@@ -77,12 +79,14 @@ No SQL Editor, rode a seção **6** de [`verify_p0_producao.sql`](../backend/sup
 A migration **016** cria a RPC `decrementar_estoque_seguro` que resolve **race conditions** no estoque quando dois caixas vendem o mesmo item simultaneamente.
 
 **Mudanças principais:**
+
 - Nova RPC `decrementar_estoque_seguro` com `SELECT FOR UPDATE` (bloqueio pessimista)
 - Coluna `version` na tabela `estoque` (controle de concorrência otimista)
 - Índice único em `estoque_baixas(venda_id, produto_id)` (garantia extra contra duplicatas)
 - Retorno estruturado: `{ sucesso, mensagem, estoque_atual }`
 
 **Mensagens de erro da nova RPC:**
+
 - `ESTOQUE_INSUFICIENTE` — Quantidade solicitada maior que disponível
 - `PRODUTO_NAO_ENCONTRADO_NO_ESTOQUE` — Produto não existe na tabela estoque
 - `CONCORRENCIA_DETECTADA` — Outra transação modificou o estoque simultaneamente
@@ -164,10 +168,10 @@ npx supabase secrets set SYNC_KEY="(segredo forte)"
 Arquivo **não versionado**; copie de `.env.example` e preencha com valores **reais**.
 
 
-| Variável                    | Deve ser                                                             |
-| --------------------------- | -------------------------------------------------------------------- |
-| `SYNC_ENDPOINT`             | `https://<ref>.supabase.co/functions/v1/sync-outbox`                 |
-| `SYNC_KEY`                  | **Idêntico** ao `SYNC_KEY` dos secrets da Edge.                      |
+| Variável        | Deve ser                                             |
+| --------------- | ---------------------------------------------------- |
+| `SYNC_ENDPOINT` | `https://<ref>.supabase.co/functions/v1/sync-outbox` |
+| `SYNC_KEY`      | **Idêntico** ao `SYNC_KEY` dos secrets da Edge.      |
 
 
 - [ ] `.env` presente na raiz de `pdv-local`
@@ -220,12 +224,12 @@ Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não e
 ## Resumo
 
 
-| Área       | Ferramenta                                                                                                                 |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Área       | Ferramenta                                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Migrations | `npx supabase migration list` + `verify_p0_producao.sql` (010 = P0; **011–013** relatórios; **014–017** sync + estoque seguro; **024–025** anti-replay + fluxo unificado) |
-| Edge       | `functions deploy` + secrets                                                                                               |
-| Desktop    | `.env` + teste de venda                                                                                                    |
-| Web        | `.env.local` / Vercel + `/gerente/vendas`                                                                                  |
+| Edge       | `functions deploy` + secrets                                                                                                                                              |
+| Desktop    | `.env` + teste de venda                                                                                                                                                   |
+| Web        | `.env.local` / Vercel + `/gerente/vendas`                                                                                                                                 |
 
 
 O P0 operacional está **fechado** para um ambiente quando: **§1** e **§5** estão OK e você marcou **§4** *ou* **§4b**; e, se usar desktop, **§2** e **§3** também estão OK.
