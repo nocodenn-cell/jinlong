@@ -13,6 +13,7 @@
 DO $$
 DECLARE
   v_operador_id uuid;
+  v_auth_user_id uuid;
   v_caixa_id uuid := gen_random_uuid();
   v_prod_1 uuid;
   v_prod_2 uuid;
@@ -56,7 +57,23 @@ BEGIN
   END IF;
 
   IF v_operador_id IS NULL THEN
-    RAISE EXCEPTION 'SMOKE_ABORT: NÃO HÁ USUÁRIO ATIVO EM public.usuarios';
+    -- Fallback final: tenta semear public.usuarios a partir de auth.users.
+    SELECT au.id
+    INTO v_auth_user_id
+    FROM auth.users au
+    ORDER BY au.created_at
+    LIMIT 1;
+
+    IF v_auth_user_id IS NULL THEN
+      RAISE EXCEPTION 'SMOKE_ABORT: NÃO HÁ USUÁRIO EM auth.users; crie/login um usuário primeiro';
+    END IF;
+
+    INSERT INTO public.usuarios (id, nome, perfil, idioma_preferido, ativo)
+    VALUES (v_auth_user_id, 'SMOKE Operador', 'OPERADOR', 'pt', true)
+    ON CONFLICT (id) DO UPDATE
+      SET ativo = true;
+
+    v_operador_id := v_auth_user_id;
   END IF;
 
   SELECT p.id, p.preco_varejo INTO v_prod_1, v_preco_1
