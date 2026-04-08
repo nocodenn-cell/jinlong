@@ -1,4 +1,10 @@
 # Validação mínima do backend Supabase: type-check da Edge + smoke das migrations em Postgres (stub auth).
+#
+# Job anti-replay (Windows + PowerShell):
+# - Secrets do repositório: SYNC_ENDPOINT (URL da função sync-outbox), SYNC_KEY (mesmo da Edge).
+# - PR interno que altera sync-outbox ou o script de diagnóstico: falha se esses secrets estiverem vazios (gate).
+# - Push/PR com secrets preenchidos: executa backend/scripts/sync-outbox-anti-replay-diagnostic.ps1.
+# - Forks: o gate de secrets não exige SYNC_* no PR de fork (head.repo != github.repository); o passo de diagnóstico só roda se os secrets existirem no repo base (geralmente não expostos a forks).
 name: CI backend Supabase
 
 on:

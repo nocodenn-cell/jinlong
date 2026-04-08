@@ -13,9 +13,13 @@ Implementação Rust: `pdv-local/src-tauri/src/db.rs` (`sync_outbox_real`, `outb
 ## Contrato HTTP
 
 - **URL:** `SYNC_ENDPOINT` (ex.: `https://<ref>.supabase.co/functions/v1/sync-outbox`)
-- **Header:** `X-SYNC-KEY: <SYNC_KEY>` (mesmo valor configurado com `supabase secrets set SYNC_KEY=...`)
-- **Body:** `{ "events": [ { "id", "tipo", "payload_json", "created_at" } ] }`
-- **Resposta:** `{ "ok": true, "processed": ["..."], "failed": [ { "id", "error" } ] }`
+- **Autenticação:** HMAC com o mesmo `SYNC_KEY` dos secrets da Edge (não use `service_role` no desktop).
+- **Headers obrigatórios:** `X-SYNC-KEY`, `X-SYNC-TS` (epoch segundos UTC), `X-SYNC-NONCE` (UUID), `X-SYNC-SIGNATURE` (hex HMAC-SHA256 de `"{ts}.{nonce}.{bodyExato}"` com a chave `SYNC_KEY`), `x-device-fingerprint` (recomendado; alinhar a canários na Edge se usar `CANARY_DEVICE_FINGERPRINTS`).
+- **GET** (ex.: `?op=catalogo` ou `pdv_config`): corpo vazio na assinatura (`bodyExato` = `""`).
+- **POST** batch outbox: **Body** `{ "events": [ { "id", "tipo", "payload_json", "created_at" } ] }` — o JSON deve ser **byte-a-byte** o mesmo usado na assinatura.
+- **Resposta batch:** `{ "ok": true, "processed": ["..."], "failed": [ { "id", "error" } ] }` (erros comuns: `REPLAY_DETECTED`, `INVALID_SIGNATURE`, `TIMESTAMP_OUT_OF_WINDOW`).
+
+Referência de teste: `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1`.
 
 ## Matriz evento → destino (nuvem)
 

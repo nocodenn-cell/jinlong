@@ -8,7 +8,8 @@ Referência operacional complementar: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLI
 - [ ] Nenhum arquivo versionado contém **URL real** de projeto Supabase, **`SYNC_KEY`** ou **`service_role`** (inclui scripts, relatórios JSON e docs de runbook).
 - [ ] Relatórios de diagnóstico (ex.: anti-replay) ficam em `backend/artifacts/*.json` — pasta **ignorada pelo Git**; não adicionar esses JSONs com `git add -f`.
 - [ ] Se algo sensível **chegou a ser commitado**: tratar como **vazamento potencial** — **rotacionar** `SYNC_KEY` (secrets da Edge), revisar **API keys** no painel Supabase conforme política do time e, se aplicável, limpar histórico (`git filter-repo`/BFG) com acompanhamento de compliance.
-- [ ] Confirmar que **apenas a Edge** (e jobs server-side explícitos, ex.: seed local) usam `SUPABASE_SERVICE_ROLE_KEY`; **não** constar em `pdv-importados` (bundle cliente), `pdv-local` nem `.env` versionados.
+- [ ] Confirmar que **apenas a Edge** (e jobs server-side explícitos, ex.: seed local em `pdv-importados` com Node) usam `SUPABASE_SERVICE_ROLE_KEY`; **não** constar no **bundle cliente**, no **`pdv-local/.env` do desktop** nem em `.env` versionados.
+- [ ] (Opcional) **pre-commit** com scanner de segredos (`gitleaks`, `trufflehog`, etc.) — o monorepo **não** versiona `.pre-commit-config.yaml`; configure por máquina ou adicione workflow de secret scanning no GitHub se o time exigir.
 
 ## 1) Critérios de aceite (go/no-go)
 
@@ -17,7 +18,7 @@ Referência operacional complementar: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLI
 - [ ] Secrets corretos no projeto alvo (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SYNC_KEY`).
 - [ ] Fluxo de venda web usa RPC transacional (`finalizar_venda_transacional`) e estoque seguro (`decrementar_estoque_seguro`).
 - [ ] Lockout de gerente ativo (`gerente_auth_attempts`) + rate-limit por escopo (`gerente_auth_rate_limits`) + tokens (`tokens_desconto_gerente`).
-- [ ] Verificações SQL sem falhas (seções 6, 7, 8 e 9 do script de verificação).
+- [ ] Verificações SQL sem falhas (`verify_p0_producao.sql`, inclusive seções **11–12** após migrations **024–025**).
 - [ ] Teste de abuso mínimo executado (itens abaixo).
 
 ## 2) Comandos CLI (executar por ambiente)
@@ -85,8 +86,8 @@ SELECT HAS_FUNCTION_PRIVILEGE(
 ## 5) Pendências para “segurança avançada” (não bloqueante do fechamento MVP)
 
 - [ ] Migrar hash de senha de gerente de `SHA-256` para `ARGON2ID`/`BCRYPT`.
-- [ ] Garantir rollout da sincronização via Edge (`SYNC_KEY`) em todos os ambientes (sem `service_role` no `pdv-local/.env`).
-- [ ] Adicionar anti-replay forte no sync (HMAC + timestamp + nonce).
+- [ ] Garantir rollout da sincronização via Edge (`SYNC_KEY` + HMAC) em todos os ambientes (sem `service_role` no `pdv-local/.env`).
+- [x] Anti-replay no sync (HMAC + timestamp + nonce + persistência **024**): implementado no código e coberto por script/CI; **por ambiente**, ainda é preciso `db push`, deploy da Edge e secrets `SYNC_ENDPOINT`/`SYNC_KEY` no GitHub para o job validar o endpoint real.
 
 ---
 

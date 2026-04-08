@@ -209,9 +209,11 @@ Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não e
 
 ## 6. CI / gate em PR (backend)
 
-- [ ] Workflow `CI backend Supabase` executa smoke de migrations + `deno check` da Edge.
-- [ ] Job de diagnóstico anti-replay habilitado com secrets (`SYNC_ENDPOINT`, `SYNC_KEY`) em CI.
-- [ ] PR interno com mudança em `backend/supabase/functions/sync-outbox/**` sem esses secrets deve falhar no gate (ou justificar override no repositório).
+- [ ] Workflow **CI backend Supabase** (`.github/workflows/ci-backend-supabase.yml`) executa smoke de migrations + `deno check` da Edge.
+- [ ] No GitHub do repositório: secrets **`SYNC_ENDPOINT`** (URL completa `.../functions/v1/sync-outbox`) e **`SYNC_KEY`** (igual ao secret da Edge) — usados pelo job `anti-replay-diagnostic-gate`.
+- [ ] Com secrets preenchidos: o job roda `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1` contra o ambiente apontado (validação ponta a ponta).
+- [ ] **PR interno** que altera `sync-outbox` ou o script de diagnóstico **sem** esses secrets deve falhar no passo de validação (gate explícito).
+- [ ] PRs de **fork**: o gate não exige secrets no fork; o diagnóstico só roda se o repositório base tiver secrets (comportamento esperado para não vazar `SYNC_KEY`).
 
 ---
 
