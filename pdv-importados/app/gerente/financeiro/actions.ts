@@ -6,11 +6,35 @@ import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
+export function validarCriarClienteInput(input: { nome: string }): string | null {
+  if (!input.nome?.trim()) return 'Nome obrigatório'
+  return null
+}
+
+export function validarCriarTituloInput(input: {
+  cliente_id: string
+  valor_total: number
+}): string | null {
+  if (!input.cliente_id?.trim()) return 'Cliente obrigatório'
+  if (!Number.isFinite(input.valor_total) || input.valor_total <= 0) return 'Valor inválido'
+  return null
+}
+
+export function validarLiquidarTituloInput(input: {
+  titulo_id: string
+  valor: number
+}): string | null {
+  if (!input.titulo_id?.trim()) return 'Título obrigatório'
+  if (!Number.isFinite(input.valor) || input.valor <= 0) return 'Valor inválido para liquidação'
+  return null
+}
+
 export async function criarCliente(input: { nome: string; documento?: string; telefone?: string }): Promise<R<string>> {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
+  const erro = validarCriarClienteInput({ nome: input.nome })
+  if (erro) return { success: false, error: erro }
   const nome = input.nome.trim()
-  if (!nome) return { success: false, error: 'Nome obrigatório' }
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -35,7 +59,11 @@ export async function criarTituloReceber(input: {
 }): Promise<R<string>> {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
-  if (!input.valor_total || input.valor_total <= 0) return { success: false, error: 'Valor inválido' }
+  const erro = validarCriarTituloInput({
+    cliente_id: input.cliente_id,
+    valor_total: input.valor_total,
+  })
+  if (erro) return { success: false, error: erro }
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -62,6 +90,11 @@ export async function liquidarTitulo(input: {
 }): Promise<R> {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
+  const erro = validarLiquidarTituloInput({
+    titulo_id: input.titulo_id,
+    valor: input.valor,
+  })
+  if (erro) return { success: false, error: erro }
 
   const supabase = await createClient()
   const { error } = await supabase.rpc('registrar_liquidacao_receber', {
@@ -78,6 +111,7 @@ export async function liquidarTitulo(input: {
 export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
+  if (!venda_id?.trim()) return { success: false, error: 'Venda obrigatória' }
   const supabase = await createClient()
   const { error } = await supabase.from('documentos_fiscais_pendentes').insert({
     venda_id,
@@ -93,6 +127,7 @@ export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
 export async function reprocessarDocumentoFiscal(documento_id: string): Promise<R> {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
+  if (!documento_id?.trim()) return { success: false, error: 'Documento obrigatório' }
   const supabase = await createClient()
   const { error } = await supabase.rpc('fiscal_reprocessar_documento', {
     p_documento_id: documento_id,

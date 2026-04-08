@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
+import { PendingSubmitButton } from '@/components/forms/PendingSubmitButton'
 import {
   criarCliente,
   criarTituloReceber,
@@ -11,7 +13,12 @@ import {
   reprocessarDocumentoFiscal,
 } from './actions'
 
-export default async function FinanceiroPage() {
+export default async function FinanceiroPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; msg?: string; err?: string }>
+}) {
+  const sp = await searchParams
   const { idioma } = await getUsuarioIdioma()
   const m = getMessages(idioma)
   const supabase = await createClient()
@@ -30,21 +37,29 @@ export default async function FinanceiroPage() {
 
   async function submitCliente(formData: FormData) {
     'use server'
-    await criarCliente({
+    const r = await criarCliente({
       nome: String(formData.get('nome')),
       documento: String(formData.get('documento') ?? ''),
       telefone: String(formData.get('telefone') ?? ''),
     })
+    if (!r.success) {
+      redirect(`/gerente/financeiro?err=1&msg=${encodeURIComponent(r.error)}`)
+    }
+    redirect('/gerente/financeiro?ok=1&msg=Cliente%20criado%20com%20sucesso')
   }
 
   async function submitTitulo(formData: FormData) {
     'use server'
-    await criarTituloReceber({
+    const r = await criarTituloReceber({
       cliente_id: String(formData.get('cliente_id')),
       valor_total: Number(formData.get('valor_total')),
       descricao: String(formData.get('descricao') ?? ''),
       vencimento: String(formData.get('vencimento') ?? '') || undefined,
     })
+    if (!r.success) {
+      redirect(`/gerente/financeiro?err=1&msg=${encodeURIComponent(r.error)}`)
+    }
+    redirect('/gerente/financeiro?ok=1&msg=T%C3%ADtulo%20criado%20com%20sucesso')
   }
 
   async function submitLiquidar(formData: FormData) {
@@ -54,26 +69,44 @@ export default async function FinanceiroPage() {
     const fp = (permitidas.includes(forma as (typeof permitidas)[number])
       ? forma
       : 'DINHEIRO') as (typeof permitidas)[number]
-    await liquidarTitulo({
+    const r = await liquidarTitulo({
       titulo_id: String(formData.get('titulo_id')),
       valor: Number(formData.get('valor')),
       forma_pagamento: fp,
     })
+    if (!r.success) {
+      redirect(`/gerente/financeiro?err=1&msg=${encodeURIComponent(r.error)}`)
+    }
+    redirect('/gerente/financeiro?ok=1&msg=Liquida%C3%A7%C3%A3o%20registrada')
   }
 
   async function submitFiscal(formData: FormData) {
     'use server'
-    await enfileirarDocFiscalStub(String(formData.get('venda_id')))
+    const r = await enfileirarDocFiscalStub(String(formData.get('venda_id')))
+    if (!r.success) {
+      redirect(`/gerente/financeiro?err=1&msg=${encodeURIComponent(r.error)}`)
+    }
+    redirect('/gerente/financeiro?ok=1&msg=Documento%20fiscal%20enfileirado')
   }
 
   async function submitProcessarFila() {
     'use server'
-    await processarFilaFiscalAgora(30)
+    const r = await processarFilaFiscalAgora(30)
+    if (!r.success) {
+      redirect(`/gerente/financeiro?err=1&msg=${encodeURIComponent(r.error)}`)
+    }
+    redirect(
+      `/gerente/financeiro?ok=1&msg=${encodeURIComponent(`Fila processada: ${r.data.emitted} emitidos, ${r.data.failed} falhas`)}`,
+    )
   }
 
   async function submitReprocessar(formData: FormData) {
     'use server'
-    await reprocessarDocumentoFiscal(String(formData.get('documento_id')))
+    const r = await reprocessarDocumentoFiscal(String(formData.get('documento_id')))
+    if (!r.success) {
+      redirect(`/gerente/financeiro?err=1&msg=${encodeURIComponent(r.error)}`)
+    }
+    redirect('/gerente/financeiro?ok=1&msg=Documento%20marcado%20para%20reprocesso')
   }
 
   return (
@@ -85,6 +118,21 @@ export default async function FinanceiroPage() {
       <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 24 }}>
         Contas a receber, liquidações e fila de documento fiscal (sem Sefaz).
       </p>
+      {sp.msg && (
+        <div
+          style={{
+            marginBottom: 16,
+            borderRadius: 8,
+            padding: 12,
+            fontSize: 13,
+            border: `1px solid ${sp.err ? '#fecaca' : '#bbf7d0'}`,
+            background: sp.err ? '#fef2f2' : '#f0fdf4',
+            color: sp.err ? '#991b1b' : '#166534',
+          }}
+        >
+          {sp.msg}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
@@ -93,9 +141,11 @@ export default async function FinanceiroPage() {
             <input name="nome" required placeholder="Nome" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
             <input name="documento" placeholder="Documento" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
             <input name="telefone" placeholder="Telefone" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <button type="submit" style={{ padding: 8, borderRadius: 8, background: '#111827', color: '#fff', border: 'none' }}>
-              Salvar
-            </button>
+            <PendingSubmitButton
+              idleLabel="Salvar"
+              pendingLabel="Salvando..."
+              style={{ padding: 8, borderRadius: 8, background: '#111827', color: '#fff', border: 'none' }}
+            />
           </form>
         </section>
 
@@ -112,24 +162,30 @@ export default async function FinanceiroPage() {
             <input name="valor_total" type="number" min={0.01} step="0.01" required placeholder="Valor" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
             <input name="descricao" placeholder="Descrição" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
             <input name="vencimento" type="date" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <button type="submit" style={{ padding: 8, borderRadius: 8, background: '#111827', color: '#fff', border: 'none' }}>
-              Criar
-            </button>
+            <PendingSubmitButton
+              idleLabel="Criar"
+              pendingLabel="Criando..."
+              style={{ padding: 8, borderRadius: 8, background: '#111827', color: '#fff', border: 'none' }}
+            />
           </form>
         </section>
 
         <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Fila fiscal (stub)</h2>
           <form action={submitProcessarFila} style={{ marginBottom: 12 }}>
-            <button type="submit" style={{ padding: 8, borderRadius: 8, background: '#111827', color: '#fff', border: 'none' }}>
-              Processar fila fiscal agora
-            </button>
+            <PendingSubmitButton
+              idleLabel="Processar fila fiscal agora"
+              pendingLabel="Processando fila..."
+              style={{ padding: 8, borderRadius: 8, background: '#111827', color: '#fff', border: 'none' }}
+            />
           </form>
           <form action={submitFiscal} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input name="venda_id" required placeholder="UUID da venda" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <button type="submit" style={{ padding: 8, borderRadius: 8, background: '#374151', color: '#fff', border: 'none' }}>
-              Enfileirar NFC-e stub
-            </button>
+            <PendingSubmitButton
+              idleLabel="Enfileirar NFC-e"
+              pendingLabel="Enfileirando..."
+              style={{ padding: 8, borderRadius: 8, background: '#374151', color: '#fff', border: 'none' }}
+            />
           </form>
         </section>
       </div>
@@ -163,9 +219,11 @@ export default async function FinanceiroPage() {
                         <option value="PIX">PIX</option>
                         <option value="OUTROS">OUTROS</option>
                       </select>
-                      <button type="submit" style={{ padding: '4px 8px', fontSize: 12 }}>
-                        OK
-                      </button>
+                      <PendingSubmitButton
+                        idleLabel="OK"
+                        pendingLabel="..."
+                        style={{ padding: '4px 8px', fontSize: 12 }}
+                      />
                     </form>
                   </td>
                 </tr>
@@ -207,9 +265,11 @@ export default async function FinanceiroPage() {
                   {(d.status === 'ERRO' || d.status === 'PENDENTE') ? (
                     <form action={submitReprocessar}>
                       <input type="hidden" name="documento_id" value={d.id} />
-                      <button type="submit" style={{ padding: '4px 8px', fontSize: 12 }}>
-                        Reprocessar
-                      </button>
+                      <PendingSubmitButton
+                        idleLabel="Reprocessar"
+                        pendingLabel="..."
+                        style={{ padding: '4px 8px', fontSize: 12 }}
+                      />
                     </form>
                   ) : (
                     <span style={{ color: '#6b7280' }}>—</span>

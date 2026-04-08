@@ -1,10 +1,17 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
+import { PendingSubmitButton } from '@/components/forms/PendingSubmitButton'
 import { criarRemessaConferencia } from './actions'
 
-export default async function RecebimentoPage() {
+export default async function RecebimentoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; msg?: string; err?: string }>
+}) {
+  const sp = await searchParams
   const { idioma } = await getUsuarioIdioma()
   const m = getMessages(idioma)
   const supabase = await createClient()
@@ -22,10 +29,10 @@ export default async function RecebimentoPage() {
     const pid = String(formData.get('produto_id') ?? '')
     const qEsp = Number(formData.get('qtd_esperada'))
     const qConf = Number(formData.get('qtd_conferida'))
-    if (!pid || Number.isNaN(qEsp) || Number.isNaN(qConf)) {
-      return
+    if (!pid || Number.isNaN(qEsp) || Number.isNaN(qConf) || qEsp < 0 || qConf < 0) {
+      redirect('/gerente/recebimento?err=1&msg=Dados%20inv%C3%A1lidos%20para%20a%20remessa')
     }
-    await criarRemessaConferencia({
+    const r = await criarRemessaConferencia({
       origem,
       observacao: observacao || undefined,
       itens: [
@@ -36,6 +43,10 @@ export default async function RecebimentoPage() {
         },
       ],
     })
+    if (!r.success) {
+      redirect(`/gerente/recebimento?err=1&msg=${encodeURIComponent(r.error)}`)
+    }
+    redirect(`/gerente/recebimento?ok=1&msg=${encodeURIComponent(`Remessa ${r.data} confirmada com sucesso`)}`)
   }
 
   return (
@@ -47,6 +58,21 @@ export default async function RecebimentoPage() {
       <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 24 }}>
         Entrada sem NF: origem livre, conferência e aplicação de estoque na sua loja (gerente).
       </p>
+      {sp.msg && (
+        <div
+          style={{
+            marginBottom: 16,
+            borderRadius: 8,
+            padding: 12,
+            fontSize: 13,
+            border: `1px solid ${sp.err ? '#fecaca' : '#bbf7d0'}`,
+            background: sp.err ? '#fef2f2' : '#f0fdf4',
+            color: sp.err ? '#991b1b' : '#166534',
+          }}
+        >
+          {sp.msg}
+        </div>
+      )}
 
       <form
         action={submit}
@@ -106,8 +132,9 @@ export default async function RecebimentoPage() {
             />
           </label>
         </div>
-        <button
-          type="submit"
+        <PendingSubmitButton
+          idleLabel="Confirmar entrada"
+          pendingLabel="Confirmando entrada..."
           style={{
             marginTop: 8,
             padding: '10px 16px',
@@ -116,11 +143,8 @@ export default async function RecebimentoPage() {
             background: '#111827',
             color: '#fff',
             fontWeight: 600,
-            cursor: 'pointer',
           }}
-        >
-          Confirmar entrada
-        </button>
+        />
       </form>
     </div>
   )
