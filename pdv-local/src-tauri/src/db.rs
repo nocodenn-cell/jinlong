@@ -1131,7 +1131,7 @@ pub fn outbox_listar_pendentes(app: &tauri::AppHandle, limite: i64) -> Result<Ve
              FROM outbox
              WHERE status = 'PENDENTE'
                AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
-             ORDER BY created_at ASC
+             ORDER BY created_at ASC, id ASC
              LIMIT ?1",
         )
         .map_err(|e| e.to_string())?;
@@ -1238,7 +1238,7 @@ pub fn sync_outbox_simulado(app: &tauri::AppHandle, limite: i64) -> Result<i64, 
     let ids: Vec<String> = {
         let mut stmt = tx
             .prepare(
-                "SELECT id FROM outbox WHERE status = 'PENDENTE' ORDER BY created_at ASC LIMIT ?1",
+                "SELECT id FROM outbox WHERE status = 'PENDENTE' ORDER BY created_at ASC, id ASC LIMIT ?1",
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt
