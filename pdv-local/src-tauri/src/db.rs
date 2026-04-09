@@ -759,6 +759,7 @@ fn sync_endpoint_and_key() -> Result<(String, String), String> {
     Ok((endpoint, sync_key))
 }
 
+#[cfg(test)]
 fn canonical_path_with_query(raw_url: &str) -> Result<String, String> {
     let url = reqwest::Url::parse(raw_url).map_err(|e| format!("URL inválida: {e}"))?;
     let mut out = url.path().to_string();
