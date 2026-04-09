@@ -1,3 +1,4 @@
+export type { ItemCarrinho } from '@/core/cart/types'
 export type {
   ResultadoPreco,
   RegraPreco,

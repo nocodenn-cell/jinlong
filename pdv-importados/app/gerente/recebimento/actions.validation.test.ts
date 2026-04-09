@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validarRemessaInput } from './actions'
+import { validarRemessaInput } from './actions.validation'
 
 describe('recebimento/actions validações', () => {
   it('exige origem e item', () => {

@@ -3,7 +3,7 @@ import {
   validarCriarClienteInput,
   validarCriarTituloInput,
   validarLiquidarTituloInput,
-} from './actions'
+} from './actions.validation'
 
 describe('financeiro/actions validações', () => {
   it('valida criar cliente', () => {

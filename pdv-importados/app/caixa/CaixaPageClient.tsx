@@ -247,6 +247,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     }
   }, [m.caixa.valor_inicial, parseValorMonetario, processandoCaixa, recarregarStatusCaixa])
 
+  const caixaAbertoParaFechar = caixaStatus?.aberto === true
+  const valorSistemaDinheiroParaFechar = caixaAbertoParaFechar
+    ? caixaStatus.valorSistemaDinheiro
+    : 0
+
   const handleFecharCaixa = useCallback(async () => {
     if (processandoCaixa) return
     if (itens.length > 0) {
@@ -259,10 +264,9 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       setMensagem("Valor contado inválido.")
       return
     }
-    const diferencaEstimada =
-      caixaStatus?.aberto
-        ? Math.round((valorContado - caixaStatus.valorSistemaDinheiro) * 100) / 100
-        : null
+    const diferencaEstimada = caixaAbertoParaFechar
+      ? Math.round((valorContado - valorSistemaDinheiroParaFechar) * 100) / 100
+      : null
     let motivo: string | undefined
     if (diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
       const motivoRaw = window.prompt(
@@ -292,6 +296,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       setProcessandoCaixa(false)
     }
   }, [
+    caixaAbertoParaFechar,
+    valorSistemaDinheiroParaFechar,
     itens.length,
     m.caixa.valor_final,
     parseValorMonetario,

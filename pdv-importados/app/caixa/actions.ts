@@ -15,6 +15,7 @@ import {
 } from '@/app/caixa/finalizarVendaValidation'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '@/core/pricing/types'
+import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 
 export type ProdutoCaixaDTO = {
   id: string
@@ -130,8 +131,8 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
 }
 
 /**
- * 1) Código de barras exato (ativo).
- * 2) Nome ILIKE (ativo), no máx. 2 linhas — se mais de uma, pede refinamento.
+ * 1) Código de barras: mesmas variantes que o pdv-local (trim, dígitos, zeros à esquerda, cortes EAN).
+ * 2) Nome ILIKE (ativo); se mais de um resultado, pede refinamento.
  */
 export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdutoResult> {
   try {
@@ -146,20 +147,34 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
     const t = termo.trim()
     if (!t) return { ok: true, status: 'nao_encontrado' }
 
-    const { data: porCodigo, error: errCodigo } = await supabase
-      .from('produtos')
-      .select(PRODUTO_COLS)
-      .eq('ativo', true)
-      .eq('codigo_barras', t)
-      .maybeSingle()
+    const variantes = variantesChaveLeitura(t)
+    if (variantes.length > 0) {
+      const { data: porCodigoLista, error: errCodigo } = await supabase
+        .from('produtos')
+        .select(PRODUTO_COLS)
+        .eq('ativo', true)
+        .in('codigo_barras', variantes)
+        .limit(10)
 
-    if (errCodigo) return { ok: false, error: errCodigo.message }
-    if (porCodigo) {
-      const q = await quantidadeEstoque(supabase, porCodigo.id, lojaId)
-      return {
-        ok: true,
-        status: 'encontrado',
-        produto: mapProdutoRow(porCodigo, q),
+      if (errCodigo) return { ok: false, error: errCodigo.message }
+      const listaCod = porCodigoLista ?? []
+      if (listaCod.length > 0) {
+        const ids = new Set(listaCod.map((r) => r.id))
+        if (ids.size > 1) {
+          return {
+            ok: true,
+            status: 'ambiguo',
+            mensagem:
+              'Vários produtos batem com o código lido. Use o nome ou corrija códigos duplicados no cadastro.',
+          }
+        }
+        const row = listaCod[0]
+        const q = await quantidadeEstoque(supabase, row.id, lojaId)
+        return {
+          ok: true,
+          status: 'encontrado',
+          produto: mapProdutoRow(row, q),
+        }
       }
     }
 
