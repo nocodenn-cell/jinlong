@@ -965,7 +965,14 @@ pub fn validar_gerente_sync(senha: String) -> Result<ValidarGerentePdvDto, Strin
         let err = parsed
             .error
             .unwrap_or_else(|| format!("erro desconhecido (HTTP {status})"));
-        return Err(err);
+        let msg = match err.as_str() {
+            "ERRO_PERSISTENCIA_TOKEN" => {
+                "Não foi possível registrar o desconto no servidor. Tente novamente em instantes."
+                    .to_string()
+            }
+            _ => err,
+        };
+        return Err(msg);
     }
 
     let token = parsed

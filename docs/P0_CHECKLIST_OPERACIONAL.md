@@ -40,7 +40,7 @@ cd C:\Naturecode\fastproduct\backend
 npx supabase migration list
 ```
 
-- Coluna **Remote** deve listar `001` … `025` sem lacunas (até onde o ambiente usa). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`. **024**: tabela `sync_request_nonces` (anti-replay HMAC). **025**: `finalizar_venda_transacional_canonica_v2` (fluxo unificado).
+- Coluna **Remote** deve refletir **todas** as migrations do repositório aplicadas **sem lacunas** na sequência do projeto (no monorepo atual, arquivos `001` … `043` em `backend/supabase/migrations/`; confira com `migration list` após `supabase link`). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`. **024**: tabela `sync_request_nonces` (anti-replay HMAC). **025**: `finalizar_venda_transacional_canonica_v2` (fluxo unificado). **026+**: evoluções (config gerente, catálogo atacado, fiado/fiscal, RLS por loja, etc.) — manter remoto alinhado ao que está versionado antes de produção.
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  
@@ -50,8 +50,8 @@ npx supabase migration list
 - Função `decrementar_estoque_idempotente` existente (legado; caixa/Edge preferem **016**).
 - Tabela `estoque_baixas` existente.
 
-- [ ] **001–010** aplicadas no projeto **produção**
-- [ ] **001–010** aplicadas em **staging/dev** (se existirem)
+- [ ] **001–010** aplicadas no projeto **produção** (e demais migrations até a última versionada no repositório, sem lacunas — ver parágrafo acima)
+- [ ] **001–010** aplicadas em **staging/dev** (e o mesmo critério de sequência completa até a última migration usada pelo time)
 
 **Migrations 011–013 (relatórios na web):** RPCs `relatorio_*_periodo` com `p_tz` validado; tabela `relatorio_settings` (fusos IANA); env `RELATORIO_TIMEZONE` no servidor prevalece sobre a tabela. O `verify_p0_producao.sql` inclui checagem na seção **5**.
 

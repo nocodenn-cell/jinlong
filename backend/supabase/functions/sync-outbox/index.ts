@@ -525,6 +525,10 @@ async function handleValidarGerentePdvSync(
         stage: "validar_gerente_pdv",
         error: insertError.message,
       });
+      return jsonResponse(503, {
+        ok: false,
+        error: "ERRO_PERSISTENCIA_TOKEN",
+      });
     }
 
     for (const ctx of rateContexts) {

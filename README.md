@@ -29,6 +29,7 @@ Abre em [http://localhost:3000](http://localhost:3000). **Rota de login:** `/log
 ```bash
 cd pdv-local
 npm install
+cp .env.example .env   # preencher SYNC_ENDPOINT e SYNC_KEY do mesmo projeto Supabase
 npm run tauri
 # ou: npx tauri dev
 ```

@@ -353,7 +353,7 @@ Deno.serve(async (req) => {
     const token = generateToken();
     const expiraEm = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutos
 
-    // Registra token no banco (opcional - para auditoria e revogação)
+    // Obrigatório persistir: a RPC de finalizar venda valida o token nesta tabela.
     const { error: insertError } = await supabase.from("tokens_desconto_gerente").insert({
       token,
       expira_em: expiraEm,
@@ -368,7 +368,10 @@ Deno.serve(async (req) => {
         stage: "db",
         error: insertError.message,
       });
-      // Não falha a requisição, apenas loga o erro
+      return jsonResponse(503, {
+        ok: false,
+        error: "ERRO_PERSISTENCIA_TOKEN",
+      });
     }
 
     for (const ctx of rateContexts) {

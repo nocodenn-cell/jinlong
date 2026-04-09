@@ -500,12 +500,14 @@ export async function validarGerenteDesconto(input: {
 
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
     if (!response.ok || payload.ok !== true) {
+      const code = typeof payload.error === 'string' ? payload.error : ''
+      const error =
+        code === 'ERRO_PERSISTENCIA_TOKEN'
+          ? 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
+          : code || `Falha ao validar gerente (${response.status}).`
       return {
         ok: false,
-        error:
-          typeof payload.error === 'string'
-            ? payload.error
-            : `Falha ao validar gerente (${response.status}).`,
+        error,
         scope: typeof payload.scope === 'string' ? payload.scope : undefined,
         lockUntil: typeof payload.lock_until === 'string' ? payload.lock_until : undefined,
       }
