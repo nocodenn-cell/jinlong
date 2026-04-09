@@ -22,6 +22,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const avisoInatividade = searchParams.get('reason') === 'sessao_inatividade'
 
   async function login(e: React.FormEvent) {
     e.preventDefault()
@@ -113,6 +114,21 @@ export function LoginForm() {
         <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 24 }}>
           Faça login para acessar o painel.
         </p>
+        {avisoInatividade ? (
+          <p
+            style={{
+              fontSize: 13,
+              color: '#93c5fd',
+              marginBottom: 16,
+              padding: '10px 12px',
+              borderRadius: 8,
+              background: 'rgba(30, 58, 138, 0.35)',
+              border: '1px solid #1d4ed8',
+            }}
+          >
+            Sua sessão foi encerrada por inatividade. Entre novamente.
+          </p>
+        ) : null}
         <form
           onSubmit={login}
           style={{ display: 'flex', flexDirection: 'column', gap: 12 }}

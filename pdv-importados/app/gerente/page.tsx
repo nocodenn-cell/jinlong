@@ -43,6 +43,24 @@ export default async function GerenteInicioPage() {
     .order('data', { ascending: false })
     .limit(8)
 
+  const { count: lojasAtivasCount } = await supabase
+    .from('lojas')
+    .select('*', { count: 'exact', head: true })
+    .eq('ativo', true)
+
+  const exibirTransferencias = (lojasAtivasCount ?? 0) >= 2
+
+  const atalhos = [
+    { href: '/gerente/produtos', label: m.produtos.titulo },
+    { href: '/gerente/estoque', label: m.estoque.titulo },
+    { href: '/gerente/recebimento', label: 'Recebimento' },
+    ...(exibirTransferencias ? [{ href: '/gerente/transferencias', label: 'Transferências' }] : []),
+    { href: '/gerente/financeiro', label: 'Financeiro' },
+    { href: '/gerente/vendas', label: m.gerente.nav_vendas },
+    { href: '/gerente/caixas', label: m.gerente.nav_caixas },
+    { href: '/gerente/relatorios', label: m.gerente.nav_relatorios },
+  ]
+
   const card = (label: string, value: string) => (
     <div
       style={{
@@ -78,16 +96,7 @@ export default async function GerenteInicioPage() {
         {m.gerente.atalhos_modulos}
       </h2>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 28 }}>
-        {[
-          { href: '/gerente/produtos', label: m.produtos.titulo },
-          { href: '/gerente/estoque', label: m.estoque.titulo },
-          { href: '/gerente/recebimento', label: 'Recebimento' },
-          { href: '/gerente/transferencias', label: 'Transferências' },
-          { href: '/gerente/financeiro', label: 'Financeiro' },
-          { href: '/gerente/vendas', label: m.gerente.nav_vendas },
-          { href: '/gerente/caixas', label: m.gerente.nav_caixas },
-          { href: '/gerente/relatorios', label: m.gerente.nav_relatorios },
-        ].map((l) => (
+        {atalhos.map((l) => (
           <Link
             key={l.href}
             href={l.href}

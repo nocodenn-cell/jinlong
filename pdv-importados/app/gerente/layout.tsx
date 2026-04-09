@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { getUsuarioIdioma, isGerenteOuDono } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import LanguageToggle from './idioma/LanguageToggle'
@@ -27,6 +28,7 @@ export default async function GerenteLayout({
         fontFamily: FONT_FAMILY[idioma] ?? 'inherit',
       }}
     >
+      <SessionIdleLogout />
       <header
         style={{
           borderBottom: '1px solid #e5e7eb',

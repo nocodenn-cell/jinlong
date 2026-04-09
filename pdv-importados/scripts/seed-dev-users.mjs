@@ -57,6 +57,9 @@ const gerenteEmail =
 const operadorEmail =
   process.env.SEED_OPERADOR_EMAIL?.trim() || 'e2e-operador@localhost.test'
 
+/** Alinhado a `032_lojas_estoque_por_loja.sql` e `lib/auth/lojaUsuario.ts` (LOJA_MATRIZ_ID). */
+const LOJA_MATRIZ_ID = 'a0000001-0000-4000-8000-000000000001'
+
 async function ensureAuthUser(supabase, email, pwd) {
   const { data: created, error: createErr } = await supabase.auth.admin.createUser({
     email,
@@ -90,7 +93,7 @@ async function ensureAuthUser(supabase, email, pwd) {
   return found
 }
 
-async function upsertUsuario(supabase, userId, { nome, perfil, idioma_preferido }) {
+async function upsertUsuario(supabase, userId, { nome, perfil, idioma_preferido, loja_id }) {
   const { error } = await supabase.from('usuarios').upsert(
     {
       id: userId,
@@ -98,6 +101,7 @@ async function upsertUsuario(supabase, userId, { nome, perfil, idioma_preferido 
       perfil,
       idioma_preferido: idioma_preferido || 'pt',
       ativo: true,
+      loja_id: loja_id ?? LOJA_MATRIZ_ID,
     },
     { onConflict: 'id' },
   )
