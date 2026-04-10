@@ -32,6 +32,18 @@ type CatalogoLocalInvoke = {
   regras?: RegraPrecoCacheLite[]
 }
 
+/** Resposta de `pdv_config_local_get_cmd` (espelha `PdvConfigCacheDto` no Rust). */
+type PdvConfigLocalInvoke = {
+  gerente_id: string
+  gerente_senha_sha256: string
+  max_desconto_gerente_percentual: number
+}
+
+/** Resposta de `load_caixa_atual_cmd` quando há sessão aberta (`CaixaSessaoDto`). */
+type CaixaSessaoInvoke = {
+  id: string
+}
+
 type OutboxResumo = {
   pendentes_total: number
   prontos_sync: number
@@ -204,7 +216,9 @@ export function App() {
 
     async function inicializar() {
       try {
-        const cfg = await invoke('pdv_config_local_get_cmd')
+        const cfg = await invoke<PdvConfigLocalInvoke | null>(
+          'pdv_config_local_get_cmd'
+        )
         if (!cancelled && cfg) {
           setGerenteId(cfg.gerente_id ?? defaultPdvConfig.gerenteId)
           setGerenteSenhaSha256(
@@ -220,7 +234,9 @@ export function App() {
 
       // Recupera caixa aberto anterior (se existir).
       try {
-        const caixa = await invoke('load_caixa_atual_cmd')
+        const caixa = await invoke<CaixaSessaoInvoke | null>(
+          'load_caixa_atual_cmd'
+        )
         if (!cancelled && caixa?.id) {
           setCaixaAtualId(String(caixa.id))
         }
@@ -231,7 +247,9 @@ export function App() {
       // Tenta atualizar catálogo/config online, mas não trava o caixa offline.
       try {
         await invoke('sync_pdv_config_real_cmd')
-        const cfg2 = await invoke('pdv_config_local_get_cmd')
+        const cfg2 = await invoke<PdvConfigLocalInvoke | null>(
+          'pdv_config_local_get_cmd'
+        )
         if (!cancelled && cfg2) {
           setGerenteId(cfg2.gerente_id ?? defaultPdvConfig.gerenteId)
           setGerenteSenhaSha256(
@@ -1098,7 +1116,9 @@ export function App() {
                 let caixaId = caixaAtualId
                 if (!caixaId) {
                   try {
-                    const atual = await invoke('load_caixa_atual_cmd')
+                    const atual = await invoke<CaixaSessaoInvoke | null>(
+                      'load_caixa_atual_cmd'
+                    )
                     if (atual?.id) {
                       caixaId = String(atual.id)
                       setCaixaAtualId(caixaId)

@@ -3,11 +3,11 @@
 mod db;
 
 use db::{
-    abrir_caixa_local, catalogo_local_get, fechar_caixa_local, get_caixa_atual,
-    diagnostics, init_db, outbox_pendentes, outbox_reprocessar_dlq, outbox_resumo,
-    pdv_config_local_get, registrar_movimento_caixa_local, registrar_venda_local, sync_catalogo_real,
-    sync_outbox_real, sync_outbox_simulado, sync_pdv_config_real, validar_gerente_sync, Diagnostics,
-    OutboxResumo, RegistrarVendaInput, ValidarGerentePdvDto,
+    abrir_caixa_local, catalogo_local_get, diagnostics, fechar_caixa_local, get_caixa_atual,
+    init_db, outbox_pendentes, outbox_reprocessar_dlq, outbox_resumo, pdv_config_local_get,
+    registrar_movimento_caixa_local, registrar_venda_local, sync_catalogo_real, sync_outbox_real,
+    sync_outbox_simulado, sync_pdv_config_real, validar_gerente_sync, Diagnostics, OutboxResumo,
+    RegistrarVendaInput, ValidarGerentePdvDto,
 };
 
 fn load_env_files() {
@@ -88,7 +88,11 @@ fn registrar_movimento_caixa_cmd(
 }
 
 #[tauri::command]
-fn fechar_caixa_cmd(app: tauri::AppHandle, caixa_id: String, troco_fechamento: f64) -> Result<(), String> {
+fn fechar_caixa_cmd(
+    app: tauri::AppHandle,
+    caixa_id: String,
+    troco_fechamento: f64,
+) -> Result<(), String> {
     fechar_caixa_local(&app, caixa_id, troco_fechamento)
 }
 
@@ -110,7 +114,9 @@ fn pdv_config_local_get_cmd(
 }
 
 #[tauri::command]
-fn sync_pdv_config_real_cmd(app: tauri::AppHandle) -> Result<Option<db::PdvConfigCacheDto>, String> {
+fn sync_pdv_config_real_cmd(
+    app: tauri::AppHandle,
+) -> Result<Option<db::PdvConfigCacheDto>, String> {
     sync_pdv_config_real(&app)
 }
 
@@ -136,13 +142,11 @@ fn main() {
             get_diagnostics,
             outbox_resumo_cmd,
             outbox_reprocessar_dlq_cmd,
-
             // Caixa local
             load_caixa_atual_cmd,
             abrir_caixa_cmd,
             registrar_movimento_caixa_cmd,
             fechar_caixa_cmd,
-
             // Catálogo local + sync
             catalogo_local_get_cmd,
             sync_catalogo_real_cmd,
@@ -153,4 +157,3 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("erro ao rodar aplicação Tauri");
 }
-
