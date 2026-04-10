@@ -13,6 +13,7 @@ import {
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import {
   adminChineseUiEnabled,
+  adminLineBoth,
   adminNavLabels,
   adminUi,
 } from '@/lib/i18n/adminChineseUiLabels'
@@ -70,7 +71,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <div>
               <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight md:text-2xl">
                 {chineseOn ? (
-                  <span className="text-2xl" aria-hidden>
+                  <span
+                    className="text-2xl"
+                    aria-hidden
+                    title="Lanterna chinesa — Painel Administrativo"
+                  >
                     🏮
                   </span>
                 ) : null}
@@ -109,10 +114,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             {adminNavItems.map((item) => {
               const line = adminUi.nav[item.labelKey]
               const { primary, secondary } = adminNavLabels(line)
+              const hint = adminUi.navHints[item.labelKey]
+              const linkTitle = `${adminLineBoth(line)} — ${hint}`
               return (
                 <Link
                   key={item.href}
                   href={item.href}
+                  title={linkTitle}
                   className={
                     chineseOn
                       ? 'group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-[#c42e2e] lg:px-4'

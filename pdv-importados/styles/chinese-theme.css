@@ -14,6 +14,17 @@
   --cloud: #e8e0d5;
 }
 
+@keyframes card-chinese-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .admin-chinese-theme .card-chinese {
   background: var(--paper);
   border: 1px solid rgba(212, 175, 55, 0.22);
@@ -21,9 +32,23 @@
   box-shadow: 0 4px 14px rgba(44, 44, 44, 0.06);
   position: relative;
   overflow: hidden;
+  animation: card-chinese-enter 0.42s ease-out both;
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;
+}
+
+.admin-chinese-theme .card-chinese:nth-child(1) {
+  animation-delay: 0.03s;
+}
+.admin-chinese-theme .card-chinese:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.admin-chinese-theme .card-chinese:nth-child(3) {
+  animation-delay: 0.13s;
+}
+.admin-chinese-theme .card-chinese:nth-child(4) {
+  animation-delay: 0.18s;
 }
 
 .admin-chinese-theme .card-chinese::before {
@@ -45,6 +70,8 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-chinese-theme .card-chinese,
   .admin-chinese-theme .card-chinese:hover {
+    animation: none;
+    animation-delay: 0s;
     transition: none;
     transform: none;
   }

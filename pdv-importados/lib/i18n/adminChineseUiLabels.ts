@@ -46,6 +46,16 @@ export const adminUi = {
     caixas: { cn: '钱箱', pt: 'Caixas' } satisfies BilingualLine,
     financeiro: { cn: '财务', pt: 'Financeiro' } satisfies BilingualLine,
   },
+  /** Dica curta para tooltip (`title`) dos links da nav — sempre em PT após o rótulo. */
+  navHints: {
+    dashboard: 'Métricas, gráfico de vendas e últimos pedidos do período.',
+    gerente: 'Painel do gerente e atalhos operacionais.',
+    vendas: 'Listagem e gestão de vendas.',
+    estoque: 'Produtos, saldos e alertas de estoque.',
+    relatorios: 'Relatórios e análises operacionais.',
+    caixas: 'Caixas e operações de ponto de venda.',
+    financeiro: 'Movimentações e visão financeira.',
+  } as const,
   dashboard: {
     pageTitle: { cn: '生意看板', pt: 'Dashboard comercial' } satisfies BilingualLine,
     pageSubtitle: { cn: '实时数据', pt: 'Dados do período selecionado' } satisfies BilingualLine,

@@ -28,7 +28,14 @@ export function ChineseStatCard({
     : 'relative flex min-h-[148px] flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm'
 
   return (
-    <div className={shell}>
+    <div
+      className={shell}
+      title={
+        oriental
+          ? 'Selo chinês 福 — Símbolo de prosperidade e boa sorte'
+          : undefined
+      }
+    >
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <div className="mb-3 flex items-start justify-between gap-2 pl-1">
           <div
