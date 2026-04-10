@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 
 export type GerenteAuth = { ok: true } | { ok: false; error: string }
 
 /**
- * Garante sessão autenticada e perfil GERENTE ou DONO (alinha às policies RLS).
+ * Garante sessão autenticada e perfil GERENTE, DONO ou ADMIN (alinha às policies RLS).
  */
 export async function assertGerenteOuDono(): Promise<GerenteAuth> {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export async function assertGerenteOuDono(): Promise<GerenteAuth> {
     .eq('id', user.id)
     .single()
 
-  if (!usuario || !['GERENTE', 'DONO'].includes(usuario.perfil)) {
+  if (!usuario || !isPerfilPainelGerencial(usuario.perfil)) {
     return { ok: false, error: 'Sem permissão' }
   }
   return { ok: true }

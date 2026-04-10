@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
+import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma, type Idioma } from './normalizeIdioma'
 
-export type PerfilUsuario = 'OPERADOR' | 'GERENTE' | 'DONO'
+export type PerfilUsuario = 'OPERADOR' | 'GERENTE' | 'DONO' | 'ADMIN'
 
 export async function getUsuarioIdioma(): Promise<{
   idioma: Idioma
@@ -30,7 +31,8 @@ export async function getUsuarioIdioma(): Promise<{
   }
 }
 
+/** Inclui ADMIN (mesmo acesso de painel que gerente/dono no app; RLS em migração 044). */
 export function isGerenteOuDono(perfil: PerfilUsuario): boolean {
-  return perfil === 'GERENTE' || perfil === 'DONO'
+  return isPerfilPainelGerencial(perfil)
 }
 

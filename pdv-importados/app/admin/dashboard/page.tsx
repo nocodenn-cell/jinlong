@@ -40,11 +40,42 @@ type VendaStatus = 'CONCLUIDA' | 'CANCELADA'
 
 type OrderRow = {
   id: string
-  cliente: string
+  /** Nome do operador da venda (`vendas.operador_id` → `usuarios.nome`). */
+  operador: string
   valor: string
   status: VendaStatus
   data: string
   formaPagamento: string
+}
+
+function collectSupabaseErrors(
+  entries: ReadonlyArray<{ label: string; error: { message: string } | null }>
+): string[] {
+  const out: string[] = []
+  for (const { label, error } of entries) {
+    if (error) out.push(`${label}: ${error.message}`)
+  }
+  return out
+}
+
+function DashboardErrorBanner({ messages }: { messages: string[] }) {
+  if (messages.length === 0) return null
+  return (
+    <div
+      className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
+      role="alert"
+    >
+      <div className="mb-1 flex items-center gap-2 font-semibold">
+        <AlertCircle className="shrink-0 text-amber-700" size={18} />
+        数据加载部分失败 / Falha ao carregar alguns dados
+      </div>
+      <ul className="list-inside list-disc text-amber-900/90">
+        {messages.map((msg, i) => (
+          <li key={`${i}-${msg.slice(0, 48)}`}>{msg}</li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 function statusBadge(status: VendaStatus): ReactNode {
@@ -174,6 +205,15 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     novosUsuariosPrevQuery,
   ])
 
+  let dashboardErrors = collectSupabaseErrors([
+    { label: 'Vendas (período)', error: vendasRangeRes.error },
+    { label: 'Vendas (período anterior)', error: vendasPrevRes.error },
+    { label: 'Pedidos recentes', error: recentOrdersRes.error },
+    { label: 'Alertas de estoque (v_estoque_baixo)', error: estoqueBaixoRes.error },
+    { label: 'Novos usuários (período)', error: novosUsuariosAtualRes.error },
+    { label: 'Novos usuários (período anterior)', error: novosUsuariosPrevRes.error },
+  ])
+
   if (!vendasRangeRes.error) vendasRange = (vendasRangeRes.data ?? []) as typeof vendasRange
   if (!vendasPrevRes.error) vendasPrevRange = (vendasPrevRes.data ?? []) as typeof vendasPrevRange
   if (!recentOrdersRes.error) {
@@ -195,7 +235,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       .from('usuarios')
       .select('id,nome')
       .in('id', operatorIds)
-    if (!usersRes.error) usuariosRows = usersRes.data ?? []
+    if (usersRes.error) {
+      dashboardErrors.push(`Operadores (nomes): ${usersRes.error.message}`)
+    } else {
+      usuariosRows = usersRes.data ?? []
+    }
   }
 
   const userById = new Map(usuariosRows.map((u) => [u.id, u.nome]))
@@ -259,7 +303,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     {
       title: '库存告警 (Alertas Estoque)',
       value: estoqueBaixoCount.toLocaleString('pt-BR'),
-      trend: estoqueBaixoCount > 0 ? 'Crítico' : '+0.0%',
+      trend: estoqueBaixoCount > 0 ? 'Atenção' : 'OK',
       up: estoqueBaixoCount === 0,
       icon: AlertCircle,
       iconColor: 'text-red-500',
@@ -268,7 +312,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const latestOrders: OrderRow[] = recentOrdersRaw.map((o) => ({
     id: o.id,
-    cliente: o.operador_id ? (userById.get(o.operador_id) ?? 'Operador') : 'Operador',
+    operador: o.operador_id ? (userById.get(o.operador_id) ?? '—') : '—',
     valor: Number(o.total_liquido ?? 0).toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -304,6 +348,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           {novosTrend.label})
         </p>
       </div>
+
+      <DashboardErrorBanner messages={dashboardErrors} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {periodOptions.map((option) => (
@@ -363,7 +409,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             <thead>
               <tr className="border-b border-slate-100 text-left text-slate-500">
                 <th className="px-3 py-2 font-medium">ID</th>
-                <th className="px-3 py-2 font-medium">客户 / Cliente</th>
+                <th className="px-3 py-2 font-medium">操作员 / Operador</th>
                 <th className="px-3 py-2 font-medium">日期 / Data</th>
                 <th className="px-3 py-2 font-medium">金额 / Valor</th>
                 <th className="px-3 py-2 font-medium">支付 / Pagamento</th>
@@ -374,7 +420,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               {latestOrders.map((order) => (
                 <tr key={order.id} className="border-b border-slate-100">
                   <td className="px-3 py-3 font-medium text-slate-700">{order.id}</td>
-                  <td className="px-3 py-3 text-slate-600">{order.cliente}</td>
+                  <td className="px-3 py-3 text-slate-600">{order.operador}</td>
                   <td className="px-3 py-3 text-slate-600">{order.data}</td>
                   <td className="px-3 py-3 tabular-nums text-slate-700">{order.valor}</td>
                   <td className="px-3 py-3 text-slate-600">{order.formaPagamento}</td>

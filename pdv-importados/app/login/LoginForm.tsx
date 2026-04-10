@@ -9,7 +9,7 @@ function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string 
   if (!nextRaw || !nextRaw.startsWith('/') || nextRaw.startsWith('//')) {
     return padraoPerfil
   }
-  if (/^\/(gerente|caixa)(\/|$)/.test(nextRaw)) {
+  if (/^\/(gerente|admin|caixa)(\/|$)/.test(nextRaw)) {
     return nextRaw
   }
   return padraoPerfil
