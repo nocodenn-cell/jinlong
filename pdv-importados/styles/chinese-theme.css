@@ -1,0 +1,117 @@
+/* Tema administrativo — identidade oriental (apenas rotas /admin via layout) */
+
+.admin-chinese-theme {
+  --imperial-red: #c42e2e;
+  --imperial-red-dark: #9e2424;
+  --gold: #d4af37;
+  --gold-dark: #b8960c;
+  --jade: #2d5a4a;
+  --jade-light: #4a7c6a;
+  --jade-pale: #e8f0ec;
+  --porcelain: #f5f0eb;
+  --ink: #2c2c2c;
+  --paper: #fef9e8;
+  --cloud: #e8e0d5;
+}
+
+.admin-chinese-theme .card-chinese {
+  background: var(--paper);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(44, 44, 44, 0.06);
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.admin-chinese-theme .card-chinese::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--gold) 0%, var(--imperial-red) 100%);
+  pointer-events: none;
+}
+
+.admin-chinese-theme .card-chinese:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(44, 44, 44, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-chinese-theme .card-chinese,
+  .admin-chinese-theme .card-chinese:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-chinese-theme .card-chinese:hover {
+    transform: none;
+    box-shadow: 0 4px 14px rgba(44, 44, 44, 0.06);
+  }
+}
+
+.admin-chinese-theme .border-chinese {
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(90deg, var(--gold), rgba(212, 175, 55, 0.15)) 1;
+  padding-top: 0.25rem;
+}
+
+.admin-chinese-theme .filter-pill-active {
+  background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
+  border-color: var(--gold);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(196, 46, 46, 0.25);
+}
+
+.admin-chinese-theme .filter-pill {
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ink);
+}
+
+.admin-chinese-theme .filter-pill:hover {
+  background: var(--jade-pale);
+  border-color: var(--jade-light);
+}
+
+.admin-chinese-theme .filter-pill-status-active {
+  background: linear-gradient(135deg, var(--jade) 0%, #1e3d32 100%);
+  border-color: var(--gold);
+  color: #fff;
+}
+
+.admin-chinese-theme .cloud-decoration {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: min(280px, 45vw);
+  height: 120px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(212, 175, 55, 0.08) 0%,
+    transparent 72%
+  );
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+.admin-chinese-theme .admin-table thead tr {
+  border-bottom-color: rgba(212, 175, 55, 0.35);
+  color: var(--jade);
+}
+
+.admin-chinese-theme .admin-table tbody tr:hover {
+  background: rgba(232, 240, 236, 0.5);
+}
+
+.admin-chinese-theme .error-banner-chinese {
+  border-color: rgba(196, 46, 46, 0.45);
+  background: linear-gradient(135deg, #fff8f5 0%, #fef3e8 100%);
+}

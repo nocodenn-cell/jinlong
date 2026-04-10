@@ -1,16 +1,14 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import {
-  AlertCircle,
-  ArrowDownRight,
-  ArrowUpRight,
-  DollarSign,
-  Package,
-  ShoppingBag,
-  type LucideIcon,
-} from 'lucide-react'
+import { AlertCircle, DollarSign, Package, ShoppingBag, type LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/server'
+import {
+  adminChineseUiEnabled,
+  adminLineBoth,
+  adminUi,
+} from '@/lib/i18n/adminChineseUiLabels'
+import { ChineseStatCard } from '../components/ChineseStatCard'
 import { SalesTrendChart } from './SalesTrendChart'
 import {
   dateKey,
@@ -28,19 +26,19 @@ type SalesPoint = {
 }
 
 type Metric = {
-  title: string
+  titleLine: string
+  titleCn?: string
   value: string
   trend: string
   up: boolean
   icon: LucideIcon
-  iconColor: string
+  iconAccentClass: string
 }
 
 type VendaStatus = 'CONCLUIDA' | 'CANCELADA'
 
 type OrderRow = {
   id: string
-  /** Nome do operador da venda (`vendas.operador_id` → `usuarios.nome`). */
   operador: string
   valor: string
   status: VendaStatus
@@ -58,18 +56,26 @@ function collectSupabaseErrors(
   return out
 }
 
-function DashboardErrorBanner({ messages }: { messages: string[] }) {
+function DashboardErrorBanner({
+  title,
+  messages,
+  oriental,
+}: {
+  title: string
+  messages: string[]
+  oriental: boolean
+}) {
   if (messages.length === 0) return null
+  const box = oriental
+    ? 'error-banner-chinese mb-4 rounded-lg border px-4 py-3 text-sm text-[#2c2c2c] shadow-sm'
+    : 'mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm'
   return (
-    <div
-      className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
-      role="alert"
-    >
+    <div className={box} role="alert">
       <div className="mb-1 flex items-center gap-2 font-semibold">
-        <AlertCircle className="shrink-0 text-amber-700" size={18} />
-        数据加载部分失败 / Falha ao carregar alguns dados
+        <AlertCircle className="shrink-0 text-red-600" size={18} />
+        {title}
       </div>
-      <ul className="list-inside list-disc text-amber-900/90">
+      <ul className={`list-inside list-disc ${oriental ? 'text-[#5c4030]' : 'text-amber-900/90'}`}>
         {messages.map((msg, i) => (
           <li key={`${i}-${msg.slice(0, 48)}`}>{msg}</li>
         ))}
@@ -78,42 +84,37 @@ function DashboardErrorBanner({ messages }: { messages: string[] }) {
   )
 }
 
-function statusBadge(status: VendaStatus): ReactNode {
-  const config: Record<VendaStatus, { label: string; className: string }> = {
+function CriticalSalesAlert({ title, body }: { title: string; body: string }) {
+  return (
+    <div
+      className="mb-6 rounded-lg border-2 border-red-200 bg-red-50 px-4 py-4 text-sm text-red-950 shadow-sm"
+      role="alert"
+    >
+      <div className="flex gap-2 font-semibold text-red-900">
+        <AlertCircle className="mt-0.5 shrink-0" size={18} />
+        {title}
+      </div>
+      <p className="mt-2 leading-relaxed text-red-900/90">{body}</p>
+    </div>
+  )
+}
+
+function statusBadge(status: VendaStatus, oriental: boolean): ReactNode {
+  const line =
+    status === 'CONCLUIDA' ? adminUi.statusBadge.concluida : adminUi.statusBadge.cancelada
+  const label = oriental ? adminLineBoth(line) : line.pt
+  const config: Record<VendaStatus, { className: string }> = {
     CONCLUIDA: {
-      label: '已完成 / Concluída',
-      className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      className:
+        'border border-[rgba(45,90,74,0.35)] bg-[#e8f0ec] text-[#2d5a4a]',
     },
     CANCELADA: {
-      label: '已取消 / Cancelada',
-      className: 'bg-rose-50 text-rose-700 border-rose-200',
+      className:
+        'border border-[rgba(196,46,46,0.35)] bg-[#fdecec] text-[#9e2424]',
     },
   }
   const meta = config[status]
-  return <Badge className={meta.className}>{meta.label}</Badge>
-}
-
-function MetricCard({ title, value, trend, up, icon, iconColor }: Metric) {
-  const Icon = icon
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-2 flex items-start justify-between">
-        <div className="rounded-lg bg-slate-50 p-2">
-          <Icon className={iconColor} size={20} />
-        </div>
-        <span
-          className={`flex items-center text-xs font-medium ${
-            up ? 'text-emerald-600' : 'text-red-600'
-          }`}
-        >
-          {up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-          {trend}
-        </span>
-      </div>
-      <p className="mb-1 text-sm text-slate-500">{title}</p>
-      <h3 className="text-2xl font-bold tabular-nums text-slate-800">{value}</h3>
-    </div>
-  )
+  return <Badge className={meta.className}>{label}</Badge>
 }
 
 type PageProps = {
@@ -124,6 +125,10 @@ type PageProps = {
 }
 
 export default async function AdminDashboardPage({ searchParams }: PageProps) {
+  const oriental = adminChineseUiEnabled()
+  const L = adminUi.dashboard
+  const dash = adminUi.common
+
   const params = searchParams ? await searchParams : undefined
   const period = normalizePeriod(params?.period)
   const status = normalizeStatus(params?.status)
@@ -223,6 +228,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   if (!novosUsuariosAtualRes.error) novosUsuariosAtual = novosUsuariosAtualRes.count ?? 0
   if (!novosUsuariosPrevRes.error) novosUsuariosPrev = novosUsuariosPrevRes.count ?? 0
 
+  const periodSalesFailed = !!vendasRangeRes.error
+  const tableLoadFailed = !!recentOrdersRes.error
+
   const operatorIds = Array.from(
     new Set(
       recentOrdersRaw
@@ -275,40 +283,99 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev)
   const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev)
 
-  const metrics: Metric[] = [
-    {
-      title: '总销售额 (Vendas Totais)',
-      value: totalAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      trend: totalTrend.label,
-      up: totalTrend.up,
-      icon: DollarSign,
-      iconColor: 'text-blue-500',
-    },
-    {
-      title: '订单量 (Pedidos)',
-      value: pedidosAtual.toLocaleString('pt-BR'),
-      trend: pedidosTrend.label,
-      up: pedidosTrend.up,
-      icon: Package,
-      iconColor: 'text-purple-500',
-    },
-    {
-      title: '客单价 (Ticket Médio)',
-      value: ticketAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      trend: ticketTrend.label,
-      up: ticketTrend.up,
-      icon: ShoppingBag,
-      iconColor: 'text-emerald-500',
-    },
-    {
-      title: '库存告警 (Alertas Estoque)',
-      value: estoqueBaixoCount.toLocaleString('pt-BR'),
-      trend: estoqueBaixoCount > 0 ? 'Atenção' : 'OK',
-      up: estoqueBaixoCount === 0,
-      icon: AlertCircle,
-      iconColor: 'text-red-500',
-    },
-  ]
+  const trendErr = adminLineBoth(adminUi.common.trendError)
+  const unavail = adminLineBoth(adminUi.common.unavailable)
+
+  const stockTrendLabel =
+    estoqueBaixoRes.error
+      ? unavail
+      : oriental
+        ? estoqueBaixoCount > 0
+          ? adminLineBoth(L.trendStockWarn)
+          : adminLineBoth(L.trendStockOk)
+        : estoqueBaixoCount > 0
+          ? L.trendStockWarn.pt
+          : L.trendStockOk.pt
+
+  const stockValue = estoqueBaixoRes.error ? dash.emDash : estoqueBaixoCount.toLocaleString('pt-BR')
+
+  const metrics: Metric[] = periodSalesFailed
+    ? [
+        {
+          titleLine: L.metricTotalSales.pt,
+          titleCn: oriental ? L.metricTotalSales.cn : undefined,
+          value: dash.emDash,
+          trend: trendErr,
+          up: false,
+          icon: DollarSign,
+          iconAccentClass: 'text-[#c42e2e]',
+        },
+        {
+          titleLine: L.metricOrders.pt,
+          titleCn: oriental ? L.metricOrders.cn : undefined,
+          value: dash.emDash,
+          trend: trendErr,
+          up: false,
+          icon: Package,
+          iconAccentClass: 'text-[#2d5a4a]',
+        },
+        {
+          titleLine: L.metricTicket.pt,
+          titleCn: oriental ? L.metricTicket.cn : undefined,
+          value: dash.emDash,
+          trend: trendErr,
+          up: false,
+          icon: ShoppingBag,
+          iconAccentClass: 'text-[#b8960c]',
+        },
+        {
+          titleLine: L.metricStock.pt,
+          titleCn: oriental ? L.metricStock.cn : undefined,
+          value: stockValue,
+          trend: stockTrendLabel,
+          up: !estoqueBaixoRes.error && estoqueBaixoCount === 0,
+          icon: AlertCircle,
+          iconAccentClass: 'text-[#c42e2e]',
+        },
+      ]
+    : [
+        {
+          titleLine: L.metricTotalSales.pt,
+          titleCn: oriental ? L.metricTotalSales.cn : undefined,
+          value: totalAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+          trend: totalTrend.label,
+          up: totalTrend.up,
+          icon: DollarSign,
+          iconAccentClass: 'text-[#c42e2e]',
+        },
+        {
+          titleLine: L.metricOrders.pt,
+          titleCn: oriental ? L.metricOrders.cn : undefined,
+          value: pedidosAtual.toLocaleString('pt-BR'),
+          trend: pedidosTrend.label,
+          up: pedidosTrend.up,
+          icon: Package,
+          iconAccentClass: 'text-[#2d5a4a]',
+        },
+        {
+          titleLine: L.metricTicket.pt,
+          titleCn: oriental ? L.metricTicket.cn : undefined,
+          value: ticketAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+          trend: ticketTrend.label,
+          up: ticketTrend.up,
+          icon: ShoppingBag,
+          iconAccentClass: 'text-[#b8960c]',
+        },
+        {
+          titleLine: L.metricStock.pt,
+          titleCn: oriental ? L.metricStock.cn : undefined,
+          value: stockValue,
+          trend: stockTrendLabel,
+          up: !estoqueBaixoRes.error && estoqueBaixoCount === 0,
+          icon: AlertCircle,
+          iconAccentClass: 'text-[#c42e2e]',
+        },
+      ]
 
   const latestOrders: OrderRow[] = recentOrdersRaw.map((o) => ({
     id: o.id,
@@ -323,122 +390,232 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   }))
 
   const periodOptions: Array<{ id: DashboardPeriod; label: string }> = [
-    { id: 'TODAY', label: '今天 / Hoje' },
-    { id: '7D', label: '7天 / 7 dias' },
-    { id: '30D', label: '30天 / 30 dias' },
+    { id: 'TODAY', label: oriental ? adminLineBoth(L.periodToday) : L.periodToday.pt },
+    { id: '7D', label: oriental ? adminLineBoth(L.period7d) : L.period7d.pt },
+    { id: '30D', label: oriental ? adminLineBoth(L.period30d) : L.period30d.pt },
   ]
 
   const statusOptions: Array<{ id: DashboardStatus; label: string }> = [
-    { id: 'ALL', label: '全部 / Todos' },
-    { id: 'CONCLUIDA', label: '完成 / Concluída' },
-    { id: 'CANCELADA', label: '取消 / Cancelada' },
+    { id: 'ALL', label: oriental ? adminLineBoth(L.statusAll) : L.statusAll.pt },
+    { id: 'CONCLUIDA', label: oriental ? adminLineBoth(L.statusDone) : L.statusDone.pt },
+    { id: 'CANCELADA', label: oriental ? adminLineBoth(L.statusCancelled) : L.statusCancelled.pt },
   ]
 
   const filterHref = (p: DashboardPeriod, s: DashboardStatus) =>
     `/admin/dashboard?period=${p}&status=${s}`
 
+  const pillPeriod = (active: boolean) =>
+    oriental
+      ? active
+        ? 'filter-pill-active'
+        : 'filter-pill'
+      : active
+        ? 'border border-slate-800 bg-slate-900 text-white shadow-sm'
+        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+
+  const pillStatus = (active: boolean) =>
+    oriental
+      ? active
+        ? 'filter-pill-status-active'
+        : 'filter-pill'
+      : active
+        ? 'border border-emerald-800 bg-emerald-800 text-white shadow-sm'
+        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+
+  const cardShell = oriental ? 'card-chinese mb-8 p-6' : 'mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
+  const cardShellLast = oriental ? 'card-chinese p-6' : 'rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
+  const sectionHeadBorder = oriental ? 'border-[rgba(212,175,55,0.2)]' : 'border-slate-200'
+
+  const pageTitleBlock = oriental ? 'border-chinese mb-6 pb-4' : 'mb-6 border-b border-slate-200 pb-4'
+
   return (
-    <div className="min-h-screen bg-[#f0f2f5] p-4 font-chinese md:p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">
-          控制台 <span className="text-lg font-normal text-slate-400">/ Dashboard</span>
+    <div className="p-4 pb-12 md:p-8">
+      <div className={pageTitleBlock}>
+        <h1 className="text-2xl font-bold text-slate-900">
+          {oriental ? L.pageTitle.cn : L.pageTitle.pt}
+          <span className="ml-2 text-lg font-normal text-slate-500">
+            {oriental ? `· ${L.pageTitle.pt}` : ''}
+          </span>
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          新客户 / Novos usuários no período: {novosUsuariosAtual.toLocaleString('pt-BR')} (
-          {novosTrend.label})
+        <p className="mt-2 text-sm text-slate-600">
+          {oriental ? (
+            <>
+              <span className="font-medium text-[#5c4d28]">{L.newUsers.cn}</span>
+              <span className="text-slate-500"> · </span>
+            </>
+          ) : null}
+          {L.newUsers.pt}: {novosUsuariosAtual.toLocaleString('pt-BR')} ({novosTrend.label})
         </p>
+        {oriental ? (
+          <p className="mt-1 text-xs text-slate-500">{adminLineBoth(L.pageSubtitle)}</p>
+        ) : null}
       </div>
 
-      <DashboardErrorBanner messages={dashboardErrors} />
+      {periodSalesFailed ? (
+        <CriticalSalesAlert
+          title={adminLineBoth(adminUi.errors.criticalSalesTitle)}
+          body={adminLineBoth(adminUi.errors.criticalSalesBody)}
+        />
+      ) : null}
+
+      <DashboardErrorBanner
+        oriental={oriental}
+        title={adminLineBoth(adminUi.errors.partialTitle)}
+        messages={dashboardErrors}
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {periodOptions.map((option) => (
           <Link
             key={option.id}
             href={filterHref(option.id, status)}
-            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-              period === option.id
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-            }`}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${pillPeriod(period === option.id)}`}
           >
             {option.label}
           </Link>
         ))}
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      <div className="mb-8 flex flex-wrap items-center gap-2">
         {statusOptions.map((option) => (
           <Link
             key={option.id}
             href={filterHref(period, option.id)}
-            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-              status === option.id
-                ? 'border-violet-500 bg-violet-50 text-violet-700'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-            }`}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${pillStatus(status === option.id)}`}
           >
             {option.label}
           </Link>
         ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
-          <MetricCard key={metric.title} {...metric} />
+          <ChineseStatCard
+            key={metric.titleLine}
+            variant={oriental ? 'oriental' : 'minimal'}
+            {...metric}
+          />
         ))}
       </div>
 
-      <div className="mb-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-700">
-            销售趋势 <span className="text-sm font-normal text-slate-400">/ Tendência de Vendas</span>
+      <div className={cardShell}>
+        <div className={`mb-5 flex items-center justify-between border-b pb-3 ${sectionHeadBorder}`}>
+          <h2 className="text-lg font-semibold text-slate-900">
+            {oriental ? L.chartTitle.cn : L.chartTitle.pt}
+            <span className="ml-2 text-sm font-normal text-slate-500">
+              {oriental ? `/ ${L.chartTitle.pt}` : ''}
+            </span>
           </h2>
         </div>
         <div className="h-[350px] w-full">
-          <SalesTrendChart data={chartData} />
+          {periodSalesFailed ? (
+            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-red-200 bg-red-50/50 px-4 text-center text-sm text-red-900">
+              {adminLineBoth(adminUi.errors.chartUnavailable)}
+            </div>
+          ) : (
+            <SalesTrendChart data={chartData} variant={oriental ? 'oriental' : 'default'} />
+          )}
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-700">
-          最近订单 <span className="text-sm font-normal text-slate-400">/ Últimos Pedidos</span>
+      <div className={cardShellLast}>
+        <h2 className={`mb-4 border-b pb-3 text-lg font-semibold text-slate-900 ${sectionHeadBorder}`}>
+          {oriental ? L.tableTitle.cn : L.tableTitle.pt}
+          <span className="ml-2 text-sm font-normal text-slate-500">
+            {oriental ? `/ ${L.tableTitle.pt}` : ''}
+          </span>
         </h2>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-left text-slate-500">
-                <th className="px-3 py-2 font-medium">ID</th>
-                <th className="px-3 py-2 font-medium">操作员 / Operador</th>
-                <th className="px-3 py-2 font-medium">日期 / Data</th>
-                <th className="px-3 py-2 font-medium">金额 / Valor</th>
-                <th className="px-3 py-2 font-medium">支付 / Pagamento</th>
-                <th className="px-3 py-2 font-medium">状态 / Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {latestOrders.map((order) => (
-                <tr key={order.id} className="border-b border-slate-100">
-                  <td className="px-3 py-3 font-medium text-slate-700">{order.id}</td>
-                  <td className="px-3 py-3 text-slate-600">{order.operador}</td>
-                  <td className="px-3 py-3 text-slate-600">{order.data}</td>
-                  <td className="px-3 py-3 tabular-nums text-slate-700">{order.valor}</td>
-                  <td className="px-3 py-3 text-slate-600">{order.formaPagamento}</td>
-                  <td className="px-3 py-3">{statusBadge(order.status)}</td>
+          {tableLoadFailed ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-950">
+              {adminLineBoth(adminUi.errors.tableLoadFailed)}
+            </div>
+          ) : (
+            <table
+              className={
+                oriental
+                  ? 'admin-table w-full min-w-[800px] border-collapse text-sm'
+                  : 'w-full min-w-[800px] border-collapse text-sm'
+              }
+            >
+              <thead>
+                <tr
+                  className={
+                    oriental
+                      ? 'border-b text-left text-sm'
+                      : 'border-b border-slate-200 text-left text-sm text-slate-600'
+                  }
+                >
+                  <th className="px-3 py-2 font-medium">
+                    {oriental ? adminLineBoth(L.tableColId) : L.tableColId.pt}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {oriental ? adminLineBoth(L.tableColOperador) : L.tableColOperador.pt}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {oriental ? adminLineBoth(L.tableColData) : L.tableColData.pt}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {oriental ? adminLineBoth(L.tableColValor) : L.tableColValor.pt}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {oriental ? adminLineBoth(L.tableColPagamento) : L.tableColPagamento.pt}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {oriental ? adminLineBoth(L.tableColStatus) : L.tableColStatus.pt}
+                  </th>
                 </tr>
-              ))}
-              {latestOrders.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
-                    没有订单 / Nenhum pedido encontrado para este filtro.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {latestOrders.map((order) => (
+                  <tr
+                    key={order.id}
+                    className={
+                      oriental
+                        ? 'border-b border-[rgba(45,90,74,0.12)]'
+                        : 'border-b border-slate-100 hover:bg-slate-50'
+                    }
+                  >
+                    <td className="max-w-[120px] truncate px-3 py-3 font-medium text-slate-900" title={order.id}>
+                      {order.id}
+                    </td>
+                    <td className="max-w-[160px] truncate px-3 py-3 text-slate-700" title={order.operador}>
+                      {order.operador}
+                    </td>
+                    <td className="px-3 py-3 text-slate-700">{order.data}</td>
+                    <td className="px-3 py-3 tabular-nums text-slate-900">{order.valor}</td>
+                    <td className="max-w-[140px] truncate px-3 py-3 text-slate-700" title={order.formaPagamento}>
+                      {order.formaPagamento}
+                    </td>
+                    <td className="px-3 py-3">{statusBadge(order.status, oriental)}</td>
+                  </tr>
+                ))}
+                {latestOrders.length === 0 && !tableLoadFailed && (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-8 text-center text-slate-600">
+                      <p className="font-medium">{oriental ? L.tableEmpty.cn : L.tableEmpty.pt}</p>
+                      {oriental ? (
+                        <p className="mt-1 text-xs text-slate-500">{L.tableEmpty.pt}</p>
+                      ) : null}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
+
+      <footer className="mt-12 text-center text-slate-500">
+        {oriental ? (
+          <>
+            <p className="text-sm tracking-wide">{L.footer.cn}</p>
+            <p className="mt-1 text-xs">{L.footer.pt}</p>
+          </>
+        ) : (
+          <p className="text-sm">{L.footer.pt}</p>
+        )}
+      </footer>
     </div>
   )
 }
-
