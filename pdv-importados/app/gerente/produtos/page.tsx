@@ -3,6 +3,8 @@ import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { criarProduto, alternarAtivoProduto } from './actions'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
+import { formatBRL } from '@/lib/format/money'
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 type ProdutoRow = {
   id: string
@@ -17,7 +19,7 @@ type ProdutoRow = {
 export default async function ProdutosPage() {
   const { idioma } = await getUsuarioIdioma()
   const m = getMessages(idioma)
-  const locale = idioma === 'zh' ? 'zh-CN' : idioma === 'zh-HK' ? 'zh-HK' : 'pt-BR'
+  const locale = localeFromIdioma(idioma)
   const fontClass = idioma === 'pt' ? '' : 'font-chinese'
 
   const supabase = await createClient()
@@ -172,10 +174,7 @@ export default async function ProdutosPage() {
                     <td className="px-3 py-2 text-slate-900 font-medium leading-relaxed">{p.nome}</td>
                     <td className="px-3 py-2 text-slate-600 font-mono">{p.codigo_barras ?? '-'}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900">
-                      {Number(p.preco_varejo).toLocaleString(locale, {
-                        style: 'currency',
-                        currency: 'BRL',
-                      })}
+                      {formatBRL(Number(p.preco_varejo), locale)}
                     </td>
                     <td className="px-3 py-2 text-slate-600">{p.origem}</td>
                     <td className="px-3 py-2">

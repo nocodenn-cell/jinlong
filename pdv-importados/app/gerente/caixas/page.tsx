@@ -3,13 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
+import { formatDateTimeOrDash } from '@/lib/format/datetime'
+import { formatBRL } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 function round2(v: number): number {
   return Math.round(v * 100) / 100
 }
-
-import { formatBRL } from '@/lib/format/money'
 
 export default async function GerenteCaixasPage() {
   const { idioma } = await getUsuarioIdioma()
@@ -143,14 +143,7 @@ export default async function GerenteCaixasPage() {
                   background: temDivergencia ? '#fff7ed' : undefined,
                 }}
               >
-                <td style={{ padding: 10 }}>
-                  {c.data_abertura
-                    ? new Date(c.data_abertura).toLocaleString(locale, {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })
-                    : '—'}
-                </td>
+                <td style={{ padding: 10 }}>{formatDateTimeOrDash(c.data_abertura, locale)}</td>
                 <td style={{ padding: 10 }}>{c.status}</td>
                 <td style={{ padding: 10 }}>
                   {formatBRL(Number(c.valor_inicial), locale)}

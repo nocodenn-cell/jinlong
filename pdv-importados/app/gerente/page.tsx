@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { formatBRL } from '@/lib/format/money'
 
 export default async function GerenteInicioPage() {
@@ -131,20 +132,8 @@ export default async function GerenteInicioPage() {
           <tbody>
             {ultimas?.map((v) => (
               <tr key={v.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 10 }}>
-                  {v.data
-                    ? new Date(v.data).toLocaleString(locale, {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })
-                    : '—'}
-                </td>
-                <td style={{ padding: 10 }}>
-                  {Number(v.total_liquido).toLocaleString(locale, {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </td>
+                <td style={{ padding: 10 }}>{formatDateTimeOrDash(v.data, locale)}</td>
+                <td style={{ padding: 10 }}>{formatBRL(Number(v.total_liquido), locale)}</td>
                 <td style={{ padding: 10 }}>{v.forma_pagamento}</td>
                 <td style={{ padding: 10 }}>{v.status}</td>
                 <td style={{ padding: 10 }}>

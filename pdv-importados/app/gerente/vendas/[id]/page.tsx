@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { formatBRL } from '@/lib/format/money'
 
 type PageProps = { params: Promise<{ id: string }> }
@@ -140,10 +141,7 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
         }}
       >
         <div>
-          <strong>{m.gerente.col_data}:</strong>{' '}
-          {venda.data
-            ? new Date(venda.data).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
-            : '—'}
+          <strong>{m.gerente.col_data}:</strong> {formatDateTimeOrDash(venda.data, locale)}
         </div>
         <div>
           <strong>{m.gerente.col_total}:</strong> {money(Number(venda.total_liquido))}
@@ -256,12 +254,7 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
                   }}
                 >
                   <td style={{ padding: 10, whiteSpace: 'nowrap' }}>
-                    {mov.created_at
-                      ? new Date(mov.created_at).toLocaleString(locale, {
-                          dateStyle: 'short',
-                          timeStyle: 'medium',
-                        })
-                      : '—'}
+                    {formatDateTimeOrDash(mov.created_at, locale, 'medium')}
                     {ehEstaVenda ? (
                       <span
                         style={{
@@ -312,14 +305,7 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
               return (
                 <tr key={`${b.produto_id}-${b.created_at}`} style={{ borderTop: '1px solid #f3f4f6' }}>
                   <td style={{ padding: 10 }}>{nome}</td>
-                  <td style={{ padding: 10 }}>
-                    {b.created_at
-                      ? new Date(b.created_at).toLocaleString(locale, {
-                          dateStyle: 'short',
-                          timeStyle: 'medium',
-                        })
-                      : '—'}
-                  </td>
+                  <td style={{ padding: 10 }}>{formatDateTimeOrDash(b.created_at, locale, 'medium')}</td>
                 </tr>
               )
             })}
