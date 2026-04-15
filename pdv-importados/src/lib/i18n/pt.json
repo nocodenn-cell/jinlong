@@ -107,6 +107,10 @@
     "nav_vendas": "Vendas",
     "nav_caixas": "Caixas",
     "nav_relatorios": "Relatórios",
+    "nav_admin": "Admin",
+    "nav_recebimento": "Recebimento",
+    "nav_financeiro": "Financeiro",
+    "nav_transferencias": "Transferências",
     "bem_vindo_resumo": "Resumo do dia e atalhos.",
     "atalhos_modulos": "Módulos",
     "vendas_recentes_link": "Ver últimas vendas",
@@ -266,6 +270,7 @@
     "sucesso": "Salvo com sucesso",
     "sim": "Sim",
     "nao": "Não",
-    "idioma": "Idioma"
+    "idioma": "Idioma",
+    "sair": "Sair"
   }
 }

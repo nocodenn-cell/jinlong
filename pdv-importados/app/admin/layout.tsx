@@ -2,15 +2,19 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Noto_Sans_SC } from 'next/font/google'
 import {
+  ArrowRightLeft,
   Building2,
   Coins,
+  Inbox,
   LayoutDashboard,
   LayoutGrid,
   LineChart,
   Package,
+  ShoppingBag,
   ShoppingCart,
 } from 'lucide-react'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
+import { SignOutButton } from '@/components/auth/SignOutButton'
 import {
   adminChineseUiEnabled,
   adminLineBoth,
@@ -30,17 +34,21 @@ const notoSc = Noto_Sans_SC({
 const adminNavItems = [
   { href: '/admin/dashboard', labelKey: 'dashboard' as const, icon: LayoutDashboard },
   { href: '/gerente', labelKey: 'gerente' as const, icon: LayoutGrid },
+  { href: '/gerente/produtos', labelKey: 'produtos' as const, icon: ShoppingBag },
   { href: '/gerente/vendas', labelKey: 'vendas' as const, icon: ShoppingCart },
   { href: '/gerente/estoque', labelKey: 'estoque' as const, icon: Package },
-  { href: '/gerente/relatorios', labelKey: 'relatorios' as const, icon: LineChart },
-  { href: '/gerente/caixas', labelKey: 'caixas' as const, icon: Building2 },
+  { href: '/gerente/recebimento', labelKey: 'recebimento' as const, icon: Inbox },
+  { href: '/gerente/transferencias', labelKey: 'transferencias' as const, icon: ArrowRightLeft },
   { href: '/gerente/financeiro', labelKey: 'financeiro' as const, icon: Coins },
+  { href: '/gerente/caixas', labelKey: 'caixas' as const, icon: Building2 },
+  { href: '/gerente/relatorios', labelKey: 'relatorios' as const, icon: LineChart },
 ] as const
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const chineseOn = adminChineseUiEnabled()
   const brand = adminUi.header.brand
   const tag = adminUi.header.tagline
+  const signOutLabel = chineseOn ? adminUi.common.signOut.cn : adminUi.common.signOut.pt
 
   return (
     <div
@@ -67,8 +75,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           />
         ) : null}
         <div className="relative mx-auto max-w-[1600px] px-4 py-5 md:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight md:text-2xl">
                 {chineseOn ? (
                   <span
@@ -98,6 +106,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 )}
               </p>
             </div>
+            <SignOutButton
+              label={signOutLabel}
+              className={
+                chineseOn
+                  ? 'shrink-0 rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20'
+                  : 'shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700'
+              }
+            />
           </div>
         </div>
       </header>

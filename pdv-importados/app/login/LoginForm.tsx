@@ -33,7 +33,9 @@ export function LoginForm() {
       supabase = createClient()
     } catch (cfgErr) {
       const msg =
-        cfgErr instanceof Error ? cfgErr.message : 'Configure Supabase em .env.local e reinicie o dev.'
+        cfgErr instanceof Error
+          ? cfgErr.message
+          : 'Configure o Supabase no arquivo .env.local na pasta do projeto e reinicie o servidor (npm run dev).'
       setErro(msg)
       setLoading(false)
       return
@@ -68,7 +70,7 @@ export function LoginForm() {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setErro('Falha ao obter usuário')
+      setErro('Não foi possível confirmar seu login. Atualize a página e tente novamente.')
       setLoading(false)
       return
     }
@@ -80,13 +82,17 @@ export function LoginForm() {
       .maybeSingle()
 
     if (perfilErr) {
-      setErro('Não foi possível carregar seu perfil. Verifique a tabela usuarios no Supabase.')
+      setErro(
+        'Não foi possível carregar seu perfil no sistema. Se o problema continuar, avise o suporte (tabela de usuários).',
+      )
       setLoading(false)
       return
     }
 
     if (!u) {
-      setErro('Usuário sem cadastro em usuarios. Crie a linha no banco com o mesmo id do Auth.')
+      setErro(
+        'Sua conta de login existe, mas ainda não está vinculada ao cadastro da loja. Peça ao administrador para criar seu usuário no painel.',
+      )
       setLoading(false)
       return
     }

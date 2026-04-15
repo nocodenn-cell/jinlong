@@ -45,6 +45,12 @@ test.describe('Painel do gerente', () => {
     await expect(page.getByText(/erro interno/i)).not.toBeVisible()
   })
 
+  test('página de vendas carrega sem erro interno', async ({ page }) => {
+    await page.goto('/gerente/vendas')
+    await expect(page.getByRole('heading', { name: /vendas/i })).toBeVisible()
+    await expect(page.getByText(/erro interno/i)).not.toBeVisible()
+  })
+
   test('toggle de idioma exibe mandarim no painel', async ({ page }) => {
     await page.goto('/gerente/produtos')
     const zhBtn = page.getByRole('button', { name: '普通话' })

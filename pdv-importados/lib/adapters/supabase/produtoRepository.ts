@@ -4,6 +4,7 @@ import type {
   ProdutoRepositoryPort,
 } from '@/core/ports/produto'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 export function createProdutoRepository(
   supabase: SupabaseClient
@@ -44,7 +45,12 @@ export function createProdutoRepository(
         .single()
 
       if (error || !data) {
-        return { ok: false, message: error?.message ?? 'Erro ao salvar produto' }
+        return {
+          ok: false,
+          message: error
+            ? mensagemErroComSecao('Cadastro de produto', error.message)
+            : 'Não foi possível salvar o produto. Tente de novo.',
+        }
       }
 
       const { error: estoqueError } = await supabase.from('estoque').insert({
@@ -57,7 +63,10 @@ export function createProdutoRepository(
       if (estoqueError) {
         return {
           ok: false,
-          message: estoqueError.message ?? 'Erro ao criar estoque',
+          message: mensagemErroComSecao(
+            'Estoque inicial do produto',
+            estoqueError.message,
+          ),
         }
       }
 
@@ -70,7 +79,7 @@ export function createProdutoRepository(
         .update({ ativo })
         .eq('id', produtoId)
 
-      if (error) return { ok: false, message: error.message }
+      if (error) return { ok: false, message: mensagemErroComSecao('Produto', error.message) }
       return { ok: true }
     },
   }

@@ -5,6 +5,10 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import {
+  mensagemErroComSecao,
+  mensagemErroValidacaoZod,
+} from '@/lib/errors/mensagemErroUsuario'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -25,13 +29,13 @@ async function lojaIdDoUsuarioLogado(): Promise<string | null> {
 }
 
 const AtualizarEstoqueSchema = z.object({
-  produto_id: z.string().uuid(),
-  quantidade_atual: z.coerce.number().min(0),
-  estoque_minimo: z.coerce.number().min(0),
+  produto_id: z.string().uuid('Produto inválido.'),
+  quantidade_atual: z.coerce.number().min(0, 'Quantidade atual não pode ser negativa.'),
+  estoque_minimo: z.coerce.number().min(0, 'Estoque mínimo não pode ser negativo.'),
 })
 
 const ProdutoIdSchema = z.object({
-  produto_id: z.string().uuid(),
+  produto_id: z.string().uuid('Produto inválido.'),
 })
 
 export async function atualizarEstoqueProduto(
@@ -42,15 +46,13 @@ export async function atualizarEstoqueProduto(
 
   const parsed = AtualizarEstoqueSchema.safeParse(input)
   if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.errors[0]?.message ?? 'Dados inválidos',
-    }
+    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    return { success: false, error: mensagemErroValidacaoZod(msg) }
   }
 
   const supabase = await createClient()
   const lojaId = await lojaIdDoUsuarioLogado()
-  if (!lojaId) return { success: false, error: 'Sessão inválida' }
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
 
   const { error } = await supabase
     .from('estoque')
@@ -62,7 +64,7 @@ export async function atualizarEstoqueProduto(
     .eq('loja_id', lojaId)
 
   if (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: mensagemErroComSecao('Estoque', error.message) }
   }
 
   revalidatePath('/gerente/estoque')
@@ -83,7 +85,7 @@ export async function garantirLinhaEstoque(input: unknown): Promise<ActionResult
 
   const supabase = await createClient()
   const lojaId = await lojaIdDoUsuarioLogado()
-  if (!lojaId) return { success: false, error: 'Sessão inválida' }
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
 
   const { error } = await supabase.from('estoque').insert({
     produto_id: parsed.data.produto_id,
@@ -96,7 +98,7 @@ export async function garantirLinhaEstoque(input: unknown): Promise<ActionResult
     if (error.code === '23505') {
       return { success: false, error: 'Estoque já existe para este produto.' }
     }
-    return { success: false, error: error.message }
+    return { success: false, error: mensagemErroComSecao('Estoque', error.message) }
   }
 
   revalidatePath('/gerente/estoque')

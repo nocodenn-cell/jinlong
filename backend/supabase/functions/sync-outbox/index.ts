@@ -246,6 +246,25 @@ function logJson(payload: Record<string, unknown>) {
   );
 }
 
+function newRequestId(): string {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return hexOfBytes(bytes);
+}
+
+function eventCorrelationId(ev: OutboxEvent): string {
+  try {
+    if (ev.tipo === "VENDA_REGISTRADA") {
+      const parsed = JSON.parse(ev.payload_json) as Record<string, unknown>;
+      const vendaId = typeof parsed.venda_id === "string" ? parsed.venda_id.trim() : "";
+      if (vendaId) return vendaId;
+    }
+  } catch {
+    // noop: fallback abaixo
+  }
+  return ev.id;
+}
+
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
@@ -781,6 +800,8 @@ async function handlePdvConfigSync(supabase: SupabaseAdmin) {
 }
 
 Deno.serve(async (req) => {
+  const requestId = newRequestId();
+  const reqStart = Date.now();
   if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
 
   const url = new URL(req.url);
@@ -792,7 +813,15 @@ Deno.serve(async (req) => {
 
   const rawBody = req.method === "POST" ? await req.text() : "";
   const auth = await authorizeSync(req, syncKey, supabase, rawBody);
-  if (!auth.ok) return jsonResponse(401, { ok: false, error: auth.error });
+  if (!auth.ok) {
+    logJson({
+      level: "warn",
+      stage: "auth",
+      request_id: requestId,
+      error: auth.error,
+    });
+    return jsonResponse(401, { ok: false, error: auth.error, request_id: requestId });
+  }
 
   try {
     if (req.method === "GET") {
@@ -809,6 +838,13 @@ Deno.serve(async (req) => {
       const processed: string[] = [];
       const failed: { id: string; error: string }[] = [];
       const useUnified = shouldUseUnifiedSalesFlow(req.headers.get("x-device-fingerprint"));
+      logJson({
+        level: "info",
+        stage: "sync_start",
+        request_id: requestId,
+        use_unified_sales_flow: useUnified,
+        event_count: body.events.length,
+      });
 
       for (const ev of body.events) {
         try {
@@ -817,16 +853,53 @@ Deno.serve(async (req) => {
           else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
           else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
           processed.push(ev.id);
+          logJson({
+            level: "info",
+            stage: "event_processed",
+            request_id: requestId,
+            event_id: ev.id,
+            event_type: ev.tipo,
+            correlation_id: eventCorrelationId(ev),
+          });
         } catch (e) {
           failed.push({ id: ev.id, error: e instanceof Error ? e.message : String(e) });
+          logJson({
+            level: "warn",
+            stage: "event_failed",
+            request_id: requestId,
+            event_id: ev.id,
+            event_type: ev.tipo,
+            correlation_id: eventCorrelationId(ev),
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
       }
-      return jsonResponse(200, { ok: true, processed, failed });
+      logJson({
+        level: "info",
+        stage: "sync_end",
+        request_id: requestId,
+        processed_count: processed.length,
+        failed_count: failed.length,
+        duration_ms: Date.now() - reqStart,
+      });
+      return jsonResponse(200, { ok: true, processed, failed, request_id: requestId });
     }
 
-    return jsonResponse(400, { ok: false, error: "INVALID_OPERATION" });
+    return jsonResponse(400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
   } catch (e) {
-    return jsonResponse(500, { ok: false, error: e instanceof Error ? e.message : String(e) });
+    const msg = e instanceof Error ? e.message : String(e);
+    logJson({
+      level: "error",
+      stage: "sync_fatal",
+      request_id: requestId,
+      error: msg,
+      duration_ms: Date.now() - reqStart,
+    });
+    return jsonResponse(500, {
+      ok: false,
+      error: "ERRO_INTERNO",
+      request_id: requestId,
+    });
   }
 });
 

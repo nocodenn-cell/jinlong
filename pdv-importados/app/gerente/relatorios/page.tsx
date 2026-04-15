@@ -9,6 +9,7 @@ import {
 } from '@/lib/relatorios/periodoRelatorio'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
+import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 
 function localeFromIdioma(idioma: string) {
   if (idioma === 'zh') return 'zh-CN'
@@ -97,6 +98,7 @@ export default async function GerenteRelatoriosPage(props: PageProps) {
           : null
 
   const rpcErro = errPorDia?.message ?? errTop?.message
+  const rpcErroAmigavel = rpcErro ? mensagemErroParaUsuario(rpcErro) : null
 
   const totalVendasPeriodo = porDia.reduce((s, r) => s + Number(r.num_vendas), 0)
   const totalLiquidoPeriodo = porDia.reduce((s, r) => s + Number(r.total_liquido), 0)
@@ -206,7 +208,11 @@ export default async function GerenteRelatoriosPage(props: PageProps) {
           }}
         >
           {m.relatorios.rpc_indisponivel}
-          <code style={{ display: 'block', marginTop: 6, fontSize: 11, wordBreak: 'break-all' }}>
+          {rpcErroAmigavel ? (
+            <p style={{ marginTop: 8, marginBottom: 4, fontWeight: 500 }}>{rpcErroAmigavel}</p>
+          ) : null}
+          <span style={{ fontSize: 11, color: '#7f1d1d' }}>Detalhe técnico (suporte):</span>
+          <code style={{ display: 'block', marginTop: 4, fontSize: 11, wordBreak: 'break-all' }}>
             {rpcErro}
           </code>
         </div>

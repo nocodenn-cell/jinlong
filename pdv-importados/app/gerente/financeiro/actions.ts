@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { mensagemErroComSecao, mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
   validarCriarClienteInput,
   validarCriarTituloInput,
@@ -28,7 +29,14 @@ export async function criarCliente(input: { nome: string; documento?: string; te
     })
     .select('id')
     .single()
-  if (error || !data) return { success: false, error: error?.message ?? 'Erro ao criar cliente' }
+  if (error || !data) {
+    return {
+      success: false,
+      error: error
+        ? mensagemErroComSecao('Cadastro de cliente', error.message)
+        : 'Não foi possível criar o cliente. Tente de novo.',
+    }
+  }
   revalidatePath('/gerente/financeiro')
   return { success: true, data: data.id as string }
 }
@@ -60,7 +68,14 @@ export async function criarTituloReceber(input: {
     })
     .select('id')
     .single()
-  if (error || !data) return { success: false, error: error?.message ?? 'Erro ao criar título' }
+  if (error || !data) {
+    return {
+      success: false,
+      error: error
+        ? mensagemErroComSecao('Conta a receber', error.message)
+        : 'Não foi possível criar o título. Tente de novo.',
+    }
+  }
   revalidatePath('/gerente/financeiro')
   return { success: true, data: data.id as string }
 }
@@ -85,7 +100,7 @@ export async function liquidarTitulo(input: {
     p_forma_pagamento: input.forma_pagamento,
     p_observacao: null,
   })
-  if (error) return { success: false, error: error.message }
+  if (error) return { success: false, error: mensagemErroComSecao('Liquidação', error.message) }
   revalidatePath('/gerente/financeiro')
   return { success: true, data: null }
 }
@@ -101,7 +116,8 @@ export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
     status: 'PENDENTE',
     payload: { origem: 'painel_gerente' },
   })
-  if (error) return { success: false, error: error.message }
+  if (error)
+    return { success: false, error: mensagemErroComSecao('Documento fiscal', error.message) }
   revalidatePath('/gerente/financeiro')
   return { success: true, data: null }
 }
@@ -114,7 +130,8 @@ export async function reprocessarDocumentoFiscal(documento_id: string): Promise<
   const { error } = await supabase.rpc('fiscal_reprocessar_documento', {
     p_documento_id: documento_id,
   })
-  if (error) return { success: false, error: error.message }
+  if (error)
+    return { success: false, error: mensagemErroComSecao('Reprocessar documento', error.message) }
   revalidatePath('/gerente/financeiro')
   return { success: true, data: null }
 }
@@ -146,7 +163,13 @@ export async function processarFilaFiscalAgora(limit = 20): Promise<R<{ emitted:
       error?: string
     }
     if (!res.ok || !payload?.ok) {
-      return { success: false, error: payload?.error ?? `Erro HTTP ${res.status}` }
+      const bruto = typeof payload?.error === 'string' ? payload.error : ''
+      return {
+        success: false,
+        error: bruto
+          ? mensagemErroParaUsuario(bruto)
+          : `O servidor fiscal não respondeu como esperado (código ${res.status}). Verifique a configuração e a internet.`,
+      }
     }
     revalidatePath('/gerente/financeiro')
     return {
@@ -157,6 +180,9 @@ export async function processarFilaFiscalAgora(limit = 20): Promise<R<{ emitted:
       },
     }
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : 'Falha ao processar fila fiscal.' }
+    return {
+      success: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível processar a fila fiscal. Tente de novo.'),
+    }
   }
 }

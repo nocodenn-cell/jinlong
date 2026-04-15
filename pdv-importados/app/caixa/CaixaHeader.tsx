@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/src/lib/i18n/getMessages"
 import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
 
@@ -78,15 +79,21 @@ export function CaixaHeader({
             )}
           </div>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="shrink-0 border-slate-600 bg-slate-800/80 text-slate-200 hover:bg-slate-700 hover:text-slate-50 text-xs h-8"
-          onClick={alternarTecnico}
-        >
-          {mostrarTecnico ? m.caixa.ocultar_tecnico : m.caixa.mostrar_tecnico}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <SignOutButton
+            label={m.comum.sair}
+            className="rounded-md border border-slate-600 bg-slate-800/80 px-2.5 py-1 text-xs font-medium text-slate-200 hover:bg-slate-700 hover:text-slate-50"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-slate-600 bg-slate-800/80 text-slate-200 hover:bg-slate-700 hover:text-slate-50 text-xs h-8"
+            onClick={alternarTecnico}
+          >
+            {mostrarTecnico ? m.caixa.ocultar_tecnico : m.caixa.mostrar_tecnico}
+          </Button>
+        </div>
       </div>
 
       <div className="text-xs text-slate-400 sm:text-right sm:max-w-xl min-w-0">
@@ -103,6 +110,7 @@ export function CaixaHeader({
                 className="border-amber-600/60 bg-amber-900/20 text-amber-200 hover:bg-amber-800/30"
                 onClick={onFecharCaixa}
                 disabled={processandoCaixa}
+                aria-busy={processandoCaixa}
               >
                 {processandoCaixa ? `${m.caixa.fechar}...` : m.caixa.fechar}
               </Button>
@@ -115,6 +123,7 @@ export function CaixaHeader({
               className="border-emerald-600/60 bg-emerald-900/20 text-emerald-200 hover:bg-emerald-800/30"
               onClick={onAbrirCaixa}
               disabled={processandoCaixa}
+              aria-busy={processandoCaixa}
             >
               {processandoCaixa ? `${m.caixa.abrir}...` : m.caixa.abrir}
             </Button>

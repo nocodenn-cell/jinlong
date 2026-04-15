@@ -107,6 +107,10 @@
     "nav_vendas": "销售记录",
     "nav_caixas": "收银会话",
     "nav_relatorios": "报表",
+    "nav_admin": "管理看板",
+    "nav_recebimento": "收货",
+    "nav_financeiro": "财务",
+    "nav_transferencias": "调拨",
     "bem_vindo_resumo": "今日概览与快捷入口。",
     "atalhos_modulos": "模块",
     "vendas_recentes_link": "查看最近销售",
@@ -266,6 +270,7 @@
     "sucesso": "保存成功",
     "sim": "是",
     "nao": "否",
-    "idioma": "语言"
+    "idioma": "语言",
+    "sair": "退出登录"
   }
 }

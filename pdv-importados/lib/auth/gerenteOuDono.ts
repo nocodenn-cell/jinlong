@@ -11,7 +11,7 @@ export async function assertGerenteOuDono(): Promise<GerenteAuth> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'Não autenticado' }
+  if (!user) return { ok: false, error: 'Faça login para continuar.' }
 
   const { data: usuario } = await supabase
     .from('usuarios')
@@ -20,7 +20,10 @@ export async function assertGerenteOuDono(): Promise<GerenteAuth> {
     .single()
 
   if (!usuario || !isPerfilPainelGerencial(usuario.perfil)) {
-    return { ok: false, error: 'Sem permissão' }
+    return {
+      ok: false,
+      error: 'Esta área é só para gerente, dono ou administrador. Use uma conta com permissão.',
+    }
   }
   return { ok: true }
 }

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { validarRemessaInput } from './actions.validation'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -31,13 +32,13 @@ export async function criarRemessaConferencia(input: {
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaDoUsuario()
-  if (!lojaId) return { success: false, error: 'Sessão inválida' }
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Sessão inválida' }
+  if (!user) return { success: false, error: 'Faça login novamente para registrar a remessa.' }
 
   const erro = validarRemessaInput({
     origem: input.origem,
@@ -58,7 +59,14 @@ export async function criarRemessaConferencia(input: {
     .select('id')
     .single()
 
-  if (e1 || !rem) return { success: false, error: e1?.message ?? 'Erro ao criar remessa' }
+  if (e1 || !rem) {
+    return {
+      success: false,
+      error: e1
+        ? mensagemErroComSecao('Remessa', e1.message)
+        : 'Não foi possível criar a remessa. Tente de novo.',
+    }
+  }
 
   const rows = input.itens.map((i) => ({
     remessa_id: rem.id,
@@ -68,12 +76,12 @@ export async function criarRemessaConferencia(input: {
   }))
 
   const { error: e2 } = await supabase.from('remessa_itens').insert(rows)
-  if (e2) return { success: false, error: e2.message }
+  if (e2) return { success: false, error: mensagemErroComSecao('Itens da remessa', e2.message) }
 
   const { error: e3 } = await supabase.rpc('confirmar_remessa_entrada', {
     p_remessa_id: rem.id,
   })
-  if (e3) return { success: false, error: e3.message }
+  if (e3) return { success: false, error: mensagemErroComSecao('Confirmação da remessa', e3.message) }
 
   revalidatePath('/gerente/recebimento')
   revalidatePath('/gerente/estoque')

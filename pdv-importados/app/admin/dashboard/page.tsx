@@ -19,6 +19,7 @@ import {
   type DashboardPeriod,
   type DashboardStatus,
 } from './dashboardUtils'
+import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 
 type SalesPoint = {
   label: string
@@ -51,7 +52,7 @@ function collectSupabaseErrors(
 ): string[] {
   const out: string[] = []
   for (const { label, error } of entries) {
-    if (error) out.push(`${label}: ${error.message}`)
+    if (error) out.push(`${label}: ${mensagemErroParaUsuario(error.message)}`)
   }
   return out
 }
@@ -244,7 +245,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       .select('id,nome')
       .in('id', operatorIds)
     if (usersRes.error) {
-      dashboardErrors.push(`Operadores (nomes): ${usersRes.error.message}`)
+      dashboardErrors.push(
+        `Operadores (nomes): ${mensagemErroParaUsuario(usersRes.error.message)}`,
+      )
     } else {
       usuariosRows = usersRes.data ?? []
     }

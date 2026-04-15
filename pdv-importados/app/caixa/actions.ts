@@ -16,6 +16,12 @@ import {
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '@/core/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
+import {
+  mensagemErroComSecao,
+  mensagemErroDeExcecao,
+  mensagemErroParaUsuario,
+  mensagemErroValidacaoZod,
+} from '@/lib/errors/mensagemErroUsuario'
 
 export type ProdutoCaixaDTO = {
   id: string
@@ -105,7 +111,7 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
       .eq('ativo', true)
 
     if (error) {
-      return { ok: false, error: error.message }
+      return { ok: false, error: mensagemErroParaUsuario(error.message) }
     }
 
     const { data: cfg } = await supabase
@@ -125,8 +131,10 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
       pricingContext: { quantidadeMinimaAtacadoPadrao: minAtacado },
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Erro ao carregar regras'
-    return { ok: false, error: msg }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível carregar as regras de preço.'),
+    }
   }
 }
 
@@ -156,7 +164,7 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
         .in('codigo_barras', variantes)
         .limit(10)
 
-      if (errCodigo) return { ok: false, error: errCodigo.message }
+      if (errCodigo) return { ok: false, error: mensagemErroParaUsuario(errCodigo.message) }
       const listaCod = porCodigoLista ?? []
       if (listaCod.length > 0) {
         const ids = new Set(listaCod.map((r) => r.id))
@@ -190,7 +198,7 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
       .ilike('nome', `%${frag}%`)
       .limit(3)
 
-    if (errNome) return { ok: false, error: errNome.message }
+    if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message) }
     const lista = porNome ?? []
     if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
     if (lista.length > 1) {
@@ -209,8 +217,10 @@ export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdu
       produto: mapProdutoRow(row, q),
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Erro ao buscar produto'
-    return { ok: false, error: msg }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.'),
+    }
   }
 }
 
@@ -277,7 +287,7 @@ async function calcularValorSistemaDinheiroCaixa(
     .eq('status', 'CONCLUIDA')
 
   if (vendasErr) {
-    throw new Error(`Vendas: ${vendasErr.message}`)
+    throw new Error(mensagemErroComSecao('Vendas em dinheiro', vendasErr.message))
   }
 
   const { data: movimentosRows, error: movErr } = await supabase
@@ -287,7 +297,7 @@ async function calcularValorSistemaDinheiroCaixa(
     .in('tipo', ['SUPRIMENTO', 'SANGRIA'])
 
   if (movErr) {
-    throw new Error(`Movimentos: ${movErr.message}`)
+    throw new Error(mensagemErroComSecao('Movimentos do caixa', movErr.message))
   }
 
   const totalVendasDinheiro = (vendasRows ?? []).reduce(
@@ -308,7 +318,7 @@ async function calcularValorSistemaDinheiroCaixa(
     .single()
 
   if (caixaErr) {
-    throw new Error(`Caixa: ${caixaErr.message}`)
+    throw new Error(mensagemErroComSecao('Caixa', caixaErr.message))
   }
 
   return roundMoney2(
@@ -333,7 +343,7 @@ export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorRes
       .limit(1)
       .maybeSingle()
 
-    if (error) return { ok: false, error: `Caixa: ${error.message}` }
+    if (error) return { ok: false, error: mensagemErroComSecao('Caixa', error.message) }
     if (!caixaAberto) return { ok: true, aberto: false }
 
     const valorSistemaDinheiro = await calcularValorSistemaDinheiroCaixa(supabase, caixaAberto.id)
@@ -346,8 +356,10 @@ export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorRes
       valorSistemaDinheiro,
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Erro ao consultar status do caixa'
-    return { ok: false, error: msg }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível consultar o status do caixa.'),
+    }
   }
 }
 
@@ -372,7 +384,8 @@ export async function abrirCaixaOperador(valorInicial: number): Promise<AbrirCai
       .order('data_abertura', { ascending: false })
       .limit(1)
       .maybeSingle()
-    if (caixaAbertoErr) return { ok: false, error: `Caixa: ${caixaAbertoErr.message}` }
+    if (caixaAbertoErr)
+      return { ok: false, error: mensagemErroComSecao('Caixa', caixaAbertoErr.message) }
     if (caixaAberto) return { ok: false, error: 'Já existe um caixa aberto para este operador.' }
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
@@ -387,13 +400,15 @@ export async function abrirCaixaOperador(valorInicial: number): Promise<AbrirCai
       .select('id')
       .single()
 
-    if (insertErr) return { ok: false, error: `Caixa: ${insertErr.message}` }
+    if (insertErr) return { ok: false, error: mensagemErroComSecao('Caixa', insertErr.message) }
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
     return { ok: true, caixaId: novo.id }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Erro ao abrir caixa'
-    return { ok: false, error: msg }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível abrir o caixa. Tente de novo.'),
+    }
   }
 }
 
@@ -423,7 +438,7 @@ export async function fecharCaixaOperador(input: {
       .order('data_abertura', { ascending: false })
       .limit(1)
       .maybeSingle()
-    if (caixaErr) return { ok: false, error: `Caixa: ${caixaErr.message}` }
+    if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message) }
     if (!caixaAberto) return { ok: false, error: 'Não há caixa aberto para fechar.' }
 
     const valorSistemaDinheiro = await calcularValorSistemaDinheiroCaixa(supabase, caixaAberto.id)
@@ -446,7 +461,7 @@ export async function fecharCaixaOperador(input: {
       })
       .eq('id', caixaAberto.id)
 
-    if (updateErr) return { ok: false, error: `Caixa: ${updateErr.message}` }
+    if (updateErr) return { ok: false, error: mensagemErroComSecao('Caixa', updateErr.message) }
 
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
@@ -459,8 +474,10 @@ export async function fecharCaixaOperador(input: {
       diferenca,
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Erro ao fechar caixa'
-    return { ok: false, error: msg }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível fechar o caixa. Tente de novo.'),
+    }
   }
 }
 
@@ -504,7 +521,9 @@ export async function validarGerenteDesconto(input: {
       const error =
         code === 'ERRO_PERSISTENCIA_TOKEN'
           ? 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
-          : code || `Falha ao validar gerente (${response.status}).`
+          : code
+            ? mensagemErroParaUsuario(code)
+            : `Não foi possível validar o gerente (servidor respondeu com código ${response.status}). Verifique a internet e tente de novo.`
       return {
         ok: false,
         error,
@@ -520,8 +539,10 @@ export async function validarGerenteDesconto(input: {
       maxDescontoPercentual: Number(payload.max_desconto_percentual ?? 0),
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Erro ao validar gerente'
-    return { ok: false, error: msg }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível validar a senha do gerente.'),
+    }
   }
 }
 
@@ -536,7 +557,7 @@ async function recalcularItensNoServidor(
     .in('id', produtosIds)
     .eq('ativo', true)
 
-  if (prodErr) return { ok: false, error: `Produtos: ${prodErr.message}` }
+  if (prodErr) return { ok: false, error: mensagemErroComSecao('Produtos', prodErr.message) }
   const produtos = new Map((produtosRows ?? []).map((p) => [p.id, p]))
   if (produtos.size !== produtosIds.length) {
     return { ok: false, error: 'Há itens inválidos/inativos no carrinho. Atualize e tente novamente.' }
@@ -548,7 +569,7 @@ async function recalcularItensNoServidor(
       'id, tipo_regra, produto_id, categoria_id, quantidade_minima, quantidade_maxima, tipo_desconto, valor_desconto, data_validade, ativo',
     )
     .eq('ativo', true)
-  if (regrasErr) return { ok: false, error: `Regras: ${regrasErr.message}` }
+  if (regrasErr) return { ok: false, error: mensagemErroComSecao('Regras de preço', regrasErr.message) }
   const regras = (regrasRows as RegraPrecoRow[] | null)?.map(mapRegraPrecoRow) ?? []
 
   const { data: cfg } = await supabase
@@ -606,7 +627,7 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
   const parsed = finalizarVendaInputSchema.safeParse(raw)
   if (!parsed.success) {
     const msg = parsed.error.issues.map((e) => e.message).join('; ')
-    return { ok: false, error: `Dados inválidos: ${msg}` }
+    return { ok: false, error: mensagemErroValidacaoZod(msg) }
   }
   const input = parsed.data
   try {
@@ -645,24 +666,47 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
 
     // Pré-checagem de estoque (melhor UX; a RPC 016/017 é a fonte de verdade sob concorrência)
     const estoquesInsuficientes: string[] = []
-    for (const item of itensAut) {
-      const { data: estoqueData, error: estqErr } = await supabase
-        .from('estoque')
-        .select('quantidade_atual, produtos!inner(nome)')
-        .eq('produto_id', item.produtoId)
-        .eq('loja_id', lojaId)
-        .maybeSingle()
+    const produtoIds = Array.from(new Set(itensAut.map((i) => i.produtoId)))
+    const { data: estoqueRows, error: estqBatchErr } = await supabase
+      .from('estoque')
+      .select('produto_id, quantidade_atual, produtos!inner(nome)')
+      .eq('loja_id', lojaId)
+      .in('produto_id', produtoIds)
 
-      if (estqErr || !estoqueData) {
+    if (estqBatchErr) {
+      return {
+        ok: false,
+        error: mensagemErroComSecao('Estoque', estqBatchErr.message),
+      }
+    }
+
+    const estoquePorProduto = new Map<
+      string,
+      { quantidade_atual: number; nome: string }
+    >()
+    for (const row of estoqueRows ?? []) {
+      const pid = row.produto_id as string
+      const p = row.produtos as
+        | { nome?: string }
+        | { nome?: string }[]
+        | null
+      const nomeProduto =
+        (Array.isArray(p) ? p[0]?.nome : p?.nome) ?? 'Produto'
+      estoquePorProduto.set(pid, {
+        quantidade_atual: Number(row.quantidade_atual ?? 0),
+        nome: nomeProduto,
+      })
+    }
+
+    for (const item of itensAut) {
+      const row = estoquePorProduto.get(item.produtoId)
+      if (!row) {
         estoquesInsuficientes.push(
           `Produto sem linha de estoque (id ${item.produtoId.slice(0, 8)}…).`,
         )
-      } else if (Number(estoqueData.quantidade_atual) < item.quantidade) {
-        const p = estoqueData.produtos
-        const nomeProduto =
-          (Array.isArray(p) ? p[0]?.nome : (p as { nome?: string } | null)?.nome) ?? 'Produto'
+      } else if (row.quantidade_atual < item.quantidade) {
         estoquesInsuficientes.push(
-          `${nomeProduto}: solicitado ${item.quantidade}, disponível ${estoqueData.quantidade_atual}`,
+          `${row.nome}: solicitado ${item.quantidade}, disponível ${row.quantidade_atual}`,
         )
       }
     }
@@ -682,7 +726,8 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
       .order('data_abertura', { ascending: false })
       .limit(1)
       .maybeSingle()
-    if (caixaAbertoErr) return { ok: false, error: `Caixa: ${caixaAbertoErr.message}` }
+    if (caixaAbertoErr)
+      return { ok: false, error: mensagemErroComSecao('Caixa', caixaAbertoErr.message) }
     if (!caixaExistente) {
       return {
         ok: false,
@@ -734,12 +779,14 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
         }
 
     const { error: txErr } = await supabase.rpc(rpcName, rpcParams)
-    if (txErr) return { ok: false, error: `Venda: ${txErr.message}` }
+    if (txErr) return { ok: false, error: mensagemErroComSecao('Finalização da venda', txErr.message) }
 
     revalidatePath('/gerente/vendas')
     return { ok: true, vendaId }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Erro ao finalizar venda'
-    return { ok: false, error: msg }
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível finalizar a venda. Tente de novo.'),
+    }
   }
 }

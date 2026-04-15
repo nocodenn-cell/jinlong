@@ -36,3 +36,30 @@ export function hasGerenteTestUser(): boolean {
     Boolean(process.env.PLAYWRIGHT_TEST_PASSWORD?.trim())
   )
 }
+
+/**
+ * Fluxo E2E completo desktop->sync->gerente exige:
+ * - service role para seed controlado
+ * - endpoint/key da Edge sync-outbox para injetar evento
+ */
+export function assertSyncFlowEnvInCi(): void {
+  if (!isCi()) return
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const endpoint = process.env.SYNC_ENDPOINT?.trim()
+  const key = process.env.SYNC_KEY?.trim()
+  if (!serviceRole || !endpoint || !key) {
+    throw new Error(
+      'E2E do fluxo sync exige SUPABASE_SERVICE_ROLE_KEY, SYNC_ENDPOINT e SYNC_KEY no CI.',
+    )
+  }
+}
+
+export function hasSyncFlowEnv(): boolean {
+  return (
+    Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) &&
+    Boolean(process.env.SYNC_ENDPOINT?.trim()) &&
+    Boolean(process.env.SYNC_KEY?.trim()) &&
+    hasGerenteTestUser() &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim())
+  )
+}

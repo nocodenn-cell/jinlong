@@ -18,7 +18,7 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 - Esperado: cenário **token válido** conclui e consome token; **expirado** e **já usado** falham com erro esperado.
 
 1. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, HMAC/`SYNC_KEY` e chamada a `decrementar_estoque_seguro`.
-2. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_`* do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
+2. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC`_* do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
 3. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
   - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC legada) e **010** (leitura `estoque_baixas` para gerente); caixa web usa **016** `decrementar_estoque_seguro` quando aplicada.
   - **§4 (com desktop):** além disso, **§3** (`pdv-local/.env` + `SYNC_`*) → catálogo → venda no Tauri → sync → mesma checagem no Supabase e na web.
@@ -46,7 +46,7 @@ npx supabase migration list
 **No SQL Editor** (dupla checagem): rode o script  
 `[backend/supabase/scripts/verify_p0_producao.sql](../backend/supabase/scripts/verify_p0_producao.sql)`
 
-- `descontos_venda` com **RLS ativo** e policies `descontos_venda_`*.
+- `descontos_venda` com **RLS ativo** e policies `descontos_venda`_*.
 - Função `decrementar_estoque_idempotente` existente (legado; caixa/Edge preferem **016**).
 - Tabela `estoque_baixas` existente.
 - **001–010** aplicadas no projeto **produção** (e demais migrations até a última versionada no repositório, sem lacunas — ver parágrafo acima)
@@ -213,7 +213,7 @@ Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não e
 ## 6. CI / gate em PR (backend)
 
 - Workflow **CI backend Supabase** (`.github/workflows/ci-backend-supabase.yml`) executa smoke de migrations + `deno check` da Edge.
-- No GitHub do repositório: secrets `**SYNC_ENDPOINT`** (URL completa `.../functions/v1/sync-outbox`) e `**SYNC_KEY**` (igual ao secret da Edge) — usados pelo job `anti-replay-diagnostic-gate`.
+- No GitHub do repositório: secrets `**SYNC_ENDPOINT`** (URL completa `.../functions/v1/sync-outbox`) e `**SYNC_KEY`** (igual ao secret da Edge) — usados pelo job `anti-replay-diagnostic-gate`.
 - Com secrets preenchidos: o job roda `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1` contra o ambiente apontado (validação ponta a ponta).
 - **PR interno** que altera `sync-outbox` ou o script de diagnóstico **sem** esses secrets deve falhar no passo de validação (gate explícito).
 - PRs de **fork**: o gate não exige secrets no fork; o diagnóstico só roda se o repositório base tiver secrets (comportamento esperado para não vazar `SYNC_KEY`).

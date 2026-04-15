@@ -40,8 +40,11 @@ export const adminUi = {
   nav: {
     dashboard: { cn: '主控台', pt: 'Dashboard' } satisfies BilingualLine,
     gerente: { cn: '经理面板', pt: 'Gerente' } satisfies BilingualLine,
+    produtos: { cn: '商品', pt: 'Produtos' } satisfies BilingualLine,
     vendas: { cn: '销售', pt: 'Vendas' } satisfies BilingualLine,
     estoque: { cn: '库存', pt: 'Estoque' } satisfies BilingualLine,
+    recebimento: { cn: '收货', pt: 'Recebimento' } satisfies BilingualLine,
+    transferencias: { cn: '调拨', pt: 'Transferências' } satisfies BilingualLine,
     relatorios: { cn: '报告', pt: 'Relatórios' } satisfies BilingualLine,
     caixas: { cn: '钱箱', pt: 'Caixas' } satisfies BilingualLine,
     financeiro: { cn: '财务', pt: 'Financeiro' } satisfies BilingualLine,
@@ -50,8 +53,11 @@ export const adminUi = {
   navHints: {
     dashboard: 'Métricas, gráfico de vendas e últimos pedidos do período.',
     gerente: 'Painel do gerente e atalhos operacionais.',
+    produtos: 'Cadastro e preços de produtos.',
     vendas: 'Listagem e gestão de vendas.',
-    estoque: 'Produtos, saldos e alertas de estoque.',
+    estoque: 'Saldos por loja e alertas de estoque.',
+    recebimento: 'Entrada de mercadorias e conferência.',
+    transferencias: 'Movimentação entre lojas.',
     relatorios: 'Relatórios e análises operacionais.',
     caixas: 'Caixas e operações de ponto de venda.',
     financeiro: 'Movimentações e visão financeira.',
@@ -90,6 +96,7 @@ export const adminUi = {
     tableColStatus: { cn: '状态', pt: 'Status' } satisfies BilingualLine,
   },
   common: {
+    signOut: { cn: '退出登录', pt: 'Sair' } satisfies BilingualLine,
     trendError: { cn: '错误', pt: 'Erro' } satisfies BilingualLine,
     unavailable: { cn: '不可用', pt: 'Indisponível' } satisfies BilingualLine,
     emDash: '—',

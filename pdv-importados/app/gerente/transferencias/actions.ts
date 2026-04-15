@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 type R = { success: true } | { success: false; error: string }
 
@@ -31,7 +32,7 @@ export async function executarTransferencia(input: {
     p_quantidade: input.quantidade,
     p_observacao: input.observacao?.trim() || null,
   })
-  if (error) return { success: false, error: error.message }
+  if (error) return { success: false, error: mensagemErroComSecao('Transferência de estoque', error.message) }
 
   revalidatePath('/gerente/transferencias')
   revalidatePath('/gerente/estoque')

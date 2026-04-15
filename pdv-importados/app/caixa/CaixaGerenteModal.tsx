@@ -146,11 +146,17 @@ export function CaixaGerenteModal({
       }}
     >
       <Card
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="caixa-gerente-modal-title"
         className="w-full sm:max-w-md rounded-none sm:rounded-lg border-slate-700 bg-slate-900 text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle className="text-lg text-slate-50">
+          <CardTitle
+            id="caixa-gerente-modal-title"
+            className="text-lg text-slate-50"
+          >
             {m.caixa.modal_gerente_titulo}
           </CardTitle>
         </CardHeader>
@@ -198,7 +204,9 @@ export function CaixaGerenteModal({
             )
           )}
           {erroLocal && (
-            <p className="text-xs text-amber-300">{erroLocal}</p>
+            <p className="text-xs text-amber-300" role="alert">
+              {erroLocal}
+            </p>
           )}
         </CardContent>
         <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t border-slate-800/80 mt-2 pt-3">

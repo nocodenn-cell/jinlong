@@ -9,18 +9,24 @@ export const FORMAS_PAGAMENTO_CAIXA = [
 ] as const
 
 export const itemFinalizarVendaSchema = z.object({
-  produtoId: z.string().uuid(),
-  quantidade: z.number().positive(),
+  produtoId: z.string().uuid('Identificador do produto inválido.'),
+  quantidade: z.number().positive('A quantidade de cada item deve ser maior que zero.'),
 })
 
 export const finalizarVendaInputSchema = z.object({
-  formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA),
-  totalBruto: z.number().nonnegative(),
-  totalDesconto: z.number().nonnegative(),
-  totalLiquido: z.number().nonnegative(),
+  formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
+    errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
+  }),
+  totalBruto: z.number().nonnegative('O total bruto não pode ser negativo.'),
+  totalDesconto: z.number().nonnegative('O total de desconto não pode ser negativo.'),
+  totalLiquido: z.number().nonnegative('O total líquido não pode ser negativo.'),
   descontoGerenteToken: z.string().min(1).optional(),
-  descontoGerentePercentual: z.number().positive().max(100).optional(),
-  itens: z.array(itemFinalizarVendaSchema).min(1),
+  descontoGerentePercentual: z
+    .number()
+    .positive('O desconto do gerente deve ser maior que zero.')
+    .max(100, 'O desconto do gerente não pode passar de 100%.')
+    .optional(),
+  itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
 }).superRefine((value, ctx) => {
   const hasToken = !!value.descontoGerenteToken
   const hasPercentual = value.descontoGerentePercentual !== undefined

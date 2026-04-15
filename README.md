@@ -34,6 +34,16 @@ npm run tauri
 # ou: npx tauri dev
 ```
 
+## Git hooks (opcional)
+
+Na raiz do repositório, para bloquear commit acidental de `.env` / `.env.local`:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+O hook executa `scripts/git-pre-commit-check.mjs`. PRs também exibem checklist em [`.github/pull_request_template.md`](.github/pull_request_template.md).
+
 ## Documentação
 
 - [**P0 checklist** — migrations, deploy Edge, secrets, teste ponta a ponta](docs/P0_CHECKLIST_OPERACIONAL.md)

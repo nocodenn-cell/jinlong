@@ -31,6 +31,7 @@ export function CaixaSearchBar({
         value={codigo}
         onChange={(e) => onCodigoChange(e.target.value)}
         placeholder={m.caixa.busca_placeholder}
+        aria-label={m.caixa.busca_placeholder}
         disabled={buscando || carregandoRegras}
         className="flex-1 bg-slate-800 border-slate-600 text-slate-100 placeholder:text-slate-500 focus-visible:ring-emerald-500"
       />
@@ -38,6 +39,7 @@ export function CaixaSearchBar({
         <Button
           type="submit"
           disabled={buscando || carregandoRegras}
+          aria-busy={buscando}
           className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white"
         >
           {buscando ? m.caixa.buscando : m.caixa.adicionar_enter}

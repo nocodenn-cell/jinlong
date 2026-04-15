@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useCartStore } from './stores/cartStore'
 import type { ItemCarrinho } from '@core/cart/types'
@@ -13,6 +13,11 @@ import {
   resolverProdutoNoCatalogo,
   type ProdutoCacheLite,
 } from './catalogoLookup'
+import {
+  mensagemErroComContexto,
+  mensagemErroDeExcecao,
+  mensagemErroParaUsuario,
+} from './lib/mensagemErroUsuario'
 
 type RegraPrecoCacheLite = {
   id: string
@@ -49,6 +54,17 @@ type OutboxResumo = {
   prontos_sync: number
   em_backoff: number
   dlq: number
+}
+
+function mensagemEhErro(msg: string): boolean {
+  return /^(falha|não foi possível|sessão|acesso negado|problema|muitas tentativas|dados inválidos|configuração inválida|limite de envio|este registro|você não tem permissão)/i.test(
+    msg.trim(),
+  )
+}
+
+function mensagemEhAviso(msg: string): boolean {
+  const t = msg.toLowerCase()
+  return t.includes('vazio') || t.includes('.env') || t.startsWith('motivo:')
 }
 
 export function App() {
@@ -98,6 +114,13 @@ export function App() {
 
   const [outboxResumo, setOutboxResumo] = useState<OutboxResumo | null>(null)
   const [reprocessandoDlq, setReprocessandoDlq] = useState(false)
+  const [isFinalizandoVenda, setIsFinalizandoVenda] = useState(false)
+  const [confirmarLimparAte, setConfirmarLimparAte] = useState(0)
+  const inputLeituraRef = useRef<HTMLInputElement | null>(null)
+  const syncInFlightRef = useRef(false)
+  const [metricaAddItemMs, setMetricaAddItemMs] = useState<number | null>(null)
+  const [metricaFinalizarMs, setMetricaFinalizarMs] = useState<number | null>(null)
+  const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
 
   const [gerenteId, setGerenteId] = useState(defaultPdvConfig.gerenteId)
   const [gerenteSenhaSha256, setGerenteSenhaSha256] = useState(
@@ -110,6 +133,17 @@ export function App() {
     const hashArray = Array.from(new Uint8Array(hashBuffer))
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
   }
+
+  const atualizarMediaMs = (atual: number | null, nova: number) => {
+    if (!Number.isFinite(nova) || nova < 0) return atual
+    if (atual === null) return nova
+    // EMA simples para suavizar os números em tempo real.
+    return Math.round((atual * 0.7 + nova * 0.3) * 10) / 10
+  }
+
+  const focarInputLeitura = useCallback(() => {
+    window.setTimeout(() => inputLeituraRef.current?.focus(), 0)
+  }, [])
 
   const aplicarCacheCatalogo = useCallback(
     (cache: CatalogoLocalInvoke | null | undefined) => {
@@ -157,12 +191,29 @@ export function App() {
       )
     } catch (e) {
       const msg = String(e)
-      setUltimoErroSincCatalogo(msg)
-      setMensagem(`Falha ao sincronizar: ${msg}`)
+      const amigavel = mensagemErroComContexto('Sincronização do catálogo', msg)
+      setUltimoErroSincCatalogo(amigavel)
+      setMensagem(amigavel)
     } finally {
       setSincronizandoCatalogo(false)
     }
   }, [tauriDisponivel, aplicarCacheCatalogo])
+
+  const executarSyncOutboxComMetrica = useCallback(
+    async (limite = 50) => {
+      if (syncInFlightRef.current) return
+      syncInFlightRef.current = true
+      const t0 = performance.now()
+      try {
+        await invoke('sync_outbox_real_cmd', { limite })
+      } finally {
+        const elapsed = performance.now() - t0
+        setMetricaSyncMs((prev) => atualizarMediaMs(prev, elapsed))
+        syncInFlightRef.current = false
+      }
+    },
+    [],
+  )
 
   const refreshOutboxResumo = useCallback(async () => {
     if (!tauriDisponivel) return
@@ -173,6 +224,11 @@ export function App() {
       setOutboxResumo(null)
     }
   }, [tauriDisponivel])
+
+  useEffect(() => {
+    // Mantém fluxo "zero mouse": ao mudar carrinho, volta foco na leitura.
+    focarInputLeitura()
+  }, [itens.length, focarInputLeitura])
 
   useEffect(() => {
     if (!tauriDisponivel) return
@@ -284,7 +340,7 @@ export function App() {
           setUltimoErroSincCatalogo(null)
         }
       } catch (e) {
-        if (!cancelled) setUltimoErroSincCatalogo(String(e))
+        if (!cancelled) setUltimoErroSincCatalogo(mensagemErroParaUsuario(String(e)))
         // offline ou .env ausente: mantém cache local já carregado
       } finally {
         if (!cancelled) setCarregandoCatalogo(false)
@@ -310,7 +366,7 @@ export function App() {
     const t = window.setInterval(() => {
       if (running) return
       running = true
-      invoke('sync_outbox_real_cmd', { limite: 50 })
+      executarSyncOutboxComMetrica(50)
         .catch(() => {
           // Sem bloquear o caixa offline
         })
@@ -321,9 +377,10 @@ export function App() {
     }, 15000)
 
     return () => window.clearInterval(t)
-  }, [tauriDisponivel, caixaAtualId, refreshOutboxResumo])
+  }, [tauriDisponivel, caixaAtualId, refreshOutboxResumo, executarSyncOutboxComMetrica])
 
   function adicionarDoCatalogo() {
+    const t0 = performance.now()
     const trimmed = codigo.trim()
     if (!trimmed) return
 
@@ -357,7 +414,17 @@ export function App() {
     adicionarItem(item)
     setCodigo('')
     setMensagem(null)
+    const elapsed = performance.now() - t0
+    setMetricaAddItemMs((prev) => atualizarMediaMs(prev, elapsed))
+    focarInputLeitura()
   }
+
+  const statusSync: 'ok' | 'pendente' | 'offline' = !tauriDisponivel
+    ? 'offline'
+    : outboxResumo && (outboxResumo.pendentes_total > 0 || outboxResumo.em_backoff > 0 || outboxResumo.dlq > 0)
+      ? 'pendente'
+      : 'ok'
+  const ultimoItemAdicionado = itens.length > 0 ? itens[itens.length - 1] : null
 
   return (
     <div
@@ -433,8 +500,47 @@ export function App() {
           >
             {status === 'online' ? 'Online' : 'Offline (seguro)'}
           </div>
+          <div
+            style={{
+              fontSize: '0.72rem',
+              color: '#6b7280',
+              padding: '0.2rem 0.6rem',
+              borderRadius: 999,
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              gap: 8,
+            }}
+            title="Métricas locais de performance do PDV"
+          >
+            <span>Leitura→item: {metricaAddItemMs ?? '—'} ms</span>
+            <span>Finalizar: {metricaFinalizarMs ?? '—'} ms</span>
+            <span>Sync: {metricaSyncMs ?? '—'} ms</span>
+          </div>
         </div>
       </header>
+      <div
+        title={
+          statusSync === 'ok'
+            ? 'Sincronização em dia'
+            : statusSync === 'pendente'
+              ? 'Existem pendências de sincronização'
+              : 'Modo offline'
+        }
+        style={{
+          position: 'fixed',
+          right: 16,
+          bottom: 14,
+          width: 14,
+          height: 14,
+          borderRadius: '50%',
+          zIndex: 30,
+          border: '2px solid #ffffff',
+          boxShadow: '0 0 0 1px rgba(0,0,0,0.08)',
+          backgroundColor:
+            statusSync === 'ok' ? '#16a34a' : statusSync === 'pendente' ? '#eab308' : '#dc2626',
+        }}
+      />
 
       {tauriDisponivel &&
         outboxResumo &&
@@ -472,13 +578,18 @@ export function App() {
                       setReprocessandoDlq(true)
                       try {
                         await invoke('outbox_reprocessar_dlq_cmd')
-                        await invoke('sync_outbox_real_cmd', { limite: 50 })
+                        await executarSyncOutboxComMetrica(50)
                         await refreshOutboxResumo()
                         setMensagem(
                           'Eventos repostos na fila. Sync executada em seguida.'
                         )
                       } catch (e) {
-                        setMensagem(`Falha ao reprocessar fila: ${String(e)}`)
+                        setMensagem(
+                          mensagemErroDeExcecao(
+                            e,
+                            'Não foi possível reprocessar a fila de sincronização.',
+                          ),
+                        )
                       } finally {
                         setReprocessandoDlq(false)
                       }
@@ -546,7 +657,7 @@ export function App() {
           app e clique em <strong>Sincronizar catálogo</strong>.
           {ultimoErroSincCatalogo && (
             <div style={{ marginTop: 6, fontSize: 12, color: '#b45309' }}>
-              Detalhe: {ultimoErroSincCatalogo}
+              Motivo: {ultimoErroSincCatalogo}
             </div>
           )}
         </div>
@@ -584,6 +695,7 @@ export function App() {
           </h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input
+              ref={inputLeituraRef}
               autoFocus
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
@@ -593,7 +705,8 @@ export function App() {
               placeholder="Código de barras ou nome do produto..."
               style={{
                 flex: 1,
-                padding: '0.7rem 0.85rem',
+                minHeight: 44,
+                padding: '0.7rem 0.9rem',
                 borderRadius: 999,
                 border: '1px solid #d1d5db',
                 backgroundColor: '#f9fafb',
@@ -605,6 +718,8 @@ export function App() {
             <button
               onClick={adicionarDoCatalogo}
               style={{
+                minHeight: 44,
+                minWidth: 44,
                 padding: '0.7rem 1rem',
                 borderRadius: 999,
                 border: 'none',
@@ -618,38 +733,76 @@ export function App() {
               Adicionar
             </button>
             <button
-              onClick={limparCarrinho}
+              onClick={() => {
+                if (itens.length === 0) return
+                const agora = Date.now()
+                if (confirmarLimparAte < agora) {
+                  setConfirmarLimparAte(agora + 2200)
+                  setMensagem('Toque novamente em "Novo Cupom (Esc)" em até 2s para confirmar limpeza.')
+                  return
+                }
+                limparCarrinho()
+                setConfirmarLimparAte(0)
+                setMensagem('Cupom limpo.')
+                focarInputLeitura()
+              }}
               disabled={itens.length === 0}
               style={{
+                minHeight: 44,
+                minWidth: 44,
                 padding: '0.7rem 1rem',
                 borderRadius: 999,
-                border: '1px solid #d1d5db',
+                border: '1px solid #fca5a5',
                 background: itens.length === 0 ? '#f9fafb' : '#ffffff',
-                color: itens.length === 0 ? '#9ca3af' : '#374151',
+                color: itens.length === 0 ? '#9ca3af' : '#b91c1c',
                 fontSize: 13,
                 fontWeight: 500,
                 cursor: itens.length === 0 ? 'default' : 'pointer',
               }}
             >
-              Novo cupom
+              Novo Cupom (Esc)
             </button>
           </div>
           {mensagem && (
-            <p
+            <div
               style={{
                 fontSize: 13,
-                ...(mensagem.startsWith('Falha')
+                ...(mensagemEhErro(mensagem)
                   ? { color: '#b91c1c', backgroundColor: '#fee2e2' }
-                  : mensagem.includes('vazio') || mensagem.includes('.env')
+                  : mensagemEhAviso(mensagem)
                     ? { color: '#92400e', backgroundColor: '#fffbeb' }
                     : { color: '#166534', backgroundColor: '#dcfce7' }),
-                padding: '0.35rem 0.6rem',
+                padding: '0.35rem 0.5rem 0.35rem 0.65rem',
                 borderRadius: 999,
                 alignSelf: 'flex-start',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
               }}
             >
-              {mensagem}
-            </p>
+              <span>{mensagem}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setMensagem(null)
+                  focarInputLeitura()
+                }}
+                style={{
+                  border: 'none',
+                  borderRadius: 999,
+                  minWidth: 24,
+                  minHeight: 24,
+                  cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.55)',
+                  color: 'inherit',
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+                aria-label="Fechar alerta"
+              >
+                ×
+              </button>
+            </div>
           )}
 
           <div
@@ -728,9 +881,28 @@ export function App() {
                         display: 'flex',
                         justifyContent: 'flex-end',
                         alignItems: 'center',
-                        gap: 4,
+                        gap: 6,
                       }}
                     >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          alterarQuantidade(item.id, Math.max(1, item.quantidade - 1))
+                        }
+                        style={{
+                          minWidth: 44,
+                          minHeight: 44,
+                          borderRadius: 10,
+                          border: '1px solid #d1d5db',
+                          background: '#ffffff',
+                          color: '#111827',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                        aria-label={`Diminuir quantidade de ${item.nome}`}
+                      >
+                        −
+                      </button>
                       <input
                         type="number"
                         min={1}
@@ -739,10 +911,11 @@ export function App() {
                           alterarQuantidade(item.id, Number(e.target.value))
                         }
                         style={{
-                          width: 52,
+                          width: 60,
+                          minHeight: 44,
                           textAlign: 'right',
-                          fontSize: 11,
-                          padding: '2px 4px',
+                          fontSize: 13,
+                          padding: '4px 6px',
                           borderRadius: 6,
                           border: '1px solid #d1d5db',
                           background: '#ffffff',
@@ -750,16 +923,38 @@ export function App() {
                         }}
                       />
                       <button
+                        type="button"
+                        onClick={() => alterarQuantidade(item.id, item.quantidade + 1)}
+                        style={{
+                          minWidth: 44,
+                          minHeight: 44,
+                          borderRadius: 10,
+                          border: '1px solid #d1d5db',
+                          background: '#ffffff',
+                          color: '#111827',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                        aria-label={`Aumentar quantidade de ${item.nome}`}
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => removerItem(item.id)}
                         style={{
-                          border: 'none',
-                          background: 'transparent',
+                          minWidth: 44,
+                          minHeight: 44,
+                          borderRadius: 10,
+                          border: '1px solid #fecaca',
+                          background: '#fff1f2',
                           color: '#b91c1c',
-                          fontSize: 11,
+                          fontSize: 12,
+                          fontWeight: 600,
                           cursor: 'pointer',
                         }}
                       >
-                        x
+                        Remover
                       </button>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -879,13 +1074,35 @@ export function App() {
                 </span>
               </div>
             )}
+            {ultimoItemAdicionado ? (
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: 10,
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                }}
+              >
+                <div style={{ fontSize: 12, color: '#1e3a8a', fontWeight: 700 }}>
+                  Último item adicionado
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: '#111827' }}>
+                  {ultimoItemAdicionado.nome}
+                </div>
+              </div>
+            ) : null}
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: 19,
-                fontWeight: 700,
+                fontSize: 34,
+                fontWeight: 900,
                 marginTop: 8,
+                padding: '0.65rem 0.75rem',
+                borderRadius: 12,
+                background: '#0f172a',
+                color: '#f8fafc',
               }}
             >
               <span>Total a pagar</span>
@@ -899,6 +1116,8 @@ export function App() {
             <button
               disabled={itens.length === 0}
               style={{
+                minHeight: 44,
+                minWidth: 44,
                 padding: '0.6rem 0.9rem',
                 borderRadius: 999,
                 border: '1px solid #d1d5db',
@@ -985,6 +1204,8 @@ export function App() {
             {!caixaAtualId ? (
               <button
                 style={{
+                  minHeight: 44,
+                  minWidth: 44,
                   padding: '0.65rem 0.9rem',
                   borderRadius: 999,
                   border: '1px solid #d1d5db',
@@ -1012,7 +1233,9 @@ export function App() {
                     setCaixaAtualId(String(caixaId))
                     setMensagem('Caixa aberto.')
                   } catch (e) {
-                    setMensagem(`Falha ao abrir caixa: ${String(e)}`)
+                    setMensagem(
+                      mensagemErroDeExcecao(e, 'Não foi possível abrir o caixa. Tente de novo.'),
+                    )
                   }
                 }}
               >
@@ -1021,6 +1244,8 @@ export function App() {
             ) : (
               <button
                 style={{
+                  minHeight: 44,
+                  minWidth: 44,
                   padding: '0.65rem 0.9rem',
                   borderRadius: 999,
                   border: '1px solid #d1d5db',
@@ -1045,7 +1270,9 @@ export function App() {
                     setCaixaAtualId(null)
                     setMensagem('Caixa fechado.')
                   } catch (e) {
-                    setMensagem(`Falha ao fechar caixa: ${String(e)}`)
+                    setMensagem(
+                      mensagemErroDeExcecao(e, 'Não foi possível fechar o caixa. Tente de novo.'),
+                    )
                   }
                 }}
               >
@@ -1056,6 +1283,8 @@ export function App() {
             {caixaAtualId && (
               <button
                 style={{
+                  minHeight: 44,
+                  minWidth: 44,
                   padding: '0.55rem 0.9rem',
                   borderRadius: 999,
                   border: '1px solid #d1d5db',
@@ -1084,7 +1313,12 @@ export function App() {
                     })
                     setMensagem('Movimento registrado.')
                   } catch (e) {
-                    setMensagem(`Falha ao registrar movimento: ${String(e)}`)
+                    setMensagem(
+                      mensagemErroDeExcecao(
+                        e,
+                        'Não foi possível registrar o movimento de caixa.',
+                      ),
+                    )
                   }
                 }}
               >
@@ -1092,23 +1326,31 @@ export function App() {
               </button>
             )}
             <button
-              disabled={itens.length === 0}
+              disabled={itens.length === 0 || isFinalizandoVenda}
               style={{
-                padding: '0.9rem 0.9rem',
+                minHeight: 52,
+                padding: '1rem 1rem',
                 borderRadius: 999,
                 border: 'none',
-                background: itens.length === 0 ? '#bbf7d0' : '#16a34a',
+                background:
+                  itens.length === 0 || isFinalizandoVenda
+                    ? '#86efac'
+                    : 'linear-gradient(135deg,#16a34a,#059669)',
                 color: '#ecfdf3',
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: itens.length === 0 ? 'default' : 'pointer',
+                fontSize: 17,
+                fontWeight: 800,
+                cursor: itens.length === 0 || isFinalizandoVenda ? 'default' : 'pointer',
+                boxShadow: '0 10px 20px rgba(5,150,105,0.25)',
               }}
               onClick={async () => {
-                if (!itens.length) return
+                if (!itens.length || isFinalizandoVenda) return
+                setIsFinalizandoVenda(true)
+                const t0Finalizar = performance.now()
                 if (!tauriDisponivel) {
                   setMensagem(
                     'Execução fora do Tauri. Abra pelo app desktop (janela do Tauri), não pelo navegador em http://localhost:4173.'
                   )
+                  setIsFinalizandoVenda(false)
                   return
                 }
 
@@ -1130,7 +1372,10 @@ export function App() {
                       setCaixaAtualId(String(caixaId))
                     }
                   } catch (e) {
-                    setMensagem(`Falha ao abrir caixa: ${String(e)}`)
+                    setMensagem(
+                      mensagemErroDeExcecao(e, 'Não foi possível preparar o caixa para a venda.'),
+                    )
+                    setIsFinalizandoVenda(false)
                     return
                   }
                 }
@@ -1163,7 +1408,7 @@ export function App() {
                   })
                   limparCarrinho()
                   try {
-                    await invoke('sync_outbox_real_cmd', { limite: 50 })
+                    await executarSyncOutboxComMetrica(50)
                     await refreshOutboxResumo()
                     setMensagem('Venda registrada e sincronizada (quando possível).')
                   } catch {
@@ -1172,11 +1417,17 @@ export function App() {
                   }
                 } catch (e) {
                   console.error(e)
-                  setMensagem(`Falha ao registrar venda local: ${String(e)}`)
+                  setMensagem(
+                    mensagemErroDeExcecao(e, 'Não foi possível registrar a venda no caixa local.'),
+                  )
+                } finally {
+                  const elapsed = performance.now() - t0Finalizar
+                  setMetricaFinalizarMs((prev) => atualizarMediaMs(prev, elapsed))
+                  setIsFinalizandoVenda(false)
                 }
               }}
             >
-              F5 · Finalizar
+              {isFinalizandoVenda ? 'Finalizando…' : 'Finalizar (F10)'}
             </button>
             <div
               style={{
@@ -1184,7 +1435,7 @@ export function App() {
                 color: '#9ca3af',
               }}
             >
-              Atalhos (futuros): F5 Dinheiro · F9 PIX · F10 Cartão.
+              Atalhos: Esc Novo Cupom · F10 Finalizar.
             </div>
           </div>
         </section>

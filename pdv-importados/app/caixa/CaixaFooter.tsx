@@ -110,9 +110,13 @@ export function CaixaFooter({
     <footer className="shrink-0 border-t border-slate-800 bg-slate-950/85 backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <label className="text-xs text-slate-400 flex items-center gap-2 min-w-0">
+          <label
+            className="text-xs text-slate-400 flex items-center gap-2 min-w-0"
+            htmlFor="caixa-forma-pagamento"
+          >
             <span className="shrink-0">{m.pdv.pagamento}</span>
             <select
+              id="caixa-forma-pagamento"
               value={formaPagamento}
               onChange={(e) =>
                 onFormaPagamentoChange(
@@ -136,6 +140,7 @@ export function CaixaFooter({
               className="bg-amber-700/90 text-amber-50 hover:bg-amber-600 border-0"
               onClick={onValidarGerente}
               disabled={validandoGerente}
+              aria-busy={validandoGerente}
             >
               {validandoGerente
                 ? m.caixa.validando_gerente
@@ -148,6 +153,7 @@ export function CaixaFooter({
               disabled={
                 finalizando || itensLength === 0 || buscando || carregandoRegras
               }
+              aria-busy={finalizando}
             >
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
             </Button>
