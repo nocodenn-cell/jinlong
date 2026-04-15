@@ -46,11 +46,9 @@ export type ItemTotalizacaoServidor = {
   quantidade: number
 }
 
-export function roundMoney2(n: number): number {
-  return Math.round(n * 100) / 100
-}
+export { roundMoney2 } from '@/core/cart/totals'
+import { roundMoney2 } from '@/core/cart/totals'
 
-/** Igual ao `calcularTotais` do `carrinhoStore`: soma valores por linha sem arredondar, depois arredonda totais. */
 export function totaisFromItens(itens: ItemTotalizacaoServidor[]) {
   const bruto = itens.reduce((acc, i) => acc + i.precoOriginal * i.quantidade, 0)
   const liquido = itens.reduce((acc, i) => acc + i.precoUnitario * i.quantidade, 0)

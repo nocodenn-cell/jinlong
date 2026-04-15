@@ -18,23 +18,11 @@ import {
   mensagemErroDeExcecao,
   mensagemErroParaUsuario,
 } from './lib/mensagemErroUsuario'
-
-type RegraPrecoCacheLite = {
-  id: string
-  tipo_regra: string
-  produto_id: string | null | undefined
-  categoria_id: string | null | undefined
-  quantidade_minima: number
-  quantidade_maxima: number | null | undefined
-  tipo_desconto: string
-  valor_desconto: number
-  data_validade: string | null | undefined
-  ativo: boolean
-}
+import { mapRegraPrecoRow, type RegraPrecoRow } from '@core/caixa/mapRegrasPreco'
 
 type CatalogoLocalInvoke = {
   produtos?: ProdutoCacheLite[]
-  regras?: RegraPrecoCacheLite[]
+  regras?: RegraPrecoRow[]
 }
 
 /** Resposta de `pdv_config_local_get_cmd` (espelha `PdvConfigCacheDto` no Rust). */
@@ -171,20 +159,8 @@ export function App() {
     (cache: CatalogoLocalInvoke | null | undefined) => {
       if (!cache) return
       const regras: RegraPreco[] = (cache.regras ?? [])
-        .filter((r: RegraPrecoCacheLite) => r.ativo)
-        .map((r: RegraPrecoCacheLite) => ({
-          id: r.id,
-          tipoRegra: r.tipo_regra === 'PRODUTO' ? 'PRODUTO' : 'CATEGORIA',
-          produtoId: r.produto_id ?? undefined,
-          categoriaId: r.categoria_id ?? undefined,
-          quantidadeMinima: r.quantidade_minima,
-          quantidadeMaxima: r.quantidade_maxima ?? undefined,
-          tipoDesconto:
-            r.tipo_desconto === 'VALOR_FIXO' ? 'VALOR_FIXO' : 'PERCENTUAL',
-          valorDesconto: r.valor_desconto,
-          dataValidade: r.data_validade ?? undefined,
-          ativo: r.ativo,
-        }))
+        .filter((r) => r.ativo)
+        .map(mapRegraPrecoRow)
 
       setRegras(regras)
 

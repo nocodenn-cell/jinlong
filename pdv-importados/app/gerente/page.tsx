@@ -2,12 +2,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
-
-function localeFromIdioma(idioma: string) {
-  if (idioma === 'zh') return 'zh-CN'
-  if (idioma === 'zh-HK') return 'zh-HK'
-  return 'pt-BR'
-}
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { formatBRL } from '@/lib/format/money'
 
 export default async function GerenteInicioPage() {
   const { idioma } = await getUsuarioIdioma()
@@ -91,7 +87,7 @@ export default async function GerenteInicioPage() {
         )}
         {card(
           m.dashboard.total_vendido,
-          totalHoje.toLocaleString(locale, { style: 'currency', currency: 'BRL' })
+          formatBRL(totalHoje, locale)
         )}
       </div>
 

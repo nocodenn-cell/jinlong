@@ -4,7 +4,10 @@ import type { ItemCarrinho } from '@core/cart/types'
 import type { PricingContext, RegraPreco, ResultadoPreco } from '@core/pricing/types'
 import { DEFAULT_PRICING_CONTEXT } from '@core/pricing/types'
 import { pricingService } from '@core/pricing/PricingService'
+import { calcularTotaisComGerente } from '@core/cart/totals'
 import { defaultPdvConfig } from '../config/pdvConfig'
+
+export { calcularTotaisComGerente } from '@core/cart/totals'
 
 export interface ItemCarrinhoComPreco extends ItemCarrinho {
   resultado: ResultadoPreco
@@ -19,13 +22,11 @@ interface CartState {
   totalLiquido: number
   totalItens: number
   totalUnidades: number
-  // Desconto especial de gerente (percentual sobre o total já com atacado)
   descontoGerentePercentual: number
   descontoGerenteValor: number
   /** Token emitido pela Edge (`op=validar_gerente`); necessário se o backend exigir auth estrita. */
   descontoGerenteToken: string | null
 
-  // Config dinâmica (carregada via cache local)
   maxDescontoGerentePercentual: number
 
   setRegras: (regras: RegraPreco[], ctx?: PricingContext) => void
@@ -39,45 +40,6 @@ interface CartState {
     maxClamp?: number | null
   ) => void
   setMaxDescontoGerentePercentual: (max: number) => void
-}
-
-function calcularTotaisBase(itens: ItemCarrinhoComPreco[]) {
-  const totalBruto = itens.reduce(
-    (acc, item) => acc + item.resultado.precoOriginal * item.quantidade,
-    0
-  )
-  const totalLiquidoBase = itens.reduce(
-    (acc, item) => acc + item.resultado.precoUnitario * item.quantidade,
-    0
-  )
-  return {
-    totalBruto,
-    totalLiquidoBase,
-    totalItens: itens.length,
-    totalUnidades: itens.reduce((acc, item) => acc + item.quantidade, 0),
-  }
-}
-
-export function calcularTotaisComGerente(
-  itens: ItemCarrinhoComPreco[],
-  descontoGerentePercentual: number
-) {
-  const base = calcularTotaisBase(itens)
-  const descontoGerenteValor =
-    descontoGerentePercentual > 0
-      ? (base.totalLiquidoBase * descontoGerentePercentual) / 100
-      : 0
-  const totalLiquido = base.totalLiquidoBase - descontoGerenteValor
-  const totalDesconto = base.totalBruto - totalLiquido
-
-  return {
-    totalBruto: Math.round(base.totalBruto * 100) / 100,
-    totalDesconto: Math.round(totalDesconto * 100) / 100,
-    totalLiquido: Math.round(totalLiquido * 100) / 100,
-    totalItens: base.totalItens,
-    totalUnidades: base.totalUnidades,
-    descontoGerenteValor: Math.round(descontoGerenteValor * 100) / 100,
-  }
 }
 
 export const useCartStore = create<CartState>()(
