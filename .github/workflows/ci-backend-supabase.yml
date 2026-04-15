@@ -43,7 +43,8 @@ jobs:
       PGPASSWORD: postgres
       PGDATABASE: postgres
     steps:
-      - uses: actions/checkout@v4
+      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install PostgreSQL client
         run: |
@@ -63,9 +64,11 @@ jobs:
   edge-sync-outbox:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      - uses: denoland/setup-deno@v2
+      # Tag de referência: v2.0.4 (major v2)
+      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282
         with:
           deno-version: v2.x
 
@@ -75,11 +78,13 @@ jobs:
   anti-replay-diagnostic-gate:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Detect sync-outbox changes
         id: changes
-        uses: dorny/paths-filter@v3
+        # Tag de referência: v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         with:
           filters: |
             sync_outbox:
