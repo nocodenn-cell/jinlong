@@ -39,13 +39,18 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # Opcional: defina secrets CI_NEXT_PUBLIC_SUPABASE_URL / CI_NEXT_PUBLIC_SUPABASE_ANON_KEY no repositório
-      # (evita JWT literal no YAML). Se ausentes, usa URL de exemplo + anon demo pública do Supabase local.
+      # Build exige secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY (anon do projeto — não versionar JWT no YAML).
+      # URL opcional: secret CI_NEXT_PUBLIC_SUPABASE_URL ou placeholder abaixo.
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' }}
-        run: npm run build
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Defina o secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          npm run build
 
   # Opcional: defina variável de repositório ENABLE_PLAYWRIGHT_E2E=true e os secrets abaixo no GitHub.
   # PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL, PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY

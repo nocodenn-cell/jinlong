@@ -252,6 +252,13 @@ function newRequestId(): string {
   return hexOfBytes(bytes);
 }
 
+/** Uniforme em [0, 1) via Web Crypto; para gatilhos não adivinháveis por atacante (ex.: throttle de manutenção). */
+function secureUnitRandom(): number {
+  const buf = new Uint8Array(4);
+  crypto.getRandomValues(buf);
+  return new DataView(buf.buffer).getUint32(0, false) / 0x100000000;
+}
+
 function eventCorrelationId(ev: OutboxEvent): string {
   try {
     if (ev.tipo === "VENDA_REGISTRADA") {
@@ -888,12 +895,19 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
+  const syncKey = Deno.env.get("SYNC_KEY")?.trim() ?? "";
+  if (!supabaseUrl || !serviceRole || !syncKey) {
+    logJson({ level: "error", stage: "env", request_id: requestId, error: "MISSING_SUPABASE_ENV" });
+    return jsonResponse(500, { ok: false, error: "MISSING_SUPABASE_ENV", request_id: requestId });
+  }
+
   const url = new URL(req.url);
   const op = url.searchParams.get("op");
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const syncKey = Deno.env.get("SYNC_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceRole);
+  const supabase = createClient(supabaseUrl, serviceRole, {
+    auth: { persistSession: false },
+  });
 
   const rawBody = req.method === "POST" ? await req.text() : "";
   const auth = await authorizeSync(req, syncKey, supabase, rawBody);
@@ -944,6 +958,16 @@ Deno.serve(async (req) => {
   }
 });
 
+/** Limpeza oportunista (~3% das requisições autenticadas) para manter a tabela pequena sem job dedicado. */
+async function maybePruneExpiredSyncNonces(supabase: SupabaseAdmin): Promise<void> {
+  if (secureUnitRandom() >= 0.03) return;
+  const nowIso = new Date().toISOString();
+  const { error } = await supabase.from("sync_request_nonces").delete().lt("expires_at", nowIso);
+  if (error) {
+    logJson({ level: "warn", stage: "nonce_prune", error: error.message });
+  }
+}
+
 async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAdmin, rawBody: string) {
   const gotKey = req.headers.get("X-SYNC-KEY");
   const ts = req.headers.get("X-SYNC-TS");
@@ -953,16 +977,31 @@ async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAd
 
   if (!gotKey || !timingSafeEqualStr(gotKey, syncKey)) return { ok: false, error: "UNAUTHORIZED" };
   if (!ts || !nonce || !signature) return { ok: false, error: "MISSING_HEADERS" };
+  const nonceTrim = nonce.trim();
+  if (!isUuid(nonceTrim)) return { ok: false, error: "INVALID_NONCE" };
 
   const tsNum = Number(ts);
   if (Math.abs(Math.floor(Date.now() / 1000) - tsNum) > MAX_CLOCK_SKEW_SECONDS) return { ok: false, error: "TS_OUT_OF_WINDOW" };
 
-  const payload = `${ts}.${nonce}.${rawBody}`;
+  const payload = `${ts}.${nonceTrim}.${rawBody}`;
   const expectedSig = await hmacSha256Hex(syncKey, payload);
   if (!timingSafeEqualStr(signature.toLowerCase(), expectedSig.toLowerCase())) return { ok: false, error: "INVALID_SIG" };
 
-  const { error } = await supabase.from("sync_request_nonces").insert({ nonce, device_fingerprint: device, request_ts: tsNum });
+  const expiresAt = new Date((tsNum + NONCE_TTL_SECONDS) * 1000).toISOString();
+  const { error } = await supabase.from("sync_request_nonces").insert({
+    nonce: nonceTrim,
+    device_fingerprint: device,
+    request_ts: tsNum,
+    expires_at: expiresAt,
+  });
   if (error) return { ok: false, error: "REPLAY_OR_DB_ERROR" };
+
+  try {
+    await maybePruneExpiredSyncNonces(supabase);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logJson({ level: "warn", stage: "nonce_prune_fatal", error: msg });
+  }
 
   return { ok: true };
 }
