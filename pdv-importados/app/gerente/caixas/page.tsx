@@ -3,23 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
-
-function localeFromIdioma(idioma: string) {
-  if (idioma === 'zh') return 'zh-CN'
-  if (idioma === 'zh-HK') return 'zh-HK'
-  return 'pt-BR'
-}
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 function round2(v: number): number {
   return Math.round(v * 100) / 100
 }
 
-function currency(value: number, locale: string): string {
-  return value.toLocaleString(locale, {
-    style: 'currency',
-    currency: 'BRL',
-  })
-}
+import { formatBRL } from '@/lib/format/money'
 
 export default async function GerenteCaixasPage() {
   const { idioma } = await getUsuarioIdioma()
@@ -163,17 +153,17 @@ export default async function GerenteCaixasPage() {
                 </td>
                 <td style={{ padding: 10 }}>{c.status}</td>
                 <td style={{ padding: 10 }}>
-                  {currency(Number(c.valor_inicial), locale)}
+                  {formatBRL(Number(c.valor_inicial), locale)}
                 </td>
                 <td style={{ padding: 10 }}>
                   {c.valor_fechamento != null
-                    ? currency(Number(c.valor_fechamento), locale)
+                    ? formatBRL(Number(c.valor_fechamento), locale)
                     : '—'}
                 </td>
-                <td style={{ padding: 10 }}>{currency(valorSistemaDinheiro, locale)}</td>
+                <td style={{ padding: 10 }}>{formatBRL(valorSistemaDinheiro, locale)}</td>
                 <td style={{ padding: 10, color: temDivergencia ? '#b45309' : undefined }}>
                   {diferenca != null
-                    ? `${diferenca > 0 ? '+' : ''}${currency(diferenca, locale)}`
+                    ? `${diferenca > 0 ? '+' : ''}${formatBRL(diferenca, locale)}`
                     : '—'}
                 </td>
                 <td style={{ padding: 10, maxWidth: 240, color: '#374151' }}>

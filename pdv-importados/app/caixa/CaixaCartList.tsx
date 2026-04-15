@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import type { ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import type { Mensagens } from "@/src/lib/i18n/getMessages"
 import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
+import { formatDecimal2 } from "@/lib/format/money"
 
 type Props = {
   m: Mensagens
@@ -14,10 +15,6 @@ type Props = {
   moeda: string
   onAlterarQuantidade: (itemId: string, quantidade: number) => void
   onRemover: (itemId: string) => void
-}
-
-function money(n: number, locale: string) {
-  return n.toLocaleString(locale, { minimumFractionDigits: 2 })
 }
 
 function listLocale(idioma: Idioma) {
@@ -90,11 +87,11 @@ export function CaixaCartList({
                 </Button>
               </div>
               <div className="text-right tabular-nums text-sm">
-                {moeda} {money(item.resultado.precoOriginal, locale)}
+                {moeda} {formatDecimal2(item.resultado.precoOriginal, locale)}
               </div>
               <div className="text-right tabular-nums text-sm">
                 {moeda}{" "}
-                {money(item.resultado.precoUnitario * item.quantidade, locale)}
+                {formatDecimal2(item.resultado.precoUnitario * item.quantidade, locale)}
               </div>
               <TipoPrecoBadge m={m} tipo={item.resultado.tipoPreco} />
             </li>
@@ -143,14 +140,14 @@ export function CaixaCartList({
                 <div>
                   <span className="text-slate-500 block">{m.caixa.col_unit}</span>
                   <span className="tabular-nums">
-                    {moeda} {money(item.resultado.precoOriginal, locale)}
+                    {moeda} {formatDecimal2(item.resultado.precoOriginal, locale)}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-500 block">{m.caixa.col_total}</span>
                   <span className="tabular-nums font-medium text-slate-100">
                     {moeda}{" "}
-                    {money(
+                    {formatDecimal2(
                       item.resultado.precoUnitario * item.quantidade,
                       locale,
                     )}

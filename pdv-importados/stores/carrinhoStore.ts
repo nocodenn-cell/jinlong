@@ -14,6 +14,7 @@ import {
   DEFAULT_PRICING_CONTEXT,
   type PricingContext,
 } from '@/core/pricing/types'
+import { calcularTotais } from '@/core/cart/totals'
 
 export interface ItemCarrinhoComPreco extends ItemCarrinho {
   resultado: ResultadoPreco
@@ -24,40 +25,18 @@ interface CarrinhoState {
   regras: RegraPreco[]
   pricingCtx: PricingContext
 
-  // Totais calculados
   totalBruto: number
   totalDesconto: number
   totalLiquido: number
   totalItens: number
   totalUnidades: number
 
-  // Ações
   setRegras: (regras: RegraPreco[], ctx?: PricingContext) => void
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (itemId: string) => void
   alterarQuantidade: (itemId: string, quantidade: number) => void
   aplicarDescontoManual: (itemId: string, desconto: number, motivo: string) => void
   limparCarrinho: () => void
-}
-
-function calcularTotais(itens: ItemCarrinhoComPreco[]) {
-  const totalBruto = itens.reduce(
-    (acc, item) => acc + item.resultado.precoOriginal * item.quantidade,
-    0
-  )
-  const totalLiquido = itens.reduce(
-    (acc, item) => acc + item.resultado.precoUnitario * item.quantidade,
-    0
-  )
-  const totalDesconto = totalBruto - totalLiquido
-
-  return {
-    totalBruto: Math.round(totalBruto * 100) / 100,
-    totalDesconto: Math.round(totalDesconto * 100) / 100,
-    totalLiquido: Math.round(totalLiquido * 100) / 100,
-    totalItens: itens.length,
-    totalUnidades: itens.reduce((acc, item) => acc + item.quantidade, 0),
-  }
 }
 
 export const useCarrinhoStore = create<CarrinhoState>()(

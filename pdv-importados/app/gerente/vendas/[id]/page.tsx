@@ -3,12 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
-
-function localeFromIdioma(idioma: string) {
-  if (idioma === 'zh') return 'zh-CN'
-  if (idioma === 'zh-HK') return 'zh-HK'
-  return 'pt-BR'
-}
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { formatBRL } from '@/lib/format/money'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -97,8 +93,7 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
     movimentosCaixa = (data ?? []) as typeof movimentosCaixa
   }
 
-  const money = (n: number) =>
-    Number(n).toLocaleString(locale, { style: 'currency', currency: 'BRL' })
+  const money = (n: number) => formatBRL(Number(n), locale)
 
   function labelMovimentoTipo(tipo: string): string {
     const labels: Record<string, string> = {

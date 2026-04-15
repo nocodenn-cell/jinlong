@@ -10,12 +10,8 @@ import {
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
-
-function localeFromIdioma(idioma: string) {
-  if (idioma === 'zh') return 'zh-CN'
-  if (idioma === 'zh-HK') return 'zh-HK'
-  return 'pt-BR'
-}
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { formatBRL } from '@/lib/format/money'
 
 type VendaDia = {
   dia: string
@@ -78,8 +74,7 @@ export default async function GerenteRelatoriosPage(props: PageProps) {
   const porDia = (porDiaRaw ?? []) as VendaDia[]
   const top = (topRaw ?? []) as TopProd[]
 
-  const fmtMoney = (n: number) =>
-    Number(n).toLocaleString(locale, { style: 'currency', currency: 'BRL' })
+  const fmtMoney = (n: number) => formatBRL(Number(n), locale)
 
   const sec = (title: string, children: ReactNode) => (
     <section style={{ marginBottom: 32 }}>

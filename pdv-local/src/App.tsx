@@ -18,23 +18,11 @@ import {
   mensagemErroDeExcecao,
   mensagemErroParaUsuario,
 } from './lib/mensagemErroUsuario'
-
-type RegraPrecoCacheLite = {
-  id: string
-  tipo_regra: string
-  produto_id: string | null | undefined
-  categoria_id: string | null | undefined
-  quantidade_minima: number
-  quantidade_maxima: number | null | undefined
-  tipo_desconto: string
-  valor_desconto: number
-  data_validade: string | null | undefined
-  ativo: boolean
-}
+import { mapRegraPrecoRow, type RegraPrecoRow } from '@core/caixa/mapRegrasPreco'
 
 type CatalogoLocalInvoke = {
   produtos?: ProdutoCacheLite[]
-  regras?: RegraPrecoCacheLite[]
+  regras?: RegraPrecoRow[]
 }
 
 /** Resposta de `pdv_config_local_get_cmd` (espelha `PdvConfigCacheDto` no Rust). */
@@ -65,6 +53,18 @@ function mensagemEhErro(msg: string): boolean {
 function mensagemEhAviso(msg: string): boolean {
   const t = msg.toLowerCase()
   return t.includes('vazio') || t.includes('.env') || t.startsWith('motivo:')
+}
+
+function corIndicadorSync(statusSync: string): string {
+  if (statusSync === 'ok') return '#16a34a'
+  if (statusSync === 'pendente') return '#eab308'
+  return '#dc2626'
+}
+
+function bgOutboxBanner(resumo: { dlq: number; em_backoff: number }): string {
+  if (resumo.dlq > 0) return '#fef2f2'
+  if (resumo.em_backoff > 0) return '#fffbeb'
+  return '#eff6ff'
 }
 
 function estiloBannerMensagem(mensagem: string): Pick<CSSProperties, 'color' | 'backgroundColor'> {
@@ -159,20 +159,8 @@ export function App() {
     (cache: CatalogoLocalInvoke | null | undefined) => {
       if (!cache) return
       const regras: RegraPreco[] = (cache.regras ?? [])
-        .filter((r: RegraPrecoCacheLite) => r.ativo)
-        .map((r: RegraPrecoCacheLite) => ({
-          id: r.id,
-          tipoRegra: r.tipo_regra === 'PRODUTO' ? 'PRODUTO' : 'CATEGORIA',
-          produtoId: r.produto_id ?? undefined,
-          categoriaId: r.categoria_id ?? undefined,
-          quantidadeMinima: r.quantidade_minima,
-          quantidadeMaxima: r.quantidade_maxima ?? undefined,
-          tipoDesconto:
-            r.tipo_desconto === 'VALOR_FIXO' ? 'VALOR_FIXO' : 'PERCENTUAL',
-          valorDesconto: r.valor_desconto,
-          dataValidade: r.data_validade ?? undefined,
-          ativo: r.ativo,
-        }))
+        .filter((r) => r.ativo)
+        .map(mapRegraPrecoRow)
 
       setRegras(regras)
 
@@ -547,8 +535,7 @@ export function App() {
           zIndex: 30,
           border: '2px solid #ffffff',
           boxShadow: '0 0 0 1px rgba(0,0,0,0.08)',
-          backgroundColor:
-            statusSync === 'ok' ? '#16a34a' : statusSync === 'pendente' ? '#eab308' : '#dc2626',
+          backgroundColor: corIndicadorSync(statusSync),
         }}
       />
 
@@ -560,12 +547,7 @@ export function App() {
               padding: '0.45rem 1.5rem',
               fontSize: 13,
               borderBottom: '1px solid #e5e7eb',
-              backgroundColor:
-                outboxResumo.dlq > 0
-                  ? '#fef2f2'
-                  : outboxResumo.em_backoff > 0
-                    ? '#fffbeb'
-                    : '#eff6ff',
+              backgroundColor: bgOutboxBanner(outboxResumo),
               color: outboxResumo.dlq > 0 ? '#991b1b' : '#374151',
               display: 'flex',
               flexWrap: 'wrap',

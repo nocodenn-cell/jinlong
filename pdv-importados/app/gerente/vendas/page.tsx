@@ -3,12 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
-
-function localeFromIdioma(idioma: string) {
-  if (idioma === 'zh') return 'zh-CN'
-  if (idioma === 'zh-HK') return 'zh-HK'
-  return 'pt-BR'
-}
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 export default async function GerenteVendasPage() {
   const { idioma } = await getUsuarioIdioma()
