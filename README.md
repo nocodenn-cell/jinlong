@@ -9,6 +9,7 @@ PDV para lojas de importados no Brasil, com interface em **português**, **普�
 | `pdv-importados/` | Next.js 15 (App Router), Supabase Auth, painel web gerente + login |
 | `pdv-local/` | Tauri 2 + React + Vite + SQLite (PDV desktop, outbox de sync) |
 | `backend/` | **Backend Supabase** — migrations PostgreSQL, Edge Functions (ex.: `sync-outbox`) |
+| `shared/` | Trechos mínimos compartilhados entre pacotes (ex.: polyfill Vitest, `env-check-lib`) |
 | `docs/` | Documentação do monorepo (deploy, E2E, release, prompts) |
 
 ## Como rodar
@@ -33,6 +34,16 @@ cp .env.example .env   # preencher SYNC_ENDPOINT e SYNC_KEY do mesmo projeto Sup
 npm run tauri
 # ou: npx tauri dev
 ```
+
+## Git hooks (opcional)
+
+Na raiz do repositório, para bloquear commit acidental de `.env` / `.env.local`:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+O hook executa `scripts/git-pre-commit-check.mjs` (resolve o `git` em caminhos padrão do Git for Windows / Linux; se necessário, defina **`GIT_EXE`** com o caminho absoluto do executável). PRs também exibem checklist em [`.github/pull_request_template.md`](.github/pull_request_template.md).
 
 ## Documentação
 

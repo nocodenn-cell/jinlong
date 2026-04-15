@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
+import { SignOutButton } from '@/components/auth/SignOutButton'
 import { getUsuarioIdioma, isGerenteOuDono } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import LanguageToggle from './idioma/LanguageToggle'
@@ -53,6 +54,15 @@ export default async function GerenteLayout({
             <Link href="/gerente/estoque" style={{ color: '#111827' }}>
               {m.estoque.titulo}
             </Link>
+            <Link href="/gerente/recebimento" style={{ color: '#111827' }}>
+              {m.gerente.nav_recebimento}
+            </Link>
+            <Link href="/gerente/transferencias" style={{ color: '#111827' }}>
+              {m.gerente.nav_transferencias}
+            </Link>
+            <Link href="/gerente/financeiro" style={{ color: '#111827' }}>
+              {m.gerente.nav_financeiro}
+            </Link>
             <Link href="/gerente/vendas" style={{ color: '#111827' }}>
               {m.gerente.nav_vendas}
             </Link>
@@ -63,12 +73,18 @@ export default async function GerenteLayout({
               {m.gerente.nav_relatorios}
             </Link>
             <Link href="/admin/dashboard" style={{ color: '#111827' }}>
-              Admin
+              {m.gerente.nav_admin}
             </Link>
           </nav>
         </div>
 
-        {podeTrocarIdioma ? <LanguageToggle idiomaAtual={idioma} /> : null}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          {podeTrocarIdioma ? <LanguageToggle idiomaAtual={idioma} /> : null}
+          <SignOutButton
+            label={m.comum.sair}
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50"
+          />
+        </div>
       </header>
 
       <main>{children}</main>

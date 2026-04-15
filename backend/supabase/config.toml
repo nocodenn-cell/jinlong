@@ -1,8 +1,13 @@
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config
-# A string used to distinguish different Supabase projects on the same host. Defaults to the
-# working directory name when running `supabase init`.
-project_id = "pdv-importados"
+#
+# Portas fixas deste workspace (evite rodar outro `supabase start` na mesma máquina sem
+# `supabase stop` ou sem mudar portas em um dos projetos):
+#   API (Kong) 54321 | Postgres 54322 | Studio 54323 | Inbucket 54324 | Analytics 54327
+#   shadow DB (db diff) 54320 | pooler (desligado) 54329
+#
+# project_id: nome dos containers Docker `supabase_*_<id>` — alinhar ao monorepo `fastproduct`.
+project_id = "fastproduct"
 
 [api]
 enabled = true

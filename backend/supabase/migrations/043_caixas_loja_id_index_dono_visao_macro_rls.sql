@@ -8,7 +8,7 @@ COMMENT ON INDEX public.idx_caixas_loja_id IS
   'Suporta joins RLS vendas↔caixas e consultas por loja.';
 
 -- Visão macro: perfil DONO enxerga estoque e vendas de todas as lojas (SELECT apenas).
--- GERENTE permanece restrito à usuarios.loja_id (042). Não existe perfil ADMIN em public.usuarios.
+-- GERENTE e ADMIN permanecem restritos à usuarios.loja_id (042); perfil ADMIN definido em 044.
 
 CREATE POLICY "estoque_select_dono_todas_lojas"
   ON public.estoque FOR SELECT TO authenticated

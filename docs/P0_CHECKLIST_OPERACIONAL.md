@@ -13,16 +13,16 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 
 **Smoke adicional 023 (desconto gerente por token):**
 
-- Rodar [`backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql`](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql) no SQL Editor.
-- Alternativa operacional (copy/paste por ambiente): [`backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql`](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql).
+- Rodar `[backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente.sql)` no SQL Editor.
+- Alternativa operacional (copy/paste por ambiente): `[backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql)`.
 - Esperado: cenário **token válido** conclui e consome token; **expirado** e **já usado** falham com erro esperado.
 
-2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, HMAC/`SYNC_KEY` e chamada a `decrementar_estoque_seguro`.
-3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC_*` do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
-4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
-   - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC legada) e **010** (leitura `estoque_baixas` para gerente); caixa web usa **016** `decrementar_estoque_seguro` quando aplicada.
-   - **§4 (com desktop):** além disso, **§3** (`pdv-local/.env` + `SYNC_*`) → catálogo → venda no Tauri → sync → mesma checagem no Supabase e na web.
-5. Marcar os checkboxes deste arquivo para o ambiente (piloto/produção) que você chama de **oficial**.
+1. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, HMAC/`SYNC_KEY` e chamada a `decrementar_estoque_seguro`.
+2. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC`_* do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
+3. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
+  - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC legada) e **010** (leitura `estoque_baixas` para gerente); caixa web usa **016** `decrementar_estoque_seguro` quando aplicada.
+  - **§4 (com desktop):** além disso, **§3** (`pdv-local/.env` + `SYNC_`*) → catálogo → venda no Tauri → sync → mesma checagem no Supabase e na web.
+4. Marcar os checkboxes deste arquivo para o ambiente (piloto/produção) que você chama de **oficial**.
 
 ### O que é obrigatório em qualquer piloto
 
@@ -44,18 +44,17 @@ npx supabase migration list
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  
-[`backend/supabase/scripts/verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql)
+`[backend/supabase/scripts/verify_p0_producao.sql](../backend/supabase/scripts/verify_p0_producao.sql)`
 
-- `descontos_venda` com **RLS ativo** e policies `descontos_venda_*`.
+- `descontos_venda` com **RLS ativo** e policies `descontos_venda`_*.
 - Função `decrementar_estoque_idempotente` existente (legado; caixa/Edge preferem **016**).
 - Tabela `estoque_baixas` existente.
-
-- [ ] **001–010** aplicadas no projeto **produção** (e demais migrations até a última versionada no repositório, sem lacunas — ver parágrafo acima)
-- [ ] **001–010** aplicadas em **staging/dev** (e o mesmo critério de sequência completa até a última migration usada pelo time)
+- **001–010** aplicadas no projeto **produção** (e demais migrations até a última versionada no repositório, sem lacunas — ver parágrafo acima)
+- **001–010** aplicadas em **staging/dev** (e o mesmo critério de sequência completa até a última migration usada pelo time)
 
 **Migrations 011–013 (relatórios na web):** RPCs `relatorio_*_periodo` com `p_tz` validado; tabela `relatorio_settings` (fusos IANA); env `RELATORIO_TIMEZONE` no servidor prevalece sobre a tabela. O `verify_p0_producao.sql` inclui checagem na seção **5**.
 
-- [ ] **011**, **012** e **013** aplicadas onde o gerente usa relatórios com intervalo de datas
+- **011**, **012** e **013** aplicadas onde o gerente usa relatórios com intervalo de datas
 
 ### 1b. Migrations 014 e 015 (outbox + segurança)
 
@@ -69,10 +68,10 @@ Smoke rápido após **015**:
 - **Web (§4b):** uma venda no `/caixa` deve concluir sem erro de RPC.
 - **Desktop (§4):** sync da outbox após venda de teste; no Dashboard, `vendas` / `itens_venda` coerentes.
 
-No SQL Editor, rode a seção **6** de [`verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql) para confirmar privilégios.
+No SQL Editor, rode a seção **6** de `[verify_p0_producao.sql](../backend/supabase/scripts/verify_p0_producao.sql)` para confirmar privilégios.
 
-- [ ] **014** e **015** aplicadas em **produção** (e staging/dev, se existirem)
-- [ ] **sync-outbox** redeployada após **015**
+- **014** e **015** aplicadas em **produção** (e staging/dev, se existirem)
+- **sync-outbox** redeployada após **015**
 
 ### 1c. Migration 016 (estoque atômico - controle de concorrência)
 
@@ -98,34 +97,34 @@ A migration **016** cria a RPC `decrementar_estoque_seguro` que resolve **race c
 - **Desktop (§4):** sync de venda com vários itens; verificar se todas as baixas foram registradas
 - Teste de concorrência: simular dois caixas tentando vender o último item (um deve receber erro de estoque insuficiente)
 
-No SQL Editor, rode a seção **7** de [`verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql) para confirmar a RPC e a coluna `version`.
+No SQL Editor, rode a seção **7** de `[verify_p0_producao.sql](../backend/supabase/scripts/verify_p0_producao.sql)` para confirmar a RPC e a coluna `version`.
 
-- [ ] **016** aplicada em **produção** (e staging/dev, se existirem)
-- [ ] **sync-outbox** redeployada após **016** (usa `decrementar_estoque_seguro`)
+- **016** aplicada em **produção** (e staging/dev, se existirem)
+- **sync-outbox** redeployada após **016** (usa `decrementar_estoque_seguro`)
 
 ### 1d. Migration 017 (auth em `decrementar_estoque_seguro`)
 
 A **017** reforça a RPC **016**: papel **authenticated** só decrementa se `p_venda_id` for de venda do **mesmo** `auth.uid()`; **service_role** (Edge) sem essa checagem.
 
-- [ ] **017** aplicada após **016** em todos os ambientes
-- [ ] **sync-outbox** redeployada se ainda estiver em versão anterior à que chama `decrementar_estoque_seguro`
+- **017** aplicada após **016** em todos os ambientes
+- **sync-outbox** redeployada se ainda estiver em versão anterior à que chama `decrementar_estoque_seguro`
 
 ### 1e. Migration 018 (tokens de desconto de gerente)
 
 A **018** cria `tokens_desconto_gerente`, usada pela Edge `validar-gerente` para registrar tokens temporários com auditoria.
 
-- [ ] **018** aplicada em todos os ambientes que usam `validar-gerente`
+- **018** aplicada em todos os ambientes que usam `validar-gerente`
 
 ### 1f. Migrations 024 e 025 (anti-replay + fluxo unificado canônico)
 
 - **024** cria `sync_request_nonces` (RLS ativo) para bloquear replay por `nonce`, com acesso apenas para `service_role`.
 - **025** cria `finalizar_venda_transacional_canonica_v2` para rollout progressivo do fluxo unificado.
 
-Valide no SQL Editor com [`verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql) (seções 11+).
+Valide no SQL Editor com `[verify_p0_producao.sql](../backend/supabase/scripts/verify_p0_producao.sql)` (seções 11+).
 
-- [ ] **024** aplicada em todos os ambientes que usam `sync-outbox`
-- [ ] **025** aplicada em todos os ambientes que usam rollout canário/unificado
-- [ ] `verify_p0_producao.sql` executado e evidenciado (print/log) no ambiente oficial
+- **024** aplicada em todos os ambientes que usam `sync-outbox`
+- **025** aplicada em todos os ambientes que usam rollout canário/unificado
+- `verify_p0_producao.sql` executado e evidenciado (print/log) no ambiente oficial
 
 ---
 
@@ -154,9 +153,9 @@ npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY="(valor do painel)"
 npx supabase secrets set SYNC_KEY="(segredo forte)"
 ```
 
-- [ ] Function **deployada** na versão atual do repositório
-- [ ] **Três** secrets definidos e iguais à intenção do `.env` local (item 3)
-- [ ] Diagnóstico anti-replay executado com sucesso (`backend/scripts/sync-outbox-anti-replay-diagnostic.ps1`)
+- Function **deployada** na versão atual do repositório
+- **Três** secrets definidos e iguais à intenção do `.env` local (item 3)
+- Diagnóstico anti-replay executado com sucesso (`backend/scripts/sync-outbox-anti-replay-diagnostic.ps1`)
 
 **Painel:** Edge Functions → `sync-outbox` → confirmar **Deployed** e URL típica  
 `https://<ref>.supabase.co/functions/v1/sync-outbox`
@@ -174,9 +173,9 @@ Arquivo **não versionado**; copie de `.env.example` e preencha com valores **re
 | `SYNC_KEY`      | **Idêntico** ao `SYNC_KEY` dos secrets da Edge.      |
 
 
-- [ ] `.env` presente na raiz de `pdv-local`
-- [ ] Reinício do app Tauri após alteração
-- [ ] **Sincronizar catálogo** sem erro 401
+- `.env` presente na raiz de `pdv-local`
+- Reinício do app Tauri após alteração
+- **Sincronizar catálogo** sem erro 401
 
 ---
 
@@ -187,9 +186,9 @@ Arquivo **não versionado**; copie de `.env.example` e preencha com valores **re
 3. Desktop: **Uma venda de teste** + **Finalizar**.
 4. Aguardar sync (ou intervalo ~15 s com caixa aberto) / verificar fila e **DLQ** se necessário.
 5. Supabase: tabelas `vendas`, `itens_venda` (e movimento de estoque conforme **007**).
-6. Web: login gerente → **`/gerente/vendas`** — venda visível.
+6. Web: login gerente → `**/gerente/vendas`** — venda visível.
 
-- [ ] Passos 1–6 OK no ambiente **oficial** de loja/piloto
+- Passos 1–6 OK no ambiente **oficial** de loja/piloto
 
 ### 4b. Teste mínimo só com caixa web (sem desktop / sem outbox)
 
@@ -200,24 +199,24 @@ Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não e
 3. No Supabase: linhas em `vendas`, `itens_venda`; estoque coerente com a **007**.
 4. Login **GERENTE/DONO** → `/gerente/vendas` — mesma venda na lista.
 
-- [ ] Passos 1–4 OK (piloto **web-only**)
+- Passos 1–4 OK (piloto **web-only**)
 
 ---
 
 ## 5. Web (`pdv-importados`)
 
-- [ ] `.env.local` na Vercel/host com `NEXT_PUBLIC_*` do **mesmo** `ref`
-- [ ] Deploy da aplicação apontando para esse projeto
+- `.env.local` na Vercel/host com `NEXT_PUBLIC_*` do **mesmo** `ref`
+- Deploy da aplicação apontando para esse projeto
 
 ---
 
 ## 6. CI / gate em PR (backend)
 
-- [ ] Workflow **CI backend Supabase** (`.github/workflows/ci-backend-supabase.yml`) executa smoke de migrations + `deno check` da Edge.
-- [ ] No GitHub do repositório: secrets **`SYNC_ENDPOINT`** (URL completa `.../functions/v1/sync-outbox`) e **`SYNC_KEY`** (igual ao secret da Edge) — usados pelo job `anti-replay-diagnostic-gate`.
-- [ ] Com secrets preenchidos: o job roda `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1` contra o ambiente apontado (validação ponta a ponta).
-- [ ] **PR interno** que altera `sync-outbox` ou o script de diagnóstico **sem** esses secrets deve falhar no passo de validação (gate explícito).
-- [ ] PRs de **fork**: o gate não exige secrets no fork; o diagnóstico só roda se o repositório base tiver secrets (comportamento esperado para não vazar `SYNC_KEY`).
+- Workflow **CI backend Supabase** (`.github/workflows/ci-backend-supabase.yml`) executa smoke de migrations + `deno check` da Edge.
+- No GitHub do repositório: secrets `**SYNC_ENDPOINT`** (URL completa `.../functions/v1/sync-outbox`) e `**SYNC_KEY`** (igual ao secret da Edge) — usados pelo job `anti-replay-diagnostic-gate`.
+- Com secrets preenchidos: o job roda `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1` contra o ambiente apontado (validação ponta a ponta).
+- **PR interno** que altera `sync-outbox` ou o script de diagnóstico **sem** esses secrets deve falhar no passo de validação (gate explícito).
+- PRs de **fork**: o gate não exige secrets no fork; o diagnóstico só roda se o repositório base tiver secrets (comportamento esperado para não vazar `SYNC_KEY`).
 
 ---
 

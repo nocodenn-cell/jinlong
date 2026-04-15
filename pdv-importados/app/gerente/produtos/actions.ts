@@ -9,9 +9,10 @@ import {
   criarProdutoComEstoque,
   alternarAtivoProduto as alternarAtivoNoDominio,
 } from '@/core/services/produtoService'
+import { mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
 
 const NovoProdutoSchema = z.object({
-  nome: z.string().min(2),
+  nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
   codigo_barras: z
     .string()
     .optional()
@@ -23,8 +24,10 @@ const NovoProdutoSchema = z.object({
       (s) => s === null || s.length >= 3,
       'Código de barras: mínimo 3 caracteres ou deixe em branco'
     ),
-  preco_varejo: z.coerce.number().positive(),
-  origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf']),
+  preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
+  origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf'], {
+    errorMap: () => ({ message: 'Origem do produto inválida.' }),
+  }),
   tem_nf: z.coerce.boolean(),
 })
 
@@ -40,10 +43,8 @@ export async function criarProduto(
 
   const parsed = NovoProdutoSchema.safeParse(input)
   if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.errors[0]?.message ?? 'Dados inválidos',
-    }
+    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    return { success: false, error: mensagemErroValidacaoZod(msg) }
   }
 
   const supabase = await createClient()

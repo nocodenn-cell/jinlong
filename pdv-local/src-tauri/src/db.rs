@@ -1,15 +1,15 @@
-use rusqlite::{params, Connection};
+use hmac::{Hmac, Mac};
 use rusqlite::OptionalExtension;
+use rusqlite::{params, Connection};
+use sha2::Sha256;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-use hmac::{Hmac, Mac};
-use sha2::Sha256;
 
 use serde::Deserialize;
-use tauri::Manager;
-use serde_json::json;
 use serde::Serialize;
+use serde_json::json;
+use tauri::Manager;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -445,11 +445,9 @@ pub fn get_caixa_atual(app: &tauri::AppHandle) -> Result<Option<CaixaSessaoDto>,
 }
 
 fn sqlite_iso_utc(tx: &rusqlite::Transaction<'_>) -> Result<String, String> {
-    tx.query_row(
-        "SELECT strftime('%Y-%m-%dT%H:%M:%SZ', 'now')",
-        [],
-        |r| r.get(0),
-    )
+    tx.query_row("SELECT strftime('%Y-%m-%dT%H:%M:%SZ', 'now')", [], |r| {
+        r.get(0)
+    })
     .map_err(|e| e.to_string())
 }
 
@@ -655,7 +653,9 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
     });
 
     let produtos: Vec<ProdutoCacheDto> = match produtos_iter {
-        Ok(it) => it.map(|r| r.map_err(|e| e.to_string())).collect::<Result<Vec<_>, _>>()?,
+        Ok(it) => it
+            .map(|r| r.map_err(|e| e.to_string()))
+            .collect::<Result<Vec<_>, _>>()?,
         Err(e) => return Err(e.to_string()),
     };
 
@@ -683,7 +683,9 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
     });
 
     let regras: Vec<RegraPrecoCacheDto> = match regras_iter {
-        Ok(it) => it.map(|r| r.map_err(|e| e.to_string())).collect::<Result<Vec<_>, _>>()?,
+        Ok(it) => it
+            .map(|r| r.map_err(|e| e.to_string()))
+            .collect::<Result<Vec<_>, _>>()?,
         Err(e) => return Err(e.to_string()),
     };
 
@@ -759,6 +761,7 @@ fn sync_endpoint_and_key() -> Result<(String, String), String> {
     Ok((endpoint, sync_key))
 }
 
+#[cfg(test)]
 fn canonical_path_with_query(raw_url: &str) -> Result<String, String> {
     let url = reqwest::Url::parse(raw_url).map_err(|e| format!("URL inválida: {e}"))?;
     let mut out = url.path().to_string();
@@ -829,11 +832,7 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
     let (endpoint, sync_key) = sync_endpoint_and_key()?;
     let client = reqwest::blocking::Client::new();
     let catalogo_url = endpoint_with_op(&endpoint, "catalogo");
-    let headers = signed_headers_for_request(
-        &sync_key,
-        "",
-        &device_fingerprint_local(),
-    )?;
+    let headers = signed_headers_for_request(&sync_key, "", &device_fingerprint_local())?;
 
     let resp = client
         .get(catalogo_url)
@@ -852,7 +851,9 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
     if !parsed.ok {
         return Err(format!(
             "Catálogo Edge retornou ok=false: {}",
-            parsed.error.unwrap_or_else(|| "erro desconhecido".to_string())
+            parsed
+                .error
+                .unwrap_or_else(|| "erro desconhecido".to_string())
         ));
     }
 
@@ -957,9 +958,8 @@ pub fn validar_gerente_sync(senha: String) -> Result<ValidarGerentePdvDto, Strin
         .text()
         .map_err(|e| format!("Falha ao ler resposta de validar gerente: {e}"))?;
 
-    let parsed: ValidarGerentePdvApiResponse = serde_json::from_str(&text).map_err(|_| {
-        format!("Resposta inválida de validar gerente ({status}): {text}")
-    })?;
+    let parsed: ValidarGerentePdvApiResponse = serde_json::from_str(&text)
+        .map_err(|_| format!("Resposta inválida de validar gerente ({status}): {text}"))?;
 
     if !parsed.ok {
         let err = parsed
@@ -997,11 +997,7 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     let (endpoint, sync_key) = sync_endpoint_and_key()?;
     let client = reqwest::blocking::Client::new();
     let config_url = endpoint_with_op(&endpoint, "pdv_config");
-    let headers = signed_headers_for_request(
-        &sync_key,
-        "",
-        &device_fingerprint_local(),
-    )?;
+    let headers = signed_headers_for_request(&sync_key, "", &device_fingerprint_local())?;
 
     let resp = client
         .get(config_url)
@@ -1021,7 +1017,9 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     if !parsed.ok {
         return Err(format!(
             "pdv_config Edge retornou ok=false: {}",
-            parsed.error.unwrap_or_else(|| "erro desconhecido".to_string())
+            parsed
+                .error
+                .unwrap_or_else(|| "erro desconhecido".to_string())
         ));
     }
     let row = match parsed.config {
@@ -1070,7 +1068,10 @@ pub fn outbox_resumo(app: &tauri::AppHandle) -> Result<OutboxResumo, String> {
     init_db(app)?;
     let path = db_path(app)?;
     let conn = Connection::open(path).map_err(|e| e.to_string())?;
-    let pendentes_total = contagem_outbox(&conn, "SELECT COUNT(1) FROM outbox WHERE status = 'PENDENTE'")?;
+    let pendentes_total = contagem_outbox(
+        &conn,
+        "SELECT COUNT(1) FROM outbox WHERE status = 'PENDENTE'",
+    )?;
     let prontos_sync = contagem_outbox(
         &conn,
         "SELECT COUNT(1) FROM outbox WHERE status = 'PENDENTE' \
@@ -1120,7 +1121,10 @@ pub fn diagnostics(app: &tauri::AppHandle) -> Result<Diagnostics, String> {
     })
 }
 
-pub fn outbox_listar_pendentes(app: &tauri::AppHandle, limite: i64) -> Result<Vec<OutboxEvent>, String> {
+pub fn outbox_listar_pendentes(
+    app: &tauri::AppHandle,
+    limite: i64,
+) -> Result<Vec<OutboxEvent>, String> {
     init_db(app)?;
     let path = db_path(app)?;
     let conn = Connection::open(path).map_err(|e| e.to_string())?;
@@ -1131,7 +1135,7 @@ pub fn outbox_listar_pendentes(app: &tauri::AppHandle, limite: i64) -> Result<Ve
              FROM outbox
              WHERE status = 'PENDENTE'
                AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
-             ORDER BY created_at ASC
+             ORDER BY created_at ASC, id ASC
              LIMIT ?1",
         )
         .map_err(|e| e.to_string())?;
@@ -1180,7 +1184,11 @@ pub fn outbox_marcar_enviado(app: &tauri::AppHandle, ids: &[String]) -> Result<i
 }
 
 /// Falha retornada pela Edge para um evento específico: retry com backoff ou DLQ após N falhas.
-pub fn outbox_marcar_falha_item_sync(app: &tauri::AppHandle, id: &str, erro: &str) -> Result<(), String> {
+pub fn outbox_marcar_falha_item_sync(
+    app: &tauri::AppHandle,
+    id: &str,
+    erro: &str,
+) -> Result<(), String> {
     init_db(app)?;
     let max = outbox_max_falhas_consecutivas();
     let path = db_path(app)?;
@@ -1238,7 +1246,7 @@ pub fn sync_outbox_simulado(app: &tauri::AppHandle, limite: i64) -> Result<i64, 
     let ids: Vec<String> = {
         let mut stmt = tx
             .prepare(
-                "SELECT id FROM outbox WHERE status = 'PENDENTE' ORDER BY created_at ASC LIMIT ?1",
+                "SELECT id FROM outbox WHERE status = 'PENDENTE' ORDER BY created_at ASC, id ASC LIMIT ?1",
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt
@@ -1300,10 +1308,14 @@ fn device_fingerprint_local() -> String {
     let user = std::env::var("USERNAME")
         .or_else(|_| std::env::var("USER"))
         .unwrap_or_else(|_| "unknown-user".to_string());
-    format!("desktop-{}-{}", user.trim().to_lowercase(), host.trim().to_lowercase())
-        .chars()
-        .take(200)
-        .collect()
+    format!(
+        "desktop-{}-{}",
+        user.trim().to_lowercase(),
+        host.trim().to_lowercase()
+    )
+    .chars()
+    .take(200)
+    .collect()
 }
 
 pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, String> {
@@ -1321,11 +1333,7 @@ pub fn sync_outbox_real(app: &tauri::AppHandle, limite: i64) -> Result<i64, Stri
     let device_fingerprint = device_fingerprint_local();
     let body = serde_json::to_string(&SyncRequest { events })
         .map_err(|e| format!("Falha ao serializar payload de sync: {e}"))?;
-    let headers = signed_headers_for_request(
-        &sync_key,
-        &body,
-        &device_fingerprint,
-    )?;
+    let headers = signed_headers_for_request(&sync_key, &body, &device_fingerprint)?;
     let res = client
         .post(endpoint)
         .header("Content-Type", "application/json")
@@ -1404,16 +1412,15 @@ mod tests {
     fn assinatura_hmac_muda_com_nonce_e_corpo() {
         let key = "segredo-de-teste";
         let ts = 1_770_000_000i64;
-        let sig1 = build_request_signature(key, ts, "nonce-a", "{\"events\":[]}")
-            .expect("assinatura 1");
-        let sig2 = build_request_signature(key, ts, "nonce-b", "{\"events\":[]}")
-            .expect("assinatura 2");
-        let sig3 = build_request_signature(key, ts, "nonce-a", "{\"events\":[1]}")
-            .expect("assinatura 3");
+        let sig1 =
+            build_request_signature(key, ts, "nonce-a", "{\"events\":[]}").expect("assinatura 1");
+        let sig2 =
+            build_request_signature(key, ts, "nonce-b", "{\"events\":[]}").expect("assinatura 2");
+        let sig3 =
+            build_request_signature(key, ts, "nonce-a", "{\"events\":[1]}").expect("assinatura 3");
 
         assert_ne!(sig1, sig2);
         assert_ne!(sig1, sig3);
         assert_eq!(sig1.len(), 64);
     }
 }
-

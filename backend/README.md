@@ -19,6 +19,37 @@ Pasta **única** do monorepo para o **backend hospedado no Supabase**:
 
 Sempre rode `npx supabase …` com o diretório de trabalho em **`backend`** (onde está `supabase/config.toml`).
 
+### Fluxo único: stack local × projeto linkado × portas
+
+- **Uma stack local por máquina (recomendado):** só um `npx supabase start` ativo usando este `config.toml`. Os containers Docker ficam com o prefixo `supabase_*_fastproduct` (`project_id` em `supabase/config.toml`). Subir **outro** Supabase CLI no padrão (outro repo ou outro `config`) costuma disputar as **mesmas portas** (54321–54327 etc.) e falha com *port is already allocated*.
+- **`npx supabase link --project-ref <ref>`:** associa o CLI ao projeto **remoto** no Dashboard (para `db push`, deploy de Edge Functions, secrets). **Não inicia** Docker nem ocupa portas por si só. Combinar **link + start** local reduz avisos de versão de imagens diferentes entre CLI e projeto na nuvem.
+- **Portas fixas** (não mudar sem motivo; ver comentário no topo de `supabase/config.toml`):
+
+| Uso | Porta |
+|-----|--------|
+| API (URL base do PostgREST / Kong) | **54321** |
+| PostgreSQL | **54322** |
+| Supabase Studio | **54323** |
+| Inbucket (e-mail de teste) | **54324** |
+| Analytics (Logflare) | **54327** |
+| Shadow DB (`db diff`) | **54320** |
+| Pooler (desligado no `config`; reservado) | **54329** |
+
+**Conflito de porta:** pare a stack deste repo e tente de novo:
+
+```powershell
+cd C:\Naturecode\fastproduct\backend
+npx supabase stop --project-id fastproduct
+```
+
+Se ainda existir stack antiga com outro nome de projeto (ex.: `pdv-importados`):
+
+```powershell
+npx supabase stop --project-id pdv-importados
+```
+
+No Windows: `netstat -ano | findstr :54322` ajuda a ver o que está escutando.
+
 ### Projeto remoto (nuvem — o mais comum)
 
 Substitua **`<ref>`** pelo **Reference ID** real (Dashboard → Project Settings → General).  
@@ -44,6 +75,8 @@ npx supabase status
 ```
 
 Útil para testar migrations e API localmente; variáveis (`API URL`, keys) aparecem no output do `status`.
+
+Restart rápido (stop + start com `project_id` **fastproduct**): `powershell -File .\scripts\restart-supabase-local.ps1` (com `cwd` em **`backend`**).
 
 Detalhes: [supabase/README.md](./supabase/README.md). **Deploy da Edge, secrets e teste desktop → nuvem:** [docs/CIRCUITO_OPERACIONAL.md](../docs/CIRCUITO_OPERACIONAL.md).
 

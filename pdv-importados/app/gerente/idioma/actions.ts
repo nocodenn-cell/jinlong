@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma } from '@/src/lib/idioma/normalizeIdioma'
 import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
 
@@ -23,7 +24,7 @@ export async function setIdiomaAction(formData: FormData) {
     .eq('id', user.id)
     .single()
 
-  if (!usuario || !['GERENTE', 'DONO'].includes(usuario.perfil)) return
+  if (!usuario || !isPerfilPainelGerencial(usuario.perfil)) return
 
   await supabase
     .from('usuarios')

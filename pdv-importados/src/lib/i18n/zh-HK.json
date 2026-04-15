@@ -107,6 +107,11 @@
     "nav_vendas": "銷售紀錄",
     "nav_caixas": "收銀會話",
     "nav_relatorios": "報表",
+    "nav_admin": "管理看板",
+    "nav_recebimento": "\u6536\u8ca8",
+    "nav_financeiro": "\u8ca1\u52d9",
+    "nav_transferencias": "\u8abf\u64a5",
+
     "bem_vindo_resumo": "今日概覽與快捷入口。",
     "atalhos_modulos": "模組",
     "vendas_recentes_link": "查看最近銷售",
@@ -266,7 +271,8 @@
     "sucesso": "儲存成功",
     "sim": "是",
     "nao": "否",
-    "idioma": "語言"
+    "idioma": "語言",
+    "sair": "登出"
   }
 }
 

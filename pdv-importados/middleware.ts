@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 
 function supabaseConfigOk(url: string | undefined, anonKey: string | undefined): boolean {
   if (!url?.trim() || !anonKey?.trim()) return false
@@ -97,7 +98,7 @@ export async function middleware(request: NextRequest) {
       .maybeSingle()
 
     const perfil = typeof row?.perfil === 'string' ? row.perfil : 'OPERADOR'
-    const gerenteOuDono = perfil === 'GERENTE' || perfil === 'DONO'
+    const gerenteOuDono = isPerfilPainelGerencial(perfil)
     const caixaRoute = pathname === '/caixa' || pathname.startsWith('/caixa/')
     const gerenteRoute = pathname.startsWith('/gerente')
     const adminRoute = pathname.startsWith('/admin')

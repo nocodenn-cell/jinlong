@@ -91,7 +91,7 @@ Repita com outro usuário Auth e `perfil = 'OPERADOR'`.
 
 ## Supabase local (`supabase start`)
 
-1. Na pasta **`backend`** do monorepo: `npx supabase start`, depois `npx supabase status` — use **API URL** e **service_role key** no `.env.local`.
+1. Na pasta **`backend`** do monorepo: `npx supabase start`, depois `npx supabase status` — use **API URL** e **service_role key** no `.env.local`. Uma stack por máquina e portas fixas: ver [backend/README.md](../../backend/README.md) (*Fluxo único: stack local × projeto linkado × portas*).
 2. Rode `npm run seed:dev-users` como acima.
 
 A **anon key** não serve para o script; só a **service_role** cria usuários em Auth e grava em `usuarios` com RLS bypass.

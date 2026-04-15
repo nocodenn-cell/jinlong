@@ -2,12 +2,6 @@
 // Recebe eventos do PDV local (outbox) e persiste no Postgres.
 // Segurança: HMAC (X-SYNC-TS, X-SYNC-NONCE, X-SYNC-SIGNATURE) + X-SYNC-KEY; anti-replay (nonce);
 // service role somente no ambiente da Function.
-//
-// Operações (query `op` em GET; POST `op=validar_gerente` usa body JSON { senha }):
-// - GET  ?op=catalogo | pdv_config
-// - POST ?op=validar_gerente — token de desconto gerente para PDV desktop (sem JWT)
-// - POST (sem op ou outro) — batch outbox: { events: { id, tipo, payload_json, created_at }[] }
-// Resposta batch: { ok, processed, failed }
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -246,11 +240,36 @@ function parseVendaPayload(raw: unknown): VendaPayload {
   return payload;
 }
 
-/** Log estruturado (uma linha JSON) para observabilidade em runtime Deno. */
 function logJson(payload: Record<string, unknown>) {
   console.log(
     JSON.stringify({ ts: new Date().toISOString(), svc: "sync-outbox", ...payload }),
   );
+}
+
+function newRequestId(): string {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return hexOfBytes(bytes);
+}
+
+/** Uniforme em [0, 1) via Web Crypto; para gatilhos não adivinháveis por atacante (ex.: throttle de manutenção). */
+function secureUnitRandom(): number {
+  const buf = new Uint8Array(4);
+  crypto.getRandomValues(buf);
+  return new DataView(buf.buffer).getUint32(0, false) / 0x100000000;
+}
+
+function eventCorrelationId(ev: OutboxEvent): string {
+  try {
+    if (ev.tipo === "VENDA_REGISTRADA") {
+      const parsed = JSON.parse(ev.payload_json) as Record<string, unknown>;
+      const vendaId = typeof parsed.venda_id === "string" ? parsed.venda_id.trim() : "";
+      if (vendaId) return vendaId;
+    }
+  } catch {
+    // noop: fallback abaixo
+  }
+  return ev.id;
 }
 
 function jsonResponse(status: number, body: unknown) {
@@ -262,7 +281,6 @@ function jsonResponse(status: number, body: unknown) {
   });
 }
 
-/** UUID v4 (aceita também variantes 1–5 do RFC). */
 function isUuid(s: string | null | undefined): s is string {
   if (!s || typeof s !== "string") return false;
   const t = s.trim();
@@ -559,7 +577,6 @@ async function handleValidarGerentePdvSync(
 
 /**
  * Garante linha em `public.caixas` com o mesmo id da sessão do PDV local
- * (idempotente: se já existir, não altera).
  */
 async function ensureCaixaPdv(
   supabase: SupabaseAdmin,
@@ -595,13 +612,7 @@ async function ensureCaixaPdv(
 }
 
 async function processCaixaAberto(supabase: SupabaseAdmin, ev: OutboxEvent) {
-  const p = JSON.parse(ev.payload_json) as {
-    id: string;
-    operador_id?: string | null;
-    data_abertura?: string;
-    valor_inicial?: number;
-    status?: string;
-  };
+  const p = JSON.parse(ev.payload_json);
   const inicial = p.valor_inicial != null && Number.isFinite(p.valor_inicial)
     ? p.valor_inicial
     : 0;
@@ -609,11 +620,7 @@ async function processCaixaAberto(supabase: SupabaseAdmin, ev: OutboxEvent) {
 }
 
 async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
-  const p = JSON.parse(ev.payload_json) as {
-    id: string;
-    data_fechamento: string;
-    valor_fechamento: number;
-  };
+  const p = JSON.parse(ev.payload_json);
   const { error } = await supabase
     .from("caixas")
     .update({
@@ -628,32 +635,18 @@ async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
 }
 
 async function processMovimentoCaixa(supabase: SupabaseAdmin, ev: OutboxEvent) {
-  const p = JSON.parse(ev.payload_json) as {
-    id: string;
-    caixa_id: string;
-    tipo: string;
-    valor: number;
-    observacao?: string | null;
-    created_at?: string;
-  };
+  const p = JSON.parse(ev.payload_json);
   if (p.tipo !== "SANGRIA" && p.tipo !== "SUPRIMENTO") {
     throw new Error(`TIPO_MOVIMENTO_INVALIDO: ${p.tipo}`);
   }
-  const row: {
-    id: string;
-    caixa_id: string;
-    tipo: string;
-    valor: number;
-    observacao: string | null;
-    created_at?: string;
-  } = {
+  const row = {
     id: p.id,
     caixa_id: p.caixa_id,
     tipo: p.tipo,
     valor: p.valor,
     observacao: p.observacao ?? null,
+    created_at: p.created_at || undefined,
   };
-  if (p.created_at) row.created_at = p.created_at;
 
   const { error } = await supabase.from("movimentos_caixa").insert(row);
   if (error && !String(error.message).includes("duplicate key")) {
@@ -673,7 +666,6 @@ async function aplicarBaixaEstoquePorItem(
     const qty = Number(i.quantidade);
     if (!Number.isFinite(qty) || qty <= 0) continue;
 
-    // Usa a nova RPC segura com controle de concorrência
     const { data: estoqueResult, error: rpcErr } = await supabase.rpc(
       "decrementar_estoque_seguro",
       {
@@ -684,60 +676,16 @@ async function aplicarBaixaEstoquePorItem(
     );
 
     if (rpcErr) {
-      const erroMsg = `Produto ${i.produto_id}: ${rpcErr.message}`;
-      errosEstoque.push(erroMsg);
-      logJson({
-        level: "error",
-        stage: "rpc_estoque",
-        event: "decrementar_estoque_seguro",
-        venda_id: vendaId,
-        produto_id: i.produto_id,
-        error: rpcErr.message,
-      });
+      errosEstoque.push(`Produto ${i.produto_id}: ${rpcErr.message}`);
       continue;
     }
 
-    // Verifica resultado da RPC
-    if (!estoqueResult || !Array.isArray(estoqueResult) || estoqueResult.length === 0) {
-      const erroMsg = `Produto ${i.produto_id}: resposta inválida do servidor`;
-      errosEstoque.push(erroMsg);
-      logJson({
-        level: "error",
-        stage: "rpc_estoque",
-        event: "decrementar_estoque_seguro",
-        venda_id: vendaId,
-        produto_id: i.produto_id,
-        error: "resposta_invalida",
-      });
-      continue;
-    }
-
-    const result = estoqueResult[0] as {
-      sucesso: boolean;
-      mensagem: string;
-      estoque_atual: number | null;
-    };
-
-    if (!result.sucesso) {
-      const erroMsg = `Produto ${i.produto_id}: ${result.mensagem}`;
-      errosEstoque.push(erroMsg);
-      logJson({
-        level: "error",
-        stage: "rpc_estoque",
-        event: "decrementar_estoque_seguro",
-        venda_id: vendaId,
-        produto_id: i.produto_id,
-        mensagem: result.mensagem,
-        estoque_atual: result.estoque_atual,
-      });
+    if (estoqueResult?.[0] && !estoqueResult[0].sucesso) {
+      errosEstoque.push(`Produto ${i.produto_id}: ${estoqueResult[0].mensagem}`);
     }
   }
 
-  // Se houver erros críticos de estoque, lança exceção para falhar o sync
-  // (exceto BAIXA_JA_EXISTE que é idempotente)
-  const errosCriticos = errosEstoque.filter(
-    (e) => !e.includes("BAIXA_JA_EXISTE")
-  );
+  const errosCriticos = errosEstoque.filter((e) => !e.includes("BAIXA_JA_EXISTE"));
   if (errosCriticos.length > 0) {
     throw new Error(`ERRO_ESTOQUE: ${errosCriticos.join("; ")}`);
   }
@@ -748,12 +696,7 @@ async function processVenda(
   ev: OutboxEvent,
   useUnifiedSalesFlow: boolean,
 ) {
-  let parsedJson: unknown;
-  try {
-    parsedJson = JSON.parse(ev.payload_json);
-  } catch {
-    throw new Error("PAYLOAD_VENDA_JSON_INVALIDO");
-  }
+  const parsedJson = JSON.parse(ev.payload_json);
   const payload = parseVendaPayload(parsedJson);
   const strictManagerDiscountAuth = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
 
@@ -764,11 +707,6 @@ async function processVenda(
     payload.troco_inicial_caixa ?? null,
   );
 
-  const caixaId = isUuid(payload.caixa_id) ? String(payload.caixa_id).trim() : null;
-  const operadorId = isUuid(payload.operador_id)
-    ? String(payload.operador_id).trim()
-    : null;
-
   const hasManagerDiscount = (payload.desconto_gerente_percentual ?? 0) > 0 ||
     (payload.desconto_gerente_valor ?? 0) > 0;
   if (strictManagerDiscountAuth && hasManagerDiscount && !payload.desconto_gerente_token) {
@@ -776,12 +714,6 @@ async function processVenda(
   }
 
   if (useUnifiedSalesFlow) {
-    logJson({
-      level: "info",
-      stage: "venda_flow",
-      flow: "unified_v2",
-      venda_id: payload.venda_id,
-    });
     const itensCanonicos = (payload.itens ?? []).map((i) => ({
       item_id: i.item_id,
       produto_id: i.produto_id,
@@ -793,8 +725,8 @@ async function processVenda(
 
     const { error: rpcUnifiedErr } = await supabase.rpc("finalizar_venda_transacional_canonica_v2", {
       p_venda_id: payload.venda_id,
-      p_caixa_id: caixaId,
-      p_operador_id: operadorId,
+      p_caixa_id: payload.caixa_id,
+      p_operador_id: payload.operador_id,
       p_forma_pagamento: payload.forma_pagamento,
       p_total_bruto: payload.total_bruto,
       p_total_desconto: payload.total_desconto,
@@ -805,29 +737,14 @@ async function processVenda(
       p_strict_manager_discount_auth: strictManagerDiscountAuth,
     });
 
-    if (rpcUnifiedErr) {
-      logJson({
-        level: "error",
-        stage: "rpc_finalizar_venda_transacional_canonica_v2",
-        venda_id: payload.venda_id,
-        error: rpcUnifiedErr.message,
-      });
-      throw new Error(`ERRO_RPC_FINALIZAR_VENDA_CANONICA: ${rpcUnifiedErr.message}`);
-    }
+    if (rpcUnifiedErr) throw new Error(`ERRO_RPC_FINALIZAR_VENDA: ${rpcUnifiedErr.message}`);
     return;
   }
 
-  logJson({
-    level: "info",
-    stage: "venda_flow",
-    flow: "legacy_registrar_venda_com_itens",
-    venda_id: payload.venda_id,
-  });
-
   const { error: rpcVendaErr } = await supabase.rpc("registrar_venda_com_itens", {
     p_venda_id: payload.venda_id,
-    p_caixa_id: caixaId,
-    p_operador_id: operadorId,
+    p_caixa_id: payload.caixa_id,
+    p_operador_id: payload.operador_id,
     p_forma_pagamento: payload.forma_pagamento,
     p_total_bruto: payload.total_bruto,
     p_total_desconto: payload.total_desconto,
@@ -838,114 +755,13 @@ async function processVenda(
     p_gerente_id: payload.gerente_id ?? null,
   });
 
-  if (rpcVendaErr) {
-    logJson({
-      level: "error",
-      stage: "rpc_registrar_venda_com_itens",
-      venda_id: payload.venda_id,
-      error: rpcVendaErr.message,
-    });
-    throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
-  }
+  if (rpcVendaErr) throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
 
   await aplicarBaixaEstoquePorItem(
     supabase,
     payload.venda_id,
-    (payload.itens ?? []).map((i) => ({
-      produto_id: i.produto_id,
-      quantidade: i.quantidade,
-    })),
+    (payload.itens ?? []).map((i) => ({ produto_id: i.produto_id, quantidade: i.quantidade })),
   );
-}
-
-function getSupabaseAdminClient() {
-  const syncKey = Deno.env.get("SYNC_KEY");
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!syncKey || !supabaseUrl || !serviceRole) {
-    return null;
-  }
-  return {
-    syncKey,
-    supabase: createClient(supabaseUrl, serviceRole, {
-      auth: { persistSession: false },
-    }),
-  };
-}
-
-async function persistNonce(
-  supabase: SupabaseAdmin,
-  nonce: string,
-  deviceFingerprint: string,
-  requestTs: number,
-): Promise<boolean> {
-  // Limpeza oportunista para manter tabela pequena sem job dedicado.
-  if (Math.random() < 0.03) {
-    const nowIso = new Date().toISOString();
-    await supabase.from("sync_request_nonces").delete().lt("expires_at", nowIso);
-  }
-
-  const expiresAt = new Date((requestTs + NONCE_TTL_SECONDS) * 1000).toISOString();
-  const { error } = await supabase.from("sync_request_nonces").insert({
-    nonce,
-    device_fingerprint: deviceFingerprint,
-    request_ts: requestTs,
-    expires_at: expiresAt,
-  });
-  if (!error) return true;
-  const msg = String(error.message ?? "");
-  if (error.code === "23505" || msg.includes("duplicate key")) {
-    return false;
-  }
-  throw new Error(`ERRO_NONCE_PERSIST: ${msg}`);
-}
-
-async function authorizeSync(
-  req: Request,
-  syncKey: string,
-  supabase: SupabaseAdmin,
-  rawBody: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const gotKey = req.headers.get("X-SYNC-KEY");
-  const ts = req.headers.get("X-SYNC-TS");
-  const nonce = req.headers.get("X-SYNC-NONCE");
-  const signature = req.headers.get("X-SYNC-SIGNATURE");
-  const device = req.headers.get("x-device-fingerprint") ?? "unknown-device";
-
-  if (!gotKey || !timingSafeEqualStr(gotKey, syncKey)) {
-    return { ok: false, error: "UNAUTHORIZED" };
-  }
-  if (!ts || !nonce || !signature) {
-    return { ok: false, error: "MISSING_SIGNATURE_HEADERS" };
-  }
-  if (!isUuid(nonce)) {
-    return { ok: false, error: "INVALID_NONCE" };
-  }
-  const tsNum = Number(ts);
-  if (!Number.isFinite(tsNum)) {
-    return { ok: false, error: "INVALID_TIMESTAMP" };
-  }
-  const nowSec = Math.floor(Date.now() / 1000);
-  if (Math.abs(nowSec - tsNum) > MAX_CLOCK_SKEW_SECONDS) {
-    return { ok: false, error: "TIMESTAMP_OUT_OF_WINDOW" };
-  }
-
-  const payload = buildSignaturePayload(
-    ts,
-    nonce,
-    rawBody,
-  );
-  const expectedSig = await hmacSha256Hex(syncKey, payload);
-  if (!timingSafeEqualStr(signature.toLowerCase(), expectedSig.toLowerCase())) {
-    return { ok: false, error: "INVALID_SIGNATURE" };
-  }
-
-  const nonceAccepted = await persistNonce(supabase, nonce, device, tsNum);
-  if (!nonceAccepted) {
-    return { ok: false, error: "REPLAY_DETECTED" };
-  }
-
-  return { ok: true };
 }
 
 async function handleCatalogoSync(supabase: SupabaseAdmin) {
@@ -957,179 +773,235 @@ async function handleCatalogoSync(supabase: SupabaseAdmin) {
       .limit(100000),
     supabase
       .from("regras_preco")
-      .select(
-        "id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo",
-      )
+      .select("id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo")
       .eq("ativo", true)
       .limit(100000),
   ]);
 
-  if (produtosRes.error) {
-    throw new Error(`ERRO_CATALOGO_PRODUTOS: ${produtosRes.error.message}`);
-  }
-  if (regrasRes.error) {
-    throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
-  }
+  if (produtosRes.error) throw new Error(`ERRO_CATALOGO_PRODUTOS: ${produtosRes.error.message}`);
+  if (regrasRes.error) throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
 
-  return jsonResponse(200, {
-    ok: true,
-    produtos: produtosRes.data ?? [],
-    regras: regrasRes.data ?? [],
-  });
+  return jsonResponse(200, { ok: true, produtos: produtosRes.data ?? [], regras: regrasRes.data ?? [] });
 }
 
+/** * 🔒 CORREÇÃO P0: Removido gerente_senha_sha256 do retorno
+ */
 async function handlePdvConfigSync(supabase: SupabaseAdmin) {
   const { data, error, status } = await supabase
     .from("pdv_config")
-    .select("gerente_id,gerente_senha_sha256,max_desconto_gerente_percentual")
+    .select("gerente_id, max_desconto_gerente_percentual") // 🔒 Removido campo de senha
     .eq("id", 1)
     .maybeSingle();
 
   if (error) {
-    if (status === 404 || status === 400) {
-      return jsonResponse(200, { ok: true, config: null });
-    }
+    if (status === 404 || status === 400) return jsonResponse(200, { ok: true, config: null });
     throw new Error(`ERRO_PDV_CONFIG: ${error.message}`);
   }
 
-  return jsonResponse(200, { ok: true, config: data ?? null });
+  const configComFlag = data ? {
+    ...data,
+    strict_manager_auth: Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true"
+  } : null;
+
+  return jsonResponse(200, { ok: true, config: configComFlag });
 }
 
-async function handleOutboxBatch(
+async function handleGetByOp(
+  op: string | null,
+  supabase: SupabaseAdmin,
+): Promise<Response | null> {
+  if (op === "catalogo") return await handleCatalogoSync(supabase);
+  if (op === "pdv_config") return await handlePdvConfigSync(supabase);
+  return null;
+}
+
+async function dispatchOutboxEvent(
+  supabase: SupabaseAdmin,
+  ev: OutboxEvent,
+  useUnified: boolean,
+): Promise<void> {
+  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev, useUnified);
+  else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
+  else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
+  else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
+}
+
+async function handlePostOutboxBatch(
   supabase: SupabaseAdmin,
   rawBody: string,
-  deviceFingerprint: string | null,
-) {
+  req: Request,
+  requestId: string,
+  reqStart: number,
+): Promise<Response> {
   let body: SyncRequest;
   try {
     body = parseSyncRequest(JSON.parse(rawBody));
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    logJson({ level: "warn", stage: "body", error: msg });
-    return jsonResponse(400, {
-      ok: false,
-      error: "INVALID_REQUEST",
-      detail: msg,
-    });
+  } catch {
+    return jsonResponse(400, { ok: false, error: "INVALID_JSON", request_id: requestId });
   }
-
-  const batchSize = body.events?.length ?? 0;
-  const useUnifiedForBatch = shouldUseUnifiedSalesFlow(deviceFingerprint);
-  logJson({ level: "info", stage: "batch_start", event_count: batchSize });
-  logJson({
-    level: "info",
-    stage: "batch_flags",
-    use_unified_sales_flow: useUnifiedForBatch,
-    device_fingerprint: (deviceFingerprint ?? "unknown").slice(0, 200),
-  });
 
   const processed: string[] = [];
   const failed: { id: string; error: string }[] = [];
+  const useUnified = shouldUseUnifiedSalesFlow(req.headers.get("x-device-fingerprint"));
+  logJson({
+    level: "info",
+    stage: "sync_start",
+    request_id: requestId,
+    use_unified_sales_flow: useUnified,
+    event_count: body.events.length,
+  });
 
-  for (const ev of body.events ?? []) {
+  for (const ev of body.events) {
     try {
-      logJson({
-        level: "info",
-        stage: "event_begin",
-        event_id: ev.id,
-        tipo: ev.tipo,
-      });
-      switch (ev.tipo) {
-        case "VENDA_REGISTRADA":
-          await processVenda(supabase, ev, useUnifiedForBatch);
-          break;
-        case "CAIXA_ABERTO":
-          await processCaixaAberto(supabase, ev);
-          break;
-        case "CAIXA_FECHADO":
-          await processCaixaFechado(supabase, ev);
-          break;
-        case "MOVIMENTO_CAIXA":
-          await processMovimentoCaixa(supabase, ev);
-          break;
-        default:
-          throw new Error(`TIPO_DESCONHECIDO: ${ev.tipo}`);
-      }
+      await dispatchOutboxEvent(supabase, ev, useUnified);
       processed.push(ev.id);
       logJson({
         level: "info",
-        stage: "event_ok",
+        stage: "event_processed",
+        request_id: requestId,
         event_id: ev.id,
-        tipo: ev.tipo,
+        event_type: ev.tipo,
+        correlation_id: eventCorrelationId(ev),
       });
     } catch (e) {
-      const err = String(e);
-      failed.push({ id: ev.id, error: err });
+      failed.push({ id: ev.id, error: e instanceof Error ? e.message : String(e) });
       logJson({
-        level: "error",
+        level: "warn",
         stage: "event_failed",
+        request_id: requestId,
         event_id: ev.id,
-        tipo: ev.tipo,
-        error: err,
+        event_type: ev.tipo,
+        correlation_id: eventCorrelationId(ev),
+        error: e instanceof Error ? e.message : String(e),
       });
     }
   }
 
   logJson({
     level: "info",
-    stage: "batch_done",
-    processed: processed.length,
-    failed: failed.length,
+    stage: "sync_end",
+    request_id: requestId,
+    processed_count: processed.length,
+    failed_count: failed.length,
+    duration_ms: Date.now() - reqStart,
   });
-
-  const resp: SyncResponse = { ok: true, processed, failed };
-  return jsonResponse(200, resp);
+  return jsonResponse(200, { ok: true, processed, failed, request_id: requestId });
 }
 
 Deno.serve(async (req) => {
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    logJson({ level: "error", stage: "env", error: "MISSING_SUPABASE_ENV" });
-    return jsonResponse(500, {
-      ok: false,
-      error: "MISSING_SUPABASE_ENV",
-    });
+  const requestId = newRequestId();
+  const reqStart = Date.now();
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
+  const syncKey = Deno.env.get("SYNC_KEY")?.trim() ?? "";
+  if (!supabaseUrl || !serviceRole || !syncKey) {
+    logJson({ level: "error", stage: "env", request_id: requestId, error: "MISSING_SUPABASE_ENV" });
+    return jsonResponse(500, { ok: false, error: "MISSING_SUPABASE_ENV", request_id: requestId });
   }
 
   const url = new URL(req.url);
   const op = url.searchParams.get("op");
-  const deviceFingerprint = req.headers.get("x-device-fingerprint");
-  const rawBody = req.method === "POST" ? await req.text() : "";
+  const supabase = createClient(supabaseUrl, serviceRole, {
+    auth: { persistSession: false },
+  });
 
-  const auth = await authorizeSync(req, admin.syncKey, admin.supabase, rawBody);
+  const rawBody = req.method === "POST" ? await req.text() : "";
+  const auth = await authorizeSync(req, syncKey, supabase, rawBody);
   if (!auth.ok) {
     logJson({
       level: "warn",
       stage: "auth",
+      request_id: requestId,
       error: auth.error,
-      op,
     });
-    return jsonResponse(401, { ok: false, error: auth.error });
+    return jsonResponse(401, { ok: false, error: auth.error, request_id: requestId });
   }
 
   try {
-    if (req.method === "GET" && op === "catalogo") {
-      return await handleCatalogoSync(admin.supabase);
+    if (req.method === "GET") {
+      const getRes = await handleGetByOp(op, supabase);
+      if (getRes) return getRes;
+      return jsonResponse(400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
     }
-    if (req.method === "GET" && op === "pdv_config") {
-      return await handlePdvConfigSync(admin.supabase);
-    }
-    if (req.method === "POST" && op === "validar_gerente") {
-      return await handleValidarGerentePdvSync(
-        admin.supabase,
-        rawBody,
-        req,
-        deviceFingerprint,
-      );
-    }
+
     if (req.method === "POST") {
-      return await handleOutboxBatch(admin.supabase, rawBody, deviceFingerprint);
+      if (op === "validar_gerente") {
+        return await handleValidarGerentePdvSync(
+          supabase,
+          rawBody,
+          req,
+          req.headers.get("x-device-fingerprint"),
+        );
+      }
+      return await handlePostOutboxBatch(supabase, rawBody, req, requestId, reqStart);
     }
-    logJson({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED", op });
-    return jsonResponse(405, { ok: false, error: "METHOD_NOT_ALLOWED" });
+
+    return jsonResponse(400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
   } catch (e) {
-    const err = e instanceof Error ? e.message : String(e);
-    logJson({ level: "error", stage: "runtime", op, error: err });
-    return jsonResponse(500, { ok: false, error: err });
+    const msg = e instanceof Error ? e.message : String(e);
+    logJson({
+      level: "error",
+      stage: "sync_fatal",
+      request_id: requestId,
+      error: msg,
+      duration_ms: Date.now() - reqStart,
+    });
+    return jsonResponse(500, {
+      ok: false,
+      error: "ERRO_INTERNO",
+      request_id: requestId,
+    });
   }
 });
+
+/** Limpeza oportunista (~3% das requisições autenticadas) para manter a tabela pequena sem job dedicado. */
+async function maybePruneExpiredSyncNonces(supabase: SupabaseAdmin): Promise<void> {
+  if (secureUnitRandom() >= 0.03) return;
+  const nowIso = new Date().toISOString();
+  const { error } = await supabase.from("sync_request_nonces").delete().lt("expires_at", nowIso);
+  if (error) {
+    logJson({ level: "warn", stage: "nonce_prune", error: error.message });
+  }
+}
+
+async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAdmin, rawBody: string) {
+  const gotKey = req.headers.get("X-SYNC-KEY");
+  const ts = req.headers.get("X-SYNC-TS");
+  const nonce = req.headers.get("X-SYNC-NONCE");
+  const signature = req.headers.get("X-SYNC-SIGNATURE");
+  const device = req.headers.get("x-device-fingerprint") ?? "unknown";
+
+  if (!gotKey || !timingSafeEqualStr(gotKey, syncKey)) return { ok: false, error: "UNAUTHORIZED" };
+  if (!ts || !nonce || !signature) return { ok: false, error: "MISSING_HEADERS" };
+  const nonceTrim = nonce.trim();
+  if (!isUuid(nonceTrim)) return { ok: false, error: "INVALID_NONCE" };
+
+  const tsNum = Number(ts);
+  if (Math.abs(Math.floor(Date.now() / 1000) - tsNum) > MAX_CLOCK_SKEW_SECONDS) return { ok: false, error: "TS_OUT_OF_WINDOW" };
+
+  const payload = `${ts}.${nonceTrim}.${rawBody}`;
+  const expectedSig = await hmacSha256Hex(syncKey, payload);
+  if (!timingSafeEqualStr(signature.toLowerCase(), expectedSig.toLowerCase())) return { ok: false, error: "INVALID_SIG" };
+
+  const expiresAt = new Date((tsNum + NONCE_TTL_SECONDS) * 1000).toISOString();
+  const { error } = await supabase.from("sync_request_nonces").insert({
+    nonce: nonceTrim,
+    device_fingerprint: device,
+    request_ts: tsNum,
+    expires_at: expiresAt,
+  });
+  if (error) return { ok: false, error: "REPLAY_OR_DB_ERROR" };
+
+  try {
+    await maybePruneExpiredSyncNonces(supabase);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logJson({ level: "warn", stage: "nonce_prune_fatal", error: msg });
+  }
+
+  return { ok: true };
+}

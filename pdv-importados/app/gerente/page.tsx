@@ -53,12 +53,15 @@ export default async function GerenteInicioPage() {
   const atalhos = [
     { href: '/gerente/produtos', label: m.produtos.titulo },
     { href: '/gerente/estoque', label: m.estoque.titulo },
-    { href: '/gerente/recebimento', label: 'Recebimento' },
-    ...(exibirTransferencias ? [{ href: '/gerente/transferencias', label: 'Transferências' }] : []),
-    { href: '/gerente/financeiro', label: 'Financeiro' },
+    { href: '/gerente/recebimento', label: m.gerente.nav_recebimento },
+    ...(exibirTransferencias
+      ? [{ href: '/gerente/transferencias', label: m.gerente.nav_transferencias }]
+      : []),
+    { href: '/gerente/financeiro', label: m.gerente.nav_financeiro },
     { href: '/gerente/vendas', label: m.gerente.nav_vendas },
     { href: '/gerente/caixas', label: m.gerente.nav_caixas },
     { href: '/gerente/relatorios', label: m.gerente.nav_relatorios },
+    { href: '/admin/dashboard', label: m.gerente.nav_admin },
   ]
 
   const card = (label: string, value: string) => (

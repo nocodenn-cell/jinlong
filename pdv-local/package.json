@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri dev",
+    "env:check": "node scripts/check-env.mjs",
+    "smoke:sync-edge": "node scripts/smoke-sync-edge.mjs",
     "test": "vitest"
   },
   "dependencies": {
