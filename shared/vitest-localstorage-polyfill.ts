@@ -1,6 +1,6 @@
 /**
- * Vitest em Node não expõe `localStorage`; o `persist` do Zustand depende dele.
- * Polyfill em memória para testes sem avisos de storage indisponível.
+ * Vitest em ambiente `node` não expõe `localStorage`; o `persist` do Zustand depende dele.
+ * Polyfill em memória + alias `window` → `globalThis` para testes sem ruído no stderr.
  */
 const memory = new Map<string, string>()
 

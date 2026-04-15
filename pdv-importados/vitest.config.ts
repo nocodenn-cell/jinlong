@@ -2,8 +2,13 @@ import path from 'path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  server: {
+    fs: {
+      allow: [path.join(__dirname, '..')],
+    },
+  },
   test: {
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: [path.join(__dirname, '../shared/vitest-localstorage-polyfill.ts')],
     environment: 'node',
     include: [
       'core/**/*.test.ts',

@@ -4,8 +4,14 @@ import { resolve } from 'node:path'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 4173,
+    fs: {
+      allow: [resolve(__dirname, '..')],
+    },
+  },
   test: {
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: [resolve(__dirname, '../shared/vitest-localstorage-polyfill.ts')],
     environment: 'node',
   },
   resolve: {
@@ -13,9 +19,6 @@ export default defineConfig({
       // Domínio compartilhado com o Next (`pdv-importados/core`) — pricing, tipos de carrinho, sync.
       '@core': resolve(__dirname, '../pdv-importados/core'),
     },
-  },
-  server: {
-    port: 4173,
   },
 })
 

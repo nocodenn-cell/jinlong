@@ -2,21 +2,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { parseEnv } from '../../shared/env-check-lib.mjs'
 
 const cwd = process.cwd()
 const envPath = path.join(cwd, '.env')
-
-function parseEnv(content) {
-  const out = new Map()
-  for (const lineRaw of content.split(/\r?\n/)) {
-    const line = lineRaw.trim()
-    if (!line || line.startsWith('#')) continue
-    const idx = line.indexOf('=')
-    if (idx <= 0) continue
-    out.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim())
-  }
-  return out
-}
 
 if (!fs.existsSync(envPath)) {
   console.error(`[smoke-sync] Arquivo .env não encontrado em ${envPath}`)
