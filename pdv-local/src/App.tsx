@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useCartStore } from './stores/cartStore'
 import type { ItemCarrinho } from '@core/cart/types'
@@ -65,6 +65,16 @@ function mensagemEhErro(msg: string): boolean {
 function mensagemEhAviso(msg: string): boolean {
   const t = msg.toLowerCase()
   return t.includes('vazio') || t.includes('.env') || t.startsWith('motivo:')
+}
+
+function estiloBannerMensagem(mensagem: string): Pick<CSSProperties, 'color' | 'backgroundColor'> {
+  if (mensagemEhErro(mensagem)) {
+    return { color: '#b91c1c', backgroundColor: '#fee2e2' }
+  }
+  if (mensagemEhAviso(mensagem)) {
+    return { color: '#92400e', backgroundColor: '#fffbeb' }
+  }
+  return { color: '#166534', backgroundColor: '#dcfce7' }
 }
 
 export function App() {
@@ -767,11 +777,7 @@ export function App() {
             <div
               style={{
                 fontSize: 13,
-                ...(mensagemEhErro(mensagem)
-                  ? { color: '#b91c1c', backgroundColor: '#fee2e2' }
-                  : mensagemEhAviso(mensagem)
-                    ? { color: '#92400e', backgroundColor: '#fffbeb' }
-                    : { color: '#166534', backgroundColor: '#dcfce7' }),
+                ...estiloBannerMensagem(mensagem),
                 padding: '0.35rem 0.5rem 0.35rem 0.65rem',
                 borderRadius: 999,
                 alignSelf: 'flex-start',

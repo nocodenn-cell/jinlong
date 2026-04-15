@@ -799,10 +799,94 @@ async function handlePdvConfigSync(supabase: SupabaseAdmin) {
   return jsonResponse(200, { ok: true, config: configComFlag });
 }
 
+async function handleGetByOp(
+  op: string | null,
+  supabase: SupabaseAdmin,
+): Promise<Response | null> {
+  if (op === "catalogo") return await handleCatalogoSync(supabase);
+  if (op === "pdv_config") return await handlePdvConfigSync(supabase);
+  return null;
+}
+
+async function dispatchOutboxEvent(
+  supabase: SupabaseAdmin,
+  ev: OutboxEvent,
+  useUnified: boolean,
+): Promise<void> {
+  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev, useUnified);
+  else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
+  else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
+  else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
+}
+
+async function handlePostOutboxBatch(
+  supabase: SupabaseAdmin,
+  rawBody: string,
+  req: Request,
+  requestId: string,
+  reqStart: number,
+): Promise<Response> {
+  let body: SyncRequest;
+  try {
+    body = parseSyncRequest(JSON.parse(rawBody));
+  } catch {
+    return jsonResponse(400, { ok: false, error: "INVALID_JSON", request_id: requestId });
+  }
+
+  const processed: string[] = [];
+  const failed: { id: string; error: string }[] = [];
+  const useUnified = shouldUseUnifiedSalesFlow(req.headers.get("x-device-fingerprint"));
+  logJson({
+    level: "info",
+    stage: "sync_start",
+    request_id: requestId,
+    use_unified_sales_flow: useUnified,
+    event_count: body.events.length,
+  });
+
+  for (const ev of body.events) {
+    try {
+      await dispatchOutboxEvent(supabase, ev, useUnified);
+      processed.push(ev.id);
+      logJson({
+        level: "info",
+        stage: "event_processed",
+        request_id: requestId,
+        event_id: ev.id,
+        event_type: ev.tipo,
+        correlation_id: eventCorrelationId(ev),
+      });
+    } catch (e) {
+      failed.push({ id: ev.id, error: e instanceof Error ? e.message : String(e) });
+      logJson({
+        level: "warn",
+        stage: "event_failed",
+        request_id: requestId,
+        event_id: ev.id,
+        event_type: ev.tipo,
+        correlation_id: eventCorrelationId(ev),
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  logJson({
+    level: "info",
+    stage: "sync_end",
+    request_id: requestId,
+    processed_count: processed.length,
+    failed_count: failed.length,
+    duration_ms: Date.now() - reqStart,
+  });
+  return jsonResponse(200, { ok: true, processed, failed, request_id: requestId });
+}
+
 Deno.serve(async (req) => {
   const requestId = newRequestId();
   const reqStart = Date.now();
-  if (req.method === "OPTIONS") return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
+  }
 
   const url = new URL(req.url);
   const op = url.searchParams.get("op");
@@ -825,64 +909,21 @@ Deno.serve(async (req) => {
 
   try {
     if (req.method === "GET") {
-      if (op === "catalogo") return await handleCatalogoSync(supabase);
-      if (op === "pdv_config") return await handlePdvConfigSync(supabase);
+      const getRes = await handleGetByOp(op, supabase);
+      if (getRes) return getRes;
+      return jsonResponse(400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
     }
 
     if (req.method === "POST") {
       if (op === "validar_gerente") {
-        return await handleValidarGerentePdvSync(supabase, rawBody, req, req.headers.get("x-device-fingerprint"));
+        return await handleValidarGerentePdvSync(
+          supabase,
+          rawBody,
+          req,
+          req.headers.get("x-device-fingerprint"),
+        );
       }
-
-      const body = parseSyncRequest(JSON.parse(rawBody));
-      const processed: string[] = [];
-      const failed: { id: string; error: string }[] = [];
-      const useUnified = shouldUseUnifiedSalesFlow(req.headers.get("x-device-fingerprint"));
-      logJson({
-        level: "info",
-        stage: "sync_start",
-        request_id: requestId,
-        use_unified_sales_flow: useUnified,
-        event_count: body.events.length,
-      });
-
-      for (const ev of body.events) {
-        try {
-          if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev, useUnified);
-          else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
-          else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
-          else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
-          processed.push(ev.id);
-          logJson({
-            level: "info",
-            stage: "event_processed",
-            request_id: requestId,
-            event_id: ev.id,
-            event_type: ev.tipo,
-            correlation_id: eventCorrelationId(ev),
-          });
-        } catch (e) {
-          failed.push({ id: ev.id, error: e instanceof Error ? e.message : String(e) });
-          logJson({
-            level: "warn",
-            stage: "event_failed",
-            request_id: requestId,
-            event_id: ev.id,
-            event_type: ev.tipo,
-            correlation_id: eventCorrelationId(ev),
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
-      }
-      logJson({
-        level: "info",
-        stage: "sync_end",
-        request_id: requestId,
-        processed_count: processed.length,
-        failed_count: failed.length,
-        duration_ms: Date.now() - reqStart,
-      });
-      return jsonResponse(200, { ok: true, processed, failed, request_id: requestId });
+      return await handlePostOutboxBatch(supabase, rawBody, req, requestId, reqStart);
     }
 
     return jsonResponse(400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });

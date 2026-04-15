@@ -289,16 +289,15 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const trendErr = adminLineBoth(adminUi.common.trendError)
   const unavail = adminLineBoth(adminUi.common.unavailable)
 
-  const stockTrendLabel =
-    estoqueBaixoRes.error
-      ? unavail
-      : oriental
-        ? estoqueBaixoCount > 0
-          ? adminLineBoth(L.trendStockWarn)
-          : adminLineBoth(L.trendStockOk)
-        : estoqueBaixoCount > 0
-          ? L.trendStockWarn.pt
-          : L.trendStockOk.pt
+  let stockTrendLabel: string
+  if (estoqueBaixoRes.error) {
+    stockTrendLabel = unavail
+  } else if (oriental) {
+    stockTrendLabel =
+      estoqueBaixoCount > 0 ? adminLineBoth(L.trendStockWarn) : adminLineBoth(L.trendStockOk)
+  } else {
+    stockTrendLabel = estoqueBaixoCount > 0 ? L.trendStockWarn.pt : L.trendStockOk.pt
+  }
 
   const stockValue = estoqueBaixoRes.error ? dash.emDash : estoqueBaixoCount.toLocaleString('pt-BR')
 

@@ -43,7 +43,7 @@ Na raiz do repositório, para bloquear commit acidental de `.env` / `.env.local`
 git config core.hooksPath .githooks
 ```
 
-O hook executa `scripts/git-pre-commit-check.mjs`. PRs também exibem checklist em [`.github/pull_request_template.md`](.github/pull_request_template.md).
+O hook executa `scripts/git-pre-commit-check.mjs` (resolve o `git` em caminhos padrão do Git for Windows / Linux; se necessário, defina **`GIT_EXE`** com o caminho absoluto do executável). PRs também exibem checklist em [`.github/pull_request_template.md`](.github/pull_request_template.md).
 
 ## Documentação
 
