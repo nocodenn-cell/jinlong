@@ -67,6 +67,18 @@ function mensagemEhAviso(msg: string): boolean {
   return t.includes('vazio') || t.includes('.env') || t.startsWith('motivo:')
 }
 
+function corIndicadorSync(statusSync: string): string {
+  if (statusSync === 'ok') return '#16a34a'
+  if (statusSync === 'pendente') return '#eab308'
+  return '#dc2626'
+}
+
+function bgOutboxBanner(resumo: { dlq: number; em_backoff: number }): string {
+  if (resumo.dlq > 0) return '#fef2f2'
+  if (resumo.em_backoff > 0) return '#fffbeb'
+  return '#eff6ff'
+}
+
 function estiloBannerMensagem(mensagem: string): Pick<CSSProperties, 'color' | 'backgroundColor'> {
   if (mensagemEhErro(mensagem)) {
     return { color: '#b91c1c', backgroundColor: '#fee2e2' }
@@ -547,8 +559,7 @@ export function App() {
           zIndex: 30,
           border: '2px solid #ffffff',
           boxShadow: '0 0 0 1px rgba(0,0,0,0.08)',
-          backgroundColor:
-            statusSync === 'ok' ? '#16a34a' : statusSync === 'pendente' ? '#eab308' : '#dc2626',
+          backgroundColor: corIndicadorSync(statusSync),
         }}
       />
 
@@ -560,12 +571,7 @@ export function App() {
               padding: '0.45rem 1.5rem',
               fontSize: 13,
               borderBottom: '1px solid #e5e7eb',
-              backgroundColor:
-                outboxResumo.dlq > 0
-                  ? '#fef2f2'
-                  : outboxResumo.em_backoff > 0
-                    ? '#fffbeb'
-                    : '#eff6ff',
+              backgroundColor: bgOutboxBanner(outboxResumo),
               color: outboxResumo.dlq > 0 ? '#991b1b' : '#374151',
               display: 'flex',
               flexWrap: 'wrap',

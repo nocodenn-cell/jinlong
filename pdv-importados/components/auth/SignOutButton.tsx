@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-type Props = {
+type Props = Readonly<{
   label: string
   className?: string
-}
+}>
 
 /**
  * Encerra a sessão Supabase e volta ao login (alinhado ao middleware e SessionIdleLogout).

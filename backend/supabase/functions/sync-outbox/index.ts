@@ -183,13 +183,13 @@ function parseVendaPayload(raw: unknown): VendaPayload {
   if ("caixa_id" in raw) {
     const caixa_id = raw.caixa_id;
     if (caixa_id === null) payload.caixa_id = null;
-    else if (typeof caixa_id === "string") payload.caixa_id = caixa_id;
+    else if (typeof caixa_id === "string") payload.caixa_id = caixa_id.trim();
     else throw new Error("PAYLOAD_CAIXA_ID_INVALIDO");
   }
   if ("operador_id" in raw) {
     const operador_id = raw.operador_id;
     if (operador_id === null) payload.operador_id = null;
-    else if (typeof operador_id === "string") payload.operador_id = operador_id;
+    else if (typeof operador_id === "string") payload.operador_id = operador_id.trim();
     else throw new Error("PAYLOAD_OPERADOR_ID_INVALIDO");
   }
 
@@ -612,7 +612,11 @@ async function ensureCaixaPdv(
 }
 
 async function processCaixaAberto(supabase: SupabaseAdmin, ev: OutboxEvent) {
-  const p = JSON.parse(ev.payload_json);
+  const p = JSON.parse(ev.payload_json) as {
+    id: string;
+    operador_id?: string | null;
+    valor_inicial?: number;
+  };
   const inicial = p.valor_inicial != null && Number.isFinite(p.valor_inicial)
     ? p.valor_inicial
     : 0;
@@ -620,13 +624,25 @@ async function processCaixaAberto(supabase: SupabaseAdmin, ev: OutboxEvent) {
 }
 
 async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
-  const p = JSON.parse(ev.payload_json);
+  const p = JSON.parse(ev.payload_json) as {
+    id: string;
+    data_fechamento: string;
+    valor_fechamento: number;
+  };
+  if (!isUuid(p.id)) throw new Error("CAIXA_FECHADO_ID_INVALIDO");
+  if (typeof p.data_fechamento !== "string" || !p.data_fechamento) {
+    throw new Error("CAIXA_FECHADO_DATA_INVALIDA");
+  }
+
   const { error } = await supabase
     .from("caixas")
     .update({
       status: "FECHADO",
       data_fechamento: p.data_fechamento,
-      valor_fechamento: p.valor_fechamento,
+      valor_fechamento:
+        typeof p.valor_fechamento === "number" && Number.isFinite(p.valor_fechamento)
+          ? p.valor_fechamento
+          : 0,
     })
     .eq("id", p.id)
     .eq("status", "ABERTO");
@@ -635,18 +651,31 @@ async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
 }
 
 async function processMovimentoCaixa(supabase: SupabaseAdmin, ev: OutboxEvent) {
-  const p = JSON.parse(ev.payload_json);
+  const p = JSON.parse(ev.payload_json) as {
+    id: string;
+    caixa_id: string;
+    tipo: string;
+    valor: number;
+    observacao?: string | null;
+    created_at?: string;
+  };
+  if (!isUuid(p.id)) throw new Error("MOVIMENTO_ID_INVALIDO");
+  if (!isUuid(p.caixa_id)) throw new Error("MOVIMENTO_CAIXA_ID_INVALIDO");
+  if (typeof p.valor !== "number" || !Number.isFinite(p.valor)) {
+    throw new Error("MOVIMENTO_VALOR_INVALIDO");
+  }
   if (p.tipo !== "SANGRIA" && p.tipo !== "SUPRIMENTO") {
     throw new Error(`TIPO_MOVIMENTO_INVALIDO: ${p.tipo}`);
   }
-  const row = {
+
+  const row: Record<string, unknown> = {
     id: p.id,
     caixa_id: p.caixa_id,
     tipo: p.tipo,
     valor: p.valor,
     observacao: p.observacao ?? null,
-    created_at: p.created_at || undefined,
   };
+  if (p.created_at) row.created_at = p.created_at;
 
   const { error } = await supabase.from("movimentos_caixa").insert(row);
   if (error && !String(error.message).includes("duplicate key")) {
@@ -784,12 +813,10 @@ async function handleCatalogoSync(supabase: SupabaseAdmin) {
   return jsonResponse(200, { ok: true, produtos: produtosRes.data ?? [], regras: regrasRes.data ?? [] });
 }
 
-/** * 🔒 CORREÇÃO P0: Removido gerente_senha_sha256 do retorno
- */
 async function handlePdvConfigSync(supabase: SupabaseAdmin) {
   const { data, error, status } = await supabase
     .from("pdv_config")
-    .select("gerente_id, max_desconto_gerente_percentual") // 🔒 Removido campo de senha
+    .select("gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual")
     .eq("id", 1)
     .maybeSingle();
 
@@ -824,6 +851,7 @@ async function dispatchOutboxEvent(
   else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
   else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
   else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
+  else throw new Error(`TIPO_DESCONHECIDO: ${ev.tipo}`);
 }
 
 async function handlePostOutboxBatch(
