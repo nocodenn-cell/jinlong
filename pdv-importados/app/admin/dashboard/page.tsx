@@ -20,6 +20,10 @@ import {
   type DashboardStatus,
 } from './dashboardUtils'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
+import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
+import { formatBRL, formatNumberLocale } from '@/lib/format/money'
+
+const LOCALE_PT_BR = 'pt-BR'
 
 type SalesPoint = {
   label: string
@@ -268,7 +272,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   while (cursor <= end) {
     const key = dateKey(cursor)
     chartData.push({
-      label: cursor.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      label: formatDayMonthInLocale(cursor, LOCALE_PT_BR),
       total: Math.round((chartBucket.get(key) ?? 0) * 100) / 100,
     })
     cursor.setDate(cursor.getDate() + 1)
@@ -299,7 +303,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     stockTrendLabel = estoqueBaixoCount > 0 ? L.trendStockWarn.pt : L.trendStockOk.pt
   }
 
-  const stockValue = estoqueBaixoRes.error ? dash.emDash : estoqueBaixoCount.toLocaleString('pt-BR')
+  const stockValue = estoqueBaixoRes.error ? dash.emDash : formatNumberLocale(estoqueBaixoCount, LOCALE_PT_BR)
 
   const metrics: Metric[] = periodSalesFailed
     ? [
@@ -344,7 +348,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         {
           titleLine: L.metricTotalSales.pt,
           titleCn: oriental ? L.metricTotalSales.cn : undefined,
-          value: totalAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+          value: formatBRL(totalAtual, LOCALE_PT_BR),
           trend: totalTrend.label,
           up: totalTrend.up,
           icon: DollarSign,
@@ -353,7 +357,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         {
           titleLine: L.metricOrders.pt,
           titleCn: oriental ? L.metricOrders.cn : undefined,
-          value: pedidosAtual.toLocaleString('pt-BR'),
+          value: formatNumberLocale(pedidosAtual, LOCALE_PT_BR),
           trend: pedidosTrend.label,
           up: pedidosTrend.up,
           icon: Package,
@@ -362,7 +366,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         {
           titleLine: L.metricTicket.pt,
           titleCn: oriental ? L.metricTicket.cn : undefined,
-          value: ticketAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+          value: formatBRL(ticketAtual, LOCALE_PT_BR),
           trend: ticketTrend.label,
           up: ticketTrend.up,
           icon: ShoppingBag,
@@ -382,12 +386,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const latestOrders: OrderRow[] = recentOrdersRaw.map((o) => ({
     id: o.id,
     operador: o.operador_id ? (userById.get(o.operador_id) ?? '—') : '—',
-    valor: Number(o.total_liquido ?? 0).toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }),
+    valor: formatBRL(Number(o.total_liquido ?? 0), LOCALE_PT_BR),
     status: o.status,
-    data: new Date(o.data).toLocaleString('pt-BR'),
+    data: formatDateTimeLocaleDefault(o.data, LOCALE_PT_BR),
     formaPagamento: o.forma_pagamento,
   }))
 
@@ -446,7 +447,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               <span className="text-slate-500"> · </span>
             </>
           ) : null}
-          {L.newUsers.pt}: {novosUsuariosAtual.toLocaleString('pt-BR')} ({novosTrend.label})
+          {L.newUsers.pt}: {formatNumberLocale(novosUsuariosAtual, LOCALE_PT_BR)} ({novosTrend.label})
         </p>
         {oriental ? (
           <p className="mt-1 text-xs text-slate-500">{adminLineBoth(L.pageSubtitle)}</p>

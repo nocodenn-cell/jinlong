@@ -1,5 +1,6 @@
 'use client'
 
+import { formatNumberLocale } from '@/lib/format/money'
 import { useEffect, useId, useState } from 'react'
 import {
   Area,
@@ -73,7 +74,7 @@ export function SalesTrendChart({
           tick={{ fill: t.tick, fontSize: 12 }}
         />
         <YAxis axisLine={false} tickLine={false} tick={{ fill: t.tick, fontSize: 12 }} />
-        <Tooltip formatter={(v) => Number(v).toLocaleString('pt-BR')} />
+        <Tooltip formatter={(v) => formatNumberLocale(Number(v), 'pt-BR')} />
         <Area
           type="monotone"
           dataKey="total"

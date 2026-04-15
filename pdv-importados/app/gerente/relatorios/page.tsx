@@ -11,7 +11,7 @@ import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
-import { formatBRL } from '@/lib/format/money'
+import { formatBRL, formatDecimalPlaces } from '@/lib/format/money'
 
 type VendaDia = {
   dia: string
@@ -327,7 +327,7 @@ export default async function GerenteRelatoriosPage(props: PageProps) {
                   <tr key={row.id} style={{ borderTop: '1px solid #f3f4f6' }}>
                     <td style={{ padding: 10 }}>{row.nome}</td>
                     <td style={{ padding: 10 }}>{row.origem}</td>
-                    <td style={{ padding: 10 }}>{Number(row.total_quantidade).toFixed(3)}</td>
+                    <td style={{ padding: 10 }}>{formatDecimalPlaces(Number(row.total_quantidade), 3)}</td>
                     <td style={{ padding: 10 }}>{fmtMoney(Number(row.total_valor))}</td>
                     <td style={{ padding: 10 }}>{row.num_vendas}</td>
                   </tr>
@@ -387,10 +387,10 @@ export default async function GerenteRelatoriosPage(props: PageProps) {
                 {(baixo as EstBaixo[] | null)?.map((row) => (
                   <tr key={row.id} style={{ borderTop: '1px solid #f3f4f6' }}>
                     <td style={{ padding: 10 }}>{row.nome}</td>
-                    <td style={{ padding: 10 }}>{Number(row.quantidade_atual).toFixed(3)}</td>
-                    <td style={{ padding: 10 }}>{Number(row.estoque_minimo).toFixed(3)}</td>
+                    <td style={{ padding: 10 }}>{formatDecimalPlaces(Number(row.quantidade_atual), 3)}</td>
+                    <td style={{ padding: 10 }}>{formatDecimalPlaces(Number(row.estoque_minimo), 3)}</td>
                     <td style={{ padding: 10, color: '#b45309', fontWeight: 600 }}>
-                      {Number(row.deficit).toFixed(3)}
+                      {formatDecimalPlaces(Number(row.deficit), 3)}
                     </td>
                   </tr>
                 ))}
