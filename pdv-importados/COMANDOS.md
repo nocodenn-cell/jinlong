@@ -19,3 +19,4 @@ Rodar sempre com **working directory** = esta pasta (`pdv-importados`).
 **Supabase:** `NEXT_PUBLIC_SUPABASE_URL` = URL `https://....supabase.co` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` = JWT da anon key (não inverter).
 
 **E2E com login real:** após `seed:dev-users`, use o e-mail do gerente (padrão `e2e-gerente@localhost.test`) e a mesma senha em `PLAYWRIGHT_TEST_EMAIL` / `PLAYWRIGHT_TEST_PASSWORD` (PowerShell: `$env:PLAYWRIGHT_TEST_EMAIL=...`). Ver [docs/SEED_DEV_E2E.md](docs/SEED_DEV_E2E.md).
+# trigger ci
