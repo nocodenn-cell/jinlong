@@ -48,7 +48,7 @@ No GitHub Actions, o workflow **CI backend Supabase** aplica todas as migrations
 
 ## CI — diagnóstico anti-replay (opcional, contra ambiente real)
 
-No mesmo workflow há o job `anti-replay-diagnostic-gate` (runner Windows + PowerShell). Configure **somente no GitHub** (Settings → Secrets and variables → Actions) os secrets **`SYNC_ENDPOINT`** (URL da função `sync-outbox`) e **`SYNC_KEY`** (igual ao secret da Edge). Com eles definidos, o CI executa `scripts/sync-outbox-anti-replay-diagnostic.ps1`; em **PR interno** que altera `sync-outbox` ou esse script, a ausência dos secrets faz o gate falhar (forks não recebem esses secrets — comportamento esperado).
+No mesmo workflow há o job `anti-replay-diagnostic-gate` (runner Windows + PowerShell). Configure **somente no GitHub** (Settings → Secrets and variables → Actions) os secrets **``** (URL da função `sync-outbox`) e **`SYNC_KEY`** (igual ao secret da Edge). Com eles definidos, o CI executa `scripts/sync-outbox-anti-replay-diagnostic.ps1`; em **PR interno** que altera `sync-outbox` ou esse script, a ausência dos secrets faz o gate falhar (forks não recebem esses secrets — comportamento esperado).
 
 ## Smoke operacional completo (SQL)
 
