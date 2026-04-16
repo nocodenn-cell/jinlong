@@ -156,6 +156,7 @@ npx supabase secrets set SYNC_KEY="(segredo forte)"
 - Function **deployada** na versão atual do repositório
 - **Três** secrets definidos e iguais à intenção do `.env` local (item 3)
 - Diagnóstico anti-replay executado com sucesso (`backend/scripts/sync-outbox-anti-replay-diagnostic.ps1`)
+- Se o diagnóstico falhar com **`REPLAY_OR_DB_ERROR`** (HMAC válido) ou **`401`** em todas as chamadas: conferir **§2.6** em [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md) — migrations **024** (`sync_request_nonces`), **GRANT** a `service_role`, `SYNC_KEY` idêntico no cliente e na Edge, redeploy após alinhar o banco.
 
 **Painel:** Edge Functions → `sync-outbox` → confirmar **Deployed** e URL típica  
 `https://<ref>.supabase.co/functions/v1/sync-outbox`

@@ -83,6 +83,17 @@ O catálogo, `pdv_config` e a outbox usam **apenas** a Edge `sync-outbox` com as
 
 Reinicie o app Tauri após alterar `.env`.
 
+### 2.6 Alinhamento pós-deploy (evitar `REPLAY_OR_DB_ERROR`, 401 e grants)
+
+Manter **migrations**, **secrets** e **runtime da Edge** alinhados evita erros já vistos em homologação (HMAC válido que falha ao registrar nonce, ou 401 em todas as chamadas).
+
+| Sintoma | Verificação usual |
+|---------|-------------------|
+| **`401 UNAUTHORIZED`** em GET/POST assinados corretamente | `SYNC_KEY` no `.env` do PDV / GitHub / script de diagnóstico deve ser **idêntico** ao secret `SYNC_KEY` da Edge `sync-outbox`. |
+| **`401 REPLAY_OR_DB_ERROR`** em request **válida** (assinatura e nonce ok) | A função falhou ao `INSERT` em `public.sync_request_nonces` (anti-replay, migration **024**). Confirme que a migration foi aplicada (`db push --linked`), que a tabela existe e que há **`GRANT` a `service_role`** conforme a migration. Em seguida, **redeploy** `sync-outbox` e rode `.\scripts\sync-outbox-anti-replay-diagnostic.ps1`. |
+| Painel bloqueia secrets com prefixo `SUPABASE_` | Normal: variáveis reservadas são gerenciadas pela plataforma. Ajuste apenas secrets **custom** (ex.: `SYNC_KEY`). |
+| Dúvida se o banco está no estado esperado | SQL Editor: `SELECT TO_REGCLASS('public.sync_request_nonces');` e conferir grants em `information_schema.role_table_grants` para essa tabela. |
+
 ---
 
 ## 3. Teste ponta a ponta (checklist)

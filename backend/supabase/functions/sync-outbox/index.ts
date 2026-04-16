@@ -4,6 +4,7 @@
 // service role somente no ambiente da Function.
 
 import { createClient } from "@supabase/supabase-js";
+import { timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 
 type OutboxEvent = {
@@ -25,17 +26,6 @@ type SyncResponse = {
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
-}
-
-/** Comparação em tempo constante (evita leak por timing no X-SYNC-KEY). */
-function timingSafeEqualStr(a: string, b: string): boolean {
-  const enc = new TextEncoder();
-  const ba = enc.encode(a);
-  const bb = enc.encode(b);
-  if (ba.length !== bb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < ba.length; i++) diff |= ba[i] ^ bb[i];
-  return diff === 0;
 }
 
 const MAX_EVENTS_PER_REQUEST = 200;

@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { roundMoney2 } from '@/core/cart/totals'
+
+export { roundMoney2 }
 
 export const FORMAS_PAGAMENTO_CAIXA = [
   'DINHEIRO',
@@ -45,9 +48,6 @@ export type ItemTotalizacaoServidor = {
   precoUnitario: number
   quantidade: number
 }
-
-export { roundMoney2 } from '@/core/cart/totals'
-import { roundMoney2 } from '@/core/cart/totals'
 
 export function totaisFromItens(itens: ItemTotalizacaoServidor[]) {
   const bruto = itens.reduce((acc, i) => acc + i.precoOriginal * i.quantidade, 0)

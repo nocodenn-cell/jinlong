@@ -1,3 +1,5 @@
+import { timingSafeEqualStr } from "./crypto.ts";
+
 const encoder = new TextEncoder();
 
 const RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -81,15 +83,6 @@ async function sha256Hex(input: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function timingSafeEqualStr(a: string, b: string): boolean {
-  const ba = encoder.encode(a);
-  const bb = encoder.encode(b);
-  if (ba.length !== bb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < ba.length; i++) diff |= ba[i] ^ bb[i];
-  return diff === 0;
 }
 
 function generateToken(): string {
