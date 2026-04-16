@@ -135,7 +135,7 @@ export function CaixaHeader({
             {new Date(caixaStatus.dataAbertura).toLocaleString(
               idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN',
             )}{' '}
-            · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)} · Sistema (dinheiro): R${' '}
+            · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)} · Saldo estimado (dinheiro): R${' '}
             {caixaStatus.valorSistemaDinheiro.toFixed(2)}
           </div>
         )}

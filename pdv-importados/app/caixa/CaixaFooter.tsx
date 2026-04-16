@@ -20,9 +20,13 @@ type Props = {
   formaPagamento: FinalizarVendaInput["formaPagamento"]
   onFormaPagamentoChange: (v: FinalizarVendaInput["formaPagamento"]) => void
   onValidarGerente: () => void
+  onAbrirSuprimento: () => void
+  onAbrirSangria: () => void
   onFinalizar: () => void
   validandoGerente: boolean
   finalizando: boolean
+  movimentandoCaixa: boolean
+  caixaAberto: boolean
   itensLength: number
   buscando: boolean
   carregandoRegras: boolean
@@ -72,9 +76,13 @@ export function CaixaFooter({
   formaPagamento,
   onFormaPagamentoChange,
   onValidarGerente,
+  onAbrirSuprimento,
+  onAbrirSangria,
   onFinalizar,
   validandoGerente,
   finalizando,
+  movimentandoCaixa,
+  caixaAberto,
   itensLength,
   buscando,
   carregandoRegras,
@@ -137,9 +145,31 @@ export function CaixaFooter({
             <Button
               type="button"
               variant="secondary"
+              className="bg-sky-700/90 text-sky-50 hover:bg-sky-600 border-0"
+              onClick={onAbrirSuprimento}
+              disabled={!caixaAberto || movimentandoCaixa || finalizando}
+              aria-busy={movimentandoCaixa}
+              title="Ctrl+Shift+S"
+            >
+              {m.caixa.suprimento} (+)
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="bg-rose-700/90 text-rose-50 hover:bg-rose-600 border-0"
+              onClick={onAbrirSangria}
+              disabled={!caixaAberto || movimentandoCaixa || finalizando}
+              aria-busy={movimentandoCaixa}
+              title="Ctrl+Shift+R"
+            >
+              {m.caixa.sangria} (-)
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
               className="bg-amber-700/90 text-amber-50 hover:bg-amber-600 border-0"
               onClick={onValidarGerente}
-              disabled={validandoGerente}
+              disabled={validandoGerente || movimentandoCaixa}
               aria-busy={validandoGerente}
             >
               {validandoGerente

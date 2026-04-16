@@ -10,6 +10,13 @@ import {
   fecharCaixaOperador,
   obterStatusCaixaOperador,
   validarGerenteDesconto,
+  obterLimiteSangriaSemGerente,
+  registrarMovimentacao,
+  autorizarMovimentacaoGerente,
+  obterMovimentacoesCaixa,
+  cancelarMovimentacaoCaixa,
+  estornarMovimentacaoCaixa,
+  type MovimentacaoCaixaDTO,
 } from "@/app/caixa/actions"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
@@ -24,6 +31,15 @@ import {
   CaixaGerenteModal,
   type ValidarSenhaGerenteResult,
 } from "@/app/caixa/CaixaGerenteModal"
+import {
+  CaixaMovimentacaoModal,
+  type TipoMovimentacaoUi,
+} from "@/app/caixa/CaixaMovimentacaoModal"
+import {
+  CaixaMovimentacaoAcaoModal,
+  type AcaoMovimentacaoTipo,
+} from "@/app/caixa/CaixaMovimentacaoAcaoModal"
+import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeline"
 
 function localeFromIdioma(idioma: Idioma): string {
   if (idioma === "pt") return "pt-BR"
@@ -40,11 +56,22 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const [codigo, setCodigo] = useState("")
   const [mensagem, setMensagem] = useState<string | null>(null)
   const [carregandoRegras, setCarregandoRegras] = useState(true)
+  const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
   const [buscando, setBuscando] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
+  const [movimentandoCaixa, setMovimentandoCaixa] = useState(false)
+  const [carregandoMovimentacoes, setCarregandoMovimentacoes] = useState(false)
+  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>([])
+  const [processandoAcaoMovimentacao, setProcessandoAcaoMovimentacao] = useState(false)
   const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
+  const [movimentacaoModalTipo, setMovimentacaoModalTipo] =
+    useState<TipoMovimentacaoUi | null>(null)
+  const [acaoMovimentacao, setAcaoMovimentacao] = useState<{
+    tipo: AcaoMovimentacaoTipo
+    item: MovimentacaoCaixaDTO
+  } | null>(null)
   const [gerenteValidadoAte, setGerenteValidadoAte] = useState<string | null>(null)
   const [gerenteToken, setGerenteToken] = useState<string | null>(null)
   const [maxDescontoGerentePercentual, setMaxDescontoGerentePercentual] =
@@ -88,6 +115,24 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setDescontoGerentePercentual(0)
   }, [])
 
+  const recarregarMovimentacoes = useCallback(async (caixaId?: string) => {
+    if (!caixaId) {
+      setMovimentacoes([])
+      return
+    }
+    setCarregandoMovimentacoes(true)
+    try {
+      const res = await obterMovimentacoesCaixa(caixaId)
+      if (!res.ok) {
+        setMensagem(res.error)
+        return
+      }
+      setMovimentacoes(res.itens)
+    } finally {
+      setCarregandoMovimentacoes(false)
+    }
+  }, [])
+
   const recarregarStatusCaixa = useCallback(async () => {
     const status = await obterStatusCaixaOperador()
     if (!status.ok) {
@@ -102,10 +147,12 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         valorInicial: status.valorInicial,
         valorSistemaDinheiro: status.valorSistemaDinheiro,
       })
+      await recarregarMovimentacoes(status.caixaId)
     } else {
       setCaixaStatus({ aberto: false })
+      setMovimentacoes([])
     }
-  }, [])
+  }, [recarregarMovimentacoes])
 
   useEffect(() => {
     let cancelado = false
@@ -128,8 +175,38 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   }, [setRegras, m.caixa.regras_erro_prefixo])
 
   useEffect(() => {
+    let cancelado = false
+    ;(async () => {
+      const res = await obterLimiteSangriaSemGerente()
+      if (cancelado) return
+      if (res.ok) {
+        setLimiteSangriaSemGerente(res.limite)
+      }
+    })()
+    return () => {
+      cancelado = true
+    }
+  }, [])
+
+  useEffect(() => {
     void recarregarStatusCaixa()
   }, [recarregarStatusCaixa])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey && e.shiftKey)) return
+      if (e.repeat) return
+      if (e.code === "KeyS") {
+        e.preventDefault()
+        if (!movimentandoCaixa && caixaStatus?.aberto) setMovimentacaoModalTipo("suprimento")
+      } else if (e.code === "KeyR") {
+        e.preventDefault()
+        if (!movimentandoCaixa && caixaStatus?.aberto) setMovimentacaoModalTipo("sangria")
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [movimentandoCaixa, caixaStatus])
 
   const handleAdicionar = useCallback(
     async (e: FormEvent) => {
@@ -396,6 +473,98 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     recarregarStatusCaixa,
   ])
 
+  const handleSalvarMovimentacao = useCallback(
+    async (payload: {
+      valor: number
+      motivoCodigo: string
+      motivo: string
+      gerenteSenha?: string
+    }): Promise<{ ok: true } | { ok: false; error: string }> => {
+      if (!caixaStatus?.aberto) {
+        return { ok: false, error: m.caixa.msg_caixa_fechado_movimentacao }
+      }
+      if (!movimentacaoModalTipo) {
+        return { ok: false, error: m.caixa.msg_tipo_movimentacao_invalido }
+      }
+
+      setMovimentandoCaixa(true)
+      try {
+        const registro = await registrarMovimentacao({
+          caixaId: caixaStatus.caixaId,
+          tipo: movimentacaoModalTipo,
+          formaPagamento: "dinheiro",
+          valor: payload.valor,
+          motivo: payload.motivo,
+          motivoCodigo: payload.motivoCodigo,
+          idempotencyKey: crypto.randomUUID(),
+          terminalId: getDeviceFingerprint(),
+        })
+
+        if (!registro.ok) return { ok: false, error: registro.error }
+
+        if (registro.status === "pendente") {
+          if (!payload.gerenteSenha?.trim()) {
+            setMensagem(m.caixa.msg_movimentacao_pendente_gerente)
+            await recarregarStatusCaixa()
+            return { ok: true }
+          }
+          const aprovacao = await autorizarMovimentacaoGerente(
+            registro.movimentacaoId,
+            payload.gerenteSenha,
+          )
+          if (!aprovacao.ok) {
+            return {
+              ok: false,
+              error: caixaFmt(m.caixa.msg_movimentacao_aprovacao_falhou, {
+                erro: aprovacao.error,
+              }),
+            }
+          }
+        }
+
+        const label = movimentacaoModalTipo === "sangria" ? m.caixa.sangria : m.caixa.suprimento
+        setMensagem(
+          caixaFmt(m.caixa.msg_movimentacao_registrada_ok, {
+            tipo: label,
+            valor: payload.valor.toFixed(2),
+          }),
+        )
+        await recarregarStatusCaixa()
+        await recarregarMovimentacoes(caixaStatus.caixaId)
+        return { ok: true }
+      } finally {
+        setMovimentandoCaixa(false)
+      }
+    },
+    [caixaStatus, movimentacaoModalTipo, recarregarStatusCaixa, recarregarMovimentacoes, m],
+  )
+
+  const handleConfirmarAcaoMovimentacao = useCallback(
+    async (motivo: string): Promise<{ ok: true } | { ok: false; error: string }> => {
+      if (!acaoMovimentacao) return { ok: false, error: m.caixa.msg_acao_movimentacao_invalida }
+      setProcessandoAcaoMovimentacao(true)
+      try {
+        if (acaoMovimentacao.tipo === "cancelar") {
+          const res = await cancelarMovimentacaoCaixa(acaoMovimentacao.item.id, motivo)
+          if (!res.ok) return { ok: false, error: res.error }
+          setMensagem(m.caixa.timeline_msg_cancelada)
+        } else {
+          const res = await estornarMovimentacaoCaixa(acaoMovimentacao.item.id, motivo)
+          if (!res.ok) return { ok: false, error: res.error }
+          setMensagem(m.caixa.timeline_msg_estornada)
+        }
+        await recarregarStatusCaixa()
+        if (caixaStatus?.aberto) {
+          await recarregarMovimentacoes(caixaStatus.caixaId)
+        }
+        return { ok: true }
+      } finally {
+        setProcessandoAcaoMovimentacao(false)
+      }
+    },
+    [acaoMovimentacao, caixaStatus, recarregarMovimentacoes, recarregarStatusCaixa, m],
+  )
+
   const valorDescontoGerente =
     descontoGerentePercentual > 0
       ? Math.round(((totalLiquido * descontoGerentePercentual) / 100) * 100) /
@@ -504,15 +673,30 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
               />
             </div>
           </section>
+          {caixaStatus?.aberto && (
+            <CaixaMovimentacoesTimeline
+              m={m}
+              idioma={idioma}
+              itens={movimentacoes}
+              carregando={carregandoMovimentacoes}
+              processandoAcao={processandoAcaoMovimentacao}
+              onCancelar={(item) => setAcaoMovimentacao({ tipo: "cancelar", item })}
+              onEstornar={(item) => setAcaoMovimentacao({ tipo: "estornar", item })}
+            />
+          )}
           <CaixaFooter
             m={m}
             idioma={idioma}
             formaPagamento={formaPagamento}
             onFormaPagamentoChange={setFormaPagamento}
             onValidarGerente={() => setGerenteModalAberto(true)}
+            onAbrirSuprimento={() => setMovimentacaoModalTipo("suprimento")}
+            onAbrirSangria={() => setMovimentacaoModalTipo("sangria")}
             onFinalizar={() => void handleFinalizar()}
             validandoGerente={validandoGerente}
             finalizando={finalizando}
+            movimentandoCaixa={movimentandoCaixa}
+            caixaAberto={caixaStatus?.aberto === true}
             itensLength={itens.length}
             buscando={buscando}
             carregandoRegras={carregandoRegras}
@@ -537,6 +721,32 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         onValidateSenha={handleValidateSenhaGerente}
         onApply={handleAplicarDescontoGerente}
       />
+      {movimentacaoModalTipo && (
+        <CaixaMovimentacaoModal
+          open={!!movimentacaoModalTipo}
+          tipo={movimentacaoModalTipo}
+          processando={movimentandoCaixa}
+          limiteSangriaSemGerente={limiteSangriaSemGerente}
+          saldoEstimado={caixaStatus?.aberto ? caixaStatus.valorSistemaDinheiro : 0}
+          m={m}
+          onOpenChange={(open) => {
+            if (!open) setMovimentacaoModalTipo(null)
+          }}
+          onSubmit={handleSalvarMovimentacao}
+        />
+      )}
+      {acaoMovimentacao && (
+        <CaixaMovimentacaoAcaoModal
+          open={!!acaoMovimentacao}
+          tipo={acaoMovimentacao.tipo}
+          processando={processandoAcaoMovimentacao}
+          m={m}
+          onOpenChange={(open) => {
+            if (!open) setAcaoMovimentacao(null)
+          }}
+          onConfirm={handleConfirmarAcaoMovimentacao}
+        />
+      )}
     </>
   )
 }
