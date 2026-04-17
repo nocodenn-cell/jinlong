@@ -104,3 +104,98 @@ export async function garantirLinhaEstoque(input: unknown): Promise<ActionResult
   revalidatePath('/gerente/estoque')
   return { success: true, data: null }
 }
+
+export type EstoqueRowDTO = {
+  id: string
+  quantidade_atual: number
+  estoque_minimo: number
+}
+
+export type ProdutoComEstoqueDTO = {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  unidade_medida: string
+  estoque: EstoqueRowDTO | null
+}
+
+export type EstoqueBaixoRowDTO = {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  origem: string
+  loja_nome?: string | null
+  quantidade_atual: number
+  estoque_minimo: number
+  deficit: number
+}
+
+export type EstoqueGerenteData =
+  | { modo: 'todos'; produtos: ProdutoComEstoqueDTO[] }
+  | { modo: 'baixo'; linhas: EstoqueBaixoRowDTO[] }
+
+/** Carga da tela de estoque (RLS + sessão do usuário). */
+export async function obterDadosEstoqueGerente(filtro: 'todos' | 'baixo'): Promise<EstoqueGerenteData> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  let lojaId = LOJA_MATRIZ_ID
+  if (user) {
+    const { data: urow } = await supabase
+      .from('usuarios')
+      .select('loja_id')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (urow?.loja_id) lojaId = urow.loja_id as string
+  }
+
+  if (filtro === 'baixo') {
+    const { data } = await supabase
+      .from('v_estoque_baixo')
+      .select(
+        'id, nome, codigo_barras, origem, loja_id, loja_nome, quantidade_atual, estoque_minimo, deficit',
+      )
+      .eq('loja_id', lojaId)
+    return { modo: 'baixo', linhas: (data ?? []) as EstoqueBaixoRowDTO[] }
+  }
+
+  const { data: plist } = await supabase
+    .from('produtos')
+    .select('id, nome, codigo_barras, unidade_medida')
+    .eq('ativo', true)
+    .order('nome', { ascending: true })
+
+  const { data: estRows } = await supabase
+    .from('estoque')
+    .select('id, produto_id, quantidade_atual, estoque_minimo')
+    .eq('loja_id', lojaId)
+
+  const estMap = new Map((estRows ?? []).map((e) => [e.produto_id as string, e]))
+  const produtos: ProdutoComEstoqueDTO[] =
+    plist?.map((p) => {
+      const row = estMap.get(p.id)
+      return {
+        ...p,
+        estoque: row
+          ? {
+              id: row.id as string,
+              quantidade_atual: Number(row.quantidade_atual),
+              estoque_minimo: Number(row.estoque_minimo),
+            }
+          : null,
+      }
+    }) ?? []
+
+  return { modo: 'todos', produtos }
+}
+
+export async function atualizarEstoqueProdutoThrow(input: unknown): Promise<void> {
+  const r = await atualizarEstoqueProduto(input)
+  if (!r.success) throw new Error(r.error)
+}
+
+export async function garantirLinhaEstoqueThrow(input: unknown): Promise<void> {
+  const r = await garantirLinhaEstoque(input)
+  if (!r.success) throw new Error(r.error)
+}

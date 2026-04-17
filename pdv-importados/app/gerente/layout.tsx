@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { getUsuarioIdioma, isGerenteOuDono } from '@/src/lib/idioma/usuarioIdioma'
@@ -30,6 +31,7 @@ export default async function GerenteLayout({
       }}
     >
       <SessionIdleLogout />
+      <GerenteToastViewport />
       <header
         style={{
           borderBottom: '1px solid #e5e7eb',
