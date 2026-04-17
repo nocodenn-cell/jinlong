@@ -14,7 +14,7 @@
 // |        |                | dispatchOutboxEvent tipos  | Corpo só no POST: VENDA_REGISTRADA (venda+itens), CAIXA_*, MOVIMENTO_CAIXA — persiste no DB; resposta agregada no batch |
 // ---
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "npm:@supabase/supabase-js";
 import { timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 
