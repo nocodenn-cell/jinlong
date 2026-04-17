@@ -48,6 +48,7 @@ O hook executa `scripts/git-pre-commit-check.mjs` (resolve o `git` em caminhos p
 ## Documentação
 
 - [**P0 checklist** — migrations, deploy Edge, secrets, teste ponta a ponta](docs/P0_CHECKLIST_OPERACIONAL.md)
+- [**P0 staging** — checklist com data/responsável + comando de status de migrations](docs/CHECKLIST_P0_STAGING.md)
 - [**Ambientes e release** — dev/staging/prod, credenciais PDV local, gates](docs/AMBIENTES_E_RELEASE.md)
 - [**Circuito operacional** — deploy Edge, secrets, teste desktop → nuvem, caixa web vs desktop](docs/CIRCUITO_OPERACIONAL.md)
 - [Roadmap](docs/ROADMAP.md)
@@ -56,7 +57,7 @@ O hook executa `scripts/git-pre-commit-check.mjs` (resolve o `git` em caminhos p
 - [Deploy na Vercel](docs/DEPLOY_VERCEL.md)
 - [Supabase — variáveis](pdv-importados/docs/SUPABASE_ENV.md)
 - [Seed dev/E2E — Auth + usuarios](pdv-importados/docs/SEED_DEV_E2E.md)
-- [Backend Supabase — visão geral](backend/README.md)
+- [Backend Supabase — visão geral](backend/README.md) — na pasta `backend`, `npm run check:edge` valida as Edge Functions (Deno) como no CI
 - [Supabase CLI / migrations](backend/supabase/README.md)
 
 ## Prompts / IA no repositório

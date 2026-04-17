@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
@@ -45,12 +46,12 @@ function parseForma(raw: string): (typeof FORMAS)[number] {
   return FORMAS.includes(raw as (typeof FORMAS)[number]) ? (raw as (typeof FORMAS)[number]) : 'DINHEIRO'
 }
 
-type Props = {
+type Props = Readonly<{
   idioma: Idioma
   clientes: FinanceiroClienteRow[]
   titulos: FinanceiroTituloRow[]
   docsFiscais: FinanceiroDocRow[]
-}
+}>
 
 export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFiscais }: Props) {
   const m = getMessages(idioma)
@@ -149,9 +150,9 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
               void mutCliente({
-                nome: String(fd.get('nome')),
-                documento: String(fd.get('documento') ?? ''),
-                telefone: String(fd.get('telefone') ?? ''),
+                nome: readFormDataString(fd, 'nome'),
+                documento: readFormDataString(fd, 'documento'),
+                telefone: readFormDataString(fd, 'telefone'),
               })
             }}
             style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
@@ -184,10 +185,10 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
               void mutTitulo({
-                cliente_id: String(fd.get('cliente_id')),
+                cliente_id: readFormDataString(fd, 'cliente_id'),
                 valor_total: Number(fd.get('valor_total')),
-                descricao: String(fd.get('descricao') ?? ''),
-                vencimento: String(fd.get('vencimento') ?? ''),
+                descricao: readFormDataString(fd, 'descricao'),
+                vencimento: readFormDataString(fd, 'vencimento'),
               })
             }}
             style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
@@ -244,7 +245,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
-              void mutEnfileirar(String(fd.get('venda_id')).trim())
+              void mutEnfileirar(readFormDataString(fd, 'venda_id').trim())
             }}
             style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
           >
@@ -297,7 +298,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                     onSubmit={(e) => {
                       e.preventDefault()
                       const fd = new FormData(e.currentTarget)
-                      const forma = parseForma(String(fd.get('forma') ?? 'DINHEIRO'))
+                      const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
                       void mutLiquidar({
                         titulo_id: t.id,
                         valor: Number(fd.get('valor')),

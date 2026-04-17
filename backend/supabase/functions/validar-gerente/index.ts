@@ -16,7 +16,7 @@
 //   não é bloqueado por esta camada.
 // - Sem STRICT e sem lista: legado Access-Control-Allow-Origin: * (só dev/homolog consciente).
 
-import { createClient } from "npm:@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 
 const USER_LIMIT = 5;

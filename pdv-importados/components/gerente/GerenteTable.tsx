@@ -6,10 +6,10 @@ export type GerenteTableColumn = {
   width?: string | number
 }
 
-type GerenteTableProps = {
+type GerenteTableProps = Readonly<{
   columns: GerenteTableColumn[]
   children: ReactNode
-}
+}>
 
 /**
  * Tabela visual padronizada da área gerente (borda, cabeçalho).

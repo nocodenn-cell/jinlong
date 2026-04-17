@@ -218,6 +218,7 @@ Use quando o piloto ainda **não** inclui Tauri ou quando §2–§3 ainda não e
 - Com secrets preenchidos: o job roda `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1` contra o ambiente apontado (validação ponta a ponta).
 - **PR interno** que altera `sync-outbox` ou o script de diagnóstico **sem** esses secrets deve falhar no passo de validação (gate explícito).
 - PRs de **fork**: o gate não exige secrets no fork; o diagnóstico só roda se o repositório base tiver secrets (comportamento esperado para não vazar `SYNC_KEY`).
+- **Opcional — drift remoto:** secrets `**SUPABASE_ACCESS_TOKEN**` (token de conta, Dashboard → Account → Access tokens) e `**SUPABASE_MIGRATION_CHECK_PROJECT_REF**` (ex.: ref do projeto **staging**). Com ambos definidos no repositório, o job `migration-remote-drift` executa `supabase link` + `node scripts/p0-migration-status.mjs` e **falha** se Local≠Remote. Sem esses secrets, ou em **PR de fork**, o job encerra com sucesso sem chamar a API (não bloqueia contribuições externas). Execução manual: aba **Actions** → workflow **CI backend Supabase** → **Run workflow**.
 
 ---
 

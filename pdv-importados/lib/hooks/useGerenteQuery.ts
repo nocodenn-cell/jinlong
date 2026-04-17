@@ -52,7 +52,7 @@ export function useGerenteQuery<TData>(
       setLoading(false)
       return
     }
-    void refetch()
+    refetch().catch(() => undefined)
   }, [options?.enabled, refetch])
 
   return { data, loading, error, refetch }

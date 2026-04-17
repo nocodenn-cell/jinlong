@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 
-type GerenteFilterBarProps = {
+type GerenteFilterBarProps = Readonly<{
   title: string
   rightSlot?: ReactNode
   children?: ReactNode
-}
+}>
 
 /** Barra de título + filtros/ações à esquerda e slot opcional à direita (ex.: exportar). */
 export function GerenteFilterBar({ title, rightSlot, children }: GerenteFilterBarProps) {

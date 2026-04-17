@@ -1,5 +1,12 @@
 # Validação mínima do backend Supabase: type-check da Edge + smoke das migrations em Postgres (stub auth).
 #
+# Job migration-remote-drift (Ubuntu + Node):
+# - Secrets opcionais: SUPABASE_ACCESS_TOKEN (token de conta em supabase.com/dashboard/account/tokens) e
+#   SUPABASE_MIGRATION_CHECK_PROJECT_REF (ex.: ref do projeto staging).
+# - Com ambos preenchidos no repositório: `supabase link` + `node scripts/p0-migration-status.mjs` (falha se Local≠Remote).
+# - Sem secrets: passo pula com sucesso (não bloqueia forks nem contribuidores sem acesso aos secrets).
+# - PR de fork: secrets do base não são injetados; o passo detecta fork e encerra 0 sem chamar a API Supabase.
+#
 # Job anti-replay (Windows + PowerShell):
 # - Secrets do repositório: SYNC_ENDPOINT (URL da função sync-outbox), SYNC_KEY (mesmo da Edge).
 # - PR interno que altera sync-outbox ou o script de diagnóstico: falha se esses secrets estiverem vazios (gate).
@@ -18,6 +25,7 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/ci-backend-supabase.yml'
+  workflow_dispatch:
 
 jobs:
   migrations-smoke:
@@ -85,6 +93,38 @@ jobs:
 
       - name: Contract smoke (sync-outbox payload v1)
         run: node backend/scripts/sync-outbox-contract-smoke.mjs
+
+  migration-remote-drift:
+    runs-on: ubuntu-latest
+    steps:
+      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      # Tag de referência: v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+
+      - name: Link + compare Local vs Remote (optional secrets)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            HEAD_REPO="$(jq -r '.pull_request.head.repo.full_name' "${GITHUB_EVENT_PATH}")"
+            if [ "${HEAD_REPO}" != "${GITHUB_REPOSITORY}" ]; then
+              echo "PR de fork (${HEAD_REPO}) — secrets do repositório base não estão disponíveis; pulando migration-remote-drift."
+              exit 0
+            fi
+          fi
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ] || [ -z "${SUPABASE_MIGRATION_CHECK_PROJECT_REF:-}" ]; then
+            echo "Secrets SUPABASE_ACCESS_TOKEN e/ou SUPABASE_MIGRATION_CHECK_PROJECT_REF ausentes; pulando checagem remota de migrations."
+            exit 0
+          fi
+          cd backend
+          npx supabase link --project-ref "${SUPABASE_MIGRATION_CHECK_PROJECT_REF}"
+          node scripts/p0-migration-status.mjs
 
   anti-replay-diagnostic-gate:
     runs-on: windows-latest

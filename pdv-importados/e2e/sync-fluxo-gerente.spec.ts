@@ -7,9 +7,9 @@ import {
   assertSyncFlowEnvInCi,
   hasSyncFlowEnv,
 } from './helpers/env'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 
 const LOGIN_PATH = '/login'
-const LOJA_MATRIZ_ID = 'a0000001-0000-4000-8000-000000000001'
 
 function hmacSha256Hex(secret: string, content: string): string {
   return crypto.createHmac('sha256', secret).update(content).digest('hex')

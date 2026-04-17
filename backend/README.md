@@ -80,6 +80,38 @@ Restart rápido (stop + start com `project_id` **fastproduct**): `powershell -Fi
 
 Detalhes: [supabase/README.md](./supabase/README.md). **Deploy da Edge, secrets e teste desktop → nuvem:** [docs/CIRCUITO_OPERACIONAL.md](../docs/CIRCUITO_OPERACIONAL.md).
 
+## P0 — status Local vs Remote
+
+Com o projeto **linkado** ao ambiente alvo (`npx supabase link`):
+
+```powershell
+node scripts/p0-migration-status.mjs
+```
+
+Saída **ALINHADO** e exit code `0` quando não há drift; caso contrário sugere `db push`. Opções: `--json`, `--warn-only` (sempre exit `0`). Checklist operacional só staging: [../docs/CHECKLIST_P0_STAGING.md](../docs/CHECKLIST_P0_STAGING.md).
+
+## Edge Functions — type-check local (recomendação passo 1)
+
+O CI roda `deno check` em `sync-outbox` e `validar-gerente`. Na pasta **`backend`**, o mesmo check **sem instalar Deno** no sistema:
+
+```powershell
+cd C:\Naturecode\fastproduct\backend
+npm run check:edge
+```
+
+O script usa **`npx -y deno@2.2.2`** (versão fixa próxima ao Deno 2.x do CI). Rode antes de PRs que alterem essas funções.
+
+**Opcional — Deno instalado** (execução mais rápida, sem download do `npx`): [instalação oficial](https://docs.deno.com/runtime/getting_started/installation/) (Windows: `irm https://deno.land/install.ps1 | iex`). Depois:
+
+```powershell
+deno check supabase/functions/sync-outbox/index.ts
+deno check supabase/functions/validar-gerente/index.ts
+```
+
+A função **`fiscal-worker`** usa imports no estilo npm sem o prefixo exigido pelo `deno check` isolado; o type-check dela fica a cargo do fluxo que você usar no deploy (ou ajuste futuro de `deno.json`).
+
 ## CI
 
-Em PRs que alterem `backend/`, o workflow [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) executa **`deno check`** em `supabase/functions/sync-outbox/index.ts`. **Migrations SQL** não têm passo automático no CI — use revisão e `db push` / staging.
+Em PRs que alterem `backend/`, o workflow [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) executa **`deno check`** em `sync-outbox` e `validar-gerente` (mesmo escopo que `npm run check:edge` na pasta `backend`). **Migrations SQL** não têm passo automático no CI — use revisão e `db push` / staging.
+
+**Opcional — drift contra projeto remoto:** no GitHub do repositório, configure secrets `SUPABASE_ACCESS_TOKEN` (token de conta) e `SUPABASE_MIGRATION_CHECK_PROJECT_REF` (ex.: ref de **staging**). O job `migration-remote-drift` roda `supabase link` + `node scripts/p0-migration-status.mjs`. Sem secrets, ou em PR vindo de **fork**, o job pula (sucesso). **Manual:** Actions → *CI backend Supabase* → *Run workflow*.

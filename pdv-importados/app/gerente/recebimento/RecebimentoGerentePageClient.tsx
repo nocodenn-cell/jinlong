@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
+import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
@@ -11,10 +12,10 @@ import { criarRemessaConferencia } from './actions'
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }
 
-type Props = {
+type Props = Readonly<{
   idioma: Idioma
   produtos: RecebimentoProdutoOpt[]
-}
+}>
 
 export function RecebimentoGerentePageClient({ idioma, produtos }: Props) {
   const m = getMessages(idioma)
@@ -67,7 +68,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos }: Props) {
         onSubmit={(e) => {
           e.preventDefault()
           const fd = new FormData(e.currentTarget)
-          const pid = String(fd.get('produto_id') ?? '')
+          const pid = readFormDataString(fd, 'produto_id')
           const qEsp = Number(fd.get('qtd_esperada'))
           const qConf = Number(fd.get('qtd_conferida'))
           if (!pid || Number.isNaN(qEsp) || Number.isNaN(qConf) || qEsp < 0 || qConf < 0) {
@@ -75,8 +76,8 @@ export function RecebimentoGerentePageClient({ idioma, produtos }: Props) {
             return
           }
           void mutate({
-            origem: String(fd.get('origem') ?? ''),
-            observacao: String(fd.get('observacao') ?? ''),
+            origem: readFormDataString(fd, 'origem'),
+            observacao: readFormDataString(fd, 'observacao'),
             produto_id: pid,
             qtd_esperada: qEsp,
             qtd_conferida: qConf,

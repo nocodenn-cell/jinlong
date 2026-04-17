@@ -15,8 +15,18 @@ import { getMessages } from '@/src/lib/i18n/getMessages'
 import { formatBRL, formatDecimalPlaces } from '@/lib/format/money'
 import { carregarDadosRelatoriosGerente } from './actions'
 
-type Props = {
+type Props = Readonly<{
   idioma: Idioma
+}>
+
+function getAvisoPeriodo(
+  aviso: 'nenhum' | 'datas_invalidas' | 'periodo_invertido' | 'periodo_limitado' | undefined,
+  m: ReturnType<typeof getMessages>,
+) {
+  if (aviso === 'datas_invalidas') return m.relatorios.aviso_datas_invalidas
+  if (aviso === 'periodo_invertido') return m.relatorios.aviso_periodo_invertido
+  if (aviso === 'periodo_limitado') return m.relatorios.aviso_periodo_limitado
+  return null
 }
 
 function downloadCsv(filename: string, columns: { key: string; header: string }[], rows: Record<string, unknown>[]) {
@@ -145,14 +155,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
 
   const fmtMoney = (n: number) => formatBRL(Number(n), locale)
 
-  const avisoTexto =
-    data?.periodo.aviso === 'datas_invalidas'
-      ? m.relatorios.aviso_datas_invalidas
-      : data?.periodo.aviso === 'periodo_invertido'
-        ? m.relatorios.aviso_periodo_invertido
-        : data?.periodo.aviso === 'periodo_limitado'
-          ? m.relatorios.aviso_periodo_limitado
-          : null
+  const avisoTexto = getAvisoPeriodo(data?.periodo.aviso, m)
 
   const totalVendasPeriodo = data?.porDia.reduce((s, r) => s + Number(r.num_vendas), 0) ?? 0
   const totalLiquidoPeriodo = data?.porDia.reduce((s, r) => s + Number(r.total_liquido), 0) ?? 0
@@ -177,7 +180,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
           if (de) q.set('de', de)
           if (ate) q.set('ate', ate)
           router.push(`/gerente/relatorios?${q.toString()}`)
-          void refetch()
+          refetch().catch(() => undefined)
         }}
         style={{
           display: 'flex',
@@ -232,7 +235,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
             setDe('')
             setAte('')
             router.push('/gerente/relatorios')
-            void refetch()
+            refetch().catch(() => undefined)
           }}
           style={{ fontSize: 13, color: '#6b7280', paddingBottom: 8, background: 'none', border: 'none', cursor: 'pointer' }}
         >

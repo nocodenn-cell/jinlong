@@ -1,9 +1,9 @@
-type GerenteStatusBadgeProps = {
+type GerenteStatusBadgeProps = Readonly<{
   /** Chave de estilo (ex.: status de venda/caixa ou ATIVO / ALERTA). */
   status: string
   /** Texto exibido; se omitido, usa `status`. */
   label?: string
-}
+}>
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
   CONCLUIDA: { bg: '#ecfdf5', color: '#166534', border: '#bbf7d0' },

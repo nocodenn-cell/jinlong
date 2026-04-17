@@ -6,6 +6,7 @@ import { objectsToCsv } from '@/lib/csv'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { formatBRL } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -23,10 +24,10 @@ export type ProdutoGerenteRow = {
   ativo: boolean
 }
 
-type Props = {
+type Props = Readonly<{
   idioma: Idioma
   rows: ProdutoGerenteRow[]
-}
+}>
 
 function downloadCsv(filename: string, columns: { key: string; header: string }[], rows: Record<string, unknown>[]) {
   const csv = objectsToCsv(columns, rows)
@@ -133,10 +134,10 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
               void criar({
-                nome: String(fd.get('nome')),
-                codigo_barras: String(fd.get('codigo_barras') ?? ''),
+                nome: readFormDataString(fd, 'nome'),
+                codigo_barras: readFormDataString(fd, 'codigo_barras'),
                 preco_varejo: Number(fd.get('preco_varejo')),
-                origem: String(fd.get('origem')),
+                origem: readFormDataString(fd, 'origem'),
                 tem_nf: fd.get('tem_nf') === 'on',
               })
               e.currentTarget.reset()

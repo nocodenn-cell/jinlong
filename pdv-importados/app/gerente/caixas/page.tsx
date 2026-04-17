@@ -6,10 +6,7 @@ import { getMessages } from '@/src/lib/i18n/getMessages'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { formatBRL } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
-
-function round2(v: number): number {
-  return Math.round(v * 100) / 100
-}
+import { roundMoney2 } from '@/core/cart/totals'
 
 export default async function GerenteCaixasPage() {
   const { idioma } = await getUsuarioIdioma()
@@ -90,10 +87,10 @@ export default async function GerenteCaixasPage() {
           rows={
             caixasList.map((c) => {
               const valorSistemaBase = valorSistemaPorCaixa.get(c.id) ?? 0
-              const valorSistemaDinheiro = round2(Number(c.valor_inicial ?? 0) + valorSistemaBase)
+              const valorSistemaDinheiro = roundMoney2(Number(c.valor_inicial ?? 0) + valorSistemaBase)
               const valorFechamento = c.valor_fechamento != null ? Number(c.valor_fechamento) : null
               const diferencaCalculada =
-                valorFechamento != null ? round2(valorFechamento - valorSistemaDinheiro) : null
+                valorFechamento != null ? roundMoney2(valorFechamento - valorSistemaDinheiro) : null
               const diferenca =
                 c.fechamento_diferenca != null ? Number(c.fechamento_diferenca) : diferencaCalculada
               return {
@@ -128,10 +125,10 @@ export default async function GerenteCaixasPage() {
           <tbody>
             {caixasList.map((c) => {
               const valorSistemaBase = valorSistemaPorCaixa.get(c.id) ?? 0
-              const valorSistemaDinheiro = round2(Number(c.valor_inicial ?? 0) + valorSistemaBase)
+              const valorSistemaDinheiro = roundMoney2(Number(c.valor_inicial ?? 0) + valorSistemaBase)
               const valorFechamento = c.valor_fechamento != null ? Number(c.valor_fechamento) : null
               const diferencaCalculada =
-                valorFechamento != null ? round2(valorFechamento - valorSistemaDinheiro) : null
+                valorFechamento != null ? roundMoney2(valorFechamento - valorSistemaDinheiro) : null
               const diferenca =
                 c.fechamento_diferenca != null ? Number(c.fechamento_diferenca) : diferencaCalculada
               const temDivergencia = diferenca != null && Math.abs(diferenca) >= 0.01

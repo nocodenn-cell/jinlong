@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
+import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
@@ -11,11 +12,11 @@ import { executarTransferencia } from './actions'
 export type TransferenciaLojaRow = { id: string; nome: string; codigo: string }
 export type TransferenciaProdutoOpt = { id: string; nome: string }
 
-type Props = {
+type Props = Readonly<{
   idioma: Idioma
   lojas: TransferenciaLojaRow[]
   produtos: TransferenciaProdutoOpt[]
-}
+}>
 
 export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Props) {
   const m = getMessages(idioma)
@@ -80,11 +81,11 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
             e.preventDefault()
             const fd = new FormData(e.currentTarget)
             void mutate({
-              loja_origem_id: String(fd.get('origem')),
-              loja_destino_id: String(fd.get('destino')),
-              produto_id: String(fd.get('produto_id')),
+              loja_origem_id: readFormDataString(fd, 'origem'),
+              loja_destino_id: readFormDataString(fd, 'destino'),
+              produto_id: readFormDataString(fd, 'produto_id'),
               quantidade: Number(fd.get('quantidade')),
-              observacao: String(fd.get('observacao') ?? ''),
+              observacao: readFormDataString(fd, 'observacao'),
             })
           }}
           style={{

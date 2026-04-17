@@ -112,7 +112,7 @@ Com teste de `validar_gerente` (dois checks extras):
 
 | Workflow | O que valida |
 |----------|----------------|
-| `ci-backend-supabase.yml` | Type-check Deno da Edge + **smoke SQL** das migrations |
+| `ci-backend-supabase.yml` | Type-check Deno da Edge + **smoke SQL** das migrations; job opcional **`migration-remote-drift`** se existirem secrets `SUPABASE_ACCESS_TOKEN` + `SUPABASE_MIGRATION_CHECK_PROJECT_REF` (compara `migration list` ao repo; PRs de fork pulam) |
 | `ci-pdv-importados.yml` | Lint, testes, build; E2E opcional com secrets |
 | `ci-pdv-local.yml` | Testes + build Vite do desktop |
 
@@ -121,3 +121,5 @@ Com teste de `validar_gerente` (dois checks extras):
 ## 6. Histórico / P0 operacional
 
 Para fechamento operacional por projeto (incl. `verify_p0_producao.sql`), continue usando **[P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md)**. Este arquivo **complementa** com matriz de ambientes e política de credenciais do PDV local.
+
+**Registro por ciclo só em staging:** [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) (tabelas com data/responsável/evidência). **Status Local vs Remote:** `cd backend` → `node scripts/p0-migration-status.mjs` (requer `supabase link`).

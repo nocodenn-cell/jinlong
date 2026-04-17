@@ -29,10 +29,10 @@ type ModalState =
       estoqueMinimo: number
     }
 
-type Props = {
+type Props = Readonly<{
   idioma: Idioma
   filtro: 'todos' | 'baixo'
-}
+}>
 
 function normalizaEstoqueRow(p: ProdutoComEstoqueDTO) {
   return p.estoque
