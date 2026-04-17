@@ -119,7 +119,7 @@ async function registerFailure(
   now: Date,
 ) {
   const nowMs = now.getTime();
-  const firstAttemptMs = row?.first_attempt_at ? Date.parse(row.first_attempt_at) : NaN;
+  const firstAttemptMs = row?.first_attempt_at ? Date.parse(row.first_attempt_at) : Number.NaN;
   const insideWindow = Number.isFinite(firstAttemptMs) && nowMs - firstAttemptMs <= RATE_WINDOW_MS;
 
   const failedCount = insideWindow ? (row?.failed_count ?? 0) + 1 : 1;
@@ -157,6 +157,193 @@ async function resetRateLimit(
   if (error) throw new Error(`RATE_LIMIT_RESET_FAILED:${ctx.scope}:${error.message}`);
 }
 
+async function precheckRateLimitLocks(
+  supabase: any,
+  rateContexts: GerenteRateContext[],
+  nowMs: number,
+  logStage: string,
+  log: LoggerFn,
+): Promise<ValidateResult | null> {
+  for (const ctx of rateContexts) {
+    const row = await getRateLimitRow(supabase, ctx);
+    if (!isLocked(row?.lock_until ?? null, nowMs)) continue;
+    log({
+      level: "warn",
+      stage: logStage,
+      event: "locked_precheck",
+      scope: ctx.scope,
+      identifier: ctx.identifier,
+      lock_until: row?.lock_until ?? null,
+    });
+    return {
+      ok: false,
+      status: 429,
+      body: {
+        ok: false,
+        error: "LOCKED_TEMPORARILY",
+        scope: ctx.scope,
+        lock_until: row?.lock_until ?? null,
+      },
+    };
+  }
+  return null;
+}
+
+type GerenteConfigBundle = {
+  config: { gerente_id: string; gerente_senha_sha256: string; max_desconto_gerente_percentual: unknown };
+  gerenteIdRaw: string;
+};
+
+async function loadGerenteConfigBundle(
+  supabase: any,
+  logStage: string,
+  log: LoggerFn,
+): Promise<GerenteConfigBundle | ValidateResult> {
+  const { data: config, error: configError } = await supabase
+    .from("pdv_config")
+    .select("gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (configError) {
+    log({ level: "error", stage: logStage, error: configError.message });
+    return { ok: false, status: 500, body: { ok: false, error: "ERRO_DB_CONFIG" } };
+  }
+  if (!config || !config.gerente_senha_sha256) {
+    log({ level: "error", stage: logStage, error: "CONFIG_NAO_ENCONTRADA" });
+    return { ok: false, status: 500, body: { ok: false, error: "CONFIG_NAO_ENCONTRADA" } };
+  }
+  const gerenteIdRaw = typeof config.gerente_id === "string" ? config.gerente_id.trim() : "";
+  if (!gerenteIdRaw) {
+    log({ level: "error", stage: logStage, error: "CONFIG_GERENTE_ID_AUSENTE" });
+    return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_ID_AUSENTE" } };
+  }
+  const { data: gerenteUser, error: gerenteErr } = await supabase
+    .from("usuarios")
+    .select("id, perfil, ativo")
+    .eq("id", gerenteIdRaw)
+    .maybeSingle();
+  if (gerenteErr) {
+    log({ level: "error", stage: logStage, error: "GERENTE_LOOKUP_ERROR", detail: gerenteErr.message });
+    return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_INVALIDA" } };
+  }
+  const perfilOk =
+    gerenteUser?.ativo === true &&
+    (gerenteUser.perfil === "GERENTE" || gerenteUser.perfil === "DONO" || gerenteUser.perfil === "ADMIN");
+  if (!perfilOk) {
+    log({ level: "error", stage: logStage, error: "CONFIG_GERENTE_INVALIDA" });
+    return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_INVALIDA" } };
+  }
+  return { config, gerenteIdRaw };
+}
+
+async function respondSenhaGerenteInvalida(
+  supabase: any,
+  rateContexts: GerenteRateContext[],
+  now: Date,
+  logStage: string,
+  log: LoggerFn,
+  lojaId: string | null,
+  clientIp: string,
+  deviceFingerprint: string,
+  persistAuthAttemptsByUser: boolean,
+  userId: string | null | undefined,
+  nowIso: string,
+): Promise<ValidateResult> {
+  let lockScope: GerenteRateScope | null = null;
+  let lockUntil: string | null = null;
+
+  for (const ctx of rateContexts) {
+    const row = await getRateLimitRow(supabase, ctx);
+    const result = await registerFailure(supabase, ctx, row, now);
+    log({
+      level: "warn",
+      stage: logStage,
+      event: "failed_attempt",
+      scope: ctx.scope,
+      identifier: ctx.identifier,
+      failed_count: result.failedCount,
+      lock_until: result.lockUntil,
+    });
+    if (result.blockedNow && !lockScope) {
+      lockScope = ctx.scope;
+      lockUntil = result.lockUntil;
+    }
+  }
+
+  if (persistAuthAttemptsByUser && userId) {
+    await supabase.from("gerente_auth_attempts").upsert({
+      user_id: userId,
+      failed_count: 1,
+      lock_until: lockUntil,
+      updated_at: nowIso,
+    });
+  }
+
+  log({
+    level: "warn",
+    stage: logStage,
+    error: "SENHA_INVALIDA",
+    loja_id: lojaId,
+    ip: clientIp,
+    device: deviceFingerprint,
+    rate_scope: lockScope,
+  });
+
+  if (lockScope && lockUntil) {
+    return {
+      ok: false,
+      status: 429,
+      body: {
+        ok: false,
+        error: "LOCKED_TEMPORARILY",
+        scope: lockScope,
+        lock_until: lockUntil,
+      },
+    };
+  }
+  return { ok: false, status: 401, body: { ok: false, error: "SENHA_INVALIDA" } };
+}
+
+async function persistTokenAndResetLimits(
+  supabase: any,
+  token: string,
+  expiraEm: string,
+  lojaId: string | null,
+  tokenCreatedBy: string | null,
+  rateContexts: GerenteRateContext[],
+  nowIso: string,
+  persistAuthAttemptsByUser: boolean,
+  userId: string | null | undefined,
+  logStage: string,
+  log: LoggerFn,
+): Promise<ValidateResult | null> {
+  const { error: insertError } = await supabase.from("tokens_desconto_gerente").insert({
+    token,
+    expira_em: expiraEm,
+    usado: false,
+    loja_id: lojaId,
+    criado_por: tokenCreatedBy,
+  });
+  if (insertError) {
+    log({ level: "error", stage: logStage, error: insertError.message });
+    return { ok: false, status: 503, body: { ok: false, error: "ERRO_PERSISTENCIA_TOKEN" } };
+  }
+
+  for (const ctx of rateContexts) {
+    await resetRateLimit(supabase, ctx, nowIso);
+  }
+  if (persistAuthAttemptsByUser && userId) {
+    await supabase.from("gerente_auth_attempts").upsert({
+      user_id: userId,
+      failed_count: 0,
+      lock_until: null,
+      updated_at: nowIso,
+    });
+  }
+  return null;
+}
+
 export async function validateGerenteAndIssueToken(
   options: ValidateOptions,
 ): Promise<ValidateResult> {
@@ -190,150 +377,47 @@ export async function validateGerenteAndIssueToken(
   );
 
   try {
-    for (const ctx of rateContexts) {
-      const row = await getRateLimitRow(supabase, ctx);
-      if (isLocked(row?.lock_until ?? null, nowMs)) {
-        log({
-          level: "warn",
-          stage: logStage,
-          event: "locked_precheck",
-          scope: ctx.scope,
-          identifier: ctx.identifier,
-          lock_until: row?.lock_until ?? null,
-        });
-        return {
-          ok: false,
-          status: 429,
-          body: {
-            ok: false,
-            error: "LOCKED_TEMPORARILY",
-            scope: ctx.scope,
-            lock_until: row?.lock_until ?? null,
-          },
-        };
-      }
-    }
+    const locked = await precheckRateLimitLocks(supabase, rateContexts, nowMs, logStage, log);
+    if (locked) return locked;
 
-    const { data: config, error: configError } = await supabase
-      .from("pdv_config")
-      .select("gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual")
-      .eq("id", 1)
-      .maybeSingle();
-
-    if (configError) {
-      log({ level: "error", stage: logStage, error: configError.message });
-      return { ok: false, status: 500, body: { ok: false, error: "ERRO_DB_CONFIG" } };
-    }
-    if (!config || !config.gerente_senha_sha256) {
-      log({ level: "error", stage: logStage, error: "CONFIG_NAO_ENCONTRADA" });
-      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_NAO_ENCONTRADA" } };
-    }
-    const gerenteIdRaw = typeof config.gerente_id === "string" ? config.gerente_id.trim() : "";
-    if (!gerenteIdRaw) {
-      log({ level: "error", stage: logStage, error: "CONFIG_GERENTE_ID_AUSENTE" });
-      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_ID_AUSENTE" } };
-    }
-    const { data: gerenteUser, error: gerenteErr } = await supabase
-      .from("usuarios")
-      .select("id, perfil, ativo")
-      .eq("id", gerenteIdRaw)
-      .maybeSingle();
-    if (gerenteErr) {
-      log({ level: "error", stage: logStage, error: "GERENTE_LOOKUP_ERROR", detail: gerenteErr.message });
-      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_INVALIDA" } };
-    }
-    if (
-      !gerenteUser ||
-      gerenteUser.ativo !== true ||
-      (gerenteUser.perfil !== "GERENTE" && gerenteUser.perfil !== "DONO" && gerenteUser.perfil !== "ADMIN")
-    ) {
-      log({ level: "error", stage: logStage, error: "CONFIG_GERENTE_INVALIDA" });
-      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_INVALIDA" } };
-    }
+    const bundleOrErr = await loadGerenteConfigBundle(supabase, logStage, log);
+    if ("ok" in bundleOrErr) return bundleOrErr;
+    const { config, gerenteIdRaw } = bundleOrErr;
 
     const senhaHash = await sha256Hex(senha);
     if (!timingSafeEqualStr(senhaHash, config.gerente_senha_sha256)) {
-      let lockScope: GerenteRateScope | null = null;
-      let lockUntil: string | null = null;
-
-      for (const ctx of rateContexts) {
-        const row = await getRateLimitRow(supabase, ctx);
-        const result = await registerFailure(supabase, ctx, row, now);
-        log({
-          level: "warn",
-          stage: logStage,
-          event: "failed_attempt",
-          scope: ctx.scope,
-          identifier: ctx.identifier,
-          failed_count: result.failedCount,
-          lock_until: result.lockUntil,
-        });
-        if (result.blockedNow && !lockScope) {
-          lockScope = ctx.scope;
-          lockUntil = result.lockUntil;
-        }
-      }
-
-      if (persistAuthAttemptsByUser && userId) {
-        await supabase.from("gerente_auth_attempts").upsert({
-          user_id: userId,
-          failed_count: 1,
-          lock_until: lockUntil,
-          updated_at: nowIso,
-        });
-      }
-
-      log({
-        level: "warn",
-        stage: logStage,
-        error: "SENHA_INVALIDA",
-        loja_id: lojaId,
-        ip: clientIp,
-        device: deviceFingerprint,
-        rate_scope: lockScope,
-      });
-
-      if (lockScope && lockUntil) {
-        return {
-          ok: false,
-          status: 429,
-          body: {
-            ok: false,
-            error: "LOCKED_TEMPORARILY",
-            scope: lockScope,
-            lock_until: lockUntil,
-          },
-        };
-      }
-      return { ok: false, status: 401, body: { ok: false, error: "SENHA_INVALIDA" } };
+      return await respondSenhaGerenteInvalida(
+        supabase,
+        rateContexts,
+        now,
+        logStage,
+        log,
+        lojaId,
+        clientIp,
+        deviceFingerprint,
+        persistAuthAttemptsByUser,
+        userId,
+        nowIso,
+      );
     }
 
     const token = generateToken();
     const expiraEm = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
 
-    const { error: insertError } = await supabase.from("tokens_desconto_gerente").insert({
+    const persistErr = await persistTokenAndResetLimits(
+      supabase,
       token,
-      expira_em: expiraEm,
-      usado: false,
-      loja_id: lojaId,
-      criado_por: tokenCreatedBy,
-    });
-    if (insertError) {
-      log({ level: "error", stage: logStage, error: insertError.message });
-      return { ok: false, status: 503, body: { ok: false, error: "ERRO_PERSISTENCIA_TOKEN" } };
-    }
-
-    for (const ctx of rateContexts) {
-      await resetRateLimit(supabase, ctx, nowIso);
-    }
-    if (persistAuthAttemptsByUser && userId) {
-      await supabase.from("gerente_auth_attempts").upsert({
-        user_id: userId,
-        failed_count: 0,
-        lock_until: null,
-        updated_at: nowIso,
-      });
-    }
+      expiraEm,
+      lojaId,
+      tokenCreatedBy,
+      rateContexts,
+      nowIso,
+      persistAuthAttemptsByUser,
+      userId,
+      logStage,
+      log,
+    );
+    if (persistErr) return persistErr;
 
     log({
       level: "info",

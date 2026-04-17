@@ -122,6 +122,132 @@ type VendaPayload = {
   itens: VendaItemPayload[];
 };
 
+function assertVendaMoneyTotals(raw: Record<string, unknown>): void {
+  for (const key of ["total_bruto", "total_desconto", "total_liquido"] as const) {
+    const v = raw[key];
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+      throw new Error(`PAYLOAD_TOTAL_INVALIDO:${key}`);
+    }
+  }
+}
+
+function parseSingleVendaItem(it: unknown): VendaItemPayload {
+  if (!isRecord(it)) throw new Error("ITEM_VENDA_INVALIDO");
+  const produto_id = it.produto_id;
+  if (typeof produto_id !== "string" || !isUuid(produto_id)) {
+    throw new Error("ITEM_PRODUTO_ID_INVALIDO");
+  }
+  const quantidade = Number(it.quantidade);
+  const preco_original = Number(it.preco_original);
+  const preco_unitario = Number(it.preco_unitario);
+  if (!Number.isFinite(quantidade) || quantidade <= 0) {
+    throw new Error("ITEM_QUANTIDADE_INVALIDA");
+  }
+  if (!Number.isFinite(preco_original) || !Number.isFinite(preco_unitario)) {
+    throw new Error("ITEM_PRECO_INVALIDO");
+  }
+  const item: VendaItemPayload = {
+    produto_id,
+    quantidade,
+    preco_original,
+    preco_unitario,
+  };
+  const nome = it.nome;
+  const item_id = it.item_id;
+  if (typeof nome === "string") item.nome = nome;
+  if (typeof item_id === "string" && isUuid(item_id)) item.item_id = item_id;
+  return item;
+}
+
+function parseVendaItensOrThrow(itensRaw: unknown): VendaItemPayload[] {
+  if (!Array.isArray(itensRaw) || itensRaw.length === 0) {
+    throw new Error("ERRO_VENDA_SEM_ITENS: payload.itens vazio");
+  }
+  return itensRaw.map(parseSingleVendaItem);
+}
+
+function setCaixaIdFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  if (!("caixa_id" in raw)) return;
+  const caixa_id = raw.caixa_id;
+  if (caixa_id === null) payload.caixa_id = null;
+  else if (typeof caixa_id === "string") payload.caixa_id = caixa_id.trim();
+  else throw new Error("PAYLOAD_CAIXA_ID_INVALIDO");
+}
+
+function setOperadorIdFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  if (!("operador_id" in raw)) return;
+  const operador_id = raw.operador_id;
+  if (operador_id === null) payload.operador_id = null;
+  else if (typeof operador_id === "string") payload.operador_id = operador_id.trim();
+  else throw new Error("PAYLOAD_OPERADOR_ID_INVALIDO");
+}
+
+function setTrocoInicialFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  const troco = raw.troco_inicial_caixa;
+  if (troco === null || troco === undefined) {
+    payload.troco_inicial_caixa = null;
+    return;
+  }
+  if (typeof troco === "number" && Number.isFinite(troco)) {
+    payload.troco_inicial_caixa = troco;
+    return;
+  }
+  throw new Error("PAYLOAD_TROCO_CAIXA_INVALIDO");
+}
+
+function setDescontoGerenteFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  const dgPct = raw.desconto_gerente_percentual;
+  if (dgPct != null) {
+    if (typeof dgPct !== "number" || !Number.isFinite(dgPct)) {
+      throw new Error("PAYLOAD_DESCONTO_GERENTE_INVALIDO");
+    }
+    payload.desconto_gerente_percentual = dgPct;
+  }
+  const dgVal = raw.desconto_gerente_valor;
+  if (dgVal != null) {
+    if (typeof dgVal !== "number" || !Number.isFinite(dgVal)) {
+      throw new Error("PAYLOAD_DESCONTO_GERENTE_INVALIDO");
+    }
+    payload.desconto_gerente_valor = dgVal;
+  }
+}
+
+function setGerenteIdFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  const gerente_id = raw.gerente_id;
+  if (gerente_id === null || gerente_id === undefined) {
+    payload.gerente_id = null;
+    return;
+  }
+  if (typeof gerente_id === "string") {
+    payload.gerente_id = gerente_id;
+    return;
+  }
+  throw new Error("PAYLOAD_GERENTE_ID_INVALIDO");
+}
+
+function setDescontoTokenFromPayload(raw: Record<string, unknown>, payload: VendaPayload): void {
+  if (!("desconto_gerente_token" in raw)) return;
+  const token = raw.desconto_gerente_token;
+  if (token === null || token === undefined) {
+    payload.desconto_gerente_token = null;
+    return;
+  }
+  if (typeof token === "string" && token.trim()) {
+    payload.desconto_gerente_token = token.trim();
+    return;
+  }
+  throw new Error("PAYLOAD_DESCONTO_GERENTE_TOKEN_INVALIDO");
+}
+
+function applyVendaOptionalFields(raw: Record<string, unknown>, payload: VendaPayload): void {
+  setCaixaIdFromPayload(raw, payload);
+  setOperadorIdFromPayload(raw, payload);
+  setTrocoInicialFromPayload(raw, payload);
+  setDescontoGerenteFromPayload(raw, payload);
+  setGerenteIdFromPayload(raw, payload);
+  setDescontoTokenFromPayload(raw, payload);
+}
+
 function parseVendaPayload(raw: unknown): VendaPayload {
   if (!isRecord(raw)) throw new Error("PAYLOAD_VENDA_INVALIDO");
 
@@ -135,46 +261,8 @@ function parseVendaPayload(raw: unknown): VendaPayload {
     throw new Error("PAYLOAD_FORMA_PAGAMENTO_INVALIDA");
   }
 
-  for (const key of ["total_bruto", "total_desconto", "total_liquido"] as const) {
-    const v = raw[key];
-    if (typeof v !== "number" || !Number.isFinite(v)) {
-      throw new Error(`PAYLOAD_TOTAL_INVALIDO:${key}`);
-    }
-  }
-
-  const itensRaw = raw.itens;
-  if (!Array.isArray(itensRaw) || itensRaw.length === 0) {
-    throw new Error("ERRO_VENDA_SEM_ITENS: payload.itens vazio");
-  }
-
-  const itens: VendaItemPayload[] = [];
-  for (const it of itensRaw) {
-    if (!isRecord(it)) throw new Error("ITEM_VENDA_INVALIDO");
-    const produto_id = it.produto_id;
-    if (typeof produto_id !== "string" || !isUuid(produto_id)) {
-      throw new Error("ITEM_PRODUTO_ID_INVALIDO");
-    }
-    const quantidade = Number(it.quantidade);
-    const preco_original = Number(it.preco_original);
-    const preco_unitario = Number(it.preco_unitario);
-    if (!Number.isFinite(quantidade) || quantidade <= 0) {
-      throw new Error("ITEM_QUANTIDADE_INVALIDA");
-    }
-    if (!Number.isFinite(preco_original) || !Number.isFinite(preco_unitario)) {
-      throw new Error("ITEM_PRECO_INVALIDO");
-    }
-    const nome = it.nome;
-    const item_id = it.item_id;
-    const item: VendaItemPayload = {
-      produto_id,
-      quantidade,
-      preco_original,
-      preco_unitario,
-    };
-    if (typeof nome === "string") item.nome = nome;
-    if (typeof item_id === "string" && isUuid(item_id)) item.item_id = item_id;
-    itens.push(item);
-  }
+  assertVendaMoneyTotals(raw);
+  const itens = parseVendaItensOrThrow(raw.itens);
 
   const payload: VendaPayload = {
     venda_id,
@@ -185,63 +273,7 @@ function parseVendaPayload(raw: unknown): VendaPayload {
     itens,
   };
 
-  if ("caixa_id" in raw) {
-    const caixa_id = raw.caixa_id;
-    if (caixa_id === null) payload.caixa_id = null;
-    else if (typeof caixa_id === "string") payload.caixa_id = caixa_id.trim();
-    else throw new Error("PAYLOAD_CAIXA_ID_INVALIDO");
-  }
-  if ("operador_id" in raw) {
-    const operador_id = raw.operador_id;
-    if (operador_id === null) payload.operador_id = null;
-    else if (typeof operador_id === "string") payload.operador_id = operador_id.trim();
-    else throw new Error("PAYLOAD_OPERADOR_ID_INVALIDO");
-  }
-
-  const troco = raw.troco_inicial_caixa;
-  if (troco === null || troco === undefined) {
-    payload.troco_inicial_caixa = null;
-  } else if (typeof troco === "number" && Number.isFinite(troco)) {
-    payload.troco_inicial_caixa = troco;
-  } else {
-    throw new Error("PAYLOAD_TROCO_CAIXA_INVALIDO");
-  }
-
-  const dgPct = raw.desconto_gerente_percentual;
-  const dgVal = raw.desconto_gerente_valor;
-  if (dgPct != null) {
-    if (typeof dgPct !== "number" || !Number.isFinite(dgPct)) {
-      throw new Error("PAYLOAD_DESCONTO_GERENTE_INVALIDO");
-    }
-    payload.desconto_gerente_percentual = dgPct;
-  }
-  if (dgVal != null) {
-    if (typeof dgVal !== "number" || !Number.isFinite(dgVal)) {
-      throw new Error("PAYLOAD_DESCONTO_GERENTE_INVALIDO");
-    }
-    payload.desconto_gerente_valor = dgVal;
-  }
-
-  const gerente_id = raw.gerente_id;
-  if (gerente_id === null || gerente_id === undefined) {
-    payload.gerente_id = null;
-  } else if (typeof gerente_id === "string") {
-    payload.gerente_id = gerente_id;
-  } else {
-    throw new Error("PAYLOAD_GERENTE_ID_INVALIDO");
-  }
-
-  if ("desconto_gerente_token" in raw) {
-    const token = raw.desconto_gerente_token;
-    if (token === null || token === undefined) {
-      payload.desconto_gerente_token = null;
-    } else if (typeof token === "string" && token.trim()) {
-      payload.desconto_gerente_token = token.trim();
-    } else {
-      throw new Error("PAYLOAD_DESCONTO_GERENTE_TOKEN_INVALIDO");
-    }
-  }
-
+  applyVendaOptionalFields(raw, payload);
   return payload;
 }
 
