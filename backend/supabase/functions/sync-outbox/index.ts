@@ -359,7 +359,9 @@ function shouldUseUnifiedSalesFlow(deviceFingerprint: string | null | undefined)
   return !!device && canarySet.has(device);
 }
 
-type SupabaseAdmin = ReturnType<typeof createClient>;
+// A Edge usa schema dinâmico do Supabase e o Deno check sem tipos gerados
+// produz falsos positivos em `from()/rpc()`. Mantemos o client frouxo aqui.
+type SupabaseAdmin = any;
 
 const GERENTE_PDV_IP_LIMIT = 20;
 const GERENTE_PDV_DEVICE_LIMIT = 10;

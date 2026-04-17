@@ -219,5 +219,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.finalizar_venda_transacional_canonica_v2 IS
+COMMENT ON FUNCTION public.finalizar_venda_transacional_canonica_v2(
+  uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean
+) IS
   'RPC canônica v2: itens após venda, baixa de estoque atômica e desconto gerente com/sem token (strict opcional).';
