@@ -53,7 +53,7 @@ Branch: `feat/autonomous-20260417-132823`
 
 ## Commits feitos
 
-- (preenchido no relatório final desta execução)
+- `82a9088` feat: advance autonomous backlog for manager auth and split cash operations
 
 ## Decisões para revisão
 
