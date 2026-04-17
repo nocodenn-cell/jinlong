@@ -1,6 +1,6 @@
 "use client"
 
-import type { FormEvent } from "react"
+import { forwardRef, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/src/lib/i18n/getMessages"
@@ -15,18 +15,22 @@ type Props = {
   carregandoRegras: boolean
 }
 
-export function CaixaSearchBar({
-  m,
-  codigo,
-  onCodigoChange,
-  onSubmit,
-  onNovoCupom,
-  buscando,
-  carregandoRegras,
-}: Props) {
+export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function CaixaSearchBar(
+  {
+    m,
+    codigo,
+    onCodigoChange,
+    onSubmit,
+    onNovoCupom,
+    buscando,
+    carregandoRegras,
+  },
+  ref,
+) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row sm:gap-3">
       <Input
+        ref={ref}
         autoFocus
         value={codigo}
         onChange={(e) => onCodigoChange(e.target.value)}
@@ -55,4 +59,6 @@ export function CaixaSearchBar({
       </div>
     </form>
   )
-}
+})
+
+CaixaSearchBar.displayName = "CaixaSearchBar"

@@ -342,93 +342,26 @@ async function calcularValorSistemaDinheiroCaixa(
   supabase: Awaited<ReturnType<typeof createClient>>,
   caixaId: string,
 ): Promise<number> {
-  const { data: vendasRows, error: vendasErr } = await supabase
-    .from('vendas')
-    .select('total_liquido')
-    .eq('caixa_id', caixaId)
-    .eq('forma_pagamento', 'DINHEIRO')
-    .eq('status', 'CONCLUIDA')
+  const { data, error } = await supabase.rpc('calcular_valor_sistema_dinheiro_caixa', {
+    p_caixa_id: caixaId,
+  })
 
-  if (vendasErr) {
-    throw new Error(mensagemErroComSecao('Vendas em dinheiro', vendasErr.message))
-  }
-
-  const { data: movimentosRows, error: movErr } = await supabase
-    .from('movimentos_caixa')
-    .select('tipo, valor')
-    .eq('caixa_id', caixaId)
-    .in('tipo', ['SUPRIMENTO', 'SANGRIA'])
-
-  if (movErr) {
-    throw new Error(mensagemErroComSecao('Movimentos do caixa', movErr.message))
-  }
-
-  const { data: novasMovRows, error: novasMovErr } = await supabase
-    .from('movimentacoes_caixa')
-    .select(
-      'tipo, valor, forma_pagamento, status, movimentacao_origem_id, origem:movimentacao_origem_id(tipo, forma_pagamento)',
+  if (error) {
+    throw new Error(
+      mensagemErroComSecao(
+        'Valor sistema (caixa)',
+        error.message.includes('function') && error.message.includes('does not exist')
+          ? 'Aplique as migrations 048–049 (devoluções + RPC calcular_valor_sistema_dinheiro_caixa).'
+          : error.message,
+      ),
     )
-    .eq('caixa_id', caixaId)
-    .eq('status', 'aprovado')
-
-  if (novasMovErr) {
-    throw new Error(mensagemErroComSecao('Movimentações transacionais', novasMovErr.message))
   }
 
-  const totalVendasDinheiro = (vendasRows ?? []).reduce(
-    (acc, row) => acc + Number(row.total_liquido ?? 0),
-    0,
-  )
-  const totalSuprimento = (movimentosRows ?? [])
-    .filter((m) => m.tipo === 'SUPRIMENTO')
-    .reduce((acc, m) => acc + Number(m.valor ?? 0), 0)
-  const totalSangria = (movimentosRows ?? [])
-    .filter((m) => m.tipo === 'SANGRIA')
-    .reduce((acc, m) => acc + Number(m.valor ?? 0), 0)
-
-  const totalNovasMovimentacoes = (novasMovRows ?? []).reduce((acc, row) => {
-    const tipo = row.tipo as TipoMovimentacaoCaixa
-    const valor = Number(row.valor ?? 0)
-    if (!Number.isFinite(valor) || valor <= 0) return acc
-
-    if (tipo === 'suprimento') {
-      return row.forma_pagamento === 'dinheiro' ? acc + valor : acc
-    }
-    if (tipo === 'sangria') {
-      return acc - valor
-    }
-    if (tipo === 'estorno') {
-      const origem = row.origem as
-        | { tipo?: TipoMovimentacaoCaixa; forma_pagamento?: FormaMovimentacaoCaixa }
-        | Array<{ tipo?: TipoMovimentacaoCaixa; forma_pagamento?: FormaMovimentacaoCaixa }>
-        | null
-      const origemRow = Array.isArray(origem) ? origem[0] : origem
-      if (!origemRow?.tipo) return acc
-      if (origemRow.tipo === 'sangria') return acc + valor
-      if (origemRow.tipo === 'suprimento' && origemRow.forma_pagamento === 'dinheiro') {
-        return acc - valor
-      }
-    }
-    return acc
-  }, 0)
-
-  const { data: caixaRow, error: caixaErr } = await supabase
-    .from('caixas')
-    .select('valor_inicial')
-    .eq('id', caixaId)
-    .single()
-
-  if (caixaErr) {
-    throw new Error(mensagemErroComSecao('Caixa', caixaErr.message))
+  const n = typeof data === 'string' ? Number.parseFloat(data) : Number(data)
+  if (!Number.isFinite(n)) {
+    throw new Error(mensagemErroComSecao('Valor sistema (caixa)', 'Resposta inválida do servidor.'))
   }
-
-  return roundMoney2(
-    Number(caixaRow.valor_inicial ?? 0) +
-      totalVendasDinheiro +
-      totalSuprimento -
-      totalSangria +
-      totalNovasMovimentacoes,
-  )
+  return roundMoney2(n)
 }
 
 async function coletarAuditoriaRequest(): Promise<{

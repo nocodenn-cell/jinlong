@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
   carregarRegrasPrecoCaixa,
@@ -107,6 +107,13 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   } = useCarrinhoStore()
 
   const loc = localeFromIdioma(idioma)
+  const buscaInputRef = useRef<HTMLInputElement>(null)
+
+  const focarCampoBusca = useCallback(() => {
+    requestAnimationFrame(() => {
+      buscaInputRef.current?.focus()
+    })
+  }, [])
 
   const limparEstadoDescontoGerente = useCallback(() => {
     setGerenteValidadoAte(null)
@@ -264,9 +271,10 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         setMensagem(m.caixa.falha_busca)
       } finally {
         setBuscando(false)
+        focarCampoBusca()
       }
     },
-    [codigo, adicionarItem, m],
+    [codigo, adicionarItem, focarCampoBusca, m],
   )
 
   const handleAlterarQuantidade = useCallback(
@@ -647,6 +655,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2 space-y-2">
             <CaixaSearchBar
+              ref={buscaInputRef}
               m={m}
               codigo={codigo}
               onCodigoChange={setCodigo}
