@@ -18,6 +18,7 @@ type Props = {
         dataAbertura: string
         valorInicial: number
         valorSistemaDinheiro: number
+        blindClosureEnabled: boolean
       }
     | { aberto: false }
     | null
@@ -135,8 +136,13 @@ export function CaixaHeader({
             {new Date(caixaStatus.dataAbertura).toLocaleString(
               idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN',
             )}{' '}
-            · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)} · Saldo estimado (dinheiro): R${' '}
-            {caixaStatus.valorSistemaDinheiro.toFixed(2)}
+            · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)}
+            {!caixaStatus.blindClosureEnabled && (
+              <>
+                {' '}
+                · Saldo estimado (dinheiro): R$ {caixaStatus.valorSistemaDinheiro.toFixed(2)}
+              </>
+            )}
           </div>
         )}
         <div>{m.caixa.atalhos_placeholder}</div>

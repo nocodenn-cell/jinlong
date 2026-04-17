@@ -18,7 +18,7 @@ import {
   estornarMovimentacaoCaixa,
   type MovimentacaoCaixaDTO,
 } from "@/app/caixa/actions"
-import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/src/lib/i18n/getMessages"
 import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
@@ -78,8 +78,9 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     useState<number>(0)
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
-  const [formaPagamento, setFormaPagamento] =
-    useState<FinalizarVendaInput["formaPagamento"]>("DINHEIRO")
+  const [pagamentos, setPagamentos] = useState<
+    Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
+  >([{ formaPagamento: "DINHEIRO", valor: 0 }])
   const [caixaStatus, setCaixaStatus] = useState<
     | {
         aberto: true
@@ -87,6 +88,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         dataAbertura: string
         valorInicial: number
         valorSistemaDinheiro: number
+        blindClosureEnabled: boolean
       }
     | { aberto: false }
     | null
@@ -153,6 +155,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         dataAbertura: status.dataAbertura,
         valorInicial: status.valorInicial,
         valorSistemaDinheiro: status.valorSistemaDinheiro,
+        blindClosureEnabled: status.blindClosureEnabled,
       })
       await recarregarMovimentacoes(status.caixaId)
     } else {
@@ -305,7 +308,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     if (!normalizado) return null
     const parsed = Number(normalizado)
     if (!Number.isFinite(parsed) || parsed < 0) return null
-    return Math.round(parsed * 100) / 100
+    return roundMoney2(parsed)
   }, [])
 
   const handleAbrirCaixa = useCallback(async () => {
@@ -333,9 +336,13 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   }, [m.caixa.valor_inicial, parseValorMonetario, processandoCaixa, recarregarStatusCaixa])
 
   const caixaAbertoParaFechar = caixaStatus?.aberto === true
-  const valorSistemaDinheiroParaFechar = caixaAbertoParaFechar
-    ? caixaStatus.valorSistemaDinheiro
-    : 0
+  const blindClosureEnabled = caixaAbertoParaFechar ? caixaStatus.blindClosureEnabled : false
+  const valorSistemaDinheiroParaFechar = caixaAbertoParaFechar ? caixaStatus.valorSistemaDinheiro : 0
+
+  const erroExigeMotivoFechamento = useCallback((error: string) => {
+    const e = error.toLowerCase()
+    return e.includes("exige motivo") || (e.includes("diferença") && e.includes("motivo"))
+  }, [])
 
   const handleFecharCaixa = useCallback(async () => {
     if (processandoCaixa) return
@@ -350,10 +357,10 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       return
     }
     const diferencaEstimada = caixaAbertoParaFechar
-      ? Math.round((valorContado - valorSistemaDinheiroParaFechar) * 100) / 100
+      ? roundMoney2(valorContado - valorSistemaDinheiroParaFechar)
       : null
     let motivo: string | undefined
-    if (diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
+    if (!blindClosureEnabled && diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
       const motivoRaw = window.prompt(
         `Diferença estimada de R$ ${diferencaEstimada.toFixed(2)}. Informe o motivo (mín. 5 caracteres):`,
       )
@@ -367,7 +374,15 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setProcessandoCaixa(true)
     setMensagem(null)
     try {
-      const res = await fecharCaixaOperador({ valorContado, motivo })
+      let res = await fecharCaixaOperador({ valorContado, motivo })
+      if (!res.ok && blindClosureEnabled && erroExigeMotivoFechamento(res.error)) {
+        const motivoRaw = window.prompt("Informe o motivo do ajuste (mín. 5 caracteres):")
+        if (!motivoRaw || motivoRaw.trim().length < 5) {
+          setMensagem("Motivo obrigatório para fechamento com divergência.")
+          return
+        }
+        res = await fecharCaixaOperador({ valorContado, motivo: motivoRaw.trim() })
+      }
       if (!res.ok) {
         setMensagem(res.error)
         return
@@ -382,6 +397,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     }
   }, [
     caixaAbertoParaFechar,
+    blindClosureEnabled,
+    erroExigeMotivoFechamento,
     valorSistemaDinheiroParaFechar,
     itens.length,
     m.caixa.valor_final,
@@ -422,28 +439,24 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setMensagem(null)
     try {
       const payload: FinalizarVendaInput = {
-        formaPagamento,
+        formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
         totalBruto,
         totalDesconto:
           descontoGerentePercentual > 0
-            ? Math.round(
-                (totalDesconto +
-                  (totalLiquido * descontoGerentePercentual) / 100) *
-                  100,
-              ) / 100
+            ? roundMoney2(totalDesconto + (totalLiquido * descontoGerentePercentual) / 100)
             : totalDesconto,
         totalLiquido:
           descontoGerentePercentual > 0
-            ? Math.round(
-                (totalLiquido -
-                  (totalLiquido * descontoGerentePercentual) / 100) *
-                  100,
-              ) / 100
+            ? roundMoney2(totalLiquido - (totalLiquido * descontoGerentePercentual) / 100)
             : totalLiquido,
         descontoGerenteToken:
           descontoGerentePercentual > 0 ? gerenteToken ?? undefined : undefined,
         descontoGerentePercentual:
           descontoGerentePercentual > 0 ? descontoGerentePercentual : undefined,
+        pagamentos: pagamentos.map((p) => ({
+          formaPagamento: p.formaPagamento,
+          valor: p.valor,
+        })),
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
@@ -468,7 +481,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   }, [
     descontoGerentePercentual,
     finalizando,
-    formaPagamento,
+    pagamentos,
     gerenteValidadoAte,
     gerenteToken,
     itens,
@@ -575,11 +588,56 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   const valorDescontoGerente =
     descontoGerentePercentual > 0
-      ? Math.round(((totalLiquido * descontoGerentePercentual) / 100) * 100) /
-        100
+      ? roundMoney2((totalLiquido * descontoGerentePercentual) / 100)
       : 0
-  const totalLiquidoComGerente =
-    Math.round((totalLiquido - valorDescontoGerente) * 100) / 100
+  const totalLiquidoComGerente = roundMoney2(totalLiquido - valorDescontoGerente)
+
+  useEffect(() => {
+    setPagamentos((prev) => {
+      if (prev.length <= 1) {
+        return [{ formaPagamento: prev[0]?.formaPagamento ?? "DINHEIRO", valor: totalLiquidoComGerente }]
+      }
+      const somaSemUltimo = prev.slice(0, -1).reduce((acc, p) => acc + p.valor, 0)
+      const ultimo = Math.max(0, roundMoney2(totalLiquidoComGerente - somaSemUltimo))
+      return [...prev.slice(0, -1), { ...prev[prev.length - 1], valor: ultimo }]
+    })
+  }, [totalLiquidoComGerente])
+
+  const handlePagamentoFormaChange = useCallback(
+    (index: number, forma: FinalizarVendaInput["formaPagamento"]) => {
+      setPagamentos((prev) => prev.map((p, i) => (i === index ? { ...p, formaPagamento: forma } : p)))
+    },
+    [],
+  )
+
+  const handlePagamentoValorChange = useCallback(
+    (index: number, valor: number) => {
+      const v = Number.isFinite(valor) && valor > 0 ? roundMoney2(valor) : 0
+      setPagamentos((prev) => prev.map((p, i) => (i === index ? { ...p, valor: v } : p)))
+    },
+    [],
+  )
+
+  const handleAdicionarPagamento = useCallback(() => {
+    setPagamentos((prev) => {
+      if (prev.length >= 4) return prev
+      const restante = Math.max(0, roundMoney2(totalLiquidoComGerente - prev.reduce((acc, p) => acc + p.valor, 0)))
+      return [...prev, { formaPagamento: "PIX", valor: restante }]
+    })
+  }, [totalLiquidoComGerente])
+
+  const handleRemoverPagamento = useCallback((index: number) => {
+    setPagamentos((prev) => {
+      if (prev.length <= 1) return prev
+      const next = prev.filter((_, i) => i !== index)
+      const soma = next.reduce((acc, p) => acc + p.valor, 0)
+      if (next.length > 0) {
+        const ajuste = Math.max(0, roundMoney2(totalLiquidoComGerente - soma))
+        next[next.length - 1] = { ...next[next.length - 1], valor: next[next.length - 1].valor + ajuste }
+      }
+      return next
+    })
+  }, [totalLiquidoComGerente])
 
   const handleValidateSenhaGerente = useCallback(
     async (senha: string): Promise<ValidarSenhaGerenteResult> => {
@@ -696,8 +754,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           <CaixaFooter
             m={m}
             idioma={idioma}
-            formaPagamento={formaPagamento}
-            onFormaPagamentoChange={setFormaPagamento}
+            pagamentos={pagamentos}
+            onPagamentoFormaChange={handlePagamentoFormaChange}
+            onPagamentoValorChange={handlePagamentoValorChange}
+            onAdicionarPagamento={handleAdicionarPagamento}
+            onRemoverPagamento={handleRemoverPagamento}
             onValidarGerente={() => setGerenteModalAberto(true)}
             onAbrirSuprimento={() => setMovimentacaoModalTipo("suprimento")}
             onAbrirSangria={() => setMovimentacaoModalTipo("sangria")}

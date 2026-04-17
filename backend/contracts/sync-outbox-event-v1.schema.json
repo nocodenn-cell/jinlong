@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fastproduct.local/schemas/sync-outbox-event-v1.schema.json",
+  "title": "SyncOutboxEventV1",
+  "description": "Contrato normalizado da outbox (payload já parseado) entre pdv-local e backend/sync-outbox.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "tipo",
+    "created_at",
+    "payload"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "VENDA_REGISTRADA",
+        "CAIXA_ABERTO",
+        "CAIXA_FECHADO",
+        "MOVIMENTO_CAIXA"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Timestamp UTC ISO-8601 do evento na outbox local."
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "VENDA_REGISTRADA"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payloadVendaRegistrada"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "CAIXA_ABERTO"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payloadCaixaAberto"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "CAIXA_FECHADO"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payloadCaixaFechado"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tipo": {
+            "const": "MOVIMENTO_CAIXA"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payloadMovimentoCaixa"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "uuidOrNull": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payloadVendaItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "produto_id",
+        "quantidade",
+        "preco_original",
+        "preco_unitario"
+      ],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "produto_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "quantidade": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "preco_original": {
+          "type": "number"
+        },
+        "preco_unitario": {
+          "type": "number"
+        }
+      }
+    },
+    "payloadVendaRegistrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "venda_id",
+        "forma_pagamento",
+        "total_bruto",
+        "total_desconto",
+        "total_liquido",
+        "itens"
+      ],
+      "properties": {
+        "venda_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "caixa_id": {
+          "$ref": "#/$defs/uuidOrNull"
+        },
+        "operador_id": {
+          "$ref": "#/$defs/uuidOrNull"
+        },
+        "troco_inicial_caixa": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "forma_pagamento": {
+          "type": "string",
+          "minLength": 1
+        },
+        "total_bruto": {
+          "type": "number"
+        },
+        "total_desconto": {
+          "type": "number"
+        },
+        "total_liquido": {
+          "type": "number"
+        },
+        "desconto_gerente_percentual": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "desconto_gerente_valor": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gerente_id": {
+          "$ref": "#/$defs/uuidOrNull"
+        },
+        "desconto_gerente_token": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "itens": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/payloadVendaItem"
+          }
+        }
+      }
+    },
+    "payloadCaixaAberto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "valor_inicial"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "operador_id": {
+          "$ref": "#/$defs/uuidOrNull"
+        },
+        "data_abertura": {
+          "type": "string"
+        },
+        "valor_inicial": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "payloadCaixaFechado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "data_fechamento",
+        "valor_fechamento"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "data_fechamento": {
+          "type": "string",
+          "minLength": 1
+        },
+        "valor_fechamento": {
+          "type": "number"
+        }
+      }
+    },
+    "payloadMovimentoCaixa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "caixa_id",
+        "tipo",
+        "valor"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "caixa_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "SANGRIA",
+            "SUPRIMENTO"
+          ]
+        },
+        "valor": {
+          "type": "number"
+        },
+        "observacao": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

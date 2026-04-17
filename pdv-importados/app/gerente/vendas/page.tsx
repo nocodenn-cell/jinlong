@@ -6,6 +6,7 @@ import { getMessages } from '@/src/lib/i18n/getMessages'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { formatBRL } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { cancelarVendaGerenteAction } from './actions'
 
 export default async function GerenteVendasPage() {
   const { idioma } = await getUsuarioIdioma()
@@ -69,6 +70,7 @@ export default async function GerenteVendasPage() {
               <th style={{ padding: 10 }}>{m.gerente.col_status}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_caixa}</th>
               <th style={{ padding: 10 }}>{m.gerente.col_detalhes}</th>
+              <th style={{ padding: 10 }}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -86,11 +88,48 @@ export default async function GerenteVendasPage() {
                     {m.gerente.ver_detalhes}
                   </Link>
                 </td>
+                <td style={{ padding: 10, minWidth: 220 }}>
+                  {v.status !== 'CANCELADA' ? (
+                    <form action={cancelarVendaGerenteAction} style={{ display: 'flex', gap: 6 }}>
+                      <input type="hidden" name="venda_id" value={v.id} />
+                      <input
+                        name="motivo"
+                        placeholder="Motivo do cancelamento"
+                        required
+                        minLength={2}
+                        maxLength={500}
+                        style={{
+                          flex: 1,
+                          fontSize: 12,
+                          padding: '6px 8px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: 8,
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        style={{
+                          background: '#b91c1c',
+                          color: '#fff',
+                          border: 0,
+                          borderRadius: 8,
+                          padding: '6px 8px',
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </form>
+                  ) : (
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>Já cancelada</span>
+                  )}
+                </td>
               </tr>
             ))}
             {(!vendas || vendas.length === 0) && (
               <tr>
-                <td colSpan={6} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={7} style={{ padding: 16, color: '#6b7280' }}>
                   {m.gerente.nenhuma_venda}
                 </td>
               </tr>

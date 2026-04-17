@@ -1,0 +1,101 @@
+-- Ajusta cálculo de caixa em dinheiro para considerar split payment:
+-- - usa soma de vendas_pagamentos forma DINHEIRO quando existir
+-- - mantém fallback legado (vendas.forma_pagamento = DINHEIRO) quando não existir parcela
+
+CREATE OR REPLACE FUNCTION public.calcular_valor_sistema_dinheiro_caixa(p_caixa_id uuid)
+RETURNS numeric(10,2)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_result numeric(10,2);
+BEGIN
+  IF auth.uid() IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.caixas c
+      INNER JOIN public.usuarios u ON u.id = auth.uid()
+      WHERE c.id = p_caixa_id
+        AND c.loja_id = u.loja_id
+        AND (
+          c.operador_id = auth.uid()
+          OR u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+        )
+    ) THEN
+      RAISE EXCEPTION 'Acesso negado ao caixa informado.' USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  WITH vendas_din_split AS (
+    SELECT COALESCE(SUM(vp.valor), 0)::numeric(10,2) AS t
+    FROM public.vendas_pagamentos vp
+    INNER JOIN public.vendas v ON v.id = vp.venda_id
+    WHERE v.caixa_id = p_caixa_id
+      AND v.status = 'CONCLUIDA'
+      AND vp.forma_pagamento = 'DINHEIRO'
+  ),
+  vendas_din_legado AS (
+    SELECT COALESCE(SUM(v.total_liquido), 0)::numeric(10,2) AS t
+    FROM public.vendas v
+    WHERE v.caixa_id = p_caixa_id
+      AND v.forma_pagamento = 'DINHEIRO'
+      AND v.status = 'CONCLUIDA'
+      AND NOT EXISTS (
+        SELECT 1 FROM public.vendas_pagamentos vp WHERE vp.venda_id = v.id
+      )
+  ),
+  vendas_din AS (
+    SELECT ROUND((SELECT t FROM vendas_din_split) + (SELECT t FROM vendas_din_legado), 2)::numeric(10,2) AS t
+  ),
+  mov_legado AS (
+    SELECT
+      COALESCE(SUM(CASE WHEN m.tipo = 'SUPRIMENTO' THEN m.valor ELSE 0 END), 0)::numeric(10,2) AS sup,
+      COALESCE(SUM(CASE WHEN m.tipo = 'SANGRIA' THEN m.valor ELSE 0 END), 0)::numeric(10,2) AS sang
+    FROM public.movimentos_caixa m
+    WHERE m.caixa_id = p_caixa_id
+      AND m.tipo IN ('SUPRIMENTO', 'SANGRIA')
+  ),
+  mov_tx AS (
+    SELECT COALESCE(SUM(
+      CASE
+        WHEN m.tipo = 'suprimento' AND m.forma_pagamento = 'dinheiro' THEN m.valor
+        WHEN m.tipo = 'sangria' THEN -m.valor
+        WHEN m.tipo = 'estorno' AND orig.tipo = 'sangria' THEN m.valor
+        WHEN m.tipo = 'estorno' AND orig.tipo = 'suprimento' AND orig.forma_pagamento = 'dinheiro' THEN -m.valor
+        ELSE 0::numeric(10,2)
+      END
+    ), 0)::numeric(10,2) AS t
+    FROM public.movimentacoes_caixa m
+    LEFT JOIN public.movimentacoes_caixa orig ON orig.id = m.movimentacao_origem_id
+    WHERE m.caixa_id = p_caixa_id
+      AND m.status = 'aprovado'
+      AND m.deleted_at IS NULL
+  ),
+  dev_din AS (
+    SELECT COALESCE(SUM(d.valor), 0)::numeric(10,2) AS t
+    FROM public.devolucoes d
+    INNER JOIN public.vendas v ON v.id = d.venda_id
+    WHERE v.caixa_id = p_caixa_id
+      AND d.forma_pagamento = 'DINHEIRO'
+  ),
+  abertura AS (
+    SELECT COALESCE(c.valor_inicial, 0)::numeric(10,2) AS t
+    FROM public.caixas c
+    WHERE c.id = p_caixa_id
+  )
+  SELECT ROUND(
+      COALESCE((SELECT t FROM abertura), 0)
+      + (SELECT t FROM vendas_din)
+      + (SELECT sup FROM mov_legado)
+      - (SELECT sang FROM mov_legado)
+      + (SELECT t FROM mov_tx)
+      - (SELECT t FROM dev_din),
+      2
+    )::numeric(10,2)
+  INTO v_result;
+
+  RETURN v_result;
+END;
+$$;

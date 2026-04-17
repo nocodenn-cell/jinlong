@@ -17,8 +17,11 @@ const FORMAS: FinalizarVendaInput["formaPagamento"][] = [
 type Props = {
   m: Mensagens
   idioma: Idioma
-  formaPagamento: FinalizarVendaInput["formaPagamento"]
-  onFormaPagamentoChange: (v: FinalizarVendaInput["formaPagamento"]) => void
+  pagamentos: Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
+  onPagamentoFormaChange: (index: number, v: FinalizarVendaInput["formaPagamento"]) => void
+  onPagamentoValorChange: (index: number, valor: number) => void
+  onAdicionarPagamento: () => void
+  onRemoverPagamento: (index: number) => void
   onValidarGerente: () => void
   onAbrirSuprimento: () => void
   onAbrirSangria: () => void
@@ -73,8 +76,11 @@ function formaLabel(
 export function CaixaFooter({
   m,
   idioma,
-  formaPagamento,
-  onFormaPagamentoChange,
+  pagamentos,
+  onPagamentoFormaChange,
+  onPagamentoValorChange,
+  onAdicionarPagamento,
+  onRemoverPagamento,
   onValidarGerente,
   onAbrirSuprimento,
   onAbrirSangria,
@@ -118,29 +124,59 @@ export function CaixaFooter({
     <footer className="shrink-0 border-t border-slate-800 bg-slate-950/85 backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <label
-            className="text-xs text-slate-400 flex items-center gap-2 min-w-0"
-            htmlFor="caixa-forma-pagamento"
-          >
-            <span className="shrink-0">{m.pdv.pagamento}</span>
-            <select
-              id="caixa-forma-pagamento"
-              value={formaPagamento}
-              onChange={(e) =>
-                onFormaPagamentoChange(
-                  e.target.value as FinalizarVendaInput["formaPagamento"],
-                )
-              }
-              disabled={finalizando || itensLength === 0}
-              className="min-w-0 flex-1 h-9 rounded-md bg-slate-800 border border-slate-600 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-            >
-              {FORMAS.map((f) => (
-                <option key={f} value={f}>
-                  {formaLabel(m, f)}
-                </option>
+          <div className="text-xs text-slate-400 min-w-[22rem]">
+            <div className="mb-1">{m.pdv.pagamento} (split)</div>
+            <div className="flex flex-col gap-1">
+              {pagamentos.map((p, idx) => (
+                <div key={`pg-${idx}`} className="flex items-center gap-1">
+                  <select
+                    value={p.formaPagamento}
+                    onChange={(e) =>
+                      onPagamentoFormaChange(
+                        idx,
+                        e.target.value as FinalizarVendaInput["formaPagamento"],
+                      )
+                    }
+                    disabled={finalizando || itensLength === 0}
+                    className="h-8 rounded-md bg-slate-800 border border-slate-600 px-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                  >
+                    {FORMAS.map((f) => (
+                      <option key={f} value={f}>
+                        {formaLabel(m, f)}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={p.valor}
+                    onChange={(e) => onPagamentoValorChange(idx, Number(e.target.value))}
+                    disabled={finalizando || itensLength === 0}
+                    className="h-8 w-24 rounded-md bg-slate-800 border border-slate-600 px-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onRemoverPagamento(idx)}
+                    disabled={finalizando || itensLength === 0 || pagamentos.length <= 1}
+                    className="h-8 px-2 rounded-md bg-slate-700 text-slate-200 text-xs disabled:opacity-50"
+                  >
+                    -
+                  </button>
+                  {idx === pagamentos.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={onAdicionarPagamento}
+                      disabled={finalizando || itensLength === 0 || pagamentos.length >= 4}
+                      className="h-8 px-2 rounded-md bg-slate-700 text-slate-200 text-xs disabled:opacity-50"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
