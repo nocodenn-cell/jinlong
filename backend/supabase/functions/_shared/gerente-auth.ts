@@ -51,6 +51,7 @@ type ValidateResult =
       token: string;
       expira_em: string;
       max_desconto_percentual: number;
+      gerente_id: string;
     };
   }
   | {
@@ -215,7 +216,7 @@ export async function validateGerenteAndIssueToken(
 
     const { data: config, error: configError } = await supabase
       .from("pdv_config")
-      .select("gerente_senha_sha256, max_desconto_gerente_percentual")
+      .select("gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual")
       .eq("id", 1)
       .maybeSingle();
 
@@ -226,6 +227,28 @@ export async function validateGerenteAndIssueToken(
     if (!config || !config.gerente_senha_sha256) {
       log({ level: "error", stage: logStage, error: "CONFIG_NAO_ENCONTRADA" });
       return { ok: false, status: 500, body: { ok: false, error: "CONFIG_NAO_ENCONTRADA" } };
+    }
+    const gerenteIdRaw = typeof config.gerente_id === "string" ? config.gerente_id.trim() : "";
+    if (!gerenteIdRaw) {
+      log({ level: "error", stage: logStage, error: "CONFIG_GERENTE_ID_AUSENTE" });
+      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_ID_AUSENTE" } };
+    }
+    const { data: gerenteUser, error: gerenteErr } = await supabase
+      .from("usuarios")
+      .select("id, perfil, ativo")
+      .eq("id", gerenteIdRaw)
+      .maybeSingle();
+    if (gerenteErr) {
+      log({ level: "error", stage: logStage, error: "GERENTE_LOOKUP_ERROR", detail: gerenteErr.message });
+      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_INVALIDA" } };
+    }
+    if (
+      !gerenteUser ||
+      gerenteUser.ativo !== true ||
+      (gerenteUser.perfil !== "GERENTE" && gerenteUser.perfil !== "DONO" && gerenteUser.perfil !== "ADMIN")
+    ) {
+      log({ level: "error", stage: logStage, error: "CONFIG_GERENTE_INVALIDA" });
+      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_GERENTE_INVALIDA" } };
     }
 
     const senhaHash = await sha256Hex(senha);
@@ -330,6 +353,7 @@ export async function validateGerenteAndIssueToken(
         token,
         expira_em: expiraEm,
         max_desconto_percentual: Number.isFinite(maxPct) && maxPct > 0 ? maxPct : 20,
+        gerente_id: gerenteIdRaw,
       },
     };
   } catch (error) {

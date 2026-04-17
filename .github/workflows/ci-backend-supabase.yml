@@ -61,7 +61,7 @@ jobs:
           done
           echo "OK: todas as migrations aplicaram sem erro."
 
-  edge-sync-outbox:
+  edge-functions-typecheck:
     runs-on: ubuntu-latest
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
@@ -72,8 +72,19 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Type-check Edge Function sync-outbox
-        run: deno check backend/supabase/functions/sync-outbox/index.ts
+      - name: Type-check Edge Functions (sync-outbox + validar-gerente)
+        run: |
+          deno check backend/supabase/functions/sync-outbox/index.ts
+          deno check backend/supabase/functions/validar-gerente/index.ts
+
+  outbox-contract:
+    runs-on: ubuntu-latest
+    steps:
+      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Contract smoke (sync-outbox payload v1)
+        run: node backend/scripts/sync-outbox-contract-smoke.mjs
 
   anti-replay-diagnostic-gate:
     runs-on: windows-latest
@@ -102,11 +113,15 @@ jobs:
             throw "PR gate bloqueado: configure secrets SYNC_ENDPOINT e SYNC_KEY para validar anti-replay."
           }
 
+      # Não use `secrets.*` em `if:` — o contexto `secrets` não é permitido em condicionais do workflow.
       - name: Run anti-replay diagnostic (when secrets are configured)
-        if: ${{ secrets.SYNC_ENDPOINT != '' && secrets.SYNC_KEY != '' }}
         shell: pwsh
         env:
           SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
           SYNC_KEY: ${{ secrets.SYNC_KEY }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:SYNC_ENDPOINT) -or [string]::IsNullOrWhiteSpace($env:SYNC_KEY)) {
+            Write-Host "⚠️ Secrets SYNC_ENDPOINT ou SYNC_KEY não configurados. Pulando diagnóstico."
+            exit 0
+          }
           ./backend/scripts/sync-outbox-anti-replay-diagnostic.ps1 -OutputJson

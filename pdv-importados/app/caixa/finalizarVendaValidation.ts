@@ -16,6 +16,13 @@ export const itemFinalizarVendaSchema = z.object({
   quantidade: z.number().positive('A quantidade de cada item deve ser maior que zero.'),
 })
 
+export const pagamentoParcelaSchema = z.object({
+  formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
+    errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
+  }),
+  valor: z.number().positive('O valor da parcela deve ser maior que zero.'),
+})
+
 export const finalizarVendaInputSchema = z.object({
   formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
     errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
@@ -29,6 +36,7 @@ export const finalizarVendaInputSchema = z.object({
     .positive('O desconto do gerente deve ser maior que zero.')
     .max(100, 'O desconto do gerente não pode passar de 100%.')
     .optional(),
+  pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
 }).superRefine((value, ctx) => {
   const hasToken = !!value.descontoGerenteToken
@@ -38,6 +46,15 @@ export const finalizarVendaInputSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['descontoGerenteToken'],
       message: 'Token e percentual de desconto de gerente devem ser enviados juntos.',
+    })
+  }
+
+  const somaPagamentos = roundMoney2(value.pagamentos.reduce((acc, p) => acc + p.valor, 0))
+  if (Math.abs(somaPagamentos - value.totalLiquido) > 0.01) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pagamentos'],
+      message: 'A soma das parcelas deve ser igual ao total líquido.',
     })
   }
 })

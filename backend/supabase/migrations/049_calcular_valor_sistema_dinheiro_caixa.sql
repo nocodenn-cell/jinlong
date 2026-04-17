@@ -31,12 +31,28 @@ BEGIN
     END IF;
   END IF;
 
-  WITH vendas_din AS (
+  WITH vendas_din_split AS (
+    SELECT COALESCE(SUM(vp.valor), 0)::numeric(10,2) AS t
+    FROM public.vendas_pagamentos vp
+    INNER JOIN public.vendas v ON v.id = vp.venda_id
+    WHERE v.caixa_id = p_caixa_id
+      AND v.status = 'CONCLUIDA'
+      AND vp.forma_pagamento = 'DINHEIRO'
+  ),
+  vendas_din_legado AS (
     SELECT COALESCE(SUM(v.total_liquido), 0)::numeric(10,2) AS t
     FROM public.vendas v
     WHERE v.caixa_id = p_caixa_id
       AND v.forma_pagamento = 'DINHEIRO'
       AND v.status = 'CONCLUIDA'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.vendas_pagamentos vp
+        WHERE vp.venda_id = v.id
+      )
+  ),
+  vendas_din AS (
+    SELECT ROUND((SELECT t FROM vendas_din_split) + (SELECT t FROM vendas_din_legado), 2)::numeric(10,2) AS t
   ),
   mov_legado AS (
     SELECT

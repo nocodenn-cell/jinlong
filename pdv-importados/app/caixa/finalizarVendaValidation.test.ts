@@ -60,6 +60,7 @@ describe('finalizarVendaValidation', () => {
       totalBruto: 1,
       totalDesconto: 0,
       totalLiquido: 1,
+      pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 1 }],
       itens: [],
     })
     expect(r.success).toBe(false)
@@ -71,6 +72,7 @@ describe('finalizarVendaValidation', () => {
       totalBruto: 20,
       totalDesconto: 2,
       totalLiquido: 18,
+      pagamentos: [{ formaPagamento: 'PIX', valor: 18 }],
       itens: [itemBase],
     })
     expect(r.success).toBe(true)

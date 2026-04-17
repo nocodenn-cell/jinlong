@@ -14,6 +14,7 @@ import {
   totaisFromItens,
   totalsMatchDeclared,
 } from '@/app/caixa/finalizarVendaValidation'
+import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '@/core/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
@@ -229,6 +230,11 @@ export type FinalizarVendaCaixaResult =
   | { ok: true; vendaId: string }
   | { ok: false; error: string }
 
+type PagamentoParcelaRpc = {
+  forma_pagamento: FinalizarVendaInput['formaPagamento']
+  valor: number
+}
+
 export type CaixaStatusOperadorResult =
   | {
       ok: true
@@ -237,6 +243,7 @@ export type CaixaStatusOperadorResult =
       dataAbertura: string
       valorInicial: number
       valorSistemaDinheiro: number
+      blindClosureEnabled: boolean
     }
   | { ok: true; aberto: false }
   | { ok: false; error: string }
@@ -256,7 +263,7 @@ export type FecharCaixaOperadorResult =
   | { ok: false; error: string }
 
 export type ValidarGerenteDescontoResult =
-  | { ok: true; token: string; expiraEm: string; maxDescontoPercentual: number }
+  | { ok: true; token: string; expiraEm: string; maxDescontoPercentual: number; gerenteId: string }
   | { ok: false; error: string; scope?: string; lockUntil?: string }
 
 export type LimiteSangriaResult =
@@ -319,6 +326,10 @@ export type ObterMovimentacoesCaixaResult =
 
 export type AcaoMovimentacaoCaixaResult =
   | { ok: true; movimentacaoId: string; status?: StatusMovimentacaoCaixa; saldoAtual?: number }
+  | { ok: false; error: string }
+
+export type CancelarVendaResult =
+  | { ok: true; vendaId: string; status: 'CANCELADA' }
   | { ok: false; error: string }
 
 type ItemAutoritativo = {
@@ -397,6 +408,14 @@ export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorRes
     if (!caixaAberto) return { ok: true, aberto: false }
 
     const valorSistemaDinheiro = await calcularValorSistemaDinheiroCaixa(supabase, caixaAberto.id)
+    const { data: cfg, error: cfgErr } = await supabase
+      .from('pdv_config')
+      .select('blind_closure')
+      .eq('id', 1)
+      .maybeSingle()
+    if (cfgErr) {
+      return { ok: false, error: mensagemErroComSecao('Configuração PDV', cfgErr.message) }
+    }
     return {
       ok: true,
       aberto: true,
@@ -404,6 +423,7 @@ export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorRes
       dataAbertura: caixaAberto.data_abertura,
       valorInicial: Number(caixaAberto.valor_inicial ?? 0),
       valorSistemaDinheiro,
+      blindClosureEnabled: Boolean(cfg?.blind_closure),
     }
   } catch (e) {
     return {
@@ -587,6 +607,7 @@ export async function validarGerenteDesconto(input: {
       token: String(payload.token ?? ''),
       expiraEm: String(payload.expira_em ?? ''),
       maxDescontoPercentual: Number(payload.max_desconto_percentual ?? 0),
+      gerenteId: String(payload.gerente_id ?? ''),
     }
   } catch (e) {
     return {
@@ -704,6 +725,9 @@ export async function autorizarMovimentacaoGerente(
     if (!validacao.token) {
       return { ok: false, error: 'Não foi possível obter token de autorização do gerente.' }
     }
+    if (!validacao.gerenteId) {
+      return { ok: false, error: 'Não foi possível identificar o gerente aprovador.' }
+    }
 
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
     const { data, error } = await supabase.rpc('aprovar_movimentacao', {
@@ -712,7 +736,7 @@ export async function autorizarMovimentacaoGerente(
       p_user_agent: userAgent,
       p_device_id: null,
       p_terminal_id: null,
-      p_gerente_id: null,
+      p_gerente_id: validacao.gerenteId,
       p_autorizacao_token: validacao.token,
     })
 
@@ -865,6 +889,47 @@ export async function estornarMovimentacaoCaixa(
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível estornar a movimentação.'),
+    }
+  }
+}
+
+export async function cancelarVenda(
+  vendaId: string,
+  motivo: string,
+): Promise<CancelarVendaResult> {
+  const vendaIdTrim = vendaId.trim()
+  const motivoTrim = motivo.trim()
+  if (!vendaIdTrim) return { ok: false, error: 'Venda inválida.' }
+  if (motivoTrim.length < 2) return { ok: false, error: 'Motivo obrigatório (mín. 2 caracteres).' }
+  if (motivoTrim.length > 500) return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
+
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const { data, error } = await supabase.rpc('cancelar_venda_transacional', {
+      p_venda_id: vendaIdTrim,
+      p_motivo: motivoTrim,
+      p_operador_id: user.id,
+    })
+    if (error) return { ok: false, error: mensagemErroComSecao('Cancelamento de venda', error.message) }
+
+    const row = Array.isArray(data) ? data[0] : (data as any)
+    if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
+
+    revalidatePath('/caixa')
+    revalidatePath('/gerente/vendas')
+    revalidatePath(`/gerente/vendas/${vendaIdTrim}`)
+    revalidatePath('/gerente/caixas')
+    revalidatePath('/gerente/financeiro')
+    return { ok: true, vendaId: String(row.venda_id), status: 'CANCELADA' }
+  } catch (e) {
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a venda.'),
     }
   }
 }
@@ -1084,6 +1149,12 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
           p_total_bruto: computedFinal.totalBruto,
           p_total_desconto: computedFinal.totalDesconto,
           p_total_liquido: computedFinal.totalLiquido,
+          p_pagamentos: input.pagamentos.map(
+            (p): PagamentoParcelaRpc => ({
+              forma_pagamento: p.formaPagamento,
+              valor: roundMoney2(p.valor),
+            }),
+          ),
           p_itens: itensRpc,
           p_desconto_gerente_token: input.descontoGerenteToken ?? null,
           p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,

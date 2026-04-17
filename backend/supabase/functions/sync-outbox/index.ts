@@ -2,6 +2,17 @@
 // Recebe eventos do PDV local (outbox) e persiste no Postgres.
 // Segurança: HMAC (X-SYNC-TS, X-SYNC-NONCE, X-SYNC-SIGNATURE) + X-SYNC-KEY; anti-replay (nonce);
 // service role somente no ambiente da Function.
+//
+// --- Matriz ?op= (após authorizeSync: chave + HMAC + nonce) ---
+// | Método | op (query)     | Handler / efeito           | Dados sensíveis na resposta |
+// |--------|----------------|----------------------------|-----------------------------|
+// | GET    | catalogo       | handleCatalogoSync         | Catálogo completo: produtos (preço, nome, codigo_barras, …) + regras_preco ativas — comercial sensível |
+// | GET    | pdv_config     | handlePdvConfigSync        | gerente_id, gerente_senha_sha256, max_desconto… — ALTÍSSIMO (hash senha gerente); strict_manager_auth |
+// | GET    | outro/ausente  | —                          | 400 INVALID_OPERATION |
+// | POST   | validar_gerente| handleValidarGerentePdvSync| token gerente + expiração (se ok) — token sensível; erros genéricos |
+// | POST   | (omitido)      | handlePostOutboxBatch      | processed[], failed[{id,error}], request_id — IDs + mensagens de erro internas |
+// |        |                | dispatchOutboxEvent tipos  | Corpo só no POST: VENDA_REGISTRADA (venda+itens), CAIXA_*, MOVIMENTO_CAIXA — persiste no DB; resposta agregada no batch |
+// ---
 
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqualStr } from "../_shared/crypto.ts";
@@ -31,6 +42,9 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 const MAX_EVENTS_PER_REQUEST = 200;
 const MAX_CLOCK_SKEW_SECONDS = 5 * 60;
 const NONCE_TTL_SECONDS = 10 * 60;
+const CORS_ALLOW_METHODS = "GET, POST, OPTIONS";
+const CORS_ALLOW_HEADERS =
+  "content-type, x-sync-key, x-sync-ts, x-sync-nonce, x-sync-signature, x-device-fingerprint";
 
 function hexOfBytes(bytes: Uint8Array): string {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -237,6 +251,11 @@ function logJson(payload: Record<string, unknown>) {
   );
 }
 
+function shouldExposeInternalErrors(): boolean {
+  const raw = (Deno.env.get("SYNC_OUTBOX_EXPOSE_INTERNAL_ERRORS") ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
 function newRequestId(): string {
   const bytes = new Uint8Array(12);
   crypto.getRandomValues(bytes);
@@ -263,13 +282,25 @@ function eventCorrelationId(ev: OutboxEvent): string {
   return ev.id;
 }
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(req: Request, status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
+      ...corsHeaders(req),
     },
   });
+}
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") ?? req.headers.get("origin");
+  return {
+    "Access-Control-Allow-Origin": origin?.trim() || "*",
+    "Access-Control-Allow-Methods": CORS_ALLOW_METHODS,
+    "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
 }
 
 function isUuid(s: string | null | undefined): s is string {
@@ -311,18 +342,18 @@ async function handleValidarGerentePdvSync(
   try {
     body = JSON.parse(rawBody);
   } catch {
-    return jsonResponse(400, { ok: false, error: "INVALID_JSON" });
+    return jsonResponse(req, 400, { ok: false, error: "INVALID_JSON" });
   }
   if (!isRecord(body)) {
-    return jsonResponse(400, { ok: false, error: "INVALID_BODY" });
+    return jsonResponse(req, 400, { ok: false, error: "INVALID_BODY" });
   }
   const senhaRaw = body.senha;
   if (typeof senhaRaw !== "string" || !senhaRaw.trim()) {
-    return jsonResponse(400, { ok: false, error: "SENHA_OBRIGATORIA" });
+    return jsonResponse(req, 400, { ok: false, error: "SENHA_OBRIGATORIA" });
   }
   const senhaNormalizada = senhaRaw.trim();
   if (senhaNormalizada.length > 128) {
-    return jsonResponse(400, { ok: false, error: "SENHA_INVALIDA_FORMATO" });
+    return jsonResponse(req, 400, { ok: false, error: "SENHA_INVALIDA_FORMATO" });
   }
 
   const result = await validateGerenteAndIssueToken({
@@ -341,7 +372,7 @@ async function handleValidarGerentePdvSync(
     tokenCreatedBy: null,
     persistAuthAttemptsByUser: false,
   });
-  return jsonResponse(result.status, result.body);
+  return jsonResponse(req, result.status, result.body);
 }
 
 /**
@@ -562,7 +593,7 @@ async function processVenda(
   );
 }
 
-async function handleCatalogoSync(supabase: SupabaseAdmin) {
+async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
   const [produtosRes, regrasRes] = await Promise.all([
     supabase
       .from("produtos")
@@ -579,10 +610,10 @@ async function handleCatalogoSync(supabase: SupabaseAdmin) {
   if (produtosRes.error) throw new Error(`ERRO_CATALOGO_PRODUTOS: ${produtosRes.error.message}`);
   if (regrasRes.error) throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
 
-  return jsonResponse(200, { ok: true, produtos: produtosRes.data ?? [], regras: regrasRes.data ?? [] });
+  return jsonResponse(req, 200, { ok: true, produtos: produtosRes.data ?? [], regras: regrasRes.data ?? [] });
 }
 
-async function handlePdvConfigSync(supabase: SupabaseAdmin) {
+async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin) {
   const { data, error, status } = await supabase
     .from("pdv_config")
     .select("gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual")
@@ -590,7 +621,7 @@ async function handlePdvConfigSync(supabase: SupabaseAdmin) {
     .maybeSingle();
 
   if (error) {
-    if (status === 404 || status === 400) return jsonResponse(200, { ok: true, config: null });
+    if (status === 404 || status === 400) return jsonResponse(req, 200, { ok: true, config: null });
     throw new Error(`ERRO_PDV_CONFIG: ${error.message}`);
   }
 
@@ -599,16 +630,22 @@ async function handlePdvConfigSync(supabase: SupabaseAdmin) {
     strict_manager_auth: Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true"
   } : null;
 
-  return jsonResponse(200, { ok: true, config: configComFlag });
+  return jsonResponse(req, 200, { ok: true, config: configComFlag });
 }
 
 async function handleGetByOp(
+  req: Request,
   op: string | null,
   supabase: SupabaseAdmin,
 ): Promise<Response | null> {
-  if (op === "catalogo") return await handleCatalogoSync(supabase);
-  if (op === "pdv_config") return await handlePdvConfigSync(supabase);
+  if (op === "catalogo") return await handleCatalogoSync(req, supabase);
+  if (op === "pdv_config") return await handlePdvConfigSync(req, supabase);
   return null;
+}
+
+function publicBatchError(err: string, exposeInternalErrors: boolean): string {
+  if (exposeInternalErrors) return err;
+  return "EVENT_PROCESSING_FAILED";
 }
 
 async function dispatchOutboxEvent(
@@ -629,12 +666,14 @@ async function handlePostOutboxBatch(
   req: Request,
   requestId: string,
   reqStart: number,
+  exposeInternalErrors: boolean,
 ): Promise<Response> {
   let body: SyncRequest;
   try {
     body = parseSyncRequest(JSON.parse(rawBody));
-  } catch {
-    return jsonResponse(400, { ok: false, error: "INVALID_JSON", request_id: requestId });
+  } catch (e) {
+    const err = e instanceof Error ? e.message : "INVALID_JSON";
+    return jsonResponse(req, 400, { ok: false, error: err, request_id: requestId });
   }
 
   const processed: string[] = [];
@@ -661,7 +700,8 @@ async function handlePostOutboxBatch(
         correlation_id: eventCorrelationId(ev),
       });
     } catch (e) {
-      failed.push({ id: ev.id, error: e instanceof Error ? e.message : String(e) });
+      const rawErr = e instanceof Error ? e.message : String(e);
+      failed.push({ id: ev.id, error: publicBatchError(rawErr, exposeInternalErrors) });
       logJson({
         level: "warn",
         stage: "event_failed",
@@ -669,7 +709,7 @@ async function handlePostOutboxBatch(
         event_id: ev.id,
         event_type: ev.tipo,
         correlation_id: eventCorrelationId(ev),
-        error: e instanceof Error ? e.message : String(e),
+        error: rawErr,
       });
     }
   }
@@ -682,14 +722,15 @@ async function handlePostOutboxBatch(
     failed_count: failed.length,
     duration_ms: Date.now() - reqStart,
   });
-  return jsonResponse(200, { ok: true, processed, failed, request_id: requestId });
+  return jsonResponse(req, 200, { ok: true, processed, failed, request_id: requestId });
 }
 
 Deno.serve(async (req) => {
   const requestId = newRequestId();
   const reqStart = Date.now();
+  const exposeInternalErrors = shouldExposeInternalErrors();
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
@@ -697,7 +738,7 @@ Deno.serve(async (req) => {
   const syncKey = Deno.env.get("SYNC_KEY")?.trim() ?? "";
   if (!supabaseUrl || !serviceRole || !syncKey) {
     logJson({ level: "error", stage: "env", request_id: requestId, error: "MISSING_SUPABASE_ENV" });
-    return jsonResponse(500, { ok: false, error: "MISSING_SUPABASE_ENV", request_id: requestId });
+    return jsonResponse(req, 500, { ok: false, error: "MISSING_SUPABASE_ENV", request_id: requestId });
   }
 
   const url = new URL(req.url);
@@ -715,14 +756,15 @@ Deno.serve(async (req) => {
       request_id: requestId,
       error: auth.error,
     });
-    return jsonResponse(401, { ok: false, error: auth.error, request_id: requestId });
+    const authError = exposeInternalErrors ? auth.error : "UNAUTHORIZED";
+    return jsonResponse(req, 401, { ok: false, error: authError, request_id: requestId });
   }
 
   try {
     if (req.method === "GET") {
-      const getRes = await handleGetByOp(op, supabase);
+      const getRes = await handleGetByOp(req, op, supabase);
       if (getRes) return getRes;
-      return jsonResponse(400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
+      return jsonResponse(req, 400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
     }
 
     if (req.method === "POST") {
@@ -733,10 +775,17 @@ Deno.serve(async (req) => {
           req,
         );
       }
-      return await handlePostOutboxBatch(supabase, rawBody, req, requestId, reqStart);
+      return await handlePostOutboxBatch(
+        supabase,
+        rawBody,
+        req,
+        requestId,
+        reqStart,
+        exposeInternalErrors,
+      );
     }
 
-    return jsonResponse(400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
+    return jsonResponse(req, 400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     logJson({
@@ -746,7 +795,7 @@ Deno.serve(async (req) => {
       error: msg,
       duration_ms: Date.now() - reqStart,
     });
-    return jsonResponse(500, {
+    return jsonResponse(req, 500, {
       ok: false,
       error: "ERRO_INTERNO",
       request_id: requestId,
@@ -777,6 +826,7 @@ async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAd
   if (!isUuid(nonceTrim)) return { ok: false, error: "INVALID_NONCE" };
 
   const tsNum = Number(ts);
+  if (!Number.isFinite(tsNum)) return { ok: false, error: "INVALID_TS" };
   if (Math.abs(Math.floor(Date.now() / 1000) - tsNum) > MAX_CLOCK_SKEW_SECONDS) return { ok: false, error: "TS_OUT_OF_WINDOW" };
 
   const payload = `${ts}.${nonceTrim}.${rawBody}`;

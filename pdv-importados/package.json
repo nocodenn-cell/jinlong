@@ -17,6 +17,7 @@
     "test:e2e:report": "playwright show-report",
     "env:check": "node scripts/check-env.mjs",
     "smoke:http": "node scripts/smoke-routes.mjs",
+    "test:cors:validar-gerente": "node scripts/test-cors-validar-gerente.mjs",
     "seed:dev-users": "node scripts/seed-dev-users.mjs"
   },
   "dependencies": {
