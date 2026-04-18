@@ -128,6 +128,11 @@ jobs:
 
   anti-replay-diagnostic-gate:
     runs-on: windows-latest
+    # dorny/paths-filter usa a API de PR; sem pull-requests:read o token falha com
+    # "Resource not accessible by integration" em PRs internos.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
