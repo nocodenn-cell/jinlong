@@ -803,7 +803,10 @@ Deno.serve(async (req) => {
       request_id: requestId,
       error: auth.error,
     });
-    const authError = authErrorForClientResponse(auth.error, exposeInternalErrors);
+    const authError = authErrorForClientResponse(
+      auth.error ?? "UNAUTHORIZED",
+      exposeInternalErrors,
+    );
     return jsonResponse(req, 401, { ok: false, error: authError, request_id: requestId });
   }
 
