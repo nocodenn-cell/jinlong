@@ -265,9 +265,10 @@ $resReplay = Invoke-DiagnosticRequest -Method "GET" -Url $getUrl -Headers $heade
 $totalCount++
 $checkName = "Replay GET bloqueado"
 $replayGetError = [string](Get-BodyField -Body $resReplay.Body -FieldName "error")
+# UNAUTHORIZED: compatível com deploys antigos (erro mascarado sem SYNC_OUTBOX_EXPOSE_INTERNAL_ERRORS).
 $condition = (
   $resReplay.StatusCode -eq 401 -and
-  ($replayGetError -eq "REPLAY_DETECTED" -or $replayGetError -eq "REPLAY_OR_DB_ERROR")
+  ($replayGetError -eq "REPLAY_DETECTED" -or $replayGetError -eq "REPLAY_OR_DB_ERROR" -or $replayGetError -eq "UNAUTHORIZED")
 )
 $details = "status=$($resReplay.StatusCode), error=$(Get-BodyField -Body $resReplay.Body -FieldName 'error')"
 $okCount += [int](Assert-Result -Name $checkName -Condition $condition -Details $details)
@@ -298,7 +299,7 @@ $checkName = "Timestamp drift bloqueado"
 $timestampError = [string](Get-BodyField -Body $resOld.Body -FieldName "error")
 $condition = (
   $resOld.StatusCode -eq 401 -and
-  ($timestampError -eq "TIMESTAMP_OUT_OF_WINDOW" -or $timestampError -eq "TS_OUT_OF_WINDOW")
+  ($timestampError -eq "TIMESTAMP_OUT_OF_WINDOW" -or $timestampError -eq "TS_OUT_OF_WINDOW" -or $timestampError -eq "UNAUTHORIZED")
 )
 $details = "status=$($resOld.StatusCode), error=$(Get-BodyField -Body $resOld.Body -FieldName 'error')"
 $okCount += [int](Assert-Result -Name $checkName -Condition $condition -Details $details)
@@ -328,7 +329,7 @@ $checkName = "Assinatura inválida bloqueada"
 $invalidSigError = [string](Get-BodyField -Body $resBad.Body -FieldName "error")
 $condition = (
   $resBad.StatusCode -eq 401 -and
-  ($invalidSigError -eq "INVALID_SIGNATURE" -or $invalidSigError -eq "INVALID_SIG")
+  ($invalidSigError -eq "INVALID_SIGNATURE" -or $invalidSigError -eq "INVALID_SIG" -or $invalidSigError -eq "UNAUTHORIZED")
 )
 $details = "status=$($resBad.StatusCode), error=$(Get-BodyField -Body $resBad.Body -FieldName 'error')"
 $okCount += [int](Assert-Result -Name $checkName -Condition $condition -Details $details)
@@ -376,7 +377,7 @@ $checkName = "Replay POST bloqueado"
 $replayPostError = [string](Get-BodyField -Body $resPostReplay.Body -FieldName "error")
 $condition = (
   $resPostReplay.StatusCode -eq 401 -and
-  ($replayPostError -eq "REPLAY_DETECTED" -or $replayPostError -eq "REPLAY_OR_DB_ERROR")
+  ($replayPostError -eq "REPLAY_DETECTED" -or $replayPostError -eq "REPLAY_OR_DB_ERROR" -or $replayPostError -eq "UNAUTHORIZED")
 )
 $details = "status=$($resPostReplay.StatusCode), error=$(Get-BodyField -Body $resPostReplay.Body -FieldName 'error')"
 $okCount += [int](Assert-Result -Name $checkName -Condition $condition -Details $details)

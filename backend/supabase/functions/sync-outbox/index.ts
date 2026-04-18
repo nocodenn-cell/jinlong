@@ -288,6 +288,19 @@ function shouldExposeInternalErrors(): boolean {
   return raw === "1" || raw === "true" || raw === "yes";
 }
 
+/** Sem `SYNC_OUTBOX_EXPOSE_INTERNAL_ERRORS`, ainda retornamos códigos estáveis do contrato sync (CI/diagnóstico). */
+function authErrorForClientResponse(code: string, exposeAll: boolean): string {
+  if (exposeAll) return code;
+  if (
+    code === "REPLAY_OR_DB_ERROR" ||
+    code === "INVALID_SIG" ||
+    code === "TS_OUT_OF_WINDOW"
+  ) {
+    return code;
+  }
+  return "UNAUTHORIZED";
+}
+
 function newRequestId(): string {
   const bytes = new Uint8Array(12);
   crypto.getRandomValues(bytes);
@@ -790,7 +803,7 @@ Deno.serve(async (req) => {
       request_id: requestId,
       error: auth.error,
     });
-    const authError = exposeInternalErrors ? auth.error : "UNAUTHORIZED";
+    const authError = authErrorForClientResponse(auth.error, exposeInternalErrors);
     return jsonResponse(req, 401, { ok: false, error: authError, request_id: requestId });
   }
 
