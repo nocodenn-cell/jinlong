@@ -6,5 +6,8 @@ export function readFormDataString(
   fallback = '',
 ): string {
   const value = formData.get(key)
-  return typeof value === 'string' ? value : fallback
+  if (value == null) return fallback
+  if (typeof value === 'string') return value
+  if (typeof File !== 'undefined' && value instanceof File) return value.name || fallback
+  return value.toString() || fallback
 }

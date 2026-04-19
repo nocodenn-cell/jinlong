@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 type GerenteStatusBadgeProps = Readonly<{
   /** Chave de estilo (ex.: status de venda/caixa ou ATIVO / ALERTA). */
   status: string
@@ -24,7 +26,10 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }
 }
 
 /** Badge compacto para status operacionais na área gerente. */
-export function GerenteStatusBadge({ status, label }: GerenteStatusBadgeProps) {
+export const GerenteStatusBadge = memo(function GerenteStatusBadge({
+  status,
+  label,
+}: GerenteStatusBadgeProps) {
   const text = label ?? status
   const style = STATUS_STYLE[status] ?? { bg: '#f9fafb', color: '#374151', border: '#e5e7eb' }
   return (
@@ -44,4 +49,4 @@ export function GerenteStatusBadge({ status, label }: GerenteStatusBadgeProps) {
       {text}
     </span>
   )
-}
+})

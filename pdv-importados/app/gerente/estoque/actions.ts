@@ -1,6 +1,5 @@
 'use server'
 
-import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
@@ -9,6 +8,7 @@ import {
   mensagemErroComSecao,
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
+import { AtualizarEstoqueSchema, ProdutoIdSchema } from './actions.validation'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -27,16 +27,6 @@ async function lojaIdDoUsuarioLogado(): Promise<string | null> {
     .maybeSingle()
   return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
 }
-
-const AtualizarEstoqueSchema = z.object({
-  produto_id: z.string().uuid('Produto inválido.'),
-  quantidade_atual: z.coerce.number().min(0, 'Quantidade atual não pode ser negativa.'),
-  estoque_minimo: z.coerce.number().min(0, 'Estoque mínimo não pode ser negativo.'),
-})
-
-const ProdutoIdSchema = z.object({
-  produto_id: z.string().uuid('Produto inválido.'),
-})
 
 export async function atualizarEstoqueProduto(
   input: unknown

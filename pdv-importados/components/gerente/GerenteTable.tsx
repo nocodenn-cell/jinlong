@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { memo } from 'react'
 
 export type GerenteTableColumn = {
   key: string
@@ -15,7 +16,7 @@ type GerenteTableProps = Readonly<{
  * Tabela visual padronizada da área gerente (borda, cabeçalho).
  * Linhas vazias: renderize um &lt;tr&gt; com colSpan no próprio children.
  */
-export function GerenteTable({ columns, children }: GerenteTableProps) {
+export const GerenteTable = memo(function GerenteTable({ columns, children }: GerenteTableProps) {
   return (
     <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
       <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
@@ -32,4 +33,4 @@ export function GerenteTable({ columns, children }: GerenteTableProps) {
       </table>
     </div>
   )
-}
+})

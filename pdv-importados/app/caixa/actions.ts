@@ -24,6 +24,7 @@ import {
   mensagemErroParaUsuario,
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
+import { resolveVendaIdForFinalize } from '@/lib/caixa/resolveVendaIdForFinalize'
 
 export type ProdutoCaixaDTO = {
   id: string
@@ -77,6 +78,24 @@ function mapProdutoRow(
 const PRODUTO_COLS =
   'id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id' as const
 
+type PdvConfigCaixaWebRow = {
+  quantidade_minima_atacado_padrao: number
+  blind_closure: boolean
+}
+
+/** Campos não sensíveis de `pdv_config` (migration 058 — tabela sem SELECT direto para authenticated). */
+async function fetchPdvConfigParaCaixaWeb(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<
+  { ok: true; row: PdvConfigCaixaWebRow | null } | { ok: false; error: string }
+> {
+  const { data, error } = await supabase.rpc('pdv_config_para_caixa_web')
+  if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
+  const rows = data as PdvConfigCaixaWebRow[] | null | undefined
+  const row = rows?.[0] ?? null
+  return { ok: true, row }
+}
+
 async function quantidadeEstoque(
   supabase: Awaited<ReturnType<typeof createClient>>,
   produtoId: string,
@@ -95,7 +114,7 @@ async function quantidadeEstoque(
 }
 
 /**
- * Regras ativas para o motor de preço no caixa (RLS: qualquer autenticado lê).
+ * Regras ativas para o motor de preço no caixa (`regras_preco` via RLS; limiares em `pdv_config` via RPC).
  */
 export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> {
   try {
@@ -116,14 +135,12 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
       return { ok: false, error: mensagemErroParaUsuario(error.message) }
     }
 
-    const { data: cfg } = await supabase
-      .from('pdv_config')
-      .select('quantidade_minima_atacado_padrao')
-      .eq('id', 1)
-      .maybeSingle()
-
-    const minAtacado = cfg?.quantidade_minima_atacado_padrao
-      ? Number(cfg.quantidade_minima_atacado_padrao)
+    const cfgRes = await fetchPdvConfigParaCaixaWeb(supabase)
+    if (!cfgRes.ok) {
+      return { ok: false, error: cfgRes.error }
+    }
+    const minAtacado = cfgRes.row?.quantidade_minima_atacado_padrao
+      ? Number(cfgRes.row.quantidade_minima_atacado_padrao)
       : DEFAULT_PRICING_CONTEXT.quantidadeMinimaAtacadoPadrao
 
     const regras = (data as RegraPrecoRow[] | null)?.map(mapRegraPrecoRow) ?? []
@@ -408,13 +425,9 @@ export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorRes
     if (!caixaAberto) return { ok: true, aberto: false }
 
     const valorSistemaDinheiro = await calcularValorSistemaDinheiroCaixa(supabase, caixaAberto.id)
-    const { data: cfg, error: cfgErr } = await supabase
-      .from('pdv_config')
-      .select('blind_closure')
-      .eq('id', 1)
-      .maybeSingle()
-    if (cfgErr) {
-      return { ok: false, error: mensagemErroComSecao('Configuração PDV', cfgErr.message) }
+    const cfgRes = await fetchPdvConfigParaCaixaWeb(supabase)
+    if (!cfgRes.ok) {
+      return { ok: false, error: mensagemErroComSecao('Configuração PDV', cfgRes.error) }
     }
     return {
       ok: true,
@@ -423,7 +436,7 @@ export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorRes
       dataAbertura: caixaAberto.data_abertura,
       valorInicial: Number(caixaAberto.valor_inicial ?? 0),
       valorSistemaDinheiro,
-      blindClosureEnabled: Boolean(cfg?.blind_closure),
+      blindClosureEnabled: Boolean(cfgRes.row?.blind_closure),
     }
   } catch (e) {
     return {
@@ -960,11 +973,8 @@ async function recalcularItensNoServidor(
   if (regrasErr) return { ok: false, error: mensagemErroComSecao('Regras de preço', regrasErr.message) }
   const regras = (regrasRows as RegraPrecoRow[] | null)?.map(mapRegraPrecoRow) ?? []
 
-  const { data: cfg } = await supabase
-    .from('pdv_config')
-    .select('quantidade_minima_atacado_padrao')
-    .eq('id', 1)
-    .maybeSingle()
+  const cfgRes = await fetchPdvConfigParaCaixaWeb(supabase)
+  const cfg = cfgRes.ok ? cfgRes.row : null
   const pricingCtx: PricingContext = {
     quantidadeMinimaAtacadoPadrao: cfg?.quantidade_minima_atacado_padrao
       ? Number(cfg.quantidade_minima_atacado_padrao)
@@ -1124,7 +1134,12 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     }
     const caixaId = caixaExistente.id
 
-    const vendaId = crypto.randomUUID()
+    const useUnifiedSalesFlow = process.env.USE_UNIFIED_SALES_FLOW === 'true'
+    const vendaId = resolveVendaIdForFinalize({
+      useUnifiedSalesFlow,
+      idempotencyKey: input.idempotencyKey,
+      randomUuid: () => crypto.randomUUID(),
+    })
     const itensRpc = itensAut.map((i) => ({
       item_id: crypto.randomUUID(),
       produto_id: i.produtoId,
@@ -1134,7 +1149,6 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
       tipo_preco: i.tipoPreco,
     }))
 
-    const useUnifiedSalesFlow = process.env.USE_UNIFIED_SALES_FLOW === 'true'
     const strictManagerDiscountAuth = process.env.STRICT_MANAGER_DISCOUNT_AUTH === 'true'
     const rpcName = useUnifiedSalesFlow
       ? 'finalizar_venda_transacional_canonica_v2'
