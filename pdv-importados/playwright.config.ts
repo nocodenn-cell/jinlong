@@ -17,7 +17,19 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? defaultBase,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'mobile-chrome-pixel',
+      use: { ...devices['Pixel 7'] },
+      testMatch: ['**/e2e/admin-idioma.spec.ts', '**/e2e/gerente.spec.ts'],
+    },
+    {
+      name: 'mobile-safari-iphone',
+      use: { ...devices['iPhone 14'] },
+      testMatch: ['**/e2e/admin-idioma.spec.ts', '**/e2e/gerente.spec.ts'],
+    },
+  ],
   webServer:
     ciWithLocalServer || !process.env.CI
       ? {

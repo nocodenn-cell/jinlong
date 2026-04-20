@@ -2,6 +2,12 @@
 
 Os testes ficam em `pdv-importados/e2e/` e usam `pdv-importados/playwright.config.ts`.
 
+Projetos Playwright atuais:
+
+- `chromium` (desktop)
+- `mobile-chrome-pixel` (Android/Pixel)
+- `mobile-safari-iphone` (iPhone/Safari)
+
 ## Smoke HTTP rapido
 
 Com o app em `npm run dev` (porta 3000 por padrao):
@@ -59,6 +65,8 @@ npm run test:e2e:report
 
 Sem `PLAYWRIGHT_TEST_*`, os testes do arquivo `gerente.spec.ts` são **pulados** no `beforeEach`. Com credenciais, `gerente.spec.ts` valida cabeçalho/navegação do painel, tabela do início, páginas **Caixas** (export CSV) e **Relatórios** (filtro de período).
 
+`admin-idioma.spec.ts` cobre troca/persistência de idioma no `/admin` e roda também nos projetos mobile.
+
 O ficheiro `e2e/caixa-venda-multi-pagamento.spec.ts` (pipeline crítico) exige as mesmas variáveis de operador e catálogo que `caixa-venda.spec.ts`: split **DINHEIRO + PIX** com valores lidos do total no rodapé.
 
 Sem `PLAYWRIGHT_CAIXA_TEST_*`, os testes de **caixa** são **pulados** (local e CI). Para o smoke `test:e2e:critical` e `caixa-fluxos-criticos.spec.ts` exercitarem `/caixa`, defina esses secrets no GitHub (usuário **OPERADOR** do seed, ex.: `e2e-operador@localhost.test`).
@@ -90,6 +98,8 @@ O job **Playwright** é **opcional**: crie a variável de repositório **`ENABLE
 Se o secret **`PLAYWRIGHT_BASE_URL`** apontar para o deploy de staging (ex.: Vercel preview estável), o job define **`PLAYWRIGHT_E2E_WITH_DEV=0`** e os testes batem na URL remota; caso contrário, sobe **`next dev`** na porta de teste (comportamento igual ao job Playwright do CI principal).
 
 **Staging / homologação:** além de `ENABLE_PLAYWRIGHT_E2E=true`, mantenha os mesmos secrets apontando para o projeto Supabase de **staging** e usuários seed só desse ambiente — evita E2E contra produção.
+
+Smoke manual específico para browsers chineses (360/QQ): [SMOKE_BROWSER_CHINES_360_QQ.md](./SMOKE_BROWSER_CHINES_360_QQ.md).
 
 Testes que dependem de credenciais de gerente são **pulados** se `PLAYWRIGHT_TEST_*` estiverem ausentes.
 

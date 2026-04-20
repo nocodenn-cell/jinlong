@@ -13,12 +13,13 @@ function intlHalfExpand(scale: number): Intl.NumberFormat | null {
   const hit = intlByScale.get(scale)
   if (hit) return hit
   try {
-    const f = new Intl.NumberFormat('en-US', {
+    const options: Intl.NumberFormatOptions & { roundingMode?: 'halfExpand' } = {
       minimumFractionDigits: scale,
       maximumFractionDigits: scale,
-      roundingMode: 'halfExpand' as Intl.NumberFormatOptions['roundingMode'],
+      roundingMode: 'halfExpand',
       useGrouping: false,
-    })
+    }
+    const f = new Intl.NumberFormat('en-US', options)
     intlByScale.set(scale, f)
     return f
   } catch {

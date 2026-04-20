@@ -133,6 +133,16 @@ describe('helpers de mensagemErroUsuario', () => {
     )
   })
 
+  it('mensagemErroParaUsuario traduz para chinês simplificado quando idioma=zh', () => {
+    expect(mensagemErroParaUsuario('Invalid login credentials', 'zh')).toBe('邮箱或密码错误。')
+  })
+
+  it('mensagemErroValidacaoZod usa prefixo em chinês tradicional quando idioma=zh-HK', () => {
+    expect(mensagemErroValidacaoZod('Expected number, received string', 'zh-HK')).toBe(
+      '資料無效：此欄位必須填寫數字。',
+    )
+  })
+
   it('mensagemErroDeExcecao usa fallback quando não recebe Error', () => {
     expect(mensagemErroDeExcecao(null, 'Falha genérica.')).toBe('Falha genérica.')
   })

@@ -83,4 +83,21 @@ test.describe('Painel do gerente', () => {
     await zhBtn.click()
     await expect(page.getByText('经理面板')).toBeVisible({ timeout: 10_000 })
   })
+
+  test('fluxo crítico admin/gerente em chinês + validação traduzida', async ({ page }) => {
+    await page.goto('/gerente/produtos')
+    await page.getByRole('button', { name: '普通话' }).click()
+    await expect(page.getByText('经理面板')).toBeVisible({ timeout: 10_000 })
+
+    // Dispara erro de validação (preço <= 0) para validar prefixo i18n em CN.
+    await page.getByPlaceholder('商品名称').fill('Teste idioma CN')
+    await page.getByPlaceholder('条形码').fill(`E2E-${Date.now()}`)
+    await page.getByPlaceholder('零售价').fill('0')
+    await page.getByRole('button', { name: /保存/ }).click()
+    await expect(page.getByText(/数据无效：|資料無效：/)).toBeVisible({ timeout: 10_000 })
+
+    await page.goto('/admin/dashboard')
+    await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
+  })
 })

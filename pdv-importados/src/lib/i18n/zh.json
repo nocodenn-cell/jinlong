@@ -137,6 +137,7 @@
     "col_qtde": "数量",
     "col_valor": "销售额",
     "exportar_csv": "导出 CSV",
+    "exportar_xlsx": "导出 XLSX",
     "col_detalhes": "详情",
     "ver_detalhes": "查看",
     "venda_detalhe_titulo": "销售明细",
@@ -306,6 +307,87 @@
     "cancelar": "取消订单",
     "desconto": "折扣",
     "troco": "找零"
+  },
+  "admin": {
+    "header": {
+      "brand": { "cn": "进口系统", "pt": "PDV Importados" },
+      "tagline": { "cn": "管理层 · 销售 · 库存 · 财务", "pt": "Painel administrativo" }
+    },
+    "nav": {
+      "dashboard": { "cn": "主控台", "pt": "Dashboard" },
+      "gerente": { "cn": "经理面板", "pt": "Gerente" },
+      "produtos": { "cn": "商品", "pt": "Produtos" },
+      "vendas": { "cn": "销售", "pt": "Vendas" },
+      "estoque": { "cn": "库存", "pt": "Estoque" },
+      "recebimento": { "cn": "收货", "pt": "Recebimento" },
+      "transferencias": { "cn": "调拨", "pt": "Transferências" },
+      "relatorios": { "cn": "报告", "pt": "Relatórios" },
+      "caixas": { "cn": "钱箱", "pt": "Caixas" },
+      "financeiro": { "cn": "财务", "pt": "Financeiro" }
+    },
+    "navHints": {
+      "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
+      "gerente": "Painel do gerente e atalhos operacionais.",
+      "produtos": "Cadastro e preços de produtos.",
+      "vendas": "Listagem e gestão de vendas.",
+      "estoque": "Saldos por loja e alertas de estoque.",
+      "recebimento": "Entrada de mercadorias e conferência.",
+      "transferencias": "Movimentação entre lojas.",
+      "relatorios": "Relatórios e análises operacionais.",
+      "caixas": "Caixas e operações de ponto de venda.",
+      "financeiro": "Movimentações e visão financeira."
+    },
+    "dashboard": {
+      "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
+      "pageSubtitle": { "cn": "实时数据", "pt": "Dados do período selecionado" },
+      "newUsers": { "cn": "新客户", "pt": "Novos usuários no período" },
+      "periodToday": { "cn": "今天", "pt": "Hoje" },
+      "period7d": { "cn": "7天", "pt": "7 dias" },
+      "period30d": { "cn": "30天", "pt": "30 dias" },
+      "statusAll": { "cn": "全部", "pt": "Todos" },
+      "statusDone": { "cn": "完成", "pt": "Concluída" },
+      "statusCancelled": { "cn": "取消", "pt": "Cancelada" },
+      "chartTitle": { "cn": "销售趋势", "pt": "Tendência de vendas" },
+      "tableTitle": { "cn": "最近订单", "pt": "Últimos pedidos" },
+      "tableEmpty": { "cn": "此筛选条件下没有订单。", "pt": "Nenhum pedido encontrado para este filtro." },
+      "footer": { "cn": "生意兴隆 · 财源广进", "pt": "Prosperidade nos negócios" },
+      "metricTotalSales": { "cn": "总销售额", "pt": "Vendas totais no período" },
+      "metricOrders": { "cn": "订单量", "pt": "Pedidos registrados" },
+      "metricTicket": { "cn": "客单价", "pt": "Ticket médio" },
+      "metricStock": { "cn": "库存预警", "pt": "Alertas de estoque baixo" },
+      "trendStockOk": { "cn": "正常", "pt": "OK" },
+      "trendStockWarn": { "cn": "注意", "pt": "Atenção" },
+      "tableColId": { "cn": "编号", "pt": "ID" },
+      "tableColOperador": { "cn": "操作员", "pt": "Operador" },
+      "tableColData": { "cn": "日期", "pt": "Data" },
+      "tableColValor": { "cn": "金额", "pt": "Valor" },
+      "tableColPagamento": { "cn": "支付", "pt": "Pagamento" },
+      "tableColStatus": { "cn": "状态", "pt": "Status" },
+      "errorSourceSalesPeriod": { "cn": "销售（本期）", "pt": "Vendas (período)" },
+      "errorSourceSalesPreviousPeriod": { "cn": "销售（上期）", "pt": "Vendas (período anterior)" },
+      "errorSourceRecentOrders": { "cn": "最近订单", "pt": "Pedidos recentes" },
+      "errorSourceLowStock": { "cn": "低库存预警", "pt": "Alertas de estoque (v_estoque_baixo)" },
+      "errorSourceNewUsersPeriod": { "cn": "新用户（本期）", "pt": "Novos usuários (período)" },
+      "errorSourceNewUsersPreviousPeriod": { "cn": "新用户（上期）", "pt": "Novos usuários (período anterior)" },
+      "errorSourceOperators": { "cn": "操作员（姓名）", "pt": "Operadores (nomes)" }
+    },
+    "common": {
+      "signOut": { "cn": "退出登录", "pt": "Sair" },
+      "trendError": { "cn": "错误", "pt": "Erro" },
+      "unavailable": { "cn": "不可用", "pt": "Indisponível" },
+      "emDash": "—"
+    },
+    "errors": {
+      "partialTitle": { "cn": "部分数据加载失败", "pt": "Falha ao carregar alguns dados" },
+      "criticalSalesTitle": { "cn": "无法加载本期销售数据", "pt": "Não foi possível carregar as vendas do período" },
+      "criticalSalesBody": { "cn": "下方数字可能为零或不完整，请勿用于决策。请检查网络、Supabase 与权限 (RLS)。", "pt": "Os números abaixo podem aparecer como zero ou incompletos — não use para decisões. Verifique rede, Supabase e permissões (RLS)." },
+      "chartUnavailable": { "cn": "图表暂不可用（销售数据加载失败）。", "pt": "Gráfico indisponível: falha ao carregar vendas do período." },
+      "tableLoadFailed": { "cn": "无法加载订单列表。", "pt": "Não foi possível carregar a lista de pedidos." }
+    },
+    "statusBadge": {
+      "concluida": { "cn": "已完成", "pt": "Concluída" },
+      "cancelada": { "cn": "已取消", "pt": "Cancelada" }
+    }
   },
   "comum": {
     "salvar": "保存",

@@ -207,7 +207,7 @@ export function labelsAjusteEstoque(m: Mensagens): EstoqueAjusteModalProps['labe
     atual: m.estoque.col_atual,
     minimo: m.estoque.col_minimo,
     motivo: 'Motivo',
-    observacao: m.comum?.observacao ?? 'Observação',
+    observacao: m.produtos.observacao ?? 'Observação',
     motivos: [
       { value: 'ACERTO_INVENTARIO', label: 'Acerto de inventário' },
       { value: 'COMPRA', label: 'Entrada por compra' },

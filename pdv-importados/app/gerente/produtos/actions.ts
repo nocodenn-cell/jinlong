@@ -10,6 +10,7 @@ import {
   alternarAtivoProduto as alternarAtivoNoDominio,
 } from '@/core/services/produtoService'
 import { mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
+import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 
 const NovoProdutoSchema = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
@@ -44,7 +45,8 @@ export async function criarProduto(
   const parsed = NovoProdutoSchema.safeParse(input)
   if (!parsed.success) {
     const msg = parsed.error.issues.map((i) => i.message).join('; ')
-    return { success: false, error: mensagemErroValidacaoZod(msg) }
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
   const supabase = await createClient()

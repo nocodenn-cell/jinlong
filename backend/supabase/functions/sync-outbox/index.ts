@@ -862,13 +862,13 @@ async function maybePruneExpiredSyncNonces(supabase: SupabaseAdmin): Promise<voi
 }
 
 async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAdmin, rawBody: string) {
-  const gotKey = req.headers.get("X-SYNC-KEY");
+  const gotKey = req.headers.get("X-SYNC-KEY")?.trim();
   const ts = req.headers.get("X-SYNC-TS");
   const nonce = req.headers.get("X-SYNC-NONCE");
   const signature = req.headers.get("X-SYNC-SIGNATURE");
   const device = req.headers.get("x-device-fingerprint") ?? "unknown";
 
-  if (!gotKey?.trim() || !(await timingSafeEqualSecret(gotKey, syncKey))) {
+  if (!gotKey || !(await timingSafeEqualSecret(gotKey, syncKey))) {
     return { ok: false, error: "UNAUTHORIZED" };
   }
   if (!ts || !nonce || !signature) return { ok: false, error: "MISSING_HEADERS" };

@@ -3,11 +3,7 @@ import type { ReactNode } from 'react'
 import { AlertCircle, DollarSign, Package, ShoppingBag, type LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/server'
-import {
-  adminChineseUiEnabled,
-  adminLineBoth,
-  adminUi,
-} from '@/lib/i18n/adminChineseUiLabels'
+import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
 import { ChineseStatCard } from '../components/ChineseStatCard'
 import { SalesTrendChartLazy } from './SalesTrendChartLazy'
 import {
@@ -22,8 +18,15 @@ import {
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
+import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
+import { getMessages } from '@/src/lib/i18n/getMessages'
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
-const LOCALE_PT_BR = 'pt-BR'
+type BilingualLine = { pt: string; cn: string }
+
+function lineBoth(line: BilingualLine): string {
+  return `${line.cn} · ${line.pt}`
+}
 
 type SalesPoint = {
   label: string
@@ -52,11 +55,12 @@ type OrderRow = {
 }
 
 function collectSupabaseErrors(
-  entries: ReadonlyArray<{ label: string; error: { message: string } | null }>
+  entries: ReadonlyArray<{ label: string; error: { message: string } | null }>,
+  idioma: string
 ): string[] {
   const out: string[] = []
   for (const { label, error } of entries) {
-    if (error) out.push(`${label}: ${mensagemErroParaUsuario(error.message)}`)
+    if (error) out.push(`${label}: ${mensagemErroParaUsuario(error.message, idioma)}`)
   }
   return out
 }
@@ -104,10 +108,13 @@ function CriticalSalesAlert({ title, body }: { title: string; body: string }) {
   )
 }
 
-function statusBadge(status: VendaStatus, oriental: boolean): ReactNode {
-  const line =
-    status === 'CONCLUIDA' ? adminUi.statusBadge.concluida : adminUi.statusBadge.cancelada
-  const label = oriental ? adminLineBoth(line) : line.pt
+function statusBadge(
+  status: VendaStatus,
+  chineseLanguage: boolean,
+  labels: { concluida: BilingualLine; cancelada: BilingualLine }
+): ReactNode {
+  const line: BilingualLine = status === 'CONCLUIDA' ? labels.concluida : labels.cancelada
+  const label = chineseLanguage ? lineBoth(line) : line.pt
   const config: Record<VendaStatus, { className: string }> = {
     CONCLUIDA: {
       className:
@@ -130,9 +137,14 @@ type PageProps = {
 }
 
 export default async function AdminDashboardPage({ searchParams }: PageProps) {
-  const oriental = adminChineseUiEnabled()
+  const { idioma } = await getUsuarioIdioma()
+  const m = getMessages(idioma)
+  const adminUi = m.admin
+  const chineseLanguage = idioma !== 'pt'
+  const chineseThemeOn = adminChineseUiEnabled()
   const L = adminUi.dashboard
   const dash = adminUi.common
+  const locale = localeFromIdioma(idioma)
 
   const params = searchParams ? await searchParams : undefined
   const period = normalizePeriod(params?.period)
@@ -216,13 +228,37 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   ])
 
   let dashboardErrors = collectSupabaseErrors([
-    { label: 'Vendas (período)', error: vendasRangeRes.error },
-    { label: 'Vendas (período anterior)', error: vendasPrevRes.error },
-    { label: 'Pedidos recentes', error: recentOrdersRes.error },
-    { label: 'Alertas de estoque (v_estoque_baixo)', error: estoqueBaixoRes.error },
-    { label: 'Novos usuários (período)', error: novosUsuariosAtualRes.error },
-    { label: 'Novos usuários (período anterior)', error: novosUsuariosPrevRes.error },
-  ])
+    {
+      label: chineseLanguage ? lineBoth(L.errorSourceSalesPeriod) : L.errorSourceSalesPeriod.pt,
+      error: vendasRangeRes.error,
+    },
+    {
+      label: chineseLanguage
+        ? lineBoth(L.errorSourceSalesPreviousPeriod)
+        : L.errorSourceSalesPreviousPeriod.pt,
+      error: vendasPrevRes.error,
+    },
+    {
+      label: chineseLanguage ? lineBoth(L.errorSourceRecentOrders) : L.errorSourceRecentOrders.pt,
+      error: recentOrdersRes.error,
+    },
+    {
+      label: chineseLanguage ? lineBoth(L.errorSourceLowStock) : L.errorSourceLowStock.pt,
+      error: estoqueBaixoRes.error,
+    },
+    {
+      label: chineseLanguage
+        ? lineBoth(L.errorSourceNewUsersPeriod)
+        : L.errorSourceNewUsersPeriod.pt,
+      error: novosUsuariosAtualRes.error,
+    },
+    {
+      label: chineseLanguage
+        ? lineBoth(L.errorSourceNewUsersPreviousPeriod)
+        : L.errorSourceNewUsersPreviousPeriod.pt,
+      error: novosUsuariosPrevRes.error,
+    },
+  ], idioma)
 
   if (!vendasRangeRes.error) vendasRange = (vendasRangeRes.data ?? []) as typeof vendasRange
   if (!vendasPrevRes.error) vendasPrevRange = (vendasPrevRes.data ?? []) as typeof vendasPrevRange
@@ -250,7 +286,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       .in('id', operatorIds)
     if (usersRes.error) {
       dashboardErrors.push(
-        `Operadores (nomes): ${mensagemErroParaUsuario(usersRes.error.message)}`,
+        `${chineseLanguage ? lineBoth(L.errorSourceOperators) : L.errorSourceOperators.pt}: ${mensagemErroParaUsuario(usersRes.error.message, idioma)}`,
       )
     } else {
       usuariosRows = usersRes.data ?? []
@@ -272,7 +308,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   while (cursor <= end) {
     const key = dateKey(cursor)
     chartData.push({
-      label: formatDayMonthInLocale(cursor, LOCALE_PT_BR),
+      label: formatDayMonthInLocale(cursor, locale),
       total: Math.round((chartBucket.get(key) ?? 0) * 100) / 100,
     })
     cursor.setDate(cursor.getDate() + 1)
@@ -290,26 +326,26 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev)
   const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev)
 
-  const trendErr = adminLineBoth(adminUi.common.trendError)
-  const unavail = adminLineBoth(adminUi.common.unavailable)
+  const trendErr = chineseLanguage ? lineBoth(adminUi.common.trendError) : adminUi.common.trendError.pt
+  const unavail = chineseLanguage ? lineBoth(adminUi.common.unavailable) : adminUi.common.unavailable.pt
 
   let stockTrendLabel: string
   if (estoqueBaixoRes.error) {
     stockTrendLabel = unavail
-  } else if (oriental) {
+  } else if (chineseLanguage) {
     stockTrendLabel =
-      estoqueBaixoCount > 0 ? adminLineBoth(L.trendStockWarn) : adminLineBoth(L.trendStockOk)
+      estoqueBaixoCount > 0 ? lineBoth(L.trendStockWarn) : lineBoth(L.trendStockOk)
   } else {
     stockTrendLabel = estoqueBaixoCount > 0 ? L.trendStockWarn.pt : L.trendStockOk.pt
   }
 
-  const stockValue = estoqueBaixoRes.error ? dash.emDash : formatNumberLocale(estoqueBaixoCount, LOCALE_PT_BR)
+  const stockValue = estoqueBaixoRes.error ? dash.emDash : formatNumberLocale(estoqueBaixoCount, locale)
 
   const metrics: Metric[] = periodSalesFailed
     ? [
         {
           titleLine: L.metricTotalSales.pt,
-          titleCn: oriental ? L.metricTotalSales.cn : undefined,
+          titleCn: chineseLanguage ? L.metricTotalSales.cn : undefined,
           value: dash.emDash,
           trend: trendErr,
           up: false,
@@ -318,7 +354,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         },
         {
           titleLine: L.metricOrders.pt,
-          titleCn: oriental ? L.metricOrders.cn : undefined,
+          titleCn: chineseLanguage ? L.metricOrders.cn : undefined,
           value: dash.emDash,
           trend: trendErr,
           up: false,
@@ -327,7 +363,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         },
         {
           titleLine: L.metricTicket.pt,
-          titleCn: oriental ? L.metricTicket.cn : undefined,
+          titleCn: chineseLanguage ? L.metricTicket.cn : undefined,
           value: dash.emDash,
           trend: trendErr,
           up: false,
@@ -336,7 +372,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         },
         {
           titleLine: L.metricStock.pt,
-          titleCn: oriental ? L.metricStock.cn : undefined,
+          titleCn: chineseLanguage ? L.metricStock.cn : undefined,
           value: stockValue,
           trend: stockTrendLabel,
           up: !estoqueBaixoRes.error && estoqueBaixoCount === 0,
@@ -347,8 +383,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     : [
         {
           titleLine: L.metricTotalSales.pt,
-          titleCn: oriental ? L.metricTotalSales.cn : undefined,
-          value: formatBRL(totalAtual, LOCALE_PT_BR),
+          titleCn: chineseLanguage ? L.metricTotalSales.cn : undefined,
+          value: formatBRL(totalAtual, locale),
           trend: totalTrend.label,
           up: totalTrend.up,
           icon: DollarSign,
@@ -356,8 +392,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         },
         {
           titleLine: L.metricOrders.pt,
-          titleCn: oriental ? L.metricOrders.cn : undefined,
-          value: formatNumberLocale(pedidosAtual, LOCALE_PT_BR),
+          titleCn: chineseLanguage ? L.metricOrders.cn : undefined,
+          value: formatNumberLocale(pedidosAtual, locale),
           trend: pedidosTrend.label,
           up: pedidosTrend.up,
           icon: Package,
@@ -365,8 +401,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         },
         {
           titleLine: L.metricTicket.pt,
-          titleCn: oriental ? L.metricTicket.cn : undefined,
-          value: formatBRL(ticketAtual, LOCALE_PT_BR),
+          titleCn: chineseLanguage ? L.metricTicket.cn : undefined,
+          value: formatBRL(ticketAtual, locale),
           trend: ticketTrend.label,
           up: ticketTrend.up,
           icon: ShoppingBag,
@@ -374,7 +410,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         },
         {
           titleLine: L.metricStock.pt,
-          titleCn: oriental ? L.metricStock.cn : undefined,
+          titleCn: chineseLanguage ? L.metricStock.cn : undefined,
           value: stockValue,
           trend: stockTrendLabel,
           up: !estoqueBaixoRes.error && estoqueBaixoCount === 0,
@@ -386,29 +422,29 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const latestOrders: OrderRow[] = recentOrdersRaw.map((o) => ({
     id: o.id,
     operador: o.operador_id ? (userById.get(o.operador_id) ?? '—') : '—',
-    valor: formatBRL(Number(o.total_liquido ?? 0), LOCALE_PT_BR),
+    valor: formatBRL(Number(o.total_liquido ?? 0), locale),
     status: o.status,
-    data: formatDateTimeLocaleDefault(o.data, LOCALE_PT_BR),
+    data: formatDateTimeLocaleDefault(o.data, locale),
     formaPagamento: o.forma_pagamento,
   }))
 
   const periodOptions: Array<{ id: DashboardPeriod; label: string }> = [
-    { id: 'TODAY', label: oriental ? adminLineBoth(L.periodToday) : L.periodToday.pt },
-    { id: '7D', label: oriental ? adminLineBoth(L.period7d) : L.period7d.pt },
-    { id: '30D', label: oriental ? adminLineBoth(L.period30d) : L.period30d.pt },
+    { id: 'TODAY', label: chineseLanguage ? lineBoth(L.periodToday) : L.periodToday.pt },
+    { id: '7D', label: chineseLanguage ? lineBoth(L.period7d) : L.period7d.pt },
+    { id: '30D', label: chineseLanguage ? lineBoth(L.period30d) : L.period30d.pt },
   ]
 
   const statusOptions: Array<{ id: DashboardStatus; label: string }> = [
-    { id: 'ALL', label: oriental ? adminLineBoth(L.statusAll) : L.statusAll.pt },
-    { id: 'CONCLUIDA', label: oriental ? adminLineBoth(L.statusDone) : L.statusDone.pt },
-    { id: 'CANCELADA', label: oriental ? adminLineBoth(L.statusCancelled) : L.statusCancelled.pt },
+    { id: 'ALL', label: chineseLanguage ? lineBoth(L.statusAll) : L.statusAll.pt },
+    { id: 'CONCLUIDA', label: chineseLanguage ? lineBoth(L.statusDone) : L.statusDone.pt },
+    { id: 'CANCELADA', label: chineseLanguage ? lineBoth(L.statusCancelled) : L.statusCancelled.pt },
   ]
 
   const filterHref = (p: DashboardPeriod, s: DashboardStatus) =>
     `/admin/dashboard?period=${p}&status=${s}`
 
   const pillPeriod = (active: boolean) =>
-    oriental
+    chineseThemeOn
       ? active
         ? 'filter-pill-active'
         : 'filter-pill'
@@ -417,7 +453,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
 
   const pillStatus = (active: boolean) =>
-    oriental
+    chineseThemeOn
       ? active
         ? 'filter-pill-status-active'
         : 'filter-pill'
@@ -425,45 +461,45 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         ? 'border border-emerald-800 bg-emerald-800 text-white shadow-sm'
         : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
 
-  const cardShell = oriental ? 'card-chinese mb-8 p-6' : 'mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
-  const cardShellLast = oriental ? 'card-chinese p-6' : 'rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
-  const sectionHeadBorder = oriental ? 'border-[rgba(212,175,55,0.2)]' : 'border-slate-200'
+  const cardShell = chineseThemeOn ? 'card-chinese mb-8 p-6' : 'mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
+  const cardShellLast = chineseThemeOn ? 'card-chinese p-6' : 'rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
+  const sectionHeadBorder = chineseThemeOn ? 'border-[rgba(212,175,55,0.2)]' : 'border-slate-200'
 
-  const pageTitleBlock = oriental ? 'border-chinese mb-6 pb-4' : 'mb-6 border-b border-slate-200 pb-4'
+  const pageTitleBlock = chineseThemeOn ? 'border-chinese mb-6 pb-4' : 'mb-6 border-b border-slate-200 pb-4'
 
   return (
     <div className="p-4 pb-12 md:p-8">
       <div className={pageTitleBlock}>
         <h1 className="text-2xl font-bold text-slate-900">
-          {oriental ? L.pageTitle.cn : L.pageTitle.pt}
+          {chineseLanguage ? L.pageTitle.cn : L.pageTitle.pt}
           <span className="ml-2 text-lg font-normal text-slate-500">
-            {oriental ? `· ${L.pageTitle.pt}` : ''}
+            {chineseLanguage ? `· ${L.pageTitle.pt}` : ''}
           </span>
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          {oriental ? (
+          {chineseLanguage ? (
             <>
               <span className="font-medium text-[#5c4d28]">{L.newUsers.cn}</span>
               <span className="text-slate-500"> · </span>
             </>
           ) : null}
-          {L.newUsers.pt}: {formatNumberLocale(novosUsuariosAtual, LOCALE_PT_BR)} ({novosTrend.label})
+          {L.newUsers.pt}: {formatNumberLocale(novosUsuariosAtual, locale)} ({novosTrend.label})
         </p>
-        {oriental ? (
-          <p className="mt-1 text-xs text-slate-500">{adminLineBoth(L.pageSubtitle)}</p>
+        {chineseLanguage ? (
+          <p className="mt-1 text-xs text-slate-500">{lineBoth(L.pageSubtitle)}</p>
         ) : null}
       </div>
 
       {periodSalesFailed ? (
         <CriticalSalesAlert
-          title={adminLineBoth(adminUi.errors.criticalSalesTitle)}
-          body={adminLineBoth(adminUi.errors.criticalSalesBody)}
+          title={lineBoth(adminUi.errors.criticalSalesTitle)}
+          body={lineBoth(adminUi.errors.criticalSalesBody)}
         />
       ) : null}
 
       <DashboardErrorBanner
-        oriental={oriental}
-        title={adminLineBoth(adminUi.errors.partialTitle)}
+        oriental={chineseThemeOn}
+        title={chineseLanguage ? lineBoth(adminUi.errors.partialTitle) : adminUi.errors.partialTitle.pt}
         messages={dashboardErrors}
       />
 
@@ -495,7 +531,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         {metrics.map((metric) => (
           <ChineseStatCard
             key={metric.titleLine}
-            variant={oriental ? 'oriental' : 'minimal'}
+            variant={chineseThemeOn ? 'oriental' : 'minimal'}
             {...metric}
           />
         ))}
@@ -504,39 +540,39 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       <div className={cardShell}>
         <div className={`mb-5 flex items-center justify-between border-b pb-3 ${sectionHeadBorder}`}>
           <h2 className="text-lg font-semibold text-slate-900">
-            {oriental ? L.chartTitle.cn : L.chartTitle.pt}
+            {chineseLanguage ? L.chartTitle.cn : L.chartTitle.pt}
             <span className="ml-2 text-sm font-normal text-slate-500">
-              {oriental ? `/ ${L.chartTitle.pt}` : ''}
+              {chineseLanguage ? `/ ${L.chartTitle.pt}` : ''}
             </span>
           </h2>
         </div>
         <div className="h-[350px] w-full">
           {periodSalesFailed ? (
             <div className="flex h-full items-center justify-center rounded-md border border-dashed border-red-200 bg-red-50/50 px-4 text-center text-sm text-red-900">
-              {adminLineBoth(adminUi.errors.chartUnavailable)}
+              {chineseLanguage ? lineBoth(adminUi.errors.chartUnavailable) : adminUi.errors.chartUnavailable.pt}
             </div>
           ) : (
-            <SalesTrendChartLazy data={chartData} variant={oriental ? 'oriental' : 'default'} />
+            <SalesTrendChartLazy data={chartData} variant={chineseThemeOn ? 'oriental' : 'default'} />
           )}
         </div>
       </div>
 
       <div className={cardShellLast}>
         <h2 className={`mb-4 border-b pb-3 text-lg font-semibold text-slate-900 ${sectionHeadBorder}`}>
-          {oriental ? L.tableTitle.cn : L.tableTitle.pt}
+          {chineseLanguage ? L.tableTitle.cn : L.tableTitle.pt}
           <span className="ml-2 text-sm font-normal text-slate-500">
-            {oriental ? `/ ${L.tableTitle.pt}` : ''}
+            {chineseLanguage ? `/ ${L.tableTitle.pt}` : ''}
           </span>
         </h2>
         <div className="overflow-x-auto">
           {tableLoadFailed ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-6 text-center text-sm text-amber-950">
-              {adminLineBoth(adminUi.errors.tableLoadFailed)}
+              {chineseLanguage ? lineBoth(adminUi.errors.tableLoadFailed) : adminUi.errors.tableLoadFailed.pt}
             </div>
           ) : (
             <table
               className={
-                oriental
+                chineseThemeOn
                   ? 'admin-table w-full min-w-[800px] border-collapse text-sm'
                   : 'w-full min-w-[800px] border-collapse text-sm'
               }
@@ -544,28 +580,28 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               <thead>
                 <tr
                   className={
-                    oriental
+                    chineseThemeOn
                       ? 'border-b text-left text-sm'
                       : 'border-b border-slate-200 text-left text-sm text-slate-600'
                   }
                 >
                   <th className="px-3 py-2 font-medium">
-                    {oriental ? adminLineBoth(L.tableColId) : L.tableColId.pt}
+                    {chineseLanguage ? lineBoth(L.tableColId) : L.tableColId.pt}
                   </th>
                   <th className="px-3 py-2 font-medium">
-                    {oriental ? adminLineBoth(L.tableColOperador) : L.tableColOperador.pt}
+                    {chineseLanguage ? lineBoth(L.tableColOperador) : L.tableColOperador.pt}
                   </th>
                   <th className="px-3 py-2 font-medium">
-                    {oriental ? adminLineBoth(L.tableColData) : L.tableColData.pt}
+                    {chineseLanguage ? lineBoth(L.tableColData) : L.tableColData.pt}
                   </th>
                   <th className="px-3 py-2 font-medium">
-                    {oriental ? adminLineBoth(L.tableColValor) : L.tableColValor.pt}
+                    {chineseLanguage ? lineBoth(L.tableColValor) : L.tableColValor.pt}
                   </th>
                   <th className="px-3 py-2 font-medium">
-                    {oriental ? adminLineBoth(L.tableColPagamento) : L.tableColPagamento.pt}
+                    {chineseLanguage ? lineBoth(L.tableColPagamento) : L.tableColPagamento.pt}
                   </th>
                   <th className="px-3 py-2 font-medium">
-                    {oriental ? adminLineBoth(L.tableColStatus) : L.tableColStatus.pt}
+                    {chineseLanguage ? lineBoth(L.tableColStatus) : L.tableColStatus.pt}
                   </th>
                 </tr>
               </thead>
@@ -574,7 +610,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
                   <tr
                     key={order.id}
                     className={
-                      oriental
+                      chineseThemeOn
                         ? 'border-b border-[rgba(45,90,74,0.12)]'
                         : 'border-b border-slate-100 hover:bg-slate-50'
                     }
@@ -590,14 +626,16 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
                     <td className="max-w-[140px] truncate px-3 py-3 text-slate-700" title={order.formaPagamento}>
                       {order.formaPagamento}
                     </td>
-                    <td className="px-3 py-3">{statusBadge(order.status, oriental)}</td>
+                    <td className="px-3 py-3">
+                      {statusBadge(order.status, chineseLanguage, adminUi.statusBadge)}
+                    </td>
                   </tr>
                 ))}
                 {latestOrders.length === 0 && !tableLoadFailed && (
                   <tr>
                     <td colSpan={6} className="px-3 py-8 text-center text-slate-600">
-                      <p className="font-medium">{oriental ? L.tableEmpty.cn : L.tableEmpty.pt}</p>
-                      {oriental ? (
+                      <p className="font-medium">{chineseLanguage ? L.tableEmpty.cn : L.tableEmpty.pt}</p>
+                      {chineseLanguage ? (
                         <p className="mt-1 text-xs text-slate-500">{L.tableEmpty.pt}</p>
                       ) : null}
                     </td>
@@ -610,7 +648,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       </div>
 
       <footer className="mt-12 text-center text-slate-500">
-        {oriental ? (
+        {chineseLanguage ? (
           <>
             <p className="text-sm tracking-wide">{L.footer.cn}</p>
             <p className="mt-1 text-xs">{L.footer.pt}</p>

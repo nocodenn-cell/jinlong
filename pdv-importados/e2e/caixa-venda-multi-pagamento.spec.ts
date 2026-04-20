@@ -170,29 +170,13 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-/** Lê o valor em «Total a pagar» no rodapé (classes Tailwind do total líquido). */
+/** Lê o total líquido bruto pelo atributo estável de teste. */
 async function readTotalLiquidoFooter(page: Page): Promise<number> {
-  const footer = page.locator('footer')
-  const el = footer.locator('.text-emerald-400').first()
+  const el = page.getByTestId('caixa-total-liquido')
   await expect(el).toBeVisible({ timeout: 10_000 })
-  const raw = (await el.innerText()).replace(/\u00a0/g, ' ').trim()
-  const match = raw.match(/([\d][\d.,]*)/)
-  if (!match) throw new Error(`Total do footer ilegível: «${raw}»`)
-  return parseBrlLikeNumber(match[1])
-}
-
-/** pt-BR (22,50), internacional (22.50 / 1.234,56). */
-function parseBrlLikeNumber(s: string): number {
-  const t = s.trim().replace(/[^\d.,-]/g, '')
-  if (t.includes(',') && !t.includes('.')) return Number(t.replace(',', '.'))
-  if (t.includes('.') && !t.includes(',')) return Number(t)
-  if (t.includes(',') && t.includes('.')) {
-    const lastComma = t.lastIndexOf(',')
-    const lastDot = t.lastIndexOf('.')
-    if (lastComma > lastDot) {
-      return Number(t.replace(/\./g, '').replace(',', '.'))
-    }
-    return Number(t.replace(/,/g, ''))
-  }
-  return Number(t)
+  const raw = (await el.getAttribute('data-total-liquido'))?.trim()
+  if (!raw) throw new Error('Atributo data-total-liquido ausente no footer')
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed)) throw new Error(`Total bruto inválido: «${raw}»`)
+  return parsed
 }

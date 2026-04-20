@@ -23,6 +23,7 @@ Seguir na ordem [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) e [
 3. **Vercel:** variáveis `NEXT_PUBLIC_*` e chaves só em servidor — [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md).
 4. **PDV desktop (se em uso):** `pdv-local/.env` com `SYNC_*` alinhado à Edge.
 5. **Teste manual §4 ou §4b** do P0 no ambiente que vai a loja.
+6. **Smoke de i18n em navegadores chineses (360/QQ):** executar e anexar evidências em [SMOKE_BROWSER_CHINES_360_QQ.md](./SMOKE_BROWSER_CHINES_360_QQ.md).
 
 ## O que continua backlog pós–go-live (não bloqueia o 1.º deploy por si)
 
@@ -54,3 +55,8 @@ npm run test:e2e:post-deploy-smoke -w pdv-importados
 ```
 
 Pipeline E2E **completo** (sync + venda + fluxos) continua em `npm run test:e2e:critical` — requer mais secrets e ambiente; ver [E2E.md](./E2E.md).
+
+Cobertura de i18n (admin/gerente) para Go/No-Go:
+
+- E2E desktop + mobile (Playwright) para troca/persistência de idioma e validação em chinês.
+- Smoke manual 360/QQ preenchido com evidência no PR de release.

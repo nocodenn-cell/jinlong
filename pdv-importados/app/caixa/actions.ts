@@ -25,6 +25,7 @@ import {
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
 import { resolveVendaIdForFinalize } from '@/lib/caixa/resolveVendaIdForFinalize'
+import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 
 export type ProdutoCaixaDTO = {
   id: string
@@ -1090,7 +1091,8 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
   const parsed = finalizarVendaInputSchema.safeParse(raw)
   if (!parsed.success) {
     const msg = parsed.error.issues.map((e) => e.message).join('; ')
-    return { ok: false, error: mensagemErroValidacaoZod(msg) }
+    const { idioma } = await getUsuarioIdioma()
+    return { ok: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
   const input = parsed.data
   try {

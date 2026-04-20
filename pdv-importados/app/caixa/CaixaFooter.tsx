@@ -257,7 +257,11 @@ export function CaixaFooter({
           )}
           <div className="text-right min-w-[7rem]">
             <div className="text-xs text-slate-400">{m.caixa.total_pagar}</div>
-            <div className="text-xl sm:text-2xl font-bold tabular-nums text-emerald-400">
+            <div
+              data-testid="caixa-total-liquido"
+              data-total-liquido={totalLiquidoComGerente.toFixed(2)}
+              className="text-xl sm:text-2xl font-bold tabular-nums text-emerald-400"
+            >
               {moedaPrefixo} {fmt(totalLiquidoComGerente)}
             </div>
           </div>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { objectsToCsv } from '@/lib/csv'
+import { downloadXlsx } from '@/lib/xlsx'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
@@ -76,18 +77,65 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
   const csvSuffix = data ? `${data.periodo.de}_${data.periodo.ate}` : 'periodo'
 
   const exportVendasOpts = useMemo(() => ({ successMessage: m.comum.sucesso }), [m.comum.sucesso])
+
+  const vendasDiaColumns = useMemo(
+    () => [
+      { key: 'dia', header: m.gerente.col_dia },
+      { key: 'num_vendas', header: m.gerente.col_num_vendas },
+      { key: 'total_liquido', header: m.relatorios.valor },
+      { key: 'ticket_medio', header: m.gerente.col_ticket },
+      { key: 'total_desconto', header: m.relatorios.col_total_desconto },
+    ],
+    [m],
+  )
+
+  const topProdutosColumns = useMemo(
+    () => [
+      { key: 'id', header: 'id' },
+      { key: 'nome', header: m.relatorios.produto },
+      { key: 'origem', header: m.relatorios.origem },
+      { key: 'total_quantidade', header: m.gerente.col_qtde },
+      { key: 'total_valor', header: m.gerente.col_valor },
+      { key: 'num_vendas', header: m.gerente.col_num_vendas },
+    ],
+    [m],
+  )
+
+  const estoqueBaixoColumns = useMemo(
+    () => [
+      { key: 'nome', header: m.relatorios.produto },
+      { key: 'codigo_barras', header: 'codigo_barras' },
+      { key: 'quantidade_atual', header: m.relatorios.estoque_atual },
+      { key: 'estoque_minimo', header: m.relatorios.minimo },
+      { key: 'deficit', header: m.relatorios.deficit },
+    ],
+    [m],
+  )
+
   const { mutate: exportVendasDia, loading: expVendas } = useGerenteMutation(
     async (_: null) => {
       if (!data) throw new Error('Sem dados')
       downloadCsv(
         `relatorio-vendas-dia_${csvSuffix}.csv`,
-        [
-          { key: 'dia', header: m.gerente.col_dia },
-          { key: 'num_vendas', header: m.gerente.col_num_vendas },
-          { key: 'total_liquido', header: m.relatorios.valor },
-          { key: 'ticket_medio', header: m.gerente.col_ticket },
-          { key: 'total_desconto', header: m.relatorios.col_total_desconto },
-        ],
+        vendasDiaColumns,
+        data.porDia.map((row) => ({
+          dia: row.dia ? String(row.dia).slice(0, 10) : '',
+          num_vendas: row.num_vendas,
+          total_liquido: Number(row.total_liquido),
+          ticket_medio: Number(row.ticket_medio),
+          total_desconto: Number(row.total_desconto),
+        })),
+      )
+      return null
+    },
+    exportVendasOpts,
+  )
+  const { mutate: exportVendasDiaXlsx, loading: expVendasXlsx } = useGerenteMutation(
+    async (_: null) => {
+      if (!data) throw new Error('Sem dados')
+      downloadXlsx(
+        `relatorio-vendas-dia_${csvSuffix}.xlsx`,
+        vendasDiaColumns,
         data.porDia.map((row) => ({
           dia: row.dia ? String(row.dia).slice(0, 10) : '',
           num_vendas: row.num_vendas,
@@ -106,14 +154,26 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
       if (!data) throw new Error('Sem dados')
       downloadCsv(
         `relatorio-top-produtos_${csvSuffix}.csv`,
-        [
-          { key: 'id', header: 'id' },
-          { key: 'nome', header: m.relatorios.produto },
-          { key: 'origem', header: m.relatorios.origem },
-          { key: 'total_quantidade', header: m.gerente.col_qtde },
-          { key: 'total_valor', header: m.gerente.col_valor },
-          { key: 'num_vendas', header: m.gerente.col_num_vendas },
-        ],
+        topProdutosColumns,
+        data.top.map((row) => ({
+          id: row.id,
+          nome: row.nome,
+          origem: row.origem,
+          total_quantidade: row.total_quantidade,
+          total_valor: row.total_valor,
+          num_vendas: row.num_vendas,
+        })),
+      )
+      return null
+    },
+    exportVendasOpts,
+  )
+  const { mutate: exportTopXlsx, loading: expTopXlsx } = useGerenteMutation(
+    async (_: null) => {
+      if (!data) throw new Error('Sem dados')
+      downloadXlsx(
+        `relatorio-top-produtos_${csvSuffix}.xlsx`,
+        topProdutosColumns,
         data.top.map((row) => ({
           id: row.id,
           nome: row.nome,
@@ -133,13 +193,25 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
       if (!data) throw new Error('Sem dados')
       downloadCsv(
         'relatorio-estoque-baixo.csv',
-        [
-          { key: 'nome', header: m.relatorios.produto },
-          { key: 'codigo_barras', header: 'codigo_barras' },
-          { key: 'quantidade_atual', header: m.relatorios.estoque_atual },
-          { key: 'estoque_minimo', header: m.relatorios.minimo },
-          { key: 'deficit', header: m.relatorios.deficit },
-        ],
+        estoqueBaixoColumns,
+        data.baixo.map((row) => ({
+          nome: row.nome,
+          codigo_barras: row.codigo_barras ?? '',
+          quantidade_atual: row.quantidade_atual,
+          estoque_minimo: row.estoque_minimo,
+          deficit: row.deficit,
+        })),
+      )
+      return null
+    },
+    exportVendasOpts,
+  )
+  const { mutate: exportBaixoXlsx, loading: expBaixoXlsx } = useGerenteMutation(
+    async (_: null) => {
+      if (!data) throw new Error('Sem dados')
+      downloadXlsx(
+        'relatorio-estoque-baixo.xlsx',
+        estoqueBaixoColumns,
         data.baixo.map((row) => ({
           nome: row.nome,
           codigo_barras: row.codigo_barras ?? '',
@@ -343,6 +415,21 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
               >
                 {m.gerente.exportar_csv}
               </button>
+              <button
+                type="button"
+                disabled={expVendasXlsx || data.porDia.length === 0}
+                onClick={() => void exportVendasDiaXlsx(null)}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 13,
+                  borderRadius: 8,
+                  border: '1px solid #d1d5db',
+                  background: '#fff',
+                  cursor: expVendasXlsx ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {m.gerente.exportar_xlsx}
+              </button>
             </div>
             <GerenteTable
               columns={[
@@ -377,7 +464,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
 
           <section style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>{m.gerente.sec_top_produtos}</h2>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8 }}>
               <button
                 type="button"
                 disabled={expTop || data.top.length === 0}
@@ -392,6 +479,21 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 }}
               >
                 {m.gerente.exportar_csv}
+              </button>
+              <button
+                type="button"
+                disabled={expTopXlsx || data.top.length === 0}
+                onClick={() => void exportTopXlsx(null)}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 13,
+                  borderRadius: 8,
+                  border: '1px solid #d1d5db',
+                  background: '#fff',
+                  cursor: expTopXlsx ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {m.gerente.exportar_xlsx}
               </button>
             </div>
             <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>{m.relatorios.top_produtos_legenda}</p>
@@ -429,7 +531,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
             <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>
               {m.relatorios.estoque_baixo_sem_periodo}
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8 }}>
               <button
                 type="button"
                 disabled={expBaixo || data.baixo.length === 0}
@@ -444,6 +546,21 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 }}
               >
                 {m.gerente.exportar_csv}
+              </button>
+              <button
+                type="button"
+                disabled={expBaixoXlsx || data.baixo.length === 0}
+                onClick={() => void exportBaixoXlsx(null)}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 13,
+                  borderRadius: 8,
+                  border: '1px solid #d1d5db',
+                  background: '#fff',
+                  cursor: expBaixoXlsx ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {m.gerente.exportar_xlsx}
               </button>
             </div>
             <GerenteTable

@@ -14,12 +14,10 @@ import {
 } from 'lucide-react'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
-import {
-  adminChineseUiEnabled,
-  adminLineBoth,
-  adminNavLabels,
-  adminUi,
-} from '@/lib/i18n/adminChineseUiLabels'
+import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
+import { getUsuarioIdioma, isGerenteOuDono } from '@/src/lib/idioma/usuarioIdioma'
+import { getMessages } from '@/src/lib/i18n/getMessages'
+import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import '@/styles/chinese-theme.css'
 
 const adminNavItems = [
@@ -35,17 +33,31 @@ const adminNavItems = [
   { href: '/gerente/relatorios', labelKey: 'relatorios' as const, icon: LineChart },
 ] as const
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const chineseOn = adminChineseUiEnabled()
-  const brand = adminUi.header.brand
-  const tag = adminUi.header.tagline
-  const signOutLabel = chineseOn ? adminUi.common.signOut.cn : adminUi.common.signOut.pt
+type BilingualLine = { pt: string; cn: string }
+
+function lineBoth(line: BilingualLine): string {
+  return `${line.cn} · ${line.pt}`
+}
+
+function navLabels(line: BilingualLine, chineseLanguage: boolean): { primary: string; secondary: string } {
+  if (!chineseLanguage) return { primary: line.pt, secondary: '' }
+  return { primary: line.cn, secondary: line.pt }
+}
+
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const chineseThemeOn = adminChineseUiEnabled()
+  const { idioma, perfil } = await getUsuarioIdioma()
+  const m = getMessages(idioma)
+  const admin = m.admin
+  const chineseLanguage = idioma !== 'pt'
+  const signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
+  const podeTrocarIdioma = isGerenteOuDono(perfil)
 
   return (
     <div
       className={[
         'min-h-screen',
-        chineseOn
+        chineseThemeOn
           ? `admin-chinese-theme bg-[#f5f0eb]`
           : 'bg-slate-100',
       ].join(' ')}
@@ -54,12 +66,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       <header
         className={
-          chineseOn
+          chineseThemeOn
             ? 'relative overflow-hidden bg-gradient-to-r from-[#2d5a4a] to-[#1a3a2f] text-white'
             : 'border-b border-slate-200 bg-slate-900 text-white'
         }
       >
-        {chineseOn ? (
+        {chineseThemeOn ? (
           <div
             className="pointer-events-none absolute inset-0 bg-[url('/images/chinese-mountains.svg')] bg-bottom bg-repeat-x [background-size:100%_auto]"
             aria-hidden
@@ -69,7 +81,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
               <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight md:text-2xl">
-                {chineseOn ? (
+                {chineseThemeOn ? (
                   <span
                     className="text-2xl"
                     aria-hidden
@@ -78,33 +90,36 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     🏮
                   </span>
                 ) : null}
-                <span>{chineseOn ? brand.cn : brand.pt}</span>
-                {chineseOn ? (
+                <span>{chineseLanguage ? admin.header.brand.cn : admin.header.brand.pt}</span>
+                {chineseLanguage ? (
                   <span className="text-sm font-normal text-[#e8c547] md:text-base">
-                    {brand.pt}
+                    {admin.header.brand.pt}
                   </span>
                 ) : null}
               </h1>
               <p className="mt-1 text-sm text-white/80">
-                {chineseOn ? (
+                {chineseLanguage ? (
                   <>
-                    {tag.cn}
+                    {admin.header.tagline.cn}
                     <span className="mx-2 text-[#e8c547]/90">|</span>
-                    <span className="text-white/70">{tag.pt}</span>
+                    <span className="text-white/70">{admin.header.tagline.pt}</span>
                   </>
                 ) : (
-                  tag.pt
+                  admin.header.tagline.pt
                 )}
               </p>
             </div>
-            <SignOutButton
-              label={signOutLabel}
-              className={
-                chineseOn
-                  ? 'shrink-0 rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20'
-                  : 'shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700'
-              }
-            />
+            <div className="flex items-center gap-2">
+              {podeTrocarIdioma ? <LanguageToggle idiomaAtual={idioma} /> : null}
+              <SignOutButton
+                label={signOutLabel}
+                className={
+                  chineseThemeOn
+                    ? 'shrink-0 rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20'
+                    : 'shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700'
+                }
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -112,31 +127,32 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <div className="mx-auto flex min-h-[calc(100vh-120px)] max-w-[1600px] flex-col lg:flex-row">
         <aside
           className={
-            chineseOn
+            chineseThemeOn
               ? 'relative w-full border-b border-[#3d3d3d] bg-[#2c2c2c] text-white lg:w-64 lg:border-b-0 lg:border-r'
               : 'relative w-full border-b border-slate-200 bg-white lg:w-56 lg:border-b-0 lg:border-r'
           }
         >
           <nav className="flex flex-wrap gap-1 p-3 lg:flex-col lg:gap-0.5">
             {adminNavItems.map((item) => {
-              const line = adminUi.nav[item.labelKey]
-              const { primary, secondary } = adminNavLabels(line)
-              const hint = adminUi.navHints[item.labelKey]
-              const linkTitle = `${adminLineBoth(line)} — ${hint}`
+              const line = admin.nav[item.labelKey]
+              const { primary, secondary } = navLabels(line, chineseLanguage)
+              const hint = admin.navHints[item.labelKey]
+              const label = chineseLanguage ? lineBoth(line) : line.pt
+              const linkTitle = `${label} — ${hint}`
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   title={linkTitle}
                   className={
-                    chineseOn
+                    chineseThemeOn
                       ? 'group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-[#c42e2e] lg:px-4'
                       : 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-800 transition-colors hover:bg-slate-100 lg:px-4'
                   }
                 >
                   <item.icon
                     className={
-                      chineseOn
+                      chineseThemeOn
                         ? 'h-5 w-5 shrink-0 opacity-75 group-hover:opacity-100'
                         : 'h-5 w-5 shrink-0 text-slate-500'
                     }
@@ -147,7 +163,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     {secondary ? (
                       <div
                         className={
-                          chineseOn
+                          chineseThemeOn
                             ? 'text-[11px] leading-tight text-white/55'
                             : 'text-[11px] leading-tight text-slate-500'
                         }
@@ -160,7 +176,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               )
             })}
           </nav>
-          {chineseOn ? (
+          {chineseThemeOn ? (
             <div
               className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/25 to-transparent lg:block"
               aria-hidden
@@ -169,10 +185,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </aside>
 
         <main className="relative min-w-0 flex-1 bg-white lg:bg-transparent">
-          {chineseOn ? <div className="cloud-decoration" /> : null}
+          {chineseThemeOn ? <div className="cloud-decoration" /> : null}
           <div
             className={
-              chineseOn
+              chineseThemeOn
                 ? 'admin-chinese-theme relative z-[1] min-h-full'
                 : 'relative z-[1] min-h-full'
             }

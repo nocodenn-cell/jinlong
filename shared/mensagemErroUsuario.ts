@@ -3,8 +3,24 @@
  * Sem dependências de framework (Next/Tauri).
  */
 
-const MSG_PADRAO =
-  'Não foi possível concluir esta operação agora. Tente de novo em alguns instantes.'
+export type IdiomaErro = 'pt' | 'zh' | 'zh-HK'
+
+const MSG_PADRAO: Record<IdiomaErro, string> = {
+  pt: 'Não foi possível concluir esta operação agora. Tente de novo em alguns instantes.',
+  zh: '当前无法完成该操作。请稍后再试。',
+  'zh-HK': '目前無法完成此操作。請稍後再試。',
+}
+
+function idiomaSeguro(idioma?: string): IdiomaErro {
+  if (idioma === 'zh' || idioma === 'zh-HK') return idioma
+  return 'pt'
+}
+
+function t(idioma: IdiomaErro, pt: string, zh: string, zhHK?: string): string {
+  if (idioma === 'pt') return pt
+  if (idioma === 'zh') return zh
+  return zhHK ?? zh
+}
 
 function truncar(s: string, max: number): string {
   const t = s.trim()
@@ -16,25 +32,36 @@ function truncar(s: string, max: number): string {
  * Traduz erro vindo do Supabase/Postgres/rede. Mantém um trecho técnico curto ao final
  * quando não houver tradução específica, para facilitar suporte.
  */
-export function mensagemErroParaUsuario(detalheTecnico: string): string {
+export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: string): string {
+  const idioma = idiomaSeguro(idiomaInput)
   const raw = (detalheTecnico ?? '').trim()
-  if (!raw) return MSG_PADRAO
+  if (!raw) return MSG_PADRAO[idioma]
 
   const lower = raw.toLowerCase()
 
   // PDV desktop (Tauri): configuração de sync
   if (lower.includes('falta sync_endpoint') || lower.includes('sync_endpoint')) {
-    return 'Falta configurar SYNC_ENDPOINT no arquivo .env do PDV (URL da função de sincronização). Peça ao suporte técnico.'
+    return t(
+      idioma,
+      'Falta configurar SYNC_ENDPOINT no arquivo .env do PDV (URL da função de sincronização). Peça ao suporte técnico.',
+      '请在 PDV 的 .env 文件中配置 SYNC_ENDPOINT（同步函数 URL）。请联系技术支持。',
+      '請在 PDV 的 .env 檔案中設定 SYNC_ENDPOINT（同步函數 URL）。請聯絡技術支援。',
+    )
   }
   if (lower.includes('sync_key') || lower.includes('falta sync_key')) {
-    return 'Falta configurar SYNC_KEY no .env do PDV (mesmo segredo da nuvem). Peça ao suporte técnico.'
+    return t(
+      idioma,
+      'Falta configurar SYNC_KEY no .env do PDV (mesmo segredo da nuvem). Peça ao suporte técnico.',
+      '请在 PDV 的 .env 中配置 SYNC_KEY（需与云端密钥一致）。请联系技术支持。',
+      '請在 PDV 的 .env 中設定 SYNC_KEY（需與雲端密鑰一致）。請聯絡技術支援。',
+    )
   }
 
   if (lower.includes('jwt') || lower.includes('invalid refresh token')) {
     if (lower.includes('expired') || lower.includes('expir')) {
-      return 'Sua sessão expirou. Faça login novamente.'
+      return t(idioma, 'Sua sessão expirou. Faça login novamente.', '会话已过期，请重新登录。', '工作階段已過期，請重新登入。')
     }
-    return 'Sessão inválida. Faça login novamente.'
+    return t(idioma, 'Sessão inválida. Faça login novamente.', '会话无效，请重新登录。', '工作階段無效，請重新登入。')
   }
 
   if (
@@ -43,18 +70,33 @@ export function mensagemErroParaUsuario(detalheTecnico: string): string {
     lower.includes('new row violates row-level security policy') ||
     (lower.includes('policy') && lower.includes('permission'))
   ) {
-    return 'Você não tem permissão para esta ação. Peça ao gerente ou verifique seu usuário no sistema.'
+    return t(
+      idioma,
+      'Você não tem permissão para esta ação. Peça ao gerente ou verifique seu usuário no sistema.',
+      '您没有执行此操作的权限。请联系经理或检查您的账号权限。',
+      '您沒有執行此操作的權限。請聯絡經理或檢查帳號權限。',
+    )
   }
 
   if (
     lower.includes('json object requested, multiple (or no) rows returned') ||
     lower.includes('the result contains 0 rows')
   ) {
-    return 'Não foi possível encontrar um registro único para esta operação. Atualize a tela e tente novamente.'
+    return t(
+      idioma,
+      'Não foi possível encontrar um registro único para esta operação. Atualize a tela e tente novamente.',
+      '无法为该操作定位唯一记录。请刷新页面后重试。',
+      '無法為此操作找到唯一紀錄。請重新整理頁面後再試。',
+    )
   }
 
   if (lower.includes('could not find the function') || lower.includes('function') && lower.includes('does not exist')) {
-    return 'Uma função necessária do banco não foi encontrada. Pode faltar migration no ambiente.'
+    return t(
+      idioma,
+      'Uma função necessária do banco não foi encontrada. Pode faltar migration no ambiente.',
+      '数据库缺少必需函数，环境可能未应用完整 migration。',
+      '資料庫缺少必要函數，環境可能未套用完整 migration。',
+    )
   }
 
   if (
@@ -62,23 +104,48 @@ export function mensagemErroParaUsuario(detalheTecnico: string): string {
     lower.includes('unique constraint') ||
     lower.includes('already exists')
   ) {
-    return 'Este registro já existe ou há conflito com outro cadastro (dados duplicados).'
+    return t(
+      idioma,
+      'Este registro já existe ou há conflito com outro cadastro (dados duplicados).',
+      '该记录已存在或与其他数据冲突（重复数据）。',
+      '此紀錄已存在或與其他資料衝突（重複資料）。',
+    )
   }
 
   if (lower.includes('foreign key') || lower.includes('violates foreign key')) {
-    return 'Dados inconsistentes: existe referência a um registro que não existe ou não pode ser usado.'
+    return t(
+      idioma,
+      'Dados inconsistentes: existe referência a um registro que não existe ou não pode ser usado.',
+      '数据不一致：引用了不存在或不可用的记录。',
+      '資料不一致：參照了不存在或不可用的紀錄。',
+    )
   }
 
   if (lower.includes('permission denied for')) {
-    return 'Acesso negado a dados do sistema. Verifique o perfil da sua conta.'
+    return t(
+      idioma,
+      'Acesso negado a dados do sistema. Verifique o perfil da sua conta.',
+      '访问系统数据被拒绝。请检查您的账号权限。',
+      '存取系統資料遭拒。請檢查您的帳號權限。',
+    )
   }
 
   if (lower.includes('relation') && lower.includes('does not exist')) {
-    return 'Falta alguma tabela ou função no banco de dados. Contate o suporte técnico.'
+    return t(
+      idioma,
+      'Falta alguma tabela ou função no banco de dados. Contate o suporte técnico.',
+      '数据库缺少表或函数。请联系技术支持。',
+      '資料庫缺少資料表或函數。請聯絡技術支援。',
+    )
   }
 
   if (lower.includes('column') && lower.includes('does not exist')) {
-    return 'A estrutura do banco está diferente do esperado (coluna ausente). Contate o suporte técnico.'
+    return t(
+      idioma,
+      'A estrutura do banco está diferente do esperado (coluna ausente). Contate o suporte técnico.',
+      '数据库结构与预期不一致（缺少字段）。请联系技术支持。',
+      '資料庫結構與預期不一致（缺少欄位）。請聯絡技術支援。',
+    )
   }
 
   if (
@@ -91,77 +158,132 @@ export function mensagemErroParaUsuario(detalheTecnico: string): string {
     lower.includes('connection') ||
     lower.includes('dns')
   ) {
-    return 'Falha de rede: o navegador não conseguiu falar com o servidor. Verifique a internet, firewall ou se o projeto Supabase está ativo.'
+    return t(
+      idioma,
+      'Falha de rede: o navegador não conseguiu falar com o servidor. Verifique a internet, firewall ou se o projeto Supabase está ativo.',
+      '网络失败：浏览器无法连接服务器。请检查网络、防火墙或 Supabase 项目状态。',
+      '網路失敗：瀏覽器無法連線伺服器。請檢查網路、防火牆或 Supabase 專案狀態。',
+    )
   }
 
   if (lower.includes('timeout') || lower.includes('timed out') || lower.includes('statement timeout')) {
-    return 'A operação demorou demais e foi interrompida. Tente novamente.'
+    return t(
+      idioma,
+      'A operação demorou demais e foi interrompida. Tente novamente.',
+      '操作超时并已中断，请重试。',
+      '操作逾時並已中斷，請重試。',
+    )
   }
 
   if (lower.includes('too many requests') || lower.includes('429')) {
-    return 'Muitas tentativas em pouco tempo. Aguarde alguns segundos e tente novamente.'
+    return t(
+      idioma,
+      'Muitas tentativas em pouco tempo. Aguarde alguns segundos e tente novamente.',
+      '请求过于频繁，请稍候再试。',
+      '請求過於頻繁，請稍候再試。',
+    )
   }
 
   if (lower.includes('database error saving new user')) {
-    return 'Não foi possível criar sua conta agora por falha no banco. Tente novamente em instantes.'
+    return t(
+      idioma,
+      'Não foi possível criar sua conta agora por falha no banco. Tente novamente em instantes.',
+      '数据库异常，当前无法创建账号。请稍后再试。',
+      '資料庫異常，目前無法建立帳號。請稍後再試。',
+    )
   }
 
   if (lower.includes('user already registered')) {
-    return 'Este email já está cadastrado. Tente entrar ou recuperar a senha.'
+    return t(
+      idioma,
+      'Este email já está cadastrado. Tente entrar ou recuperar a senha.',
+      '该邮箱已注册，请直接登录或找回密码。',
+      '此電郵已註冊，請直接登入或重設密碼。',
+    )
   }
 
   if (lower.includes('email rate limit exceeded')) {
-    return 'Limite de envio de email atingido. Aguarde alguns minutos para tentar novamente.'
+    return t(
+      idioma,
+      'Limite de envio de email atingido. Aguarde alguns minutos para tentar novamente.',
+      '邮件发送频率超限，请稍后再试。',
+      '電郵發送頻率超限，請稍後再試。',
+    )
   }
 
   if (lower.includes('signup is disabled')) {
-    return 'O cadastro de novos usuários está desativado neste ambiente.'
+    return t(
+      idioma,
+      'O cadastro de novos usuários está desativado neste ambiente.',
+      '当前环境已禁用新用户注册。',
+      '目前環境已停用新用戶註冊。',
+    )
   }
 
   if (lower.includes('invalid api key') || lower.includes('apikey') && lower.includes('invalid')) {
-    return 'Configuração inválida de acesso ao Supabase (chave pública). Revise o .env e reinicie a aplicação.'
+    return t(
+      idioma,
+      'Configuração inválida de acesso ao Supabase (chave pública). Revise o .env e reinicie a aplicação.',
+      'Supabase 访问配置无效（公开密钥）。请检查 .env 并重启应用。',
+      'Supabase 存取設定無效（公開金鑰）。請檢查 .env 並重新啟動應用程式。',
+    )
   }
 
   if (lower.includes('invalid input syntax') && lower.includes('uuid')) {
-    return 'Identificador inválido. Atualize a página e tente de novo.'
+    return t(idioma, 'Identificador inválido. Atualize a página e tente de novo.', '标识符无效，请刷新后重试。', '識別碼無效，請重新整理後再試。')
   }
 
   if (lower.includes('numeric field overflow') || lower.includes('value out of range')) {
-    return 'Valor numérico fora do limite permitido. Confira os valores informados.'
+    return t(
+      idioma,
+      'Valor numérico fora do limite permitido. Confira os valores informados.',
+      '数值超出允许范围，请检查输入。',
+      '數值超出允許範圍，請檢查輸入。',
+    )
   }
 
   if (lower.includes('check constraint')) {
-    return 'Os dados não atendem a uma regra do sistema. Revise os valores e tente novamente.'
+    return t(
+      idioma,
+      'Os dados não atendem a uma regra do sistema. Revise os valores e tente novamente.',
+      '数据不满足系统规则，请检查后重试。',
+      '資料不符合系統規則，請檢查後再試。',
+    )
   }
 
   if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
-    return 'Email ou senha incorretos.'
+    return t(idioma, 'Email ou senha incorretos.', '邮箱或密码错误。', '電郵或密碼錯誤。')
   }
 
   if (lower.includes('email not confirmed')) {
-    return 'Confirme seu email no link enviado pelo sistema antes de entrar.'
+    return t(
+      idioma,
+      'Confirme seu email no link enviado pelo sistema antes de entrar.',
+      '请先通过系统邮件中的链接完成邮箱确认后再登录。',
+      '請先透過系統郵件中的連結完成電郵驗證後再登入。',
+    )
   }
 
   if (lower.includes('required')) {
-    return 'Preencha todos os campos obrigatórios.'
+    return t(idioma, 'Preencha todos os campos obrigatórios.', '请填写所有必填字段。', '請填寫所有必填欄位。')
   }
   if (
     lower.includes('expected number') ||
     (lower.includes('invalid_type') && lower.includes('number'))
   ) {
-    return 'Um valor numérico é obrigatório neste campo.'
+    return t(idioma, 'Um valor numérico é obrigatório neste campo.', '该字段必须填写数字。', '此欄位必須填寫數字。')
   }
   if (lower.includes('expected string') && !lower.includes('expected string literal')) {
-    return 'Formato de texto inválido em um dos campos.'
+    return t(idioma, 'Formato de texto inválido em um dos campos.', '某个字段的文本格式无效。', '某個欄位的文字格式無效。')
   }
   if (lower.includes('invalid uuid')) {
-    return 'Identificador inválido. Atualize a página e tente novamente.'
+    return t(idioma, 'Identificador inválido. Atualize a página e tente novamente.', '标识符无效，请刷新页面后重试。', '識別碼無效，請重新整理頁面後再試。')
   }
   if (lower.includes('too small') && lower.includes('array')) {
-    return 'É necessário pelo menos um item na lista.'
+    return t(idioma, 'É necessário pelo menos um item na lista.', '列表中至少需要一个项目。', '清單中至少需要一個項目。')
   }
   if (lower.includes('number must be greater than 0') || lower.includes('too_small')) {
-    return 'Use um número maior que zero onde for exigido.'
+    return t(idioma, 'Use um número maior que zero onde for exigido.', '该字段必须大于 0。', '此欄位必須大於 0。')
   }
 
   const parecePt =
@@ -169,30 +291,48 @@ export function mensagemErroParaUsuario(detalheTecnico: string): string {
       raw,
     ) && !/^(error|failed|invalid|unexpected|cannot|permission|relation)\b/i.test(raw)
 
-  if (parecePt) return raw
+  if (parecePt && idioma === 'pt') return raw
 
-  return `${MSG_PADRAO} Se precisar de ajuda, informe ao suporte: «${truncar(raw, 220)}».`
+  return t(
+    idioma,
+    `${MSG_PADRAO.pt} Se precisar de ajuda, informe ao suporte: «${truncar(raw, 220)}».`,
+    `${MSG_PADRAO.zh} 如需支持，请将以下信息告知技术支持：「${truncar(raw, 220)}」。`,
+    `${MSG_PADRAO['zh-HK']} 如需支援，請將以下訊息提供給技術支援：「${truncar(raw, 220)}」。`,
+  )
 }
 
 /** Prefixa a mensagem traduzida (ex.: contexto "Caixa", "Venda"). */
-export function mensagemErroComSecao(secao: string, detalheTecnico: string): string {
+export function mensagemErroComSecao(secao: string, detalheTecnico: string, idiomaInput?: string): string {
   const s = secao.trim()
-  const m = mensagemErroParaUsuario(detalheTecnico)
+  const m = mensagemErroParaUsuario(detalheTecnico, idiomaInput)
   if (!s) return m
   return `${s}: ${m}`
 }
 
 /** Alias usado pelo PDV desktop (`pdv-local`). */
-export function mensagemErroComContexto(contexto: string, detalhe: string): string {
-  return mensagemErroComSecao(contexto, detalhe)
+export function mensagemErroComContexto(contexto: string, detalhe: string, idiomaInput?: string): string {
+  return mensagemErroComSecao(contexto, detalhe, idiomaInput)
 }
 
 /** Junta issues do Zod já em string (inglês ou misto) e traduz o conjunto. */
-export function mensagemErroValidacaoZod(issuesJuntas: string): string {
+export function mensagemErroValidacaoZod(issuesJuntas: string, idiomaInput?: string): string {
+  const idioma = idiomaSeguro(idiomaInput)
   const base = issuesJuntas.trim()
-  if (!base) return 'Os dados enviados são inválidos. Revise o formulário.'
-  const traduzida = mensagemErroParaUsuario(base)
-  return `Dados inválidos: ${traduzida}`
+  if (!base) {
+    return t(
+      idioma,
+      'Os dados enviados são inválidos. Revise o formulário.',
+      '提交的数据无效，请检查表单。',
+      '提交的資料無效，請檢查表單。',
+    )
+  }
+  const traduzida = mensagemErroParaUsuario(base, idioma)
+  return t(
+    idioma,
+    `Dados inválidos: ${traduzida}`,
+    `数据无效：${traduzida}`,
+    `資料無效：${traduzida}`,
+  )
 }
 
 /** Erros em `catch`: mensagem traduzida ou fallback (sem logging — use wrapper no Next se precisar). */

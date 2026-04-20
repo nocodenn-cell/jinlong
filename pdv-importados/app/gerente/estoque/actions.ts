@@ -9,6 +9,7 @@ import {
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
 import { AtualizarEstoqueSchema, ProdutoIdSchema } from './actions.validation'
+import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -37,7 +38,8 @@ export async function atualizarEstoqueProduto(
   const parsed = AtualizarEstoqueSchema.safeParse(input)
   if (!parsed.success) {
     const msg = parsed.error.issues.map((i) => i.message).join('; ')
-    return { success: false, error: mensagemErroValidacaoZod(msg) }
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
   const supabase = await createClient()

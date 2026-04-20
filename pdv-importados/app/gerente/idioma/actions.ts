@@ -35,5 +35,7 @@ export async function setIdiomaAction(formData: FormData) {
   revalidatePath('/gerente/produtos')
   revalidatePath('/gerente/dashboard')
   revalidatePath('/gerente')
+  revalidatePath('/admin')
+  revalidatePath('/admin/dashboard')
 }
 

@@ -1,7 +1,10 @@
 /**
- * Textos do painel /admin com variantes PT + 中文.
- * Desligue o chinês com NEXT_PUBLIC_ADMIN_CHINESE_UI=false (mantém layout funcional em PT).
+ * DEPRECATED (compat): helper legado do /admin.
+ * A fonte principal de texto agora é `getMessages(...).admin`.
+ * Este módulo permanece apenas para transição gradual de componentes antigos.
+ * `NEXT_PUBLIC_ADMIN_CHINESE_UI` controla tema visual/rollout, não dicionário principal.
  */
+import { getMessagesWithFallback } from '@/src/lib/i18n/getMessages'
 
 export type BilingualLine = { pt: string; cn: string }
 
@@ -29,7 +32,7 @@ export function adminNavLabels(line: BilingualLine): { primary: string; secondar
   return { primary: line.cn, secondary: line.pt }
 }
 
-export const adminUi = {
+const legacyAdminUi = {
   header: {
     brand: { cn: '进口系统', pt: 'PDV Importados' } satisfies BilingualLine,
     tagline: {
@@ -128,3 +131,30 @@ export const adminUi = {
     cancelada: { cn: '已取消', pt: 'Cancelada' } satisfies BilingualLine,
   },
 } as const
+
+function isAdminUiShape(value: unknown): value is typeof legacyAdminUi {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return !!(v.header && v.nav && v.dashboard && v.common && v.errors && v.statusBadge)
+}
+
+/**
+ * Camada de compatibilidade (dual-read):
+ * 1) tenta namespace `admin` do JSON único (`getMessages().admin`)
+ * 2) fallback para o dicionário legado inline.
+ */
+function readAdminUiFromMessages(): typeof legacyAdminUi | null {
+  const fromPt = (getMessagesWithFallback('pt') as any)?.admin
+  if (isAdminUiShape(fromPt)) return fromPt
+
+  const fromZh = (getMessagesWithFallback('zh') as any)?.admin
+  if (isAdminUiShape(fromZh)) return fromZh
+
+  const fromZhHk = (getMessagesWithFallback('zh-HK') as any)?.admin
+  if (isAdminUiShape(fromZhHk)) return fromZhHk
+
+  return null
+}
+
+/** @deprecated Use `getMessages(idioma).admin` diretamente nas telas novas. */
+export const adminUi = readAdminUiFromMessages() ?? legacyAdminUi

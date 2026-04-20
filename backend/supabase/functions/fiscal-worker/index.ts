@@ -110,8 +110,8 @@ Deno.serve(async (req) => {
   }
 
   const workerKey = Deno.env.get("FISCAL_WORKER_KEY");
-  const gotKey = req.headers.get("X-FISCAL-WORKER-KEY");
-  if (!workerKey?.trim() || !gotKey?.trim() || !(await timingSafeEqualSecret(workerKey, gotKey))) {
+  const gotKey = req.headers.get("X-FISCAL-WORKER-KEY")?.trim();
+  if (!workerKey?.trim() || !gotKey || !(await timingSafeEqualSecret(workerKey, gotKey))) {
     return json(401, { ok: false, error: "UNAUTHORIZED" });
   }
 
