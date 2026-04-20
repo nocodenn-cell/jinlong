@@ -1,0 +1,66 @@
+{
+  "version": "4",
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.49.1": "947c71e163ca8bb5b538eccb5ee86fbc8da6bcb916a861586db5fad1af4701bb"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:turbo@^2.5.4"
+      ]
+    },
+    "members": {
+      "pdv-importados": {
+        "packageJson": {
+          "dependencies": [
+            "npm:@playwright/test@^1.49.1",
+            "npm:@radix-ui/react-slot@^1.0.2",
+            "npm:@sentry/nextjs@^10.49.0",
+            "npm:@supabase/ssr@~0.5.2",
+            "npm:@supabase/supabase-js@^2.99.3",
+            "npm:@types/node@20",
+            "npm:@types/react-dom@18",
+            "npm:@types/react@18",
+            "npm:autoprefixer@10",
+            "npm:class-variance-authority@0.7",
+            "npm:clsx@^2.1.0",
+            "npm:eslint-config-next@^15.5.14",
+            "npm:eslint@8",
+            "npm:lucide-react@^1.8.0",
+            "npm:next@^16.2.4",
+            "npm:postcss@8",
+            "npm:react-dom@^19.2.5",
+            "npm:react@^19.2.5",
+            "npm:recharts@^3.8.1",
+            "npm:tailwind-merge@^2.2.1",
+            "npm:tailwindcss-animate@^1.0.7",
+            "npm:tailwindcss@^3.4.0",
+            "npm:typescript@5",
+            "npm:vite@^6.3.4",
+            "npm:vitest@^3.2.4",
+            "npm:zod@^3.23.8",
+            "npm:zustand@5"
+          ]
+        }
+      },
+      "pdv-local": {
+        "packageJson": {
+          "dependencies": [
+            "npm:@supabase/supabase-js@^2.99.3",
+            "npm:@tauri-apps/api@^2.10.1",
+            "npm:@tauri-apps/cli@^2.10.1",
+            "npm:@types/react-dom@^18.3.0",
+            "npm:@types/react@^18.3.3",
+            "npm:@vitejs/plugin-react-swc@^3.11.0",
+            "npm:react-dom@^18.3.1",
+            "npm:react@^18.3.1",
+            "npm:typescript@^5.7.2",
+            "npm:vite@^6.3.4",
+            "npm:vitest@^3.2.4",
+            "npm:zustand@5"
+          ]
+        }
+      }
+    }
+  }
+}

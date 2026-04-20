@@ -12,6 +12,7 @@ import {
   DEFAULT_PRICING_CONTEXT,
   type PricingContext,
 } from '@/core/pricing'
+import { roundMoney2 } from '@/core/cart/totals'
 
 export interface ItemCarrinhoComPreco extends ItemCarrinho {
   id: string
@@ -51,9 +52,9 @@ function calcularTotais(itens: ItemCarrinhoComPreco[]) {
   const totalDesconto = totalBruto - totalLiquido
 
   return {
-    totalBruto: Math.round(totalBruto * 100) / 100,
-    totalDesconto: Math.round(totalDesconto * 100) / 100,
-    totalLiquido: Math.round(totalLiquido * 100) / 100,
+    totalBruto: roundMoney2(totalBruto),
+    totalDesconto: roundMoney2(totalDesconto),
+    totalLiquido: roundMoney2(totalLiquido),
     totalItens: itens.length,
     totalUnidades: itens.reduce((acc, item) => acc + item.quantidade, 0),
   }

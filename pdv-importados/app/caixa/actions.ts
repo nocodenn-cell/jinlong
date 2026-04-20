@@ -358,12 +358,77 @@ type ItemAutoritativo = {
   tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL'
 }
 
+type FiscalDocType = 'NFC_E_STUB' | 'NFCE' | 'NFE'
+
 const LIMITE_DIVERGENCIA_FECHAMENTO = 5
 
 function parseMoneyInput(v: number): number | null {
   if (!Number.isFinite(v)) return null
   if (v < 0) return null
   return roundMoney2(v)
+}
+
+function resolveFiscalDocType(rawValue: string | undefined): FiscalDocType {
+  const normalized = (rawValue ?? '').trim().toUpperCase()
+  if (normalized === 'NFCE' || normalized === 'NFE') return normalized
+  return 'NFC_E_STUB'
+}
+
+async function enfileirarDocumentoFiscalPosVenda(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  input: FinalizarVendaInput,
+  itensAut: ItemAutoritativo[],
+  dados: {
+    vendaId: string
+    lojaId: string
+    caixaId: string
+    operadorId: string
+    computedFinal: { totalBruto: number; totalDesconto: number; totalLiquido: number }
+  },
+): Promise<void> {
+  if (process.env.AUTO_ENQUEUE_FISCAL_ON_SALE !== 'true') return
+
+  const tipoDoc = resolveFiscalDocType(process.env.FISCAL_DEFAULT_DOC_TYPE)
+  const payload = {
+    origem: 'caixa_web',
+    venda_id: dados.vendaId,
+    loja_id: dados.lojaId,
+    caixa_id: dados.caixaId,
+    operador_id: dados.operadorId,
+    forma_pagamento: input.formaPagamento,
+    pagamentos: input.pagamentos.map((p) => ({
+      forma_pagamento: p.formaPagamento,
+      valor: roundMoney2(p.valor),
+    })),
+    totais: {
+      bruto: roundMoney2(dados.computedFinal.totalBruto),
+      desconto: roundMoney2(dados.computedFinal.totalDesconto),
+      liquido: roundMoney2(dados.computedFinal.totalLiquido),
+    },
+    itens: itensAut.map((i) => ({
+      produto_id: i.produtoId,
+      quantidade: i.quantidade,
+      preco_original: roundMoney2(i.precoOriginal),
+      preco_unitario: roundMoney2(i.precoUnitario),
+      desconto_unitario: roundMoney2(i.descontoUnitario),
+      tipo_preco: i.tipoPreco,
+    })),
+  }
+
+  const { error } = await supabase.rpc('fiscal_enfileirar_documento_venda', {
+    p_venda_id: dados.vendaId,
+    p_tipo_doc: tipoDoc,
+    p_payload: payload,
+  })
+
+  // Não bloqueia a venda: emissão fiscal pode ser reprocessada pela fila.
+  if (error) {
+    console.error('[fiscal] falha ao enfileirar documento após finalização da venda', {
+      vendaId: dados.vendaId,
+      tipoDoc,
+      error: error.message,
+    })
+  }
 }
 
 async function calcularValorSistemaDinheiroCaixa(
@@ -1135,6 +1200,13 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
     const caixaId = caixaExistente.id
 
     const useUnifiedSalesFlow = process.env.USE_UNIFIED_SALES_FLOW === 'true'
+    if (!useUnifiedSalesFlow && input.pagamentos.length > 1) {
+      return {
+        ok: false,
+        error:
+          'Split de pagamento requer fluxo unificado habilitado no servidor. Ajuste para 1 forma de pagamento.',
+      }
+    }
     const vendaId = resolveVendaIdForFinalize({
       useUnifiedSalesFlow,
       idempotencyKey: input.idempotencyKey,
@@ -1188,6 +1260,14 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
 
     const { error: txErr } = await supabase.rpc(rpcName, rpcParams)
     if (txErr) return { ok: false, error: mensagemErroComSecao('Finalização da venda', txErr.message) }
+
+    await enfileirarDocumentoFiscalPosVenda(supabase, input, itensAut, {
+      vendaId,
+      lojaId,
+      caixaId,
+      operadorId: user.id,
+      computedFinal,
+    })
 
     revalidatePath('/gerente/vendas')
     return { ok: true, vendaId }

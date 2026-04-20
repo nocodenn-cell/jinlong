@@ -63,3 +63,28 @@ export function hasSyncFlowEnv(): boolean {
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim())
   )
 }
+
+/**
+ * Fluxos em `/caixa` exigem usuário **OPERADOR** (middleware redireciona GERENTE/DONO para `/gerente`).
+ * Use credenciais dedicadas; não reutilize só `PLAYWRIGHT_TEST_*` do painel gerente.
+ */
+export function hasCaixaOperadorUser(): boolean {
+  return (
+    Boolean(process.env.PLAYWRIGHT_CAIXA_TEST_EMAIL?.trim()) &&
+    Boolean(process.env.PLAYWRIGHT_CAIXA_TEST_PASSWORD?.trim())
+  )
+}
+
+export function caixaOperadorEmail(): string {
+  return process.env.PLAYWRIGHT_CAIXA_TEST_EMAIL!.trim()
+}
+
+export function caixaOperadorPassword(): string {
+  return process.env.PLAYWRIGHT_CAIXA_TEST_PASSWORD!.trim()
+}
+
+/** Código de barras do catálogo demo (migration `027_seed_produtos_demo_importados_zh.sql`). */
+export function e2eProdutoCodigoBarras(): string {
+  const raw = process.env.PLAYWRIGHT_E2E_PRODUTO_CODIGO?.trim()
+  return raw || '7898512340003'
+}

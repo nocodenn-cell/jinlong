@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { roundMoney2 } from '@/core/cart/totals'
+import { roundAbnt } from '@/core/money/roundAbnt'
 
 export { roundMoney2 }
 
@@ -13,7 +14,7 @@ export const FORMAS_PAGAMENTO_CAIXA = [
 
 function quantidadeAte3CasasDecimais(n: number): boolean {
   if (!Number.isFinite(n)) return false
-  const r = Math.round((n + Number.EPSILON) * 1000) / 1000
+  const r = roundAbnt(n, 3)
   return Math.abs(n - r) < 1e-9
 }
 

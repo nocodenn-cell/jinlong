@@ -96,6 +96,38 @@ describe('useCartStore behavior', () => {
     expect(state.totalUnidades).toBe(0)
   })
 
+  it('aplica token de gerente só com percentual > 0 e zera ao remover desconto', () => {
+    useCartStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoVariejo: 100,
+    })
+    useCartStore.getState().aplicarDescontoGerente(5, 'tok-sync-1')
+    expect(useCartStore.getState().descontoGerenteToken).toBe('tok-sync-1')
+
+    useCartStore.getState().aplicarDescontoGerente(0)
+    const s = useCartStore.getState()
+    expect(s.descontoGerentePercentual).toBe(0)
+    expect(s.descontoGerenteToken).toBeNull()
+  })
+
+  it('setMaxDescontoGerentePercentual zera token quando percentual cai a zero', () => {
+    useCartStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoVariejo: 50,
+    })
+    useCartStore.getState().aplicarDescontoGerente(10, 'tok-2')
+    useCartStore.getState().setMaxDescontoGerentePercentual(0)
+    const s = useCartStore.getState()
+    expect(s.descontoGerentePercentual).toBe(0)
+    expect(s.descontoGerenteToken).toBeNull()
+  })
+
   it('limita desconto de gerente ao máximo configurado', () => {
     useCartStore.getState().adicionarItem({
       id: 'linha-1',

@@ -6,19 +6,22 @@ on:
     branches: [main, develop]
     paths:
       - 'pdv-local/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
       - '.github/workflows/ci-pdv-local.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'pdv-local/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
       - '.github/workflows/ci-pdv-local.yml'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pdv-local
 
     steps:
       # Sonar githubactions:S7637 — SHA do release da tag indicada
@@ -28,13 +31,10 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: pdv-local/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Install (workspaces na raiz)
         run: npm ci
 
-      - name: Unit tests
-        run: npm test -- --run
-
-      - name: Build
-        run: npm run build
+      - name: Unit tests & build (Turborepo)
+        run: npx turbo run test build --filter=pdv-local

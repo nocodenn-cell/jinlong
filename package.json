@@ -1,0 +1,29 @@
+{
+  "name": "fastproduct",
+  "private": true,
+  "description": "Monorepo PDV — workspaces: pdv-importados (Next), pdv-local (Tauri), backend (Supabase)",
+  "workspaces": [
+    "pdv-importados",
+    "pdv-local",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=20.0.0 <25.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "check": "turbo run check --filter=fastproduct-backend",
+    "check:edge": "npm run check",
+    "check:all": "turbo run check lint test",
+    "ci": "turbo run check lint test build",
+    "dev:web": "npm run dev -w pdv-importados",
+    "dev:desktop": "npm run dev -w pdv-local",
+    "dev:tauri": "npm run tauri -w pdv-local"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  },
+  "packageManager": "npm@10.9.2"
+}

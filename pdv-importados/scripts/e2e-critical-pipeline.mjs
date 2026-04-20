@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Pipeline E2E crítico: valida env do painel e do PDV local, smoke na Edge sync-outbox,
- * depois roda apenas sync-fluxo-gerente.spec.ts.
+ * depois roda sync-fluxo-gerente, caixa-venda, caixa-venda-multi-pagamento (split) e caixa-fluxos-criticos.
  *
  * Uso (a partir de pdv-importados): npm run test:e2e:critical
  */
@@ -40,4 +40,22 @@ runStep('playwright e2e/sync-fluxo-gerente.spec.ts', 'npx', [
   'e2e/sync-fluxo-gerente.spec.ts',
 ], pdvImportados)
 
-console.log('[pipeline] Concluído: env, smoke sync e E2E crítico.')
+runStep('playwright e2e/caixa-venda.spec.ts', 'npx', [
+  'playwright',
+  'test',
+  'e2e/caixa-venda.spec.ts',
+], pdvImportados)
+
+runStep('playwright e2e/caixa-venda-multi-pagamento.spec.ts', 'npx', [
+  'playwright',
+  'test',
+  'e2e/caixa-venda-multi-pagamento.spec.ts',
+], pdvImportados)
+
+runStep('playwright e2e/caixa-fluxos-criticos.spec.ts', 'npx', [
+  'playwright',
+  'test',
+  'e2e/caixa-fluxos-criticos.spec.ts',
+], pdvImportados)
+
+console.log('[pipeline] Concluído: env, smoke sync, E2E sync-gerente, vendas caixa (simples + split) e fluxos caixa.')

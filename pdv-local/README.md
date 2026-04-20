@@ -15,11 +15,15 @@ Cliente de **caixa local-first** que vai rodar em Windows (Tauri) e conversar co
 
 ## Como rodar (depois de instalar Rust + Tauri toolchain)
 
+Instale dependências na **raiz do monorepo** (um único `package-lock.json`):
+
 ```bash
-cd c:/Naturecode/fastproduct/pdv-local
-npm install
-npx tauri dev
+cd c:/Naturecode/fastproduct
+npm ci
+npm run dev:tauri
 ```
+
+Alternativa (só esta pasta, menos recomendado): `cd pdv-local && npm install` gera lockfile local e não alinha versões com o restante do monorepo.
 
 O Tauri vai abrir uma janela apontando para o frontend React em `http://localhost:4173`.
 

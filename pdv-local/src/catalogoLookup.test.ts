@@ -32,6 +32,26 @@ describe('variantesChaveLeitura', () => {
   })
 })
 
+describe('buildMapaProdutoChaves — idempotência de chave', () => {
+  it('mantém o primeiro produto ativo quando dois compartilham variante de código', () => {
+    const primeiro: ProdutoCacheLite = {
+      ...produto,
+      id: '11111111-1111-1111-1111-111111111111',
+      nome: 'Primeiro',
+      codigo_barras: '0078901234567',
+    }
+    const segundo: ProdutoCacheLite = {
+      ...produto,
+      id: '22222222-2222-2222-2222-222222222222',
+      nome: 'Segundo',
+      codigo_barras: '0078901234567',
+    }
+    const mapa = buildMapaProdutoChaves([primeiro, segundo])
+    expect(mapa['78901234567']?.id).toBe(primeiro.id)
+    expect(mapa['78901234567']?.nome).toBe('Primeiro')
+  })
+})
+
 describe('resolverProdutoNoCatalogo', () => {
   it('resolve por código normalizado mesmo com zeros à esquerda na leitura', () => {
     const mapa = buildMapaProdutoChaves([produto])

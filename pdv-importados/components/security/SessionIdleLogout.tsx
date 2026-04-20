@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { performClientLogout } from '@/lib/auth/clientLogout'
 import { getIdleLogoutMinutes } from '@/lib/security/idleLogoutMinutes'
+import { resetCarrinhoPersistido } from '@/lib/caixa/resetCarrinhoPersistido'
 
 /**
  * Encerra a sessão Supabase após período sem eventos de uso (teclado/mouse/toque).
@@ -21,12 +22,17 @@ export function SessionIdleLogout() {
     const logout = async () => {
       if (signingOut.current) return
       signingOut.current = true
-      try {
-        const supabase = createClient()
-        await supabase.auth.signOut()
-      } finally {
-        window.location.assign('/login?reason=sessao_inatividade')
+      const res = await performClientLogout()
+      if (!res.ok) {
+        // Se não invalidou sessão, não redireciona (evita falso logout).
+        signingOut.current = false
+        timeoutId = setTimeout(() => {
+          void logout()
+        }, 15_000)
+        return
       }
+      resetCarrinhoPersistido()
+      window.location.assign('/login?reason=sessao_inatividade')
     }
 
     const reset = () => {

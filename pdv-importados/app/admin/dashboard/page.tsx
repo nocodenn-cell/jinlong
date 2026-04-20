@@ -9,7 +9,7 @@ import {
   adminUi,
 } from '@/lib/i18n/adminChineseUiLabels'
 import { ChineseStatCard } from '../components/ChineseStatCard'
-import { SalesTrendChart } from './SalesTrendChart'
+import { SalesTrendChartLazy } from './SalesTrendChartLazy'
 import {
   dateKey,
   formatTrendPercent,
@@ -516,7 +516,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               {adminLineBoth(adminUi.errors.chartUnavailable)}
             </div>
           ) : (
-            <SalesTrendChart data={chartData} variant={oriental ? 'oriental' : 'default'} />
+            <SalesTrendChartLazy data={chartData} variant={oriental ? 'oriental' : 'default'} />
           )}
         </div>
       </div>

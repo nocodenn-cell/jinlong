@@ -13,6 +13,9 @@
 #   PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY
 #   PLAYWRIGHT_TEST_EMAIL (opcional)
 #   PLAYWRIGHT_TEST_PASSWORD (opcional)
+#   PLAYWRIGHT_CAIXA_TEST_EMAIL / PLAYWRIGHT_CAIXA_TEST_PASSWORD (OPERADOR — smoke pós-deploy + pipeline crítico)
+#   PLAYWRIGHT_E2E_PRODUTO_CODIGO (opcional — caixa-venda.spec)
+# Workflow só Playwright (sem lint/build): .github/workflows/e2e-playwright-only.yml
 name: CI pdv-importados
 
 on:
@@ -20,19 +23,22 @@ on:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
       - '.github/workflows/ci-pdv-importados.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
       - '.github/workflows/ci-pdv-importados.yml'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pdv-importados
 
     steps:
       # Sonar githubactions:S7637 — SHA do release da tag indicada
@@ -42,16 +48,13 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: pdv-importados/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Install (workspaces na raiz)
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests
-        run: npm test
+      - name: Lint & unit tests
+        run: npx turbo run lint test --filter=pdv-importados
 
       # Build exige secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY (anon do projeto — não versionar JWT no YAML).
       # URL opcional: secret CI_NEXT_PUBLIC_SUPABASE_URL ou placeholder abaixo.
@@ -64,15 +67,14 @@ jobs:
             echo "::error::Defina o secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
             exit 1
           fi
-          npm run build
+          npx turbo run build --filter=pdv-importados
 
   deploy:
     needs: build-and-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pdv-importados
+    outputs:
+      vercel_url: ${{ steps.vercel.outputs['preview-url'] }}
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -81,9 +83,9 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: pdv-importados/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Install (workspaces na raiz)
         run: npm ci
 
       - name: Build
@@ -99,7 +101,7 @@ jobs:
             echo "::error::Defina o secret CI_NEXT_PUBLIC_SUPABASE_URL em Settings → Secrets and variables → Actions."
             exit 1
           fi
-          npm run build
+          npx turbo run build --filter=pdv-importados
 
       - name: Upload sourcemaps to Sentry
         uses: getsentry/action-sourcemaps@v1
@@ -112,6 +114,7 @@ jobs:
           sourcemap-paths: pdv-importados/.next/static/chunks
 
       - name: Deploy to Vercel
+        id: vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -131,11 +134,8 @@ jobs:
 
   smoke-test:
     needs: deploy
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.deploy.outputs.vercel_url != ''
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pdv-importados
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -144,29 +144,30 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: pdv-importados/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Install (workspaces na raiz)
         run: npm ci
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
-      - name: Run Smoke E2E
+      - name: Run Smoke E2E (login + /caixa na URL do deploy)
         env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
+          CI: true
+          PLAYWRIGHT_E2E_WITH_DEV: '0'
+          PLAYWRIGHT_BASE_URL: ${{ needs.deploy.outputs.vercel_url }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: npm run test:e2e:critical
+          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
+        run: npm run test:e2e:post-deploy-smoke -w pdv-importados
   # PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL, PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY
   # (opcional p/ gerente.spec) PLAYWRIGHT_TEST_EMAIL, PLAYWRIGHT_TEST_PASSWORD
   e2e-playwright:
     needs: build-and-test
     if: ${{ vars.ENABLE_PLAYWRIGHT_E2E == 'true' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pdv-importados
 
     steps:
       # Sonar githubactions:S7637 — SHA do release da tag indicada
@@ -176,9 +177,9 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: pdv-importados/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Install (workspaces na raiz)
         run: npm ci
 
       - name: Install Playwright Chromium
@@ -187,9 +188,13 @@ jobs:
       - name: E2E
         env:
           CI: true
-          PLAYWRIGHT_E2E_WITH_DEV: '1'
+          PLAYWRIGHT_E2E_WITH_DEV: ${{ secrets.PLAYWRIGHT_BASE_URL != '' && '0' || '1' }}
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
           PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
-        run: npm run test:e2e
+          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
+          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ secrets.PLAYWRIGHT_E2E_PRODUTO_CODIGO }}
+        run: npm run test:e2e -w pdv-importados

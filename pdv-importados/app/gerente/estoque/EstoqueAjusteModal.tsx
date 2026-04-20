@@ -14,6 +14,9 @@ export type EstoqueAjusteModalProps = Readonly<{
     titulo: string
     atual: string
     minimo: string
+    motivo: string
+    observacao: string
+    motivos: ReadonlyArray<{ value: string; label: string }>
     salvar: string
     cancelar: string
   }>
@@ -22,6 +25,8 @@ export type EstoqueAjusteModalProps = Readonly<{
     produto_id: string
     quantidade_atual: number
     estoque_minimo: number
+    motivo: string
+    observacao?: string
   }) => void
 }>
 
@@ -104,6 +109,8 @@ export function EstoqueAjusteModal({
               produto_id: produtoId,
               quantidade_atual: Number(fd.get('quantidade_atual')),
               estoque_minimo: Number(fd.get('estoque_minimo')),
+              motivo: String(fd.get('motivo') ?? ''),
+              observacao: String(fd.get('observacao') ?? '').trim() || undefined,
             })
           }}
           style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
@@ -129,6 +136,30 @@ export function EstoqueAjusteModal({
               step="0.001"
               required
               defaultValue={estoqueMinimo}
+              style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+            <span style={{ color: '#6b7280' }}>{labels.motivo}</span>
+            <select
+              name="motivo"
+              required
+              defaultValue={labels.motivos[0]?.value ?? 'ACERTO_INVENTARIO'}
+              style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}
+            >
+              {labels.motivos.map((motivo) => (
+                <option key={motivo.value} value={motivo.value}>
+                  {motivo.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+            <span style={{ color: '#6b7280' }}>{labels.observacao}</span>
+            <input
+              name="observacao"
+              maxLength={500}
+              placeholder="Detalhe do ajuste (obrigatório para OUTRO)"
               style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}
             />
           </label>
@@ -175,6 +206,15 @@ export function labelsAjusteEstoque(m: Mensagens): EstoqueAjusteModalProps['labe
     titulo: m.estoque.col_ajuste,
     atual: m.estoque.col_atual,
     minimo: m.estoque.col_minimo,
+    motivo: 'Motivo',
+    observacao: m.comum?.observacao ?? 'Observação',
+    motivos: [
+      { value: 'ACERTO_INVENTARIO', label: 'Acerto de inventário' },
+      { value: 'COMPRA', label: 'Entrada por compra' },
+      { value: 'PERDA', label: 'Perda' },
+      { value: 'QUEBRA', label: 'Quebra/avaria' },
+      { value: 'OUTRO', label: 'Outro' },
+    ],
     salvar: m.estoque.atualizar,
     cancelar: m.comum?.cancelar ?? 'Cancelar',
   }

@@ -54,8 +54,26 @@ type Props = {
 }
 
 export function CaixaPageClient({ messages: m, idioma }: Props) {
+  const pagamentoInicial = useCallback(
+    (valor: number): { formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number } => ({
+      formaPagamento: "DINHEIRO",
+      valor: roundMoney2(Math.max(0, valor)),
+    }),
+    [],
+  )
   const [codigo, setCodigo] = useState("")
-  const [mensagem, setMensagem] = useState<string | null>(null)
+  const [mensagem, setMensagemState] = useState<string | null>(null)
+  const [msgVendaOk, setMsgVendaOk] = useState(false)
+
+  const setCaixaMensagem = useCallback((text: string | null) => {
+    setMsgVendaOk(false)
+    setMensagemState(text)
+  }, [])
+
+  const setCaixaMensagemVendaOk = useCallback((text: string) => {
+    setMsgVendaOk(true)
+    setMensagemState(text)
+  }, [])
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
   const [buscando, setBuscando] = useState(false)
@@ -81,7 +99,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     useState<number>(0)
   const [pagamentos, setPagamentos] = useState<
     Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
-  >([{ formaPagamento: "DINHEIRO", valor: 0 }])
+  >(() => [pagamentoInicial(0)])
   const [caixaStatus, setCaixaStatus] = useState<
     | {
         aberto: true
@@ -136,19 +154,21 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     try {
       const res = await obterMovimentacoesCaixa(caixaId)
       if (!res.ok) {
-        setMensagem(res.error)
+        setCaixaMensagem(res.error)
         return
       }
       setMovimentacoes(res.itens)
     } finally {
       setCarregandoMovimentacoes(false)
     }
-  }, [])
+  }, [setCaixaMensagem])
 
   const recarregarStatusCaixa = useCallback(async () => {
     const status = await obterStatusCaixaOperador()
     if (!status.ok) {
-      setMensagem(status.error)
+      setCaixaStatus(null)
+      setMovimentacoes([])
+      setCaixaMensagem(status.error)
       return
     }
     if (status.aberto) {
@@ -165,7 +185,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       setCaixaStatus({ aberto: false })
       setMovimentacoes([])
     }
-  }, [recarregarMovimentacoes])
+  }, [recarregarMovimentacoes, setCaixaMensagem])
 
   useEffect(() => {
     let cancelado = false
@@ -175,9 +195,9 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       if (cancelado) return
       if (res.ok) {
         setRegras(res.regras, res.pricingContext)
-        setMensagem(null)
+        setCaixaMensagem(null)
       } else {
-        setMensagem(`${m.caixa.regras_erro_prefixo} ${res.error}`)
+        setCaixaMensagem(`${m.caixa.regras_erro_prefixo} ${res.error}`)
         setRegras([], DEFAULT_PRICING_CONTEXT)
       }
       setCarregandoRegras(false)
@@ -185,7 +205,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     return () => {
       cancelado = true
     }
-  }, [setRegras, m.caixa.regras_erro_prefixo])
+  }, [setRegras, m.caixa.regras_erro_prefixo, setCaixaMensagem])
 
   useEffect(() => {
     let cancelado = false
@@ -228,25 +248,25 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       if (!trimmed) return
 
       setBuscando(true)
-      setMensagem(null)
+      setCaixaMensagem(null)
 
       try {
         const res = await buscarProdutoParaCaixa(trimmed)
 
         if (!res.ok) {
-          setMensagem(res.error)
+          setCaixaMensagem(res.error)
           setBuscando(false)
           return
         }
 
         if (res.status === "nao_encontrado") {
-          setMensagem(m.caixa.produto_nao_encontrado)
+          setCaixaMensagem(m.caixa.produto_nao_encontrado)
           setBuscando(false)
           return
         }
 
         if (res.status === "ambiguo") {
-          setMensagem(res.mensagem)
+          setCaixaMensagem(res.mensagem)
           setBuscando(false)
           return
         }
@@ -269,18 +289,18 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
         setCodigo("")
         if (avisoEstoque) {
-          setMensagem(`${m.caixa.item_adicionado} ${avisoEstoque}`)
+          setCaixaMensagem(`${m.caixa.item_adicionado} ${avisoEstoque}`)
         } else {
-          setMensagem(null)
+          setCaixaMensagem(null)
         }
       } catch {
-        setMensagem(m.caixa.falha_busca)
+        setCaixaMensagem(m.caixa.falha_busca)
       } finally {
         setBuscando(false)
         focarCampoBusca()
       }
     },
-    [codigo, adicionarItem, focarCampoBusca, m],
+    [codigo, adicionarItem, focarCampoBusca, m, setCaixaMensagem],
   )
 
   const handleAlterarQuantidade = useCallback(
@@ -301,10 +321,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const handleNovoCupom = useCallback(() => {
     vendaIdempotenciaRef.current = null
     limparCarrinho()
+    setPagamentos([pagamentoInicial(0)])
     setCodigo("")
-    setMensagem(null)
+    setCaixaMensagem(null)
     limparEstadoDescontoGerente()
-  }, [limparCarrinho, limparEstadoDescontoGerente])
+  }, [limparCarrinho, limparEstadoDescontoGerente, pagamentoInicial, setCaixaMensagem])
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
     if (raw == null) return null
@@ -320,24 +341,24 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     const raw = window.prompt(`${m.caixa.valor_inicial}:`, "0")
     const valorInicial = parseValorMonetario(raw)
     if (valorInicial === null) {
-      setMensagem("Valor inicial inválido.")
+      setCaixaMensagem("Valor inicial inválido.")
       return
     }
 
     setProcessandoCaixa(true)
-    setMensagem(null)
+    setCaixaMensagem(null)
     try {
       const res = await abrirCaixaOperador(valorInicial)
       if (!res.ok) {
-        setMensagem(res.error)
+        setCaixaMensagem(res.error)
         return
       }
-      setMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`)
+      setCaixaMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`)
       await recarregarStatusCaixa()
     } finally {
       setProcessandoCaixa(false)
     }
-  }, [m.caixa.valor_inicial, parseValorMonetario, processandoCaixa, recarregarStatusCaixa])
+  }, [m.caixa.valor_inicial, parseValorMonetario, processandoCaixa, recarregarStatusCaixa, setCaixaMensagem])
 
   const caixaAbertoParaFechar = caixaStatus?.aberto === true
   const blindClosureEnabled = caixaAbertoParaFechar ? caixaStatus.blindClosureEnabled : false
@@ -351,13 +372,13 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const handleFecharCaixa = useCallback(async () => {
     if (processandoCaixa) return
     if (itens.length > 0) {
-      setMensagem("Finalize ou limpe o cupom antes de fechar o caixa.")
+      setCaixaMensagem("Finalize ou limpe o cupom antes de fechar o caixa.")
       return
     }
     const raw = window.prompt(`${m.caixa.valor_final}:`)
     const valorContado = parseValorMonetario(raw)
     if (valorContado === null) {
-      setMensagem("Valor contado inválido.")
+      setCaixaMensagem("Valor contado inválido.")
       return
     }
     const diferencaEstimada = caixaAbertoParaFechar
@@ -369,30 +390,30 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         `Diferença estimada de R$ ${diferencaEstimada.toFixed(2)}. Informe o motivo (mín. 5 caracteres):`,
       )
       if (!motivoRaw || motivoRaw.trim().length < 5) {
-        setMensagem("Motivo obrigatório para diferença acima de R$ 5,00.")
+        setCaixaMensagem("Motivo obrigatório para diferença acima de R$ 5,00.")
         return
       }
       motivo = motivoRaw.trim()
     }
 
     setProcessandoCaixa(true)
-    setMensagem(null)
+    setCaixaMensagem(null)
     try {
       let res = await fecharCaixaOperador({ valorContado, motivo })
       if (!res.ok && blindClosureEnabled && erroExigeMotivoFechamento(res.error)) {
         const motivoRaw = window.prompt("Informe o motivo do ajuste (mín. 5 caracteres):")
         if (!motivoRaw || motivoRaw.trim().length < 5) {
-          setMensagem("Motivo obrigatório para fechamento com divergência.")
+          setCaixaMensagem("Motivo obrigatório para fechamento com divergência.")
           return
         }
         res = await fecharCaixaOperador({ valorContado, motivo: motivoRaw.trim() })
       }
       if (!res.ok) {
-        setMensagem(res.error)
+        setCaixaMensagem(res.error)
         return
       }
       const diferencaPrefixo = res.diferenca > 0 ? "+" : ""
-      setMensagem(
+      setCaixaMensagem(
         `Caixa fechado. Sistema: R$ ${res.valorSistemaDinheiro.toFixed(2)} · Contado: R$ ${res.valorContado.toFixed(2)} · Diferença: ${diferencaPrefixo}R$ ${res.diferenca.toFixed(2)}`,
       )
       await recarregarStatusCaixa()
@@ -409,6 +430,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     parseValorMonetario,
     processandoCaixa,
     recarregarStatusCaixa,
+    setCaixaMensagem,
   ])
 
   useEffect(() => {
@@ -423,24 +445,24 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     const checkExpiracao = () => {
       if (Date.now() >= expiraEmMs) {
         limparEstadoDescontoGerente()
-        setMensagem(m.caixa.msg_token_expirado)
+        setCaixaMensagem(m.caixa.msg_token_expirado)
       }
     }
 
     checkExpiracao()
     const timer = window.setInterval(checkExpiracao, 1000)
     return () => window.clearInterval(timer)
-  }, [gerenteValidadoAte, limparEstadoDescontoGerente, m.caixa.msg_token_expirado])
+  }, [gerenteValidadoAte, limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem])
 
   const handleFinalizar = useCallback(async () => {
     if (itens.length === 0 || finalizando) return
     if (gerenteValidadoAte && Date.now() >= Date.parse(gerenteValidadoAte)) {
       limparEstadoDescontoGerente()
-      setMensagem(m.caixa.msg_token_expirado)
+      setCaixaMensagem(m.caixa.msg_token_expirado)
       return
     }
     setFinalizando(true)
-    setMensagem(null)
+    setCaixaMensagem(null)
     try {
       if (!vendaIdempotenciaRef.current) {
         vendaIdempotenciaRef.current = crypto.randomUUID()
@@ -475,15 +497,16 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         vendaIdempotenciaRef.current = null
         limparCarrinho()
         limparEstadoDescontoGerente()
-        setMensagem(
+        setPagamentos([pagamentoInicial(0)])
+        setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
         )
         await recarregarStatusCaixa()
       } else {
-        setMensagem(res.error)
+        setCaixaMensagem(res.error)
       }
     } catch {
-      setMensagem(m.caixa.msg_falha_finalizar)
+      setCaixaMensagem(m.caixa.msg_falha_finalizar)
     } finally {
       setFinalizando(false)
     }
@@ -496,11 +519,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     itens,
     limparEstadoDescontoGerente,
     limparCarrinho,
+    pagamentoInicial,
     totalBruto,
     totalDesconto,
     totalLiquido,
     m,
     recarregarStatusCaixa,
+    setCaixaMensagem,
+    setCaixaMensagemVendaOk,
   ])
 
   const handleFinalizarRef = useRef(handleFinalizar)
@@ -574,7 +600,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
         if (registro.status === "pendente") {
           if (!payload.gerenteSenha?.trim()) {
-            setMensagem(m.caixa.msg_movimentacao_pendente_gerente)
+            setCaixaMensagem(m.caixa.msg_movimentacao_pendente_gerente)
             await recarregarStatusCaixa()
             return { ok: true }
           }
@@ -593,7 +619,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         }
 
         const label = movimentacaoModalTipo === "sangria" ? m.caixa.sangria : m.caixa.suprimento
-        setMensagem(
+        setCaixaMensagem(
           caixaFmt(m.caixa.msg_movimentacao_registrada_ok, {
             tipo: label,
             valor: payload.valor.toFixed(2),
@@ -606,7 +632,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         setMovimentandoCaixa(false)
       }
     },
-    [caixaStatus, movimentacaoModalTipo, recarregarStatusCaixa, recarregarMovimentacoes, m],
+    [caixaStatus, movimentacaoModalTipo, recarregarStatusCaixa, recarregarMovimentacoes, m, setCaixaMensagem],
   )
 
   const handleConfirmarAcaoMovimentacao = useCallback(
@@ -617,11 +643,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         if (acaoMovimentacao.tipo === "cancelar") {
           const res = await cancelarMovimentacaoCaixa(acaoMovimentacao.item.id, motivo)
           if (!res.ok) return { ok: false, error: res.error }
-          setMensagem(m.caixa.timeline_msg_cancelada)
+          setCaixaMensagem(m.caixa.timeline_msg_cancelada)
         } else {
           const res = await estornarMovimentacaoCaixa(acaoMovimentacao.item.id, motivo)
           if (!res.ok) return { ok: false, error: res.error }
-          setMensagem(m.caixa.timeline_msg_estornada)
+          setCaixaMensagem(m.caixa.timeline_msg_estornada)
         }
         await recarregarStatusCaixa()
         if (caixaStatus?.aberto) {
@@ -632,7 +658,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         setProcessandoAcaoMovimentacao(false)
       }
     },
-    [acaoMovimentacao, caixaStatus, recarregarMovimentacoes, recarregarStatusCaixa, m],
+    [acaoMovimentacao, caixaStatus, recarregarMovimentacoes, recarregarStatusCaixa, m, setCaixaMensagem],
   )
 
   const valorDescontoGerente =
@@ -737,14 +763,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       setGerenteToken(payload.token)
       setMaxDescontoGerentePercentual(payload.maxDescontoPercentual)
       setDescontoGerentePercentual(payload.percentual)
-      setMensagem(
+      setCaixaMensagem(
         caixaFmt(m.caixa.msg_gerente_ok, {
           pct: payload.percentual.toFixed(2),
           hora: new Date(payload.expiraEm).toLocaleTimeString(loc),
         }),
       )
     },
-    [m, loc],
+    [m, loc, setCaixaMensagem],
   )
 
   return (
@@ -772,8 +798,17 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
               carregandoRegras={carregandoRegras}
             />
             {mensagem && (
-              <div className="text-xs text-amber-300" role="status" aria-live="polite">
-                {mensagem}
+              <div
+                className="text-xs text-amber-300"
+                role="status"
+                aria-live="polite"
+                data-testid="caixa-status"
+              >
+                {msgVendaOk ? (
+                  <span data-testid="caixa-msg-venda-ok">{mensagem}</span>
+                ) : (
+                  mensagem
+                )}
               </div>
             )}
           </div>

@@ -47,6 +47,15 @@ npm run test:e2e
 
 Ou coloque essas variáveis no `.env.local` e carregue-as no shell de CI (o Playwright lê `process.env` do ambiente onde roda o comando; se necessário, use `dotenv` no CI ou export explícito).
 
+Para testes em **`/caixa`** (`caixa.spec.ts`, `caixa-venda.spec.ts`, `caixa-fluxos-criticos.spec.ts`, `npm run test:e2e:critical`), use credenciais do **OPERADOR** — o middleware não deixa GERENTE acessar `/caixa`:
+
+```powershell
+$env:PLAYWRIGHT_CAIXA_TEST_EMAIL="e2e-operador@localhost.test"
+$env:PLAYWRIGHT_CAIXA_TEST_PASSWORD="(a mesma de SEED_DEV_PASSWORD)"
+# Opcional: produto existente no catálogo (padrão 7898512340003 — seed migration 027)
+$env:PLAYWRIGHT_E2E_PRODUTO_CODIGO="7898512340003"
+```
+
 ---
 
 ## Opção B — Manual (Dashboard + SQL)

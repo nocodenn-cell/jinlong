@@ -44,14 +44,15 @@ export async function atualizarEstoqueProduto(
   const lojaId = await lojaIdDoUsuarioLogado()
   if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
 
-  const { error } = await supabase
-    .from('estoque')
-    .update({
-      quantidade_atual: parsed.data.quantidade_atual,
-      estoque_minimo: parsed.data.estoque_minimo,
-    })
-    .eq('produto_id', parsed.data.produto_id)
-    .eq('loja_id', lojaId)
+  const observacao = parsed.data.observacao?.trim() || null
+  const { error } = await supabase.rpc('ajustar_estoque_manual', {
+    p_produto_id: parsed.data.produto_id,
+    p_loja_id: lojaId,
+    p_quantidade_atual: parsed.data.quantidade_atual,
+    p_estoque_minimo: parsed.data.estoque_minimo,
+    p_motivo_codigo: parsed.data.motivo,
+    p_observacao: observacao,
+  })
 
   if (error) {
     return { success: false, error: mensagemErroComSecao('Estoque', error.message) }

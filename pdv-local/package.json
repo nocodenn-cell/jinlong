@@ -13,7 +13,8 @@
     "tauri": "tauri dev",
     "env:check": "node scripts/check-env.mjs",
     "smoke:sync-edge": "node scripts/smoke-sync-edge.mjs",
-    "test": "vitest"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",

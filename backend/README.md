@@ -99,19 +99,20 @@ cd C:\Naturecode\fastproduct\backend
 npm run check:edge
 ```
 
-O script usa **`npx -y deno@2.2.2`** (versão fixa próxima ao Deno 2.x do CI). Rode antes de PRs que alterem essas funções.
+O script usa **`npx -y deno@2.2.2`** (versão fixa próxima ao Deno 2.x do CI). Rode antes de PRs que alterem essas funções (`npm run check` é alias de `check:edge`). Com **workspaces na raiz** do monorepo: `cd ..` (para `fastproduct/`), `npm ci`, depois `npm run check -w fastproduct-backend` ou `npm run check` na raiz.
 
 **Opcional — Deno instalado** (execução mais rápida, sem download do `npx`): [instalação oficial](https://docs.deno.com/runtime/getting_started/installation/) (Windows: `irm https://deno.land/install.ps1 | iex`). Depois:
 
 ```powershell
 deno check supabase/functions/sync-outbox/index.ts
 deno check supabase/functions/validar-gerente/index.ts
+deno check --config supabase/functions/fiscal-worker/deno.json supabase/functions/fiscal-worker/index.ts
 ```
 
-A função **`fiscal-worker`** usa imports no estilo npm sem o prefixo exigido pelo `deno check` isolado; o type-check dela fica a cargo do fluxo que você usar no deploy (ou ajuste futuro de `deno.json`).
+A função **`fiscal-worker`** usa `npm:` no `deno.json`; o type-check exige **`--config supabase/functions/fiscal-worker/deno.json`** (já incluído em `npm run check:edge`).
 
 ## CI
 
-Em PRs que alterem `backend/`, o workflow [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) executa **`deno check`** em `sync-outbox` e `validar-gerente` (mesmo escopo que `npm run check:edge` na pasta `backend`). **Migrations SQL** não têm passo automático no CI — use revisão e `db push` / staging.
+Em PRs que alterem `backend/`, o workflow [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) executa **`deno check`** nas três Edge Functions acima (mesmo escopo que `npm run check:edge` na pasta `backend`) e o job **`migrations-smoke`** aplica todas as migrations em ordem sobre PostgreSQL 15 com stub de `auth` — isso **não** substitui `db push` no projeto real, mas pega erros de SQL/ordem cedo.
 
 **Opcional — drift contra projeto remoto:** no GitHub do repositório, configure secrets `SUPABASE_ACCESS_TOKEN` (token de conta) e `SUPABASE_MIGRATION_CHECK_PROJECT_REF` (ex.: ref de **staging**). O job `migration-remote-drift` roda `supabase link` + `node scripts/p0-migration-status.mjs`. Sem secrets, ou em PR vindo de **fork**, o job pula (sucesso). **Manual:** Actions → *CI backend Supabase* → *Run workflow*.

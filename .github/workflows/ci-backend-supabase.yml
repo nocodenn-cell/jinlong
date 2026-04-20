@@ -19,11 +19,17 @@ on:
     branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
       - '.github/workflows/ci-backend-supabase.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
       - '.github/workflows/ci-backend-supabase.yml'
   workflow_dispatch:
 
@@ -80,10 +86,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Type-check Edge Functions (sync-outbox + validar-gerente)
+      - name: Type-check Edge Functions (sync-outbox + validar-gerente + fiscal-worker)
         run: |
           deno check backend/supabase/functions/sync-outbox/index.ts
           deno check backend/supabase/functions/validar-gerente/index.ts
+          deno check --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
 
   outbox-contract:
     runs-on: ubuntu-latest

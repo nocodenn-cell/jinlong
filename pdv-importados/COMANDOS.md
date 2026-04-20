@@ -1,10 +1,10 @@
 # Comandos rápidos (pdv-importados)
 
-Rodar sempre com **working directory** = esta pasta (`pdv-importados`).
+Na maioria dos fluxos use **working directory** = esta pasta (`pdv-importados`). O monorepo também aceita `npm ci` na **raiz** (`fastproduct/`) e scripts na raiz (`npm run dev:web`, `npm run lint`, etc.) — ver `../README.md`.
 
 | Objetivo | Comando |
 |----------|---------|
-| Instalar deps | `npm install` |
+| Instalar deps | Na raiz: `npm ci` · só aqui: `npm install` (gera lockfile local; evite no CI) |
 | Dev (ver porta no terminal) | `npm run dev` |
 | Build produção | `npm run build` · depois `npm run start` |
 | Lint | `npm run lint` |

@@ -1,9 +1,11 @@
 /**
  * Cálculo de totais do carrinho — domínio puro, reutilizado no painel Next e no PDV Tauri.
  */
+import { roundAbnt } from '../money/roundAbnt'
 
+/** Duas casas decimais — espelha `public.round_abnt(n, 2)` no Postgres. */
 export function roundMoney2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100
+  return roundAbnt(n, 2)
 }
 
 export interface ItemParaTotalizacao {

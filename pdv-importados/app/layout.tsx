@@ -1,18 +1,23 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
+import { htmlLangFromIdioma } from '@/src/lib/idioma/htmlLang'
 
 export const metadata: Metadata = {
   title: 'PDV Importados',
   description: 'Sistema de ponto de venda para lojas de importados',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { idioma } = await getUsuarioIdioma()
+  const lang = htmlLangFromIdioma(idioma)
+
   return (
-    <html lang="pt">
+    <html lang={lang}>
       <body>{children}</body>
     </html>
   )

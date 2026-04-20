@@ -1,0 +1,61 @@
+# Suíte E2E crítica sem passar pelo job "build-and-test" do CI principal.
+# Útil em homologação (branch staging) ou execução manual com secrets de staging.
+#
+# Ative com variável de repositório ENABLE_PLAYWRIGHT_E2E=true (push em staging),
+# ou rode manualmente (workflow_dispatch) mesmo com a variável em false.
+#
+# Secrets (mesmos de ci-pdv-importados / docs/E2E.md):
+#   PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL, PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   PLAYWRIGHT_TEST_EMAIL, PLAYWRIGHT_TEST_PASSWORD (gerente — sync-fluxo-gerente)
+#   PLAYWRIGHT_CAIXA_TEST_EMAIL, PLAYWRIGHT_CAIXA_TEST_PASSWORD (operador — /caixa)
+# Opcional: PLAYWRIGHT_BASE_URL (URL do deploy; se definido, não use PLAYWRIGHT_E2E_WITH_DEV)
+# Opcional: PLAYWRIGHT_E2E_PRODUTO_CODIGO
+name: E2E Playwright-only (crítico)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [staging]
+    paths:
+      - 'pdv-importados/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
+      - '.github/workflows/e2e-playwright-only.yml'
+
+concurrency:
+  group: e2e-playwright-only-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-critical:
+    if: vars.ENABLE_PLAYWRIGHT_E2E == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install (workspaces na raiz)
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E crítico (sync gerente + caixa venda + fluxos)
+        env:
+          CI: true
+          PLAYWRIGHT_E2E_WITH_DEV: ${{ secrets.PLAYWRIGHT_BASE_URL != '' && '0' || '1' }}
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
+          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ secrets.PLAYWRIGHT_E2E_PRODUTO_CODIGO }}
+        run: npm run test:e2e:critical -w pdv-importados
