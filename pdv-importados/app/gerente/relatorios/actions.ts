@@ -34,12 +34,23 @@ export type RelatorioEstoqueBaixoDTO = {
   deficit: number
 }
 
+export type RelatorioResumoExecutivoDTO = {
+  itens_vendidos: number
+  vendas_concluidas: number
+  vendas_canceladas: number
+  taxa_cancelamento: number
+  cobertura_custo: number
+  custo_confiavel: boolean
+  margem_bruta_estimada: number | null
+}
+
 export type RelatoriosGerentePayload = {
   periodo: PeriodoRelatorioResolvido
   tzRelatorio: string
   porDia: RelatorioVendaDiaDTO[]
   top: RelatorioTopProdDTO[]
   baixo: RelatorioEstoqueBaixoDTO[]
+  resumoExecutivo: RelatorioResumoExecutivoDTO
   rpcErro: string | null
   rpcErroAmigavel: string | null
 }
@@ -65,14 +76,23 @@ export async function carregarDadosRelatoriosGerente(input: {
     p_limite: 50,
     p_tz: tzRelatorio,
   })
+  const { data: resumoRaw, error: errResumo } = await supabase.rpc(
+    'relatorio_resumo_executivo_periodo',
+    {
+      p_de: periodo.de,
+      p_ate: periodo.ate,
+      p_tz: tzRelatorio,
+    },
+  )
 
   const { data: baixo } = await supabase
     .from('v_estoque_baixo')
     .select('id, nome, codigo_barras, quantidade_atual, estoque_minimo, deficit')
     .limit(40)
 
-  const rpcErro = errPorDia?.message ?? errTop?.message ?? null
+  const rpcErro = errPorDia?.message ?? errTop?.message ?? errResumo?.message ?? null
   const rpcErroAmigavel = rpcErro ? mensagemErroParaUsuario(rpcErro) : null
+  const resumo = Array.isArray(resumoRaw) ? resumoRaw[0] : resumoRaw
 
   return {
     periodo: {
@@ -84,6 +104,18 @@ export async function carregarDadosRelatoriosGerente(input: {
     porDia: (porDiaRaw ?? []) as RelatorioVendaDiaDTO[],
     top: (topRaw ?? []) as RelatorioTopProdDTO[],
     baixo: (baixo ?? []) as RelatorioEstoqueBaixoDTO[],
+    resumoExecutivo: {
+      itens_vendidos: Number(resumo?.itens_vendidos ?? 0),
+      vendas_concluidas: Number(resumo?.vendas_concluidas ?? 0),
+      vendas_canceladas: Number(resumo?.vendas_canceladas ?? 0),
+      taxa_cancelamento: Number(resumo?.taxa_cancelamento ?? 0),
+      cobertura_custo: Number(resumo?.cobertura_custo ?? 0),
+      custo_confiavel: Boolean(resumo?.custo_confiavel),
+      margem_bruta_estimada:
+        resumo?.margem_bruta_estimada === null || resumo?.margem_bruta_estimada === undefined
+          ? null
+          : Number(resumo.margem_bruta_estimada),
+    },
     rpcErro,
     rpcErroAmigavel,
   }

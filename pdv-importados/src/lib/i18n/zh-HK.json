@@ -40,6 +40,10 @@
     "resumo_periodo": "區間內",
     "resumo_vendas": "筆銷售",
     "resumo_liquido": "淨額",
+    "kpi_itens_vendidos": "售出件數",
+    "kpi_taxa_cancelamento": "取消率",
+    "kpi_margem_bruta_estimada": "預計毛利",
+    "kpi_margem_indisponivel": "不可用（成本資料不完整）",
     "col_total_desconto": "折扣",
     "top_produtos_legenda": "同一時段內排名（已完成銷售），最多 50 個商品。",
     "estoque_baixo_sem_periodo": "目前快照（不按日期篩選）。"

@@ -159,6 +159,10 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
 
   const totalVendasPeriodo = data?.porDia.reduce((s, r) => s + Number(r.num_vendas), 0) ?? 0
   const totalLiquidoPeriodo = data?.porDia.reduce((s, r) => s + Number(r.total_liquido), 0) ?? 0
+  const itensVendidosPeriodo = data?.resumoExecutivo.itens_vendidos ?? 0
+  const taxaCancelamentoPeriodo = data?.resumoExecutivo.taxa_cancelamento ?? 0
+  const margemBrutaEstimativa = data?.resumoExecutivo.margem_bruta_estimada ?? null
+  const custoConfiavel = data?.resumoExecutivo.custo_confiavel ?? false
 
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
@@ -295,10 +299,33 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
           <section style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>{m.gerente.sec_vendas_dia}</h2>
             {!data.rpcErro && data.porDia.length > 0 ? (
-              <p style={{ fontSize: 14, marginBottom: 12, color: '#374151' }}>
-                <strong>{m.relatorios.resumo_periodo}:</strong> {totalVendasPeriodo} {m.relatorios.resumo_vendas} ·{' '}
-                {fmtMoney(totalLiquidoPeriodo)} {m.relatorios.resumo_liquido}
-              </p>
+              <div
+                style={{
+                  marginBottom: 12,
+                  color: '#374151',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 14 }}>
+                  <strong>{m.relatorios.resumo_periodo}:</strong> {totalVendasPeriodo} {m.relatorios.resumo_vendas} ·{' '}
+                  {fmtMoney(totalLiquidoPeriodo)} {m.relatorios.resumo_liquido}
+                </span>
+                <span style={{ fontSize: 13, color: '#475569' }}>
+                  {m.relatorios.kpi_itens_vendidos}: {formatDecimalPlaces(Number(itensVendidosPeriodo), 3)}
+                </span>
+                <span style={{ fontSize: 13, color: '#475569' }}>
+                  {m.relatorios.kpi_taxa_cancelamento}:{' '}
+                  {formatDecimalPlaces(Number(taxaCancelamentoPeriodo * 100), 2)}%
+                </span>
+                <span style={{ fontSize: 13, color: custoConfiavel ? '#065f46' : '#92400e' }}>
+                  {m.relatorios.kpi_margem_bruta_estimada}:{' '}
+                  {custoConfiavel && margemBrutaEstimativa !== null
+                    ? fmtMoney(Number(margemBrutaEstimativa))
+                    : m.relatorios.kpi_margem_indisponivel}
+                </span>
+              </div>
             ) : null}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8 }}>
               <button

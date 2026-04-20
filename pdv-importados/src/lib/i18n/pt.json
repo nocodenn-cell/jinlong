@@ -40,6 +40,10 @@
     "resumo_periodo": "No período",
     "resumo_vendas": "vendas",
     "resumo_liquido": "líquido",
+    "kpi_itens_vendidos": "Itens vendidos",
+    "kpi_taxa_cancelamento": "Taxa de cancelamento",
+    "kpi_margem_bruta_estimada": "Margem bruta estimada",
+    "kpi_margem_indisponivel": "indisponível (custo incompleto)",
     "col_total_desconto": "Descontos",
     "top_produtos_legenda": "Ranking no mesmo período (vendas concluídas). Até 50 produtos.",
     "estoque_baixo_sem_periodo": "Instantâneo atual (sem filtro de data)."
