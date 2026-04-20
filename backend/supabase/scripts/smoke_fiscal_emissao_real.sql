@@ -70,6 +70,19 @@ BEGIN
     RAISE EXCEPTION 'SMOKE_FAIL: proxima_tentativa_em deveria estar preenchida para erro transitorio.';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM public.documentos_fiscais_eventos e
+    WHERE e.documento_id = v_doc_id AND e.evento_tipo = 'ERRO'
+  ) THEN
+    RAISE EXCEPTION 'SMOKE_FAIL: timeline — evento ERRO ausente apos fiscal_marcar_erro.';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.v_fiscal_doc_status_event_mismatch m
+    WHERE m.documento_id = v_doc_id
+  ) THEN
+    RAISE EXCEPTION 'SMOKE_FAIL: v_fiscal_doc_status_event_mismatch listou doc em ERRO cujo ultimo evento nao e ERRO (inconsistencia).';
+  END IF;
+
   -- 4) Reprocesso manual (fluxo gerente).
   PERFORM public.fiscal_reprocessar_documento(v_doc_id);
 
@@ -79,6 +92,13 @@ BEGIN
 
   IF v_status <> 'PENDENTE' THEN
     RAISE EXCEPTION 'SMOKE_FAIL: status apos fiscal_reprocessar_documento deveria ser PENDENTE. atual=%', v_status;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.documentos_fiscais_eventos e
+    WHERE e.documento_id = v_doc_id AND e.evento_tipo = 'REPROCESSO_MANUAL'
+  ) THEN
+    RAISE EXCEPTION 'SMOKE_FAIL: timeline — evento REPROCESSO_MANUAL ausente apos fiscal_reprocessar_documento.';
   END IF;
 
   -- 5) Marca emitido (simulacao do worker/provedor).
@@ -96,6 +116,13 @@ BEGIN
 
   IF v_status <> 'EMITIDO' THEN
     RAISE EXCEPTION 'SMOKE_FAIL: status final deveria ser EMITIDO. atual=%', v_status;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.documentos_fiscais_eventos e
+    WHERE e.documento_id = v_doc_id AND e.evento_tipo = 'EMITIDO'
+  ) THEN
+    RAISE EXCEPTION 'SMOKE_FAIL: timeline — evento EMITIDO ausente apos fiscal_marcar_emitido.';
   END IF;
 
   RAISE NOTICE '=========================================';

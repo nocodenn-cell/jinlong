@@ -16,7 +16,24 @@ type ProviderResult =
     provider_ref?: string | null;
     payload?: Record<string, unknown> | null;
   }
-  | { ok: false; erro: string; transitorio: boolean };
+  | {
+    ok: false;
+    erro: string;
+    transitorio: boolean;
+    http_status?: number | null;
+    provider_code?: string | null;
+    provider_message?: string | null;
+    payload?: Record<string, unknown> | null;
+  };
+
+type FiscalNormalizedError = {
+  error_code: string;
+  error_category: string;
+  action_hint: string;
+  retryable: boolean;
+  next_step_url: string | null;
+  details: Record<string, unknown> | null;
+};
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -33,6 +50,85 @@ function randomHex(bytes = 12): string {
   const arr = new Uint8Array(bytes);
   crypto.getRandomValues(arr);
   return Array.from(arr).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function asString(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const trimmed = v.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function classifyFiscalError(input: {
+  erro: string;
+  transitorio: boolean;
+  httpStatus?: number | null;
+  providerCode?: string | null;
+  providerMessage?: string | null;
+  payload?: Record<string, unknown> | null;
+}): FiscalNormalizedError {
+  const message = [input.erro, input.providerCode, input.providerMessage].filter(Boolean).join(" | ");
+  const lower = message.toLowerCase();
+  const has = (parts: string[]) => parts.some((p) => lower.includes(p));
+  const isTimeoutOrRate =
+    input.httpStatus === 408 ||
+    input.httpStatus === 429 ||
+    input.httpStatus === 504 ||
+    has(["timeout", "timed out", "time out", "rate limit", "too many requests", "abort"]);
+  if (isTimeoutOrRate) {
+    return {
+      error_code: "TIMEOUT_OR_RATE_LIMIT",
+      error_category: "TIMEOUT_RATE_LIMIT",
+      action_hint: "Reprocessar automaticamente apos janela de retentativa; verificar limites do provider.",
+      retryable: true,
+      next_step_url: "/gerente/financeiro?tab=fiscal",
+      details: input.payload ?? null,
+    };
+  }
+
+  const isCadastroInvalido = has([
+    "cnpj",
+    "cpf",
+    "inscricao",
+    "inscrição",
+    "ie invalida",
+    "ie inválida",
+    "cadastro",
+    "destinatario",
+    "destinatário",
+    "endereco",
+    "endereço",
+  ]);
+  if (isCadastroInvalido) {
+    return {
+      error_code: "CADASTRAL_DATA_INVALID",
+      error_category: "DADOS_CADASTRAIS_INVALIDOS",
+      action_hint: "Corrigir cadastro fiscal (CNPJ/CPF/IE/endereco) e reprocessar.",
+      retryable: false,
+      next_step_url: "/gerente/financeiro?tab=fiscal",
+      details: input.payload ?? null,
+    };
+  }
+
+  const isRegraFiscal = has(["sefaz", "rejeicao", "rejeição", "regra fiscal", "cfop", "cst", "ncm"]);
+  if (isRegraFiscal) {
+    return {
+      error_code: "FISCAL_RULE_REJECTION",
+      error_category: "REJEICAO_REGRA_FISCAL",
+      action_hint: "Ajustar regra fiscal/documento e reenviar para autorizacao.",
+      retryable: false,
+      next_step_url: "/gerente/financeiro?tab=fiscal",
+      details: input.payload ?? null,
+    };
+  }
+
+  return {
+    error_code: "PROVIDER_COMMUNICATION_FAILURE",
+    error_category: "FALHA_COMUNICACAO_PROVIDER",
+    action_hint: "Verificar conectividade, status do provider e credenciais da integracao fiscal.",
+    retryable: input.transitorio || (input.httpStatus != null && input.httpStatus >= 500),
+    next_step_url: "/gerente/financeiro?tab=fiscal",
+    details: input.payload ?? null,
+  };
 }
 
 async function processWithMockProvider(doc: FiscalDoc): Promise<ProviderResult> {
@@ -78,16 +174,34 @@ async function processWithHttpProvider(
     }
     const record = isRecord(body) ? body : {};
     if (!res.ok) {
+      const errorCode = asString(record.error) ??
+        asString(record.code) ??
+        asString(record.sefaz_code) ??
+        `HTTP_${res.status}`;
+      const providerMessage = asString(record.message) ??
+        asString(record.error_description) ??
+        asString(record.sefaz_message);
       return {
         ok: false,
-        erro: String(record.error ?? `HTTP_${res.status}`),
-        transitorio: res.status >= 500 || res.status === 429,
+        erro: errorCode,
+        transitorio: res.status >= 500 || res.status === 429 || res.status === 408 || res.status === 504,
+        http_status: res.status,
+        provider_code: errorCode,
+        provider_message: providerMessage,
+        payload: record,
       };
     }
     const chave = typeof record.chave_fiscal === "string" ? record.chave_fiscal : "";
     const protocolo = typeof record.protocolo === "string" ? record.protocolo : "";
     if (!chave || !protocolo) {
-      return { ok: false, erro: "PROVIDER_INVALID_RESPONSE", transitorio: false };
+      return {
+        ok: false,
+        erro: "PROVIDER_INVALID_RESPONSE",
+        transitorio: false,
+        http_status: res.status,
+        provider_code: "PROVIDER_INVALID_RESPONSE",
+        payload: record,
+      };
     }
     return {
       ok: true,
@@ -97,8 +211,15 @@ async function processWithHttpProvider(
       payload: record,
     };
   } catch (e) {
+    const isAbort = e instanceof Error && e.name === "AbortError";
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, erro: `HTTP_PROVIDER_ERROR:${msg}`, transitorio: true };
+    return {
+      ok: false,
+      erro: isAbort ? "HTTP_PROVIDER_TIMEOUT" : `HTTP_PROVIDER_ERROR:${msg}`,
+      transitorio: true,
+      provider_code: isAbort ? "HTTP_PROVIDER_TIMEOUT" : "HTTP_PROVIDER_ERROR",
+      provider_message: msg,
+    };
   } finally {
     clearTimeout(t);
   }
@@ -181,20 +302,44 @@ Deno.serve(async (req) => {
       });
       if (error) {
         failed.push({ id: doc.id, erro: `MARCAR_EMITIDO_ERROR:${error.message}` });
-        await supabase.rpc("fiscal_marcar_erro", {
+        const normalized = classifyFiscalError({
+          erro: `MARCAR_EMITIDO_ERROR:${error.message}`,
+          transitorio: true,
+        });
+        await supabase.rpc("fiscal_marcar_erro_normalizado", {
           p_documento_id: doc.id,
           p_erro: `MARCAR_EMITIDO_ERROR:${error.message}`,
           p_transitorio: true,
+          p_error_code: normalized.error_code,
+          p_error_category: normalized.error_category,
+          p_action_hint: normalized.action_hint,
+          p_retryable: normalized.retryable,
+          p_next_step_url: normalized.next_step_url,
+          p_error_payload: normalized.details,
         });
       } else {
         emitted.push(doc.id);
       }
     } else {
       failed.push({ id: doc.id, erro: result.erro });
-      await supabase.rpc("fiscal_marcar_erro", {
+      const normalized = classifyFiscalError({
+        erro: result.erro,
+        transitorio: result.transitorio,
+        httpStatus: result.http_status,
+        providerCode: result.provider_code,
+        providerMessage: result.provider_message,
+        payload: result.payload,
+      });
+      await supabase.rpc("fiscal_marcar_erro_normalizado", {
         p_documento_id: doc.id,
         p_erro: result.erro,
         p_transitorio: result.transitorio,
+        p_error_code: normalized.error_code,
+        p_error_category: normalized.error_category,
+        p_action_hint: normalized.action_hint,
+        p_retryable: normalized.retryable,
+        p_next_step_url: normalized.next_step_url,
+        p_error_payload: normalized.details,
       });
     }
   }

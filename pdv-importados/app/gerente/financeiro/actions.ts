@@ -118,7 +118,7 @@ export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
   })
   if (error)
     return { success: false, error: mensagemErroComSecao('Documento fiscal', error.message) }
-  revalidatePath('/gerente/financeiro')
+  revalidatePath('/gerente/financeiro', 'layout')
   return { success: true, data: null }
 }
 
@@ -132,7 +132,8 @@ export async function reprocessarDocumentoFiscal(documento_id: string): Promise<
   })
   if (error)
     return { success: false, error: mensagemErroComSecao('Reprocessar documento', error.message) }
-  revalidatePath('/gerente/financeiro')
+  revalidatePath('/gerente/financeiro', 'layout')
+  revalidatePath(`/gerente/financeiro/documento/${documento_id}`)
   return { success: true, data: null }
 }
 
@@ -171,7 +172,7 @@ export async function processarFilaFiscalAgora(limit = 20): Promise<R<{ emitted:
           : `O servidor fiscal não respondeu como esperado (código ${res.status}). Verifique a configuração e a internet.`,
       }
     }
-    revalidatePath('/gerente/financeiro')
+    revalidatePath('/gerente/financeiro', 'layout')
     return {
       success: true,
       data: {

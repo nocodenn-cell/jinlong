@@ -339,12 +339,13 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
             { key: 'tp', header: 'Tipo' },
             { key: 't', header: 'Tentativas' },
             { key: 'e', header: 'Erro' },
+            { key: 'dt', header: 'Detalhe' },
             { key: 'ac', header: 'Ações' },
           ]}
         >
           {docsFiscais.length === 0 ? (
             <tr>
-              <td colSpan={6} style={{ padding: 12, color: '#6b7280' }}>
+              <td colSpan={7} style={{ padding: 12, color: '#6b7280' }}>
                 Nenhum documento fiscal na fila.
               </td>
             </tr>
@@ -358,6 +359,11 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                 <td style={{ padding: 10 }}>{d.tipo_doc}</td>
                 <td style={{ padding: 10 }}>{Number(d.tentativas ?? 0)}</td>
                 <td style={{ padding: 10, color: '#b91c1c' }}>{d.ultimo_erro ?? '—'}</td>
+                <td style={{ padding: 10 }}>
+                  <Link href={`/gerente/financeiro/documento/${d.id}`} style={{ fontSize: 13, color: '#2563eb' }}>
+                    Ver timeline
+                  </Link>
+                </td>
                 <td style={{ padding: 10 }}>
                   {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
                     <button

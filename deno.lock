@@ -26,6 +26,7 @@
             "npm:clsx@^2.1.0",
             "npm:eslint-config-next@^15.5.14",
             "npm:eslint@8",
+            "npm:exceljs@^4.4.0",
             "npm:lucide-react@^1.8.0",
             "npm:next@^16.2.4",
             "npm:postcss@8",
