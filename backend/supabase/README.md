@@ -2,6 +2,10 @@
 
 As migrations e Edge Functions do projeto ficam em `**backend/supabase/**` (pasta central de backend do monorepo), não em `pdv-local`.
 
+**Checklist única (migrations → deploy das Edges → secrets → alinhamento web/desktop):** [../../docs/CHECKLIST_DEPLOY_SUPABASE.md](../../docs/CHECKLIST_DEPLOY_SUPABASE.md).
+
+**Kardex (auditoria de estoque):** view `public.v_kardex_unificado` (migration `060_v_kardex_unificado.sql`) — eventos agregados a partir de `movimentos_estoque_log`, `estoque_baixas` e `estoque_reposicoes_cancelamento`.
+
 ## Stack local vs projeto linkado (uma máquina)
 
 - **`npx supabase link`:** liga o CLI ao projeto **remoto** (Reference ID). Use na pasta **`backend`** para `db push` e deploy de functions. Não substitui o Docker local.

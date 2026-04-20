@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { timingSafeEqualStr } from "../_shared/crypto.ts";
+import { timingSafeEqualSecret } from "../_shared/crypto.ts";
 
 type FiscalDoc = {
   id: string;
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
 
   const workerKey = Deno.env.get("FISCAL_WORKER_KEY");
   const gotKey = req.headers.get("X-FISCAL-WORKER-KEY");
-  if (!workerKey || !gotKey || !timingSafeEqualStr(workerKey, gotKey)) {
+  if (!workerKey?.trim() || !gotKey?.trim() || !(await timingSafeEqualSecret(workerKey, gotKey))) {
     return json(401, { ok: false, error: "UNAUTHORIZED" });
   }
 

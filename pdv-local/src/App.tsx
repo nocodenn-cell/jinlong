@@ -18,6 +18,7 @@ import {
   mensagemErroDeExcecao,
   mensagemErroParaUsuario,
 } from './lib/mensagemErroUsuario'
+import { logger } from './lib/logger'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@core/caixa/mapRegrasPreco'
 
 type CatalogoLocalInvoke = {
@@ -1404,7 +1405,7 @@ export function App() {
                     setMensagem('Venda registrada localmente. Sincronização pendente.')
                   }
                 } catch (e) {
-                  console.error(e)
+                  logger.error('Erro ao registrar venda no caixa local', { error: e })
                   setMensagem(
                     mensagemErroDeExcecao(e, 'Não foi possível registrar a venda no caixa local.'),
                   )

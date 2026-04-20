@@ -11,9 +11,20 @@ export const FORMAS_PAGAMENTO_CAIXA = [
   'FIADO',
 ] as const
 
+function quantidadeAte3CasasDecimais(n: number): boolean {
+  if (!Number.isFinite(n)) return false
+  const r = Math.round((n + Number.EPSILON) * 1000) / 1000
+  return Math.abs(n - r) < 1e-9
+}
+
 export const itemFinalizarVendaSchema = z.object({
   produtoId: z.string().uuid('Identificador do produto inválido.'),
-  quantidade: z.number().positive('A quantidade de cada item deve ser maior que zero.'),
+  quantidade: z
+    .number()
+    .positive('A quantidade de cada item deve ser maior que zero.')
+    .refine(quantidadeAte3CasasDecimais, {
+      message: 'Use no máximo 3 casas decimais na quantidade (ex.: balança 0,125 kg).',
+    }),
 })
 
 export const pagamentoParcelaSchema = z.object({
@@ -24,6 +35,8 @@ export const pagamentoParcelaSchema = z.object({
 })
 
 export const finalizarVendaInputSchema = z.object({
+  /** Opcional: UUID estável por tentativa de finalização (fluxo unificado); vira `p_venda_id` e evita duplicar venda em retry/duplo clique. */
+  idempotencyKey: z.string().uuid().optional(),
   formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
     errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
   }),

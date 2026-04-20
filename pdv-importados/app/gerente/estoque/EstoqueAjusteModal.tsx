@@ -1,28 +1,29 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import type { Mensagens } from '@/src/lib/i18n/getMessages'
 
-export type EstoqueAjusteModalProps = {
+export type EstoqueAjusteModalProps = Readonly<{
   open: boolean
   produtoId: string
   produtoNome: string
   quantidadeAtual: number
   estoqueMinimo: number
   saving: boolean
-  labels: {
+  labels: Readonly<{
     titulo: string
     atual: string
     minimo: string
     salvar: string
     cancelar: string
-  }
+  }>
   onClose: () => void
   onSubmit: (payload: {
     produto_id: string
     quantidade_atual: number
     estoque_minimo: number
   }) => void
-}
+}>
 
 /**
  * Modal de ajuste de quantidade / mínimo (substitui o formulário inline da listagem).
@@ -38,24 +39,48 @@ export function EstoqueAjusteModal({
   onClose,
   onSubmit,
 }: EstoqueAjusteModalProps) {
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (open && !dialog.open) {
+      dialog.showModal()
+    }
+    return () => {
+      if (dialog.open) dialog.close()
+    }
+  }, [open])
+
   if (!open) return null
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      open
       aria-labelledby="estoque-ajuste-titulo"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose()
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          onClose()
+        }
+      }}
       style={{
-        position: 'fixed',
-        inset: 0,
+        width: '100%',
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+        border: 'none',
         background: 'rgba(0,0,0,0.35)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 50,
-        padding: 16,
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -66,7 +91,6 @@ export function EstoqueAjusteModal({
           width: '100%',
           boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         <h2 id="estoque-ajuste-titulo" style={{ fontSize: 18, fontWeight: 600, margin: '0 0 8px' }}>
           {labels.titulo}
@@ -141,7 +165,7 @@ export function EstoqueAjusteModal({
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   )
 }
 

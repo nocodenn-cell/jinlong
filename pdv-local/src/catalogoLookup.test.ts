@@ -24,6 +24,12 @@ describe('variantesChaveLeitura', () => {
     const longa = '00789012345679999'
     expect(variantesChaveLeitura(longa)).toContain('0078901234567')
   })
+
+  it('EAN com zero à esquerda e dígitos extras: inclui GTIN-13 sem zeros à esquerda', () => {
+    const lida = '07891234567890'
+    expect(variantesChaveLeitura(lida)).toContain('7891234567890')
+    expect(variantesChaveLeitura(lida)).toContain('0789123456789')
+  })
 })
 
 describe('resolverProdutoNoCatalogo', () => {

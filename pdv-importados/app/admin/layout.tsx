@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { Noto_Sans_SC } from 'next/font/google'
 import {
   ArrowRightLeft,
   Building2,
@@ -22,14 +21,6 @@ import {
   adminUi,
 } from '@/lib/i18n/adminChineseUiLabels'
 import '@/styles/chinese-theme.css'
-
-const notoSc = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['500', '700'],
-  variable: '--font-noto-sc-admin',
-  display: 'swap',
-  adjustFontFallback: true,
-})
 
 const adminNavItems = [
   { href: '/admin/dashboard', labelKey: 'dashboard' as const, icon: LayoutDashboard },
@@ -55,7 +46,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       className={[
         'min-h-screen',
         chineseOn
-          ? `admin-chinese-theme bg-[#f5f0eb] ${notoSc.variable} ${notoSc.className}`
+          ? `admin-chinese-theme bg-[#f5f0eb]`
           : 'bg-slate-100',
       ].join(' ')}
     >

@@ -18,6 +18,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
+import { logJson } from "../../../../shared/logger.ts";
 
 const USER_LIMIT = 5;
 const IP_LIMIT = 20;
@@ -29,11 +30,7 @@ const CORS_ALLOW_HEADERS =
 const CORS_ALLOW_METHODS = "POST, OPTIONS";
 
 /** Log estruturado */
-function logJson(payload: Record<string, unknown>) {
-  console.log(
-    JSON.stringify({ ts: new Date().toISOString(), svc: "validar-gerente", ...payload })
-  );
-}
+const log = (payload: Record<string, unknown>) => logJson("validar-gerente", payload);
 
 function normalizeOriginUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
@@ -123,7 +120,7 @@ function logCorsBlocked(req: Request): void {
   const ts = new Date().toISOString();
   const originLabel = origin || "(none)";
   console.warn(`CORS blocked: origin=${originLabel}, ip=${ip}, ts=${ts}`);
-  logJson({
+  log({
     level: "warn",
     stage: "cors",
     error: "ORIGIN_NOT_ALLOWED",
@@ -156,7 +153,7 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    logJson({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED" });
+    log({ level: "warn", stage: "http", error: "METHOD_NOT_ALLOWED" });
     return jsonResponse(405, { ok: false, error: "METHOD_NOT_ALLOWED" }, req, corsMode);
   }
 
@@ -165,7 +162,7 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    logJson({ level: "warn", stage: "http", error: "INVALID_JSON" });
+    log({ level: "warn", stage: "http", error: "INVALID_JSON" });
     return jsonResponse(400, { ok: false, error: "INVALID_JSON" }, req, corsMode);
   }
 
@@ -189,7 +186,7 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!supabaseUrl || !serviceRoleKey) {
-    logJson({ level: "error", stage: "config", error: "MISSING_ENV" });
+    log({ level: "error", stage: "config", error: "MISSING_ENV" });
     return jsonResponse(500, { ok: false, error: "CONFIG_ERROR" }, req, corsMode);
   }
 
@@ -204,13 +201,13 @@ Deno.serve(async (req) => {
         ? authHeader.slice("Bearer ".length).trim()
         : "";
     if (!bearer) {
-      logJson({ level: "warn", stage: "auth", error: "MISSING_BEARER" });
+      log({ level: "warn", stage: "auth", error: "MISSING_BEARER" });
       return jsonResponse(401, { ok: false, error: "UNAUTHORIZED" }, req, corsMode);
     }
 
     const { data: authData, error: authErr } = await supabase.auth.getUser(bearer);
     if (authErr || !authData.user) {
-      logJson({
+      log({
         level: "warn",
         stage: "auth",
         error: "INVALID_BEARER",
@@ -226,7 +223,7 @@ Deno.serve(async (req) => {
       userId: authData.user.id,
       req,
       logStage: "auth",
-      log: logJson,
+      log: log,
       limits: {
         user: USER_LIMIT,
         ip: IP_LIMIT,
@@ -239,7 +236,7 @@ Deno.serve(async (req) => {
     return jsonResponse(result.status, result.body, req, corsMode);
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : "UNKNOWN_ERROR";
-    logJson({ level: "error", stage: "runtime", error: errorMsg });
+    log({ level: "error", stage: "runtime", error: errorMsg });
     return jsonResponse(500, { ok: false, error: "ERRO_INTERNO" }, req, corsMode);
   }
 });

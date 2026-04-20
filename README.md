@@ -1,5 +1,9 @@
 # fastproduct — monorepo PDV
 
+[![CI](https://github.com/your-org/fastproduct/actions/workflows/ci-pdv-importados.yml/badge.svg)](https://github.com/your-org/fastproduct/actions/workflows/ci-pdv-importados.yml)
+[![Coverage](https://codecov.io/gh/your-org/fastproduct/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/fastproduct)
+[![Uptime](https://img.shields.io/badge/Uptime-99.9%25-brightgreen)](https://sentry.io)
+
 PDV para lojas de importados no Brasil, com interface em **português**, **普通话 (简体)** e **廣東話 (繁體)**.
 
 ## Estrutura

@@ -144,6 +144,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
+            autoComplete="username"
             required
             autoFocus
             style={{
@@ -160,6 +161,7 @@ export function LoginForm() {
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
             placeholder="Senha"
+            autoComplete="current-password"
             required
             style={{
               padding: '10px 12px',

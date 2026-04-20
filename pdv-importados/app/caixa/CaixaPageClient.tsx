@@ -18,6 +18,7 @@ import {
   estornarMovimentacaoCaixa,
   type MovimentacaoCaixaDTO,
 } from "@/app/caixa/actions"
+import { DEFAULT_PRICING_CONTEXT } from "@/core/pricing"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/src/lib/i18n/getMessages"
@@ -110,6 +111,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
+  /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». Só usado com `USE_UNIFIED_SALES_FLOW` no servidor. */
+  const vendaIdempotenciaRef = useRef<string | null>(null)
 
   const focarCampoBusca = useCallback(() => {
     requestAnimationFrame(() => {
@@ -175,7 +178,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         setMensagem(null)
       } else {
         setMensagem(`${m.caixa.regras_erro_prefixo} ${res.error}`)
-        setRegras([])
+        setRegras([], DEFAULT_PRICING_CONTEXT)
       }
       setCarregandoRegras(false)
     })()
@@ -296,6 +299,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   )
 
   const handleNovoCupom = useCallback(() => {
+    vendaIdempotenciaRef.current = null
     limparCarrinho()
     setCodigo("")
     setMensagem(null)
@@ -438,7 +442,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setFinalizando(true)
     setMensagem(null)
     try {
+      if (!vendaIdempotenciaRef.current) {
+        vendaIdempotenciaRef.current = crypto.randomUUID()
+      }
       const payload: FinalizarVendaInput = {
+        idempotencyKey: vendaIdempotenciaRef.current,
         formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
         totalBruto,
         totalDesconto:
@@ -464,6 +472,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       }
       const res = await finalizarVendaCaixa(payload)
       if (res.ok) {
+        vendaIdempotenciaRef.current = null
         limparCarrinho()
         limparEstadoDescontoGerente()
         setMensagem(
@@ -493,6 +502,46 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     m,
     recarregarStatusCaixa,
   ])
+
+  const handleFinalizarRef = useRef(handleFinalizar)
+  const handleFecharCaixaRef = useRef(handleFecharCaixa)
+  const focarCampoBuscaRef = useRef(focarCampoBusca)
+  handleFinalizarRef.current = handleFinalizar
+  handleFecharCaixaRef.current = handleFecharCaixa
+  focarCampoBuscaRef.current = focarCampoBusca
+
+  useEffect(() => {
+    const alvoEhCampoTexto = (t: EventTarget | null) => {
+      if (!(t instanceof HTMLElement)) return false
+      const tag = t.tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true
+      if (t.isContentEditable) return true
+      if (t.closest("[data-caixa-atalho-bloqueado='true']")) return true
+      return false
+    }
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return
+      if (alvoEhCampoTexto(e.target)) return
+
+      if (e.code === "F4") {
+        e.preventDefault()
+        void handleFinalizarRef.current()
+        return
+      }
+      if (e.code === "F6") {
+        e.preventDefault()
+        void handleFecharCaixaRef.current()
+        return
+      }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyB") {
+        e.preventDefault()
+        focarCampoBuscaRef.current()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
 
   const handleSalvarMovimentacao = useCallback(
     async (payload: {

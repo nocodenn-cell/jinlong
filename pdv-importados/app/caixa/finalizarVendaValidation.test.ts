@@ -77,4 +77,54 @@ describe('finalizarVendaValidation', () => {
     })
     expect(r.success).toBe(true)
   })
+
+  it('finalizarVendaInputSchema aceita quantidade com 3 casas decimais', () => {
+    const r = finalizarVendaInputSchema.safeParse({
+      formaPagamento: 'DINHEIRO',
+      totalBruto: 1.25,
+      totalDesconto: 0,
+      totalLiquido: 1.25,
+      pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 1.25 }],
+      itens: [{ ...itemBase, quantidade: 0.125 }],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('finalizarVendaInputSchema rejeita quantidade com mais de 3 decimais', () => {
+    const r = finalizarVendaInputSchema.safeParse({
+      formaPagamento: 'DINHEIRO',
+      totalBruto: 1,
+      totalDesconto: 0,
+      totalLiquido: 1,
+      pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 1 }],
+      itens: [{ ...itemBase, quantidade: 1.0001 }],
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it('finalizarVendaInputSchema aceita idempotencyKey UUID opcional', () => {
+    const r = finalizarVendaInputSchema.safeParse({
+      idempotencyKey: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+      formaPagamento: 'PIX',
+      totalBruto: 20,
+      totalDesconto: 2,
+      totalLiquido: 18,
+      pagamentos: [{ formaPagamento: 'PIX', valor: 18 }],
+      itens: [itemBase],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('finalizarVendaInputSchema rejeita idempotencyKey inválido', () => {
+    const r = finalizarVendaInputSchema.safeParse({
+      idempotencyKey: 'não-uuid',
+      formaPagamento: 'PIX',
+      totalBruto: 20,
+      totalDesconto: 2,
+      totalLiquido: 18,
+      pagamentos: [{ formaPagamento: 'PIX', valor: 18 }],
+      itens: [itemBase],
+    })
+    expect(r.success).toBe(false)
+  })
 })

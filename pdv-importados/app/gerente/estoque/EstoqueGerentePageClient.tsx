@@ -82,51 +82,62 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
   const somenteBaixo = filtro === 'baixo'
   const modalLabels = labelsAjusteEstoque(m)
 
-  const exportSlot =
-    data?.modo === 'baixo' ? (
-      <ExportCsvButton
-        label={m.gerente.exportar_csv}
-        filename="gerente-estoque-baixo.csv"
-        columns={[
-          { key: 'nome', header: m.estoque.col_produto },
-          { key: 'codigo_barras', header: m.estoque.col_codigo },
-          { key: 'quantidade_atual', header: m.estoque.col_atual },
-          { key: 'estoque_minimo', header: m.estoque.col_minimo },
-          { key: 'deficit', header: m.estoque.col_deficit },
-        ]}
-        rows={
-          data.linhas.map((row: EstoqueBaixoRowDTO) => ({
-            nome: row.nome,
-            codigo_barras: row.codigo_barras ?? '',
-            quantidade_atual: row.quantidade_atual,
-            estoque_minimo: row.estoque_minimo,
-            deficit: row.deficit,
-          }))
-        }
-      />
-    ) : data?.modo === 'todos' ? (
-      <ExportCsvButton
-        label={m.gerente.exportar_csv}
-        filename="gerente-estoque-visao-geral.csv"
-        columns={[
-          { key: 'nome', header: m.estoque.col_produto },
-          { key: 'codigo_barras', header: m.estoque.col_codigo },
-          { key: 'unidade_medida', header: m.estoque.col_unidade },
-          { key: 'quantidade_atual', header: m.estoque.col_atual },
-          { key: 'estoque_minimo', header: m.estoque.col_minimo },
-        ]}
-        rows={data.produtos.map((p) => {
-          const e = normalizaEstoqueRow(p)
-          return {
-            nome: p.nome,
-            codigo_barras: p.codigo_barras ?? '',
-            unidade_medida: p.unidade_medida,
-            quantidade_atual: e ? e.quantidade_atual : '',
-            estoque_minimo: e ? e.estoque_minimo : '',
+  const exportSlot = useMemo(() => {
+    if (!data) return null
+
+    if (data.modo === 'baixo') {
+      return (
+        <ExportCsvButton
+          label={m.gerente.exportar_csv}
+          filename="gerente-estoque-baixo.csv"
+          columns={[
+            { key: 'nome', header: m.estoque.col_produto },
+            { key: 'codigo_barras', header: m.estoque.col_codigo },
+            { key: 'quantidade_atual', header: m.estoque.col_atual },
+            { key: 'estoque_minimo', header: m.estoque.col_minimo },
+            { key: 'deficit', header: m.estoque.col_deficit },
+          ]}
+          rows={
+            data.linhas.map((row: EstoqueBaixoRowDTO) => ({
+              nome: row.nome,
+              codigo_barras: row.codigo_barras ?? '',
+              quantidade_atual: row.quantidade_atual,
+              estoque_minimo: row.estoque_minimo,
+              deficit: row.deficit,
+            }))
           }
-        })}
-      />
-    ) : null
+        />
+      )
+    }
+
+    if (data.modo === 'todos') {
+      return (
+        <ExportCsvButton
+          label={m.gerente.exportar_csv}
+          filename="gerente-estoque-visao-geral.csv"
+          columns={[
+            { key: 'nome', header: m.estoque.col_produto },
+            { key: 'codigo_barras', header: m.estoque.col_codigo },
+            { key: 'unidade_medida', header: m.estoque.col_unidade },
+            { key: 'quantidade_atual', header: m.estoque.col_atual },
+            { key: 'estoque_minimo', header: m.estoque.col_minimo },
+          ]}
+          rows={data.produtos.map((p) => {
+            const e = normalizaEstoqueRow(p)
+            return {
+              nome: p.nome,
+              codigo_barras: p.codigo_barras ?? '',
+              unidade_medida: p.unidade_medida,
+              quantidade_atual: e ? e.quantidade_atual : '',
+              estoque_minimo: e ? e.estoque_minimo : '',
+            }
+          })}
+        />
+      )
+    }
+
+    return null
+  }, [data, m])
 
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>

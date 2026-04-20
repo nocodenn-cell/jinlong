@@ -15,8 +15,9 @@
 // ---
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { timingSafeEqualStr } from "../_shared/crypto.ts";
+import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
+import { logJson } from "../../../../shared/logger.ts";
 
 type OutboxEvent = {
   id: string;
@@ -277,11 +278,8 @@ function parseVendaPayload(raw: unknown): VendaPayload {
   return payload;
 }
 
-function logJson(payload: Record<string, unknown>) {
-  console.log(
-    JSON.stringify({ ts: new Date().toISOString(), svc: "sync-outbox", ...payload }),
-  );
-}
+/** Log estruturado */
+const log = (payload: Record<string, unknown>) => logJson("sync-outbox", payload);
 
 function shouldExposeInternalErrors(): boolean {
   const raw = (Deno.env.get("SYNC_OUTBOX_EXPOSE_INTERNAL_ERRORS") ?? "").trim().toLowerCase();
@@ -410,7 +408,7 @@ async function handleValidarGerentePdvSync(
     userId: null,
     req,
     logStage: "validar_gerente_pdv",
-    log: logJson,
+    log: log,
     limits: {
       ip: GERENTE_PDV_IP_LIMIT,
       device: GERENTE_PDV_DEVICE_LIMIT,
@@ -726,7 +724,7 @@ async function handlePostOutboxBatch(
   const processed: string[] = [];
   const failed: { id: string; error: string }[] = [];
   const useUnified = shouldUseUnifiedSalesFlow(req.headers.get("x-device-fingerprint"));
-  logJson({
+  log({
     level: "info",
     stage: "sync_start",
     request_id: requestId,
@@ -738,7 +736,7 @@ async function handlePostOutboxBatch(
     try {
       await dispatchOutboxEvent(supabase, ev, useUnified);
       processed.push(ev.id);
-      logJson({
+      log({
         level: "info",
         stage: "event_processed",
         request_id: requestId,
@@ -749,7 +747,7 @@ async function handlePostOutboxBatch(
     } catch (e) {
       const rawErr = e instanceof Error ? e.message : String(e);
       failed.push({ id: ev.id, error: publicBatchError(rawErr, exposeInternalErrors) });
-      logJson({
+      log({
         level: "warn",
         stage: "event_failed",
         request_id: requestId,
@@ -761,7 +759,7 @@ async function handlePostOutboxBatch(
     }
   }
 
-  logJson({
+  log({
     level: "info",
     stage: "sync_end",
     request_id: requestId,
@@ -784,7 +782,7 @@ Deno.serve(async (req) => {
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
   const syncKey = Deno.env.get("SYNC_KEY")?.trim() ?? "";
   if (!supabaseUrl || !serviceRole || !syncKey) {
-    logJson({ level: "error", stage: "env", request_id: requestId, error: "MISSING_SUPABASE_ENV" });
+    log({ level: "error", stage: "env", request_id: requestId, error: "MISSING_SUPABASE_ENV" });
     return jsonResponse(req, 500, { ok: false, error: "MISSING_SUPABASE_ENV", request_id: requestId });
   }
 
@@ -797,7 +795,7 @@ Deno.serve(async (req) => {
   const rawBody = req.method === "POST" ? await req.text() : "";
   const auth = await authorizeSync(req, syncKey, supabase, rawBody);
   if (!auth.ok) {
-    logJson({
+    log({
       level: "warn",
       stage: "auth",
       request_id: requestId,
@@ -838,7 +836,7 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 400, { ok: false, error: "INVALID_OPERATION", request_id: requestId });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    logJson({
+    log({
       level: "error",
       stage: "sync_fatal",
       request_id: requestId,
@@ -859,7 +857,7 @@ async function maybePruneExpiredSyncNonces(supabase: SupabaseAdmin): Promise<voi
   const nowIso = new Date().toISOString();
   const { error } = await supabase.from("sync_request_nonces").delete().lt("expires_at", nowIso);
   if (error) {
-    logJson({ level: "warn", stage: "nonce_prune", error: error.message });
+    log({ level: "warn", stage: "nonce_prune", error: error.message });
   }
 }
 
@@ -870,7 +868,9 @@ async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAd
   const signature = req.headers.get("X-SYNC-SIGNATURE");
   const device = req.headers.get("x-device-fingerprint") ?? "unknown";
 
-  if (!gotKey || !timingSafeEqualStr(gotKey, syncKey)) return { ok: false, error: "UNAUTHORIZED" };
+  if (!gotKey?.trim() || !(await timingSafeEqualSecret(gotKey, syncKey))) {
+    return { ok: false, error: "UNAUTHORIZED" };
+  }
   if (!ts || !nonce || !signature) return { ok: false, error: "MISSING_HEADERS" };
   const nonceTrim = nonce.trim();
   if (!isUuid(nonceTrim)) return { ok: false, error: "INVALID_NONCE" };
@@ -896,7 +896,7 @@ async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAd
     await maybePruneExpiredSyncNonces(supabase);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    logJson({ level: "warn", stage: "nonce_prune_fatal", error: msg });
+    log({ level: "warn", stage: "nonce_prune_fatal", error: msg });
   }
 
   return { ok: true };

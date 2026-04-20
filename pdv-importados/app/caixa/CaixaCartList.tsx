@@ -69,12 +69,14 @@ export function CaixaCartList({
               <div className="flex items-center justify-end gap-1">
                 <Input
                   type="number"
-                  min={1}
+                  inputMode="decimal"
+                  min={0.001}
+                  step={0.001}
                   value={item.quantidade}
                   onChange={(e) =>
                     onAlterarQuantidade(item.id, Number(e.target.value))
                   }
-                  className="w-14 h-8 text-right bg-slate-800 border-slate-600 text-slate-100 text-xs px-1"
+                  className="w-16 h-8 text-right bg-slate-800 border-slate-600 text-slate-100 text-xs px-1"
                 />
                 <Button
                   type="button"
@@ -118,7 +120,9 @@ export function CaixaCartList({
                 <div className="flex items-center gap-2 mt-0.5">
                   <Input
                     type="number"
-                    min={1}
+                    inputMode="decimal"
+                    min={0.001}
+                    step={0.001}
                     value={item.quantidade}
                     onChange={(e) =>
                       onAlterarQuantidade(item.id, Number(e.target.value))

@@ -2,6 +2,9 @@
   "name": "pdv-local",
   "private": true,
   "version": "0.1.0",
+  "engines": {
+    "node": ">=20.0.0 <25.0.0"
+  },
   "description": "PDV desktop local-first (Tauri + React) para loja de importados",
   "scripts": {
     "dev": "vite",
