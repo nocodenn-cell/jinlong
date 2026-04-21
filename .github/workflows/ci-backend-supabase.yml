@@ -95,6 +95,62 @@ jobs:
           cd backend
           npx supabase stop --project-id fastproduct --no-backup
 
+  test-rls-scope:
+    name: Test RLS scope by profile
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (workspace root)
+        run: npm ci
+
+      - name: Start Supabase local stack
+        run: |
+          set -euo pipefail
+          cd backend
+          npx supabase --version
+          timeout 240s npx supabase start
+
+      - name: Reset + seed base determinístico
+        run: |
+          set -euo pipefail
+          cd backend
+          npx supabase db reset --local --yes
+
+      - name: Run RLS scope test suite
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          npm run test:rls-scope -w fastproduct-backend
+
+      - name: Diagnóstico em falha (logs + status)
+        if: failure()
+        run: |
+          set +e
+          cd backend
+          echo "=== supabase status ==="
+          npx supabase status || true
+          echo "=== docker ps -a ==="
+          docker ps -a || true
+          echo "=== logs dos containers supabase ==="
+          for c in $(docker ps -a --format '{{.Names}}' | rg supabase); do
+            echo "--- $c ---"
+            docker logs "$c" --tail 200 || true
+          done
+
+      - name: Teardown Supabase local
+        if: always()
+        run: |
+          set +e
+          cd backend
+          npx supabase stop --project-id fastproduct --no-backup
+
   edge-functions-typecheck:
     runs-on: ubuntu-latest
     steps:
