@@ -126,7 +126,6 @@ pub struct RegraPrecoCacheDto {
 #[derive(Serialize)]
 pub struct PdvConfigCacheDto {
     pub gerente_id: String,
-    pub gerente_senha_sha256: String,
     pub max_desconto_gerente_percentual: f64,
 }
 
@@ -604,7 +603,7 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
 
     let mut stmt = conn
         .prepare(
-            "SELECT gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual
+            "SELECT gerente_id, max_desconto_gerente_percentual
              FROM pdv_config_cache
              WHERE id = 1",
         )
@@ -614,8 +613,7 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
         .query_row([], |row| {
             Ok(PdvConfigCacheDto {
                 gerente_id: row.get(0)?,
-                gerente_senha_sha256: row.get(1)?,
-                max_desconto_gerente_percentual: row.get(2)?,
+                max_desconto_gerente_percentual: row.get(1)?,
             })
         })
         .optional();
@@ -724,7 +722,6 @@ struct RegraPrecoSupabaseRow {
 #[derive(Deserialize)]
 struct PdvConfigSupabaseRow {
     gerente_id: String,
-    gerente_senha_sha256: String,
     max_desconto_gerente_percentual: f64,
 }
 
@@ -783,9 +780,10 @@ fn build_request_signature(
     sync_key: &str,
     ts: i64,
     nonce: &str,
+    device_fingerprint: &str,
     body: &str,
 ) -> Result<String, String> {
-    let message = format!("{ts}.{nonce}.{body}");
+    let message = format!("{ts}.{nonce}.{device_fingerprint}.{body}");
     let mut mac = HmacSha256::new_from_slice(sync_key.as_bytes())
         .map_err(|e| format!("Falha ao inicializar assinatura HMAC: {e}"))?;
     mac.update(message.as_bytes());
@@ -800,7 +798,7 @@ fn signed_headers_for_request(
 ) -> Result<reqwest::header::HeaderMap, String> {
     let ts = unix_ts_now()?;
     let nonce = Uuid::new_v4().to_string();
-    let signature = build_request_signature(sync_key, ts, &nonce, body)?;
+    let signature = build_request_signature(sync_key, ts, &nonce, device_fingerprint, body)?;
 
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
@@ -1031,14 +1029,13 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     let conn = Connection::open(path).map_err(|e| e.to_string())?;
     conn.execute(
         "INSERT OR REPLACE INTO pdv_config_cache (id, gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual)
-         VALUES (1, ?1, ?2, ?3)",
-        params![row.gerente_id, row.gerente_senha_sha256, row.max_desconto_gerente_percentual],
+         VALUES (1, ?1, '', ?2)",
+        params![row.gerente_id, row.max_desconto_gerente_percentual],
     )
     .map_err(|e| e.to_string())?;
 
     Ok(Some(PdvConfigCacheDto {
         gerente_id: row.gerente_id,
-        gerente_senha_sha256: row.gerente_senha_sha256,
         max_desconto_gerente_percentual: row.max_desconto_gerente_percentual,
     }))
 }
@@ -1412,15 +1409,18 @@ mod tests {
     fn assinatura_hmac_muda_com_nonce_e_corpo() {
         let key = "segredo-de-teste";
         let ts = 1_770_000_000i64;
-        let sig1 =
-            build_request_signature(key, ts, "nonce-a", "{\"events\":[]}").expect("assinatura 1");
-        let sig2 =
-            build_request_signature(key, ts, "nonce-b", "{\"events\":[]}").expect("assinatura 2");
-        let sig3 =
-            build_request_signature(key, ts, "nonce-a", "{\"events\":[1]}").expect("assinatura 3");
+        let sig1 = build_request_signature(key, ts, "nonce-a", "device-a", "{\"events\":[]}")
+            .expect("assinatura 1");
+        let sig2 = build_request_signature(key, ts, "nonce-b", "device-a", "{\"events\":[]}")
+            .expect("assinatura 2");
+        let sig3 = build_request_signature(key, ts, "nonce-a", "device-a", "{\"events\":[1]}")
+            .expect("assinatura 3");
+        let sig4 = build_request_signature(key, ts, "nonce-a", "device-b", "{\"events\":[]}")
+            .expect("assinatura 4");
 
         assert_ne!(sig1, sig2);
         assert_ne!(sig1, sig3);
+        assert_ne!(sig1, sig4);
         assert_eq!(sig1.len(), 64);
     }
 }

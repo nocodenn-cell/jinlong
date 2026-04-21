@@ -5,6 +5,32 @@ const nextConfig = {
   typescript: {
     tsconfigPath: './tsconfig.json',
   },
+  /**
+   * Cabeçalhos baseline (defesa em profundidade).
+   * CSP completa costuma exigir nonces/hashes com Next + scripts inline; trate em fase dedicada.
+   */
+  async headers() {
+    const base = [
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+      },
+    ]
+    const hsts =
+      process.env.VERCEL_ENV === 'production' ||
+      (process.env.NODE_ENV === 'production' && !process.env.VERCEL)
+        ? [{ key: 'Strict-Transport-Security', value: 'max-age=15552000; includeSubDomains' }]
+        : []
+    return [
+      {
+        source: '/:path*',
+        headers: [...base, ...hsts],
+      },
+    ]
+  },
 }
 
 module.exports = withSentryConfig(nextConfig, {

@@ -3,10 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useCartStore } from './stores/cartStore'
 import type { ItemCarrinho } from '@core/cart/types'
 import type { RegraPreco } from '@core/pricing/types'
-import {
-  defaultPdvConfig,
-  PDV_CONFIG_GERENTE_HASH_SENTINEL,
-} from './config/pdvConfig'
+import { defaultPdvConfig } from './config/pdvConfig'
 import {
   buildMapaProdutoChaves,
   produtosCatalogoAtivos,
@@ -29,7 +26,6 @@ type CatalogoLocalInvoke = {
 /** Resposta de `pdv_config_local_get_cmd` (espelha `PdvConfigCacheDto` no Rust). */
 type PdvConfigLocalInvoke = {
   gerente_id: string
-  gerente_senha_sha256: string
   max_desconto_gerente_percentual: number
 }
 
@@ -134,16 +130,6 @@ export function App() {
   const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
 
   const [gerenteId, setGerenteId] = useState(defaultPdvConfig.gerenteId)
-  const [gerenteSenhaSha256, setGerenteSenhaSha256] = useState(
-    defaultPdvConfig.gerenteSenhaSha256
-  )
-
-  const sha256Hex = async (value: string) => {
-    const bytes = new TextEncoder().encode(value)
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', bytes)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-  }
 
   const atualizarMediaMs = (atual: number | null, nova: number) => {
     if (!Number.isFinite(nova) || nova < 0) return atual
@@ -276,9 +262,6 @@ export function App() {
         )
         if (!cancelled && cfg) {
           setGerenteId(cfg.gerente_id ?? defaultPdvConfig.gerenteId)
-          setGerenteSenhaSha256(
-            cfg.gerente_senha_sha256 ?? defaultPdvConfig.gerenteSenhaSha256
-          )
           setMaxDescontoGerentePercentual(
             Number(cfg.max_desconto_gerente_percentual ?? defaultPdvConfig.maxDescontoGerentePercentual)
           )
@@ -307,9 +290,6 @@ export function App() {
         )
         if (!cancelled && cfg2) {
           setGerenteId(cfg2.gerente_id ?? defaultPdvConfig.gerenteId)
-          setGerenteSenhaSha256(
-            cfg2.gerente_senha_sha256 ?? defaultPdvConfig.gerenteSenhaSha256
-          )
           setMaxDescontoGerentePercentual(
             Number(
               cfg2.max_desconto_gerente_percentual ?? defaultPdvConfig.maxDescontoGerentePercentual
@@ -1139,33 +1119,16 @@ export function App() {
                       maxClamp = r.max_desconto_percentual
                     }
                   } catch {
-                    if (gerenteSenhaSha256 === PDV_CONFIG_GERENTE_HASH_SENTINEL) {
-                      setMensagem(
-                        'Senha do gerente não configurada no servidor: defina `gerente_senha_sha256` em `public.pdv_config`, faça sync de pdv_config (com rede) ou tente de novo online.'
-                      )
-                      return
-                    }
-                    const senhaSha = await sha256Hex(senha)
-                    if (senhaSha !== gerenteSenhaSha256) {
-                      setMensagem('Senha de gerente inválida.')
-                      return
-                    }
                     setMensagem(
-                      'Validação local (sem rede). Se o servidor exigir token de gerente, a sincronização pode falhar até haver conexão.'
+                      'Falha ao validar gerente no servidor. Verifique conexão e configuração de SYNC_ENDPOINT/SYNC_KEY.'
                     )
+                    return
                   }
                 } else {
-                  if (gerenteSenhaSha256 === PDV_CONFIG_GERENTE_HASH_SENTINEL) {
-                    setMensagem(
-                      'Configure a senha do gerente no Supabase (`pdv_config`) e sincronize o app; validação local indisponível até haver hash real no cache.'
-                    )
-                    return
-                  }
-                  const senhaSha = await sha256Hex(senha)
-                  if (senhaSha !== gerenteSenhaSha256) {
-                    setMensagem('Senha de gerente inválida.')
-                    return
-                  }
+                  setMensagem(
+                    'Validação de gerente exige app desktop conectado ao servidor (token remoto obrigatório).'
+                  )
+                  return
                 }
 
                 const maxPrompt =

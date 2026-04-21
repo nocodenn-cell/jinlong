@@ -7,7 +7,7 @@
 // | Método | op (query)     | Handler / efeito           | Dados sensíveis na resposta |
 // |--------|----------------|----------------------------|-----------------------------|
 // | GET    | catalogo       | handleCatalogoSync         | Catálogo completo: produtos (preço, nome, codigo_barras, …) + regras_preco ativas — comercial sensível |
-// | GET    | pdv_config     | handlePdvConfigSync        | gerente_id, gerente_senha_sha256, max_desconto… — ALTÍSSIMO (hash senha gerente); strict_manager_auth |
+// | GET    | pdv_config     | handlePdvConfigSync        | gerente_id, max_desconto…; strict_manager_auth (sem hash de senha) |
 // | GET    | outro/ausente  | —                          | 400 INVALID_OPERATION |
 // | POST   | validar_gerente| handleValidarGerentePdvSync| token gerente + expiração (se ok) — token sensível; erros genéricos |
 // | POST   | (omitido)      | handlePostOutboxBatch      | processed[], failed[{id,error}], request_id — IDs + mensagens de erro internas |
@@ -67,9 +67,10 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
 function buildSignaturePayload(
   ts: string,
   nonce: string,
+  deviceFingerprint: string,
   body: string,
 ): string {
-  return `${ts}.${nonce}.${body}`;
+  return `${ts}.${nonce}.${deviceFingerprint}.${body}`;
 }
 
 /** Valida o body HTTP e normaliza `created_at` ausente. */
@@ -361,6 +362,17 @@ function parseCsvLowerSet(raw: string | null | undefined): Set<string> {
       .map((s) => s.trim().toLowerCase())
       .filter((s) => s.length > 0),
   );
+}
+
+function parseDeviceKeyMap(raw: string | null | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const part of (raw ?? "").split(",")) {
+    const [deviceRaw, keyRaw] = part.split("=");
+    const device = (deviceRaw ?? "").trim().toLowerCase();
+    const key = (keyRaw ?? "").trim();
+    if (device && key) map.set(device, key);
+  }
+  return map;
 }
 
 function shouldUseUnifiedSalesFlow(deviceFingerprint: string | null | undefined): boolean {
@@ -661,7 +673,7 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
 async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin) {
   const { data, error, status } = await supabase
     .from("pdv_config")
-    .select("gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual")
+    .select("gerente_id, max_desconto_gerente_percentual")
     .eq("id", 1)
     .maybeSingle();
 
@@ -781,7 +793,8 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
   const syncKey = Deno.env.get("SYNC_KEY")?.trim() ?? "";
-  if (!supabaseUrl || !serviceRole || !syncKey) {
+  const hasDeviceKeys = parseDeviceKeyMap(Deno.env.get("SYNC_DEVICE_KEYS")).size > 0;
+  if (!supabaseUrl || !serviceRole || (!syncKey && !hasDeviceKeys)) {
     log({ level: "error", stage: "env", request_id: requestId, error: "MISSING_SUPABASE_ENV" });
     return jsonResponse(req, 500, { ok: false, error: "MISSING_SUPABASE_ENV", request_id: requestId });
   }
@@ -866,12 +879,26 @@ async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAd
   const ts = req.headers.get("X-SYNC-TS");
   const nonce = req.headers.get("X-SYNC-NONCE");
   const signature = req.headers.get("X-SYNC-SIGNATURE");
-  const device = req.headers.get("x-device-fingerprint") ?? "unknown";
+  const device = (req.headers.get("x-device-fingerprint") ?? "").trim().toLowerCase();
+  const enforceAllowlist = (Deno.env.get("SYNC_ENFORCE_DEVICE_ALLOWLIST") ?? "auto").trim().toLowerCase();
+  const allowedDevices = parseCsvLowerSet(Deno.env.get("SYNC_ALLOWED_DEVICE_FINGERPRINTS"));
+  const deviceKeyMap = parseDeviceKeyMap(Deno.env.get("SYNC_DEVICE_KEYS"));
+  const shouldEnforceAllowlist =
+    enforceAllowlist === "true" ||
+    enforceAllowlist === "1" ||
+    enforceAllowlist === "yes" ||
+    ((enforceAllowlist === "auto" || enforceAllowlist === "") && allowedDevices.size > 0);
 
-  if (!gotKey || !(await timingSafeEqualSecret(gotKey, syncKey))) {
+  if (!ts || !nonce || !signature) return { ok: false, error: "MISSING_HEADERS" };
+  if (!device) return { ok: false, error: "MISSING_DEVICE_FINGERPRINT" };
+  if (shouldEnforceAllowlist && !allowedDevices.has(device)) {
+    return { ok: false, error: "DEVICE_NOT_ALLOWED" };
+  }
+  const expectedKey = deviceKeyMap.size > 0 ? deviceKeyMap.get(device) : syncKey;
+  if (!expectedKey) return { ok: false, error: "DEVICE_NOT_ALLOWED" };
+  if (!gotKey || !(await timingSafeEqualSecret(gotKey, expectedKey))) {
     return { ok: false, error: "UNAUTHORIZED" };
   }
-  if (!ts || !nonce || !signature) return { ok: false, error: "MISSING_HEADERS" };
   const nonceTrim = nonce.trim();
   if (!isUuid(nonceTrim)) return { ok: false, error: "INVALID_NONCE" };
 
@@ -879,8 +906,8 @@ async function authorizeSync(req: Request, syncKey: string, supabase: SupabaseAd
   if (!Number.isFinite(tsNum)) return { ok: false, error: "INVALID_TS" };
   if (Math.abs(Math.floor(Date.now() / 1000) - tsNum) > MAX_CLOCK_SKEW_SECONDS) return { ok: false, error: "TS_OUT_OF_WINDOW" };
 
-  const payload = `${ts}.${nonceTrim}.${rawBody}`;
-  const expectedSig = await hmacSha256Hex(syncKey, payload);
+  const payload = buildSignaturePayload(ts, nonceTrim, device, rawBody);
+  const expectedSig = await hmacSha256Hex(expectedKey, payload);
   if (!timingSafeEqualStr(signature.toLowerCase(), expectedSig.toLowerCase())) return { ok: false, error: "INVALID_SIG" };
 
   const expiresAt = new Date((tsNum + NONCE_TTL_SECONDS) * 1000).toISOString();

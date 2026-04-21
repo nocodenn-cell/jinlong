@@ -42,7 +42,7 @@ Referências: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md), [CIR
 
 Marque explicitamente (PR ou checklist interno):
 
-- [ ] **Migrations:** `migration list` remoto sem lacunas (incl. **014–018** onde houver sync desktop/caixa seguro e `validar-gerente`; **024** anti-replay `sync_request_nonces`; **025** RPC `finalizar_venda_transacional_canonica_v2`); smoke CI (`ci-backend-supabase` → job *migrations-smoke*) verde no commit.
+- [ ] **Migrations:** `migration list` remoto sem lacunas (incl. **014–018** onde houver sync desktop/caixa seguro e `validar-gerente`; **024** anti-replay `sync_request_nonces`; **025** RPC `finalizar_venda_transacional_canonica_v2`); smoke CI (`ci-backend-supabase` → job *supabase-local-rls-smoke* / "Supabase local RLS smoke") verde no commit.
 - [ ] **Edge:** `sync-outbox` deployada com os **três** secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SYNC_KEY`) do projeto **alvo**; redeploy após mudanças na função (HMAC, anti-replay, `op=catalogo` / `pdv_config` / `validar_gerente`, batch outbox, RPC v2). Secrets de rollout opcionais: `USE_UNIFIED_SALES_FLOW`, `CANARY_DEVICE_FINGERPRINTS`, `STRICT_MANAGER_DISCOUNT_AUTH` (ver §4).
 - [ ] **Web:** `NEXT_PUBLIC_*` do mesmo `ref`; build sem erros; smoke manual em `/login` e fluxo crítico (ver P0 §4 ou §4b).
 - [ ] **Desktop (se aplicável):** `.env` da loja com `SYNC_ENDPOINT` + `SYNC_KEY` do **ambiente alvo** (sem `service_role` no cliente); opcional `DEVICE_FINGERPRINT` alinhado ao canário; uma venda de teste + linha em `vendas` no projeto certo.

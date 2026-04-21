@@ -6,6 +6,11 @@ import { SignOutButton } from '@/components/auth/SignOutButton'
 import { getUsuarioIdioma, isGerenteOuDono } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import LanguageToggle from './idioma/LanguageToggle'
+import {
+  GERENTE_HEADER_NAV_ORDER,
+  gerenteNavLabel,
+  painelGerencialHref,
+} from '@/lib/navigation/painelGerencialNav'
 
 export default async function GerenteLayout({
   children,
@@ -47,36 +52,11 @@ export default async function GerenteLayout({
             {m.gerente.titulo_painel}
           </div>
           <nav style={{ display: 'flex', gap: 12, fontSize: 13, flexWrap: 'wrap' }}>
-            <Link href="/gerente" style={{ color: '#111827' }}>
-              {m.gerente.inicio}
-            </Link>
-            <Link href="/gerente/produtos" style={{ color: '#111827' }}>
-              {m.produtos.titulo}
-            </Link>
-            <Link href="/gerente/estoque" style={{ color: '#111827' }}>
-              {m.estoque.titulo}
-            </Link>
-            <Link href="/gerente/recebimento" style={{ color: '#111827' }}>
-              {m.gerente.nav_recebimento}
-            </Link>
-            <Link href="/gerente/transferencias" style={{ color: '#111827' }}>
-              {m.gerente.nav_transferencias}
-            </Link>
-            <Link href="/gerente/financeiro" style={{ color: '#111827' }}>
-              {m.gerente.nav_financeiro}
-            </Link>
-            <Link href="/gerente/vendas" style={{ color: '#111827' }}>
-              {m.gerente.nav_vendas}
-            </Link>
-            <Link href="/gerente/caixas" style={{ color: '#111827' }}>
-              {m.gerente.nav_caixas}
-            </Link>
-            <Link href="/gerente/relatorios" style={{ color: '#111827' }}>
-              {m.gerente.nav_relatorios}
-            </Link>
-            <Link href="/admin/dashboard" style={{ color: '#111827' }}>
-              {m.gerente.nav_admin}
-            </Link>
+            {GERENTE_HEADER_NAV_ORDER.map((key) => (
+              <Link key={key} href={painelGerencialHref(key)} style={{ color: '#111827' }}>
+                {gerenteNavLabel(m, key)}
+              </Link>
+            ))}
           </nav>
         </div>
 

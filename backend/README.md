@@ -90,6 +90,12 @@ node scripts/p0-migration-status.mjs
 
 Saída **ALINHADO** e exit code `0` quando não há drift; caso contrário sugere `db push`. Opções: `--json`, `--warn-only` (sempre exit `0`). Checklist operacional só staging: [../docs/CHECKLIST_P0_STAGING.md](../docs/CHECKLIST_P0_STAGING.md).
 
+## P0 — smoke RLS (policies + view + dois JWTs)
+
+- **SQL (governação):** `supabase/scripts/smoke_rls_painel_gerente.sql` — exige policies em `usuarios`, `produtos`, `estoque`, `lojas`, `vendas`, fiscal, fiado; confirma `v_estoque_baixo` com `security_invoker=true` (migration `040`). Instruções `curl` com dois JWTs no próprio ficheiro.
+- **REST automatizado (opcional):** na pasta `backend`, com `SUPABASE_URL` + `SUPABASE_ANON_KEY` e tokens `RLS_SMOKE_JWT_PAINEL` + `RLS_SMOKE_JWT_CAIXA` (access_token após login): `npm run smoke:rls-rest`. Sem URL/anon ou sem JWTs: termina `0` (não bloqueia CI).
+- **Login por perfil (base para validar RLS):** `npm run test:rls-policies` usa `createClient(SUPABASE_URL, SUPABASE_ANON_KEY)` e autentica com `auth.signInWithPassword({ email, password })` para perfis OPERADOR/GERENTE/DONO/ADMIN (envs `RLS_*`).
+
 ## Edge Functions — type-check local (recomendação passo 1)
 
 O CI roda `deno check` em `sync-outbox` e `validar-gerente`. Na pasta **`backend`**, o mesmo check **sem instalar Deno** no sistema:
@@ -113,6 +119,6 @@ A função **`fiscal-worker`** usa `npm:` no `deno.json`; o type-check exige **`
 
 ## CI
 
-Em PRs que alterem `backend/`, o workflow [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) executa **`deno check`** nas três Edge Functions acima (mesmo escopo que `npm run check:edge` na pasta `backend`) e o job **`migrations-smoke`** aplica todas as migrations em ordem sobre PostgreSQL 15 com stub de `auth` — isso **não** substitui `db push` no projeto real, mas pega erros de SQL/ordem cedo.
+Em PRs que alterem `backend/`, o workflow [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) executa **`deno check`** nas três Edge Functions acima (mesmo escopo que `npm run check:edge` na pasta `backend`) e o job **`supabase-local-rls-smoke`** (nome exibido: **Supabase local RLS smoke**) valida migrations e smoke de governança RLS em stack Supabase local isolada — isso **não** substitui `db push` no projeto real, mas pega erros de SQL/ordem cedo.
 
-**Opcional — drift contra projeto remoto:** no GitHub do repositório, configure secrets `SUPABASE_ACCESS_TOKEN` (token de conta) e `SUPABASE_MIGRATION_CHECK_PROJECT_REF` (ex.: ref de **staging**). O job `migration-remote-drift` roda `supabase link` + `node scripts/p0-migration-status.mjs`. Sem secrets, ou em PR vindo de **fork**, o job pula (sucesso). **Manual:** Actions → *CI backend Supabase* → *Run workflow*.
+**Drift contra projeto remoto (gate interno obrigatório):** no GitHub do repositório, configure secrets `SUPABASE_ACCESS_TOKEN` (token de conta) e `SUPABASE_MIGRATION_CHECK_PROJECT_REF` (ex.: ref de **staging**). O job `migration-remote-drift` roda `supabase link` + `node scripts/p0-migration-status.mjs` e **falha** se houver divergência Local vs Remote. Em PR de **fork**, o job é pulado por segurança (secrets indisponíveis). **Manual:** Actions → *CI backend Supabase* → *Run workflow*.

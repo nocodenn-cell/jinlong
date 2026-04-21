@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
+import { isPerfilPainelGerencial, PREFIXOS_ROTAS_PAINEL_WEB } from '@/lib/auth/painelGerencial'
 
 function supabaseConfigOk(url: string | undefined, anonKey: string | undefined): boolean {
   if (!url?.trim() || !anonKey?.trim()) return false
@@ -18,11 +18,10 @@ function supabaseConfigOk(url: string | undefined, anonKey: string | undefined):
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const isProtected =
-    pathname.startsWith('/gerente') ||
-    pathname.startsWith('/admin') ||
-    pathname === '/caixa' ||
-    pathname.startsWith('/caixa/')
+  const isPainelWeb =
+    pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[0]) || pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[1])
+  const isCaixaWeb = pathname === '/caixa' || pathname.startsWith('/caixa/')
+  const isProtected = isPainelWeb || isCaixaWeb
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -99,11 +98,9 @@ export async function middleware(request: NextRequest) {
 
     const perfil = typeof row?.perfil === 'string' ? row.perfil : 'OPERADOR'
     const gerenteOuDono = isPerfilPainelGerencial(perfil)
-    const caixaRoute = pathname === '/caixa' || pathname.startsWith('/caixa/')
-    const gerenteRoute = pathname.startsWith('/gerente')
-    const adminRoute = pathname.startsWith('/admin')
+    const caixaRoute = isCaixaWeb
 
-    if ((gerenteRoute || adminRoute) && !gerenteOuDono) {
+    if (isPainelWeb && !gerenteOuDono) {
       const url = request.nextUrl.clone()
       url.pathname = '/caixa'
       url.search = ''

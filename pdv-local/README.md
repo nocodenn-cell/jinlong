@@ -41,7 +41,7 @@ Depois ajuste:
 - `SYNC_KEY` → o mesmo valor configurado nos secrets da Edge Function `sync-outbox`.
 - A mesma Edge `sync-outbox` atende `GET ?op=catalogo` e `GET ?op=pdv_config` com autenticação `X-SYNC-KEY`.
 - **Não** é mais necessário `SUPABASE_SERVICE_ROLE_KEY` no `pdv-local/.env`.
-- **Senha do gerente (desconto):** após migrations **005** + **026**, `public.pdv_config.gerente_senha_sha256` usa um hash sentinela até você definir o SHA-256 da senha real (`UPDATE ... WHERE id = 1`). Depois use **Sincronizar** para puxar `pdv_config` ou valide com rede via Edge (`validar_gerente`).
+- **Senha do gerente (desconto):** use hash forte server-side em `public.pdv_config.gerente_senha_bcrypt` (bcrypt). A validação do desconto é feita pela Edge (`validar_gerente`) e não depende mais de hash local no app desktop.
 
 **Credenciais e ambientes (dev/staging/prod):** ver `../docs/AMBIENTES_E_RELEASE.md` (boas práticas de rotação de segredo e isolamento por ambiente).
 

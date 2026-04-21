@@ -1,37 +1,14 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import {
-  ArrowRightLeft,
-  Building2,
-  Coins,
-  Inbox,
-  LayoutDashboard,
-  LayoutGrid,
-  LineChart,
-  Package,
-  ShoppingBag,
-  ShoppingCart,
-} from 'lucide-react'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
+import { ADMIN_SIDEBAR_NAV } from '@/lib/navigation/adminSidebarNav'
+import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { getUsuarioIdioma, isGerenteOuDono } from '@/src/lib/idioma/usuarioIdioma'
 import { getMessages } from '@/src/lib/i18n/getMessages'
 import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import '@/styles/chinese-theme.css'
-
-const adminNavItems = [
-  { href: '/admin/dashboard', labelKey: 'dashboard' as const, icon: LayoutDashboard },
-  { href: '/gerente', labelKey: 'gerente' as const, icon: LayoutGrid },
-  { href: '/gerente/produtos', labelKey: 'produtos' as const, icon: ShoppingBag },
-  { href: '/gerente/vendas', labelKey: 'vendas' as const, icon: ShoppingCart },
-  { href: '/gerente/estoque', labelKey: 'estoque' as const, icon: Package },
-  { href: '/gerente/recebimento', labelKey: 'recebimento' as const, icon: Inbox },
-  { href: '/gerente/transferencias', labelKey: 'transferencias' as const, icon: ArrowRightLeft },
-  { href: '/gerente/financeiro', labelKey: 'financeiro' as const, icon: Coins },
-  { href: '/gerente/caixas', labelKey: 'caixas' as const, icon: Building2 },
-  { href: '/gerente/relatorios', labelKey: 'relatorios' as const, icon: LineChart },
-] as const
 
 type BilingualLine = { pt: string; cn: string }
 
@@ -133,16 +110,18 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           }
         >
           <nav className="flex flex-wrap gap-1 p-3 lg:flex-col lg:gap-0.5">
-            {adminNavItems.map((item) => {
-              const line = admin.nav[item.labelKey]
+            {ADMIN_SIDEBAR_NAV.map((item) => {
+              const dictKey = adminNavDictionaryKey(item.key)
+              const line = admin.nav[dictKey]
               const { primary, secondary } = navLabels(line, chineseLanguage)
-              const hint = admin.navHints[item.labelKey]
+              const hint = admin.navHints[dictKey]
               const label = chineseLanguage ? lineBoth(line) : line.pt
               const linkTitle = `${label} — ${hint}`
+              const href = painelGerencialHref(item.key)
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={href}
+                  href={href}
                   title={linkTitle}
                   className={
                     chineseThemeOn

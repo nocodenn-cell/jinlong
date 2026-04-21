@@ -38,3 +38,24 @@ jobs:
 
       - name: Unit tests & build (Turborepo)
         run: npx turbo run test build --filter=pdv-local
+
+  rust-tauri-checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry/target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: pdv-local/src-tauri
+
+      - name: Cargo test (core local sync/db)
+        working-directory: pdv-local/src-tauri
+        run: cargo test --lib --verbose
+
+      - name: Cargo build mínimo (Tauri binary)
+        working-directory: pdv-local/src-tauri
+        run: cargo build --bin pdv-local --locked --verbose

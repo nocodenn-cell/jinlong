@@ -5,6 +5,11 @@ import { getMessages } from '@/src/lib/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { formatBRL } from '@/lib/format/money'
+import {
+  gerenteInicioAtalhoKeys,
+  gerenteNavLabel,
+  painelGerencialHref,
+} from '@/lib/navigation/painelGerencialNav'
 
 export default async function GerenteInicioPage() {
   const { idioma } = await getUsuarioIdioma()
@@ -47,19 +52,10 @@ export default async function GerenteInicioPage() {
 
   const exibirTransferencias = (lojasAtivasCount ?? 0) >= 2
 
-  const atalhos = [
-    { href: '/gerente/produtos', label: m.produtos.titulo },
-    { href: '/gerente/estoque', label: m.estoque.titulo },
-    { href: '/gerente/recebimento', label: m.gerente.nav_recebimento },
-    ...(exibirTransferencias
-      ? [{ href: '/gerente/transferencias', label: m.gerente.nav_transferencias }]
-      : []),
-    { href: '/gerente/financeiro', label: m.gerente.nav_financeiro },
-    { href: '/gerente/vendas', label: m.gerente.nav_vendas },
-    { href: '/gerente/caixas', label: m.gerente.nav_caixas },
-    { href: '/gerente/relatorios', label: m.gerente.nav_relatorios },
-    { href: '/admin/dashboard', label: m.gerente.nav_admin },
-  ]
+  const atalhos = gerenteInicioAtalhoKeys(exibirTransferencias).map((key) => ({
+    href: painelGerencialHref(key),
+    label: gerenteNavLabel(m, key),
+  }))
 
   const card = (label: string, value: string) => (
     <div
@@ -155,7 +151,7 @@ export default async function GerenteInicioPage() {
       </div>
 
       <div style={{ marginTop: 16, textAlign: 'right' }}>
-        <Link href="/gerente/vendas" style={{ fontSize: 14, color: '#2563eb' }}>
+        <Link href={painelGerencialHref('vendas')} style={{ fontSize: 14, color: '#2563eb' }}>
           {m.gerente.nav_vendas} →
         </Link>
       </div>

@@ -1,6 +1,5 @@
 import { timingSafeEqualStr } from "./crypto.ts";
-
-const encoder = new TextEncoder();
+import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
 const RATE_WINDOW_MS = 15 * 60 * 1000;
 const LOCK_MS = 15 * 60 * 1000;
@@ -79,11 +78,14 @@ function extractDeviceFingerprint(req: Request): string {
   return normalizeIdentifier(fromHeader ?? "", UNKNOWN_DEVICE);
 }
 
-async function sha256Hex(input: string): Promise<string> {
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+function isBcryptHash(hash: unknown): hash is string {
+  if (typeof hash !== "string") return false;
+  return /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(hash);
+}
+
+function allowLegacySha256Fallback(): boolean {
+  const v = (Deno.env.get("ALLOW_LEGACY_SHA256_GERENTE_PASSWORD") ?? "").trim().toLowerCase();
+  return v === "true" || v === "1" || v === "yes";
 }
 
 function generateToken(): string {
@@ -190,7 +192,12 @@ async function precheckRateLimitLocks(
 }
 
 type GerenteConfigBundle = {
-  config: { gerente_id: string; gerente_senha_sha256: string; max_desconto_gerente_percentual: unknown };
+  config: {
+    gerente_id: string;
+    gerente_senha_sha256: string | null;
+    gerente_senha_bcrypt: string | null;
+    max_desconto_gerente_percentual: unknown;
+  };
   gerenteIdRaw: string;
 };
 
@@ -201,7 +208,7 @@ async function loadGerenteConfigBundle(
 ): Promise<GerenteConfigBundle | ValidateResult> {
   const { data: config, error: configError } = await supabase
     .from("pdv_config")
-    .select("gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual")
+    .select("gerente_id, gerente_senha_sha256, gerente_senha_bcrypt, max_desconto_gerente_percentual")
     .eq("id", 1)
     .maybeSingle();
 
@@ -209,7 +216,9 @@ async function loadGerenteConfigBundle(
     log({ level: "error", stage: logStage, error: configError.message });
     return { ok: false, status: 500, body: { ok: false, error: "ERRO_DB_CONFIG" } };
   }
-  if (!config || !config.gerente_senha_sha256) {
+  const hasBcrypt = isBcryptHash(config?.gerente_senha_bcrypt);
+  const hasLegacy = typeof config?.gerente_senha_sha256 === "string" && config.gerente_senha_sha256.length > 0;
+  if (!config || (!hasBcrypt && !hasLegacy)) {
     log({ level: "error", stage: logStage, error: "CONFIG_NAO_ENCONTRADA" });
     return { ok: false, status: 500, body: { ok: false, error: "CONFIG_NAO_ENCONTRADA" } };
   }
@@ -384,8 +393,23 @@ export async function validateGerenteAndIssueToken(
     if ("ok" in bundleOrErr) return bundleOrErr;
     const { config, gerenteIdRaw } = bundleOrErr;
 
-    const senhaHash = await sha256Hex(senha);
-    if (!timingSafeEqualStr(senhaHash, config.gerente_senha_sha256)) {
+    let senhaValida = false;
+    const bcryptHash = typeof config.gerente_senha_bcrypt === "string" ? config.gerente_senha_bcrypt : "";
+    if (isBcryptHash(bcryptHash)) {
+      senhaValida = bcrypt.compareSync(senha, bcryptHash);
+    } else if (allowLegacySha256Fallback() && typeof config.gerente_senha_sha256 === "string") {
+      const senhaHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(senha));
+      const senhaSha256 = Array.from(new Uint8Array(senhaHash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      senhaValida = timingSafeEqualStr(senhaSha256, config.gerente_senha_sha256);
+    } else {
+      log({
+        level: "error",
+        stage: logStage,
+        error: "CONFIG_HASH_INSEGURO",
+      });
+      return { ok: false, status: 500, body: { ok: false, error: "CONFIG_HASH_INSEGURO" } };
+    }
+    if (!senhaValida) {
       return await respondSenhaGerenteInvalida(
         supabase,
         rateContexts,
