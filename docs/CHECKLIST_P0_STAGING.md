@@ -2,6 +2,8 @@
 
 Use este arquivo como **registro por ciclo** (homologação antes de promover para produção). O conteúdo normativo e a ordem das tarefas continuam em [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) e [AMBIENTES_E_RELEASE.md](./AMBIENTES_E_RELEASE.md).
 
+**Trilha mestra (ordem T1–T12):** [P0_CHECKLIST_OPERACIONAL.md — Trilha unificada](./P0_CHECKLIST_OPERACIONAL.md#trilha-unificada-ordem-de-execução). Preencha as tabelas abaixo **por ciclo** e anexe evidências no PR/ticket. O **critério “piloto concluído”** (GO/NO_GO, fiscal, smoke longo) está em [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md) — use a **§7** deste arquivo para registrar isso no mesmo ciclo, quando aplicável.
+
 **Status rápido das migrations (CLI linkada ao staging):** na pasta `backend`, rode:
 
 ```powershell
@@ -44,6 +46,19 @@ Opcional: `node scripts/p0-migration-status.mjs --json` para saída máquina-leg
 | 2.1 | `npx supabase functions deploy sync-outbox` (após §1 alinhado ao código esperado pela Edge) | [ ] | | | |
 | 2.2 | Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SYNC_KEY` | [ ] | | | |
 | 2.3 | (Opcional) `sync-outbox-anti-replay-diagnostic.ps1` — ver [AMBIENTES_E_RELEASE.md §4.5](./AMBIENTES_E_RELEASE.md#45-diagnóstico-automatizado) | [ ] | | | |
+
+---
+
+## §2b — Outras Edge Functions (conforme escopo do piloto)
+
+Marque apenas o que o release **deste ciclo** exige (web com desconto gerente → `validar-gerente`; fila fiscal / demo → `fiscal-worker`). Detalhes: [CHECKLIST_DEPLOY_SUPABASE.md §2–3](./CHECKLIST_DEPLOY_SUPABASE.md#2-edge-functions--deploy).
+
+| # | Verificação | OK? | Data | Responsável | Evidência |
+|---|-------------|-----|------|-------------|-----------|
+| 2b.1 | `npx supabase functions deploy validar-gerente` (se caixa web usa desconto com validação na Edge) | [ ] | | | |
+| 2b.2 | Secrets `validar-gerente`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` + `VALIDAR_GERENTE_*` — [CHECKLIST_DEPLOY §3](./CHECKLIST_DEPLOY_SUPABASE.md#3-secrets-das-edge-functions) | [ ] | | | |
+| 2b.3 | `npx supabase functions deploy fiscal-worker` (se piloto incluir NFC-e/NFe ou fila fiscal) | [ ] | | | |
+| 2b.4 | Secrets `fiscal-worker` + envs Next (`FISCAL_WORKER_*`, `FISCAL_PROVIDER_*`) — [CHECKLIST_DEPLOY §3–4](./CHECKLIST_DEPLOY_SUPABASE.md#3-secrets-das-edge-functions) | [ ] | | | |
 
 ---
 
@@ -95,6 +110,22 @@ Marque **apenas um** caminho principal.
 | 6.1 | Último PR relevante: workflow `ci-backend-supabase` verde | [ ] | | | |
 | 6.2 | (Se secrets `SYNC_ENDPOINT` + `SYNC_KEY`) gate anti-replay no GitHub verde | [ ] | | | |
 | 6.3 | (Opcional) Secrets `SUPABASE_ACCESS_TOKEN` + `SUPABASE_MIGRATION_CHECK_PROJECT_REF` — job `migration-remote-drift` compara Local vs Remote no ref configurado (ex.: staging); sem secrets o job **pula**; PRs de fork também **pulam** (sem acesso aos secrets do base) | [ ] | | | |
+
+---
+
+## §7 — Piloto (done + smoke SQL longo + fiscal)
+
+Use quando este ciclo for **encerramento de piloto** ou gate explícito antes de produção. Referência normativa: [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md).
+
+| # | Verificação | OK? | Data | Responsável | Evidência |
+|---|-------------|-----|------|-------------|-----------|
+| 7.1 | Migrations **mínimas do pacote piloto** aplicadas no ref (ver § “Código e banco” em DONE_DEFINITION) + **sem lacunas** vs `backend/supabase/migrations/` | [ ] | | | |
+| 7.2 | `backend/supabase/scripts/smoke_operacao_fluxo_completo.sql` executado no SQL Editor (ambiente de homologação) — anexar output | [ ] | | | |
+| 7.3 | Gate **GO / NO_GO** registrado com resumo SQL ou print | [ ] | | | |
+| 7.4 | Decisão fiscal da demo (`mock` vs `http`) + fallback documentado | [ ] | | | |
+| 7.5 | `pdv-importados`: `npm test` + `npm run build` verdes no commit/tag do release | [ ] | | | |
+| 7.6 | `pdv-local`: `npm test` + `npm run build` verdes (se desktop no piloto) | [ ] | | | |
+| 7.7 | Janela de publicação + critérios de rollback + responsável pós-release definidos | [ ] | | | |
 
 ---
 

@@ -35,6 +35,21 @@ Com **`SUPABASE_SERVICE_ROLE_KEY`** no `.env.local`, rode `npm run seed:dev-user
 - Secrets **não** vão no `.env.local` do Next: use `npx supabase secrets set ...` ou o painel **Edge Functions → Secrets**.
 - Ver [backend/supabase/README.md](../../backend/supabase/README.md).
 
+## Módulo fiscal (caixa web → fila → `fiscal-worker`)
+
+Variáveis no **`.env.local`** (ver também `.env.example` secção 4):
+
+| Variável | Uso |
+|----------|-----|
+| `FISCAL_WORKER_ENDPOINT` | URL `https://<ref>.supabase.co/functions/v1/fiscal-worker` |
+| `FISCAL_WORKER_KEY` | Mesmo valor do secret **`FISCAL_WORKER_KEY`** da Edge (header `X-FISCAL-WORKER-KEY`) |
+| `AUTO_ENQUEUE_FISCAL_ON_SALE` | `true` para chamar a RPC `fiscal_enfileirar_documento_venda` após finalizar venda no `/caixa` |
+| `FISCAL_DEFAULT_DOC_TYPE` | `NFC_E_STUB` (homologação sem provedor real), `NFCE` ou `NFE` quando a integração estiver pronta |
+
+Com `AUTO_ENQUEUE_FISCAL_ON_SALE=true`, o comando **`npm run env:check`** exige `FISCAL_WORKER_ENDPOINT` e `FISCAL_WORKER_KEY` válidos (URL deve conter `fiscal-worker`).
+
+**Ativação em produção com provedor real (ex.: Focus):** ordem de deploy, secrets `FISCAL_PROVIDER_*` na Edge e rollback — [docs/CHECKLIST_ATIVACAO_FOCUS_1_DIA.md](../../docs/CHECKLIST_ATIVACAO_FOCUS_1_DIA.md). Deploy geral: [docs/CHECKLIST_DEPLOY_SUPABASE.md](../../docs/CHECKLIST_DEPLOY_SUPABASE.md).
+
 ## Segurança
 
 - **Nunca** commite `.env.local`, **service_role** nem `sb_secret_...`.

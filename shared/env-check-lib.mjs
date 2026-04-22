@@ -24,6 +24,13 @@ export function parseEnv(content) {
  *   envFileName: string
  *   required: string[]
  *   recommended?: string[]
+ *   conditionalRequired?: Array<{
+ *     description: string
+ *     whenKey: string
+ *     whenValueEquals?: string
+ *     keys: string[]
+ *   }>
+ *   validators?: Array<(parsed: Map<string, string>) => string | null>
  *   missingFileHint: string
  *   okMessage: string
  * }} opts
@@ -34,6 +41,8 @@ export function runEnvCheck(opts) {
     envFileName,
     required,
     recommended = [],
+    conditionalRequired = [],
+    validators = [],
     missingFileHint,
     okMessage,
   } = opts
@@ -51,6 +60,29 @@ export function runEnvCheck(opts) {
     console.error('[env-check] Variáveis obrigatórias ausentes:')
     for (const k of missing) console.error(` - ${k}`)
     process.exit(1)
+  }
+
+  for (const block of conditionalRequired) {
+    const raw = parsed.get(block.whenKey)
+    const want = (block.whenValueEquals ?? 'true').trim().toLowerCase()
+    const isOn = (raw ?? '').trim().toLowerCase() === want
+    if (!isOn) continue
+    const miss = block.keys.filter((k) => !(parsed.get(k) ?? '').trim())
+    if (miss.length > 0) {
+      console.error(
+        `[env-check] Com ${block.whenKey} ativo, faltam variáveis (${block.description}):`,
+      )
+      for (const k of miss) console.error(` - ${k}`)
+      process.exit(1)
+    }
+  }
+
+  for (const fn of validators) {
+    const msg = fn(parsed)
+    if (msg) {
+      console.error(`[env-check] ${msg}`)
+      process.exit(1)
+    }
   }
 
   const missingRecommended = recommended.filter((k) => !parsed.get(k))

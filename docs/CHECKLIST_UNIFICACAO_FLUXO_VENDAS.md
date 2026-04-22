@@ -4,6 +4,19 @@ Objetivo: unificar o fluxo de venda entre `pdv-importados` e `pdv-local` com rol
 
 Status final esperado: ambos os canais usam a mesma regra transacional canônica no Supabase, com segurança de desconto gerente equivalente.
 
+### Auditoria código × checklist (implementação já no repo)
+
+| Etapa (checklist) | No repositório hoje | Pendência típica |
+|-------------------|---------------------|-------------------|
+| **1.1** RPC canônica v2 | Migration `025_finalizar_venda_transacional_canonica_v2.sql` + evoluções (`061_*` idempotência, etc.) | Só **operação**: `db push` nos refs alvo |
+| **1.2** `sync-outbox` + flags | `USE_UNIFIED_SALES_FLOW`, `CANARY_DEVICE_FINGERPRINTS`, `shouldUseUnifiedSalesFlow()`, RPC `finalizar_venda_transacional_canonica_v2` **ou** legado `registrar_venda_com_itens` + baixa | Definir **secrets** e cutover (canário → 100%) por ambiente |
+| **1.3** Web | `pdv-importados/app/caixa/actions.ts` — `USE_UNIFIED_SALES_FLOW === 'true'` → RPC `finalizar_venda_transacional_canonica_v2` | — |
+| **1.3** Desktop | Outbox → mesma Edge; ramo unificado em `processVenda` | **Evidência:** smoke real + fingerprint canário por PDV |
+| **2.1** Desconto gerente | `STRICT_MANAGER_DISCOUNT_AUTH` na Edge + `GERENTE_TOKEN_OBRIGATORIO` em `processVenda` | Secret em cada projeto; token via `op=validar_gerente` no desktop |
+| **3.x** Observabilidade / remoção legado | — | **Fora do código** (dashboards, política de release) até decisão de remover ramo legado |
+
+Os itens marcados **`[x]`** nas secções abaixo refletem **entrega no Git**; itens **`[ ]`** permanecem quando dependem de **SRE/QA/produção** ou ainda não existem (ex.: suíte Deno dedicada na pasta `backend`).
+
 ---
 
 ## Donos sugeridos
@@ -21,25 +34,25 @@ Status final esperado: ambos os canais usam a mesma regra transacional canônica
 
 ### 1.1 Criar RPC canônica versionada (`v2`) sem remover legado
 
-- [ ] **Item:** Criar RPC canônica única para venda (web + sync local)
+- [x] **Item:** Criar RPC canônica única para venda (web + sync local)
   - **Owner:** BE
-  - **Arquivo:** `backend/supabase/migrations/<nova_migration>_finalizar_venda_transacional_v2.sql`
+  - **Arquivo:** `backend/supabase/migrations/025_finalizar_venda_transacional_canonica_v2.sql` (e migrations subsequentes que ajustam a RPC)
   - **Comando:**
     - `cd C:\Naturecode\fastproduct\backend`
     - `npx supabase db push --linked`
   - **Métrica:** RPC nova disponível e executável com payload de teste, sem alterar contrato atual em produção
   - **Rollback:** não apontar chamadores para `v2`; manter uso da RPC atual
 
-- [ ] **Item:** Garantir idempotência e consistência de estoque na RPC canônica
+- [x] **Item:** Garantir idempotência e consistência de estoque na RPC canônica
   - **Owner:** BE
-  - **Arquivo:** mesma migration da RPC + funções auxiliares de estoque
+  - **Arquivo:** evoluções em `backend/supabase/migrations/` (ex.: `061_finalizar_venda_canonica_v2_idempotencia.sql`, `055_round_abnt_finalize_v2.sql`)
   - **Comando:** `npx supabase db push --linked`
   - **Métrica:** repetição do mesmo `venda_id` não duplica baixa/itens
   - **Rollback:** manter execução no caminho antigo
 
 ### 1.2 Adaptar `sync-outbox` para chamar a RPC canônica via flag
 
-- [ ] **Item:** Introduzir chave de rollout no `sync-outbox` (`USE_UNIFIED_SALES_FLOW`)
+- [x] **Item:** Introduzir chave de rollout no `sync-outbox` (`USE_UNIFIED_SALES_FLOW`)
   - **Owner:** BE
   - **Arquivo:** `backend/supabase/functions/sync-outbox/index.ts`
   - **Comando:**
@@ -48,7 +61,7 @@ Status final esperado: ambos os canais usam a mesma regra transacional canônica
   - **Métrica:** deploy sem erro e logs mostrando rota antiga quando flag `false`
   - **Rollback:** manter `USE_UNIFIED_SALES_FLOW="false"`
 
-- [ ] **Item:** Implementar strategy de chamada (legado x canônico) no `sync-outbox`
+- [x] **Item:** Implementar strategy de chamada (legado x canônico) no `sync-outbox`
   - **Owner:** BE
   - **Arquivo:** `backend/supabase/functions/sync-outbox/index.ts`
   - **Comando:** deploy da função
@@ -57,16 +70,16 @@ Status final esperado: ambos os canais usam a mesma regra transacional canônica
 
 ### 1.3 Validar web e desktop contra a mesma regra
 
-- [ ] **Item:** Garantir que web finalize venda pela RPC canônica
+- [x] **Item:** Garantir que web finalize venda pela RPC canônica
   - **Owner:** FE-WEB + BE
-  - **Arquivo:** `pdv-importados/app/caixa/actions.ts`
+  - **Arquivo:** `pdv-importados/app/caixa/actions.ts` (`USE_UNIFIED_SALES_FLOW` → `finalizar_venda_transacional_canonica_v2`)
   - **Comando:** `npm run test` (em `pdv-importados`)
   - **Métrica:** teste de finalização passando e venda persistida corretamente
   - **Rollback:** manter chamada na RPC atual até estabilizar
 
 - [ ] **Item:** Garantir que desktop sincronize vendas via RPC canônica (indireto pelo `sync-outbox`)
   - **Owner:** FE-DESK + BE
-  - **Arquivo:** `pdv-local/src-tauri/src/db.rs`, `backend/supabase/functions/sync-outbox/index.ts`
+  - **Arquivo:** `pdv-local/src-tauri/src/db.rs`, `backend/supabase/functions/sync-outbox/index.ts` — **ramo unificado já na Edge**; falta **evidência** por loja/dispositivo (`cargo test` + smoke sync com `USE_UNIFIED_SALES_FLOW` / canário)
   - **Comando:** `cargo test` (em `pdv-local/src-tauri`) + smoke de sync
   - **Métrica:** venda local sincronizada com mesmos campos/validações da web
   - **Rollback:** flag `USE_UNIFIED_SALES_FLOW="false"`
@@ -77,16 +90,16 @@ Status final esperado: ambos os canais usam a mesma regra transacional canônica
 
 ### 2.1 Tornar autorização de desconto gerente equivalente
 
-- [ ] **Item:** Exigir prova de autorização de gerente no fluxo local (compatível com web)
+- [x] **Item:** Exigir prova de autorização de gerente no fluxo local (compatível com web)
   - **Owner:** BE + Sec
-  - **Arquivo:** `backend/supabase/functions/sync-outbox/index.ts`, migrations de suporte
+  - **Arquivo:** `backend/supabase/functions/sync-outbox/index.ts` (`STRICT_MANAGER_DISCOUNT_AUTH` + `GERENTE_TOKEN_OBRIGATORIO` quando há desconto gerente sem token)
   - **Comando:** deploy function + `db push`
   - **Métrica:** desconto privilegiado sem token/prova retorna erro de autorização
   - **Rollback:** `STRICT_MANAGER_DISCOUNT_AUTH="false"` temporariamente
 
-- [ ] **Item:** Adicionar flag de endurecimento (`STRICT_MANAGER_DISCOUNT_AUTH`)
+- [x] **Item:** Adicionar flag de endurecimento (`STRICT_MANAGER_DISCOUNT_AUTH`)
   - **Owner:** SRE/DevOps
-  - **Arquivo:** Secrets da Edge Function `sync-outbox`
+  - **Arquivo:** Secrets da Edge Function `sync-outbox` (nome documentado; valor por ambiente)
   - **Comando:** `npx supabase secrets set STRICT_MANAGER_DISCOUNT_AUTH="false"`
   - **Métrica:** modo dual ativo (aceita legado + novo durante transição)
   - **Rollback:** manter `false` até remediação
@@ -176,11 +189,11 @@ Status final esperado: ambos os canais usam a mesma regra transacional canônica
   - **Métrica:** ambiente sem dependência de modo dual
   - **Rollback:** reativar modo dual temporariamente
 
-- [ ] **Item:** Atualizar documentação operacional
+- [x] **Item:** Atualizar documentação operacional
   - **Owner:** BE + QA
-  - **Arquivo:** `docs/P0_CHECKLIST_OPERACIONAL.md`, `docs/SECURANCA_CHECKLIST_FECHAMENTO.md`, `docs/AMBIENTES_E_RELEASE.md`
+  - **Arquivo:** `docs/P0_CHECKLIST_OPERACIONAL.md`, `docs/AMBIENTES_E_RELEASE.md`, `docs/CHECKLIST_P0_STAGING.md`, **este** `CHECKLIST_UNIFICACAO_FLUXO_VENDAS.md` (auditoria código × checklist)
   - **Comando:** revisão + commit de docs
-  - **Métrica:** documentação sem referência ao fluxo legado
+  - **Métrica:** trilhas P0/deploy e unificação refletem o estado do repo; remoção do ramo legado no **código** da Edge continua pendente até decisão de release (item 3.3 anterior)
   - **Rollback:** n/a
 
 ---

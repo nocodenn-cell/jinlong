@@ -1,6 +1,15 @@
-# PDV Local — Tauri + React (esqueleto)
+# PDV Local — Tauri + React (desktop)
 
-Cliente de **caixa local-first** que vai rodar em Windows (Tauri) e conversar com o painel `pdv-importados` (Next.js + Supabase).
+Cliente de **caixa local-first** (Windows via Tauri 2) com **SQLite**, **catálogo em cache** e **fila outbox** sincronizada pela Edge `sync-outbox` — o cenário “loja com catálogo + outbox” descrito no `../pdv-importados/README.md` **é este app**, não o browser.
+
+## Papel no monorepo (vs `pdv-importados`)
+
+| | **pdv-importados** (web) | **pdv-local** (desktop) |
+|---|--------------------------|-------------------------|
+| Rede | Online-first, Supabase Auth no navegador | Operação na máquina da loja; sync por `SYNC_*` |
+| Rotas / UI | Muitas rotas (login, caixa web, painel gerente, admin) | **Uma** aplicação Vite (poucas telas); superfície de código e dependências **menor** que o web |
+| Persistência | Postgres (RLS) em tempo real | SQLite + envio assíncrono via outbox |
+| Complemento | Referência operacional “sempre online” | Complementa o mesmo negócio com **vendas e caixa persistidos localmente** até a nuvem aceitar o sync |
 
 ## Estrutura
 

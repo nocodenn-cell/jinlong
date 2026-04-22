@@ -41,6 +41,9 @@ import {
   type AcaoMovimentacaoTipo,
 } from "@/app/caixa/CaixaMovimentacaoAcaoModal"
 import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeline"
+import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
+import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
+import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
 
 function localeFromIdioma(idioma: Idioma): string {
   if (idioma === "pt") return "pt-BR"
@@ -91,6 +94,15 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     tipo: AcaoMovimentacaoTipo
     item: MovimentacaoCaixaDTO
   } | null>(null)
+  type ValorModalFluxo = "abrir_caixa" | "fechar_contado"
+  const [valorNumericoModal, setValorNumericoModal] = useState<
+    null | { fluxo: ValorModalFluxo; initial: string }
+  >(null)
+  const [motivoFecharModal, setMotivoFecharModal] = useState<
+    | null
+    | { tipo: "diferenca"; valorContado: number; diferencaFmt: string }
+    | { tipo: "blind_retry"; valorContado: number }
+  >(null)
   const [gerenteValidadoAte, setGerenteValidadoAte] = useState<string | null>(null)
   const [gerenteToken, setGerenteToken] = useState<string | null>(null)
   const [maxDescontoGerentePercentual, setMaxDescontoGerentePercentual] =
@@ -336,102 +348,98 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     return roundMoney2(parsed)
   }, [])
 
-  const handleAbrirCaixa = useCallback(async () => {
-    if (processandoCaixa) return
-    const raw = window.prompt(`${m.caixa.valor_inicial}:`, "0")
-    const valorInicial = parseValorMonetario(raw)
-    if (valorInicial === null) {
-      setCaixaMensagem("Valor inicial inválido.")
-      return
-    }
-
-    setProcessandoCaixa(true)
-    setCaixaMensagem(null)
-    try {
-      const res = await abrirCaixaOperador(valorInicial)
-      if (!res.ok) {
-        setCaixaMensagem(res.error)
-        return
-      }
-      setCaixaMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`)
-      await recarregarStatusCaixa()
-    } finally {
-      setProcessandoCaixa(false)
-    }
-  }, [m.caixa.valor_inicial, parseValorMonetario, processandoCaixa, recarregarStatusCaixa, setCaixaMensagem])
-
-  const caixaAbertoParaFechar = caixaStatus?.aberto === true
-  const blindClosureEnabled = caixaAbertoParaFechar ? caixaStatus.blindClosureEnabled : false
-  const valorSistemaDinheiroParaFechar = caixaAbertoParaFechar ? caixaStatus.valorSistemaDinheiro : 0
-
   const erroExigeMotivoFechamento = useCallback((error: string) => {
     const e = error.toLowerCase()
     return e.includes("exige motivo") || (e.includes("diferença") && e.includes("motivo"))
   }, [])
 
-  const handleFecharCaixa = useCallback(async () => {
-    if (processandoCaixa) return
-    if (itens.length > 0) {
-      setCaixaMensagem("Finalize ou limpe o cupom antes de fechar o caixa.")
-      return
-    }
-    const raw = window.prompt(`${m.caixa.valor_final}:`)
-    const valorContado = parseValorMonetario(raw)
-    if (valorContado === null) {
-      setCaixaMensagem("Valor contado inválido.")
-      return
-    }
-    const diferencaEstimada = caixaAbertoParaFechar
-      ? roundMoney2(valorContado - valorSistemaDinheiroParaFechar)
-      : null
-    let motivo: string | undefined
-    if (!blindClosureEnabled && diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
-      const motivoRaw = window.prompt(
-        `Diferença estimada de R$ ${diferencaEstimada.toFixed(2)}. Informe o motivo (mín. 5 caracteres):`,
-      )
-      if (!motivoRaw || motivoRaw.trim().length < 5) {
-        setCaixaMensagem("Motivo obrigatório para diferença acima de R$ 5,00.")
-        return
-      }
-      motivo = motivoRaw.trim()
-    }
-
-    setProcessandoCaixa(true)
-    setCaixaMensagem(null)
-    try {
-      let res = await fecharCaixaOperador({ valorContado, motivo })
-      if (!res.ok && blindClosureEnabled && erroExigeMotivoFechamento(res.error)) {
-        const motivoRaw = window.prompt("Informe o motivo do ajuste (mín. 5 caracteres):")
-        if (!motivoRaw || motivoRaw.trim().length < 5) {
-          setCaixaMensagem("Motivo obrigatório para fechamento com divergência.")
+  const executarFecharCaixa = useCallback(
+    async (valorContado: number, motivo?: string) => {
+      setProcessandoCaixa(true)
+      setCaixaMensagem(null)
+      try {
+        let res = await fecharCaixaOperador({ valorContado, motivo })
+        const blind = caixaStatus?.aberto === true && caixaStatus.blindClosureEnabled
+        if (!res.ok && blind && erroExigeMotivoFechamento(res.error) && motivo == null) {
+          setMotivoFecharModal({ tipo: "blind_retry", valorContado })
           return
         }
-        res = await fecharCaixaOperador({ valorContado, motivo: motivoRaw.trim() })
+        if (!res.ok) {
+          setCaixaMensagem(res.error)
+          return
+        }
+        const diferencaPrefixo = res.diferenca > 0 ? "+" : ""
+        setCaixaMensagem(
+          `Caixa fechado. Sistema: R$ ${res.valorSistemaDinheiro.toFixed(2)} · Contado: R$ ${res.valorContado.toFixed(2)} · Diferença: ${diferencaPrefixo}R$ ${res.diferenca.toFixed(2)}`,
+        )
+        await recarregarStatusCaixa()
+      } finally {
+        setProcessandoCaixa(false)
       }
-      if (!res.ok) {
-        setCaixaMensagem(res.error)
+    },
+    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem],
+  )
+
+  const handleAbrirCaixa = useCallback(() => {
+    if (processandoCaixa) return
+    setValorNumericoModal({ fluxo: "abrir_caixa", initial: "0" })
+  }, [processandoCaixa])
+
+  const handleFecharCaixa = useCallback(() => {
+    if (processandoCaixa) return
+    if (itens.length > 0) {
+      setCaixaMensagem(m.caixa.msg_fechar_cupom_nao_vazio)
+      return
+    }
+    setValorNumericoModal({ fluxo: "fechar_contado", initial: "" })
+  }, [processandoCaixa, itens.length, m.caixa.msg_fechar_cupom_nao_vazio, setCaixaMensagem])
+
+  const onConfirmValorNumerico = useCallback(
+    (v: number) => {
+      if (!valorNumericoModal) return
+      const { fluxo } = valorNumericoModal
+      if (fluxo === "abrir_caixa") {
+        void (async () => {
+          setProcessandoCaixa(true)
+          setCaixaMensagem(null)
+          try {
+            const res = await abrirCaixaOperador(v)
+            if (!res.ok) {
+              setCaixaMensagem(res.error)
+              return
+            }
+            setCaixaMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`)
+            await recarregarStatusCaixa()
+          } finally {
+            setProcessandoCaixa(false)
+          }
+        })()
         return
       }
-      const diferencaPrefixo = res.diferenca > 0 ? "+" : ""
-      setCaixaMensagem(
-        `Caixa fechado. Sistema: R$ ${res.valorSistemaDinheiro.toFixed(2)} · Contado: R$ ${res.valorContado.toFixed(2)} · Diferença: ${diferencaPrefixo}R$ ${res.diferenca.toFixed(2)}`,
-      )
-      await recarregarStatusCaixa()
-    } finally {
-      setProcessandoCaixa(false)
-    }
-  }, [
-    caixaAbertoParaFechar,
-    blindClosureEnabled,
-    erroExigeMotivoFechamento,
-    valorSistemaDinheiroParaFechar,
-    itens.length,
-    m.caixa.valor_final,
-    parseValorMonetario,
-    processandoCaixa,
-    recarregarStatusCaixa,
-    setCaixaMensagem,
-  ])
+      const aberto = caixaStatus?.aberto === true
+      const blind = aberto && caixaStatus.blindClosureEnabled
+      const valorSistemaDinheiro = aberto ? caixaStatus.valorSistemaDinheiro : 0
+      const diferencaEstimada = aberto ? roundMoney2(v - valorSistemaDinheiro) : null
+      if (!blind && diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
+        setMotivoFecharModal({
+          tipo: "diferenca",
+          valorContado: v,
+          diferencaFmt: diferencaEstimada.toFixed(2),
+        })
+        return
+      }
+      void executarFecharCaixa(v, undefined)
+    },
+    [valorNumericoModal, caixaStatus, executarFecharCaixa, recarregarStatusCaixa, setCaixaMensagem],
+  )
+
+  const onConfirmMotivoFechar = useCallback(
+    (motivo: string) => {
+      if (!motivoFecharModal) return
+      void executarFecharCaixa(motivoFecharModal.valorContado, motivo)
+    },
+    [motivoFecharModal, executarFecharCaixa],
+  )
 
   useEffect(() => {
     if (!gerenteValidadoAte) return
@@ -797,20 +805,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
               buscando={buscando}
               carregandoRegras={carregandoRegras}
             />
-            {mensagem && (
-              <div
-                className="text-xs text-amber-300"
-                role="status"
-                aria-live="polite"
-                data-testid="caixa-status"
-              >
-                {msgVendaOk ? (
-                  <span data-testid="caixa-msg-venda-ok">{mensagem}</span>
-                ) : (
-                  mensagem
-                )}
-              </div>
-            )}
+            <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
           </div>
           <section className="flex-1 min-h-0 flex flex-col mx-4 sm:mx-6 rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden mb-2">
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -899,6 +894,57 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
             if (!open) setAcaoMovimentacao(null)
           }}
           onConfirm={handleConfirmarAcaoMovimentacao}
+        />
+      )}
+      {valorNumericoModal && (
+        <CaixaValorNumericoModal
+          open
+          onOpenChange={(open) => {
+            if (!open) setValorNumericoModal(null)
+          }}
+          title={
+            valorNumericoModal.fluxo === "abrir_caixa"
+              ? m.caixa.modal_valor_titulo_abrir
+              : m.caixa.modal_valor_titulo_fechar
+          }
+          description={
+            valorNumericoModal.fluxo === "abrir_caixa"
+              ? m.caixa.valor_inicial
+              : m.caixa.valor_final
+          }
+          campoLabel={m.caixa.modal_valor_label}
+          placeholder={m.caixa.modal_valor_placeholder}
+          initial={valorNumericoModal.initial}
+          m={m}
+          parseValor={(raw) => parseValorMonetario(raw)}
+          mensagemInvalido={
+            valorNumericoModal.fluxo === "abrir_caixa"
+              ? m.caixa.msg_valor_inicial_invalido
+              : m.caixa.msg_valor_contado_invalido
+          }
+          onConfirm={onConfirmValorNumerico}
+        />
+      )}
+      {motivoFecharModal && (
+        <CaixaMotivoMinModal
+          open
+          onOpenChange={(open) => {
+            if (!open) setMotivoFecharModal(null)
+          }}
+          title={
+            motivoFecharModal.tipo === "diferenca"
+              ? m.caixa.modal_motivo_diferenca_titulo
+              : m.caixa.modal_motivo_blind_titulo
+          }
+          description={
+            motivoFecharModal.tipo === "diferenca"
+              ? caixaFmt(m.caixa.modal_motivo_diferenca_desc, {
+                  diferenca: motivoFecharModal.diferencaFmt,
+                })
+              : m.caixa.modal_motivo_blind_desc
+          }
+          m={m}
+          onConfirm={onConfirmMotivoFechar}
         />
       )}
     </>

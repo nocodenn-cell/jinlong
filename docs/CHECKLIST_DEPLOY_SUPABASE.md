@@ -2,7 +2,15 @@
 
 Objetivo: **ordem segura** para subir ou atualizar o backend Supabase (Postgres + Edge Functions) sem esquecer secrets, alinhamento com a web e com o PDV desktop.
 
-Documentos relacionados: [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) (ciclo completo de homologação), [backend/supabase/README.md](../backend/supabase/README.md), [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md), [pdv-importados/docs/SUPABASE_ENV.md](../pdv-importados/docs/SUPABASE_ENV.md).
+Documentos relacionados: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) (trilha T1–T12), [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) (evidências por ciclo), [AMBIENTES_E_RELEASE.md](./AMBIENTES_E_RELEASE.md) (gates), [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md) (fechamento piloto), [backend/supabase/README.md](../backend/supabase/README.md), [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md), [pdv-importados/docs/SUPABASE_ENV.md](../pdv-importados/docs/SUPABASE_ENV.md).
+
+### Ordem mestra (resumo)
+
+1. **Link + migrations:** §1 deste documento (`link` → `migration list` → `db push` se preciso → `verify_p0_producao.sql`).  
+2. **Edge:** §2–3 — deploy `sync-outbox` (sempre que houver desktop/outbox); `validar-gerente` e `fiscal-worker` conforme escopo (tabela **§2b** em [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md)).  
+3. **Web / desktop:** §4–5 — `NEXT_PUBLIC_*`, `FISCAL_*` no Next; `SYNC_*` no Tauri.  
+4. **Smoke:** §6 — login + fluxo crítico; opcional `smoke_operacao_fluxo_completo.sql` em homologação ([DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md)).  
+5. **Evidências:** registrar no [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) antes de promover staging → prod.
 
 ---
 

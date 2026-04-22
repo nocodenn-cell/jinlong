@@ -6,6 +6,12 @@ Escopo: `backend` (migrations + Edge Function `fiscal-worker`) e `pdv-importados
 
 Referencias: [CHECKLIST_DEPLOY_SUPABASE.md](./CHECKLIST_DEPLOY_SUPABASE.md), [HOMOLOGACAO_PRODUCAO.md](./HOMOLOGACAO_PRODUCAO.md), [RUNBOOK_ROLLBACK.md](./RUNBOOK_ROLLBACK.md).
 
+**Encaixe com o restante do monorepo:**
+
+- **P0 / migrations / Edge base:** [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) (trilha T1–T12) — execute **antes** ou em paralelo com D-1; o remoto deve incluir `062_fiscal_enqueue_on_sale_rpc.sql` (RPC `fiscal_enfileirar_documento_venda`) e migrations fiscais posteriores exigidas pelo branch.
+- **Critério “piloto fechado” + evidências:** [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md) (§1.4 `fiscal-worker`, §4 decisão `mock` vs `http`, §7 em [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md)).
+- **Pré-deploy web:** na pasta `pdv-importados`, com `AUTO_ENQUEUE_FISCAL_ON_SALE=true`, rode `npm run env:check` — valida `FISCAL_WORKER_*` e URL da Edge.
+
 ---
 
 ## Premissas de entrada (Go/No-Go inicial)

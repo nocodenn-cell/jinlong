@@ -17,7 +17,7 @@ PDV para lojas de importados no Brasil: **atacado por faixa**, **PT no caixa** /
 
 ## Stack (fixa neste módulo)
 
-- Next.js 15 **App Router** em `app/` (sem `src/app` paralelo), TypeScript strict, Tailwind, shadcn/ui, Lucide
+- Next.js 16 **App Router** em `app/` (sem `src/app` paralelo), **React 19** (alinhado ao `pdv-local`), TypeScript strict, Tailwind, shadcn/ui, Lucide
 - Supabase: `@supabase/ssr`, Auth, Postgres com RLS (ver migrations no `backend`)
 - i18n: **`getMessages` + `src/lib/i18n/*.json`** (pt, zh, zh-HK) — **sem** `next-intl`; URLs **sem** prefixo `/pt/` (`/login`, `/caixa`, `/gerente/...`)
 - Estado: Zustand (`stores/carrinhoStore.ts`) + `core/` (pricing, tipos)
@@ -31,7 +31,7 @@ PDV para lojas de importados no Brasil: **atacado por faixa**, **PT no caixa** /
 
 ```
 app/                 ← rotas: login, caixa, gerente, layouts
-components/ui/       ← shadcn
+components/          ← UI por domínio (ui/, caixa/, gerente/, …); ver components/README.md
 lib/supabase/        ← client/server canônicos
 lib/adapters/
 stores/

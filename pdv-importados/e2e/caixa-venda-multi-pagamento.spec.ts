@@ -164,6 +164,68 @@ test.describe('Caixa — venda com split DINHEIRO + PIX', () => {
     await expect(selects.nth(0)).toHaveValue('DINHEIRO')
   })
 
+  test('tres parcelas (DINHEIRO + PIX + CARTAO_DEBITO) somam ao total e finaliza', async ({ page }) => {
+    test.skip(!unifiedSalesFlowEnabled, 'Requer USE_UNIFIED_SALES_FLOW=true para persistir split.')
+    await page.goto('/caixa')
+    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
+
+    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
+    if (await abrir.isVisible().catch(() => false)) {
+      queuePromptAnswers(page, ['300'])
+      await abrir.click()
+      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
+    }
+
+    const codigo = e2eProdutoCodigoBarras()
+    const busca = page.getByRole('textbox', {
+      name: /código de barras|nome do produto|条码|商品名称/i,
+    })
+    await busca.fill(codigo)
+    await busca.press('Enter')
+
+    const status = page.getByTestId('caixa-status')
+    await expect(status).toBeVisible({ timeout: 20_000 })
+    const statusTxt = (await status.innerText()).toLowerCase()
+    if (statusTxt.includes('não encontrad') || statusTxt.includes('not found') || statusTxt.includes('找不到')) {
+      test.skip(
+        true,
+        `Produto «${codigo}» não encontrado (seed 027 ou PLAYWRIGHT_E2E_PRODUTO_CODIGO).`,
+      )
+      return
+    }
+    await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
+
+    const footer = page.locator('footer')
+    await expect(footer.getByText(/Pagamento|付款/i)).toBeVisible()
+
+    await footer.getByRole('button', { name: /^\+$/ }).click()
+    await footer.getByRole('button', { name: /^\+$/ }).click()
+
+    const selects = footer.locator('select')
+    const inputs = footer.locator('input[type="number"]')
+    await expect(selects).toHaveCount(3, { timeout: 10_000 })
+    await expect(inputs).toHaveCount(3)
+
+    await selects.nth(0).selectOption({ value: 'DINHEIRO' })
+    await selects.nth(1).selectOption({ value: 'PIX' })
+    await selects.nth(2).selectOption({ value: 'CARTAO_DEBITO' })
+
+    const total = await readTotalLiquidoFooter(page)
+    const p1 = round2(Math.max(0.01, total * 0.25))
+    const p2 = round2(Math.max(0.01, total * 0.35))
+    const p3 = round2(total - p1 - p2)
+    await inputs.nth(0).fill(String(p1))
+    await inputs.nth(1).fill(String(p2))
+    await inputs.nth(2).fill(String(p3))
+
+    await expect(page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i })).toBeEnabled({
+      timeout: 15_000,
+    })
+    await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
+
+    await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
+  })
+
 })
 
 function round2(n: number): number {

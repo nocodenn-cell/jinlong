@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
+import { GerenteNavLink } from '@/components/gerente/GerenteNavLink'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
@@ -60,23 +60,6 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
   const { mutate: criarLinhaEstoque, loading: criandoLinha } = useGerenteMutation(
     garantirLinhaEstoqueThrow,
     mutationOpts,
-  )
-
-  const navLink = (href: string, active: boolean, label: string) => (
-    <Link
-      href={href}
-      style={{
-        padding: '6px 12px',
-        borderRadius: 8,
-        fontSize: 13,
-        textDecoration: 'none',
-        background: active ? '#111827' : '#f3f4f6',
-        color: active ? '#fff' : '#111827',
-        border: active ? 'none' : '1px solid #e5e7eb',
-      }}
-    >
-      {label}
-    </Link>
   )
 
   const somenteBaixo = filtro === 'baixo'
@@ -145,8 +128,12 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
       <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>{m.estoque.subtitulo}</p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {navLink('/gerente/estoque', !somenteBaixo, m.estoque.nav_todos)}
-        {navLink('/gerente/estoque?filtro=baixo', somenteBaixo, m.estoque.nav_baixo)}
+        <GerenteNavLink href="/gerente/estoque" active={!somenteBaixo}>
+          {m.estoque.nav_todos}
+        </GerenteNavLink>
+        <GerenteNavLink href="/gerente/estoque?filtro=baixo" active={somenteBaixo}>
+          {m.estoque.nav_baixo}
+        </GerenteNavLink>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>

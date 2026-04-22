@@ -120,6 +120,10 @@ Com teste de `validar_gerente` (dois checks extras):
 
 ## 6. Histórico / P0 operacional
 
-Para fechamento operacional por projeto (incl. `verify_p0_producao.sql`), continue usando **[P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md)**. Este arquivo **complementa** com matriz de ambientes e política de credenciais do PDV local.
+Para fechamento operacional por projeto (incl. `verify_p0_producao.sql`), continue usando **[P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md)** (tabela **Trilha unificada** T1–T12). Este arquivo **complementa** com matriz de ambientes e política de credenciais do PDV local.
 
 **Registro por ciclo só em staging:** [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) (tabelas com data/responsável/evidência). **Status Local vs Remote:** `cd backend` → `node scripts/p0-migration-status.mjs` (requer `supabase link`).
+
+**Ordem segura de deploy (Postgres + Edge + envs):** [CHECKLIST_DEPLOY_SUPABASE.md](./CHECKLIST_DEPLOY_SUPABASE.md).
+
+**Encerramento do piloto (migrations mínimas + `fiscal-worker` + smoke SQL longo + GO/NO_GO + janela/rollback):** [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md) — registrar também na **§7** do checklist de staging quando o ciclo for fechamento de piloto.

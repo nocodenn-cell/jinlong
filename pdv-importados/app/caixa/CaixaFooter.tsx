@@ -4,15 +4,10 @@ import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/src/lib/i18n/getMessages"
 import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
-import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
-
-const FORMAS: FinalizarVendaInput["formaPagamento"][] = [
-  "DINHEIRO",
-  "PIX",
-  "CARTAO_DEBITO",
-  "CARTAO_CREDITO",
-  "FIADO",
-]
+import {
+  FORMAS_PAGAMENTO_CAIXA,
+  type FinalizarVendaInput,
+} from "@/app/caixa/finalizarVendaValidation"
 
 type Props = {
   m: Mensagens
@@ -138,9 +133,10 @@ export function CaixaFooter({
                       )
                     }
                     disabled={finalizando || itensLength === 0}
+                    aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: String(idx + 1) })}
                     className="h-8 rounded-md bg-slate-800 border border-slate-600 px-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
                   >
-                    {FORMAS.map((f) => (
+                    {FORMAS_PAGAMENTO_CAIXA.map((f) => (
                       <option key={f} value={f}>
                         {formaLabel(m, f)}
                       </option>
@@ -153,12 +149,14 @@ export function CaixaFooter({
                     value={p.valor}
                     onChange={(e) => onPagamentoValorChange(idx, Number(e.target.value))}
                     disabled={finalizando || itensLength === 0}
+                    aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: String(idx + 1) })}
                     className="h-8 w-24 rounded-md bg-slate-800 border border-slate-600 px-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
                   />
                   <button
                     type="button"
                     onClick={() => onRemoverPagamento(idx)}
                     disabled={finalizando || itensLength === 0 || pagamentos.length <= 1}
+                    aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: String(idx + 1) })}
                     className="h-8 px-2 rounded-md bg-slate-700 text-slate-200 text-xs disabled:opacity-50"
                   >
                     -
@@ -168,6 +166,7 @@ export function CaixaFooter({
                       type="button"
                       onClick={onAdicionarPagamento}
                       disabled={finalizando || itensLength === 0 || pagamentos.length >= 4}
+                      aria-label={m.caixa.aria_adicionar_parcela}
                       className="h-8 px-2 rounded-md bg-slate-700 text-slate-200 text-xs disabled:opacity-50"
                     >
                       +

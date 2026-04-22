@@ -3,9 +3,33 @@
 Use este arquivo como **lista de verificação** em **cada** projeto Supabase (ex.: dev, staging, produção) e na **máquina do PDV desktop**.
 
 Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).  
-**Ambientes (dev/staging/prod), credenciais do PDV local e gates de release:** [AMBIENTES_E_RELEASE.md](./AMBIENTES_E_RELEASE.md).
-**Fonte única para fechamento de segurança:** [SECURANCA_CHECKLIST_FECHAMENTO.md](./SECURANCA_CHECKLIST_FECHAMENTO.md).
+**Ambientes (dev/staging/prod), credenciais do PDV local e gates de release:** [AMBIENTES_E_RELEASE.md](./AMBIENTES_E_RELEASE.md).  
+**Deploy Supabase + web + secrets (ordem segura):** [CHECKLIST_DEPLOY_SUPABASE.md](./CHECKLIST_DEPLOY_SUPABASE.md).  
+**Registro por ciclo (staging) com evidências:** [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md).  
+**Fechamento do piloto (GO/NO_GO + fiscal + smoke SQL):** [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md).  
+**Fonte única para fechamento de segurança:** [SECURANCA_CHECKLIST_FECHAMENTO.md](./SECURANCA_CHECKLIST_FECHAMENTO.md).  
 **Fechamento de governança (P2):** [P2_GOVERNANCA_RLS_E_PENTEST.md](./P2_GOVERNANCA_RLS_E_PENTEST.md).
+
+## Trilha unificada (ordem de execução)
+
+Marque por **ambiente** (`dev` / `staging` / `prod`). Itens **§2–§3** só se houver PDV desktop no piloto.
+
+| # | Etapa | Documento / seção | OK? |
+|---|--------|-------------------|-----|
+| T1 | `cd backend` → `npx supabase link --project-ref <REF>` | Este arquivo §1 | [ ] |
+| T2 | `npx supabase migration list` — **Remote** sem lacunas vs **Local** (todas as migrations em `backend/supabase/migrations/`, inclusive arquivos com prefixo de timestamp) | §1 + [CHECKLIST_DEPLOY_SUPABASE.md §1](./CHECKLIST_DEPLOY_SUPABASE.md#1-banco-migrations) | [ ] |
+| T3 | `node scripts/p0-migration-status.mjs` — saída **ALINHADO** | [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) (§1 — tabela 1.3) | [ ] |
+| T4 | `npx supabase db push` (se drift) → repetir T2–T3 | §1 | [ ] |
+| T5 | SQL Editor: `verify_p0_producao.sql` | §1 | [ ] |
+| T6 | (Opcional recomendado) Smoke **023** — `smoke_023_finalizar_venda_token_gerente*.sql` | §1 (parágrafo abaixo) | [ ] |
+| T7 | `npx supabase functions deploy sync-outbox` (+ `validar-gerente` / `fiscal-worker` se o piloto usar) | §2 + [CHECKLIST_DEPLOY_SUPABASE.md §2](./CHECKLIST_DEPLOY_SUPABASE.md#2-edge-functions--deploy) | [ ] |
+| T8 | Secrets das functions conforme matriz do deploy | §2 + [CHECKLIST_DEPLOY_SUPABASE.md §3](./CHECKLIST_DEPLOY_SUPABASE.md#3-secrets-das-edge-functions) | [ ] |
+| T9 | `pdv-importados` — `.env.local` / Vercel com `NEXT_PUBLIC_*` do **mesmo** ref | §5 + [CHECKLIST_DEPLOY_SUPABASE.md §4](./CHECKLIST_DEPLOY_SUPABASE.md#4-alinhamento-com-pdv-importados-vercel-ou-host-next); gates em [AMBIENTES_E_RELEASE.md §3](./AMBIENTES_E_RELEASE.md#3-gates-de-release-antes-de-promover-staging--prod) | [ ] |
+| T10 | (Se desktop) `pdv-local/.env` + teste §4 | §3–§4 | [ ] |
+| T11 | (Se só web) teste §4b | §4b | [ ] |
+| T12 | Encerramento piloto: [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md) + evidências em [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) | Staging → prod | [ ] |
+
+**Registro formal por ciclo em staging:** copie as tabelas de [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) para o PR/ticket e anexe prints ou links das evidências (SQL Editor, deploy, Vercel).
 
 ## Ordem sugerida (fechar o P0 sem pular dependência)
 
@@ -17,12 +41,12 @@ Referência ampla: [CIRCUITO_OPERACIONAL.md](./CIRCUITO_OPERACIONAL.md).
 - Alternativa operacional (copy/paste por ambiente): `[backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql](../backend/supabase/scripts/smoke_023_finalizar_venda_token_gerente_env.sql)`.
 - Esperado: cenário **token válido** conclui e consome token; **expirado** e **já usado** falham com erro esperado.
 
-1. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, HMAC/`SYNC_KEY` e chamada a `decrementar_estoque_seguro`.
-2. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC`_* do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
-3. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
+2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, HMAC/`SYNC_KEY` e chamada a `decrementar_estoque_seguro`.
+3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC`_* do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
+4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
   - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC legada) e **010** (leitura `estoque_baixas` para gerente); caixa web usa **016** `decrementar_estoque_seguro` quando aplicada.
   - **§4 (com desktop):** além disso, **§3** (`pdv-local/.env` + `SYNC_`*) → catálogo → venda no Tauri → sync → mesma checagem no Supabase e na web.
-4. Marcar os checkboxes deste arquivo para o ambiente (piloto/produção) que você chama de **oficial**.
+5. Marcar os checkboxes desta trilha e do [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) para o ambiente (piloto/produção) que você chama de **oficial**.
 
 ### O que é obrigatório em qualquer piloto
 
@@ -40,7 +64,7 @@ cd C:\Naturecode\fastproduct\backend
 npx supabase migration list
 ```
 
-- Coluna **Remote** deve refletir **todas** as migrations do repositório aplicadas **sem lacunas** na sequência do projeto (no monorepo atual, arquivos `001` … `043` em `backend/supabase/migrations/`; confira com `migration list` após `supabase link`). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`. **024**: tabela `sync_request_nonces` (anti-replay HMAC). **025**: `finalizar_venda_transacional_canonica_v2` (fluxo unificado). **026+**: evoluções (config gerente, catálogo atacado, fiado/fiscal, RLS por loja, etc.) — manter remoto alinhado ao que está versionado antes de produção.
+- Coluna **Remote** deve refletir **todas** as migrations do repositório aplicadas **sem lacunas** na sequência do projeto (pasta `backend/supabase/migrations/`: arquivos com prefixo numérico `001_` … até a última versão no branch **e** eventuais arquivos com **timestamp** no nome; confira com `migration list` após `supabase link`). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`. **024**: tabela `sync_request_nonces` (anti-replay HMAC). **025**: `finalizar_venda_transacional_canonica_v2` (fluxo unificado). **026+**: evoluções (config gerente, catálogo atacado, fiado/fiscal, RLS por loja, etc.) — manter remoto alinhado ao que está versionado antes de produção.
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  

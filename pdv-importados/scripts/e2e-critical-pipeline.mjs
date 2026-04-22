@@ -58,4 +58,6 @@ runStep('playwright e2e/caixa-fluxos-criticos.spec.ts', 'npx', [
   'e2e/caixa-fluxos-criticos.spec.ts',
 ], pdvImportados)
 
-console.log('[pipeline] Concluído: env, smoke sync, E2E sync-gerente, vendas caixa (simples + split) e fluxos caixa.')
+console.log(
+  '[pipeline] Concluído: env, smoke sync, E2E sync-gerente, vendas caixa (simples + split 2 e 3 parcelas) e fluxos caixa.',
+)

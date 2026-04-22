@@ -26,8 +26,32 @@ Regra de leitura:
 | `documentos_fiscais_eventos` | SELECT | não | todas da loja | todas da loja | todas da loja | `doc_fiscal_eventos_gerente_select` |
 | `contas_receber` | SELECT | não | todas da loja | todas da loja | todas da loja | `contas_receber_gerente` |
 | `v_estoque_baixo` | SELECT | mesma loja | mesma loja | mesma loja + macro | mesma loja | depende de `security_invoker` + RLS base |
-| `RPC: finalizar_venda_transacional_canonica_v2` | EXECUTE | sim (fluxo próprio) | sim | sim | sim | deve respeitar escopo de venda/caixa/token |
-| `RPC: decrementar_estoque_seguro` | EXECUTE | indireto (via venda) | sim | sim | sim | função `SECURITY DEFINER`, validar entrada/loja |
+| `RPC: ajustar_estoque_manual` | EXECUTE | não | sim | sim | não | checagem explícita `GERENTE`/`DONO` na função |
+| `RPC: aprovar_movimentacao` | EXECUTE | não | sim | sim | sim | sangria acima do limite, fluxo pendente |
+| `RPC: calcular_valor_sistema_dinheiro_caixa` | EXECUTE | sim (uso esperado: caixa do operador) | sim | sim | sim | `SECURITY DEFINER`; reforço de perfil recomendável no app |
+| `RPC: cancelar_movimentacao` | EXECUTE | sim (própria pendente) | sim | sim | sim | operador dono do lançamento ou perfil gerencial |
+| `RPC: cancelar_venda_transacional` | EXECUTE | não | sim | sim | sim | apenas `GERENTE`/`DONO`/`ADMIN` na loja do caixa |
+| `RPC: confirmar_remessa_entrada` | EXECUTE | não | sim | sim | sim | `GERENTE`/`DONO`/`ADMIN` (migração 044) |
+| `RPC: decrementar_estoque_idempotente` | EXECUTE | sim | sim | sim | sim | `SECURITY DEFINER`; idempotência por par venda+produto |
+| `RPC: decrementar_estoque_seguro` | EXECUTE | sim | sim | sim | sim | `SECURITY DEFINER`; deriva loja pela venda/caixa |
+| `RPC: estornar_movimentacao` | EXECUTE | sim (escopo caixa) | sim | sim | sim | origem aprovada + regras de caixa na função |
+| `RPC: finalizar_venda_transacional` | EXECUTE | sim | sim | sim | sim | fluxo legado; preferir canônica v2 |
+| `RPC: finalizar_venda_transacional_canonica_v2` | EXECUTE | sim | sim | sim | sim | idempotente se venda já `CONCLUIDA` |
+| `RPC: fiscal_enfileirar_documento_venda` | EXECUTE | sim (venda própria) | sim | sim | sim | ou visão gerencial na mesma base |
+| `RPC: fiscal_reprocessar_documento` | EXECUTE | não | sim | sim | sim | apenas `GERENTE`/`DONO`/`ADMIN` |
+| `RPC: obter_limite_sangria_sem_gerente` | EXECUTE | sim | sim | sim | sim | leitura de `pdv_config` |
+| `RPC: pdv_config_para_caixa_web` | EXECUTE | sim | sim | sim | sim | payload restrito para o caixa web |
+| `RPC: recalcular_saldo_caixa` | EXECUTE | sim | sim | sim | sim | `SECURITY DEFINER` sem checagem de perfil na função (hardening recomendado) |
+| `RPC: registrar_liquidacao_receber` | EXECUTE | não | sim | sim | sim | `GERENTE`/`DONO`/`ADMIN` |
+| `RPC: registrar_movimentacao` | EXECUTE | sim (próprio caixa) | sim | sim | sim | operador dono do caixa ou perfil gerencial |
+| `RPC: registrar_venda_com_itens` | EXECUTE | sim | sim | sim | sim | `p_operador_id` deve ser coerente com o fluxo e RLS |
+| `RPC: relatorio_resumo_executivo_periodo` | EXECUTE | sim (RLS em `vendas`) | sim | sim | sim | `SECURITY INVOKER` |
+| `RPC: relatorio_top_produtos_periodo` | EXECUTE | sim (RLS) | sim | sim | sim | sobrecargas `(date,date,int[,tz])` e legado `timestamptz` |
+| `RPC: relatorio_tz_validado` | EXECUTE | sim | sim | sim | sim | normalização de fuso |
+| `RPC: relatorio_vendas_por_dia_periodo` | EXECUTE | sim (RLS) | sim | sim | sim | sobrecargas `(date,date[,tz])` e legado `timestamptz` |
+| `RPC: transferir_estoque_entre_lojas` | EXECUTE | não | sim | sim | sim | `GERENTE`/`DONO`/`ADMIN` (migração 044) |
+
+Funções `public` com `GRANT EXECUTE` apenas para `service_role` (fora da matriz de sessão `authenticated` do app): `fiscal_claim_documentos`, `fiscal_marcar_emitido`, `fiscal_marcar_erro`, `fiscal_marcar_erro_normalizado`. Triggers internos (`tg_*`) não são RPCs de API.
 
 ## Regras de validação obrigatórias no CI
 

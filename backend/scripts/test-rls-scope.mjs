@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createClient } from "@supabase/supabase-js";
 import { execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
@@ -16,12 +17,17 @@ const USERS = [
 
 const IDS = {
   loja: "b0000001-0000-4000-8000-000000000001",
+  loja2: "c0000001-0000-4000-8000-000000000001",
   categoria: "b0000002-0000-4000-8000-000000000001",
   produto: "b0000003-0000-4000-8000-000000000001",
   caixaOperador: "b0000004-0000-4000-8000-000000000001",
   caixaGerente: "b0000004-0000-4000-8000-000000000002",
   vendaOperador: "b0000005-0000-4000-8000-000000000001",
   vendaGerente: "b0000005-0000-4000-8000-000000000002",
+  tituloReceber: "b0000006-0000-4000-8000-000000000001",
+  clienteReceber: "b0000007-0000-4000-8000-000000000001",
+  remessaConferencia: "c0000002-0000-4000-8000-000000000001",
+  remessaItem: "c0000002-0000-4000-8000-000000000002",
 };
 
 function requireEnv(name, value) {
@@ -32,6 +38,27 @@ function reportLine(ok, rule, detail = "") {
   const badge = ok ? "PASS" : "FAIL";
   const text = detail ? `${rule} -> ${detail}` : rule;
   console.log(`[${badge}] ${text}`);
+}
+
+async function assertRpcOk(client, name, args = {}) {
+  const { error } = await client.rpc(name, args);
+  if (error) throw new Error(`${name}: ${error.message}`);
+}
+
+async function assertRpcErrorContains(client, name, args, substring) {
+  const { error } = await client.rpc(name, args);
+  const msg = error?.message ?? "";
+  if (!msg.includes(substring)) {
+    throw new Error(`Esperava mensagem contendo "${substring}" em ${name}; obtido: ${msg || "(sem erro)"}`);
+  }
+}
+
+function monthDateRange() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const last = new Date(y, d.getMonth() + 1, 0).getDate();
+  return { p_de: `${y}-${m}-01`, p_ate: `${y}-${m}-${String(last).padStart(2, "0")}` };
 }
 
 async function ensureUsersAndSeed() {
@@ -72,6 +99,10 @@ BEGIN
   VALUES ('${IDS.loja}'::uuid, 'Loja Teste RLS', 'LOJA-RLS', true)
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, codigo = EXCLUDED.codigo, ativo = true;
 
+  INSERT INTO public.lojas (id, nome, codigo, ativo)
+  VALUES ('${IDS.loja2}'::uuid, 'Loja Teste RLS Filial', 'LOJA-RLS-B', true)
+  ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, codigo = EXCLUDED.codigo, ativo = true;
+
   INSERT INTO public.categorias (id, nome)
   VALUES ('${IDS.categoria}'::uuid, 'Categoria RLS')
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
@@ -94,7 +125,37 @@ BEGIN
 
   INSERT INTO public.estoque (produto_id, quantidade_atual, estoque_minimo, loja_id)
   VALUES ('${IDS.produto}'::uuid, 100, 5, '${IDS.loja}'::uuid)
-  ON CONFLICT (loja_id, produto_id) DO UPDATE SET quantidade_atual = EXCLUDED.quantidade_atual, estoque_minimo = EXCLUDED.estoque_minimo;
+  ON CONFLICT (loja_id, produto_id) DO UPDATE SET quantidade_atual = 100, estoque_minimo = EXCLUDED.estoque_minimo;
+
+  INSERT INTO public.estoque (produto_id, quantidade_atual, estoque_minimo, loja_id)
+  VALUES ('${IDS.produto}'::uuid, 20, 1, '${IDS.loja2}'::uuid)
+  ON CONFLICT (loja_id, produto_id) DO UPDATE SET quantidade_atual = 20, estoque_minimo = EXCLUDED.estoque_minimo;
+
+  DELETE FROM public.estoque_baixas
+  WHERE venda_id IN ('${IDS.vendaOperador}'::uuid, '${IDS.vendaGerente}'::uuid)
+    AND produto_id = '${IDS.produto}'::uuid;
+
+  DELETE FROM public.movimentos_estoque_log WHERE remessa_id = '${IDS.remessaConferencia}'::uuid;
+  DELETE FROM public.remessa_itens WHERE remessa_id = '${IDS.remessaConferencia}'::uuid;
+  DELETE FROM public.remessas WHERE id = '${IDS.remessaConferencia}'::uuid;
+
+  INSERT INTO public.remessas (id, loja_id, origem_descricao, status, created_by)
+  VALUES (
+    '${IDS.remessaConferencia}'::uuid,
+    '${IDS.loja2}'::uuid,
+    'Seed remessa RLS (conferência)',
+    'EM_CONFERENCIA',
+    '${authByPerfil.GERENTE}'::uuid
+  );
+
+  INSERT INTO public.remessa_itens (id, remessa_id, produto_id, quantidade_esperada, quantidade_conferida)
+  VALUES (
+    '${IDS.remessaItem}'::uuid,
+    '${IDS.remessaConferencia}'::uuid,
+    '${IDS.produto}'::uuid,
+    3,
+    3
+  );
 
   INSERT INTO public.caixas (id, operador_id, valor_inicial, status, loja_id)
   VALUES
@@ -107,9 +168,34 @@ BEGIN
     ('${IDS.vendaOperador}'::uuid, '${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 50, 0, 50, 'PIX', 'CONCLUIDA'),
     ('${IDS.vendaGerente}'::uuid, '${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 70, 0, 70, 'PIX', 'CONCLUIDA')
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, caixa_id = EXCLUDED.caixa_id;
+
+  INSERT INTO public.clientes (id, nome, documento)
+  VALUES ('${IDS.clienteReceber}'::uuid, 'Cliente RLS Fiado', '00000000000')
+  ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
+
+  INSERT INTO public.contas_receber (id, cliente_id, descricao, valor_total, valor_aberto, status)
+  VALUES (
+    '${IDS.tituloReceber}'::uuid,
+    '${IDS.clienteReceber}'::uuid,
+    'Título seed RLS',
+    999.99,
+    999.99,
+    'ABERTO'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    valor_aberto = EXCLUDED.valor_aberto,
+    valor_total = EXCLUDED.valor_total,
+    status = 'ABERTO';
 END$$;
 `;
-  execSync(`psql "${POSTGRES_URL}" -v ON_ERROR_STOP=1 -c "${sql.replace(/\n/g, " ")}"`, { stdio: "inherit" });
+  const sqlOneLine = sql.replace(/\n/g, " ");
+  const psqlCmd = process.env.PSQL_CMD?.trim();
+  const execLine = psqlCmd
+    ? `${psqlCmd} -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`
+    : process.platform === "win32"
+      ? `docker exec -i supabase_db_fastproduct psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`
+      : `psql "${POSTGRES_URL}" -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`;
+  execSync(execLine, { stdio: "inherit", shell: true });
   return authByPerfil;
 }
 
@@ -206,6 +292,306 @@ async function main() {
     if (Array.isArray(data) && data.length > 0) {
       throw new Error("OPERADOR recebeu registros de contas_receber");
     }
+  });
+
+  const dr = monthDateRange();
+  const tz = "America/Sao_Paulo";
+
+  await run("RPC relatorio_tz_validado", async () => {
+    await assertRpcOk(operador, "relatorio_tz_validado", { p_tz: tz });
+  });
+
+  await run("RPC obter_limite_sangria_sem_gerente", async () => {
+    await assertRpcOk(operador, "obter_limite_sangria_sem_gerente");
+  });
+
+  await run("RPC pdv_config_para_caixa_web", async () => {
+    await assertRpcOk(operador, "pdv_config_para_caixa_web");
+  });
+
+  await run("RPC calcular_valor_sistema_dinheiro_caixa", async () => {
+    await assertRpcOk(operador, "calcular_valor_sistema_dinheiro_caixa", { p_caixa_id: IDS.caixaOperador });
+  });
+
+  await run("RPC finalizar_venda_transacional_canonica_v2 (idempotente CONCLUIDA)", async () => {
+    await assertRpcOk(operador, "finalizar_venda_transacional_canonica_v2", {
+      p_venda_id: IDS.vendaOperador,
+      p_caixa_id: IDS.caixaOperador,
+    });
+  });
+
+  await run("RPC finalizar_venda_transacional (itens inválidos)", async () => {
+    await assertRpcErrorContains(operador, "finalizar_venda_transacional", {
+      p_venda_id: IDS.vendaOperador,
+      p_caixa_id: IDS.caixaOperador,
+      p_forma_pagamento: "PIX",
+      p_total_bruto: 1,
+      p_total_desconto: 0,
+      p_total_liquido: 1,
+      p_itens: [],
+    }, "FINALIZAR_VENDA_ITENS_INVALIDOS");
+  });
+
+  await run("RPC fiscal_enfileirar_documento_venda", async () => {
+    await assertRpcOk(operador, "fiscal_enfileirar_documento_venda", {
+      p_venda_id: IDS.vendaOperador,
+      p_tipo_doc: "NFC_E_STUB",
+      p_payload: {},
+    });
+  });
+
+  await run("RPC decrementar_estoque_seguro", async () => {
+    const { data, error } = await operador.rpc("decrementar_estoque_seguro", {
+      p_produto_id: IDS.produto,
+      p_quantidade: 0.01,
+      p_venda_id: IDS.vendaOperador,
+    });
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || row.sucesso !== true) {
+      throw new Error(`decrementar_estoque_seguro inesperado: ${JSON.stringify(data)}`);
+    }
+  });
+
+  await run("RPC decrementar_estoque_idempotente (no-op se já baixado)", async () => {
+    await assertRpcOk(operador, "decrementar_estoque_idempotente", {
+      p_produto_id: IDS.produto,
+      p_quantidade: 0.01,
+      p_venda_id: IDS.vendaOperador,
+    });
+  });
+
+  await run("RPC recalcular_saldo_caixa", async () => {
+    await assertRpcOk(gerente, "recalcular_saldo_caixa", { p_caixa_id: IDS.caixaGerente });
+  });
+
+  await run("RPC registrar_movimentacao (suprimento)", async () => {
+    await assertRpcOk(operador, "registrar_movimentacao", {
+      p_caixa_id: IDS.caixaOperador,
+      p_tipo: "suprimento",
+      p_forma_pagamento: "dinheiro",
+      p_valor: 0.01,
+      p_motivo: "Smoke RLS",
+      p_idempotency_key: `rls-supr-${randomUUID()}`,
+    });
+  });
+
+  await run("RPC cancelar_movimentacao (uuid inexistente)", async () => {
+    await assertRpcErrorContains(gerente, "cancelar_movimentacao", {
+      p_movimentacao_id: randomUUID(),
+      p_motivo_cancelamento: "smoke",
+    }, "NAO_ENCONTRADA");
+  });
+
+  await run("RPC aprovar_movimentacao (uuid inexistente)", async () => {
+    await assertRpcErrorContains(gerente, "aprovar_movimentacao", {
+      p_movimentacao_id: randomUUID(),
+    }, "NAO_ENCONTRADA");
+  });
+
+  await run("RPC estornar_movimentacao (origem inexistente)", async () => {
+    await assertRpcErrorContains(operador, "estornar_movimentacao", {
+      p_movimentacao_origem_id: randomUUID(),
+      p_motivo: "smoke",
+      p_idempotency_key: `rls-est-${randomUUID()}`,
+    }, "NAO_ENCONTRADA");
+  });
+
+  await run("RPC cancelar_venda_transacional negado a OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "cancelar_venda_transacional", {
+      p_venda_id: IDS.vendaGerente,
+      p_motivo: "smoke rls",
+    }, "SEM_PERMISSAO");
+  });
+
+  await run("RPC relatorio_vendas_por_dia_periodo", async () => {
+    await assertRpcOk(gerente, "relatorio_vendas_por_dia_periodo", { ...dr, p_tz: tz });
+  });
+
+  await run("RPC relatorio_top_produtos_periodo", async () => {
+    await assertRpcOk(gerente, "relatorio_top_produtos_periodo", {
+      ...dr,
+      p_limite: 10,
+      p_tz: tz,
+    });
+  });
+
+  await run("RPC relatorio_resumo_executivo_periodo", async () => {
+    await assertRpcOk(dono, "relatorio_resumo_executivo_periodo", { ...dr, p_tz: tz });
+  });
+
+  await run("RPC registrar_liquidacao_receber (GERENTE)", async () => {
+    await assertRpcOk(gerente, "registrar_liquidacao_receber", {
+      p_titulo_id: IDS.tituloReceber,
+      p_valor: 0.01,
+      p_forma_pagamento: "PIX",
+      p_observacao: "smoke rls",
+    });
+  });
+
+  await run("RPC registrar_liquidacao_receber negado a OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "registrar_liquidacao_receber", {
+      p_titulo_id: IDS.tituloReceber,
+      p_valor: 0.01,
+      p_forma_pagamento: "PIX",
+    }, "LIQUIDACAO_PERFIL");
+  });
+
+  await run("RPC ajustar_estoque_manual negado a OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "ajustar_estoque_manual", {
+      p_produto_id: IDS.produto,
+      p_loja_id: IDS.loja,
+      p_quantidade_atual: 100,
+      p_estoque_minimo: 5,
+      p_motivo_codigo: "ACERTO_INVENTARIO",
+    }, "PERFIL");
+  });
+
+  await run("RPC ajustar_estoque_manual negado a ADMIN", async () => {
+    await assertRpcErrorContains(admin, "ajustar_estoque_manual", {
+      p_produto_id: IDS.produto,
+      p_loja_id: IDS.loja,
+      p_quantidade_atual: 100,
+      p_estoque_minimo: 5,
+      p_motivo_codigo: "ACERTO_INVENTARIO",
+    }, "PERFIL");
+  });
+
+  await run("RPC ajustar_estoque_manual (GERENTE, sem delta)", async () => {
+    const { data, error } = await gerente.from("estoque").select("quantidade_atual,estoque_minimo").eq("loja_id", IDS.loja).eq("produto_id", IDS.produto).single();
+    if (error) throw new Error(error.message);
+    await assertRpcOk(gerente, "ajustar_estoque_manual", {
+      p_produto_id: IDS.produto,
+      p_loja_id: IDS.loja,
+      p_quantidade_atual: data.quantidade_atual,
+      p_estoque_minimo: data.estoque_minimo,
+      p_motivo_codigo: "ACERTO_INVENTARIO",
+    });
+  });
+
+  await run("RPC confirmar_remessa_entrada negado a OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "confirmar_remessa_entrada", {
+      p_remessa_id: randomUUID(),
+    }, "REMESSA_PERFIL");
+  });
+
+  await run("RPC confirmar_remessa_entrada (status inválido / id inexistente)", async () => {
+    await assertRpcErrorContains(admin, "confirmar_remessa_entrada", {
+      p_remessa_id: randomUUID(),
+    }, "REMESSA_STATUS_INVALIDO");
+  });
+
+  await run("RPC confirmar_remessa_entrada (sucesso)", async () => {
+    const remessaQtd = 3;
+    const { data: r0, error: er0 } = await dono.from("remessas").select("status").eq("id", IDS.remessaConferencia).single();
+    if (er0) throw new Error(er0.message);
+    if (r0?.status !== "EM_CONFERENCIA") {
+      throw new Error(`remessa seed: esperado EM_CONFERENCIA, veio ${r0?.status}`);
+    }
+    const { data: e0, error: ee0 } = await dono
+      .from("estoque")
+      .select("quantidade_atual")
+      .eq("loja_id", IDS.loja2)
+      .eq("produto_id", IDS.produto)
+      .single();
+    if (ee0) throw new Error(ee0.message);
+    const qAntes = Number(e0.quantidade_atual);
+
+    await assertRpcOk(admin, "confirmar_remessa_entrada", { p_remessa_id: IDS.remessaConferencia });
+
+    const { data: r1, error: er1 } = await dono.from("remessas").select("status").eq("id", IDS.remessaConferencia).single();
+    if (er1) throw new Error(er1.message);
+    if (r1?.status !== "CONCLUIDA") {
+      throw new Error(`após confirmar, esperado CONCLUIDA, veio ${r1?.status}`);
+    }
+    const { data: e1, error: ee1 } = await dono
+      .from("estoque")
+      .select("quantidade_atual")
+      .eq("loja_id", IDS.loja2)
+      .eq("produto_id", IDS.produto)
+      .single();
+    if (ee1) throw new Error(ee1.message);
+    const delta = Number(e1.quantidade_atual) - qAntes;
+    if (Math.abs(delta - remessaQtd) > 0.0001) {
+      throw new Error(`estoque filial esperado +${remessaQtd}, delta=${delta}`);
+    }
+  });
+
+  await run("RPC transferir_estoque_entre_lojas (lojas iguais)", async () => {
+    await assertRpcErrorContains(admin, "transferir_estoque_entre_lojas", {
+      p_loja_origem: IDS.loja,
+      p_loja_destino: IDS.loja,
+      p_produto_id: IDS.produto,
+      p_quantidade: 1,
+    }, "LOJA_IGUAL");
+  });
+
+  await run("RPC transferir_estoque_entre_lojas negado a OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "transferir_estoque_entre_lojas", {
+      p_loja_origem: IDS.loja,
+      p_loja_destino: IDS.loja2,
+      p_produto_id: IDS.produto,
+      p_quantidade: 1,
+    }, "TRANSFERENCIA_PERFIL");
+  });
+
+  await run("RPC transferir_estoque_entre_lojas (sucesso)", async () => {
+    const readQtd = async (lojaId) => {
+      const { data, error } = await dono
+        .from("estoque")
+        .select("quantidade_atual")
+        .eq("loja_id", lojaId)
+        .eq("produto_id", IDS.produto)
+        .single();
+      if (error) throw new Error(error.message);
+      return Number(data.quantidade_atual);
+    };
+    const origAntes = await readQtd(IDS.loja);
+    const dstAntes = await readQtd(IDS.loja2);
+    await assertRpcOk(gerente, "transferir_estoque_entre_lojas", {
+      p_loja_origem: IDS.loja,
+      p_loja_destino: IDS.loja2,
+      p_produto_id: IDS.produto,
+      p_quantidade: 1,
+      p_observacao: "smoke rls transferência",
+    });
+    const origDepois = await readQtd(IDS.loja);
+    const dstDepois = await readQtd(IDS.loja2);
+    if (Math.abs(origAntes - origDepois - 1) > 0.0001) {
+      throw new Error(`origem esperada -1 unidade (${origAntes} -> ${origDepois})`);
+    }
+    if (Math.abs(dstDepois - dstAntes - 1) > 0.0001) {
+      throw new Error(`destino esperado +1 unidade (${dstAntes} -> ${dstDepois})`);
+    }
+  });
+
+  await run("RPC fiscal_reprocessar_documento (documento inexistente)", async () => {
+    await assertRpcErrorContains(gerente, "fiscal_reprocessar_documento", {
+      p_documento_id: randomUUID(),
+    }, "FISCAL_REPROCESSO_STATUS_INVALIDO");
+  });
+
+  await run("RPC registrar_venda_com_itens", async () => {
+    const vid = randomUUID();
+    const iid = randomUUID();
+    await assertRpcOk(operador, "registrar_venda_com_itens", {
+      p_venda_id: vid,
+      p_caixa_id: IDS.caixaOperador,
+      p_operador_id: authByPerfil.OPERADOR,
+      p_forma_pagamento: "PIX",
+      p_total_bruto: 10,
+      p_total_desconto: 0,
+      p_total_liquido: 10,
+      p_itens: [
+        {
+          item_id: iid,
+          produto_id: IDS.produto,
+          quantidade: 1,
+          preco_original: 10,
+          preco_unitario: 10,
+        },
+      ],
+    });
   });
 
   await Promise.all([

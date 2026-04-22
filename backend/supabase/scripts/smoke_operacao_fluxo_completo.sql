@@ -4,8 +4,8 @@
 -- MOVIMENTOS DE CAIXA (SUPRIMENTO/SANGRIA) E FECHAMENTO DE CAIXA.
 --
 -- PRÉ-REQUISITOS:
--- - MIGRATIONS APLICADAS ATÉ 035 (lojas + estoque por loja).
--- - PELO MENOS 1 USUÁRIO OPERADOR EM public.usuarios.
+-- - Banco alinhado ao repositório (sem lacunas em migration list), incluindo loja/estoque por loja (ex.: pacote 032+).
+-- - PELO MENOS 1 USUÁRIO OPERADOR EM public.usuarios (ou outro perfil ativo — o script faz fallback).
 -- - PELO MENOS 4 PRODUTOS ATIVOS COM ESTOQUE > 0.
 --
 -- OBS: ESTE SCRIPT GERA DADOS FICTÍCIOS DE TESTE.

@@ -7,6 +7,7 @@ import type { ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import type { Mensagens } from "@/src/lib/i18n/getMessages"
 import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
 import { formatDecimal2 } from "@/lib/format/money"
+import { caixaFmt } from "@/app/caixa/caixaI18n"
 
 type Props = {
   m: Mensagens
@@ -37,7 +38,7 @@ export function CaixaCartList({
     return (
       <div className="h-full min-h-[12rem] flex items-center justify-center text-sm text-slate-500 px-4 text-center">
         {m.caixa.carrinho_vazio_linha1}{" "}
-        <span className="mx-1 font-mono text-slate-400">produtos</span>{" "}
+        <span className="mx-1 font-mono text-slate-400">{m.caixa.carrinho_vazio_ref_catalogo}</span>{" "}
         {m.caixa.carrinho_vazio_linha2}
       </div>
     )
@@ -73,6 +74,7 @@ export function CaixaCartList({
                   min={0.001}
                   step={0.001}
                   value={item.quantidade}
+                  aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
                   onChange={(e) =>
                     onAlterarQuantidade(item.id, Number(e.target.value))
                   }
@@ -124,6 +126,7 @@ export function CaixaCartList({
                     min={0.001}
                     step={0.001}
                     value={item.quantidade}
+                    aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
                     onChange={(e) =>
                       onAlterarQuantidade(item.id, Number(e.target.value))
                     }

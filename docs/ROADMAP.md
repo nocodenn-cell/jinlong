@@ -13,12 +13,16 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 - Migrations e Edge Functions em **`backend/supabase/`** (pasta única de backend Supabase no monorepo)
 - **Fase 1 (gerente):** migration **010** — RLS `SELECT` em `estoque_baixas` para GERENTE/DONO; rota **`/gerente/vendas/[id]`** com itens e baixas; links na lista e no painel
 - **Relatórios:** migrations **011**–**013** — RPCs `relatorio_*_periodo` com **`p_de` / `p_ate` / `p_tz`** (IANA validado em `pg_timezone_names`); **`relatorio_settings`** + env **`RELATORIO_TIMEZONE`**; **`/gerente/relatorios`**; estoque baixo instantâneo
+- **Fiscal (base técnica):** fila `documentos_fiscais_pendentes`, Edge **`fiscal-worker`**, RPC **`fiscal_enfileirar_documento_venda`** (ex.: migration **062**), enfileiramento opcional pós-venda no caixa web (`AUTO_ENQUEUE_FISCAL_ON_SALE` + `FISCAL_DEFAULT_DOC_TYPE`); painel gerente em **`/gerente/financeiro`**; `npm run env:check` valida `FISCAL_*` quando o enqueue está ligado
 
 ## Curto prazo
 
-- [ ] **P0 operacional** — roteiro linear: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) (§1 migrations + verify SQL → §2 Edge se usar desktop → §5 web; teste **§4b web-only** ou **§4** com desktop)
-- [ ] Aplicar migrations **001–013** em **cada** ambiente Supabase usado (dev/staging/prod) — `verify_p0_producao.sql` (011–013 = relatórios + fuso configurável)
-- [ ] Secrets `SYNC_KEY` + `pdv-local/.env` — **obrigatório** só no piloto com **desktop**; web-only dispensa §2–§3
+### Operação e ambientes (checklists — marcar ao concluir em cada ref)
+
+- [ ] **P0 operacional** — roteiro linear: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) (trilha T1–T12: link → migrations → `verify_p0_producao.sql` → Edge `sync-outbox` + secrets se desktop → web §5 → teste **§4b** ou **§4**)
+- [ ] Aplicar **todas** as migrations versionadas em **cada** ambiente Supabase usado (dev/staging/prod), **sem lacunas** — `npx supabase migration list` + `verify_p0_producao.sql` (inclui **001–013** relatórios/fuso e demais blocos P0 descritos no checklist)
+- [ ] Secrets `SYNC_KEY` + `pdv-local/.env` — **obrigatório** só no piloto com **desktop**; web-only dispensa §2–§3 do P0
+- [ ] **Ativação NFC-e/NFe real (Focus)** — operação: [CHECKLIST_ATIVACAO_FOCUS_1_DIA.md](./CHECKLIST_ATIVACAO_FOCUS_1_DIA.md); critérios e evidência de piloto: [DONE_DEFINITION_PILOTO.md](./DONE_DEFINITION_PILOTO.md) §4.3 e §7 em [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md)
 - [x] CI: build + lint + Vitest em PR; job Playwright **opcional** (`vars.ENABLE_PLAYWRIGHT_E2E` + secrets — ver `ci-pdv-importados.yml`); E2E sem skip silencioso quando `CI=true`; **smoke migrations** Postgres (`ci-backend-supabase`); **CI pdv-local**
 - [x] `npm audit` / atualizacao de dependencias criticas (pdv-importados + pdv-local)
 

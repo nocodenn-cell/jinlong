@@ -1,7 +1,9 @@
 /**
  * Motor de preço atacado — Strategy Pattern.
  * Sem dependência de React, Next ou Supabase (copiável para PDV local / Tauri).
+ * Arredondamentos monetários: `roundAbnt` (alinhado a `public.round_abnt` / ABNT no Postgres).
  */
+import { roundAbnt } from '../money/roundAbnt'
 import type { ItemCarrinho } from '../cart/types'
 import type { PricingContext, RegraPreco, ResultadoPreco } from './types'
 import { DEFAULT_PRICING_CONTEXT } from './types'
@@ -31,9 +33,9 @@ class PrecoAtacadoCatalogoStrategy implements PriceStrategy {
     if (quantidadeTotal < ctx.quantidadeMinimaAtacadoPadrao) return null
     const pv = item.precoVariejo
     return {
-      precoUnitario: Math.round(pa * 100) / 100,
+      precoUnitario: roundAbnt(pa, 2),
       precoOriginal: pv,
-      descontoUnitario: Math.round((pv - pa) * 100) / 100,
+      descontoUnitario: roundAbnt(pv - pa, 2),
       tipoPreco: 'ATACADO',
     }
   }
@@ -170,11 +172,11 @@ function aplicarDesconto(precoBase: number, regra: RegraPreco): ResultadoPreco {
   } else {
     precoFinal = Math.max(0, precoBase - regra.valorDesconto)
   }
-  precoFinal = Math.round(precoFinal * 100) / 100
+  precoFinal = roundAbnt(precoFinal, 2)
   return {
     precoUnitario: precoFinal,
     precoOriginal: precoBase,
-    descontoUnitario: Math.round((precoBase - precoFinal) * 100) / 100,
+    descontoUnitario: roundAbnt(precoBase - precoFinal, 2),
     tipoPreco: 'ATACADO',
     regraAplicadaId: regra.id,
   }
