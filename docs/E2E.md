@@ -89,15 +89,32 @@ O workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-p
 
 Em **`main`**, após deploy na Vercel, o job **smoke-test** corre **`npm run test:e2e:post-deploy-smoke`** (`e2e/login.spec.ts` + `e2e/caixa.spec.ts`) com `PLAYWRIGHT_BASE_URL` = URL do deploy e `PLAYWRIGHT_E2E_WITH_DEV=0`. Ver [PRODUCAO_GO_NO_GO.md](./PRODUCAO_GO_NO_GO.md).
 
-O job **Playwright** é **opcional**: crie a variável de repositório **`ENABLE_PLAYWRIGHT_E2E`** = `true` e defina os secrets **`PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL`**, **`PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY`** (e, para `gerente.spec.ts`, **`PLAYWRIGHT_TEST_EMAIL`** / **`PLAYWRIGHT_TEST_PASSWORD`**). Para testes em **`/caixa`**, inclua **`PLAYWRIGHT_CAIXA_TEST_EMAIL`** / **`PLAYWRIGHT_CAIXA_TEST_PASSWORD`** (e opcionalmente **`PLAYWRIGHT_E2E_PRODUTO_CODIGO`**). No CI o Playwright sobe o Next com **`PLAYWRIGHT_E2E_WITH_DEV=1`** (ver `playwright.config.ts`), salvo se **`PLAYWRIGHT_BASE_URL`** estiver definido (deploy de staging — ver workflow abaixo).
+### E2E crítico obrigatório (gate em `main` / `develop`)
+
+No workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), após **build-and-test**, o job **`e2e-critical`** roda sempre **`npm run test:e2e:critical`** (check-env, smoke `sync-outbox`, `sync-fluxo-gerente`, vendas caixa e fluxos críticos). O **deploy em `main` na Vercel só prossegue** se esse job tiver sucesso (ou for ignorado em PR de fork, sem secrets).
+
+Secrets **obrigatórios** no repositório (Actions):
+
+| Secret | Uso |
+| --- | --- |
+| `PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase de **teste/staging** |
+| `PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key do mesmo projeto |
+| `PLAYWRIGHT_TEST_EMAIL` / `PLAYWRIGHT_TEST_PASSWORD` | Usuário **GERENTE** (sync + painel) |
+| `PLAYWRIGHT_CAIXA_TEST_EMAIL` / `PLAYWRIGHT_CAIXA_TEST_PASSWORD` | Usuário **OPERADOR** (`/caixa`) |
+| `PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY` | **Service role** do mesmo projeto (só CI; seed no teste sync) |
+| `SYNC_ENDPOINT` / `SYNC_KEY` | Edge **sync-outbox** (mesmo par usado no backend) |
+
+Opcionais: `PLAYWRIGHT_BASE_URL` (testar contra deploy em vez de subir `next dev`), `PLAYWRIGHT_E2E_PRODUTO_CODIGO`.
+
+O job **Playwright suíte completa** (`npm run test:e2e`) continua **opcional**: variável de repositório **`ENABLE_PLAYWRIGHT_E2E`** = `true` e os mesmos secrets acima. No CI o Playwright sobe o Next com **`PLAYWRIGHT_E2E_WITH_DEV=1`** (ver `playwright.config.ts`), salvo se **`PLAYWRIGHT_BASE_URL`** estiver definido.
 
 ### Workflow só E2E (sem lint/build)
 
-[`.github/workflows/e2e-playwright-only.yml`](../.github/workflows/e2e-playwright-only.yml) executa apenas **`npm run test:e2e:critical`** (`install` + Playwright). Dispara em **`workflow_dispatch`** ou em **push** na branch **`staging`**, quando **`ENABLE_PLAYWRIGHT_E2E=true`** *ou* quando o disparo é manual. Útil para homologação sem repetir o pipeline completo do app.
+[`.github/workflows/e2e-playwright-only.yml`](../.github/workflows/e2e-playwright-only.yml) executa apenas **`npm run test:e2e:critical`** em **push** na branch **`staging`** ou **`workflow_dispatch`**, com os mesmos secrets obrigatórios da tabela acima (o workflow grava `pdv-importados/.env.local` e `pdv-local/.env` antes do pipeline).
 
-Se o secret **`PLAYWRIGHT_BASE_URL`** apontar para o deploy de staging (ex.: Vercel preview estável), o job define **`PLAYWRIGHT_E2E_WITH_DEV=0`** e os testes batem na URL remota; caso contrário, sobe **`next dev`** na porta de teste (comportamento igual ao job Playwright do CI principal).
+Se o secret **`PLAYWRIGHT_BASE_URL`** apontar para o deploy de staging (ex.: Vercel preview estável), o job define **`PLAYWRIGHT_E2E_WITH_DEV=0`** e os testes batem na URL remota; caso contrário, sobe **`next dev`** na porta de teste.
 
-**Staging / homologação:** além de `ENABLE_PLAYWRIGHT_E2E=true`, mantenha os mesmos secrets apontando para o projeto Supabase de **staging** e usuários seed só desse ambiente — evita E2E contra produção.
+**Staging / homologação:** mantenha os secrets apontando para o projeto Supabase de **staging** e usuários seed só desse ambiente — evita E2E contra produção.
 
 Smoke manual específico para browsers chineses (360/QQ): [SMOKE_BROWSER_CHINES_360_QQ.md](./SMOKE_BROWSER_CHINES_360_QQ.md).
 

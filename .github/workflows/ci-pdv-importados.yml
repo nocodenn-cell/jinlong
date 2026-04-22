@@ -15,6 +15,8 @@
 #   PLAYWRIGHT_TEST_PASSWORD (opcional)
 #   PLAYWRIGHT_CAIXA_TEST_EMAIL / PLAYWRIGHT_CAIXA_TEST_PASSWORD (OPERADOR — smoke pós-deploy + pipeline crítico)
 #   PLAYWRIGHT_E2E_PRODUTO_CODIGO (opcional — caixa-venda.spec)
+#   PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY (service_role do projeto de teste — sync-fluxo-gerente no pipeline crítico)
+#   SYNC_ENDPOINT, SYNC_KEY (Edge sync-outbox — mesmo par do backend)
 # Workflow só Playwright (sem lint/build): .github/workflows/e2e-playwright-only.yml
 name: CI pdv-importados
 
@@ -69,9 +71,90 @@ jobs:
           fi
           npx turbo run build --filter=pdv-importados
 
-  deploy:
+  # Gate obrigatório: `npm run test:e2e:critical` (check-env + smoke sync + Playwright crítico).
+  # PRs de fork são ignorados (sem secrets); push/PR no repositório base exige todos os secrets abaixo.
+  e2e-critical:
+    name: E2E crítico (gate)
     needs: build-and-test
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install (workspaces na raiz)
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verificar secrets e gravar .env (pipeline crítico)
+        env:
+          PW_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          PW_ANON: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PW_GER_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+          PW_GER_PASS: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          PW_CX_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+          PW_CX_PASS: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
+          SR_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
+          SYNC_EP: ${{ secrets.SYNC_ENDPOINT }}
+          SYNC_K: ${{ secrets.SYNC_KEY }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -z "${PW_URL:-}" ] && missing+=(PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL)
+          [ -z "${PW_ANON:-}" ] && missing+=(PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY)
+          [ -z "${PW_GER_EMAIL:-}" ] && missing+=(PLAYWRIGHT_TEST_EMAIL)
+          [ -z "${PW_GER_PASS:-}" ] && missing+=(PLAYWRIGHT_TEST_PASSWORD)
+          [ -z "${PW_CX_EMAIL:-}" ] && missing+=(PLAYWRIGHT_CAIXA_TEST_EMAIL)
+          [ -z "${PW_CX_PASS:-}" ] && missing+=(PLAYWRIGHT_CAIXA_TEST_PASSWORD)
+          [ -z "${SR_KEY:-}" ] && missing+=(PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY)
+          [ -z "${SYNC_EP:-}" ] && missing+=(SYNC_ENDPOINT)
+          [ -z "${SYNC_K:-}" ] && missing+=(SYNC_KEY)
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::E2E crítico obrigatório: defina os secrets ${missing[*]} (ver cabeçalho deste workflow e docs/E2E.md)."
+            exit 1
+          fi
+          {
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$PW_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$PW_ANON"
+            printf '%s\n' 'USE_UNIFIED_SALES_FLOW=true'
+          } > pdv-importados/.env.local
+          {
+            printf 'SYNC_ENDPOINT=%s\n' "$SYNC_EP"
+            printf 'SYNC_KEY=%s\n' "$SYNC_K"
+          } > pdv-local/.env
+
+      - name: Pipeline E2E crítico
+        env:
+          CI: true
+          PLAYWRIGHT_E2E_WITH_DEV: ${{ secrets.PLAYWRIGHT_BASE_URL != '' && '0' || '1' }}
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
+          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ secrets.PLAYWRIGHT_E2E_PRODUTO_CODIGO }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
+          SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
+          SYNC_KEY: ${{ secrets.SYNC_KEY }}
+          USE_UNIFIED_SALES_FLOW: 'true'
+        run: npm run test:e2e:critical -w pdv-importados
+
+  deploy:
+    needs: [build-and-test, e2e-critical]
+    if: |
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.build-and-test.result == 'success' &&
+      (needs.e2e-critical.result == 'success' || needs.e2e-critical.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       vercel_url: ${{ steps.vercel.outputs['preview-url'] }}
@@ -162,8 +245,7 @@ jobs:
           PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
           PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
         run: npm run test:e2e:post-deploy-smoke -w pdv-importados
-  # PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL, PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY
-  # (opcional p/ gerente.spec) PLAYWRIGHT_TEST_EMAIL, PLAYWRIGHT_TEST_PASSWORD
+  # Suíte Playwright completa (`npm run test:e2e`) — opcional; o gate mínimo é o job `e2e-critical` acima.
   e2e-playwright:
     needs: build-and-test
     if: ${{ vars.ENABLE_PLAYWRIGHT_E2E == 'true' }}
