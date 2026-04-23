@@ -11,6 +11,7 @@ import {
   gerenteNavLabel,
   painelGerencialHref,
 } from '@/lib/navigation/painelGerencialNav'
+import { Logo } from '@/components/branding/Logo'
 
 export default async function GerenteLayout({
   children,
@@ -47,7 +48,14 @@ export default async function GerenteLayout({
           gap: 12,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+          <Logo
+            variant="symbol"
+            href="/gerente"
+            aria-label={m.login.nav_marca}
+            className="text-amber-600 shrink-0"
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
             {m.gerente.titulo_painel}
           </div>
@@ -58,6 +66,7 @@ export default async function GerenteLayout({
               </Link>
             ))}
           </nav>
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>

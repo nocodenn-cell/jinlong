@@ -79,7 +79,7 @@ export function CaixaMovimentacaoAcaoModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 dragon-glass-backdrop"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onOpenChange(false)
@@ -88,7 +88,7 @@ export function CaixaMovimentacaoAcaoModal({
       <Card
         role="dialog"
         aria-modal="true"
-        className="w-full sm:max-w-md rounded-none sm:rounded-lg border-slate-700 bg-slate-900 text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
+        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">

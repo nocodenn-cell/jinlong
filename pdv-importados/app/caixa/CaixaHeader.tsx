@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
+import { DragonIcon } from "@/components/icons/DragonIcon"
+import { Logo } from "@/components/branding/Logo"
 
 const TECH_STORAGE_KEY = "fastproduct-caixa-mostrar-tecnico"
 
@@ -72,12 +74,20 @@ export function CaixaHeader({
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
       <div className="flex items-start justify-between gap-3 sm:block">
-        <div className="text-sm min-w-0">
+        <div className="text-sm min-w-0 flex items-start gap-3">
+          <Logo
+            variant="symbol"
+            href="/caixa"
+            aria-label={m.login.nav_marca}
+            className="text-amber-500 shrink-0 mt-0.5"
+          />
+          <div>
           <div className="font-semibold text-slate-50">{m.caixa.titulo_pdv}</div>
           <div className="text-xs text-slate-400">
             {new Date().toLocaleString(
               idioma === "pt" ? "pt-BR" : idioma === "zh-HK" ? "zh-HK" : "zh-CN",
             )}
+          </div>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -137,12 +147,20 @@ export function CaixaHeader({
               idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN',
             )}{' '}
             · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)}
-            {!caixaStatus.blindClosureEnabled && (
-              <>
-                {' '}
-                · Saldo estimado (dinheiro): R$ {caixaStatus.valorSistemaDinheiro.toFixed(2)}
-              </>
-            )}
+          </div>
+        )}
+        {caixaStatus?.aberto && !caixaStatus.blindClosureEnabled && (
+          <div className="mt-3 flex flex-col items-end relative group max-sm:items-start">
+            <DragonIcon className="pointer-events-none w-12 h-12 sm:w-14 sm:h-14 absolute -right-1 -top-2 sm:-right-2 sm:-top-3 text-amber-400/15 group-hover:text-amber-400/[0.22] transition-all duration-700 rotate-12" />
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tight relative z-10">
+              {m.caixa.header_guardiao_saldo_eyebrow}
+            </span>
+            <div className="flex items-center gap-2 text-amber-400 font-mono text-base sm:text-lg font-semibold tabular-nums relative z-10">
+              R$ {caixaStatus.valorSistemaDinheiro.toLocaleString(
+                idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN',
+                { minimumFractionDigits: 2 },
+              )}
+            </div>
           </div>
         )}
         <div>{m.caixa.atalhos_placeholder}</div>

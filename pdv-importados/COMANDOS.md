@@ -9,7 +9,7 @@ Na maioria dos fluxos use **working directory** = esta pasta (`pdv-importados`).
 | Build produção | `npm run build` · depois `npm run start` |
 | Lint | `npm run lint` |
 | Testes unitários | `npm test` |
-| E2E (sobe Next na **3009** sozinho) | `npm run test:e2e` |
+| E2E (reutiliza `:3000` se `dev` ativo; senão sobe Next) | `npm run test:e2e` |
 | Smoke HTTP (precisa `dev` em outra aba) | `npm run smoke:http` |
 | Smoke em outra porta | `$env:SMOKE_BASE_URL="http://localhost:3001"; npm run smoke:http` |
 | Seed Auth + `usuarios` (dev/E2E) | `npm run seed:dev-users` — [docs/SEED_DEV_E2E.md](docs/SEED_DEV_E2E.md) |

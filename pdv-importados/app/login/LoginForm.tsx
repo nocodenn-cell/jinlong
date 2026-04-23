@@ -3,6 +3,10 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { Logo } from '@/components/branding/Logo'
+import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
+import { DragonIcon } from '@/components/icons/DragonIcon'
+import type { Mensagens } from '@/i18n/getMessages'
 
 /** Evita open redirect: só `/gerente...` ou `/caixa...`. */
 function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string {
@@ -15,7 +19,12 @@ function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string 
   return padraoPerfil
 }
 
-export function LoginForm() {
+type Props = {
+  messages: Mensagens
+}
+
+export function LoginForm({ messages: m }: Props) {
+  const L = m.login
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
@@ -49,7 +58,6 @@ export function LoginForm() {
       })
       authError = res.error
     } catch (netErr) {
-      // fetch falhou (rede, URL errada, bloqueio, projeto pausado, etc.)
       const hint =
         netErr instanceof TypeError && netErr.message === 'Failed to fetch'
           ? ' Não foi possível contatar o Supabase (rede, URL em NEXT_PUBLIC_SUPABASE_URL ou extensão do navegador).'
@@ -82,8 +90,21 @@ export function LoginForm() {
       .maybeSingle()
 
     if (perfilErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[login] falha ao consultar public.usuarios:', perfilErr)
+      }
+      const code =
+        perfilErr && typeof perfilErr === 'object' && 'code' in perfilErr
+          ? String((perfilErr as { code?: unknown }).code ?? '')
+          : ''
+      const hintDev =
+        process.env.NODE_ENV === 'development' && (perfilErr.message || code)
+          ? ` Detalhe (dev): ${[perfilErr.message, code].filter(Boolean).join(' — ')}`
+          : ''
       setErro(
-        'Não foi possível carregar seu perfil no sistema. Se o problema continuar, avise o suporte (tabela de usuários).',
+        'Não foi possível carregar seu perfil no sistema. Se o problema continuar, avise o suporte (tabela de usuários).' +
+          ' Erro 500 costuma indicar falha no banco (migrações, RLS ou indisponibilidade) — veja os logs do projeto no Supabase.' +
+          hintDev,
       )
       setLoading(false)
       return
@@ -105,92 +126,67 @@ export function LoginForm() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#020617',
-        color: '#e5e7eb',
-      }}
-    >
-      <div style={{ width: '100%', maxWidth: 360, padding: '0 16px' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>PDV Importados</h1>
-        <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 24 }}>
-          Faça login para acessar o painel.
-        </p>
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
+      <div className="w-full max-w-[380px] flex flex-col items-center">
+        <div className="dragon-hero-mark mb-8 flex flex-col items-center">
+          <DragonIcon className="h-28 w-28 sm:h-32 sm:w-32 text-[#F59E0B]" />
+        </div>
+
+        <div className="mb-8 text-center w-full">
+          <Logo variant="wordmark" logoSubtitle={m.brand.logo_subtitle} />
+          <p className="mt-4 text-sm text-slate-400 tracking-wide">{L.subtitulo}</p>
+          <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-amber-500/80">
+            {L.tagline}
+          </p>
+        </div>
+
         {avisoInatividade ? (
           <p
-            style={{
-              fontSize: 13,
-              color: '#93c5fd',
-              marginBottom: 16,
-              padding: '10px 12px',
-              borderRadius: 8,
-              background: 'rgba(30, 58, 138, 0.35)',
-              border: '1px solid #1d4ed8',
-            }}
+            className="mb-5 w-full rounded-lg border border-sky-600/50 bg-sky-950/40 px-3 py-2.5 text-center text-sm text-sky-200"
+            role="status"
           >
-            Sua sessão foi encerrada por inatividade. Entre novamente.
+            {L.sessao_inatividade}
           </p>
         ) : null}
-        <form
-          onSubmit={login}
-          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
+
+        <form onSubmit={login} className="w-full flex flex-col gap-3">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
+            placeholder={L.email_placeholder}
             autoComplete="username"
             required
             autoFocus
-            style={{
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: '1px solid #374151',
-              background: '#020617',
-              color: '#e5e7eb',
-              fontSize: 14,
-            }}
+            className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none ring-emerald-500/30 focus:border-emerald-600/60 focus:ring-2"
           />
           <input
             type="password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            placeholder="Senha"
+            placeholder={L.senha_placeholder}
             autoComplete="current-password"
             required
-            style={{
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: '1px solid #374151',
-              background: '#020617',
-              color: '#e5e7eb',
-              fontSize: 14,
-            }}
+            className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none ring-emerald-500/30 focus:border-emerald-600/60 focus:ring-2"
           />
-          {erro && (
-            <p style={{ color: '#f97373', fontSize: 13, textAlign: 'center' }}>{erro}</p>
-          )}
+          {erro ? (
+            <p className="text-center text-sm text-red-300/95" role="alert">
+              {erro}
+            </p>
+          ) : null}
           <button
             type="submit"
             disabled={loading}
-            style={{
-              marginTop: 4,
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: 'none',
-              background: '#16a34a',
-              color: '#ecfdf3',
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className="mt-1 flex items-center justify-center gap-2 rounded-lg border-0 bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? (
+              <>
+                <DragonOuroLoader iconClassName="h-4 w-4" />
+                {L.entrando}
+              </>
+            ) : (
+              L.entrar
+            )}
           </button>
         </form>
       </div>

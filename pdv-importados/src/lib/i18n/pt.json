@@ -229,6 +229,10 @@
     "descontos_regras": "Descontos (atacado/manual)",
     "desconto_gerente_label": "Desconto gerente ({{pct}}%)",
     "gerente_valido_ate": "Gerente até {{hora}} · {{pct}}% (máx. {{max}}%)",
+    "empty_guardiao": "O guardião aguarda o primeiro item.",
+    "header_guardiao_saldo_eyebrow": "Saldo em espécie (estimado)",
+    "aria_selo_gerente": "Aprovado pelo gerente (selo)",
+    "aria_selo_mov_aprovada": "Movimentação aprovada (selo)",
     "resumo_itens": "{{itens}} itens · {{unidades}} unidades",
     "msg_token_expirado": "Autorização de gerente expirou. Solicite novamente para aplicar desconto.",
     "msg_senha_obrigatoria": "Informe a senha do gerente.",
@@ -411,6 +415,20 @@
       "concluida": { "cn": "已完成", "pt": "Concluída" },
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
+  },
+  "brand": {
+    "logo_subtitle": "Dragon POS"
+  },
+  "login": {
+    "subtitulo": "Faça login para continuar",
+    "tagline": "Importados · operações seguras",
+    "email_placeholder": "Email",
+    "senha_placeholder": "Senha",
+    "entrar": "Entrar",
+    "entrando": "Entrando…",
+    "sessao_inatividade": "Sua sessão foi encerrada por inatividade. Entre novamente.",
+    "carregando_pagina": "Carregando…",
+    "nav_marca": "Fastproduct — identidade Dragon POS"
   },
   "comum": {
     "salvar": "Salvar",

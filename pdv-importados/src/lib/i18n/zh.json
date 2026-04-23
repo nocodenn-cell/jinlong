@@ -229,6 +229,10 @@
     "descontos_regras": "折扣（批发/手工）",
     "desconto_gerente_label": "经理折扣 ({{pct}}%)",
     "gerente_valido_ate": "经理授权至 {{hora}} · {{pct}}%（最高 {{max}}%）",
+    "empty_guardiao": "守护龙等待第一件商品。",
+    "header_guardiao_saldo_eyebrow": "现金余额（估算）",
+    "aria_selo_gerente": "经理已批准（印）",
+    "aria_selo_mov_aprovada": "流水已批准（印）",
     "resumo_itens": "{{itens}} 项 · {{unidades}} 件",
     "msg_token_expirado": "经理授权已过期，请重新申请折扣。",
     "msg_senha_obrigatoria": "请输入经理密码。",
@@ -411,6 +415,20 @@
       "concluida": { "cn": "已完成", "pt": "Concluída" },
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
+  },
+  "brand": {
+    "logo_subtitle": "龙码收银"
+  },
+  "login": {
+    "subtitulo": "请登录以继续",
+    "tagline": "进口贸易 · 安全运营",
+    "email_placeholder": "邮箱",
+    "senha_placeholder": "密码",
+    "entrar": "登录",
+    "entrando": "登录中…",
+    "sessao_inatividade": "会话因闲置已结束，请重新登录。",
+    "carregando_pagina": "加载中…",
+    "nav_marca": "Fastproduct — Dragon POS"
   },
   "comum": {
     "salvar": "保存",

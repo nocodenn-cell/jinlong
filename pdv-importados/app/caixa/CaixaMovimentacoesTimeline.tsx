@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
+import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 
 type Props = {
   m: Mensagens
@@ -67,7 +68,20 @@ export function CaixaMovimentacoesTimeline({
                     <span className="text-slate-200 font-medium">
                       {tipoLabel(item.tipo)} · {money(item.valor)}
                     </span>
-                    <span className="rounded border border-slate-600 px-2 py-0.5 text-slate-300">
+                    <span
+                      className={[
+                        'inline-flex items-center gap-1 rounded border px-2 py-0.5',
+                        item.status === 'aprovado'
+                          ? 'border-[color:var(--caixa-imperial-red,#b91c1c)]/55 bg-[color:var(--caixa-imperial-red,#b91c1c)]/10 text-red-200'
+                          : 'border-slate-600 text-slate-300',
+                      ].join(' ')}
+                    >
+                      {item.status === 'aprovado' ? (
+                        <ImperialSealIcon
+                          className="h-3.5 w-3.5 shrink-0 text-[color:var(--caixa-imperial-red,#b91c1c)]"
+                          title={m.caixa.aria_selo_mov_aprovada}
+                        />
+                      ) : null}
                       {statusLabel(item.status)}
                     </span>
                     {item.numeroSequencial !== null && (
@@ -89,7 +103,7 @@ export function CaixaMovimentacoesTimeline({
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="border-amber-700/60 bg-amber-900/20 text-amber-200 hover:bg-amber-800/30"
+                          className="border-[color:var(--caixa-imperial-red,#b91c1c)]/70 bg-[color:var(--caixa-imperial-red,#b91c1c)]/12 text-red-100 hover:bg-[color:var(--caixa-imperial-red,#b91c1c)]/20"
                           onClick={() => onCancelar(item)}
                           disabled={processandoAcao}
                         >

@@ -8,6 +8,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { formatDecimal2 } from "@/lib/format/money"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { DragonIcon } from "@/components/icons/DragonIcon"
 
 type Props = {
   m: Mensagens
@@ -36,10 +37,14 @@ export function CaixaCartList({
 
   if (itens.length === 0) {
     return (
-      <div className="h-full min-h-[12rem] flex items-center justify-center text-sm text-slate-500 px-4 text-center">
-        {m.caixa.carrinho_vazio_linha1}{" "}
-        <span className="mx-1 font-mono text-slate-400">{m.caixa.carrinho_vazio_ref_catalogo}</span>{" "}
-        {m.caixa.carrinho_vazio_linha2}
+      <div className="h-full min-h-[14rem] flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <DragonIcon className="h-24 w-24 text-amber-500/10 shrink-0" />
+        <p className="text-sm font-medium text-slate-400">{m.caixa.empty_guardiao}</p>
+        <p className="text-xs text-slate-500 max-w-sm">
+          {m.caixa.carrinho_vazio_linha1}{" "}
+          <span className="mx-1 font-mono text-slate-500">{m.caixa.carrinho_vazio_ref_catalogo}</span>{" "}
+          {m.caixa.carrinho_vazio_linha2}
+        </p>
       </div>
     )
   }

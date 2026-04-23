@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 
 type Props = {
@@ -158,7 +159,7 @@ export function CaixaMovimentacaoModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 dragon-glass-backdrop"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onOpenChange(false)
@@ -167,7 +168,7 @@ export function CaixaMovimentacaoModal({
       <Card
         role="dialog"
         aria-modal="true"
-        className="w-full sm:max-w-md rounded-none sm:rounded-lg border-slate-700 bg-slate-900 text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
+        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
@@ -239,9 +240,16 @@ export function CaixaMovimentacaoModal({
 
           {precisaSenhaGerente && (
             <label className="block text-xs text-amber-300">
-              {caixaFmt(m.caixa.modal_movimentacao_senha_gerente, {
-                limite: limiteSangriaSemGerente.toFixed(2),
-              })}
+              <span className="mb-1 flex items-center gap-2 text-amber-200/95">
+                <ImperialSealIcon
+                  className="h-5 w-5 shrink-0 text-[color:var(--dragon-imperial-red,#b91c1c)]"
+                  title={m.caixa.aria_selo_gerente}
+                  pulse
+                />
+                {caixaFmt(m.caixa.modal_movimentacao_senha_gerente, {
+                  limite: limiteSangriaSemGerente.toFixed(2),
+                })}
+              </span>
               <Input
                 ref={senhaRef}
                 type="password"

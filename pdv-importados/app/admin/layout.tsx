@@ -8,6 +8,7 @@ import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/pai
 import { getUsuarioIdioma, isGerenteOuDono } from '@/idioma/usuarioIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
+import { Logo } from '@/components/branding/Logo'
 import '@/styles/chinese-theme.css'
 
 type BilingualLine = { pt: string; cn: string }
@@ -57,7 +58,13 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <div className="relative mx-auto max-w-[1600px] px-4 py-5 md:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
-              <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight md:text-2xl">
+              <h1 className="flex flex-wrap items-center gap-3 text-xl font-bold tracking-tight md:text-2xl">
+                <Logo
+                  variant="symbol"
+                  href={painelGerencialHref('dashboard')}
+                  aria-label={m.login.nav_marca}
+                  className={chineseThemeOn ? 'text-amber-300' : 'text-amber-600'}
+                />
                 {chineseThemeOn ? (
                   <span
                     className="text-2xl"

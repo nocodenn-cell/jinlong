@@ -4,6 +4,7 @@ import { forwardRef, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
+import { DragonOuroLoader } from "@/components/branding/DragonOuroLoader"
 
 type Props = {
   m: Mensagens
@@ -44,9 +45,16 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
           type="submit"
           disabled={buscando || carregandoRegras}
           aria-busy={buscando}
-          className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white"
+          className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white min-w-[7rem]"
         >
-          {buscando ? m.caixa.buscando : m.caixa.adicionar_enter}
+          {buscando ? (
+            <>
+              <DragonOuroLoader iconClassName="h-4 w-4" />
+              {m.caixa.buscando}
+            </>
+          ) : (
+            m.caixa.adicionar_enter
+          )}
         </Button>
         <Button
           type="button"

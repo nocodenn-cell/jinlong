@@ -37,6 +37,7 @@ import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeli
 import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
 import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
+import "@/styles/theme-oriental.css"
 
 function localeFromIdioma(idioma: Idioma): string {
   if (idioma === "pt") return "pt-BR"
@@ -576,7 +577,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   return (
     <>
-      <div className="min-h-[100dvh] bg-slate-900 text-slate-50 flex flex-col">
+      <div className="min-h-[100dvh] caixa-oriental-root text-slate-50 flex flex-col">
         <CaixaHeader
           m={m}
           idioma={idioma}

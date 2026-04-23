@@ -8,6 +8,7 @@ import {
   FORMAS_PAGAMENTO_CAIXA,
   type FinalizarVendaInput,
 } from "@/app/caixa/finalizarVendaValidation"
+import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 
 type Props = {
   m: Mensagens
@@ -180,7 +181,7 @@ export function CaixaFooter({
             <Button
               type="button"
               variant="secondary"
-              className="bg-sky-700/90 text-sky-50 hover:bg-sky-600 border-0"
+              className="bg-emerald-700/90 text-emerald-50 hover:bg-emerald-600 border-0 ring-1 ring-emerald-400/30"
               onClick={onAbrirSuprimento}
               disabled={!caixaAberto || movimentandoCaixa || finalizando}
               aria-busy={movimentandoCaixa}
@@ -202,11 +203,18 @@ export function CaixaFooter({
             <Button
               type="button"
               variant="secondary"
-              className="bg-amber-700/90 text-amber-50 hover:bg-amber-600 border-0"
+              className="inline-flex items-center gap-2 bg-amber-700/90 text-amber-50 hover:bg-amber-600 border-0 ring-1 ring-amber-400/35 shadow-[0_0_0_1px_rgba(245,158,11,0.12)]"
               onClick={onValidarGerente}
               disabled={validandoGerente || movimentandoCaixa}
               aria-busy={validandoGerente}
             >
+              {!gerenteValidadoAte ? (
+                <ImperialSealIcon
+                  className="h-4 w-4 shrink-0 text-red-500"
+                  title={m.caixa.aria_selo_gerente}
+                  pulse
+                />
+              ) : null}
               {validandoGerente
                 ? m.caixa.validando_gerente
                 : m.caixa.validar_gerente}
@@ -225,7 +233,13 @@ export function CaixaFooter({
           </div>
           <span className="text-xs text-slate-400">{resumoItens}</span>
           {gerenteLinha && (
-            <span className="text-xs text-amber-300">{gerenteLinha}</span>
+            <span className="inline-flex items-center gap-2 text-xs text-amber-300">
+              <ImperialSealIcon
+                className="h-5 w-5 shrink-0 text-[color:var(--caixa-imperial-red,#b91c1c)]"
+                title={m.caixa.aria_selo_gerente}
+              />
+              {gerenteLinha}
+            </span>
           )}
         </div>
 

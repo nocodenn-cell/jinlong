@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 
 export type ValidarSenhaGerenteResult =
   | {
@@ -139,7 +140,7 @@ export function CaixaGerenteModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 dragon-glass-backdrop"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) fechar()
@@ -149,14 +150,21 @@ export function CaixaGerenteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-gerente-modal-title"
-        className="w-full sm:max-w-md rounded-none sm:rounded-lg border-slate-700 bg-slate-900 text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
+        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
           <CardTitle
             id="caixa-gerente-modal-title"
-            className="text-lg text-slate-50"
+            className="flex items-center gap-2 text-lg text-slate-50"
           >
+            {passo === "senha" ? (
+              <ImperialSealIcon
+                className="h-6 w-6 shrink-0 text-red-600"
+                title={m.caixa.aria_selo_gerente}
+                pulse
+              />
+            ) : null}
             {m.caixa.modal_gerente_titulo}
           </CardTitle>
         </CardHeader>
@@ -223,10 +231,15 @@ export function CaixaGerenteModal({
               </Button>
               <Button
                 type="button"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white inline-flex items-center gap-2"
                 onClick={handleAplicarPercent}
                 disabled={validando || !ctx}
               >
+                <ImperialSealIcon
+                  className="h-4 w-4 shrink-0 text-red-600 drop-shadow-sm"
+                  title={m.caixa.aria_selo_gerente}
+                  pulse
+                />
                 {m.caixa.modal_gerente_aplicar}
               </Button>
             </>

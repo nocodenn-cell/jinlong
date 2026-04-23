@@ -17,7 +17,7 @@ cd pdv-importados
 npm run smoke:http
 ```
 
-Outra porta: `SMOKE_BASE_URL=http://localhost:3009 npm run smoke:http`
+Outra porta: `SMOKE_BASE_URL=http://localhost:3001 npm run smoke:http`
 
 ## Rodar localmente
 
@@ -29,10 +29,8 @@ npm ci
 # Primeira vez: instalar Chromium
 npx playwright install chromium
 
-# Terminal 1 (opcional se não usar webServer do Playwright)
-npm run dev:web
-
-# Terminal 2
+# Com `npm run dev:web` já em :3000, o Playwright reutiliza o mesmo servidor (sem segundo `next dev`).
+# Sem dev: o Playwright sobe `next dev` na porta configurada (padrão 3000).
 npm run test:e2e -w pdv-importados
 ```
 
@@ -54,9 +52,9 @@ npm run test:e2e:report
 |----------|-------------|-----|
 | `NEXT_PUBLIC_SUPABASE_URL` | Para testes de login | Cliente Supabase no browser |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Recomendado com URL | Auth real nos testes de login |
-| `PLAYWRIGHT_BASE_URL` | Não | Padrão `http://localhost:3009` (servidor de teste do Playwright). Se definido no CI (secret), o Playwright **não** sobe `next dev` (`PLAYWRIGHT_E2E_WITH_DEV=0`) e usa essa URL (ex.: deploy de staging). |
-| `PLAYWRIGHT_TEST_PORT` | Não | Porta do `next dev` iniciado pelo Playwright (padrão `3009`) |
-| `PLAYWRIGHT_REUSE_SERVER` | Não | Defina `1` para reutilizar um `next dev` já rodando na mesma porta (padrão: sempre sobe servidor novo) |
+| `PLAYWRIGHT_BASE_URL` | Não | Padrão `http://localhost:3000` (alinhado ao `next dev`). No CI sem `PLAYWRIGHT_E2E_WITH_DEV`, o Playwright **não** sobe `next dev`; use URL de deploy/staging via secret quando aplicável. |
+| `PLAYWRIGHT_TEST_PORT` | Não | Porta do `webServer` / `baseURL` local (padrão `3000`). Ex.: `3009` para E2E isolado com dev ainda em `3000`. |
+| `PLAYWRIGHT_REUSE_SERVER` | Não | Fora do CI, reutilizar `next dev` já na mesma porta é o **padrão**. Defina `0` para forçar o Playwright a subir `next dev` via `webServer` (falha se a porta estiver ocupada). |
 | `PLAYWRIGHT_TEST_EMAIL` | Para suite gerente | Usuário **GERENTE** ou **DONO** |
 | `PLAYWRIGHT_TEST_PASSWORD` | Para suite gerente | Senha do usuário de teste |
 | `PLAYWRIGHT_CAIXA_TEST_EMAIL` | Para `/caixa` (`caixa.spec`, `caixa-fluxos-criticos`, pipeline `test:e2e:critical`) | Usuário com **`perfil = OPERADOR`** (o middleware redireciona GERENTE/DONO para `/gerente`) |

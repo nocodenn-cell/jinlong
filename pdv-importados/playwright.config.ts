@@ -1,12 +1,27 @@
 import { defineConfig, devices } from '@playwright/test'
 
-/** Porta dedicada aos E2E para não colidir com `npm run dev` em :3000. */
-const e2ePort = process.env.PLAYWRIGHT_TEST_PORT ?? '3009'
+/**
+ * Porta do `webServer` / `baseURL` quando não há `PLAYWRIGHT_BASE_URL`.
+ * Padrão **3000** = mesmo `npm run dev`; fora do CI, `reuseExistingServer` evita um segundo `next dev`.
+ * Isolado (dev em 3000 + E2E próprio): `PLAYWRIGHT_TEST_PORT=3009`.
+ */
+const e2ePort = process.env.PLAYWRIGHT_TEST_PORT ?? '3000'
 const defaultBase = `http://localhost:${e2ePort}`
+
+const isCi = process.env.CI === 'true'
 
 /** No CI, sobe Next localmente quando `PLAYWRIGHT_E2E_WITH_DEV=1` (ver workflow opcional). */
 const ciWithLocalServer =
-  process.env.CI === 'true' && process.env.PLAYWRIGHT_E2E_WITH_DEV === '1'
+  isCi && process.env.PLAYWRIGHT_E2E_WITH_DEV === '1'
+
+/**
+ * Se a URL do `webServer` já responder, não executa `command` (reutiliza `localhost:${e2ePort}`).
+ * `PLAYWRIGHT_REUSE_SERVER=0`: sempre tenta subir via `command` (útil para “sala limpa”; falha se porta ocupada).
+ */
+const reuseExistingServer =
+  process.env.PLAYWRIGHT_REUSE_SERVER === '0'
+    ? false
+    : !isCi || !ciWithLocalServer
 
 export default defineConfig({
   testDir: './e2e',
@@ -31,12 +46,11 @@ export default defineConfig({
     },
   ],
   webServer:
-    ciWithLocalServer || !process.env.CI
+    ciWithLocalServer || !isCi
       ? {
           command: `npx next dev -p ${e2ePort}`,
           url: defaultBase,
-          reuseExistingServer:
-            !ciWithLocalServer && process.env.PLAYWRIGHT_REUSE_SERVER === '1',
+          reuseExistingServer,
           timeout: 120_000,
         }
       : undefined,
