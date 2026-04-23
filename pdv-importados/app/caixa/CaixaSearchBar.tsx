@@ -3,7 +3,7 @@
 import { forwardRef, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Mensagens } from "@/src/lib/i18n/getMessages"
+import type { Mensagens } from "@/i18n/getMessages"
 
 type Props = {
   m: Mensagens

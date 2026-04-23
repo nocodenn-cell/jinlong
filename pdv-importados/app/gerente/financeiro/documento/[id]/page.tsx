@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { createClient } from '@/lib/supabase/server'
-import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { DocumentoFiscalDetalheClient } from './DocumentoFiscalDetalheClient'
 
 type PageProps = { params: Promise<{ id: string }> }

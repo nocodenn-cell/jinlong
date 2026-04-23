@@ -9,8 +9,8 @@ import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { fmtQuantidadeEstoque } from '@/lib/format/fmtQuantidadeEstoque'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
-import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import {
   atualizarEstoqueProdutoThrow,
   garantirLinhaEstoqueThrow,

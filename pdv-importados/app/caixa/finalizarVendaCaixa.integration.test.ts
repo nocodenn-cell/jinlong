@@ -68,6 +68,20 @@ class QueryBuilder {
     return Promise.resolve({ data: null, error: null })
   }
 
+  /** Usado por `getUsuarioIdioma` quando `safeParse` falha (ex.: soma de parcelas ≠ total líquido). */
+  single(): Promise<{ data: any; error: null }> {
+    if (this.table === 'usuarios') {
+      return Promise.resolve({
+        data: { perfil: 'OPERADOR', idioma_preferido: 'pt' },
+        error: null,
+      })
+    }
+    return this.execute().then((res) => ({
+      data: Array.isArray(res.data) ? (res.data[0] ?? null) : res.data,
+      error: null,
+    }))
+  }
+
   then<TResult1 = any, TResult2 = never>(
     onfulfilled?: ((value: { data: any; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,

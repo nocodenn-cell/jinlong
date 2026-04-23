@@ -3,8 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
-import { normalizeIdioma } from '@/src/lib/idioma/normalizeIdioma'
-import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
+import { normalizeIdioma } from '@/idioma/normalizeIdioma'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 
 export async function setIdiomaAction(formData: FormData) {
   const idiomaRaw = formData.get('idioma')

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { ProdutosGerentePageClient, type ProdutoGerenteRow } from './ProdutosGerentePageClient'
 
 export default async function ProdutosPage() {

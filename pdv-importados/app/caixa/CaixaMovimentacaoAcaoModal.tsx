@@ -9,9 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import type { Mensagens } from "@/src/lib/i18n/getMessages"
-
-export type AcaoMovimentacaoTipo = "cancelar" | "estornar"
+import type { Mensagens } from "@/i18n/getMessages"
+import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 
 type Props = {
   open: boolean

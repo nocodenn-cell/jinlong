@@ -9,7 +9,7 @@ import {
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
 import { AtualizarEstoqueSchema, ProdutoIdSchema } from './actions.validation'
-import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
 type ActionResult<T = null> =
   | { success: true; data: T }

@@ -10,8 +10,8 @@ import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { formatBRL } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
-import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import { alternarAtivoProduto, criarProduto } from './actions'
 
 export type ProdutoGerenteRow = {

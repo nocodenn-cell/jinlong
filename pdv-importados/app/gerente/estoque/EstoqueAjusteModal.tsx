@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import type { Mensagens } from '@/src/lib/i18n/getMessages'
+import type { Mensagens } from '@/i18n/getMessages'
 
 export type EstoqueAjusteModalProps = Readonly<{
   open: boolean

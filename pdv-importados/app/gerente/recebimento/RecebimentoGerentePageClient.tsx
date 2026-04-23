@@ -6,8 +6,8 @@ import { useCallback } from 'react'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
-import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import { criarRemessaConferencia } from './actions'
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }

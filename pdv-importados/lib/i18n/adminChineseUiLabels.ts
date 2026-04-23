@@ -4,7 +4,7 @@
  * Este módulo permanece apenas para transição gradual de componentes antigos.
  * `NEXT_PUBLIC_ADMIN_CHINESE_UI` controla tema visual/rollout, não dicionário principal.
  */
-import { getMessagesWithFallback } from '@/src/lib/i18n/getMessages'
+import { getMessagesWithFallback } from '@/i18n/getMessages'
 
 export type BilingualLine = { pt: string; cn: string }
 

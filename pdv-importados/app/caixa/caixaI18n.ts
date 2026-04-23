@@ -1,4 +1,4 @@
-import type { Mensagens } from '@/src/lib/i18n/getMessages'
+import type { Mensagens } from '@/i18n/getMessages'
 
 /** Substitui {{chave}} em strings do JSON do caixa. */
 export function caixaFmt(

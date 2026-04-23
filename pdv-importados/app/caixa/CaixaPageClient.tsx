@@ -8,21 +8,18 @@ import {
   finalizarVendaCaixa,
   abrirCaixaOperador,
   fecharCaixaOperador,
-  obterStatusCaixaOperador,
   validarGerenteDesconto,
   obterLimiteSangriaSemGerente,
-  registrarMovimentacao,
-  autorizarMovimentacaoGerente,
-  obterMovimentacoesCaixa,
-  cancelarMovimentacaoCaixa,
-  estornarMovimentacaoCaixa,
-  type MovimentacaoCaixaDTO,
 } from "@/app/caixa/actions"
+import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { DEFAULT_PRICING_CONTEXT } from "@/core/pricing"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
-import type { Mensagens } from "@/src/lib/i18n/getMessages"
-import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
+import type { Mensagens } from "@/i18n/getMessages"
+import type { Idioma } from "@/idioma/normalizeIdioma"
+import { useCaixaMensagens } from "@/app/caixa/hooks/useCaixaMensagens"
+import { useCaixaPagamentos } from "@/app/caixa/hooks/useCaixaPagamentos"
+import { useCaixaStatusMovimentacoes } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
@@ -32,14 +29,10 @@ import {
   CaixaGerenteModal,
   type ValidarSenhaGerenteResult,
 } from "@/app/caixa/CaixaGerenteModal"
-import {
-  CaixaMovimentacaoModal,
-  type TipoMovimentacaoUi,
-} from "@/app/caixa/CaixaMovimentacaoModal"
-import {
-  CaixaMovimentacaoAcaoModal,
-  type AcaoMovimentacaoTipo,
-} from "@/app/caixa/CaixaMovimentacaoAcaoModal"
+import { CaixaMovimentacaoModal } from "@/app/caixa/CaixaMovimentacaoModal"
+import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
+import { CaixaMovimentacaoAcaoModal } from "@/app/caixa/CaixaMovimentacaoAcaoModal"
+import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeline"
 import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
@@ -57,36 +50,15 @@ type Props = {
 }
 
 export function CaixaPageClient({ messages: m, idioma }: Props) {
-  const pagamentoInicial = useCallback(
-    (valor: number): { formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number } => ({
-      formaPagamento: "DINHEIRO",
-      valor: roundMoney2(Math.max(0, valor)),
-    }),
-    [],
-  )
+  const { mensagem, msgVendaOk, setCaixaMensagem, setCaixaMensagemVendaOk } = useCaixaMensagens()
+
   const [codigo, setCodigo] = useState("")
-  const [mensagem, setMensagemState] = useState<string | null>(null)
-  const [msgVendaOk, setMsgVendaOk] = useState(false)
-
-  const setCaixaMensagem = useCallback((text: string | null) => {
-    setMsgVendaOk(false)
-    setMensagemState(text)
-  }, [])
-
-  const setCaixaMensagemVendaOk = useCallback((text: string) => {
-    setMsgVendaOk(true)
-    setMensagemState(text)
-  }, [])
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
   const [buscando, setBuscando] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
-  const [movimentandoCaixa, setMovimentandoCaixa] = useState(false)
-  const [carregandoMovimentacoes, setCarregandoMovimentacoes] = useState(false)
-  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>([])
-  const [processandoAcaoMovimentacao, setProcessandoAcaoMovimentacao] = useState(false)
   const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
   const [movimentacaoModalTipo, setMovimentacaoModalTipo] =
     useState<TipoMovimentacaoUi | null>(null)
@@ -109,21 +81,17 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     useState<number>(0)
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
-  const [pagamentos, setPagamentos] = useState<
-    Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
-  >(() => [pagamentoInicial(0)])
-  const [caixaStatus, setCaixaStatus] = useState<
-    | {
-        aberto: true
-        caixaId: string
-        dataAbertura: string
-        valorInicial: number
-        valorSistemaDinheiro: number
-        blindClosureEnabled: boolean
-      }
-    | { aberto: false }
-    | null
-  >(null)
+
+  const {
+    caixaStatus,
+    movimentacoes,
+    carregandoMovimentacoes,
+    movimentandoCaixa,
+    processandoAcaoMovimentacao,
+    recarregarStatusCaixa,
+    handleSalvarMovimentacao,
+    handleConfirmarAcaoMovimentacao,
+  } = useCaixaStatusMovimentacoes({ m, setCaixaMensagem, movimentacaoModalTipo, acaoMovimentacao })
 
   const {
     itens,
@@ -138,6 +106,22 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     removerItem,
     limparCarrinho,
   } = useCarrinhoStore()
+
+  const valorDescontoGerente =
+    descontoGerentePercentual > 0
+      ? roundMoney2((totalLiquido * descontoGerentePercentual) / 100)
+      : 0
+  const totalLiquidoComGerente = roundMoney2(totalLiquido - valorDescontoGerente)
+
+  const {
+    pagamentos,
+    pagamentoInicial,
+    handlePagamentoFormaChange,
+    handlePagamentoValorChange,
+    handleAdicionarPagamento,
+    handleRemoverPagamento,
+    resetPagamentos,
+  } = useCaixaPagamentos(totalLiquidoComGerente)
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
@@ -156,48 +140,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setMaxDescontoGerentePercentual(0)
     setDescontoGerentePercentual(0)
   }, [])
-
-  const recarregarMovimentacoes = useCallback(async (caixaId?: string) => {
-    if (!caixaId) {
-      setMovimentacoes([])
-      return
-    }
-    setCarregandoMovimentacoes(true)
-    try {
-      const res = await obterMovimentacoesCaixa(caixaId)
-      if (!res.ok) {
-        setCaixaMensagem(res.error)
-        return
-      }
-      setMovimentacoes(res.itens)
-    } finally {
-      setCarregandoMovimentacoes(false)
-    }
-  }, [setCaixaMensagem])
-
-  const recarregarStatusCaixa = useCallback(async () => {
-    const status = await obterStatusCaixaOperador()
-    if (!status.ok) {
-      setCaixaStatus(null)
-      setMovimentacoes([])
-      setCaixaMensagem(status.error)
-      return
-    }
-    if (status.aberto) {
-      setCaixaStatus({
-        aberto: true,
-        caixaId: status.caixaId,
-        dataAbertura: status.dataAbertura,
-        valorInicial: status.valorInicial,
-        valorSistemaDinheiro: status.valorSistemaDinheiro,
-        blindClosureEnabled: status.blindClosureEnabled,
-      })
-      await recarregarMovimentacoes(status.caixaId)
-    } else {
-      setCaixaStatus({ aberto: false })
-      setMovimentacoes([])
-    }
-  }, [recarregarMovimentacoes, setCaixaMensagem])
 
   useEffect(() => {
     let cancelado = false
@@ -232,10 +174,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       cancelado = true
     }
   }, [])
-
-  useEffect(() => {
-    void recarregarStatusCaixa()
-  }, [recarregarStatusCaixa])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -333,11 +271,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const handleNovoCupom = useCallback(() => {
     vendaIdempotenciaRef.current = null
     limparCarrinho()
-    setPagamentos([pagamentoInicial(0)])
+    resetPagamentos()
     setCodigo("")
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
-  }, [limparCarrinho, limparEstadoDescontoGerente, pagamentoInicial, setCaixaMensagem])
+  }, [limparCarrinho, limparEstadoDescontoGerente, resetPagamentos, setCaixaMensagem])
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
     if (raw == null) return null
@@ -505,7 +443,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         vendaIdempotenciaRef.current = null
         limparCarrinho()
         limparEstadoDescontoGerente()
-        setPagamentos([pagamentoInicial(0)])
+        resetPagamentos()
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
         )
@@ -527,7 +465,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     itens,
     limparEstadoDescontoGerente,
     limparCarrinho,
-    pagamentoInicial,
+    resetPagamentos,
     totalBruto,
     totalDesconto,
     totalLiquido,
@@ -576,151 +514,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [])
-
-  const handleSalvarMovimentacao = useCallback(
-    async (payload: {
-      valor: number
-      motivoCodigo: string
-      motivo: string
-      gerenteSenha?: string
-    }): Promise<{ ok: true } | { ok: false; error: string }> => {
-      if (!caixaStatus?.aberto) {
-        return { ok: false, error: m.caixa.msg_caixa_fechado_movimentacao }
-      }
-      if (!movimentacaoModalTipo) {
-        return { ok: false, error: m.caixa.msg_tipo_movimentacao_invalido }
-      }
-
-      setMovimentandoCaixa(true)
-      try {
-        const registro = await registrarMovimentacao({
-          caixaId: caixaStatus.caixaId,
-          tipo: movimentacaoModalTipo,
-          formaPagamento: "dinheiro",
-          valor: payload.valor,
-          motivo: payload.motivo,
-          motivoCodigo: payload.motivoCodigo,
-          idempotencyKey: crypto.randomUUID(),
-          terminalId: getDeviceFingerprint(),
-        })
-
-        if (!registro.ok) return { ok: false, error: registro.error }
-
-        if (registro.status === "pendente") {
-          if (!payload.gerenteSenha?.trim()) {
-            setCaixaMensagem(m.caixa.msg_movimentacao_pendente_gerente)
-            await recarregarStatusCaixa()
-            return { ok: true }
-          }
-          const aprovacao = await autorizarMovimentacaoGerente(
-            registro.movimentacaoId,
-            payload.gerenteSenha,
-          )
-          if (!aprovacao.ok) {
-            return {
-              ok: false,
-              error: caixaFmt(m.caixa.msg_movimentacao_aprovacao_falhou, {
-                erro: aprovacao.error,
-              }),
-            }
-          }
-        }
-
-        const label = movimentacaoModalTipo === "sangria" ? m.caixa.sangria : m.caixa.suprimento
-        setCaixaMensagem(
-          caixaFmt(m.caixa.msg_movimentacao_registrada_ok, {
-            tipo: label,
-            valor: payload.valor.toFixed(2),
-          }),
-        )
-        await recarregarStatusCaixa()
-        await recarregarMovimentacoes(caixaStatus.caixaId)
-        return { ok: true }
-      } finally {
-        setMovimentandoCaixa(false)
-      }
-    },
-    [caixaStatus, movimentacaoModalTipo, recarregarStatusCaixa, recarregarMovimentacoes, m, setCaixaMensagem],
-  )
-
-  const handleConfirmarAcaoMovimentacao = useCallback(
-    async (motivo: string): Promise<{ ok: true } | { ok: false; error: string }> => {
-      if (!acaoMovimentacao) return { ok: false, error: m.caixa.msg_acao_movimentacao_invalida }
-      setProcessandoAcaoMovimentacao(true)
-      try {
-        if (acaoMovimentacao.tipo === "cancelar") {
-          const res = await cancelarMovimentacaoCaixa(acaoMovimentacao.item.id, motivo)
-          if (!res.ok) return { ok: false, error: res.error }
-          setCaixaMensagem(m.caixa.timeline_msg_cancelada)
-        } else {
-          const res = await estornarMovimentacaoCaixa(acaoMovimentacao.item.id, motivo)
-          if (!res.ok) return { ok: false, error: res.error }
-          setCaixaMensagem(m.caixa.timeline_msg_estornada)
-        }
-        await recarregarStatusCaixa()
-        if (caixaStatus?.aberto) {
-          await recarregarMovimentacoes(caixaStatus.caixaId)
-        }
-        return { ok: true }
-      } finally {
-        setProcessandoAcaoMovimentacao(false)
-      }
-    },
-    [acaoMovimentacao, caixaStatus, recarregarMovimentacoes, recarregarStatusCaixa, m, setCaixaMensagem],
-  )
-
-  const valorDescontoGerente =
-    descontoGerentePercentual > 0
-      ? roundMoney2((totalLiquido * descontoGerentePercentual) / 100)
-      : 0
-  const totalLiquidoComGerente = roundMoney2(totalLiquido - valorDescontoGerente)
-
-  useEffect(() => {
-    setPagamentos((prev) => {
-      if (prev.length <= 1) {
-        return [{ formaPagamento: prev[0]?.formaPagamento ?? "DINHEIRO", valor: totalLiquidoComGerente }]
-      }
-      const somaSemUltimo = prev.slice(0, -1).reduce((acc, p) => acc + p.valor, 0)
-      const ultimo = Math.max(0, roundMoney2(totalLiquidoComGerente - somaSemUltimo))
-      return [...prev.slice(0, -1), { ...prev[prev.length - 1], valor: ultimo }]
-    })
-  }, [totalLiquidoComGerente])
-
-  const handlePagamentoFormaChange = useCallback(
-    (index: number, forma: FinalizarVendaInput["formaPagamento"]) => {
-      setPagamentos((prev) => prev.map((p, i) => (i === index ? { ...p, formaPagamento: forma } : p)))
-    },
-    [],
-  )
-
-  const handlePagamentoValorChange = useCallback(
-    (index: number, valor: number) => {
-      const v = Number.isFinite(valor) && valor > 0 ? roundMoney2(valor) : 0
-      setPagamentos((prev) => prev.map((p, i) => (i === index ? { ...p, valor: v } : p)))
-    },
-    [],
-  )
-
-  const handleAdicionarPagamento = useCallback(() => {
-    setPagamentos((prev) => {
-      if (prev.length >= 4) return prev
-      const restante = Math.max(0, roundMoney2(totalLiquidoComGerente - prev.reduce((acc, p) => acc + p.valor, 0)))
-      return [...prev, { formaPagamento: "PIX", valor: restante }]
-    })
-  }, [totalLiquidoComGerente])
-
-  const handleRemoverPagamento = useCallback((index: number) => {
-    setPagamentos((prev) => {
-      if (prev.length <= 1) return prev
-      const next = prev.filter((_, i) => i !== index)
-      const soma = next.reduce((acc, p) => acc + p.valor, 0)
-      if (next.length > 0) {
-        const ajuste = Math.max(0, roundMoney2(totalLiquidoComGerente - soma))
-        next[next.length - 1] = { ...next[next.length - 1], valor: next[next.length - 1].valor + ajuste }
-      }
-      return next
-    })
-  }, [totalLiquidoComGerente])
 
   const handleValidateSenhaGerente = useCallback(
     async (senha: string): Promise<ValidarSenhaGerenteResult> => {

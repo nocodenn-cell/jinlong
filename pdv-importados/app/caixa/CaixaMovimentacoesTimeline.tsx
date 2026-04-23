@@ -1,9 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import type { Mensagens } from "@/src/lib/i18n/getMessages"
-import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
-import type { MovimentacaoCaixaDTO } from "@/app/caixa/actions"
+import type { Mensagens } from "@/i18n/getMessages"
+import type { Idioma } from "@/idioma/normalizeIdioma"
+import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 
 type Props = {
   m: Mensagens

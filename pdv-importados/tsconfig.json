@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@/i18n/*": [
+        "./src/lib/i18n/*"
+      ],
+      "@/idioma/*": [
+        "./src/lib/idioma/*"
       ]
     },
     "target": "ES2017"

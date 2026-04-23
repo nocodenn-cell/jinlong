@@ -19,7 +19,7 @@ PDV para lojas de importados no Brasil: **atacado por faixa**, **PT no caixa** /
 
 - Next.js 16 **App Router** em `app/` (sem `src/app` paralelo), **React 19** (alinhado ao `pdv-local`), TypeScript strict, Tailwind, shadcn/ui, Lucide
 - Supabase: `@supabase/ssr`, Auth, Postgres com RLS (ver migrations no `backend`)
-- i18n: **`getMessages` + `src/lib/i18n/*.json`** (pt, zh, zh-HK) — **sem** `next-intl`; URLs **sem** prefixo `/pt/` (`/login`, `/caixa`, `/gerente/...`)
+- i18n: **`getMessages` + `src/lib/i18n/*.json`** (pt, zh, zh-HK) — **sem** `next-intl`; URLs **sem** prefixo `/pt/` (`/login`, `/caixa`, `/gerente/...`). Nos imports TypeScript, preferir **`@/i18n/...`** e **`@/idioma/...`** (aliases em `tsconfig.json`; arquivos continuam em `src/lib/...`).
 - Estado: Zustand (`stores/carrinhoStore.ts`) + `core/` (pricing, tipos)
 - **Não misturar Tauri/desktop aqui** — isso é `../pdv-local`
 
@@ -35,8 +35,8 @@ components/          ← UI por domínio (ui/, caixa/, gerente/, …); ver compo
 lib/supabase/        ← client/server canônicos
 lib/adapters/
 stores/
-src/lib/i18n/        ← JSON + getMessages
-src/lib/idioma/
+src/lib/i18n/        ← JSON + getMessages (import: @/i18n/...)
+src/lib/idioma/      ← perfil/idioma usuário (import: @/idioma/...)
 core/                ← domínio compartilhado (pricing, sync docs)
 middleware.ts        ← sessão + perfil OPERADOR vs GERENTE/DONO
 ```

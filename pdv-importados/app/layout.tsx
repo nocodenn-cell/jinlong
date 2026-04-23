@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
-import { htmlLangFromIdioma } from '@/src/lib/idioma/htmlLang'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { htmlLangFromIdioma } from '@/idioma/htmlLang'
 
 export const metadata: Metadata = {
   title: 'PDV Importados',

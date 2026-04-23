@@ -1,4 +1,4 @@
-import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { EstoqueGerentePageClient } from './EstoqueGerentePageClient'
 
 export default async function EstoqueGerentePage({

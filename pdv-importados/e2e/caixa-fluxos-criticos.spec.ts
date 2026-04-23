@@ -1,17 +1,12 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser, caixaOperadorEmail, caixaOperadorPassword } from './helpers/env'
+import {
+  confirmarModalValorNumerico,
+  MODAL_TITULO_ABRIR,
+  MODAL_TITULO_FECHAR,
+} from './helpers/caixaModais'
 
 const LOGIN_PATH = '/login'
-
-/** Enfileira handlers `once` na ordem dos prompts esperados. */
-function queuePromptAnswers(page: Page, answers: readonly string[]) {
-  for (const answer of answers) {
-    page.once('dialog', async (dialog) => {
-      if (dialog.type() === 'prompt') await dialog.accept(answer)
-      else await dialog.dismiss()
-    })
-  }
-}
 
 test.describe.configure({ mode: 'serial' })
 
@@ -37,10 +32,10 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
     await page.goto('/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
-    const abrir = page.getByRole('button', { name: /Abrir caixa/ })
+    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
     if (await abrir.isVisible().catch(() => false)) {
-      queuePromptAnswers(page, ['120'])
       await abrir.click()
+      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '120')
       await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
     }
 
@@ -66,12 +61,12 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
     const m = headerText.match(/Saldo estimado[^\dR]*R\$\s*([\d.,]+)/i)
     const bruto = m?.[1]?.replace(',', '.').trim()
     if (!bruto || Number.isNaN(Number.parseFloat(bruto))) {
-      test.skip(true, 'Não foi possível ler o saldo estimado do cabeçalho para o prompt de fechamento.')
+      test.skip(true, 'Não foi possível ler o saldo estimado do cabeçalho para o fechamento.')
       return
     }
 
-    queuePromptAnswers(page, [bruto])
-    await page.getByRole('button', { name: /Fechar caixa/ }).click()
+    await page.getByRole('button', { name: /Fechar caixa|结算收银台|結算收銀台/ }).click()
+    await confirmarModalValorNumerico(page, MODAL_TITULO_FECHAR, bruto)
     await expect(page.getByRole('status')).toContainText(/Caixa fechado|fechado\./i, { timeout: 25_000 })
   })
 })

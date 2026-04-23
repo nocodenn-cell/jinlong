@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
-import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import { executarTransferencia } from './actions'
 
 export type TransferenciaLojaRow = { id: string; nome: string; codigo: string }

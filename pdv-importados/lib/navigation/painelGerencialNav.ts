@@ -1,4 +1,4 @@
-import type { Mensagens } from '@/src/lib/i18n/getMessages'
+import type { Mensagens } from '@/i18n/getMessages'
 
 /**
  * Chaves canónicas dos módulos do painel gerencial + dashboard admin.

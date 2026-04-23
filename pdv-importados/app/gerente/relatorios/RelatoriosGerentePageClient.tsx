@@ -3,43 +3,21 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { objectsToCsv } from '@/lib/csv'
-import { downloadXlsx } from '@/lib/xlsx'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
-import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
 import { formatarDiaRelatorioParaLocale } from '@/lib/relatorios/periodoRelatorio'
-import type { Idioma } from '@/src/lib/idioma/normalizeIdioma'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import { getMessages } from '@/i18n/getMessages'
 import { formatBRL, formatDecimalPlaces } from '@/lib/format/money'
 import { carregarDadosRelatoriosGerente } from './actions'
+import { getAvisoPeriodo } from '@/app/gerente/relatorios/relatoriosGerenteUtils'
+import { useRelatoriosGerenteExports } from '@/app/gerente/relatorios/useRelatoriosGerenteExports'
 
 type Props = Readonly<{
   idioma: Idioma
 }>
-
-function getAvisoPeriodo(
-  aviso: 'nenhum' | 'datas_invalidas' | 'periodo_invertido' | 'periodo_limitado' | undefined,
-  m: ReturnType<typeof getMessages>,
-) {
-  if (aviso === 'datas_invalidas') return m.relatorios.aviso_datas_invalidas
-  if (aviso === 'periodo_invertido') return m.relatorios.aviso_periodo_invertido
-  if (aviso === 'periodo_limitado') return m.relatorios.aviso_periodo_limitado
-  return null
-}
-
-function downloadCsv(filename: string, columns: { key: string; header: string }[], rows: Record<string, unknown>[]) {
-  const csv = objectsToCsv(columns, rows)
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
 
 export function RelatoriosGerentePageClient({ idioma }: Props) {
   const m = getMessages(idioma)
@@ -76,8 +54,6 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
 
   const csvSuffix = data ? `${data.periodo.de}_${data.periodo.ate}` : 'periodo'
 
-  const exportVendasOpts = useMemo(() => ({ successMessage: m.comum.sucesso }), [m.comum.sucesso])
-
   const vendasDiaColumns = useMemo(
     () => [
       { key: 'dia', header: m.gerente.col_dia },
@@ -112,118 +88,20 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
     [m],
   )
 
-  const { mutate: exportVendasDia, loading: expVendas } = useGerenteMutation(
-    async (_: null) => {
-      if (!data) throw new Error('Sem dados')
-      downloadCsv(
-        `relatorio-vendas-dia_${csvSuffix}.csv`,
-        vendasDiaColumns,
-        data.porDia.map((row) => ({
-          dia: row.dia ? String(row.dia).slice(0, 10) : '',
-          num_vendas: row.num_vendas,
-          total_liquido: Number(row.total_liquido),
-          ticket_medio: Number(row.ticket_medio),
-          total_desconto: Number(row.total_desconto),
-        })),
-      )
-      return null
-    },
-    exportVendasOpts,
-  )
-  const { mutate: exportVendasDiaXlsx, loading: expVendasXlsx } = useGerenteMutation(
-    async (_: null) => {
-      if (!data) throw new Error('Sem dados')
-      downloadXlsx(
-        `relatorio-vendas-dia_${csvSuffix}.xlsx`,
-        vendasDiaColumns,
-        data.porDia.map((row) => ({
-          dia: row.dia ? String(row.dia).slice(0, 10) : '',
-          num_vendas: row.num_vendas,
-          total_liquido: Number(row.total_liquido),
-          ticket_medio: Number(row.ticket_medio),
-          total_desconto: Number(row.total_desconto),
-        })),
-      )
-      return null
-    },
-    exportVendasOpts,
-  )
-
-  const { mutate: exportTop, loading: expTop } = useGerenteMutation(
-    async (_: null) => {
-      if (!data) throw new Error('Sem dados')
-      downloadCsv(
-        `relatorio-top-produtos_${csvSuffix}.csv`,
-        topProdutosColumns,
-        data.top.map((row) => ({
-          id: row.id,
-          nome: row.nome,
-          origem: row.origem,
-          total_quantidade: row.total_quantidade,
-          total_valor: row.total_valor,
-          num_vendas: row.num_vendas,
-        })),
-      )
-      return null
-    },
-    exportVendasOpts,
-  )
-  const { mutate: exportTopXlsx, loading: expTopXlsx } = useGerenteMutation(
-    async (_: null) => {
-      if (!data) throw new Error('Sem dados')
-      downloadXlsx(
-        `relatorio-top-produtos_${csvSuffix}.xlsx`,
-        topProdutosColumns,
-        data.top.map((row) => ({
-          id: row.id,
-          nome: row.nome,
-          origem: row.origem,
-          total_quantidade: row.total_quantidade,
-          total_valor: row.total_valor,
-          num_vendas: row.num_vendas,
-        })),
-      )
-      return null
-    },
-    exportVendasOpts,
-  )
-
-  const { mutate: exportBaixo, loading: expBaixo } = useGerenteMutation(
-    async (_: null) => {
-      if (!data) throw new Error('Sem dados')
-      downloadCsv(
-        'relatorio-estoque-baixo.csv',
-        estoqueBaixoColumns,
-        data.baixo.map((row) => ({
-          nome: row.nome,
-          codigo_barras: row.codigo_barras ?? '',
-          quantidade_atual: row.quantidade_atual,
-          estoque_minimo: row.estoque_minimo,
-          deficit: row.deficit,
-        })),
-      )
-      return null
-    },
-    exportVendasOpts,
-  )
-  const { mutate: exportBaixoXlsx, loading: expBaixoXlsx } = useGerenteMutation(
-    async (_: null) => {
-      if (!data) throw new Error('Sem dados')
-      downloadXlsx(
-        'relatorio-estoque-baixo.xlsx',
-        estoqueBaixoColumns,
-        data.baixo.map((row) => ({
-          nome: row.nome,
-          codigo_barras: row.codigo_barras ?? '',
-          quantidade_atual: row.quantidade_atual,
-          estoque_minimo: row.estoque_minimo,
-          deficit: row.deficit,
-        })),
-      )
-      return null
-    },
-    exportVendasOpts,
-  )
+  const {
+    exportVendasDia,
+    expVendas,
+    exportVendasDiaXlsx,
+    expVendasXlsx,
+    exportTop,
+    expTop,
+    exportTopXlsx,
+    expTopXlsx,
+    exportBaixo,
+    expBaixo,
+    exportBaixoXlsx,
+    expBaixoXlsx,
+  } = useRelatoriosGerenteExports(m, data, csvSuffix, vendasDiaColumns, topProdutosColumns, estoqueBaixoColumns)
 
   const fmtMoney = (n: number) => formatBRL(Number(n), locale)
 

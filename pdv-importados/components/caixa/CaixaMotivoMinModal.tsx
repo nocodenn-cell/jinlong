@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import type { Mensagens } from "@/src/lib/i18n/getMessages"
+import type { Mensagens } from "@/i18n/getMessages"
 
 export type CaixaMotivoMinModalProps = {
   open: boolean

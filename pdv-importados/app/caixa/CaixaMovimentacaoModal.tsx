@@ -10,10 +10,9 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import type { Mensagens } from "@/src/lib/i18n/getMessages"
+import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
-
-export type TipoMovimentacaoUi = "suprimento" | "sangria"
+import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 
 type Props = {
   open: boolean

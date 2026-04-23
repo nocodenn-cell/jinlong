@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
-import { getUsuarioIdioma, isGerenteOuDono } from '@/src/lib/idioma/usuarioIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import { getUsuarioIdioma, isGerenteOuDono } from '@/idioma/usuarioIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import LanguageToggle from './idioma/LanguageToggle'
 import {
   GERENTE_HEADER_NAV_ORDER,

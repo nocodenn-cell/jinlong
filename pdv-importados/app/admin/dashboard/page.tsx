@@ -18,8 +18,8 @@ import {
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
-import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
 type BilingualLine = { pt: string; cn: string }

@@ -10,7 +10,7 @@ import {
   alternarAtivoProduto as alternarAtivoNoDominio,
 } from '@/core/services/produtoService'
 import { mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
-import { getUsuarioIdioma } from '@/src/lib/idioma/usuarioIdioma'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
 const NovoProdutoSchema = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),

@@ -21,9 +21,11 @@ export default defineConfig({
     globals: false,
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './'),
-      '@shared': path.resolve(__dirname, '../shared'),
-    },
+    alias: [
+      { find: '@/i18n', replacement: path.resolve(__dirname, 'src/lib/i18n') },
+      { find: '@/idioma', replacement: path.resolve(__dirname, 'src/lib/idioma') },
+      { find: '@', replacement: path.resolve(__dirname, './') },
+      { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
+    ],
   },
 })

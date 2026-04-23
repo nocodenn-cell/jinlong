@@ -1,22 +1,14 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import {
   hasCaixaOperadorUser,
   caixaOperadorEmail,
   caixaOperadorPassword,
   e2eProdutoCodigoBarras,
 } from './helpers/env'
+import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
 
 const LOGIN_PATH = '/login'
 const unifiedSalesFlowEnabled = process.env.USE_UNIFIED_SALES_FLOW === 'true'
-
-function queuePromptAnswers(page: Page, answers: readonly string[]) {
-  for (const answer of answers) {
-    page.once('dialog', async (dialog) => {
-      if (dialog.type() === 'prompt') await dialog.accept(answer)
-      else await dialog.dismiss()
-    })
-  }
-}
 
 test.describe.configure({ mode: 'serial' })
 
@@ -43,8 +35,8 @@ test.describe('Caixa — venda com split DINHEIRO + PIX', () => {
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
     if (await abrir.isVisible().catch(() => false)) {
-      queuePromptAnswers(page, ['300'])
       await abrir.click()
+      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
       await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
     }
 
@@ -101,8 +93,8 @@ test.describe('Caixa — venda com split DINHEIRO + PIX', () => {
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
     if (await abrir.isVisible().catch(() => false)) {
-      queuePromptAnswers(page, ['300'])
       await abrir.click()
+      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
       await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
     }
 
@@ -171,8 +163,8 @@ test.describe('Caixa — venda com split DINHEIRO + PIX', () => {
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
     if (await abrir.isVisible().catch(() => false)) {
-      queuePromptAnswers(page, ['300'])
       await abrir.click()
+      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
       await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
     }
 

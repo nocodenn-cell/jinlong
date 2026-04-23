@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
-import type { Mensagens } from "@/src/lib/i18n/getMessages"
-import type { Idioma } from "@/src/lib/idioma/normalizeIdioma"
+import type { Mensagens } from "@/i18n/getMessages"
+import type { Idioma } from "@/idioma/normalizeIdioma"
 
 const TECH_STORAGE_KEY = "fastproduct-caixa-mostrar-tecnico"
 
