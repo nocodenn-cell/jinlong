@@ -4,19 +4,11 @@ import { useCartStore } from './stores/cartStore'
 import type { ItemCarrinho } from '@core/cart/types'
 import { defaultPdvConfig } from './config/pdvConfig'
 import { resolverProdutoNoCatalogo, type ProdutoCacheLite } from './catalogoLookup'
-import { mensagemErroDeExcecao, mensagemErroParaUsuario } from './lib/mensagemErroUsuario'
+import { mensagemErroDeExcecao } from './lib/mensagemErroUsuario'
 import { logger } from './lib/logger'
-import {
-  usePdvLocalCatalogo,
-  type CaixaSessaoInvoke,
-} from './hooks/usePdvLocalCatalogo'
-
-type OutboxResumo = {
-  pendentes_total: number
-  prontos_sync: number
-  em_backoff: number
-  dlq: number
-}
+import { usePdvLocalCatalogo } from './hooks/usePdvLocalCatalogo'
+import { usePdvLocalOutboxSync } from './hooks/usePdvLocalOutboxSync'
+import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
 
 function mensagemEhErro(msg: string): boolean {
   return /^(falha|não foi possível|sessão|acesso negado|problema|muitas tentativas|dados inválidos|configuração inválida|limite de envio|este registro|você não tem permissão)/i.test(
@@ -99,12 +91,8 @@ export function App() {
     setMensagem,
   })
 
-  const [outboxResumo, setOutboxResumo] = useState<OutboxResumo | null>(null)
-  const [reprocessandoDlq, setReprocessandoDlq] = useState(false)
-  const [isFinalizandoVenda, setIsFinalizandoVenda] = useState(false)
   const [confirmarLimparAte, setConfirmarLimparAte] = useState(0)
   const inputLeituraRef = useRef<HTMLInputElement | null>(null)
-  const syncInFlightRef = useRef(false)
   const [metricaAddItemMs, setMetricaAddItemMs] = useState<number | null>(null)
   const [metricaFinalizarMs, setMetricaFinalizarMs] = useState<number | null>(null)
   const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
@@ -120,65 +108,54 @@ export function App() {
     window.setTimeout(() => inputLeituraRef.current?.focus(), 0)
   }, [])
 
-  const executarSyncOutboxComMetrica = useCallback(
-    async (limite = 50) => {
-      if (syncInFlightRef.current) return
-      syncInFlightRef.current = true
-      const t0 = performance.now()
-      try {
-        await invoke('sync_outbox_real_cmd', { limite })
-      } finally {
-        const elapsed = performance.now() - t0
-        setMetricaSyncMs((prev) => atualizarMediaMs(prev, elapsed))
-        syncInFlightRef.current = false
-      }
-    },
-    [],
-  )
+  const {
+    outboxResumo,
+    reprocessandoDlq,
+    statusSync,
+    executarSyncOutboxComMetrica,
+    refreshOutboxResumo,
+    reprocessarDlq,
+  } = usePdvLocalOutboxSync({
+    tauriDisponivel,
+    caixaAtualId,
+    onSyncElapsedMs: (elapsed) =>
+      setMetricaSyncMs((prev) => atualizarMediaMs(prev, elapsed)),
+    onMensagem: setMensagem,
+    formatarErro: mensagemErroDeExcecao,
+  })
 
-  const refreshOutboxResumo = useCallback(async () => {
-    if (!tauriDisponivel) return
-    try {
-      const r = await invoke<OutboxResumo>('outbox_resumo_cmd')
-      setOutboxResumo(r)
-    } catch {
-      setOutboxResumo(null)
-    }
-  }, [tauriDisponivel])
+  const {
+    isFinalizandoVenda,
+    abrirCaixa,
+    fecharCaixa,
+    registrarMovimentoCaixa,
+    finalizarVenda,
+  } = usePdvLocalVendaCaixaFlow({
+    tauriDisponivel,
+    caixaAtualId,
+    itens,
+    totalBruto,
+    totalDesconto,
+    totalLiquido,
+    descontoGerentePercentual,
+    descontoGerenteValor,
+    descontoGerenteToken,
+    gerenteId,
+    onSetCaixaAtualId: setCaixaAtualId,
+    onSetMensagem: setMensagem,
+    onLimparCarrinho: limparCarrinho,
+    onSyncOutbox: executarSyncOutboxComMetrica,
+    onRefreshOutboxResumo: refreshOutboxResumo,
+    onFinalizarElapsedMs: (elapsed) =>
+      setMetricaFinalizarMs((prev) => atualizarMediaMs(prev, elapsed)),
+    formatarErro: mensagemErroDeExcecao,
+    logError: logger.error,
+  })
 
   useEffect(() => {
     // Mantém fluxo "zero mouse": ao mudar carrinho, volta foco na leitura.
     focarInputLeitura()
   }, [itens.length, focarInputLeitura])
-
-  useEffect(() => {
-    if (!tauriDisponivel) return
-    void refreshOutboxResumo()
-    const id = window.setInterval(() => void refreshOutboxResumo(), 12000)
-    return () => window.clearInterval(id)
-  }, [tauriDisponivel, refreshOutboxResumo])
-
-  // Auto-sync: enquanto existir caixa aberto, tentamos descarregar o outbox.
-  useEffect(() => {
-    if (!tauriDisponivel) return
-    if (!caixaAtualId) return
-
-    let running = false
-    const t = window.setInterval(() => {
-      if (running) return
-      running = true
-      executarSyncOutboxComMetrica(50)
-        .catch(() => {
-          // Sem bloquear o caixa offline
-        })
-        .finally(() => {
-          void refreshOutboxResumo()
-          running = false
-        })
-    }, 15000)
-
-    return () => window.clearInterval(t)
-  }, [tauriDisponivel, caixaAtualId, refreshOutboxResumo, executarSyncOutboxComMetrica])
 
   function adicionarDoCatalogo() {
     const t0 = performance.now()
@@ -220,11 +197,6 @@ export function App() {
     focarInputLeitura()
   }
 
-  const statusSync: 'ok' | 'pendente' | 'offline' = !tauriDisponivel
-    ? 'offline'
-    : outboxResumo && (outboxResumo.pendentes_total > 0 || outboxResumo.em_backoff > 0 || outboxResumo.dlq > 0)
-      ? 'pendente'
-      : 'ok'
   const ultimoItemAdicionado = itens.length > 0 ? itens[itens.length - 1] : null
 
   return (
@@ -368,28 +340,7 @@ export function App() {
                 <button
                   type="button"
                   disabled={reprocessandoDlq}
-                  onClick={() => {
-                    void (async () => {
-                      setReprocessandoDlq(true)
-                      try {
-                        await invoke('outbox_reprocessar_dlq_cmd')
-                        await executarSyncOutboxComMetrica(50)
-                        await refreshOutboxResumo()
-                        setMensagem(
-                          'Eventos repostos na fila. Sync executada em seguida.'
-                        )
-                      } catch (e) {
-                        setMensagem(
-                          mensagemErroDeExcecao(
-                            e,
-                            'Não foi possível reprocessar a fila de sincronização.',
-                          ),
-                        )
-                      } finally {
-                        setReprocessandoDlq(false)
-                      }
-                    })()
-                  }}
+                  onClick={() => void reprocessarDlq()}
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
@@ -989,28 +940,8 @@ export function App() {
                   fontWeight: 500,
                   cursor: 'pointer',
                 }}
-                onClick={async () => {
-                  if (!tauriDisponivel) {
-                    setMensagem('Abra pelo app desktop (Tauri).')
-                    return
-                  }
-                  try {
-                    const trocoRaw = window.prompt(
-                      'Troco inicial do caixa (R$):',
-                      '0'
-                    )
-                    const troco = trocoRaw ? Number(trocoRaw.replace(',', '.')) : 0
-                    const caixaId = await invoke('abrir_caixa_cmd', {
-                      operador_id: null,
-                      troco_inicial: Number.isFinite(troco) ? troco : 0,
-                    })
-                    setCaixaAtualId(String(caixaId))
-                    setMensagem('Caixa aberto.')
-                  } catch (e) {
-                    setMensagem(
-                      mensagemErroDeExcecao(e, 'Não foi possível abrir o caixa. Tente de novo.'),
-                    )
-                  }
+                onClick={() => {
+                  void abrirCaixa()
                 }}
               >
                 F2 · Abrir caixa
@@ -1029,25 +960,8 @@ export function App() {
                   fontWeight: 500,
                   cursor: 'pointer',
                 }}
-                onClick={async () => {
-                  if (!caixaAtualId) return
-                  try {
-                    const trocoRaw = window.prompt(
-                      'Valor em caixa para fechamento (R$):',
-                      String(totalLiquido.toFixed(2))
-                    )
-                    const troco = trocoRaw ? Number(trocoRaw.replace(',', '.')) : 0
-                    await invoke('fechar_caixa_cmd', {
-                      caixa_id: caixaAtualId,
-                      troco_fechamento: Number.isFinite(troco) ? troco : 0,
-                    })
-                    setCaixaAtualId(null)
-                    setMensagem('Caixa fechado.')
-                  } catch (e) {
-                    setMensagem(
-                      mensagemErroDeExcecao(e, 'Não foi possível fechar o caixa. Tente de novo.'),
-                    )
-                  }
+                onClick={() => {
+                  void fecharCaixa()
                 }}
               >
                 F3 · Fechar caixa
@@ -1068,32 +982,8 @@ export function App() {
                   fontWeight: 500,
                   cursor: itens.length === 0 ? 'default' : 'pointer',
                 }}
-                onClick={async () => {
-                  try {
-                    const tipo = window.prompt(
-                      'Movimento de caixa (SANGRIA ou SUPRIMENTO):',
-                      'SANGRIA'
-                    )
-                    if (!tipo) return
-                    const valorRaw = window.prompt('Valor do movimento (R$):', '10')
-                    if (!valorRaw) return
-                    const valor = Number(valorRaw.replace(',', '.'))
-                    if (!Number.isFinite(valor) || valor <= 0) return
-                    await invoke('registrar_movimento_caixa_cmd', {
-                      caixa_id: caixaAtualId,
-                      tipo: tipo.toUpperCase(),
-                      valor,
-                      observacao: null,
-                    })
-                    setMensagem('Movimento registrado.')
-                  } catch (e) {
-                    setMensagem(
-                      mensagemErroDeExcecao(
-                        e,
-                        'Não foi possível registrar o movimento de caixa.',
-                      ),
-                    )
-                  }
+                onClick={() => {
+                  void registrarMovimentoCaixa()
                 }}
               >
                 F4 · Sangria/Suprimento
@@ -1116,89 +1006,8 @@ export function App() {
                 cursor: itens.length === 0 || isFinalizandoVenda ? 'default' : 'pointer',
                 boxShadow: '0 10px 20px rgba(5,150,105,0.25)',
               }}
-              onClick={async () => {
-                if (!itens.length || isFinalizandoVenda) return
-                setIsFinalizandoVenda(true)
-                const t0Finalizar = performance.now()
-                if (!tauriDisponivel) {
-                  setMensagem(
-                    'Execução fora do Tauri. Abra pelo app desktop (janela do Tauri), não pelo navegador em http://localhost:4173.'
-                  )
-                  setIsFinalizandoVenda(false)
-                  return
-                }
-
-                // Garante uma sessão de caixa aberta antes de registrar a venda.
-                let caixaId = caixaAtualId
-                if (!caixaId) {
-                  try {
-                    const atual = await invoke<CaixaSessaoInvoke | null>(
-                      'load_caixa_atual_cmd'
-                    )
-                    if (atual?.id) {
-                      caixaId = String(atual.id)
-                      setCaixaAtualId(caixaId)
-                    } else {
-                      caixaId = await invoke('abrir_caixa_cmd', {
-                        operador_id: null,
-                        troco_inicial: 0,
-                      })
-                      setCaixaAtualId(String(caixaId))
-                    }
-                  } catch (e) {
-                    setMensagem(
-                      mensagemErroDeExcecao(e, 'Não foi possível preparar o caixa para a venda.'),
-                    )
-                    setIsFinalizandoVenda(false)
-                    return
-                  }
-                }
-
-                try {
-                  await invoke('registrar_venda', {
-                    venda: {
-                      caixa_id: caixaId,
-                      operador_id: null,
-                      forma_pagamento: 'DINHEIRO',
-                      total_bruto: totalBruto,
-                      total_desconto: totalDesconto,
-                      total_liquido: totalLiquido,
-                      desconto_gerente_percentual:
-                        descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
-                      desconto_gerente_valor:
-                        descontoGerentePercentual > 0 ? descontoGerenteValor : null,
-                      gerente_id:
-                        descontoGerentePercentual > 0 ? gerenteId : null,
-                      desconto_gerente_token:
-                        descontoGerentePercentual > 0 ? descontoGerenteToken : null,
-                      itens: itens.map((i) => ({
-                        produto_id: i.produtoId,
-                        nome: i.nome,
-                        quantidade: i.quantidade,
-                        preco_original: i.resultado.precoOriginal,
-                        preco_unitario: i.resultado.precoUnitario,
-                      })),
-                    },
-                  })
-                  limparCarrinho()
-                  try {
-                    await executarSyncOutboxComMetrica(50)
-                    await refreshOutboxResumo()
-                    setMensagem('Venda registrada e sincronizada (quando possível).')
-                  } catch {
-                    await refreshOutboxResumo()
-                    setMensagem('Venda registrada localmente. Sincronização pendente.')
-                  }
-                } catch (e) {
-                  logger.error('Erro ao registrar venda no caixa local', { error: e })
-                  setMensagem(
-                    mensagemErroDeExcecao(e, 'Não foi possível registrar a venda no caixa local.'),
-                  )
-                } finally {
-                  const elapsed = performance.now() - t0Finalizar
-                  setMetricaFinalizarMs((prev) => atualizarMediaMs(prev, elapsed))
-                  setIsFinalizandoVenda(false)
-                }
+              onClick={() => {
+                void finalizarVenda()
               }}
             >
               {isFinalizandoVenda ? 'Finalizando…' : 'Finalizar (F10)'}

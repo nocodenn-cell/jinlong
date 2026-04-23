@@ -1,3 +1,49 @@
 {
-  "extends": ["next/core-web-vitals"]
+  "extends": ["next/core-web-vitals"],
+  "overrides": [
+    {
+      "files": ["**/*.{ts,tsx}"],
+      "excludedFiles": ["app/caixa/server/**/*", "app/caixa/actions.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/app/caixa/actions",
+                "importNames": [
+                  "AbrirCaixaOperadorResult",
+                  "AcaoMovimentacaoCaixaResult",
+                  "AutorizarMovimentacaoGerenteResult",
+                  "BuscarProdutoResult",
+                  "CancelarVendaResult",
+                  "CarregarRegrasResult",
+                  "CaixaStatusOperadorResult",
+                  "FecharCaixaOperadorResult",
+                  "FinalizarVendaCaixaResult",
+                  "FormaMovimentacaoCaixa",
+                  "LimiteSangriaResult",
+                  "MovimentacaoCaixaDTO",
+                  "ObterMovimentacoesCaixaResult",
+                  "ProdutoCaixaDTO",
+                  "RegistrarMovimentacaoInput",
+                  "RegistrarMovimentacaoResult",
+                  "StatusMovimentacaoCaixa",
+                  "TipoMovimentacaoCaixa",
+                  "ValidarGerenteDescontoResult"
+                ],
+                "message": "Tipos do caixa devem vir de '@/app/caixa/caixaActionTypes', '@/app/caixa/caixaOperadorTypes' ou '@/app/caixa/caixaMovimentacaoTypes'. Use '@/app/caixa/actions' apenas para as server actions (funções)."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["@/app/caixa/server/*", "@/app/caixa/server/**"],
+                "message": "Importe via '@/app/caixa/actions' (actions) ou via arquivos de tipos em '@/app/caixa/*Types'. Evite importar módulos server/* fora do boundary."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
