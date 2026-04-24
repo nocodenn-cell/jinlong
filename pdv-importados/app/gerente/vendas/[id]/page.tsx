@@ -119,58 +119,48 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
   }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ marginBottom: 16 }}>
-        <Link href="/gerente/vendas" style={{ fontSize: 13, color: '#2563eb' }}>
+    <div className="mx-auto max-w-[900px] px-4 py-6 sm:px-6">
+      <div className="mb-4">
+        <Link href="/gerente/vendas" className="gerente-nav-back text-sm font-medium hover:underline">
           ← {m.gerente.nav_vendas}
         </Link>
       </div>
 
-      <h1 style={{ fontSize: 24, fontWeight: 600, margin: '0 0 8px' }}>{m.gerente.venda_detalhe_titulo}</h1>
-      <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6b7280', fontFamily: 'monospace' }}>{id}</p>
+      <h1 className="gerente-fin-page-title text-2xl font-semibold tracking-tight">{m.gerente.venda_detalhe_titulo}</h1>
+      <p className="gerente-fin-muted mb-5 font-mono text-sm">{id}</p>
 
-      <section
-        style={{
-          border: '1px solid #e5e7eb',
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 20,
-          display: 'grid',
-          gap: 8,
-          fontSize: 14,
-        }}
-      >
-        <div>
+      <section className="dragon-glass-card mb-5 grid gap-2 rounded-xl p-4 text-sm">
+        <div className="gerente-fin-cell">
           <strong>{m.gerente.col_data}:</strong> {formatDateTimeOrDash(venda.data, locale)}
         </div>
-        <div>
+        <div className="gerente-fin-cell">
           <strong>{m.gerente.col_total}:</strong> {money(Number(venda.total_liquido))}
-          <span style={{ color: '#6b7280', marginLeft: 8 }}>
+          <span className="gerente-fin-muted ml-2">
             ({m.gerente.venda_bruto} {money(Number(venda.total_bruto))} · {m.gerente.venda_desconto}{' '}
             {money(Number(venda.total_desconto))})
           </span>
         </div>
-        <div>
+        <div className="gerente-fin-cell">
           <strong>{m.gerente.col_forma}:</strong> {venda.forma_pagamento}
         </div>
-        <div>
+        <div className="gerente-fin-cell">
           <strong>{m.gerente.col_status}:</strong> {venda.status}
         </div>
-        <div>
+        <div className="gerente-fin-cell">
           <strong>{m.gerente.col_tipo_venda}:</strong> {venda.tipo_venda}
         </div>
         {venda.numero_nf ? (
-          <div>
+          <div className="gerente-fin-cell">
             <strong>{m.gerente.col_nf}:</strong> {venda.numero_nf}
           </div>
         ) : null}
-        <div>
+        <div className="gerente-fin-cell">
           <strong>{m.gerente.col_op}:</strong> {operadorNome ?? '—'}
         </div>
-        <div>
+        <div className="gerente-fin-cell">
           <strong>{m.gerente.col_caixa}:</strong>{' '}
           {caixaId ? (
-            <Link href="/gerente/caixas" style={{ color: '#2563eb', fontFamily: 'monospace', fontSize: 13 }}>
+            <Link href="/gerente/caixas" className="gerente-nav-back font-mono text-sm hover:underline">
               {String(caixaId).slice(0, 8)}…
             </Link>
           ) : (
@@ -179,21 +169,35 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
         </div>
       </section>
 
-      <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px' }}>{m.gerente.sec_itens_venda}</h2>
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12, marginBottom: 24 }}>
-        <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
+      <h2 className="gerente-section-accent mb-3 text-base font-semibold">{m.gerente.sec_itens_venda}</h2>
+      <div className="gerente-table-dragon gerente-table-wrap dragon-glass-card mb-6 overflow-x-auto rounded-xl">
+        <table className="w-full border-collapse text-sm">
           <thead>
-            <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
-              <th style={{ padding: 10 }}>{m.estoque.col_produto}</th>
-              <th style={{ padding: 10 }}>{m.estoque.col_codigo}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_qtde}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_preco_unit}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_desconto_unit}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_tipo_preco}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_subtotal}</th>
+            <tr className="border-b text-left">
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.estoque.col_produto}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.estoque.col_codigo}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_qtde}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_preco_unit}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_desconto_unit}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_tipo_preco}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_subtotal}
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-700/40">
             {itens?.map((row) => {
               const p = row.produto
               const nome =
@@ -206,20 +210,20 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
               const pu = Number(row.preco_unitario)
               const sub = q * pu
               return (
-                <tr key={row.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 10 }}>{nome}</td>
-                  <td style={{ padding: 10, fontFamily: 'monospace', fontSize: 12 }}>{cod ?? '—'}</td>
-                  <td style={{ padding: 10 }}>{q}</td>
-                  <td style={{ padding: 10 }}>{money(pu)}</td>
-                  <td style={{ padding: 10 }}>{money(Number(row.desconto_unitario))}</td>
-                  <td style={{ padding: 10 }}>{row.tipo_preco}</td>
-                  <td style={{ padding: 10 }}>{money(sub)}</td>
+                <tr key={row.id} className="gerente-fin-row-hover">
+                  <td className="gerente-fin-cell px-3 py-2.5">{nome}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5 font-mono text-xs">{cod ?? '—'}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{q}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{money(pu)}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{money(Number(row.desconto_unitario))}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{row.tipo_preco}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{money(sub)}</td>
                 </tr>
               )
             })}
             {(!itens || itens.length === 0) && (
               <tr>
-                <td colSpan={7} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={7} className="gerente-fin-empty px-4 py-6 text-center text-sm">
                   {m.gerente.venda_sem_itens}
                 </td>
               </tr>
@@ -228,19 +232,27 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
         </table>
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 8px' }}>{m.gerente.sec_movimentos_caixa}</h2>
-      <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 12px' }}>{m.gerente.sec_movimentos_caixa_ajuda}</p>
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12, marginBottom: 24 }}>
-        <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
+      <h2 className="gerente-section-accent mb-2 text-base font-semibold">{m.gerente.sec_movimentos_caixa}</h2>
+      <p className="gerente-fin-muted mb-3 text-sm">{m.gerente.sec_movimentos_caixa_ajuda}</p>
+      <div className="gerente-table-dragon gerente-table-wrap dragon-glass-card mb-6 overflow-x-auto rounded-xl">
+        <table className="w-full border-collapse text-sm">
           <thead>
-            <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
-              <th style={{ padding: 10 }}>{m.gerente.col_data}</th>
-              <th style={{ padding: 10 }}>{m.relatorios.tipo}</th>
-              <th style={{ padding: 10 }}>{m.relatorios.valor}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_obs_movimento}</th>
+            <tr className="border-b text-left">
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_data}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.relatorios.tipo}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.relatorios.valor}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_obs_movimento}
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-700/40">
             {movimentosCaixa.map((mov) => {
               const ehEstaVenda =
                 mov.tipo === 'VENDA' && mov.referencia_id != null && String(mov.referencia_id) === id
@@ -248,31 +260,24 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
               return (
                 <tr
                   key={mov.id}
-                  style={{
-                    borderTop: '1px solid #f3f4f6',
-                    background: ehEstaVenda ? '#eff6ff' : undefined,
-                  }}
+                  className={`gerente-fin-row-hover ${ehEstaVenda ? 'gerente-venda-mov-destaque' : ''}`}
                 >
-                  <td style={{ padding: 10, whiteSpace: 'nowrap' }}>
+                  <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5">
                     {formatDateTimeOrDash(mov.created_at, locale, 'medium')}
                     {ehEstaVenda ? (
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: '#1d4ed8',
-                        }}
-                      >
+                      <span className="gerente-venda-mov-badge ml-2 text-[11px] font-semibold">
                         {m.gerente.venda_mov_destaque}
                       </span>
                     ) : null}
                   </td>
-                  <td style={{ padding: 10 }}>{labelMovimentoTipo(mov.tipo)}</td>
-                  <td style={{ padding: 10, fontVariantNumeric: 'tabular-nums', color: valorCor }}>
+                  <td className="gerente-fin-cell px-3 py-2.5">{labelMovimentoTipo(mov.tipo)}</td>
+                  <td
+                    className="gerente-fin-cell px-3 py-2.5 tabular-nums"
+                    style={valorCor ? { color: valorCor } : undefined}
+                  >
                     {valorTxt}
                   </td>
-                  <td style={{ padding: 10, color: '#4b5563', maxWidth: 280 }}>
+                  <td className="gerente-fin-muted max-w-[280px] px-3 py-2.5 text-sm">
                     {mov.observacao?.trim() ? mov.observacao : '—'}
                   </td>
                 </tr>
@@ -280,7 +285,7 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
             })}
             {movimentosCaixa.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={4} className="gerente-fin-empty px-4 py-6 text-center text-sm">
                   {!caixaId ? m.gerente.venda_sem_caixa : m.gerente.venda_sem_movimentos_caixa}
                 </td>
               </tr>
@@ -289,29 +294,33 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
         </table>
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px' }}>{m.gerente.sec_baixas_estoque}</h2>
-      <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 12px' }}>{m.gerente.sec_baixas_estoque_ajuda}</p>
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-        <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
+      <h2 className="gerente-section-accent mb-3 text-base font-semibold">{m.gerente.sec_baixas_estoque}</h2>
+      <p className="gerente-fin-muted mb-3 text-sm">{m.gerente.sec_baixas_estoque_ajuda}</p>
+      <div className="gerente-table-dragon gerente-table-wrap dragon-glass-card overflow-x-auto rounded-xl">
+        <table className="w-full border-collapse text-sm">
           <thead>
-            <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
-              <th style={{ padding: 10 }}>{m.estoque.col_produto}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_data}</th>
+            <tr className="border-b text-left">
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.estoque.col_produto}
+              </th>
+              <th className="gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_data}
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-700/40">
             {baixas?.map((b) => {
               const nome = nomeProdutoBaixa.get(b.produto_id) ?? '—'
               return (
-                <tr key={`${b.produto_id}-${b.created_at}`} style={{ borderTop: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 10 }}>{nome}</td>
-                  <td style={{ padding: 10 }}>{formatDateTimeOrDash(b.created_at, locale, 'medium')}</td>
+                <tr key={`${b.produto_id}-${b.created_at}`} className="gerente-fin-row-hover">
+                  <td className="gerente-fin-cell px-3 py-2.5">{nome}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{formatDateTimeOrDash(b.created_at, locale, 'medium')}</td>
                 </tr>
               )
             })}
             {(!baixas || baixas.length === 0) && (
               <tr>
-                <td colSpan={2} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={2} className="gerente-fin-empty px-4 py-6 text-center text-sm">
                   {m.gerente.venda_sem_baixas}
                 </td>
               </tr>

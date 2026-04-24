@@ -123,11 +123,11 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
   }, [data, m])
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
       <GerenteFilterBar title={m.estoque.titulo} />
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>{m.estoque.subtitulo}</p>
+      <p className="gerente-fin-muted mb-4 text-sm">{m.estoque.subtitulo}</p>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div className="mb-4 flex flex-wrap gap-2">
         <GerenteNavLink href="/gerente/estoque" active={!somenteBaixo}>
           {m.estoque.nav_todos}
         </GerenteNavLink>
@@ -136,17 +136,14 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
         </GerenteNavLink>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        {loading ? null : exportSlot}
-      </div>
+      <div className="mb-4 flex justify-end">{loading ? null : exportSlot}</div>
 
-      {loading && !data ? (
-        <p style={{ color: '#6b7280' }}>{m.comum.carregando}</p>
-      ) : null}
+      {loading && !data ? <p className="gerente-fin-muted text-sm">{m.comum.carregando}</p> : null}
 
       {somenteBaixo && data?.modo === 'baixo' ? (
         <>
           <GerenteTable
+            tone="dragon"
             columns={[
               { key: 'p', header: m.estoque.col_produto },
               { key: 'c', header: m.estoque.col_codigo },
@@ -158,33 +155,34 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
           >
             {data.linhas.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: 12, color: '#6b7280' }}>
+                <td colSpan={6} className="gerente-fin-empty px-3 py-4 text-sm">
                   {m.estoque.vazio_baixo}
                 </td>
               </tr>
             ) : (
               data.linhas.map((row) => (
-                <tr key={row.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 10 }}>{row.nome}</td>
-                  <td style={{ padding: 10 }}>{row.codigo_barras ?? '—'}</td>
-                  <td style={{ padding: 10 }}>{fmtQuantidadeEstoque(row.quantidade_atual)}</td>
-                  <td style={{ padding: 10 }}>{fmtQuantidadeEstoque(row.estoque_minimo)}</td>
-                  <td style={{ padding: 10, color: '#b45309', fontWeight: 600 }}>
+                <tr key={row.id} className="gerente-fin-row-hover transition-colors">
+                  <td className="gerente-fin-cell px-3 py-2.5">{row.nome}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{row.codigo_barras ?? '—'}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{fmtQuantidadeEstoque(row.quantidade_atual)}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{fmtQuantidadeEstoque(row.estoque_minimo)}</td>
+                  <td className="gerente-caixa-diff-warn px-3 py-2.5 font-semibold">
                     {fmtQuantidadeEstoque(row.deficit)}
                   </td>
-                  <td style={{ padding: 10 }}>
+                  <td className="px-3 py-2.5">
                     <GerenteStatusBadge status="ALERTA" label={m.estoque.badge_alerta} />
                   </td>
                 </tr>
               ))
             )}
           </GerenteTable>
-          <p style={{ fontSize: 12, color: '#6b7280', marginTop: 12 }}>{m.estoque.dica_baixo}</p>
+          <p className="gerente-fin-muted mt-3 text-xs">{m.estoque.dica_baixo}</p>
         </>
       ) : null}
 
       {!somenteBaixo && data?.modo === 'todos' ? (
         <GerenteTable
+          tone="dragon"
           columns={[
             { key: 'p', header: m.estoque.col_produto },
             { key: 'c', header: m.estoque.col_codigo },
@@ -195,7 +193,7 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
         >
           {data.produtos.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ padding: 12, color: '#6b7280' }}>
+              <td colSpan={5} className="gerente-fin-empty px-3 py-4 text-sm">
                 {m.estoque.vazio_geral}
               </td>
             </tr>
@@ -205,19 +203,19 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
               const abaixo =
                 e != null && Number(e.quantidade_atual) <= Number(e.estoque_minimo)
               return (
-                <tr key={p.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 10 }}>{p.nome}</td>
-                  <td style={{ padding: 10 }}>{p.codigo_barras ?? '—'}</td>
-                  <td style={{ padding: 10 }}>{p.unidade_medida}</td>
-                  <td style={{ padding: 10 }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                <tr key={p.id} className="gerente-fin-row-hover transition-colors">
+                  <td className="gerente-fin-cell px-3 py-2.5">{p.nome}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{p.codigo_barras ?? '—'}</td>
+                  <td className="gerente-fin-cell px-3 py-2.5">{p.unidade_medida}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <GerenteStatusBadge status="ATIVO" label={m.produtos.ativo} />
                       {abaixo ? (
                         <GerenteStatusBadge status="ALERTA" label={m.estoque.badge_alerta} />
                       ) : null}
                     </div>
                   </td>
-                  <td style={{ padding: 10, minWidth: 200 }}>
+                  <td className="min-w-[200px] px-3 py-2.5">
                     {e ? (
                       <button
                         type="button"
@@ -230,21 +228,13 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
                             estoqueMinimo: e.estoque_minimo,
                           })
                         }
-                        style={{
-                          padding: '8px 12px',
-                          borderRadius: 8,
-                          border: 'none',
-                          background: '#111827',
-                          color: '#fff',
-                          fontSize: 13,
-                          cursor: salvando || criandoLinha ? 'not-allowed' : 'pointer',
-                        }}
+                        className="rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-55"
                       >
                         {m.estoque.col_ajuste}
                       </button>
                     ) : (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                        <span style={{ color: '#6b7280', fontSize: 13 }}>{m.estoque.sem_linha}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="gerente-fin-empty text-sm">{m.estoque.sem_linha}</span>
                         <button
                           type="button"
                           disabled={salvando || criandoLinha}
@@ -252,14 +242,7 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
                             const r = await criarLinhaEstoque({ produto_id: p.id })
                             if (r !== null) await refetch()
                           }}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: 8,
-                            border: '1px solid #d1d5db',
-                            background: '#fff',
-                            fontSize: 13,
-                            cursor: salvando || criandoLinha ? 'not-allowed' : 'pointer',
-                          }}
+                          className="gerente-chip-action rounded-lg border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-55"
                         >
                           {m.estoque.inicializar_estoque}
                         </button>

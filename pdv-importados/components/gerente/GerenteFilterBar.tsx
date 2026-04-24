@@ -19,8 +19,8 @@ export function GerenteFilterBar({ title, rightSlot, children }: GerenteFilterBa
         marginBottom: 20,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{title}</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="gerente-page-title m-0 text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
         {children}
       </div>
       {rightSlot}

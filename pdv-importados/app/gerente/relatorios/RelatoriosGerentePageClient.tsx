@@ -14,6 +14,10 @@ import { formatBRL, formatDecimalPlaces } from '@/lib/format/money'
 import { carregarDadosRelatoriosGerente } from './actions'
 import { getAvisoPeriodo } from '@/app/gerente/relatorios/relatoriosGerenteUtils'
 import { useRelatoriosGerenteExports } from '@/app/gerente/relatorios/useRelatoriosGerenteExports'
+import { cn } from '@/lib/utils'
+
+const REL_EXPORT_BTN_CLASS =
+  'gerente-btn-csv inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -115,15 +119,15 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
   const custoConfiavel = data?.resumoExecutivo.custo_confiavel ?? false
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
-      <div style={{ marginBottom: 16 }}>
-        <Link href="/gerente" style={{ fontSize: 13, color: '#2563eb' }}>
+    <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
+      <div className="mb-4">
+        <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
           ← {m.gerente.inicio}
         </Link>
       </div>
 
       <GerenteFilterBar title={m.relatorios.titulo} />
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>
+      <p className="gerente-fin-muted mb-4 text-sm">
         {m.relatorios.vendas_periodo} · {m.relatorios.mais_vendidos} · {m.relatorios.estoque_baixo}
       </p>
 
@@ -136,50 +140,31 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
           router.push(`/gerente/relatorios?${q.toString()}`)
           refetch().catch(() => undefined)
         }}
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'flex-end',
-          gap: 12,
-          marginBottom: 16,
-          padding: 16,
-          border: '1px solid #e5e7eb',
-          borderRadius: 12,
-          background: '#fafafa',
-        }}
+        className="gerente-period-form mb-4 flex flex-wrap items-end gap-3"
       >
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-          <span style={{ fontWeight: 500 }}>{m.relatorios.periodo_de}</span>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="gerente-fin-label font-medium">{m.relatorios.periodo_de}</span>
           <input
             type="date"
             value={de}
             onChange={(e) => setDe(e.target.value)}
             required
-            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
+            className="gerente-fin-input rounded-lg border px-2.5 py-2 text-sm"
           />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-          <span style={{ fontWeight: 500 }}>{m.relatorios.periodo_ate}</span>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="gerente-fin-label font-medium">{m.relatorios.periodo_ate}</span>
           <input
             type="date"
             value={ate}
             onChange={(e) => setAte(e.target.value)}
             required
-            style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
+            className="gerente-fin-input rounded-lg border px-2.5 py-2 text-sm"
           />
         </label>
         <button
           type="submit"
-          style={{
-            padding: '8px 16px',
-            fontSize: 14,
-            borderRadius: 8,
-            border: 'none',
-            background: '#2563eb',
-            color: '#fff',
-            cursor: 'pointer',
-            fontWeight: 500,
-          }}
+          className="rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-[filter] hover:from-emerald-500 hover:to-emerald-700"
         >
           {m.relatorios.aplicar_periodo}
         </button>
@@ -191,85 +176,62 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
             router.push('/gerente/relatorios')
             refetch().catch(() => undefined)
           }}
-          style={{ fontSize: 13, color: '#6b7280', paddingBottom: 8, background: 'none', border: 'none', cursor: 'pointer' }}
+          className="gerente-fin-muted pb-2 text-sm hover:text-amber-700"
         >
           {m.relatorios.limpar_periodo}
         </button>
       </form>
 
       {data ? (
-        <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>
+        <p className="gerente-fin-muted mb-3 text-xs opacity-90">
           {m.relatorios.periodo_fuso_legenda.replace('{{tz}}', data.tzRelatorio)}
         </p>
       ) : null}
 
-      {loading && !data ? <p style={{ color: '#6b7280' }}>{m.comum.carregando}</p> : null}
+      {loading && !data ? <p className="gerente-fin-muted text-sm">{m.comum.carregando}</p> : null}
 
       {avisoTexto ? (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: '10px 12px',
-            fontSize: 13,
-            borderRadius: 8,
-            background: '#fffbeb',
-            border: '1px solid #fcd34d',
-            color: '#92400e',
-          }}
-        >
+        <div className="gerente-alert-warn mb-3 rounded-lg px-3 py-2.5 text-sm leading-relaxed" role="status">
           {avisoTexto}
         </div>
       ) : null}
 
       {data?.rpcErro ? (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: '10px 12px',
-            fontSize: 13,
-            borderRadius: 8,
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#991b1b',
-          }}
-        >
+        <div className="gerente-alert-error mb-4 rounded-lg p-3 text-sm leading-relaxed" role="alert">
           {m.relatorios.rpc_indisponivel}
           {data.rpcErroAmigavel ? (
-            <p style={{ marginTop: 8, marginBottom: 4, fontWeight: 500 }}>{data.rpcErroAmigavel}</p>
+            <p className="gerente-fin-cell mt-2 font-medium">{data.rpcErroAmigavel}</p>
           ) : null}
-          <span style={{ fontSize: 11, color: '#7f1d1d' }}>Detalhe técnico (suporte):</span>
-          <code style={{ display: 'block', marginTop: 4, fontSize: 11, wordBreak: 'break-all' }}>
-            {data.rpcErro}
-          </code>
+          <span className="gerente-fin-muted mt-2 block text-xs">Detalhe técnico (suporte):</span>
+          <code className="gerente-fin-cell mt-1 block font-mono">{data.rpcErro}</code>
         </div>
       ) : null}
 
       {data ? (
         <>
-          <section style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>{m.gerente.sec_vendas_dia}</h2>
+          <section className="dragon-glass-card mb-8 rounded-xl p-5">
+            <h2 className="gerente-section-accent mb-3 text-base font-semibold">{m.gerente.sec_vendas_dia}</h2>
             {!data.rpcErro && data.porDia.length > 0 ? (
-              <div
-                style={{
-                  marginBottom: 12,
-                  color: '#374151',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                <span style={{ fontSize: 14 }}>
+              <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                <span className="gerente-fin-cell min-w-0">
                   <strong>{m.relatorios.resumo_periodo}:</strong> {totalVendasPeriodo} {m.relatorios.resumo_vendas} ·{' '}
                   {fmtMoney(totalLiquidoPeriodo)} {m.relatorios.resumo_liquido}
                 </span>
-                <span style={{ fontSize: 13, color: '#475569' }}>
+                <span className="gerente-fin-muted text-xs sm:text-sm">
                   {m.relatorios.kpi_itens_vendidos}: {formatDecimalPlaces(Number(itensVendidosPeriodo), 3)}
                 </span>
-                <span style={{ fontSize: 13, color: '#475569' }}>
+                <span className="gerente-fin-muted text-xs sm:text-sm">
                   {m.relatorios.kpi_taxa_cancelamento}:{' '}
                   {formatDecimalPlaces(Number(taxaCancelamentoPeriodo * 100), 2)}%
                 </span>
-                <span style={{ fontSize: 13, color: custoConfiavel ? '#065f46' : '#92400e' }}>
+                <span
+                  className={cn(
+                    'text-xs font-medium sm:text-sm',
+                    custoConfiavel && margemBrutaEstimativa !== null
+                      ? 'gerente-relatorio-kpi-margem-ok'
+                      : 'gerente-relatorio-kpi-margem-warn',
+                  )}
+                >
                   {m.relatorios.kpi_margem_bruta_estimada}:{' '}
                   {custoConfiavel && margemBrutaEstimativa !== null
                     ? fmtMoney(Number(margemBrutaEstimativa))
@@ -277,19 +239,12 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 </span>
               </div>
             ) : null}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8 }}>
+            <div className="mb-2 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 disabled={expVendas || data.porDia.length === 0}
                 onClick={() => void exportVendasDia(null)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: 13,
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  cursor: expVendas ? 'not-allowed' : 'pointer',
-                }}
+                className={REL_EXPORT_BTN_CLASS}
               >
                 {m.gerente.exportar_csv}
               </button>
@@ -297,64 +252,59 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 type="button"
                 disabled={expVendasXlsx || data.porDia.length === 0}
                 onClick={() => void exportVendasDiaXlsx(null)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: 13,
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  cursor: expVendasXlsx ? 'not-allowed' : 'pointer',
-                }}
+                className={REL_EXPORT_BTN_CLASS}
               >
                 {m.gerente.exportar_xlsx}
               </button>
             </div>
-            <GerenteTable
-              columns={[
-                { key: 'd', header: m.gerente.col_dia },
-                { key: 'n', header: m.gerente.col_num_vendas },
-                { key: 'v', header: m.relatorios.valor },
-                { key: 't', header: m.gerente.col_ticket },
-                { key: 'des', header: m.relatorios.col_total_desconto },
-              ]}
-            >
-              {data.porDia.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: 16, color: '#6b7280' }}>
-                    {m.gerente.nenhuma_venda}
-                  </td>
-                </tr>
-              ) : (
-                data.porDia.map((row) => (
-                  <tr key={String(row.dia)} style={{ borderTop: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: 10 }}>
-                      {row.dia ? formatarDiaRelatorioParaLocale(String(row.dia), locale) : '—'}
+            <div className="gerente-table-wrap overflow-x-auto rounded-lg">
+              <GerenteTable
+                tone="dragon"
+                columns={[
+                  { key: 'd', header: m.gerente.col_dia },
+                  { key: 'n', header: m.gerente.col_num_vendas },
+                  { key: 'v', header: m.relatorios.valor },
+                  { key: 't', header: m.gerente.col_ticket },
+                  { key: 'des', header: m.relatorios.col_total_desconto },
+                ]}
+              >
+                {data.porDia.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="gerente-fin-empty px-4 py-6 text-center text-sm">
+                      {m.gerente.nenhuma_venda}
                     </td>
-                    <td style={{ padding: 10 }}>{row.num_vendas}</td>
-                    <td style={{ padding: 10 }}>{fmtMoney(Number(row.total_liquido))}</td>
-                    <td style={{ padding: 10 }}>{fmtMoney(Number(row.ticket_medio))}</td>
-                    <td style={{ padding: 10 }}>{fmtMoney(Number(row.total_desconto))}</td>
                   </tr>
-                ))
-              )}
-            </GerenteTable>
+                ) : (
+                  data.porDia.map((row) => (
+                    <tr key={String(row.dia)} className="gerente-fin-row-hover transition-colors">
+                      <td className="gerente-fin-cell px-3 py-2.5">
+                        {row.dia ? formatarDiaRelatorioParaLocale(String(row.dia), locale) : '—'}
+                      </td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">{row.num_vendas}</td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">
+                        {fmtMoney(Number(row.total_liquido))}
+                      </td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">
+                        {fmtMoney(Number(row.ticket_medio))}
+                      </td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">
+                        {fmtMoney(Number(row.total_desconto))}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </GerenteTable>
+            </div>
           </section>
 
-          <section style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>{m.gerente.sec_top_produtos}</h2>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8 }}>
+          <section className="dragon-glass-card mb-8 rounded-xl p-5">
+            <h2 className="gerente-section-accent mb-3 text-base font-semibold">{m.gerente.sec_top_produtos}</h2>
+            <div className="mb-2 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 disabled={expTop || data.top.length === 0}
                 onClick={() => void exportTop(null)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: 13,
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  cursor: expTop ? 'not-allowed' : 'pointer',
-                }}
+                className={REL_EXPORT_BTN_CLASS}
               >
                 {m.gerente.exportar_csv}
               </button>
@@ -362,66 +312,57 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 type="button"
                 disabled={expTopXlsx || data.top.length === 0}
                 onClick={() => void exportTopXlsx(null)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: 13,
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  cursor: expTopXlsx ? 'not-allowed' : 'pointer',
-                }}
+                className={REL_EXPORT_BTN_CLASS}
               >
                 {m.gerente.exportar_xlsx}
               </button>
             </div>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>{m.relatorios.top_produtos_legenda}</p>
-            <GerenteTable
-              columns={[
-                { key: 'p', header: m.relatorios.produto },
-                { key: 'o', header: m.relatorios.origem },
-                { key: 'q', header: m.gerente.col_qtde },
-                { key: 'v', header: m.gerente.col_valor },
-                { key: 'nv', header: m.gerente.col_num_vendas },
-              ]}
-            >
-              {data.top.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: 16, color: '#6b7280' }}>
-                    —
-                  </td>
-                </tr>
-              ) : (
-                data.top.map((row) => (
-                  <tr key={row.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: 10 }}>{row.nome}</td>
-                    <td style={{ padding: 10 }}>{row.origem}</td>
-                    <td style={{ padding: 10 }}>{formatDecimalPlaces(Number(row.total_quantidade), 3)}</td>
-                    <td style={{ padding: 10 }}>{fmtMoney(Number(row.total_valor))}</td>
-                    <td style={{ padding: 10 }}>{row.num_vendas}</td>
+            <p className="gerente-fin-muted mb-2 text-xs">{m.relatorios.top_produtos_legenda}</p>
+            <div className="gerente-table-wrap overflow-x-auto rounded-lg">
+              <GerenteTable
+                tone="dragon"
+                columns={[
+                  { key: 'p', header: m.relatorios.produto },
+                  { key: 'o', header: m.relatorios.origem },
+                  { key: 'q', header: m.gerente.col_qtde },
+                  { key: 'v', header: m.gerente.col_valor },
+                  { key: 'nv', header: m.gerente.col_num_vendas },
+                ]}
+              >
+                {data.top.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="gerente-fin-empty px-4 py-6 text-center text-sm">
+                      —
+                    </td>
                   </tr>
-                ))
-              )}
-            </GerenteTable>
+                ) : (
+                  data.top.map((row) => (
+                    <tr key={row.id} className="gerente-fin-row-hover transition-colors">
+                      <td className="gerente-fin-cell px-3 py-2.5">{row.nome}</td>
+                      <td className="gerente-fin-cell px-3 py-2.5">{row.origem}</td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">
+                        {formatDecimalPlaces(Number(row.total_quantidade), 3)}
+                      </td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">
+                        {fmtMoney(Number(row.total_valor))}
+                      </td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">{row.num_vendas}</td>
+                    </tr>
+                  ))
+                )}
+              </GerenteTable>
+            </div>
           </section>
 
-          <section style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>{m.gerente.sec_estoque_baixo}</h2>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>
-              {m.relatorios.estoque_baixo_sem_periodo}
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8 }}>
+          <section className="dragon-glass-card mb-8 rounded-xl p-5">
+            <h2 className="gerente-section-accent mb-3 text-base font-semibold">{m.gerente.sec_estoque_baixo}</h2>
+            <p className="gerente-fin-muted mb-2 text-xs">{m.relatorios.estoque_baixo_sem_periodo}</p>
+            <div className="mb-2 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 disabled={expBaixo || data.baixo.length === 0}
                 onClick={() => void exportBaixo(null)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: 13,
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  cursor: expBaixo ? 'not-allowed' : 'pointer',
-                }}
+                className={REL_EXPORT_BTN_CLASS}
               >
                 {m.gerente.exportar_csv}
               </button>
@@ -429,45 +370,45 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 type="button"
                 disabled={expBaixoXlsx || data.baixo.length === 0}
                 onClick={() => void exportBaixoXlsx(null)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: 13,
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  cursor: expBaixoXlsx ? 'not-allowed' : 'pointer',
-                }}
+                className={REL_EXPORT_BTN_CLASS}
               >
                 {m.gerente.exportar_xlsx}
               </button>
             </div>
-            <GerenteTable
-              columns={[
-                { key: 'p', header: m.relatorios.produto },
-                { key: 'a', header: m.relatorios.estoque_atual },
-                { key: 'm', header: m.relatorios.minimo },
-                { key: 'd', header: m.relatorios.deficit },
-              ]}
-            >
-              {data.baixo.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: 16, color: '#6b7280' }}>
-                    —
-                  </td>
-                </tr>
-              ) : (
-                data.baixo.map((row) => (
-                  <tr key={row.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: 10 }}>{row.nome}</td>
-                    <td style={{ padding: 10 }}>{formatDecimalPlaces(Number(row.quantidade_atual), 3)}</td>
-                    <td style={{ padding: 10 }}>{formatDecimalPlaces(Number(row.estoque_minimo), 3)}</td>
-                    <td style={{ padding: 10, color: '#b45309', fontWeight: 600 }}>
-                      {formatDecimalPlaces(Number(row.deficit), 3)}
+            <div className="gerente-table-wrap overflow-x-auto rounded-lg">
+              <GerenteTable
+                tone="dragon"
+                columns={[
+                  { key: 'p', header: m.relatorios.produto },
+                  { key: 'a', header: m.relatorios.estoque_atual },
+                  { key: 'm', header: m.relatorios.minimo },
+                  { key: 'd', header: m.relatorios.deficit },
+                ]}
+              >
+                {data.baixo.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="gerente-fin-empty px-4 py-6 text-center text-sm">
+                      —
                     </td>
                   </tr>
-                ))
-              )}
-            </GerenteTable>
+                ) : (
+                  data.baixo.map((row) => (
+                    <tr key={row.id} className="gerente-fin-row-hover transition-colors">
+                      <td className="gerente-fin-cell px-3 py-2.5">{row.nome}</td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">
+                        {formatDecimalPlaces(Number(row.quantidade_atual), 3)}
+                      </td>
+                      <td className="gerente-fin-cell px-3 py-2.5 tabular-nums">
+                        {formatDecimalPlaces(Number(row.estoque_minimo), 3)}
+                      </td>
+                      <td className="gerente-caixa-diff-warn px-3 py-2.5 font-semibold tabular-nums">
+                        {formatDecimalPlaces(Number(row.deficit), 3)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </GerenteTable>
+            </div>
           </section>
         </>
       ) : null}

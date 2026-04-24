@@ -8,6 +8,7 @@ import { getMessages } from '@/i18n/getMessages'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { derivadosLinhaCaixaGerente } from '@/lib/gerente/caixaRowDerivados'
+import { cn } from '@/lib/utils'
 
 export default async function GerenteCaixasPage() {
   const { idioma } = await getUsuarioIdioma()
@@ -55,9 +56,9 @@ export default async function GerenteCaixasPage() {
   }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
-      <div style={{ marginBottom: 16 }}>
-        <Link href="/gerente" style={{ fontSize: 13, color: '#2563eb' }}>
+    <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
+      <div className="mb-4">
+        <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
           ← {m.gerente.inicio}
         </Link>
       </div>
@@ -97,6 +98,7 @@ export default async function GerenteCaixasPage() {
       />
 
       <GerenteTable
+        tone="dragon"
         columns={[
           { key: 'data', header: m.gerente.col_data },
           { key: 'status', header: m.gerente.col_status },
@@ -114,37 +116,37 @@ export default async function GerenteCaixasPage() {
           return (
             <tr
               key={c.id}
-              style={{
-                borderTop: '1px solid #f3f4f6',
-                background: temDivergencia ? '#fff7ed' : undefined,
-              }}
+              className={cn('gerente-fin-row-hover transition-colors', temDivergencia && 'gerente-caixa-row-alert')}
             >
-              <td style={{ padding: 10 }}>{fmtGerenteDateTime(c.data_abertura, locale)}</td>
-              <td style={{ padding: 10 }}>{c.status}</td>
-              <td style={{ padding: 10 }}>{fmtGerenteBRL(Number(c.valor_inicial), locale)}</td>
-              <td style={{ padding: 10 }}>
-                {c.valor_fechamento != null
-                  ? fmtGerenteBRL(Number(c.valor_fechamento), locale)
-                  : '—'}
+              <td className="gerente-fin-cell px-3 py-3">{fmtGerenteDateTime(c.data_abertura, locale)}</td>
+              <td className="gerente-fin-cell px-3 py-3">{c.status}</td>
+              <td className="gerente-fin-cell px-3 py-3 tabular-nums">
+                {fmtGerenteBRL(Number(c.valor_inicial), locale)}
               </td>
-              <td style={{ padding: 10 }}>{fmtGerenteBRL(valorSistemaDinheiro, locale)}</td>
-              <td style={{ padding: 10, color: temDivergencia ? '#b45309' : undefined }}>
+              <td className="gerente-fin-cell px-3 py-3 tabular-nums">
+                {c.valor_fechamento != null ? fmtGerenteBRL(Number(c.valor_fechamento), locale) : '—'}
+              </td>
+              <td className="gerente-fin-cell px-3 py-3 tabular-nums">
+                {fmtGerenteBRL(valorSistemaDinheiro, locale)}
+              </td>
+              <td
+                className={cn(
+                  'gerente-fin-cell px-3 py-3 tabular-nums',
+                  temDivergencia && 'gerente-caixa-diff-warn font-semibold',
+                )}
+              >
                 {diferenca != null
                   ? `${diferenca > 0 ? '+' : ''}${fmtGerenteBRL(diferenca, locale)}`
                   : '—'}
               </td>
-              <td style={{ padding: 10, maxWidth: 240, color: '#374151' }}>
-                {c.fechamento_observacao ?? '—'}
-              </td>
-              <td style={{ padding: 10, fontSize: 12, fontFamily: 'monospace' }}>
-                {fmtGerenteIdCurto(c.id)}
-              </td>
+              <td className="gerente-fin-cell max-w-[240px] px-3 py-3 text-sm">{c.fechamento_observacao ?? '—'}</td>
+              <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{fmtGerenteIdCurto(c.id)}</td>
             </tr>
           )
         })}
         {caixasList.length === 0 && (
           <tr>
-            <td colSpan={8} style={{ padding: 16, color: '#6b7280' }}>
+            <td colSpan={8} className="gerente-fin-empty px-4 py-8 text-center">
               {m.gerente.nenhum_caixa}
             </td>
           </tr>

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { DragonEmblemIcon } from '@/components/icons/DragonEmblemIcon'
+import { ImperialSealIcon } from '@/components/icons/ImperialSealIcon'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -50,6 +52,16 @@ export default async function GerenteInicioPage() {
     .select('*', { count: 'exact', head: true })
     .eq('ativo', true)
 
+  const { count: caixasAbertos } = await supabase
+    .from('caixas')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'ABERTO')
+
+  const { count: filaFiscalPendente } = await supabase
+    .from('documentos_fiscais_pendentes')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['PENDENTE', 'ERRO'])
+
   const exibirTransferencias = (lojasAtivasCount ?? 0) >= 2
 
   const atalhos = gerenteInicioAtalhoKeys(exibirTransferencias).map((key) => ({
@@ -57,83 +69,109 @@ export default async function GerenteInicioPage() {
     label: gerenteNavLabel(m, key),
   }))
 
-  const card = (label: string, value: string) => (
-    <div
-      style={{
-        border: '1px solid #e5e7eb',
-        borderRadius: 12,
-        padding: 16,
-        minWidth: 140,
-        flex: '1 1 140px',
-      }}
-    >
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: '#111827' }}>{value}</div>
-    </div>
-  )
+  const mostrarCaixaAberto = (caixasAbertos ?? 0) > 0
+  const mostrarFilaFiscal = (filaFiscalPendente ?? 0) > 0
 
   return (
-    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>{m.gerente.inicio}</h1>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 24 }}>{m.gerente.bem_vindo_resumo}</p>
+    <div className="relative mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      {(mostrarCaixaAberto || mostrarFilaFiscal) && (
+        <div className="mb-6 flex flex-wrap gap-3">
+          {mostrarCaixaAberto ? (
+            <div
+              className="dragon-glass-card inline-flex items-center gap-2 rounded-full border border-emerald-700/40 px-3 py-1.5 text-xs font-semibold text-emerald-100"
+              role="status"
+            >
+              <DragonEmblemIcon className="h-5 w-5 shrink-0" />
+              <span>
+                {m.dashboard.caixa_aberto}
+                <span className="ml-1.5 tabular-nums text-emerald-200/90">({caixasAbertos ?? 0})</span>
+              </span>
+            </div>
+          ) : null}
+          {mostrarFilaFiscal ? (
+            <div
+              className="dragon-glass-card inline-flex items-center gap-2 rounded-full border border-red-800/50 px-3 py-1.5 text-xs font-semibold text-red-100"
+              role="status"
+            >
+              <ImperialSealIcon
+                className="h-5 w-5 shrink-0 text-red-500"
+                pulse
+                title={m.gerente.dragon_badge_fila_fiscal}
+              />
+              <span>
+                {m.gerente.dragon_badge_fila_fiscal}
+                <span className="ml-1.5 tabular-nums text-red-200/90">({filaFiscalPendente ?? 0})</span>
+              </span>
+            </div>
+          ) : null}
+        </div>
+      )}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
-        {card(
-          m.dashboard.num_vendas,
-          String(vendasHoje ?? 0)
-        )}
-        {card(
-          m.dashboard.total_vendido,
-          formatBRL(totalHoje, locale)
-        )}
+      <h1 className="gerente-fin-page-title text-2xl font-semibold tracking-tight">{m.gerente.inicio}</h1>
+      <p className="gerente-fin-muted mt-2 text-sm">{m.gerente.bem_vindo_resumo}</p>
+
+      <div className="mt-8 flex flex-wrap gap-4">
+        <div className="dragon-glass-card min-w-[140px] flex-1 rounded-xl p-4">
+          <div className="gerente-fin-muted text-xs font-medium">{m.dashboard.num_vendas}</div>
+          <div className="gerente-kpi-value mt-1 text-2xl font-bold tabular-nums">{String(vendasHoje ?? 0)}</div>
+        </div>
+        <div className="dragon-glass-card min-w-[140px] flex-1 rounded-xl p-4">
+          <div className="gerente-fin-muted text-xs font-medium">{m.dashboard.total_vendido}</div>
+          <div className="gerente-kpi-value mt-1 text-2xl font-bold tabular-nums">
+            {formatBRL(totalHoje, locale)}
+          </div>
+        </div>
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
-        {m.gerente.atalhos_modulos}
-      </h2>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 28 }}>
+      <h2 className="gerente-section-accent mt-10 text-base font-semibold">{m.gerente.atalhos_modulos}</h2>
+      <div className="mt-3 flex flex-wrap gap-2">
         {atalhos.map((l) => (
           <Link
             key={l.href}
             href={l.href}
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: '1px solid #e5e7eb',
-              background: '#f9fafb',
-              color: '#111827',
-              fontSize: 14,
-              textDecoration: 'none',
-            }}
+            className="gerente-inicio-chip dragon-glass-card rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
           >
             {l.label}
           </Link>
         ))}
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
-        {m.gerente.vendas_recentes_link}
-      </h2>
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
-        <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
+      <h2 className="gerente-section-accent mt-10 text-base font-semibold">{m.gerente.vendas_recentes_link}</h2>
+      <div className="dragon-glass-card gerente-inicio-table gerente-table-wrap mt-3 overflow-hidden rounded-xl">
+        <table className="w-full border-collapse text-sm">
           <thead>
-            <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
-              <th style={{ padding: 10 }}>{m.gerente.col_data}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_total}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_forma}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_status}</th>
-              <th style={{ padding: 10 }}>{m.gerente.col_detalhes}</th>
+            <tr className="border-b text-left">
+              <th className="gerente-fin-muted px-3 py-3 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_data}
+              </th>
+              <th className="gerente-fin-muted px-3 py-3 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_total}
+              </th>
+              <th className="gerente-fin-muted px-3 py-3 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_forma}
+              </th>
+              <th className="gerente-fin-muted px-3 py-3 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_status}
+              </th>
+              <th className="gerente-fin-muted px-3 py-3 text-xs font-semibold uppercase tracking-wide">
+                {m.gerente.col_detalhes}
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-700/50">
             {ultimas?.map((v) => (
-              <tr key={v.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 10 }}>{formatDateTimeOrDash(v.data, locale)}</td>
-                <td style={{ padding: 10 }}>{formatBRL(Number(v.total_liquido), locale)}</td>
-                <td style={{ padding: 10 }}>{v.forma_pagamento}</td>
-                <td style={{ padding: 10 }}>{v.status}</td>
-                <td style={{ padding: 10 }}>
-                  <Link href={`/gerente/vendas/${v.id}`} style={{ color: '#2563eb', fontSize: 13 }}>
+              <tr key={v.id}>
+                <td className="gerente-fin-cell px-3 py-3">{formatDateTimeOrDash(v.data, locale)}</td>
+                <td className="gerente-fin-cell px-3 py-3 tabular-nums">
+                  {formatBRL(Number(v.total_liquido), locale)}
+                </td>
+                <td className="gerente-fin-cell px-3 py-3">{v.forma_pagamento}</td>
+                <td className="gerente-fin-cell px-3 py-3">{v.status}</td>
+                <td className="px-3 py-3">
+                  <Link
+                    href={`/gerente/vendas/${v.id}`}
+                    className="gerente-section-accent text-sm font-medium hover:underline"
+                  >
                     {m.gerente.ver_detalhes}
                   </Link>
                 </td>
@@ -141,7 +179,7 @@ export default async function GerenteInicioPage() {
             ))}
             {(!ultimas || ultimas.length === 0) && (
               <tr>
-                <td colSpan={5} style={{ padding: 16, color: '#6b7280' }}>
+                <td colSpan={5} className="gerente-fin-empty px-4 py-8 text-center">
                   {m.gerente.nenhuma_venda}
                 </td>
               </tr>
@@ -150,8 +188,11 @@ export default async function GerenteInicioPage() {
         </table>
       </div>
 
-      <div style={{ marginTop: 16, textAlign: 'right' }}>
-        <Link href={painelGerencialHref('vendas')} style={{ fontSize: 14, color: '#2563eb' }}>
+      <div className="mt-6 text-right">
+        <Link
+          href={painelGerencialHref('vendas')}
+          className="gerente-section-accent text-sm font-medium hover:underline"
+        >
           {m.gerente.nav_vendas} →
         </Link>
       </div>

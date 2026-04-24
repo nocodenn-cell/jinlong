@@ -1,6 +1,7 @@
 'use client'
 
 import { objectsToCsv } from '@/lib/csv'
+import { cn } from '@/lib/utils'
 
 type Col<T extends Record<string, unknown>> = { key: keyof T & string; header: string }
 
@@ -9,6 +10,7 @@ type Props<T extends Record<string, unknown>> = {
   filename: string
   columns: Col<T>[]
   rows: T[]
+  className?: string
 }
 
 export function ExportCsvButton<T extends Record<string, unknown>>({
@@ -16,6 +18,7 @@ export function ExportCsvButton<T extends Record<string, unknown>>({
   filename,
   columns,
   rows,
+  className,
 }: Props<T>) {
   function download() {
     const csv = objectsToCsv(columns, rows)
@@ -32,15 +35,13 @@ export function ExportCsvButton<T extends Record<string, unknown>>({
     <button
       type="button"
       onClick={download}
-      style={{
-        padding: '6px 12px',
-        fontSize: 13,
-        borderRadius: 8,
-        border: '1px solid #d1d5db',
-        background: '#fff',
-        cursor: rows.length === 0 ? 'not-allowed' : 'pointer',
-        opacity: rows.length === 0 ? 0.55 : 1,
-      }}
+      className={cn(
+        'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+        rows.length === 0
+          ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
+          : 'border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50',
+        className,
+      )}
       disabled={rows.length === 0}
     >
       {label}

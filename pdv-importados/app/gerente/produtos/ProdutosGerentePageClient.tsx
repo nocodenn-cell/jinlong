@@ -103,33 +103,34 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
     { successMessage: m.comum.sucesso },
   )
 
-  return (
-    <div className={`min-h-screen bg-slate-50 px-4 py-4 md:px-6 ${fontClass}`}>
-      <div className="mx-auto w-full max-w-7xl space-y-4">
-        <GerenteFilterBar
-          title={m.produtos.titulo}
-          rightSlot={
-            <button
-              type="button"
-              disabled={expLoading || rows.length === 0}
-              onClick={() => void exportCsv(null)}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            >
-              {m.gerente.exportar_csv}
-            </button>
-          }
-        />
-        <p className="text-xs text-slate-500 -mt-2">
-          {idioma === 'pt'
-            ? 'Gestão de catálogo com visão densa para operação diária.'
-            : '高密度商品管理视图，适合日常运营。'}
-        </p>
+  const finIn = 'gerente-fin-input h-9 rounded-md px-3 text-xs'
 
-        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-3 py-2.5">
-            <h2 className="text-sm font-semibold text-slate-800">{m.produtos.cadastro_rapido}</h2>
-          </div>
-          <form
+  return (
+    <div className={`mx-auto w-full max-w-7xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
+      <GerenteFilterBar
+        title={m.produtos.titulo}
+        rightSlot={
+          <button
+            type="button"
+            disabled={expLoading || rows.length === 0}
+            onClick={() => void exportCsv(null)}
+            className="gerente-btn-csv rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+          >
+            {m.gerente.exportar_csv}
+          </button>
+        }
+      />
+      <p className="gerente-fin-muted -mt-2 text-xs">
+        {idioma === 'pt'
+          ? 'Gestão de catálogo com visão densa para operação diária.'
+          : '高密度商品管理视图，适合日常运营。'}
+      </p>
+
+      <section className="dragon-glass-card overflow-hidden rounded-xl">
+        <div className="gerente-fin-divider border-b px-3 py-2.5">
+          <h2 className="gerente-section-accent text-sm font-semibold">{m.produtos.cadastro_rapido}</h2>
+        </div>
+        <form
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
@@ -144,17 +145,8 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             }}
             className="grid grid-cols-1 gap-2.5 p-3 md:grid-cols-6"
           >
-            <input
-              name="nome"
-              placeholder={m.produtos.nome}
-              required
-              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 md:col-span-2"
-            />
-            <input
-              name="codigo_barras"
-              placeholder={m.produtos.codigo_barras}
-              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
+            <input name="nome" placeholder={m.produtos.nome} required className={`${finIn} md:col-span-2`} />
+            <input name="codigo_barras" placeholder={m.produtos.codigo_barras} className={finIn} />
             <input
               name="preco_varejo"
               type="number"
@@ -162,13 +154,9 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
               min="0"
               placeholder={m.produtos.preco_varejo}
               required
-              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className={finIn}
             />
-            <select
-              name="origem"
-              defaultValue="china_manual"
-              className="h-9 rounded-md border border-slate-300 px-3 text-xs text-slate-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            >
+            <select name="origem" defaultValue="china_manual" className={finIn}>
               <option value="china_manual">{m.produtos.origem_china}</option>
               <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
               <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
@@ -176,42 +164,39 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             <button
               type="submit"
               disabled={criarLoading}
-              className="h-9 rounded-md bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              className="h-9 rounded-md bg-gradient-to-b from-emerald-600 to-emerald-800 px-3 text-xs font-semibold text-white shadow-sm transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:opacity-60"
             >
               {criarLoading ? '…' : m.comum.salvar}
             </button>
-            <label className="md:col-span-6 inline-flex items-center gap-2 text-xs text-slate-600">
-              <input type="checkbox" name="tem_nf" className="h-3.5 w-3.5 rounded border-slate-300" />
+            <label className="gerente-fin-muted md:col-span-6 inline-flex items-center gap-2 text-xs">
+              <input type="checkbox" name="tem_nf" className="h-3.5 w-3.5 rounded border-slate-400" />
               {m.produtos.tem_nf}
-              <span className="text-slate-400">· {m.produtos.codigo_barras_opcional}</span>
+              <span className="opacity-80">· {m.produtos.codigo_barras_opcional}</span>
             </label>
           </form>
         </section>
 
-        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-3 py-2.5">
-            <h2 className="text-sm font-semibold text-slate-800">{m.produtos.lista_produtos}</h2>
+        <section className="dragon-glass-card overflow-hidden rounded-xl">
+          <div className="gerente-fin-divider border-b px-3 py-2.5">
+            <h2 className="gerente-section-accent text-sm font-semibold">{m.produtos.lista_produtos}</h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 border-b border-slate-200 bg-slate-50/80 p-3 sm:grid-cols-2 lg:grid-cols-4">
-            <input
-              disabled
-              placeholder={m.produtos.buscar}
-              className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500"
-            />
-            <select disabled className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500">
+          <div className="gerente-fin-divider grid grid-cols-1 gap-2 border-b p-3 sm:grid-cols-2 lg:grid-cols-4">
+            <input disabled placeholder={m.produtos.buscar} className={`${finIn} h-8 cursor-not-allowed opacity-60`} />
+            <select disabled className={`${finIn} h-8 cursor-not-allowed opacity-60`}>
               <option>{m.produtos.origem_label}</option>
             </select>
-            <select disabled className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500">
+            <select disabled className={`${finIn} h-8 cursor-not-allowed opacity-60`}>
               <option>{m.produtos.status}</option>
             </select>
-            <select disabled className="h-8 rounded border border-slate-300 bg-white px-2.5 text-xs text-slate-500">
+            <select disabled className={`${finIn} h-8 cursor-not-allowed opacity-60`}>
               <option>{m.produtos.tem_nf}</option>
             </select>
           </div>
 
           <div className="p-3">
             <GerenteTable
+              tone="dragon"
               columns={[
                 { key: 'id', header: 'ID' },
                 { key: 'nome', header: m.produtos.nome },
@@ -225,20 +210,22 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             >
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-4 text-xs text-slate-500">
+                  <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
                     {m.produtos.nenhum_produto_cadastrado}
                   </td>
                 </tr>
               ) : (
                 rows.map((p) => (
-                  <tr key={p.id} className="group border-t border-slate-100 transition-colors hover:bg-blue-50/50">
-                    <td className="px-3 py-2 font-mono text-[11px] text-slate-500">{p.id.slice(0, 8)}</td>
-                    <td className="px-3 py-2 font-medium leading-relaxed text-slate-900">{p.nome}</td>
-                    <td className="px-3 py-2 font-mono text-slate-600">{p.codigo_barras ?? '-'}</td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-900">
+                  <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
+                    <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
+                      {p.id.slice(0, 8)}
+                    </td>
+                    <td className="gerente-fin-cell px-3 py-2 font-medium leading-relaxed">{p.nome}</td>
+                    <td className="gerente-fin-cell px-3 py-2 font-mono">{p.codigo_barras ?? '-'}</td>
+                    <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums font-semibold">
                       {formatBRL(Number(p.preco_varejo), locale)}
                     </td>
-                    <td className="px-3 py-2 text-slate-600">{p.origem}</td>
+                    <td className="gerente-fin-cell px-3 py-2">{p.origem}</td>
                     <td className="px-3 py-2">
                       <GerenteStatusBadge status={p.tem_nf ? 'TEM_NF' : 'SEM_NF'} label={p.tem_nf ? m.comum.sim : m.comum.nao} />
                     </td>
@@ -253,7 +240,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
                         type="button"
                         disabled={toggleLoading}
                         onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
-                        className="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700 opacity-60 transition hover:bg-slate-50 group-hover:opacity-100 disabled:opacity-40"
+                        className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40"
                       >
                         {p.ativo ? m.produtos.inativar : m.produtos.ativar}
                       </button>
@@ -264,7 +251,6 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             </GerenteTable>
           </div>
         </section>
-      </div>
     </div>
   )
 }

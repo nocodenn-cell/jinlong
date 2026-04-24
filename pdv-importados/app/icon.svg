@@ -1,7 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Fastproduct">
-  <rect width="32" height="32" rx="7" fill="#020617"/>
-  <g transform="translate(4 4)" fill="none" stroke="#F59E0B" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 2C12 2 14.5 3 16 5M16 5C17.5 7 17.5 10 16 12C14.5 14 12 15 10 15C8 15 5 14 3 11M16 5L21 3M10 15C8 15 6 17 6 19C6 21 8 22 10 22C12 22 15 21 17 18M10 15L7 12M17 18L21 21M17 18L19 15"/>
-    <circle cx="9" cy="8" r="1" fill="#F59E0B" stroke="none"/>
+  <rect width="32" height="32" rx="7" fill="#0f172a" />
+  <g transform="translate(0.5, 2.5) scale(0.39)">
+    <g transform="translate(8, 8)">
+      <path
+        d="M15 30 Q25 15 40 20 Q55 25 60 35 Q65 45 55 50 Q40 55 25 45 Q15 40 15 30Z"
+        fill="#F59E0B"
+        stroke="#B45309"
+        stroke-width="1.5"
+      />
+      <circle cx="45" cy="22" r="8" fill="#FDE047" stroke="#B45309" stroke-width="1.5" />
+      <circle cx="48" cy="20" r="2" fill="#000000" />
+      <path d="M42 15 L38 8 L44 12Z" fill="#F97316" />
+      <path d="M48 14 L52 6 L50 13Z" fill="#F97316" />
+      <path d="M25 25 Q15 10 5 15 Q10 22 20 25Z" fill="#F59E0B" opacity="0.8" />
+      <path d="M12 40 Q2 45 5 35 Q8 28 15 38" fill="none" stroke="#F59E0B" stroke-width="2" />
+    </g>
   </g>
 </svg>

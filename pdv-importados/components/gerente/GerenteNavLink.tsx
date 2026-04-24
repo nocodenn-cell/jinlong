@@ -1,12 +1,10 @@
-import Link from 'next/link'
-import type { CSSProperties, ReactNode } from 'react'
+'use client'
 
-const baseStyle: CSSProperties = {
-  padding: '6px 12px',
-  borderRadius: 8,
-  fontSize: 13,
-  textDecoration: 'none',
-}
+import Link from 'next/link'
+import type { ReactNode } from 'react'
+import { useGerenteUiTheme } from '@/components/gerente/GerenteThemeContext'
+import { isGerenteLightChrome } from '@/components/gerente/gerenteUiTheme'
+import { cn } from '@/lib/utils'
 
 export type GerenteNavLinkProps = {
   href: string
@@ -14,17 +12,24 @@ export type GerenteNavLinkProps = {
   children: ReactNode
 }
 
-/** Link de navegação secundária (abas / filtros) no painel gerente — estilo único para reuso e testes. */
+/** Abas / filtros secundários no painel gerente — responde ao tema claro/escuro. */
 export function GerenteNavLink({ href, active, children }: GerenteNavLinkProps) {
+  const { theme } = useGerenteUiTheme()
+  const light = isGerenteLightChrome(theme)
+
   return (
     <Link
       href={href}
-      style={{
-        ...baseStyle,
-        background: active ? '#111827' : '#f3f4f6',
-        color: active ? '#fff' : '#111827',
-        border: active ? 'none' : '1px solid #e5e7eb',
-      }}
+      className={cn(
+        'rounded-lg border px-3 py-1.5 text-sm font-medium no-underline transition-colors',
+        light
+          ? active
+            ? 'border-amber-400/70 bg-amber-50 text-amber-950'
+            : 'border-slate-200 bg-white text-slate-800 hover:border-amber-300/60 hover:bg-amber-50/50'
+          : active
+            ? 'border-amber-500/45 bg-amber-500/15 text-amber-100'
+            : 'border-slate-600/60 bg-slate-900/45 text-slate-200 hover:border-amber-500/35 hover:text-amber-200',
+      )}
     >
       {children}
     </Link>

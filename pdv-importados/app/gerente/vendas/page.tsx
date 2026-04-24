@@ -9,6 +9,17 @@ import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/form
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { cancelarVendaGerenteAction } from './actions'
 
+function statusBadgeClasses(status: string): string {
+  const s = status.toUpperCase()
+  if (s === 'CANCELADA') {
+    return 'inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800'
+  }
+  if (s === 'CONCLUIDA') {
+    return 'inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-900'
+  }
+  return 'inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800'
+}
+
 export default async function GerenteVendasPage() {
   const { idioma } = await getUsuarioIdioma()
   const m = getMessages(idioma)
@@ -22,9 +33,9 @@ export default async function GerenteVendasPage() {
     .limit(120)
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
-      <div style={{ marginBottom: 16 }}>
-        <Link href="/gerente" style={{ fontSize: 13, color: '#2563eb' }}>
+    <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
+      <div className="mb-4">
+        <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
           ← {m.gerente.inicio}
         </Link>
       </div>
@@ -56,6 +67,7 @@ export default async function GerenteVendasPage() {
       />
 
       <GerenteTable
+        tone="dragon"
         columns={[
           { key: 'data', header: m.gerente.col_data },
           { key: 'total', header: m.gerente.col_total },
@@ -63,65 +75,63 @@ export default async function GerenteVendasPage() {
           { key: 'status', header: m.gerente.col_status },
           { key: 'caixa', header: m.gerente.col_caixa },
           { key: 'detalhes', header: m.gerente.col_detalhes },
-          { key: 'acoes', header: 'Ações' },
+          { key: 'acoes', header: m.gerente.col_acoes },
         ]}
       >
         {vendas?.map((v) => (
-          <tr key={v.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-            <td style={{ padding: 10 }}>{fmtGerenteDateTime(v.data, locale)}</td>
-            <td style={{ padding: 10 }}>{fmtGerenteBRL(Number(v.total_liquido), locale)}</td>
-            <td style={{ padding: 10 }}>{v.forma_pagamento}</td>
-            <td style={{ padding: 10 }}>{v.status}</td>
-            <td style={{ padding: 10, fontSize: 12, fontFamily: 'monospace' }}>
+          <tr key={v.id} className="gerente-fin-row-hover transition-colors">
+            <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 tabular-nums">
+              {fmtGerenteDateTime(v.data, locale)}
+            </td>
+            <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 font-medium tabular-nums">
+              {fmtGerenteBRL(Number(v.total_liquido), locale)}
+            </td>
+            <td className="gerente-fin-cell px-3 py-3">{v.forma_pagamento}</td>
+            <td className="px-3 py-3">
+              <span className={statusBadgeClasses(v.status ?? '')}>{v.status}</span>
+            </td>
+            <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">
               {fmtGerenteIdCurto(v.caixa_id ?? undefined)}
             </td>
-            <td style={{ padding: 10 }}>
-              <Link href={`/gerente/vendas/${v.id}`} style={{ color: '#2563eb', fontSize: 13 }}>
+            <td className="px-3 py-3">
+              <Link
+                href={`/gerente/vendas/${v.id}`}
+                className="gerente-section-accent text-sm font-medium hover:underline"
+              >
                 {m.gerente.ver_detalhes}
               </Link>
             </td>
-            <td style={{ padding: 10, minWidth: 220 }}>
+            <td className="min-w-[min(100%,280px)] max-w-[360px] px-3 py-3">
               {v.status !== 'CANCELADA' ? (
-                <form action={cancelarVendaGerenteAction} style={{ display: 'flex', gap: 6 }}>
+                <form
+                  action={cancelarVendaGerenteAction}
+                  className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch"
+                >
                   <input type="hidden" name="venda_id" value={v.id} />
                   <input
                     name="motivo"
-                    placeholder="Motivo do cancelamento"
+                    placeholder={m.gerente.venda_motivo_cancel_placeholder}
                     required
                     minLength={2}
                     maxLength={500}
-                    style={{
-                      flex: 1,
-                      fontSize: 12,
-                      padding: '6px 8px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: 8,
-                    }}
+                    className="gerente-fin-input min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm shadow-inner"
                   />
                   <button
                     type="submit"
-                    style={{
-                      background: '#b91c1c',
-                      color: '#fff',
-                      border: 0,
-                      borderRadius: 8,
-                      padding: '6px 8px',
-                      fontSize: 12,
-                      cursor: 'pointer',
-                    }}
+                    className="gerente-btn-cancel shrink-0 whitespace-nowrap rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-800"
                   >
-                    Cancelar
+                    {m.comum.cancelar}
                   </button>
                 </form>
               ) : (
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Já cancelada</span>
+                <span className="gerente-fin-empty text-sm">{m.gerente.venda_ja_cancelada}</span>
               )}
             </td>
           </tr>
         ))}
         {(!vendas || vendas.length === 0) && (
           <tr>
-            <td colSpan={7} style={{ padding: 16, color: '#6b7280' }}>
+            <td colSpan={7} className="gerente-fin-empty px-4 py-8 text-center">
               {m.gerente.nenhuma_venda}
             </td>
           </tr>

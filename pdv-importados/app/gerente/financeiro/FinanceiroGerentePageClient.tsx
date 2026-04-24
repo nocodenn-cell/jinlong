@@ -2,14 +2,18 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
+import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
+import { cn } from '@/lib/utils'
 import {
   criarCliente,
   criarTituloReceber,
@@ -46,6 +50,13 @@ function parseForma(raw: string): (typeof FORMAS)[number] {
   return FORMAS.includes(raw as (typeof FORMAS)[number]) ? (raw as (typeof FORMAS)[number]) : 'DINHEIRO'
 }
 
+function interStub(template: string, vars: Record<string, string | number>): string {
+  return Object.entries(vars).reduce(
+    (acc, [k, v]) => acc.replaceAll(`{{${k}}}`, String(v)),
+    template,
+  )
+}
+
 type Props = Readonly<{
   idioma: Idioma
   clientes: FinanceiroClienteRow[]
@@ -53,10 +64,91 @@ type Props = Readonly<{
   docsFiscais: FinanceiroDocRow[]
 }>
 
+function FinField({ id, label, children }: Readonly<{ id: string; label: string; children: ReactNode }>) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="gerente-fin-label text-xs font-medium">
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function FinCard({
+  title,
+  description,
+  children,
+}: Readonly<{ title: string; description?: string; children: ReactNode }>) {
+  return (
+    <section className="dragon-glass-card flex flex-col rounded-xl p-5">
+      <h2 className="text-base font-semibold tracking-wide text-amber-400">{title}</h2>
+      {description ? <p className="gerente-fin-muted mt-1 text-xs leading-relaxed">{description}</p> : null}
+      <div className="mt-4 flex flex-col gap-3">{children}</div>
+    </section>
+  )
+}
+
+const inputClass =
+  'gerente-fin-input w-full rounded-lg border px-3 py-2 text-sm shadow-inner disabled:cursor-not-allowed disabled:opacity-60'
+
+const jadeBtnBase =
+  'inline-flex w-full min-h-[42px] items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-[filter,box-shadow] hover:from-emerald-500 hover:to-emerald-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px]'
+
+function JadeSubmitButton({
+  loading,
+  children,
+  disabled,
+  className,
+}: Readonly<{
+  loading: boolean
+  children: ReactNode
+  disabled?: boolean
+  className?: string
+}>) {
+  return (
+    <button type="submit" disabled={disabled || loading} className={cn(jadeBtnBase, className)}>
+      {loading ? <DragonOuroLoader iconClassName="h-4 w-4 text-emerald-100" /> : null}
+      <span>{children}</span>
+    </button>
+  )
+}
+
+function JadeActionButton({
+  loading,
+  children,
+  disabled,
+  onClick,
+  type = 'button',
+  className,
+}: Readonly<{
+  loading: boolean
+  children: ReactNode
+  disabled?: boolean
+  onClick?: () => void
+  type?: 'button' | 'submit'
+  className?: string
+}>) {
+  return (
+    <button
+      type={type}
+      disabled={disabled || loading}
+      onClick={onClick}
+      className={cn(jadeBtnBase, className)}
+    >
+      {loading ? <DragonOuroLoader iconClassName="h-4 w-4 text-emerald-100" /> : null}
+      <span>{children}</span>
+    </button>
+  )
+}
+
 export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFiscais }: Props) {
   const m = getMessages(idioma)
+  const f = m.gerente.financeiro_stub
+  const locale = useMemo(() => localeFromIdioma(idioma), [idioma])
   const router = useRouter()
   const refetch = useCallback(() => router.refresh(), [router])
+  const semClientes = clientes.length === 0
 
   const { mutate: mutCliente, loading: loadCliente } = useGerenteMutation(
     async (p: { nome: string; documento: string; telefone: string }) => {
@@ -65,7 +157,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
       refetch()
       return r.data
     },
-    { successMessage: 'Cliente criado com sucesso.' },
+    { successMessage: f.toast_cliente_ok },
   )
 
   const { mutate: mutTitulo, loading: loadTitulo } = useGerenteMutation(
@@ -80,7 +172,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
       refetch()
       return r.data
     },
-    { successMessage: 'Título criado com sucesso.' },
+    { successMessage: f.toast_titulo_ok },
   )
 
   const { mutate: mutLiquidar, loading: loadLiquidar } = useGerenteMutation(
@@ -90,7 +182,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
       refetch()
       return null
     },
-    { successMessage: 'Liquidação registrada.' },
+    { successMessage: f.toast_liquidar_ok },
   )
 
   const { mutate: mutFila, loading: loadFila } = useGerenteMutation(
@@ -105,7 +197,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
         if (data) {
           emitGerenteToast({
             kind: 'success',
-            message: `Fila processada: ${data.emitted} emitidos, ${data.failed} falhas.`,
+            message: interStub(f.toast_fila_ok, { emitidos: data.emitted, falhas: data.failed }),
           })
         }
       },
@@ -119,7 +211,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
       refetch()
       return null
     },
-    { successMessage: 'Documento fiscal enfileirado.' },
+    { successMessage: f.toast_enfileirar_ok },
   )
 
   const { mutate: mutReprocessar, loading: loadReprocessar } = useGerenteMutation(
@@ -129,23 +221,29 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
       refetch()
       return null
     },
-    { successMessage: 'Documento marcado para reprocesso.' },
+    { successMessage: f.toast_reprocessar_ok },
   )
 
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <Link href="/gerente" style={{ fontSize: 14, color: '#2563eb' }}>
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <Link href="/gerente" className="gerente-nav-back text-sm font-medium transition-colors hover:underline">
         ← {m.gerente.inicio}
       </Link>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginTop: 16 }}>Financeiro &amp; fiscal (stub)</h1>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 24 }}>
-        Contas a receber, liquidações e fila de documento fiscal (sem Sefaz).
-      </p>
 
-      <div style={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-        <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Novo cliente</h2>
+      <header className="gerente-fin-header-border mt-5 border-b pb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="gerente-fin-page-title text-2xl font-semibold tracking-tight sm:text-3xl">{f.titulo}</h1>
+          <span className="gerente-fin-badge rounded-full border px-2.5 py-0.5 text-xs font-semibold ring-1">
+            {f.badge}
+          </span>
+        </div>
+        <p className="gerente-fin-muted mt-3 max-w-3xl text-sm leading-relaxed">{f.subtitulo}</p>
+      </header>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        <FinCard title={f.sec_cliente}>
           <form
+            className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
@@ -155,32 +253,28 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                 telefone: readFormDataString(fd, 'telefone'),
               })
             }}
-            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
           >
-            <input name="nome" required placeholder="Nome" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <input name="documento" placeholder="Documento" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <input name="telefone" placeholder="Telefone" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <button
-              type="submit"
-              disabled={loadCliente}
-              style={{
-                padding: 8,
-                borderRadius: 8,
-                background: '#111827',
-                color: '#fff',
-                border: 'none',
-                cursor: loadCliente ? 'not-allowed' : 'pointer',
-                opacity: loadCliente ? 0.7 : 1,
-              }}
-            >
-              {loadCliente ? 'Salvando...' : 'Salvar'}
-            </button>
+            <FinField id="fin-nome" label={f.label_nome}>
+              <input id="fin-nome" name="nome" required placeholder={f.ph_nome} className={inputClass} />
+            </FinField>
+            <FinField id="fin-doc" label={f.label_documento}>
+              <input id="fin-doc" name="documento" placeholder={f.ph_documento} className={inputClass} />
+            </FinField>
+            <FinField id="fin-tel" label={f.label_telefone}>
+              <input id="fin-tel" name="telefone" placeholder={f.ph_telefone} className={inputClass} />
+            </FinField>
+            <JadeSubmitButton loading={loadCliente}>
+              {loadCliente ? f.btn_salvando : f.btn_salvar_cliente}
+            </JadeSubmitButton>
           </form>
-        </section>
+        </FinCard>
 
-        <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Novo título a receber</h2>
+        <FinCard
+          title={f.sec_titulo}
+          description={semClientes ? f.sem_clientes_titulo : undefined}
+        >
           <form
+            className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
@@ -191,197 +285,203 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                 vencimento: readFormDataString(fd, 'vencimento'),
               })
             }}
-            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
           >
-            <select name="cliente_id" required style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-            <input name="valor_total" type="number" min={0.01} step="0.01" required placeholder="Valor" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <input name="descricao" placeholder="Descrição" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <input name="vencimento" type="date" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <button
-              type="submit"
-              disabled={loadTitulo}
-              style={{
-                padding: 8,
-                borderRadius: 8,
-                background: '#111827',
-                color: '#fff',
-                border: 'none',
-                cursor: loadTitulo ? 'not-allowed' : 'pointer',
-                opacity: loadTitulo ? 0.7 : 1,
-              }}
-            >
-              {loadTitulo ? 'Criando...' : 'Criar'}
-            </button>
+            <FinField id="fin-cliente-sel" label={f.label_cliente}>
+              <select
+                id="fin-cliente-sel"
+                name="cliente_id"
+                required
+                disabled={semClientes}
+                className={`${inputClass} disabled:cursor-not-allowed`}
+              >
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+            </FinField>
+            <FinField id="fin-valor-tit" label={f.label_valor_total}>
+              <input
+                id="fin-valor-tit"
+                name="valor_total"
+                type="number"
+                min={0.01}
+                step="0.01"
+                required
+                placeholder={f.ph_valor_titulo}
+                className={inputClass}
+              />
+            </FinField>
+            <FinField id="fin-desc" label={f.label_descricao}>
+              <input id="fin-desc" name="descricao" placeholder={f.ph_descricao_titulo} className={inputClass} />
+            </FinField>
+            <FinField id="fin-ven" label={f.label_vencimento}>
+              <input id="fin-ven" name="vencimento" type="date" className={inputClass} />
+            </FinField>
+            <JadeSubmitButton loading={loadTitulo} disabled={semClientes}>
+              {loadTitulo ? f.btn_criando : f.btn_criar_titulo}
+            </JadeSubmitButton>
           </form>
-        </section>
+        </FinCard>
 
-        <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Fila fiscal (stub)</h2>
-          <button
-            type="button"
-            disabled={loadFila}
-            onClick={() => void mutFila(null)}
-            style={{
-              marginBottom: 12,
-              padding: 8,
-              borderRadius: 8,
-              background: '#111827',
-              color: '#fff',
-              border: 'none',
-              cursor: loadFila ? 'not-allowed' : 'pointer',
-              width: '100%',
-              opacity: loadFila ? 0.7 : 1,
-            }}
-          >
-            {loadFila ? 'Processando fila...' : 'Processar fila fiscal agora'}
-          </button>
+        <FinCard title={f.sec_fila} description={f.ajuda_fila}>
+          <JadeActionButton loading={loadFila} onClick={() => void mutFila(null)}>
+            {f.btn_processar_fila}
+          </JadeActionButton>
           <form
+            className="gerente-fin-divider flex flex-col gap-3 border-t pt-4"
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
               void mutEnfileirar(readFormDataString(fd, 'venda_id').trim())
             }}
-            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
           >
-            <input name="venda_id" required placeholder="UUID da venda" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
-            <button
-              type="submit"
-              disabled={loadEnfileirar}
-              style={{
-                padding: 8,
-                borderRadius: 8,
-                background: '#374151',
-                color: '#fff',
-                border: 'none',
-                cursor: loadEnfileirar ? 'not-allowed' : 'pointer',
-                opacity: loadEnfileirar ? 0.7 : 1,
-              }}
-            >
-              {loadEnfileirar ? 'Enfileirando...' : 'Enfileirar NFC-e'}
-            </button>
+            <FinField id="fin-venda" label={f.label_venda_id}>
+              <input id="fin-venda" name="venda_id" required placeholder={f.ph_venda_uuid} className={inputClass} />
+            </FinField>
+            <JadeSubmitButton loading={loadEnfileirar}>
+              {loadEnfileirar ? f.btn_enfileirando : f.btn_enfileirar}
+            </JadeSubmitButton>
           </form>
-        </section>
+        </FinCard>
       </div>
 
-      <section style={{ marginTop: 32, border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Títulos em aberto</h2>
-        <GerenteTable
-          columns={[
-            { key: 'c', header: 'Cliente' },
-            { key: 'a', header: 'Aberto' },
-            { key: 's', header: 'Status' },
-            { key: 'l', header: 'Liquidar' },
-          ]}
-        >
-          {titulos.length === 0 ? (
-            <tr>
-              <td colSpan={4} style={{ padding: 12, color: '#6b7280' }}>
-                Nenhum título em aberto.
-              </td>
-            </tr>
-          ) : (
-            titulos.map((t) => (
-              <tr key={t.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 10 }}>{t.cliente_nome ?? '—'}</td>
-                <td style={{ padding: 10 }}>{Number(t.valor_aberto).toFixed(2)}</td>
-                <td style={{ padding: 10 }}>
-                  <GerenteStatusBadge status={t.status} />
-                </td>
-                <td style={{ padding: 10 }}>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      const fd = new FormData(e.currentTarget)
-                      const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
-                      void mutLiquidar({
-                        titulo_id: t.id,
-                        valor: Number(fd.get('valor')),
-                        forma_pagamento: forma,
-                      })
-                    }}
-                    style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}
-                  >
-                    <input name="valor" type="number" min={0.01} step="0.01" placeholder="Valor" style={{ width: 100, padding: 4 }} />
-                    <select name="forma" style={{ padding: 4 }}>
-                      <option value="DINHEIRO">DINHEIRO</option>
-                      <option value="PIX">PIX</option>
-                      <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
-                      <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
-                      <option value="OUTROS">OUTROS</option>
-                    </select>
-                    <button
-                      type="submit"
-                      disabled={loadLiquidar}
-                      style={{ padding: '4px 8px', fontSize: 12, cursor: loadLiquidar ? 'not-allowed' : 'pointer' }}
-                    >
-                      {loadLiquidar ? '...' : 'OK'}
-                    </button>
-                  </form>
+      <section className="dragon-glass-card mt-10 rounded-xl p-5">
+        <h2 className="text-lg font-semibold text-amber-400">{f.sec_titulos_aberto}</h2>
+        <div className="mt-4 overflow-x-auto">
+          <GerenteTable
+            tone="dragon"
+            columns={[
+              { key: 'c', header: f.col_cliente },
+              { key: 'a', header: f.col_aberto },
+              { key: 's', header: m.gerente.col_status },
+              { key: 'l', header: f.col_liquidar },
+            ]}
+          >
+            {titulos.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="gerente-fin-empty px-4 py-8 text-center text-sm">
+                  {f.empty_titulos}
                 </td>
               </tr>
-            ))
-          )}
-        </GerenteTable>
+            ) : (
+              titulos.map((t) => (
+                <tr key={t.id} className="gerente-fin-row-hover transition-colors">
+                  <td className="gerente-fin-cell px-3 py-3 font-medium">{t.cliente_nome ?? f.dash}</td>
+                  <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 tabular-nums">
+                    {fmtGerenteBRL(Number(t.valor_aberto), locale)}
+                  </td>
+                  <td className="px-3 py-3">
+                    <GerenteStatusBadge status={t.status} />
+                  </td>
+                  <td className="min-w-[220px] px-3 py-3">
+                    <form
+                      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        const fd = new FormData(e.currentTarget)
+                        const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
+                        void mutLiquidar({
+                          titulo_id: t.id,
+                          valor: Number(fd.get('valor')),
+                          forma_pagamento: forma,
+                        })
+                      }}
+                    >
+                      <input
+                        name="valor"
+                        type="number"
+                        min={0.01}
+                        step="0.01"
+                        placeholder={f.liq_placeholder_valor}
+                        className={`${inputClass} sm:max-w-[120px]`}
+                      />
+                      <select name="forma" className={`${inputClass} sm:max-w-[200px]`}>
+                        <option value="DINHEIRO">DINHEIRO</option>
+                        <option value="PIX">PIX</option>
+                        <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
+                        <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
+                        <option value="OUTROS">OUTROS</option>
+                      </select>
+                      <button
+                        type="submit"
+                        disabled={loadLiquidar}
+                        className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg border border-emerald-600/50 bg-emerald-900/30 px-3 py-2 text-xs font-semibold text-emerald-100 shadow-sm hover:bg-emerald-800/40 disabled:opacity-55"
+                      >
+                        {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
+                        {loadLiquidar ? f.liq_loading : f.liq_ok}
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))
+            )}
+          </GerenteTable>
+        </div>
       </section>
 
-      <section style={{ marginTop: 24, border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Documentos fiscais</h2>
-        <GerenteTable
-          columns={[
-            { key: 'st', header: 'Status' },
-            { key: 'v', header: 'Venda' },
-            { key: 'tp', header: 'Tipo' },
-            { key: 't', header: 'Tentativas' },
-            { key: 'e', header: 'Erro' },
-            { key: 'dt', header: 'Detalhe' },
-            { key: 'ac', header: 'Ações' },
-          ]}
-        >
-          {docsFiscais.length === 0 ? (
-            <tr>
-              <td colSpan={7} style={{ padding: 12, color: '#6b7280' }}>
-                Nenhum documento fiscal na fila.
-              </td>
-            </tr>
-          ) : (
-            docsFiscais.map((d) => (
-              <tr key={d.id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 10 }}>
-                  <GerenteStatusBadge status={d.status} />
-                </td>
-                <td style={{ padding: 10, fontFamily: 'monospace' }}>{String(d.venda_id).slice(0, 8)}...</td>
-                <td style={{ padding: 10 }}>{d.tipo_doc}</td>
-                <td style={{ padding: 10 }}>{Number(d.tentativas ?? 0)}</td>
-                <td style={{ padding: 10, color: '#b91c1c' }}>{d.ultimo_erro ?? '—'}</td>
-                <td style={{ padding: 10 }}>
-                  <Link href={`/gerente/financeiro/documento/${d.id}`} style={{ fontSize: 13, color: '#2563eb' }}>
-                    Ver timeline
-                  </Link>
-                </td>
-                <td style={{ padding: 10 }}>
-                  {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
-                    <button
-                      type="button"
-                      disabled={loadReprocessar}
-                      onClick={() => void mutReprocessar(d.id)}
-                      style={{ padding: '4px 8px', fontSize: 12, cursor: loadReprocessar ? 'not-allowed' : 'pointer' }}
-                    >
-                      {loadReprocessar ? '...' : 'Reprocessar'}
-                    </button>
-                  ) : (
-                    <span style={{ color: '#6b7280' }}>—</span>
-                  )}
+      <section className="dragon-glass-card mt-6 rounded-xl p-5">
+        <h2 className="text-lg font-semibold text-amber-400">{f.sec_docs}</h2>
+        <div className="mt-4 overflow-x-auto">
+          <GerenteTable
+            tone="dragon"
+            columns={[
+              { key: 'st', header: m.gerente.col_status },
+              { key: 'v', header: f.col_venda },
+              { key: 'tp', header: f.col_tipo },
+              { key: 't', header: f.col_tentativas },
+              { key: 'e', header: f.col_erro },
+              { key: 'dt', header: f.col_detalhe },
+              { key: 'ac', header: f.col_acoes },
+            ]}
+          >
+            {docsFiscais.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="gerente-fin-empty px-4 py-8 text-center text-sm">
+                  {f.empty_docs}
                 </td>
               </tr>
-            ))
-          )}
-        </GerenteTable>
+            ) : (
+              docsFiscais.map((d) => (
+                <tr key={d.id} className="gerente-fin-row-hover transition-colors">
+                  <td className="px-3 py-3">
+                    <GerenteStatusBadge status={d.status} />
+                  </td>
+                  <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{String(d.venda_id).slice(0, 8)}…</td>
+                  <td className="gerente-fin-cell px-3 py-3">{d.tipo_doc}</td>
+                  <td className="gerente-fin-cell px-3 py-3 tabular-nums">{Number(d.tentativas ?? 0)}</td>
+                  <td className="max-w-[200px] truncate px-3 py-3 text-sm text-red-300" title={d.ultimo_erro ?? ''}>
+                    {d.ultimo_erro ?? f.dash}
+                  </td>
+                  <td className="px-3 py-3">
+                    <Link
+                      href={`/gerente/financeiro/documento/${d.id}`}
+                      className="gerente-nav-back text-sm font-medium hover:underline"
+                    >
+                      {f.link_timeline}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-3">
+                    {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
+                      <button
+                        type="button"
+                        disabled={loadReprocessar}
+                        onClick={() => void mutReprocessar(d.id)}
+                        className="inline-flex min-w-[100px] items-center justify-center gap-1 rounded-lg bg-red-800/90 px-3 py-1.5 text-xs font-semibold text-red-50 shadow-sm hover:bg-red-700 disabled:opacity-55"
+                      >
+                        {loadReprocessar ? <DragonOuroLoader className="text-red-100" iconClassName="h-3.5 w-3.5" /> : null}
+                        {loadReprocessar ? f.liq_loading : f.btn_reprocessar}
+                      </button>
+                    ) : (
+                      <span className="gerente-fin-empty text-sm">{f.dash}</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </GerenteTable>
+        </div>
       </section>
     </div>
   )

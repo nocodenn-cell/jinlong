@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">PDV Importados</title>
+  <desc id="desc">Lockup with golden dragon and PDV Importados wordmark</desc>
+  <rect width="200" height="60" rx="8" fill="#0f172a" />
+  <g transform="translate(8, 8)">
+    <path
+      d="M15 30 Q25 15 40 20 Q55 25 60 35 Q65 45 55 50 Q40 55 25 45 Q15 40 15 30Z"
+      fill="#F59E0B"
+      stroke="#B45309"
+      stroke-width="1.5"
+    />
+    <circle cx="45" cy="22" r="8" fill="#FDE047" stroke="#B45309" stroke-width="1.5" />
+    <circle cx="48" cy="20" r="2" fill="#000000" />
+    <path d="M42 15 L38 8 L44 12Z" fill="#F97316" />
+    <path d="M48 14 L52 6 L50 13Z" fill="#F97316" />
+    <path d="M25 25 Q15 10 5 15 Q10 22 20 25Z" fill="#F59E0B" opacity="0.8" />
+    <path d="M12 40 Q2 45 5 35 Q8 28 15 38" fill="none" stroke="#F59E0B" stroke-width="2" />
+  </g>
+  <text x="75" y="36" font-family="system-ui, Segoe UI, sans-serif" font-weight="bold" font-size="20" fill="#FDE047">PDV Importados</text>
+  <text x="75" y="52" font-family="system-ui, Segoe UI, sans-serif" font-size="12" fill="#94A3B8">&#x26A1; Importa&#231;&#227;o com confian&#231;a</text>
+</svg>

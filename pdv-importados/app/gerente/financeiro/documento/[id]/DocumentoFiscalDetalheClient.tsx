@@ -62,75 +62,68 @@ export function DocumentoFiscalDetalheClient({ doc, eventos, voltarLabel, locale
   const podeReprocessar = doc.status === 'ERRO' || doc.status === 'PENDENTE'
 
   return (
-    <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
-      <Link href="/gerente/financeiro" style={{ fontSize: 14, color: '#2563eb' }}>
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <Link href="/gerente/financeiro" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {voltarLabel}
       </Link>
-      <h1 style={{ fontSize: 22, fontWeight: 600, marginTop: 16 }}>Documento fiscal</h1>
-      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
+      <h1 className="gerente-fin-page-title mt-4 text-2xl font-semibold tracking-tight">Documento fiscal</h1>
+      <p className="gerente-fin-muted mb-6 text-sm leading-relaxed">
         Timeline auditável (quem/o quê/quando conforme dados gravados no backend).
       </p>
 
-      <section
-        style={{
-          border: '1px solid #e5e7eb',
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 24,
-        }}
-      >
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+      <section className="dragon-glass-card mb-6 rounded-xl p-5">
+        <div className="flex flex-wrap items-center gap-3">
           <GerenteStatusBadge status={doc.status} />
-          <span style={{ fontSize: 14 }}>
+          <span className="gerente-fin-cell text-sm">
             <strong>Tipo:</strong> {doc.tipo_doc}
           </span>
         </div>
-        <dl style={{ marginTop: 12, fontSize: 14, display: 'grid', gap: 6 }}>
+        <dl className="mt-3 grid gap-2 text-sm">
           <div>
-            <dt style={{ color: '#6b7280', display: 'inline' }}>Venda </dt>
-            <dd style={{ display: 'inline', fontFamily: 'monospace' }}>{doc.venda_id}</dd>
+            <dt className="gerente-fin-muted inline">Venda </dt>
+            <dd className="inline font-mono text-xs">{doc.venda_id}</dd>
           </div>
           <div>
-            <dt style={{ color: '#6b7280', display: 'inline' }}>Tentativas </dt>
-            <dd style={{ display: 'inline' }}>{Number(doc.tentativas ?? 0)}</dd>
+            <dt className="gerente-fin-muted inline">Tentativas </dt>
+            <dd className="gerente-fin-cell inline">{Number(doc.tentativas ?? 0)}</dd>
           </div>
           {doc.proxima_tentativa_em ? (
             <div>
-              <dt style={{ color: '#6b7280', display: 'inline' }}>Próxima tentativa </dt>
-              <dd style={{ display: 'inline' }}>{doc.proxima_tentativa_em}</dd>
+              <dt className="gerente-fin-muted inline">Próxima tentativa </dt>
+              <dd className="gerente-fin-cell inline">{doc.proxima_tentativa_em}</dd>
             </div>
           ) : null}
           {doc.ultima_tentativa_em ? (
             <div>
-              <dt style={{ color: '#6b7280', display: 'inline' }}>Última tentativa </dt>
-              <dd style={{ display: 'inline' }}>{doc.ultima_tentativa_em}</dd>
+              <dt className="gerente-fin-muted inline">Última tentativa </dt>
+              <dd className="gerente-fin-cell inline">{doc.ultima_tentativa_em}</dd>
             </div>
           ) : null}
           {doc.ultimo_erro ? (
             <div>
-              <dt style={{ color: '#b91c1c', display: 'inline' }}>Erro atual </dt>
-              <dd style={{ display: 'inline', color: '#b91c1c' }}>{doc.ultimo_erro}</dd>
+              <dt className="inline text-red-600">Erro atual </dt>
+              <dd className="inline text-red-600">{doc.ultimo_erro}</dd>
             </div>
           ) : null}
           {doc.fiscal_error_code ? (
             <div>
-              <dt style={{ color: '#6b7280', display: 'inline' }}>Código fiscal </dt>
-              <dd style={{ display: 'inline' }}>{doc.fiscal_error_code}</dd>
+              <dt className="gerente-fin-muted inline">Código fiscal </dt>
+              <dd className="gerente-fin-cell inline">{doc.fiscal_error_code}</dd>
             </div>
           ) : null}
           {doc.chave_fiscal ? (
             <div>
-              <dt style={{ color: '#6b7280', display: 'inline' }}>Chave </dt>
-              <dd style={{ display: 'inline', fontFamily: 'monospace', fontSize: 12 }}>{doc.chave_fiscal}</dd>
+              <dt className="gerente-fin-muted inline">Chave </dt>
+              <dd className="inline font-mono text-xs">{doc.chave_fiscal}</dd>
             </div>
           ) : null}
           <div>
-            <dt style={{ color: '#6b7280', display: 'inline' }}>Criado em </dt>
-            <dd style={{ display: 'inline' }}>{doc.created_at}</dd>
+            <dt className="gerente-fin-muted inline">Criado em </dt>
+            <dd className="gerente-fin-cell inline">{doc.created_at}</dd>
           </div>
           <div>
-            <dt style={{ color: '#6b7280', display: 'inline' }}>Atualizado em </dt>
-            <dd style={{ display: 'inline' }}>{doc.updated_at}</dd>
+            <dt className="gerente-fin-muted inline">Atualizado em </dt>
+            <dd className="gerente-fin-cell inline">{doc.updated_at}</dd>
           </div>
         </dl>
         {podeReprocessar ? (
@@ -138,42 +131,33 @@ export function DocumentoFiscalDetalheClient({ doc, eventos, voltarLabel, locale
             type="button"
             disabled={loadReprocessar}
             onClick={() => void mutReprocessar(null)}
-            style={{
-              marginTop: 16,
-              padding: '8px 14px',
-              borderRadius: 8,
-              background: '#111827',
-              color: '#fff',
-              border: 'none',
-              cursor: loadReprocessar ? 'not-allowed' : 'pointer',
-              opacity: loadReprocessar ? 0.7 : 1,
-            }}
+            className="mt-4 inline-flex rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loadReprocessar ? 'Reprocessando...' : 'Reprocessar manualmente'}
           </button>
         ) : null}
       </section>
 
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Timeline</h2>
+      <section className="dragon-glass-card rounded-xl p-5">
+        <h2 className="gerente-section-accent mb-4 text-base font-semibold">Timeline</h2>
         {eventos.length === 0 ? (
-          <p style={{ color: '#6b7280', fontSize: 14 }}>Nenhum evento registrado (aplique a migration 066).</p>
+          <p className="gerente-fin-muted text-sm">Nenhum evento registrado (aplique a migration 066).</p>
         ) : (
-          <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <ol className="m-0 flex list-decimal flex-col gap-4 pl-5 text-sm">
             {eventos.map((e) => {
               const detalhes = linhasDescricaoPayloadGenerico(e.evento_tipo, e.payload, locale)
               return (
-                <li key={e.id} style={{ fontSize: 14 }}>
-                  <div style={{ fontWeight: 600 }}>{labelFiscalEventoTipo(e.evento_tipo)}</div>
-                  <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
+                <li key={e.id}>
+                  <div className="gerente-fin-cell font-semibold">{labelFiscalEventoTipo(e.evento_tipo)}</div>
+                  <div className="gerente-fin-muted mt-0.5 text-xs">
                     {e.created_at}
                     {e.status_antes || e.status_depois
                       ? ` · ${e.status_antes ?? '—'} → ${e.status_depois ?? '—'}`
                       : ''}
                   </div>
-                  <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>Origem: {e.origem_acao}</div>
+                  <div className="gerente-fin-muted mt-0.5 text-xs">Origem: {e.origem_acao}</div>
                   {detalhes.length > 0 ? (
-                    <ul style={{ margin: '8px 0 0', paddingLeft: 16, color: '#374151' }}>
+                    <ul className="gerente-fin-cell mt-2 list-disc space-y-1 pl-4 text-xs">
                       {detalhes.map((line, i) => (
                         <li key={i}>{line}</li>
                       ))}

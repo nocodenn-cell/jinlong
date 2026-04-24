@@ -10,9 +10,7 @@ export default async function GerenteRelatoriosPage() {
   return (
     <Suspense
       fallback={
-        <div style={{ padding: 24, maxWidth: '1100px', margin: '0 auto', color: '#6b7280' }}>
-          {m.comum.carregando}
-        </div>
+        <div className="gerente-fin-muted mx-auto max-w-[1100px] px-4 py-6 sm:px-6">{m.comum.carregando}</div>
       }
     >
       <RelatoriosGerentePageClient idioma={idioma} />

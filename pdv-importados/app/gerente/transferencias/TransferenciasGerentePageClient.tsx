@@ -48,26 +48,19 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
   const podeTransferir = lojas.length >= 2
 
   return (
-    <div style={{ padding: 24, maxWidth: 640, margin: '0 auto' }}>
-      <Link href="/gerente" style={{ fontSize: 14, color: '#2563eb' }}>
+    <div className="mx-auto max-w-xl px-4 py-6 sm:px-6">
+      <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginTop: 16 }}>Transferência entre lojas</h1>
-      <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 20 }}>
+      <h1 className="gerente-fin-page-title mt-4 text-2xl font-semibold tracking-tight">{m.gerente.nav_transferencias}</h1>
+      <p className="gerente-fin-muted mt-2 text-sm leading-relaxed">
         Saída na origem e entrada no destino, com log de movimento (gerente).
       </p>
 
       {!podeTransferir ? (
         <div
-          style={{
-            padding: 16,
-            borderRadius: 12,
-            border: '1px solid #fde68a',
-            background: '#fffbeb',
-            color: '#92400e',
-            fontSize: 14,
-            lineHeight: 1.5,
-          }}
+          className="mt-6 rounded-xl border border-amber-300/60 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950"
+          role="status"
         >
           <strong>Operação indisponível com uma loja.</strong> A transferência exige pelo menos duas lojas cadastradas e
           ativas. Com loja única, todo o estoque já está na mesma unidade; use ajustes de entrada/saída (recebimento ou
@@ -88,18 +81,11 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
               observacao: readFormDataString(fd, 'observacao'),
             })
           }}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            border: '1px solid #e5e7eb',
-            borderRadius: 12,
-            padding: 16,
-          }}
+          className="dragon-glass-card mt-6 flex flex-col gap-3 rounded-xl p-5"
         >
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>Loja origem</span>
-            <select name="origem" required style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}>
+          <label className="flex flex-col gap-1">
+            <span className="gerente-fin-label text-xs font-medium">Loja origem</span>
+            <select name="origem" required className="gerente-fin-input rounded-lg border px-3 py-2 text-sm">
               {lojas.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.nome} ({l.codigo})
@@ -107,9 +93,9 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
               ))}
             </select>
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>Loja destino</span>
-            <select name="destino" required style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}>
+          <label className="flex flex-col gap-1">
+            <span className="gerente-fin-label text-xs font-medium">Loja destino</span>
+            <select name="destino" required className="gerente-fin-input rounded-lg border px-3 py-2 text-sm">
               {lojas.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.nome} ({l.codigo})
@@ -117,9 +103,9 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
               ))}
             </select>
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>Produto</span>
-            <select name="produto_id" required style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}>
+          <label className="flex flex-col gap-1">
+            <span className="gerente-fin-label text-xs font-medium">Produto</span>
+            <select name="produto_id" required className="gerente-fin-input rounded-lg border px-3 py-2 text-sm">
               {produtos.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nome}
@@ -127,35 +113,25 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
               ))}
             </select>
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 13 }}>Quantidade</span>
+          <label className="flex flex-col gap-1">
+            <span className="gerente-fin-label text-xs font-medium">Quantidade</span>
             <input
               name="quantidade"
               type="number"
               min={0.001}
               step="0.001"
               required
-              style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db', maxWidth: 200 }}
+              className="gerente-fin-input max-w-[220px] rounded-lg border px-3 py-2 text-sm"
             />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 13 }}>Observação</span>
-            <input name="observacao" style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }} />
+          <label className="flex flex-col gap-1">
+            <span className="gerente-fin-label text-xs font-medium">Observação</span>
+            <input name="observacao" className="gerente-fin-input rounded-lg border px-3 py-2 text-sm" />
           </label>
           <button
             type="submit"
             disabled={loading}
-            style={{
-              marginTop: 8,
-              padding: '10px 16px',
-              borderRadius: 8,
-              border: 'none',
-              background: '#111827',
-              color: '#fff',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-            }}
+            className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:min-w-[160px]"
           >
             {loading ? 'Transferindo...' : 'Transferir'}
           </button>

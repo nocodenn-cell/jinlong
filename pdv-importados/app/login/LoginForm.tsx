@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/branding/Logo'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
-import { DragonIcon } from '@/components/icons/DragonIcon'
+import { DragonEmblemIcon } from '@/components/icons/DragonEmblemIcon'
 import type { Mensagens } from '@/i18n/getMessages'
 
 /** Evita open redirect: só `/gerente...` ou `/caixa...`. */
@@ -129,7 +129,7 @@ export function LoginForm({ messages: m }: Props) {
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <div className="w-full max-w-[380px] flex flex-col items-center">
         <div className="dragon-hero-mark mb-8 flex flex-col items-center">
-          <DragonIcon className="h-28 w-28 sm:h-32 sm:w-32 text-[#F59E0B]" />
+          <DragonEmblemIcon className="h-28 w-28 sm:h-32 sm:w-32" />
         </div>
 
         <div className="mb-8 text-center w-full">
