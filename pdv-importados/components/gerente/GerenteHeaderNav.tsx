@@ -24,7 +24,7 @@ export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
   const light = isGerenteLightChrome(theme)
 
   return (
-    <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium" aria-label={m.gerente.titulo_painel}>
+    <nav className="gerente-compact-nav flex flex-wrap gap-x-4 gap-y-1.5 text-[15px] font-medium" aria-label={m.gerente.titulo_painel}>
       {GERENTE_HEADER_NAV_ORDER.map((key) => {
         const href = painelGerencialHref(key)
         const ativo = linkAtivo(href, pathname)
@@ -33,11 +33,9 @@ export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
             key={key}
             href={href}
             className={cn(
-              'border-b-2 border-transparent pb-1 transition-colors',
-              light
-                ? 'text-slate-600 hover:text-amber-700'
-                : 'text-slate-300 hover:text-amber-400',
-              ativo && (light ? 'border-amber-600 text-amber-800' : 'border-amber-500 text-amber-400'),
+              'border-b-2 border-transparent pb-0.5 transition-colors',
+              light ? 'app-muted hover:app-accent-text' : 'app-muted hover:app-accent-text',
+              ativo && 'border-[color:var(--accent)] app-accent-text',
             )}
           >
             {gerenteNavLabel(m, key)}

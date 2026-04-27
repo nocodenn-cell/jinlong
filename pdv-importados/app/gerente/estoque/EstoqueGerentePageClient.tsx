@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { GerenteNavLink } from '@/components/gerente/GerenteNavLink'
@@ -155,8 +156,13 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
           >
             {data.linhas.length === 0 ? (
               <tr>
-                <td colSpan={6} className="gerente-fin-empty px-3 py-4 text-sm">
-                  {m.estoque.vazio_baixo}
+                <td colSpan={6} className="gerente-fin-empty px-3 py-5 text-sm">
+                  <div className="flex flex-col items-center gap-2">
+                    <span>{m.estoque.vazio_baixo}</span>
+                    <Link href="/gerente/produtos" className="rounded-lg px-3 py-1.5 text-xs font-semibold app-btn-accent">
+                      {m.gerente.nav_produtos}
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -193,8 +199,13 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
         >
           {data.produtos.length === 0 ? (
             <tr>
-              <td colSpan={5} className="gerente-fin-empty px-3 py-4 text-sm">
-                {m.estoque.vazio_geral}
+              <td colSpan={5} className="gerente-fin-empty px-3 py-5 text-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <span>{m.estoque.vazio_geral}</span>
+                  <Link href="/gerente/produtos" className="rounded-lg px-3 py-1.5 text-xs font-semibold app-btn-accent">
+                    {m.gerente.nav_produtos}
+                  </Link>
+                </div>
               </td>
             </tr>
           ) : (
@@ -228,7 +239,7 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
                             estoqueMinimo: e.estoque_minimo,
                           })
                         }
-                        className="rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-55"
+                        className="rounded-lg px-3 py-2 text-xs font-semibold shadow-sm transition-[filter] disabled:cursor-not-allowed disabled:opacity-55 app-btn-accent"
                       >
                         {m.estoque.col_ajuste}
                       </button>

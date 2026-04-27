@@ -13,7 +13,7 @@ type PropsSymbol = {
 
 type PropsWithSubtitle = {
   variant: 'full' | 'wordmark'
-  /** Linha secundária da marca (ex.: Dragon POS / 龙码收银) — veja `brand.logo_subtitle` nos JSON. */
+  /** Linha secundária da marca (ex.: Jīn Lóng / 金龍) — veja `brand.logo_subtitle` nos JSON. */
   logoSubtitle: string
   className?: string
   href?: string
@@ -23,7 +23,7 @@ type PropsWithSubtitle = {
 export type LogoProps = PropsSymbol | PropsWithSubtitle
 
 /**
- * Logomarca oficial Fastproduct + subtítulo de marca (i18n).
+ * Logomarca oficial Jīn Lóng + subtítulo de marca (i18n).
  * `full`: ícone + wordmark · `symbol`: só o dragão · `wordmark`: só texto.
  */
 export function Logo(props: LogoProps) {
@@ -33,11 +33,11 @@ export function Logo(props: LogoProps) {
 
   const wordmark = (
     <span className="flex flex-col items-center leading-none">
-      <span className="logo-wordmark-main text-2xl sm:text-3xl font-semibold tracking-tight text-slate-50">
-        Fastproduct
+      <span className="logo-wordmark-main text-2xl sm:text-3xl font-semibold tracking-tight">
+        Jīn Lóng
       </span>
       {logoSubtitle ? (
-        <span className="dragon-hero-subtitle logo-wordmark-subtitle mt-1 text-[11px] font-medium tracking-[0.12em] text-amber-400/95 sm:text-xs sm:tracking-[0.18em]">
+        <span className="dragon-hero-subtitle logo-wordmark-subtitle mt-1 text-[11px] font-medium tracking-[0.12em] sm:text-xs sm:tracking-[0.18em]">
           {logoSubtitle}
         </span>
       ) : null}
@@ -72,7 +72,7 @@ export function Logo(props: LogoProps) {
           'inline-flex rounded-lg outline-none ring-offset-2 ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-amber-400/70',
           className,
         )}
-        aria-label={ariaLabel ?? 'Fastproduct — início'}
+        aria-label={ariaLabel ?? 'Jīn Lóng — início'}
       >
         {mark}
       </Link>

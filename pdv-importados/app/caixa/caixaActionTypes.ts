@@ -1,6 +1,8 @@
 import type { RegraPreco } from '@/core/pricing/types'
 import type { PricingContext } from '@/core/pricing/types'
 
+export type OrigemProdutoCaixa = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
+
 export type ProdutoCaixaDTO = {
   id: string
   nome: string
@@ -8,9 +10,24 @@ export type ProdutoCaixaDTO = {
   preco_varejo: number
   preco_atacado: number | null
   categoria_id: string | null
+  origem: OrigemProdutoCaixa
+  tem_nf: boolean
+  observacao: string | null
   /** Estoque atual (se houver linha em `estoque`) */
   quantidade_estoque: number | null
+  /** Mínimo cadastrado na mesma loja, quando houver linha de estoque */
+  estoque_minimo: number | null
 }
+
+export type CategoriaAtalhoDTO = { id: string; nome: string }
+
+export type ListarCategoriasCaixaResult =
+  | { ok: true; categorias: CategoriaAtalhoDTO[] }
+  | { ok: false; error: string }
+
+export type CotacaoUsdBrlResult =
+  | { ok: true; brlPorUsd: number; fonte: 'api' | 'fallback'; dataReferencia: string }
+  | { ok: false }
 
 export type CarregarRegrasResult =
   | { ok: true; regras: RegraPreco[]; pricingContext: PricingContext }

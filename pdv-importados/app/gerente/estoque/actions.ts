@@ -127,6 +127,22 @@ export type EstoqueGerenteData =
   | { modo: 'todos'; produtos: ProdutoComEstoqueDTO[] }
   | { modo: 'baixo'; linhas: EstoqueBaixoRowDTO[] }
 
+function deficitPercentualBaixo(row: EstoqueBaixoRowDTO): number {
+  const min = Math.max(Number(row.estoque_minimo), 1e-9)
+  const def = Math.max(Number(row.deficit), 0)
+  return def / min
+}
+
+function riscoPercentualTodos(p: ProdutoComEstoqueDTO): number {
+  const e = p.estoque
+  if (!e) return 0
+  const q = Number(e.quantidade_atual)
+  const min = Number(e.estoque_minimo)
+  if (q > min) return 0
+  const denom = Math.max(min, 1e-9)
+  return (min - q) / denom
+}
+
 /** Carga da tela de estoque (RLS + sessão do usuário). */
 export async function obterDadosEstoqueGerente(filtro: 'todos' | 'baixo'): Promise<EstoqueGerenteData> {
   const supabase = await createClient()
@@ -150,7 +166,14 @@ export async function obterDadosEstoqueGerente(filtro: 'todos' | 'baixo'): Promi
         'id, nome, codigo_barras, origem, loja_id, loja_nome, quantidade_atual, estoque_minimo, deficit',
       )
       .eq('loja_id', lojaId)
-    return { modo: 'baixo', linhas: (data ?? []) as EstoqueBaixoRowDTO[] }
+    const linhas = (data ?? []) as EstoqueBaixoRowDTO[]
+    linhas.sort((a, b) => {
+      const pa = deficitPercentualBaixo(a)
+      const pb = deficitPercentualBaixo(b)
+      if (pb !== pa) return pb - pa
+      return Number(b.deficit) - Number(a.deficit)
+    })
+    return { modo: 'baixo', linhas }
   }
 
   const { data: plist } = await supabase
@@ -179,6 +202,13 @@ export async function obterDadosEstoqueGerente(filtro: 'todos' | 'baixo'): Promi
           : null,
       }
     }) ?? []
+
+  produtos.sort((a, b) => {
+    const ra = riscoPercentualTodos(a)
+    const rb = riscoPercentualTodos(b)
+    if (rb !== ra) return rb - ra
+    return a.nome.localeCompare(b.nome, undefined, { sensitivity: 'base' })
+  })
 
   return { modo: 'todos', produtos }
 }

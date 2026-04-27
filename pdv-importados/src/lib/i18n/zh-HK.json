@@ -115,8 +115,20 @@
     "nav_recebimento": "\u6536\u8ca8",
     "nav_financeiro": "\u8ca1\u52d9",
     "nav_transferencias": "\u8abf\u64a5",
+    "nav_produtos": "\u5546\u54c1",
 
     "bem_vindo_resumo": "今日概覽與快捷入口。",
+    "status_caixa_label": "收銀狀態",
+    "caixa_nao_aberto": "收銀未開啟",
+    "operador_label": "操作員",
+    "valor_atual_caixa": "當前現金",
+    "ticket_medio": "客單價",
+    "meta_dia": "今日目標",
+    "vs_dia_anterior": "較昨日",
+    "pagamento_dinheiro": "現金",
+    "pagamento_pix": "PIX",
+    "pagamento_cartao": "銀行卡",
+    "sem_pagamentos_hoje": "今日暫無已完成支付",
     "atalhos_modulos": "模組",
     "vendas_recentes_link": "查看最近銷售",
     "nenhuma_venda": "暫無銷售紀錄。",
@@ -223,12 +235,28 @@
       "toast_liquidar_ok": "核銷已登記。",
       "toast_enfileirar_ok": "稅務單據已入隊。",
       "toast_reprocessar_ok": "單據已標記為重新處理。",
-      "toast_fila_ok": "隊列已處理：成功 {{emitidos}}，失敗 {{falhas}}。"
+      "toast_fila_ok": "隊列已處理：成功 {{emitidos}}，失敗 {{falhas}}。",
+      "kpi_titulos_abertos": "未結應收",
+      "kpi_fila_pendente": "待處理單據",
+      "kpi_erros_fiscais": "稅務錯誤",
+      "kpi_valor_aberto_total": "未結金額合計"
     },
     "dragon_badge_fila_fiscal": "稅務隊列",
     "theme_escuro": "夜間",
-    "theme_claro": "淺色",
-    "theme_toggle_aria": "切換面板淺色或夜間主題",
+    "theme_claro": "雲",
+    "theme_toggle_aria": "切換面板雲主題或夜間主題",
+    "table_density_compact": "緊湊",
+    "table_density_comfort": "舒適",
+    "table_density_aria": "表格密度",
+    "badge_dono": "店主身份",
+    "badge_admin": "管理員身份",
+    "badge_gerente": "經理身份",
+    "secao_dono_titulo": "店主專區",
+    "secao_dono_subtitulo": "用於策略決策與全域管理視圖的快捷入口。",
+    "secao_dono_admin_titulo": "管理看板",
+    "secao_dono_admin_desc": "查看彙總指標與營運全景。",
+    "secao_dono_fin_titulo": "營運財務",
+    "secao_dono_fin_desc": "追蹤稅務隊列、應收賬款與關鍵待辦。",
     "recebimento_page": {
       "titulo": "收貨與到貨",
       "badge": "無發票入庫",
@@ -242,6 +270,10 @@
       "label_qtd_esperada": "預期數量",
       "label_qtd_conferida": "實收數量",
       "divergencia_alerta": "實收與預期不一致。入庫規則由後台處理；請在確認後核對庫存。",
+      "divergencia_calculo": "{{esperada}} − {{conferida}} = {{delta}}",
+      "divergencia_moderada": "中度差異",
+      "divergencia_grave": "高度差異",
+      "divergencia_legenda_pct": "約佔預期 {{pct}}%",
       "btn_confirmar": "確認入庫",
       "btn_confirmando": "正在確認…",
       "toast_ok": "到貨單 {{id}} 已確認，庫存已更新。",
@@ -255,6 +287,24 @@
       "col_origem": "來源",
       "col_data": "日期",
       "empty_recentes": "尚無到貨紀錄。"
+    },
+    "transferencias_page": {
+      "intro": "由來源店扣減並入庫到目標店（經理操作日誌）。",
+      "bloqueio_origem_destino": "來源與目標不可為同一門店。",
+      "estoque_disponivel": "來源店可用庫存",
+      "estoque_carregando": "正在載入庫存…",
+      "estoque_insuficiente": "數量超過來源店可用庫存。",
+      "resumo_titulo": "確認前摘要",
+      "resumo_origem": "來源",
+      "resumo_destino": "目標",
+      "resumo_produto": "商品",
+      "resumo_quantidade": "數量",
+      "resumo_obs": "備註",
+      "resumo_nenhuma_obs": "—",
+      "btn_transferir": "調撥",
+      "btn_transferindo": "調撥中…",
+      "uma_loja_aviso_titulo": "僅有一家門店時無法調撥。",
+      "uma_loja_aviso_texto": "調撥至少需要兩家活躍門店。單店時請在收貨或庫存調整流程中處理。"
     }
   },
   "estoque": {
@@ -293,7 +343,9 @@
     "regras_catalogo": "Supabase 目錄 · 規則表",
     "regras_carregando": "載入規則中…",
     "tech_finalizar_hint": "結帳使用交易 RPC（遷移 020）與安全庫存扣減（016/017）。桌面經 outbox 同步。詳見營運文件。",
-    "busca_placeholder": "條碼或商品名稱…",
+    "busca_placeholder": "條碼、名稱或分類…",
+    "busca_dica": "Enter 加入。若名稱未命中，亦會按已登記分類搜尋。",
+    "atalhos_categoria": "快捷（填入欄位後 Enter）",
     "adicionar_enter": "新增（Enter）",
     "buscando": "搜尋中…",
     "novo_cupom": "新單",
@@ -310,6 +362,23 @@
     "produto_nao_encontrado": "找不到商品（條碼或名稱）。",
     "item_adicionado": "已加入。",
     "estoque_baixo": "注意：庫存偏低或為零。",
+    "estoque_abaixo_minimo": "注意：庫存已達或低於最低線。",
+    "estoque_dica_rep": "進口補貨通常要數週，請提早安排。",
+    "origem_china_manual": "中國（人手）",
+    "origem_brasil_nf": "巴西（有發票）",
+    "origem_brasil_sem_nf": "巴西（無發票）",
+    "badge_nf": "有發票",
+    "badge_sem_nf": "無發票",
+    "obs_titulo": "備註",
+    "estoque_resumo": "庫存：{{atual}} · 最低 {{min}}",
+    "estoque_resumo_sem_min": "庫存：{{atual}}",
+    "alerta_estoque_min": "低於最低線",
+    "alerta_rep_import": "進口補貨請預留交期。",
+    "cambio_carregando": "美元匯率…",
+    "cambio_usd": "USD 1 ≈ R$ {{valor}} · {{data}}",
+    "cambio_usd_fallback": "USD 1 ≈ R$ {{valor}} · 內部參考（{{data}}）",
+    "cambio_usd_indisponivel": "美元匯率不可用（可於伺服器設定 CAMBIO_USD_BRL_FALLBACK）。",
+    "leadtime_banner": "進口典型交期：30–60 日。",
     "falha_busca": "搜尋失敗，請檢查網絡。",
     "regras_erro_prefixo": "價格規則：",
     "validar_gerente": "經理折扣",
@@ -429,7 +498,7 @@
   },
   "admin": {
     "header": {
-      "brand": { "cn": "进口系统", "pt": "PDV Importados" },
+      "brand": { "cn": "金龍", "pt": "Jīn Lóng" },
       "tagline": { "cn": "管理层 · 销售 · 库存 · 财务", "pt": "Painel administrativo" }
     },
     "nav": {
@@ -509,7 +578,7 @@
     }
   },
   "brand": {
-    "logo_subtitle": "龍碼收銀"
+    "logo_subtitle": "金龍"
   },
   "login": {
     "subtitulo": "請登入以繼續",
@@ -520,7 +589,7 @@
     "entrando": "登入中…",
     "sessao_inatividade": "閒置過久，工作階段已結束，請重新登入。",
     "carregando_pagina": "載入中…",
-    "nav_marca": "Fastproduct — Dragon POS"
+    "nav_marca": "Jīn Lóng — 金龍"
   },
   "comum": {
     "salvar": "儲存",

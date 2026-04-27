@@ -1,4 +1,4 @@
-# PDV Importados — Contexto do Projeto
+# Jīn Lóng — Contexto do Projeto
 
 > Sistema de ponto de venda para lojas de importados, lojas chinesas e atacarejos no Brasil.
 > Desenvolvido em 2026 com Next.js 15, Supabase e shadcn/ui.

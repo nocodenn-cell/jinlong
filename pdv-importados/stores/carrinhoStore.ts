@@ -94,7 +94,11 @@ export const useCarrinhoStore = create<CarrinhoState>()(
           // Incrementa quantidade do item existente
           novosItens = itens.map((i) =>
             i.produtoId === novoItem.produtoId
-              ? { ...i, quantidade: i.quantidade + novoItem.quantidade }
+              ? {
+                  ...i,
+                  quantidade: i.quantidade + novoItem.quantidade,
+                  metaPdv: novoItem.metaPdv ?? i.metaPdv,
+                }
               : i
           )
         } else {

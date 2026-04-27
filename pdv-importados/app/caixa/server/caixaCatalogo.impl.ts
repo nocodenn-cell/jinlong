@@ -4,12 +4,16 @@ import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT } from '@/core/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
-import type { BuscarProdutoResult, CarregarRegrasResult } from '@/app/caixa/caixaActionTypes'
+import type {
+  BuscarProdutoResult,
+  CarregarRegrasResult,
+  ListarCategoriasCaixaResult,
+} from '@/app/caixa/caixaActionTypes'
 import {
+  estoqueResumoParaCaixa,
   fetchPdvConfigParaCaixaWeb,
   mapProdutoRow,
   PRODUTO_COLS,
-  quantidadeEstoque,
   sanitizeIlikeFragment,
 } from '@/app/caixa/server/caixaActionsInternals'
 
@@ -89,11 +93,11 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
           }
         }
         const row = listaCod[0]
-        const q = await quantidadeEstoque(supabase, row.id, lojaId)
+        const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
         return {
           ok: true,
           status: 'encontrado',
-          produto: mapProdutoRow(row, q),
+          produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
         }
       }
     }
@@ -111,27 +115,73 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       .limit(3)
 
     if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message) }
-    const lista = porNome ?? []
+    let lista = porNome ?? []
+
+    if (lista.length === 0) {
+      const { data: cats, error: errCat } = await supabase
+        .from('categorias')
+        .select('id')
+        .ilike('nome', `%${frag}%`)
+        .limit(25)
+      if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message) }
+      const catIds = (cats ?? []).map((c) => c.id)
+      if (catIds.length > 0) {
+        const { data: porCat, error: errPorCat } = await supabase
+          .from('produtos')
+          .select(PRODUTO_COLS)
+          .eq('ativo', true)
+          .in('categoria_id', catIds)
+          .limit(3)
+        if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message) }
+        lista = porCat ?? []
+      }
+    }
+
     if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
     if (lista.length > 1) {
       return {
         ok: true,
         status: 'ambiguo',
-        mensagem: `Vários produtos batem com “${frag}”. Use o código de barras ou refine o nome.`,
+        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Use o código de barras ou refine a busca.`,
       }
     }
 
     const row = lista[0]
-    const q = await quantidadeEstoque(supabase, row.id, lojaId)
+    const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
     return {
       ok: true,
       status: 'encontrado',
-      produto: mapProdutoRow(row, q),
+      produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
     }
   } catch (e) {
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.'),
+    }
+  }
+}
+
+export async function listarCategoriasAtalhoCaixaImpl(): Promise<ListarCategoriasCaixaResult> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('id, nome')
+      .order('nome', { ascending: true })
+      .limit(14)
+
+    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
+    const categorias = (data ?? []).map((r) => ({ id: r.id, nome: r.nome }))
+    return { ok: true, categorias }
+  } catch (e) {
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível carregar categorias.'),
     }
   }
 }

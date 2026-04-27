@@ -149,7 +149,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
             value={de}
             onChange={(e) => setDe(e.target.value)}
             required
-            className="gerente-fin-input rounded-lg border px-2.5 py-2 text-sm"
+            className="rounded-lg px-2.5 py-2 text-sm app-input"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -159,12 +159,12 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
             value={ate}
             onChange={(e) => setAte(e.target.value)}
             required
-            className="gerente-fin-input rounded-lg border px-2.5 py-2 text-sm"
+            className="rounded-lg px-2.5 py-2 text-sm app-input"
           />
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-[filter] hover:from-emerald-500 hover:to-emerald-700"
+          className="rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-[filter] app-btn-accent"
         >
           {m.relatorios.aplicar_periodo}
         </button>
@@ -176,7 +176,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
             router.push('/gerente/relatorios')
             refetch().catch(() => undefined)
           }}
-          className="gerente-fin-muted pb-2 text-sm hover:text-amber-700"
+          className="gerente-fin-muted pb-2 text-sm app-link-accent"
         >
           {m.relatorios.limpar_periodo}
         </button>
@@ -191,13 +191,13 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
       {loading && !data ? <p className="gerente-fin-muted text-sm">{m.comum.carregando}</p> : null}
 
       {avisoTexto ? (
-        <div className="gerente-alert-warn mb-3 rounded-lg px-3 py-2.5 text-sm leading-relaxed" role="status">
+        <div className="mb-3 rounded-lg border px-3 py-2.5 text-sm leading-relaxed app-badge-warn" role="status">
           {avisoTexto}
         </div>
       ) : null}
 
       {data?.rpcErro ? (
-        <div className="gerente-alert-error mb-4 rounded-lg p-3 text-sm leading-relaxed" role="alert">
+        <div className="mb-4 rounded-lg border p-3 text-sm leading-relaxed app-badge-danger" role="alert">
           {m.relatorios.rpc_indisponivel}
           {data.rpcErroAmigavel ? (
             <p className="gerente-fin-cell mt-2 font-medium">{data.rpcErroAmigavel}</p>
@@ -271,7 +271,23 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 {data.porDia.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="gerente-fin-empty px-4 py-6 text-center text-sm">
-                      {m.gerente.nenhuma_venda}
+                      <div className="flex flex-col items-center gap-2">
+                        <span>{m.gerente.nenhuma_venda}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const hoje = new Date()
+                            const de30 = new Date(hoje)
+                            de30.setDate(hoje.getDate() - 30)
+                            const fmt = (d: Date) => d.toISOString().slice(0, 10)
+                            setDe(fmt(de30))
+                            setAte(fmt(hoje))
+                          }}
+                          className="rounded-lg px-3 py-1.5 text-xs font-semibold app-btn-accent"
+                        >
+                          {m.relatorios.aplicar_periodo}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ) : (

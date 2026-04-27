@@ -24,11 +24,11 @@ export function GerenteNavLink({ href, active, children }: GerenteNavLinkProps) 
         'rounded-lg border px-3 py-1.5 text-sm font-medium no-underline transition-colors',
         light
           ? active
-            ? 'border-amber-400/70 bg-amber-50 text-amber-950'
-            : 'border-slate-200 bg-white text-slate-800 hover:border-amber-300/60 hover:bg-amber-50/50'
+            ? 'app-border app-accent-text app-surface-soft'
+            : 'app-border app-surface app-surface-text hover:app-accent-text'
           : active
-            ? 'border-amber-500/45 bg-amber-500/15 text-amber-100'
-            : 'border-slate-600/60 bg-slate-900/45 text-slate-200 hover:border-amber-500/35 hover:text-amber-200',
+            ? 'app-border app-accent-text app-surface-soft'
+            : 'app-border app-surface app-surface-text hover:app-accent-text',
       )}
     >
       {children}

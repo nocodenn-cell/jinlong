@@ -10,6 +10,7 @@ import {
   fecharCaixaOperador,
   validarGerenteDesconto,
   obterLimiteSangriaSemGerente,
+  listarCategoriasAtalhoCaixa,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { DEFAULT_PRICING_CONTEXT } from "@/core/pricing"
@@ -23,6 +24,7 @@ import { useCaixaStatusMovimentacoes } from "@/app/caixa/hooks/useCaixaStatusMov
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
+import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaFooter } from "@/app/caixa/CaixaFooter"
 import {
@@ -82,6 +84,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     useState<number>(0)
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
+  const [categoriasAtalho, setCategoriasAtalho] = useState<{ id: string; nome: string }[]>([])
 
   const {
     caixaStatus,
@@ -177,6 +180,20 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   }, [])
 
   useEffect(() => {
+    let cancelado = false
+    ;(async () => {
+      const res = await listarCategoriasAtalhoCaixa()
+      if (cancelado) return
+      if (res.ok) {
+        setCategoriasAtalho(res.categorias)
+      }
+    })()
+    return () => {
+      cancelado = true
+    }
+  }, [])
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey && e.shiftKey)) return
       if (e.repeat) return
@@ -223,10 +240,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         }
 
         const p = res.produto
-        const avisoEstoque =
-          p.quantidade_estoque !== null && p.quantidade_estoque < 1
-            ? m.caixa.estoque_baixo
-            : ""
+        const q = p.quantidade_estoque
+        const min = p.estoque_minimo
+        let avisoEstoqueMsg: string | null = null
+        if (q !== null && q < 1) {
+          avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_baixo}`
+        } else if (q !== null && min !== null && q <= min) {
+          avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_abaixo_minimo} ${m.caixa.estoque_dica_rep}`
+        }
 
         adicionarItem({
           id: `${p.id}-${Date.now()}`,
@@ -236,11 +257,18 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           precoVariejo: p.preco_varejo,
           precoAtacado: p.preco_atacado,
           categoriaId: p.categoria_id ?? undefined,
+          metaPdv: {
+            origem: p.origem,
+            tem_nf: p.tem_nf,
+            observacao: p.observacao,
+            estoque_atual: p.quantidade_estoque,
+            estoque_minimo: p.estoque_minimo,
+          },
         })
 
         setCodigo("")
-        if (avisoEstoque) {
-          setCaixaMensagem(`${m.caixa.item_adicionado} ${avisoEstoque}`)
+        if (avisoEstoqueMsg) {
+          setCaixaMensagem(avisoEstoqueMsg)
         } else {
           setCaixaMensagem(null)
         }
@@ -577,7 +605,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   return (
     <>
-      <div className="min-h-[100dvh] caixa-oriental-root text-slate-50 flex flex-col">
+      <div className="min-h-[100dvh] caixa-oriental-root flex flex-col">
         <CaixaHeader
           m={m}
           idioma={idioma}
@@ -588,7 +616,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           onFecharCaixa={() => void handleFecharCaixa()}
         />
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2 space-y-2">
+          <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2 space-y-3">
+            <CaixaOperadorContextBar m={m} idioma={idioma} />
             <CaixaSearchBar
               ref={buscaInputRef}
               m={m}
@@ -598,10 +627,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
               onNovoCupom={handleNovoCupom}
               buscando={buscando}
               carregandoRegras={carregandoRegras}
+              categoriasAtalho={categoriasAtalho}
             />
             <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
           </div>
-          <section className="flex-1 min-h-0 flex flex-col mx-4 sm:mx-6 rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden mb-2">
+          <section className="flex-1 min-h-0 flex flex-col mx-4 sm:mx-6 rounded-lg border overflow-hidden mb-2 app-surface app-border">
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
               <CaixaCartList
                 m={m}

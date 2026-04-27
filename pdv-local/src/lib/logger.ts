@@ -1,10 +1,7 @@
 /**
- * Logger simples para observabilidade no desktop (Tauri).
- * Registra erros e eventos importantes no console e em arquivo.
+ * Logger simples para observabilidade no desktop.
+ * Mantém buffer em memória e persiste snapshot em localStorage quando disponível.
  */
-
-import { writeTextFile, readTextFile, exists } from '@tauri-apps/api/fs'
-import { appDataDir } from '@tauri-apps/api/path'
 
 export interface LogEntry {
   level: 'info' | 'warn' | 'error'
@@ -16,26 +13,16 @@ export interface LogEntry {
 class Logger {
   private logs: LogEntry[] = []
   private maxLogs = 1000
-  private logFile = 'app.log'
-  private initialized = false
-
-  private async ensureLogFile() {
-    if (this.initialized) return
-    try {
-      const appData = await appDataDir()
-      this.logFile = `${appData}fastproduct\\logs\\app.log`
-      // Ensure directory exists, but for simplicity, assume it does or create manually
-      this.initialized = true
-    } catch (e) {
-      console.warn('Failed to initialize log file path', e)
-    }
-  }
+  private storageKey = 'pdv_local_logs'
 
   private async persistLog(entry: LogEntry) {
     try {
-      await this.ensureLogFile()
-      const logLine = JSON.stringify(entry) + '\n'
-      await writeTextFile(this.logFile, logLine, { append: true })
+      if (typeof window === 'undefined') return
+      const previous = window.localStorage.getItem(this.storageKey)
+      const parsed = previous ? (JSON.parse(previous) as LogEntry[]) : []
+      parsed.push(entry)
+      const bounded = parsed.slice(-this.maxLogs)
+      window.localStorage.setItem(this.storageKey, JSON.stringify(bounded))
     } catch (e) {
       console.warn('Failed to persist log', e)
     }
@@ -93,11 +80,11 @@ class Logger {
 
   async getLogFileContent(): Promise<string> {
     try {
-      await this.ensureLogFile()
-      if (await exists(this.logFile)) {
-        return await readTextFile(this.logFile)
-      }
-      return ''
+      if (typeof window === 'undefined') return ''
+      const value = window.localStorage.getItem(this.storageKey)
+      if (!value) return ''
+      const logs = JSON.parse(value) as LogEntry[]
+      return logs.map((log) => JSON.stringify(log)).join('\n')
     } catch (e) {
       console.warn('Failed to read log file', e)
       return ''

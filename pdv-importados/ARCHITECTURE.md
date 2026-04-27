@@ -1,4 +1,4 @@
-# Arquitetura — PDV Importados
+# Arquitetura — Jīn Lóng
 
 ## Camadas
 

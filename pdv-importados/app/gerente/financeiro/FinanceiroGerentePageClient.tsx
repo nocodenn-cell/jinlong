@@ -13,6 +13,7 @@ import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
+import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { cn } from '@/lib/utils'
 import {
   criarCliente,
@@ -82,7 +83,7 @@ function FinCard({
 }: Readonly<{ title: string; description?: string; children: ReactNode }>) {
   return (
     <section className="dragon-glass-card flex flex-col rounded-xl p-5">
-      <h2 className="text-base font-semibold tracking-wide text-amber-400">{title}</h2>
+      <h2 className="text-base font-semibold tracking-wide app-accent-text">{title}</h2>
       {description ? <p className="gerente-fin-muted mt-1 text-xs leading-relaxed">{description}</p> : null}
       <div className="mt-4 flex flex-col gap-3">{children}</div>
     </section>
@@ -90,10 +91,12 @@ function FinCard({
 }
 
 const inputClass =
-  'gerente-fin-input w-full rounded-lg border px-3 py-2 text-sm shadow-inner disabled:cursor-not-allowed disabled:opacity-60'
+  'w-full rounded-lg px-3 py-2 text-sm shadow-inner app-input disabled:cursor-not-allowed disabled:opacity-60'
+const selectClass =
+  'w-full rounded-lg px-3 py-2 text-sm shadow-inner app-select disabled:cursor-not-allowed disabled:opacity-60'
 
 const jadeBtnBase =
-  'inline-flex w-full min-h-[42px] items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-[filter,box-shadow] hover:from-emerald-500 hover:to-emerald-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px]'
+  'inline-flex w-full min-h-[42px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-md transition-[filter,box-shadow] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px] app-btn-accent'
 
 function JadeSubmitButton({
   loading,
@@ -108,7 +111,7 @@ function JadeSubmitButton({
 }>) {
   return (
     <button type="submit" disabled={disabled || loading} className={cn(jadeBtnBase, className)}>
-      {loading ? <DragonOuroLoader iconClassName="h-4 w-4 text-emerald-100" /> : null}
+      {loading ? <DragonOuroLoader iconClassName="h-4 w-4 app-surface-text" /> : null}
       <span>{children}</span>
     </button>
   )
@@ -136,7 +139,7 @@ function JadeActionButton({
       onClick={onClick}
       className={cn(jadeBtnBase, className)}
     >
-      {loading ? <DragonOuroLoader iconClassName="h-4 w-4 text-emerald-100" /> : null}
+      {loading ? <DragonOuroLoader iconClassName="h-4 w-4 app-surface-text" /> : null}
       <span>{children}</span>
     </button>
   )
@@ -224,6 +227,14 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
     { successMessage: f.toast_reprocessar_ok },
   )
 
+  const kpis = useMemo(() => {
+    const titulosAbertosCount = titulos.filter((t) => Number(t.valor_aberto) > 1e-6).length
+    const valorAbertoTotal = titulos.reduce((s, t) => s + Number(t.valor_aberto ?? 0), 0)
+    const filaPendenteCount = docsFiscais.filter((d) => String(d.status).toUpperCase() === 'PENDENTE').length
+    const errosFiscaisCount = docsFiscais.filter((d) => String(d.status).toUpperCase() === 'ERRO').length
+    return { titulosAbertosCount, valorAbertoTotal, filaPendenteCount, errosFiscaisCount }
+  }, [titulos, docsFiscais])
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium transition-colors hover:underline">
@@ -240,10 +251,28 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
         <p className="gerente-fin-muted mt-3 max-w-3xl text-sm leading-relaxed">{f.subtitulo}</p>
       </header>
 
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="dragon-glass-card rounded-xl border p-4 app-border">
+          <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.kpi_titulos_abertos}</div>
+          <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.titulosAbertosCount}</div>
+          <div className="mt-1 text-xs app-muted">
+            {f.kpi_valor_aberto_total}: {fmtGerenteBRL(kpis.valorAbertoTotal, locale)}
+          </div>
+        </div>
+        <div className="dragon-glass-card rounded-xl border p-4 app-border">
+          <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.kpi_fila_pendente}</div>
+          <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.filaPendenteCount}</div>
+        </div>
+        <div className="dragon-glass-card rounded-xl border p-4 app-border">
+          <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.kpi_erros_fiscais}</div>
+          <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.errosFiscaisCount}</div>
+        </div>
+      </div>
+
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <FinCard title={f.sec_cliente}>
           <form
-            className="flex flex-col gap-3"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
@@ -263,7 +292,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
             <FinField id="fin-tel" label={f.label_telefone}>
               <input id="fin-tel" name="telefone" placeholder={f.ph_telefone} className={inputClass} />
             </FinField>
-            <JadeSubmitButton loading={loadCliente}>
+            <JadeSubmitButton loading={loadCliente} className="sm:col-span-2 sm:justify-self-end">
               {loadCliente ? f.btn_salvando : f.btn_salvar_cliente}
             </JadeSubmitButton>
           </form>
@@ -274,7 +303,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
           description={semClientes ? f.sem_clientes_titulo : undefined}
         >
           <form
-            className="flex flex-col gap-3"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
@@ -292,7 +321,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                 name="cliente_id"
                 required
                 disabled={semClientes}
-                className={`${inputClass} disabled:cursor-not-allowed`}
+                className={selectClass}
               >
                 {clientes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -319,7 +348,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
             <FinField id="fin-ven" label={f.label_vencimento}>
               <input id="fin-ven" name="vencimento" type="date" className={inputClass} />
             </FinField>
-            <JadeSubmitButton loading={loadTitulo} disabled={semClientes}>
+            <JadeSubmitButton loading={loadTitulo} disabled={semClientes} className="sm:col-span-2 sm:justify-self-end">
               {loadTitulo ? f.btn_criando : f.btn_criar_titulo}
             </JadeSubmitButton>
           </form>
@@ -330,7 +359,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
             {f.btn_processar_fila}
           </JadeActionButton>
           <form
-            className="gerente-fin-divider flex flex-col gap-3 border-t pt-4"
+            className="gerente-fin-divider grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault()
               const fd = new FormData(e.currentTarget)
@@ -340,7 +369,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
             <FinField id="fin-venda" label={f.label_venda_id}>
               <input id="fin-venda" name="venda_id" required placeholder={f.ph_venda_uuid} className={inputClass} />
             </FinField>
-            <JadeSubmitButton loading={loadEnfileirar}>
+            <JadeSubmitButton loading={loadEnfileirar} className="sm:justify-self-end sm:self-end">
               {loadEnfileirar ? f.btn_enfileirando : f.btn_enfileirar}
             </JadeSubmitButton>
           </form>
@@ -348,7 +377,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
       </div>
 
       <section className="dragon-glass-card mt-10 rounded-xl p-5">
-        <h2 className="text-lg font-semibold text-amber-400">{f.sec_titulos_aberto}</h2>
+        <h2 className="text-lg font-semibold app-accent-text">{f.sec_titulos_aberto}</h2>
         <div className="mt-4 overflow-x-auto">
           <GerenteTable
             tone="dragon"
@@ -397,7 +426,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                         placeholder={f.liq_placeholder_valor}
                         className={`${inputClass} sm:max-w-[120px]`}
                       />
-                      <select name="forma" className={`${inputClass} sm:max-w-[200px]`}>
+                      <select name="forma" className={`${selectClass} sm:max-w-[200px]`}>
                         <option value="DINHEIRO">DINHEIRO</option>
                         <option value="PIX">PIX</option>
                         <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
@@ -407,7 +436,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                       <button
                         type="submit"
                         disabled={loadLiquidar}
-                        className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg border border-emerald-600/50 bg-emerald-900/30 px-3 py-2 text-xs font-semibold text-emerald-100 shadow-sm hover:bg-emerald-800/40 disabled:opacity-55"
+                        className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
                       >
                         {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
                         {loadLiquidar ? f.liq_loading : f.liq_ok}
@@ -422,7 +451,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
       </section>
 
       <section className="dragon-glass-card mt-6 rounded-xl p-5">
-        <h2 className="text-lg font-semibold text-amber-400">{f.sec_docs}</h2>
+        <h2 className="text-lg font-semibold app-accent-text">{f.sec_docs}</h2>
         <div className="mt-4 overflow-x-auto">
           <GerenteTable
             tone="dragon"
@@ -451,7 +480,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                   <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{String(d.venda_id).slice(0, 8)}…</td>
                   <td className="gerente-fin-cell px-3 py-3">{d.tipo_doc}</td>
                   <td className="gerente-fin-cell px-3 py-3 tabular-nums">{Number(d.tentativas ?? 0)}</td>
-                  <td className="max-w-[200px] truncate px-3 py-3 text-sm text-red-300" title={d.ultimo_erro ?? ''}>
+                  <td className="max-w-[200px] truncate px-3 py-3 text-sm app-badge-danger" title={d.ultimo_erro ?? ''}>
                     {d.ultimo_erro ?? f.dash}
                   </td>
                   <td className="px-3 py-3">
@@ -464,15 +493,16 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                   </td>
                   <td className="px-3 py-3">
                     {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
-                      <button
+                      <ConfirmActionButton
                         type="button"
                         disabled={loadReprocessar}
+                        confirmMessage={`Confirma reprocessar o documento ${String(d.id).slice(0, 8)}…? O item voltará para a fila fiscal.`}
                         onClick={() => void mutReprocessar(d.id)}
-                        className="inline-flex min-w-[100px] items-center justify-center gap-1 rounded-lg bg-red-800/90 px-3 py-1.5 text-xs font-semibold text-red-50 shadow-sm hover:bg-red-700 disabled:opacity-55"
+                        className="inline-flex min-w-[100px] items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-danger"
                       >
-                        {loadReprocessar ? <DragonOuroLoader className="text-red-100" iconClassName="h-3.5 w-3.5" /> : null}
+                        {loadReprocessar ? <DragonOuroLoader className="app-surface-text" iconClassName="h-3.5 w-3.5" /> : null}
                         {loadReprocessar ? f.liq_loading : f.btn_reprocessar}
-                      </button>
+                      </ConfirmActionButton>
                     ) : (
                       <span className="gerente-fin-empty text-sm">{f.dash}</span>
                     )}

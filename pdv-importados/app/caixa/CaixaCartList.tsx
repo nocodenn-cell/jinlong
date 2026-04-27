@@ -9,6 +9,7 @@ import type { Idioma } from "@/idioma/normalizeIdioma"
 import { formatDecimal2 } from "@/lib/format/money"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { DragonIcon } from "@/components/icons/DragonIcon"
+import { labelOrigemCaixa, truncarObservacaoCaixa } from "@/lib/caixa/metaProdutoUi"
 
 type Props = {
   m: Mensagens
@@ -38,11 +39,11 @@ export function CaixaCartList({
   if (itens.length === 0) {
     return (
       <div className="h-full min-h-[14rem] flex flex-col items-center justify-center gap-4 px-6 text-center">
-        <DragonIcon className="h-24 w-24 text-amber-500/10 shrink-0" />
-        <p className="text-sm font-medium text-slate-400">{m.caixa.empty_guardiao}</p>
-        <p className="text-xs text-slate-500 max-w-sm">
+        <DragonIcon className="h-24 w-24 app-subtle shrink-0 opacity-40" />
+        <p className="text-sm font-medium app-muted">{m.caixa.empty_guardiao}</p>
+        <p className="text-xs app-subtle max-w-sm">
           {m.caixa.carrinho_vazio_linha1}{" "}
-          <span className="mx-1 font-mono text-slate-500">{m.caixa.carrinho_vazio_ref_catalogo}</span>{" "}
+          <span className="mx-1 font-mono app-subtle">{m.caixa.carrinho_vazio_ref_catalogo}</span>{" "}
           {m.caixa.carrinho_vazio_linha2}
         </p>
       </div>
@@ -53,23 +54,24 @@ export function CaixaCartList({
     <>
       {/* Desktop: tabela */}
       <div className="hidden md:block">
-        <header className="grid grid-cols-[minmax(0,2.2fr)_4.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-xs text-slate-400 border-b border-slate-800">
+        <header className="grid grid-cols-[minmax(0,2.55fr)_4.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 text-xs app-muted border-b app-divider">
           <span>{m.caixa.col_produto}</span>
           <span className="text-right">{m.caixa.col_qtde}</span>
           <span className="text-right">{m.caixa.col_unit}</span>
           <span className="text-right">{m.caixa.col_total}</span>
           <span className="text-right">{m.caixa.col_tipo}</span>
         </header>
-        <ul className="divide-y divide-slate-800 text-sm">
+        <ul className="divide-y app-divider text-sm">
           {itens.map((item) => (
             <li
               key={item.id}
-              className="grid grid-cols-[minmax(0,2.2fr)_4.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 items-center"
+              className="grid grid-cols-[minmax(0,2.55fr)_4.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 items-center"
             >
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 gap-1">
                 <span className="font-medium truncate">{item.nome}</span>
-                <span className="text-xs text-slate-500 truncate">
-                  {m.caixa.id_label}: {item.produtoId}
+                <MetaPdvBloco item={item} m={m} compact={false} />
+                <span className="text-[11px] app-subtle font-mono truncate">
+                  {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
                 </span>
               </div>
               <div className="flex items-center justify-end gap-1">
@@ -83,13 +85,13 @@ export function CaixaCartList({
                   onChange={(e) =>
                     onAlterarQuantidade(item.id, Number(e.target.value))
                   }
-                  className="w-16 h-8 text-right bg-slate-800 border-slate-600 text-slate-100 text-xs px-1"
+                  className="w-16 h-8 text-right text-xs px-1 app-input"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-1 text-[11px] text-slate-500 hover:text-red-400"
+                  className="h-8 px-1 text-[11px] app-subtle hover:app-accent-text"
                   onClick={() => onRemover(item.id)}
                 >
                   {m.caixa.remover}
@@ -109,21 +111,22 @@ export function CaixaCartList({
       </div>
 
       {/* Mobile: cards */}
-      <ul className="md:hidden divide-y divide-slate-800">
+      <ul className="md:hidden divide-y app-divider">
         {itens.map((item) => (
           <li key={item.id} className="p-3 space-y-2">
             <div className="flex justify-between gap-2 min-w-0">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 space-y-1">
                 <div className="font-medium text-sm truncate">{item.nome}</div>
-                <div className="text-[11px] text-slate-500 truncate">
-                  {m.caixa.id_label}: {item.produtoId}
+                <MetaPdvBloco item={item} m={m} compact />
+                <div className="text-[10px] app-subtle font-mono truncate">
+                  {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
                 </div>
               </div>
               <TipoPrecoBadge m={m} tipo={item.resultado.tipoPreco} compact />
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <span className="text-slate-500">{m.caixa.col_qtde}</span>
+                <span className="app-subtle">{m.caixa.col_qtde}</span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <Input
                     type="number"
@@ -135,13 +138,13 @@ export function CaixaCartList({
                     onChange={(e) =>
                       onAlterarQuantidade(item.id, Number(e.target.value))
                     }
-                    className="h-9 text-right bg-slate-800 border-slate-600 text-slate-100"
+                    className="h-9 text-right app-input"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="text-red-400 hover:text-red-300 shrink-0"
+                    className="app-accent-text hover:opacity-85 shrink-0"
                     onClick={() => onRemover(item.id)}
                   >
                     {m.caixa.remover}
@@ -150,14 +153,14 @@ export function CaixaCartList({
               </div>
               <div className="text-right space-y-1">
                 <div>
-                  <span className="text-slate-500 block">{m.caixa.col_unit}</span>
+                  <span className="app-subtle block">{m.caixa.col_unit}</span>
                   <span className="tabular-nums">
                     {moeda} {formatDecimal2(item.resultado.precoOriginal, locale)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">{m.caixa.col_total}</span>
-                  <span className="tabular-nums font-medium text-slate-100">
+                  <span className="app-subtle block">{m.caixa.col_total}</span>
+                  <span className="tabular-nums font-medium">
                     {moeda}{" "}
                     {formatDecimal2(
                       item.resultado.precoUnitario * item.quantidade,
@@ -171,6 +174,83 @@ export function CaixaCartList({
         ))}
       </ul>
     </>
+  )
+}
+
+function MetaPdvBloco({
+  item,
+  m,
+  compact,
+}: {
+  item: ItemCarrinhoComPreco
+  m: Mensagens
+  compact: boolean
+}) {
+  const meta = item.metaPdv
+  if (!meta) return null
+
+  const origemClass =
+    meta.origem === "china_manual"
+      ? "app-badge-warn"
+      : meta.origem === "brasil_nf"
+        ? "app-badge-positive"
+        : "app-border app-muted app-surface-soft"
+
+  const nfClass = meta.tem_nf
+    ? "app-badge-positive"
+    : "app-border app-muted"
+
+  const q = meta.estoque_atual
+  const min = meta.estoque_minimo
+  const alertaCritico = q !== null && q < 1
+  const alertaMinimo =
+    !alertaCritico && q !== null && min !== null && q <= min
+
+  const obs = truncarObservacaoCaixa(meta.observacao)
+  const estoqueFmt =
+    q !== null && min !== null
+      ? caixaFmt(m.caixa.estoque_resumo, {
+          atual: String(q),
+          min: String(min),
+        })
+      : q !== null
+        ? caixaFmt(m.caixa.estoque_resumo_sem_min, { atual: String(q) })
+        : null
+
+  return (
+    <div className={compact ? "space-y-1" : "space-y-1"}>
+      <div className={`flex flex-wrap items-center gap-1 ${compact ? "" : "max-w-full"}`}>
+        <Badge variant="outline" className={`text-[9px] font-medium px-1.5 py-0 ${origemClass}`}>
+          {labelOrigemCaixa(meta.origem, m)}
+        </Badge>
+        <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${nfClass}`}>
+          {meta.tem_nf ? m.caixa.badge_nf : m.caixa.badge_sem_nf}
+        </Badge>
+      </div>
+      {obs ? (
+        <p className={`text-[11px] app-muted ${compact ? "line-clamp-2" : "line-clamp-2"}`}>
+          <span className="app-subtle">{m.caixa.obs_titulo}</span> {obs}
+        </p>
+      ) : null}
+      {estoqueFmt ? (
+        <p
+          className={`text-[11px] tabular-nums ${
+            alertaCritico || alertaMinimo ? "app-accent-text" : "app-subtle"
+          }`}
+        >
+          {estoqueFmt}
+          {alertaMinimo || alertaCritico ? (
+            <>
+              {" "}
+              <span className="app-accent-text">· {m.caixa.alerta_estoque_min}</span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+      {alertaMinimo || alertaCritico ? (
+        <p className="text-[10px] app-accent-text leading-snug">{m.caixa.alerta_rep_import}</p>
+      ) : null}
+    </div>
   )
 }
 
@@ -191,10 +271,10 @@ function TipoPrecoBadge({
         : m.relatorios.varejo
   const className =
     tipo === "ATACADO"
-      ? "bg-emerald-600/15 border-emerald-500/40 text-emerald-300"
+      ? "app-badge-positive"
       : tipo === "MANUAL"
-        ? "bg-amber-600/20 border-amber-500/50 text-amber-200"
-        : "bg-slate-700/40 border-slate-500/40 text-slate-200"
+        ? "app-badge-warn"
+        : "app-border app-muted app-surface-soft"
   const badge = (
     <Badge
       variant="outline"

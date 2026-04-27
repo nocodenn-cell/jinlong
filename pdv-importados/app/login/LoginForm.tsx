@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/branding/Logo'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
-import { DragonEmblemIcon } from '@/components/icons/DragonEmblemIcon'
 import type { Mensagens } from '@/i18n/getMessages'
 
 /** Evita open redirect: só `/gerente...` ou `/caixa...`. */
@@ -126,18 +126,24 @@ export function LoginForm({ messages: m }: Props) {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-950 px-4 py-10 text-slate-100 login-brand-stage">
       <div className="w-full max-w-[380px] flex flex-col items-center">
-        <div className="dragon-hero-mark mb-8 flex flex-col items-center">
-          <DragonEmblemIcon className="h-28 w-28 sm:h-32 sm:w-32" />
+        <div className="mb-5 flex flex-col items-center justify-center">
+          <div className="dragon-login-symbol-wrap">
+            <Image
+              src="/branding/dragon-brand-mark.png"
+              alt="Símbolo principal da marca Jīn Lóng"
+              width={320}
+              height={460}
+              priority
+              className="dragon-hero-mark h-[236px] w-auto sm:h-[274px]"
+            />
+          </div>
         </div>
 
         <div className="mb-8 text-center w-full">
           <Logo variant="wordmark" logoSubtitle={m.brand.logo_subtitle} />
-          <p className="mt-4 text-sm text-slate-400 tracking-wide">{L.subtitulo}</p>
-          <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-amber-500/80">
-            {L.tagline}
-          </p>
+          <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-amber-300/45 to-transparent" />
         </div>
 
         {avisoInatividade ? (
@@ -149,7 +155,7 @@ export function LoginForm({ messages: m }: Props) {
           </p>
         ) : null}
 
-        <form onSubmit={login} className="w-full flex flex-col gap-3">
+        <form onSubmit={login} className="w-full flex flex-col gap-3 rounded-xl border p-4 app-surface app-border">
           <input
             type="email"
             value={email}
@@ -158,7 +164,7 @@ export function LoginForm({ messages: m }: Props) {
             autoComplete="username"
             required
             autoFocus
-            className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none ring-emerald-500/30 focus:border-emerald-600/60 focus:ring-2"
+            className="rounded-lg px-3 py-2.5 text-sm transition app-input"
           />
           <input
             type="password"
@@ -167,17 +173,18 @@ export function LoginForm({ messages: m }: Props) {
             placeholder={L.senha_placeholder}
             autoComplete="current-password"
             required
-            className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 outline-none ring-emerald-500/30 focus:border-emerald-600/60 focus:ring-2"
+            className="rounded-lg px-3 py-2.5 text-sm transition app-input"
           />
           {erro ? (
-            <p className="text-center text-sm text-red-300/95" role="alert">
+            <p className="text-center text-sm text-rose-300/90" role="alert">
               {erro}
             </p>
           ) : null}
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 flex items-center justify-center gap-2 rounded-lg border-0 bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+            className="mt-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold shadow-[0_10px_22px_-14px_rgba(217,119,6,0.65)] transition app-btn-accent"
+            style={{ fontFamily: '"Cinzel","Noto Serif SC","Noto Serif TC","Times New Roman",serif' }}
           >
             {loading ? (
               <>

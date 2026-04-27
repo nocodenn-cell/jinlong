@@ -38,3 +38,24 @@ export async function executarTransferencia(input: {
   revalidatePath('/gerente/estoque')
   return { success: true }
 }
+
+/** Quantidade atual na origem (para validação de UI antes da RPC). */
+export async function obterEstoqueDisponivelTransferencia(
+  lojaId: string,
+  produtoId: string,
+): Promise<{ success: true; quantidade: number } | { success: false; error: string }> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('estoque')
+    .select('quantidade_atual')
+    .eq('loja_id', lojaId)
+    .eq('produto_id', produtoId)
+    .maybeSingle()
+
+  if (error) return { success: false, error: mensagemErroComSecao('Transferência de estoque', error.message) }
+
+  return { success: true, quantidade: Number(data?.quantidade_atual ?? 0) }
+}

@@ -19,7 +19,7 @@ type Ctx = Readonly<{
 const GerenteUiThemeContext = createContext<Ctx | null>(null)
 
 export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [theme, setThemeState] = useState<GerenteUiTheme>('dragon-dark')
+  const [theme, setThemeState] = useState<GerenteUiTheme>('noturno')
 
   useLayoutEffect(() => {
     try {
@@ -39,6 +39,12 @@ export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactN
   }, [])
 
   const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme])
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.appTheme = theme
+    document.documentElement.dataset.gerenteUiTheme = theme
+    document.documentElement.dataset.gerenteUiThemeLegacy = theme === 'novem' ? 'dragon-light' : 'dragon-dark'
+  }, [theme])
 
   return <GerenteUiThemeContext.Provider value={value}>{children}</GerenteUiThemeContext.Provider>
 }

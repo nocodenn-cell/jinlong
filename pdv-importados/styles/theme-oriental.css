@@ -7,13 +7,324 @@
   --dragon-jade: #10b981;
   --dragon-gold: #f59e0b;
   --dragon-imperial-red: #b91c1c;
+  --dragon-night-900: #12090b;
+  --dragon-cloud-cream: #fff7e8;
+  --surface: rgba(15, 23, 42, 0.68);
+  --surface-soft: rgba(15, 23, 42, 0.42);
+  --surface-text: rgb(241 245 249);
+  --border: rgba(148, 163, 184, 0.38);
+  --accent: #fbbf24;
+  --accent-strong: #f59e0b;
+  --accent-contrast: #111827;
+  --logo-wordmark-main: #f8fafc;
+  --logo-wordmark-subtitle: rgba(251, 191, 36, 0.95);
+}
+
+[data-app-theme='noturno'] {
+  --surface: rgba(15, 23, 42, 0.68);
+  --surface-soft: rgba(15, 23, 42, 0.42);
+  --surface-text: rgb(241 245 249);
+  --border: rgba(148, 163, 184, 0.38);
+  --accent: #fbbf24;
+  --accent-strong: #f59e0b;
+  --accent-contrast: #111827;
+}
+
+[data-app-theme='novem'] {
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-soft: rgba(255, 255, 255, 0.62);
+  --surface-text: rgb(30 41 59);
+  --border: rgba(245, 158, 11, 0.3);
+  --accent: #b45309;
+  --accent-strong: #92400e;
+  --accent-contrast: #fffbeb;
+  --logo-wordmark-main: #1e293b;
+  --logo-wordmark-subtitle: #92400e;
+}
+
+[data-app-theme='novem'] .gerente-shell {
+  background:
+    radial-gradient(circle at 14% -10%, rgba(251, 191, 36, 0.1) 0%, transparent 42%),
+    radial-gradient(circle at 88% 8%, rgba(148, 163, 184, 0.12) 0%, transparent 35%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+.logo-wordmark-main {
+  color: var(--logo-wordmark-main);
+  text-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+}
+
+.logo-wordmark-subtitle {
+  color: var(--logo-wordmark-subtitle);
+}
+
+[data-app-theme='novem'] .logo-wordmark-main {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* Header gerente compacto: libera área útil para KPIs */
+.gerente-compact-brand .dragon-hero-mark {
+  height: 2.75rem;
+  width: 2.75rem;
+}
+
+.gerente-compact-brand .logo-wordmark-main {
+  font-size: 1.95rem;
+  line-height: 1;
+}
+
+.gerente-compact-brand .logo-wordmark-subtitle {
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+
+@media (min-width: 640px) {
+  .gerente-compact-brand .dragon-hero-mark {
+    height: 3.15rem;
+    width: 3.15rem;
+  }
+
+  .gerente-compact-brand .logo-wordmark-main {
+    font-size: 2.05rem;
+  }
+
+  .gerente-compact-nav {
+    font-size: 0.955rem;
+  }
+}
+
+.app-surface {
+  background: var(--surface);
+  color: var(--surface-text);
+}
+
+.app-surface-soft {
+  background: var(--surface-soft);
+  color: var(--surface-text);
+}
+
+.app-border {
+  border-color: var(--border) !important;
+}
+
+.app-accent-text {
+  color: var(--accent);
+}
+
+.app-accent-bg {
+  background: var(--accent);
+}
+
+.app-input {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--surface-text);
+}
+
+.app-input::placeholder {
+  color: color-mix(in srgb, var(--surface-text) 68%, transparent);
+}
+
+.app-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.app-btn-accent {
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 72%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 86%, #fff 14%) 0%,
+    color-mix(in srgb, var(--accent-strong) 90%, #000 10%) 100%
+  );
+  color: var(--accent-contrast);
+}
+
+.app-btn-accent:hover {
+  filter: brightness(1.04);
+}
+
+.app-btn-accent:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.app-btn-neutral {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--surface-text);
+}
+
+.app-btn-neutral:hover {
+  border-color: var(--accent);
+}
+
+.app-btn-danger {
+  border: 1px solid color-mix(in srgb, #ef4444 45%, var(--border));
+  background: color-mix(in srgb, #7f1d1d 40%, var(--surface-soft));
+  color: #fecaca;
+}
+
+.app-btn-danger:hover {
+  filter: brightness(1.08);
+}
+
+.app-select {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--surface-text);
+}
+
+.app-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.app-muted {
+  color: color-mix(in srgb, var(--surface-text) 70%, transparent);
+}
+
+.app-subtle {
+  color: color-mix(in srgb, var(--surface-text) 56%, transparent);
+}
+
+.app-divider {
+  border-color: var(--border) !important;
+}
+
+.app-chip {
+  border-color: var(--border);
+  background: var(--surface-soft);
+  color: color-mix(in srgb, var(--surface-text) 74%, transparent);
+}
+
+.app-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.app-link-accent:hover {
+  color: var(--accent);
+}
+
+/* A11y Fase 2.3: foco visível consistente para navegação por teclado */
+.app-btn-accent:focus-visible,
+.app-btn-neutral:focus-visible,
+.app-btn-danger:focus-visible,
+.app-chip:focus-visible,
+.app-link-accent:focus-visible,
+.app-badge-positive:focus-visible,
+.app-badge-warn:focus-visible,
+.app-badge-danger:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--surface) 65%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+[data-app-theme='novem'] .app-btn-accent:focus-visible,
+[data-app-theme='novem'] .app-btn-neutral:focus-visible,
+[data-app-theme='novem'] .app-btn-danger:focus-visible,
+[data-app-theme='novem'] .app-chip:focus-visible,
+[data-app-theme='novem'] .app-link-accent:focus-visible,
+[data-app-theme='novem'] .app-badge-positive:focus-visible,
+[data-app-theme='novem'] .app-badge-warn:focus-visible,
+[data-app-theme='novem'] .app-badge-danger:focus-visible {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, #ffffff 88%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
+/* A11y Fase 2.3: compatibilidade para classes legadas ainda usadas no gerente */
+.gerente-nav-back:focus-visible,
+.gerente-section-accent:focus-visible,
+.gerente-chip-action:focus-visible,
+.gerente-btn-csv:focus-visible,
+.gerente-btn-cancel:focus-visible {
+  outline: none;
+  border-radius: 0.5rem;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--surface) 65%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.app-badge-positive {
+  border: 1px solid color-mix(in srgb, #10b981 45%, var(--border));
+  background: color-mix(in srgb, #064e3b 35%, transparent);
+  color: #a7f3d0;
+}
+
+.app-badge-warn {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent-strong) 20%, transparent);
+  color: color-mix(in srgb, var(--accent) 82%, #fff 18%);
+}
+
+.app-badge-danger {
+  border: 1px solid color-mix(in srgb, #f87171 45%, var(--border));
+  background: color-mix(in srgb, #7f1d1d 20%, transparent);
+  color: #fecaca;
+}
+
+[data-app-theme='novem'] .app-badge-positive {
+  border-color: rgba(34, 197, 94, 0.32);
+  background: rgba(220, 252, 231, 0.85);
+  color: rgb(22 101 52);
+}
+
+[data-app-theme='novem'] .app-badge-warn {
+  border-color: rgba(245, 158, 11, 0.38);
+  background: rgba(255, 247, 237, 0.92);
+  color: rgb(154 52 18);
+}
+
+[data-app-theme='novem'] .app-badge-danger {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(254, 242, 242, 0.92);
+  color: rgb(153 27 27);
+}
+
+[data-app-theme='novem'] .gerente-fin-muted,
+[data-app-theme='novem'] .app-muted {
+  color: rgb(71 85 105) !important;
+}
+
+.login-brand-stage .dragon-login-symbol-wrap {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.login-brand-stage {
+  position: relative;
+  isolation: isolate;
+}
+
+.login-brand-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.9));
+  opacity: 1;
+}
+
+.login-brand-stage > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Painel gerente — fundo com “nuvens” sobre slate-950 */
 .bg-oriental-clouds {
   position: relative;
   isolation: isolate;
-  background-color: rgb(2 6 23);
+  background:
+    radial-gradient(circle at 50% -10%, rgba(251, 191, 36, 0.16) 0%, transparent 42%),
+    linear-gradient(180deg, #1f2937 0%, #111827 54%, #0b1220 100%);
 }
 
 .bg-oriental-clouds::before {
@@ -22,12 +333,14 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.07;
+  opacity: 0.12;
   background-image:
-    radial-gradient(ellipse 90% 50% at 12% 18%, rgba(245, 158, 11, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 88% 12%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 55% at 50% 88%, rgba(148, 163, 184, 0.14) 0%, transparent 52%);
-  background-size: 120% 100%, 100% 80%, 130% 100%;
+    radial-gradient(ellipse 88% 50% at 12% 18%, rgba(251, 191, 36, 0.16) 0%, transparent 56%),
+    radial-gradient(ellipse 70% 42% at 88% 12%, rgba(148, 163, 184, 0.14) 0%, transparent 56%),
+    radial-gradient(ellipse 78% 50% at 50% 88%, rgba(226, 232, 240, 0.1) 0%, transparent 58%),
+    radial-gradient(ellipse 44% 20% at 22% 72%, rgba(251, 191, 36, 0.11) 0%, transparent 72%),
+    radial-gradient(ellipse 40% 18% at 76% 64%, rgba(148, 163, 184, 0.1) 0%, transparent 72%);
+  background-size: 120% 100%, 100% 80%, 130% 100%, 72% 52%, 66% 48%;
 }
 
 .bg-oriental-clouds > * {
@@ -39,7 +352,9 @@
 .caixa-oriental-root {
   position: relative;
   isolation: isolate;
-  background-color: rgb(15 23 42);
+  background:
+    radial-gradient(circle at 50% -18%, rgba(245, 158, 11, 0.2) 0%, transparent 46%),
+    linear-gradient(180deg, #2a0506 0%, #16070a 58%, #0b0a14 100%);
 }
 
 .caixa-oriental-root::before {
@@ -48,18 +363,110 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.045;
+  opacity: 0.14;
   background-image:
-    radial-gradient(ellipse 85% 55% at 18% 12%, rgb(148 163 184) 0%, transparent 52%),
-    radial-gradient(ellipse 70% 48% at 82% 22%, rgb(148 163 184) 0%, transparent 48%),
-    radial-gradient(ellipse 75% 50% at 48% 78%, rgb(148 163 184) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 40% at 65% 45%, rgb(100 116 139) 0%, transparent 42%);
-  background-size: 120% 100%, 110% 90%, 130% 110%, 80% 70%;
+    radial-gradient(ellipse 80% 38% at 18% 18%, rgba(255, 245, 221, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 75% 34% at 84% 22%, rgba(255, 245, 221, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 64% 32% at 46% 80%, rgba(255, 245, 221, 0.12) 0%, transparent 62%),
+    radial-gradient(ellipse 40% 22% at 66% 50%, rgba(245, 158, 11, 0.1) 0%, transparent 58%);
+  background-size: 120% 100%, 110% 90%, 130% 110%, 88% 70%;
 }
 
 .caixa-oriental-root > * {
   position: relative;
   z-index: 1;
+}
+
+/* Tema app global */
+[data-app-theme='novem'] .bg-oriental-clouds {
+  background:
+    radial-gradient(circle at 50% -16%, rgba(251, 191, 36, 0.2) 0%, transparent 42%),
+    linear-gradient(180deg, #fff8eb 0%, #fff3de 100%);
+}
+
+[data-app-theme='novem'] .bg-oriental-clouds::before {
+  opacity: 0.07;
+}
+
+[data-app-theme='novem'] .caixa-oriental-root {
+  color: rgb(30 41 59);
+  background:
+    radial-gradient(circle at 50% -18%, rgba(245, 158, 11, 0.15) 0%, transparent 46%),
+    linear-gradient(180deg, #fff8ec 0%, #fff3df 62%, #ffeed2 100%);
+}
+
+[data-app-theme='novem'] .caixa-oriental-root::before {
+  opacity: 0.08;
+}
+
+[data-app-theme='novem'] .caixa-oriental-root section {
+  border-color: rgba(251, 191, 36, 0.35) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* Fase 2: padronização semântica para gerente/caixa */
+[data-app-theme] .gerente-table-dragon {
+  border-color: var(--border) !important;
+  background: var(--surface-soft) !important;
+}
+
+[data-app-theme] .gerente-table-dragon tbody tr:hover,
+[data-app-theme] .gerente-fin-row-hover:hover,
+[data-app-theme] .gerente-inicio-table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface) 84%, transparent) !important;
+}
+
+[data-app-theme] .gerente-chip-action,
+[data-app-theme] .gerente-inicio-chip,
+[data-app-theme] .filter-pill {
+  border-color: var(--border) !important;
+  background: var(--surface-soft) !important;
+  color: var(--surface-text) !important;
+}
+
+[data-app-theme] .filter-pill-active,
+[data-app-theme] .filter-pill-status-active {
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent-strong) 42%, transparent) !important;
+  color: var(--accent-contrast) !important;
+}
+
+[data-app-theme] .gerente-table-dragon table,
+[data-app-theme] .gerente-fin-cell,
+[data-app-theme] .gerente-page-title,
+[data-app-theme] .gerente-fin-page-title {
+  color: var(--surface-text) !important;
+}
+
+[data-app-theme] .gerente-table-dragon thead tr,
+[data-app-theme] .gerente-inicio-table thead tr {
+  border-color: var(--border) !important;
+  background: color-mix(in srgb, var(--surface) 78%, transparent) !important;
+}
+
+[data-app-theme] .gerente-fin-input,
+[data-app-theme] .gerente-period-form {
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--surface-text) !important;
+}
+
+[data-app-theme] button.gerente-btn-csv:not(:disabled),
+[data-app-theme] .gerente-chip-action {
+  border-color: var(--border) !important;
+  background: var(--surface-soft) !important;
+  color: var(--surface-text) !important;
+}
+
+[data-app-theme] button.gerente-btn-csv:not(:disabled):hover,
+[data-app-theme] .gerente-chip-action:hover {
+  border-color: var(--accent) !important;
+}
+
+[data-app-theme] .gerente-section-accent,
+[data-app-theme] .gerente-kpi-value,
+[data-app-theme] .gerente-venda-mov-badge {
+  color: var(--accent) !important;
 }
 
 /* Modais — vidro (backdrop + cartão) */
@@ -215,27 +622,30 @@
 
 /* —— Painel gerente: tema claro (dragon-light) —— */
 [data-gerente-ui-theme='dragon-light'] .bg-oriental-clouds {
-  background-color: rgb(255 253 250);
+  background-color: rgb(255 255 255);
 }
 
 [data-gerente-ui-theme='dragon-light'] .bg-oriental-clouds::before {
-  opacity: 0.05;
-  background-image:
-    radial-gradient(ellipse 90% 50% at 12% 18%, rgba(245, 158, 11, 0.12) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 88% 12%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 55% at 50% 88%, rgba(148, 163, 184, 0.1) 0%, transparent 52%);
+  opacity: 0;
+  background-image: none;
+  background-size: auto;
+  background-position: initial;
+  background-repeat: repeat;
+  filter: none;
 }
 
 [data-gerente-ui-theme='dragon-light'] .dragon-glass-card {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-  border-color: rgba(226, 232, 240, 0.95) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 252, 245, 0.92) 100%) !important;
+  border-color: rgba(226, 232, 240, 0.98) !important;
   box-shadow:
-    0 10px 40px -12px rgba(15, 23, 42, 0.08),
+    0 12px 30px -18px rgba(15, 23, 42, 0.18),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
 }
 
 [data-gerente-ui-theme='dragon-light'] .dragon-glass-backdrop {
-  background-color: rgba(255, 253, 250, 0.72) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 248, 234, 0.6) 100%) !important;
 }
 
 [data-gerente-ui-theme='dragon-dark'] .gerente-page-title {
@@ -253,7 +663,7 @@
 
 [data-gerente-ui-theme='dragon-light'] .gerente-table-dragon {
   border-color: rgba(226, 232, 240, 0.95);
-  background-color: rgba(255, 255, 255, 0.75);
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 [data-gerente-ui-theme='dragon-light'] .gerente-table-dragon table {

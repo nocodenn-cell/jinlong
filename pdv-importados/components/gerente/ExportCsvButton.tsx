@@ -36,10 +36,10 @@ export function ExportCsvButton<T extends Record<string, unknown>>({
       type="button"
       onClick={download}
       className={cn(
-        'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+        'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors app-btn-neutral',
         rows.length === 0
-          ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
-          : 'border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50',
+          ? 'cursor-not-allowed opacity-45'
+          : 'shadow-sm',
         className,
       )}
       disabled={rows.length === 0}

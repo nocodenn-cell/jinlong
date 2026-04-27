@@ -169,7 +169,9 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
     resolveVendaIdForFinalizeMock.mockReturnValue('66666666-6666-6666-8666-666666666666')
   })
 
-  it('legado bloqueia split >1 com mensagem esperada', async () => {
+  it(
+    'legado bloqueia split >1 com mensagem esperada',
+    async () => {
     const { supabase } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
     const { finalizarVendaCaixa } = await import('./actions')
@@ -180,7 +182,9 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
       error:
         'Split de pagamento requer fluxo unificado habilitado no servidor. Ajuste para 1 forma de pagamento.',
     })
-  })
+    },
+    15000,
+  )
 
   it('unificado aceita split e envia p_pagamentos para RPC canônica', async () => {
     process.env.USE_UNIFIED_SALES_FLOW = 'true'

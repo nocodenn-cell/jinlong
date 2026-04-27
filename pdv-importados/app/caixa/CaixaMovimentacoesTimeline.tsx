@@ -47,33 +47,33 @@ export function CaixaMovimentacoesTimeline({
   }
 
   return (
-    <section className="mx-4 sm:mx-6 mt-2 mb-2 rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-800">
-        <div className="text-sm font-semibold text-slate-100">{m.caixa.timeline_titulo}</div>
-        <div className="text-xs text-slate-400">{m.caixa.timeline_subtitulo}</div>
+    <section className="mx-4 sm:mx-6 mt-2 mb-2 rounded-lg border overflow-hidden app-surface app-border">
+      <div className="px-4 py-3 border-b app-divider">
+        <div className="text-sm font-semibold">{m.caixa.timeline_titulo}</div>
+        <div className="text-xs app-muted">{m.caixa.timeline_subtitulo}</div>
       </div>
       <div className="max-h-60 overflow-y-auto">
         {carregando ? (
-          <div className="px-4 py-3 text-xs text-slate-400">{m.caixa.timeline_carregando}</div>
+          <div className="px-4 py-3 text-xs app-muted">{m.caixa.timeline_carregando}</div>
         ) : itens.length === 0 ? (
-          <div className="px-4 py-3 text-xs text-slate-400">{m.caixa.timeline_vazio}</div>
+          <div className="px-4 py-3 text-xs app-muted">{m.caixa.timeline_vazio}</div>
         ) : (
-          <ul className="divide-y divide-slate-800">
+          <ul className="divide-y app-divider">
             {itens.map((item) => {
               const podeCancelar = item.status === "pendente"
               const podeEstornar = item.status === "aprovado" && item.tipo !== "estorno"
               return (
                 <li key={item.id} className="px-4 py-3 space-y-2">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-slate-200 font-medium">
+                    <span className="font-medium">
                       {tipoLabel(item.tipo)} · {money(item.valor)}
                     </span>
                     <span
                       className={[
                         'inline-flex items-center gap-1 rounded border px-2 py-0.5',
                         item.status === 'aprovado'
-                          ? 'border-[color:var(--caixa-imperial-red,#b91c1c)]/55 bg-[color:var(--caixa-imperial-red,#b91c1c)]/10 text-red-200'
-                          : 'border-slate-600 text-slate-300',
+                          ? 'app-badge-danger'
+                          : 'app-btn-neutral',
                       ].join(' ')}
                     >
                       {item.status === 'aprovado' ? (
@@ -85,15 +85,15 @@ export function CaixaMovimentacoesTimeline({
                       {statusLabel(item.status)}
                     </span>
                     {item.numeroSequencial !== null && (
-                      <span className="text-slate-500">
+                      <span className="app-subtle">
                         {m.caixa.timeline_numero}: #{item.numeroSequencial}
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[11px] app-muted">
                     {new Date(item.createdAt).toLocaleString(loc)} · {m.caixa.timeline_motivo}: {item.motivo}
                   </div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[11px] app-muted">
                     {m.caixa.timeline_saldo}: {money(item.saldoAntes)} → {money(item.saldoDepois)}
                   </div>
                   {(podeCancelar || podeEstornar) && (
@@ -103,7 +103,7 @@ export function CaixaMovimentacoesTimeline({
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="border-[color:var(--caixa-imperial-red,#b91c1c)]/70 bg-[color:var(--caixa-imperial-red,#b91c1c)]/12 text-red-100 hover:bg-[color:var(--caixa-imperial-red,#b91c1c)]/20"
+                          className="app-btn-danger"
                           onClick={() => onCancelar(item)}
                           disabled={processandoAcao}
                         >
@@ -115,7 +115,7 @@ export function CaixaMovimentacoesTimeline({
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="border-rose-700/60 bg-rose-900/20 text-rose-200 hover:bg-rose-800/30"
+                          className="app-btn-danger"
                           onClick={() => onEstornar(item)}
                           disabled={processandoAcao}
                         >

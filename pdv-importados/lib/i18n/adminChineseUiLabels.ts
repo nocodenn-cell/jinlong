@@ -34,7 +34,7 @@ export function adminNavLabels(line: BilingualLine): { primary: string; secondar
 
 const legacyAdminUi = {
   header: {
-    brand: { cn: '进口系统', pt: 'PDV Importados' } satisfies BilingualLine,
+    brand: { cn: '金龍', pt: 'Jīn Lóng' } satisfies BilingualLine,
     tagline: {
       cn: '管理层 · 销售 · 库存 · 财务',
       pt: 'Painel administrativo',

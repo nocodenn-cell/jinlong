@@ -8,6 +8,7 @@ import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
+import { formatDecimalPlaces } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -33,10 +34,11 @@ type Props = Readonly<{
   remessasRecentes: RemessaRecenteRow[]
 }>
 
-const inputClass = 'gerente-fin-input w-full rounded-lg border px-3 py-2 text-sm shadow-sm'
+const inputClass = 'w-full rounded-lg px-3 py-2 text-sm shadow-sm app-input'
+const selectClass = 'w-full rounded-lg px-3 py-2 text-sm shadow-sm app-select'
 
 const btnPrimary =
-  'inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-3 text-sm font-semibold text-white shadow-md transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px]'
+  'inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px] app-btn-accent'
 
 export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecentes }: Props) {
   const m = getMessages(idioma)
@@ -49,13 +51,20 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
   const [qtdEspStr, setQtdEspStr] = useState('')
   const [qtdConfStr, setQtdConfStr] = useState('')
 
-  const mostrarDivergencia = useMemo(() => {
-    const a = Number(qtdEspStr.replace(',', '.'))
-    const b = Number(qtdConfStr.replace(',', '.'))
-    if (qtdEspStr === '' || qtdConfStr === '') return false
-    if (Number.isNaN(a) || Number.isNaN(b)) return false
-    return a !== b
+  const divergenciaDetalhe = useMemo(() => {
+    const esp = Number(qtdEspStr.replace(',', '.'))
+    const conf = Number(qtdConfStr.replace(',', '.'))
+    if (qtdEspStr === '' || qtdConfStr === '') return null
+    if (Number.isNaN(esp) || Number.isNaN(conf)) return null
+    if (esp === conf) return null
+    const delta = esp - conf
+    const abs = Math.abs(delta)
+    const pct = esp > 1e-9 ? (abs / esp) * 100 : 100
+    const grave = pct >= 10 || abs >= 5
+    return { esp, conf, delta, abs, pct, grave }
   }, [qtdEspStr, qtdConfStr])
+
+  const numLocale = idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN'
 
   const { mutate, loading } = useGerenteMutation(
     async (p: {
@@ -107,14 +116,14 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
 
       {semProdutos ? (
         <div
-          className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm"
+          className="mt-8 rounded-xl border p-5 shadow-sm app-badge-warn"
           role="status"
         >
           <p className="font-semibold">{r.sem_produtos_titulo}</p>
-          <p className="mt-2 text-sm text-amber-900/90">{r.sem_produtos_texto}</p>
+          <p className="mt-2 text-sm">{r.sem_produtos_texto}</p>
           <Link
             href="/gerente/produtos"
-            className="mt-4 inline-flex text-sm font-semibold text-amber-950 underline decoration-amber-700/60 underline-offset-2 hover:decoration-amber-950"
+            className="mt-4 inline-flex text-sm font-semibold underline decoration-current/60 underline-offset-2"
           >
             {r.link_produtos}
           </Link>
@@ -122,6 +131,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
       ) : null}
 
       <form
+        id="recebimento-form"
         className="dragon-glass-card mt-8 rounded-xl p-5"
         onSubmit={(e) => {
           e.preventDefault()
@@ -143,7 +153,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
           })
         }}
       >
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1">
             <label htmlFor="rec-origem" className="gerente-fin-label text-xs font-medium">
               {r.label_origem}
@@ -158,18 +168,6 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-obs" className="gerente-fin-label text-xs font-medium">
-              {r.label_observacao}
-            </label>
-            <input
-              id="rec-obs"
-              name="observacao"
-              disabled={semProdutos}
-              placeholder={r.ph_observacao}
-              className={inputClass}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
             <label htmlFor="rec-prod" className="gerente-fin-label text-xs font-medium">
               {r.label_produto}
             </label>
@@ -178,7 +176,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
               name="produto_id"
               required
               disabled={semProdutos}
-              className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`${selectClass} disabled:cursor-not-allowed disabled:opacity-60`}
               defaultValue=""
             >
               <option value="" disabled>
@@ -192,49 +190,86 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
               ))}
             </select>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="rec-q-esp" className="gerente-fin-label text-xs font-medium">
-                {r.label_qtd_esperada}
-              </label>
-              <input
-                id="rec-q-esp"
-                name="qtd_esperada"
-                type="number"
-                min={0}
-                step="0.001"
-                required
-                disabled={semProdutos}
-                value={qtdEspStr}
-                onChange={(e) => setQtdEspStr(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="rec-q-conf" className="gerente-fin-label text-xs font-medium">
-                {r.label_qtd_conferida}
-              </label>
-              <input
-                id="rec-q-conf"
-                name="qtd_conferida"
-                type="number"
-                min={0}
-                step="0.001"
-                required
-                disabled={semProdutos}
-                value={qtdConfStr}
-                onChange={(e) => setQtdConfStr(e.target.value)}
-                className={inputClass}
-              />
-            </div>
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label htmlFor="rec-obs" className="gerente-fin-label text-xs font-medium">
+              {r.label_observacao}
+            </label>
+            <input
+              id="rec-obs"
+              name="observacao"
+              disabled={semProdutos}
+              placeholder={r.ph_observacao}
+              className={inputClass}
+            />
           </div>
-          {mostrarDivergencia ? (
-            <p
-              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          <div className="flex flex-col gap-1">
+            <label htmlFor="rec-q-esp" className="gerente-fin-label text-xs font-medium">
+              {r.label_qtd_esperada}
+            </label>
+            <input
+              id="rec-q-esp"
+              name="qtd_esperada"
+              type="number"
+              min={0}
+              step="0.001"
+              required
+              disabled={semProdutos}
+              value={qtdEspStr}
+              onChange={(e) => setQtdEspStr(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="rec-q-conf" className="gerente-fin-label text-xs font-medium">
+              {r.label_qtd_conferida}
+            </label>
+            <input
+              id="rec-q-conf"
+              name="qtd_conferida"
+              type="number"
+              min={0}
+              step="0.001"
+              required
+              disabled={semProdutos}
+              value={qtdConfStr}
+              onChange={(e) => setQtdConfStr(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          {divergenciaDetalhe ? (
+            <div
+              className={`rounded-lg border px-3 py-3 text-sm md:col-span-2 ${
+                divergenciaDetalhe.grave ? 'app-badge-danger' : 'app-badge-warn'
+              }`}
               role="status"
             >
-              {r.divergencia_alerta}
-            </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    divergenciaDetalhe.grave ? 'app-badge-danger' : 'app-badge-warn'
+                  }`}
+                >
+                  {divergenciaDetalhe.grave ? r.divergencia_grave : r.divergencia_moderada}
+                </span>
+                <span className="font-mono text-xs tabular-nums sm:text-sm">
+                  {r.divergencia_calculo
+                    .replace('{{esperada}}', formatDecimalPlaces(divergenciaDetalhe.esp, 3))
+                    .replace('{{conferida}}', formatDecimalPlaces(divergenciaDetalhe.conf, 3))
+                    .replace(
+                      '{{delta}}',
+                      (divergenciaDetalhe.delta >= 0 ? '+' : '') +
+                        formatDecimalPlaces(divergenciaDetalhe.delta, 3),
+                    )}
+                </span>
+              </div>
+              <p className="mt-2 text-xs app-muted">
+                {r.divergencia_legenda_pct.replace(
+                  '{{pct}}',
+                  divergenciaDetalhe.pct.toLocaleString(numLocale, { maximumFractionDigits: 1 }),
+                )}
+              </p>
+              <p className="mt-2 text-sm leading-snug">{r.divergencia_alerta}</p>
+            </div>
           ) : null}
         </div>
         <div className="gerente-fin-divider mt-6 flex justify-end border-t pt-5">
@@ -260,7 +295,12 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             {remessasRecentes.length === 0 ? (
               <tr>
                 <td colSpan={4} className="gerente-fin-empty px-4 py-8 text-center text-sm">
-                  {r.empty_recentes}
+                  <div className="flex flex-col items-center gap-2">
+                    <span>{r.empty_recentes}</span>
+                    <a href="#recebimento-form" className="rounded-lg px-3 py-1.5 text-xs font-semibold app-btn-accent">
+                      {r.btn_confirmar}
+                    </a>
+                  </div>
                 </td>
               </tr>
             ) : (

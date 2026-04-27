@@ -1,5 +1,9 @@
+'use client'
+
 import type { ReactNode } from 'react'
 import { memo } from 'react'
+import type { GerenteTableDensity } from '@/components/gerente/GerenteTableDensityContext'
+import { useGerenteTableDensity } from '@/components/gerente/GerenteTableDensityContext'
 import { cn } from '@/lib/utils'
 
 export type GerenteTableColumn = {
@@ -13,6 +17,8 @@ type GerenteTableProps = Readonly<{
   children: ReactNode
   /** `dragon`: tabela para fundos escuros / dragon-glass-card */
   tone?: 'paper' | 'dragon'
+  /** Sobrescreve densidade do contexto (ex.: relatório export-only) */
+  density?: GerenteTableDensity
 }>
 
 /**
@@ -23,35 +29,42 @@ export const GerenteTable = memo(function GerenteTable({
   columns,
   children,
   tone = 'paper',
+  density: densityProp,
 }: GerenteTableProps) {
   const dragon = tone === 'dragon'
+  const densityFromCtx = useGerenteTableDensity()
+  const density = densityProp ?? densityFromCtx
+  const compact = density === 'compact'
 
   return (
     <div
+      data-gerente-table-density={density}
       className={cn(
         'overflow-x-auto rounded-xl border shadow-sm',
-        dragon ? 'gerente-table-dragon border-slate-600/50 bg-slate-950/35' : 'border-slate-200 bg-white',
+        dragon ? 'gerente-table-dragon app-border app-surface-soft' : 'app-border app-surface',
       )}
     >
       <table
         className={cn(
-          'w-full border-collapse text-sm',
-          dragon ? 'text-slate-100' : 'text-slate-900',
+          'w-full border-collapse',
+          compact ? 'text-xs' : 'text-sm',
+          dragon ? 'app-surface-text' : 'app-surface-text',
         )}
       >
         <thead>
           <tr
             className={cn(
               'border-b text-left',
-              dragon ? 'border-slate-600/60 bg-slate-900/70' : 'border-slate-200 bg-slate-100',
+              dragon ? 'app-divider app-surface' : 'app-divider app-surface-soft',
             )}
           >
             {columns.map((column) => (
               <th
                 key={column.key}
                 className={cn(
-                  'whitespace-nowrap px-3 py-3 text-xs font-semibold uppercase tracking-wide',
-                  dragon ? 'text-slate-300' : 'text-slate-600',
+                  'whitespace-nowrap font-semibold uppercase tracking-wide',
+                  compact ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-3 text-xs',
+                  dragon ? 'app-muted' : 'app-muted',
                 )}
                 style={column.width !== undefined ? { width: column.width } : undefined}
               >
@@ -60,7 +73,13 @@ export const GerenteTable = memo(function GerenteTable({
             ))}
           </tr>
         </thead>
-        <tbody className={cn('divide-y', dragon ? 'divide-slate-700/50' : 'divide-slate-100')}>
+        <tbody
+          className={cn(
+            'divide-y app-divider',
+            compact &&
+              '[&_td]:!px-2 [&_td]:!py-1.5 [&_td]:!text-xs [&_th]:!px-2 [&_th]:!py-1.5 [&_th]:!text-xs',
+          )}
+        >
           {children}
         </tbody>
       </table>

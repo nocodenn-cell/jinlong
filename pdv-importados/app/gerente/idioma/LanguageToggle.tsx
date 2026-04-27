@@ -7,7 +7,7 @@ type Idioma3 = 'pt' | 'zh' | 'zh-HK'
 
 type Props = {
   idiomaAtual: Idioma3
-  /** `dragon`: cabeçalho escuro · `dragon-light`: cabeçalho claro Dragon POS */
+  /** `dragon`: cabeçalho escuro · `dragon-light`: cabeçalho claro Jīn Lóng */
   variant?: 'default' | 'dragon' | 'dragon-light'
 }
 
@@ -18,12 +18,12 @@ export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Pro
   const baseBtn = cn(
     'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
     dragon &&
-      'border border-slate-600/80 bg-slate-900/50 text-slate-200 hover:border-amber-500/50 hover:text-amber-300 disabled:cursor-default disabled:border-amber-500/60 disabled:bg-amber-500/15 disabled:text-amber-200',
+      'app-btn-neutral disabled:cursor-default disabled:opacity-55',
     dragonLight &&
-      'border border-slate-300/90 bg-white/90 text-slate-800 hover:border-amber-500/50 hover:text-amber-800 disabled:cursor-default disabled:border-amber-400/70 disabled:bg-amber-50/90 disabled:text-amber-950',
+      'app-btn-neutral disabled:cursor-default disabled:opacity-55',
     !dragon &&
       !dragonLight &&
-      'border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 disabled:cursor-default disabled:border-emerald-300 disabled:bg-emerald-50',
+      'app-btn-neutral disabled:cursor-default disabled:opacity-55',
   )
 
   return (

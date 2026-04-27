@@ -150,17 +150,17 @@ export function CaixaGerenteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-gerente-modal-title"
-        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
+        className="dragon-glass-card app-border w-full sm:max-w-md rounded-none sm:rounded-lg border app-surface-text shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
           <CardTitle
             id="caixa-gerente-modal-title"
-            className="flex items-center gap-2 text-lg text-slate-50"
+            className="flex items-center gap-2 text-lg app-surface-text"
           >
             {passo === "senha" ? (
               <ImperialSealIcon
-                className="h-6 w-6 shrink-0 text-red-600"
+                className="h-6 w-6 shrink-0 app-accent-text"
                 title={m.caixa.aria_selo_gerente}
                 pulse
               />
@@ -171,7 +171,7 @@ export function CaixaGerenteModal({
         <CardContent className="px-4 sm:px-6 space-y-3 overflow-y-auto">
           {passo === "senha" ? (
             <>
-              <label className="block text-xs text-slate-400">
+              <label className="block text-xs app-muted">
                 {m.caixa.modal_gerente_passo_senha}
                 <Input
                   ref={senhaRef}
@@ -181,7 +181,7 @@ export function CaixaGerenteModal({
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder={m.caixa.modal_gerente_senha_placeholder}
                   disabled={validando}
-                  className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+                  className="mt-1 app-input"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void handleContinuarSenha()
                   }}
@@ -191,7 +191,7 @@ export function CaixaGerenteModal({
           ) : (
             ctx && (
               <>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs app-muted">
                   {caixaFmt(m.caixa.modal_gerente_passo_percentual, {
                     max: ctx.maxDescontoPercentual.toFixed(1),
                   })}
@@ -203,7 +203,7 @@ export function CaixaGerenteModal({
                   onChange={(e) => setPercentStr(e.target.value)}
                   placeholder={m.caixa.modal_gerente_percent_placeholder}
                   disabled={validando}
-                  className="bg-slate-800 border-slate-600 text-slate-100"
+                  className="app-input"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleAplicarPercent()
                   }}
@@ -212,18 +212,18 @@ export function CaixaGerenteModal({
             )
           )}
           {erroLocal && (
-            <p className="text-xs text-amber-300" role="alert">
+            <p className="rounded-md border px-2 py-1 text-xs app-badge-warn" role="alert">
               {erroLocal}
             </p>
           )}
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t border-slate-800/80 mt-2 pt-3">
+        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t app-divider mt-2 pt-3">
           {passo === "percent" ? (
             <>
               <Button
                 type="button"
                 variant="outline"
-                className="border-slate-600 bg-slate-800 text-slate-200"
+                className="app-btn-neutral"
                 onClick={handleVoltar}
                 disabled={validando}
               >
@@ -231,12 +231,12 @@ export function CaixaGerenteModal({
               </Button>
               <Button
                 type="button"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white inline-flex items-center gap-2"
+                className="app-btn-accent inline-flex items-center gap-2"
                 onClick={handleAplicarPercent}
                 disabled={validando || !ctx}
               >
                 <ImperialSealIcon
-                  className="h-4 w-4 shrink-0 text-red-600 drop-shadow-sm"
+                  className="h-4 w-4 shrink-0 app-accent-text drop-shadow-sm"
                   title={m.caixa.aria_selo_gerente}
                   pulse
                 />
@@ -248,7 +248,7 @@ export function CaixaGerenteModal({
               <Button
                 type="button"
                 variant="ghost"
-                className="text-slate-400 hover:text-slate-200"
+                className="app-btn-neutral"
                 onClick={fechar}
                 disabled={validando}
               >
@@ -256,7 +256,7 @@ export function CaixaGerenteModal({
               </Button>
               <Button
                 type="button"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                className="app-btn-accent"
                 onClick={() => void handleContinuarSenha()}
                 disabled={validando}
               >

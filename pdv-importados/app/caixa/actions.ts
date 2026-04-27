@@ -8,9 +8,11 @@ import type {
   CancelarVendaResult,
   CarregarRegrasResult,
   CaixaStatusOperadorResult,
+  CotacaoUsdBrlResult,
   FecharCaixaOperadorResult,
   FinalizarVendaCaixaResult,
   LimiteSangriaResult,
+  ListarCategoriasCaixaResult,
   ObterMovimentacoesCaixaResult,
   RegistrarMovimentacaoInput,
   RegistrarMovimentacaoResult,
@@ -19,7 +21,9 @@ import type {
 import {
   buscarProdutoParaCaixaImpl,
   carregarRegrasPrecoCaixaImpl,
+  listarCategoriasAtalhoCaixaImpl,
 } from '@/app/caixa/server/caixaCatalogo.impl'
+import { obterCotacaoUsdBrlImpl } from '@/app/caixa/server/caixaCambioServer'
 import {
   cancelarVendaImpl,
   finalizarVendaCaixaImpl,
@@ -49,12 +53,16 @@ export type {
   CancelarVendaResult,
   CarregarRegrasResult,
   CaixaStatusOperadorResult,
+  CategoriaAtalhoDTO,
+  CotacaoUsdBrlResult,
   FecharCaixaOperadorResult,
   FinalizarVendaCaixaResult,
   FormaMovimentacaoCaixa,
   LimiteSangriaResult,
+  ListarCategoriasCaixaResult,
   MovimentacaoCaixaDTO,
   ObterMovimentacoesCaixaResult,
+  OrigemProdutoCaixa,
   ProdutoCaixaDTO,
   RegistrarMovimentacaoInput,
   RegistrarMovimentacaoResult,
@@ -72,10 +80,20 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
 
 /**
  * 1) Código de barras: mesmas variantes que o pdv-local (trim, dígitos, zeros à esquerda, cortes EAN).
- * 2) Nome ILIKE (ativo); se mais de um resultado, pede refinamento.
+ * 2) Nome ILIKE (ativo); se vazio, 3) categorias cujo nome contém o termo; se mais de um produto, pede refinamento.
  */
 export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdutoResult> {
   return buscarProdutoParaCaixaImpl(termo)
+}
+
+/** Categorias para atalhos de busca no campo principal (preenchimento + Enter). */
+export async function listarCategoriasAtalhoCaixa(): Promise<ListarCategoriasCaixaResult> {
+  return listarCategoriasAtalhoCaixaImpl()
+}
+
+/** Referência USD→BRL (Frankfurter); fallback opcional via env. */
+export async function obterCotacaoUsdBrl(): Promise<CotacaoUsdBrlResult> {
+  return obterCotacaoUsdBrlImpl()
 }
 
 export async function obterStatusCaixaOperador(): Promise<CaixaStatusOperadorResult> {

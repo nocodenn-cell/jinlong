@@ -168,14 +168,14 @@ export function CaixaMovimentacaoModal({
       <Card
         role="dialog"
         aria-modal="true"
-        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
+        className="dragon-glass-card app-border w-full sm:max-w-md rounded-none sm:rounded-lg border app-surface-text shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle className="text-lg text-slate-50">{title}</CardTitle>
+          <CardTitle className="text-lg app-surface-text">{title}</CardTitle>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-3 overflow-y-auto">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs app-muted">
             {m.caixa.modal_movimentacao_valor}
             <Input
               ref={valorRef}
@@ -183,7 +183,7 @@ export function CaixaMovimentacaoModal({
               value={valorStr}
               onChange={(e) => setValorStr(e.target.value)}
               placeholder="0,00"
-              className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+              className="mt-1 app-input"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleSalvar()
               }}
@@ -197,7 +197,7 @@ export function CaixaMovimentacaoModal({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                className="app-btn-neutral"
                 onClick={() => setValorStr(String(s))}
               >
                 {m.caixa.moeda_prefixo} {s.toFixed(2)}
@@ -205,18 +205,18 @@ export function CaixaMovimentacaoModal({
             ))}
           </div>
 
-          <p className="text-xs text-slate-300">
+          <p className="text-xs app-subtle">
             {caixaFmt(m.caixa.modal_movimentacao_saldo_estimado, {
               saldo: saldoEstimado.toFixed(2),
             })}
           </p>
 
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs app-muted">
             {m.caixa.modal_movimentacao_motivo}
             <select
               value={motivoCodigo}
               onChange={(e) => setMotivoCodigo(e.target.value)}
-              className="mt-1 w-full h-9 rounded-md bg-slate-800 border border-slate-600 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full h-9 rounded-md px-2 py-1.5 text-xs app-select"
             >
               {MOTIVOS_BASE.map((codigo) => (
                 <option key={codigo} value={codigo}>
@@ -227,20 +227,20 @@ export function CaixaMovimentacaoModal({
           </label>
 
           {motivoCodigo === "OUTRO" && (
-            <label className="block text-xs text-slate-400">
+            <label className="block text-xs app-muted">
               {m.caixa.modal_movimentacao_outro}
               <Input
                 value={motivoOutro}
                 onChange={(e) => setMotivoOutro(e.target.value)}
                 placeholder={m.caixa.modal_movimentacao_outro_placeholder}
-                className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+                className="mt-1 app-input"
               />
             </label>
           )}
 
           {precisaSenhaGerente && (
-            <label className="block text-xs text-amber-300">
-              <span className="mb-1 flex items-center gap-2 text-amber-200/95">
+            <label className="block text-xs app-accent-text">
+              <span className="mb-1 flex items-center gap-2 app-accent-text">
                 <ImperialSealIcon
                   className="h-5 w-5 shrink-0 text-[color:var(--dragon-imperial-red,#b91c1c)]"
                   title={m.caixa.aria_selo_gerente}
@@ -257,22 +257,22 @@ export function CaixaMovimentacaoModal({
                 value={gerenteSenha}
                 onChange={(e) => setGerenteSenha(e.target.value)}
                 placeholder={m.caixa.modal_gerente_senha_placeholder}
-                className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+                className="mt-1 app-input"
               />
             </label>
           )}
 
           {erroLocal && (
-            <p className="text-xs text-amber-300" role="alert">
+            <p className="rounded-md border px-2 py-1 text-xs app-badge-warn" role="alert">
               {erroLocal}
             </p>
           )}
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t border-slate-800/80 mt-2 pt-3">
+        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t app-divider mt-2 pt-3">
           <Button
             type="button"
             variant="ghost"
-            className="text-slate-400 hover:text-slate-200"
+            className="app-btn-neutral"
             onClick={() => onOpenChange(false)}
             disabled={processando}
           >
@@ -280,7 +280,7 @@ export function CaixaMovimentacaoModal({
           </Button>
           <Button
             type="button"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white"
+            className="app-btn-accent"
             onClick={() => void handleSalvar()}
             disabled={processando}
             aria-busy={processando}

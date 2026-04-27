@@ -88,34 +88,34 @@ export function CaixaMovimentacaoAcaoModal({
       <Card
         role="dialog"
         aria-modal="true"
-        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
+        className="dragon-glass-card app-border w-full sm:max-w-md rounded-none sm:rounded-lg border app-surface-text shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle className="text-lg text-slate-50">{title}</CardTitle>
+          <CardTitle className="text-lg app-surface-text">{title}</CardTitle>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-3 overflow-y-auto">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs app-muted">
             {m.caixa.timeline_modal_motivo_label}
             <textarea
               ref={motivoRef}
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               placeholder={m.caixa.timeline_modal_motivo_placeholder}
-              className="mt-1 min-h-24 w-full rounded-md bg-slate-800 border border-slate-600 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 min-h-24 w-full rounded-md px-2 py-1.5 text-xs app-input"
             />
           </label>
           {erroLocal && (
-            <p className="text-xs text-amber-300" role="alert">
+            <p className="text-xs app-badge-warn rounded-md border px-2 py-1" role="alert">
               {erroLocal}
             </p>
           )}
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t border-slate-800/80 mt-2 pt-3">
+        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t app-divider mt-2 pt-3">
           <Button
             type="button"
             variant="ghost"
-            className="text-slate-400 hover:text-slate-200"
+            className="app-btn-neutral"
             onClick={() => onOpenChange(false)}
             disabled={processando}
           >
@@ -123,7 +123,7 @@ export function CaixaMovimentacaoAcaoModal({
           </Button>
           <Button
             type="button"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white"
+            className="app-btn-danger"
             onClick={() => void confirmar()}
             disabled={processando}
           >

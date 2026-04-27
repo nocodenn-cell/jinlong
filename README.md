@@ -76,6 +76,7 @@ O hook executa `scripts/git-pre-commit-check.mjs` (resolve o `git` em caminhos p
 - [**P0 checklist** — migrations, deploy Edge, secrets, teste ponta a ponta](docs/P0_CHECKLIST_OPERACIONAL.md)
 - [**P0 staging** — checklist com data/responsável + comando de status de migrations](docs/CHECKLIST_P0_STAGING.md)
 - [**Ambientes e release** — dev/staging/prod, credenciais PDV local, gates](docs/AMBIENTES_E_RELEASE.md)
+- [**Guia de implantação (Web vs Desktop)** — quando usar cada módulo por cenário de loja](docs/GUIA_IMPLANTACAO_WEB_VS_DESKTOP.md)
 - [**Circuito operacional** — deploy Edge, secrets, teste desktop → nuvem, caixa web vs desktop](docs/CIRCUITO_OPERACIONAL.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Segurança — dependências](pdv-importados/docs/SECURITY.md)

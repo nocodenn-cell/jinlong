@@ -1,4 +1,4 @@
-# PDV Importados - Frontend
+# Jīn Lóng - Frontend
 
 Sistema de ponto de venda para lojas de importados no Brasil, desenvolvido com **Next.js 16** (App Router).
 

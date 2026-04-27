@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
+import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { reprocessarDocumentoFiscal } from '../../actions'
 import {
@@ -101,8 +102,8 @@ export function DocumentoFiscalDetalheClient({ doc, eventos, voltarLabel, locale
           ) : null}
           {doc.ultimo_erro ? (
             <div>
-              <dt className="inline text-red-600">Erro atual </dt>
-              <dd className="inline text-red-600">{doc.ultimo_erro}</dd>
+              <dt className="inline app-badge-danger rounded px-1 py-0.5">Erro atual </dt>
+              <dd className="inline app-badge-danger rounded px-1 py-0.5">{doc.ultimo_erro}</dd>
             </div>
           ) : null}
           {doc.fiscal_error_code ? (
@@ -127,14 +128,15 @@ export function DocumentoFiscalDetalheClient({ doc, eventos, voltarLabel, locale
           </div>
         </dl>
         {podeReprocessar ? (
-          <button
+          <ConfirmActionButton
             type="button"
             disabled={loadReprocessar}
+            confirmMessage={`Confirma reprocessar o documento ${doc.id.slice(0, 8)}…? O item voltará para a fila fiscal.`}
             onClick={() => void mutReprocessar(null)}
-            className="mt-4 inline-flex rounded-lg bg-gradient-to-b from-emerald-600 to-emerald-800 px-4 py-2 text-sm font-semibold text-white shadow-md transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+            className="mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-70 app-btn-danger"
           >
             {loadReprocessar ? 'Reprocessando...' : 'Reprocessar manualmente'}
-          </button>
+          </ConfirmActionButton>
         ) : null}
       </section>
 

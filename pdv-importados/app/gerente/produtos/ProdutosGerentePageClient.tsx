@@ -103,7 +103,8 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
     { successMessage: m.comum.sucesso },
   )
 
-  const finIn = 'gerente-fin-input h-9 rounded-md px-3 text-xs'
+  const finIn = 'h-9 rounded-md px-3 text-xs app-input'
+  const finSelect = 'h-9 rounded-md px-3 text-xs app-select'
 
   return (
     <div className={`mx-auto w-full max-w-7xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
@@ -156,7 +157,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
               required
               className={finIn}
             />
-            <select name="origem" defaultValue="china_manual" className={finIn}>
+            <select name="origem" defaultValue="china_manual" className={finSelect}>
               <option value="china_manual">{m.produtos.origem_china}</option>
               <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
               <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
@@ -164,12 +165,12 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             <button
               type="submit"
               disabled={criarLoading}
-              className="h-9 rounded-md bg-gradient-to-b from-emerald-600 to-emerald-800 px-3 text-xs font-semibold text-white shadow-sm transition-[filter] hover:from-emerald-500 hover:to-emerald-700 disabled:opacity-60"
+              className="h-9 rounded-md px-3 text-xs font-semibold shadow-sm transition-[filter] disabled:opacity-60 app-btn-accent"
             >
               {criarLoading ? '…' : m.comum.salvar}
             </button>
             <label className="gerente-fin-muted md:col-span-6 inline-flex items-center gap-2 text-xs">
-              <input type="checkbox" name="tem_nf" className="h-3.5 w-3.5 rounded border-slate-400" />
+              <input type="checkbox" name="tem_nf" className="h-3.5 w-3.5 rounded app-border app-surface-soft" />
               {m.produtos.tem_nf}
               <span className="opacity-80">· {m.produtos.codigo_barras_opcional}</span>
             </label>
@@ -183,13 +184,13 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
 
           <div className="gerente-fin-divider grid grid-cols-1 gap-2 border-b p-3 sm:grid-cols-2 lg:grid-cols-4">
             <input disabled placeholder={m.produtos.buscar} className={`${finIn} h-8 cursor-not-allowed opacity-60`} />
-            <select disabled className={`${finIn} h-8 cursor-not-allowed opacity-60`}>
+            <select disabled className={`${finSelect} h-8 cursor-not-allowed opacity-60`}>
               <option>{m.produtos.origem_label}</option>
             </select>
-            <select disabled className={`${finIn} h-8 cursor-not-allowed opacity-60`}>
+            <select disabled className={`${finSelect} h-8 cursor-not-allowed opacity-60`}>
               <option>{m.produtos.status}</option>
             </select>
-            <select disabled className={`${finIn} h-8 cursor-not-allowed opacity-60`}>
+            <select disabled className={`${finSelect} h-8 cursor-not-allowed opacity-60`}>
               <option>{m.produtos.tem_nf}</option>
             </select>
           </div>

@@ -1,9 +1,9 @@
-/** Arte ouroboros raster, recortada em círculo (sem máscara SVG). */
-const OUROBOROS_SRC = '/branding/dragon-ouroboros-mark.png'
+/** Arte principal imperial em amarelo com fundo transparente. */
+const OUROBOROS_SRC = '/branding/dragon-imperial-amber.png'
 
 /**
- * Emblema ouroboros — mesma silhueta da referência (PNG em `public/branding`).
- * Paleta: fundo `#0f172a`, traço fino e dragão `#fde047`.
+ * Emblema Jīn Lóng com fundo transparente.
+ * Paleta: traços em `#fde047`.
  */
 export function DragonEmblemIcon({
   className,
@@ -22,15 +22,7 @@ export function DragonEmblemIcon({
       aria-label={title}
     >
       {title ? <title>{title}</title> : null}
-      <defs>
-        <clipPath id="dragon-ouroboros-clip">
-          <circle cx="40" cy="40" r="36" />
-        </clipPath>
-      </defs>
-      <circle cx="40" cy="40" r="38" fill="#0f172a" stroke="#fde047" strokeWidth="1.2" />
-      <g clipPath="url(#dragon-ouroboros-clip)">
-        <image href={OUROBOROS_SRC} x="0" y="0" width="80" height="80" preserveAspectRatio="xMidYMid meet" />
-      </g>
+      <image href={OUROBOROS_SRC} x="0" y="0" width="80" height="80" preserveAspectRatio="xMidYMid meet" />
     </svg>
   )
 }

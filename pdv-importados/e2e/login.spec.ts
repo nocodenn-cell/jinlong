@@ -10,7 +10,7 @@ const LOGIN_PATH = '/login'
 test.describe('Página de login — UI', () => {
   test('exibe formulário', async ({ page }) => {
     await page.goto(LOGIN_PATH)
-    await expect(page.getByRole('heading', { name: 'PDV Importados' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Jīn Lóng' })).toBeVisible()
     await expect(page.getByPlaceholder('Email')).toBeVisible()
     await expect(page.getByPlaceholder('Senha')).toBeVisible()
     await expect(page.getByRole('button', { name: /^Entrar$/ })).toBeVisible()

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none" role="img" aria-labelledby="title desc">
-  <title id="title">PDV Importados</title>
-  <desc id="desc">Lockup with golden dragon and PDV Importados wordmark</desc>
+  <title id="title">Jīn Lóng</title>
+  <desc id="desc">Lockup with golden dragon and Jīn Lóng wordmark</desc>
   <rect width="200" height="60" rx="8" fill="#0f172a" />
   <g transform="translate(8, 8)">
     <path
@@ -16,6 +16,6 @@
     <path d="M25 25 Q15 10 5 15 Q10 22 20 25Z" fill="#F59E0B" opacity="0.8" />
     <path d="M12 40 Q2 45 5 35 Q8 28 15 38" fill="none" stroke="#F59E0B" stroke-width="2" />
   </g>
-  <text x="75" y="36" font-family="system-ui, Segoe UI, sans-serif" font-weight="bold" font-size="20" fill="#FDE047">PDV Importados</text>
+  <text x="75" y="36" font-family="system-ui, Segoe UI, sans-serif" font-weight="bold" font-size="20" fill="#FDE047">Jīn Lóng</text>
   <text x="75" y="52" font-family="system-ui, Segoe UI, sans-serif" font-size="12" fill="#94A3B8">&#x26A1; Importa&#231;&#227;o com confian&#231;a</text>
 </svg>

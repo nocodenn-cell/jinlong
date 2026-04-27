@@ -6,7 +6,7 @@ import { getMessages } from '@/i18n/getMessages'
 export default async function GerenteLayout({ children }: { children: ReactNode }) {
   const { idioma, perfil } = await getUsuarioIdioma()
   const m = getMessages(idioma)
-  const logoSubtitle = m.brand?.logo_subtitle ?? 'Dragon POS'
+  const logoSubtitle = m.brand?.logo_subtitle ?? '金龍'
 
   return (
     <GerenteLayoutShell idioma={idioma} perfil={perfil} m={m} logoSubtitle={logoSubtitle}>
