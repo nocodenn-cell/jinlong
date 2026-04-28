@@ -23,6 +23,8 @@ interface CarrinhoState {
   itens: ItemCarrinhoComPreco[]
   regras: RegraPreco[]
   pricingCtx: PricingContext
+  /** Utilizador Supabase a quem o carrinho persistido pertence; alinhado em /caixa após auth/hidratação */
+  cartOwnerUserId: string | null
 
   // Totais calculados
   totalBruto: number
@@ -33,6 +35,8 @@ interface CarrinhoState {
 
   // Ações
   setRegras: (regras: RegraPreco[], pricingCtx: PricingContext) => void
+  /** Associa o carrinho ao utilizador atual; limpa itens se já existir dono diferente (troca de operador). */
+  setCartOwnerForSession: (userId: string | null) => void
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (itemId: string) => void
   alterarQuantidade: (itemId: string, quantidade: number) => void
@@ -66,11 +70,46 @@ export const useCarrinhoStore = create<CarrinhoState>()(
       itens: [],
       regras: [],
       pricingCtx: DEFAULT_PRICING_CONTEXT,
+      cartOwnerUserId: null,
       totalBruto: 0,
       totalDesconto: 0,
       totalLiquido: 0,
       totalItens: 0,
       totalUnidades: 0,
+
+      setCartOwnerForSession: (userId) => {
+        const curOwner = get().cartOwnerUserId ?? null
+        const { itens } = get()
+        if (userId === curOwner) return
+
+        if (userId === null) {
+          set({
+            itens: [],
+            totalBruto: 0,
+            totalDesconto: 0,
+            totalLiquido: 0,
+            totalItens: 0,
+            totalUnidades: 0,
+            cartOwnerUserId: null,
+          })
+          return
+        }
+
+        if (itens.length > 0 && curOwner !== null && curOwner !== userId) {
+          set({
+            itens: [],
+            totalBruto: 0,
+            totalDesconto: 0,
+            totalLiquido: 0,
+            totalItens: 0,
+            totalUnidades: 0,
+            cartOwnerUserId: userId,
+          })
+          return
+        }
+
+        set({ cartOwnerUserId: userId })
+      },
 
       setRegras: (regras, pricingCtx) => {
         set({ regras, pricingCtx })
@@ -162,6 +201,7 @@ export const useCarrinhoStore = create<CarrinhoState>()(
           totalLiquido: 0,
           totalItens: 0,
           totalUnidades: 0,
+          cartOwnerUserId: null,
         }),
     }),
     {
@@ -169,6 +209,7 @@ export const useCarrinhoStore = create<CarrinhoState>()(
       // Não persistir regras de preço (sempre buscar fresh do servidor)
       partialize: (state) => ({
         itens: state.itens,
+        cartOwnerUserId: state.cartOwnerUserId,
       }),
     }
   )

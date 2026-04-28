@@ -39,6 +39,7 @@ import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeli
 import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
 import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
+import { createClient } from "@/lib/supabase/client"
 import "@/styles/theme-oriental.css"
 
 function localeFromIdioma(idioma: Idioma): string {
@@ -105,6 +106,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     totalItens,
     totalUnidades,
     setRegras,
+    setCartOwnerForSession,
     adicionarItem,
     alterarQuantidade,
     removerItem,
@@ -249,6 +251,15 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_abaixo_minimo} ${m.caixa.estoque_dica_rep}`
         }
 
+        const supabase = createClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        const uid = session?.user?.id ?? null
+        if (uid) {
+          setCartOwnerForSession(uid)
+        }
+
         adicionarItem({
           id: `${p.id}-${Date.now()}`,
           produtoId: p.id,
@@ -279,7 +290,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         focarCampoBusca()
       }
     },
-    [codigo, adicionarItem, focarCampoBusca, m, setCaixaMensagem],
+    [codigo, adicionarItem, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession],
   )
 
   const handleAlterarQuantidade = useCallback(

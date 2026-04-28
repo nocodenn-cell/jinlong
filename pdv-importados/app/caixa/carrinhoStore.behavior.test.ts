@@ -34,6 +34,7 @@ function resetCarrinhoStore() {
     itens: [],
     regras: [],
     pricingCtx: DEFAULT_PRICING_CONTEXT,
+    cartOwnerUserId: null,
     totalBruto: 0,
     totalDesconto: 0,
     totalLiquido: 0,
@@ -102,6 +103,63 @@ describe('useCarrinhoStore behavior', () => {
     expect(state.itens[0]?.resultado.precoUnitario).toBe(0)
     expect(state.itens[0]?.resultado.tipoPreco).toBe('MANUAL')
     expect(state.totalLiquido).toBe(0)
+  })
+
+  it('setCartOwnerForSession atribui dono quando carrinho vazio', () => {
+    useCarrinhoStore.getState().setCartOwnerForSession('user-a')
+    expect(useCarrinhoStore.getState().cartOwnerUserId).toBe('user-a')
+  })
+
+  it('setCartOwnerForSession reivindica legado (itens sem dono) sem apagar', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoVariejo: 10,
+    })
+    useCarrinhoStore.setState({ cartOwnerUserId: null })
+    useCarrinhoStore.getState().setCartOwnerForSession('user-b')
+    const state = useCarrinhoStore.getState()
+    expect(state.cartOwnerUserId).toBe('user-b')
+    expect(state.itens).toHaveLength(1)
+  })
+
+  it('setCartOwnerForSession limpa quando dono persistido difere do novo utilizador', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoVariejo: 10,
+    })
+    useCarrinhoStore.setState({ cartOwnerUserId: 'user-a' })
+    useCarrinhoStore.getState().setCartOwnerForSession('user-b')
+    const state = useCarrinhoStore.getState()
+    expect(state.itens).toHaveLength(0)
+    expect(state.cartOwnerUserId).toBe('user-b')
+    expect(state.totalLiquido).toBe(0)
+  })
+
+  it('setCartOwnerForSession(null) zera carrinho e dono', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoVariejo: 10,
+    })
+    useCarrinhoStore.setState({ cartOwnerUserId: 'user-a' })
+    useCarrinhoStore.getState().setCartOwnerForSession(null)
+    const state = useCarrinhoStore.getState()
+    expect(state.itens).toHaveLength(0)
+    expect(state.cartOwnerUserId).toBeNull()
+  })
+
+  it('limparCarrinho remove dono', () => {
+    useCarrinhoStore.setState({ cartOwnerUserId: 'user-a' })
+    useCarrinhoStore.getState().limparCarrinho()
+    expect(useCarrinhoStore.getState().cartOwnerUserId).toBeNull()
   })
 })
 
