@@ -44,7 +44,7 @@ Marque por **ambiente** (`dev` / `staging` / `prod`). Itens **§2–§3** só se
 2. **§2** — `npx supabase functions deploy sync-outbox` → três **secrets** da function conferidos (Dashboard ou CLI). **Depois** do `db push` que inclui **014+** e mudanças na Edge no repositório, redeploy alinha batch, HMAC/`SYNC_KEY` e chamada a `decrementar_estoque_seguro`.
 3. **§5** — `pdv-importados/.env.local` com `NEXT_PUBLIC`_* do **mesmo** projeto; deploy (Vercel/host) quando for o ambiente oficial.
 4. **Escolha um caminho de teste** (marque o §4 ou o §4b abaixo):
-  - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009** (RPC legada) e **010** (leitura `estoque_baixas` para gerente); caixa web usa **016** `decrementar_estoque_seguro` quando aplicada.
+  - **§4b (mínimo, só web):** operador em `/caixa` → **Finalizar venda** de teste → gerente em `/gerente/vendas` vê a linha → abrir **detalhe** (`/gerente/vendas/[id]`) e conferir itens / baixas. Exige **009**/`010` (grants e leitura `estoque_baixas` para gerente). A baixa efetiva no Postgres é feita por **`decrementar_estoque_seguro`** (migrations **016**+**038**), invocada a partir das RPCs de **finalizar venda** (canónica v2 ou legado).
   - **§4 (com desktop):** além disso, **§3** (`pdv-local/.env` + `SYNC_`*) → catálogo → venda no Tauri → sync → mesma checagem no Supabase e na web.
 5. Marcar os checkboxes desta trilha e do [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md) para o ambiente (piloto/produção) que você chama de **oficial**.
 
@@ -64,14 +64,14 @@ cd C:\Naturecode\fastproduct\backend
 npx supabase migration list
 ```
 
-- Coluna **Remote** deve refletir **todas** as migrations do repositório aplicadas **sem lacunas** na sequência do projeto (pasta `backend/supabase/migrations/`: arquivos com prefixo numérico `001_` … até a última versão no branch **e** eventuais arquivos com **timestamp** no nome; confira com `migration list` após `supabase link`). **009** + **015**: `decrementar_estoque_idempotente` para `authenticated` exige venda do operador; **service_role** sem essa restrição. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: essa RPC só **service_role**. **016**: `decrementar_estoque_seguro` (FOR UPDATE + retorno estruturado). **017**: mesma regra de operador/service_role na RPC segura. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`. **024**: tabela `sync_request_nonces` (anti-replay HMAC). **025**: `finalizar_venda_transacional_canonica_v2` (fluxo unificado). **026+**: evoluções (config gerente, catálogo atacado, fiado/fiscal, RLS por loja, etc.) — manter remoto alinhado ao que está versionado antes de produção.
+- Coluna **Remote** deve refletir **todas** as migrations do repositório aplicadas **sem lacunas** na sequência do projeto (pasta `backend/supabase/migrations/`: arquivos com prefixo numérico `001_` … até a última versão no branch **e** eventuais arquivos com **timestamp** no nome; confira com `migration list` após `supabase link`). **007**/**015**: ainda existe a RPC legada `decrementar_estoque_idempotente` (não é o caminho da **sync-outbox** nem da finalização web atuais). **070**/**071**: o corpo delega a **`decrementar_estoque_seguro`** e revoga-se `EXECUTE` para **`authenticated`** na RPC legada (mantém-se para **`service_role`**). **009** + **015**: grants/hardening históricos; **`decrementar_estoque_seguro`** (016/017/038) é a RPC de baixa com **FOR UPDATE** usada pela Edge e pelas RPCs de finalizar venda. **010**: `SELECT` em `estoque_baixas` para **GERENTE/DONO**. **014**: `registrar_venda_com_itens` (sync desktop). **015**: `registrar_venda_com_itens` só **service_role**. **018**: tabela `tokens_desconto_gerente` para auditoria/revogação da `validar-gerente`. **024**: tabela `sync_request_nonces` (anti-replay HMAC). **025**: `finalizar_venda_transacional_canonica_v2` (fluxo unificado). **026+**: evoluções (config gerente, catálogo atacado, fiado/fiscal, RLS por loja, etc.) — manter remoto alinhado ao que está versionado antes de produção.
 - Se faltar algo: `npx supabase db push` (e revisar erros).
 
 **No SQL Editor** (dupla checagem): rode o script  
 `[backend/supabase/scripts/verify_p0_producao.sql](../backend/supabase/scripts/verify_p0_producao.sql)`
 
 - `descontos_venda` com **RLS ativo** e policies `descontos_venda`_*.
-- Função `decrementar_estoque_idempotente` existente (legado; caixa/Edge preferem **016**).
+- Função `decrementar_estoque_idempotente` ainda presente no BD (**legado**; **070**/**071**); **caixa web** e **sync-outbox** usam **`decrementar_estoque_seguro`** (016+). Operadores JWT **não** devem ter `EXECUTE` na legada após **071**.
 - Tabela `estoque_baixas` existente.
 - **001–010** aplicadas no projeto **produção** (e demais migrations até a última versionada no repositório, sem lacunas — ver parágrafo acima)
 - **001–010** aplicadas em **staging/dev** (e o mesmo critério de sequência completa até a última migration usada pelo time)
@@ -85,7 +85,7 @@ npx supabase migration list
 Ordem: `db push` (aplica **014** depois **015**) → em seguida `functions deploy sync-outbox` (limite de 200 eventos por POST + `X-SYNC-KEY` em tempo constante).
 
 - **014** — RPC `registrar_venda_com_itens` usada pela Edge no sync de vendas do PDV local.
-- **015** — `registrar_venda_com_itens` **somente** `service_role`; `decrementar_estoque_idempotente` valida operador na venda para JWT `authenticated`.
+- **015** — `registrar_venda_com_itens` **somente** `service_role`; endurecimento da RPC legada `decrementar_estoque_idempotente` (não substitui o uso de **`decrementar_estoque_seguro`** na outbox / finalizar venda).
 
 Smoke rápido após **015**:
 

@@ -6,15 +6,17 @@ O lockfile único fica na **raiz** do repositório (`npm ci` a partir da raiz). 
 
 ### Opção A — raiz do repositório (recomendada)
 
+Na raiz existe [`vercel.json`](../vercel.json) com `installCommand`, `buildCommand` e `outputDirectory` alinhados ao monorepo. No painel da Vercel pode deixar os overrides vazios **ou** confirmar os mesmos valores:
+
 | Campo                 | Valor |
 | --------------------- | ----- |
 | **Root Directory**    | `.` (raiz do repo) |
-| **Framework**         | Next.js (ou “Other” + override abaixo) |
-| **Install Command**   | `npm ci` |
-| **Build Command**     | `npx turbo run build --filter=pdv-importados` |
-| **Output Directory**  | `pdv-importados/.next` |
+| **Framework**         | Next.js (ou “Other”; o output é fixado no `vercel.json`) |
+| **Install Command**   | `npm ci` (padrão via `vercel.json`) |
+| **Build Command**     | `npm run build` (= Turbo só em `pdv-importados`) |
+| **Output Directory**  | `pdv-importados/.next` (via `vercel.json`) |
 
-Confirme no painel da Vercel que o diretório de saída do Next aponta para `pdv-importados/.next` quando a raiz não é a pasta do app.
+O ficheiro [`.nvmrc`](../.nvmrc) na raiz fixa **Node 20** quando o Root Directory do projeto é a raiz do repositório.
 
 ### Opção B — Root Directory só em `pdv-importados` (legado)
 
@@ -57,7 +59,7 @@ Detalhes: `backend/supabase/README.md` e `pdv-importados/docs/SUPABASE_ENV.md`.
 
 ### Banco (migrations)
 
-Após alterações em `backend/supabase/migrations/`, aplicar no projeto Supabase (CLI `db push` a partir da pasta `**backend**` / migrações linkadas ou **SQL Editor**). Ex.: `007_estoque_baixa_idempotente.sql` (RPC `decrementar_estoque_idempotente`) é necessária para baixa de estoque na Edge `sync-outbox`.
+Após alterações em `backend/supabase/migrations/`, aplicar no projeto Supabase (CLI `db push` a partir da pasta `**backend**` / migrações linkadas ou **SQL Editor**). Para baixa de estoque coerente com o código atual da Edge `sync-outbox` e do caixa web, o remoto deve incluir pelo menos **007** (`estoque_baixas`) e a cadeia **016**/**038** (**`decrementar_estoque_seguro`**, `FOR UPDATE` + `version`), **070**/**071** (RPC legada delega a `seguro`; sem `EXECUTE` para `authenticated`), além das RPCs de finalização (**025** canónica v2, etc.). A RPC legada `decrementar_estoque_idempotente` permanece só para **`service_role`** / compatibilidade; **não** é o caminho da outbox nem da finalização web.
 
 ## Verificação pós-deploy
 

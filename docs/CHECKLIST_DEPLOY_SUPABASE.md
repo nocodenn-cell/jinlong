@@ -36,6 +36,9 @@ Execute sempre a partir da pasta **`backend`** (raiz do módulo Supabase deste m
 | 1.4 | Verificação SQL recomendada | SQL Editor: executar `backend/supabase/scripts/verify_p0_producao.sql` |
 | 1.5 | Após migrations **058** (RPC `pdv_config_para_caixa_web`), **059** (cancelamento split) e **060** (view `v_kardex_unificado`): confirmar `db push` **antes** de publicar build Next que já depende das RPCs 058+ |
 
+> **1.4b (opcional – validação da migration 069)**  
+> Após rodar `npx supabase db push` com a migration 069, execute o script `backend/supabase/scripts/smoke_fiscal_enqueue_069_service_role.sql` no SQL Editor do Supabase (ou via psql). O script confirma que a função `fiscal_enfileirar_documento_venda` aceita a role `service_role` sem erros de permissão.
+
 Se o repositório tiver `node scripts/p0-migration-status.mjs`, use também para um resumo rápido de alinhamento (ver [CHECKLIST_P0_STAGING.md](./CHECKLIST_P0_STAGING.md)).
 
 ---
@@ -63,7 +66,20 @@ Defina no Dashboard (**Edge Functions → Secrets**) ou via CLI (`npx supabase s
 | `SUPABASE_URL` | URL `https://<ref>.supabase.co` do **mesmo** projeto |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role do **mesmo** projeto (só servidor / Edge) |
 
-### 3.2 — `sync-outbox` (PDV local → nuvem + catálogo)
+### 3.2 – Enfileiramento automático de notas fiscais a partir do PDV desktop (sync-outbox)
+
+- **Comportamento padrão**:  
+  O secret `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE` **não está definido** por padrão. Nenhuma venda do PDV desktop é enfileirada para emissão de nota.  
+- **Quando ativado**:  
+  Defina o secret como `true` ou `1`. A Edge Function `sync-outbox`, após persistir a venda com sucesso, chamará a RPC `fiscal_enfileirar_documento_venda` com payload compatível ao caixa web (`origem: "pdv_local_sync"`).  
+- **Falha no enfileiramento**:  
+  Apenas um **log estruturado** (`level: "warn"`, estágio `fiscal_enqueue_sync`) é gravado; o batch de outbox **não** é interrompido (mesma filosofia do caixa web, que usa `console.error` no servidor Next em falha de RPC).  
+- **Pré-requisito obrigatório antes de ativar em produção**:  
+  A migration **069** deve estar aplicada na base (senão a Edge com `service_role` falhará com `FISCAL_ENQUEUE_AUTH`).  
+- **Alinhamento de tipo de documento**:  
+  No **desktop**, o tipo vem do secret **`FISCAL_DEFAULT_DOC_TYPE`** na Edge `sync-outbox` (`NFC_E_STUB` se omitido). No **caixa web**, a mesma variável pode existir no Next (`pdv-importados`); valide paridade entre ambientes se quiser o mesmo tipo (`NFC_E_STUB`, `NFCE` ou `NFE`).
+
+#### Demais secrets — `sync-outbox` (PDV local → nuvem + catálogo)
 
 | Secret | Nota |
 |--------|------|
@@ -72,6 +88,8 @@ Defina no Dashboard (**Edge Functions → Secrets**) ou via CLI (`npx supabase s
 | `STRICT_MANAGER_DISCOUNT_AUTH` | Alinhar com a web |
 | `SYNC_OUTBOX_EXPOSE_INTERNAL_ERRORS` | Produção: manter **desligado** ou `false` |
 | `CANARY_DEVICE_FINGERPRINTS` | Opcional; só se usar rollout por fingerprint |
+| `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE` | Ver **§3.2** (comportamento e pré-requisitos). |
+| `FISCAL_DEFAULT_DOC_TYPE` | Secret opcional na Edge quando o enqueue do desktop está ativo; ver também alinhamento em **§3.2**. |
 
 ### 3.3 — `validar-gerente` (desconto gerente na web)
 

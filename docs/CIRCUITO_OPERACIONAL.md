@@ -12,10 +12,10 @@ Documento único para **deploy da Edge**, **secrets**, **teste ponta a ponta** e
 |---|---------------------------|---------------------------|
 | **Quem usa** | OPERADOR logado no navegador (idealmente com internet). | Operador na frente de loja (Windows); funciona **offline-first** com cache SQLite. |
 | **Catálogo e preços** | Lê **Supabase** ao vivo (`produtos`, `estoque`, `regras_preco`). Motor de preço no cliente (Zustand + `core`). | Cache local sincronizado (**Sincronizar catálogo**); mesmo tipo de regras em cache. |
-| **Registro de venda** | **Finalizar venda** grava `vendas` / `itens_venda` e chama a RPC **`decrementar_estoque_idempotente`** (migrations **007** + **009** com `GRANT` a `authenticated`). Alternativa: fluxo desktop + outbox (abaixo). | **Grava venda em SQLite**, enfileira **outbox** e envia para a Edge **`sync-outbox`** (`SYNC_*`). |
+| **Registro de venda** | **Finalizar venda** grava `vendas` / `itens_venda` e baixa estoque via **`decrementar_estoque_seguro`** (dentro de `finalizar_venda_transacional_canonica_v2` ou `finalizar_venda_transacional`; migrations **016**+**038**, com **007**/`estoque_baixas` para idempotência por par venda+produto). Alternativa: fluxo desktop + outbox (abaixo). | **Grava venda em SQLite**, enfileira **outbox** e envia para a Edge **`sync-outbox`** (`SYNC_*`), que aplica a mesma lógica (**`decrementar_estoque_seguro`** ou RPC canónica v2). |
 | **Para relatórios / gerente** | Vendas gravadas pela web ou pelo desktop aparecem em `/gerente/*` após persistência no Postgres. | Após sync com sucesso, vendas e estoque refletem no Supabase. |
 
-**Conclusão para operação:** o **desktop** continua indicado para **loja offline-first** e fila outbox. O **caixa web** passa a registrar venda direto no Postgres (com **009** aplicada). Exige **conexão** e o **mesmo modelo de dados** (`vendas`, itens, RPC de estoque).
+**Conclusão para operação:** o **desktop** continua indicado para **loja offline-first** e fila outbox. O **caixa web** passa a registrar venda direto no Postgres (ex.: **009** em diante, incluindo **`decrementar_estoque_seguro`** e RPCs de finalizar venda). Exige **conexão** e o **mesmo modelo de dados** (`vendas`, itens, RPC de estoque).
 
 ---
 
@@ -101,7 +101,7 @@ Manter **migrations**, **secrets** e **runtime da Edge** alinhados evita erros j
 Lista numerada ampliada com caixas para marcar: [**P0_CHECKLIST_OPERACIONAL.md**](./P0_CHECKLIST_OPERACIONAL.md).  
 Verificação SQL: [`backend/supabase/scripts/verify_p0_producao.sql`](../backend/supabase/scripts/verify_p0_producao.sql).
 
-1. **Supabase:** migrations aplicadas (`db push`), inclusive **007** (estoque idempotente), **008** (RLS `descontos_venda`), **024** (nonces anti-replay) e **025** (RPC canônica v2).
+1. **Supabase:** migrations aplicadas (`db push`), inclusive **007** (`estoque_baixas` + função legada `decrementar_estoque_idempotente` ainda no BD), **008** (RLS `descontos_venda`), **016**/**038** (`decrementar_estoque_seguro` — baixa usada pelo caixa web e pela Edge), **070**/**071** (delegação da RPC legada + revogação de `EXECUTE` para `authenticated`), **024** (nonces anti-replay) e **025** (RPC canônica v2).
 2. **Edge:** `sync-outbox` deployada + secrets obrigatórios (§2.3); opcionalmente flags §2.4 conforme rollout.
 3. **Diagnóstico (recomendado):** a partir de `backend`, com `SYNC_ENDPOINT` e `SYNC_KEY` no ambiente:  
    `.\scripts\sync-outbox-anti-replay-diagnostic.ps1`  
@@ -111,7 +111,7 @@ Verificação SQL: [`backend/supabase/scripts/verify_p0_producao.sql`](../backen
 6. **Desktop:** realizar uma **venda de teste** simples e **Finalizar** (F5); confirmar sync da outbox.
 7. **Smoke desconto gerente (com fluxo unificado / estrito):** com rede, aplicar **Desconto especial (gerente)** (o app chama `validar_gerente` na Edge e grava o token na venda). Com `STRICT_MANAGER_DISCOUNT_AUTH=true`, uma venda com desconto **sem** token deve falhar na Edge; com token, deve concluir. Com canário, use o mesmo `DEVICE_FINGERPRINT` no `.env` que está em `CANARY_DEVICE_FINGERPRINTS`.
 8. **Desktop:** aguardar sync automático ou conferir fila / DLQ.
-9. **Nuvem:** **Table Editor** — `vendas` / `itens_venda`; estoque coerente com a RPC em uso (legada ou v2).
+9. **Nuvem:** **Table Editor** — `vendas` / `itens_venda`; estoque coerente com **`decrementar_estoque_seguro`** / fluxo canónico v2.
 10. **Web gerente:** `/gerente/vendas` (ou `/gerente`) — venda aparece na lista.
 
 Se a persistência na nuvem falhar, ver logs da Edge (Dashboard) e coluna `last_error` na **outbox** local (SQLite) para eventos em DLQ.

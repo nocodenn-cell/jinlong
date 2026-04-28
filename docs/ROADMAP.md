@@ -13,7 +13,7 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 - Migrations e Edge Functions em **`backend/supabase/`** (pasta única de backend Supabase no monorepo)
 - **Fase 1 (gerente):** migration **010** — RLS `SELECT` em `estoque_baixas` para GERENTE/DONO; rota **`/gerente/vendas/[id]`** com itens e baixas; links na lista e no painel
 - **Relatórios:** migrations **011**–**013** — RPCs `relatorio_*_periodo` com **`p_de` / `p_ate` / `p_tz`** (IANA validado em `pg_timezone_names`); **`relatorio_settings`** + env **`RELATORIO_TIMEZONE`**; **`/gerente/relatorios`**; estoque baixo instantâneo
-- **Fiscal (base técnica):** fila `documentos_fiscais_pendentes`, Edge **`fiscal-worker`**, RPC **`fiscal_enfileirar_documento_venda`** (ex.: migration **062**), enfileiramento opcional pós-venda no caixa web (`AUTO_ENQUEUE_FISCAL_ON_SALE` + `FISCAL_DEFAULT_DOC_TYPE`); painel gerente em **`/gerente/financeiro`**; `npm run env:check` valida `FISCAL_*` quando o enqueue está ligado
+- **Fiscal (base técnica):** fila `documentos_fiscais_pendentes`, Edge **`fiscal-worker`**, RPC **`fiscal_enfileirar_documento_venda`** (ex.: migration **062**), enfileiramento opcional pós-venda no caixa web (`AUTO_ENQUEUE_FISCAL_ON_SALE` + `FISCAL_DEFAULT_DOC_TYPE`); opcional pós-sync **desktop** na Edge **`sync-outbox`** (`AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE` + `FISCAL_DEFAULT_DOC_TYPE`, desligado por predefinição); painel gerente em **`/gerente/financeiro`**; `npm run env:check` valida `FISCAL_*` quando o enqueue web está ligado
 
 ## Curto prazo
 

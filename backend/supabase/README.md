@@ -6,6 +6,8 @@ As migrations e Edge Functions do projeto ficam em `**backend/supabase/**` (past
 
 **Kardex (auditoria de estoque):** view `public.v_kardex_unificado` (migration `060_v_kardex_unificado.sql`) — eventos agregados a partir de `movimentos_estoque_log`, `estoque_baixas` e `estoque_reposicoes_cancelamento`.
 
+**Baixa na venda:** usar **`decrementar_estoque_seguro`** (e RPCs de finalizar venda). Migrations **070**/**071**: a RPC legada `decrementar_estoque_idempotente` delega a `seguro` e deixa de ter `EXECUTE` para `authenticated` (mantém-se para `service_role`).
+
 ## Stack local vs projeto linkado (uma máquina)
 
 - **`npx supabase link`:** liga o CLI ao projeto **remoto** (Reference ID). Use na pasta **`backend`** para `db push` e deploy de functions. Não substitui o Docker local.
@@ -46,6 +48,11 @@ npx supabase functions deploy sync-outbox
 
 Configure os secrets da function (`SYNC_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) no Dashboard ou via CLI (veja `../pdv-importados/scripts/supabase-edge-secrets.example.ps1` a partir da pasta `backend`).
 
+> **Enfileiramento automático para PDV desktop (opcional)**  
+> Após a migration 069, a Edge Function `sync-outbox` pode opcionalmente enfileirar documentos fiscais para vendas realizadas no desktop. A ativação é controlada pelo secret `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE`. O script de smoke `smoke_fiscal_enqueue_069_service_role.sql` (em `scripts/`) valida que a RPC `fiscal_enfileirar_documento_venda` aceita a role `service_role` sem quebrar permissões existentes.
+
+Opcional — fila fiscal após venda sincronizada pelo desktop: secret `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true` e, na mesma Edge, opcionalmente `FISCAL_DEFAULT_DOC_TYPE` (lido por `sync-outbox`; alinhe com o Next se quiser o mesmo tipo que o caixa web). **Predefinição:** desligado (ausente ou `false`); não chama API fiscal externa, só a RPC interna de enfileiramento. Com o enqueue ligado, aplique antes a migration **069** e, em homologação, rode o smoke `supabase/scripts/smoke_fiscal_enqueue_069_service_role.sql`.
+
 ## Edge Function `fiscal-worker`
 
 Emissão fiscal assíncrona (stub/mock ou HTTP provider). Deploy na pasta **`backend`**:
@@ -71,7 +78,14 @@ Para simular o ciclo de operação (compra/entrada de estoque, vendas por forma 
 
 - `backend/supabase/scripts/smoke_operacao_fluxo_completo.sql`
 
-O script é de teste, cria dados fictícios e valida automaticamente os resultados (lança erro se algum passo falhar).
+Outros smokes pontuais (homologação):
+
+- `smoke_fiscal_enqueue_069_service_role.sql` – valida a permissão `service_role` na RPC fiscal e simula o enfileiramento de um documento de teste.
+
+> **Limitação do smoke via SQL puro**  
+> O script acima usa `set_config('request.jwt.claim.role', 'service_role', true)` para simular a role dentro do SQL Editor do Supabase. Em uma conexão psql direta, `auth.role()` pode não refletir esse claim dinâmico. Nesse caso, a validação da definição da função (`pg_get_functiondef`) ainda é suficiente para confirmar que a migration 069 foi aplicada.
+
+O script operacional completo é de teste, cria dados fictícios e valida automaticamente os resultados (lança erro se algum passo falhar).
 
 ## Segurança (obrigatório)
 

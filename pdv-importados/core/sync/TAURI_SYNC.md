@@ -25,22 +25,22 @@ Referência de teste: `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1`.
 
 | `tipo` (outbox)   | Tabelas / ação |
 |-------------------|----------------|
-| `VENDA_REGISTRADA` | `caixas` (ensure), `vendas`, `descontos_venda` (opcional), `itens_venda`, RPC `decrementar_estoque_idempotente` por item |
+| `VENDA_REGISTRADA` | `caixas` (ensure), `vendas`, `descontos_venda` (opcional), `itens_venda`, baixa por item via RPC **`decrementar_estoque_seguro`** (fluxo legado na Edge) ou **`finalizar_venda_transacional_canonica_v2`** (fluxo unificado) |
 | `CAIXA_ABERTO`    | `caixas` (insert idempotente / ensure) |
-| `CAIXA_FECHADO`   | `caixas` (UPDATE `status = FECHADO` se ainda `ABERTO`) |
+| `CAIXA_FECHADO`   | `caixas` (UPDATE `status = FECHADO` se ainda `ABERTO`; preenche `fechamento_diferenca` via RPC `calcular_valor_sistema_dinheiro_caixa` e `fechamento_observacao` opcional no payload) |
 | `MOVIMENTO_CAIXA` | `movimentos_caixa` (INSERT; `tipo` `SANGRIA` ou `SUPRIMENTO`) |
 
 ## Payloads gerados no PDV local (Rust)
 
 - **CAIXA_ABERTO:** `{ id, operador_id, data_abertura, valor_inicial, status }`
-- **CAIXA_FECHADO:** `{ id, data_fechamento, valor_fechamento }`
+- **CAIXA_FECHADO:** `{ id, data_fechamento, valor_fechamento [, fechamento_observacao] }` — observação opcional (máx. 500 caracteres); diferença contagem vs valor sistema é calculada na Edge ao aplicar o evento.
 - **MOVIMENTO_CAIXA:** `{ id, caixa_id, tipo, valor, observacao, created_at }`
 - **VENDA_REGISTRADA:** ver `registrar_venda_local` em `db.rs` (`venda_id`, `itens`, totais, …)
 
 ## Estoque
 
-- Migration `007_estoque_baixa_idempotente.sql`: tabela `estoque_baixas` + função `decrementar_estoque_idempotente`.
-- Reenvio do mesmo evento de venda não duplica baixa para o par `(venda_id, produto_id)`.
+- Migration `007_estoque_baixa_idempotente.sql`: cria tabela `estoque_baixas` e a RPC legada `decrementar_estoque_idempotente` (ainda no BD). **070**/**071**: essa RPC delega internamente a **`decrementar_estoque_seguro`** e deixa de ter `EXECUTE` para `authenticated`. O código atual da **`sync-outbox`** baixa estoque com **`decrementar_estoque_seguro`** (migrations **016**/**038**) ou com a RPC canónica v2, conforme flags.
+- Reenvio do mesmo evento de venda não duplica baixa para o par `(venda_id, produto_id)` (idempotência em `estoque_baixas` / retorno `BAIXA_JA_EXISTE` na RPC segura).
 
 ## Retentativas (outbox)
 
