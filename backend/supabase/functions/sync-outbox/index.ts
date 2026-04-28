@@ -12,12 +12,14 @@
 // | POST   | validar_gerente| handleValidarGerentePdvSync| token gerente + expiração (se ok) — token sensível; erros genéricos |
 // | POST   | (omitido)      | handlePostOutboxBatch      | processed[], failed[{id,error}], request_id — IDs + mensagens de erro internas |
 // |        |                | dispatchOutboxEvent tipos  | Corpo só no POST: VENDA_REGISTRADA (venda+itens), CAIXA_*, MOVIMENTO_CAIXA — persiste no DB; resposta agregada no batch |
+// |        |                | pós-venda fiscal (opcional) | Se `AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE=true`, chama RPC `fiscal_enfileirar_documento_venda` (erro só em log; não falha o batch) |
 // ---
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 import { logJson } from "../../../../shared/logger.ts";
+import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
 
 type OutboxEvent = {
   id: string;
@@ -480,26 +482,55 @@ async function processCaixaAberto(supabase: SupabaseAdmin, ev: OutboxEvent) {
   await ensureCaixaPdv(supabase, p.id, p.operador_id ?? null, inicial);
 }
 
+function roundMoney2Caixa(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
   const p = JSON.parse(ev.payload_json) as {
     id: string;
     data_fechamento: string;
     valor_fechamento: number;
+    fechamento_observacao?: string | null;
   };
   if (!isUuid(p.id)) throw new Error("CAIXA_FECHADO_ID_INVALIDO");
   if (typeof p.data_fechamento !== "string" || !p.data_fechamento) {
     throw new Error("CAIXA_FECHADO_DATA_INVALIDA");
   }
 
+  const valorFechamento =
+    typeof p.valor_fechamento === "number" && Number.isFinite(p.valor_fechamento)
+      ? p.valor_fechamento
+      : 0;
+
+  let fechamentoObs: string | null = null;
+  if (typeof p.fechamento_observacao === "string") {
+    const t = p.fechamento_observacao.trim();
+    if (t.length > 500) throw new Error("CAIXA_FECHADO_OBSERVACAO_LONGA");
+    fechamentoObs = t.length > 0 ? t : null;
+  }
+
+  const { data: vsData, error: vsErr } = await supabase.rpc(
+    "calcular_valor_sistema_dinheiro_caixa",
+    { p_caixa_id: p.id.trim() },
+  );
+  if (vsErr) {
+    throw new Error(`ERRO_CAIXA_FECHADO_VALOR_SISTEMA: ${vsErr.message}`);
+  }
+  const vsNum = typeof vsData === "string" ? Number.parseFloat(vsData) : Number(vsData);
+  if (!Number.isFinite(vsNum)) {
+    throw new Error("ERRO_CAIXA_FECHADO_VALOR_SISTEMA_INVALIDO");
+  }
+  const fechamentoDiferenca = roundMoney2Caixa(valorFechamento - vsNum);
+
   const { error } = await supabase
     .from("caixas")
     .update({
       status: "FECHADO",
       data_fechamento: p.data_fechamento,
-      valor_fechamento:
-        typeof p.valor_fechamento === "number" && Number.isFinite(p.valor_fechamento)
-          ? p.valor_fechamento
-          : 0,
+      valor_fechamento: valorFechamento,
+      fechamento_diferenca: fechamentoDiferenca,
+      fechamento_observacao: fechamentoObs,
     })
     .eq("id", p.id)
     .eq("status", "ABERTO");
@@ -624,6 +655,7 @@ async function processVenda(
     });
 
     if (rpcUnifiedErr) throw new Error(`ERRO_RPC_FINALIZAR_VENDA: ${rpcUnifiedErr.message}`);
+    await maybeEnqueueFiscalDocumentAfterSyncedVenda(supabase, payload, log);
     return;
   }
 
@@ -648,6 +680,8 @@ async function processVenda(
     payload.venda_id,
     (payload.itens ?? []).map((i) => ({ produto_id: i.produto_id, quantidade: i.quantidade })),
   );
+
+  await maybeEnqueueFiscalDocumentAfterSyncedVenda(supabase, payload, log);
 }
 
 async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {

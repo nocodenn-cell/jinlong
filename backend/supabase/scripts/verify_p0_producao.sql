@@ -1,5 +1,6 @@
 -- Verificação rápida P0 (cole no SQL Editor do Supabase do ambiente que você chama de produção).
 -- Esperado: migrations 001…010 (P0) + 011–013 (relatórios) + 014–015 (RPCs/sync) + 016–017 (estoque atômico + auth),
+-- + 070–071 (idempotente legada delega a `seguro`; sem EXECUTE para authenticated na idempotente),
 -- RLS descontos_venda + estoque_baixas, RPCs de estoque, tabela estoque_baixas,
 -- RPCs relatorio_*_periodo (date + p_tz após 013), anti-replay 024 e RPC canônica 025.
 
@@ -48,12 +49,13 @@ WHERE n.nspname = 'public'
   AND c.relname = 'estoque_baixas'
 ORDER BY polname;
 
--- 4) GRANT na RPC de estoque para authenticated (migration 009 — caixa web)
+-- 4) GRANT na RPC de estoque para authenticated (caixa web): `decrementar_estoque_seguro` (016+).
+-- Após 071, `decrementar_estoque_idempotente` não deve ter EXECUTE para authenticated.
 SELECT has_function_privilege(
   'authenticated',
-  'public.decrementar_estoque_idempotente(uuid, numeric, uuid)',
+  'public.decrementar_estoque_seguro(uuid, numeric, uuid)',
   'EXECUTE'
-) AS authenticated_pode_executar_rpc_estoque;
+) AS authenticated_pode_executar_decrementar_estoque_seguro;
 
 -- 5) Relatórios por período (migrations 011–013; 013 = p_tz + relatorio_settings)
 SELECT to_regclass('public.relatorio_settings') AS tabela_relatorio_settings;
@@ -81,9 +83,9 @@ SELECT has_function_privilege(
   'EXECUTE'
 ) AS authenticated_relatorio_top_produtos;
 
--- 6) Hardening migration 015 — privilégios das RPCs críticas
+-- 6) Hardening migration 015 + 071 — privilégios das RPCs críticas
 -- Esperado: authenticated NÃO executa registrar_venda_com_itens; service_role SIM.
--- decrementar_estoque_idempotente: authenticated e service_role executam.
+-- decrementar_estoque_idempotente (071): apenas service_role; authenticated = false.
 
 -- Conferir manualmente: registrar_venda_com_itens só para service_role (authenticated = false, service_role = true).
 SELECT has_function_privilege(
@@ -98,18 +100,18 @@ SELECT has_function_privilege(
   'EXECUTE'
 ) AS registrar_venda__service_role_execute;
 
--- Ambos true após 015 (caixa web + Edge).
+-- idempotente legada: authenticated false (071); service_role true (Edge/scripts).
 SELECT has_function_privilege(
   'authenticated',
   'public.decrementar_estoque_idempotente(uuid, numeric, uuid)',
   'EXECUTE'
-) AS decrementar_estoque__authenticated_execute;
+) AS decrementar_estoque_idempotente__authenticated_execute;
 
 SELECT has_function_privilege(
   'service_role',
   'public.decrementar_estoque_idempotente(uuid, numeric, uuid)',
   'EXECUTE'
-) AS decrementar_estoque__service_role_execute;
+) AS decrementar_estoque_idempotente__service_role_execute;
 
 -- 7) Verificação migration 016 — RPC decrementar_estoque_seguro (com controle de concorrência)
 -- Esta RPC deve existir e ter permissões para authenticated e service_role

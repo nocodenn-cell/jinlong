@@ -277,6 +277,10 @@
         },
         "valor_fechamento": {
           "type": "number"
+        },
+        "fechamento_observacao": {
+          "type": "string",
+          "maxLength": 500
         }
       }
     },

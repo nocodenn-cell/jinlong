@@ -14,6 +14,10 @@ $ErrorActionPreference = 'Stop'
 # npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY="(cole no terminal, não em arquivo versionado)"
 # npx supabase secrets set SYNC_KEY="(gere um segredo forte)"
 #
+# sync-outbox — fila fiscal após venda do PDV local (opcional; predefinição = desligado):
+# npx supabase secrets set AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE="true"
+# npx supabase secrets set FISCAL_DEFAULT_DOC_TYPE="NFC_E_STUB"
+#
 # CORS da Edge validar-gerente:
 # Produção: lista fixa + modo estrito (bloqueia browser sem Origin na lista; * desligado).
 # npx supabase secrets set VALIDAR_GERENTE_CORS_STRICT="true"

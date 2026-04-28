@@ -353,14 +353,6 @@ async function main() {
     }
   });
 
-  await run("RPC decrementar_estoque_idempotente (no-op se já baixado)", async () => {
-    await assertRpcOk(operador, "decrementar_estoque_idempotente", {
-      p_produto_id: IDS.produto,
-      p_quantidade: 0.01,
-      p_venda_id: IDS.vendaOperador,
-    });
-  });
-
   await run("RPC recalcular_saldo_caixa", async () => {
     await assertRpcOk(gerente, "recalcular_saldo_caixa", { p_caixa_id: IDS.caixaGerente });
   });

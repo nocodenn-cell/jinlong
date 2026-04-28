@@ -75,6 +75,14 @@ function validateCaixaFechadoPayload(payload) {
   if (typeof payload.valor_fechamento !== "number" || !Number.isFinite(payload.valor_fechamento)) {
     return asError("valor_fechamento inválido");
   }
+  if (payload.fechamento_observacao !== undefined && payload.fechamento_observacao !== null) {
+    if (typeof payload.fechamento_observacao !== "string") {
+      return asError("fechamento_observacao inválida");
+    }
+    if (payload.fechamento_observacao.length > 500) {
+      return asError("fechamento_observacao muito longa");
+    }
+  }
   return ok();
 }
 
@@ -208,6 +216,16 @@ const validCases = [
   },
   {
     ...base,
+    tipo: "CAIXA_FECHADO",
+    payload_json: JSON.stringify({
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      data_fechamento: "2026-04-18T21:00:00Z",
+      valor_fechamento: 100,
+      fechamento_observacao: "Contagem conferida com gerente",
+    }),
+  },
+  {
+    ...base,
     tipo: "MOVIMENTO_CAIXA",
     payload_json: JSON.stringify({
       id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
@@ -246,6 +264,16 @@ const invalidCases = [
       caixa_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       tipo: "OUTRO",
       valor: 10,
+    }),
+  },
+  {
+    ...base,
+    tipo: "CAIXA_FECHADO",
+    payload_json: JSON.stringify({
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      data_fechamento: "2026-04-18T22:00:00Z",
+      valor_fechamento: 1,
+      fechamento_observacao: "x".repeat(501),
     }),
   },
 ];
