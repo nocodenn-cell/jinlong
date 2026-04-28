@@ -11,13 +11,14 @@
     "node": ">=20.0.0 <25.0.0"
   },
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=pdv-importados",
+    "build:all": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "check": "turbo run check --filter=fastproduct-backend",
     "check:edge": "npm run check",
     "check:all": "turbo run check lint test",
-    "ci": "turbo run check lint test build",
+    "ci": "turbo run check lint test && turbo run build --filter=pdv-importados",
     "dev:web": "npm run dev -w pdv-importados",
     "dev:desktop": "npm run dev -w pdv-local",
     "dev:tauri": "npm run tauri -w pdv-local"

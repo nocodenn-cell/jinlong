@@ -32,9 +32,11 @@ Seguir na ordem [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) e [
 ## Comandos úteis antes de declarar “produção OK”
 
 ```bash
-# Na raiz do monorepo
+# Na raiz do monorepo (check + lint + test + build Next — sem build Vite do pdv-local)
 npm run ci
 ```
+
+Build do desktop (`pdv-local`): workflow [`.github/workflows/ci-pdv-local.yml`](../.github/workflows/ci-pdv-local.yml) ou `npm run build:all` na raiz.
 
 ```powershell
 cd backend

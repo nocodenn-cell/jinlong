@@ -28,10 +28,11 @@ Scripts úteis (executar na raiz):
 |--------|--------|
 | `npm run lint` | ESLint em todos os pacotes que definem `lint` |
 | `npm run test` | Vitest em `pdv-importados` e `pdv-local` |
-| `npm run build` | Build de produção dos pacotes que definem `build` |
+| `npm run build` | Build de produção só do **Next** (`pdv-importados`) — alinhado ao deploy Vercel |
+| `npm run build:all` | Build de todos os pacotes que definem `build` (inclui `pdv-local`/Vite) |
 | `npm run check` | `deno check` das Edge Functions (`backend`) |
 | `npm run check:all` | `check` + `lint` + `test` |
-| `npm run ci` | `check` + `lint` + `test` + `build` (pipeline local próximo ao CI) |
+| `npm run ci` | `check` + `lint` + `test` + build só do **Next** (igual Vercel / `npm run build` na raiz) |
 | `npm run dev:web` | `next dev` só no workspace web |
 | `npm run dev:desktop` | `vite` só no workspace desktop |
 
