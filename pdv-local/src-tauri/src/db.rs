@@ -560,10 +560,20 @@ pub fn fechar_caixa_local(
     app: &tauri::AppHandle,
     caixa_id: String,
     troco_fechamento: f64,
+    fechamento_observacao: Option<String>,
 ) -> Result<(), String> {
     init_db(app)?;
     if troco_fechamento < 0.0 {
         return Err("Troco de fechamento inválido".to_string());
+    }
+
+    let obs_trimmed = fechamento_observacao
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    if let Some(ref s) = obs_trimmed {
+        if s.len() > 500 {
+            return Err("Observação de fechamento muito longa (máx. 500 caracteres).".to_string());
+        }
     }
 
     let path = db_path(app)?;
@@ -581,15 +591,21 @@ pub fn fechar_caixa_local(
 
     if n > 0 {
         let now = sqlite_iso_utc(&tx)?;
-        enqueue_outbox_tx(
-            &tx,
-            "CAIXA_FECHADO",
-            &json!({
+        let payload = if let Some(s) = obs_trimmed {
+            json!({
                 "id": caixa_id,
                 "data_fechamento": now,
-                "valor_fechamento": troco_fechamento
-            }),
-        )?;
+                "valor_fechamento": troco_fechamento,
+                "fechamento_observacao": s,
+            })
+        } else {
+            json!({
+                "id": caixa_id,
+                "data_fechamento": now,
+                "valor_fechamento": troco_fechamento,
+            })
+        };
+        enqueue_outbox_tx(&tx, "CAIXA_FECHADO", &payload)?;
     }
 
     tx.commit().map_err(|e| e.to_string())?;

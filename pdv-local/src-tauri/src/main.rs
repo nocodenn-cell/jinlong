@@ -92,8 +92,14 @@ fn fechar_caixa_cmd(
     app: tauri::AppHandle,
     caixa_id: String,
     troco_fechamento: f64,
+    fechamento_observacao: Option<String>,
 ) -> Result<(), String> {
-    fechar_caixa_local(&app, caixa_id, troco_fechamento)
+    fechar_caixa_local(
+        &app,
+        caixa_id,
+        troco_fechamento,
+        fechamento_observacao,
+    )
 }
 
 #[tauri::command]

@@ -82,9 +82,16 @@ export function usePdvLocalVendaCaixaFlow({
         String(totalLiquido.toFixed(2)),
       )
       const troco = trocoRaw ? Number(trocoRaw.replace(',', '.')) : 0
+      const obsRaw = window.prompt(
+        'Observação de fechamento (opcional; ex.: divergência contagem):',
+        '',
+      )
+      const fechamento_observacao =
+        obsRaw != null && obsRaw.trim().length > 0 ? obsRaw.trim() : null
       await invoke('fechar_caixa_cmd', {
         caixa_id: caixaAtualId,
         troco_fechamento: Number.isFinite(troco) ? troco : 0,
+        fechamento_observacao,
       })
       onSetCaixaAtualId(null)
       onSetMensagem('Caixa fechado.')

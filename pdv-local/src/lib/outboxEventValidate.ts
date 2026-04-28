@@ -78,6 +78,14 @@ export function validateCaixaFechadoPayload(
   if (typeof payload.valor_fechamento !== 'number' || !Number.isFinite(payload.valor_fechamento)) {
     return { ok: false, error: 'valor_fechamento inválido' }
   }
+  if (payload.fechamento_observacao !== undefined && payload.fechamento_observacao !== null) {
+    if (typeof payload.fechamento_observacao !== 'string') {
+      return { ok: false, error: 'fechamento_observacao inválida' }
+    }
+    if (payload.fechamento_observacao.length > 500) {
+      return { ok: false, error: 'fechamento_observacao muito longa (máx. 500)' }
+    }
+  }
   return { ok: true }
 }
 

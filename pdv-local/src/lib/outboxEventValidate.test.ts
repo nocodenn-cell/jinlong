@@ -86,4 +86,35 @@ describe('validateNormalizedEvent — idempotência de regras do contrato v1', (
     const ev = normalizeOutboxRecord(row)
     expect(validateNormalizedEvent(ev)).toEqual({ ok: true })
   })
+
+  it('CAIXA_FECHADO aceita fechamento_observacao opcional', () => {
+    const r = validateNormalizedEvent({
+      id: UUID,
+      tipo: 'CAIXA_FECHADO',
+      created_at: '2026-01-02T10:00:00.000Z',
+      payload: {
+        id: UUID2,
+        data_fechamento: '2026-01-02T10:00:00.000Z',
+        valor_fechamento: 10,
+        fechamento_observacao: 'Fecho conferido',
+      },
+    })
+    expect(r).toEqual({ ok: true })
+  })
+
+  it('CAIXA_FECHADO rejeita fechamento_observacao > 500', () => {
+    const r = validateNormalizedEvent({
+      id: UUID,
+      tipo: 'CAIXA_FECHADO',
+      created_at: '2026-01-02T10:00:00.000Z',
+      payload: {
+        id: UUID2,
+        data_fechamento: '2026-01-02T10:00:00.000Z',
+        valor_fechamento: 10,
+        fechamento_observacao: 'x'.repeat(501),
+      },
+    })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('500')
+  })
 })
