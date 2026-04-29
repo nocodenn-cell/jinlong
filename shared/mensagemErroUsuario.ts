@@ -3,23 +3,21 @@
  * Sem dependências de framework (Next/Tauri).
  */
 
-export type IdiomaErro = 'pt' | 'zh' | 'zh-HK'
+export type IdiomaErro = 'pt' | 'zh'
 
 const MSG_PADRAO: Record<IdiomaErro, string> = {
   pt: 'Não foi possível concluir esta operação agora. Tente de novo em alguns instantes.',
   zh: '当前无法完成该操作。请稍后再试。',
-  'zh-HK': '目前無法完成此操作。請稍後再試。',
 }
 
 function idiomaSeguro(idioma?: string): IdiomaErro {
-  if (idioma === 'zh' || idioma === 'zh-HK') return idioma
+  if (idioma === 'zh') return idioma
   return 'pt'
 }
 
-function t(idioma: IdiomaErro, pt: string, zh: string, zhHK?: string): string {
+function t(idioma: IdiomaErro, pt: string, zh: string): string {
   if (idioma === 'pt') return pt
-  if (idioma === 'zh') return zh
-  return zhHK ?? zh
+  return zh
 }
 
 function truncar(s: string, max: number): string {
@@ -45,7 +43,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Falta configurar SYNC_ENDPOINT no arquivo .env do PDV (URL da função de sincronização). Peça ao suporte técnico.',
       '请在 PDV 的 .env 文件中配置 SYNC_ENDPOINT（同步函数 URL）。请联系技术支持。',
-      '請在 PDV 的 .env 檔案中設定 SYNC_ENDPOINT（同步函數 URL）。請聯絡技術支援。',
     )
   }
   if (lower.includes('sync_key') || lower.includes('falta sync_key')) {
@@ -53,15 +50,14 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Falta configurar SYNC_KEY no .env do PDV (mesmo segredo da nuvem). Peça ao suporte técnico.',
       '请在 PDV 的 .env 中配置 SYNC_KEY（需与云端密钥一致）。请联系技术支持。',
-      '請在 PDV 的 .env 中設定 SYNC_KEY（需與雲端密鑰一致）。請聯絡技術支援。',
     )
   }
 
   if (lower.includes('jwt') || lower.includes('invalid refresh token')) {
     if (lower.includes('expired') || lower.includes('expir')) {
-      return t(idioma, 'Sua sessão expirou. Faça login novamente.', '会话已过期，请重新登录。', '工作階段已過期，請重新登入。')
+      return t(idioma, 'Sua sessão expirou. Faça login novamente.', '会话已过期，请重新登录。')
     }
-    return t(idioma, 'Sessão inválida. Faça login novamente.', '会话无效，请重新登录。', '工作階段無效，請重新登入。')
+    return t(idioma, 'Sessão inválida. Faça login novamente.', '会话无效，请重新登录。')
   }
 
   if (
@@ -74,7 +70,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Você não tem permissão para esta ação. Peça ao gerente ou verifique seu usuário no sistema.',
       '您没有执行此操作的权限。请联系经理或检查您的账号权限。',
-      '您沒有執行此操作的權限。請聯絡經理或檢查帳號權限。',
     )
   }
 
@@ -86,7 +81,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Não foi possível encontrar um registro único para esta operação. Atualize a tela e tente novamente.',
       '无法为该操作定位唯一记录。请刷新页面后重试。',
-      '無法為此操作找到唯一紀錄。請重新整理頁面後再試。',
     )
   }
 
@@ -95,7 +89,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Uma função necessária do banco não foi encontrada. Pode faltar migration no ambiente.',
       '数据库缺少必需函数，环境可能未应用完整 migration。',
-      '資料庫缺少必要函數，環境可能未套用完整 migration。',
     )
   }
 
@@ -108,7 +101,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Este registro já existe ou há conflito com outro cadastro (dados duplicados).',
       '该记录已存在或与其他数据冲突（重复数据）。',
-      '此紀錄已存在或與其他資料衝突（重複資料）。',
     )
   }
 
@@ -117,7 +109,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Dados inconsistentes: existe referência a um registro que não existe ou não pode ser usado.',
       '数据不一致：引用了不存在或不可用的记录。',
-      '資料不一致：參照了不存在或不可用的紀錄。',
     )
   }
 
@@ -126,7 +117,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Acesso negado a dados do sistema. Verifique o perfil da sua conta.',
       '访问系统数据被拒绝。请检查您的账号权限。',
-      '存取系統資料遭拒。請檢查您的帳號權限。',
     )
   }
 
@@ -135,7 +125,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Falta alguma tabela ou função no banco de dados. Contate o suporte técnico.',
       '数据库缺少表或函数。请联系技术支持。',
-      '資料庫缺少資料表或函數。請聯絡技術支援。',
     )
   }
 
@@ -144,7 +133,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'A estrutura do banco está diferente do esperado (coluna ausente). Contate o suporte técnico.',
       '数据库结构与预期不一致（缺少字段）。请联系技术支持。',
-      '資料庫結構與預期不一致（缺少欄位）。請聯絡技術支援。',
     )
   }
 
@@ -162,7 +150,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Falha de rede: o navegador não conseguiu falar com o servidor. Verifique a internet, firewall ou se o projeto Supabase está ativo.',
       '网络失败：浏览器无法连接服务器。请检查网络、防火墙或 Supabase 项目状态。',
-      '網路失敗：瀏覽器無法連線伺服器。請檢查網路、防火牆或 Supabase 專案狀態。',
     )
   }
 
@@ -171,7 +158,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'A operação demorou demais e foi interrompida. Tente novamente.',
       '操作超时并已中断，请重试。',
-      '操作逾時並已中斷，請重試。',
     )
   }
 
@@ -180,7 +166,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Muitas tentativas em pouco tempo. Aguarde alguns segundos e tente novamente.',
       '请求过于频繁，请稍候再试。',
-      '請求過於頻繁，請稍候再試。',
     )
   }
 
@@ -189,7 +174,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Não foi possível criar sua conta agora por falha no banco. Tente novamente em instantes.',
       '数据库异常，当前无法创建账号。请稍后再试。',
-      '資料庫異常，目前無法建立帳號。請稍後再試。',
     )
   }
 
@@ -198,7 +182,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Este email já está cadastrado. Tente entrar ou recuperar a senha.',
       '该邮箱已注册，请直接登录或找回密码。',
-      '此電郵已註冊，請直接登入或重設密碼。',
     )
   }
 
@@ -207,7 +190,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Limite de envio de email atingido. Aguarde alguns minutos para tentar novamente.',
       '邮件发送频率超限，请稍后再试。',
-      '電郵發送頻率超限，請稍後再試。',
     )
   }
 
@@ -216,7 +198,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'O cadastro de novos usuários está desativado neste ambiente.',
       '当前环境已禁用新用户注册。',
-      '目前環境已停用新用戶註冊。',
     )
   }
 
@@ -225,12 +206,11 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Configuração inválida de acesso ao Supabase (chave pública). Revise o .env e reinicie a aplicação.',
       'Supabase 访问配置无效（公开密钥）。请检查 .env 并重启应用。',
-      'Supabase 存取設定無效（公開金鑰）。請檢查 .env 並重新啟動應用程式。',
     )
   }
 
   if (lower.includes('invalid input syntax') && lower.includes('uuid')) {
-    return t(idioma, 'Identificador inválido. Atualize a página e tente de novo.', '标识符无效，请刷新后重试。', '識別碼無效，請重新整理後再試。')
+    return t(idioma, 'Identificador inválido. Atualize a página e tente de novo.', '标识符无效，请刷新后重试。')
   }
 
   if (lower.includes('numeric field overflow') || lower.includes('value out of range')) {
@@ -238,7 +218,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Valor numérico fora do limite permitido. Confira os valores informados.',
       '数值超出允许范围，请检查输入。',
-      '數值超出允許範圍，請檢查輸入。',
     )
   }
 
@@ -247,12 +226,11 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Os dados não atendem a uma regra do sistema. Revise os valores e tente novamente.',
       '数据不满足系统规则，请检查后重试。',
-      '資料不符合系統規則，請檢查後再試。',
     )
   }
 
   if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
-    return t(idioma, 'Email ou senha incorretos.', '邮箱或密码错误。', '電郵或密碼錯誤。')
+    return t(idioma, 'Email ou senha incorretos.', '邮箱或密码错误。')
   }
 
   if (lower.includes('email not confirmed')) {
@@ -260,30 +238,29 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
       idioma,
       'Confirme seu email no link enviado pelo sistema antes de entrar.',
       '请先通过系统邮件中的链接完成邮箱确认后再登录。',
-      '請先透過系統郵件中的連結完成電郵驗證後再登入。',
     )
   }
 
   if (lower.includes('required')) {
-    return t(idioma, 'Preencha todos os campos obrigatórios.', '请填写所有必填字段。', '請填寫所有必填欄位。')
+    return t(idioma, 'Preencha todos os campos obrigatórios.', '请填写所有必填字段。')
   }
   if (
     lower.includes('expected number') ||
     (lower.includes('invalid_type') && lower.includes('number'))
   ) {
-    return t(idioma, 'Um valor numérico é obrigatório neste campo.', '该字段必须填写数字。', '此欄位必須填寫數字。')
+    return t(idioma, 'Um valor numérico é obrigatório neste campo.', '该字段必须填写数字。')
   }
   if (lower.includes('expected string') && !lower.includes('expected string literal')) {
-    return t(idioma, 'Formato de texto inválido em um dos campos.', '某个字段的文本格式无效。', '某個欄位的文字格式無效。')
+    return t(idioma, 'Formato de texto inválido em um dos campos.', '某个字段的文本格式无效。')
   }
   if (lower.includes('invalid uuid')) {
-    return t(idioma, 'Identificador inválido. Atualize a página e tente novamente.', '标识符无效，请刷新页面后重试。', '識別碼無效，請重新整理頁面後再試。')
+    return t(idioma, 'Identificador inválido. Atualize a página e tente novamente.', '标识符无效，请刷新页面后重试。')
   }
   if (lower.includes('too small') && lower.includes('array')) {
-    return t(idioma, 'É necessário pelo menos um item na lista.', '列表中至少需要一个项目。', '清單中至少需要一個項目。')
+    return t(idioma, 'É necessário pelo menos um item na lista.', '列表中至少需要一个项目。')
   }
   if (lower.includes('number must be greater than 0') || lower.includes('too_small')) {
-    return t(idioma, 'Use um número maior que zero onde for exigido.', '该字段必须大于 0。', '此欄位必須大於 0。')
+    return t(idioma, 'Use um número maior que zero onde for exigido.', '该字段必须大于 0。')
   }
 
   const parecePt =
@@ -297,7 +274,6 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
     idioma,
     `${MSG_PADRAO.pt} Se precisar de ajuda, informe ao suporte: «${truncar(raw, 220)}».`,
     `${MSG_PADRAO.zh} 如需支持，请将以下信息告知技术支持：「${truncar(raw, 220)}」。`,
-    `${MSG_PADRAO['zh-HK']} 如需支援，請將以下訊息提供給技術支援：「${truncar(raw, 220)}」。`,
   )
 }
 
@@ -323,7 +299,6 @@ export function mensagemErroValidacaoZod(issuesJuntas: string, idiomaInput?: str
       idioma,
       'Os dados enviados são inválidos. Revise o formulário.',
       '提交的数据无效，请检查表单。',
-      '提交的資料無效，請檢查表單。',
     )
   }
   const traduzida = mensagemErroParaUsuario(base, idioma)
@@ -331,7 +306,6 @@ export function mensagemErroValidacaoZod(issuesJuntas: string, idiomaInput?: str
     idioma,
     `Dados inválidos: ${traduzida}`,
     `数据无效：${traduzida}`,
-    `資料無效：${traduzida}`,
   )
 }
 

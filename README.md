@@ -1,6 +1,6 @@
 # fastproduct — monorepo PDV
 
-PDV para lojas de importados no Brasil, com interface em **português**, **普通话 (简体)** e **廣東話 (繁體)**.
+PDV para lojas de importados no Brasil, com interface em **português** e **普通话 (简体)**.
 
 **Produção (go/no-go):** [docs/PRODUCAO_GO_NO_GO.md](docs/PRODUCAO_GO_NO_GO.md) — o que o CI cobre vs o que é manual (Supabase, Vercel, Edge).
 

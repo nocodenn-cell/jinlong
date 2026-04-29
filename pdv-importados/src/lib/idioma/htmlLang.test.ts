@@ -5,7 +5,6 @@ describe('htmlLangFromIdioma', () => {
   it.each([
     ['pt', 'pt-BR'],
     ['zh', 'zh-CN'],
-    ['zh-HK', 'zh-HK'],
   ] as const)('mapeia %s → %s', (idioma, esperado) => {
     expect(htmlLangFromIdioma(idioma)).toBe(esperado)
   })
