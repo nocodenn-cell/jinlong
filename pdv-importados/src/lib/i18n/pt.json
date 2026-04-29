@@ -311,6 +311,7 @@
     "subtitulo": "Consulte quantidades, ajuste o mínimo e priorize itens críticos.",
     "nav_todos": "Visão geral",
     "nav_baixo": "Abaixo do mínimo",
+    "nav_etiquetas": "Imprimir Etiquetas",
     "col_produto": "Produto",
     "col_codigo": "Código",
     "col_atual": "Quantidade atual",
@@ -324,7 +325,28 @@
     "vazio_baixo": "Nenhum produto ativo está abaixo do mínimo.",
     "vazio_geral": "Nenhum produto ativo cadastrado.",
     "badge_alerta": "Abaixo do mínimo",
-    "dica_baixo": "Para alterar quantidades, use a visão geral e salve por produto."
+    "dica_baixo": "Para alterar quantidades, use a visão geral e salve por produto.",
+    "etiquetas": {
+      "titulo": "Imprimir Etiquetas",
+      "subtitulo": "Gere etiquetas térmicas para seus produtos com código de barras e preço.",
+      "buscar_placeholder": "Código de barras...",
+      "carrinho_vazio": "Carrinho vazio",
+      "total": "Total",
+      "quantidade": "Qtd",
+      "remover": "Remover",
+      "limpar": "Limpar Carrinho",
+      "preco": "Preço",
+      "gerar_pdf": "Gerar PDF",
+      "acoes_rapidas": "Ações Rápidas",
+      "imprimir_saldo": "Imprimir Saldo Total",
+      "imprimir_saldo_desc": "Usar quantidade atual do estoque",
+      "selecionar_categoria": "Selecionar por Categoria",
+      "em_breve": "Em breve",
+      "formato_info": "Informações do Formato",
+      "tamanho": "Tamanho",
+      "maximo": "Máximo",
+      "layout": "Layout"
+    }
   },
   "caixa": {
     "titulo": "Caixa",

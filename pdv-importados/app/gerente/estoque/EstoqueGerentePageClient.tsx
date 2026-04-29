@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { GerenteNavLink } from '@/components/gerente/GerenteNavLink'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
@@ -41,6 +42,7 @@ function normalizaEstoqueRow(p: ProdutoComEstoqueDTO) {
 
 export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
   const m = getMessages(idioma)
+  const pathname = usePathname()
   const [modal, setModal] = useState<ModalState>(null)
 
   const queryFn = useCallback(() => obterDadosEstoqueGerente(filtro), [filtro])
@@ -129,11 +131,14 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
       <p className="gerente-fin-muted mb-4 text-sm">{m.estoque.subtitulo}</p>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <GerenteNavLink href="/gerente/estoque" active={!somenteBaixo}>
+        <GerenteNavLink href="/gerente/estoque" active={!somenteBaixo && !pathname.includes('imprimir-etiquetas')}>
           {m.estoque.nav_todos}
         </GerenteNavLink>
         <GerenteNavLink href="/gerente/estoque?filtro=baixo" active={somenteBaixo}>
           {m.estoque.nav_baixo}
+        </GerenteNavLink>
+        <GerenteNavLink href="/gerente/estoque/imprimir-etiquetas" active={pathname.includes('imprimir-etiquetas')}>
+          {m.estoque.nav_etiquetas}
         </GerenteNavLink>
       </div>
 

@@ -311,6 +311,7 @@
     "subtitulo": "查看数量、调整最低库存并优先处理预警商品。",
     "nav_todos": "总览",
     "nav_baixo": "低于最低",
+    "nav_etiquetas": "打印标签",
     "col_produto": "商品",
     "col_codigo": "条码",
     "col_atual": "当前库存",
@@ -324,7 +325,28 @@
     "vazio_baixo": "没有活跃商品低于最低库存。",
     "vazio_geral": "没有活跃商品。",
     "badge_alerta": "低于最低",
-    "dica_baixo": "要修改数量，请在总览中为每个商品保存。"
+    "dica_baixo": "要修改数量，请在总览中为每个商品保存。",
+    "etiquetas": {
+      "titulo": "打印标签",
+      "subtitulo": "为商品生成带条码和价格的热敏标签。",
+      "buscar_placeholder": "条形码...",
+      "carrinho_vazio": "购物车为空",
+      "total": "总计",
+      "quantidade": "数量",
+      "remover": "删除",
+      "limpar": "清空购物车",
+      "preco": "价格",
+      "gerar_pdf": "生成PDF",
+      "acoes_rapidas": "快速操作",
+      "imprimir_saldo": "打印库存总量",
+      "imprimir_saldo_desc": "使用当前库存数量",
+      "selecionar_categoria": "按类别选择",
+      "em_breve": "即将推出",
+      "formato_info": "格式信息",
+      "tamanho": "尺寸",
+      "maximo": "最大",
+      "layout": "布局"
+    }
   },
   "caixa": {
     "titulo": "收银台",
