@@ -1,0 +1,201 @@
+/**
+ * Design Tokens Component - Tokens específicos para componentes
+ * Baseado nos tokens semânticos, com granularidade para componentes específicos
+ */
+
+:root {
+  /* === BUTTON TOKENS === */
+  /* Button Accent */
+  --btn-accent-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-brand-primary) 86%, #fff 14%) 0%,
+    color-mix(in srgb, var(--color-brand-strong) 90%, #000 10%) 100%
+  );
+  --btn-accent-border: color-mix(in srgb, var(--color-brand-strong) 72%, transparent);
+  --btn-accent-text: var(--color-brand-contrast);
+  --btn-accent-shadow: 0 1px 3px color-mix(in srgb, rgba(0, 0, 0, 0.3) 50%, transparent);
+  --btn-accent-shadow-hover: 0 4px 12px color-mix(in srgb, var(--color-brand-primary) 25%, transparent);
+  --btn-accent-transform-hover: translateY(-1px);
+
+  /* Button Neutral */
+  --btn-neutral-bg: var(--color-background-surface-soft);
+  --btn-neutral-border: var(--color-border-primary);
+  --btn-neutral-text: var(--color-text-primary);
+  --btn-neutral-shadow: 0 1px 2px color-mix(in srgb, rgba(0, 0, 0, 0.2) 50%, transparent);
+  --btn-neutral-shadow-hover: 0 2px 8px color-mix(in srgb, var(--color-brand-primary) 20%, transparent);
+  --btn-neutral-bg-hover: color-mix(in srgb, var(--color-background-surface) 85%, var(--color-brand-primary) 15%);
+  --btn-neutral-transform-hover: translateY(-1px);
+
+  /* Button Danger */
+  --btn-danger-bg: color-mix(in srgb, var(--color-danger-900) 40%, var(--color-background-surface-soft));
+  --btn-danger-border: color-mix(in srgb, var(--color-danger-500) 45%, var(--color-border-primary));
+  --btn-danger-text: var(--color-danger-100);
+  --btn-danger-shadow: 0 1px 3px color-mix(in srgb, rgba(239, 68, 68, 0.3) 50%, transparent);
+  --btn-danger-shadow-hover: 0 4px 12px color-mix(in srgb, rgba(239, 68, 68, 0.35), transparent);
+  --btn-danger-transform-hover: translateY(-1px);
+
+  /* Button Common */
+  --btn-height-sm: 2.25rem;
+  --btn-height-md: 2.5rem;
+  --btn-height-lg: 2.75rem;
+  --btn-padding-x-sm: 0.75rem;
+  --btn-padding-x-md: 1rem;
+  --btn-padding-x-lg: 1.5rem;
+  --btn-font-size: var(--font-size-button);
+  --btn-font-weight: var(--font-weight-emphasis);
+  --btn-radius: var(--radius-button-md);
+  --btn-transition: var(--transition-button);
+
+  /* === INPUT TOKENS === */
+  --input-bg: var(--color-background-surface-soft);
+  --input-border: var(--color-border-primary);
+  --input-border-focus: var(--color-border-focus);
+  --input-text: var(--color-text-primary);
+  --input-placeholder: color-mix(in srgb, var(--color-text-primary) 68%, transparent);
+  --input-shadow-focus: 0 0 0 2px color-mix(in srgb, var(--color-brand-primary) 38%, transparent);
+  --input-height: 2.75rem;
+  --input-padding-x: 1rem;
+  --input-font-size: var(--font-size-body-md);
+  --input-radius: var(--radius-component-md);
+  --input-transition: var(--transition-input);
+
+  /* === CARD TOKENS === */
+  --card-bg: var(--color-background-surface);
+  --card-border: var(--color-border-primary);
+  --card-shadow: var(--shadow-component-md);
+  --card-radius: var(--radius-card);
+  --card-padding: var(--space-component-lg);
+
+  /* === MODAL TOKENS === */
+  --modal-backdrop-bg: var(--color-background-overlay);
+  --modal-backdrop-blur: 14px;
+  --modal-bg: rgba(15, 23, 42, 0.78);
+  --modal-border: rgba(71, 85, 105, 0.85);
+  --modal-shadow: var(--shadow-modal);
+  --modal-radius: var(--radius-modal);
+  --modal-padding: var(--space-component-xl);
+  --modal-max-width: 28rem;
+  --modal-transition: var(--transition-modal);
+
+  /* === TOOLTIP TOKENS === */
+  --tooltip-bg: var(--color-background-surface);
+  --tooltip-border: var(--color-border-primary);
+  --tooltip-text: var(--color-text-primary);
+  --tooltip-shadow: var(--shadow-tooltip);
+  --tooltip-radius: var(--radius-tooltip);
+  --tooltip-padding: var(--space-component-sm) var(--space-component-md);
+  --tooltip-font-size: var(--font-size-caption);
+  --tooltip-arrow-size: 0.375rem;
+  --tooltip-offset: 0.25rem;
+  --tooltip-transition: var(--transition-tooltip);
+
+  /* === BADGE TOKENS === */
+  /* Badge Success */
+  --badge-success-bg: color-mix(in srgb, var(--color-success-900) 35%, transparent);
+  --badge-success-border: color-mix(in srgb, var(--color-success-500) 45%, var(--color-border-primary));
+  --badge-success-text: var(--color-success-100);
+
+  /* Badge Warning */
+  --badge-warning-bg: color-mix(in srgb, var(--color-warning-600) 20%, transparent);
+  --badge-warning-border: color-mix(in srgb, var(--color-warning-500) 55%, var(--color-border-primary));
+  --badge-warning-text: color-mix(in srgb, var(--color-warning-400) 82%, #fff 18%);
+
+  /* Badge Danger */
+  --badge-danger-bg: color-mix(in srgb, var(--color-danger-900) 20%, transparent);
+  --badge-danger-border: color-mix(in srgb, var(--color-danger-500) 45%, var(--color-border-primary));
+  --badge-danger-text: var(--color-danger-100);
+
+  /* Badge Neutral */
+  --badge-neutral-bg: var(--color-background-surface-soft);
+  --badge-neutral-border: var(--color-border-primary);
+  --badge-neutral-text: var(--color-text-secondary);
+
+  /* Badge Common */
+  --badge-padding-x: 0.625rem;
+  --badge-padding-y: 0.25rem;
+  --badge-font-size: var(--font-size-caption);
+  --badge-font-weight: var(--font-weight-emphasis);
+  --badge-radius: var(--radius-button-full);
+  --badge-transition: var(--transition-fast);
+
+  /* === CHIP TOKENS === */
+  --chip-bg: var(--color-background-surface-soft);
+  --chip-border: var(--color-border-primary);
+  --chip-text: color-mix(in srgb, var(--color-text-primary) 78%, transparent);
+  --chip-text-hover: var(--color-brand-primary);
+  --chip-bg-hover: color-mix(in srgb, var(--color-background-surface-soft) 85%, var(--color-brand-primary) 15%);
+  --chip-shadow-hover: 0 2px 6px color-mix(in srgb, var(--color-brand-primary) 20%, transparent);
+  --chip-transform-hover: translateY(-1px);
+  --chip-padding-x: 1rem;
+  --chip-padding-y: 0.5rem;
+  --chip-font-size: var(--font-size-caption);
+  --chip-font-weight: var(--font-weight-emphasis);
+  --chip-radius: var(--radius-button-full);
+  --chip-transition: var(--transition-fast);
+
+  /* === SKELETON TOKENS === */
+  --skeleton-bg: var(--color-background-surface);
+  --skeleton-radius: var(--radius-component-md);
+  --skeleton-animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --skeleton-animation-reduced: pulse-reduced 3s ease-in-out infinite;
+
+  /* === TABLE TOKENS === */
+  --table-bg: var(--color-background-surface-soft);
+  --table-border: var(--color-border-primary);
+  --table-header-bg: color-mix(in srgb, var(--color-background-surface) 78%, transparent);
+  --table-header-text: var(--color-text-secondary);
+  --table-row-hover-bg: color-mix(in srgb, var(--color-background-surface) 84%, transparent);
+  --table-cell-padding: var(--space-component-md);
+  --table-font-size: var(--font-size-body-sm);
+
+  /* === LOADING TOKENS === */
+  --loading-overlay-bg: var(--color-background-overlay);
+  --loading-spinner-size: 1.5rem;
+  --loading-spinner-color: var(--color-brand-primary);
+  --loading-text-color: var(--color-text-secondary);
+  --loading-font-size: var(--font-size-body-sm);
+
+  /* === DIVIDER TOKENS === */
+  --divider-color: var(--color-border-primary);
+  --divider-height: 1px;
+  --divider-margin: var(--space-component-lg) 0;
+
+  /* === CAIXA-SPECIFIC TOKENS === */
+  /* Caixa Header */
+  --caixa-header-bg: var(--color-background-surface-soft);
+  --caixa-header-border: var(--color-border-primary);
+  --caixa-header-padding: var(--space-layout-sm);
+  --caixa-title-size: var(--font-size-heading-md);
+  --caixa-title-weight: var(--font-weight-heading);
+
+  /* Caixa Search */
+  --caixa-search-height: var(--input-height);
+  --caixa-search-bg: var(--input-bg);
+  --caixa-search-border: var(--input-border);
+  --caixa-search-text: var(--input-text);
+  --caixa-search-placeholder: var(--input-placeholder);
+
+  /* Caixa Cart */
+  --caixa-cart-bg: var(--color-background-surface);
+  --caixa-cart-border: var(--color-border-primary);
+  --caixa-cart-radius: var(--radius-card);
+  --caixa-cart-padding: var(--space-component-lg);
+  --caixa-cart-empty-icon-size: 6rem;
+  --caixa-cart-empty-text-color: var(--color-text-secondary);
+
+  /* Caixa Footer */
+  --caixa-footer-bg: var(--color-background-surface);
+  --caixa-footer-border: var(--color-border-primary);
+  --caixa-footer-padding: var(--space-layout-sm);
+  --caixa-total-size: var(--font-size-heading-xl);
+  --caixa-total-weight: var(--font-weight-bold);
+  --caixa-total-color: var(--color-brand-primary);
+
+  /* Caixa Status */
+  --caixa-status-open-bg: color-mix(in srgb, var(--color-success-700) 20%, transparent);
+  --caixa-status-open-border: var(--color-success-600);
+  --caixa-status-open-text: var(--color-success-100);
+  --caixa-status-closed-bg: color-mix(in srgb, var(--color-background-surface-soft) 50%, transparent);
+  --caixa-status-closed-border: var(--color-border-primary);
+  --caixa-status-closed-text: var(--color-text-secondary);
+}

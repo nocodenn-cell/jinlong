@@ -1,0 +1,16 @@
+/**
+ * Design Tokens Index - Import centralizado
+ * Importa todos os tokens na ordem correta
+ */
+
+/* 1. Base tokens (primitivos) */
+@import './base.css';
+
+/* 2. Semantic tokens (com significado) */
+@import './semantic.css';
+
+/* 3. Component tokens (específicos) */
+@import './component.css';
+
+/* 4. Theme tokens (variações) */
+@import './theme.css';

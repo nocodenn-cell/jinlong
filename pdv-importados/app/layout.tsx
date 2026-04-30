@@ -1,10 +1,19 @@
 import type { Metadata } from 'next'
+import { Noto_Sans_SC } from 'next/font/google'
 import './globals.css'
 import '@/styles/theme-oriental.css'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { htmlLangFromIdioma } from '@/idioma/htmlLang'
 import { getMessages } from '@/i18n/getMessages'
 import { AppThemeProvider } from '@/components/theme/AppThemeProvider'
+
+// Fonte para chinês simplificado
+const notoSansSC = Noto_Sans_SC({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-noto-sc',
+  display: 'swap',
+})
 
 /**
  * Metadados dinâmicos conforme idioma do usuário (cookie/sessão).
@@ -37,8 +46,8 @@ export default async function RootLayout({
   const htmlLang = htmlLangFromIdioma(idioma)
 
   return (
-    <html lang={htmlLang} className="dark" data-app-theme="noturno" data-gerente-ui-theme="noturno" suppressHydrationWarning>
-      <body className="antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+    <html lang={htmlLang} className={`${notoSansSC.variable} dark`} data-app-theme="noturno" data-gerente-ui-theme="noturno" suppressHydrationWarning>
+      <body className={`${notoSansSC.variable} antialiased selection:bg-emerald-500/30 selection:text-emerald-200 ${idioma === 'zh' ? 'font-noto-sc' : ''}`}>
         <AppThemeProvider>{children}</AppThemeProvider>
       </body>
     </html>

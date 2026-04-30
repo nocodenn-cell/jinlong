@@ -1,6 +1,7 @@
 'use client'
 
 import { formatNumberLocale } from '@/lib/format/money'
+import { useIdioma } from '@/hooks/useIdioma'
 import { useEffect, useId, useState } from 'react'
 import {
   Area,
@@ -32,7 +33,7 @@ const THEMES = {
   },
 } as const
 
-export function SalesTrendChart({
+export default function SalesTrendChart({
   data,
   variant = 'default',
 }: {
@@ -40,6 +41,7 @@ export function SalesTrendChart({
   variant?: keyof typeof THEMES
 }) {
   const [ready, setReady] = useState(false)
+  const { idioma } = useIdioma()
   const gradId = useId().replace(/:/g, '')
   const t = THEMES[variant]
 
@@ -59,7 +61,7 @@ export function SalesTrendChart({
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data}>
+      <AreaChart data={data} className={idioma === 'zh' ? 'font-noto-sc' : ''}>
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor={t.stop} stopOpacity={0.2} />

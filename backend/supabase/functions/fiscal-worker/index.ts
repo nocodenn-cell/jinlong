@@ -3,7 +3,13 @@ import { timingSafeEqualSecret } from "../_shared/crypto.ts";
 import { classifyFiscalError } from "./fiscal_classify.ts";
 import type { FiscalDoc } from "./fiscal_types.ts";
 import { isRecord, json } from "./fiscal_http.ts";
-import { processWithHttpProvider, processWithMockProvider } from "./fiscal_providers.ts";
+import { callProvider, type ProviderConfig } from "./fiscal-provider-adapter.ts";
+import { 
+  shouldRetry, 
+  calculateNextRetryAt, 
+  formatRetryMessage,
+  DEFAULT_RETRY_CONFIG 
+} from "./fiscal-backoff.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -33,7 +39,8 @@ Deno.serve(async (req) => {
     // ignora e usa limit default
   }
 
-  const providerMode = (Deno.env.get("FISCAL_PROVIDER_MODE") ?? "mock").toLowerCase();
+  // Configurar provider baseado nas variáveis de ambiente
+  const providerType = (Deno.env.get("FISCAL_PROVIDER_TYPE") ?? "mock").toLowerCase() as ProviderConfig['type'];
   const providerUrl = Deno.env.get("FISCAL_PROVIDER_URL") ?? "";
   const providerToken = Deno.env.get("FISCAL_PROVIDER_TOKEN") ?? null;
   const timeoutMsRaw = Number(Deno.env.get("FISCAL_PROVIDER_TIMEOUT_MS") ?? "10000");
@@ -41,10 +48,15 @@ Deno.serve(async (req) => {
     ? Math.floor(timeoutMsRaw)
     : 10000;
 
-  if (providerMode !== "mock" && providerMode !== "http") {
-    return json(500, { ok: false, error: "INVALID_PROVIDER_MODE" });
-  }
-  if (providerMode === "http" && !providerUrl.trim()) {
+  const providerConfig: ProviderConfig = {
+    type: providerType,
+    url: providerUrl || undefined,
+    token: providerToken || undefined,
+    timeout: timeoutMs,
+  };
+
+  // Validação básica da configuração
+  if (providerType === "http" && !providerUrl.trim()) {
     return json(500, { ok: false, error: "MISSING_PROVIDER_URL" });
   }
 
@@ -58,6 +70,7 @@ Deno.serve(async (req) => {
   const processed: string[] = [];
   const emitted: string[] = [];
   const failed: Array<{ id: string; erro: string }> = [];
+  const retried: Array<{ id: string; proxima_tentativa: Date }> = [];
 
   for (const raw of (docs ?? []) as FiscalDoc[]) {
     const doc: FiscalDoc = {
@@ -68,11 +81,20 @@ Deno.serve(async (req) => {
     };
     processed.push(doc.id);
 
-    const result = providerMode === "http"
-      ? await processWithHttpProvider(doc, providerUrl, providerToken, timeoutMs)
-      : await processWithMockProvider(doc);
+    // Obter contagem de retentivas atual
+    const { data: retryData } = await supabase
+      .from("documentos_fiscais")
+      .select("retentivas")
+      .eq("id", doc.id)
+      .single();
+    
+    const currentRetries = retryData?.retentivas ?? 0;
+
+    // Chamar provider usando adapter
+    const result = await callProvider(doc, providerConfig);
 
     if (result.ok) {
+      // Sucesso - marcar como emitido
       const { error } = await supabase.rpc("fiscal_marcar_emitido", {
         p_documento_id: doc.id,
         p_chave_fiscal: result.chave_fiscal,
@@ -101,35 +123,56 @@ Deno.serve(async (req) => {
         emitted.push(doc.id);
       }
     } else {
-      failed.push({ id: doc.id, erro: result.erro });
-      const normalized = classifyFiscalError({
-        erro: result.erro,
-        transitorio: result.transitorio,
-        httpStatus: result.http_status,
-        providerCode: result.provider_code,
-        providerMessage: result.provider_message,
-        payload: result.payload,
-      });
-      await supabase.rpc("fiscal_marcar_erro_normalizado", {
-        p_documento_id: doc.id,
-        p_erro: result.erro,
-        p_transitorio: result.transitorio,
-        p_error_code: normalized.error_code,
-        p_error_category: normalized.error_category,
-        p_action_hint: normalized.action_hint,
-        p_retryable: normalized.retryable,
-        p_next_step_url: normalized.next_step_url,
-        p_error_payload: normalized.details,
-      });
+      // Falha - verificar se deve retry
+      if (shouldRetry(result, currentRetries)) {
+        const nextRetryAt = calculateNextRetryAt(currentRetries);
+        const retryMessage = formatRetryMessage(doc.id, currentRetries + 1, nextRetryAt, result.erro);
+        
+        // Atualizar com próxima tentativa
+        await supabase
+          .from("documentos_fiscais")
+          .update({
+            retentativas: currentRetries + 1,
+            proxima_tentativa_em: nextRetryAt.toISOString(),
+            erro: result.erro,
+          })
+          .eq("id", doc.id);
+        
+        retried.push({ id: doc.id, proxima_tentativa: nextRetryAt });
+        console.log(retryMessage);
+      } else {
+        // Não retry - marcar como erro permanente
+        failed.push({ id: doc.id, erro: result.erro });
+        const normalized = classifyFiscalError({
+          erro: result.erro,
+          transitorio: result.transitorio,
+          httpStatus: result.http_status,
+          providerCode: result.provider_code,
+          providerMessage: result.provider_message,
+          payload: result.payload,
+        });
+        await supabase.rpc("fiscal_marcar_erro_normalizado", {
+          p_documento_id: doc.id,
+          p_erro: result.erro,
+          p_transitorio: result.transitorio,
+          p_error_code: normalized.error_code,
+          p_error_category: normalized.error_category,
+          p_action_hint: normalized.action_hint,
+          p_retryable: normalized.retryable,
+          p_next_step_url: normalized.next_step_url,
+          p_error_payload: normalized.details,
+        });
+      }
     }
   }
 
   return json(200, {
     ok: true,
-    provider_mode: providerMode,
+    provider_type: providerType,
     claimed: (docs ?? []).length,
     processed,
     emitted,
     failed,
+    retried,
   });
 });

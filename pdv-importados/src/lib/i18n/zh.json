@@ -346,6 +346,46 @@
       "tamanho": "尺寸",
       "maximo": "最大",
       "layout": "布局"
+    },
+    "dashboard_novo": {
+      "titulo": "新版控制面板",
+      "resumo_vendas": "销售概览",
+      "vendas_hoje": "今日销售",
+      "vendas_semana": "本周销售",
+      "vendas_mes": "本月销售",
+      "meta_vendas": "销售目标",
+      "desempenho": "业绩表现",
+      "produtos_destaque": "热销商品",
+      "estoque_critico": "库存预警",
+      "movimentacoes_recentes": "最近动态",
+      "graficos_interativos": "交互图表",
+      "filtros_avancados": "高级筛选",
+      "exportar_dados": "导出数据",
+      "personalizar_painel": "自定义面板",
+      "atualizacao_automatica": "自动更新",
+      "notificacoes": "通知提醒",
+      "comparativo_periodos": "期间对比",
+      "indicadores_chave": "关键指标",
+      "tendencias_mercado": "市场趋势"
+    },
+    "relatorios_avancados": {
+      "titulo": "高级报告",
+      "analise_vendas": "销售分析",
+      "rentabilidade_produtos": "商品盈利能力",
+      "curva_abc": "ABC曲线分析",
+      "giro_estoque": "库存周转率",
+      "margem_lucro": "利润率",
+      "performance_categorias": "分类表现",
+      "relatorio_fiscal": "税务报告",
+      "conciliacao_bancaria": "银行对账",
+      "analise_clientes": "客户分析",
+      "previsao_demanda": "需求预测",
+      "relatorio_customizado": "自定义报告",
+      "agendamentos_automaticos": "定时生成",
+      "compartilhamento": "分享功能",
+      "exportar_multiplos_formatos": "多格式导出",
+      "filtros_personalizados": "自定义筛选",
+      "drill_down_details": "下钻详情"
     }
   },
   "caixa": {
@@ -624,6 +664,50 @@
     "sim": "是",
     "nao": "否",
     "idioma": "语言",
-    "sair": "退出登录"
+    "sair": "退出登录",
+    "fechar": "关闭"
+  },
+  "dashboard_novo": {
+    "title": "仪表板",
+    "loading": "加载中...",
+    "error": "加载数据时出错",
+    "cards": {
+      "faturamento_hoje": "今日收入",
+      "ticket_medio": "平均客单价",
+      "estoque_baixo": "低库存产品",
+      "vendas_hoje": "今日订单数"
+    }
+  },
+  "vendas": {
+    "titulo": "销售报告",
+    "periodo": "销售周期",
+    "grafico_label": "日销售额",
+    "tabela_cabecalho": ["日期", "总金额", "订单数量", "平均客单价"],
+    "filtro_data_inicio": "开始日期",
+    "filtro_data_fim": "结束日期",
+    "filtro_operador": "销售人员",
+    "exportar_csv": "导出CSV"
+  },
+  "produtos": {
+    "mais_vendidos": "热卖产品",
+    "estoque_baixo": "库存不足产品",
+    "tabela_cabecalho": ["产品", "SKU", "销量", "销售额", "当前库存"],
+    "estoque_critico": "库存紧张",
+    "sem_produtos": "暂无产品"
+  },
+  "caixa": {
+    "fechamento": "收银结算",
+    "resumo": "今日收银总结",
+    "tabela_cabecalho": ["收银员", "开启金额", "销售额", "抽款", "补款", "结算金额", "状态"],
+    "divergencia_alerta": "差异金额 R$ {diferenca} 超过限额",
+    "status_aberto": "开启",
+    "status_fechado": "已结算"
+  },
+  "alertas": {
+    "titulo": "智能警报",
+    "estoque": "⚠️ {quantidade} 个产品库存过低",
+    "divergencia": "🔴 {operador} 的收银差额为 R$ {diferenca}",
+    "sem_alertas": "✅ 无活动警报",
+    "ver_detalhes": "查看详情"
   }
 }

@@ -9,7 +9,6 @@ export const FORMAS_PAGAMENTO_CAIXA = [
   'PIX',
   'CARTAO_DEBITO',
   'CARTAO_CREDITO',
-  'FIADO',
 ] as const
 
 function quantidadeAte3CasasDecimais(n: number): boolean {

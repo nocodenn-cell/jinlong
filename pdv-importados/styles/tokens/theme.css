@@ -1,0 +1,221 @@
+/**
+ * Design Tokens Theme - Variações por tema
+ * Override dos tokens semânticos baseado no tema selecionado
+ */
+
+/* === TEMA NOTURNO (PADRÃO) === */
+:root,
+[data-app-theme='noturno'] {
+  /* Surface colors */
+  --color-background-surface: rgba(15, 23, 42, 0.68);
+  --color-background-surface-soft: rgba(15, 23, 42, 0.42);
+  --color-background-overlay: rgba(2, 6, 23, 0.58);
+  
+  /* Text colors */
+  --color-text-primary: rgb(241 245 249);
+  --color-text-secondary: rgb(203 213 225);
+  --color-text-tertiary: rgb(148 163 184);
+  --color-text-disabled: rgb(100 116 139);
+  
+  /* Border colors */
+  --color-border-primary: rgba(148, 163, 184, 0.38);
+  --color-border-secondary: rgba(71, 85, 105, 0.5);
+  --color-border-disabled: rgba(51, 65, 85, 0.6);
+  
+  /* Brand colors */
+  --color-brand-primary: var(--color-dragon-gold-400);
+  --color-brand-secondary: var(--color-dragon-gold-500);
+  --color-brand-strong: var(--color-dragon-gold-600);
+  --color-brand-contrast: rgb(17 24 39);
+}
+
+/* === TEMA NOVEM (CLARO) === */
+[data-app-theme='novem'] {
+  /* Surface colors */
+  --color-background-surface: rgba(255, 255, 255, 0.82);
+  --color-background-surface-soft: rgba(255, 255, 255, 0.62);
+  --color-background-overlay: rgba(255, 255, 255, 0.74);
+  
+  /* Text colors */
+  --color-text-primary: rgb(30 41 59);
+  --color-text-secondary: rgb(71 85 105);
+  --color-text-tertiary: rgb(100 116 139);
+  --color-text-disabled: rgb(148 163 184);
+  
+  /* Border colors */
+  --color-border-primary: rgba(226, 232, 240, 0.95);
+  --color-border-secondary: rgba(203, 213, 225, 0.85);
+  --color-border-disabled: rgba(226, 232, 240, 0.6);
+  
+  /* Brand colors */
+  --color-brand-primary: var(--color-dragon-gold-600);
+  --color-brand-secondary: var(--color-dragon-gold-700);
+  --color-brand-strong: var(--color-dragon-gold-900);
+  --color-brand-contrast: rgb(255 251 235);
+  
+  /* Component overrides for light theme */
+  --btn-accent-shadow: 0 1px 3px color-mix(in srgb, rgba(0, 0, 0, 0.1) 50%, transparent);
+  --btn-accent-shadow-hover: 0 4px 12px color-mix(in srgb, var(--color-brand-primary) 15%, transparent);
+  --btn-neutral-shadow: 0 1px 2px color-mix(in srgb, rgba(0, 0, 0, 0.05) 50%, transparent);
+  --btn-neutral-shadow-hover: 0 2px 8px color-mix(in srgb, var(--color-brand-primary) 10%, transparent);
+  --btn-danger-shadow: 0 1px 3px color-mix(in srgb, rgba(239, 68, 68, 0.2) 50%, transparent);
+  --btn-danger-shadow-hover: 0 4px 12px color-mix(in srgb, rgba(239, 68, 68, 0.25), transparent);
+  
+  /* Badge overrides for light theme */
+  --badge-success-bg: rgba(220, 252, 231, 0.85);
+  --badge-success-border: rgba(34, 197, 94, 0.32);
+  --badge-success-text: rgb(22 101 52);
+  
+  --badge-warning-bg: rgba(255, 247, 237, 0.92);
+  --badge-warning-border: rgba(245, 158, 11, 0.38);
+  --badge-warning-text: rgb(154 52 18);
+  
+  --badge-danger-bg: rgba(254, 242, 242, 0.92);
+  --badge-danger-border: rgba(248, 113, 113, 0.35);
+  --badge-danger-text: rgb(153 27 27);
+  
+  --badge-neutral-bg: rgb(255, 255, 255);
+  --badge-neutral-border: rgb(226, 232, 240);
+  --badge-neutral-text: rgb(30 41 59);
+  
+  /* Table overrides for light theme */
+  --table-bg: rgb(255, 255, 255);
+  --table-header-bg: rgb(248, 250, 252);
+  --table-header-text: rgb(71 85 105);
+  --table-row-hover-bg: rgba(254, 243, 199, 0.25);
+  --table-border: rgb(241, 245, 249);
+  
+  /* Modal overrides for light theme */
+  --modal-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 252, 245, 0.92) 100%);
+  --modal-border: rgba(226, 232, 240, 0.98);
+  --modal-shadow: 0 12px 30px -18px rgba(15, 23, 42, 0.18);
+  
+  /* Tooltip overrides for light theme */
+  --tooltip-bg: rgb(255, 255, 255);
+  --tooltip-border: rgb(226, 232, 240);
+  --tooltip-text: rgb(15, 23, 42);
+}
+
+/* === TEMA DRAGON-LIGHT (GERENTE) === */
+[data-gerente-ui-theme='dragon-light'] {
+  /* Surface colors */
+  --color-background-surface: rgb(255, 255, 255);
+  --color-background-surface-soft: rgba(255, 255, 255, 0.85);
+  --color-background-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 248, 234, 0.6) 100%);
+  
+  /* Text colors */
+  --color-text-primary: rgb(15, 23, 42);
+  --color-text-secondary: rgb(51, 65, 85);
+  --color-text-tertiary: rgb(100, 116 139);
+  --color-text-disabled: rgb(148, 163, 184);
+  
+  /* Border colors */
+  --color-border-primary: rgb(226, 232, 240);
+  --color-border-secondary: rgba(226, 232, 240, 0.95);
+  --color-border-disabled: rgb(203, 213, 225);
+  
+  /* Brand colors */
+  --color-brand-primary: var(--color-dragon-gold-500);
+  --color-brand-secondary: var(--color-dragon-gold-600);
+  --color-brand-strong: var(--color-dragon-gold-700);
+  --color-brand-contrast: rgb(255, 251, 235);
+  
+  /* Component overrides */
+  --modal-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 252, 245, 0.92) 100%);
+  --modal-border: rgba(226, 232, 240, 0.98);
+  --modal-shadow: 0 12px 30px -18px rgba(15, 23, 42, 0.18);
+  
+  --table-bg: rgb(255, 255, 255);
+  --table-header-bg: rgb(248, 250, 252);
+  --table-header-text: rgb(71, 85, 105);
+  --table-row-hover-bg: rgba(254, 243, 199, 0.35);
+  --table-border: rgb(241, 245, 249);
+}
+
+/* === TEMA DRAGON-DARK (GERENTE) === */
+[data-gerente-ui-theme='dragon-dark'] {
+  /* Surface colors */
+  --color-background-surface: rgba(2, 6, 23, 0.35);
+  --color-background-surface-soft: rgba(15, 23, 42, 0.5);
+  --color-background-overlay: rgba(2, 6, 23, 0.58);
+  
+  /* Text colors */
+  --color-text-primary: rgb(248, 250, 252);
+  --color-text-secondary: rgb(203, 213, 225);
+  --color-text-tertiary: rgb(148, 163, 184);
+  --color-text-disabled: rgb(100 116 139);
+  
+  /* Border colors */
+  --color-border-primary: rgba(71, 85, 105, 0.75);
+  --color-border-secondary: rgba(71, 85, 105, 0.5);
+  --color-border-disabled: rgba(51, 65, 85, 0.6);
+  
+  /* Brand colors */
+  --color-brand-primary: var(--color-dragon-gold-400);
+  --color-brand-secondary: var(--color-dragon-gold-500);
+  --color-brand-strong: var(--color-dragon-gold-600);
+  --color-brand-contrast: rgb(17, 24, 39);
+  
+  /* Component overrides */
+  --table-bg: rgba(2, 6, 23, 0.35);
+  --table-header-bg: rgba(15, 23, 42, 0.5);
+  --table-header-text: rgb(203, 213, 225);
+  --table-row-hover-bg: rgba(30, 41, 59, 0.45);
+  --table-border: rgba(71, 85, 105, 0.5);
+}
+
+/* === RESPONSIVE THEME ADJUSTMENTS === */
+@media (max-width: 640px) {
+  /* Reduce visual complexity on mobile */
+  :root,
+  [data-app-theme='noturno'],
+  [data-app-theme='novem'] {
+    --btn-accent-shadow-hover: none;
+    --btn-neutral-shadow-hover: none;
+    --btn-danger-shadow-hover: none;
+    --chip-shadow-hover: none;
+  }
+}
+
+/* === HIGH CONTRAST MODE === */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border-primary: rgba(148, 163, 184, 0.8);
+    --color-border-focus: var(--color-brand-primary);
+    --btn-accent-border: var(--color-brand-primary);
+    --btn-neutral-border: var(--color-brand-primary);
+    --btn-danger-border: var(--color-danger-500);
+  }
+  
+  [data-app-theme='novem'] {
+    --color-border-primary: rgb(148, 163, 184);
+    --color-border-secondary: rgb(100, 116, 139);
+  }
+}
+
+/* === COLOR SCHEME ADAPTATIONS === */
+@media (prefers-color-scheme: light) {
+  /* Auto-adjust for light mode if no theme is set */
+  :root:not([data-app-theme]) {
+    --color-background-surface: rgba(255, 255, 255, 0.82);
+    --color-background-surface-soft: rgba(255, 255, 255, 0.62);
+    --color-text-primary: rgb(30, 41 59);
+    --color-text-secondary: rgb(71, 85, 105);
+    --color-text-tertiary: rgb(100, 116, 139);
+    --color-border-primary: rgba(226, 232, 240, 0.95);
+    --color-border-secondary: rgba(203, 213, 225, 0.85);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Auto-adjust for dark mode if no theme is set */
+  :root:not([data-app-theme]) {
+    --color-background-surface: rgba(15, 23, 42, 0.68);
+    --color-background-surface-soft: rgba(15, 23, 42, 0.42);
+    --color-text-primary: rgb(241 245 249);
+    --color-text-secondary: rgb(203, 213, 225);
+    --color-text-tertiary: rgb(148, 163, 184);
+    --color-border-primary: rgba(148, 163, 184, 0.38);
+    --color-border-secondary: rgba(71, 85, 105, 0.5);
+  }
+}

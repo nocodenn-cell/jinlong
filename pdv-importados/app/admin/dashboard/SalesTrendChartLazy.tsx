@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic'
 
 const SalesTrendChartDynamic = dynamic(
-  () => import('./SalesTrendChart').then((mod) => mod.SalesTrendChart),
+  () => import('./SalesTrendChart'),
   {
     ssr: false,
     loading: () => (
