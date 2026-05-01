@@ -1,6 +1,15 @@
-/** Log estruturado para Edge functions */
-export function logJson(svc: string, payload: Record<string, unknown>) {
-  console.log(
-    JSON.stringify({ ts: new Date().toISOString(), svc, ...payload })
-  );
-}
+/**
+ * Logger unificado para todo o projeto
+ * Este arquivo agora redireciona para o logger unificado para compatibilidade
+ */
+
+export { 
+  logJson, 
+  logCaughtServerError, 
+  logger,
+  redactForLog,
+  type LogEntry,
+  EdgeLogger,
+  DesktopLogger,
+  ServerLogger
+} from './unified-logger';

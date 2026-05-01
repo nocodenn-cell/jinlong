@@ -24,6 +24,7 @@ export async function gerarBarcodeDataUrl(
   options: BarcodeOptions
 ): Promise<string> {
   // Dynamic import com any para evitar erros de tipo com biblioteca sem definições nativas
+  // @ts-ignore - Ignorar erro de tipo para bwip-js que não tem definições TypeScript
   const bwipJs = await import('bwip-js') as any
   
   const canvas = document.createElement('canvas')

@@ -32,7 +32,7 @@ export function SessionIdleLogout() {
         return
       }
       resetCarrinhoPersistido()
-      window.location.assign('/login?reason=sessao_inatividade')
+      globalThis.location?.assign('/login?reason=sessao_inatividade')
     }
 
     const reset = () => {
@@ -45,15 +45,15 @@ export function SessionIdleLogout() {
     const onActivity = () => reset()
 
     reset()
-    window.addEventListener('keydown', onActivity)
-    window.addEventListener('mousedown', onActivity)
-    window.addEventListener('touchstart', onActivity)
+    globalThis.addEventListener('keydown', onActivity)
+    globalThis.addEventListener('mousedown', onActivity)
+    globalThis.addEventListener('touchstart', onActivity)
 
     return () => {
       clearTimeout(timeoutId)
-      window.removeEventListener('keydown', onActivity)
-      window.removeEventListener('mousedown', onActivity)
-      window.removeEventListener('touchstart', onActivity)
+      globalThis.removeEventListener('keydown', onActivity)
+      globalThis.removeEventListener('mousedown', onActivity)
+      globalThis.removeEventListener('touchstart', onActivity)
     }
   }, [])
 

@@ -119,7 +119,6 @@ function logCorsBlocked(req: Request): void {
   const ip = clientIpForCorsLog(req);
   const ts = new Date().toISOString();
   const originLabel = origin || "(none)";
-  console.warn(`CORS blocked: origin=${originLabel}, ip=${ip}, ts=${ts}`);
   log({
     level: "warn",
     stage: "cors",

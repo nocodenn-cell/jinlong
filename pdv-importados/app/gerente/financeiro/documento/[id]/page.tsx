@@ -47,7 +47,6 @@ export default async function DocumentoFiscalDetalhePage(props: PageProps) {
     .order('created_at', { ascending: true })
 
   if (evErr && process.env.NODE_ENV === 'development') {
-    console.warn('[documento fiscal] eventos:', evErr.message)
   }
 
   const eventos = (evErr ? [] : (eventosRaw ?? [])).map((e) => ({

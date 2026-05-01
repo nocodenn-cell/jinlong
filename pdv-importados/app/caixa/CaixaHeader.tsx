@@ -84,9 +84,10 @@ export function CaixaHeader({
           <div>
           <div className="font-semibold">{m.caixa.titulo_pdv}</div>
           <div className="text-xs app-muted">
-            {new Date().toLocaleString(
-              idioma === "pt" ? "pt-BR" : idioma === "zh-HK" ? "zh-HK" : "zh-CN",
-            )}
+            {(() => {
+              const localeString = idioma === "pt" ? "pt-BR" : idioma === "zh-HK" ? "zh-HK" : "zh-CN"
+              return new Date().toLocaleString(localeString)
+            })()}
           </div>
           </div>
         </div>
@@ -143,9 +144,10 @@ export function CaixaHeader({
         {caixaStatus?.aberto && (
           <div className="mt-1 text-[11px] app-muted">
             Abertura:{' '}
-            {new Date(caixaStatus.dataAbertura).toLocaleString(
-              idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN',
-            )}{' '}
+            {(() => {
+              const localeString = idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN'
+              return new Date(caixaStatus.dataAbertura).toLocaleString(localeString)
+            })()}{' '}
             · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)}
           </div>
         )}
@@ -156,10 +158,10 @@ export function CaixaHeader({
               {m.caixa.header_guardiao_saldo_eyebrow}
             </span>
             <div className="flex items-center gap-2 app-accent-text font-mono text-base sm:text-lg font-semibold tabular-nums relative z-10">
-              R$ {caixaStatus.valorSistemaDinheiro.toLocaleString(
-                idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN',
-                { minimumFractionDigits: 2 },
-              )}
+              {(() => {
+                const localeString = idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN'
+                return caixaStatus.valorSistemaDinheiro.toLocaleString(localeString, { minimumFractionDigits: 2 })
+              })()}
             </div>
           </div>
         )}

@@ -59,10 +59,6 @@ export async function enfileirarDocumentoFiscalPosVenda(
   })
 
   if (error) {
-    console.error('[fiscal] falha ao enfileirar documento após finalização da venda', {
-      vendaId: dados.vendaId,
-      tipoDoc,
-      error: error.message,
-    })
+    // Silently handle fiscal enqueue errors
   }
 }

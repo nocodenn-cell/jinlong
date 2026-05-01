@@ -16,7 +16,7 @@ function supabaseConfigOk(url: string | undefined, anonKey: string | undefined):
  * Protege rotas do PDV autenticadas e mantém a sessão Supabase atualizada (cookies).
  * Sem config válida: rotas protegidas redirecionam para /login (fail-safe; evita crash do client).
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isPainelWeb =
     pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[0]) || pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[1])

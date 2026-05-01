@@ -13,13 +13,11 @@ export async function getFeatureFlag(flagName: string): Promise<boolean> {
     })
     
     if (error) {
-      console.error(`Error fetching feature flag ${flagName}:`, error)
       return false // Fail safe: desligado por segurança
     }
     
     return data ?? false
   } catch (error) {
-    console.error(`Error fetching feature flag ${flagName}:`, error)
     return false // Fail safe: desligado por segurança
   }
 }
@@ -85,7 +83,6 @@ export function FeatureGate({
           setCachedFlag(flagName, enabled)
         }
       } catch (error) {
-        console.error(`Failed to load feature flag ${flagName}:`, error)
         if (isMounted) {
           setIsEnabled(false) // Fail safe
         }
@@ -144,7 +141,6 @@ export function useFeatureFlag(flagName: string) {
           setCachedFlag(flagName, enabled)
         }
       } catch (error) {
-        console.error(`Failed to load feature flag ${flagName}:`, error)
         if (isMounted) {
           setIsEnabled(false)
         }

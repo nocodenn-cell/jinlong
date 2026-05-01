@@ -6,7 +6,7 @@ import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma } from '@/src/lib/idioma/normalizeIdioma'
 
 export type PerfilUsuario = 'OPERADOR' | 'GERENTE' | 'DONO' | 'ADMIN'
-export type Idioma = 'pt' | 'en' | 'zh'
+export type Idioma = 'pt' | 'en' | 'zh' | 'zh-HK'
 
 export function useIdioma() {
   const [idioma, setIdioma] = useState<Idioma>('pt')
@@ -35,7 +35,6 @@ export function useIdioma() {
         setPerfil(perfilUsuario)
         setIdioma(normalizeIdioma(usuario?.idioma_preferido))
       } catch (error) {
-        console.error('Error loading user data:', error)
         setIdioma('pt')
         setPerfil('OPERADOR')
       } finally {

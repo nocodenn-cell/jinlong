@@ -68,16 +68,22 @@ export function TooltipWrapper({
 export function CaixaTooltip({
   children,
   content,
-  ...props
+  side,
+  delayDuration,
+  collisionPadding,
+  disabled
 }: TooltipProps) {
   return (
     <TooltipWrapper
-      {...props}
+      content={content}
       side="top"
       delayDuration={300}
-      className="text-xs app-surface-text"
+      collisionPadding={collisionPadding}
+      disabled={disabled}
     >
-      {children}
+      <TooltipContent side="top" className="text-xs app-surface-text">
+        {content}
+      </TooltipContent>
     </TooltipWrapper>
   )
 }

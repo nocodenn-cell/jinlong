@@ -144,7 +144,6 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
         nomeArquivo: `etiquetas-${Date.now()}.pdf`,
       })
     } catch (error: unknown) {
-      console.error('Erro ao gerar PDF:', error)
       alert(
         idioma === 'zh'
           ? '生成PDF时出错'

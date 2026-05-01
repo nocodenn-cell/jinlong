@@ -90,9 +90,6 @@ export function LoginForm({ messages: m }: Props) {
       .maybeSingle()
 
     if (perfilErr) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[login] falha ao consultar public.usuarios:', perfilErr)
-      }
       const code =
         perfilErr && typeof perfilErr === 'object' && 'code' in perfilErr
           ? String((perfilErr as { code?: unknown }).code ?? '')

@@ -1,95 +1,62 @@
-/**
- * Logger simples para observabilidade no desktop.
- * Mantém buffer em memória e persiste snapshot em localStorage quando disponível.
- */
+import { logger as unifiedLogger, type LogEntry } from '../../../shared/unified-logger';
 
-export interface LogEntry {
-  level: 'info' | 'warn' | 'error'
-  message: string
-  timestamp: string
-  context?: Record<string, any>
-}
-
+// Manter a interface original para compatibilidade com o restante do desktop
 class Logger {
-  private logs: LogEntry[] = []
-  private maxLogs = 1000
-  private storageKey = 'pdv_local_logs'
+  private static instance: Logger;
+  private buffer: LogEntry[] = [];
 
-  private async persistLog(entry: LogEntry) {
-    try {
-      if (typeof window === 'undefined') return
-      const previous = window.localStorage.getItem(this.storageKey)
-      const parsed = previous ? (JSON.parse(previous) as LogEntry[]) : []
-      parsed.push(entry)
-      const bounded = parsed.slice(-this.maxLogs)
-      window.localStorage.setItem(this.storageKey, JSON.stringify(bounded))
-    } catch (e) {
-      console.warn('Failed to persist log', e)
+  private constructor() {}
+
+  static getInstance(): Logger {
+    if (!Logger.instance) {
+      Logger.instance = new Logger();
     }
+    return Logger.instance;
   }
 
-  private log(level: LogEntry['level'], message: string, context?: Record<string, any>) {
-    const entry: LogEntry = {
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-      context,
-    }
-
-    this.logs.push(entry)
-    if (this.logs.length > this.maxLogs) {
-      this.logs.shift()
-    }
-
-    // Console output
-    const prefix = `[${entry.timestamp}] ${level.toUpperCase()}:`
-    switch (level) {
-      case 'error':
-        console.error(prefix, message, context)
-        break
-      case 'warn':
-        console.warn(prefix, message, context)
-        break
-      default:
-        console.log(prefix, message, context)
-    }
-
-    // Persist to file asynchronously
-    this.persistLog(entry)
+  info(message: string, context?: Record<string, unknown>): void {
+    unifiedLogger.info(message, context);
+    this.buffer.push({ level: 'info', message, timestamp: new Date().toISOString(), context });
   }
 
-  info(message: string, context?: Record<string, any>) {
-    this.log('info', message, context)
+  warn(message: string, context?: Record<string, unknown>): void {
+    unifiedLogger.warn(message, context);
+    this.buffer.push({ level: 'warn', message, timestamp: new Date().toISOString(), context });
   }
 
-  warn(message: string, context?: Record<string, any>) {
-    this.log('warn', message, context)
-  }
-
-  error(message: string, context?: Record<string, any>) {
-    this.log('error', message, context)
+  error(message: string, context?: Record<string, unknown>): void {
+    unifiedLogger.error(message, context);
+    this.buffer.push({ level: 'error', message, timestamp: new Date().toISOString(), context });
   }
 
   getLogs(): LogEntry[] {
-    return [...this.logs]
+    return this.buffer;
   }
 
-  clearLogs() {
-    this.logs = []
+  clearLogs(): void {
+    this.buffer = [];
   }
 
-  async getLogFileContent(): Promise<string> {
+  // Persistência local (preservar funcionalidade original)
+  saveToLocalStorage(): void {
     try {
-      if (typeof window === 'undefined') return ''
-      const value = window.localStorage.getItem(this.storageKey)
-      if (!value) return ''
-      const logs = JSON.parse(value) as LogEntry[]
-      return logs.map((log) => JSON.stringify(log)).join('\n')
+      localStorage.setItem('pdv_logs', JSON.stringify(this.buffer));
     } catch (e) {
-      console.warn('Failed to read log file', e)
-      return ''
+      unifiedLogger.warn('Failed to save logs to localStorage', { error: String(e) });
+    }
+  }
+
+  loadFromLocalStorage(): void {
+    try {
+      const saved = localStorage.getItem('pdv_logs');
+      if (saved) {
+        this.buffer = JSON.parse(saved);
+      }
+    } catch (e) {
+      unifiedLogger.warn('Failed to load logs from localStorage', { error: String(e) });
     }
   }
 }
 
-export const logger = new Logger()
+export const logger = Logger.getInstance();
+export { LogEntry };

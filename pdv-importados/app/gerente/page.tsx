@@ -63,7 +63,11 @@ export default async function GerenteInicioPage() {
 
   const totalOntem = (aggOntem ?? []).reduce((s, r) => s + Number(r.total_liquido ?? 0), 0)
   const variacaoPercentual =
-    totalOntem > 0 ? ((totalHoje - totalOntem) / totalOntem) * 100 : totalHoje > 0 ? 100 : 0
+    totalOntem > 0
+      ? ((totalHoje - totalOntem) / totalOntem) * 100
+      : totalHoje > 0
+        ? 100
+        : 0
   const tendenciaPositiva = variacaoPercentual >= 0
   const progressoMeta = Math.min(totalHoje / metaDia, 1)
 

@@ -139,7 +139,6 @@ Deno.serve(async (req) => {
           .eq("id", doc.id);
         
         retried.push({ id: doc.id, proxima_tentativa: nextRetryAt });
-        console.log(retryMessage);
       } else {
         // Não retry - marcar como erro permanente
         failed.push({ id: doc.id, erro: result.erro });

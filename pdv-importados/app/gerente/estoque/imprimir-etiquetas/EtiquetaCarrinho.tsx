@@ -10,7 +10,7 @@ type Props = {
   onAtualizarQuantidade: (produtoId: string, novaQuantidade: number) => void
   onRemover: (produtoId: string) => void
   onLimpar: () => void
-  idioma: 'pt' | 'zh'
+  idioma: 'pt' | 'zh' | 'zh-HK'
 }
 
 const LABELS = {
@@ -27,6 +27,13 @@ const LABELS = {
     limpar: '清空购物车',
     total: '总计',
     preco: '价格',
+  },
+  'zh-HK': {
+    quantidade: '數量',
+    remover: '刪除',
+    limpar: '清空購物車',
+    total: '總計',
+    preco: '價格',
   },
 }
 

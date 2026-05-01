@@ -1,0 +1,30 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "prefer-const": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/logger.ts", "**/logger/*.ts", "shared/logger.ts", "shared/unified-logger.ts"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.spec.ts", "**/test/**/*.ts", "**/*.test.tsx", "**/*.spec.tsx"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["**/node_modules/**", "**/dist/**", "**/.next/**", "**/build/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
+}
