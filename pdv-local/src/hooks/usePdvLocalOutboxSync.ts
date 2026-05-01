@@ -73,15 +73,15 @@ export function usePdvLocalOutboxSync({
   useEffect(() => {
     if (!tauriDisponivel) return
     void refreshOutboxResumo()
-    const id = window.setInterval(() => void refreshOutboxResumo(), 12000)
-    return () => window.clearInterval(id)
+    const id = globalThis.setInterval(() => void refreshOutboxResumo(), 12000)
+    return () => globalThis.clearInterval(id)
   }, [tauriDisponivel, refreshOutboxResumo])
 
   useEffect(() => {
     if (!tauriDisponivel || !caixaAtualId) return
 
     let running = false
-    const t = window.setInterval(() => {
+    const t = globalThis.setInterval(() => {
       if (running) return
       running = true
       executarSyncOutboxComMetrica(50)
@@ -94,7 +94,7 @@ export function usePdvLocalOutboxSync({
         })
     }, 15000)
 
-    return () => window.clearInterval(t)
+    return () => globalThis.clearInterval(t)
   }, [tauriDisponivel, caixaAtualId, refreshOutboxResumo, executarSyncOutboxComMetrica])
 
   const statusSync: StatusSync = !tauriDisponivel

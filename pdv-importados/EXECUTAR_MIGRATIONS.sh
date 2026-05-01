@@ -32,7 +32,7 @@ executar_migration() {
 }
 
 # Verificar variáveis de ambiente
-if [ -z "$DATABASE_URL" ]; then
+if [[ -z "$DATABASE_URL" ]]; then
     echo -e "${RED}❌ DATABASE_URL não configurado${NC}"
     echo "Configure a variável de ambiente:"
     echo "export DATABASE_URL=postgresql://user:pass@host:port/dbname"
@@ -49,7 +49,7 @@ FILES=(
 )
 
 for file in "${FILES[@]}"; do
-    if [ ! -f "$file" ]; then
+    if [[ ! -f "$file" ]]; then
         echo -e "${RED}❌ Arquivo não encontrado: $file${NC}"
         exit 1
     fi

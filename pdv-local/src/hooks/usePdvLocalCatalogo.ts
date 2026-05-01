@@ -102,17 +102,17 @@ export function usePdvLocalCatalogo({
     setTauriDisponivel(check())
 
     let tries = 0
-    const t = window.setInterval(() => {
+    const t = globalThis.setInterval(() => {
       tries += 1
       if (check()) {
         setTauriDisponivel(true)
-        window.clearInterval(t)
+        globalThis.clearInterval(t)
       } else if (tries >= 15) {
-        window.clearInterval(t)
+        globalThis.clearInterval(t)
       }
     }, 200)
 
-    return () => window.clearInterval(t)
+    return () => globalThis.clearInterval(t)
   }, [])
 
   useEffect(() => {

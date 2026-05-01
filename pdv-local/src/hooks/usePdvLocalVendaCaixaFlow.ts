@@ -61,7 +61,7 @@ export function usePdvLocalVendaCaixaFlow({
       return
     }
     try {
-      const trocoRaw = window.prompt('Troco inicial do caixa (R$):', '0')
+      const trocoRaw = globalThis.prompt('Troco inicial do caixa (R$):', '0')
       const troco = trocoRaw ? Number(trocoRaw.replace(',', '.')) : 0
       const novoCaixaId = await invoke('abrir_caixa_cmd', {
         operador_id: null,
@@ -77,12 +77,12 @@ export function usePdvLocalVendaCaixaFlow({
   const fecharCaixa = useCallback(async () => {
     if (!caixaAtualId) return
     try {
-      const trocoRaw = window.prompt(
+      const trocoRaw = globalThis.prompt(
         'Valor em caixa para fechamento (R$):',
         String(totalLiquido.toFixed(2)),
       )
       const troco = trocoRaw ? Number(trocoRaw.replace(',', '.')) : 0
-      const obsRaw = window.prompt(
+      const obsRaw = globalThis.prompt(
         'Observação de fechamento (opcional; ex.: divergência contagem):',
         '',
       )
@@ -103,9 +103,9 @@ export function usePdvLocalVendaCaixaFlow({
   const registrarMovimentoCaixa = useCallback(async () => {
     if (!caixaAtualId) return
     try {
-      const tipo = window.prompt('Movimento de caixa (SANGRIA ou SUPRIMENTO):', 'SANGRIA')
+      const tipo = globalThis.prompt('Movimento de caixa (SANGRIA ou SUPRIMENTO):', 'SANGRIA')
       if (!tipo) return
-      const valorRaw = window.prompt('Valor do movimento (R$):', '10')
+      const valorRaw = globalThis.prompt('Valor do movimento (R$):', '10')
       if (!valorRaw) return
       const valor = Number(valorRaw.replace(',', '.'))
       if (!Number.isFinite(valor) || valor <= 0) return

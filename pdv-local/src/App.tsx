@@ -105,7 +105,7 @@ export function App() {
   }
 
   const focarInputLeitura = useCallback(() => {
-    window.setTimeout(() => inputLeituraRef.current?.focus(), 0)
+    globalThis.setTimeout(() => inputLeituraRef.current?.focus(), 0)
   }, [])
 
   const {
@@ -871,7 +871,7 @@ export function App() {
               }}
               onClick={async () => {
                 if (!itens.length) return
-                const senha = window.prompt('Senha do gerente para aplicar desconto especial:')
+                const senha = globalThis.prompt('Senha do gerente para aplicar desconto especial:')
                 if (!senha) return
 
                 let tokenPdv: string | null = null
@@ -909,7 +909,7 @@ export function App() {
                     ? Math.min(maxDescontoGerentePercentual, maxClamp)
                     : maxDescontoGerentePercentual
 
-                const entrada = window.prompt(
+                const entrada = globalThis.prompt(
                   `Informe o desconto especial em % (máx. ${maxPrompt}%):`,
                   descontoGerentePercentual > 0 ? String(descontoGerentePercentual) : '5'
                 )

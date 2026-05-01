@@ -120,12 +120,12 @@ export class DesktopLogger extends BaseLogger {
 
   private async persistLog(entry: LogEntry): Promise<void> {
     try {
-      if (typeof window === 'undefined') return
-      const previous = window.localStorage.getItem(this.storageKey)
+      if (typeof globalThis === 'undefined') return
+      const previous = globalThis.localStorage.getItem(this.storageKey)
       const parsed = previous ? (JSON.parse(previous) as LogEntry[]) : []
       parsed.push(entry)
       const bounded = parsed.slice(-this.maxLogs)
-      window.localStorage.setItem(this.storageKey, JSON.stringify(bounded))
+      globalThis.localStorage.setItem(this.storageKey, JSON.stringify(bounded))
     } catch (e) {
       // Silently handle persistence errors
     }
@@ -169,8 +169,8 @@ export class DesktopLogger extends BaseLogger {
 
   async getLogFileContent(): Promise<string> {
     try {
-      if (typeof window === 'undefined') return ''
-      const value = window.localStorage.getItem(this.storageKey)
+      if (typeof globalThis === 'undefined') return ''
+      const value = globalThis.localStorage.getItem(this.storageKey)
       if (!value) return ''
       const logs = JSON.parse(value) as LogEntry[]
       return logs.map((log) => JSON.stringify(log)).join('\n')

@@ -207,8 +207,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         if (!movimentandoCaixa && caixaStatus?.aberto) setMovimentacaoModalTipo("sangria")
       }
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    globalThis.addEventListener("keydown", onKey)
+    return () => globalThis.removeEventListener("keydown", onKey)
   }, [movimentandoCaixa, caixaStatus])
 
   const handleAdicionar = useCallback(
@@ -443,8 +443,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     }
 
     checkExpiracao()
-    const timer = window.setInterval(checkExpiracao, 1000)
-    return () => window.clearInterval(timer)
+    const timer = globalThis.setInterval(checkExpiracao, 1000)
+    return () => globalThis.clearInterval(timer)
   }, [gerenteValidadoAte, limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem])
 
   const handleFinalizar = useCallback(async () => {
@@ -558,8 +558,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         focarCampoBuscaRef.current()
       }
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    globalThis.addEventListener("keydown", onKey)
+    return () => globalThis.removeEventListener("keydown", onKey)
   }, [])
 
   const handleValidateSenhaGerente = useCallback(
