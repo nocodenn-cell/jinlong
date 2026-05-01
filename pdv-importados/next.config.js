@@ -2,8 +2,15 @@ const { withSentryConfig } = require('@sentry/nextjs')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
+  transpilePackages: ['shared'],
+  output: 'standalone',
+  eslint: { ignoreDuringBuilds: false },
+  typescript: { 
+    ignoreBuildErrors: false,
     tsconfigPath: './tsconfig.json',
+  },
+  turbopack: {
+    root: process.cwd(),
   },
   /**
    * Cabeçalhos baseline (defesa em profundidade).

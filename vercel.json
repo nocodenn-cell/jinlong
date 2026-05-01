@@ -1,6 +1,15 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm ci",
-  "buildCommand": "npm run build",
-  "outputDirectory": "pdv-importados/.next"
+  "framework": "nextjs",
+  "buildCommand": "cd pdv-importados && npm run build",
+  "outputDirectory": "pdv-importados/.next",
+  "installCommand": "npm install",
+  "functions": {
+    "pdv-importados/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "github": {
+    "silent": true,
+    "autoJobCancelation": true
+  }
 }
