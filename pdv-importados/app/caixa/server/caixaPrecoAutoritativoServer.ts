@@ -50,11 +50,6 @@ export async function recalcularItensNoServidor(
       : DEFAULT_PRICING_CONTEXT.quantidadeMinimaAtacadoPadrao,
   }
 
-  const quantidadePorProduto = itensInput.reduce<Record<string, number>>((acc, item) => {
-    acc[item.produtoId] = (acc[item.produtoId] ?? 0) + item.quantidade
-    return acc
-  }, {})
-
   const itens: ItemAutoritativo[] = []
   for (const i of itensInput) {
     const p = produtos.get(i.produtoId)!

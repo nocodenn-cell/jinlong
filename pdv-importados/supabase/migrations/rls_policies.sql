@@ -103,22 +103,25 @@ CREATE POLICY fiscal_fila_loja_policy ON fiscal_fila
 
 -- 10. Política especial para Gerentes (acesso total na loja)
 -- Gerentes podem ver tudo da sua loja, mas não de outras lojas
-CREATE POLICY gerentes_loja_policy ON vendas
-  FOR ALL TO authenticated
-  USING (
-    auth.jwt()->->>'loja_id' = loja_id
-    AND (
-      auth.jwt()->->>'papel' = 'GERENTE' 
-      OR auth.jwt()->->>'papel' = 'ADMIN'
+-- Constantes de papéis administrativos
+DO $$
+BEGIN
+  -- Policy para gerentes e admins
+  CREATE POLICY gerentes_loja_policy ON vendas
+    FOR ALL TO authenticated
+    USING (
+      auth.jwt()->->>'loja_id' = loja_id
+      AND (
+        auth.jwt()->->>'papel' IN ('GERENTE', 'ADMIN')
+      )
     )
-  )
-  WITH CHECK (
-    auth.jwt()->->>'loja_id' = loja_id
-    AND (
-      auth.jwt()->->>'papel' = 'GERENTE' 
-      OR auth.jwt()->->>'papel' = 'ADMIN'
-    )
-  );
+    WITH CHECK (
+      auth.jwt()->->>'loja_id' = loja_id
+      AND (
+        auth.jwt()->->>'papel' IN ('GERENTE', 'ADMIN')
+      )
+    );
+END $$;
 
 -- 11. Política para Admins (acesso cross-loja para suporte)
 -- Admins podem ver tudo (apenas para suporte e auditoria)

@@ -56,7 +56,7 @@ export async function exemploMigracaoObjetoDireto() {
     ipAddress: "192.168.1.100",
     timestamp: new Date(),
     motivo: "Desconto autorizado",
-    valor: 150.50,
+    valor: 150.5,
     operadorId: "operador-001",
     caixaId: "caixa-001"
   }

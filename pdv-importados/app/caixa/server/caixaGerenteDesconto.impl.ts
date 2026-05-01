@@ -44,12 +44,17 @@ export async function validarGerenteDescontoImpl(input: {
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
     if (!response.ok || payload.ok !== true) {
       const code = typeof payload.error === 'string' ? payload.error : ''
-      const error =
-        code === 'ERRO_PERSISTENCIA_TOKEN'
-          ? 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
-          : code
-            ? mensagemErroParaUsuario(code)
-            : `Não foi possível validar o gerente (servidor respondeu com código ${response.status}). Verifique a internet e tente de novo.`
+      const getErrorMessage = (code: string | null, status: number) => {
+        if (code === 'ERRO_PERSISTENCIA_TOKEN') {
+          return 'Não foi possível registrar o desconto no servidor. Tente novamente em instantes.'
+        }
+        if (code) {
+          return mensagemErroParaUsuario(code)
+        }
+        return `Não foi possível validar o gerente (servidor respondeu com código ${status}). Verifique a internet e tente de novo.`
+      }
+
+      const error = getErrorMessage(code, response.status)
       return {
         ok: false,
         error,

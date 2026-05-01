@@ -14,7 +14,7 @@ type Props = Readonly<
  */
 export function ConfirmActionButton({ confirmMessage, onClick, ...props }: Props) {
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    const ok = window.confirm(confirmMessage)
+    const ok = globalThis.confirm(confirmMessage)
     if (!ok) {
       event.preventDefault()
       event.stopPropagation()

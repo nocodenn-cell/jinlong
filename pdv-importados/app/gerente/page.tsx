@@ -62,12 +62,17 @@ export default async function GerenteInicioPage() {
     .eq('status', 'CONCLUIDA')
 
   const totalOntem = (aggOntem ?? []).reduce((s, r) => s + Number(r.total_liquido ?? 0), 0)
-  const variacaoPercentual =
-    totalOntem > 0
-      ? ((totalHoje - totalOntem) / totalOntem) * 100
-      : totalHoje > 0
-        ? 100
-        : 0
+  const getVariacaoPercentual = (totalHoje: number, totalOntem: number) => {
+    if (totalOntem > 0) {
+      return ((totalHoje - totalOntem) / totalOntem) * 100
+    }
+    if (totalHoje > 0) {
+      return 100
+    }
+    return 0
+  }
+
+  const variacaoPercentual = getVariacaoPercentual(totalHoje, totalOntem)
   const tendenciaPositiva = variacaoPercentual >= 0
   const progressoMeta = Math.min(totalHoje / metaDia, 1)
 
@@ -226,9 +231,8 @@ export default async function GerenteInicioPage() {
       {mostrarFilaFiscal && (
         <div className="mb-6 flex flex-wrap gap-3">
           {mostrarFilaFiscal ? (
-            <div
+            <output
               className="dragon-glass-card inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold app-badge-danger"
-              role="status"
             >
               <ImperialSealIcon
                 className="h-5 w-5 shrink-0 app-accent-text"
@@ -239,7 +243,7 @@ export default async function GerenteInicioPage() {
                 {m.gerente.dragon_badge_fila_fiscal}
                 <span className="ml-1.5 tabular-nums app-muted">({filaFiscalPendente ?? 0})</span>
               </span>
-            </div>
+            </output>
           ) : null}
         </div>
       )}

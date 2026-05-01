@@ -3,4 +3,4 @@ import { useCartStore, calcularTotaisComGerente, type ItemCarrinhoComPreco } fro
 
 // Reexportar com o nome que o desktop espera
 export const useDesktopCartStore = useCartStore;
-export { calcularTotaisComGerente, type ItemCarrinhoComPreco };
+export { type ItemCarrinhoComPreco };

@@ -124,9 +124,12 @@ Deno.serve(async (req) => {
       }
     } else {
       // Falha - verificar se deve retry
-      if (shouldRetry(result, currentRetries)) {
-        const nextRetryAt = calculateNextRetryAt(currentRetries);
-        const retryMessage = formatRetryMessage(doc.id, currentRetries + 1, nextRetryAt, result.erro);
+      if (!shouldRetry(result, currentRetries)) {
+        // Não deve retry - marcar como falha permanente
+        continue
+      }
+      const nextRetryAt = calculateNextRetryAt(currentRetries);
+      const retryMessage = formatRetryMessage(doc.id, currentRetries + 1, nextRetryAt, result.erro);
         
         // Atualizar com próxima tentativa
         await supabase

@@ -1007,7 +1007,7 @@ export function App() {
                 boxShadow: '0 10px 20px rgba(5,150,105,0.25)',
               }}
               onClick={() => {
-                void finalizarVenda()
+                finalizarVenda()
               }}
             >
               {isFinalizandoVenda ? 'Finalizando…' : 'Finalizar (F10)'}

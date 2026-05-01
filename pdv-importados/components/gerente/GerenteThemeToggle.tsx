@@ -17,12 +17,11 @@ export function GerenteThemeToggle({ labelDark, labelLight, ariaLabel }: Props) 
   const chromeLight = isGerenteLightChrome(theme)
 
   return (
-    <div
+    <fieldset
       className={cn(
         'inline-flex rounded-lg p-0.5 shadow-sm backdrop-blur-sm',
         'border app-border app-surface-soft',
       )}
-      role="group"
       aria-label={ariaLabel}
     >
       <button
@@ -53,6 +52,6 @@ export function GerenteThemeToggle({ labelDark, labelLight, ariaLabel }: Props) 
       >
         {labelLight}
       </button>
-    </div>
+    </fieldset>
   )
 }

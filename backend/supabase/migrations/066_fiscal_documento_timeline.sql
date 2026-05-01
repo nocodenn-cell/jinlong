@@ -32,15 +32,22 @@ CREATE INDEX IF NOT EXISTS idx_doc_fiscal_eventos_doc_created
 
 ALTER TABLE public.documentos_fiscais_eventos ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "doc_fiscal_eventos_gerente_select" ON public.documentos_fiscais_eventos;
-CREATE POLICY "doc_fiscal_eventos_gerente_select"
-  ON public.documentos_fiscais_eventos FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.usuarios u
-      WHERE u.id = auth.uid() AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
-    )
-  );
+-- Constantes de perfis administrativos
+DO $$
+DECLARE
+  v_admin_profiles TEXT[] := ARRAY['GERENTE', 'DONO', 'ADMIN'];
+BEGIN
+  -- Policy para gerentes
+  DROP POLICY IF EXISTS "doc_fiscal_eventos_gerente_select" ON public.documentos_fiscais_eventos;
+  CREATE POLICY "doc_fiscal_eventos_gerente_select"
+    ON public.documentos_fiscais_eventos FOR SELECT TO authenticated
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.usuarios u
+        WHERE u.id = auth.uid() AND u.perfil = ANY(v_admin_profiles)
+      )
+    );
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- Triggers: INSERT (enfileiramento) + UPDATE (claim / erro / emitido / cancelado)
@@ -275,6 +282,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_admin_profiles TEXT[] := ARRAY['GERENTE', 'DONO', 'ADMIN'];
   v_uid uuid := auth.uid();
   v_old_status text;
   v_prev_ultimo text;
@@ -289,7 +297,7 @@ BEGIN
       SELECT 1
       FROM public.usuarios u
       WHERE u.id = v_uid
-        AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+        AND u.perfil = ANY(v_admin_profiles)
     ) THEN
       RAISE EXCEPTION 'FISCAL_REPROCESSO_PERFIL';
     END IF;
@@ -365,6 +373,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_admin_profiles TEXT[] := ARRAY['GERENTE', 'DONO', 'ADMIN'];
   v_uid uuid := auth.uid();
   v_tipo text := upper(COALESCE(NULLIF(trim(p_tipo_doc), ''), 'NFC_E_STUB'));
   v_documento_id uuid;
@@ -394,7 +403,7 @@ BEGIN
             SELECT 1
             FROM public.usuarios u
             WHERE u.id = v_uid
-              AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+              AND u.perfil = ANY(v_admin_profiles)
           )
         )
     ) THEN

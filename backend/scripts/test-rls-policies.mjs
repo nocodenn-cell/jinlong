@@ -192,11 +192,15 @@ async function smokeLoginPerfil({ perfil, email, password }) {
     perfil,
     ok: true,
     etapa: "ok",
-    detalhe: probeProdutoId && perfil === "OPERADOR"
-      ? "login + escopo vendas OK + UPDATE operador bloqueado em produto existente"
-      : perfil === "OPERADOR"
-        ? "login + escopo vendas OK"
-        : "login + SELECT vendas OK",
+    detalhe: (() => {
+      if (probeProdutoId && perfil === "OPERADOR") {
+        return "login + escopo vendas OK + UPDATE operador bloqueado em produto existente"
+      }
+      if (perfil === "OPERADOR") {
+        return "login + escopo vendas OK"
+      }
+      return "login + SELECT vendas OK"
+    })(),
   };
 }
 

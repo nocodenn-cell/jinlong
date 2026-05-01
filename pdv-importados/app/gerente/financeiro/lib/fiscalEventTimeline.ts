@@ -20,7 +20,7 @@ function asStr(v: unknown): string | null {
   if (typeof v === 'string') return v
   if (typeof v === 'number' || typeof v === 'boolean') return String(v)
   try {
-    return JSON.stringify(v)
+    return JSON.stringify(v, null, 0)
   } catch {
     return String(v)
   }

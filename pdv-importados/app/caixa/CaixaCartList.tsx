@@ -189,12 +189,13 @@ function MetaPdvBloco({
   const meta = item.metaPdv
   if (!meta) return null
 
-  const origemClass =
-    meta.origem === "china_manual"
-      ? "app-badge-warn"
-      : meta.origem === "brasil_nf"
-        ? "app-badge-positive"
-        : "app-border app-muted app-surface-soft"
+  const getOrigemClass = (origem: string) => {
+    if (origem === "china_manual") return "app-badge-warn"
+    if (origem === "brasil_nf") return "app-badge-positive"
+    return "app-border app-muted app-surface-soft"
+  }
+
+  const origemClass = getOrigemClass(meta.origem)
 
   const nfClass = meta.tem_nf
     ? "app-badge-positive"

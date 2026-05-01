@@ -39,7 +39,7 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
       await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
     }
 
-    await page.getByRole('button', { name: /Sangria \(\-\)/ }).click()
+    await page.getByRole('button', { name: /Sangria (-)/ }).click()
     await expect(page.getByRole('dialog')).toContainText(/Registrar sangria/i, { timeout: 10_000 })
     await page.getByRole('button', { name: /R\$\s*50\.00/ }).click()
     await page.getByRole('button', { name: /^Confirmar$/ }).click()

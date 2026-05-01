@@ -63,8 +63,8 @@ export function CaixaValorNumericoModal({
         fechar()
       }
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    globalThis.addEventListener("keydown", onKey)
+    return () => globalThis.removeEventListener("keydown", onKey)
   }, [open, fechar])
 
   const handleConfirmar = useCallback(() => {
