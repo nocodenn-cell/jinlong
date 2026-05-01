@@ -260,7 +260,7 @@ function TipoPrecoBadge({
   compact,
 }: {
   m: Mensagens
-  tipo: "VAREJO" | "ATACADO" | "MANUAL"
+  tipo: "VAREJO" | "ATACADO" | "MANUAL" | "PROMOCAO"
   compact?: boolean
 }) {
   const label =
@@ -268,13 +268,17 @@ function TipoPrecoBadge({
       ? m.relatorios.atacado
       : tipo === "MANUAL"
         ? m.relatorios.manual
-        : m.relatorios.varejo
+        : tipo === "PROMOCAO"
+          ? "PROMO"
+          : m.relatorios.varejo
   const className =
     tipo === "ATACADO"
       ? "app-badge-positive"
       : tipo === "MANUAL"
         ? "app-badge-warn"
-        : "app-border app-muted app-surface-soft"
+        : tipo === "PROMOCAO"
+          ? "app-badge-info"
+          : "app-border app-muted app-surface-soft"
   const badge = (
     <Badge
       variant="outline"

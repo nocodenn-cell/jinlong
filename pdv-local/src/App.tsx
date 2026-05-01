@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { useCartStore } from './stores/cartStore'
+import { useDesktopCartStore } from './stores/cartStore'
 import type { ItemCarrinho } from '@core/cart/types'
 import { defaultPdvConfig } from './config/pdvConfig'
 import { resolverProdutoNoCatalogo, type ProdutoCacheLite } from './catalogoLookup'
@@ -62,7 +62,7 @@ export function App() {
     alterarQuantidade,
     removerItem,
     limparCarrinho,
-  } = useCartStore()
+  } = useDesktopCartStore()
   const {
     aplicarDescontoGerente,
     descontoGerentePercentual,
@@ -70,7 +70,7 @@ export function App() {
     descontoGerenteToken,
     setMaxDescontoGerentePercentual,
     maxDescontoGerentePercentual,
-  } = useCartStore()
+  } = useDesktopCartStore()
 
   const [gerenteId, setGerenteId] = useState(defaultPdvConfig.gerenteId)
   const [caixaAtualId, setCaixaAtualId] = useState<string | null>(null)

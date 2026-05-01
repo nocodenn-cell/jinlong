@@ -13,7 +13,7 @@ import {
   listarCategoriasAtalhoCaixa,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
-import { DEFAULT_PRICING_CONTEXT } from "@/core/pricing"
+import { DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -154,11 +154,11 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       const res = await carregarRegrasPrecoCaixa()
       if (cancelado) return
       if (res.ok) {
-        setRegras(res.regras, res.pricingContext)
+        setRegras(res.regras)
         setCaixaMensagem(null)
       } else {
         setCaixaMensagem(`${m.caixa.regras_erro_prefixo} ${res.error}`)
-        setRegras([], DEFAULT_PRICING_CONTEXT)
+        setRegras([])
       }
       setCarregandoRegras(false)
     })()
@@ -265,15 +265,22 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           produtoId: p.id,
           nome: p.nome,
           quantidade: 1,
-          precoVariejo: p.preco_varejo,
-          precoAtacado: p.preco_atacado,
-          categoriaId: p.categoria_id ?? undefined,
+          precoUnitario: p.preco_varejo,
+          precoOriginal: p.preco_varejo,
+          resultado: {
+            precoUnitario: p.preco_varejo,
+            precoOriginal: p.preco_varejo,
+            descontoUnitario: 0,
+            tipoPreco: 'VAREJO',
+          },
           metaPdv: {
             origem: p.origem,
             tem_nf: p.tem_nf,
             observacao: p.observacao,
             estoque_atual: p.quantidade_estoque,
             estoque_minimo: p.estoque_minimo,
+            categoriaId: p.categoria_id,
+            precoAtacado: p.preco_atacado,
           },
         })
 

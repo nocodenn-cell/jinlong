@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPreco'
-import type { ItemCarrinho } from '@/core/cart/types'
-import { pricingService } from '@/core/pricing/PricingService'
-import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '@/core/pricing/types'
+import { pricingService } from '@/shared/pricing/PricingService'
+import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '@/shared/pricing/types'
+import type { ItemCarrinho } from '@/stores/unifiedCartStore'
 import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { fetchPdvConfigParaCaixaWeb } from '@/app/caixa/server/caixaPdvConfigRpc'
@@ -13,7 +13,7 @@ export type ItemAutoritativo = {
   precoOriginal: number
   precoUnitario: number
   descontoUnitario: number
-  tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL'
+  tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
 }
 
 export async function recalcularItensNoServidor(
@@ -64,15 +64,23 @@ export async function recalcularItensNoServidor(
       produtoId: p.id,
       nome: p.nome,
       quantidade: i.quantidade,
-      precoVariejo: Number(p.preco_varejo),
-      precoAtacado: pa === null || pa === undefined ? null : Number(pa),
-      categoriaId: p.categoria_id ?? undefined,
+      precoUnitario: Number(p.preco_varejo),
+      precoOriginal: Number(p.preco_varejo),
+      resultado: {
+        precoUnitario: Number(p.preco_varejo),
+        precoOriginal: Number(p.preco_varejo),
+        descontoUnitario: 0,
+        tipoPreco: 'VAREJO',
+      },
+      metaPdv: {
+        categoriaId: p.categoria_id,
+        precoAtacado: pa === null || pa === undefined ? null : Number(pa),
+      },
     }
-    const preco = pricingService.calcularPreco(
+    const preco = pricingService.calcularPrecoItem(
       itemCarrinho,
       regras,
-      quantidadePorProduto[i.produtoId],
-      pricingCtx,
+      pricingCtx
     )
     itens.push({
       produtoId: i.produtoId,

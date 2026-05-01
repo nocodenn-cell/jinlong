@@ -1,7 +1,7 @@
 /**
  * Converte linhas de `public.regras_preco` (Supabase) para o tipo do motor de preço.
  */
-import type { RegraPreco } from '@/core/pricing/types'
+import type { RegraPreco } from '@/shared/pricing/types'
 
 export type RegraPrecoRow = {
   id: string
@@ -25,14 +25,12 @@ export function mapRegraPrecoRow(row: RegraPrecoRow): RegraPreco {
 
   return {
     id: row.id,
-    tipoRegra: row.tipo_regra as 'PRODUTO' | 'CATEGORIA',
-    produtoId: row.produto_id ?? undefined,
-    categoriaId: row.categoria_id ?? undefined,
-    quantidadeMinima: qMin,
-    quantidadeMaxima: qMax,
-    tipoDesconto: row.tipo_desconto as 'PERCENTUAL' | 'VALOR_FIXO',
-    valorDesconto: Number(row.valor_desconto),
-    dataValidade: row.data_validade ?? undefined,
+    nome: row.tipo_regra,
+    tipo: row.tipo_regra === 'PRODUTO' ? 'VAREJO' : 'ATAcado',
+    minQuantidade: qMin,
+    maxQuantidade: qMax,
+    descontoPercentual: row.tipo_desconto === 'PERCENTUAL' ? Number(row.valor_desconto) : undefined,
+    precoFixo: row.tipo_desconto === 'VALOR_FIXO' ? Number(row.valor_desconto) : undefined,
     ativo: row.ativo,
   }
 }

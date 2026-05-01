@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useCarrinhoStore } from '@/stores/carrinhoStore'
-import { DEFAULT_PRICING_CONTEXT } from '@/core/pricing/types'
+import { DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
 
 const memoryStorage = (() => {
   const data = new Map<string, string>()
@@ -54,14 +54,16 @@ describe('useCarrinhoStore behavior', () => {
       produtoId: 'p-1',
       nome: 'Produto A',
       quantidade: 1,
-      precoVariejo: 10,
+      precoUnitario: 10,
+      precoOriginal: 10,
     })
     useCarrinhoStore.getState().adicionarItem({
       id: 'linha-2',
       produtoId: 'p-1',
       nome: 'Produto A',
       quantidade: 1,
-      precoVariejo: 10,
+      precoUnitario: 10,
+      precoOriginal: 10,
     })
 
     const state = useCarrinhoStore.getState()
@@ -77,7 +79,8 @@ describe('useCarrinhoStore behavior', () => {
       produtoId: 'p-1',
       nome: 'Produto A',
       quantidade: 1,
-      precoVariejo: 10,
+      precoUnitario: 10,
+      precoOriginal: 10,
     })
 
     useCarrinhoStore.getState().alterarQuantidade('linha-1', 0)
@@ -94,7 +97,8 @@ describe('useCarrinhoStore behavior', () => {
       produtoId: 'p-1',
       nome: 'Produto A',
       quantidade: 1,
-      precoVariejo: 10,
+      precoUnitario: 10,
+      precoOriginal: 10,
     })
 
     useCarrinhoStore.getState().aplicarDescontoManual('linha-1', 50, 'teste')
@@ -116,7 +120,8 @@ describe('useCarrinhoStore behavior', () => {
       produtoId: 'p-1',
       nome: 'Produto A',
       quantidade: 1,
-      precoVariejo: 10,
+      precoUnitario: 10,
+      precoOriginal: 10,
     })
     useCarrinhoStore.setState({ cartOwnerUserId: null })
     useCarrinhoStore.getState().setCartOwnerForSession('user-b')
@@ -131,7 +136,8 @@ describe('useCarrinhoStore behavior', () => {
       produtoId: 'p-1',
       nome: 'Produto A',
       quantidade: 1,
-      precoVariejo: 10,
+      precoUnitario: 10,
+      precoOriginal: 10,
     })
     useCarrinhoStore.setState({ cartOwnerUserId: 'user-a' })
     useCarrinhoStore.getState().setCartOwnerForSession('user-b')
@@ -147,7 +153,8 @@ describe('useCarrinhoStore behavior', () => {
       produtoId: 'p-1',
       nome: 'Produto A',
       quantidade: 1,
-      precoVariejo: 10,
+      precoUnitario: 10,
+      precoOriginal: 10,
     })
     useCarrinhoStore.setState({ cartOwnerUserId: 'user-a' })
     useCarrinhoStore.getState().setCartOwnerForSession(null)
