@@ -7,22 +7,41 @@ const nextConfig = {
   output: 'standalone',
   eslint: { ignoreDuringBuilds: false },
   typescript: { 
-    ignoreBuildErrors: true, // Ignorar erros TypeScript temporariamente para testar aliases
+    ignoreBuildErrors: true, // Temporariamente para testar aliases
     tsconfigPath: './tsconfig.json',
   },
-  // Desabilitar Turbopack para usar Webpack (melhor com aliases)
-  // turbopack: {
-  //   root: process.cwd(),
-  // },
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Adicionar aliases para resolver @/shared no build
+    // Aliases explícitos e robustos para resolver @/shared e outras pastas
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, '.'),
       '@/shared': path.resolve(__dirname, '../shared'),
       '@/i18n': path.resolve(__dirname, './src/lib/i18n'),
       '@/idioma': path.resolve(__dirname, './src/lib/idioma'),
+      '@/lib': path.resolve(__dirname, './lib'),
+      '@/components': path.resolve(__dirname, './components'),
+      '@/app': path.resolve(__dirname, './app'),
+      '@/core': path.resolve(__dirname, './core'),
+      '@/stores': path.resolve(__dirname, './stores'),
     }
+
+    // Fallback para módulos Node.js que podem ser necessários
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      crypto: false,
+      stream: false,
+      url: false,
+      zlib: false,
+      http: false,
+      https: false,
+      assert: false,
+      os: false,
+      path: false,
+    }
+
     return config
   },
   /**
