@@ -1,5 +1,5 @@
-import type { RegraPreco } from '../../shared/pricing/types'
-import type { PricingContext } from '../../shared/pricing/types'
+import type { RegraPreco } from '@/shared/pricing/types'
+import type { PricingContext } from '@/shared/pricing/types'
 
 export type OrigemProdutoCaixa = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
 

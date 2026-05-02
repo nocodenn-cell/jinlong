@@ -1,7 +1,7 @@
 /**
  * Converte linhas de `public.regras_preco` (Supabase) para o tipo do motor de preço.
  */
-import type { RegraPreco } from '../../shared/pricing/types'
+import type { RegraPreco } from '@/shared/pricing/types'
 
 export type RegraPrecoRow = {
   id: string

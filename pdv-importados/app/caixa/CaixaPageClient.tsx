@@ -13,7 +13,7 @@ import {
   listarCategoriasAtalhoCaixa,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
-import { DEFAULT_PRICING_CONTEXT } from '../../shared/pricing/types'
+import { DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
