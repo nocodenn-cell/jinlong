@@ -1,6 +1,5 @@
 {
   "buildCommand": "npm run build",
-  "nodeVersion": "20.x",
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1"
   },
