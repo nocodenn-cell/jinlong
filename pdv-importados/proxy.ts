@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPerfilPainelGerencial, PREFIXOS_ROTAS_PAINEL_WEB } from '@/lib/auth/painelGerencial'
 
@@ -23,8 +23,9 @@ export async function proxy(request: NextRequest) {
   const isCaixaWeb = pathname === '/caixa' || pathname.startsWith('/caixa/')
   const isProtected = isPainelWeb || isCaixaWeb
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Criar cliente Supabase DENTRO da função para evitar carregamento no escopo do arquivo
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
   const redirectLogin = () => {
     const url = request.nextUrl.clone()
@@ -42,43 +43,16 @@ export async function proxy(request: NextRequest) {
     return redir
   }
 
-  if (!supabaseConfigOk(supabaseUrl, supabaseAnonKey)) {
+  if (!supabaseConfigOk(supabaseUrl, supabaseKey)) {
     if (isProtected) {
       return redirectLogin()
     }
     return NextResponse.next()
   }
 
-  let response = NextResponse.next({ request })
-
-  const supabase = createServerClient(supabaseUrl!, supabaseAnonKey!, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll()
-      },
-      setAll(
-        cookiesToSet: {
-          name: string
-          value: string
-          options?: Partial<{
-            httpOnly: boolean
-            secure: boolean
-            sameSite: 'lax' | 'strict' | 'none'
-            maxAge: number
-            path: string
-            domain: string
-          }>
-        }[],
-      ) {
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value)
-        })
-        response = NextResponse.next({ request })
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options)
-        })
-      },
-    },
+  // Criar cliente Supabase com configuração simplificada para middleware
+  const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false }, // Importante para middleware
   })
 
   const {
