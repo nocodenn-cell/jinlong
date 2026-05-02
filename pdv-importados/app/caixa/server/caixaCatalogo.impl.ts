@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPreco'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import { DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
+import { DEFAULT_PRICING_CONTEXT } from '....../shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import type {
