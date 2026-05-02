@@ -3,11 +3,9 @@ const path = require('path');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
-  turbopack: {
-    resolveAlias: {
-      '@': path.resolve(__dirname, '.'),
-      '@/shared': path.resolve(__dirname, './src/shared'),
-    },
+  // Force Webpack for Vercel builds
+  experimental: {
+    webpackBuildWorker: true,
   },
   webpack: (config, { isServer }) => {
     config.resolve.alias = {

@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "nodeVersion": "20.x",
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "build": {
+    "env": {
+      "NEXT_BUILD_WORKERS": "1"
+    }
+  }
+}
