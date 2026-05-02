@@ -1,4 +1,4 @@
-import { roundMoney2 } from '../../shared/cart/totals'
+import { roundMoney2 } from '@/shared/cart/totals'
 
 type CaixaLinha = {
   id: string
