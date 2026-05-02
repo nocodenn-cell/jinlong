@@ -3,10 +3,6 @@ const path = require('path');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
-  // Force Webpack for Vercel builds
-  experimental: {
-    webpackBuildWorker: true,
-  },
   webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
