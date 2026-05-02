@@ -1,4 +1,4 @@
-import { serverLogger } from '../../../shared/unified-logger';
+import { serverLogger } from '@/shared/unified-logger';
 
 /**
  * Log estruturado no servidor (stderr) com redação de chaves sensíveis.

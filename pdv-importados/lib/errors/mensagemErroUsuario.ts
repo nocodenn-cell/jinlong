@@ -5,9 +5,9 @@ export {
   mensagemErroComSecao,
   mensagemErroComContexto,
   mensagemErroValidacaoZod,
-} from '../../../shared/mensagemErroUsuario'
+} from '@/shared/mensagemErroUsuario'
 
-import { mensagemErroDeExcecao as mensagemErroDeExcecaoShared } from '../../../shared/mensagemErroUsuario'
+import { mensagemErroDeExcecao as mensagemErroDeExcecaoShared } from '@/shared/mensagemErroUsuario'
 
 /** Erros em `catch`: registra no servidor e traduz para o usuário. */
 export function mensagemErroDeExcecao(e: unknown, fallbackEmPortugues: string): string {
