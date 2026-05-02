@@ -2,12 +2,14 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Desabilita completamente o Turbopack
-  experimental: {
-    turbo: null,
-  },
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  turbopack: {
+    resolveAlias: {
+      '@': path.resolve(__dirname, '.'),
+      '@/shared': path.resolve(__dirname, './src/shared'),
+    },
+  },
   webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
