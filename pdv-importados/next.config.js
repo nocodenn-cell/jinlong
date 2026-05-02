@@ -15,7 +15,7 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, '.'),
-      '@/shared': path.resolve(__dirname, '../shared'),
+      '@/shared': path.resolve(__dirname, '../../shared'), // Caminho correto para pasta shared na raiz
       '@/i18n': path.resolve(__dirname, './src/lib/i18n'),
       '@/idioma': path.resolve(__dirname, './src/lib/idioma'),
       '@/lib': path.resolve(__dirname, './lib'),
