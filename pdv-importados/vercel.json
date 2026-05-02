@@ -1,11 +1,3 @@
 {
-  "buildCommand": "npm run build",
-  "env": {
-    "NEXT_TELEMETRY_DISABLED": "1"
-  },
-  "build": {
-    "env": {
-      "NEXT_BUILD_WORKERS": "1"
-    }
-  }
+  "outputDirectory": ".next"
 }
