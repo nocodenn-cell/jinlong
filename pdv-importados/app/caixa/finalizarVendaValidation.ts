@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { roundMoney2 } from '../../shared/cart/totals'
+import { roundMoney2 } from '../../../shared/cart/totals'
 import { roundAbnt } from '@/core/money/roundAbnt'
 
 export { roundMoney2 }

@@ -1,5 +1,5 @@
 import type { Mensagens } from '@/i18n/getMessages'
-import type { MetaProdutoPdv } from '@/shared/cart/types'
+import type { MetaProdutoPdv } from '../../shared/cart/types'
 
 export function labelOrigemCaixa(
   origem: MetaProdutoPdv['origem'],
