@@ -11,7 +11,7 @@ describe('normalizeIdioma', () => {
     expect(normalizeIdioma(null)).toBe('pt')
     expect(normalizeIdioma(undefined)).toBe('pt')
     expect(normalizeIdioma('en')).toBe('pt')
-    expect(normalizeIdioma('zh-hk')).toBe('pt')
+    expect(normalizeIdioma('zh-HK')).toBe('zh')
     expect(normalizeIdioma(123)).toBe('pt')
   })
 })

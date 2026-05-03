@@ -17,7 +17,7 @@ Sistema de ponto de venda para lojas de importados no Brasil, desenvolvido com *
 - TypeScript
 - Tailwind CSS + componentes estilo shadcn em `components/ui/`
 - Zustand (estado do carrinho e fluxos de UI)
-- Internacionalização: **`getMessages`** + `src/lib/i18n/*.json` (pt, zh, zh-HK) — **sem** `next-intl`; rotas **sem** prefixo de locale (`/login`, `/caixa`, `/gerente/...`)
+- Internacionalização: **`getMessages`** + `src/lib/i18n/*.json` (pt, zh) — **sem** `next-intl`; rotas **sem** prefixo de locale (`/login`, `/caixa`, `/gerente/...`)
 - Supabase (`@supabase/ssr`, Auth, Postgres com RLS — schema em `../backend/supabase/migrations/`)
 
 ## Estrutura

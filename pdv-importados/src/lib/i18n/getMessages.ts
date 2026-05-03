@@ -6,7 +6,7 @@ import { normalizeIdioma } from '../idioma/normalizeIdioma'
 export type Mensagens = typeof pt
 
 export function getMessages(idioma: Idioma): Mensagens {
-  if (idioma === 'zh' || idioma === 'zh-HK') return zh as unknown as Mensagens
+  if (idioma === 'zh') return zh as unknown as Mensagens
   return pt as Mensagens
 }
 

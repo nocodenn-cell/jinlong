@@ -6,7 +6,7 @@ import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma } from '@/src/lib/idioma/normalizeIdioma'
 
 export type PerfilUsuario = 'OPERADOR' | 'GERENTE' | 'DONO' | 'ADMIN'
-export type Idioma = 'pt' | 'en' | 'zh' | 'zh-HK'
+export type Idioma = 'pt' | 'en' | 'zh'
 
 export function useIdioma() {
   const [idioma, setIdioma] = useState<Idioma>('pt')

@@ -150,9 +150,7 @@ function readAdminUiFromMessages(): typeof legacyAdminUi | null {
   const fromZh = (getMessagesWithFallback('zh') as any)?.admin
   if (isAdminUiShape(fromZh)) return fromZh
 
-  const fromZhHk = (getMessagesWithFallback('zh-HK') as any)?.admin
-  if (isAdminUiShape(fromZhHk)) return fromZhHk
-
+  
   return null
 }
 

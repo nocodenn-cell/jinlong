@@ -90,7 +90,7 @@ ON CONFLICT (id) DO UPDATE SET
   ativo = EXCLUDED.ativo;
 ```
 
-`idioma_preferido` deve ser um de: `pt`, `zh`, `zh-HK` (conforme migrations).
+`idioma_preferido` deve ser um de: `pt`, `zh` (conforme migrations).
 
 ### 3. Operador para `/caixa`
 

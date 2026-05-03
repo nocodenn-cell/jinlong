@@ -50,11 +50,4 @@ test.describe('Admin - i18n idioma', () => {
     await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
   })
 
-  test('alterna para zh-HK e persiste após refresh', async ({ page }) => {
-    await expect(page.getByText('Dashboard comercial')).toBeVisible()
-    await page.getByRole('button', { name: '廣東話' }).click()
-    await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
-    await page.reload()
-    await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
   })
-})
