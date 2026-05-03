@@ -12,4 +12,4 @@ export {
   EdgeLogger,
   DesktopLogger,
   ServerLogger
-} from './unified-logger';
+} from './unified-logger.ts';

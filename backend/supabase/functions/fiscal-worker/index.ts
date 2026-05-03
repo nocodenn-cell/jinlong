@@ -126,10 +126,21 @@ Deno.serve(async (req) => {
       // Falha - verificar se deve retry
       if (!shouldRetry(result, currentRetries)) {
         // Não deve retry - marcar como falha permanente
-        continue
-      }
-      const nextRetryAt = calculateNextRetryAt(currentRetries);
-      const retryMessage = formatRetryMessage(doc.id, currentRetries + 1, nextRetryAt, result.erro);
+        failed.push({ id: doc.id, erro: result.erro });
+        const normalized = classifyFiscalError({
+          erro: result.erro,
+          transitorio: result.transitorio,
+          httpStatus: result.http_status,
+          providerCode: result.provider_code,
+          providerMessage: result.provider_message,
+          payload: result.payload,
+        });
+        // Log de erro permanente
+        console.error(`Documento ${doc.id} falha permanente:`, normalized);
+      } else {
+        // Deve fazer retry
+        const nextRetryAt = calculateNextRetryAt(currentRetries);
+        const retryMessage = formatRetryMessage(doc.id, currentRetries + 1, nextRetryAt, result.erro);
         
         // Atualizar com próxima tentativa
         await supabase
@@ -142,28 +153,6 @@ Deno.serve(async (req) => {
           .eq("id", doc.id);
         
         retried.push({ id: doc.id, proxima_tentativa: nextRetryAt });
-      } else {
-        // Não retry - marcar como erro permanente
-        failed.push({ id: doc.id, erro: result.erro });
-        const normalized = classifyFiscalError({
-          erro: result.erro,
-          transitorio: result.transitorio,
-          httpStatus: result.http_status,
-          providerCode: result.provider_code,
-          providerMessage: result.provider_message,
-          payload: result.payload,
-        });
-        await supabase.rpc("fiscal_marcar_erro_normalizado", {
-          p_documento_id: doc.id,
-          p_erro: result.erro,
-          p_transitorio: result.transitorio,
-          p_error_code: normalized.error_code,
-          p_error_category: normalized.error_category,
-          p_action_hint: normalized.action_hint,
-          p_retryable: normalized.retryable,
-          p_next_step_url: normalized.next_step_url,
-          p_error_payload: normalized.details,
-        });
       }
     }
   }

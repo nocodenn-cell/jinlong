@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    setupFiles: [path.join(__dirname, '@/shared/vitest-localstorage-polyfill.ts')],
+    setupFiles: [path.join(__dirname, '../shared/vitest-localstorage-polyfill.ts')],
     environment: 'node',
     include: [
       'core/**/*.test.ts',
@@ -25,7 +25,7 @@ export default defineConfig({
       { find: '@/i18n', replacement: path.resolve(__dirname, 'src/lib/i18n') },
       { find: '@/idioma', replacement: path.resolve(__dirname, 'src/lib/idioma') },
       { find: '@', replacement: path.resolve(__dirname, './') },
-      { find: '@shared', replacement: path.resolve(__dirname, '@/shared') },
+      { find: '@/shared', replacement: path.resolve(__dirname, './shared') },
     ],
   },
 })

@@ -65,12 +65,12 @@ export function CaixaCartList({
           {itens.map((item) => (
             <li
               key={item.id}
-              className="grid grid-cols-[minmax(0,2.55fr)_4.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-2 items-center"
+              className="grid grid-cols-[minmax(0,2.55fr)_4.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-gray-50 transition-colors"
             >
-              <div className="flex flex-col min-w-0 gap-1">
-                <span className="font-medium truncate">{item.nome}</span>
+              <div className="flex flex-col min-w-0 gap-2">
+                <span className="font-medium truncate text-base">{item.nome}</span>
                 <MetaPdvBloco item={item} m={m} compact={false} />
-                <span className="text-[11px] app-subtle font-mono truncate">
+                <span className="text-[10px] app-subtle font-mono truncate opacity-60">
                   {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
                 </span>
               </div>
@@ -113,12 +113,12 @@ export function CaixaCartList({
       {/* Mobile: cards */}
       <ul className="md:hidden divide-y app-divider">
         {itens.map((item) => (
-          <li key={item.id} className="p-3 space-y-2">
+          <li key={item.id} className="p-4 space-y-3 hover:bg-gray-50 transition-colors">
             <div className="flex justify-between gap-2 min-w-0">
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="font-medium text-sm truncate">{item.nome}</div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="font-medium text-base truncate">{item.nome}</div>
                 <MetaPdvBloco item={item} m={m} compact />
-                <div className="text-[10px] app-subtle font-mono truncate">
+                <div className="text-[9px] app-subtle font-mono truncate opacity-60">
                   {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
                 </div>
               </div>

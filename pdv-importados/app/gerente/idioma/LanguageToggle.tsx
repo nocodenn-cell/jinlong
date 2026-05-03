@@ -3,7 +3,7 @@
 import { setIdiomaAction } from './actions'
 import { cn } from '@/lib/utils'
 
-type Idioma3 = 'pt' | 'zh' | 'zh-HK'
+type Idioma3 = 'pt' | 'zh'
 
 type Props = {
   idiomaAtual: Idioma3
@@ -44,17 +44,6 @@ export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Pro
         普通话
       </button>
 
-      <button
-        type="submit"
-        name="idioma"
-        value="zh-HK"
-        title="Mandarim (繁體)"
-        disabled={idiomaAtual === 'zh-HK'}
-        className={baseBtn}
-        style={{ fontFamily: '"Noto Sans TC","MingLiU",sans-serif' }}
-      >
-        繁體中文
-      </button>
-    </form>
+          </form>
   )
 }

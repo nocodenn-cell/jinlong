@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { redactForLog } from './redact'
+import { redactForLog } from '@/shared/unified-logger'
 
 describe('redactForLog', () => {
   it('mascara chaves sensíveis', () => {

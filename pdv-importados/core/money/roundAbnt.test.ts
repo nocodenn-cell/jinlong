@@ -20,7 +20,7 @@ describe('roundAbnt (alinhado a Postgres ROUND / round_abnt)', () => {
   })
 
   it('roundMoney2 via re-export usa scale 2', async () => {
-    const { roundMoney2 } = await import('@/core/cart/totals')
+    const { roundMoney2 } = await import('@/shared/cart/totals')
     expect(roundMoney2(10.125)).toBe(10.13)
   })
 })
