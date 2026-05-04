@@ -125,16 +125,34 @@ export const useCartStore = create<CarrinhoState>()(
         }),
 
       limparCarrinho: () =>
-        set({
+        set((state) => ({
           itens: [],
+          cartOwnerUserId: null,
           totalBruto: 0,
           totalDesconto: 0,
           totalLiquido: 0,
           totalItens: 0,
           totalUnidades: 0,
-        }),
+          regras: state.regras,
+        })),
 
-      setCartOwnerForSession: (userId) => set({ cartOwnerUserId: userId }),
+      setCartOwnerForSession: (userId) =>
+        set((state) => {
+          // Se o dono está mudando, limpa o carrinho
+          if (userId !== state.cartOwnerUserId) {
+            return {
+              itens: [],
+              cartOwnerUserId: userId,
+              totalBruto: 0,
+              totalDesconto: 0,
+              totalLiquido: 0,
+              totalItens: 0,
+              totalUnidades: 0,
+              regras: state.regras,
+            };
+          }
+          return { cartOwnerUserId: userId };
+        }),
       setRegras: (regras) => set({ regras }),
       alterarQuantidade: (id, quantidade) => set((state) => {
         const novosItens = state.itens.map((i) =>

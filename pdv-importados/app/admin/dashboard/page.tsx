@@ -227,7 +227,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     novosUsuariosPrevQuery,
   ])
 
-  let dashboardErrors = collectSupabaseErrors([
+  const dashboardErrors = collectSupabaseErrors([
     {
       label: chineseLanguage ? lineBoth(L.errorSourceSalesPeriod) : L.errorSourceSalesPeriod.pt,
       error: vendasRangeRes.error,

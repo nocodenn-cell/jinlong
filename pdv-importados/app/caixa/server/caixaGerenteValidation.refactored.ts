@@ -7,7 +7,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { assertSupabasePublicEnv } from '@/lib/supabase/env'
 import {
-  mensagemErroComSecao,
   mensagemErroDeExcecao,
   mensagemErroParaUsuario,
 } from '@/lib/errors/mensagemErroUsuario'

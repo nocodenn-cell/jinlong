@@ -34,7 +34,7 @@ export function useIdioma() {
         const perfilUsuario = (usuario?.perfil ?? 'OPERADOR') as PerfilUsuario
         setPerfil(perfilUsuario)
         setIdioma(normalizeIdioma(usuario?.idioma_preferido))
-      } catch (error) {
+      } catch (_err) {
         setIdioma('pt')
         setPerfil('OPERADOR')
       } finally {

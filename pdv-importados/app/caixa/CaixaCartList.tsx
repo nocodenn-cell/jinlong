@@ -67,26 +67,33 @@ export function CaixaCartList({
               key={item.id}
               className="grid grid-cols-[minmax(0,2.55fr)_4.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-gray-50 transition-colors"
             >
-              <div className="flex flex-col min-w-0 gap-2">
-                <span className="font-medium truncate text-base">{item.nome}</span>
+              <div className="flex flex-col min-w-0 gap-1">
+                <span className="font-semibold truncate text-base text-foreground">{item.nome}</span>
                 <MetaPdvBloco item={item} m={m} compact={false} />
                 <span className="text-[10px] app-subtle font-mono truncate opacity-60">
                   {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
                 </span>
               </div>
               <div className="flex items-center justify-end gap-1">
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  min={0.001}
-                  step={0.001}
-                  value={item.quantidade}
-                  aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
-                  onChange={(e) =>
-                    onAlterarQuantidade(item.id, Number(e.target.value))
-                  }
-                  className="w-16 h-8 text-right text-xs px-1 app-input"
-                />
+                <div className="relative">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={0.001}
+                    step={0.001}
+                    value={item.quantidade}
+                    aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
+                    onChange={(e) =>
+                      onAlterarQuantidade(item.id, Number(e.target.value))
+                    }
+                    className="w-16 h-8 text-right text-xs px-1 app-input pr-8"
+                  />
+                  <div className="absolute right-1 top-1/2 transform -translate-y-1/2">
+                    <Badge variant="secondary" className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-full font-medium">
+                      {item.quantidade}
+                    </Badge>
+                  </div>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -115,8 +122,8 @@ export function CaixaCartList({
         {itens.map((item) => (
           <li key={item.id} className="p-4 space-y-3 hover:bg-gray-50 transition-colors">
             <div className="flex justify-between gap-2 min-w-0">
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="font-medium text-base truncate">{item.nome}</div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="font-semibold text-base truncate text-foreground">{item.nome}</div>
                 <MetaPdvBloco item={item} m={m} compact />
                 <div className="text-[9px] app-subtle font-mono truncate opacity-60">
                   {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
@@ -128,18 +135,25 @@ export function CaixaCartList({
               <div>
                 <span className="app-subtle">{m.caixa.col_qtde}</span>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    min={0.001}
-                    step={0.001}
-                    value={item.quantidade}
-                    aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
-                    onChange={(e) =>
-                      onAlterarQuantidade(item.id, Number(e.target.value))
-                    }
-                    className="h-9 text-right app-input"
-                  />
+                  <div className="relative flex-1">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0.001}
+                      step={0.001}
+                      value={item.quantidade}
+                      aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
+                      onChange={(e) =>
+                        onAlterarQuantidade(item.id, Number(e.target.value))
+                      }
+                      className="h-9 text-right app-input pr-12"
+                    />
+                    <div className="absolute right-1 top-1/2 transform -translate-y-1/2">
+                      <Badge variant="secondary" className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-full font-medium">
+                        {item.quantidade}
+                      </Badge>
+                    </div>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"

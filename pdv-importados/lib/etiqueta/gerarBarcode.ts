@@ -33,7 +33,7 @@ export async function gerarBarcodeDataUrl(
     throw new Error('Não foi possível obter contexto 2D do canvas')
   }
 
-  const largura = options.largura || 200
+  const _largura = options.largura || 200
   const altura = options.altura || 80
   const tipo = options.tipo || 'EAN13'
 
@@ -58,7 +58,7 @@ export async function gerarBarcodeDataUrl(
  */
 export async function gerarBarcodeParaPdf(
   codigo: string,
-  config: EtiquetaConfig
+  _config: EtiquetaConfig
 ): Promise<string> {
   return gerarBarcodeDataUrl({
     codigo,

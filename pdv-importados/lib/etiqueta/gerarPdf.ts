@@ -4,7 +4,6 @@
  * Limite de 500 etiquetas por PDF para evitar travamento do browser.
  */
 
-import type { EtiquetaConfig } from './EtiquetaConfig'
 import type { ItemCarrinho, GerarPdfOptions } from './types'
 import { gerarBarcodeParaPdf } from './gerarBarcode'
 import { getEtiquetaConfig } from './EtiquetaConfig'
@@ -92,7 +91,7 @@ export async function gerarPdfEtiquetas(
         config.largura - config.margem * 2,
         6
       )
-    } catch (error) {
+    } catch (_err) {
       // Fallback: mostrar código em texto se falhar
       pdf.setFontSize(config.fontSizeCodigo)
       pdf.text(item.codigoBarras, config.margem, config.altura - config.margem - 2)

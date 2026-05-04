@@ -52,6 +52,8 @@ const password =
   process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() ||
   ''
 
+const donoEmail =
+  process.env.SEED_DONO_EMAIL?.trim() || 'e2e-dono@localhost.test'
 const gerenteEmail =
   process.env.SEED_GERENTE_EMAIL?.trim() || 'e2e-gerente@localhost.test'
 const operadorEmail =
@@ -130,6 +132,14 @@ async function main() {
 
   console.log('Supabase URL:', url)
 
+  const dono = await ensureAuthUser(supabase, donoEmail, password)
+  await upsertUsuario(supabase, dono.id, {
+    nome: 'Dono E2E',
+    perfil: 'DONO',
+    idioma_preferido: 'pt',
+  })
+  console.log('OK DONO:', donoEmail, '→', dono.id)
+
   const gerente = await ensureAuthUser(supabase, gerenteEmail, password)
   await upsertUsuario(supabase, gerente.id, {
     nome: 'Gerente E2E',
@@ -146,6 +156,9 @@ async function main() {
   })
   console.log('OK OPERADOR:', operadorEmail, '→', operador.id)
 
+  console.log('\nPlaywright (dono):')
+  console.log(`  PLAYWRIGHT_TEST_EMAIL=${donoEmail}`)
+  console.log(`  PLAYWRIGHT_TEST_PASSWORD=${password === '' ? '(sua senha)' : '***'}`)
   console.log('\nPlaywright (gerente):')
   console.log(`  PLAYWRIGHT_TEST_EMAIL=${gerenteEmail}`)
   console.log(`  PLAYWRIGHT_TEST_PASSWORD=${password === '' ? '(sua senha)' : '***'}`)

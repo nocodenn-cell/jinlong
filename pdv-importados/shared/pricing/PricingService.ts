@@ -12,11 +12,11 @@ export class PricingService {
   recalcularCarrinho(
     itens: Array<ItemCarrinho & { resultado: ResultadoPreco }>,
     regras: RegraPreco[],
-    ctx: PricingContext
+    _ctx: PricingContext
   ): Array<ItemCarrinho & { resultado: ResultadoPreco }> {
     return itens.map(item => ({
       ...item,
-      resultado: this.calcularPrecoItem(item, regras, ctx)
+      resultado: this.calcularPrecoItem(item, regras, _ctx)
     }))
   }
 
@@ -100,7 +100,7 @@ export class PricingService {
   private verificarCondicoesRegra(
     item: ItemCarrinho,
     regra: RegraPreco,
-    ctx: PricingContext
+    _ctx: PricingContext
   ): boolean {
     // Verificar limites de quantidade
     if (regra.minQuantidade && item.quantidade < regra.minQuantidade) {

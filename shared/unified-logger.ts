@@ -126,7 +126,7 @@ export class DesktopLogger extends BaseLogger {
       parsed.push(entry)
       const bounded = parsed.slice(-this.maxLogs)
       globalThis.localStorage.setItem(this.storageKey, JSON.stringify(bounded))
-    } catch (e) {
+    } catch (_err) {
       // Silently handle persistence errors
     }
   }
@@ -173,8 +173,8 @@ export class DesktopLogger extends BaseLogger {
       const value = globalThis.localStorage.getItem(this.storageKey)
       if (!value) return ''
       const logs = JSON.parse(value) as LogEntry[]
-      return logs.map((log) => JSON.stringify(log)).join('\n')
-    } catch (e) {
+      return logs.map((_log) => JSON.stringify(_log)).join('\n')
+    } catch (_err) {
       return ''
     }
   }

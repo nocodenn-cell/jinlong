@@ -1,7 +1,6 @@
 "use client"
 
 import { CaixaGridLayout } from "@/components/caixa/CaixaGridLayout"
-import { getMessages } from "@/i18n/getMessages"
 
 // Dados mock para teste
 const mockItens = [
@@ -60,16 +59,16 @@ export default function LayoutTestePage() {
   const totalDesconto = mockItens.reduce((sum, item) => sum + ((item.precoOriginal - item.precoUnitario) * item.quantidade), 0)
   const totalLiquido = mockItens.reduce((sum, item) => sum + (item.precoUnitario * item.quantidade), 0)
 
-  const handleAlterarQuantidade = (itemId: string, quantidade: number) => {
-    console.log(`Alterar quantidade: ${itemId} -> ${quantidade}`)
+  const handleAlterarQuantidade = (_itemId: string, _quantidade: number) => {
+    // Test: Alterar quantidade
   }
 
-  const handleRemover = (itemId: string) => {
-    console.log(`Remover item: ${itemId}`)
+  const handleRemover = (_itemId: string) => {
+    // Test: Remover item
   }
 
-  const handleAdicionarProduto = (codigo: string) => {
-    console.log(`Adicionar produto: ${codigo}`)
+  const handleAdicionarProduto = (_codigo: string) => {
+    // Test: Adicionar produto
   }
 
   return (

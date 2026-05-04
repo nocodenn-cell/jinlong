@@ -13,7 +13,7 @@ import {
   listarCategoriasAtalhoCaixa,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
-import { DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
+import { _DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -121,7 +121,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   const {
     pagamentos,
-    pagamentoInicial,
+    _pagamentoInicial,
     handlePagamentoFormaChange,
     handlePagamentoValorChange,
     handleAdicionarPagamento,
@@ -343,7 +343,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       setProcessandoCaixa(true)
       setCaixaMensagem(null)
       try {
-        let res = await fecharCaixaOperador({ valorContado, motivo })
+        const res = await fecharCaixaOperador({ valorContado, motivo })
         const blind = caixaStatus?.aberto === true && caixaStatus.blindClosureEnabled
         if (!res.ok && blind && erroExigeMotivoFechamento(res.error) && motivo == null) {
           setMotivoFecharModal({ tipo: "blind_retry", valorContado })
