@@ -1,10 +1,6 @@
 import type { Metadata } from 'next'
-<<<<<<< HEAD
 import { Noto_Sans_SC } from 'next/font/google'
-=======
-import { Inter, Noto_Sans_SC, Noto_Sans_TC } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
->>>>>>> main
 import './globals.css'
 import '@/styles/theme-oriental.css'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
@@ -32,8 +28,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const brandTitle = m.brand?.logo_subtitle ?? '金龍'
   const tagline = m.login?.tagline ?? 'Importados · operações seguras'
 
-  // Favicon: `app/icon.svg` (dragão #F59E0B sobre #020617) — convenção Next, link gerado automaticamente.
-
   return {
     title: {
       default: `Jīn Lóng · ${brandTitle}`,
@@ -52,16 +46,12 @@ export default async function RootLayout({
   const htmlLang = htmlLangFromIdioma(idioma)
 
   return (
-<<<<<<< HEAD
     <html lang={htmlLang} className={`${notoSansSC.variable} dark`} data-app-theme="noturno" data-gerente-ui-theme="noturno" suppressHydrationWarning>
       <body className={`${notoSansSC.variable} antialiased selection:bg-emerald-500/30 selection:text-emerald-200 ${idioma === 'zh' ? 'font-noto-sc' : ''}`}>
-        <AppThemeProvider>{children}</AppThemeProvider>
-=======
-    <html lang="pt" className={`${notoSc.variable} ${notoTc.variable}`}>
-      <body className={inter.className}>
-        {children}
-        <Analytics />
->>>>>>> main
+        <AppThemeProvider>
+          {children}
+          <Analytics />
+        </AppThemeProvider>
       </body>
     </html>
   )
