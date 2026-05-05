@@ -32,18 +32,11 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/nextjs": "^10.49.0",
     "@supabase/ssr": "^0.5.2",
-<<<<<<< HEAD
-    "@supabase/supabase-js": "^2.46.1",
-    "@types/node": "^20.0.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-=======
     "@supabase/supabase-js": "^2.99.3",
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vercel/analytics": "^2.0.1",
->>>>>>> main
     "autoprefixer": "^10.0.0",
     "bwip-js": "^4.10.1",
     "class-variance-authority": "^0.7.0",
