@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import React, { type ReactNode } from 'react'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { CaixaCarrinhoAuthSync } from '@/app/caixa/CaixaCarrinhoAuthSync'
 

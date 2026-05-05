@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import React, { type ReactNode } from 'react'
 import { Inter } from 'next/font/google'
 
 const inter = Inter({

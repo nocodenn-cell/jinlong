@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { ReactNode } from 'react'
+import React, { type ReactNode } from 'react'
 
 // Server action para buscar feature flag
 export async function getFeatureFlag(flagName: string): Promise<boolean> {

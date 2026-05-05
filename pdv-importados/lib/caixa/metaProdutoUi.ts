@@ -1,8 +1,8 @@
 import type { Mensagens } from '@/i18n/getMessages'
-import type { MetaProdutoPdv } from '@/shared/cart/types'
+import type { OrigemProdutoCaixa } from '@/app/caixa/caixaActionTypes'
 
 export function labelOrigemCaixa(
-  origem: MetaProdutoPdv['origem'],
+  origem: OrigemProdutoCaixa,
   m: Mensagens,
 ): string {
   if (origem === 'china_manual') return m.caixa.origem_china_manual

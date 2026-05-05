@@ -1,7 +1,8 @@
 "use client"
 
 import { Skeleton, CaixaSkeletonRow, CaixaSkeletonCard, CaixaSkeletonHeader } from "@/components/ui/skeleton"
-import { CaixaTooltip, SuprimentoTooltip, SangriaTooltip, FinalizarTooltip } from "@/components/ui/tooltip"
+// Temporarily removed tooltip imports due to React type conflicts
+// import { CaixaTooltip, SuprimentoTooltip, SangriaTooltip, FinalizarTooltip } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 
 export function CaixaCartListSkeleton({ isDesktop = false }: { isDesktop?: boolean }) {
@@ -104,32 +105,25 @@ export function CaixaHeaderSkeleton() {
 }
 
 // Exemplo de integração com tooltips em botões existentes
+// Temporarily disabled due to React type conflicts
 export function CaixaButtonsWithTooltips() {
   return (
     <div className="flex flex-wrap gap-2">
-      <SuprimentoTooltip>
-        <Button variant="secondary" className="app-btn-neutral">
-          Suprimento (+)
-        </Button>
-      </SuprimentoTooltip>
+      <Button variant="secondary" className="app-btn-neutral" title="Adicionar dinheiro ao caixa (Ctrl+Shift+S)">
+        Suprimento (+)
+      </Button>
       
-      <SangriaTooltip>
-        <Button variant="secondary" className="app-btn-danger">
-          Sangria (-)
-        </Button>
-      </SangriaTooltip>
+      <Button variant="secondary" className="app-btn-danger" title="Retirar dinheiro do caixa (Ctrl+Shift+R)">
+        Sangria (-)
+      </Button>
       
-      <CaixaTooltip content="Validar senha de gerente para aplicar descontos">
-        <Button variant="secondary" className="inline-flex items-center gap-2 app-badge-warn">
-          Validar Gerente
-        </Button>
-      </CaixaTooltip>
+      <Button variant="secondary" className="inline-flex items-center gap-2 app-badge-warn" title="Validar senha de gerente para aplicar descontos">
+        Validar Gerente
+      </Button>
       
-      <FinalizarTooltip>
-        <Button className="app-btn-accent">
-          Finalizar Venda
-        </Button>
-      </FinalizarTooltip>
+      <Button className="app-btn-accent" title="Finalizar venda (F4)">
+        Finalizar Venda
+      </Button>
     </div>
   )
 }

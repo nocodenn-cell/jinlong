@@ -6,6 +6,7 @@ import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { htmlLangFromIdioma } from '@/idioma/htmlLang'
 import { getMessages } from '@/i18n/getMessages'
 import { AppThemeProvider } from '@/components/theme/AppThemeProvider'
+import React from 'react'
 
 // Fonte para chinês simplificado
 const notoSansSC = Noto_Sans_SC({

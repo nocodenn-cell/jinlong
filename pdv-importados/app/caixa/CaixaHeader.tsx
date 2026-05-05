@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -64,9 +64,7 @@ export function CaixaHeader({
   const fontStack =
     idioma === "zh"
       ? 'var(--font-noto-sc),"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif'
-      : idioma === "zh-HK"
-        ? 'var(--font-noto-tc),"Noto Sans TC","MingLiU","Microsoft JhengHei",sans-serif'
-        : undefined
+      : undefined
 
   return (
     <header
@@ -85,7 +83,7 @@ export function CaixaHeader({
           <div className="font-semibold">{m.caixa.titulo_pdv}</div>
           <div className="text-xs app-muted">
             {(() => {
-              const localeString = idioma === "pt" ? "pt-BR" : idioma === "zh-HK" ? "zh-HK" : "zh-CN"
+              const localeString = idioma === "pt" ? "pt-BR" : "zh-CN"
               return new Date().toLocaleString(localeString)
             })()}
           </div>
@@ -145,7 +143,7 @@ export function CaixaHeader({
           <div className="mt-1 text-[11px] app-muted">
             Abertura:{' '}
             {(() => {
-              const localeString = idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN'
+              const localeString = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
               return new Date(caixaStatus.dataAbertura).toLocaleString(localeString)
             })()}{' '}
             · Inicial: R$ {caixaStatus.valorInicial.toFixed(2)}
@@ -159,7 +157,7 @@ export function CaixaHeader({
             </span>
             <div className="flex items-center gap-2 app-accent-text font-mono text-base sm:text-lg font-semibold tabular-nums relative z-10">
               {(() => {
-                const localeString = idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN'
+                const localeString = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
                 return caixaStatus.valorSistemaDinheiro.toLocaleString(localeString, { minimumFractionDigits: 2 })
               })()}
             </div>

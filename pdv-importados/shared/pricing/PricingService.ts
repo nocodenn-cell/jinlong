@@ -2,7 +2,7 @@
  * Serviço de precificação unificado
  */
 
-import type { ItemCarrinho } from '../../pdv-importados/stores/unifiedCartStore'
+import type { ItemCarrinho } from '../../stores/unifiedCartStore'
 import type { RegraPreco, ResultadoPreco, PricingContext } from './types'
 
 export class PricingService {

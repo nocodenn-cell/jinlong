@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +23,7 @@ type Props = {
 
 function listLocale(idioma: Idioma) {
   if (idioma === "pt") return "pt-BR"
-  if (idioma === "zh-HK") return "zh-HK"
+  if (idioma === "zh") return "zh-CN"
   return "zh-CN"
 }
 
