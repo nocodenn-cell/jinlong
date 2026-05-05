@@ -1,5 +1,10 @@
 import type { Metadata } from 'next'
+<<<<<<< HEAD
 import { Noto_Sans_SC } from 'next/font/google'
+=======
+import { Inter, Noto_Sans_SC, Noto_Sans_TC } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+>>>>>>> main
 import './globals.css'
 import '@/styles/theme-oriental.css'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
@@ -47,9 +52,16 @@ export default async function RootLayout({
   const htmlLang = htmlLangFromIdioma(idioma)
 
   return (
+<<<<<<< HEAD
     <html lang={htmlLang} className={`${notoSansSC.variable} dark`} data-app-theme="noturno" data-gerente-ui-theme="noturno" suppressHydrationWarning>
       <body className={`${notoSansSC.variable} antialiased selection:bg-emerald-500/30 selection:text-emerald-200 ${idioma === 'zh' ? 'font-noto-sc' : ''}`}>
         <AppThemeProvider>{children}</AppThemeProvider>
+=======
+    <html lang="pt" className={`${notoSc.variable} ${notoTc.variable}`}>
+      <body className={inter.className}>
+        {children}
+        <Analytics />
+>>>>>>> main
       </body>
     </html>
   )
