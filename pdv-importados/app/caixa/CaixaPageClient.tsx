@@ -623,7 +623,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   return (
     <>
-      <div className="min-h-[100dvh] bg-oriental-clouds flex flex-col">
+      <div className="min-h-[100dvh] caixa-oriental-root flex flex-col">
         <CaixaHeader
           m={m}
           idioma={idioma}

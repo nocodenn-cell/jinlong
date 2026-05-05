@@ -7,6 +7,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { DragonIcon } from "@/components/icons/DragonIcon"
 import { Logo } from "@/components/branding/Logo"
+import LanguageToggle from "@/app/caixa/idioma/LanguageToggle"
 
 const TECH_STORAGE_KEY = "fastproduct-caixa-mostrar-tecnico"
 
@@ -90,6 +91,7 @@ export function CaixaHeader({
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <LanguageToggle idiomaAtual={idioma} variant="dragon" />
           <SignOutButton
             label={m.comum.sair}
             className="rounded-md px-2.5 py-1 text-xs font-medium bg-secondary text-secondary-foreground border border-border"

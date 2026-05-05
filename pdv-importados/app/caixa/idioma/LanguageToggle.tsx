@@ -1,0 +1,48 @@
+'use client'
+
+import { cn } from '@/lib/utils'
+
+type Idioma3 = 'pt' | 'zh'
+
+type Props = {
+  idiomaAtual: Idioma3
+  /** `dragon`: cabeçalho escuro · `dragon-light`: cabeçalho claro Jīn Lóng */
+  variant?: 'default' | 'dragon' | 'dragon-light'
+}
+
+export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Props) {
+  const dragon = variant === 'dragon'
+  const dragonLight = variant === 'dragon-light'
+
+  const baseBtn = cn(
+    'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+    dragon &&
+      'bg-secondary text-secondary-foreground border border-border disabled:cursor-default disabled:opacity-55',
+    dragonLight &&
+      'bg-secondary text-secondary-foreground border border-border disabled:cursor-default disabled:opacity-55',
+    !dragon &&
+      !dragonLight &&
+      'bg-secondary text-secondary-foreground border border-border disabled:cursor-default disabled:opacity-55',
+  )
+
+  return (
+    <form className="flex gap-2">
+      <button type="submit" name="idioma" value="pt" disabled={idiomaAtual === 'pt'} className={baseBtn}>
+        PT
+      </button>
+
+      <button
+        type="submit"
+        name="idioma"
+        value="zh"
+        title="Mandarim (简体)"
+        disabled={idiomaAtual === 'zh'}
+        className={baseBtn}
+        style={{ fontFamily: '"Noto Sans SC","PingFang SC",sans-serif' }}
+      >
+        普通话
+      </button>
+
+          </form>
+  )
+}
