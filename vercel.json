@@ -3,11 +3,6 @@
   "buildCommand": "cd pdv-importados && npm run build",
   "outputDirectory": "pdv-importados/.next",
   "installCommand": "npm install",
-  "functions": {
-    "pdv-importados/app/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
   "github": {
     "silent": true,
     "autoJobCancelation": true
