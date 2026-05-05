@@ -623,7 +623,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   return (
     <>
-      <div className="min-h-[100dvh] caixa-oriental-root flex flex-col">
+      <div className="min-h-[100dvh] bg-oriental-clouds flex flex-col">
         <CaixaHeader
           m={m}
           idioma={idioma}
@@ -649,7 +649,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
             />
             <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
           </div>
-          <section className="flex-1 min-h-0 flex flex-col mx-4 sm:mx-6 rounded-lg border overflow-hidden mb-2 app-surface app-border">
+          <section className="flex-1 min-h-0 flex flex-col mx-4 sm:mx-6 rounded-xl border border-border bg-card overflow-hidden mb-2">
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
               <CaixaCartList
                 m={m}

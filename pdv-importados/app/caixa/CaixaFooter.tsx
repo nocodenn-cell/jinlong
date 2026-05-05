@@ -117,10 +117,10 @@ export function CaixaFooter({
     })
 
   return (
-    <footer className="shrink-0 border-t backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 app-divider app-surface">
+    <footer className="shrink-0 border-t border-border backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-card">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <div className="text-xs app-muted min-w-[22rem]">
+          <div className="text-xs text-muted-foreground min-w-[22rem]">
             <div className="mb-1">{m.pdv.pagamento} (split)</div>
             <div className="flex flex-col gap-1">
               {pagamentos.map((p, idx) => (
@@ -135,7 +135,7 @@ export function CaixaFooter({
                     }
                     disabled={finalizando || itensLength === 0}
                     aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: String(idx + 1) })}
-                    className="h-8 rounded-md px-2 text-xs disabled:opacity-50 app-select"
+                    className="h-8 rounded-md px-2 text-xs disabled:opacity-50 bg-background border border-border text-foreground"
                   >
                     {FORMAS_PAGAMENTO_CAIXA.map((f) => (
                       <option key={f} value={f}>
@@ -151,14 +151,14 @@ export function CaixaFooter({
                     onChange={(e) => onPagamentoValorChange(idx, Number(e.target.value))}
                     disabled={finalizando || itensLength === 0}
                     aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: String(idx + 1) })}
-                    className="h-8 w-24 rounded-md px-2 text-xs disabled:opacity-50 app-input"
+                    className="h-8 w-24 rounded-md px-2 text-xs disabled:opacity-50 bg-background border border-border text-foreground"
                   />
                   <button
                     type="button"
                     onClick={() => onRemoverPagamento(idx)}
                     disabled={finalizando || itensLength === 0 || pagamentos.length <= 1}
                     aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: String(idx + 1) })}
-                    className="h-8 px-2 rounded-md text-xs disabled:opacity-50 app-btn-danger"
+                    className="h-8 px-2 rounded-md text-xs disabled:opacity-50 bg-red-900/30 text-red-300 border border-red-700"
                   >
                     -
                   </button>
@@ -168,7 +168,7 @@ export function CaixaFooter({
                       onClick={onAdicionarPagamento}
                       disabled={finalizando || itensLength === 0 || pagamentos.length >= 4}
                       aria-label={m.caixa.aria_adicionar_parcela}
-                      className="h-8 px-2 rounded-md text-xs disabled:opacity-50 app-btn-neutral"
+                      className="h-8 px-2 rounded-md text-xs disabled:opacity-50 bg-secondary text-secondary-foreground border border-border"
                     >
                       +
                     </button>
@@ -181,7 +181,7 @@ export function CaixaFooter({
             <Button
               type="button"
               variant="secondary"
-              className="app-btn-neutral"
+              className="bg-secondary text-secondary-foreground border border-border"
               onClick={onAbrirSuprimento}
               disabled={!caixaAberto || movimentandoCaixa || finalizando}
               aria-busy={movimentandoCaixa}
@@ -192,7 +192,7 @@ export function CaixaFooter({
             <Button
               type="button"
               variant="secondary"
-              className="app-btn-danger"
+              className="bg-red-900/30 text-red-300 border border-red-700"
               onClick={onAbrirSangria}
               disabled={!caixaAberto || movimentandoCaixa || finalizando}
               aria-busy={movimentandoCaixa}
@@ -203,7 +203,7 @@ export function CaixaFooter({
             <Button
               type="button"
               variant="secondary"
-              className="inline-flex items-center gap-2 app-badge-warn"
+              className="inline-flex items-center gap-2 bg-yellow-900/30 text-yellow-400 border border-yellow-700"
               onClick={onValidarGerente}
               disabled={validandoGerente || movimentandoCaixa}
               aria-busy={validandoGerente}
@@ -221,7 +221,7 @@ export function CaixaFooter({
             </Button>
             <Button
               type="button"
-              className="app-btn-accent"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={onFinalizar}
               disabled={
                 finalizando || itensLength === 0 || buscando || carregandoRegras
@@ -231,9 +231,9 @@ export function CaixaFooter({
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
             </Button>
           </div>
-          <span className="text-xs app-muted">{resumoItens}</span>
+          <span className="text-xs text-muted-foreground">{resumoItens}</span>
           {gerenteLinha && (
-            <span className="inline-flex items-center gap-2 text-xs app-accent-text">
+            <span className="inline-flex items-center gap-2 text-xs text-primary">
               <ImperialSealIcon
                 className="h-5 w-5 shrink-0 text-[color:var(--caixa-imperial-red,#b91c1c)]"
                 title={m.caixa.aria_selo_gerente}
@@ -244,20 +244,20 @@ export function CaixaFooter({
         </div>
 
         <div className="flex flex-wrap justify-end gap-4 sm:gap-6 md:gap-8">
-          <div className="text-right text-xs app-muted">
+          <div className="text-right text-xs text-muted-foreground">
             <div>{m.caixa.bruto}</div>
             <div className="text-base font-semibold tabular-nums">
               {moedaPrefixo} {fmt(totalBruto)}
             </div>
           </div>
-          <div className="text-right text-xs app-accent-text">
+          <div className="text-right text-xs text-primary">
             <div>{m.caixa.descontos_regras}</div>
             <div className="text-base font-semibold tabular-nums">
               - {moedaPrefixo} {fmt(totalDesconto)}
             </div>
           </div>
           {descontoGerentePercentual > 0 && (
-            <div className="text-right text-xs app-accent-text">
+            <div className="text-right text-xs text-primary">
               <div>
                 {caixaFmt(m.caixa.desconto_gerente_label, {
                   pct: descontoGerentePercentual.toFixed(2),
@@ -269,11 +269,11 @@ export function CaixaFooter({
             </div>
           )}
           <div className="text-right min-w-[7rem]">
-            <div className="text-xs app-muted">{m.caixa.total_pagar}</div>
+            <div className="text-xs text-muted-foreground">{m.caixa.total_pagar}</div>
             <div
               data-testid="caixa-total-liquido"
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-xl sm:text-2xl font-bold tabular-nums app-accent-text"
+              className="text-xl sm:text-2xl font-bold tabular-nums text-primary"
             >
               {moedaPrefixo} {fmt(totalLiquidoComGerente)}
             </div>

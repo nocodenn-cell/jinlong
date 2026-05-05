@@ -68,7 +68,7 @@ export function CaixaHeader({
 
   return (
     <header
-      className="shrink-0 px-4 sm:px-6 py-3 border-b flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between app-divider app-surface-soft"
+      className="shrink-0 px-4 sm:px-6 py-3 border-b border-border flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between bg-card"
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
       <div className="flex items-start justify-between gap-3 sm:block">
@@ -77,11 +77,11 @@ export function CaixaHeader({
             variant="symbol"
             href="/caixa"
             aria-label={m.login.nav_marca}
-            className="app-accent-text shrink-0 mt-0.5"
+            className="text-primary shrink-0 mt-0.5"
           />
           <div>
           <div className="font-semibold">{m.caixa.titulo_pdv}</div>
-          <div className="text-xs app-muted">
+          <div className="text-xs text-muted-foreground">
             {(() => {
               const localeString = idioma === "pt" ? "pt-BR" : "zh-CN"
               return new Date().toLocaleString(localeString)
@@ -92,13 +92,13 @@ export function CaixaHeader({
         <div className="flex items-center gap-2 shrink-0">
           <SignOutButton
             label={m.comum.sair}
-            className="rounded-md px-2.5 py-1 text-xs font-medium app-btn-neutral"
+            className="rounded-md px-2.5 py-1 text-xs font-medium bg-secondary text-secondary-foreground border border-border"
           />
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="text-xs h-8 app-btn-neutral"
+            className="text-xs h-8 bg-secondary text-secondary-foreground border border-border"
             onClick={alternarTecnico}
           >
             {mostrarTecnico ? m.caixa.ocultar_tecnico : m.caixa.mostrar_tecnico}
@@ -106,18 +106,18 @@ export function CaixaHeader({
         </div>
       </div>
 
-      <div className="text-xs app-muted sm:text-right sm:max-w-xl min-w-0">
+      <div className="text-xs text-muted-foreground sm:text-right sm:max-w-xl min-w-0">
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {caixaStatus?.aberto ? (
             <>
-              <span className="rounded-md px-2 py-1 app-badge-positive">
+              <span className="rounded-md px-2 py-1 bg-green-900/30 text-green-400 border border-green-700">
                 Caixa aberto
               </span>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="app-badge-warn"
+                className="bg-yellow-900/30 text-yellow-400 border border-yellow-700"
                 onClick={onFecharCaixa}
                 disabled={processandoCaixa}
                 aria-busy={processandoCaixa}
@@ -130,7 +130,7 @@ export function CaixaHeader({
               type="button"
               size="sm"
               variant="outline"
-              className="app-badge-positive"
+              className="bg-green-900/30 text-green-400 border border-green-700"
               onClick={onAbrirCaixa}
               disabled={processandoCaixa}
               aria-busy={processandoCaixa}
@@ -140,7 +140,7 @@ export function CaixaHeader({
           )}
         </div>
         {caixaStatus?.aberto && (
-          <div className="mt-1 text-[11px] app-muted">
+          <div className="mt-1 text-[11px] text-muted-foreground">
             Abertura:{' '}
             {(() => {
               const localeString = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
@@ -151,11 +151,11 @@ export function CaixaHeader({
         )}
         {caixaStatus?.aberto && !caixaStatus.blindClosureEnabled && (
           <div className="mt-3 flex flex-col items-end relative group max-sm:items-start">
-            <DragonIcon className="pointer-events-none w-12 h-12 sm:w-14 sm:h-14 absolute -right-1 -top-2 sm:-right-2 sm:-top-3 app-subtle opacity-45 transition-all duration-700 rotate-12" />
-            <span className="text-[10px] app-subtle uppercase font-bold tracking-tight relative z-10">
+            <DragonIcon className="pointer-events-none w-12 h-12 sm:w-14 sm:h-14 absolute -right-1 -top-2 sm:-right-2 sm:-top-3 text-muted-foreground opacity-45 transition-all duration-700 rotate-12" />
+            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight relative z-10">
               {m.caixa.header_guardiao_saldo_eyebrow}
             </span>
-            <div className="flex items-center gap-2 app-accent-text font-mono text-base sm:text-lg font-semibold tabular-nums relative z-10">
+            <div className="flex items-center gap-2 text-primary font-mono text-base sm:text-lg font-semibold tabular-nums relative z-10">
               {(() => {
                 const localeString = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
                 return caixaStatus.valorSistemaDinheiro.toLocaleString(localeString, { minimumFractionDigits: 2 })
@@ -166,11 +166,11 @@ export function CaixaHeader({
         <div>{m.caixa.atalhos_placeholder}</div>
         <div className="mt-1">
           {m.caixa.regras_catalogo}{" "}
-          <code className="app-subtle">regras_preco</code>
+          <code className="text-muted-foreground">regras_preco</code>
           {carregandoRegras ? ` · ${m.caixa.regras_carregando}` : ""}
         </div>
         {mostrarTecnico && (
-          <div className="mt-2 rounded-md px-2 py-1.5 text-left app-surface app-border">
+          <div className="mt-2 rounded-md px-2 py-1.5 text-left bg-card border border-border">
             {m.caixa.tech_finalizar_hint}
           </div>
         )}
