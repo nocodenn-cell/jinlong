@@ -2,15 +2,23 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { executarTransferencia, obterEstoqueDisponivelTransferencia } from './actions'
+import { caixaFmt } from '@/app/caixa/caixaI18n'
 
 export type TransferenciaLojaRow = { id: string; nome: string; codigo: string }
-export type TransferenciaProdutoOpt = { id: string; nome: string }
+export type TransferenciaProdutoOpt = {
+  id: string
+  nome: string
+  unidade_medida: string
+  limite_transferencia_sem_observacao: number | null
+}
 
 type Props = Readonly<{
   idioma: Idioma
@@ -31,7 +39,13 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
   const [quantidadeStr, setQuantidadeStr] = useState('')
   const [observacao, setObservacao] = useState('')
   const [estoqueOrigem, setEstoqueOrigem] = useState<number | null>(null)
+  const [unidadeMedida, setUnidadeMedida] = useState('UN')
+  const [limiteObs, setLimiteObs] = useState(50)
   const [carregandoEstoque, setCarregandoEstoque] = useState(false)
+  const [confirmacaoPendente, setConfirmacaoPendente] = useState<
+    null | { tipo: 'trocar' } | { tipo: 'transferir'; quantidade: number }
+  >(null)
+  const idempotencyRef = useRef<string>(crypto.randomUUID())
 
   useEffect(() => {
     if (!podeTransferir) return
@@ -45,9 +59,15 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
       const r = await obterEstoqueDisponivelTransferencia(origemId, produtoId)
       if (cancel) return
       setCarregandoEstoque(false)
-      if (r.success) setEstoqueOrigem(r.quantidade)
+      if (r.success) {
+        setEstoqueOrigem(r.quantidadeDisponivel)
+        setUnidadeMedida(r.unidadeMedida)
+        setLimiteObs(r.limiteObservacao)
+      }
       else {
         setEstoqueOrigem(null)
+        setUnidadeMedida('UN')
+        setLimiteObs(50)
         emitGerenteToast({ kind: 'error', message: r.error })
       }
     })()
@@ -63,6 +83,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
       produto_id: string
       quantidade: number
       observacao: string
+      idempotency_key: string
     }) => {
       const r = await executarTransferencia({
         loja_origem_id: p.loja_origem_id,
@@ -70,12 +91,18 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
         produto_id: p.produto_id,
         quantidade: p.quantidade,
         observacao: p.observacao || undefined,
+        idempotency_key: p.idempotency_key,
       })
       if (!r.success) throw new Error(r.error)
       refetch()
-      return null
+      return r
     },
-    { successMessage: 'Transferência concluída.' },
+    {
+      onSuccess: (result) => {
+        emitGerenteToast({ kind: 'success', message: `Transferência concluída. ID: ${result.transferenciaId}` })
+        idempotencyRef.current = crypto.randomUUID()
+      },
+    },
   )
 
   const inputClass = 'rounded-lg px-3 py-2 text-sm app-input'
@@ -86,17 +113,46 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
   const qtdValida = Number.isFinite(qtd) && qtd > 0
   const estoqueInsuficiente =
     estoqueOrigem !== null && qtdValida && qtd > estoqueOrigem + 1e-9
+  const observacaoObrigatoria = qtdValida && qtd > limiteObs && observacao.trim().length === 0
 
   const nomeLoja = useCallback((id: string) => lojas.find((l) => l.id === id)?.nome ?? '—', [lojas])
-  const nomeProduto = useMemo(() => produtos.find((p) => p.id === produtoId)?.nome ?? '—', [produtos, produtoId])
+  const produtoSelecionado = useMemo(
+    () => produtos.find((p) => p.id === produtoId) ?? null,
+    [produtos, produtoId],
+  )
+  const nomeProduto = produtoSelecionado?.nome ?? '—'
+  const saldoProjetado =
+    estoqueOrigem !== null && qtdValida ? Math.max(0, estoqueOrigem - qtd) : null
 
   const podeEnviar =
     podeTransferir &&
     !origemIgualDestino &&
     qtdValida &&
     !estoqueInsuficiente &&
+    !observacaoObrigatoria &&
     produtoId !== '' &&
     !carregandoEstoque
+
+  const executarTrocaOrigemDestino = useCallback(() => {
+    setOrigemId(destinoId)
+    setDestinoId(origemId)
+    setConfirmacaoPendente(null)
+  }, [destinoId, origemId])
+
+  const executarTransferenciaConfirmada = useCallback(
+    (quantidade: number) => {
+      void mutate({
+        loja_origem_id: origemId,
+        loja_destino_id: destinoId,
+        produto_id: produtoId,
+        quantidade,
+        observacao: observacao.trim(),
+        idempotency_key: idempotencyRef.current,
+      })
+      setConfirmacaoPendente(null)
+    },
+    [destinoId, mutate, observacao, origemId, produtoId],
+  )
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -106,20 +162,24 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
       return
     }
     if (!qtdValida) {
-      emitGerenteToast({ kind: 'error', message: 'Quantidade inválida.' })
+      emitGerenteToast({ kind: 'error', message: t.qtd_invalida })
       return
     }
     if (estoqueInsuficiente) {
-      emitGerenteToast({ kind: 'error', message: t.estoque_insuficiente })
+      emitGerenteToast({
+        kind: 'error',
+        message: `Saldo insuficiente na origem. Disponível: ${Number(estoqueOrigem ?? 0).toFixed(3)}, solicitado: ${qtd.toFixed(3)}.`,
+      })
       return
     }
-    void mutate({
-      loja_origem_id: origemId,
-      loja_destino_id: destinoId,
-      produto_id: produtoId,
-      quantidade: qtd,
-      observacao: observacao.trim(),
-    })
+    if (observacaoObrigatoria) {
+      emitGerenteToast({
+        kind: 'error',
+        message: `Observação obrigatória para transferências acima de ${limiteObs.toFixed(3)} ${unidadeMedida}.`,
+      })
+      return
+    }
+    setConfirmacaoPendente({ tipo: 'transferir', quantidade: qtd })
   }
 
   return (
@@ -153,6 +213,9 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
                 </option>
               ))}
             </select>
+            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground border border-border">
+              {t.resumo_origem}: {nomeLoja(origemId)}
+            </span>
           </label>
           <label className="flex flex-col gap-1">
             <span className="gerente-fin-label text-xs font-medium">{t.resumo_destino}</span>
@@ -169,7 +232,26 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
                 </option>
               ))}
             </select>
+            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary border border-primary/30">
+              {t.resumo_destino}: {nomeLoja(destinoId)}
+            </span>
           </label>
+          <div className="md:col-span-2 -mt-1">
+            <button
+              type="button"
+              className="text-xs font-medium app-link-accent underline-offset-4 hover:underline"
+              onClick={() => {
+                if (produtoId) {
+                  setConfirmacaoPendente({ tipo: 'trocar' })
+                  return
+                }
+                setOrigemId(destinoId)
+                setDestinoId(origemId)
+              }}
+            >
+              {t.btn_trocar_origem_destino}
+            </button>
+          </div>
           {origemIgualDestino ? (
             <p className="rounded-lg border px-3 py-2 text-sm app-badge-danger md:col-span-2" role="alert">
               {t.bloqueio_origem_destino}
@@ -217,12 +299,13 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
               <span className="tabular-nums font-semibold">
                 {(() => {
                   const localeString = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
-                  return estoqueOrigem.toLocaleString(localeString)
+                    return estoqueOrigem.toLocaleString(localeString)
                 })()}
               </span>
             ) : (
               <span className="app-muted">—</span>
             )}
+            <span className="ml-2 text-xs app-muted">({unidadeMedida})</span>
             {estoqueInsuficiente ? (
               <span className="mt-1 block text-xs font-medium">{t.estoque_insuficiente}</span>
             ) : null}
@@ -230,6 +313,11 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
           <label className="flex flex-col gap-1 md:col-span-2">
             <span className="gerente-fin-label text-xs font-medium">{t.resumo_obs}</span>
             <input value={observacao} onChange={(e) => setObservacao(e.target.value)} className={inputClass} />
+            {observacaoObrigatoria ? (
+              <span className="text-xs app-badge-warn rounded-md border px-2 py-1 mt-1">
+                {t.obs_obrigatoria_limite}
+              </span>
+            ) : null}
           </label>
 
           <div className="rounded-lg border p-3 md:col-span-2 app-surface-soft app-border">
@@ -246,7 +334,19 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
               </li>
               <li>
                 <span className="app-muted">{t.resumo_quantidade}:</span>{' '}
-                <span className="tabular-nums font-medium">{qtdValida ? qtd : '—'}</span>
+                <span className="tabular-nums font-medium">{qtdValida ? qtd : '—'} {unidadeMedida}</span>
+              </li>
+              <li>
+                <span className="app-muted">{t.saldo_atual_origem}:</span>{' '}
+                <span className="tabular-nums font-medium">
+                  {estoqueOrigem !== null ? estoqueOrigem : '—'} {unidadeMedida}
+                </span>
+              </li>
+              <li>
+                <span className="app-muted">{t.saldo_projetado_origem}:</span>{' '}
+                <span className="tabular-nums font-medium">
+                  {saldoProjetado !== null ? saldoProjetado : '—'} {unidadeMedida}
+                </span>
               </li>
               <li>
                 <span className="app-muted">{t.resumo_obs}:</span>{' '}
@@ -260,10 +360,110 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
             disabled={loading || !podeEnviar}
             className="mt-2 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-70 md:col-span-2 md:w-auto md:justify-self-end md:min-w-[160px] app-btn-accent"
           >
-            {loading ? t.btn_transferindo : t.btn_transferir}
+            {loading ? t.btn_processando : t.btn_transferir}
           </button>
         </form>
       ) : null}
+      <TransferenciaConfirmModal
+        open={confirmacaoPendente !== null}
+        title={
+          confirmacaoPendente?.tipo === 'trocar'
+            ? t.modal_trocar_titulo
+            : t.modal_confirmar_titulo
+        }
+        description={
+          confirmacaoPendente?.tipo === 'trocar'
+            ? t.modal_trocar_descricao
+            : caixaFmt(t.modal_confirmar_descricao, {
+                quantidade: String(confirmacaoPendente?.quantidade ?? '—'),
+                unidade: unidadeMedida,
+                produto: nomeProduto,
+                origem: nomeLoja(origemId),
+                destino: nomeLoja(destinoId),
+              })
+        }
+        processing={loading}
+        processandoLabel={t.btn_processando}
+        confirmarLabel={m.comum.confirmar}
+        cancelarLabel={m.comum.cancelar}
+        onOpenChange={(open) => {
+          if (!open) setConfirmacaoPendente(null)
+        }}
+        onConfirm={() => {
+          if (!confirmacaoPendente) return
+          if (confirmacaoPendente.tipo === 'trocar') {
+            executarTrocaOrigemDestino()
+            return
+          }
+          executarTransferenciaConfirmada(confirmacaoPendente.quantidade)
+        }}
+      />
+    </div>
+  )
+}
+
+function TransferenciaConfirmModal({
+  open,
+  title,
+  description,
+  processing,
+  processandoLabel,
+  confirmarLabel,
+  cancelarLabel,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean
+  title: string
+  description: string
+  processing: boolean
+  processandoLabel: string
+  confirmarLabel: string
+  cancelarLabel: string
+  onOpenChange: (open: boolean) => void
+  onConfirm: () => void
+}) {
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 dragon-glass-backdrop"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onOpenChange(false)
+      }}
+    >
+      <Card
+        role="dialog"
+        aria-modal="true"
+        className="dragon-glass-card app-border w-full sm:max-w-md rounded-none sm:rounded-lg border app-surface-text shadow-xl max-h-[90vh] flex flex-col"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
+          <CardTitle className="text-lg app-surface-text">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6">
+          <p className="text-sm app-muted">{description}</p>
+        </CardContent>
+        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t app-divider mt-3 pt-3">
+          <Button
+            type="button"
+            variant="ghost"
+            className="app-btn-neutral"
+            onClick={() => onOpenChange(false)}
+            disabled={processing}
+          >
+            {cancelarLabel}
+          </Button>
+          <Button
+            type="button"
+            className="app-btn-accent"
+            onClick={onConfirm}
+            disabled={processing}
+          >
+            {processing ? processandoLabel : confirmarLabel}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }
