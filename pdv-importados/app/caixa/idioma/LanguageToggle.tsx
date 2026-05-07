@@ -1,5 +1,6 @@
 'use client'
 
+import { setIdiomaAction } from './actions'
 import { cn } from '@/lib/utils'
 
 type Idioma3 = 'pt' | 'zh'
@@ -26,7 +27,7 @@ export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Pro
   )
 
   return (
-    <form className="flex gap-2">
+    <form className="flex gap-2 shrink-0" action={setIdiomaAction}>
       <button type="submit" name="idioma" value="pt" disabled={idiomaAtual === 'pt'} className={baseBtn}>
         PT
       </button>
@@ -42,7 +43,6 @@ export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Pro
       >
         普通话
       </button>
-
-          </form>
+    </form>
   )
 }
