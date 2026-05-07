@@ -1,16 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
+import { useCallback, useRef, useState, type FormEvent } from "react"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
-  carregarRegrasPrecoCaixa,
   buscarProdutoParaCaixa,
   finalizarVendaCaixa,
   abrirCaixaOperador,
   fecharCaixaOperador,
   validarGerenteDesconto,
-  obterLimiteSangriaSemGerente,
-  listarCategoriasAtalhoCaixa,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
@@ -20,6 +17,9 @@ import type { Idioma } from "@/idioma/normalizeIdioma"
 import { useCaixaMensagens } from "@/app/caixa/hooks/useCaixaMensagens"
 import { useCaixaPagamentos } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { useCaixaStatusMovimentacoes } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
+import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
+import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
+import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
@@ -144,69 +144,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setDescontoGerentePercentual(0)
   }, [])
 
-  useEffect(() => {
-    let cancelado = false
-    ;(async () => {
-      setCarregandoRegras(true)
-      const res = await carregarRegrasPrecoCaixa()
-      if (cancelado) return
-      if (res.ok) {
-        setRegras(res.regras)
-        setCaixaMensagem(null)
-      } else {
-        setCaixaMensagem(`${m.caixa.regras_erro_prefixo} ${res.error}`)
-        setRegras([])
-      }
-      setCarregandoRegras(false)
-    })()
-    return () => {
-      cancelado = true
-    }
-  }, [setRegras, m.caixa.regras_erro_prefixo, setCaixaMensagem])
-
-  useEffect(() => {
-    let cancelado = false
-    ;(async () => {
-      const res = await obterLimiteSangriaSemGerente()
-      if (cancelado) return
-      if (res.ok) {
-        setLimiteSangriaSemGerente(res.limite)
-      }
-    })()
-    return () => {
-      cancelado = true
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelado = false
-    ;(async () => {
-      const res = await listarCategoriasAtalhoCaixa()
-      if (cancelado) return
-      if (res.ok) {
-        setCategoriasAtalho(res.categorias)
-      }
-    })()
-    return () => {
-      cancelado = true
-    }
-  }, [])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey && e.shiftKey)) return
-      if (e.repeat) return
-      if (e.code === "KeyS") {
-        e.preventDefault()
-        if (!movimentandoCaixa && caixaStatus?.aberto) setMovimentacaoModalTipo("suprimento")
-      } else if (e.code === "KeyR") {
-        e.preventDefault()
-        if (!movimentandoCaixa && caixaStatus?.aberto) setMovimentacaoModalTipo("sangria")
-      }
-    }
-    globalThis.addEventListener("keydown", onKey)
-    return () => globalThis.removeEventListener("keydown", onKey)
-  }, [movimentandoCaixa, caixaStatus])
+  useCaixaBootstrapData({
+    regrasErroPrefixo: m.caixa.regras_erro_prefixo,
+    setCarregandoRegras,
+    setRegras,
+    setCaixaMensagem,
+    setLimiteSangriaSemGerente,
+    setCategoriasAtalho,
+  })
 
   const handleAdicionar = useCallback(
     async (e: FormEvent) => {
@@ -376,6 +321,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setValorNumericoModal({ fluxo: "fechar_contado", initial: "" })
   }, [processandoCaixa, itens.length, m.caixa.msg_fechar_cupom_nao_vazio, setCaixaMensagem])
 
+  const handleAbrirSuprimento = useCallback(() => {
+    setMovimentacaoModalTipo("suprimento")
+  }, [])
+
+  const handleAbrirSangria = useCallback(() => {
+    setMovimentacaoModalTipo("sangria")
+  }, [])
+
   const onConfirmValorNumerico = useCallback(
     (v: number) => {
       if (!valorNumericoModal) return
@@ -422,27 +375,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     },
     [motivoFecharModal, executarFecharCaixa],
   )
-
-  useEffect(() => {
-    if (!gerenteValidadoAte) return
-
-    const expiraEmMs = Date.parse(gerenteValidadoAte)
-    if (!Number.isFinite(expiraEmMs)) {
-      limparEstadoDescontoGerente()
-      return
-    }
-
-    const checkExpiracao = () => {
-      if (Date.now() >= expiraEmMs) {
-        limparEstadoDescontoGerente()
-        setCaixaMensagem(m.caixa.msg_token_expirado)
-      }
-    }
-
-    checkExpiracao()
-    const timer = globalThis.setInterval(checkExpiracao, 1000)
-    return () => globalThis.clearInterval(timer)
-  }, [gerenteValidadoAte, limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem])
 
   const handleFinalizar = useCallback(async () => {
     if (itens.length === 0 || finalizando) return
@@ -519,45 +451,23 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setCaixaMensagemVendaOk,
   ])
 
-  const handleFinalizarRef = useRef(handleFinalizar)
-  const handleFecharCaixaRef = useRef(handleFecharCaixa)
-  const focarCampoBuscaRef = useRef(focarCampoBusca)
-  handleFinalizarRef.current = handleFinalizar
-  handleFecharCaixaRef.current = handleFecharCaixa
-  focarCampoBuscaRef.current = focarCampoBusca
+  useCaixaGerenteTokenExpiry({
+    gerenteValidadoAte,
+    onExpire: useCallback(() => {
+      limparEstadoDescontoGerente()
+      setCaixaMensagem(m.caixa.msg_token_expirado)
+    }, [limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem]),
+  })
 
-  useEffect(() => {
-    const alvoEhCampoTexto = (t: EventTarget | null) => {
-      if (!(t instanceof HTMLElement)) return false
-      const tag = t.tagName
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true
-      if (t.isContentEditable) return true
-      if (t.closest("[data-caixa-atalho-bloqueado='true']")) return true
-      return false
-    }
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.repeat) return
-      if (alvoEhCampoTexto(e.target)) return
-
-      if (e.code === "F4") {
-        e.preventDefault()
-        void handleFinalizarRef.current()
-        return
-      }
-      if (e.code === "F6") {
-        e.preventDefault()
-        void handleFecharCaixaRef.current()
-        return
-      }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyB") {
-        e.preventDefault()
-        focarCampoBuscaRef.current()
-      }
-    }
-    globalThis.addEventListener("keydown", onKey)
-    return () => globalThis.removeEventListener("keydown", onKey)
-  }, [])
+  useCaixaKeyboardShortcuts({
+    caixaAberto: caixaStatus?.aberto === true,
+    movimentandoCaixa,
+    onAbrirSuprimento: handleAbrirSuprimento,
+    onAbrirSangria: handleAbrirSangria,
+    onFinalizar: () => void handleFinalizar(),
+    onFecharCaixa: () => void handleFecharCaixa(),
+    onFocarBusca: focarCampoBusca,
+  })
 
   const handleValidateSenhaGerente = useCallback(
     async (senha: string): Promise<ValidarSenhaGerenteResult> => {
@@ -678,8 +588,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
             onAdicionarPagamento={handleAdicionarPagamento}
             onRemoverPagamento={handleRemoverPagamento}
             onValidarGerente={() => setGerenteModalAberto(true)}
-            onAbrirSuprimento={() => setMovimentacaoModalTipo("suprimento")}
-            onAbrirSangria={() => setMovimentacaoModalTipo("sangria")}
+            onAbrirSuprimento={handleAbrirSuprimento}
+            onAbrirSangria={handleAbrirSangria}
             onFinalizar={() => void handleFinalizar()}
             validandoGerente={validandoGerente}
             finalizando={finalizando}
