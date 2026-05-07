@@ -34,13 +34,14 @@ type ModalState =
 type Props = Readonly<{
   idioma: Idioma
   filtro: 'todos' | 'baixo'
+  importacaoNfeEnabled?: boolean
 }>
 
 function normalizaEstoqueRow(p: ProdutoComEstoqueDTO) {
   return p.estoque
 }
 
-export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
+export function EstoqueGerentePageClient({ idioma, filtro, importacaoNfeEnabled = false }: Props) {
   const m = getMessages(idioma)
   const pathname = usePathname()
   const [modal, setModal] = useState<ModalState>(null)
@@ -140,6 +141,11 @@ export function EstoqueGerentePageClient({ idioma, filtro }: Props) {
         <GerenteNavLink href="/gerente/estoque/imprimir-etiquetas" active={pathname.includes('imprimir-etiquetas')}>
           {m.estoque.nav_etiquetas}
         </GerenteNavLink>
+        {importacaoNfeEnabled ? (
+          <GerenteNavLink href="/gerente/estoque/importar-nfe" active={pathname.includes('importar-nfe')}>
+            {m.estoque.import_nfe.nav_link}
+          </GerenteNavLink>
+        ) : null}
       </div>
 
       <div className="mb-4 flex justify-end">{loading ? null : exportSlot}</div>
