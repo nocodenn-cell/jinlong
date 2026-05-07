@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RPC transferir_estoque_seguro v1",
+  "type": "object",
+  "required": [
+    "p_loja_origem",
+    "p_loja_destino",
+    "p_produto_id",
+    "p_quantidade",
+    "p_idempotency_key"
+  ],
+  "properties": {
+    "p_loja_origem": { "type": "string", "format": "uuid" },
+    "p_loja_destino": { "type": "string", "format": "uuid" },
+    "p_produto_id": { "type": "string", "format": "uuid" },
+    "p_quantidade": { "type": "number", "exclusiveMinimum": 0 },
+    "p_observacao": { "type": ["string", "null"] },
+    "p_idempotency_key": { "type": "string", "minLength": 1 },
+    "p_saldo_esperado": { "type": ["number", "null"] }
+  },
+  "additionalProperties": false,
+  "x-returns": {
+    "type": "string",
+    "format": "uuid",
+    "description": "ID da transferência (movimento de saída)."
+  }
+}

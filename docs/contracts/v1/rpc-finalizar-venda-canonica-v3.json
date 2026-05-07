@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RPC finalizar_venda_transacional_canonica_v3 v1",
+  "type": "object",
+  "required": [
+    "p_caixa_id",
+    "p_forma_pagamento",
+    "p_itens",
+    "p_total_bruto",
+    "p_total_desconto",
+    "p_total_liquido"
+  ],
+  "properties": {
+    "p_caixa_id": { "type": "string", "format": "uuid" },
+    "p_forma_pagamento": { "type": "string" },
+    "p_idempotency_key": { "type": ["string", "null"] },
+    "p_total_bruto": { "type": "number", "minimum": 0 },
+    "p_total_desconto": { "type": "number", "minimum": 0 },
+    "p_total_liquido": { "type": "number", "minimum": 0 },
+    "p_itens": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["produto_id", "quantidade"],
+        "properties": {
+          "produto_id": { "type": "string", "format": "uuid" },
+          "quantidade": { "type": "number", "exclusiveMinimum": 0 },
+          "preco_unitario": { "type": ["number", "null"], "minimum": 0 }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true,
+  "x-returns": {
+    "type": "object",
+    "required": ["venda_id"],
+    "properties": {
+      "venda_id": { "type": "string", "format": "uuid" }
+    }
+  }
+}

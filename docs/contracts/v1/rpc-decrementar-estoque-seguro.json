@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RPC decrementar_estoque_seguro v1",
+  "type": "object",
+  "required": [
+    "p_loja_id",
+    "p_produto_id",
+    "p_quantidade"
+  ],
+  "properties": {
+    "p_loja_id": { "type": "string", "format": "uuid" },
+    "p_produto_id": { "type": "string", "format": "uuid" },
+    "p_quantidade": { "type": "number", "exclusiveMinimum": 0 },
+    "p_referencia": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false,
+  "x-returns": {
+    "type": "object",
+    "description": "Operação sem retorno funcional (efeito transacional em estoque e log)."
+  }
+}
