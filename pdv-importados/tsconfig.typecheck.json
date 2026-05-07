@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "stores/**/*.ts",
+    "stores/**/*.tsx",
+    "core/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "app/caixa/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.integration.test.ts"
+  ]
+}

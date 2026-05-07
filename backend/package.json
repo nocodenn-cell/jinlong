@@ -4,6 +4,7 @@
   "description": "Supabase (migrations + Edge). Scripts npm facilitam o mesmo type-check do CI sem instalar Deno globalmente.",
   "scripts": {
     "check": "npm run check:edge",
+    "typecheck": "npm run check:edge",
     "check:edge": "npx -y deno@2.2.2 check supabase/functions/sync-outbox/index.ts && npx -y deno@2.2.2 check supabase/functions/validar-gerente/index.ts && npx -y deno@2.2.2 check --config supabase/functions/fiscal-worker/deno.json supabase/functions/fiscal-worker/index.ts",
     "smoke:rls-rest": "node scripts/p0-rls-rest-smoke.mjs",
     "test:rls-policies": "node scripts/test-rls-policies.mjs",

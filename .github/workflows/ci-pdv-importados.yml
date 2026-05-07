@@ -55,8 +55,11 @@ jobs:
       - name: Install (workspaces na raiz)
         run: npm ci
 
-      - name: Lint & unit tests
-        run: npx turbo run lint test --filter=pdv-importados
+      - name: Lint, typecheck e unit tests
+        run: npx turbo run lint typecheck test --filter=pdv-importados
+
+      - name: Coverage (Vitest + lcov)
+        run: npm run test:coverage -w pdv-importados
 
       # Build exige secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY (anon do projeto — não versionar JWT no YAML).
       # URL opcional: secret CI_NEXT_PUBLIC_SUPABASE_URL ou placeholder abaixo.

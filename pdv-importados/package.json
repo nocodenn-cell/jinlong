@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --exclude \"app/caixa/**/*.test.ts\" --exclude \"app/caixa/**/*.integration.test.ts\"",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:hydration": "playwright test e2e/hydration.spec.ts",
@@ -28,6 +30,7 @@
     "test-storybook": "test-storybook"
   },
   "dependencies": {
+    "@fastproduct/shared-core": "0.1.0",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/nextjs": "^10.49.0",
@@ -65,6 +68,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
     "@playwright/test": "^1.49.1",
     "@storybook/addon-backgrounds": "^8.6.14",
     "@storybook/addon-controls": "^8.6.14",

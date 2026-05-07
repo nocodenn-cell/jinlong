@@ -36,8 +36,11 @@ jobs:
       - name: Install (workspaces na raiz)
         run: npm ci
 
-      - name: Unit tests & build (Turborepo)
-        run: npx turbo run test build --filter=pdv-local
+      - name: Typecheck, unit tests e build (Turborepo)
+        run: npx turbo run typecheck test build --filter=pdv-local
+
+      - name: Coverage (Vitest + lcov)
+        run: npm run test:coverage -w pdv-local
 
   rust-tauri-checks:
     runs-on: windows-latest

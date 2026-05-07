@@ -28,6 +28,7 @@ Thumbs.db
 **/test-results/
 **/playwright-report/
 **/playwright/.cache/
+**/coverage/
 
 # Tauri / Rust
 **/target/

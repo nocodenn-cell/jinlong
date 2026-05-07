@@ -19,6 +19,16 @@ export default defineConfig({
       'app/**/*.test.tsx',
     ],
     globals: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      thresholds: {
+        lines: 1,
+        functions: 1,
+        branches: 1,
+        statements: 1,
+      },
+    },
   },
   resolve: {
     alias: [
