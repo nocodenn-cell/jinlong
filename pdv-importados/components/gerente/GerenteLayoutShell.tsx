@@ -12,6 +12,7 @@ import { isGerenteLightChrome } from '@/components/gerente/gerenteUiTheme'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
+import { normalizePerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import { GerenteTableDensityProvider } from '@/components/gerente/GerenteTableDensityContext'
@@ -29,7 +30,7 @@ type Props = Readonly<{
 function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props) {
   const { theme } = useGerenteUiTheme()
   const chromeLight = isGerenteLightChrome(theme)
-  const podeTrocarIdioma = isPerfilPainelGerencial(perfil)
+  const podeTrocarIdioma = isPerfilPainelGerencial(normalizePerfilUsuario(perfil))
   const langToggleVariant = chromeLight ? 'dragon-light' : 'dragon'
   const roleBadgeLabel =
     perfil === 'DONO'

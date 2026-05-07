@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma } from '@/src/lib/idioma/normalizeIdioma'
-
-export type PerfilUsuario = 'OPERADOR' | 'GERENTE' | 'DONO' | 'ADMIN'
+import { normalizePerfilUsuario, type PerfilUsuario } from '@/src/lib/idioma/normalizePerfilUsuario'
 export type Idioma = 'pt' | 'en' | 'zh'
 
 export function useIdioma() {
@@ -31,10 +30,10 @@ export function useIdioma() {
           .eq('id', user.id)
           .single()
 
-        const perfilUsuario = (usuario?.perfil ?? 'OPERADOR') as PerfilUsuario
+        const perfilUsuario = normalizePerfilUsuario(usuario?.perfil)
         setPerfil(perfilUsuario)
         setIdioma(normalizeIdioma(usuario?.idioma_preferido))
-      } catch (_err) {
+      } catch {
         setIdioma('pt')
         setPerfil('OPERADOR')
       } finally {

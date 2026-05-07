@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma, type Idioma } from './normalizeIdioma'
-
-export type PerfilUsuario = 'OPERADOR' | 'GERENTE' | 'DONO' | 'ADMIN'
+import { normalizePerfilUsuario, type PerfilUsuario } from './normalizePerfilUsuario'
 
 export async function getUsuarioIdioma(): Promise<{
   idioma: Idioma
@@ -24,7 +23,7 @@ export async function getUsuarioIdioma(): Promise<{
     .eq('id', user.id)
     .single()
 
-  const perfil = (usuario?.perfil ?? 'OPERADOR') as PerfilUsuario
+  const perfil = normalizePerfilUsuario(usuario?.perfil)
   return {
     idioma: normalizeIdioma(usuario?.idioma_preferido),
     perfil,

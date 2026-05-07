@@ -1,6 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPerfilPainelGerencial, PREFIXOS_ROTAS_PAINEL_WEB } from '@/lib/auth/painelGerencial'
+import { normalizePerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 
 function supabaseConfigOk(url: string | undefined, anonKey: string | undefined): boolean {
   if (!url?.trim() || !anonKey?.trim()) return false
@@ -23,9 +24,8 @@ export async function proxy(request: NextRequest) {
   const isCaixaWeb = pathname === '/caixa' || pathname.startsWith('/caixa/')
   const isProtected = isPainelWeb || isCaixaWeb
 
-  // Criar cliente Supabase DENTRO da função para evitar carregamento no escopo do arquivo
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   const redirectLogin = () => {
     const url = request.nextUrl.clone()
@@ -50,9 +50,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Criar cliente Supabase com configuração simplificada para middleware
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false }, // Importante para middleware
+  const response = NextResponse.next({
+    request,
+  })
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          request.cookies.set(name, value)
+          response.cookies.set(name, value, options)
+        })
+      },
+    },
   })
 
   const {
@@ -70,7 +82,7 @@ export async function proxy(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    const perfil = typeof row?.perfil === 'string' ? row.perfil : 'OPERADOR'
+    const perfil = normalizePerfilUsuario(typeof row?.perfil === 'string' ? row.perfil : null)
     const gerenteOuDono = isPerfilPainelGerencial(perfil)
     const caixaRoute = isCaixaWeb
 
