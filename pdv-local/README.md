@@ -15,7 +15,7 @@ Cliente de **caixa local-first** (Windows via Tauri 2) com **SQLite**, **catálo
 
 - `src/` — App React (Vite).
 - `src-tauri/` — App desktop Tauri 2.
-- `tsconfig.json` — alias `@core/*` apontando para `../pdv-importados/core/*` (iremos evoluir isso para um pacote compartilhado).
+- `tsconfig.json` — alias `@core/*` apontando para `../shared-core/src/*` (pacote compartilhado do monorepo).
 
 ## comandos Tauri (sync)
 
@@ -56,14 +56,14 @@ Depois ajuste:
 
 ## Próximos passos
 
-- Empacotar `../pdv-importados/core` como biblioteca compartilhada (npm workspace ou pacote interno).
+- Evoluir `shared-core` com contratos estáveis e release versionado interno.
 - Login de operador no PDV (substituir `PDV_OPERADOR_ID` opcional no `.env`).
 - Sincronizar fechamento de caixa e movimentos (sangria/suprimento) na Edge `sync-outbox`.
 
 ### Sincronização de vendas (caixa + operador)
 
 - Aplique as migrations no Supabase com **`npx supabase db push`** a partir da pasta **`backend`** na raiz do monorepo (não de `pdv-local`). Na primeira vez: `npx supabase link --project-ref <Reference ID>`. Detalhes em `../backend/supabase/README.md`.
-- **Retry / DLQ:** falhas por evento na Edge aplicam backoff e, após `OUTBOX_MAX_SYNC_FAILURES` (padrão 12), o item fica `ERRO` até **Repor na fila** no app. Ver `../pdv-importados/core/sync/TAURI_SYNC.md`.
+- **Retry / DLQ:** falhas por evento na Edge aplicam backoff e, após `OUTBOX_MAX_SYNC_FAILURES` (padrão 12), o item fica `ERRO` até **Repor na fila** no app.
 - O payload da outbox inclui `caixa_id`, `troco_inicial_caixa` e `operador_id` (UUID válido).
 - A função `sync-outbox` cria `public.caixas` com o mesmo `id` da sessão local, se ainda não existir, e grava `vendas.caixa_id` / `vendas.operador_id` quando forem UUIDs válidos.
 - Opcional: defina `PDV_OPERADOR_ID` no `.env` (UUID de `public.usuarios`) para preencher operador sem UI de login.

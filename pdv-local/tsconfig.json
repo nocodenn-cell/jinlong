@@ -17,7 +17,8 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@core/*": ["../pdv-importados/core/*"],
+      "@core/*": ["../shared-core/src/*"],
+      "@fastproduct/shared-core/*": ["../shared-core/*"],
       "@shared/*": ["../shared/*"]
     }
   },
