@@ -90,7 +90,17 @@
     "nenhum_resultado_filtro": "Nenhum produto encontrado com estes filtros.",
     "pag_prev": "Anterior",
     "pag_next": "Próxima",
-    "pag_info": "Página {{atual}} de {{total}}"
+    "pag_info": "Página {{atual}} de {{total}}",
+    "nome_obrigatorio": "Nome do produto é obrigatório",
+    "contador_encontrados": "{{count}} produtos encontrados",
+    "pag_linhas_por_pagina": "Linhas por página",
+    "pag_mostrar": "Mostrando {{visiveis}} de {{total}}",
+    "preco_atualizado": "Preço de varejo atualizado.",
+    "tooltip_origem_china_manual": "Importado China — cadastro e preço informados manualmente.",
+    "tooltip_origem_brasil_nf": "Nacional — com nota fiscal.",
+    "tooltip_origem_brasil_sem_nf": "Nacional — sem nota fiscal.",
+    "preco_invalido": "Informe um preço de varejo válido.",
+    "preco_maior_zero": "O preço deve ser maior que zero."
   },
   "precos": {
     "titulo": "Regras de preço",

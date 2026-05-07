@@ -90,7 +90,17 @@
     "nenhum_resultado_filtro": "没有符合条件的商品。",
     "pag_prev": "上一页",
     "pag_next": "下一页",
-    "pag_info": "第 {{atual}} / {{total}} 页"
+    "pag_info": "第 {{atual}} / {{total}} 页",
+    "nome_obrigatorio": "商品名称必填",
+    "contador_encontrados": "找到 {{count}} 个商品",
+    "pag_linhas_por_pagina": "每页行数",
+    "pag_mostrar": "显示 {{visiveis}} / {{total}} 个商品",
+    "preco_atualizado": "零售价已更新。",
+    "tooltip_origem_china_manual": "中国进口 — 价格与资料在系统中手工维护。",
+    "tooltip_origem_brasil_nf": "本土 — 有发票。",
+    "tooltip_origem_brasil_sem_nf": "本土 — 无发票。",
+    "preco_invalido": "请输入有效的零售价。",
+    "preco_maior_zero": "价格必须大于零。"
   },
   "precos": {
     "titulo": "价格规则",

@@ -9,7 +9,10 @@ import {
   criarProdutoComEstoque,
   alternarAtivoProduto as alternarAtivoNoDominio,
 } from '@/core/services/produtoService'
-import { mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
+import {
+  mensagemErroComSecao,
+  mensagemErroValidacaoZod,
+} from '@/lib/errors/mensagemErroUsuario'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
 const NovoProdutoSchema = z.object({
@@ -57,6 +60,41 @@ export async function criarProduto(
     revalidatePath('/gerente/produtos')
   }
   return result
+}
+
+const AtualizarPrecoSchema = z.object({
+  produto_id: z.string().uuid('ID do produto inválido.'),
+  preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
+})
+
+export async function atualizarPrecoVarejoProduto(
+  input: unknown
+): Promise<ActionResult<null>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = AtualizarPrecoSchema.safeParse(input)
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('produtos')
+    .update({ preco_varejo: parsed.data.preco_varejo })
+    .eq('id', parsed.data.produto_id)
+
+  if (error) {
+    return {
+      success: false,
+      error: mensagemErroComSecao('Preço varejo', error.message),
+    }
+  }
+
+  revalidatePath('/gerente/produtos')
+  return { success: true, data: null }
 }
 
 export async function alternarAtivoProduto(
