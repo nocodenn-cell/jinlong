@@ -36,9 +36,12 @@ import { CaixaMovimentacaoAcaoModal } from "@/app/caixa/CaixaMovimentacaoAcaoMod
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeline"
 import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
+import { CaixaToastViewport } from "@/components/caixa/CaixaToastViewport"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
 import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
+import { CaixaConfirmModal } from "@/app/caixa/CaixaConfirmModal"
 import { createClient } from "@/lib/supabase/client"
+import { useScannerDetector } from "@/hooks/useScannerDetector"
 import "@/styles/theme-oriental.css"
 
 function localeFromIdioma(idioma: Idioma): string {
@@ -52,7 +55,14 @@ type Props = {
 }
 
 export function CaixaPageClient({ messages: m, idioma }: Props) {
-  const { mensagem, msgVendaOk, setCaixaMensagem, setCaixaMensagemVendaOk } = useCaixaMensagens()
+  const {
+    mensagem,
+    msgVendaOk,
+    toasts,
+    setCaixaMensagem,
+    setCaixaMensagemVendaOk,
+    dismissCaixaToast,
+  } = useCaixaMensagens()
 
   const [codigo, setCodigo] = useState("")
   const [carregandoRegras, setCarregandoRegras] = useState(true)
@@ -84,6 +94,13 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
   const [categoriasAtalho, setCategoriasAtalho] = useState<{ id: string; nome: string }[]>([])
+  const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
+  const [confirmacaoPendente, setConfirmacaoPendente] = useState<
+    | null
+    | { tipo: "sangria" }
+    | { tipo: "cancelar"; item: MovimentacaoCaixaDTO }
+    | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
+  >(null)
 
   const {
     caixaStatus,
@@ -137,26 +154,9 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     })
   }, [])
 
-  const limparEstadoDescontoGerente = useCallback(() => {
-    setGerenteValidadoAte(null)
-    setGerenteToken(null)
-    setMaxDescontoGerentePercentual(0)
-    setDescontoGerentePercentual(0)
-  }, [])
-
-  useCaixaBootstrapData({
-    regrasErroPrefixo: m.caixa.regras_erro_prefixo,
-    setCarregandoRegras,
-    setRegras,
-    setCaixaMensagem,
-    setLimiteSangriaSemGerente,
-    setCategoriasAtalho,
-  })
-
-  const handleAdicionar = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault()
-      const trimmed = codigo.trim()
+  const handleAdicionarCodigo = useCallback(
+    async (rawCodigo: string) => {
+      const trimmed = rawCodigo.trim()
       if (!trimmed) return
 
       setBuscando(true)
@@ -166,20 +166,20 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         const res = await buscarProdutoParaCaixa(trimmed)
 
         if (!res.ok) {
-          setCaixaMensagem(res.error)
-          setBuscando(false)
+          setCaixaMensagem(res.error, { kind: "error" })
+          tocarFeedback("erro")
           return
         }
 
         if (res.status === "nao_encontrado") {
-          setCaixaMensagem(m.caixa.produto_nao_encontrado)
-          setBuscando(false)
+          setCaixaMensagem(m.caixa.msg_produto_nao_encontrado_acao, { kind: "warning" })
+          tocarFeedback("erro")
           return
         }
 
         if (res.status === "ambiguo") {
-          setCaixaMensagem(res.mensagem)
-          setBuscando(false)
+          setCaixaMensagem(res.mensagem, { kind: "warning" })
+          tocarFeedback("erro")
           return
         }
 
@@ -213,7 +213,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
             precoUnitario: p.preco_varejo,
             precoOriginal: p.preco_varejo,
             descontoUnitario: 0,
-            tipoPreco: 'VAREJO',
+            tipoPreco: "VAREJO",
           },
           metaPdv: {
             origem: p.origem,
@@ -228,26 +228,94 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
         setCodigo("")
         if (avisoEstoqueMsg) {
-          setCaixaMensagem(avisoEstoqueMsg)
+          setCaixaMensagem(avisoEstoqueMsg, { kind: "warning" })
         } else {
-          setCaixaMensagem(null)
+          setCaixaMensagem(m.caixa.msg_item_adicionado_toast, { kind: "success" })
         }
+        tocarFeedback("ok")
       } catch {
-        setCaixaMensagem(m.caixa.falha_busca)
+        setCaixaMensagem(m.caixa.falha_busca, { kind: "error" })
+        tocarFeedback("erro")
       } finally {
         setBuscando(false)
         focarCampoBusca()
       }
     },
-    [codigo, adicionarItem, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession],
+    [adicionarItem, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession],
+  )
+
+  const tocarFeedback = useCallback(
+    (kind: "ok" | "erro") => {
+      if (!somFeedbackAtivo) return
+      if (typeof window === "undefined") return
+      const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = "sine"
+      osc.frequency.value = kind === "ok" ? 880 : 220
+      gain.gain.value = 0.03
+      osc.start()
+      osc.stop(ctx.currentTime + 0.08)
+      osc.onended = () => void ctx.close()
+    },
+    [somFeedbackAtivo],
+  )
+
+  const limparEstadoDescontoGerente = useCallback(() => {
+    setGerenteValidadoAte(null)
+    setGerenteToken(null)
+    setMaxDescontoGerentePercentual(0)
+    setDescontoGerentePercentual(0)
+  }, [])
+
+  useCaixaBootstrapData({
+    regrasErroPrefixo: m.caixa.regras_erro_prefixo,
+    setCarregandoRegras,
+    setRegras,
+    setCaixaMensagem,
+    setLimiteSangriaSemGerente,
+    setCategoriasAtalho,
+  })
+
+  const handleAdicionar = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault()
+      await handleAdicionarCodigo(codigo)
+    },
+    [codigo, handleAdicionarCodigo],
+  )
+
+  useScannerDetector(
+    useCallback(
+      (scannedCode: string) => {
+        setCaixaMensagem(`Código lido: ${scannedCode}`, { kind: "info" })
+        void handleAdicionarCodigo(scannedCode)
+      },
+      [handleAdicionarCodigo, setCaixaMensagem],
+    ),
+    {
+      enabled: true,
+      maxIntervalMs: 40,
+      flushTimeoutMs: 100,
+      minLength: 3,
+    },
   )
 
   const handleAlterarQuantidade = useCallback(
     (itemId: string, quantidade: number) => {
       if (Number.isNaN(quantidade)) return
+      if (quantidade <= 0) {
+        removerItem(itemId)
+        setCaixaMensagem(m.caixa.msg_item_removido_qtde_zero, { kind: "info" })
+        return
+      }
       alterarQuantidade(itemId, quantidade)
     },
-    [alterarQuantidade],
+    [alterarQuantidade, m.caixa.msg_item_removido_qtde_zero, removerItem, setCaixaMensagem],
   )
 
   const handleRemover = useCallback(
@@ -292,13 +360,16 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           return
         }
         if (!res.ok) {
-          setCaixaMensagem(res.error)
+          setCaixaMensagem(res.error, { kind: "error" })
+          tocarFeedback("erro")
           return
         }
         const diferencaPrefixo = res.diferenca > 0 ? "+" : ""
         setCaixaMensagem(
           `Caixa fechado. Sistema: R$ ${res.valorSistemaDinheiro.toFixed(2)} · Contado: R$ ${res.valorContado.toFixed(2)} · Diferença: ${diferencaPrefixo}R$ ${res.diferenca.toFixed(2)}`,
+          { kind: "success" },
         )
+        tocarFeedback("ok")
         await recarregarStatusCaixa()
       } finally {
         setProcessandoCaixa(false)
@@ -315,7 +386,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const handleFecharCaixa = useCallback(() => {
     if (processandoCaixa) return
     if (itens.length > 0) {
-      setCaixaMensagem(m.caixa.msg_fechar_cupom_nao_vazio)
+      setCaixaMensagem(m.caixa.msg_fechar_cupom_nao_vazio, { kind: "warning" })
       return
     }
     setValorNumericoModal({ fluxo: "fechar_contado", initial: "" })
@@ -326,8 +397,20 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   }, [])
 
   const handleAbrirSangria = useCallback(() => {
-    setMovimentacaoModalTipo("sangria")
+    setConfirmacaoPendente({ tipo: "sangria" })
   }, [])
+
+  const handleConfirmarAcaoSensivel = useCallback(() => {
+    if (!confirmacaoPendente) return
+    if (confirmacaoPendente.tipo === "sangria") {
+      setMovimentacaoModalTipo("sangria")
+    } else if (confirmacaoPendente.tipo === "cancelar") {
+      setAcaoMovimentacao({ tipo: "cancelar", item: confirmacaoPendente.item })
+    } else {
+      setAcaoMovimentacao({ tipo: "estornar", item: confirmacaoPendente.item })
+    }
+    setConfirmacaoPendente(null)
+  }, [confirmacaoPendente])
 
   const onConfirmValorNumerico = useCallback(
     (v: number) => {
@@ -340,10 +423,12 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           try {
             const res = await abrirCaixaOperador(v)
             if (!res.ok) {
-              setCaixaMensagem(res.error)
+              setCaixaMensagem(res.error, { kind: "error" })
+              tocarFeedback("erro")
               return
             }
-            setCaixaMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`)
+            setCaixaMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`, { kind: "success" })
+            tocarFeedback("ok")
             await recarregarStatusCaixa()
           } finally {
             setProcessandoCaixa(false)
@@ -380,7 +465,20 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     if (itens.length === 0 || finalizando) return
     if (gerenteValidadoAte && Date.now() >= Date.parse(gerenteValidadoAte)) {
       limparEstadoDescontoGerente()
-      setCaixaMensagem(m.caixa.msg_token_expirado)
+      setCaixaMensagem(m.caixa.msg_token_expirado, { kind: "warning" })
+      return
+    }
+    const totalPagamentos = roundMoney2(
+      pagamentos.reduce((acc, pagamento) => acc + pagamento.valor, 0),
+    )
+    if (Math.abs(totalPagamentos - totalLiquidoComGerente) > 0.01) {
+      setCaixaMensagem(
+        caixaFmt(m.caixa.msg_pagamento_split_invalido, {
+          esperado: totalLiquidoComGerente.toFixed(2),
+          informado: totalPagamentos.toFixed(2),
+        }),
+        { kind: "warning" },
+      )
       return
     }
     setFinalizando(true)
@@ -422,13 +520,17 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         resetPagamentos()
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
+          { kind: "success" },
         )
+        tocarFeedback("ok")
         await recarregarStatusCaixa()
       } else {
-        setCaixaMensagem(res.error)
+        setCaixaMensagem(res.error, { kind: "error" })
+        tocarFeedback("erro")
       }
     } catch {
-      setCaixaMensagem(m.caixa.msg_falha_finalizar)
+      setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+      tocarFeedback("erro")
     } finally {
       setFinalizando(false)
     }
@@ -445,6 +547,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     totalBruto,
     totalDesconto,
     totalLiquido,
+    totalLiquidoComGerente,
     m,
     recarregarStatusCaixa,
     setCaixaMensagem,
@@ -455,7 +558,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     gerenteValidadoAte,
     onExpire: useCallback(() => {
       limparEstadoDescontoGerente()
-      setCaixaMensagem(m.caixa.msg_token_expirado)
+      setCaixaMensagem(m.caixa.msg_token_expirado, { kind: "warning" })
     }, [limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem]),
   })
 
@@ -467,6 +570,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     onFinalizar: () => void handleFinalizar(),
     onFecharCaixa: () => void handleFecharCaixa(),
     onFocarBusca: focarCampoBusca,
+    onNovoCupom: handleNovoCupom,
   })
 
   const handleValidateSenhaGerente = useCallback(
@@ -523,14 +627,16 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           pct: payload.percentual.toFixed(2),
           hora: new Date(payload.expiraEm).toLocaleTimeString(loc),
         }),
+        { kind: "success" },
       )
+      tocarFeedback("ok")
     },
-    [m, loc, setCaixaMensagem],
+    [m, loc, setCaixaMensagem, tocarFeedback],
   )
 
   return (
     <>
-      <div className="min-h-[100dvh] caixa-oriental-root flex flex-col">
+      <div className="min-h-[100dvh] caixa-oriental-root flex flex-col text-[14px] leading-5">
         <CaixaHeader
           m={m}
           idioma={idioma}
@@ -553,6 +659,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
               buscando={buscando}
               carregandoRegras={carregandoRegras}
               categoriasAtalho={categoriasAtalho}
+              somAtivo={somFeedbackAtivo}
+              onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
             />
             <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
           </div>
@@ -575,8 +683,12 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
               itens={movimentacoes}
               carregando={carregandoMovimentacoes}
               processandoAcao={processandoAcaoMovimentacao}
-              onCancelar={(item) => setAcaoMovimentacao({ tipo: "cancelar", item })}
-              onEstornar={(item) => setAcaoMovimentacao({ tipo: "estornar", item })}
+              onCancelar={(item) => {
+                setConfirmacaoPendente({ tipo: "cancelar", item })
+              }}
+              onEstornar={(item) => {
+                setConfirmacaoPendente({ tipo: "estornar", item })
+              }}
             />
           )}
           <CaixaFooter
@@ -611,6 +723,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           />
         </div>
       </div>
+      <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
       <CaixaGerenteModal
         open={gerenteModalAberto}
         onOpenChange={setGerenteModalAberto}
@@ -696,6 +809,29 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           onConfirm={onConfirmMotivoFechar}
         />
       )}
+      <CaixaConfirmModal
+        open={confirmacaoPendente !== null}
+        title={
+          confirmacaoPendente?.tipo === "sangria"
+            ? m.caixa.modal_confirmacao_sangria_titulo
+            : confirmacaoPendente?.tipo === "cancelar"
+              ? m.caixa.modal_confirmacao_cancelar_titulo
+              : m.caixa.modal_confirmacao_estorno_titulo
+        }
+        description={
+          confirmacaoPendente?.tipo === "sangria"
+            ? m.caixa.confirmar_sangria_curta
+            : confirmacaoPendente?.tipo === "cancelar"
+              ? m.caixa.confirmar_cancelamento_curto
+              : m.caixa.confirmar_estorno_curto
+        }
+        m={m}
+        initialFocus="cancel"
+        onOpenChange={(open) => {
+          if (!open) setConfirmacaoPendente(null)
+        }}
+        onConfirm={handleConfirmarAcaoSensivel}
+      />
     </>
   )
 }
