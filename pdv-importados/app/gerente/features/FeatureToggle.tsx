@@ -17,7 +17,7 @@ export async function getFeatureFlag(flagName: string): Promise<boolean> {
     }
     
     return data ?? false
-  } catch (error) {
+  } catch {
     return false // Fail safe: desligado por segurança
   }
 }
@@ -82,7 +82,7 @@ export function FeatureGate({
           setIsEnabled(enabled)
           setCachedFlag(flagName, enabled)
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
           setIsEnabled(false) // Fail safe
         }
@@ -140,7 +140,7 @@ export function useFeatureFlag(flagName: string) {
           setIsEnabled(enabled)
           setCachedFlag(flagName, enabled)
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
           setIsEnabled(false)
         }

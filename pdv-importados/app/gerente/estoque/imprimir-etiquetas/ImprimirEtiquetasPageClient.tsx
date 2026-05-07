@@ -8,7 +8,7 @@ import { EtiquetaCarrinho } from './EtiquetaCarrinho'
 import { buscarProdutoPorCodigo, buscarEstoqueAtual } from './actions'
 import { baixarPdfEtiquetas } from '@/lib/etiqueta/gerarPdf'
 import { getEtiquetaConfig } from '@/lib/etiqueta/EtiquetaConfig'
-import type { ItemCarrinho, ProdutoComEstoqueDTO } from '@/lib/etiqueta/types'
+import type { ItemCarrinho } from '@/lib/etiqueta/types'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 
@@ -143,7 +143,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
         config,
         nomeArquivo: `etiquetas-${Date.now()}.pdf`,
       })
-    } catch (error: unknown) {
+    } catch {
       alert(
         idioma === 'zh'
           ? '生成PDF时出错'

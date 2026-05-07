@@ -20,7 +20,7 @@ export function useRelatoriosGerenteExports(
   const exportVendasOpts = useMemo(() => ({ successMessage: m.comum.sucesso }), [m.comum.sucesso])
 
   const { mutate: exportVendasDia, loading: expVendas } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       if (!data) throw new Error('Sem dados')
       downloadCsv(
         `relatorio-vendas-dia_${csvSuffix}.csv`,
@@ -39,7 +39,7 @@ export function useRelatoriosGerenteExports(
   )
 
   const { mutate: exportVendasDiaXlsx, loading: expVendasXlsx } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       if (!data) throw new Error('Sem dados')
       downloadXlsx(
         `relatorio-vendas-dia_${csvSuffix}.xlsx`,
@@ -58,7 +58,7 @@ export function useRelatoriosGerenteExports(
   )
 
   const { mutate: exportTop, loading: expTop } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       if (!data) throw new Error('Sem dados')
       downloadCsv(
         `relatorio-top-produtos_${csvSuffix}.csv`,
@@ -78,7 +78,7 @@ export function useRelatoriosGerenteExports(
   )
 
   const { mutate: exportTopXlsx, loading: expTopXlsx } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       if (!data) throw new Error('Sem dados')
       downloadXlsx(
         `relatorio-top-produtos_${csvSuffix}.xlsx`,
@@ -98,7 +98,7 @@ export function useRelatoriosGerenteExports(
   )
 
   const { mutate: exportBaixo, loading: expBaixo } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       if (!data) throw new Error('Sem dados')
       downloadCsv(
         'relatorio-estoque-baixo.csv',
@@ -117,7 +117,7 @@ export function useRelatoriosGerenteExports(
   )
 
   const { mutate: exportBaixoXlsx, loading: expBaixoXlsx } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       if (!data) throw new Error('Sem dados')
       downloadXlsx(
         'relatorio-estoque-baixo.xlsx',

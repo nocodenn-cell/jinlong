@@ -64,7 +64,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
     return { esp, conf, delta, abs, pct, grave }
   }, [qtdEspStr, qtdConfStr])
 
-  const numLocale = idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN'
+  const numLocale = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
 
   const { mutate, loading } = useGerenteMutation(
     async (p: {

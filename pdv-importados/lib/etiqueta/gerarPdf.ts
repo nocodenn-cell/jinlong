@@ -82,7 +82,7 @@ export async function gerarPdfEtiquetas(
 
     // Código de barras
     try {
-      const barcodeDataUrl = await gerarBarcodeParaPdf(item.codigoBarras, config)
+      const barcodeDataUrl = await gerarBarcodeParaPdf(item.codigoBarras)
       pdf.addImage(
         barcodeDataUrl,
         'PNG',
@@ -91,7 +91,7 @@ export async function gerarPdfEtiquetas(
         config.largura - config.margem * 2,
         6
       )
-    } catch (_err) {
+    } catch {
       // Fallback: mostrar código em texto se falhar
       pdf.setFontSize(config.fontSizeCodigo)
       pdf.text(item.codigoBarras, config.margem, config.altura - config.margem - 2)

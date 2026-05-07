@@ -43,7 +43,6 @@ type Props = {
 
 function moneyLocale(idioma: Idioma) {
   if (idioma === "pt") return "pt-BR"
-  if (idioma === "zh-HK") return "zh-HK"
   return "zh-CN"
 }
 

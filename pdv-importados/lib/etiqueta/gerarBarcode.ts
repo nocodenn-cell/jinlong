@@ -3,8 +3,6 @@
  * Dynamic import para evitar bundle bloat no carregamento inicial.
  */
 
-import type { EtiquetaConfig } from './EtiquetaConfig'
-
 export interface BarcodeOptions {
   /** Código de barras (EAN-13 ou interno) */
   codigo: string
@@ -33,7 +31,6 @@ export async function gerarBarcodeDataUrl(
     throw new Error('Não foi possível obter contexto 2D do canvas')
   }
 
-  const _largura = options.largura || 200
   const altura = options.altura || 80
   const tipo = options.tipo || 'EAN13'
 
@@ -57,8 +54,7 @@ export async function gerarBarcodeDataUrl(
  * Retorna Promise com data URL base64.
  */
 export async function gerarBarcodeParaPdf(
-  codigo: string,
-  _config: EtiquetaConfig
+  codigo: string
 ): Promise<string> {
   return gerarBarcodeDataUrl({
     codigo,

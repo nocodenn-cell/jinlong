@@ -50,7 +50,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
   const exportOpts = useMemo(() => ({ successMessage: m.comum.sucesso }), [m.comum.sucesso])
 
   const { mutate: exportCsv, loading: expLoading } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       downloadCsv(
         'gerente-produtos.csv',
         [

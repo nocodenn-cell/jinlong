@@ -189,7 +189,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
   )
 
   const { mutate: mutFila, loading: loadFila } = useGerenteMutation(
-    async (_: null) => {
+    async () => {
       const r = await processarFilaFiscalAgora(30)
       if (!r.success) throw new Error(r.error)
       refetch()

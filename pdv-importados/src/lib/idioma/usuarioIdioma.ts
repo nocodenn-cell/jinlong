@@ -3,6 +3,8 @@ import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma, type Idioma } from './normalizeIdioma'
 import { normalizePerfilUsuario, type PerfilUsuario } from './normalizePerfilUsuario'
 
+export type { PerfilUsuario } from './normalizePerfilUsuario'
+
 export async function getUsuarioIdioma(): Promise<{
   idioma: Idioma
   perfil: PerfilUsuario

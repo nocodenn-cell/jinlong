@@ -216,7 +216,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
             ) : estoqueOrigem !== null ? (
               <span className="tabular-nums font-semibold">
                 {(() => {
-                  const localeString = idioma === 'pt' ? 'pt-BR' : idioma === 'zh-HK' ? 'zh-HK' : 'zh-CN'
+                  const localeString = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
                   return estoqueOrigem.toLocaleString(localeString)
                 })()}
               </span>

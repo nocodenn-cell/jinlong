@@ -3,26 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { QrCode, CreditCard, Coins, Clock } from "lucide-react"
 import type { Mensagens } from "@/i18n/getMessages"
+import type { Idioma } from "@/idioma/normalizeIdioma"
+import type { ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
 
 interface Props {
   m: Mensagens
-  idioma: string
-  itens: Array<{
-    id: string
-    nome: string
-    quantidade: number
-    precoUnitario: number
-    precoTotal: number
-    observacao?: string
-    produtoId: string
-    resultado?: {
-      tipoPreco: string
-      precoUnitario: number
-      precoOriginal: number
-    }
-  }>
+  idioma: Idioma
+  itens: ItemCarrinhoComPreco[]
   totalDesconto: number
   totalLiquido: number
   onAlterarQuantidade: (itemId: string, quantidade: number) => void

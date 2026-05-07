@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
 import { Trash2, Plus, Minus } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { ItemCarrinho } from '@/lib/etiqueta/types'
 
 type Props = {

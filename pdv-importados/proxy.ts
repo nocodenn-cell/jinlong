@@ -49,16 +49,20 @@ export async function proxy(request: NextRequest) {
     }
     return NextResponse.next()
   }
+  const publicSupabaseUrl = (supabaseUrl ?? '').trim()
+  const publicSupabaseKey = (supabaseKey ?? '').trim()
 
   const response = NextResponse.next({
     request,
   })
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+  const supabase = createServerClient(publicSupabaseUrl, publicSupabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll()
       },
-      setAll(cookiesToSet) {
+      setAll(
+        cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[],
+      ) {
         cookiesToSet.forEach(({ name, value, options }) => {
           request.cookies.set(name, value)
           response.cookies.set(name, value, options)

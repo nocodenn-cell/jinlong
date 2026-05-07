@@ -18,7 +18,6 @@ type Props = {
 
 function localeFromIdioma(idioma: Idioma): string {
   if (idioma === "pt") return "pt-BR"
-  if (idioma === "zh-HK") return "zh-HK"
   return "zh-CN"
 }
 

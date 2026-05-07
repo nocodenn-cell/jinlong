@@ -111,7 +111,7 @@ export default async function GerenteCaixasPage() {
         ]}
       >
         {caixasList.map((c) => {
-          const { valorSistemaDinheiro, valorFechamento, diferenca, temDivergencia } =
+          const { valorSistemaDinheiro, diferenca, temDivergencia } =
             derivadosLinhaCaixaGerente(c, valorSistemaPorCaixa)
           return (
             <tr

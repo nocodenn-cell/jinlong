@@ -13,7 +13,6 @@ import {
   listarCategoriasAtalhoCaixa,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
-import { _DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -44,7 +43,6 @@ import "@/styles/theme-oriental.css"
 
 function localeFromIdioma(idioma: Idioma): string {
   if (idioma === "pt") return "pt-BR"
-  if (idioma === "zh-HK") return "zh-HK"
   return "zh-CN"
 }
 
@@ -121,7 +119,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   const {
     pagamentos,
-    _pagamentoInicial,
     handlePagamentoFormaChange,
     handlePagamentoValorChange,
     handleAdicionarPagamento,

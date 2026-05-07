@@ -2,8 +2,6 @@ import Link from 'next/link'
 import { DragonEmblemIcon } from '@/components/icons/DragonEmblemIcon'
 import { cn } from '@/lib/utils'
 
-type Variant = 'full' | 'symbol' | 'wordmark'
-
 type PropsSymbol = {
   variant: 'symbol'
   className?: string
