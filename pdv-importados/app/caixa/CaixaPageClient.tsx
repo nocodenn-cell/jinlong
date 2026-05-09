@@ -1,9 +1,10 @@
 "use client"
 
-import { useCallback, useRef, useState, type FormEvent } from "react"
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
   buscarProdutoParaCaixa,
+  calcularPrecoProdutoCaixa,
   finalizarVendaCaixa,
   abrirCaixaOperador,
   fecharCaixaOperador,
@@ -11,6 +12,7 @@ import {
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { aplicarDescontoGerenteSobreTotal } from "@/stores/managerDiscount"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -128,18 +130,27 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     limparCarrinho,
   } = useCarrinhoStore()
 
-  const valorDescontoGerente =
-    descontoGerentePercentual > 0
-      ? roundMoney2((totalLiquido * descontoGerentePercentual) / 100)
-      : 0
-  const totalLiquidoComGerente = roundMoney2(totalLiquido - valorDescontoGerente)
+  const economiaPrecoAtacadoAuto = useMemo(() => {
+    return itens.reduce((acc, it) => {
+      if (it.resultado?.tipoPreco !== "ATACADO") return acc
+      const o = it.resultado.precoOriginal
+      const u = it.resultado.precoUnitario
+      if (!Number.isFinite(o) || !Number.isFinite(u) || o <= u) return acc
+      return acc + (o - u) * it.quantidade
+    }, 0)
+  }, [itens])
+
+  const descontoGerenteAplicado = aplicarDescontoGerenteSobreTotal({
+    totalLiquido,
+    percentual: descontoGerentePercentual,
+    maxPermitido: maxDescontoGerentePercentual,
+  })
+  const valorDescontoGerente = descontoGerenteAplicado.descontoValor
+  const totalLiquidoComGerente = descontoGerenteAplicado.totalLiquidoComDesconto
+  const descontoGerentePercentualEfetivo = descontoGerenteAplicado.percentualClamped
 
   const {
     pagamentos,
-    handlePagamentoFormaChange,
-    handlePagamentoValorChange,
-    handleAdicionarPagamento,
-    handleRemoverPagamento,
     resetPagamentos,
   } = useCaixaPagamentos(totalLiquidoComGerente)
 
@@ -153,6 +164,29 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       buscaInputRef.current?.focus()
     })
   }, [])
+
+  const aplicarPrecoRpcParaLinha = useCallback(
+    async (params: { produtoId: string; itemId: string; quantidade: number }) => {
+      const linha = useCarrinhoStore.getState().itens.find((i) => i.id === params.itemId)
+      if (!linha || linha.produtoId !== params.produtoId) return
+      const tp = linha.resultado?.tipoPreco
+      if (tp === "MANUAL" || tp === "PROMOCAO") return
+
+      const res = await calcularPrecoProdutoCaixa({
+        produtoId: params.produtoId,
+        quantidade: params.quantidade,
+      })
+      if (!res.ok) {
+        setCaixaMensagem(res.error, { kind: "error" })
+        return
+      }
+      useCarrinhoStore.getState().sincronizarPrecoCalculadoRpc(params.itemId, {
+        precoUnitario: res.preco,
+        tipoPreco: res.tipo,
+      })
+    },
+    [setCaixaMensagem],
+  )
 
   const handleAdicionarCodigo = useCallback(
     async (rawCodigo: string) => {
@@ -190,7 +224,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         if (q !== null && q < 1) {
           avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_baixo}`
         } else if (q !== null && min !== null && q <= min) {
-          avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_abaixo_minimo} ${m.caixa.estoque_dica_rep}`
+          avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_abaixo_minimo}`
         }
 
         const supabase = createClient()
@@ -223,8 +257,21 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
             estoque_minimo: p.estoque_minimo,
             categoriaId: p.categoria_id,
             precoAtacado: p.preco_atacado,
+            precoVarejoReferencia: p.preco_varejo,
           },
         })
+
+        const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.produtoId === p.id)
+        if (linhaApos) {
+          const tp = linhaApos.resultado?.tipoPreco
+          if (tp !== "MANUAL" && tp !== "PROMOCAO") {
+            await aplicarPrecoRpcParaLinha({
+              produtoId: p.id,
+              itemId: linhaApos.id,
+              quantidade: linhaApos.quantidade,
+            })
+          }
+        }
 
         setCodigo("")
         if (avisoEstoqueMsg) {
@@ -241,7 +288,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         focarCampoBusca()
       }
     },
-    [adicionarItem, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession],
+    [adicionarItem, aplicarPrecoRpcParaLinha, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession],
   )
 
   const tocarFeedback = useCallback(
@@ -306,16 +353,35 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   )
 
   const handleAlterarQuantidade = useCallback(
-    (itemId: string, quantidade: number) => {
+    async (itemId: string, quantidade: number) => {
       if (Number.isNaN(quantidade)) return
       if (quantidade <= 0) {
         removerItem(itemId)
         setCaixaMensagem(m.caixa.msg_item_removido_qtde_zero, { kind: "info" })
         return
       }
+      const antes = useCarrinhoStore.getState().itens.find((i) => i.id === itemId)
+      const tpAntes = antes?.resultado?.tipoPreco
+      if (tpAntes === "MANUAL" || tpAntes === "PROMOCAO") {
+        alterarQuantidade(itemId, quantidade)
+        return
+      }
       alterarQuantidade(itemId, quantidade)
+      const depois = useCarrinhoStore.getState().itens.find((i) => i.id === itemId)
+      if (!depois) return
+      await aplicarPrecoRpcParaLinha({
+        produtoId: depois.produtoId,
+        itemId: depois.id,
+        quantidade: depois.quantidade,
+      })
     },
-    [alterarQuantidade, m.caixa.msg_item_removido_qtde_zero, removerItem, setCaixaMensagem],
+    [
+      alterarQuantidade,
+      aplicarPrecoRpcParaLinha,
+      m.caixa.msg_item_removido_qtde_zero,
+      removerItem,
+      setCaixaMensagem,
+    ],
   )
 
   const handleRemover = useCallback(
@@ -492,17 +558,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
         totalBruto,
         totalDesconto:
-          descontoGerentePercentual > 0
-            ? roundMoney2(totalDesconto + (totalLiquido * descontoGerentePercentual) / 100)
+          descontoGerentePercentualEfetivo > 0
+            ? roundMoney2(totalDesconto + valorDescontoGerente)
             : totalDesconto,
-        totalLiquido:
-          descontoGerentePercentual > 0
-            ? roundMoney2(totalLiquido - (totalLiquido * descontoGerentePercentual) / 100)
-            : totalLiquido,
+        totalLiquido: totalLiquidoComGerente,
         descontoGerenteToken:
-          descontoGerentePercentual > 0 ? gerenteToken ?? undefined : undefined,
+          descontoGerentePercentualEfetivo > 0 ? gerenteToken ?? undefined : undefined,
         descontoGerentePercentual:
-          descontoGerentePercentual > 0 ? descontoGerentePercentual : undefined,
+          descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
         pagamentos: pagamentos.map((p) => ({
           formaPagamento: p.formaPagamento,
           valor: p.valor,
@@ -535,7 +598,8 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       setFinalizando(false)
     }
   }, [
-    descontoGerentePercentual,
+    descontoGerentePercentualEfetivo,
+    valorDescontoGerente,
     finalizando,
     pagamentos,
     gerenteValidadoAte,
@@ -546,7 +610,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     resetPagamentos,
     totalBruto,
     totalDesconto,
-    totalLiquido,
     totalLiquidoComGerente,
     m,
     recarregarStatusCaixa,
@@ -694,11 +757,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           <CaixaFooter
             m={m}
             idioma={idioma}
-            pagamentos={pagamentos}
-            onPagamentoFormaChange={handlePagamentoFormaChange}
-            onPagamentoValorChange={handlePagamentoValorChange}
-            onAdicionarPagamento={handleAdicionarPagamento}
-            onRemoverPagamento={handleRemoverPagamento}
             onValidarGerente={() => setGerenteModalAberto(true)}
             onAbrirSuprimento={handleAbrirSuprimento}
             onAbrirSangria={handleAbrirSangria}
@@ -717,6 +775,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
             maxDescontoGerentePercentual={maxDescontoGerentePercentual}
             totalBruto={totalBruto}
             totalDesconto={totalDesconto}
+            economiaPrecoAtacadoAuto={economiaPrecoAtacadoAuto}
             valorDescontoGerente={valorDescontoGerente}
             totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}

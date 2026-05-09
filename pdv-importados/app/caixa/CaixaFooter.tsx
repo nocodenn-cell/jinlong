@@ -4,20 +4,11 @@ import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
-import {
-  FORMAS_PAGAMENTO_CAIXA,
-  type FinalizarVendaInput,
-} from "@/app/caixa/finalizarVendaValidation"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 
 type Props = {
   m: Mensagens
   idioma: Idioma
-  pagamentos: Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }>
-  onPagamentoFormaChange: (index: number, v: FinalizarVendaInput["formaPagamento"]) => void
-  onPagamentoValorChange: (index: number, valor: number) => void
-  onAdicionarPagamento: () => void
-  onRemoverPagamento: (index: number) => void
   onValidarGerente: () => void
   onAbrirSuprimento: () => void
   onAbrirSangria: () => void
@@ -36,6 +27,8 @@ type Props = {
   maxDescontoGerentePercentual: number
   totalBruto: number
   totalDesconto: number
+  /** Parcela do desconto total explicada por preço atacado automático (varejo − atacado). */
+  economiaPrecoAtacadoAuto: number
   valorDescontoGerente: number
   totalLiquidoComGerente: number
   moedaPrefixo: string
@@ -50,32 +43,9 @@ function timeLocale(idioma: Idioma) {
   return moneyLocale(idioma)
 }
 
-function formaLabel(
-  m: Mensagens,
-  value: FinalizarVendaInput["formaPagamento"],
-): string {
-  switch (value) {
-    case "DINHEIRO":
-      return m.pdv.dinheiro
-    case "PIX":
-      return m.pdv.pix
-    case "CARTAO_DEBITO":
-      return m.pdv.cartao_debito
-    case "CARTAO_CREDITO":
-      return m.pdv.cartao_credito
-    default:
-      return value
-  }
-}
-
 export function CaixaFooter({
   m,
   idioma,
-  pagamentos,
-  onPagamentoFormaChange,
-  onPagamentoValorChange,
-  onAdicionarPagamento,
-  onRemoverPagamento,
   onValidarGerente,
   onAbrirSuprimento,
   onAbrirSangria,
@@ -94,6 +64,7 @@ export function CaixaFooter({
   maxDescontoGerentePercentual,
   totalBruto,
   totalDesconto,
+  economiaPrecoAtacadoAuto,
   valorDescontoGerente,
   totalLiquidoComGerente,
   moedaPrefixo,
@@ -119,120 +90,60 @@ export function CaixaFooter({
     <footer className="shrink-0 border-t border-border backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-card">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <div className="text-xs text-muted-foreground min-w-[22rem]">
-            <div className="mb-1">{m.pdv.pagamento} (split)</div>
-            <div className="flex flex-col gap-1">
-              {pagamentos.map((p, idx) => (
-                <div key={`pg-${idx}`} className="flex items-center gap-1">
-                  <select
-                    value={p.formaPagamento}
-                    onChange={(e) =>
-                      onPagamentoFormaChange(
-                        idx,
-                        e.target.value as FinalizarVendaInput["formaPagamento"],
-                      )
-                    }
-                    disabled={finalizando || itensLength === 0}
-                    aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: String(idx + 1) })}
-                    className="h-8 rounded-md px-2 text-xs disabled:opacity-50 bg-background border border-border text-foreground"
-                  >
-                    {FORMAS_PAGAMENTO_CAIXA.map((f) => (
-                      <option key={f} value={f}>
-                        {formaLabel(m, f)}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={p.valor}
-                    onChange={(e) => onPagamentoValorChange(idx, Number(e.target.value))}
-                    disabled={finalizando || itensLength === 0}
-                    aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: String(idx + 1) })}
-                    className="h-8 w-24 rounded-md px-2 text-xs disabled:opacity-50 bg-background border border-border text-foreground"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => onRemoverPagamento(idx)}
-                    disabled={finalizando || itensLength === 0 || pagamentos.length <= 1}
-                    aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: String(idx + 1) })}
-                    className="h-8 px-2 rounded-md text-xs disabled:opacity-50 bg-red-900/30 text-red-300 border border-red-700"
-                  >
-                    -
-                  </button>
-                  {idx === pagamentos.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={onAdicionarPagamento}
-                      disabled={finalizando || itensLength === 0 || pagamentos.length >= 4}
-                      aria-label={m.caixa.aria_adicionar_parcela}
-                      className="h-8 px-2 rounded-md text-xs disabled:opacity-50 bg-secondary text-secondary-foreground border border-border"
-                    >
-                      +
-                    </button>
-                  )}
-                </div>
-              ))}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-foreground/80">{m.caixa.bloco_operacao_atual}</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="bg-secondary text-secondary-foreground border border-border"
+                onClick={onAbrirSuprimento}
+                disabled={!caixaAberto || movimentandoCaixa || finalizando}
+                aria-busy={movimentandoCaixa}
+                title="Ctrl+Shift+S"
+              >
+                {m.caixa.suprimento} (+)
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="bg-red-900/30 text-red-300 border border-red-700"
+                onClick={onAbrirSangria}
+                disabled={!caixaAberto || movimentandoCaixa || finalizando}
+                aria-busy={movimentandoCaixa}
+                title="Ctrl+Shift+R"
+              >
+                {m.caixa.sangria} (-)
+              </Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="bg-secondary text-secondary-foreground border border-border"
-              onClick={onAbrirSuprimento}
-              disabled={!caixaAberto || movimentandoCaixa || finalizando}
-              aria-busy={movimentandoCaixa}
-              title="Ctrl+Shift+S"
-            >
-              {m.caixa.suprimento} (+)
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="bg-red-900/30 text-red-300 border border-red-700"
-              onClick={onAbrirSangria}
-              disabled={!caixaAberto || movimentandoCaixa || finalizando}
-              aria-busy={movimentandoCaixa}
-              title="Ctrl+Shift+R"
-            >
-              {m.caixa.sangria} (-)
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="inline-flex items-center gap-2 bg-yellow-900/30 text-yellow-400 border border-yellow-700"
-              onClick={onValidarGerente}
-              disabled={validandoGerente || movimentandoCaixa}
-              aria-busy={validandoGerente}
-            >
-              {!gerenteValidadoAte ? (
-                <ImperialSealIcon
-                  className="h-4 w-4 shrink-0 app-accent-text"
-                  title={m.caixa.aria_selo_gerente}
-                  pulse
-                />
-              ) : null}
-              {validandoGerente
-                ? m.caixa.validando_gerente
-                : m.caixa.validar_gerente}
-            </Button>
-            <Button
-              type="button"
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={onFinalizar}
-              disabled={
-                finalizando || itensLength === 0 || buscando || carregandoRegras
-              }
-              aria-busy={finalizando}
-            >
-              {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
-            </Button>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-foreground/80">{m.caixa.bloco_autorizacao}</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="inline-flex items-center gap-2 bg-yellow-900/30 text-yellow-400 border border-yellow-700"
+                onClick={onValidarGerente}
+                disabled={validandoGerente || movimentandoCaixa}
+                aria-busy={validandoGerente}
+              >
+                {!gerenteValidadoAte ? (
+                  <ImperialSealIcon
+                    className="h-4 w-4 shrink-0 app-accent-text"
+                    title={m.caixa.aria_selo_gerente}
+                    pulse
+                  />
+                ) : null}
+                {validandoGerente
+                  ? m.caixa.validando_gerente
+                  : m.caixa.validar_gerente}
+              </Button>
+            </div>
           </div>
-          <span className="text-xs text-muted-foreground">{resumoItens}</span>
+          <span className="text-sm text-foreground/85">{resumoItens}</span>
           {gerenteLinha && (
-            <span className="inline-flex items-center gap-2 text-xs text-primary">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
               <ImperialSealIcon
                 className="h-5 w-5 shrink-0 text-[color:var(--caixa-imperial-red,#b91c1c)]"
                 title={m.caixa.aria_selo_gerente}
@@ -242,40 +153,63 @@ export function CaixaFooter({
           )}
         </div>
 
-        <div className="flex flex-wrap justify-end gap-4 sm:gap-6 md:gap-8">
-          <div className="text-right text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-6 md:gap-8">
+          <div className="w-full text-right text-xs font-semibold uppercase tracking-wide text-foreground/70">
+            {m.caixa.bloco_resumo_financeiro}
+          </div>
+          <div className="text-right text-sm text-foreground/85">
             <div>{m.caixa.bruto}</div>
-            <div className="text-base font-semibold tabular-nums">
+            <div className="text-lg font-semibold tabular-nums text-foreground">
               {moedaPrefixo} {fmt(totalBruto)}
             </div>
           </div>
-          <div className="text-right text-xs text-primary">
+          <div className="text-right text-sm text-primary">
             <div>{m.caixa.descontos_regras}</div>
-            <div className="text-base font-semibold tabular-nums">
+            <div className="text-lg font-bold tabular-nums">
               - {moedaPrefixo} {fmt(totalDesconto)}
             </div>
+            {economiaPrecoAtacadoAuto > 0.005 && (
+              <div className="text-xs font-normal text-foreground/80 mt-0.5 max-w-[14rem] ml-auto">
+                {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
+                  valor: fmt(economiaPrecoAtacadoAuto),
+                })}
+              </div>
+            )}
           </div>
           {descontoGerentePercentual > 0 && (
-            <div className="text-right text-xs text-primary">
+            <div className="text-right text-sm text-primary">
               <div>
                 {caixaFmt(m.caixa.desconto_gerente_label, {
                   pct: descontoGerentePercentual.toFixed(2),
                 })}
               </div>
-              <div className="text-base font-semibold tabular-nums">
+              <div className="text-lg font-bold tabular-nums">
                 - {moedaPrefixo} {fmt(valorDescontoGerente)}
               </div>
             </div>
           )}
           <div className="text-right min-w-[7rem]">
-            <div className="text-xs text-muted-foreground">{m.caixa.total_pagar}</div>
+            <div className="text-sm font-medium text-foreground/90">{m.caixa.total_pagar}</div>
             <div
               data-testid="caixa-total-liquido"
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-xl sm:text-2xl font-bold tabular-nums text-primary"
+              className="text-2xl sm:text-3xl font-extrabold tabular-nums text-primary"
             >
               {moedaPrefixo} {fmt(totalLiquidoComGerente)}
             </div>
+          </div>
+          <div className="pl-1">
+            <Button
+              type="button"
+              className="h-11 min-w-[11rem] bg-primary text-primary-foreground text-base font-bold hover:bg-primary/90"
+              onClick={onFinalizar}
+              disabled={
+                finalizando || itensLength === 0 || buscando || carregandoRegras
+              }
+              aria-busy={finalizando}
+            >
+              {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
+            </Button>
           </div>
         </div>
       </div>

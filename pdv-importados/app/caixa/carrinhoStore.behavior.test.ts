@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useCarrinhoStore } from '@/stores/carrinhoStore'
-import { DEFAULT_PRICING_CONTEXT } from '@/shared/pricing/types'
+import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 
 const memoryStorage = (() => {
   const data = new Map<string, string>()
@@ -107,6 +107,52 @@ describe('useCarrinhoStore behavior', () => {
     expect(state.itens[0]?.resultado.precoUnitario).toBe(0)
     expect(state.itens[0]?.resultado.tipoPreco).toBe('MANUAL')
     expect(state.totalLiquido).toBe(0)
+  })
+
+  it('sincronizarPrecoCalculadoRpc aplica atacado mantendo referência de varejo', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 6,
+      precoUnitario: 100,
+      precoOriginal: 100,
+      metaPdv: { precoVarejoReferencia: 100 },
+    })
+    useCarrinhoStore.getState().sincronizarPrecoCalculadoRpc('linha-1', {
+      precoUnitario: 80,
+      tipoPreco: 'ATACADO',
+    })
+    const it = useCarrinhoStore.getState().itens[0]
+    expect(it?.resultado.tipoPreco).toBe('ATACADO')
+    expect(it?.resultado.precoOriginal).toBe(100)
+    expect(it?.resultado.precoUnitario).toBe(80)
+    expect(it?.resultado.descontoUnitario).toBe(20)
+    expect(useCarrinhoStore.getState().totalDesconto).toBe(120)
+  })
+
+  it('sincronizarPrecoCalculadoRpc ignora linha MANUAL', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 2,
+      precoUnitario: 8,
+      precoOriginal: 10,
+      resultado: {
+        precoUnitario: 8,
+        precoOriginal: 10,
+        descontoUnitario: 2,
+        tipoPreco: 'MANUAL',
+      },
+    })
+    useCarrinhoStore.getState().sincronizarPrecoCalculadoRpc('linha-1', {
+      precoUnitario: 5,
+      tipoPreco: 'ATACADO',
+    })
+    const it = useCarrinhoStore.getState().itens[0]
+    expect(it?.resultado.tipoPreco).toBe('MANUAL')
+    expect(it?.resultado.precoUnitario).toBe(8)
   })
 
   it('setCartOwnerForSession atribui dono quando carrinho vazio', () => {

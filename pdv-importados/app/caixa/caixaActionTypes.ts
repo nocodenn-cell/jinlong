@@ -1,5 +1,5 @@
-import type { RegraPreco } from '@/shared/pricing/types'
-import type { PricingContext } from '@/shared/pricing/types'
+import type { RegraPreco } from '@shared/pricing/types'
+import type { PricingContext } from '@shared/pricing/types'
 
 export type OrigemProdutoCaixa = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
 
@@ -37,6 +37,10 @@ export type BuscarProdutoResult =
   | { ok: true; status: 'encontrado'; produto: ProdutoCaixaDTO }
   | { ok: true; status: 'nao_encontrado' }
   | { ok: true; status: 'ambiguo'; mensagem: string }
+  | { ok: false; error: string }
+
+export type CalcularPrecoProdutoCaixaResult =
+  | { ok: true; preco: number; tipo: 'VAREJO' | 'ATACADO' }
   | { ok: false; error: string }
 
 export type ValidarGerenteDescontoResult =

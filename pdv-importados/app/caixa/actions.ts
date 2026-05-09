@@ -5,6 +5,7 @@ import type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
   BuscarProdutoResult,
+  CalcularPrecoProdutoCaixaResult,
   CancelarVendaResult,
   CarregarRegrasResult,
   CaixaStatusOperadorResult,
@@ -23,6 +24,7 @@ import {
   carregarRegrasPrecoCaixaImpl,
   listarCategoriasAtalhoCaixaImpl,
 } from '@/app/caixa/server/caixaCatalogo.impl'
+import { calcularPrecoProdutoCaixaImpl } from '@/app/caixa/server/caixaPrecoProduto.impl'
 import { obterCotacaoUsdBrlImpl } from '@/app/caixa/server/caixaCambioServer'
 import {
   cancelarVendaImpl,
@@ -50,6 +52,7 @@ export type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
   BuscarProdutoResult,
+  CalcularPrecoProdutoCaixaResult,
   CancelarVendaResult,
   CarregarRegrasResult,
   CaixaStatusOperadorResult,
@@ -84,6 +87,15 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
  */
 export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdutoResult> {
   return buscarProdutoParaCaixaImpl(termo)
+}
+
+/** Preço unitário (varejo ou atacado) para a quantidade atual no carrinho, via RPC `calcular_preco_produto`. */
+export async function calcularPrecoProdutoCaixa(input: {
+  produtoId: string
+  quantidade: number
+  lojaId?: string | null
+}): Promise<CalcularPrecoProdutoCaixaResult> {
+  return calcularPrecoProdutoCaixaImpl(input)
 }
 
 /** Categorias para atalhos de busca no campo principal (preenchimento + Enter). */

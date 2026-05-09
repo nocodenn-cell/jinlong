@@ -100,7 +100,12 @@
     "tooltip_origem_brasil_nf": "本土 — 有发票。",
     "tooltip_origem_brasil_sem_nf": "本土 — 无发票。",
     "preco_invalido": "请输入有效的零售价。",
-    "preco_maior_zero": "价格必须大于零。"
+    "preco_maior_zero": "价格必须大于零。",
+    "mais_vendidos": "热卖产品",
+    "estoque_baixo": "库存不足产品",
+    "tabela_cabecalho": ["产品", "SKU", "销量", "销售额", "当前库存"],
+    "estoque_critico": "库存紧张",
+    "sem_produtos": "暂无产品"
   },
   "precos": {
     "titulo": "价格规则",
@@ -137,6 +142,11 @@
     "pagamento_dinheiro": "现金",
     "pagamento_pix": "PIX",
     "pagamento_cartao": "银行卡",
+    "forma_cartao_debito": "借记卡",
+    "forma_cartao_credito": "信用卡",
+    "forma_outros": "其他",
+    "venda_status_concluida": "已完成",
+    "venda_status_cancelada": "已取消",
     "sem_pagamentos_hoje": "今日暂无已完成支付",
     "atalhos_modulos": "模块",
     "vendas_recentes_link": "查看最近销售",
@@ -490,17 +500,11 @@
     "modal_confirmacao_cancelar_titulo": "确认取消",
     "estoque_baixo": "注意：库存偏低或为零。",
     "estoque_abaixo_minimo": "注意：库存已达到或低于最低线。",
-    "estoque_dica_rep": "进口补货通常需数周，请提前计划。",
     "origem_china_manual": "中国（手工）",
     "origem_brasil_nf": "巴西（有发票）",
     "origem_brasil_sem_nf": "巴西（无发票）",
     "badge_nf": "有发票",
     "badge_sem_nf": "无发票",
-    "obs_titulo": "备注",
-    "estoque_resumo": "库存：{{atual}} · 最低 {{min}}",
-    "estoque_resumo_sem_min": "库存：{{atual}}",
-    "alerta_estoque_min": "低于最低线",
-    "alerta_rep_import": "进口补货请考虑交期。",
     "cambio_carregando": "美元汇率…",
     "cambio_usd": "USD 1 ≈ R$ {{valor}} · {{data}}",
     "cambio_usd_fallback": "USD 1 ≈ R$ {{valor}} · 内部参考（{{data}}）",
@@ -514,6 +518,7 @@
     "total_pagar": "应付合计",
     "bruto": "原价",
     "descontos_regras": "折扣（批发/手工）",
+    "economia_atacado_por_quantidade": "含按数量批发价优惠：{{valor}}",
     "desconto_gerente_label": "经理折扣 ({{pct}}%)",
     "gerente_valido_ate": "经理授权至 {{hora}} · {{pct}}%（最高 {{max}}%）",
     "empty_guardiao": "守护龙等待第一件商品。",
@@ -604,7 +609,15 @@
     "aria_parcela_valor": "第 {{n}} 笔金额（¥）",
     "aria_remover_parcela": "删除第 {{n}} 笔",
     "aria_adicionar_parcela": "添加付款笔数",
-    "aria_qtde_item": "数量 — {{nome}}"
+    "aria_qtde_item": "数量 — {{nome}}",
+    "aria_qtde_aumentar": "增加 1 件 — {{nome}}",
+    "aria_qtde_diminuir": "减少 1 件 — {{nome}}",
+    "fechamento": "收银结算",
+    "resumo": "今日收银总结",
+    "tabela_cabecalho": ["收银员", "开启金额", "销售额", "抽款", "补款", "结算金额", "状态"],
+    "divergencia_alerta": "差异金额 R$ {diferenca} 超过限额",
+    "status_aberto": "开启",
+    "status_fechado": "已结算"
   },
   "pdv": {
     "scan_placeholder": "扫描条形码或输入商品名...",
@@ -752,21 +765,6 @@
     "filtro_data_fim": "结束日期",
     "filtro_operador": "销售人员",
     "exportar_csv": "导出CSV"
-  },
-  "produtos": {
-    "mais_vendidos": "热卖产品",
-    "estoque_baixo": "库存不足产品",
-    "tabela_cabecalho": ["产品", "SKU", "销量", "销售额", "当前库存"],
-    "estoque_critico": "库存紧张",
-    "sem_produtos": "暂无产品"
-  },
-  "caixa": {
-    "fechamento": "收银结算",
-    "resumo": "今日收银总结",
-    "tabela_cabecalho": ["收银员", "开启金额", "销售额", "抽款", "补款", "结算金额", "状态"],
-    "divergencia_alerta": "差异金额 R$ {diferenca} 超过限额",
-    "status_aberto": "开启",
-    "status_fechado": "已结算"
   },
   "alertas": {
     "titulo": "智能警报",
