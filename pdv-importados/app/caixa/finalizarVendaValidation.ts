@@ -17,6 +17,8 @@ function quantidadeAte3CasasDecimais(n: number): boolean {
   return Math.abs(n - r) < 1e-9
 }
 
+export const TIPO_PRECO_ITEM_FINALIZAR = ['VAREJO', 'ATACADO', 'MANUAL', 'PROMOCAO'] as const
+
 export const itemFinalizarVendaSchema = z.object({
   produtoId: z.string().uuid('Identificador do produto inválido.'),
   quantidade: z
@@ -25,6 +27,12 @@ export const itemFinalizarVendaSchema = z.object({
     .refine(quantidadeAte3CasasDecimais, {
       message: 'Use no máximo 3 casas decimais na quantidade (ex.: balança 0,125 kg).',
     }),
+  /** Referência de varejo (ex.: bruto da linha); para ATACADO costuma ser o preço de tabela varejo. */
+  precoOriginal: z.number().nonnegative('preço original inválido.'),
+  precoUnitario: z.number().nonnegative('preço unitário inválido.'),
+  tipoPreco: z.enum(TIPO_PRECO_ITEM_FINALIZAR, {
+    errorMap: () => ({ message: 'Tipo de preço do item inválido.' }),
+  }),
 })
 
 export const pagamentoParcelaSchema = z.object({

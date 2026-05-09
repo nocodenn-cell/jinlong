@@ -139,6 +139,18 @@ function makeSupabase(opts?: { caixaAberto?: boolean }) {
     from: vi.fn((table: string) => new QueryBuilder(table, state)),
     rpc: vi.fn((name: string, params: Record<string, unknown>) => {
       rpcCalls.push({ name, params })
+      if (name === 'calcular_preco_produto') {
+        return Promise.resolve({
+          data: { preco: 10, tipo: 'VAREJO' },
+          error: null,
+        })
+      }
+      if (name === 'finalizar_venda_transacional_canonica_v3') {
+        return Promise.resolve({
+          data: [{ venda_id: '66666666-6666-6666-8666-666666666666', status: 'CONCLUIDA' }],
+          error: null,
+        })
+      }
       return Promise.resolve({ data: {}, error: null })
     }),
   }
@@ -153,7 +165,15 @@ function payloadBase(): FinalizarVendaInput {
       { formaPagamento: 'DINHEIRO', valor: 20 },
       { formaPagamento: 'PIX', valor: 10 },
     ],
-    itens: [{ produtoId: '11111111-1111-1111-1111-111111111111', quantidade: 3 }],
+    itens: [
+      {
+        produtoId: '11111111-1111-1111-1111-111111111111',
+        quantidade: 3,
+        precoOriginal: 10,
+        precoUnitario: 10,
+        tipoPreco: 'VAREJO',
+      },
+    ],
     totalBruto: 30,
     totalDesconto: 0,
     totalLiquido: 30,
@@ -198,7 +218,7 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
       vendaId: '66666666-6666-6666-8666-666666666666',
     })
 
-    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v2')
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v3')
     expect(txCall).toBeTruthy()
     expect(txCall?.params.p_pagamentos).toEqual([
       { forma_pagamento: 'DINHEIRO', valor: 20 },

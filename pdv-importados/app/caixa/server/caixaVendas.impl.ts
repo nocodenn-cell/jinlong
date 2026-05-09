@@ -20,6 +20,7 @@ import {
   recalcularItensNoServidor,
 } from '@/app/caixa/server/caixaActionsInternals'
 import { getDeviceFingerprint } from '@/lib/security/deviceFingerprint'
+import { getCaixaSalesRuntimeConfig } from '@/lib/config/caixaSalesRuntimeConfig'
 
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
@@ -81,6 +82,19 @@ export async function finalizarVendaCaixaImpl(
   }
   const input = parsed.data
   try {
+    const runtimeCfg = getCaixaSalesRuntimeConfig()
+    if (runtimeCfg.hasInvalidFlags) {
+      console.error('[caixa.finalizar_venda.flag_invalida]', {
+        invalidFlags: runtimeCfg.invalidFlags,
+        source: runtimeCfg.source,
+      })
+      return {
+        ok: false,
+        error:
+          'Configuração de ambiente inválida para finalização de venda. Revise USE_UNIFIED_SALES_FLOW, STRICT_MANAGER_DISCOUNT_AUTH e AUTO_ENQUEUE_FISCAL_ON_SALE.',
+      }
+    }
+
     const supabase = await createClient()
     const {
       data: { user },
@@ -89,8 +103,14 @@ export async function finalizarVendaCaixaImpl(
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
 
-    const itensCliente = input.itens.map((i) => ({ produtoId: i.produtoId, quantidade: i.quantidade }))
-    const recalc = await recalcularItensNoServidor(supabase, itensCliente)
+    const itensCliente = input.itens.map((i) => ({
+      produtoId: i.produtoId,
+      quantidade: i.quantidade,
+      precoOriginal: i.precoOriginal,
+      precoUnitario: i.precoUnitario,
+      tipoPreco: i.tipoPreco,
+    }))
+    const recalc = await recalcularItensNoServidor(supabase, itensCliente, lojaId)
     if (!recalc.ok) return { ok: false, error: recalc.error }
     const itensAut = recalc.itens
 
@@ -133,7 +153,7 @@ export async function finalizarVendaCaixaImpl(
     }
     const caixaId = caixaExistente.id
 
-    const useUnifiedSalesFlow = process.env.USE_UNIFIED_SALES_FLOW === 'true'
+    const useUnifiedSalesFlow = runtimeCfg.useUnifiedSalesFlow
     if (!useUnifiedSalesFlow && input.pagamentos.length > 1) {
       return {
         ok: false,
@@ -163,7 +183,7 @@ export async function finalizarVendaCaixaImpl(
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
 
     // Usar nova RPC unificada com transação atômica
-    const strictManagerDiscountAuth = process.env.STRICT_MANAGER_DISCOUNT_AUTH === 'true'
+    const strictManagerDiscountAuth = runtimeCfg.strictManagerDiscountAuth
     const { data, error: txErr } = await supabase.rpc('finalizar_venda_transacional_canonica_v3', {
       p_venda_id: vendaId,
       p_caixa_id: caixaId,
@@ -183,7 +203,7 @@ export async function finalizarVendaCaixaImpl(
       p_desconto_gerente_token: input.descontoGerenteToken ?? null,
       p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
       p_strict_manager_discount_auth: strictManagerDiscountAuth,
-      p_fiscal_auto_enqueue: process.env.AUTO_ENQUEUE_FISCAL_ON_SALE === 'true',
+      p_fiscal_auto_enqueue: runtimeCfg.autoEnqueueFiscalOnSale,
       p_ip_address: ipAddress,
       p_user_agent: userAgent,
       p_device_id: getDeviceFingerprint(),
@@ -191,6 +211,11 @@ export async function finalizarVendaCaixaImpl(
     })
 
     if (txErr) {
+      console.warn('[caixa.finalizar_venda.rpc_error]', {
+        useUnifiedSalesFlow: runtimeCfg.useUnifiedSalesFlow,
+        strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
+        autoEnqueueFiscalOnSale: runtimeCfg.autoEnqueueFiscalOnSale,
+      })
       // Transação inteira foi revertida automaticamente pelo PostgreSQL
       return { ok: false, error: mensagemErroComSecao('Finalização da venda', txErr.message) }
     }

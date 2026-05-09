@@ -573,6 +573,9 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
+          precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
+          precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
+          tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
         })),
       }
       const res = await finalizarVendaCaixa(payload)

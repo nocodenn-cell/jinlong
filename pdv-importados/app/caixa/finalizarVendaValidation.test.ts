@@ -9,6 +9,9 @@ import {
 const itemBase = {
   produtoId: '550e8400-e29b-41d4-a716-446655440000',
   quantidade: 2,
+  precoOriginal: 10,
+  precoUnitario: 10,
+  tipoPreco: 'VAREJO' as const,
 }
 
 const itemPrecificadoBase = {
