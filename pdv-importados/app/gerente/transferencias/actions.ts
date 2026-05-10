@@ -4,10 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
-
-type R =
-  | { success: true; transferenciaId: string }
-  | { success: false; error: string }
+import {
+  actionFail,
+  runServerActionWithObservability,
+  type ActionResult,
+} from '@/lib/observability/runServerAction'
 
 export async function executarTransferencia(input: {
   loja_origem_id: string
@@ -16,57 +17,65 @@ export async function executarTransferencia(input: {
   quantidade: number
   observacao?: string
   idempotency_key: string
-}): Promise<R> {
+}): Promise<ActionResult<{ transferenciaId: string }>> {
   const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
+  if (!auth.ok) return actionFail(auth.error, { errorCode: 'UNAUTHORIZED' })
 
   if (input.loja_origem_id === input.loja_destino_id) {
-    return { success: false, error: 'Lojas origem e destino devem ser diferentes.' }
+    return actionFail('Lojas origem e destino devem ser diferentes.', { errorCode: 'VALIDATION_FAILED' })
   }
   if (!input.quantidade || input.quantidade <= 0) {
-    return { success: false, error: 'Quantidade inválida.' }
+    return actionFail('Quantidade inválida.', { errorCode: 'VALIDATION_FAILED' })
   }
   if (!input.idempotency_key?.trim()) {
-    return { success: false, error: 'Chave de idempotência ausente.' }
+    return actionFail('Chave de idempotência ausente.', { errorCode: 'VALIDATION_FAILED' })
   }
 
   const supabase = await createClient()
   const estoqueAtual = await obterEstoqueDisponivelTransferencia(input.loja_origem_id, input.produto_id)
-  if (!estoqueAtual.success) return estoqueAtual
+  if (!estoqueAtual.success) return actionFail(estoqueAtual.error, { errorCode: 'VALIDATION_FAILED' })
 
   const quantidade = Number(input.quantidade)
   if (estoqueAtual.quantidadeDisponivel < quantidade) {
-    return {
-      success: false,
-      error: `Saldo insuficiente na origem. Disponível: ${estoqueAtual.quantidadeDisponivel.toFixed(3)}, solicitado: ${quantidade.toFixed(3)}.`,
-    }
+    return actionFail(
+      `Saldo insuficiente na origem. Disponível: ${estoqueAtual.quantidadeDisponivel.toFixed(3)}, solicitado: ${quantidade.toFixed(3)}.`,
+      { errorCode: 'VALIDATION_FAILED' },
+    )
   }
   if (quantidade > estoqueAtual.limiteObservacao && !input.observacao?.trim()) {
-    return {
-      success: false,
-      error: `Observação obrigatória para transferências acima de ${estoqueAtual.limiteObservacao.toFixed(3)} unidades.`,
-    }
+    return actionFail(
+      `Observação obrigatória para transferências acima de ${estoqueAtual.limiteObservacao.toFixed(3)} unidades.`,
+      { errorCode: 'VALIDATION_FAILED' },
+    )
   }
 
-  const { data, error } = await supabase.rpc('transferir_estoque_seguro', {
-    p_loja_origem: input.loja_origem_id,
-    p_loja_destino: input.loja_destino_id,
-    p_produto_id: input.produto_id,
-    p_quantidade: quantidade,
-    p_observacao: input.observacao?.trim() || null,
-    p_idempotency_key: input.idempotency_key.trim(),
-    p_saldo_esperado: estoqueAtual.quantidadeDisponivel,
-  })
-  if (error) return { success: false, error: mensagemErroComSecao('Transferência de estoque', error.message) }
+  return runServerActionWithObservability(
+    'gerente/transferencia/executar',
+    async () => {
+      const { data, error } = await supabase.rpc('transferir_estoque_seguro', {
+        p_loja_origem: input.loja_origem_id,
+        p_loja_destino: input.loja_destino_id,
+        p_produto_id: input.produto_id,
+        p_quantidade: quantidade,
+        p_observacao: input.observacao?.trim() || null,
+        p_idempotency_key: input.idempotency_key.trim(),
+        p_saldo_esperado: estoqueAtual.quantidadeDisponivel,
+      })
+      if (error) {
+        throw new Error(mensagemErroComSecao('Transferência de estoque', error.message))
+      }
 
-  const transferenciaId = typeof data === 'string' ? data : null
-  if (!transferenciaId) {
-    return { success: false, error: 'Falha ao concluir transferência: ID não retornado.' }
-  }
+      const transferenciaId = typeof data === 'string' ? data : null
+      if (!transferenciaId) {
+        throw new Error('Falha ao concluir transferência: ID não retornado.')
+      }
 
-  revalidatePath('/gerente/transferencias')
-  revalidatePath('/gerente/estoque')
-  return { success: true, transferenciaId }
+      revalidatePath('/gerente/transferencias')
+      revalidatePath('/gerente/estoque')
+      return { transferenciaId }
+    },
+    'transferir_estoque_seguro',
+  )
 }
 
 /** Quantidade atual na origem (para validação de UI antes da RPC). */

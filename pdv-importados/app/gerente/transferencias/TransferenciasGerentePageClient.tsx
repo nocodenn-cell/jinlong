@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
+import { transferenciaActionResultToLegacy } from '@/lib/observability/actionResultAdapters'
 import { executarTransferencia, obterEstoqueDisponivelTransferencia } from './actions'
 import { caixaFmt } from '@/app/caixa/caixaI18n'
 
@@ -85,7 +86,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
       observacao: string
       idempotency_key: string
     }) => {
-      const r = await executarTransferencia({
+      const raw = await executarTransferencia({
         loja_origem_id: p.loja_origem_id,
         loja_destino_id: p.loja_destino_id,
         produto_id: p.produto_id,
@@ -93,6 +94,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
         observacao: p.observacao || undefined,
         idempotency_key: p.idempotency_key,
       })
+      const r = transferenciaActionResultToLegacy(raw)
       if (!r.success) throw new Error(r.error)
       refetch()
       return r

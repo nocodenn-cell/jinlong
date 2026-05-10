@@ -8,10 +8,15 @@ import {
   mensagemErroComSecao,
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
+import {
+  actionFail,
+  runServerActionWithObservability,
+  type ActionResult,
+} from '@/lib/observability/runServerAction'
 import { AtualizarEstoqueSchema, ProdutoIdSchema } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
-type ActionResult<T = null> =
+type LegacyEstoqueMutationResult<T = null> =
   | { success: true; data: T }
   | { success: false; error: string }
 
@@ -29,45 +34,51 @@ async function lojaIdDoUsuarioLogado(): Promise<string | null> {
   return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
 }
 
-export async function atualizarEstoqueProduto(
-  input: unknown
-): Promise<ActionResult> {
+export async function atualizarEstoqueProduto(input: unknown): Promise<ActionResult<null>> {
   const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
+  if (!auth.ok) return actionFail(auth.error, { errorCode: 'UNAUTHORIZED' })
 
   const parsed = AtualizarEstoqueSchema.safeParse(input)
   if (!parsed.success) {
     const msg = parsed.error.issues.map((i) => i.message).join('; ')
     const { idioma } = await getUsuarioIdioma()
-    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
+    return actionFail(mensagemErroValidacaoZod(msg, idioma), { errorCode: 'VALIDATION_FAILED' })
   }
 
   const supabase = await createClient()
   const lojaId = await lojaIdDoUsuarioLogado()
-  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
-
-  const observacao = parsed.data.observacao?.trim() || null
-  const { error } = await supabase.rpc('ajustar_estoque_manual', {
-    p_produto_id: parsed.data.produto_id,
-    p_loja_id: lojaId,
-    p_quantidade_atual: parsed.data.quantidade_atual,
-    p_estoque_minimo: parsed.data.estoque_minimo,
-    p_motivo_codigo: parsed.data.motivo,
-    p_observacao: observacao,
-  })
-
-  if (error) {
-    return { success: false, error: mensagemErroComSecao('Estoque', error.message) }
+  if (!lojaId) {
+    return actionFail('Não foi possível identificar sua loja. Faça login novamente.', {
+      errorCode: 'UNAUTHORIZED',
+    })
   }
 
-  revalidatePath('/gerente/estoque')
-  return { success: true, data: null }
+  const observacao = parsed.data.observacao?.trim() || null
+  return runServerActionWithObservability(
+    'gerente/estoque/atualizar',
+    async () => {
+      const { error } = await supabase.rpc('ajustar_estoque_manual', {
+        p_produto_id: parsed.data.produto_id,
+        p_loja_id: lojaId,
+        p_quantidade_atual: parsed.data.quantidade_atual,
+        p_estoque_minimo: parsed.data.estoque_minimo,
+        p_motivo_codigo: parsed.data.motivo,
+        p_observacao: observacao,
+      })
+      if (error) {
+        throw new Error(mensagemErroComSecao('Estoque', error.message))
+      }
+      revalidatePath('/gerente/estoque')
+      return null
+    },
+    'ajustar_estoque_manual',
+  )
 }
 
 /**
  * Produtos legados sem linha em `estoque`: cria registro inicial (0 / 0).
  */
-export async function garantirLinhaEstoque(input: unknown): Promise<ActionResult> {
+export async function garantirLinhaEstoque(input: unknown): Promise<LegacyEstoqueMutationResult> {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -215,7 +226,7 @@ export async function obterDadosEstoqueGerente(filtro: 'todos' | 'baixo'): Promi
 
 export async function atualizarEstoqueProdutoThrow(input: unknown): Promise<void> {
   const r = await atualizarEstoqueProduto(input)
-  if (!r.success) throw new Error(r.error)
+  if (!r.ok) throw new Error(r.error)
 }
 
 export async function garantirLinhaEstoqueThrow(input: unknown): Promise<void> {
