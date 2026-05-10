@@ -11,7 +11,7 @@ export default async function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-950 text-slate-400 text-sm gap-3">
+        <div className="login-premium-root flex min-h-[100dvh] flex-col items-center justify-center gap-3 bg-black text-sm text-[#bfa76a]/80">
           <DragonOuroLoader iconClassName="h-6 w-6" />
           <span>{messages.login.carregando_pagina}</span>
         </div>

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import { Logo } from '@/components/branding/Logo'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import type { Mensagens } from '@/i18n/getMessages'
 
@@ -123,69 +122,85 @@ export function LoginForm({ messages: m }: Props) {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-950 px-4 py-10 text-slate-100 login-brand-stage">
-      <div className="w-full max-w-[380px] flex flex-col items-center">
-        <div className="mb-5 flex flex-col items-center justify-center">
-          <div className="dragon-login-symbol-wrap">
-            <Image
-              src="/branding/dragon-brand-mark.png"
-              alt="Símbolo principal da marca Jīn Lóng"
-              width={320}
-              height={460}
-              priority
-              className="dragon-hero-mark h-[236px] w-auto sm:h-[274px]"
-            />
+    <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center bg-black px-4 pb-12 pt-8 sm:pb-16 sm:pt-10">
+      <div className="login-premium-art-wrap flex w-full max-w-3xl flex-col items-center">
+        <div className="login-premium-dragon-frame w-full">
+          <div className="login-premium-dragon-outer relative mx-auto h-[min(68vh,680px)] w-full max-w-[min(92vw,520px)] sm:h-[min(72vh,720px)]">
+            <div className="login-premium-dragon-media relative h-full w-full">
+              <Image
+                src="/branding/dragon-jinlong-login-hero-transparent.png"
+                alt={L.nav_marca}
+                fill
+                priority
+                sizes="(max-width: 640px) 88vw, 500px"
+                className="login-premium-dragon-img object-contain object-center"
+              />
+              <div className="login-premium-vignette" aria-hidden />
+            </div>
           </div>
         </div>
 
-        <div className="mb-8 text-center w-full">
-          <Logo variant="wordmark" logoSubtitle={m.brand.logo_subtitle} />
-          <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-amber-300/45 to-transparent" />
-        </div>
+        <h1 className="login-premium-wordmark mt-5 max-w-md text-center text-base leading-snug sm:mt-6 sm:text-lg">
+          <span className="inline-block">Jīn Lóng</span>
+          <span className="mx-2 inline-block align-middle text-[#bfa76a]/45" aria-hidden>
+            |
+          </span>
+          <span className="login-premium-wordmark-han inline-block align-middle">{m.brand.logo_subtitle}</span>
+        </h1>
+      </div>
 
+      <div className="login-premium-form-block mt-9 w-full max-w-[380px] sm:mt-11">
         {avisoInatividade ? (
-          <p
-            className="mb-5 w-full rounded-lg border border-sky-600/50 bg-sky-950/40 px-3 py-2.5 text-center text-sm text-sky-200"
-            role="status"
-          >
+          <p className="login-premium-inactivity mb-6 rounded-md px-3 py-2.5 text-center text-sm" role="status">
             {L.sessao_inatividade}
           </p>
         ) : null}
 
-        <form onSubmit={login} className="w-full flex flex-col gap-3 rounded-xl border p-4 app-surface app-border">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={L.email_placeholder}
-            autoComplete="username"
-            required
-            autoFocus
-            className="rounded-lg px-3 py-2.5 text-sm transition app-input"
-          />
-          <input
-            type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            placeholder={L.senha_placeholder}
-            autoComplete="current-password"
-            required
-            className="rounded-lg px-3 py-2.5 text-sm transition app-input"
-          />
+        <form onSubmit={login} className="flex w-full flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="login-email" className="login-premium-label">
+              {L.email_placeholder}
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={L.email_placeholder}
+              autoComplete="username"
+              required
+              autoFocus
+              className="login-premium-input"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="login-senha" className="login-premium-label">
+              {L.senha_placeholder}
+            </label>
+            <input
+              id="login-senha"
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder={L.senha_placeholder}
+              autoComplete="current-password"
+              required
+              className="login-premium-input"
+            />
+          </div>
           {erro ? (
-            <p className="text-center text-sm text-rose-300/90" role="alert">
+            <p className="text-center text-sm text-rose-300/95" role="alert">
               {erro}
             </p>
           ) : null}
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold shadow-[0_10px_22px_-14px_rgba(217,119,6,0.65)] transition app-btn-accent"
-            style={{ fontFamily: '"Cinzel","Noto Serif SC","Noto Serif TC","Times New Roman",serif' }}
+            className="login-premium-submit flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <DragonOuroLoader iconClassName="h-4 w-4" />
+                <DragonOuroLoader className="text-black" iconClassName="h-4 w-4 text-black" />
                 {L.entrando}
               </>
             ) : (
