@@ -56,12 +56,6 @@ export function CaixaFooterSkeleton() {
     <footer className="shrink-0 border-t backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 app-divider app-surface">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <div className="text-xs app-muted min-w-[22rem]">
-            <Skeleton width="40%" height="0.875rem" variant="text" />
-            <div className="flex flex-col gap-1 mt-1">
-              <Skeleton width="100%" height="2rem" variant="rounded" />
-            </div>
-          </div>
           <div className="flex flex-wrap gap-2">
             <Skeleton width="4rem" height="2.25rem" variant="rounded" />
             <Skeleton width="4rem" height="2.25rem" variant="rounded" />

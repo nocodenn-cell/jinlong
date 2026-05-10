@@ -17,8 +17,8 @@ export function CaixaMessageBanner({ mensagem, msgVendaOk }: CaixaMessageBannerP
     <div
       className={
         msgVendaOk
-          ? 'dragon-decreto-frame dragon-decreto-print relative overflow-hidden rounded-lg border border-emerald-700/40 bg-emerald-950/25 px-3 py-2.5 text-xs text-emerald-100'
-          : 'text-xs text-amber-300'
+          ? 'dragon-decreto-frame dragon-decreto-print relative overflow-hidden rounded-lg border border-emerald-600/60 bg-emerald-950/35 px-3 py-2.5 text-sm font-medium text-emerald-100'
+          : 'rounded-md border border-amber-500/45 bg-amber-950/25 px-3 py-2 text-sm font-medium text-amber-200'
       }
       role="status"
       aria-live="polite"

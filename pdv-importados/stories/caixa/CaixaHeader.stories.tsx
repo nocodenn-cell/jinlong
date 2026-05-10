@@ -50,8 +50,6 @@ export const Default: Story = {
       },
       pdv: {
         sair: 'Sair',
-        mostrar_tecnico: 'Mostrar Técnico',
-        ocultar_tecnico: 'Ocultar Técnico',
       },
     },
     idioma: 'pt-BR',
@@ -83,8 +81,6 @@ export const Closed: Story = {
       },
       pdv: {
         sair: 'Sair',
-        mostrar_tecnico: 'Mostrar Técnico',
-        ocultar_tecnico: 'Ocultar Técnico',
       },
     },
     idioma: 'pt-BR',
@@ -113,8 +109,6 @@ export const Loading: Story = {
       },
       pdv: {
         sair: 'Sair',
-        mostrar_tecnico: 'Mostrar Técnico',
-        ocultar_tecnico: 'Ocultar Técnico',
       },
     },
     idioma: 'pt-BR',
@@ -146,8 +140,6 @@ export const BlindClosure: Story = {
       },
       pdv: {
         sair: 'Sair',
-        mostrar_tecnico: 'Mostrar Técnico',
-        ocultar_tecnico: 'Ocultar Técnico',
       },
     },
     idioma: 'pt-BR',

@@ -8,6 +8,7 @@ type Params = {
   onFinalizar: () => void
   onFecharCaixa: () => void
   onFocarBusca: () => void
+  onNovoCupom: () => void
 }
 
 function alvoEhCampoTexto(target: EventTarget | null): boolean {
@@ -27,6 +28,7 @@ export function useCaixaKeyboardShortcuts({
   onFinalizar,
   onFecharCaixa,
   onFocarBusca,
+  onNovoCupom,
 }: Params) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,9 +56,19 @@ export function useCaixaKeyboardShortcuts({
         onFinalizar()
         return
       }
+      if (e.code === "F2") {
+        e.preventDefault()
+        onFocarBusca()
+        return
+      }
       if (e.code === "F6") {
         e.preventDefault()
         onFecharCaixa()
+        return
+      }
+      if (e.code === "F8") {
+        e.preventDefault()
+        onNovoCupom()
         return
       }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyB") {
@@ -66,5 +78,5 @@ export function useCaixaKeyboardShortcuts({
     }
     globalThis.addEventListener("keydown", onKey)
     return () => globalThis.removeEventListener("keydown", onKey)
-  }, [onFecharCaixa, onFinalizar, onFocarBusca])
+  }, [onFecharCaixa, onFinalizar, onFocarBusca, onNovoCupom])
 }

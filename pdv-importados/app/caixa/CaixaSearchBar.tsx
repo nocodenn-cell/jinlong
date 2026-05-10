@@ -17,6 +17,8 @@ type Props = {
   buscando: boolean
   carregandoRegras: boolean
   categoriasAtalho?: CategoriaChip[]
+  somAtivo: boolean
+  onToggleSom: () => void
 }
 
 export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function CaixaSearchBar(
@@ -29,11 +31,25 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     buscando,
     carregandoRegras,
     categoriasAtalho = [],
+    somAtivo,
+    onToggleSom,
   },
   ref,
 ) {
   return (
     <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-sm font-semibold text-foreground/95">
+          {m.caixa.busca_label_principal}
+        </label>
+        <button
+          type="button"
+          onClick={onToggleSom}
+          className="rounded-md border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground/90 hover:bg-accent"
+        >
+          {somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
+        </button>
+      </div>
       <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <Input
           ref={ref}
@@ -43,14 +59,20 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
           placeholder={m.caixa.busca_placeholder}
           aria-label={m.caixa.busca_placeholder}
           disabled={buscando || carregandoRegras}
-          className="flex-1 bg-background border border-border text-foreground placeholder:text-muted-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex-1 bg-background border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-amber-300"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault()
+              onCodigoChange("")
+            }
+          }}
         />
         <div className="flex gap-2 sm:shrink-0">
           <Button
             type="submit"
             disabled={buscando || carregandoRegras}
             aria-busy={buscando}
-            className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 min-w-[7rem] bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 py-2 text-sm font-medium transition-colors"
+            className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 min-w-[7rem] bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 py-2 text-base font-semibold transition-colors"
           >
             {buscando ? (
               <>
@@ -65,13 +87,13 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             type="button"
             variant="secondary"
             onClick={onNovoCupom}
-            className="flex-1 sm:flex-none bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 rounded-md px-3 py-2 text-sm font-medium transition-colors"
+            className="flex-1 sm:flex-none bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 rounded-md px-3 py-2 text-base font-semibold transition-colors"
           >
             {m.caixa.novo_cupom}
           </Button>
         </div>
       </form>
-      <p className="text-[11px] text-muted-foreground leading-snug">{m.caixa.busca_dica}</p>
+      <p className="text-sm text-foreground/85 leading-snug">{m.caixa.busca_dica}</p>
       {categoriasAtalho.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
