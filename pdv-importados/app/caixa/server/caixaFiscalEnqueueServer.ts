@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
 import type { ItemAutoritativo } from '@/app/caixa/server/caixaPrecoAutoritativoServer'
+import { getCaixaSalesRuntimeConfig } from '@/lib/config/caixaSalesRuntimeConfig'
 
 type FiscalDocType = 'NFC_E_STUB' | 'NFCE' | 'NFE'
 
@@ -23,7 +24,7 @@ export async function enfileirarDocumentoFiscalPosVenda(
     computedFinal: { totalBruto: number; totalDesconto: number; totalLiquido: number }
   },
 ): Promise<void> {
-  if (process.env.AUTO_ENQUEUE_FISCAL_ON_SALE !== 'true') return
+  if (!getCaixaSalesRuntimeConfig().autoEnqueueFiscalOnSale) return
 
   const tipoDoc = resolveFiscalDocType(process.env.FISCAL_DEFAULT_DOC_TYPE)
   const payload = {
