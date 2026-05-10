@@ -17,6 +17,7 @@ export default defineConfig({
       'src/**/*.test.tsx',
       'app/**/*.test.ts',
       'app/**/*.test.tsx',
+      '../shared-core/src/**/*.test.ts',
     ],
     globals: false,
     coverage: {
@@ -34,6 +35,7 @@ export default defineConfig({
     alias: [
       { find: '@/i18n', replacement: path.resolve(__dirname, 'src/lib/i18n') },
       { find: '@/idioma', replacement: path.resolve(__dirname, 'src/lib/idioma') },
+      { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
       { find: '@', replacement: path.resolve(__dirname, './') },
       { find: '@/shared', replacement: path.resolve(__dirname, './shared') },
     ],
