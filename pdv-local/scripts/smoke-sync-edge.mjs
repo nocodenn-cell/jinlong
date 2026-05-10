@@ -15,6 +15,7 @@ if (!fs.existsSync(envPath)) {
 const env = parseEnv(fs.readFileSync(envPath, 'utf8'))
 const endpoint = env.get('SYNC_ENDPOINT')
 const syncKey = env.get('SYNC_KEY')
+const anonKey = env.get('SUPABASE_ANON_KEY')
 if (!endpoint || !syncKey) {
   console.error('[smoke-sync] SYNC_ENDPOINT e SYNC_KEY são obrigatórios no .env.')
   process.exit(1)
@@ -27,20 +28,40 @@ async function executarSmoke() {
   const payload = `${ts}.${nonce}.${body}`
   const signature = crypto.createHmac('sha256', syncKey).update(payload).digest('hex')
 
-  const res = await fetch(endpoint, {
+  const baseHeaders = {
+    'Content-Type': 'application/json',
+    'X-SYNC-KEY': syncKey,
+    'X-SYNC-TS': ts,
+    'X-SYNC-NONCE': nonce,
+    'X-SYNC-SIGNATURE': signature,
+    'x-device-fingerprint': 'smoke-local',
+  }
+
+  let res = await fetch(endpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-SYNC-KEY': syncKey,
-      'X-SYNC-TS': ts,
-      'X-SYNC-NONCE': nonce,
-      'X-SYNC-SIGNATURE': signature,
-      'x-device-fingerprint': 'smoke-local',
-    },
+    headers: baseHeaders,
     body,
   })
+  let text = await res.text()
 
-  const text = await res.text()
+  // Alguns gateways/proxies de Functions exigem Authorization + apikey.
+  if (
+    res.status === 401 &&
+    anonKey &&
+    /authorization/i.test(text)
+  ) {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        ...baseHeaders,
+        Authorization: `Bearer ${anonKey}`,
+        apikey: anonKey,
+      },
+      body,
+    })
+    text = await res.text()
+  }
+
   let parsed = null
   let jsonInvalido = false
   try {
@@ -55,6 +76,15 @@ async function executarSmoke() {
     return
   }
   if (!res.ok || parsed?.ok !== true) {
+    if (
+      res.status === 401 &&
+      !anonKey &&
+      String(parsed?.message ?? '').toLowerCase().includes('authorization')
+    ) {
+      console.error(
+        '[smoke-sync] Endpoint exige Authorization/apikey. Defina SUPABASE_ANON_KEY no pdv-local/.env para validar esse cenário.',
+      )
+    }
     console.error('[smoke-sync] Falhou:', {
       status: res.status,
       body: parsed,

@@ -47,8 +47,7 @@ export function App() {
   const [status] = useState<'online' | 'offline'>('offline')
   const [codigo, setCodigo] = useState('')
   const [mensagem, setMensagem] = useState<string | null>(null)
-  // Estado de sync removido da UI para simplificar o MVP local-first
-  // Mantemos apenas a venda local em SQLite.
+  // Caixa local-first: vendas em SQLite; fila outbox sincroniza em background quando há caixa aberto.
 
   const {
     itens,
@@ -110,6 +109,7 @@ export function App() {
 
   const {
     outboxResumo,
+    ultimoErroOutbox,
     reprocessandoDlq,
     statusSync,
     executarSyncOutboxComMetrica,
@@ -140,6 +140,7 @@ export function App() {
     descontoGerentePercentual,
     descontoGerenteValor,
     descontoGerenteToken,
+    maxDescontoGerentePercentual,
     gerenteId,
     onSetCaixaAtualId: setCaixaAtualId,
     onSetMensagem: setMensagem,
@@ -149,7 +150,8 @@ export function App() {
     onFinalizarElapsedMs: (elapsed) =>
       setMetricaFinalizarMs((prev) => atualizarMediaMs(prev, elapsed)),
     formatarErro: mensagemErroDeExcecao,
-    logError: logger.error,
+    logError: (message, payload) =>
+      logger.error(message, (payload as Record<string, unknown> | undefined) ?? undefined),
   })
 
   useEffect(() => {
@@ -186,6 +188,14 @@ export function App() {
       nome: produto.nome,
       quantidade: 1,
       precoVariejo: produto.preco_varejo,
+      precoUnitario: produto.preco_varejo,
+      precoOriginal: produto.preco_varejo,
+      resultado: {
+        precoUnitario: produto.preco_varejo,
+        precoOriginal: produto.preco_varejo,
+        descontoUnitario: 0,
+        tipoPreco: 'VAREJO',
+      },
       categoriaId: produto.categoria_id ?? undefined,
     }
 
@@ -313,6 +323,23 @@ export function App() {
           backgroundColor: corIndicadorSync(statusSync),
         }}
       />
+
+      {tauriDisponivel && ultimoErroOutbox && (
+        <div
+          style={{
+            padding: '0.45rem 1.5rem',
+            fontSize: 12,
+            borderBottom: '1px solid #fcd34d',
+            backgroundColor: '#fffbeb',
+            color: '#92400e',
+          }}
+        >
+          <strong>Última falha de sync (fila):</strong> {ultimoErroOutbox}
+          <span style={{ marginLeft: 8, opacity: 0.85 }}>
+            (tentativas continuam em segundo plano; verifique rede, SYNC_ENDPOINT e SYNC_KEY)
+          </span>
+        </div>
+      )}
 
       {tauriDisponivel &&
         outboxResumo &&

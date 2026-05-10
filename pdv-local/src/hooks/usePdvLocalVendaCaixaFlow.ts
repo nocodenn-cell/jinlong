@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { validarPercentualPermitido } from '@core/managerDiscount/policy'
 import type { CaixaSessaoInvoke } from './usePdvLocalCatalogo'
 
 type ItemVenda = {
@@ -22,6 +23,12 @@ type Params = {
   descontoGerentePercentual: number
   descontoGerenteValor: number
   descontoGerenteToken: string | null
+  /**
+   * Teto autorizado para validação defensiva offline. Em geral provém de
+   * `defaultPdvConfig.maxDescontoGerentePercentual` ou de cache local.
+   * Quando ausente, o fluxo só valida a presença de token.
+   */
+  maxDescontoGerentePercentual?: number
   gerenteId: string
   onSetCaixaAtualId: (id: string | null) => void
   onSetMensagem: (msg: string) => void
@@ -43,6 +50,7 @@ export function usePdvLocalVendaCaixaFlow({
   descontoGerentePercentual,
   descontoGerenteValor,
   descontoGerenteToken,
+  maxDescontoGerentePercentual,
   gerenteId,
   onSetCaixaAtualId,
   onSetMensagem,
@@ -133,6 +141,27 @@ export function usePdvLocalVendaCaixaFlow({
       return
     }
 
+    if (descontoGerentePercentual > 0) {
+      if (!descontoGerenteToken) {
+        onSetMensagem('Desconto de gerente sem autorização. Repita a validação antes de finalizar.')
+        setIsFinalizandoVenda(false)
+        return
+      }
+      if (typeof maxDescontoGerentePercentual === 'number') {
+        const checagem = validarPercentualPermitido(
+          descontoGerentePercentual,
+          maxDescontoGerentePercentual,
+        )
+        if (!checagem.ok) {
+          onSetMensagem(
+            `Desconto rejeitado pelo limite local (${maxDescontoGerentePercentual.toFixed(2)}%). Repita a validação.`,
+          )
+          setIsFinalizandoVenda(false)
+          return
+        }
+      }
+    }
+
     let caixaId = caixaAtualId
     if (!caixaId) {
       try {
@@ -207,6 +236,7 @@ export function usePdvLocalVendaCaixaFlow({
     descontoGerenteValor,
     gerenteId,
     descontoGerenteToken,
+    maxDescontoGerentePercentual,
     onLimparCarrinho,
     onSyncOutbox,
     onRefreshOutboxResumo,

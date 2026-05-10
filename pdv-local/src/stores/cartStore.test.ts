@@ -12,6 +12,14 @@ function item(
     nome: 'Produto teste',
     quantidade: 1,
     precoVariejo: 10,
+    precoUnitario: 10,
+    precoOriginal: 10,
+    resultado: {
+      precoUnitario: 10,
+      precoOriginal: 10,
+      descontoUnitario: 0,
+      tipoPreco: 'VAREJO',
+    },
   }
   const merged = { ...base, ...overrides }
   const resultado: ResultadoPreco =
@@ -22,7 +30,12 @@ function item(
       descontoUnitario: 0,
       tipoPreco: 'VAREJO',
     } as ResultadoPreco)
-  return { ...(merged as ItemCarrinho), resultado }
+  return {
+    ...(merged as ItemCarrinho),
+    precoUnitario: resultado.precoUnitario,
+    precoOriginal: resultado.precoOriginal,
+    resultado,
+  }
 }
 
 describe('calcularTotaisComGerente', () => {

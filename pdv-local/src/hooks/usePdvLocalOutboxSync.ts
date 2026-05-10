@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { logger } from '../lib/logger'
 
 export type OutboxResumo = {
   pendentes_total: number
@@ -26,22 +27,35 @@ export function usePdvLocalOutboxSync({
   formatarErro,
 }: Params) {
   const [outboxResumo, setOutboxResumo] = useState<OutboxResumo | null>(null)
+  const [ultimoErroOutbox, setUltimoErroOutbox] = useState<string | null>(null)
   const [reprocessandoDlq, setReprocessandoDlq] = useState(false)
   const syncInFlightRef = useRef(false)
 
   const executarSyncOutboxComMetrica = useCallback(
-    async (limite = 50) => {
+    async (limite = 50, opts?: { suppressThrow?: boolean }) => {
       if (syncInFlightRef.current) return
       syncInFlightRef.current = true
       const t0 = performance.now()
       try {
         await invoke('sync_outbox_real_cmd', { limite })
+        setUltimoErroOutbox(null)
+      } catch (e) {
+        const msg = formatarErro(e, 'Falha ao sincronizar a fila com o servidor.')
+        setUltimoErroOutbox(msg)
+        logger.warn('outbox_sync_failed', {
+          stage: 'outbox',
+          event: 'sync_outbox_real_cmd',
+          limite,
+          error: String(e),
+          mensagem: msg,
+        })
+        if (!opts?.suppressThrow) throw e
       } finally {
         onSyncElapsedMs(performance.now() - t0)
         syncInFlightRef.current = false
       }
     },
-    [onSyncElapsedMs],
+    [onSyncElapsedMs, formatarErro],
   )
 
   const refreshOutboxResumo = useCallback(async () => {
@@ -49,10 +63,19 @@ export function usePdvLocalOutboxSync({
     try {
       const r = await invoke<OutboxResumo>('outbox_resumo_cmd')
       setOutboxResumo(r)
-    } catch {
+      setUltimoErroOutbox(null)
+    } catch (e) {
       setOutboxResumo(null)
+      const msg = formatarErro(e, 'Não foi possível ler o resumo da fila de sincronização.')
+      setUltimoErroOutbox(msg)
+      logger.warn('outbox_resumo_failed', {
+        stage: 'outbox',
+        event: 'outbox_resumo_cmd',
+        error: String(e),
+        mensagem: msg,
+      })
     }
-  }, [tauriDisponivel])
+  }, [tauriDisponivel, formatarErro])
 
   const reprocessarDlq = useCallback(async () => {
     setReprocessandoDlq(true)
@@ -60,6 +83,7 @@ export function usePdvLocalOutboxSync({
       await invoke('outbox_reprocessar_dlq_cmd')
       await executarSyncOutboxComMetrica(50)
       await refreshOutboxResumo()
+      setUltimoErroOutbox(null)
       onMensagem('Eventos repostos na fila. Sync executada em seguida.')
     } catch (e) {
       onMensagem(
@@ -84,10 +108,7 @@ export function usePdvLocalOutboxSync({
     const t = globalThis.setInterval(() => {
       if (running) return
       running = true
-      executarSyncOutboxComMetrica(50)
-        .catch(() => {
-          // Sem bloquear o caixa offline
-        })
+      void executarSyncOutboxComMetrica(50, { suppressThrow: true })
         .finally(() => {
           void refreshOutboxResumo()
           running = false
@@ -108,6 +129,7 @@ export function usePdvLocalOutboxSync({
 
   return {
     outboxResumo,
+    ultimoErroOutbox,
     reprocessandoDlq,
     statusSync,
     executarSyncOutboxComMetrica,
