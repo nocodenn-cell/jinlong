@@ -12,7 +12,7 @@ const unifiedSalesFlowEnabled = process.env.USE_UNIFIED_SALES_FLOW === 'true'
 
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Caixa — venda com split DINHEIRO + PIX', () => {
+test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida do footer)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     if (!hasCaixaOperadorUser()) {
       testInfo.skip(

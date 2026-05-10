@@ -12,7 +12,7 @@ const unifiedSalesFlowEnabled = process.env.USE_UNIFIED_SALES_FLOW === 'true'
 
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Caixa — split bloqueado no fluxo legado', () => {
+test.describe.skip('Caixa — split bloqueado no fluxo legado (UI de parcelas removida)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     if (!hasCaixaOperadorUser()) {
       testInfo.skip(
