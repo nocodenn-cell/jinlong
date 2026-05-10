@@ -16,10 +16,9 @@ import {
 import { resolveVendaIdForFinalize } from '@/lib/caixa/resolveVendaIdForFinalize'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import {
-  coletarAuditoriaRequest,
+  enfileirarDocumentoFiscalPosVenda,
   recalcularItensNoServidor,
 } from '@/app/caixa/server/caixaActionsInternals'
-import { getDeviceFingerprint } from '@/lib/security/deviceFingerprint'
 
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
@@ -159,69 +158,59 @@ export async function finalizarVendaCaixaImpl(
       tipo_preco: i.tipoPreco,
     }))
 
-    // Coletar dados de auditoria
-    const { ipAddress, userAgent } = await coletarAuditoriaRequest()
-
-    // Usar nova RPC unificada com transação atômica
     const strictManagerDiscountAuth = process.env.STRICT_MANAGER_DISCOUNT_AUTH === 'true'
-    const { data, error: txErr } = await supabase.rpc('finalizar_venda_transacional_canonica_v3', {
-      p_venda_id: vendaId,
-      p_caixa_id: caixaId,
-      p_operador_id: user.id,
-      p_loja_id: lojaId,
-      p_forma_pagamento: input.formaPagamento,
-      p_total_bruto: computedFinal.totalBruto,
-      p_total_desconto: computedFinal.totalDesconto,
-      p_total_liquido: computedFinal.totalLiquido,
-      p_pagamentos: input.pagamentos.map(
-        (p): PagamentoParcelaRpc => ({
-          forma_pagamento: p.formaPagamento,
-          valor: roundMoney2(p.valor),
-        }),
-      ),
-      p_itens: itensRpc,
-      p_desconto_gerente_token: input.descontoGerenteToken ?? null,
-      p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
-      p_strict_manager_discount_auth: strictManagerDiscountAuth,
-      p_fiscal_auto_enqueue: process.env.AUTO_ENQUEUE_FISCAL_ON_SALE === 'true',
-      p_ip_address: ipAddress,
-      p_user_agent: userAgent,
-      p_device_id: getDeviceFingerprint(),
-      p_terminal_id: 'web-caixa',
+    const rpcName = useUnifiedSalesFlow
+      ? 'finalizar_venda_transacional_canonica_v2'
+      : 'finalizar_venda_transacional'
+    const rpcParams = useUnifiedSalesFlow
+      ? {
+          p_venda_id: vendaId,
+          p_caixa_id: caixaId,
+          p_operador_id: user.id,
+          p_forma_pagamento: input.formaPagamento,
+          p_total_bruto: computedFinal.totalBruto,
+          p_total_desconto: computedFinal.totalDesconto,
+          p_total_liquido: computedFinal.totalLiquido,
+          p_pagamentos: input.pagamentos.map(
+            (p): PagamentoParcelaRpc => ({
+              forma_pagamento: p.formaPagamento,
+              valor: roundMoney2(p.valor),
+            }),
+          ),
+          p_itens: itensRpc,
+          p_desconto_gerente_token: input.descontoGerenteToken ?? null,
+          p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
+          p_strict_manager_discount_auth: strictManagerDiscountAuth,
+        }
+      : {
+          p_venda_id: vendaId,
+          p_caixa_id: caixaId,
+          p_forma_pagamento: input.formaPagamento,
+          p_total_bruto: computedFinal.totalBruto,
+          p_total_desconto: computedFinal.totalDesconto,
+          p_total_liquido: computedFinal.totalLiquido,
+          p_itens: itensRpc,
+          p_desconto_gerente_token: input.descontoGerenteToken ?? null,
+          p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
+        }
+
+    const { error: txErr } = await supabase.rpc(rpcName, rpcParams)
+    if (txErr) return { ok: false, error: mensagemErroComSecao('Finalização da venda', txErr.message) }
+
+    await enfileirarDocumentoFiscalPosVenda(supabase, input, itensAut, {
+      vendaId,
+      lojaId,
+      caixaId,
+      operadorId: user.id,
+      computedFinal,
     })
 
-    if (txErr) {
-      // Transação inteira foi revertida automaticamente pelo PostgreSQL
-      return { ok: false, error: mensagemErroComSecao('Finalização da venda', txErr.message) }
-    }
-
-    // Processar resultado da RPC unificada
-    const row = Array.isArray(data) ? data[0] : (data as any)
-    if (!row?.venda_id) {
-      return { ok: false, error: 'Falha na finalização da venda. Tente novamente.' }
-    }
-
-    // Verificar status retornado
-    if (row.status !== 'CONCLUIDA') {
-      return { ok: false, error: row.mensagem || 'Erro na finalização da venda.' }
-    }
-
-    // Invalidar cache
     revalidatePath('/caixa')
     revalidatePath('/gerente/vendas')
     revalidatePath('/gerente/caixas')
     revalidatePath('/gerente/financeiro')
-
-    // Retornar sucesso com dados completos
-    return {
-      ok: true,
-      vendaId: row.venda_id,
-      documentoFiscal: row.dados_fiscais,
-      itensAtualizados: row.itens_atualizados,
-      estoqueBaixado: row.estoque_baixado,
-    }
+    return { ok: true, vendaId }
   } catch (e) {
-    // Rollback automático do PostgreSQL em caso de exceção
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível finalizar a venda. Tente de novo.'),
