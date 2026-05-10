@@ -6,6 +6,7 @@ import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { formatBRL } from '@/lib/format/money'
+import { labelFormaPagamentoVenda, labelStatusVenda } from '@/lib/format/vendaLabels'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -141,10 +142,10 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
           </span>
         </div>
         <div className="gerente-fin-cell">
-          <strong>{m.gerente.col_forma}:</strong> {venda.forma_pagamento}
+          <strong>{m.gerente.col_forma}:</strong> {labelFormaPagamentoVenda(venda.forma_pagamento, m)}
         </div>
         <div className="gerente-fin-cell">
-          <strong>{m.gerente.col_status}:</strong> {venda.status}
+          <strong>{m.gerente.col_status}:</strong> {labelStatusVenda(venda.status, m)}
         </div>
         <div className="gerente-fin-cell">
           <strong>{m.gerente.col_tipo_venda}:</strong> {venda.tipo_venda}

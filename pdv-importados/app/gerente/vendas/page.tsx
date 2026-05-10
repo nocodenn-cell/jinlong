@@ -7,6 +7,7 @@ import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
+import { labelFormaPagamentoVenda, labelStatusVenda } from '@/lib/format/vendaLabels'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { cancelarVendaGerenteAction } from './actions'
 
@@ -58,8 +59,8 @@ export default async function GerenteVendasPage() {
               vendas?.map((v) => ({
                 data: v.data ? new Date(v.data).toISOString() : '',
                 total_liquido: Number(v.total_liquido),
-                forma_pagamento: v.forma_pagamento,
-                status: v.status,
+                forma_pagamento: labelFormaPagamentoVenda(v.forma_pagamento, m),
+                status: labelStatusVenda(v.status, m),
                 caixa_id: v.caixa_id ?? '',
               })) ?? []
             }
@@ -87,9 +88,13 @@ export default async function GerenteVendasPage() {
             <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 font-medium tabular-nums">
               {fmtGerenteBRL(Number(v.total_liquido), locale)}
             </td>
-            <td className="gerente-fin-cell px-3 py-3">{v.forma_pagamento}</td>
+            <td className="gerente-fin-cell px-3 py-3">
+              {labelFormaPagamentoVenda(v.forma_pagamento, m)}
+            </td>
             <td className="px-3 py-3">
-              <span className={statusBadgeClasses(v.status ?? '')}>{v.status}</span>
+              <span className={statusBadgeClasses(v.status ?? '')}>
+                {labelStatusVenda(v.status, m)}
+              </span>
             </td>
             <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">
               {fmtGerenteIdCurto(v.caixa_id ?? undefined)}
