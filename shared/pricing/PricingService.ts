@@ -2,10 +2,18 @@
  * Serviço de precificação unificado
  */
 
-import type { ItemCarrinho } from '../../pdv-importados/stores/unifiedCartStore'
+import type { ItemCarrinho } from '../../shared-core/src/stores/unifiedCartStore'
 import type { RegraPreco, ResultadoPreco, PricingContext } from './types'
 
 export class PricingService {
+  private resolverPrecoOriginal(item: ItemCarrinho): number {
+    return item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
+  }
+
+  private resolverPrecoUnitario(item: ItemCarrinho): number {
+    return item.precoUnitario ?? item.precoOriginal ?? item.precoVariejo ?? 0
+  }
+
   /**
    * Recalcula preços do carrinho baseado nas regras e contexto
    */
@@ -29,17 +37,19 @@ export class PricingService {
     ctx: PricingContext
   ): ResultadoPreco {
     const regraAplicavel = this.encontrarRegraAplicavel(item, regras, ctx)
+    const precoOriginalBase = this.resolverPrecoOriginal(item)
+    const precoUnitarioBase = this.resolverPrecoUnitario(item)
     
     if (!regraAplicavel) {
       return {
-        precoUnitario: item.precoUnitario,
-        precoOriginal: item.precoOriginal,
+        precoUnitario: precoUnitarioBase,
+        precoOriginal: precoOriginalBase,
         descontoUnitario: 0,
         tipoPreco: 'VAREJO'
       }
     }
 
-    const precoOriginal = item.precoOriginal
+    const precoOriginal = precoOriginalBase
     let precoUnitario = precoOriginal
     let descontoUnitario = 0
     let tipoPreco: ResultadoPreco['tipoPreco'] = 'VAREJO'
