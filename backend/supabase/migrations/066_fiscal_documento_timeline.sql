@@ -44,7 +44,7 @@ BEGIN
     USING (
       EXISTS (
         SELECT 1 FROM public.usuarios u
-        WHERE u.id = auth.uid() AND u.perfil = ANY(v_admin_profiles)
+        WHERE u.id = auth.uid() AND u.perfil = ANY(ARRAY['GERENTE', 'DONO', 'ADMIN'])
       )
     );
 END $$;
@@ -297,7 +297,7 @@ BEGIN
       SELECT 1
       FROM public.usuarios u
       WHERE u.id = v_uid
-        AND u.perfil = ANY(v_admin_profiles)
+        AND u.perfil = ANY(ARRAY['GERENTE', 'DONO', 'ADMIN'])
     ) THEN
       RAISE EXCEPTION 'FISCAL_REPROCESSO_PERFIL';
     END IF;
@@ -403,7 +403,7 @@ BEGIN
             SELECT 1
             FROM public.usuarios u
             WHERE u.id = v_uid
-              AND u.perfil = ANY(v_admin_profiles)
+              AND u.perfil = ANY(ARRAY['GERENTE', 'DONO', 'ADMIN'])
           )
         )
     ) THEN
