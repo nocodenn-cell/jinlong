@@ -64,7 +64,7 @@ export function EtiquetaCarrinho({
         <button
           type="button"
           onClick={onLimpar}
-          className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+          className="rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
         >
           {labels.limpar}
         </button>
@@ -108,7 +108,7 @@ export function EtiquetaCarrinho({
             <button
               type="button"
               onClick={() => onRemover(item.produtoId)}
-              className="rounded-md p-2 text-red-600 hover:bg-red-50"
+              className="rounded-md p-2 text-destructive hover:bg-destructive/10"
               title={labels.remover}
             >
               <Trash2 className="h-4 w-4" />

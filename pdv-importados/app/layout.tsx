@@ -35,7 +35,9 @@ export default function RootLayout({
       data-gerente-ui-theme="noturno"
       suppressHydrationWarning
     >
-      <body className={`${notoSansSC.variable} antialiased selection:bg-emerald-500/30 selection:text-emerald-200`}>
+      <body
+        className={`${notoSansSC.variable} antialiased selection:bg-success/35 selection:text-success-foreground`}
+      >
         <HydrationFix />
         <AppThemeProvider>
           {children}

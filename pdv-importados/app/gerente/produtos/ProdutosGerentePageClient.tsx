@@ -446,7 +446,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
                       <OrigemBadgeUi
                         label={m.produtos.origem_brasil_nf}
                         tooltip={m.produtos.tooltip_origem_brasil_nf}
-                        className="border-emerald-500/45 bg-emerald-500/15 text-emerald-100"
+                        className="border-success/45 bg-success/15 text-success"
                       />
                     )}
                   </td>

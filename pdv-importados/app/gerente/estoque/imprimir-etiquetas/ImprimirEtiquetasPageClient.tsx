@@ -208,7 +208,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
               type="button"
               onClick={handleGerarPdf}
               disabled={carrinho.length === 0 || gerandoPdf}
-              className="w-full rounded-lg bg-green-600 px-4 py-3 text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg bg-success px-4 py-3 text-success-foreground hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <div className="flex items-center justify-center gap-2">
                 <Printer className="h-5 w-5" />

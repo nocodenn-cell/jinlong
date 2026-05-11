@@ -50,16 +50,16 @@ export const BrandColors: Story = {
         <h2 className="text-2xl font-bold mb-4 app-accent-text">Cores Semânticas</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="w-24 h-24 rounded-lg mb-2 bg-green-500"></div>
-            <p className="text-sm font-medium">Success</p>
+            <div className="mb-2 h-24 w-24 rounded-lg bg-success" />
+            <p className="text-sm font-medium">Success (token)</p>
           </div>
           <div className="text-center">
             <div className="w-24 h-24 rounded-lg mb-2 bg-yellow-500"></div>
             <p className="text-sm font-medium">Warning</p>
           </div>
           <div className="text-center">
-            <div className="w-24 h-24 rounded-lg mb-2 bg-red-500"></div>
-            <p className="text-sm font-medium">Danger</p>
+            <div className="mb-2 h-24 w-24 rounded-lg bg-destructive" />
+            <p className="text-sm font-medium">Destructive (token)</p>
           </div>
           <div className="text-center">
             <div className="w-24 h-24 rounded-lg mb-2 app-surface border app-border">

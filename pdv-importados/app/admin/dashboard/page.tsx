@@ -81,7 +81,7 @@ function DashboardErrorBanner({
   return (
     <div className={box} role="alert">
       <div className="mb-1 flex items-center gap-2 font-semibold">
-        <AlertCircle className="shrink-0 text-red-600" size={18} />
+        <AlertCircle className="shrink-0 text-amber-800 dark:text-amber-200" size={18} />
         {title}
       </div>
       <ul className={`list-inside list-disc ${oriental ? 'text-[#5c4030]' : 'text-amber-900/90'}`}>
@@ -96,14 +96,14 @@ function DashboardErrorBanner({
 function CriticalSalesAlert({ title, body }: { title: string; body: string }) {
   return (
     <div
-      className="mb-6 rounded-lg border-2 border-red-200 bg-red-50 px-4 py-4 text-sm text-red-950 shadow-sm"
+      className="mb-6 rounded-lg border-2 border-destructive/35 bg-destructive/10 px-4 py-4 text-sm text-foreground shadow-sm"
       role="alert"
     >
-      <div className="flex gap-2 font-semibold text-red-900">
+      <div className="flex gap-2 font-semibold text-destructive">
         <AlertCircle className="mt-0.5 shrink-0" size={18} />
         {title}
       </div>
-      <p className="mt-2 leading-relaxed text-red-900/90">{body}</p>
+      <p className="mt-2 leading-relaxed text-foreground/90">{body}</p>
     </div>
   )
 }
@@ -458,7 +458,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         ? 'filter-pill-status-active'
         : 'filter-pill'
       : active
-        ? 'border border-emerald-800 bg-emerald-800 text-white shadow-sm'
+        ? 'border border-success bg-success text-success-foreground shadow-sm hover:bg-success/90'
         : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
 
   const cardShell = chineseThemeOn ? 'card-chinese mb-8 p-6' : 'mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
@@ -548,7 +548,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         </div>
         <div className="h-[350px] w-full">
           {periodSalesFailed ? (
-            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-red-200 bg-red-50/50 px-4 text-center text-sm text-red-900">
+            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
               {chineseLanguage ? lineBoth(adminUi.errors.chartUnavailable) : adminUi.errors.chartUnavailable.pt}
             </div>
           ) : (

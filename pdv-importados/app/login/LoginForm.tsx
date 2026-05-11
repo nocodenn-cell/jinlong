@@ -189,7 +189,7 @@ export function LoginForm({ messages: m }: Props) {
             />
           </div>
           {erro ? (
-            <p className="text-center text-sm text-rose-300/95" role="alert">
+            <p className="text-center text-sm text-destructive" role="alert">
               {erro}
             </p>
           ) : null}

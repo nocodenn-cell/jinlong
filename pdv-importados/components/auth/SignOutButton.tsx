@@ -45,7 +45,7 @@ export function SignOutButton({ label, className }: Props) {
       >
         {loading ? '…' : label}
       </button>
-      {error ? <p className="mt-1 text-xs text-red-400">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
     </>
   )
 }

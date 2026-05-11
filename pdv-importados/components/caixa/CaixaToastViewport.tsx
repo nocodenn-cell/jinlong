@@ -14,10 +14,14 @@ type Props = {
 }
 
 const kindClass: Record<CaixaToastKind, string> = {
-  info: "border-sky-500/45 bg-sky-950/85 text-sky-100",
-  success: "border-emerald-500/45 bg-emerald-950/85 text-emerald-100",
-  warning: "border-amber-500/45 bg-amber-950/90 text-amber-100",
-  error: "border-red-500/45 bg-red-950/90 text-red-100",
+  info:
+    'border border-primary/40 bg-card/95 text-foreground shadow-lg backdrop-blur-sm',
+  success:
+    'border border-success/45 bg-card/95 text-success shadow-lg backdrop-blur-sm',
+  warning:
+    'border border-amber-500/45 bg-card/95 text-amber-800 dark:text-amber-100 shadow-lg backdrop-blur-sm',
+  error:
+    'border border-destructive/45 bg-card/95 text-destructive shadow-lg backdrop-blur-sm',
 }
 
 export function CaixaToastViewport({ items, onDismiss }: Props) {

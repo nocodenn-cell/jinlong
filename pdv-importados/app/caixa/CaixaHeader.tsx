@@ -78,7 +78,7 @@ export function CaixaHeader({
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {caixaStatus?.aberto ? (
             <>
-              <span className="rounded-md px-2 py-1 text-sm font-semibold bg-green-900/35 text-green-300 border border-green-600">
+              <span className="rounded-md border border-success/45 bg-success/15 px-2 py-1 text-sm font-semibold text-success">
                 Caixa aberto
               </span>
               <Button
@@ -98,7 +98,7 @@ export function CaixaHeader({
               type="button"
               size="sm"
               variant="outline"
-              className="text-sm font-semibold bg-green-900/35 text-green-300 border border-green-600"
+              className="border-success/45 bg-success/15 text-sm font-semibold text-success"
               onClick={onAbrirCaixa}
               disabled={processandoCaixa}
               aria-busy={processandoCaixa}

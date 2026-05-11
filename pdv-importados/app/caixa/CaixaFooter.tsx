@@ -107,7 +107,7 @@ export function CaixaFooter({
               <Button
                 type="button"
                 variant="secondary"
-                className="bg-red-900/30 text-red-300 border border-red-700"
+                className="border-destructive/45 bg-destructive/15 text-destructive hover:bg-destructive/25"
                 onClick={onAbrirSangria}
                 disabled={!caixaAberto || movimentandoCaixa || finalizando}
                 aria-busy={movimentandoCaixa}

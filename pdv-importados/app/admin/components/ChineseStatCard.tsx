@@ -46,7 +46,7 @@ export function ChineseStatCard({
           </div>
           <span
             className={`max-w-[55%] truncate text-right text-xs font-semibold tabular-nums ${
-              up ? (oriental ? 'text-[#2d5a4a]' : 'text-emerald-700') : 'text-red-600'
+              up ? (oriental ? 'text-[#2d5a4a]' : 'text-success') : 'text-destructive'
             }`}
             title={trend}
           >

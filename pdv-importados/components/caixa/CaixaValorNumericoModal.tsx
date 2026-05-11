@@ -126,7 +126,7 @@ export function CaixaValorNumericoModal({
             />
           </label>
           {erro ? (
-            <p className="text-xs text-red-400" role="alert">
+            <p className="text-xs text-destructive" role="alert">
               {erro}
             </p>
           ) : null}
@@ -135,7 +135,11 @@ export function CaixaValorNumericoModal({
           <Button type="button" variant="secondary" onClick={fechar}>
             {m.comum.cancelar}
           </Button>
-          <Button type="button" className="bg-emerald-600 hover:bg-emerald-500" onClick={handleConfirmar}>
+          <Button
+            type="button"
+            className="bg-success text-success-foreground hover:bg-success/90"
+            onClick={handleConfirmar}
+          >
             {m.comum.confirmar}
           </Button>
         </CardFooter>

@@ -14,6 +14,9 @@ import { DragonIcon } from "@/components/icons/DragonIcon"
 import { labelOrigemCaixa } from "@/lib/caixa/metaProdutoUi"
 import type { OrigemProdutoCaixa } from "@/app/caixa/caixaActionTypes"
 
+/** Chip “positivo” no caixa (atacado, NF, origem BR com NF) — alinhado aos tokens `success`. */
+const CAIXA_CHIP_SUCCESS = 'border-success/40 bg-success/15 text-success'
+
 type Props = {
   m: Mensagens
   idioma: Idioma
@@ -179,7 +182,7 @@ export function CaixaCartList({
                   {res.tipoPreco === "ATACADO" ? (
                     <Badge
                       variant="outline"
-                      className="shrink-0 text-[10px] font-semibold px-1.5 py-0 bg-green-900/30 text-green-400 border border-green-700"
+                      className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
                     >
                       {m.relatorios.atacado}
                     </Badge>
@@ -248,7 +251,7 @@ export function CaixaCartList({
                   {res.tipoPreco === "ATACADO" ? (
                     <Badge
                       variant="outline"
-                      className="shrink-0 text-[10px] font-semibold px-1.5 py-0 bg-green-900/30 text-green-400 border border-green-700"
+                      className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
                     >
                       {m.relatorios.atacado}
                     </Badge>
@@ -340,15 +343,13 @@ function MetaPdvBloco({
 
   const getOrigemClass = (o: OrigemProdutoCaixa) => {
     if (o === "china_manual") return "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
-    if (o === "brasil_nf") return "bg-green-900/30 text-green-400 border border-green-700"
+    if (o === 'brasil_nf') return CAIXA_CHIP_SUCCESS
     return "border border-border text-muted-foreground bg-muted"
   }
 
   const origemClass = getOrigemClass(origem)
 
-  const nfClass = meta.tem_nf
-    ? "bg-green-900/30 text-green-400 border border-green-700"
-    : "border border-border text-muted-foreground"
+  const nfClass = meta.tem_nf ? CAIXA_CHIP_SUCCESS : 'border border-border text-muted-foreground'
 
   return (
     <div className="space-y-1">
@@ -382,8 +383,8 @@ function TipoPrecoBadge({
           ? "PROMO"
           : m.relatorios.varejo
   const className =
-    tipo === "ATACADO"
-      ? "bg-green-900/30 text-green-400 border border-green-700"
+    tipo === 'ATACADO'
+      ? CAIXA_CHIP_SUCCESS
       : tipo === "MANUAL"
         ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
         : tipo === "PROMOCAO"
