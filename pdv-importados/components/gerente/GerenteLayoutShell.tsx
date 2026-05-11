@@ -45,8 +45,6 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
   const FONT_FAMILY: Record<string, string> = {
     zh: 'var(--font-noto-sc),"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif',
-    'zh-HK':
-      'var(--font-noto-tc),"Noto Sans TC","MingLiU","Microsoft JhengHei",sans-serif',
   }
 
   return (

@@ -1,3 +1,7 @@
+-- @deprecated Este script não faz parte da cadeia oficial de migrations.
+-- A fonte de verdade é `backend/supabase/migrations/` (ex.: `083_finalizar_venda_ordem_loja_fiscal_v3.sql`).
+-- Não aplicar em produção — o DDL abaixo diverge do schema atual (tabelas/colunas).
+--
 -- Migration: RPC Unificada para Finalização de Venda com Transação Atômica
 -- Elimina o risco de "venda ficar pelo caminho"
 

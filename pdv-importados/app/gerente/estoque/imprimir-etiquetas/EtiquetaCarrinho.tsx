@@ -2,16 +2,17 @@
 
 import { Trash2, Plus, Minus } from 'lucide-react'
 import type { ItemCarrinho } from '@/lib/etiqueta/types'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = {
   itens: ItemCarrinho[]
   onAtualizarQuantidade: (produtoId: string, novaQuantidade: number) => void
   onRemover: (produtoId: string) => void
   onLimpar: () => void
-  idioma: 'pt' | 'zh' | 'zh-HK'
+  idioma: Idioma
 }
 
-const LABELS = {
+const LABELS: Record<Idioma, { quantidade: string; remover: string; limpar: string; total: string; preco: string }> = {
   pt: {
     quantidade: 'Qtd',
     remover: 'Remover',
@@ -25,13 +26,6 @@ const LABELS = {
     limpar: '清空购物车',
     total: '总计',
     preco: '价格',
-  },
-  'zh-HK': {
-    quantidade: '數量',
-    remover: '刪除',
-    limpar: '清空購物車',
-    total: '總計',
-    preco: '價格',
   },
 }
 

@@ -180,15 +180,28 @@ SELECT has_table_privilege('authenticated', 'public.sync_request_nonces', 'SELEC
 SELECT has_table_privilege('authenticated', 'public.sync_request_nonces', 'INSERT') AS nonce_authenticated_insert;
 SELECT has_table_privilege('authenticated', 'public.sync_request_nonces', 'DELETE') AS nonce_authenticated_delete;
 
--- 12) RPC canônica v2 (migration 025)
+-- 12) RPC canônica v2 (split payment + round_abnt; migration 052+)
 SELECT has_function_privilege(
   'authenticated',
-  'public.finalizar_venda_transacional_canonica_v2(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, text, numeric, boolean)',
+  'public.finalizar_venda_transacional_canonica_v2(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean)',
   'EXECUTE'
 ) AS finalizar_venda_canonica_v2__authenticated_execute;
 
 SELECT has_function_privilege(
   'service_role',
-  'public.finalizar_venda_transacional_canonica_v2(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, text, numeric, boolean)',
+  'public.finalizar_venda_transacional_canonica_v2(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean)',
   'EXECUTE'
 ) AS finalizar_venda_canonica_v2__service_role_execute;
+
+-- 13) RPC canônica v3 (caixa web; migration 083)
+SELECT proname AS rotina_v3
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND proname = 'finalizar_venda_transacional_canonica_v3';
+
+SELECT has_function_privilege(
+  'authenticated',
+  'public.finalizar_venda_transacional_canonica_v3(uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text)',
+  'EXECUTE'
+) AS finalizar_venda_canonica_v3__authenticated_execute;
