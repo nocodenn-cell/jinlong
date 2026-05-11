@@ -52,6 +52,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
+      # Vitest/Vite (Rollup): lock gerado em Windows pode omitir o binário nativo linux; optional na raiz alinha com o rollup do lock.
       - name: Install (workspaces na raiz)
         run: npm ci
 
