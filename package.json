@@ -27,8 +27,5 @@
   "devDependencies": {
     "turbo": "^2.5.4"
   },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.60.2"
-  },
   "packageManager": "npm@10.9.2"
 }
