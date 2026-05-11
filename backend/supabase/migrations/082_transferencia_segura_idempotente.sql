@@ -1,4 +1,5 @@
 -- Transferencia de estoque segura com idempotencia + RPC de pre-validacao.
+-- Nota: renumerado de 074_* para 082_* — o remoto já registrava 074 como `074_remove_zhHK.sql` (evitar PK duplicada em schema_migrations).
 
 ALTER TABLE public.pdv_config
   ADD COLUMN IF NOT EXISTS limite_transferencia_obs numeric(12,3) NOT NULL DEFAULT 50;
