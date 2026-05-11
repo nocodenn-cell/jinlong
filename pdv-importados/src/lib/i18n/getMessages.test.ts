@@ -16,5 +16,10 @@ describe('getMessages', () => {
     expect(getMessages('pt').estoque.titulo).toBe('Estoque')
     expect(getMessages('zh').estoque.titulo).toBe('库存')
   })
+
+  it('paridade gerente.dashboard_inicio (pt/zh)', () => {
+    expect(getMessages('pt').gerente.dashboard_inicio.sparkline_titulo).toContain('hora')
+    expect(getMessages('zh').gerente.dashboard_inicio.sparkline_titulo.length).toBeGreaterThan(0)
+  })
 })
 
