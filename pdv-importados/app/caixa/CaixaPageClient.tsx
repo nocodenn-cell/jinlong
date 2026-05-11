@@ -165,6 +165,27 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     })
   }, [])
 
+  const tocarFeedback = useCallback(
+    (kind: "ok" | "erro") => {
+      if (!somFeedbackAtivo) return
+      if (typeof window === "undefined") return
+      const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = "sine"
+      osc.frequency.value = kind === "ok" ? 880 : 220
+      gain.gain.value = 0.03
+      osc.start()
+      osc.stop(ctx.currentTime + 0.08)
+      osc.onended = () => void ctx.close()
+    },
+    [somFeedbackAtivo],
+  )
+
   const aplicarPrecoRpcParaLinha = useCallback(
     async (params: { produtoId: string; itemId: string; quantidade: number }) => {
       const linha = useCarrinhoStore.getState().itens.find((i) => i.id === params.itemId)
@@ -288,28 +309,15 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         focarCampoBusca()
       }
     },
-    [adicionarItem, aplicarPrecoRpcParaLinha, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession],
-  )
-
-  const tocarFeedback = useCallback(
-    (kind: "ok" | "erro") => {
-      if (!somFeedbackAtivo) return
-      if (typeof window === "undefined") return
-      const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-      if (!AudioCtx) return
-      const ctx = new AudioCtx()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.type = "sine"
-      osc.frequency.value = kind === "ok" ? 880 : 220
-      gain.gain.value = 0.03
-      osc.start()
-      osc.stop(ctx.currentTime + 0.08)
-      osc.onended = () => void ctx.close()
-    },
-    [somFeedbackAtivo],
+    [
+      adicionarItem,
+      aplicarPrecoRpcParaLinha,
+      focarCampoBusca,
+      m,
+      setCaixaMensagem,
+      setCartOwnerForSession,
+      tocarFeedback,
+    ],
   )
 
   const limparEstadoDescontoGerente = useCallback(() => {
@@ -441,7 +449,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         setProcessandoCaixa(false)
       }
     },
-    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem],
+    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback],
   )
 
   const handleAbrirCaixa = useCallback(() => {
@@ -516,7 +524,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       }
       void executarFecharCaixa(v, undefined)
     },
-    [valorNumericoModal, caixaStatus, executarFecharCaixa, recarregarStatusCaixa, setCaixaMensagem],
+    [
+      valorNumericoModal,
+      caixaStatus,
+      executarFecharCaixa,
+      recarregarStatusCaixa,
+      setCaixaMensagem,
+      tocarFeedback,
+    ],
   )
 
   const onConfirmMotivoFechar = useCallback(
@@ -618,6 +633,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     recarregarStatusCaixa,
     setCaixaMensagem,
     setCaixaMensagemVendaOk,
+    tocarFeedback,
   ])
 
   useCaixaGerenteTokenExpiry({
