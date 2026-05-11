@@ -39,6 +39,18 @@ Refer to `README.md` for the full table. Quick reference:
 - Without real Supabase credentials, the web app loads the login page but cannot authenticate users. The POS and management features behind auth will not be accessible.
 - For local dev without Supabase, copy `.env.example` files to `.env.local` (web) / `.env` (desktop) — placeholder values allow the app to start and render the login UI.
 
+### Test account (for cloud agents)
+
+Secrets `TEST_LOGIN_EMAIL` and `TEST_LOGIN_PASSWORD` provide a GERENTE-profile account. After configuring `.env.local` with real Supabase credentials, use these to log in at `/login`. The account has access to `/gerente` (dashboard, products, inventory, sales, cashiers, reports, admin) and `/caixa` (POS).
+
+To configure `.env.local` from injected secrets at session start:
+```bash
+# Only needed if .env.local still has placeholder values
+sed -i "s|^NEXT_PUBLIC_SUPABASE_URL=.*|NEXT_PUBLIC_SUPABASE_URL=https://${NEXT_PUBLIC_SUPABASE_URL}.supabase.co|" pdv-importados/.env.local
+sed -i "s|^NEXT_PUBLIC_SUPABASE_ANON_KEY=.*|NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}|" pdv-importados/.env.local
+```
+Note: if `NEXT_PUBLIC_SUPABASE_URL` is already a full URL, skip the prefix wrapping.
+
 ### Gotchas
 
 - The package manager is **npm** (not pnpm/yarn). The lockfile is `package-lock.json`.
