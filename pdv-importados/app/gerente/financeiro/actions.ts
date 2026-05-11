@@ -38,6 +38,7 @@ export async function criarCliente(input: { nome: string; documento?: string; te
     }
   }
   revalidatePath('/gerente/financeiro')
+  revalidatePath('/gerente/clientes-fornecedores')
   return { success: true, data: data.id as string }
 }
 

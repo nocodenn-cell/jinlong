@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Tag,
   Truck,
+  Users,
   Warehouse,
   Wallet,
 } from 'lucide-react'
@@ -44,6 +45,11 @@ export const GERENTE_MEGA_NAV_GROUPS: readonly MegaNavGroup[] = [
             href: '/gerente/produtos',
             icon: Package,
             label: (m) => m.produtos.titulo,
+          },
+          {
+            href: '/gerente/clientes-fornecedores',
+            icon: Users,
+            label: (m) => m.gerente.nav_clientes_fornecedores,
           },
         ],
       },
