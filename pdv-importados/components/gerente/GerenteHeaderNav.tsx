@@ -1,45 +1,167 @@
 'use client'
 
 import Link from 'next/link'
+import { ChevronDown } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import type { Mensagens } from '@/i18n/getMessages'
-import { useGerenteUiTheme } from '@/components/gerente/GerenteThemeContext'
-import { isGerenteLightChrome } from '@/components/gerente/gerenteUiTheme'
 import {
-  GERENTE_HEADER_NAV_ORDER,
-  gerenteNavLabel,
-  painelGerencialHref,
-} from '@/lib/navigation/painelGerencialNav'
+  GERENTE_MEGA_NAV_GROUPS,
+  megaNavGroupIsActive,
+  type MegaNavGroup,
+} from '@/lib/navigation/gerenteMegaNavConfig'
 import { cn } from '@/lib/utils'
 
-function linkAtivo(href: string, pathname: string | null): boolean {
-  if (!pathname) return false
-  if (href === '/gerente') return pathname === '/gerente'
-  return pathname === href || pathname.startsWith(`${href}/`)
+function linkInicioAtivo(pathname: string | null): boolean {
+  return pathname === '/gerente'
+}
+
+function MegaMenuPanel({
+  group,
+  m,
+  onNavigate,
+}: Readonly<{
+  group: MegaNavGroup
+  m: Mensagens
+  onNavigate: () => void
+}>) {
+  const gridCols = group.columns.length > 1 ? 'sm:grid-cols-2' : 'grid-cols-1'
+  return (
+    <div className="absolute left-0 top-full z-[60] max-w-[min(100vw-2rem,420px)] pt-1" role="presentation">
+      <div
+        className={cn(
+          'dragon-glass-card grid gap-5 rounded-lg border app-border bg-[color:var(--color-background-surface)] p-4 shadow-lg',
+          'grid-cols-1',
+          gridCols,
+        )}
+        role="menu"
+        aria-label={group.title(m)}
+      >
+        {group.columns.map((col, colIdx) => (
+          <div key={`${group.id}-col-${colIdx}`}>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide app-muted">{col.heading(m)}</p>
+            <ul className="space-y-0.5">
+              {col.items.map((item) => {
+                const Icon = item.icon
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      role="menuitem"
+                      className={cn(
+                        'flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                        'app-muted hover:bg-[color:var(--color-background-surface-soft)] hover:app-accent-text',
+                      )}
+                      onClick={onNavigate}
+                    >
+                      <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                      {item.label(m)}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function useMegaNavState() {
+  const [openId, setOpenId] = useState<string | null>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const navRef = useRef<HTMLElement | null>(null)
+
+  const cancelScheduledClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }, [])
+
+  const scheduleClose = useCallback(() => {
+    cancelScheduledClose()
+    closeTimerRef.current = setTimeout(() => setOpenId(null), 140)
+  }, [cancelScheduledClose])
+
+  const open = useCallback(
+    (id: string) => {
+      cancelScheduledClose()
+      setOpenId(id)
+    },
+    [cancelScheduledClose],
+  )
+
+  useEffect(() => {
+    if (openId === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenId(null)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [openId])
+
+  useEffect(() => {
+    if (openId === null) return
+    const onDown = (e: MouseEvent) => {
+      const root = navRef.current
+      if (root && !root.contains(e.target as Node)) setOpenId(null)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [openId])
+
+  return { openId, setOpenId, open, scheduleClose, cancelScheduledClose, navRef }
 }
 
 export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
   const pathname = usePathname()
-  const { theme } = useGerenteUiTheme()
-  const light = isGerenteLightChrome(theme)
+  const { openId, setOpenId, open, scheduleClose, cancelScheduledClose, navRef } = useMegaNavState()
+
+  const triggerBase =
+    'inline-flex items-center gap-0.5 border-b-2 border-transparent pb-0.5 text-[15px] font-medium transition-colors'
+  const triggerIdle = 'app-muted hover:app-accent-text'
+  const triggerOpen = 'border-[color:var(--accent)] app-accent-text'
 
   return (
-    <nav className="gerente-compact-nav flex flex-wrap gap-x-4 gap-y-1.5 text-[15px] font-medium" aria-label={m.gerente.titulo_painel}>
-      {GERENTE_HEADER_NAV_ORDER.map((key) => {
-        const href = painelGerencialHref(key)
-        const ativo = linkAtivo(href, pathname)
+    <nav
+      ref={navRef}
+      className="gerente-compact-nav flex flex-wrap items-center gap-x-4 gap-y-1.5"
+      aria-label={m.gerente.titulo_painel}
+    >
+      <Link
+        href="/gerente"
+        className={cn(triggerBase, triggerIdle, linkInicioAtivo(pathname) && triggerOpen)}
+      >
+        {m.gerente.inicio}
+      </Link>
+
+      {GERENTE_MEGA_NAV_GROUPS.map((group) => {
+        const ativo = megaNavGroupIsActive(group, pathname)
+        const expanded = openId === group.id
         return (
-          <Link
-            key={key}
-            href={href}
-            className={cn(
-              'border-b-2 border-transparent pb-0.5 transition-colors',
-              light ? 'app-muted hover:app-accent-text' : 'app-muted hover:app-accent-text',
-              ativo && 'border-[color:var(--accent)] app-accent-text',
-            )}
+          <div
+            key={group.id}
+            className="relative"
+            onMouseEnter={() => open(group.id)}
+            onMouseLeave={scheduleClose}
           >
-            {gerenteNavLabel(m, key)}
-          </Link>
+            <button
+              type="button"
+              className={cn(triggerBase, triggerIdle, (expanded || ativo) && triggerOpen)}
+              aria-expanded={expanded}
+              aria-haspopup="menu"
+              onClick={() => setOpenId(expanded ? null : group.id)}
+              onFocus={() => cancelScheduledClose()}
+            >
+              {group.title(m)}
+              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', expanded && 'rotate-180')} />
+            </button>
+            {expanded ? (
+              <MegaMenuPanel group={group} m={m} onNavigate={() => setOpenId(null)} />
+            ) : null}
+          </div>
         )
       })}
     </nav>
