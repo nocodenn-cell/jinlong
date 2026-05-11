@@ -8,7 +8,7 @@ export default async function FinanceiroPage() {
   const { data: clientes } = await supabase.from('clientes').select('id, nome').eq('ativo', true).order('nome')
   const { data: titulosRaw } = await supabase
     .from('contas_receber')
-    .select('id, valor_total, valor_aberto, status, descricao, cliente_id, clientes(nome)')
+    .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, clientes(nome)')
     .in('status', ['ABERTO', 'PARCIAL'])
     .order('created_at', { ascending: false })
     .limit(50)
@@ -27,6 +27,7 @@ export default async function FinanceiroPage() {
       valor_aberto: Number(t.valor_aberto),
       status: t.status,
       descricao: t.descricao,
+      vencimento: t.vencimento != null ? String(t.vencimento) : null,
       cliente_id: t.cliente_id,
       cliente_nome: nomeCliente ?? null,
     }
