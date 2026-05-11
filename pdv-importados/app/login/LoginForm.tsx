@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import type { Mensagens } from '@/i18n/getMessages'
@@ -122,34 +121,16 @@ export function LoginForm({ messages: m }: Props) {
   }
 
   return (
-    <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center bg-black px-4 pb-12 pt-8 sm:pb-16 sm:pt-10">
-      <div className="login-premium-art-wrap flex w-full max-w-3xl flex-col items-center">
-        <div className="login-premium-dragon-frame w-full">
-          <div className="login-premium-dragon-outer relative mx-auto h-[min(68vh,680px)] w-full max-w-[min(92vw,520px)] sm:h-[min(72vh,720px)]">
-            <div className="login-premium-dragon-media relative h-full w-full">
-              <Image
-                src="/branding/dragon-jinlong-login-hero.png"
-                alt={L.nav_marca}
-                fill
-                priority
-                sizes="(max-width: 640px) 88vw, 500px"
-                className="login-premium-dragon-img object-contain object-center"
-              />
-              <div className="login-premium-vignette" aria-hidden />
-            </div>
-          </div>
-        </div>
+    <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center bg-black px-4 py-12 sm:py-16">
+      <h1 className="login-premium-wordmark mb-10 max-w-md text-center text-lg leading-snug sm:mb-12 sm:text-xl">
+        <span className="inline-block">Jīn Lóng</span>
+        <span className="mx-2 inline-block align-middle text-[#bfa76a]/45" aria-hidden>
+          |
+        </span>
+        <span className="login-premium-wordmark-han inline-block align-middle">{m.brand.logo_subtitle}</span>
+      </h1>
 
-        <h1 className="login-premium-wordmark mt-5 max-w-md text-center text-base leading-snug sm:mt-6 sm:text-lg">
-          <span className="inline-block">Jīn Lóng</span>
-          <span className="mx-2 inline-block align-middle text-[#bfa76a]/45" aria-hidden>
-            |
-          </span>
-          <span className="login-premium-wordmark-han inline-block align-middle">{m.brand.logo_subtitle}</span>
-        </h1>
-      </div>
-
-      <div className="login-premium-form-block mt-9 w-full max-w-[380px] sm:mt-11">
+      <div className="login-premium-form-block w-full max-w-[380px]">
         {avisoInatividade ? (
           <p className="login-premium-inactivity mb-6 rounded-md px-3 py-2.5 text-center text-sm" role="status">
             {L.sessao_inatividade}
