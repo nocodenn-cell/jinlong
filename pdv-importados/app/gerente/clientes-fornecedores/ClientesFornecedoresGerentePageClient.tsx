@@ -127,6 +127,16 @@ export function ClientesFornecedoresGerentePageClient({ idioma, rows }: Props) {
   const router = useRouter()
   const fontClass = idioma === 'pt' ? '' : 'font-chinese'
 
+  const mutSucessoRefreshOpts = useMemo(
+    () => ({
+      successMessage: m.comum.sucesso,
+      onSuccess: () => {
+        router.refresh()
+      },
+    }),
+    [m.comum.sucesso, router],
+  )
+
   const [busca, setBusca] = useState('')
   const [draftFiltro, setDraftFiltro] = useState<FiltroContatosState>(() => ({ ...FILTRO_INICIAL }))
   const [appliedFiltro, setAppliedFiltro] = useState<FiltroContatosState>(() => ({ ...FILTRO_INICIAL }))
@@ -183,9 +193,9 @@ export function ClientesFornecedoresGerentePageClient({ idioma, rows }: Props) {
       const r = await atualizarClienteContato(input)
       if (!r.success) throw new Error(r.error)
       setEditRow(null)
-      return null
+      return true
     },
-    { successMessage: m.comum.sucesso },
+    mutSucessoRefreshOpts,
   )
 
   const { mutate: salvarFornecedorEdit, loading: salvaFornecedor } = useGerenteMutation(
@@ -193,9 +203,9 @@ export function ClientesFornecedoresGerentePageClient({ idioma, rows }: Props) {
       const r = await atualizarFornecedorContato(input)
       if (!r.success) throw new Error(r.error)
       setEditRow(null)
-      return null
+      return true
     },
-    { successMessage: m.comum.sucesso },
+    mutSucessoRefreshOpts,
   )
 
   const savingEdit = salvaCliente || salvaFornecedor
@@ -208,18 +218,18 @@ export function ClientesFornecedoresGerentePageClient({ idioma, rows }: Props) {
         telefone: input.telefone || undefined,
       })
       if (!r.success) throw new Error(r.error)
-      return r.data
+      return true
     },
-    { successMessage: m.comum.sucesso },
+    mutSucessoRefreshOpts,
   )
 
   const { mutate: criarForn, loading: criarFornLoading } = useGerenteMutation(
     async (input: { nome: string; cnpj: string }) => {
       const r = await criarFornecedorContato(input)
       if (!r.success) throw new Error(r.error)
-      return r.data
+      return true
     },
-    { successMessage: m.comum.sucesso },
+    mutSucessoRefreshOpts,
   )
 
   const finIn = 'h-9 rounded-md px-3 text-xs app-input'
@@ -234,12 +244,10 @@ export function ClientesFornecedoresGerentePageClient({ idioma, rows }: Props) {
         saving={savingEdit}
         onClose={() => setEditRow(null)}
         onSaveCliente={async (input) => {
-          const ok = await salvarClienteEdit(input)
-          if (ok !== null) router.refresh()
+          await salvarClienteEdit(input)
         }}
         onSaveFornecedor={async (input) => {
-          const ok = await salvarFornecedorEdit(input)
-          if (ok !== null) router.refresh()
+          await salvarFornecedorEdit(input)
         }}
       />
 
@@ -308,10 +316,9 @@ export function ClientesFornecedoresGerentePageClient({ idioma, rows }: Props) {
                       documento: readFormDataString(fd, 'documento'),
                       telefone: readFormDataString(fd, 'telefone'),
                     })
-                    if (ok !== null) {
+                    if (ok) {
                       e.currentTarget.reset()
                       setTipoNovo('CLIENTE')
-                      router.refresh()
                     }
                     return
                   }
@@ -319,10 +326,9 @@ export function ClientesFornecedoresGerentePageClient({ idioma, rows }: Props) {
                     nome,
                     cnpj: readFormDataString(fd, 'cnpj'),
                   })
-                  if (ok !== null) {
+                  if (ok) {
                     e.currentTarget.reset()
                     setTipoNovo('CLIENTE')
-                    router.refresh()
                   }
                 }}
               >
