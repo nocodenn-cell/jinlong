@@ -86,6 +86,7 @@
     "filtro_nf_sim": "Com NF",
     "filtro_nf_nao": "Sem NF",
     "filtrar": "Filtrar",
+    "filtros_lateral_titulo": "Filtros da lista",
     "lista_total": "Total: {{total}} registro(s)",
     "nenhum_resultado_filtro": "Nenhum produto encontrado com estes filtros.",
     "pag_prev": "Anterior",
@@ -310,11 +311,14 @@
       "periodo_venc_ate": "até",
       "col_vencimento": "Vencimento",
       "col_valor": "Valor",
-      "rail_valor_total": "Valor total (lista filtrada)",
+      "rail_valor_total": "Valor total (listagem atual)",
       "btn_nova_conta": "Incluir conta",
       "sec_cadastro_fila": "Cadastros e fila fiscal",
       "empty_filtrados": "Nenhum título corresponde aos filtros. Ajuste os critérios ou limpe os filtros.",
-      "empty_filtrados_cta": "Use «Incluir conta» abaixo para cadastrar um novo título."
+      "empty_filtrados_cta": "Use «Incluir conta» abaixo para cadastrar um novo título.",
+      "lista_limite_aviso": "Lista limitada a {{limite}} linhas. Refine os filtros ou use o parâmetro «limite» na URL (50–500).",
+      "kpi_soma_truncada": "Soma aproximada: calculada sobre os primeiros {{n}} títulos em aberto; existem mais registros.",
+      "rail_soma_parcial_lista": "Soma apenas das linhas exibidas (lista truncada)."
     },
     "dragon_badge_fila_fiscal": "Fila fiscal",
     "theme_escuro": "Noturno",
@@ -361,7 +365,8 @@
       "col_remessa": "Remessa",
       "col_origem": "Origem",
       "col_data": "Data",
-      "empty_recentes": "Nenhuma remessa registrada ainda."
+      "empty_recentes": "Nenhuma remessa registrada ainda.",
+      "sec_formulario": "Registrar conferência"
     },
     "transferencias_page": {
       "intro": "Saída na origem e entrada no destino, com log de movimento (gerente).",
@@ -764,6 +769,7 @@
     "sim": "Sim",
     "nao": "Não",
     "idioma": "Idioma",
-    "sair": "Sair"
+    "sair": "Sair",
+    "limpar_filtros": "Limpar filtros"
   }
 }

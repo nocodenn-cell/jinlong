@@ -3,10 +3,11 @@
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { objectsToCsv } from '@/lib/csv'
+import type { GerenteTableColumn } from '@/components/gerente/GerenteTable'
+import { CadastroRapidoBlock, FiltroLateralCadastro, TabelaCadastroPadrao } from '@/components/gerente/cadastro'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
-import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -32,23 +33,6 @@ type Props = Readonly<{
   idioma: Idioma
   rows: ProdutoGerenteRow[]
 }>
-
-function interpolate(template: string, vars: Record<string, string | number>) {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
-    String(vars[key] ?? ''),
-  )
-}
-
-function downloadCsv(filename: string, columns: { key: string; header: string }[], rows: Record<string, unknown>[]) {
-  const csv = objectsToCsv(columns, rows)
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
 
 type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
 
@@ -194,7 +178,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
 
   const { mutate: exportCsv, loading: expLoading } = useGerenteMutation(
     async () => {
-      downloadCsv(
+      downloadCsvBrowser(
         'gerente-produtos.csv',
         [
           { key: 'id', header: 'id' },
@@ -251,6 +235,25 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
 
   const resetaPaginaFiltros = () => setPaginaAtual(1)
 
+  const limparFiltrosLista = () => {
+    setBusca('')
+    setFiltroOrigem('all')
+    setFiltroStatus('all')
+    setFiltroNf('all')
+    setPaginaAtual(1)
+  }
+
+  const colunasProdutos: GerenteTableColumn[] = [
+    { key: 'id', header: 'ID' },
+    { key: 'nome', header: m.produtos.nome },
+    { key: 'cb', header: m.produtos.codigo_barras },
+    { key: 'preco', header: m.produtos.preco_varejo, width: '7rem' },
+    { key: 'origem', header: m.produtos.origem_label },
+    { key: 'nf', header: m.produtos.tem_nf },
+    { key: 'st', header: m.produtos.status },
+    { key: 'ac', header: m.produtos.acoes, width: '6rem' },
+  ]
+
   return (
     <div className={`mx-auto w-full max-w-7xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
       <GerenteFilterBar
@@ -272,10 +275,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
           : '高密度商品管理视图，适合日常运营。'}
       </p>
 
-      <section className="dragon-glass-card overflow-hidden rounded-xl">
-        <div className="gerente-fin-divider border-b px-3 py-2.5">
-          <h2 className="gerente-section-accent text-sm font-semibold">{m.produtos.cadastro_rapido}</h2>
-        </div>
+      <CadastroRapidoBlock title={m.produtos.cadastro_rapido} defaultOpen>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -294,7 +294,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             })
             e.currentTarget.reset()
           }}
-          className="grid grid-cols-1 gap-2.5 p-3 md:grid-cols-6"
+          className="grid grid-cols-1 gap-2.5 md:grid-cols-6"
         >
           <input name="nome" placeholder={m.produtos.nome} className={`${finIn} md:col-span-2`} />
           <input name="codigo_barras" placeholder={m.produtos.codigo_barras} className={finIn} />
@@ -325,209 +325,204 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             <span className="opacity-80">· {m.produtos.codigo_barras_opcional}</span>
           </label>
         </form>
-      </section>
+      </CadastroRapidoBlock>
 
-      <section className="dragon-glass-card overflow-hidden rounded-xl">
-        <div className="gerente-fin-divider flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5">
-          <h2 className="gerente-section-accent text-sm font-semibold">{m.produtos.lista_produtos}</h2>
-          <p className="gerente-fin-muted text-xs font-medium">
-            {interpolate(m.produtos.contador_encontrados, { count: produtosFiltrados.length })}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(14rem,18rem)_1fr] lg:items-start">
+        <FiltroLateralCadastro
+          title={m.produtos.filtros_lateral_titulo}
+          labelFiltrar={m.produtos.filtrar}
+          labelLimpar={m.comum.limpar_filtros}
+          onFiltrar={() => resetaPaginaFiltros()}
+          onLimpar={limparFiltrosLista}
+          filtros={
+            <>
+              <input
+                value={busca}
+                onChange={(e) => {
+                  setBusca(e.target.value)
+                  setPaginaAtual(1)
+                }}
+                placeholder={m.produtos.buscar}
+                className={`${finIn} h-8`}
+                aria-label={m.produtos.buscar}
+              />
+              <select
+                value={filtroOrigem}
+                onChange={(e) => {
+                  setFiltroOrigem(e.target.value as 'all' | OrigemCode)
+                  resetaPaginaFiltros()
+                }}
+                className={`${finSelect} h-8`}
+              >
+                <option value="all">{m.produtos.filtro_todas_origens}</option>
+                <option value="china_manual">{m.produtos.origem_china}</option>
+                <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
+                <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
+              </select>
+              <select
+                value={filtroStatus}
+                onChange={(e) => {
+                  setFiltroStatus(e.target.value as 'all' | 'ativo' | 'inativo')
+                  resetaPaginaFiltros()
+                }}
+                className={`${finSelect} h-8`}
+              >
+                <option value="all">{m.produtos.filtro_todos_status}</option>
+                <option value="ativo">{m.produtos.ativo}</option>
+                <option value="inativo">{m.produtos.inativo}</option>
+              </select>
+              <select
+                value={filtroNf}
+                onChange={(e) => {
+                  setFiltroNf(e.target.value as 'all' | 'sim' | 'nao')
+                  resetaPaginaFiltros()
+                }}
+                className={`${finSelect} h-8`}
+              >
+                <option value="all">{m.produtos.filtro_todas_nf}</option>
+                <option value="sim">{m.produtos.filtro_nf_sim}</option>
+                <option value="nao">{m.produtos.filtro_nf_nao}</option>
+              </select>
+            </>
+          }
+        />
 
-        <div className="gerente-fin-divider grid grid-cols-1 gap-2 border-b p-3 sm:grid-cols-2 lg:grid-cols-4">
-          <input
-            value={busca}
-            onChange={(e) => {
-              setBusca(e.target.value)
-              setPaginaAtual(1)
-            }}
-            placeholder={m.produtos.buscar}
-            className={`${finIn} h-8`}
-            aria-label={m.produtos.buscar}
-          />
-          <select
-            value={filtroOrigem}
-            onChange={(e) => {
-              setFiltroOrigem(e.target.value as 'all' | OrigemCode)
-              resetaPaginaFiltros()
-            }}
-            className={`${finSelect} h-8`}
-          >
-            <option value="all">{m.produtos.filtro_todas_origens}</option>
-            <option value="china_manual">{m.produtos.origem_china}</option>
-            <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-            <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
-          </select>
-          <select
-            value={filtroStatus}
-            onChange={(e) => {
-              setFiltroStatus(e.target.value as 'all' | 'ativo' | 'inativo')
-              resetaPaginaFiltros()
-            }}
-            className={`${finSelect} h-8`}
-          >
-            <option value="all">{m.produtos.filtro_todos_status}</option>
-            <option value="ativo">{m.produtos.ativo}</option>
-            <option value="inativo">{m.produtos.inativo}</option>
-          </select>
-          <select
-            value={filtroNf}
-            onChange={(e) => {
-              setFiltroNf(e.target.value as 'all' | 'sim' | 'nao')
-              resetaPaginaFiltros()
-            }}
-            className={`${finSelect} h-8`}
-          >
-            <option value="all">{m.produtos.filtro_todas_nf}</option>
-            <option value="sim">{m.produtos.filtro_nf_sim}</option>
-            <option value="nao">{m.produtos.filtro_nf_nao}</option>
-          </select>
-        </div>
-
-        <div className="p-3">
-          <GerenteTable
-            tone="dragon"
-            columns={[
-              { key: 'id', header: 'ID' },
-              { key: 'nome', header: m.produtos.nome },
-              { key: 'cb', header: m.produtos.codigo_barras },
-              { key: 'preco', header: m.produtos.preco_varejo, width: '7rem' },
-              { key: 'origem', header: m.produtos.origem_label },
-              { key: 'nf', header: m.produtos.tem_nf },
-              { key: 'st', header: m.produtos.status },
-              { key: 'ac', header: m.produtos.acoes, width: '6rem' },
-            ]}
-          >
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
-                  {m.produtos.nenhum_produto_cadastrado}
-                </td>
-              </tr>
-            ) : produtosFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
-                  {m.produtos.nenhum_resultado_filtro}
-                </td>
-              </tr>
-            ) : (
-              produtosExibidos.map((p) => (
-                <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
-                  <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
-                    <span title={p.id}>{p.id.length <= 6 ? p.id : p.id.slice(-6)}</span>
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2 font-medium leading-relaxed">{p.nome}</td>
-                  <td className="gerente-fin-cell px-3 py-2 font-mono">{p.codigo_barras ?? '-'}</td>
-                  <td className="gerente-fin-cell px-1 py-1 text-right">
-                    <PrecoVarejoCell
-                      produtoId={p.id}
-                      precoVarejo={Number(p.preco_varejo)}
-                      onSaved={refetch}
-                      msgInvalido={m.produtos.preco_invalido}
-                      msgMaiorZero={m.produtos.preco_maior_zero}
-                      atualizadoMessage={m.produtos.preco_atualizado}
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2">
-                    {p.origem === 'china_manual' ? (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_china}
-                        tooltip={m.produtos.tooltip_origem_china_manual}
-                        className="border-amber-500/50 bg-amber-500/15 text-amber-100"
-                      />
-                    ) : p.origem === 'brasil_sem_nf' ? (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_brasil_sem_nf}
-                        tooltip={m.produtos.tooltip_origem_brasil_sem_nf}
-                        className="border-slate-500/50 bg-slate-500/20 text-slate-100"
-                      />
-                    ) : (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_brasil_nf}
-                        tooltip={m.produtos.tooltip_origem_brasil_nf}
-                        className="border-success/45 bg-success/15 text-success"
-                      />
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <GerenteStatusBadge status={p.tem_nf ? 'TEM_NF' : 'SEM_NF'} label={p.tem_nf ? m.comum.sim : m.comum.nao} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <GerenteStatusBadge
-                      status={p.ativo ? 'ATIVO' : 'INATIVO'}
-                      label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-center">
+        <TabelaCadastroPadrao
+          sectionTitle={m.produtos.lista_produtos}
+          sectionMeta={
+            <span>{interpolateTemplate(m.produtos.contador_encontrados, { count: produtosFiltrados.length })}</span>
+          }
+          columns={colunasProdutos}
+          footer={
+            rows.length > 0 ? (
+              <div className="gerente-fin-divider flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="gerente-fin-muted text-xs">
+                  {interpolateTemplate(m.produtos.pag_mostrar, {
+                    visiveis: produtosExibidos.length,
+                    total: produtosFiltrados.length,
+                  })}
+                </div>
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                  <label className="flex items-center gap-2 text-xs gerente-fin-muted">
+                    <span>{m.produtos.pag_linhas_por_pagina}</span>
+                    <select
+                      value={itensPorPagina}
+                      onChange={(e) => {
+                        setItensPorPagina(Number(e.target.value))
+                        setPaginaAtual(1)
+                      }}
+                      className={`${finSelect} h-8 min-w-[4.5rem]`}
+                    >
+                      {[10, 25, 50].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      disabled={toggleLoading}
-                      onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
-                      className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40"
+                      disabled={paginaSegura <= 1}
+                      onClick={() => setPaginaAtual((x) => Math.max(1, x - 1))}
+                      className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={m.produtos.pag_prev}
                     >
-                      {p.ativo ? m.produtos.inativar : m.produtos.ativar}
+                      <ChevronLeft size={20} className="shrink-0" />
                     </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </GerenteTable>
-        </div>
-
-        {rows.length > 0 ? (
-          <div className="gerente-fin-divider flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="gerente-fin-muted text-xs">
-              {interpolate(m.produtos.pag_mostrar, {
-                visiveis: produtosExibidos.length,
-                total: produtosFiltrados.length,
-              })}
-            </div>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-              <label className="flex items-center gap-2 text-xs gerente-fin-muted">
-                <span>{m.produtos.pag_linhas_por_pagina}</span>
-                <select
-                  value={itensPorPagina}
-                  onChange={(e) => {
-                    setItensPorPagina(Number(e.target.value))
-                    setPaginaAtual(1)
-                  }}
-                  className={`${finSelect} h-8 min-w-[4.5rem]`}
-                >
-                  {[10, 25, 50].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={paginaSegura <= 1}
-                  onClick={() => setPaginaAtual((x) => Math.max(1, x - 1))}
-                  className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label={m.produtos.pag_prev}
-                >
-                  <ChevronLeft size={20} className="shrink-0" />
-                </button>
-                <span className="text-xs font-medium tabular-nums">
-                  {interpolate(m.produtos.pag_info, { atual: paginaSegura, total: totalPaginas })}
-                </span>
-                <button
-                  type="button"
-                  disabled={paginaSegura >= totalPaginas}
-                  onClick={() => setPaginaAtual((x) => Math.min(totalPaginas, x + 1))}
-                  className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label={m.produtos.pag_next}
-                >
-                  <ChevronRight size={20} className="shrink-0" />
-                </button>
+                    <span className="text-xs font-medium tabular-nums">
+                      {interpolateTemplate(m.produtos.pag_info, { atual: paginaSegura, total: totalPaginas })}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={paginaSegura >= totalPaginas}
+                      onClick={() => setPaginaAtual((x) => Math.min(totalPaginas, x + 1))}
+                      className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={m.produtos.pag_next}
+                    >
+                      <ChevronRight size={20} className="shrink-0" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ) : null}
-      </section>
+            ) : null
+          }
+        >
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
+                {m.produtos.nenhum_produto_cadastrado}
+              </td>
+            </tr>
+          ) : produtosFiltrados.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
+                {m.produtos.nenhum_resultado_filtro}
+              </td>
+            </tr>
+          ) : (
+            produtosExibidos.map((p) => (
+              <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
+                <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
+                  <span title={p.id}>{p.id.length <= 6 ? p.id : p.id.slice(-6)}</span>
+                </td>
+                <td className="gerente-fin-cell px-3 py-2 font-medium leading-relaxed">{p.nome}</td>
+                <td className="gerente-fin-cell px-3 py-2 font-mono">{p.codigo_barras ?? '-'}</td>
+                <td className="gerente-fin-cell px-1 py-1 text-right">
+                  <PrecoVarejoCell
+                    produtoId={p.id}
+                    precoVarejo={Number(p.preco_varejo)}
+                    onSaved={refetch}
+                    msgInvalido={m.produtos.preco_invalido}
+                    msgMaiorZero={m.produtos.preco_maior_zero}
+                    atualizadoMessage={m.produtos.preco_atualizado}
+                  />
+                </td>
+                <td className="gerente-fin-cell px-3 py-2">
+                  {p.origem === 'china_manual' ? (
+                    <OrigemBadgeUi
+                      label={m.produtos.origem_china}
+                      tooltip={m.produtos.tooltip_origem_china_manual}
+                      className="border-amber-500/50 bg-amber-500/15 text-amber-100"
+                    />
+                  ) : p.origem === 'brasil_sem_nf' ? (
+                    <OrigemBadgeUi
+                      label={m.produtos.origem_brasil_sem_nf}
+                      tooltip={m.produtos.tooltip_origem_brasil_sem_nf}
+                      className="border-slate-500/50 bg-slate-500/20 text-slate-100"
+                    />
+                  ) : (
+                    <OrigemBadgeUi
+                      label={m.produtos.origem_brasil_nf}
+                      tooltip={m.produtos.tooltip_origem_brasil_nf}
+                      className="border-success/45 bg-success/15 text-success"
+                    />
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  <GerenteStatusBadge status={p.tem_nf ? 'TEM_NF' : 'SEM_NF'} label={p.tem_nf ? m.comum.sim : m.comum.nao} />
+                </td>
+                <td className="px-3 py-2">
+                  <GerenteStatusBadge
+                    status={p.ativo ? 'ATIVO' : 'INATIVO'}
+                    label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
+                  />
+                </td>
+                <td className="px-3 py-2 text-center">
+                  <button
+                    type="button"
+                    disabled={toggleLoading}
+                    onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
+                    className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40"
+                  >
+                    {p.ativo ? m.produtos.inativar : m.produtos.ativar}
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </TabelaCadastroPadrao>
+      </div>
     </div>
   )
 }

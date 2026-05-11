@@ -86,6 +86,7 @@
     "filtro_nf_sim": "有发票",
     "filtro_nf_nao": "无发票",
     "filtrar": "查询",
+    "filtros_lateral_titulo": "列表筛选",
     "lista_total": "共 {{total}} 条",
     "nenhum_resultado_filtro": "没有符合条件的商品。",
     "pag_prev": "上一页",
@@ -315,11 +316,14 @@
       "periodo_venc_ate": "至",
       "col_vencimento": "到期日",
       "col_valor": "金额",
-      "rail_valor_total": "合计（筛选后）",
+      "rail_valor_total": "合计（当前查询结果）",
       "btn_nova_conta": "新增应收",
       "sec_cadastro_fila": "建档与税务队列",
       "empty_filtrados": "没有符合筛选条件的账单。",
-      "empty_filtrados_cta": "可用下方「新增应收」创建一笔。"
+      "empty_filtrados_cta": "可用下方「新增应收」创建一笔。",
+      "lista_limite_aviso": "列表最多显示 {{limite}} 行。请缩小筛选条件，或在 URL 使用参数 «limite»（50–500）。",
+      "kpi_soma_truncada": "合计为近似值：仅累加前 {{n}} 笔未结应收，仍有更多记录。",
+      "rail_soma_parcial_lista": "合计仅为当前页行（列表已截断）。"
     },
     "dragon_badge_fila_fiscal": "税务队列",
     "theme_escuro": "夜间",
@@ -366,7 +370,8 @@
       "col_remessa": "单号",
       "col_origem": "来源",
       "col_data": "日期",
-      "empty_recentes": "尚无到货记录。"
+      "empty_recentes": "尚无到货记录。",
+      "sec_formulario": "登记收货核对"
     },
     "transferencias_page": {
       "intro": "从来源店扣减并入库到目标店（经理操作日志）。",
@@ -816,7 +821,8 @@
     "nao": "否",
     "idioma": "语言",
     "sair": "退出登录",
-    "fechar": "关闭"
+    "fechar": "关闭",
+    "limpar_filtros": "清除筛选"
   },
   "dashboard_novo": {
     "title": "仪表板",
