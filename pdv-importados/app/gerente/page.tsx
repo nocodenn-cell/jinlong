@@ -1,96 +1,142 @@
 import Link from 'next/link'
-import { DollarSign, ShoppingCart, FileText, TrendingUp, AlertCircle } from 'lucide-react'
+import { DollarSign, ShoppingCart, TrendingUp, Percent, AlertCircle } from 'lucide-react'
+import { obterDashboardResumo, type DashboardResumoDTO } from './actions'
 import { getDashboardMetrics } from './dashboard-actions'
 import { MetricCard } from '@/components/gerente/MetricCard'
 import { DashboardHeader } from '@/components/gerente/DashboardHeader'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
-import { formatBRL } from '@/lib/format/money'
+import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import {
   gerenteInicioAtalhoKeys,
   gerenteNavLabel,
   painelGerencialHref,
 } from '@/lib/navigation/painelGerencialNav'
 
+// Revalida o snapshot dos KPIs no máximo a cada 30s. `unstable_cache` foi
+// preterido aqui porque a RPC depende do JWT do usuário (cookies), e funções
+// embrulhadas em `unstable_cache` rodam fora do contexto de request.
+export const revalidate = 30
+
+function getVariacaoPercentual(hoje: number, ontem: number): number {
+  if (ontem > 0) return ((hoje - ontem) / ontem) * 100
+  if (hoje > 0) return 100
+  return 0
+}
+
+const ZERO_RESUMO: DashboardResumoDTO = {
+  tz: 'America/Sao_Paulo',
+  hoje: '',
+  ontem: '',
+  faturamento_hoje: 0,
+  faturamento_ontem: 0,
+  quantidade_vendas_hoje: 0,
+  quantidade_vendas_ontem: 0,
+  ticket_medio_hoje: 0,
+  ticket_medio_ontem: 0,
+  margem_estimada: null,
+  cobertura_custo: 0,
+  custo_confiavel: false,
+}
+
 export default async function GerenteInicioPage() {
   const { idioma, perfil } = await getUsuarioIdioma()
   const m = getMessages(idioma)
   const locale = localeFromIdioma(idioma)
-  
-  // Buscar métricas do dashboard
-  const metrics = await getDashboardMetrics()
-  
+
+  const [resumoResult, headerMetrics] = await Promise.all([
+    obterDashboardResumo(),
+    getDashboardMetrics(),
+  ])
+
+  const resumo: DashboardResumoDTO = resumoResult.ok ? resumoResult.data : ZERO_RESUMO
+  const erroResumo = resumoResult.ok ? null : resumoResult.error
+
+  const variacaoFaturamento = getVariacaoPercentual(
+    resumo.faturamento_hoje,
+    resumo.faturamento_ontem,
+  )
+  const variacaoTicket = getVariacaoPercentual(
+    resumo.ticket_medio_hoje,
+    resumo.ticket_medio_ontem,
+  )
+  const variacaoVendas = getVariacaoPercentual(
+    resumo.quantidade_vendas_hoje,
+    resumo.quantidade_vendas_ontem,
+  )
+
   const atalhos = gerenteInicioAtalhoKeys(false).map((key) => ({
     href: painelGerencialHref(key),
     label: gerenteNavLabel(m, key),
   }))
 
+  const margemRotulo = resumo.custo_confiavel && resumo.margem_estimada !== null
+    ? formatBRL(resumo.margem_estimada, locale)
+    : m.relatorios.kpi_margem_indisponivel
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header com título e botão fiscal */}
-      <DashboardHeader 
-        m={m} 
-        documentosFiscaisPendentes={metrics.documentosFiscaisPendentes} 
+      <DashboardHeader
+        m={m}
+        documentosFiscaisPendentes={headerMetrics.documentosFiscaisPendentes}
       />
 
-      {/* Grid de cards de métricas */}
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Faturamento Hoje"
-          value={formatBRL(metrics.faturamentoHoje, locale)}
-          icon={DollarSign}
-          trend={{
-            value: 12.5, // TODO: calcular tendência real
-            isPositive: true,
-          }}
-        />
-        
-        <MetricCard
-          title="Ticket Médio Hoje"
-          value={formatBRL(metrics.ticketMedioHoje, locale)}
-          icon={TrendingUp}
-          trend={{
-            value: 8.3, // TODO: calcular tendência real
-            isPositive: true,
-          }}
-        />
-        
-        <MetricCard
-          title="Quantidade de Vendas Hoje"
-          value={metrics.quantidadeVendasHoje}
-          icon={ShoppingCart}
-          trend={{
-            value: -3.2, // TODO: calcular tendência real
-            isPositive: false,
-          }}
-        />
-        
-        <MetricCard
-          title="Títulos em Aberto"
-          value={formatBRL(metrics.titulosEmAberto, locale)}
-          icon={FileText}
-        />
-      </div>
-
-      {/* Alerta para documentos fiscais pendentes */}
-      {metrics.documentosFiscaisPendentes > 0 && (
-        <div className="mt-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500" />
-            <div>
-              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                Documentos Fiscais Pendentes
-              </h3>
-              <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
-                Existem {metrics.documentosFiscaisPendentes} documentos aguardando processamento.
-              </p>
-            </div>
+      {erroResumo && (
+        <div
+          role="alert"
+          className="mt-6 flex items-start gap-3 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
+          <div>
+            <div className="font-medium text-foreground">Não foi possível carregar os KPIs</div>
+            <div className="mt-1">{erroResumo}</div>
           </div>
         </div>
       )}
 
-      {/* Seção de atalhos */}
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Faturamento Hoje"
+          value={formatBRL(resumo.faturamento_hoje, locale)}
+          icon={DollarSign}
+          trend={{
+            value: Number(variacaoFaturamento.toFixed(1)),
+            isPositive: variacaoFaturamento >= 0,
+          }}
+        />
+
+        <MetricCard
+          title="Ticket Médio Hoje"
+          value={formatBRL(resumo.ticket_medio_hoje, locale)}
+          icon={TrendingUp}
+          trend={{
+            value: Number(variacaoTicket.toFixed(1)),
+            isPositive: variacaoTicket >= 0,
+          }}
+        />
+
+        <MetricCard
+          title="Vendas Hoje"
+          value={formatNumberLocale(resumo.quantidade_vendas_hoje, locale)}
+          icon={ShoppingCart}
+          trend={{
+            value: Number(variacaoVendas.toFixed(1)),
+            isPositive: variacaoVendas >= 0,
+          }}
+        />
+
+        <MetricCard
+          title="Margem Estimada Hoje"
+          value={margemRotulo}
+          icon={Percent}
+        />
+      </div>
+
+      <p className="mt-2 text-xs text-muted-foreground">
+        {m.gerente.vs_dia_anterior}
+      </p>
+
       <div className="mt-10">
         <h2 className="text-lg font-semibold text-foreground">{m.gerente.atalhos_modulos}</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -106,7 +152,6 @@ export default async function GerenteInicioPage() {
         </div>
       </div>
 
-      {/* Seção para perfil DONO */}
       {perfil === 'DONO' && (
         <div className="mt-10">
           <h2 className="text-lg font-semibold text-foreground">{m.gerente.secao_dono_titulo}</h2>
