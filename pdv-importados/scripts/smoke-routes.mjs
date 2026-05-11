@@ -13,6 +13,8 @@ const cases = [
   { path: '/gerente/produtos', expectRedirect: true, name: 'gerente sem auth' },
   { path: '/gerente/clientes-fornecedores', expectRedirect: true, name: 'gerente contatos sem auth' },
   { path: '/gerente/vendedores', expectRedirect: true, name: 'gerente vendedores sem auth' },
+  { path: '/gerente/categorias', expectRedirect: true, name: 'gerente categorias sem auth' },
+  { path: '/gerente/formas-pagamento', expectRedirect: true, name: 'gerente formas-pagamento sem auth' },
   { path: '/gerente/estoque', expectRedirect: true, name: 'estoque gerente sem auth' },
   { path: '/gerente', expectRedirect: true, name: 'gerente inicio sem auth' },
   { path: '/gerente/vendas', expectRedirect: true, name: 'gerente vendas sem auth' },

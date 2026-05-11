@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao, mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
+  somenteDigitos,
+  validarDocumentoClienteOpcional,
+} from '@/app/gerente/clientes-fornecedores/actions.validation'
+import {
   validarCriarClienteInput,
   validarCriarTituloInput,
   validarLiquidarTituloInput,
@@ -17,14 +21,20 @@ export async function criarCliente(input: { nome: string; documento?: string; te
   if (!auth.ok) return { success: false, error: auth.error }
   const erro = validarCriarClienteInput({ nome: input.nome })
   if (erro) return { success: false, error: erro }
+  const docErro = validarDocumentoClienteOpcional(input.documento)
+  if (docErro) return { success: false, error: docErro }
   const nome = input.nome.trim()
+  const docNorm =
+    input.documento?.trim() === '' || input.documento === undefined
+      ? null
+      : somenteDigitos(input.documento)
 
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('clientes')
     .insert({
       nome,
-      documento: input.documento?.trim() || null,
+      documento: docNorm,
       telefone: input.telefone?.trim() || null,
     })
     .select('id')
