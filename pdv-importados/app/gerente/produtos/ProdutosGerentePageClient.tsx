@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { GerenteTableColumn } from '@/components/gerente/GerenteTable'
+import type { CampoFiltro } from '@/components/gerente/cadastro'
 import { CadastroRapidoBlock, FiltroLateralCadastro, TabelaCadastroPadrao } from '@/components/gerente/cadastro'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
@@ -13,28 +14,63 @@ import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
+import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
 import {
   alternarAtivoProduto,
   atualizarPrecoVarejoProduto,
+  buscarProdutosComFiltros,
+  buscarProdutosParaExportacao,
   criarProduto,
 } from './actions'
+import type { ProdutoGerenteRow } from './produtoGerenteTypes'
+import { parseTagsFiltroTexto } from './produtoGerenteFiltrosUtils'
 
-export type ProdutoGerenteRow = {
-  id: string
-  nome: string
-  codigo_barras: string | null
-  preco_varejo: number
-  origem: string
-  tem_nf: boolean
-  ativo: boolean
-}
-
-type Props = Readonly<{
-  idioma: Idioma
-  rows: ProdutoGerenteRow[]
-}>
+export type { ProdutoGerenteRow } from './produtoGerenteTypes'
 
 type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
+
+type FiltrosUi = {
+  situacao: 'todos' | 'ativos' | 'inativos'
+  origem: 'all' | OrigemCode
+  nf: 'all' | 'sim' | 'nao'
+  estoque: 'todos' | 'abaixo_minimo' | 'em_falta'
+  imagens: 'todos' | 'com_imagem' | 'sem_imagem'
+  tagsTexto: string
+  categoriaId: string
+  marcaId: string
+  fornecedorId: string
+  busca: string
+}
+
+const FILTROS_UI_INITIAL: FiltrosUi = {
+  situacao: 'todos',
+  origem: 'all',
+  nf: 'all',
+  estoque: 'todos',
+  imagens: 'todos',
+  tagsTexto: '',
+  categoriaId: '',
+  marcaId: '',
+  fornecedorId: '',
+  busca: '',
+}
+
+function toBuscarInput(f: FiltrosUi, page: number, pageSize: number): BuscarProdutosComFiltrosInput {
+  return {
+    situacao: f.situacao,
+    origem: f.origem,
+    nf: f.nf,
+    estoque: f.estoque,
+    imagens: f.imagens,
+    tags: parseTagsFiltroTexto(f.tagsTexto),
+    categoriaId: f.categoriaId || undefined,
+    marcaId: f.marcaId || undefined,
+    fornecedorId: f.fornecedorId || undefined,
+    busca: f.busca,
+    page,
+    pageSize,
+  }
+}
 
 function OrigemBadgeUi({
   tooltip,
@@ -133,51 +169,69 @@ function PrecoVarejoCell({
   )
 }
 
-export function ProdutosGerentePageClient({ idioma, rows }: Props) {
+type Props = Readonly<{
+  idioma: Idioma
+  opcoes: OpcoesFiltrosProdutos
+  inicial: { rows: ProdutoGerenteRow[]; total: number }
+}>
+
+export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const m = getMessages(idioma)
   const router = useRouter()
   const fontClass = idioma === 'pt' ? '' : 'font-chinese'
-  const refetch = useCallback(() => router.refresh(), [router])
 
-  const [busca, setBusca] = useState('')
+  const [rows, setRows] = useState<ProdutoGerenteRow[]>(inicial.rows)
+  const [total, setTotal] = useState(inicial.total)
+  const [filtros, setFiltros] = useState<FiltrosUi>(FILTROS_UI_INITIAL)
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(10)
-  const [filtroOrigem, setFiltroOrigem] = useState<'all' | OrigemCode>('all')
-  const [filtroStatus, setFiltroStatus] = useState<'all' | 'ativo' | 'inativo'>('all')
-  const [filtroNf, setFiltroNf] = useState<'all' | 'sim' | 'nao'>('all')
+  const [loadingList, setLoadingList] = useState(false)
+  const tinhaProdutosAoCarregar = useRef(inicial.total > 0)
 
-  const produtosFiltrados = useMemo(() => {
-    const termo = busca.toLowerCase().trim()
-    return rows.filter((p) => {
-      if (filtroOrigem !== 'all' && p.origem !== filtroOrigem) return false
-      if (filtroStatus === 'ativo' && !p.ativo) return false
-      if (filtroStatus === 'inativo' && p.ativo) return false
-      if (filtroNf === 'sim' && !p.tem_nf) return false
-      if (filtroNf === 'nao' && p.tem_nf) return false
-      if (!termo) return true
-      const nome = p.nome?.toLowerCase() ?? ''
-      const cb = p.codigo_barras ?? ''
-      const idLow = p.id.toLowerCase()
-      return nome.includes(termo) || cb.includes(termo) || idLow.includes(termo)
-    })
-  }, [busca, rows, filtroOrigem, filtroStatus, filtroNf])
+  const fetchList = useCallback(async (f: FiltrosUi, page: number) => {
+    setLoadingList(true)
+    try {
+      const r = await buscarProdutosComFiltros(toBuscarInput(f, page, itensPorPagina))
+      if (!r.success) {
+        emitGerenteToast({ kind: 'error', message: r.error })
+        return
+      }
+      setRows(r.data.rows)
+      setTotal(r.data.total)
+    } finally {
+      setLoadingList(false)
+    }
+  }, [itensPorPagina])
 
-  const totalPaginas = Math.max(1, Math.ceil(produtosFiltrados.length / itensPorPagina))
+  const primeiraMontagem = useRef(true)
+  useEffect(() => {
+    if (primeiraMontagem.current) {
+      primeiraMontagem.current = false
+      return
+    }
+    const id = setTimeout(() => {
+      void fetchList(filtros, paginaAtual)
+    }, 320)
+    return () => clearTimeout(id)
+  }, [filtros, paginaAtual, itensPorPagina, fetchList])
+
+  const refetch = useCallback(() => {
+    void fetchList(filtros, paginaAtual)
+  }, [fetchList, filtros, paginaAtual])
+
+  const totalPaginas = Math.max(1, Math.ceil(total / itensPorPagina))
   const paginaSegura = Math.min(paginaAtual, totalPaginas)
 
   useEffect(() => {
     setPaginaAtual((prev) => Math.min(prev, totalPaginas))
   }, [totalPaginas])
 
-  const produtosExibidos = useMemo(() => {
-    const inicio = (paginaSegura - 1) * itensPorPagina
-    return produtosFiltrados.slice(inicio, inicio + itensPorPagina)
-  }, [produtosFiltrados, paginaSegura, itensPorPagina])
-
   const exportOpts = useMemo(() => ({ successMessage: m.comum.sucesso }), [m.comum.sucesso])
 
   const { mutate: exportCsv, loading: expLoading } = useGerenteMutation(
     async () => {
+      const r = await buscarProdutosParaExportacao(toBuscarInput(filtros, 1, itensPorPagina), 500)
+      if (!r.success) throw new Error(r.error)
       downloadCsvBrowser(
         'gerente-produtos.csv',
         [
@@ -189,7 +243,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
           { key: 'tem_nf', header: m.produtos.tem_nf },
           { key: 'ativo', header: m.produtos.status },
         ],
-        produtosFiltrados.map((p) => ({
+        r.data.map((p) => ({
           id: p.id,
           nome: p.nome,
           codigo_barras: p.codigo_barras ?? '',
@@ -214,7 +268,8 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
     }) => {
       const r = await criarProduto(input)
       if (!r.success) throw new Error(r.error)
-      refetch()
+      void fetchList(filtros, paginaAtual)
+      router.refresh()
       return r.data
     },
     { successMessage: m.comum.sucesso },
@@ -224,7 +279,8 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
     async (p: { id: string; ativo: boolean }) => {
       const r = await alternarAtivoProduto(p.id, p.ativo)
       if (!r.success) throw new Error(r.error)
-      refetch()
+      void fetchList(filtros, paginaAtual)
+      router.refresh()
       return null
     },
     { successMessage: m.comum.sucesso },
@@ -233,15 +289,152 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
   const finIn = 'h-9 rounded-md px-3 text-xs app-input'
   const finSelect = 'h-9 rounded-md px-3 text-xs app-select'
 
-  const resetaPaginaFiltros = () => setPaginaAtual(1)
+  const patchFiltro = useCallback(<K extends keyof FiltrosUi>(k: K, v: FiltrosUi[K], resetPage = true) => {
+    setFiltros((prev) => ({ ...prev, [k]: v }))
+    if (resetPage) setPaginaAtual(1)
+  }, [])
 
-  const limparFiltrosLista = () => {
-    setBusca('')
-    setFiltroOrigem('all')
-    setFiltroStatus('all')
-    setFiltroNf('all')
+  const onFiltrar = useCallback(() => {
     setPaginaAtual(1)
-  }
+    void fetchList(filtros, 1)
+  }, [fetchList, filtros])
+
+  const onLimpar = useCallback(() => {
+    setFiltros(FILTROS_UI_INITIAL)
+    setPaginaAtual(1)
+  }, [])
+
+  const opCategorias = useMemo(
+    () => [
+      { value: '', label: m.produtos.filtro_categoria_todas },
+      ...opcoes.categorias.map((c) => ({ value: c.id, label: c.nome })),
+    ],
+    [m.produtos.filtro_categoria_todas, opcoes.categorias],
+  )
+
+  const opMarcas = useMemo(
+    () => [
+      { value: '', label: m.produtos.filtro_marca_todas },
+      ...opcoes.marcas.map((x) => ({ value: x.id, label: x.nome })),
+    ],
+    [m.produtos.filtro_marca_todas, opcoes.marcas],
+  )
+
+  const opFornecedores = useMemo(
+    () => [
+      { value: '', label: m.produtos.filtro_fornecedor_todos },
+      ...opcoes.fornecedores.map((x) => ({ value: x.id, label: x.nome })),
+    ],
+    [m.produtos.filtro_fornecedor_todos, opcoes.fornecedores],
+  )
+
+  const camposFiltro: CampoFiltro[] = useMemo(
+    () => [
+      {
+        id: 'busca',
+        label: m.produtos.buscar,
+        tipo: 'search',
+        valor: filtros.busca,
+        onChange: (v) => patchFiltro('busca', typeof v === 'string' ? v : '', false),
+        placeholder: m.produtos.buscar,
+      },
+      {
+        id: 'origem',
+        label: m.produtos.origem_label,
+        tipo: 'select',
+        valor: filtros.origem,
+        onChange: (v) => patchFiltro('origem', (typeof v === 'string' ? v : 'all') as FiltrosUi['origem']),
+        opcoes: [
+          { value: 'all', label: m.produtos.filtro_todas_origens },
+          { value: 'china_manual', label: m.produtos.origem_china },
+          { value: 'brasil_nf', label: m.produtos.origem_brasil_nf },
+          { value: 'brasil_sem_nf', label: m.produtos.origem_brasil_sem_nf },
+        ],
+      },
+      {
+        id: 'situacao',
+        label: m.produtos.filtro_situacao_label,
+        tipo: 'select',
+        valor: filtros.situacao,
+        onChange: (v) =>
+          patchFiltro('situacao', (typeof v === 'string' ? v : 'todos') as FiltrosUi['situacao']),
+        opcoes: [
+          { value: 'todos', label: m.produtos.filtro_situacao_todos },
+          { value: 'ativos', label: m.produtos.filtro_situacao_somente_ativos },
+          { value: 'inativos', label: m.produtos.filtro_situacao_somente_inativos },
+        ],
+      },
+      {
+        id: 'nf',
+        label: m.produtos.tem_nf,
+        tipo: 'select',
+        valor: filtros.nf,
+        onChange: (v) => patchFiltro('nf', (typeof v === 'string' ? v : 'all') as FiltrosUi['nf']),
+        opcoes: [
+          { value: 'all', label: m.produtos.filtro_todas_nf },
+          { value: 'sim', label: m.produtos.filtro_nf_sim },
+          { value: 'nao', label: m.produtos.filtro_nf_nao },
+        ],
+      },
+      {
+        id: 'estoque',
+        label: m.produtos.filtro_estoque_label,
+        tipo: 'select',
+        valor: filtros.estoque,
+        onChange: (v) => patchFiltro('estoque', (typeof v === 'string' ? v : 'todos') as FiltrosUi['estoque']),
+        opcoes: [
+          { value: 'todos', label: m.produtos.filtro_estoque_todos },
+          { value: 'abaixo_minimo', label: m.produtos.filtro_estoque_abaixo_minimo },
+          { value: 'em_falta', label: m.produtos.filtro_estoque_em_falta },
+        ],
+      },
+      {
+        id: 'imagens',
+        label: m.produtos.filtro_imagens_label,
+        tipo: 'select',
+        valor: filtros.imagens,
+        onChange: (v) => patchFiltro('imagens', (typeof v === 'string' ? v : 'todos') as FiltrosUi['imagens']),
+        opcoes: [
+          { value: 'todos', label: m.produtos.filtro_imagens_todos },
+          { value: 'com_imagem', label: m.produtos.filtro_imagens_com },
+          { value: 'sem_imagem', label: m.produtos.filtro_imagens_sem },
+        ],
+      },
+      {
+        id: 'categoria',
+        label: m.produtos.categoria,
+        tipo: 'select',
+        valor: filtros.categoriaId,
+        onChange: (v) => patchFiltro('categoriaId', typeof v === 'string' ? v : ''),
+        opcoes: opCategorias,
+      },
+      {
+        id: 'marca',
+        label: m.produtos.filtro_marca_label,
+        tipo: 'select',
+        valor: filtros.marcaId,
+        onChange: (v) => patchFiltro('marcaId', typeof v === 'string' ? v : ''),
+        opcoes: opMarcas,
+      },
+      {
+        id: 'fornecedor',
+        label: m.produtos.filtro_fornecedor_label,
+        tipo: 'select',
+        valor: filtros.fornecedorId,
+        onChange: (v) => patchFiltro('fornecedorId', typeof v === 'string' ? v : ''),
+        opcoes: opFornecedores,
+      },
+      {
+        id: 'tags',
+        label: m.produtos.filtro_tags_label,
+        tipo: 'search',
+        valor: filtros.tagsTexto,
+        onChange: (v) => patchFiltro('tagsTexto', typeof v === 'string' ? v : '', false),
+        placeholder: m.produtos.filtro_tags_placeholder,
+      },
+    ],
+    [filtros, m.produtos, opCategorias, opMarcas, opFornecedores, patchFiltro],
+  )
 
   const colunasProdutos: GerenteTableColumn[] = [
     { key: 'id', header: 'ID' },
@@ -261,7 +454,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
         rightSlot={
           <button
             type="button"
-            disabled={expLoading || produtosFiltrados.length === 0}
+            disabled={expLoading || total === 0}
             onClick={() => void exportCsv(null)}
             className="gerente-btn-csv rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-50"
           >
@@ -332,74 +525,29 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
           title={m.produtos.filtros_lateral_titulo}
           labelFiltrar={m.produtos.filtrar}
           labelLimpar={m.comum.limpar_filtros}
-          onFiltrar={() => resetaPaginaFiltros()}
-          onLimpar={limparFiltrosLista}
-          filtros={
-            <>
-              <input
-                value={busca}
-                onChange={(e) => {
-                  setBusca(e.target.value)
-                  setPaginaAtual(1)
-                }}
-                placeholder={m.produtos.buscar}
-                className={`${finIn} h-8`}
-                aria-label={m.produtos.buscar}
-              />
-              <select
-                value={filtroOrigem}
-                onChange={(e) => {
-                  setFiltroOrigem(e.target.value as 'all' | OrigemCode)
-                  resetaPaginaFiltros()
-                }}
-                className={`${finSelect} h-8`}
-              >
-                <option value="all">{m.produtos.filtro_todas_origens}</option>
-                <option value="china_manual">{m.produtos.origem_china}</option>
-                <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-                <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
-              </select>
-              <select
-                value={filtroStatus}
-                onChange={(e) => {
-                  setFiltroStatus(e.target.value as 'all' | 'ativo' | 'inativo')
-                  resetaPaginaFiltros()
-                }}
-                className={`${finSelect} h-8`}
-              >
-                <option value="all">{m.produtos.filtro_todos_status}</option>
-                <option value="ativo">{m.produtos.ativo}</option>
-                <option value="inativo">{m.produtos.inativo}</option>
-              </select>
-              <select
-                value={filtroNf}
-                onChange={(e) => {
-                  setFiltroNf(e.target.value as 'all' | 'sim' | 'nao')
-                  resetaPaginaFiltros()
-                }}
-                className={`${finSelect} h-8`}
-              >
-                <option value="all">{m.produtos.filtro_todas_nf}</option>
-                <option value="sim">{m.produtos.filtro_nf_sim}</option>
-                <option value="nao">{m.produtos.filtro_nf_nao}</option>
-              </select>
-            </>
-          }
+          onFiltrar={onFiltrar}
+          onLimpar={onLimpar}
+          campos={camposFiltro}
         />
 
         <TabelaCadastroPadrao
           sectionTitle={m.produtos.lista_produtos}
           sectionMeta={
-            <span>{interpolateTemplate(m.produtos.contador_encontrados, { count: produtosFiltrados.length })}</span>
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <span>{interpolateTemplate(m.produtos.contador_encontrados, { count: total })}</span>
+              {loadingList ? (
+                <span className="text-[11px] font-normal opacity-70">{m.produtos.filtro_carregando}</span>
+              ) : null}
+            </span>
           }
           columns={colunasProdutos}
           footer={
-            rows.length > 0 ? (
+            total > 0 ? (
               <div className="gerente-fin-divider flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="gerente-fin-muted text-xs">
                   {interpolateTemplate(m.produtos.pag_mostrar, {
-                    visiveis: produtosExibidos.length,
-                    total: produtosFiltrados.length,
+                    visiveis: rows.length,
+                    total,
                   })}
                 </div>
                 <div className="flex flex-wrap items-center gap-4 sm:gap-6">
@@ -423,7 +571,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      disabled={paginaSegura <= 1}
+                      disabled={paginaSegura <= 1 || loadingList}
                       onClick={() => setPaginaAtual((x) => Math.max(1, x - 1))}
                       className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
                       aria-label={m.produtos.pag_prev}
@@ -435,7 +583,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
                     </span>
                     <button
                       type="button"
-                      disabled={paginaSegura >= totalPaginas}
+                      disabled={paginaSegura >= totalPaginas || loadingList}
                       onClick={() => setPaginaAtual((x) => Math.min(totalPaginas, x + 1))}
                       className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
                       aria-label={m.produtos.pag_next}
@@ -448,20 +596,22 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
             ) : null
           }
         >
-          {rows.length === 0 ? (
+          {loadingList && rows.length === 0 ? (
             <tr>
               <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
-                {m.produtos.nenhum_produto_cadastrado}
+                {m.produtos.filtro_carregando}
               </td>
             </tr>
-          ) : produtosFiltrados.length === 0 ? (
+          ) : total === 0 ? (
             <tr>
               <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
-                {m.produtos.nenhum_resultado_filtro}
+                {!tinhaProdutosAoCarregar.current
+                  ? m.produtos.nenhum_produto_cadastrado
+                  : m.produtos.nenhum_resultado_filtro}
               </td>
             </tr>
           ) : (
-            produtosExibidos.map((p) => (
+            rows.map((p) => (
               <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
                 <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
                   <span title={p.id}>{p.id.length <= 6 ? p.id : p.id.slice(-6)}</span>
