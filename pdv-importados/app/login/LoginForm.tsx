@@ -128,7 +128,7 @@ export function LoginForm({ messages: m }: Props) {
           <div className="login-premium-dragon-outer relative mx-auto h-[min(68vh,680px)] w-full max-w-[min(92vw,520px)] sm:h-[min(72vh,720px)]">
             <div className="login-premium-dragon-media relative h-full w-full">
               <Image
-                src="/branding/dragon-jinlong-login-hero-transparent.png"
+                src="/branding/dragon-jinlong-login-hero.png"
                 alt={L.nav_marca}
                 fill
                 priority
