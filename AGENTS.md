@@ -44,3 +44,5 @@ Refer to `README.md` for the full table. Quick reference:
 - The package manager is **npm** (not pnpm/yarn). The lockfile is `package-lock.json`.
 - Node.js version: `.nvmrc` says 20, but engines allow `>=20.0.0 <25.0.0`. Node 22 works.
 - Edge Function type-check downloads Deno 2.2.2 on first run via `npx -y deno@2.2.2`. This is normal and cached after first use.
+- **`NEXT_PUBLIC_SUPABASE_URL` must be a full URL** (e.g. `https://abcdefgh.supabase.co`), not just the project reference ID. The app validates this at startup and throws if missing `https://`. If the secret is stored as just the ref ID, prefix it: `https://${NEXT_PUBLIC_SUPABASE_URL}.supabase.co`.
+- **Login requires a confirmed user** in Supabase Auth **plus** a matching row in `public.usuarios`. Without `SUPABASE_SERVICE_ROLE_KEY`, you cannot seed test users programmatically. See `pdv-importados/docs/SEED_DEV_E2E.md` for details.
