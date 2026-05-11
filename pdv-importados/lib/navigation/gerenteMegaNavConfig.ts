@@ -59,6 +59,21 @@ export const GERENTE_MEGA_NAV_GROUPS: readonly MegaNavGroup[] = [
           },
         ],
       },
+      {
+        heading: (m) => m.gerente.nav_col_auxiliares,
+        items: [
+          {
+            href: '/gerente/categorias',
+            icon: Tag,
+            label: (m) => m.gerente.nav_categorias,
+          },
+          {
+            href: '/gerente/formas-pagamento',
+            icon: Receipt,
+            label: (m) => m.gerente.nav_formas_pagamento,
+          },
+        ],
+      },
     ],
   },
   {
