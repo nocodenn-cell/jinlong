@@ -15,6 +15,17 @@ import type {
 import { coletarAuditoriaRequest, parseMoneyInput } from '@/app/caixa/server/caixaActionsInternals'
 import { validarGerenteDescontoImpl } from '@/app/caixa/server/caixaGerenteDesconto.impl'
 
+type RpcMovimentacaoResultRow = {
+  movimentacao_id?: unknown
+  status_movimentacao?: unknown
+  saldo_atual?: unknown
+}
+
+function firstRpcMovimentacaoRow(data: unknown): RpcMovimentacaoResultRow | undefined {
+  if (data == null) return undefined
+  return (Array.isArray(data) ? data[0] : data) as RpcMovimentacaoResultRow
+}
+
 export async function registrarMovimentacaoImpl(
   dados: RegistrarMovimentacaoInput,
 ): Promise<RegistrarMovimentacaoResult> {
@@ -53,7 +64,7 @@ export async function registrarMovimentacaoImpl(
     })
 
     if (error) return { ok: false, error: mensagemErroComSecao('Movimentação de caixa', error.message) }
-    const row = Array.isArray(data) ? data[0] : (data as any)
+    const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) {
       return { ok: false, error: 'A movimentação não retornou identificador.' }
     }
@@ -117,7 +128,7 @@ export async function autorizarMovimentacaoGerenteImpl(
     })
 
     if (error) return { ok: false, error: mensagemErroComSecao('Aprovação de movimentação', error.message) }
-    const row = Array.isArray(data) ? data[0] : (data as any)
+    const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) {
       return { ok: false, error: 'A aprovação não retornou identificador.' }
     }
@@ -204,7 +215,7 @@ export async function cancelarMovimentacaoCaixaImpl(
     })
     if (error) return { ok: false, error: mensagemErroComSecao('Cancelamento de movimentação', error.message) }
 
-    const row = Array.isArray(data) ? data[0] : (data as any)
+    const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) return { ok: false, error: 'Cancelamento não retornou identificador.' }
 
     revalidatePath('/caixa')
@@ -250,7 +261,7 @@ export async function estornarMovimentacaoCaixaImpl(
     })
     if (error) return { ok: false, error: mensagemErroComSecao('Estorno de movimentação', error.message) }
 
-    const row = Array.isArray(data) ? data[0] : (data as any)
+    const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) return { ok: false, error: 'Estorno não retornou identificador.' }
 
     revalidatePath('/caixa')

@@ -27,6 +27,22 @@ type PagamentoParcelaRpc = {
   valor: number
 }
 
+type RpcCancelarVendaRow = { venda_id?: unknown }
+
+type RpcFinalizarVendaRow = {
+  venda_id?: unknown
+  status?: unknown
+  mensagem?: unknown
+  dados_fiscais?: unknown
+  itens_atualizados?: unknown
+  estoque_baixado?: unknown
+}
+
+function firstRpcVendaRow<T>(data: unknown): T | undefined {
+  if (data == null) return undefined
+  return (Array.isArray(data) ? data[0] : data) as T
+}
+
 export async function cancelarVendaImpl(
   vendaId: string,
   motivo: string,
@@ -54,7 +70,7 @@ export async function cancelarVendaImpl(
     })
     if (error) return { ok: false, error: mensagemErroComSecao('Cancelamento de venda', error.message) }
 
-    const row = Array.isArray(data) ? data[0] : (data as any)
+    const row = firstRpcVendaRow<RpcCancelarVendaRow>(data)
     if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
 
     revalidatePath('/caixa')
@@ -73,7 +89,16 @@ export async function cancelarVendaImpl(
 
 export async function finalizarVendaCaixaImpl(
   raw: unknown,
-): Promise<{ ok: true; vendaId: string; documentoFiscal?: any; itensAtualizados?: any; estoqueBaixado?: any } | { ok: false; error: string }> {
+): Promise<
+  | {
+      ok: true
+      vendaId: string
+      documentoFiscal?: unknown
+      itensAtualizados?: unknown
+      estoqueBaixado?: unknown
+    }
+  | { ok: false; error: string }
+> {
   const parsed = finalizarVendaInputSchema.safeParse(raw)
   if (!parsed.success) {
     const msg = parsed.error.issues.map((e) => e.message).join('; ')
@@ -221,14 +246,14 @@ export async function finalizarVendaCaixaImpl(
     }
 
     // Processar resultado da RPC unificada
-    const row = Array.isArray(data) ? data[0] : (data as any)
+    const row = firstRpcVendaRow<RpcFinalizarVendaRow>(data)
     if (!row?.venda_id) {
       return { ok: false, error: 'Falha na finalização da venda. Tente novamente.' }
     }
 
     // Verificar status retornado
     if (row.status !== 'CONCLUIDA') {
-      return { ok: false, error: row.mensagem || 'Erro na finalização da venda.' }
+      return { ok: false, error: String(row.mensagem ?? 'Erro na finalização da venda.') }
     }
 
     // Invalidar cache
@@ -240,7 +265,7 @@ export async function finalizarVendaCaixaImpl(
     // Retornar sucesso com dados completos
     return {
       ok: true,
-      vendaId: row.venda_id,
+      vendaId: String(row.venda_id),
       documentoFiscal: row.dados_fiscais,
       itensAtualizados: row.itens_atualizados,
       estoqueBaixado: row.estoque_baixado,

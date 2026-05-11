@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Calendar, Plus, Search } from 'lucide-react'
-import React, { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
@@ -24,19 +24,16 @@ import {
   processarFilaFiscalAgora,
   reprocessarDocumentoFiscal,
 } from './actions'
+import {
+  FIN_KPI_SOMA_CAP,
+  type FinanceiroTituloFilters,
+  type FinanceiroTituloListaRow,
+  serializeTituloFiltersToSearchParams,
+} from '@/lib/gerente/financeiroTitulosServer'
 
 export type FinanceiroClienteRow = { id: string; nome: string }
 
-export type FinanceiroTituloRow = {
-  id: string
-  valor_total: number
-  valor_aberto: number
-  status: string
-  descricao: string | null
-  vencimento: string | null
-  cliente_id: string
-  cliente_nome: string | null
-}
+export type FinanceiroTituloRow = FinanceiroTituloListaRow
 
 export type FinanceiroDocRow = {
   id: string
@@ -60,28 +57,29 @@ function interStub(template: string, vars: Record<string, string | number>): str
   )
 }
 
+type TituloQueryMeta = Readonly<{
+  filters: FinanceiroTituloFilters
+  limite: number
+  listCapped: boolean
+  listaFiltrada: boolean
+}>
+
+type KpisFinanceiro = Readonly<{
+  titulosAbertosCount: number
+  valorAbertoTotal: number
+  kpiValorTruncado: boolean
+  filaPendenteCount: number
+  errosFiscaisCount: number
+}>
+
 type Props = Readonly<{
   idioma: Idioma
   clientes: FinanceiroClienteRow[]
   titulos: FinanceiroTituloRow[]
   docsFiscais: FinanceiroDocRow[]
+  tituloQuery: TituloQueryMeta
+  kpis: KpisFinanceiro
 }>
-
-type TituloFilters = {
-  opcao: 'mix' | 'ABERTO' | 'PARCIAL'
-  nomeCliente: string
-  q: string
-  de: string
-  ate: string
-}
-
-const INITIAL_TITULO_FILTERS: TituloFilters = {
-  opcao: 'mix',
-  nomeCliente: '',
-  q: '',
-  de: '',
-  ate: '',
-}
 
 function parseLocalYmd(raw: string | null | undefined): Date | null {
   if (raw == null || String(raw).trim() === '') return null
@@ -96,49 +94,6 @@ function formatDateOnlyOrDash(raw: string | null | undefined, locale: string): s
   const d = parseLocalYmd(raw)
   if (!d) return '—'
   return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-function tituloMatchesFilters(t: FinanceiroTituloRow, f: TituloFilters): boolean {
-  if (f.opcao === 'ABERTO' && t.status !== 'ABERTO') return false
-  if (f.opcao === 'PARCIAL' && t.status !== 'PARCIAL') return false
-  if (f.opcao === 'mix' && t.status !== 'ABERTO' && t.status !== 'PARCIAL') return false
-
-  const needleNome = f.nomeCliente.trim().toLowerCase()
-  if (needleNome) {
-    const nome = (t.cliente_nome ?? '').toLowerCase()
-    if (!nome.includes(needleNome)) return false
-  }
-
-  const needle = f.q.trim().toLowerCase()
-  if (needle) {
-    const blob = `${t.cliente_nome ?? ''} ${t.descricao ?? ''}`.toLowerCase()
-    if (!blob.includes(needle)) return false
-  }
-
-  const vd = parseLocalYmd(t.vencimento)
-  const de = f.de.trim()
-  const ate = f.ate.trim()
-  if (de || ate) {
-    if (!vd) return false
-    const t0 = vd.getTime()
-    if (de) {
-      const d0 = parseLocalYmd(de)
-      if (d0) {
-        const start = new Date(d0)
-        start.setHours(0, 0, 0, 0)
-        if (t0 < start.getTime()) return false
-      }
-    }
-    if (ate) {
-      const d1 = parseLocalYmd(ate)
-      if (d1) {
-        const end = new Date(d1)
-        end.setHours(23, 59, 59, 999)
-        if (t0 > end.getTime()) return false
-      }
-    }
-  }
-  return true
 }
 
 function FinField({ id, label, children }: Readonly<{ id: string; label: string; children: ReactNode }>) {
@@ -221,7 +176,14 @@ function JadeActionButton({
   )
 }
 
-export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFiscais }: Props) {
+export function FinanceiroGerentePageClient({
+  idioma,
+  clientes,
+  titulos,
+  docsFiscais,
+  tituloQuery,
+  kpis,
+}: Props) {
   const m = getMessages(idioma)
   const f = m.gerente.financeiro_stub
   const locale = useMemo(() => localeFromIdioma(idioma), [idioma])
@@ -303,26 +265,32 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
     { successMessage: f.toast_reprocessar_ok },
   )
 
-  const kpis = useMemo(() => {
-    const titulosAbertosCount = titulos.filter((t) => Number(t.valor_aberto) > 1e-6).length
-    const valorAbertoTotal = titulos.reduce((s, t) => s + Number(t.valor_aberto ?? 0), 0)
-    const filaPendenteCount = docsFiscais.filter((d) => String(d.status).toUpperCase() === 'PENDENTE').length
-    const errosFiscaisCount = docsFiscais.filter((d) => String(d.status).toUpperCase() === 'ERRO').length
-    return { titulosAbertosCount, valorAbertoTotal, filaPendenteCount, errosFiscaisCount }
-  }, [titulos, docsFiscais])
-
   const novoTituloAnchorRef = useRef<HTMLDivElement>(null)
-  const [draftFilters, setDraftFilters] = useState<TituloFilters>(INITIAL_TITULO_FILTERS)
-  const [appliedFilters, setAppliedFilters] = useState<TituloFilters>(INITIAL_TITULO_FILTERS)
+  const [draftFilters, setDraftFilters] = useState<FinanceiroTituloFilters>(() => ({ ...tituloQuery.filters }))
 
-  const titulosFiltrados = useMemo(
-    () => titulos.filter((t) => tituloMatchesFilters(t, appliedFilters)),
-    [titulos, appliedFilters],
-  )
+  useEffect(() => {
+    setDraftFilters({ ...tituloQuery.filters })
+  }, [
+    tituloQuery.filters.opcao,
+    tituloQuery.filters.nomeCliente,
+    tituloQuery.filters.q,
+    tituloQuery.filters.de,
+    tituloQuery.filters.ate,
+  ])
 
-  const valorTotalFiltrado = useMemo(
-    () => titulosFiltrados.reduce((s, t) => s + Number(t.valor_aberto ?? 0), 0),
-    [titulosFiltrados],
+  const applyFiltersToUrl = useCallback(() => {
+    const sp = serializeTituloFiltersToSearchParams(draftFilters, tituloQuery.limite)
+    const qs = sp.toString()
+    router.replace(qs ? `/gerente/financeiro?${qs}` : '/gerente/financeiro')
+  }, [draftFilters, router, tituloQuery.limite])
+
+  const clearFiltersUrl = useCallback(() => {
+    router.replace('/gerente/financeiro')
+  }, [router])
+
+  const valorTotalLista = useMemo(
+    () => titulos.reduce((s, t) => s + Number(t.valor_aberto ?? 0), 0),
+    [titulos],
   )
 
   return (
@@ -347,6 +315,11 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
           <div className="mt-0.5 text-xl font-bold tabular-nums">{kpis.titulosAbertosCount}</div>
           <div className="mt-0.5 text-[11px] app-muted">
             {f.kpi_valor_aberto_total}: {fmtGerenteBRL(kpis.valorAbertoTotal, locale)}
+            {kpis.kpiValorTruncado ? (
+              <span className="mt-1 block text-[10px] leading-snug text-amber-600/90 dark:text-amber-400/90">
+                {interStub(f.kpi_soma_truncada, { n: String(FIN_KPI_SOMA_CAP) })}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="dragon-glass-card rounded-xl border p-3 app-border">
@@ -369,7 +342,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
               onChange={(e) =>
                 setDraftFilters((p) => ({
                   ...p,
-                  opcao: e.target.value as TituloFilters['opcao'],
+                  opcao: e.target.value as FinanceiroTituloFilters['opcao'],
                 }))
               }
               className={selectClass}
@@ -433,17 +406,14 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
               <button
                 type="button"
                 className="rounded-lg px-3 py-2 text-xs font-semibold app-muted transition hover:underline"
-                onClick={() => {
-                  setDraftFilters(INITIAL_TITULO_FILTERS)
-                  setAppliedFilters(INITIAL_TITULO_FILTERS)
-                }}
+                onClick={() => clearFiltersUrl()}
               >
                 {f.btn_limpar_filtros}
               </button>
               <button
                 type="button"
                 className="inline-flex min-h-[40px] min-w-[120px] items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold shadow-sm transition hover:opacity-90 disabled:opacity-55 app-border app-accent-text"
-                onClick={() => setAppliedFilters({ ...draftFilters })}
+                onClick={() => applyFiltersToUrl()}
               >
                 {f.btn_filtrar}
               </button>
@@ -463,13 +433,13 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                   { key: 'l', header: f.col_liquidar },
                 ]}
               >
-                {titulos.length === 0 ? (
+                {titulos.length === 0 && !tituloQuery.listaFiltrada ? (
                   <tr>
                     <td colSpan={5} className="gerente-fin-empty px-4 py-10 text-center text-sm">
                       {f.empty_titulos}
                     </td>
                   </tr>
-                ) : titulosFiltrados.length === 0 ? (
+                ) : titulos.length === 0 && tituloQuery.listaFiltrada ? (
                   <tr>
                     <td colSpan={5} className="gerente-fin-empty px-4 py-10 text-center text-sm leading-relaxed">
                       <div>{f.empty_filtrados}</div>
@@ -477,7 +447,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                     </td>
                   </tr>
                 ) : (
-                  titulosFiltrados.map((t, idx) => (
+                  titulos.map((t, idx) => (
                     <tr
                       key={t.id}
                       className={cn(
@@ -539,6 +509,11 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                 )}
               </GerenteTable>
             </div>
+            {tituloQuery.listCapped ? (
+              <p className="mt-2 text-[11px] leading-snug app-muted">
+                {interStub(f.lista_limite_aviso, { limite: String(tituloQuery.limite) })}
+              </p>
+            ) : null}
           </section>
         </div>
 
@@ -554,8 +529,11 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
           <div className="dragon-glass-card rounded-xl border p-4 app-border">
             <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.rail_valor_total}</div>
             <div className="mt-2 text-2xl font-bold tabular-nums app-accent-text">
-              {fmtGerenteBRL(valorTotalFiltrado, locale)}
+              {fmtGerenteBRL(valorTotalLista, locale)}
             </div>
+            {tituloQuery.listCapped ? (
+              <p className="mt-2 text-[10px] leading-snug app-muted">{f.rail_soma_parcial_lista}</p>
+            ) : null}
           </div>
         </aside>
       </div>
