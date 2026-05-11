@@ -29,3 +29,17 @@ export const AtualizarEstoqueSchema = z.object({
 export const ProdutoIdSchema = z.object({
   produto_id: z.string().uuid('Produto inválido.'),
 })
+
+export const EstoqueListagemInputSchema = z.object({
+  visao: z.enum(['geral', 'critico']),
+  busca: z.string().max(200).optional().default(''),
+  categoria_id: z.string().uuid().nullable().optional(),
+  origem: z.enum(['', 'china_manual', 'brasil_nf', 'brasil_sem_nf']).optional().default(''),
+  ordem: z
+    .enum(['nome', 'quantidade_atual', 'estoque_minimo', 'codigo_barras', 'deficit'])
+    .optional()
+    .default('nome'),
+  dir_asc: z.boolean().optional().default(true),
+  limite: z.coerce.number().int().min(1).max(500).optional().default(25),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+})

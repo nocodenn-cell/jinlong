@@ -13,7 +13,7 @@ import {
   runServerActionWithObservability,
   type ActionResult,
 } from '@/lib/observability/runServerAction'
-import { AtualizarEstoqueSchema, ProdutoIdSchema } from './actions.validation'
+import { AtualizarEstoqueSchema, EstoqueListagemInputSchema, ProdutoIdSchema } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
 type LegacyEstoqueMutationResult<T = null> =
@@ -123,105 +123,120 @@ export type ProdutoComEstoqueDTO = {
   estoque: EstoqueRowDTO | null
 }
 
-export type EstoqueBaixoRowDTO = {
+export type EstoqueGerenteLinhaDTO = Readonly<{
   id: string
   nome: string
   codigo_barras: string | null
+  unidade_medida: string
   origem: string
-  loja_nome?: string | null
-  quantidade_atual: number
-  estoque_minimo: number
-  deficit: number
-}
+  categoria_id: string | null
+  estoque_id: string | null
+  quantidade_atual: number | null
+  estoque_minimo: number | null
+  deficit: number | null
+}>
 
-export type EstoqueGerenteData =
-  | { modo: 'todos'; produtos: ProdutoComEstoqueDTO[] }
-  | { modo: 'baixo'; linhas: EstoqueBaixoRowDTO[] }
+export type EstoqueGerenteListaResult = Readonly<{
+  total: number
+  rows: EstoqueGerenteLinhaDTO[]
+}>
 
-function deficitPercentualBaixo(row: EstoqueBaixoRowDTO): number {
-  const min = Math.max(Number(row.estoque_minimo), 1e-9)
-  const def = Math.max(Number(row.deficit), 0)
-  return def / min
-}
-
-function riscoPercentualTodos(p: ProdutoComEstoqueDTO): number {
-  const e = p.estoque
-  if (!e) return 0
-  const q = Number(e.quantidade_atual)
-  const min = Number(e.estoque_minimo)
-  if (q > min) return 0
-  const denom = Math.max(min, 1e-9)
-  return (min - q) / denom
-}
-
-/** Carga da tela de estoque (RLS + sessão do usuário). */
-export async function obterDadosEstoqueGerente(filtro: 'todos' | 'baixo'): Promise<EstoqueGerenteData> {
+async function lojaIdResolvidaGestao(): Promise<string> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  let lojaId = LOJA_MATRIZ_ID
-  if (user) {
-    const { data: urow } = await supabase
-      .from('usuarios')
-      .select('loja_id')
-      .eq('id', user.id)
-      .maybeSingle()
-    if (urow?.loja_id) lojaId = urow.loja_id as string
+  if (!user?.id) return LOJA_MATRIZ_ID
+  const { data: urow } = await supabase
+    .from('usuarios')
+    .select('loja_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  return (urow?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+}
+
+function mapRpcRow(raw: Record<string, unknown>): EstoqueGerenteLinhaDTO {
+  const num = (v: unknown): number | null => {
+    if (v === null || v === undefined) return null
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
   }
-
-  if (filtro === 'baixo') {
-    const { data } = await supabase
-      .from('v_estoque_baixo')
-      .select(
-        'id, nome, codigo_barras, origem, loja_id, loja_nome, quantidade_atual, estoque_minimo, deficit',
-      )
-      .eq('loja_id', lojaId)
-    const linhas = (data ?? []) as EstoqueBaixoRowDTO[]
-    linhas.sort((a, b) => {
-      const pa = deficitPercentualBaixo(a)
-      const pb = deficitPercentualBaixo(b)
-      if (pb !== pa) return pb - pa
-      return Number(b.deficit) - Number(a.deficit)
-    })
-    return { modo: 'baixo', linhas }
+  const str = (v: unknown): string | null => (typeof v === 'string' ? v : v == null ? null : String(v))
+  return {
+    id: String(raw.id),
+    nome: String(raw.nome ?? ''),
+    codigo_barras: str(raw.codigo_barras),
+    unidade_medida: String(raw.unidade_medida ?? 'UN'),
+    origem: String(raw.origem ?? ''),
+    categoria_id: str(raw.categoria_id),
+    estoque_id: str(raw.estoque_id),
+    quantidade_atual: num(raw.quantidade_atual),
+    estoque_minimo: num(raw.estoque_minimo),
+    deficit: num(raw.deficit),
   }
+}
 
-  const { data: plist } = await supabase
-    .from('produtos')
-    .select('id, nome, codigo_barras, unidade_medida')
-    .eq('ativo', true)
-    .order('nome', { ascending: true })
+function parseListaPayload(raw: unknown): EstoqueGerenteListaResult {
+  if (!raw || typeof raw !== 'object') {
+    return { total: 0, rows: [] }
+  }
+  const o = raw as Record<string, unknown>
+  const total = typeof o.total === 'number' ? o.total : Number(o.total) || 0
+  const rowsRaw = o.rows
+  if (!Array.isArray(rowsRaw)) return { total, rows: [] }
+  return {
+    total,
+    rows: rowsRaw.map((r) => mapRpcRow(r as Record<string, unknown>)),
+  }
+}
 
-  const { data: estRows } = await supabase
-    .from('estoque')
-    .select('id, produto_id, quantidade_atual, estoque_minimo')
-    .eq('loja_id', lojaId)
-
-  const estMap = new Map((estRows ?? []).map((e) => [e.produto_id as string, e]))
-  const produtos: ProdutoComEstoqueDTO[] =
-    plist?.map((p) => {
-      const row = estMap.get(p.id)
-      return {
-        ...p,
-        estoque: row
-          ? {
-              id: row.id as string,
-              quantidade_atual: Number(row.quantidade_atual),
-              estoque_minimo: Number(row.estoque_minimo),
-            }
-          : null,
-      }
-    }) ?? []
-
-  produtos.sort((a, b) => {
-    const ra = riscoPercentualTodos(a)
-    const rb = riscoPercentualTodos(b)
-    if (rb !== ra) return rb - ra
-    return a.nome.localeCompare(b.nome, undefined, { sensitivity: 'base' })
+/** Lista paginada (RPC `gerente_estoque_list_page`). */
+export async function obterListaEstoqueGerente(input: unknown): Promise<EstoqueGerenteListaResult> {
+  const parsed = EstoqueListagemInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { total: 0, rows: [] }
+  }
+  const supabase = await createClient()
+  const lojaId = await lojaIdResolvidaGestao()
+  const p = parsed.data
+  const { data, error } = await supabase.rpc('gerente_estoque_list_page', {
+    p_loja_id: lojaId,
+    p_visao: p.visao,
+    p_busca: p.busca ?? '',
+    p_categoria_id: p.categoria_id ?? null,
+    p_origem: p.origem ?? '',
+    p_ordem: p.ordem,
+    p_dir_asc: p.dir_asc,
+    p_limite: p.limite,
+    p_offset: p.offset,
   })
+  if (error) {
+    throw new Error(mensagemErroComSecao('Estoque', error.message))
+  }
+  return parseListaPayload(data)
+}
 
-  return { modo: 'todos', produtos }
+const EXPORT_PAGE = 400
+const EXPORT_MAX_ROWS = 12_000
+
+/** Todas as linhas que batem nos filtros (paginação servidor em blocos); teto por segurança. */
+export async function obterListaEstoqueGerenteCompletaParaExport(input: unknown): Promise<EstoqueGerenteLinhaDTO[]> {
+  const parsed = EstoqueListagemInputSchema.omit({ limite: true, offset: true }).safeParse(input)
+  if (!parsed.success) return []
+  const base = parsed.data
+  const acc: EstoqueGerenteLinhaDTO[] = []
+  let offset = 0
+  while (acc.length < EXPORT_MAX_ROWS) {
+    const chunk = await obterListaEstoqueGerente({
+      ...base,
+      limite: EXPORT_PAGE,
+      offset,
+    })
+    acc.push(...chunk.rows)
+    if (chunk.rows.length === 0 || acc.length >= chunk.total || chunk.rows.length < EXPORT_PAGE) break
+    offset += EXPORT_PAGE
+  }
+  return acc
 }
 
 export async function atualizarEstoqueProdutoThrow(input: unknown): Promise<void> {
