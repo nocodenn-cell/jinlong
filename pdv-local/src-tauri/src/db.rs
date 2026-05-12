@@ -107,6 +107,8 @@ pub struct ProdutoCacheDto {
     pub preco_varejo: f64,
     pub categoria_id: Option<String>,
     pub ativo: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub imagem_url: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -277,6 +279,10 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
         [],
     );
     let _ = conn.execute("ALTER TABLE outbox ADD COLUMN next_retry_at TEXT", []);
+    let _ = conn.execute(
+        "ALTER TABLE produtos_cache ADD COLUMN imagem_url TEXT",
+        [],
+    );
 
     Ok(())
 }
@@ -650,7 +656,7 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
 
     let mut produtos_stmt = conn
         .prepare(
-            "SELECT id, nome, codigo_barras, preco_varejo, categoria_id, ativo
+            "SELECT id, nome, codigo_barras, preco_varejo, categoria_id, ativo, imagem_url
              FROM produtos_cache",
         )
         .map_err(|e| e.to_string())?;
@@ -663,6 +669,7 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
             preco_varejo: row.get(3)?,
             categoria_id: row.get(4)?,
             ativo: row.get::<_, i64>(5)? != 0,
+            imagem_url: row.get::<_, Option<String>>(6)?,
         })
     });
 
@@ -719,6 +726,8 @@ struct ProdutoSupabaseRow {
     ativo: bool,
     origem: String,
     tem_nf: bool,
+    #[serde(default)]
+    imagem_url: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -889,8 +898,8 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
     for p in produtos_rows {
         tx.execute(
             "INSERT OR REPLACE INTO produtos_cache
-             (id, nome, codigo_barras, preco_varejo, categoria_id, ativo, origem, tem_nf)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+             (id, nome, codigo_barras, preco_varejo, categoria_id, ativo, origem, tem_nf, imagem_url)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 p.id,
                 p.nome,
@@ -899,7 +908,8 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
                 p.categoria_id,
                 if p.ativo { 1 } else { 0 },
                 p.origem,
-                if p.tem_nf { 1 } else { 0 }
+                if p.tem_nf { 1 } else { 0 },
+                p.imagem_url
             ],
         )
         .map_err(|e| e.to_string())?;

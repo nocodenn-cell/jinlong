@@ -185,7 +185,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
   }
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
@@ -201,7 +201,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
       {podeTransferir ? (
         <form onSubmit={onSubmit} className="dragon-glass-card mt-6 grid grid-cols-1 gap-3 rounded-xl p-5 md:grid-cols-2">
           <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-xs font-medium">{t.resumo_origem}</span>
+            <span className="gerente-fin-label text-sm font-medium">{t.resumo_origem}</span>
             <select
               name="origem"
               required
@@ -220,7 +220,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
             </span>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-xs font-medium">{t.resumo_destino}</span>
+            <span className="gerente-fin-label text-sm font-medium">{t.resumo_destino}</span>
             <select
               name="destino"
               required
@@ -260,7 +260,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
             </p>
           ) : null}
           <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-xs font-medium">{t.resumo_produto}</span>
+            <span className="gerente-fin-label text-sm font-medium">{t.resumo_produto}</span>
             <select
               name="produto_id"
               required
@@ -276,7 +276,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-xs font-medium">{t.resumo_quantidade}</span>
+            <span className="gerente-fin-label text-sm font-medium">{t.resumo_quantidade}</span>
             <input
               name="quantidade"
               type="number"
@@ -313,7 +313,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
             ) : null}
           </div>
           <label className="flex flex-col gap-1 md:col-span-2">
-            <span className="gerente-fin-label text-xs font-medium">{t.resumo_obs}</span>
+            <span className="gerente-fin-label text-sm font-medium">{t.resumo_obs}</span>
             <input value={observacao} onChange={(e) => setObservacao(e.target.value)} className={inputClass} />
             {observacaoObrigatoria ? (
               <span className="text-xs app-badge-warn rounded-md border px-2 py-1 mt-1">

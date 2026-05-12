@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { GerenteNavLink } from '@/components/gerente/GerenteNavLink'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
+import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { fmtQuantidadeEstoque } from '@/lib/format/fmtQuantidadeEstoque'
 import { objectsToCsv } from '@/lib/csv'
@@ -295,7 +296,7 @@ export function EstoqueGerentePageClient({
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-[1200px] px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <GerenteFilterBar title={m.estoque.titulo} />
       <p className="gerente-fin-muted mb-4 text-sm">{m.estoque.subtitulo}</p>
 
@@ -318,7 +319,7 @@ export function EstoqueGerentePageClient({
 
       <div className="mb-4 rounded-xl border border-border bg-card p-3 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.estoque.buscar_label}
             <input
               value={busca}
@@ -327,7 +328,7 @@ export function EstoqueGerentePageClient({
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.produtos.categoria}
             <select
               value={categoriaId}
@@ -342,7 +343,7 @@ export function EstoqueGerentePageClient({
               ))}
             </select>
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.produtos.origem_label}
             <select
               value={origem}
@@ -355,7 +356,7 @@ export function EstoqueGerentePageClient({
               <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
             </select>
           </label>
-          <label className="flex w-[140px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex w-[140px] flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.produtos.pag_linhas_por_pagina}
             <select
               value={pageSize}
@@ -371,21 +372,23 @@ export function EstoqueGerentePageClient({
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-        {loading ? null : (
-          <button
-            type="button"
-            disabled={exporting || total === 0}
-            onClick={() => void handleExportCsv()}
-            className={cn(
-              'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors app-btn-neutral',
-              (exporting || total === 0) && 'cursor-not-allowed opacity-45',
-            )}
-          >
-            {exporting ? m.comum.carregando : m.gerente.exportar_csv}
-          </button>
-        )}
-      </div>
+      <GerenteStickyToolbar className="mb-4">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {loading ? null : (
+            <button
+              type="button"
+              disabled={exporting || total === 0}
+              onClick={() => void handleExportCsv()}
+              className={cn(
+                'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors app-btn-neutral',
+                (exporting || total === 0) && 'cursor-not-allowed opacity-45',
+              )}
+            >
+              {exporting ? m.comum.carregando : m.gerente.exportar_csv}
+            </button>
+          )}
+        </div>
+      </GerenteStickyToolbar>
 
       {loading && !data ? <p className="gerente-fin-muted text-sm">{m.comum.carregando}</p> : null}
 

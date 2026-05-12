@@ -68,7 +68,7 @@ type Props = Readonly<{
 function FinField({ id, label, children }: Readonly<{ id: string; label: string; children: ReactNode }>) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="gerente-fin-label text-xs font-medium">
+      <label htmlFor={id} className="gerente-fin-label text-sm font-medium">
         {label}
       </label>
       {children}
@@ -236,7 +236,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
   }, [titulos, docsFiscais])
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-6xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium transition-colors hover:underline">
         ← {m.gerente.inicio}
       </Link>
@@ -253,18 +253,18 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <div className="dragon-glass-card rounded-xl border p-4 app-border">
-          <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.kpi_titulos_abertos}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide app-muted">{f.kpi_titulos_abertos}</div>
           <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.titulosAbertosCount}</div>
           <div className="mt-1 text-xs app-muted">
             {f.kpi_valor_aberto_total}: {fmtGerenteBRL(kpis.valorAbertoTotal, locale)}
           </div>
         </div>
         <div className="dragon-glass-card rounded-xl border p-4 app-border">
-          <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.kpi_fila_pendente}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide app-muted">{f.kpi_fila_pendente}</div>
           <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.filaPendenteCount}</div>
         </div>
         <div className="dragon-glass-card rounded-xl border p-4 app-border">
-          <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.kpi_erros_fiscais}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide app-muted">{f.kpi_erros_fiscais}</div>
           <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.errosFiscaisCount}</div>
         </div>
       </div>
@@ -436,7 +436,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
                       <button
                         type="submit"
                         disabled={loadLiquidar}
-                        className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
+                        className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
                       >
                         {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
                         {loadLiquidar ? f.liq_loading : f.liq_ok}

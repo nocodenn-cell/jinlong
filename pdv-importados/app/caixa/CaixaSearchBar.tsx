@@ -96,17 +96,18 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
       <p className="text-sm text-foreground/85 leading-snug">{m.caixa.busca_dica}</p>
       {categoriasAtalho.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {m.caixa.atalhos_categoria}
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {categoriasAtalho.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 disabled={buscando || carregandoRegras}
                 onClick={() => onCodigoChange(c.nome)}
-                className="rounded-full border border-border bg-muted text-muted-foreground px-2.5 py-0.5 text-[11px] hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
+                title={c.nome}
+                className="min-h-9 shrink-0 rounded-full border border-border bg-muted px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               >
                 {c.nome}
               </button>

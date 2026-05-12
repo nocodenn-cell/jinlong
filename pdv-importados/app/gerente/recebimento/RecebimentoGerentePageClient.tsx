@@ -99,7 +99,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
   )
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-3xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
@@ -155,7 +155,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-origem" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-origem" className="gerente-fin-label text-sm font-medium">
               {r.label_origem}
             </label>
             <input
@@ -168,7 +168,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-prod" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-prod" className="gerente-fin-label text-sm font-medium">
               {r.label_produto}
             </label>
             <select
@@ -191,7 +191,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             </select>
           </div>
           <div className="flex flex-col gap-1 md:col-span-2">
-            <label htmlFor="rec-obs" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-obs" className="gerente-fin-label text-sm font-medium">
               {r.label_observacao}
             </label>
             <input
@@ -203,7 +203,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-q-esp" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-q-esp" className="gerente-fin-label text-sm font-medium">
               {r.label_qtd_esperada}
             </label>
             <input
@@ -220,7 +220,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-q-conf" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-q-conf" className="gerente-fin-label text-sm font-medium">
               {r.label_qtd_conferida}
             </label>
             <input

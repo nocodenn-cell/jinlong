@@ -20,6 +20,21 @@ Sistema de ponto de venda para lojas de importados no Brasil, desenvolvido com *
 - Internacionalização: **`getMessages`** + `src/lib/i18n/*.json` (pt, zh) — **sem** `next-intl`; rotas **sem** prefixo de locale (`/login`, `/caixa`, `/gerente/...`)
 - Supabase (`@supabase/ssr`, Auth, Postgres com RLS — schema em `../backend/supabase/migrations/`)
 
+## Importação CSV de produtos (gerente)
+
+Comportamento na rota **`/gerente/produtos`** (server action `importarProdutosCsv` em `app/gerente/produtos/actions.ts`):
+
+| Modo | Checkbox «atualizar por id» | Coluna `id` | Efeito |
+|------|-------------------------------|-------------|--------|
+| **Só criação** | Desligado | **Vazia** em todas as linhas | Cada linha válida cria um produto novo (com estoque inicial). |
+| **Criação + atualização** | Ligado | **UUID** de produto existente | Atualiza nome, código de barras, preço varejo, origem, `tem_nf` e `ativo`. |
+| **Criação + atualização** | Ligado | **Vazia** | Igual a só criação para essa linha. |
+
+- **Cabeçalho**: tem de coincidir com o modelo (`lib/gerente/produtosCsvContract.ts` — `PRODUTO_IMPORT_CSV_HEADER_KEYS`). Colunas a mais ou nomes errados falham na validação; **não** há colunas para `created_at` nem alteração de chave — só os campos do modelo.
+- **ID inexistente** (com atualizar por id): a linha é registada como falha com texto do tipo «Não existe produto com id …» (i18n `import_row_id_nao_encontrado`).
+- **Permissões**: `assertGerenteOuDono` na action; no Postgres aplicam-se as policies RLS habituais do painel gerencial.
+- **Export**: o download da lista usa o mesmo cabeçalho canónico para reimportação ou edição externa.
+
 ## Estrutura
 
 ```

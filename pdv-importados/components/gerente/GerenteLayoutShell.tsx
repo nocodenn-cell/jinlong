@@ -67,8 +67,8 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
       <header
         className={cn(
-          'gerente-compact-header relative overflow-hidden border-b bg-oriental-clouds',
-          'app-divider',
+          'gerente-compact-header sticky top-0 z-30 relative overflow-hidden border-b bg-oriental-clouds print:hidden',
+          'app-divider shadow-sm',
         )}
       >
         <div
@@ -88,7 +88,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
               aria-label={m.login.nav_marca}
               className={cn('gerente-compact-brand shrink-0 sm:items-end app-accent-text')}
             />
-            <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden sm:min-w-[12rem]">
               <div
                 className={cn(
                   'text-[11px] font-semibold uppercase tracking-wide',
@@ -125,7 +125,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
       <div
         className={cn(
-          'gerente-watermark-char pointer-events-none fixed bottom-4 right-2 z-0 select-none font-serif text-9xl leading-none',
+          'gerente-watermark-char pointer-events-none fixed bottom-4 right-2 z-0 select-none font-serif text-9xl leading-none print:hidden',
           'app-subtle opacity-35',
         )}
         aria-hidden

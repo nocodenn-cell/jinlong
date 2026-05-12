@@ -1,15 +1,23 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { objectsToCsv } from '@/lib/csv'
+import { rowsToCsv } from '@/lib/csv'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
+import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
+import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
+import { ProdutosExcluirLoteModal } from '@/components/gerente/produtos/ProdutosExcluirLoteModal'
+import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImportarModal'
+import { ProdutoImagemCell } from '@/components/gerente/produtos/ProdutoImagemCell'
+import { ProdutosListaImpressao } from '@/components/gerente/produtos/ProdutosListaImpressao'
+import { ProdutosToolbar } from '@/components/gerente/produtos/ProdutosToolbar'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { PRODUTO_IMPORT_CSV_HEADER_KEYS } from '@/lib/gerente/produtosCsvContract'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import {
@@ -17,16 +25,9 @@ import {
   atualizarPrecoVarejoProduto,
   criarProduto,
 } from './actions'
+import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 
-export type ProdutoGerenteRow = {
-  id: string
-  nome: string
-  codigo_barras: string | null
-  preco_varejo: number
-  origem: string
-  tem_nf: boolean
-  ativo: boolean
-}
+export type { ProdutoGerenteRow } from './produtoGerenteTypes'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -39,8 +40,11 @@ function interpolate(template: string, vars: Record<string, string | number>) {
   )
 }
 
-function downloadCsv(filename: string, columns: { key: string; header: string }[], rows: Record<string, unknown>[]) {
-  const csv = objectsToCsv(columns, rows)
+function downloadCsvCanonical(
+  filename: string,
+  dataRows: (string | number | null | undefined)[][],
+) {
+  const csv = rowsToCsv([...PRODUTO_IMPORT_CSV_HEADER_KEYS], dataRows)
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -64,7 +68,7 @@ function OrigemBadgeUi({
   return (
     <span
       title={tooltip}
-      className={`inline-flex max-w-[9rem] truncate rounded-full border px-2 py-0.5 text-[11px] font-semibold ${className}`}
+      className={`inline-flex max-w-[9rem] truncate rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}
     >
       {label}
     </span>
@@ -143,7 +147,7 @@ function PrecoVarejoCell({
           setSaving(false)
         }
       }}
-      className="gerente-fin-cell w-full min-w-[6rem] rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-xs font-semibold tabular-nums app-border hover:border-[color:var(--gerente-ring,theme(colors.slate.500))] focus:border-amber-500/80 focus:outline-none focus:ring-1 focus:ring-amber-500/50 disabled:opacity-50"
+      className="gerente-fin-cell w-full min-w-[6rem] rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm font-semibold tabular-nums app-border hover:border-[color:var(--gerente-ring,theme(colors.slate.500))] focus-visible:border-amber-500/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 disabled:opacity-50"
       aria-label="Preço varejo"
     />
   )
@@ -161,6 +165,16 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
   const [filtroOrigem, setFiltroOrigem] = useState<'all' | OrigemCode>('all')
   const [filtroStatus, setFiltroStatus] = useState<'all' | 'ativo' | 'inativo'>('all')
   const [filtroNf, setFiltroNf] = useState<'all' | 'sim' | 'nao'>('all')
+  const [importModalAberto, setImportModalAberto] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [exclusaoModalAberto, setExclusaoModalAberto] = useState(false)
+  const [idsExclusaoLote, setIdsExclusaoLote] = useState<readonly string[]>([])
+  const [editarModalAberto, setEditarModalAberto] = useState(false)
+  const [produtoEditar, setProdutoEditar] = useState<ProdutoGerenteRow | null>(null)
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [busca, filtroOrigem, filtroStatus, filtroNf])
 
   const produtosFiltrados = useMemo(() => {
     const termo = busca.toLowerCase().trim()
@@ -190,30 +204,36 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
     return produtosFiltrados.slice(inicio, inicio + itensPorPagina)
   }, [produtosFiltrados, paginaSegura, itensPorPagina])
 
+  const todosPaginaSelecionados =
+    produtosExibidos.length > 0 && produtosExibidos.every((p) => selectedIds.has(p.id))
+
+  const alternarSelecaoPagina = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (todosPaginaSelecionados) {
+        produtosExibidos.forEach((p) => next.delete(p.id))
+      } else {
+        produtosExibidos.forEach((p) => next.add(p.id))
+      }
+      return next
+    })
+  }, [produtosExibidos, todosPaginaSelecionados])
+
   const exportOpts = useMemo(() => ({ successMessage: m.comum.sucesso }), [m.comum.sucesso])
 
   const { mutate: exportCsv, loading: expLoading } = useGerenteMutation(
     async () => {
-      downloadCsv(
-        'gerente-produtos.csv',
-        [
-          { key: 'id', header: 'id' },
-          { key: 'nome', header: m.produtos.nome },
-          { key: 'codigo_barras', header: m.produtos.codigo_barras },
-          { key: 'preco_varejo', header: m.produtos.preco_varejo },
-          { key: 'origem', header: m.produtos.origem_label },
-          { key: 'tem_nf', header: m.produtos.tem_nf },
-          { key: 'ativo', header: m.produtos.status },
-        ],
-        produtosFiltrados.map((p) => ({
-          id: p.id,
-          nome: p.nome,
-          codigo_barras: p.codigo_barras ?? '',
-          preco_varejo: Number(p.preco_varejo),
-          origem: p.origem,
-          tem_nf: p.tem_nf ? '1' : '0',
-          ativo: p.ativo ? '1' : '0',
-        })),
+      downloadCsvCanonical(
+        'produtos-catalogo.csv',
+        produtosFiltrados.map((p) => [
+          p.id,
+          p.nome,
+          p.codigo_barras ?? '',
+          Number(p.preco_varejo),
+          p.origem,
+          p.tem_nf ? '1' : '0',
+          p.ativo ? '1' : '0',
+        ]),
       )
       return null
     },
@@ -246,35 +266,119 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
     { successMessage: m.comum.sucesso },
   )
 
-  const finIn = 'h-9 rounded-md px-3 text-xs app-input'
-  const finSelect = 'h-9 rounded-md px-3 text-xs app-select'
+  const finIn =
+    'h-9 min-w-0 rounded-md px-3 text-sm app-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+  const finSelect =
+    'h-9 min-w-0 rounded-md px-3 text-sm app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
   const resetaPaginaFiltros = () => setPaginaAtual(1)
 
+  const irParaCadastroRapido = useCallback(() => {
+    document.getElementById('cadastro-rapido')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const imprimirLista = useCallback(() => {
+    if (produtosFiltrados.length === 0) return
+    window.print()
+  }, [produtosFiltrados.length])
+
+  const irParaColunaFoto = useCallback(() => {
+    document.getElementById('produtos-foto-col-anchor')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+    })
+  }, [])
+
+  const abrirExclusaoLote = useCallback(() => {
+    const arr = Array.from(selectedIds)
+    if (arr.length === 0) {
+      emitGerenteToast({ kind: 'error', message: m.produtos.exclusao_sem_selecao })
+      return
+    }
+    if (arr.length > 100) {
+      emitGerenteToast({ kind: 'error', message: m.produtos.exclusao_max_selecao })
+      return
+    }
+    setIdsExclusaoLote(arr)
+    setExclusaoModalAberto(true)
+  }, [selectedIds, m.produtos])
+
+  const abrirExclusaoIndividual = useCallback((produtoId: string) => {
+    setIdsExclusaoLote([produtoId])
+    setExclusaoModalAberto(true)
+  }, [])
+
+  const onExclusaoModalOpenChange = useCallback((open: boolean) => {
+    setExclusaoModalAberto(open)
+    if (!open) setIdsExclusaoLote([])
+  }, [])
+
+  const handleLoteExclusaoAplicado = useCallback(() => {
+    refetch()
+    setSelectedIds(new Set())
+  }, [refetch])
+
+  const abrirEditar = useCallback((p: ProdutoGerenteRow) => {
+    setProdutoEditar(p)
+    setEditarModalAberto(true)
+  }, [])
+
+  const onEditarModalOpenChange = useCallback((open: boolean) => {
+    setEditarModalAberto(open)
+    if (!open) setProdutoEditar(null)
+  }, [])
+
   return (
-    <div className={`mx-auto w-full max-w-7xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
-      <GerenteFilterBar
-        title={m.produtos.titulo}
-        rightSlot={
-          <button
-            type="button"
-            disabled={expLoading || produtosFiltrados.length === 0}
-            onClick={() => void exportCsv(null)}
-            className="gerente-btn-csv rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-          >
-            {m.gerente.exportar_csv}
-          </button>
-        }
+    <>
+      <div className={`print:hidden mx-auto w-full max-w-7xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
+      <GerenteFilterBar title={m.produtos.titulo} />
+      <GerenteStickyToolbar>
+        <ProdutosToolbar
+          m={m}
+          exportDisabled={expLoading || produtosFiltrados.length === 0}
+          exportLoading={expLoading}
+          printDisabled={produtosFiltrados.length === 0}
+          fotoDisabled={rows.length === 0}
+          exclusaoDisabled={selectedIds.size === 0 || selectedIds.size > 100}
+          onExport={() => void exportCsv(null)}
+          onImport={() => setImportModalAberto(true)}
+          onIncluirCadastro={irParaCadastroRapido}
+          onPrint={imprimirLista}
+          onFotoColuna={irParaColunaFoto}
+          onExcluir={abrirExclusaoLote}
+        />
+      </GerenteStickyToolbar>
+      <ProdutosExcluirLoteModal
+        open={exclusaoModalAberto}
+        onOpenChange={onExclusaoModalOpenChange}
+        produtoIds={idsExclusaoLote}
+        m={m}
+        onLoteAplicadoComSucesso={handleLoteExclusaoAplicado}
       />
-      <p className="gerente-fin-muted -mt-2 text-xs">
+      <ProdutosEditarCatalogoModal
+        open={editarModalAberto}
+        onOpenChange={onEditarModalOpenChange}
+        produto={produtoEditar}
+        m={m}
+        onSalvo={refetch}
+      />
+      <ProdutosImportarModal
+        open={importModalAberto}
+        onOpenChange={setImportModalAberto}
+        m={m}
+        onImportComplete={refetch}
+      />
+      <p className="gerente-fin-muted -mt-2 text-sm leading-relaxed">
         {idioma === 'pt'
           ? 'Gestão de catálogo com visão densa para operação diária.'
           : '高密度商品管理视图，适合日常运营。'}
       </p>
 
-      <section className="dragon-glass-card overflow-hidden rounded-xl">
+      <section id="cadastro-rapido" className="dragon-glass-card overflow-hidden rounded-xl scroll-mt-24">
         <div className="gerente-fin-divider border-b px-3 py-2.5">
-          <h2 className="gerente-section-accent text-sm font-semibold">{m.produtos.cadastro_rapido}</h2>
+          <h2 className="gerente-section-accent text-lg font-semibold leading-snug sm:text-xl">
+            {m.produtos.cadastro_rapido}
+          </h2>
         </div>
         <form
           onSubmit={(e) => {
@@ -315,11 +419,11 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
           <button
             type="submit"
             disabled={criarLoading}
-            className="h-9 rounded-md px-3 text-xs font-semibold shadow-sm transition-[filter] disabled:opacity-60 app-btn-accent"
+            className="h-9 rounded-md px-4 text-sm font-semibold shadow-sm transition-[filter] disabled:opacity-60 app-btn-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {criarLoading ? '…' : m.comum.salvar}
           </button>
-          <label className="gerente-fin-muted md:col-span-6 inline-flex items-center gap-2 text-xs">
+          <label className="gerente-fin-muted md:col-span-6 inline-flex items-center gap-2 text-sm">
             <input type="checkbox" name="tem_nf" className="h-3.5 w-3.5 rounded app-border app-surface-soft" />
             {m.produtos.tem_nf}
             <span className="opacity-80">· {m.produtos.codigo_barras_opcional}</span>
@@ -329,8 +433,10 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
 
       <section className="dragon-glass-card overflow-hidden rounded-xl">
         <div className="gerente-fin-divider flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5">
-          <h2 className="gerente-section-accent text-sm font-semibold">{m.produtos.lista_produtos}</h2>
-          <p className="gerente-fin-muted text-xs font-medium">
+          <h2 className="gerente-section-accent text-lg font-semibold leading-snug sm:text-xl">
+            {m.produtos.lista_produtos}
+          </h2>
+          <p className="gerente-fin-muted text-sm font-medium">
             {interpolate(m.produtos.contador_encontrados, { count: produtosFiltrados.length })}
           </p>
         </div>
@@ -343,29 +449,17 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
               setPaginaAtual(1)
             }}
             placeholder={m.produtos.buscar}
-            className={`${finIn} h-8`}
+            title={m.produtos.buscar}
+            className={finIn}
             aria-label={m.produtos.buscar}
           />
-          <select
-            value={filtroOrigem}
-            onChange={(e) => {
-              setFiltroOrigem(e.target.value as 'all' | OrigemCode)
-              resetaPaginaFiltros()
-            }}
-            className={`${finSelect} h-8`}
-          >
-            <option value="all">{m.produtos.filtro_todas_origens}</option>
-            <option value="china_manual">{m.produtos.origem_china}</option>
-            <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-            <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
-          </select>
           <select
             value={filtroStatus}
             onChange={(e) => {
               setFiltroStatus(e.target.value as 'all' | 'ativo' | 'inativo')
               resetaPaginaFiltros()
             }}
-            className={`${finSelect} h-8`}
+            className={finSelect}
           >
             <option value="all">{m.produtos.filtro_todos_status}</option>
             <option value="ativo">{m.produtos.ativo}</option>
@@ -377,11 +471,24 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
               setFiltroNf(e.target.value as 'all' | 'sim' | 'nao')
               resetaPaginaFiltros()
             }}
-            className={`${finSelect} h-8`}
+            className={finSelect}
           >
             <option value="all">{m.produtos.filtro_todas_nf}</option>
             <option value="sim">{m.produtos.filtro_nf_sim}</option>
             <option value="nao">{m.produtos.filtro_nf_nao}</option>
+          </select>
+          <select
+            value={filtroOrigem}
+            onChange={(e) => {
+              setFiltroOrigem(e.target.value as 'all' | OrigemCode)
+              resetaPaginaFiltros()
+            }}
+            className={finSelect}
+          >
+            <option value="all">{m.produtos.filtro_todas_origens}</option>
+            <option value="china_manual">{m.produtos.origem_china}</option>
+            <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
+            <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
           </select>
         </div>
 
@@ -389,33 +496,84 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
           <GerenteTable
             tone="dragon"
             columns={[
+              {
+                key: 'sel',
+                header: (
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 rounded app-border app-surface-soft"
+                    checked={todosPaginaSelecionados}
+                    onChange={() => alternarSelecaoPagina()}
+                    disabled={produtosExibidos.length === 0}
+                    aria-label={m.produtos.coluna_selecionar_aria}
+                    title={m.produtos.coluna_selecionar_aria}
+                  />
+                ),
+                width: '2.75rem',
+              },
               { key: 'id', header: 'ID' },
+              {
+                key: 'foto',
+                header: (
+                  <span id="produtos-foto-col-anchor" className="inline-flex">
+                    {m.produtos.foto_coluna}
+                  </span>
+                ),
+                width: '3.75rem',
+              },
               { key: 'nome', header: m.produtos.nome },
               { key: 'cb', header: m.produtos.codigo_barras },
               { key: 'preco', header: m.produtos.preco_varejo, width: '7rem' },
               { key: 'origem', header: m.produtos.origem_label },
               { key: 'nf', header: m.produtos.tem_nf },
               { key: 'st', header: m.produtos.status },
-              { key: 'ac', header: m.produtos.acoes, width: '6rem' },
+              { key: 'ac', header: m.produtos.acoes, width: '8.75rem' },
             ]}
           >
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
+                <td colSpan={10} className="gerente-fin-empty px-3 py-4 text-sm">
                   {m.produtos.nenhum_produto_cadastrado}
                 </td>
               </tr>
             ) : produtosFiltrados.length === 0 ? (
               <tr>
-                <td colSpan={8} className="gerente-fin-empty px-3 py-4 text-xs">
+                <td colSpan={10} className="gerente-fin-empty px-3 py-4 text-sm">
                   {m.produtos.nenhum_resultado_filtro}
                 </td>
               </tr>
             ) : (
               produtosExibidos.map((p) => (
                 <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
-                  <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
+                  <td className="gerente-fin-cell px-2 py-2 text-center align-middle">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded app-border app-surface-soft"
+                      checked={selectedIds.has(p.id)}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev)
+                          if (e.target.checked) next.add(p.id)
+                          else next.delete(p.id)
+                          return next
+                        })
+                      }}
+                      aria-label={m.produtos.coluna_selecionar}
+                    />
+                  </td>
+                  <td className="gerente-fin-cell px-3 py-2 font-mono text-xs opacity-80">
                     <span title={p.id}>{p.id.length <= 6 ? p.id : p.id.slice(-6)}</span>
+                  </td>
+                  <td className="gerente-fin-cell px-1 py-1 align-middle">
+                    <ProdutoImagemCell
+                      produtoId={p.id}
+                      nome={p.nome}
+                      imagemUrl={p.imagem_url}
+                      disabled={toggleLoading}
+                      m={m}
+                      onDone={refetch}
+                    />
                   </td>
                   <td className="gerente-fin-cell px-3 py-2 font-medium leading-relaxed">{p.nome}</td>
                   <td className="gerente-fin-cell px-3 py-2 font-mono">{p.codigo_barras ?? '-'}</td>
@@ -460,14 +618,36 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
                     />
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <button
-                      type="button"
-                      disabled={toggleLoading}
-                      onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
-                      className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40"
-                    >
-                      {p.ativo ? m.produtos.inativar : m.produtos.ativar}
-                    </button>
+                    <div className="flex flex-col items-stretch gap-1.5">
+                      <button
+                        type="button"
+                        disabled={toggleLoading}
+                        onClick={() => abrirEditar(p)}
+                        className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40 app-border app-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-1"
+                      >
+                        <Pencil className="h-3 w-3 shrink-0" aria-hidden />
+                        {m.produtos.editar_catalogo}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={toggleLoading}
+                        onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
+                        className="gerente-chip-action rounded-md border px-2 py-1 text-xs font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-1"
+                      >
+                        {p.ativo ? m.produtos.inativar : m.produtos.ativar}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={toggleLoading}
+                        onClick={() => abrirExclusaoIndividual(p.id)}
+                        title={m.produtos.exclusao_linha_title}
+                        aria-label={m.produtos.exclusao_linha_aria}
+                        className="inline-flex items-center justify-center gap-1 rounded-md border border-destructive/35 px-2 py-1 text-xs font-medium text-destructive opacity-90 transition hover:bg-destructive/10 group-hover:opacity-100 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-1"
+                      >
+                        <Trash2 className="h-3 w-3 shrink-0" aria-hidden />
+                        <span className="hidden min-[380px]:inline">{m.produtos.exclusao_linha_botao}</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -492,7 +672,7 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
                     setItensPorPagina(Number(e.target.value))
                     setPaginaAtual(1)
                   }}
-                  className={`${finSelect} h-8 min-w-[4.5rem]`}
+                  className={`${finSelect} min-w-[4.5rem]`}
                 >
                   {[10, 25, 50].map((n) => (
                     <option key={n} value={n}>
@@ -528,6 +708,8 @@ export function ProdutosGerentePageClient({ idioma, rows }: Props) {
           </div>
         ) : null}
       </section>
-    </div>
+      </div>
+      <ProdutosListaImpressao rows={produtosFiltrados} m={m} idioma={idioma} />
+    </>
   )
 }

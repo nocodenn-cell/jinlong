@@ -688,7 +688,7 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
   const [produtosRes, regrasRes] = await Promise.all([
     supabase
       .from("produtos")
-      .select("id,nome,codigo_barras,preco_varejo,categoria_id,ativo,origem,tem_nf")
+      .select("id,nome,codigo_barras,preco_varejo,categoria_id,ativo,origem,tem_nf,imagem_url")
       .order("nome", { ascending: true })
       .limit(100000),
     supabase

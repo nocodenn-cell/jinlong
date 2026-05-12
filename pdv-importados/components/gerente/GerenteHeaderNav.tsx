@@ -24,7 +24,13 @@ export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
   const light = isGerenteLightChrome(theme)
 
   return (
-    <nav className="gerente-compact-nav flex flex-wrap gap-x-4 gap-y-1.5 text-[15px] font-medium" aria-label={m.gerente.titulo_painel}>
+    <nav
+      className={cn(
+        'gerente-compact-nav flex max-w-full flex-nowrap gap-x-4 gap-y-0 overflow-x-auto overflow-y-hidden pb-0.5 text-[15px] font-medium',
+        '[scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border',
+      )}
+      aria-label={m.gerente.titulo_painel}
+    >
       {GERENTE_HEADER_NAV_ORDER.map((key) => {
         const href = painelGerencialHref(key)
         const ativo = linkAtivo(href, pathname)
@@ -33,7 +39,7 @@ export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
             key={key}
             href={href}
             className={cn(
-              'border-b-2 border-transparent pb-0.5 transition-colors',
+              'shrink-0 whitespace-nowrap border-b-2 border-transparent pb-0.5 transition-colors',
               light ? 'app-muted hover:app-accent-text' : 'app-muted hover:app-accent-text',
               ativo && 'border-[color:var(--accent)] app-accent-text',
             )}
