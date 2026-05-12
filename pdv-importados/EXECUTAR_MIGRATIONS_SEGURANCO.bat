@@ -99,8 +99,8 @@ if not exist "supabase\migrations\rls_policies.sql" (
     set "files_ok=false"
 )
 
-if not exist "supabase\migrations\finalizar_venda_unificada.sql" (
-    echo %RED%❌ Arquivo não encontrado: supabase\migrations\finalizar_venda_unificada.sql%NC%
+if not exist "supabase\migrations\obsolete\finalizar_venda_unificada.sql" (
+    echo %RED%❌ Arquivo não encontrado: supabase\migrations\obsolete\finalizar_venda_unificada.sql%NC%
     set "files_ok=false"
 )
 
@@ -161,10 +161,10 @@ echo %GREEN%✅ 3. Segurança - EXECUTADO COM SUCESSO%NC%
 REM 4. Robustez (RPC com idempotência)
 echo.
 echo %PURPLE%📋 4. Robustez - Idempotência na RPC%NC%
-echo %CYAN%📁 Arquivo: supabase\migrations\finalizar_venda_unificada.sql%NC%
+echo %CYAN%📁 Arquivo: supabase\migrations\obsolete\finalizar_venda_unificada.sql%NC%
 echo %CYAN%📝 Descrição: Zero duplicatas%NC%
 
-psql "%DATABASE_URL%" -f "supabase\migrations\finalizar_venda_unificada.sql"
+psql "%DATABASE_URL%" -f "supabase\migrations\obsolete\finalizar_venda_unificada.sql"
 if %ERRORLEVEL% neq 0 (
     echo %RED%❌ 4. Robustez - FALHA NA EXECUÇÃO%NC%
     pause
