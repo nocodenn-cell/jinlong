@@ -687,6 +687,7 @@
     "empty_shortcut_focus": "聚焦搜索",
     "produto_nao_encontrado": "未找到商品（条码或名称）。",
     "msg_produto_nao_encontrado_acao": "未找到该编码。请尝试名称或 SKU 后按回车。",
+    "msg_fila_leituras_cheia": "读取队列已满，请等待当前商品处理完毕。",
     "item_adicionado": "已添加。",
     "msg_item_adicionado_toast": "商品已加入小票。",
     "msg_item_removido_qtde_zero": "数量为 0，商品已从小票移除。",

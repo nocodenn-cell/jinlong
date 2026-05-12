@@ -647,6 +647,7 @@
     "empty_shortcut_focus": "Focar busca",
     "produto_nao_encontrado": "Produto não encontrado (código ou nome).",
     "msg_produto_nao_encontrado_acao": "Código não encontrado. Tente nome ou SKU e pressione Enter.",
+    "msg_fila_leituras_cheia": "Fila de leituras cheia. Aguarde o processamento do item em curso.",
     "item_adicionado": "Adicionado.",
     "msg_item_adicionado_toast": "Item adicionado ao cupom.",
     "msg_item_removido_qtde_zero": "Item removido: quantidade ajustada para zero.",
