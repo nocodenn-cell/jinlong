@@ -1,3 +1,4 @@
+/** Linha de produto na listagem gerente (filtros + tabela). */
 export type ProdutoGerenteRow = {
   id: string
   nome: string

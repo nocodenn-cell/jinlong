@@ -96,6 +96,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
   const [categoriasAtalho, setCategoriasAtalho] = useState<{ id: string; nome: string }[]>([])
+  const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
     | null
@@ -334,6 +335,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setCaixaMensagem,
     setLimiteSangriaSemGerente,
     setCategoriasAtalho,
+    setConfigCaixaWeb,
   })
 
   const handleAdicionar = useCallback(
@@ -730,7 +732,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2 space-y-3">
-            <CaixaOperadorContextBar m={m} idioma={idioma} />
+            <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
             <CaixaSearchBar
               ref={buscaInputRef}
               m={m}

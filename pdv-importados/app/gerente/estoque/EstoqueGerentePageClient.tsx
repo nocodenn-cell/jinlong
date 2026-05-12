@@ -10,7 +10,7 @@ import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { fmtQuantidadeEstoque } from '@/lib/format/fmtQuantidadeEstoque'
-import { objectsToCsv } from '@/lib/csv'
+import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -45,10 +45,6 @@ type Props = Readonly<{
   importacaoNfeEnabled?: boolean
 }>
 
-function interpolate(template: string, vars: Record<string, string | number>) {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => String(vars[key] ?? ''))
-}
-
 function skuCurtoDeId(id: string): string {
   const d = id.replace(/-/g, '')
   return d.slice(-6)
@@ -72,17 +68,6 @@ function origemLabel(m: ReturnType<typeof getMessages>, origem: string): string 
     default:
       return origem
   }
-}
-
-function downloadCsv(filename: string, columns: { key: string; header: string }[], rows: Record<string, unknown>[]) {
-  const csv = objectsToCsv(columns, rows)
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
 }
 
 export function EstoqueGerentePageClient({
@@ -245,7 +230,7 @@ export function EstoqueGerentePageClient({
 
   async function handleExportCsv() {
     if (selected.size > 0) {
-      downloadCsv(
+      downloadCsvBrowser(
         somenteBaixoNav ? 'gerente-estoque-baixo-selecao.csv' : 'gerente-estoque-selecao.csv',
         csvColumns,
         [...selected.values()].map(rowToCsvRecord),
@@ -263,7 +248,7 @@ export function EstoqueGerentePageClient({
         dir_asc: listParams.dir_asc,
       }
       const todas = await obterListaEstoqueGerenteCompletaParaExport(filtrosExport)
-      downloadCsv(
+      downloadCsvBrowser(
         somenteBaixoNav ? 'gerente-estoque-baixo.csv' : 'gerente-estoque-visao-geral.csv',
         csvColumns,
         todas.map(rowToCsvRecord),
@@ -523,7 +508,7 @@ export function EstoqueGerentePageClient({
       {!loading && total > 0 ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            {interpolate(m.produtos.pag_mostrar, { visiveis: String(rows.length), total: String(total) })}
+            {interpolateTemplate(m.produtos.pag_mostrar, { visiveis: String(rows.length), total: String(total) })}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -536,7 +521,7 @@ export function EstoqueGerentePageClient({
               {m.produtos.pag_prev}
             </button>
             <span className="text-xs text-muted-foreground">
-              {interpolate(m.produtos.pag_info, { atual: String(pageSegura), total: String(pageCount) })}
+              {interpolateTemplate(m.produtos.pag_info, { atual: String(pageSegura), total: String(pageCount) })}
             </span>
             <button
               type="button"

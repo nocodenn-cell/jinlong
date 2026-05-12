@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
+import { CadastroRapidoBlock } from '@/components/gerente/cadastro'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
@@ -130,9 +131,10 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         </div>
       ) : null}
 
+      <CadastroRapidoBlock title={r.sec_formulario} defaultOpen className="mt-8">
       <form
         id="recebimento-form"
-        className="dragon-glass-card mt-8 rounded-xl p-5"
+        className="space-y-0"
         onSubmit={(e) => {
           e.preventDefault()
           if (semProdutos) return
@@ -278,6 +280,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
           </button>
         </div>
       </form>
+      </CadastroRapidoBlock>
 
       <section className="dragon-glass-card mt-10 rounded-xl p-5">
         <h2 className="gerente-section-accent text-lg font-semibold">{r.sec_recentes}</h2>

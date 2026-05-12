@@ -21,10 +21,16 @@ export interface BarcodeOptions {
 export async function gerarBarcodeDataUrl(
   options: BarcodeOptions
 ): Promise<string> {
-  // Dynamic import com any para evitar erros de tipo com biblioteca sem definições nativas
-  // @ts-ignore - Ignorar erro de tipo para bwip-js que não tem definições TypeScript
-  const bwipJs = await import('bwip-js') as any
-  
+  const bwipModule = await import('bwip-js')
+  type BwipToCanvas = (
+    canvas: HTMLCanvasElement,
+    opts: Record<string, string | number | boolean>,
+  ) => Promise<void>
+  const mod = bwipModule as unknown as { default?: { toCanvas: BwipToCanvas }; toCanvas?: BwipToCanvas }
+  const bwipJs = mod.default ?? mod
+  if (typeof bwipJs.toCanvas !== 'function') {
+    throw new Error('bwip-js: API toCanvas não disponível')
+  }
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) {

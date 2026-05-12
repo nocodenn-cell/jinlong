@@ -50,23 +50,11 @@
 }
 
 /**
- * Altura do header gerente varia (mobile: logo + nav quebram linhas).
- * Toolbars `position: sticky` usam `top: var(--gerente-sticky-top)`.
+ * Fallback se JS não medir o header (ResizeObserver em `GerenteLayoutShell`).
+ * Valor padrão sobrescrito por `--gerente-sticky-top` em px no elemento `.gerente-shell`.
  */
 .gerente-shell {
   --gerente-sticky-top: 6.75rem;
-}
-
-@media (min-width: 640px) {
-  .gerente-shell {
-    --gerente-sticky-top: 5.85rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .gerente-shell {
-    --gerente-sticky-top: 5.35rem;
-  }
 }
 
 .logo-wordmark-main {

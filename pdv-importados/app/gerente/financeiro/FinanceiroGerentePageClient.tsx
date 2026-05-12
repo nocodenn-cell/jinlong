@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import React, { useCallback, useMemo, type ReactNode } from 'react'
+import { Calendar, Plus, Search } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
@@ -23,18 +24,16 @@ import {
   processarFilaFiscalAgora,
   reprocessarDocumentoFiscal,
 } from './actions'
+import {
+  FIN_KPI_SOMA_CAP,
+  type FinanceiroTituloFilters,
+  type FinanceiroTituloListaRow,
+  serializeTituloFiltersToSearchParams,
+} from '@/lib/gerente/financeiroTitulosServer'
 
 export type FinanceiroClienteRow = { id: string; nome: string }
 
-export type FinanceiroTituloRow = {
-  id: string
-  valor_total: number
-  valor_aberto: number
-  status: string
-  descricao: string | null
-  cliente_id: string
-  cliente_nome: string | null
-}
+export type FinanceiroTituloRow = FinanceiroTituloListaRow
 
 export type FinanceiroDocRow = {
   id: string
@@ -58,12 +57,44 @@ function interStub(template: string, vars: Record<string, string | number>): str
   )
 }
 
+type TituloQueryMeta = Readonly<{
+  filters: FinanceiroTituloFilters
+  limite: number
+  listCapped: boolean
+  listaFiltrada: boolean
+}>
+
+type KpisFinanceiro = Readonly<{
+  titulosAbertosCount: number
+  valorAbertoTotal: number
+  kpiValorTruncado: boolean
+  filaPendenteCount: number
+  errosFiscaisCount: number
+}>
+
 type Props = Readonly<{
   idioma: Idioma
   clientes: FinanceiroClienteRow[]
   titulos: FinanceiroTituloRow[]
   docsFiscais: FinanceiroDocRow[]
+  tituloQuery: TituloQueryMeta
+  kpis: KpisFinanceiro
 }>
+
+function parseLocalYmd(raw: string | null | undefined): Date | null {
+  if (raw == null || String(raw).trim() === '') return null
+  const s = String(raw).trim().slice(0, 10)
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+function formatDateOnlyOrDash(raw: string | null | undefined, locale: string): string {
+  const d = parseLocalYmd(raw)
+  if (!d) return '—'
+  return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 
 function FinField({ id, label, children }: Readonly<{ id: string; label: string; children: ReactNode }>) {
   return (
@@ -145,7 +176,14 @@ function JadeActionButton({
   )
 }
 
-export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFiscais }: Props) {
+export function FinanceiroGerentePageClient({
+  idioma,
+  clientes,
+  titulos,
+  docsFiscais,
+  tituloQuery,
+  kpis,
+}: Props) {
   const m = getMessages(idioma)
   const f = m.gerente.financeiro_stub
   const locale = useMemo(() => localeFromIdioma(idioma), [idioma])
@@ -227,49 +265,283 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
     { successMessage: f.toast_reprocessar_ok },
   )
 
-  const kpis = useMemo(() => {
-    const titulosAbertosCount = titulos.filter((t) => Number(t.valor_aberto) > 1e-6).length
-    const valorAbertoTotal = titulos.reduce((s, t) => s + Number(t.valor_aberto ?? 0), 0)
-    const filaPendenteCount = docsFiscais.filter((d) => String(d.status).toUpperCase() === 'PENDENTE').length
-    const errosFiscaisCount = docsFiscais.filter((d) => String(d.status).toUpperCase() === 'ERRO').length
-    return { titulosAbertosCount, valorAbertoTotal, filaPendenteCount, errosFiscaisCount }
-  }, [titulos, docsFiscais])
+  const novoTituloAnchorRef = useRef<HTMLDivElement>(null)
+  const [draftFilters, setDraftFilters] = useState<FinanceiroTituloFilters>(() => ({ ...tituloQuery.filters }))
+
+  useEffect(() => {
+    setDraftFilters({ ...tituloQuery.filters })
+  }, [
+    tituloQuery.filters.opcao,
+    tituloQuery.filters.nomeCliente,
+    tituloQuery.filters.q,
+    tituloQuery.filters.de,
+    tituloQuery.filters.ate,
+  ])
+
+  const applyFiltersToUrl = useCallback(() => {
+    const sp = serializeTituloFiltersToSearchParams(draftFilters, tituloQuery.limite)
+    const qs = sp.toString()
+    router.replace(qs ? `/gerente/financeiro?${qs}` : '/gerente/financeiro')
+  }, [draftFilters, router, tituloQuery.limite])
+
+  const clearFiltersUrl = useCallback(() => {
+    router.replace('/gerente/financeiro')
+  }, [router])
+
+  const valorTotalLista = useMemo(
+    () => titulos.reduce((s, t) => s + Number(t.valor_aberto ?? 0), 0),
+    [titulos],
+  )
 
   return (
-    <div className={`mx-auto max-w-6xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+    <div
+      className={`mx-auto max-w-[1580px] px-4 py-5 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}
+    >
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium transition-colors hover:underline">
         ← {m.gerente.inicio}
       </Link>
 
-      <header className="gerente-fin-header-border mt-5 border-b pb-6">
+      <header className="gerente-fin-header-border mt-4 border-b pb-5">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="gerente-fin-page-title text-2xl font-semibold tracking-tight sm:text-3xl">{f.titulo}</h1>
           <span className="gerente-fin-badge rounded-full border px-2.5 py-0.5 text-xs font-semibold ring-1">
             {f.badge}
           </span>
         </div>
-        <p className="gerente-fin-muted mt-3 max-w-3xl text-sm leading-relaxed">{f.subtitulo}</p>
+        <p className="gerente-fin-muted mt-2 max-w-3xl text-sm leading-relaxed">{f.subtitulo}</p>
       </header>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <div className="dragon-glass-card rounded-xl border p-4 app-border">
-          <div className="text-xs font-semibold uppercase tracking-wide app-muted">{f.kpi_titulos_abertos}</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.titulosAbertosCount}</div>
-          <div className="mt-1 text-xs app-muted">
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="dragon-glass-card rounded-xl border p-3 app-border">
+          <div className="text-[10px] font-semibold uppercase tracking-wide app-muted">{f.kpi_titulos_abertos}</div>
+          <div className="mt-0.5 text-xl font-bold tabular-nums">{kpis.titulosAbertosCount}</div>
+          <div className="mt-0.5 text-[11px] app-muted">
             {f.kpi_valor_aberto_total}: {fmtGerenteBRL(kpis.valorAbertoTotal, locale)}
+            {kpis.kpiValorTruncado ? (
+              <span className="mt-1 block text-[10px] leading-snug text-amber-600/90 dark:text-amber-400/90">
+                {interStub(f.kpi_soma_truncada, { n: String(FIN_KPI_SOMA_CAP) })}
+              </span>
+            ) : null}
           </div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-4 app-border">
-          <div className="text-xs font-semibold uppercase tracking-wide app-muted">{f.kpi_fila_pendente}</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.filaPendenteCount}</div>
+        <div className="dragon-glass-card rounded-xl border p-3 app-border">
+          <div className="text-[10px] font-semibold uppercase tracking-wide app-muted">{f.kpi_fila_pendente}</div>
+          <div className="mt-0.5 text-xl font-bold tabular-nums">{kpis.filaPendenteCount}</div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-4 app-border">
-          <div className="text-xs font-semibold uppercase tracking-wide app-muted">{f.kpi_erros_fiscais}</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.errosFiscaisCount}</div>
+        <div className="dragon-glass-card rounded-xl border p-3 app-border">
+          <div className="text-[10px] font-semibold uppercase tracking-wide app-muted">{f.kpi_erros_fiscais}</div>
+          <div className="mt-0.5 text-xl font-bold tabular-nums">{kpis.errosFiscaisCount}</div>
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(200px,260px)] lg:items-start">
+        <aside className="dragon-glass-card flex flex-col gap-3 rounded-xl border p-4 app-border lg:sticky lg:top-4">
+          <h2 className="text-sm font-semibold tracking-wide app-accent-text">{f.layout_filters_title}</h2>
+          <FinField id="fin-filter-opcao" label={f.filter_opcao}>
+            <select
+              id="fin-filter-opcao"
+              value={draftFilters.opcao}
+              onChange={(e) =>
+                setDraftFilters((p) => ({
+                  ...p,
+                  opcao: e.target.value as FinanceiroTituloFilters['opcao'],
+                }))
+              }
+              className={selectClass}
+            >
+              <option value="mix">{f.filter_opcao_em_aberto}</option>
+              <option value="ABERTO">{f.filter_opcao_so_aberto}</option>
+              <option value="PARCIAL">{f.filter_opcao_parcial}</option>
+            </select>
+          </FinField>
+          <FinField id="fin-filter-cat" label={f.filter_categoria}>
+            <select id="fin-filter-cat" disabled value="todas" className={selectClass} title={f.filter_categoria_hint}>
+              <option value="todas">{f.filter_categoria_todas}</option>
+            </select>
+          </FinField>
+          <FinField id="fin-filter-nome" label={f.filter_cliente_nome}>
+            <input
+              id="fin-filter-nome"
+              value={draftFilters.nomeCliente}
+              onChange={(e) => setDraftFilters((p) => ({ ...p, nomeCliente: e.target.value }))}
+              placeholder={f.ph_filter_nome_cliente}
+              className={inputClass}
+            />
+          </FinField>
+        </aside>
+
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="dragon-glass-card flex flex-col gap-3 rounded-xl border p-3 app-border sm:p-4">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-70 app-muted"
+                aria-hidden
+              />
+              <input
+                value={draftFilters.q}
+                onChange={(e) => setDraftFilters((p) => ({ ...p, q: e.target.value }))}
+                placeholder={f.toolbar_search_ph}
+                className={cn(inputClass, 'gerente-fin-input pl-9')}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="flex items-center gap-2 text-xs font-medium app-muted">
+                <Calendar className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                <span className="whitespace-nowrap">{f.periodo_venc_de}</span>
+              </div>
+              <input
+                type="date"
+                value={draftFilters.de}
+                onChange={(e) => setDraftFilters((p) => ({ ...p, de: e.target.value }))}
+                className={cn(inputClass, 'sm:max-w-[160px]')}
+              />
+              <span className="hidden text-xs app-muted sm:inline">{f.periodo_venc_ate}</span>
+              <input
+                type="date"
+                value={draftFilters.ate}
+                onChange={(e) => setDraftFilters((p) => ({ ...p, ate: e.target.value }))}
+                className={cn(inputClass, 'sm:max-w-[160px]')}
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3 app-divider">
+              <button
+                type="button"
+                className="rounded-lg px-3 py-2 text-xs font-semibold app-muted transition hover:underline"
+                onClick={() => clearFiltersUrl()}
+              >
+                {f.btn_limpar_filtros}
+              </button>
+              <button
+                type="button"
+                className="inline-flex min-h-[40px] min-w-[120px] items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold shadow-sm transition hover:opacity-90 disabled:opacity-55 app-border app-accent-text"
+                onClick={() => applyFiltersToUrl()}
+              >
+                {f.btn_filtrar}
+              </button>
+            </div>
+          </div>
+
+          <section className="min-w-0">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide app-muted">{f.sec_titulos_aberto}</h2>
+            <div className="overflow-x-auto">
+              <GerenteTable
+                tone="dragon"
+                columns={[
+                  { key: 'c', header: f.col_cliente },
+                  { key: 'v', header: f.col_vencimento },
+                  { key: 'a', header: f.col_valor },
+                  { key: 's', header: m.gerente.col_status },
+                  { key: 'l', header: f.col_liquidar },
+                ]}
+              >
+                {titulos.length === 0 && !tituloQuery.listaFiltrada ? (
+                  <tr>
+                    <td colSpan={5} className="gerente-fin-empty px-4 py-10 text-center text-sm">
+                      {f.empty_titulos}
+                    </td>
+                  </tr>
+                ) : titulos.length === 0 && tituloQuery.listaFiltrada ? (
+                  <tr>
+                    <td colSpan={5} className="gerente-fin-empty px-4 py-10 text-center text-sm leading-relaxed">
+                      <div>{f.empty_filtrados}</div>
+                      <div className="mt-2 text-xs app-muted">{f.empty_filtrados_cta}</div>
+                    </td>
+                  </tr>
+                ) : (
+                  titulos.map((t, idx) => (
+                    <tr
+                      key={t.id}
+                      className={cn(
+                        'gerente-fin-row-hover transition-colors',
+                        idx % 2 === 1 && 'bg-muted/25',
+                      )}
+                    >
+                      <td className="gerente-fin-cell px-3 py-2.5 font-medium">{t.cliente_nome ?? f.dash}</td>
+                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 tabular-nums">
+                        {formatDateOnlyOrDash(t.vencimento, locale)}
+                      </td>
+                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 text-sm font-semibold tabular-nums app-accent-text">
+                        {fmtGerenteBRL(Number(t.valor_aberto), locale)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <GerenteStatusBadge status={t.status} />
+                      </td>
+                      <td className="min-w-[220px] px-3 py-2.5">
+                        <form
+                          className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            const fd = new FormData(e.currentTarget)
+                            const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
+                            void mutLiquidar({
+                              titulo_id: t.id,
+                              valor: Number(fd.get('valor')),
+                              forma_pagamento: forma,
+                            })
+                          }}
+                        >
+                          <input
+                            name="valor"
+                            type="number"
+                            min={0.01}
+                            step="0.01"
+                            placeholder={f.liq_placeholder_valor}
+                            className={`${inputClass} sm:max-w-[120px]`}
+                          />
+                          <select name="forma" className={`${selectClass} sm:max-w-[200px]`}>
+                            <option value="DINHEIRO">DINHEIRO</option>
+                            <option value="PIX">PIX</option>
+                            <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
+                            <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
+                            <option value="OUTROS">OUTROS</option>
+                          </select>
+                          <button
+                            type="submit"
+                            disabled={loadLiquidar}
+                            className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
+                          >
+                            {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
+                            {loadLiquidar ? f.liq_loading : f.liq_ok}
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </GerenteTable>
+            </div>
+            {tituloQuery.listCapped ? (
+              <p className="mt-2 text-[11px] leading-snug app-muted">
+                {interStub(f.lista_limite_aviso, { limite: String(tituloQuery.limite) })}
+              </p>
+            ) : null}
+          </section>
+        </div>
+
+        <aside className="flex w-full flex-col gap-3 lg:sticky lg:top-4">
+          <button
+            type="button"
+            className={cn(jadeBtnBase, 'w-full justify-center')}
+            onClick={() => novoTituloAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            <Plus className="h-4 w-4 shrink-0" aria-hidden />
+            <span>{f.btn_nova_conta}</span>
+          </button>
+          <div className="dragon-glass-card rounded-xl border p-4 app-border">
+            <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.rail_valor_total}</div>
+            <div className="mt-2 text-2xl font-bold tabular-nums app-accent-text">
+              {fmtGerenteBRL(valorTotalLista, locale)}
+            </div>
+            {tituloQuery.listCapped ? (
+              <p className="mt-2 text-[10px] leading-snug app-muted">{f.rail_soma_parcial_lista}</p>
+            ) : null}
+          </div>
+        </aside>
+      </div>
+
+      <h2 className="mb-3 mt-10 text-base font-semibold tracking-wide app-accent-text">{f.sec_cadastro_fila}</h2>
+      <div className="grid gap-6 lg:grid-cols-3">
         <FinCard title={f.sec_cliente}>
           <form
             className="grid grid-cols-1 gap-3 sm:grid-cols-2"
@@ -298,61 +570,63 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
           </form>
         </FinCard>
 
-        <FinCard
-          title={f.sec_titulo}
-          description={semClientes ? f.sem_clientes_titulo : undefined}
-        >
-          <form
-            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-            onSubmit={(e) => {
-              e.preventDefault()
-              const fd = new FormData(e.currentTarget)
-              void mutTitulo({
-                cliente_id: readFormDataString(fd, 'cliente_id'),
-                valor_total: Number(fd.get('valor_total')),
-                descricao: readFormDataString(fd, 'descricao'),
-                vencimento: readFormDataString(fd, 'vencimento'),
-              })
-            }}
+        <div ref={novoTituloAnchorRef} className="scroll-mt-24">
+          <FinCard
+            title={f.sec_titulo}
+            description={semClientes ? f.sem_clientes_titulo : undefined}
           >
-            <FinField id="fin-cliente-sel" label={f.label_cliente}>
-              <select
-                id="fin-cliente-sel"
-                name="cliente_id"
-                required
-                disabled={semClientes}
-                className={selectClass}
-              >
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
-            </FinField>
-            <FinField id="fin-valor-tit" label={f.label_valor_total}>
-              <input
-                id="fin-valor-tit"
-                name="valor_total"
-                type="number"
-                min={0.01}
-                step="0.01"
-                required
-                placeholder={f.ph_valor_titulo}
-                className={inputClass}
-              />
-            </FinField>
-            <FinField id="fin-desc" label={f.label_descricao}>
-              <input id="fin-desc" name="descricao" placeholder={f.ph_descricao_titulo} className={inputClass} />
-            </FinField>
-            <FinField id="fin-ven" label={f.label_vencimento}>
-              <input id="fin-ven" name="vencimento" type="date" className={inputClass} />
-            </FinField>
-            <JadeSubmitButton loading={loadTitulo} disabled={semClientes} className="sm:col-span-2 sm:justify-self-end">
-              {loadTitulo ? f.btn_criando : f.btn_criar_titulo}
-            </JadeSubmitButton>
-          </form>
-        </FinCard>
+            <form
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const fd = new FormData(e.currentTarget)
+                void mutTitulo({
+                  cliente_id: readFormDataString(fd, 'cliente_id'),
+                  valor_total: Number(fd.get('valor_total')),
+                  descricao: readFormDataString(fd, 'descricao'),
+                  vencimento: readFormDataString(fd, 'vencimento'),
+                })
+              }}
+            >
+              <FinField id="fin-cliente-sel" label={f.label_cliente}>
+                <select
+                  id="fin-cliente-sel"
+                  name="cliente_id"
+                  required
+                  disabled={semClientes}
+                  className={selectClass}
+                >
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+              </FinField>
+              <FinField id="fin-valor-tit" label={f.label_valor_total}>
+                <input
+                  id="fin-valor-tit"
+                  name="valor_total"
+                  type="number"
+                  min={0.01}
+                  step="0.01"
+                  required
+                  placeholder={f.ph_valor_titulo}
+                  className={inputClass}
+                />
+              </FinField>
+              <FinField id="fin-desc" label={f.label_descricao}>
+                <input id="fin-desc" name="descricao" placeholder={f.ph_descricao_titulo} className={inputClass} />
+              </FinField>
+              <FinField id="fin-ven" label={f.label_vencimento}>
+                <input id="fin-ven" name="vencimento" type="date" className={inputClass} />
+              </FinField>
+              <JadeSubmitButton loading={loadTitulo} disabled={semClientes} className="sm:col-span-2 sm:justify-self-end">
+                {loadTitulo ? f.btn_criando : f.btn_criar_titulo}
+              </JadeSubmitButton>
+            </form>
+          </FinCard>
+        </div>
 
         <FinCard title={f.sec_fila} description={f.ajuda_fila}>
           <JadeActionButton loading={loadFila} onClick={() => void mutFila(null)}>
@@ -376,81 +650,7 @@ export function FinanceiroGerentePageClient({ idioma, clientes, titulos, docsFis
         </FinCard>
       </div>
 
-      <section className="dragon-glass-card mt-10 rounded-xl p-5">
-        <h2 className="text-lg font-semibold app-accent-text">{f.sec_titulos_aberto}</h2>
-        <div className="mt-4 overflow-x-auto">
-          <GerenteTable
-            tone="dragon"
-            columns={[
-              { key: 'c', header: f.col_cliente },
-              { key: 'a', header: f.col_aberto },
-              { key: 's', header: m.gerente.col_status },
-              { key: 'l', header: f.col_liquidar },
-            ]}
-          >
-            {titulos.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="gerente-fin-empty px-4 py-8 text-center text-sm">
-                  {f.empty_titulos}
-                </td>
-              </tr>
-            ) : (
-              titulos.map((t) => (
-                <tr key={t.id} className="gerente-fin-row-hover transition-colors">
-                  <td className="gerente-fin-cell px-3 py-3 font-medium">{t.cliente_nome ?? f.dash}</td>
-                  <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 tabular-nums">
-                    {fmtGerenteBRL(Number(t.valor_aberto), locale)}
-                  </td>
-                  <td className="px-3 py-3">
-                    <GerenteStatusBadge status={t.status} />
-                  </td>
-                  <td className="min-w-[220px] px-3 py-3">
-                    <form
-                      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        const fd = new FormData(e.currentTarget)
-                        const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
-                        void mutLiquidar({
-                          titulo_id: t.id,
-                          valor: Number(fd.get('valor')),
-                          forma_pagamento: forma,
-                        })
-                      }}
-                    >
-                      <input
-                        name="valor"
-                        type="number"
-                        min={0.01}
-                        step="0.01"
-                        placeholder={f.liq_placeholder_valor}
-                        className={`${inputClass} sm:max-w-[120px]`}
-                      />
-                      <select name="forma" className={`${selectClass} sm:max-w-[200px]`}>
-                        <option value="DINHEIRO">DINHEIRO</option>
-                        <option value="PIX">PIX</option>
-                        <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
-                        <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
-                        <option value="OUTROS">OUTROS</option>
-                      </select>
-                      <button
-                        type="submit"
-                        disabled={loadLiquidar}
-                        className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
-                      >
-                        {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
-                        {loadLiquidar ? f.liq_loading : f.liq_ok}
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              ))
-            )}
-          </GerenteTable>
-        </div>
-      </section>
-
-      <section className="dragon-glass-card mt-6 rounded-xl p-5">
+      <section className="dragon-glass-card mt-8 rounded-xl p-5">
         <h2 className="text-lg font-semibold app-accent-text">{f.sec_docs}</h2>
         <div className="mt-4 overflow-x-auto">
           <GerenteTable

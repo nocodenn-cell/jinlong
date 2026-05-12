@@ -86,6 +86,7 @@
     "filtro_nf_sim": "Com NF",
     "filtro_nf_nao": "Sem NF",
     "filtrar": "Filtrar",
+    "filtros_lateral_titulo": "Filtros da lista",
     "lista_total": "Total: {{total}} registro(s)",
     "nenhum_resultado_filtro": "Nenhum produto encontrado com estes filtros.",
     "pag_prev": "Anterior",
@@ -195,7 +196,27 @@
     "coluna_selecionar_aria": "Selecionar todos os produtos desta página",
     "editar_catalogo": "Editar",
     "editar_modal_titulo": "Editar produto",
-    "editar_modal_salvar": "Guardar"
+    "editar_modal_salvar": "Guardar",
+    "filtro_estoque_label": "Estoque (sua loja)",
+    "filtro_estoque_todos": "Qualquer saldo",
+    "filtro_estoque_abaixo_minimo": "Abaixo ou igual ao mínimo",
+    "filtro_estoque_em_falta": "Sem saldo (≤ 0)",
+    "filtro_imagens_label": "Imagem",
+    "filtro_imagens_todos": "Todas",
+    "filtro_imagens_com": "Com imagem",
+    "filtro_imagens_sem": "Sem imagem",
+    "filtro_categoria_todas": "Todas as categorias",
+    "filtro_marca_label": "Marca",
+    "filtro_marca_todas": "Todas as marcas",
+    "filtro_fornecedor_label": "Fornecedor",
+    "filtro_fornecedor_todos": "Todos os fornecedores",
+    "filtro_tags_label": "Tags (qualquer)",
+    "filtro_tags_placeholder": "Ex.: promo, verão",
+    "filtro_carregando": "Atualizando lista…",
+    "filtro_situacao_label": "Situação",
+    "filtro_situacao_todos": "Todos (ativos e inativos)",
+    "filtro_situacao_somente_ativos": "Só ativos",
+    "filtro_situacao_somente_inativos": "Só inativos"
   },
   "precos": {
     "titulo": "Regras de preço",
@@ -219,7 +240,14 @@
     "nav_admin": "Admin",
     "nav_recebimento": "Recebimento",
     "nav_financeiro": "Financeiro",
+    "nav_configuracoes": "Configurações",
     "nav_transferencias": "Transferências",
+    "nav_topico_catalogo": "Catálogo",
+    "nav_topico_estoque_logistica": "Estoque e logística",
+    "nav_topico_vendas_caixa": "Vendas e caixa",
+    "nav_topico_analise": "Relatórios",
+    "nav_topico_sistema": "Sistema",
+    "nav_subsecoes_aria": "Itens do módulo selecionado",
     "nav_produtos": "Produtos",
     "bem_vindo_resumo": "Resumo do dia e atalhos.",
     "status_caixa_label": "Status do caixa",
@@ -387,7 +415,32 @@
       "kpi_titulos_abertos": "Títulos em aberto",
       "kpi_fila_pendente": "Docs. pendentes",
       "kpi_erros_fiscais": "Erros fiscais",
-      "kpi_valor_aberto_total": "Valor em aberto"
+      "kpi_valor_aberto_total": "Valor em aberto",
+      "layout_filters_title": "Filtros",
+      "filter_opcao": "Opção",
+      "filter_opcao_em_aberto": "Em aberto (aberto e parcial)",
+      "filter_opcao_so_aberto": "Somente aberto",
+      "filter_opcao_parcial": "Somente parcial",
+      "filter_categoria": "Categoria",
+      "filter_categoria_todas": "Todas",
+      "filter_categoria_hint": "Sem categorias nesta versão.",
+      "filter_cliente_nome": "Cliente",
+      "ph_filter_nome_cliente": "Nome…",
+      "btn_filtrar": "Filtrar",
+      "btn_limpar_filtros": "Limpar filtros",
+      "toolbar_search_ph": "Pesquisar cliente ou descrição…",
+      "periodo_venc_de": "Venc. de",
+      "periodo_venc_ate": "até",
+      "col_vencimento": "Vencimento",
+      "col_valor": "Valor",
+      "rail_valor_total": "Valor total (listagem atual)",
+      "btn_nova_conta": "Incluir conta",
+      "sec_cadastro_fila": "Cadastros e fila fiscal",
+      "empty_filtrados": "Nenhum título corresponde aos filtros. Ajuste os critérios ou limpe os filtros.",
+      "empty_filtrados_cta": "Use «Incluir conta» abaixo para cadastrar um novo título.",
+      "lista_limite_aviso": "Lista limitada a {{limite}} linhas. Refine os filtros ou use o parâmetro «limite» na URL (50–500).",
+      "kpi_soma_truncada": "Soma aproximada: calculada sobre os primeiros {{n}} títulos em aberto; existem mais registros.",
+      "rail_soma_parcial_lista": "Soma apenas das linhas exibidas (lista truncada)."
     },
     "dragon_badge_fila_fiscal": "Fila fiscal",
     "theme_escuro": "Noturno",
@@ -434,7 +487,8 @@
       "col_remessa": "Remessa",
       "col_origem": "Origem",
       "col_data": "Data",
-      "empty_recentes": "Nenhuma remessa registrada ainda."
+      "empty_recentes": "Nenhuma remessa registrada ainda.",
+      "sec_formulario": "Registrar conferência"
     },
     "transferencias_page": {
       "intro": "Saída na origem e entrada no destino, com log de movimento (gerente).",
@@ -497,6 +551,9 @@
     "vazio_geral": "Nenhum produto ativo cadastrado.",
     "badge_alerta": "Abaixo do mínimo",
     "dica_baixo": "Para alterar quantidades, use a visão geral e salve por produto.",
+    "adicionar_produto": "Adicionar produto",
+    "modal_novo_produto_titulo": "Novo produto",
+    "modal_novo_produto_hint": "Cria o produto e o registro de estoque inicial na sua loja (quantidade zero).",
     "etiquetas": {
       "titulo": "Imprimir Etiquetas",
       "subtitulo": "Gere etiquetas térmicas para seus produtos com código de barras e preço.",
@@ -562,6 +619,7 @@
     "atalhos_placeholder": "Atalhos de teclado em breve",
     "regras_catalogo": "Catálogo Supabase · regras em",
     "regras_carregando": "carregando regras…",
+    "lead_time_importacao_banner": "Lead time típico de importação: {{min}}–{{max}} dias.",
     "busca_placeholder": "Código de barras, nome ou categoria…",
     "busca_label_principal": "Leitura / busca principal",
     "busca_dica": "Enter adiciona ao cupom. Se o nome não bater, buscamos também pela categoria cadastrada.",
@@ -745,7 +803,8 @@
       "transferencias": { "cn": "调拨", "pt": "Transferências" },
       "relatorios": { "cn": "报告", "pt": "Relatórios" },
       "caixas": { "cn": "钱箱", "pt": "Caixas" },
-      "financeiro": { "cn": "财务", "pt": "Financeiro" }
+      "financeiro": { "cn": "财务", "pt": "Financeiro" },
+      "configuracoes": { "cn": "设置", "pt": "Configurações" }
     },
     "navHints": {
       "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
@@ -757,7 +816,8 @@
       "transferencias": "Movimentação entre lojas.",
       "relatorios": "Relatórios e análises operacionais.",
       "caixas": "Caixas e operações de ponto de venda.",
-      "financeiro": "Movimentações e visão financeira."
+      "financeiro": "Movimentações e visão financeira.",
+      "configuracoes": "Parâmetros globais (comissão, limites de caixa, lead time, estoque mínimo)."
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
@@ -811,6 +871,23 @@
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
   },
+  "configuracoes": {
+    "titulo": "Configurações gerenciais",
+    "subtitulo": "Parâmetros globais de comissão, caixa, estoque e importação. Alterações aplicam-se após recarregar o caixa.",
+    "grupo_financeiro": "Financeiro",
+    "grupo_caixa": "Caixa",
+    "grupo_estoque": "Estoque",
+    "grupo_importacao": "Importação",
+    "chave_comissao_padrao_percentual": "Comissão padrão (%)",
+    "chave_desconto_maximo_operador_percentual": "Desconto máximo sem gerente (%)",
+    "chave_cancelamento_maximo_valor_sem_gerente": "Limite de cancelamento — operador (R$)",
+    "chave_estoque_minimo_padrao": "Estoque mínimo padrão (novos produtos)",
+    "chave_lead_time_min_dias": "Lead time mínimo (dias)",
+    "chave_lead_time_max_dias": "Lead time máximo (dias)",
+    "botao_salvar": "Salvar",
+    "salvo_sucesso": "Configuração atualizada.",
+    "erro_valor_vazio": "Informe um valor."
+  },
   "brand": {
     "logo_subtitle": "金龍"
   },
@@ -837,6 +914,7 @@
     "sim": "Sim",
     "nao": "Não",
     "idioma": "Idioma",
-    "sair": "Sair"
+    "sair": "Sair",
+    "limpar_filtros": "Limpar filtros"
   }
 }

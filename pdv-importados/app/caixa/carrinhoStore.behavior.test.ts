@@ -104,8 +104,8 @@ describe('useCarrinhoStore behavior', () => {
     useCarrinhoStore.getState().aplicarDescontoManual('linha-1', 50, 'teste')
 
     const state = useCarrinhoStore.getState()
-    expect(state.itens[0]?.resultado.precoUnitario).toBe(0)
-    expect(state.itens[0]?.resultado.tipoPreco).toBe('MANUAL')
+    expect(state.itens[0]?.resultado?.precoUnitario).toBe(0)
+    expect(state.itens[0]?.resultado?.tipoPreco).toBe('MANUAL')
     expect(state.totalLiquido).toBe(0)
   })
 
@@ -124,10 +124,10 @@ describe('useCarrinhoStore behavior', () => {
       tipoPreco: 'ATACADO',
     })
     const it = useCarrinhoStore.getState().itens[0]
-    expect(it?.resultado.tipoPreco).toBe('ATACADO')
-    expect(it?.resultado.precoOriginal).toBe(100)
-    expect(it?.resultado.precoUnitario).toBe(80)
-    expect(it?.resultado.descontoUnitario).toBe(20)
+    expect(it?.resultado?.tipoPreco).toBe('ATACADO')
+    expect(it?.resultado?.precoOriginal).toBe(100)
+    expect(it?.resultado?.precoUnitario).toBe(80)
+    expect(it?.resultado?.descontoUnitario).toBe(20)
     expect(useCarrinhoStore.getState().totalDesconto).toBe(120)
   })
 
@@ -151,8 +151,8 @@ describe('useCarrinhoStore behavior', () => {
       tipoPreco: 'ATACADO',
     })
     const it = useCarrinhoStore.getState().itens[0]
-    expect(it?.resultado.tipoPreco).toBe('MANUAL')
-    expect(it?.resultado.precoUnitario).toBe(8)
+    expect(it?.resultado?.tipoPreco).toBe('MANUAL')
+    expect(it?.resultado?.precoUnitario).toBe(8)
   })
 
   it('setCartOwnerForSession atribui dono quando carrinho vazio', () => {

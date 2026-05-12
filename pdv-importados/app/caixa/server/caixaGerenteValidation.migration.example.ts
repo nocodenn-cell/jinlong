@@ -111,7 +111,20 @@ export async function exemploServerActionMigrada(senha: string, lojaId: string, 
 }
 
 // ✅ EXEMPLO 5: Migração com valores dinâmicos
-export async function exemploMigracaoDinamica(requestData: any) {
+type ExemploRequest = Readonly<{
+  senha: string
+  lojaId: string
+  deviceFingerprint?: string
+  sessionId?: string
+  headers?: Record<string, string | undefined>
+  ip?: string
+  motivo?: string
+  valor?: number
+  operadorId: string
+  caixaId: string
+}>
+
+export async function exemploMigracaoDinamica(requestData: ExemploRequest) {
   const params: GerenteValidationParams = {
     senha: requestData.senha,
     lojaId: requestData.lojaId,
@@ -123,7 +136,7 @@ export async function exemploMigracaoDinamica(requestData: any) {
     motivo: requestData.motivo || 'Validação de desconto',
     valor: requestData.valor || 0,
     operadorId: requestData.operadorId,
-    caixaId: requestData.caixaId
+    caixaId: requestData.caixaId,
   }
 
   return await respondSenhaGerenteInvalida(params)

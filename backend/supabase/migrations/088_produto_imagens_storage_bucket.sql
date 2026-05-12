@@ -1,13 +1,8 @@
--- Foto de produto: URL pública (bucket Storage) + coluna no catálogo.
--- Caminho de objeto: `{produto_id}/{arquivo}` (primeiro segmento = UUID do produto).
-
-ALTER TABLE public.produtos
-  ADD COLUMN IF NOT EXISTS imagem_url text;
+-- Bucket Storage `produto-imagens` e policies (coluna `imagem_url` já criada em 084).
 
 COMMENT ON COLUMN public.produtos.imagem_url IS
   'URL pública (Supabase Storage, bucket produto-imagens) da foto do produto; opcional.';
 
--- Bucket público para leitura direta em <img>; escrita só perfis gerenciais (policies abaixo).
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'produto-imagens',
@@ -20,8 +15,6 @@ ON CONFLICT (id) DO UPDATE SET
   public = EXCLUDED.public,
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
-
--- Policies em storage.objects (RLS já ativo no Storage por defeito do Supabase).
 
 DROP POLICY IF EXISTS "produto_imagens_insert_gerencial" ON storage.objects;
 CREATE POLICY "produto_imagens_insert_gerencial"

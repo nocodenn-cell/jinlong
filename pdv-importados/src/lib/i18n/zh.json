@@ -86,6 +86,7 @@
     "filtro_nf_sim": "有发票",
     "filtro_nf_nao": "无发票",
     "filtrar": "查询",
+    "filtros_lateral_titulo": "列表筛选",
     "lista_total": "共 {{total}} 条",
     "nenhum_resultado_filtro": "没有符合条件的商品。",
     "pag_prev": "上一页",
@@ -196,11 +197,26 @@
     "editar_catalogo": "编辑",
     "editar_modal_titulo": "编辑商品",
     "editar_modal_salvar": "保存",
-    "mais_vendidos": "热卖产品",
-    "estoque_baixo": "库存不足产品",
-    "tabela_cabecalho": ["产品", "SKU", "销量", "销售额", "当前库存"],
-    "estoque_critico": "库存紧张",
-    "sem_produtos": "暂无产品"
+    "filtro_estoque_label": "库存（本店）",
+    "filtro_estoque_todos": "任意库存",
+    "filtro_estoque_abaixo_minimo": "低于或等于最低库存",
+    "filtro_estoque_em_falta": "无库存（≤ 0）",
+    "filtro_imagens_label": "图片",
+    "filtro_imagens_todos": "全部",
+    "filtro_imagens_com": "有图片",
+    "filtro_imagens_sem": "无图片",
+    "filtro_categoria_todas": "全部分类",
+    "filtro_marca_label": "品牌",
+    "filtro_marca_todas": "全部品牌",
+    "filtro_fornecedor_label": "供应商",
+    "filtro_fornecedor_todos": "全部供应商",
+    "filtro_tags_label": "标签（任一匹配）",
+    "filtro_tags_placeholder": "例：促销, 夏季",
+    "filtro_carregando": "正在更新列表…",
+    "filtro_situacao_label": "状态",
+    "filtro_situacao_todos": "全部（启用与停用）",
+    "filtro_situacao_somente_ativos": "仅启用",
+    "filtro_situacao_somente_inativos": "仅停用"
   },
   "precos": {
     "titulo": "价格规则",
@@ -224,7 +240,14 @@
     "nav_admin": "管理看板",
     "nav_recebimento": "收货",
     "nav_financeiro": "财务",
+    "nav_configuracoes": "设置",
     "nav_transferencias": "调拨",
+    "nav_topico_catalogo": "商品档案",
+    "nav_topico_estoque_logistica": "库存与物流",
+    "nav_topico_vendas_caixa": "销售与收银",
+    "nav_topico_analise": "报表",
+    "nav_topico_sistema": "系统",
+    "nav_subsecoes_aria": "当前模块子项",
     "nav_produtos": "商品",
     "bem_vindo_resumo": "今日概览与快捷入口。",
     "status_caixa_label": "收银状态",
@@ -392,7 +415,32 @@
       "kpi_titulos_abertos": "未结应收",
       "kpi_fila_pendente": "待处理单据",
       "kpi_erros_fiscais": "税务错误",
-      "kpi_valor_aberto_total": "未结金额合计"
+      "kpi_valor_aberto_total": "未结金额合计",
+      "layout_filters_title": "筛选",
+      "filter_opcao": "选项",
+      "filter_opcao_em_aberto": "未结（未结+部分）",
+      "filter_opcao_so_aberto": "仅未结",
+      "filter_opcao_parcial": "仅部分收款",
+      "filter_categoria": "类别",
+      "filter_categoria_todas": "全部",
+      "filter_categoria_hint": "当前版本暂无类别字段。",
+      "filter_cliente_nome": "客户",
+      "ph_filter_nome_cliente": "名称…",
+      "btn_filtrar": "筛选",
+      "btn_limpar_filtros": "清除筛选",
+      "toolbar_search_ph": "搜索客户或说明…",
+      "periodo_venc_de": "到期从",
+      "periodo_venc_ate": "至",
+      "col_vencimento": "到期日",
+      "col_valor": "金额",
+      "rail_valor_total": "合计（当前查询结果）",
+      "btn_nova_conta": "新增应收",
+      "sec_cadastro_fila": "建档与税务队列",
+      "empty_filtrados": "没有符合筛选条件的账单。",
+      "empty_filtrados_cta": "可用下方「新增应收」创建一笔。",
+      "lista_limite_aviso": "列表最多显示 {{limite}} 行。请缩小筛选条件，或在 URL 使用参数 «limite»（50–500）。",
+      "kpi_soma_truncada": "合计为近似值：仅累加前 {{n}} 笔未结应收，仍有更多记录。",
+      "rail_soma_parcial_lista": "合计仅为当前页行（列表已截断）。"
     },
     "dragon_badge_fila_fiscal": "税务队列",
     "theme_escuro": "夜间",
@@ -439,7 +487,8 @@
       "col_remessa": "单号",
       "col_origem": "来源",
       "col_data": "日期",
-      "empty_recentes": "尚无到货记录。"
+      "empty_recentes": "尚无到货记录。",
+      "sec_formulario": "登记收货核对"
     },
     "transferencias_page": {
       "intro": "从来源店扣减并入库到目标店（经理操作日志）。",
@@ -502,6 +551,9 @@
     "vazio_geral": "没有活跃商品。",
     "badge_alerta": "低于最低",
     "dica_baixo": "要修改数量，请在总览中为每个商品保存。",
+    "adicionar_produto": "添加商品",
+    "modal_novo_produto_titulo": "新商品",
+    "modal_novo_produto_hint": "创建商品并在本店生成初始库存记录（数量为零）。",
     "etiquetas": {
       "titulo": "打印标签",
       "subtitulo": "为商品生成带条码和价格的热敏标签。",
@@ -607,6 +659,7 @@
     "atalhos_placeholder": "快捷键即将支持",
     "regras_catalogo": "Supabase 目录 · 规则表",
     "regras_carregando": "加载规则中…",
+    "lead_time_importacao_banner": "进口典型交期：{{min}}–{{max}} 天。",
     "busca_placeholder": "条码、名称或类别…",
     "busca_label_principal": "主输入 / 搜索",
     "busca_dica": "回车加入。若名称未命中，也会按已登记类别搜索。",
@@ -796,7 +849,8 @@
       "transferencias": { "cn": "调拨", "pt": "Transferências" },
       "relatorios": { "cn": "报告", "pt": "Relatórios" },
       "caixas": { "cn": "钱箱", "pt": "Caixas" },
-      "financeiro": { "cn": "财务", "pt": "Financeiro" }
+      "financeiro": { "cn": "财务", "pt": "Financeiro" },
+      "configuracoes": { "cn": "设置", "pt": "Configurações" }
     },
     "navHints": {
       "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
@@ -808,7 +862,8 @@
       "transferencias": "Movimentação entre lojas.",
       "relatorios": "Relatórios e análises operacionais.",
       "caixas": "Caixas e operações de ponto de venda.",
-      "financeiro": "Movimentações e visão financeira."
+      "financeiro": "Movimentações e visão financeira.",
+      "configuracoes": "全局参数（佣金、收银限制、交期、最低库存）。"
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
@@ -862,6 +917,23 @@
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
   },
+  "configuracoes": {
+    "titulo": "管理设置",
+    "subtitulo": "佣金、收银、库存与进口的全局参数。更改后请刷新收银端生效。",
+    "grupo_financeiro": "财务",
+    "grupo_caixa": "收银",
+    "grupo_estoque": "库存",
+    "grupo_importacao": "进口",
+    "chave_comissao_padrao_percentual": "默认佣金 (%)",
+    "chave_desconto_maximo_operador_percentual": "无店长授权最大折扣 (%)",
+    "chave_cancelamento_maximo_valor_sem_gerente": "操作员取消上限 (R$)",
+    "chave_estoque_minimo_padrao": "新商品默认最低库存",
+    "chave_lead_time_min_dias": "交期下限（天）",
+    "chave_lead_time_max_dias": "交期上限（天）",
+    "botao_salvar": "保存",
+    "salvo_sucesso": "已更新。",
+    "erro_valor_vazio": "请填写数值。"
+  },
   "brand": {
     "logo_subtitle": "金龍"
   },
@@ -889,7 +961,8 @@
     "nao": "否",
     "idioma": "语言",
     "sair": "退出登录",
-    "fechar": "关闭"
+    "fechar": "关闭",
+    "limpar_filtros": "清除筛选"
   },
   "dashboard_novo": {
     "title": "仪表板",

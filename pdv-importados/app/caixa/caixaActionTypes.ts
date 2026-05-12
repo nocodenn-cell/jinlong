@@ -51,6 +51,10 @@ export type LimiteSangriaResult =
   | { ok: true; limite: number }
   | { ok: false; error: string }
 
+export type ConfiguracoesCaixaWebResult =
+  | { ok: true; mapa: Record<string, string> }
+  | { ok: false; error: string }
+
 export type FinalizarVendaCaixaResult =
   | { ok: true; vendaId: string }
   | { ok: false; error: string }
