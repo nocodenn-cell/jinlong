@@ -726,15 +726,15 @@ html:has(.login-premium-root) body {
   animation: dragon-subtitle-glow 2.6s ease-in-out infinite;
 }
 
-/* Troca de rota (App Router template) — “respiração” suave */
+/* Troca de rota (App Router template) — “respiração” suave.
+ * Sem `transform` no wrapper: `transform` (ex.: scale) com `animation-fill: both`
+ * mantém containing block e quebra `position: sticky` das toolbars gerente na viewport. */
 @keyframes dragon-page-enter {
   from {
     opacity: 0.88;
-    transform: scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
