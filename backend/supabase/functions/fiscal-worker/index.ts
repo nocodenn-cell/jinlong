@@ -4,7 +4,6 @@ import { classifyFiscalError } from "./fiscal_classify.ts";
 import type { FiscalDoc } from "./fiscal_types.ts";
 import { isRecord, json } from "./fiscal_http.ts";
 import { callProvider, type ProviderConfig } from "./fiscal-provider-adapter.ts";
-import { shouldRetry, DEFAULT_RETRY_CONFIG } from "./fiscal-backoff.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -75,10 +74,6 @@ Deno.serve(async (req) => {
     };
     processed.push(doc.id);
 
-    const tentativasAtuais = typeof raw.tentativas === "number" && Number.isFinite(raw.tentativas)
-      ? raw.tentativas
-      : 0;
-
     const result = await callProvider(doc, providerConfig);
 
     if (result.ok) {
@@ -91,65 +86,21 @@ Deno.serve(async (req) => {
       });
       if (error) {
         failed.push({ id: doc.id, erro: `MARCAR_EMITIDO_ERROR:${error.message}` });
-        const normalized = classifyFiscalError({
-          erro: `MARCAR_EMITIDO_ERROR:${error.message}`,
-          transitorio: true,
-        });
-        await supabase.rpc("fiscal_marcar_erro_normalizado", {
+        const { error: retryErr } = await supabase.rpc("fiscal_marcar_erro", {
           p_documento_id: doc.id,
           p_erro: `MARCAR_EMITIDO_ERROR:${error.message}`,
           p_transitorio: true,
-          p_error_code: normalized.error_code,
-          p_error_category: normalized.error_category,
-          p_action_hint: normalized.action_hint,
-          p_retryable: normalized.retryable,
-          p_next_step_url: normalized.next_step_url,
-          p_error_payload: normalized.details,
         });
-      } else {
-        emitted.push(doc.id);
-      }
-    } else {
-      if (!shouldRetry(result, tentativasAtuais, DEFAULT_RETRY_CONFIG)) {
-        failed.push({ id: doc.id, erro: result.erro });
-        const normalized = classifyFiscalError({
-          erro: result.erro,
-          transitorio: result.transitorio,
-          httpStatus: result.http_status,
-          providerCode: result.provider_code,
-          providerMessage: result.provider_message,
-          payload: result.payload,
-        });
-        const { error: normErr } = await supabase.rpc("fiscal_marcar_erro_normalizado", {
-          p_documento_id: doc.id,
-          p_erro: result.erro,
-          p_transitorio: false,
-          p_error_code: normalized.error_code,
-          p_error_category: normalized.error_category,
-          p_action_hint: normalized.action_hint,
-          p_retryable: false,
-          p_next_step_url: normalized.next_step_url,
-          p_error_payload: normalized.details,
-        });
-        if (normErr) {
+        if (retryErr) {
           console.error(
             JSON.stringify({
               scope: "fiscal-worker",
-              event: "fiscal_marcar_erro_normalizado_failed",
+              event: "fiscal_marcar_erro_failed",
               correlation_id: doc.correlation_id ?? null,
               documento_id: doc.id,
-              message: normErr.message,
+              message: retryErr.message,
             }),
           );
-        }
-      } else {
-        const { error: retryErr } = await supabase.rpc("fiscal_marcar_erro", {
-          p_documento_id: doc.id,
-          p_erro: result.erro,
-          p_transitorio: true,
-        });
-        if (retryErr) {
-          failed.push({ id: doc.id, erro: `MARCAR_ERRO_RETRY:${retryErr.message}` });
         } else {
           const { data: row } = await supabase
             .from("documentos_fiscais_pendentes")
@@ -161,6 +112,59 @@ Deno.serve(async (req) => {
             proxima_tentativa: row?.proxima_tentativa_em ?? null,
           });
         }
+      } else {
+        emitted.push(doc.id);
+      }
+    } else if (result.transitorio) {
+      const { error: retryErr } = await supabase.rpc("fiscal_marcar_erro", {
+        p_documento_id: doc.id,
+        p_erro: result.erro,
+        p_transitorio: true,
+      });
+      if (retryErr) {
+        failed.push({ id: doc.id, erro: `MARCAR_ERRO:${retryErr.message}` });
+      } else {
+        const { data: row } = await supabase
+          .from("documentos_fiscais_pendentes")
+          .select("proxima_tentativa_em")
+          .eq("id", doc.id)
+          .maybeSingle();
+        retried.push({
+          id: doc.id,
+          proxima_tentativa: row?.proxima_tentativa_em ?? null,
+        });
+      }
+    } else {
+      failed.push({ id: doc.id, erro: result.erro });
+      const normalized = classifyFiscalError({
+        erro: result.erro,
+        transitorio: result.transitorio,
+        httpStatus: result.http_status,
+        providerCode: result.provider_code,
+        providerMessage: result.provider_message,
+        payload: result.payload,
+      });
+      const { error: normErr } = await supabase.rpc("fiscal_marcar_erro_normalizado", {
+        p_documento_id: doc.id,
+        p_erro: result.erro,
+        p_transitorio: false,
+        p_error_code: normalized.error_code,
+        p_error_category: normalized.error_category,
+        p_action_hint: normalized.action_hint,
+        p_retryable: false,
+        p_next_step_url: normalized.next_step_url,
+        p_error_payload: normalized.details,
+      });
+      if (normErr) {
+        console.error(
+          JSON.stringify({
+            scope: "fiscal-worker",
+            event: "fiscal_marcar_erro_normalizado_failed",
+            correlation_id: doc.correlation_id ?? null,
+            documento_id: doc.id,
+            message: normErr.message,
+          }),
+        );
       }
     }
   }
