@@ -145,7 +145,14 @@
     "nav_admin": "Admin",
     "nav_recebimento": "Recebimento",
     "nav_financeiro": "Financeiro",
+    "nav_configuracoes": "Configurações",
     "nav_transferencias": "Transferências",
+    "nav_topico_catalogo": "Catálogo",
+    "nav_topico_estoque_logistica": "Estoque e logística",
+    "nav_topico_vendas_caixa": "Vendas e caixa",
+    "nav_topico_analise": "Relatórios",
+    "nav_topico_sistema": "Sistema",
+    "nav_subsecoes_aria": "Itens do módulo selecionado",
     "nav_produtos": "Produtos",
     "bem_vindo_resumo": "Resumo do dia e atalhos.",
     "status_caixa_label": "Status do caixa",
@@ -449,6 +456,9 @@
     "vazio_geral": "Nenhum produto ativo cadastrado.",
     "badge_alerta": "Abaixo do mínimo",
     "dica_baixo": "Para alterar quantidades, use a visão geral e salve por produto.",
+    "adicionar_produto": "Adicionar produto",
+    "modal_novo_produto_titulo": "Novo produto",
+    "modal_novo_produto_hint": "Cria o produto e o registro de estoque inicial na sua loja (quantidade zero).",
     "etiquetas": {
       "titulo": "Imprimir Etiquetas",
       "subtitulo": "Gere etiquetas térmicas para seus produtos com código de barras e preço.",
@@ -514,6 +524,7 @@
     "atalhos_placeholder": "Atalhos de teclado em breve",
     "regras_catalogo": "Catálogo Supabase · regras em",
     "regras_carregando": "carregando regras…",
+    "lead_time_importacao_banner": "Lead time típico de importação: {{min}}–{{max}} dias.",
     "busca_placeholder": "Código de barras, nome ou categoria…",
     "busca_label_principal": "Leitura / busca principal",
     "busca_dica": "Enter adiciona ao cupom. Se o nome não bater, buscamos também pela categoria cadastrada.",
@@ -697,7 +708,8 @@
       "transferencias": { "cn": "调拨", "pt": "Transferências" },
       "relatorios": { "cn": "报告", "pt": "Relatórios" },
       "caixas": { "cn": "钱箱", "pt": "Caixas" },
-      "financeiro": { "cn": "财务", "pt": "Financeiro" }
+      "financeiro": { "cn": "财务", "pt": "Financeiro" },
+      "configuracoes": { "cn": "设置", "pt": "Configurações" }
     },
     "navHints": {
       "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
@@ -709,7 +721,8 @@
       "transferencias": "Movimentação entre lojas.",
       "relatorios": "Relatórios e análises operacionais.",
       "caixas": "Caixas e operações de ponto de venda.",
-      "financeiro": "Movimentações e visão financeira."
+      "financeiro": "Movimentações e visão financeira.",
+      "configuracoes": "Parâmetros globais (comissão, limites de caixa, lead time, estoque mínimo)."
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
@@ -762,6 +775,23 @@
       "concluida": { "cn": "已完成", "pt": "Concluída" },
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
+  },
+  "configuracoes": {
+    "titulo": "Configurações gerenciais",
+    "subtitulo": "Parâmetros globais de comissão, caixa, estoque e importação. Alterações aplicam-se após recarregar o caixa.",
+    "grupo_financeiro": "Financeiro",
+    "grupo_caixa": "Caixa",
+    "grupo_estoque": "Estoque",
+    "grupo_importacao": "Importação",
+    "chave_comissao_padrao_percentual": "Comissão padrão (%)",
+    "chave_desconto_maximo_operador_percentual": "Desconto máximo sem gerente (%)",
+    "chave_cancelamento_maximo_valor_sem_gerente": "Limite de cancelamento — operador (R$)",
+    "chave_estoque_minimo_padrao": "Estoque mínimo padrão (novos produtos)",
+    "chave_lead_time_min_dias": "Lead time mínimo (dias)",
+    "chave_lead_time_max_dias": "Lead time máximo (dias)",
+    "botao_salvar": "Salvar",
+    "salvo_sucesso": "Configuração atualizada.",
+    "erro_valor_vazio": "Informe um valor."
   },
   "brand": {
     "logo_subtitle": "金龍"

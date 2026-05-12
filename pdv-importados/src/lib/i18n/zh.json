@@ -150,7 +150,14 @@
     "nav_admin": "管理看板",
     "nav_recebimento": "收货",
     "nav_financeiro": "财务",
+    "nav_configuracoes": "设置",
     "nav_transferencias": "调拨",
+    "nav_topico_catalogo": "商品档案",
+    "nav_topico_estoque_logistica": "库存与物流",
+    "nav_topico_vendas_caixa": "销售与收银",
+    "nav_topico_analise": "报表",
+    "nav_topico_sistema": "系统",
+    "nav_subsecoes_aria": "当前模块子项",
     "nav_produtos": "商品",
     "bem_vindo_resumo": "今日概览与快捷入口。",
     "status_caixa_label": "收银状态",
@@ -454,6 +461,9 @@
     "vazio_geral": "没有活跃商品。",
     "badge_alerta": "低于最低",
     "dica_baixo": "要修改数量，请在总览中为每个商品保存。",
+    "adicionar_produto": "添加商品",
+    "modal_novo_produto_titulo": "新商品",
+    "modal_novo_produto_hint": "创建商品并在本店生成初始库存记录（数量为零）。",
     "etiquetas": {
       "titulo": "打印标签",
       "subtitulo": "为商品生成带条码和价格的热敏标签。",
@@ -559,6 +569,7 @@
     "atalhos_placeholder": "快捷键即将支持",
     "regras_catalogo": "Supabase 目录 · 规则表",
     "regras_carregando": "加载规则中…",
+    "lead_time_importacao_banner": "进口典型交期：{{min}}–{{max}} 天。",
     "busca_placeholder": "条码、名称或类别…",
     "busca_label_principal": "主输入 / 搜索",
     "busca_dica": "回车加入。若名称未命中，也会按已登记类别搜索。",
@@ -748,7 +759,8 @@
       "transferencias": { "cn": "调拨", "pt": "Transferências" },
       "relatorios": { "cn": "报告", "pt": "Relatórios" },
       "caixas": { "cn": "钱箱", "pt": "Caixas" },
-      "financeiro": { "cn": "财务", "pt": "Financeiro" }
+      "financeiro": { "cn": "财务", "pt": "Financeiro" },
+      "configuracoes": { "cn": "设置", "pt": "Configurações" }
     },
     "navHints": {
       "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
@@ -760,7 +772,8 @@
       "transferencias": "Movimentação entre lojas.",
       "relatorios": "Relatórios e análises operacionais.",
       "caixas": "Caixas e operações de ponto de venda.",
-      "financeiro": "Movimentações e visão financeira."
+      "financeiro": "Movimentações e visão financeira.",
+      "configuracoes": "全局参数（佣金、收银限制、交期、最低库存）。"
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
@@ -813,6 +826,23 @@
       "concluida": { "cn": "已完成", "pt": "Concluída" },
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
+  },
+  "configuracoes": {
+    "titulo": "管理设置",
+    "subtitulo": "佣金、收银、库存与进口的全局参数。更改后请刷新收银端生效。",
+    "grupo_financeiro": "财务",
+    "grupo_caixa": "收银",
+    "grupo_estoque": "库存",
+    "grupo_importacao": "进口",
+    "chave_comissao_padrao_percentual": "默认佣金 (%)",
+    "chave_desconto_maximo_operador_percentual": "无店长授权最大折扣 (%)",
+    "chave_cancelamento_maximo_valor_sem_gerente": "操作员取消上限 (R$)",
+    "chave_estoque_minimo_padrao": "新商品默认最低库存",
+    "chave_lead_time_min_dias": "交期下限（天）",
+    "chave_lead_time_max_dias": "交期上限（天）",
+    "botao_salvar": "保存",
+    "salvo_sucesso": "已更新。",
+    "erro_valor_vazio": "请填写数值。"
   },
   "brand": {
     "logo_subtitle": "金龍"

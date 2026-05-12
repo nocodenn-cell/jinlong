@@ -21,6 +21,11 @@ import {
 } from '@/app/caixa/server/caixaActionsInternals'
 import { getDeviceFingerprint } from '@/lib/security/deviceFingerprint'
 import { getCaixaSalesRuntimeConfig } from '@/lib/config/caixaSalesRuntimeConfig'
+import {
+  obterMapaConfiguracoesParaCaixaWeb,
+  parseMoneyConfig,
+  parsePercentConfig,
+} from '@/lib/caixa/configuracoesGeraisCaixa'
 
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
@@ -62,6 +67,28 @@ export async function cancelarVendaImpl(
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const { data: urow } = await supabase
+      .from('usuarios')
+      .select('perfil')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (urow?.perfil === 'OPERADOR') {
+      const { data: vrow } = await supabase
+        .from('vendas')
+        .select('total_liquido')
+        .eq('id', vendaIdTrim)
+        .maybeSingle()
+      const totalLiq = Number(vrow?.total_liquido ?? 0)
+      const cfgMap = await obterMapaConfiguracoesParaCaixaWeb(supabase)
+      const maxCancel = parseMoneyConfig(cfgMap.cancelamento_maximo_valor_sem_gerente, 500)
+      if (Number.isFinite(totalLiq) && totalLiq > maxCancel + 0.01) {
+        return {
+          ok: false,
+          error: `Cancelamento não permitido: o valor da venda (R$ ${totalLiq.toFixed(2)}) ultrapassa o limite configurado para operador (R$ ${maxCancel.toFixed(2)}).`,
+        }
+      }
+    }
 
     const { data, error } = await supabase.rpc('cancelar_venda_transacional', {
       p_venda_id: vendaIdTrim,
@@ -142,6 +169,19 @@ export async function finalizarVendaCaixaImpl(
     const computedBase = totaisFromItens(itensAut)
     const gerentePercentual = input.descontoGerentePercentual ?? null
     const hasDescontoGerente = !!input.descontoGerenteToken && gerentePercentual !== null
+
+    if (!hasDescontoGerente && computedBase.totalBruto > 0.009) {
+      const cfgMap = await obterMapaConfiguracoesParaCaixaWeb(supabase)
+      const maxPctOp = parsePercentConfig(cfgMap.desconto_maximo_operador_percentual, 10)
+      const pctLinhas = (computedBase.totalDesconto / computedBase.totalBruto) * 100
+      if (pctLinhas > maxPctOp + 0.05) {
+        return {
+          ok: false,
+          error: `O desconto total na venda (${pctLinhas.toFixed(1)}%) ultrapassa o máximo permitido sem validação de gerente (${maxPctOp}%). Solicite aprovação do gerente.`,
+        }
+      }
+    }
+
     const descontoGerenteValor = hasDescontoGerente
       ? roundMoney2((computedBase.totalLiquido * gerentePercentual) / 100)
       : 0
