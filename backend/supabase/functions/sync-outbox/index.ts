@@ -556,16 +556,43 @@ async function processMovimentoCaixa(supabase: SupabaseAdmin, ev: OutboxEvent) {
     throw new Error(`TIPO_MOVIMENTO_INVALIDO: ${p.tipo}`);
   }
 
-  const row: Record<string, unknown> = {
-    id: p.id,
-    caixa_id: p.caixa_id,
-    tipo: p.tipo,
-    valor: p.valor,
-    observacao: p.observacao ?? null,
-  };
-  if (p.created_at) row.created_at = p.created_at;
+  const caixaId = p.caixa_id.trim();
+  const { data: caixaRow, error: caixaErr } = await supabase
+    .from("caixas")
+    .select("operador_id")
+    .eq("id", caixaId)
+    .maybeSingle();
 
-  const { error } = await supabase.from("movimentos_caixa").insert(row);
+  if (caixaErr) throw new Error(`MOVIMENTO_CAIXA_LOOKUP: ${caixaErr.message}`);
+  const operadorId = caixaRow?.operador_id;
+  if (!operadorId || !isUuid(String(operadorId))) {
+    throw new Error("MOVIMENTO_CAIXA_OPERADOR_OBRIGATORIO");
+  }
+
+  const tipoMovimento = p.tipo === "SANGRIA" ? "sangria" : "suprimento";
+  const motivo =
+    typeof p.observacao === "string" && p.observacao.trim().length > 0
+      ? p.observacao.trim()
+      : "Movimento sincronizado (PDV local)";
+
+  const { error } = await supabase.rpc("registrar_movimentacao", {
+    p_caixa_id: caixaId,
+    p_tipo: tipoMovimento,
+    p_forma_pagamento: "dinheiro",
+    p_valor: p.valor,
+    p_motivo: motivo,
+    p_motivo_codigo: "OUTRO",
+    p_status: null,
+    p_movimentacao_origem_id: null,
+    p_idempotency_key: p.id.trim(),
+    p_ip_address: null,
+    p_user_agent: null,
+    p_device_id: null,
+    p_terminal_id: "sync-outbox",
+    p_operador_id: String(operadorId).trim(),
+    p_gerente_id: null,
+  });
+
   if (error && !String(error.message).includes("duplicate key")) {
     throw new Error(`ERRO_MOVIMENTO: ${error.message}`);
   }

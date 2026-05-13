@@ -28,7 +28,7 @@ Referência de teste: `backend/scripts/sync-outbox-anti-replay-diagnostic.ps1`.
 | `VENDA_REGISTRADA` | `caixas` (ensure), `vendas`, `descontos_venda` (opcional), `itens_venda`, baixa por item via RPC **`decrementar_estoque_seguro`** (fluxo legado na Edge) ou **`finalizar_venda_transacional_canonica_v2`** (fluxo unificado) |
 | `CAIXA_ABERTO`    | `caixas` (insert idempotente / ensure) |
 | `CAIXA_FECHADO`   | `caixas` (UPDATE `status = FECHADO` se ainda `ABERTO`; preenche `fechamento_diferenca` via RPC `calcular_valor_sistema_dinheiro_caixa` e `fechamento_observacao` opcional no payload) |
-| `MOVIMENTO_CAIXA` | `movimentos_caixa` (INSERT; `tipo` `SANGRIA` ou `SUPRIMENTO`) |
+| `MOVIMENTO_CAIXA` | RPC **`registrar_movimentacao`** → `movimentacoes_caixa` (`tipo` `sangria`/`suprimento`, `p_idempotency_key` = `id` do payload; `p_operador_id` = `caixas.operador_id`) |
 
 ## Payloads gerados no PDV local (Rust)
 
