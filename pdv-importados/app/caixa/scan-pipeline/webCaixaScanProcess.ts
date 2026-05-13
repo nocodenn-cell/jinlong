@@ -52,11 +52,10 @@ export type WebCaixaScanDeps = {
   focarCampoBusca: () => void
   adicionarItem: CarrinhoState['adicionarItem']
   setCartOwnerForSession: CarrinhoState['setCartOwnerForSession']
-  aplicarPrecoRpcParaLinha: (params: {
-    produtoId: string
-    itemId: string
-    quantidade: number
-  }) => Promise<void>
+  aplicarPrecoRpcParaLinha: (
+    params: { produtoId: string; itemId: string; quantidade: number },
+    opts?: { scanSignal?: AbortSignal },
+  ) => Promise<void>
   /** Sessão operacional do cupom (novo cupom ⇒ novo id); usado com `meta.cupomSessionId` no enqueue. */
   getActiveCupomSessionId: () => string
   /** Telemetria humana (runtime + adapter); injetada por `useCaixaScanPipeline`. */
@@ -72,6 +71,8 @@ export async function runWebCaixaScanProcess(
 ): Promise<ScanProcessResult> {
   const { m, setCaixaMensagem, setCodigo, tocarFeedback, focarCampoBusca } = deps
   const signal = ctx.signal
+  /** Linha criada neste scan; rollback até commit explícito (P0 stale_cupom / abort). */
+  let linhaPendenteRollback: string | null = null
   const trimmed = ctx.scan.event.codigo.trim()
   if (!trimmed) {
     return { ok: false, reason: 'validation', message: 'Código vazio.' }
@@ -173,8 +174,20 @@ export async function runWebCaixaScanProcess(
     const stale3 = staleCupomIfAny(ctx, deps)
     if (stale3) return stale3
 
+    /**
+     * Política P0: mutação do carrinho só é “confirmada” quando o scan termina com sucesso.
+     * Qualquer abort / stale_cupom / falha de pricing após `adicionarItem` faz rollback da linha
+     * deste bip (evita divergência invisível scan failed vs carrinho mutado).
+     */
+    const novaLinhaId = `${p.id}-${Date.now()}`
+    const abandonarLinhaDoScan = () => {
+      if (!linhaPendenteRollback) return
+      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
+      linhaPendenteRollback = null
+    }
+
     deps.adicionarItem({
-      id: `${p.id}-${Date.now()}`,
+      id: novaLinhaId,
       produtoId: p.id,
       nome: p.nome,
       quantidade: 1,
@@ -197,24 +210,30 @@ export async function runWebCaixaScanProcess(
         precoVarejoReferencia: p.preco_varejo,
       },
     })
+    linhaPendenteRollback = novaLinhaId
 
     if (signal?.aborted) {
+      abandonarLinhaDoScan()
       return { ok: false, reason: 'aborted' }
     }
 
-    const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.produtoId === p.id)
+    const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.id === novaLinhaId)
     if (linhaApos) {
       const tp = linhaApos.resultado?.tipoPreco
       if (tp !== 'MANUAL' && tp !== 'PROMOCAO') {
         const tPricing = Date.now()
         const pricingR = await raceWithScanAbort(signal, () =>
-          deps.aplicarPrecoRpcParaLinha({
-            produtoId: p.id,
-            itemId: linhaApos.id,
-            quantidade: linhaApos.quantidade,
-          }),
+          deps.aplicarPrecoRpcParaLinha(
+            {
+              produtoId: p.id,
+              itemId: linhaApos.id,
+              quantidade: linhaApos.quantidade,
+            },
+            { scanSignal: signal },
+          ),
         )
         if (!pricingR.ok) {
+          abandonarLinhaDoScan()
           return { ok: false, reason: 'aborted' }
         }
         deps.telemetry?.emitTelemetry(
@@ -229,11 +248,15 @@ export async function runWebCaixaScanProcess(
     }
 
     if (signal?.aborted) {
+      abandonarLinhaDoScan()
       return { ok: false, reason: 'aborted' }
     }
 
     const stale4 = staleCupomIfAny(ctx, deps)
-    if (stale4) return stale4
+    if (stale4) {
+      abandonarLinhaDoScan()
+      return stale4
+    }
 
     setCodigo('')
     if (avisoEstoqueMsg) {
@@ -251,6 +274,7 @@ export async function runWebCaixaScanProcess(
       }),
     )
     tocarFeedback('ok')
+    linhaPendenteRollback = null
     return { ok: true }
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
@@ -260,6 +284,10 @@ export async function runWebCaixaScanProcess(
     tocarFeedback('erro')
     return { ok: false, reason: 'unknown', message: m.caixa.falha_busca }
   } finally {
+    if (linhaPendenteRollback != null && linhaPendenteRollback !== '') {
+      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
+      linhaPendenteRollback = null
+    }
     focarCampoBusca()
   }
 }

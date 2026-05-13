@@ -196,7 +196,10 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   )
 
   const aplicarPrecoRpcParaLinha = useCallback(
-    async (params: { produtoId: string; itemId: string; quantidade: number }) => {
+    async (
+      params: { produtoId: string; itemId: string; quantidade: number },
+      opts?: { scanSignal?: AbortSignal },
+    ) => {
       const linha = useCarrinhoStore.getState().itens.find((i) => i.id === params.itemId)
       if (!linha || linha.produtoId !== params.produtoId) return
       const tp = linha.resultado?.tipoPreco
@@ -206,10 +209,12 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         produtoId: params.produtoId,
         quantidade: params.quantidade,
       })
+      if (opts?.scanSignal?.aborted) return
       if (!res.ok) {
         setCaixaMensagem(res.error, { kind: "error" })
         return
       }
+      if (opts?.scanSignal?.aborted) return
       useCarrinhoStore.getState().sincronizarPrecoCalculadoRpc(params.itemId, {
         precoUnitario: res.preco,
         tipoPreco: res.tipo,

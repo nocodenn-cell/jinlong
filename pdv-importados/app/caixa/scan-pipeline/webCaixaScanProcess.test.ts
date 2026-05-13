@@ -3,6 +3,21 @@ import type { ScanProcessContext } from '../../../../shared-core/src/pdv/scan-pi
 import { buscarProdutoParaCaixa } from '@/app/caixa/actions'
 import { runWebCaixaScanProcess, type WebCaixaScanDeps } from './webCaixaScanProcess'
 
+const scanStoreTest = vi.hoisted(() => {
+  const itens: { id: string; produtoId: string; quantidade: number; resultado?: { tipoPreco: string } }[] = []
+  const removerItem = vi.fn((id: string) => {
+    const ix = itens.findIndex((x) => x.id === id)
+    if (ix >= 0) itens.splice(ix, 1)
+  })
+  return {
+    itens,
+    removerItem,
+    getState() {
+      return { itens: [...itens], removerItem }
+    },
+  }
+})
+
 vi.mock('@/app/caixa/actions', () => ({
   buscarProdutoParaCaixa: vi.fn(),
 }))
@@ -20,7 +35,7 @@ vi.mock('@/lib/supabase/client', () => ({
 
 vi.mock('@/stores/carrinhoStore', () => ({
   useCarrinhoStore: {
-    getState: vi.fn(() => ({ itens: [] })),
+    getState: () => scanStoreTest.getState(),
   },
 }))
 
@@ -65,7 +80,14 @@ function minimalDeps(overrides: Partial<WebCaixaScanDeps> = {}): WebCaixaScanDep
     setCodigo: vi.fn(),
     tocarFeedback: vi.fn(),
     focarCampoBusca: vi.fn(),
-    adicionarItem: vi.fn(),
+    adicionarItem: vi.fn((item) => {
+      scanStoreTest.itens.push({
+        id: item.id,
+        produtoId: item.produtoId,
+        quantidade: item.quantidade,
+        resultado: item.resultado as { tipoPreco: string },
+      })
+    }),
     setCartOwnerForSession: vi.fn(),
     aplicarPrecoRpcParaLinha: vi.fn().mockResolvedValue(undefined),
     getActiveCupomSessionId: () => 'cupom-a',
@@ -77,6 +99,8 @@ function minimalDeps(overrides: Partial<WebCaixaScanDeps> = {}): WebCaixaScanDep
 describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
   beforeEach(() => {
     vi.mocked(buscarProdutoParaCaixa).mockReset()
+    scanStoreTest.itens.length = 0
+    scanStoreTest.removerItem.mockClear()
   })
 
   it('stale_cupom: retorna sem toast e sem chamar busca quando cupom ativo difere do meta', async () => {
@@ -153,5 +177,39 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
         estoque_minimo: null,
       },
     })
+  })
+
+  it('stale_cupom após add: compensa removendo linha (P0 — carrinho alinhado ao scan)', async () => {
+    let cupomCalls = 0
+    vi.mocked(buscarProdutoParaCaixa).mockResolvedValue({
+      ok: true,
+      status: 'encontrado',
+      produto: {
+        id: 'p1',
+        nome: 'Produto teste',
+        codigo_barras: '789',
+        preco_varejo: 9.99,
+        preco_atacado: null,
+        categoria_id: null,
+        origem: 'brasil_sem_nf',
+        tem_nf: false,
+        observacao: null,
+        quantidade_estoque: 5,
+        estoque_minimo: null,
+      },
+    } as Awaited<ReturnType<typeof buscarProdutoParaCaixa>>)
+
+    const deps = minimalDeps({
+      getActiveCupomSessionId: () => {
+        cupomCalls += 1
+        return cupomCalls <= 4 ? 'cupom-a' : 'cupom-b'
+      },
+    })
+
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+    expect(r).toEqual({ ok: false, reason: 'stale_cupom' })
+    expect(deps.adicionarItem).toHaveBeenCalledTimes(1)
+    expect(scanStoreTest.itens).toHaveLength(0)
+    expect(scanStoreTest.removerItem).toHaveBeenCalled()
   })
 })
