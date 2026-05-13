@@ -1,5 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { CaixaHeader } from '@/app/caixa/CaixaHeader'
+import type { Mensagens } from '@/i18n/getMessages'
+import pt from '@/i18n/pt.json'
+
+const m = pt as Mensagens
+
+const noop = () => {}
 
 const meta: Meta<typeof CaixaHeader> = {
   title: 'Caixa/CaixaHeader',
@@ -14,19 +20,15 @@ const meta: Meta<typeof CaixaHeader> = {
   argTypes: {
     caixaStatus: {
       control: 'object',
-      description: 'Status atual do caixa',
+      description: 'Status atual do caixa (aberto com saldo ou fechado)',
     },
-    regrasPrecoLoading: {
+    carregandoRegras: {
       control: 'boolean',
       description: 'Se as regras de preço estão carregando',
     },
-    dinheiroSistema: {
-      control: 'number',
-      description: 'Valor em dinheiro no sistema',
-    },
-    blindClosure: {
+    processandoCaixa: {
       control: 'boolean',
-      description: 'Se está em modo blind closure',
+      description: 'Se abrir/fechar caixa está em andamento',
     },
   },
 }
@@ -36,121 +38,66 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
-    m: {
-      caixa: {
-        logo_wordmark_alt: 'Dragon POS',
-        data_hora_atual: '30/04/2026 14:20:00',
-        status_caixa_aberto: 'Caixa Aberto',
-        status_caixa_fechado: 'Caixa Fechado',
-        dinheiro_em_sistema: 'Dinheiro em Sistema: R$',
-        carregando_regras_preco: 'Carregando regras de preço...',
-        aria_status_caixa: 'Status do caixa',
-        aria_data_hora: 'Data e hora atual',
-        aria_dinheiro_sistema: 'Valor em dinheiro no sistema',
-      },
-      pdv: {
-        sair: 'Sair',
-      },
-    },
-    idioma: 'pt-BR',
+    m,
+    idioma: 'pt',
+    carregandoRegras: false,
     caixaStatus: {
       aberto: true,
-      dataAbertura: '2026-04-30T08:00:00Z',
+      dataAbertura: '2026-04-30T08:00:00.000Z',
       valorInicial: 1000,
-      valorSistemaDinheiro: 2500.50,
+      valorSistemaDinheiro: 2500.5,
+      blindClosureEnabled: false,
     },
-    regrasPrecoLoading: false,
-    dinheiroSistema: 2500.50,
-    blindClosure: false,
+    processandoCaixa: false,
+    onAbrirCaixa: noop,
+    onFecharCaixa: noop,
   },
 }
 
 export const Closed: Story = {
   args: {
-    m: {
-      caixa: {
-        logo_wordmark_alt: 'Dragon POS',
-        data_hora_atual: '30/04/2026 14:20:00',
-        status_caixa_aberto: 'Caixa Aberto',
-        status_caixa_fechado: 'Caixa Fechado',
-        dinheiro_em_sistema: 'Dinheiro em Sistema: R$',
-        carregando_regras_preco: 'Carregando regras de preço...',
-        aria_status_caixa: 'Status do caixa',
-        aria_data_hora: 'Data e hora atual',
-        aria_dinheiro_sistema: 'Valor em dinheiro no sistema',
-      },
-      pdv: {
-        sair: 'Sair',
-      },
-    },
-    idioma: 'pt-BR',
-    caixaStatus: {
-      aberto: false,
-    },
-    regrasPrecoLoading: false,
-    dinheiroSistema: 0,
-    blindClosure: false,
+    m,
+    idioma: 'pt',
+    carregandoRegras: false,
+    caixaStatus: { aberto: false },
+    processandoCaixa: false,
+    onAbrirCaixa: noop,
+    onFecharCaixa: noop,
   },
 }
 
 export const Loading: Story = {
   args: {
-    m: {
-      caixa: {
-        logo_wordmark_alt: 'Dragon POS',
-        data_hora_atual: '30/04/2026 14:20:00',
-        status_caixa_aberto: 'Caixa Aberto',
-        status_caixa_fechado: 'Caixa Fechado',
-        dinheiro_em_sistema: 'Dinheiro em Sistema: R$',
-        carregando_regras_preco: 'Carregando regras de preço...',
-        aria_status_caixa: 'Status do caixa',
-        aria_data_hora: 'Data e hora atual',
-        aria_dinheiro_sistema: 'Valor em dinheiro no sistema',
-      },
-      pdv: {
-        sair: 'Sair',
-      },
-    },
-    idioma: 'pt-BR',
+    m,
+    idioma: 'pt',
+    carregandoRegras: true,
     caixaStatus: {
       aberto: true,
-      dataAbertura: '2026-04-30T08:00:00Z',
+      dataAbertura: '2026-04-30T08:00:00.000Z',
       valorInicial: 1000,
-      valorSistemaDinheiro: 2500.50,
+      valorSistemaDinheiro: 2500.5,
+      blindClosureEnabled: false,
     },
-    regrasPrecoLoading: true,
-    dinheiroSistema: 2500.50,
-    blindClosure: false,
+    processandoCaixa: false,
+    onAbrirCaixa: noop,
+    onFecharCaixa: noop,
   },
 }
 
 export const BlindClosure: Story = {
   args: {
-    m: {
-      caixa: {
-        logo_wordmark_alt: 'Dragon POS',
-        data_hora_atual: '30/04/2026 14:20:00',
-        status_caixa_aberto: 'Caixa Aberto',
-        status_caixa_fechado: 'Caixa Fechado',
-        dinheiro_em_sistema: 'Dinheiro em Sistema: R$',
-        carregando_regras_preco: 'Carregando regras de preço...',
-        aria_status_caixa: 'Status do caixa',
-        aria_data_hora: 'Data e hora atual',
-        aria_dinheiro_sistema: 'Valor em dinheiro no sistema',
-      },
-      pdv: {
-        sair: 'Sair',
-      },
-    },
-    idioma: 'pt-BR',
+    m,
+    idioma: 'pt',
+    carregandoRegras: false,
     caixaStatus: {
       aberto: true,
-      dataAbertura: '2026-04-30T08:00:00Z',
+      dataAbertura: '2026-04-30T08:00:00.000Z',
       valorInicial: 1000,
-      valorSistemaDinheiro: 2500.50,
+      valorSistemaDinheiro: 2500.5,
+      blindClosureEnabled: true,
     },
-    regrasPrecoLoading: false,
-    dinheiroSistema: 2500.50,
-    blindClosure: true,
+    processandoCaixa: false,
+    onAbrirCaixa: noop,
+    onFecharCaixa: noop,
   },
 }
