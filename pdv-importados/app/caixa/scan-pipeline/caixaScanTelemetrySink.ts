@@ -12,6 +12,8 @@ export function createCaixaScanTelemetrySink(): ScanPipelineSink {
   }
   return {
     emitTelemetry(payload: HumanTelemetryPayloadInput) {
+      // Apenas fora de production (ramo acima). ESLint: telemetria humana de diagnóstico local.
+      // eslint-disable-next-line no-console -- sink dev-only; produção usa noop
       console.debug(`[caixa.scan.telemetry] ${payload.event}`, payload)
     },
   }
