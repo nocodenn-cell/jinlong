@@ -75,7 +75,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
       data-app-theme={theme}
       data-gerente-ui-theme={theme === 'novem' ? 'dragon-light' : 'dragon-dark'}
       className={cn(
-        'gerente-shell relative min-h-screen antialiased transition-[background-color,color] duration-200',
+        'gerente-shell relative min-h-screen overflow-x-visible overflow-y-visible antialiased transition-[background-color,color] duration-200',
         theme === 'noturno' && 'app-surface app-surface-text',
         theme === 'novem' && 'app-surface app-surface-text',
       )}
@@ -143,7 +143,11 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
         </div>
       </header>
 
-      <main className="relative z-[1]">{children}</main>
+      {/*
+        Sticky (ex.: GerenteStickyToolbar) ancora ao viewport; um ancestral com overflow
+        não-visible quebra esse comportamento. Manter overflow visível no main.
+      */}
+      <main className="relative z-[1] overflow-x-visible overflow-y-visible">{children}</main>
 
       <div
         className={cn(
