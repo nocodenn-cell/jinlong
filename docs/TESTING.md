@@ -55,12 +55,12 @@ O script usa defaults para usuários de teste, mas permite override:
 - `RLS_DONO_EMAIL` / `RLS_DONO_PASSWORD`
 - `RLS_ADMIN_EMAIL` / `RLS_ADMIN_PASSWORD`
 
-Também requer envs da stack local (gerados por `supabase status -o env`):
+Também requer envs da stack local (gerados por `supabase status -o env`). O CLI recente usa nomes curtos; o script aceita ambos:
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (somente para seed determinístico)
-- `POSTGRES_URL` (seed SQL determinístico)
+- `SUPABASE_URL` ou `API_URL`
+- `SUPABASE_ANON_KEY` ou `ANON_KEY` ou `PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` ou `SERVICE_ROLE_KEY` (somente para seed determinístico)
+- `POSTGRES_URL` ou `DB_URL` (seed SQL determinístico)
 
 ## Interpretação do resultado
 

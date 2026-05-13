@@ -71,7 +71,14 @@ jobs:
           set -euo pipefail
           cd backend
           eval "$(npx supabase status -o env | sed 's/^/export /')"
-          psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
+          # CLI recente exporta DB_URL; documentação antiga usava POSTGRES_URL.
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL). Saída de status:" >&2
+            npx supabase status -o env >&2 || true
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
 
       - name: Diagnóstico em falha (logs + status)
         if: failure()
@@ -132,6 +139,11 @@ jobs:
           set -euo pipefail
           cd backend
           eval "$(npx supabase status -o env | sed 's/^/export /')"
+          if [ -z "${POSTGRES_URL:-}" ] && [ -z "${DB_URL:-}" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL). Saída de status:" >&2
+            npx supabase status -o env >&2 || true
+            exit 1
+          fi
           npm run test:rls-scope -w fastproduct-backend
 
       - name: Diagnóstico em falha (logs + status)

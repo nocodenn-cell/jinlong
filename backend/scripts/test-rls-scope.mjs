@@ -3,10 +3,13 @@ import { createClient } from "@supabase/supabase-js";
 import { execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-const POSTGRES_URL = process.env.POSTGRES_URL ?? "";
+// Nomes alinhados ao `supabase status -o env` (CLI recente) + aliases usados em docs/CI antigos.
+const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.API_URL ?? "";
+const SUPABASE_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ?? process.env.ANON_KEY ?? process.env.PUBLISHABLE_KEY ?? "";
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY ?? "";
+const POSTGRES_URL = process.env.POSTGRES_URL ?? process.env.DB_URL ?? "";
 
 const USERS = [
   { perfil: "OPERADOR", email: process.env.RLS_OPERADOR_EMAIL ?? "test_operador@example.com", password: process.env.RLS_OPERADOR_PASSWORD ?? "Test@123456" },
@@ -62,10 +65,10 @@ function monthDateRange() {
 }
 
 async function ensureUsersAndSeed() {
-  requireEnv("SUPABASE_URL", SUPABASE_URL);
-  requireEnv("SUPABASE_ANON_KEY", SUPABASE_ANON_KEY);
-  requireEnv("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY);
-  requireEnv("POSTGRES_URL", POSTGRES_URL);
+  requireEnv("SUPABASE_URL ou API_URL", SUPABASE_URL);
+  requireEnv("SUPABASE_ANON_KEY ou ANON_KEY ou PUBLISHABLE_KEY", SUPABASE_ANON_KEY);
+  requireEnv("SUPABASE_SERVICE_ROLE_KEY ou SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY);
+  requireEnv("POSTGRES_URL ou DB_URL", POSTGRES_URL);
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
