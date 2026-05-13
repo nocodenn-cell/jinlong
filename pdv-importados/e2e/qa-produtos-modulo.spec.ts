@@ -65,7 +65,7 @@ async function loginGerente(page: import('@playwright/test').Page): Promise<void
 
 test.describe.configure({ mode: 'serial', timeout: 120_000 })
 test.describe('QA módulo produtos (gerente)', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ page }) => {
     test.skip(!hasGerenteCreds(), 'Defina PLAYWRIGHT_TEST_EMAIL e PLAYWRIGHT_TEST_PASSWORD')
     await loginGerente(page)
     await page.goto(PRODUTOS)
