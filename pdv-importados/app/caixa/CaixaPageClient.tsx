@@ -27,6 +27,8 @@ import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaFooter } from "@/app/caixa/CaixaFooter"
+import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
+import { CaixaPdvOperacoesButtons } from "@/app/caixa/CaixaPdvOperacoesButtons"
 import {
   CaixaGerenteModal,
   type ValidarSenhaGerenteResult,
@@ -45,6 +47,10 @@ import { useScannerDetector } from "@/hooks/useScannerDetector"
 import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipeline"
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
 import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
+import {
+  CaixaPdvOperadorTabs,
+  type CaixaPdvOperadorTabId,
+} from "@/app/caixa/CaixaPdvOperadorTabs"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import "@/styles/theme-oriental.css"
 
@@ -116,6 +122,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     | { tipo: "cancelar"; item: MovimentacaoCaixaDTO }
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
+  const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
 
   const {
     caixaStatus,
@@ -350,6 +357,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     setCodigo("")
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
+    setAbaPdvAtiva("produto")
   }, [
     flushLeiturasPendentes,
     limparCarrinho,
@@ -594,6 +602,25 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     }, [limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem]),
   })
 
+  const pdvClassicAtalhos = useMemo(
+    () =>
+      pdvLayoutVariant === "classic"
+        ? {
+            onExcluirVenda: handleNovoCupom,
+            onFinalizarVenda: () => void handleFinalizar(),
+            abas: {
+              produto: () => {
+                setAbaPdvAtiva("produto")
+                focarCampoBusca()
+              },
+              cliente: () => setAbaPdvAtiva("cliente"),
+              pgto: () => setAbaPdvAtiva("pgto"),
+            },
+          }
+        : null,
+    [pdvLayoutVariant, handleNovoCupom, handleFinalizar, focarCampoBusca],
+  )
+
   useCaixaKeyboardShortcuts({
     caixaAberto: caixaStatus?.aberto === true,
     movimentandoCaixa,
@@ -603,6 +630,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     onFecharCaixa: () => void handleFecharCaixa(),
     onFocarBusca: focarCampoBusca,
     onNovoCupom: handleNovoCupom,
+    pdvClassicAtalhos,
   })
 
   const handleValidateSenhaGerente = useCallback(
@@ -686,22 +714,37 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         <div className="flex-1 flex flex-col min-h-0">
           {pdvLayoutVariant === "classic" && <CaixaPdvLayoutPreviewBanner m={m} />}
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
-            <div className="min-h-0 flex flex-col gap-3 md:min-h-0">
-              <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
-              <CaixaSearchBar
-                ref={buscaInputRef}
+            <div className="min-h-0 flex flex-col md:min-h-0">
+              <CaixaPdvOperadorTabs
                 m={m}
-                codigo={codigo}
-                onCodigoChange={setCodigo}
-                onSubmit={handleAdicionar}
-                onNovoCupom={handleNovoCupom}
-                buscando={buscandoPipeline}
-                carregandoRegras={carregandoRegras}
-                categoriasAtalho={categoriasAtalho}
-                somAtivo={somFeedbackAtivo}
-                onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                idioma={idioma}
+                tab={abaPdvAtiva}
+                onTabChange={setAbaPdvAtiva}
+                mostrarAtalhos={pdvLayoutVariant === "classic"}
+                operadorLabel={operadorLabel}
+                pagamentos={pagamentos}
+                totalLiquidoComGerente={totalLiquidoComGerente}
+                moedaPrefixo={m.caixa.moeda_prefixo}
+                produtoPanel={
+                  <>
+                    <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                    <CaixaSearchBar
+                      ref={buscaInputRef}
+                      m={m}
+                      codigo={codigo}
+                      onCodigoChange={setCodigo}
+                      onSubmit={handleAdicionar}
+                      onNovoCupom={handleNovoCupom}
+                      buscando={buscandoPipeline}
+                      carregandoRegras={carregandoRegras}
+                      categoriasAtalho={categoriasAtalho}
+                      somAtivo={somFeedbackAtivo}
+                      onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                    />
+                    <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
+                  </>
+                }
               />
-              <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
             </div>
             <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card md:min-h-0">
               <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -710,10 +753,29 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                   idioma={idioma}
                   itens={itens}
                   moeda={m.caixa.moeda_prefixo}
+                  listEmptyVariant={
+                    pdvLayoutVariant === "classic" ? "pdv_classic" : "default"
+                  }
                   onAlterarQuantidade={handleAlterarQuantidade}
                   onRemover={handleRemover}
                 />
               </div>
+              {pdvLayoutVariant === "classic" && (
+                <CaixaPdvCartSaleBar
+                  m={m}
+                  idioma={idioma}
+                  onExcluirVenda={handleNovoCupom}
+                  onFinalizar={() => void handleFinalizar()}
+                  finalizando={finalizando}
+                  movimentandoCaixa={movimentandoCaixa}
+                  caixaAberto={caixaStatus?.aberto === true}
+                  itensLength={itens.length}
+                  buscando={buscandoPipeline}
+                  carregandoRegras={carregandoRegras}
+                  totalLiquidoComGerente={totalLiquidoComGerente}
+                  moedaPrefixo={m.caixa.moeda_prefixo}
+                />
+              )}
             </section>
             <aside className="hidden min-h-0 flex-col gap-3 rounded-xl border border-border bg-card/90 p-3 text-sm md:flex">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -730,13 +792,47 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               <div className="border-t border-border pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {m.caixa.rail_titulo_operacoes}
               </div>
-              <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
+              {pdvLayoutVariant === "classic" ? (
+                <CaixaPdvOperacoesButtons
+                  m={m}
+                  caixaAberto={caixaStatus?.aberto === true}
+                  movimentandoCaixa={movimentandoCaixa}
+                  finalizando={finalizando}
+                  validandoGerente={validandoGerente}
+                  gerenteValidadoAte={gerenteValidadoAte}
+                  onAbrirSuprimento={handleAbrirSuprimento}
+                  onAbrirSangria={handleAbrirSangria}
+                  onValidarGerente={() => setGerenteModalAberto(true)}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
+              )}
               <div className="mt-auto border-t border-border pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
               </div>
               <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
             </aside>
           </div>
+          {pdvLayoutVariant === "classic" && (
+            <div className="border-t border-border bg-card px-4 py-3 sm:px-6 md:hidden">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {m.caixa.rail_titulo_operacoes}
+              </div>
+              <div className="mt-2">
+                <CaixaPdvOperacoesButtons
+                  m={m}
+                  caixaAberto={caixaStatus?.aberto === true}
+                  movimentandoCaixa={movimentandoCaixa}
+                  finalizando={finalizando}
+                  validandoGerente={validandoGerente}
+                  gerenteValidadoAte={gerenteValidadoAte}
+                  onAbrirSuprimento={handleAbrirSuprimento}
+                  onAbrirSangria={handleAbrirSangria}
+                  onValidarGerente={() => setGerenteModalAberto(true)}
+                />
+              </div>
+            </div>
+          )}
           {caixaStatus?.aberto && (
             <CaixaMovimentacoesTimeline
               m={m}
@@ -755,6 +851,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           <CaixaFooter
             m={m}
             idioma={idioma}
+            layout={pdvLayoutVariant === "classic" ? "classic_summary" : "full"}
             onValidarGerente={() => setGerenteModalAberto(true)}
             onAbrirSuprimento={handleAbrirSuprimento}
             onAbrirSangria={handleAbrirSangria}

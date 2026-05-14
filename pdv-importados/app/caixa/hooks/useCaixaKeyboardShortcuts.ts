@@ -1,5 +1,17 @@
 import { useEffect } from "react"
 
+/** Atalhos extras do layout PDV clássico (Fase E). Só passar quando `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic`. */
+export type CaixaPdvClassicAtalhos = {
+  onExcluirVenda: () => void
+  onFinalizarVenda: () => void
+  /** Só registra Alt+Z/C/B quando `abas` for passado (layout PDV clássico). */
+  abas?: {
+    produto?: () => void
+    cliente?: () => void
+    pgto?: () => void
+  }
+}
+
 type Params = {
   caixaAberto: boolean
   movimentandoCaixa: boolean
@@ -9,6 +21,7 @@ type Params = {
   onFecharCaixa: () => void
   onFocarBusca: () => void
   onNovoCupom: () => void
+  pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
 }
 
 function alvoEhCampoTexto(target: EventTarget | null): boolean {
@@ -29,6 +42,7 @@ export function useCaixaKeyboardShortcuts({
   onFecharCaixa,
   onFocarBusca,
   onNovoCupom,
+  pdvClassicAtalhos = null,
 }: Params) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -74,9 +88,50 @@ export function useCaixaKeyboardShortcuts({
       if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyB") {
         e.preventDefault()
         onFocarBusca()
+        return
+      }
+      if (
+        pdvClassicAtalhos &&
+        e.altKey &&
+        !e.ctrlKey &&
+        !e.shiftKey &&
+        !e.metaKey
+      ) {
+        if (e.code === "KeyQ") {
+          e.preventDefault()
+          pdvClassicAtalhos.onExcluirVenda()
+          return
+        }
+        if (e.code === "KeyS") {
+          e.preventDefault()
+          pdvClassicAtalhos.onFinalizarVenda()
+          return
+        }
+        const abas = pdvClassicAtalhos.abas
+        if (abas?.produto && e.code === "KeyZ") {
+          e.preventDefault()
+          abas.produto()
+          return
+        }
+        if (abas?.cliente && e.code === "KeyC") {
+          e.preventDefault()
+          abas.cliente()
+          return
+        }
+        if (abas?.pgto && e.code === "KeyB") {
+          e.preventDefault()
+          abas.pgto()
+          return
+        }
       }
     }
     globalThis.addEventListener("keydown", onKey)
     return () => globalThis.removeEventListener("keydown", onKey)
-  }, [onFecharCaixa, onFinalizar, onFocarBusca, onNovoCupom])
+  }, [
+    onFecharCaixa,
+    onFinalizar,
+    onFocarBusca,
+    onNovoCupom,
+    pdvClassicAtalhos,
+  ])
 }
