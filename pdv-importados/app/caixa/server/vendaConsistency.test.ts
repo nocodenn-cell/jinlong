@@ -153,9 +153,8 @@ describe('Consistência de Vendas - PDV', () => {
     const resultado = await finalizarVendaCaixaImpl(vendaInput)
 
     expect(resultado.ok).toBe(false)
-    expect(resultado.error).toContain('Estoque insuficiente')
-
     if (resultado.ok === false) {
+      expect(resultado.error).toContain('Estoque insuficiente')
       const {
         data: { user },
       } = await supabase.auth.getUser()

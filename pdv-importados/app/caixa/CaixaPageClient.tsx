@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useRef, useState, type FormEvent } from "react"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
-  buscarProdutoParaCaixa,
   calcularPrecoProdutoCaixa,
   finalizarVendaCaixa,
   abrirCaixaOperador,
@@ -42,9 +41,17 @@ import { CaixaToastViewport } from "@/components/caixa/CaixaToastViewport"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
 import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
 import { CaixaConfirmModal } from "@/app/caixa/CaixaConfirmModal"
-import { createClient } from "@/lib/supabase/client"
 import { useScannerDetector } from "@/hooks/useScannerDetector"
+import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipeline"
+import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
 import "@/styles/theme-oriental.css"
+
+function newCupomSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return `cupom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
 
 function localeFromIdioma(idioma: Idioma): string {
   if (idioma === "pt") return "pt-BR"
@@ -69,7 +76,6 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const [codigo, setCodigo] = useState("")
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
-  const [buscando, setBuscando] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
@@ -96,6 +102,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
   const [categoriasAtalho, setCategoriasAtalho] = useState<{ id: string; nome: string }[]>([])
+  const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
     | null
@@ -159,137 +166,13 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
   /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». Só usado com `USE_UNIFIED_SALES_FLOW` no servidor. */
   const vendaIdempotenciaRef = useRef<string | null>(null)
 
+  const cupomSessionIdRef = useRef<string>(newCupomSessionId())
+
   const focarCampoBusca = useCallback(() => {
     requestAnimationFrame(() => {
       buscaInputRef.current?.focus()
     })
   }, [])
-
-  const aplicarPrecoRpcParaLinha = useCallback(
-    async (params: { produtoId: string; itemId: string; quantidade: number }) => {
-      const linha = useCarrinhoStore.getState().itens.find((i) => i.id === params.itemId)
-      if (!linha || linha.produtoId !== params.produtoId) return
-      const tp = linha.resultado?.tipoPreco
-      if (tp === "MANUAL" || tp === "PROMOCAO") return
-
-      const res = await calcularPrecoProdutoCaixa({
-        produtoId: params.produtoId,
-        quantidade: params.quantidade,
-      })
-      if (!res.ok) {
-        setCaixaMensagem(res.error, { kind: "error" })
-        return
-      }
-      useCarrinhoStore.getState().sincronizarPrecoCalculadoRpc(params.itemId, {
-        precoUnitario: res.preco,
-        tipoPreco: res.tipo,
-      })
-    },
-    [setCaixaMensagem],
-  )
-
-  const handleAdicionarCodigo = useCallback(
-    async (rawCodigo: string) => {
-      const trimmed = rawCodigo.trim()
-      if (!trimmed) return
-
-      setBuscando(true)
-      setCaixaMensagem(null)
-
-      try {
-        const res = await buscarProdutoParaCaixa(trimmed)
-
-        if (!res.ok) {
-          setCaixaMensagem(res.error, { kind: "error" })
-          tocarFeedback("erro")
-          return
-        }
-
-        if (res.status === "nao_encontrado") {
-          setCaixaMensagem(m.caixa.msg_produto_nao_encontrado_acao, { kind: "warning" })
-          tocarFeedback("erro")
-          return
-        }
-
-        if (res.status === "ambiguo") {
-          setCaixaMensagem(res.mensagem, { kind: "warning" })
-          tocarFeedback("erro")
-          return
-        }
-
-        const p = res.produto
-        const q = p.quantidade_estoque
-        const min = p.estoque_minimo
-        let avisoEstoqueMsg: string | null = null
-        if (q !== null && q < 1) {
-          avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_baixo}`
-        } else if (q !== null && min !== null && q <= min) {
-          avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_abaixo_minimo}`
-        }
-
-        const supabase = createClient()
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        const uid = session?.user?.id ?? null
-        if (uid) {
-          setCartOwnerForSession(uid)
-        }
-
-        adicionarItem({
-          id: `${p.id}-${Date.now()}`,
-          produtoId: p.id,
-          nome: p.nome,
-          quantidade: 1,
-          precoUnitario: p.preco_varejo,
-          precoOriginal: p.preco_varejo,
-          resultado: {
-            precoUnitario: p.preco_varejo,
-            precoOriginal: p.preco_varejo,
-            descontoUnitario: 0,
-            tipoPreco: "VAREJO",
-          },
-          metaPdv: {
-            origem: p.origem,
-            tem_nf: p.tem_nf,
-            observacao: p.observacao,
-            estoque_atual: p.quantidade_estoque,
-            estoque_minimo: p.estoque_minimo,
-            categoriaId: p.categoria_id,
-            precoAtacado: p.preco_atacado,
-            precoVarejoReferencia: p.preco_varejo,
-          },
-        })
-
-        const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.produtoId === p.id)
-        if (linhaApos) {
-          const tp = linhaApos.resultado?.tipoPreco
-          if (tp !== "MANUAL" && tp !== "PROMOCAO") {
-            await aplicarPrecoRpcParaLinha({
-              produtoId: p.id,
-              itemId: linhaApos.id,
-              quantidade: linhaApos.quantidade,
-            })
-          }
-        }
-
-        setCodigo("")
-        if (avisoEstoqueMsg) {
-          setCaixaMensagem(avisoEstoqueMsg, { kind: "warning" })
-        } else {
-          setCaixaMensagem(m.caixa.msg_item_adicionado_toast, { kind: "success" })
-        }
-        tocarFeedback("ok")
-      } catch {
-        setCaixaMensagem(m.caixa.falha_busca, { kind: "error" })
-        tocarFeedback("erro")
-      } finally {
-        setBuscando(false)
-        focarCampoBusca()
-      }
-    },
-    [adicionarItem, aplicarPrecoRpcParaLinha, focarCampoBusca, m, setCaixaMensagem, setCartOwnerForSession],
-  )
 
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
@@ -312,6 +195,47 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     [somFeedbackAtivo],
   )
 
+  const aplicarPrecoRpcParaLinha = useCallback(
+    async (
+      params: { produtoId: string; itemId: string; quantidade: number },
+      opts?: { scanSignal?: AbortSignal },
+    ) => {
+      const linha = useCarrinhoStore.getState().itens.find((i) => i.id === params.itemId)
+      if (!linha || linha.produtoId !== params.produtoId) return
+      const tp = linha.resultado?.tipoPreco
+      if (tp === "MANUAL" || tp === "PROMOCAO") return
+
+      const res = await calcularPrecoProdutoCaixa({
+        produtoId: params.produtoId,
+        quantidade: params.quantidade,
+      })
+      if (opts?.scanSignal?.aborted) return
+      if (!res.ok) {
+        setCaixaMensagem(res.error, { kind: "error" })
+        return
+      }
+      if (opts?.scanSignal?.aborted) return
+      useCarrinhoStore.getState().sincronizarPrecoCalculadoRpc(params.itemId, {
+        precoUnitario: res.preco,
+        tipoPreco: res.tipo,
+      })
+    },
+    [setCaixaMensagem],
+  )
+
+  const { enqueueLeitura, buscandoPipeline, flushLeiturasPendentes, pipelineDebug } = useCaixaScanPipeline({
+    m,
+    setCaixaMensagem,
+    setCaixaMensagemScannerInfo: setCaixaMensagem,
+    setCodigo,
+    tocarFeedback,
+    focarCampoBusca,
+    adicionarItem,
+    setCartOwnerForSession,
+    aplicarPrecoRpcParaLinha,
+    getActiveCupomSessionId: () => cupomSessionIdRef.current,
+  })
+
   const limparEstadoDescontoGerente = useCallback(() => {
     setGerenteValidadoAte(null)
     setGerenteToken(null)
@@ -326,23 +250,43 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     setCaixaMensagem,
     setLimiteSangriaSemGerente,
     setCategoriasAtalho,
+    setConfigCaixaWeb,
   })
 
   const handleAdicionar = useCallback(
-    async (e: FormEvent) => {
+    (e: FormEvent) => {
       e.preventDefault()
-      await handleAdicionarCodigo(codigo)
+      const sid = cupomSessionIdRef.current
+      const r = enqueueLeitura(codigo, {
+        source: "form_submit",
+        cupomSessionId: sid,
+        // Temporário: mesmo valor que cupomSessionId; futuro = trace por evento (não contrato eterno).
+        correlationId: sid,
+      })
+      if (!r) return
+      if (!r.ok && r.reason === "queue_full") {
+        setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
+      }
     },
-    [codigo, handleAdicionarCodigo],
+    [codigo, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
   )
 
   useScannerDetector(
     useCallback(
       (scannedCode: string) => {
-        setCaixaMensagem(`Código lido: ${scannedCode}`, { kind: "info" })
-        void handleAdicionarCodigo(scannedCode)
+        const sid = cupomSessionIdRef.current
+        const r = enqueueLeitura(scannedCode, {
+          source: "scanner",
+          cupomSessionId: sid,
+          // Temporário: alinhar correlation ao cupom; futuro = trace por leitura.
+          correlationId: sid,
+        })
+        if (!r) return
+        if (!r.ok && r.reason === "queue_full") {
+          setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
+        }
       },
-      [handleAdicionarCodigo, setCaixaMensagem],
+      [enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
     ),
     {
       enabled: true,
@@ -393,12 +337,20 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   const handleNovoCupom = useCallback(() => {
     vendaIdempotenciaRef.current = null
+    flushLeiturasPendentes({ reason: "new_cupom" })
+    cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
     resetPagamentos()
     setCodigo("")
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
-  }, [limparCarrinho, limparEstadoDescontoGerente, resetPagamentos, setCaixaMensagem])
+  }, [
+    flushLeiturasPendentes,
+    limparCarrinho,
+    limparEstadoDescontoGerente,
+    resetPagamentos,
+    setCaixaMensagem,
+  ])
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
     if (raw == null) return null
@@ -441,7 +393,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         setProcessandoCaixa(false)
       }
     },
-    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem],
+    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback],
   )
 
   const handleAbrirCaixa = useCallback(() => {
@@ -516,7 +468,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
       }
       void executarFecharCaixa(v, undefined)
     },
-    [valorNumericoModal, caixaStatus, executarFecharCaixa, recarregarStatusCaixa, setCaixaMensagem],
+    [
+      valorNumericoModal,
+      caixaStatus,
+      executarFecharCaixa,
+      recarregarStatusCaixa,
+      setCaixaMensagem,
+      tocarFeedback,
+    ],
   )
 
   const onConfirmMotivoFechar = useCallback(
@@ -618,6 +577,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
     recarregarStatusCaixa,
     setCaixaMensagem,
     setCaixaMensagemVendaOk,
+    tocarFeedback,
   ])
 
   useCaixaGerenteTokenExpiry({
@@ -714,7 +674,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2 space-y-3">
-            <CaixaOperadorContextBar m={m} idioma={idioma} />
+            <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
             <CaixaSearchBar
               ref={buscaInputRef}
               m={m}
@@ -722,7 +682,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
               onCodigoChange={setCodigo}
               onSubmit={handleAdicionar}
               onNovoCupom={handleNovoCupom}
-              buscando={buscando}
+              buscando={buscandoPipeline}
               carregandoRegras={carregandoRegras}
               categoriasAtalho={categoriasAtalho}
               somAtivo={somFeedbackAtivo}
@@ -769,7 +729,7 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
             movimentandoCaixa={movimentandoCaixa}
             caixaAberto={caixaStatus?.aberto === true}
             itensLength={itens.length}
-            buscando={buscando}
+            buscando={buscandoPipeline}
             carregandoRegras={carregandoRegras}
             totalItens={totalItens}
             totalUnidades={totalUnidades}
@@ -786,6 +746,14 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
+      {pipelineDebug && (
+        <CaixaScanPipelineDevPanel
+          buscandoPipeline={buscandoPipeline}
+          snapshot={pipelineDebug.snapshot}
+          telemetryTail={pipelineDebug.telemetryTail}
+          activeCupomSessionId={cupomSessionIdRef.current}
+        />
+      )}
       <CaixaGerenteModal
         open={gerenteModalAberto}
         onOpenChange={setGerenteModalAberto}

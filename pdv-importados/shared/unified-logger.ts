@@ -8,7 +8,7 @@ export interface LogEntry {
   level: 'info' | 'warn' | 'error'
   message: string
   timestamp: string
-  context?: Record<string, any>
+  context?: Record<string, unknown>
   service?: string
 }
 
@@ -73,7 +73,7 @@ export function redactForLog<T>(value: T, depth = 0): T {
 
 // Logger base com funcionalidades compartilhadas
 class BaseLogger {
-  protected createLogEntry(level: LogEntry['level'], message: string, context?: Record<string, any>): LogEntry {
+  protected createLogEntry(level: LogEntry['level'], message: string, context?: Record<string, unknown>): LogEntry {
     return {
       level,
       message,
@@ -131,7 +131,7 @@ export class DesktopLogger extends BaseLogger {
     }
   }
 
-  private log(level: LogEntry['level'], message: string, context?: Record<string, any>): void {
+  private log(level: LogEntry['level'], message: string, context?: Record<string, unknown>): void {
     const entry = this.createLogEntry(level, message, context)
 
     // Buffer em memória
@@ -147,15 +147,15 @@ export class DesktopLogger extends BaseLogger {
     this.persistLog(entry)
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     this.log('info', message, context)
   }
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     this.log('warn', message, context)
   }
 
-  error(message: string, context?: Record<string, any>): void {
+  error(message: string, context?: Record<string, unknown>): void {
     this.log('error', message, context)
   }
 

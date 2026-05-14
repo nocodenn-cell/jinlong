@@ -13,6 +13,8 @@ export type ProdutoCacheLite = {
   preco_varejo: number
   categoria_id: string | null | undefined
   ativo: boolean
+  /** URL pública da foto (sync); opcional. */
+  imagem_url?: string | null
 }
 
 const UUID_RE =

@@ -29,6 +29,8 @@ export function createProdutoRepository(
           ? Number(input.preco_atacado)
           : null
 
+      const ativo = input.ativo !== false
+
       const { data, error } = await supabase
         .from('produtos')
         .insert({
@@ -39,7 +41,7 @@ export function createProdutoRepository(
           origem: input.origem,
           tem_nf: input.tem_nf,
           unidade_medida: 'UN',
-          ativo: true,
+          ativo,
         })
         .select('id')
         .single()

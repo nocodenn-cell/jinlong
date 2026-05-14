@@ -24,6 +24,8 @@ vi.mock('next/cache', () => ({
 
 type RpcCall = { name: string; params: Record<string, unknown> }
 
+type MockQueryResult = { data: unknown; error: null }
+
 class QueryBuilder {
   private filters: Record<string, unknown> = {}
 
@@ -57,7 +59,7 @@ class QueryBuilder {
     return this
   }
 
-  maybeSingle(): Promise<{ data: any; error: null }> {
+  maybeSingle(): Promise<MockQueryResult> {
     if (this.table === 'caixas') {
       if (!this.state.caixaAberto) return Promise.resolve({ data: null, error: null })
       return Promise.resolve({
@@ -69,7 +71,7 @@ class QueryBuilder {
   }
 
   /** Usado por `getUsuarioIdioma` quando `safeParse` falha (ex.: soma de parcelas ≠ total líquido). */
-  single(): Promise<{ data: any; error: null }> {
+  single(): Promise<MockQueryResult> {
     if (this.table === 'usuarios') {
       return Promise.resolve({
         data: { perfil: 'OPERADOR', idioma_preferido: 'pt' },
@@ -82,14 +84,14 @@ class QueryBuilder {
     }))
   }
 
-  then<TResult1 = any, TResult2 = never>(
-    onfulfilled?: ((value: { data: any; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
+  then<TResult1 = unknown, TResult2 = never>(
+    onfulfilled?: ((value: MockQueryResult) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): Promise<TResult1 | TResult2> {
     return this.execute().then(onfulfilled, onrejected)
   }
 
-  private execute(): Promise<{ data: any; error: null }> {
+  private execute(): Promise<MockQueryResult> {
     if (this.table === 'produtos') {
       const ids = (this.filters.id as string[]) ?? []
       const data = ids.map((id) => ({

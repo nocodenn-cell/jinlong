@@ -1,0 +1,901 @@
+{
+  "statistics": {
+    "detectionDate": "2026-05-11T20:14:37.360Z",
+    "formats": {
+      "typescript": {
+        "sources": {
+          "lib/adapters/supabase/produtoRepository.ts": {
+            "lines": 85,
+            "tokens": 773,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/supabase/server.ts": {
+            "lines": 29,
+            "tokens": 262,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/supabase/env.ts": {
+            "lines": 34,
+            "tokens": 322,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/supabase/client.ts": {
+            "lines": 13,
+            "tokens": 124,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/security/idleLogoutMinutes.ts": {
+            "lines": 13,
+            "tokens": 134,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/security/deviceFingerprint.ts": {
+            "lines": 33,
+            "tokens": 308,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/relatorios/periodoRelatorio.ts": {
+            "lines": 108,
+            "tokens": 1371,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/relatorios/periodoRelatorio.test.ts": {
+            "lines": 38,
+            "tokens": 395,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/relatorios/getRelatorioTimezone.ts": {
+            "lines": 19,
+            "tokens": 212,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/observability/runServerAction.ts": {
+            "lines": 37,
+            "tokens": 338,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/observability/actionResultAdapters.ts": {
+            "lines": 19,
+            "tokens": 275,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/observability/actionResultAdapters.test.ts": {
+            "lines": 20,
+            "tokens": 266,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/nfe/nfeParser.ts": {
+            "lines": 142,
+            "tokens": 1606,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/nfe/nfeParser.test.ts": {
+            "lines": 54,
+            "tokens": 261,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/navigation/painelGerencialNav.ts": {
+            "lines": 91,
+            "tokens": 673,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/navigation/adminSidebarNav.ts": {
+            "lines": 30,
+            "tokens": 315,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/logging/server-error.ts": {
+            "lines": 8,
+            "tokens": 56,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/logging/redact.test.ts": {
+            "lines": 20,
+            "tokens": 285,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/idioma/localeFromIdioma.ts": {
+            "lines": 3,
+            "tokens": 40,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/i18n/adminChineseUiLabels.ts": {
+            "lines": 162,
+            "tokens": 2093,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/i18n/adminChineseUiLabels.test.ts": {
+            "lines": 153,
+            "tokens": 1409,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 26,
+            "duplicatedTokens": 224,
+            "percentage": 16.99,
+            "percentageTokens": 15.9,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/hooks/useGerenteQuery.ts": {
+            "lines": 58,
+            "tokens": 577,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/hooks/useGerenteMutation.ts": {
+            "lines": 54,
+            "tokens": 528,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/toast.ts": {
+            "lines": 25,
+            "tokens": 261,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/sparklineGeometry.ts": {
+            "lines": 47,
+            "tokens": 668,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/sparklineGeometry.test.ts": {
+            "lines": 39,
+            "tokens": 411,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/gerenteCadastroUi.ts": {
+            "lines": 21,
+            "tokens": 272,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/formatDashboardAtividade.ts": {
+            "lines": 81,
+            "tokens": 900,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/formatDashboardAtividade.test.ts": {
+            "lines": 38,
+            "tokens": 452,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/financeiroTitulosServer.ts": {
+            "lines": 207,
+            "tokens": 2741,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/dashboardResumoTypes.ts": {
+            "lines": 50,
+            "tokens": 370,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/dashboardResumoParse.ts": {
+            "lines": 97,
+            "tokens": 1254,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 10,
+            "duplicatedTokens": 170,
+            "percentage": 10.31,
+            "percentageTokens": 13.56,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/dashboardResumoParse.test.ts": {
+            "lines": 65,
+            "tokens": 636,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/dashboardMetaConfig.ts": {
+            "lines": 57,
+            "tokens": 545,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/gerente/caixaRowDerivados.ts": {
+            "lines": 31,
+            "tokens": 331,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/forms/readFormDataString.ts": {
+            "lines": 12,
+            "tokens": 141,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/forms/readFormDataString.test.ts": {
+            "lines": 14,
+            "tokens": 167,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/format/vendaLabels.ts": {
+            "lines": 38,
+            "tokens": 395,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/format/quantidadeCaixa.ts": {
+            "lines": 17,
+            "tokens": 195,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/format/money.ts": {
+            "lines": 19,
+            "tokens": 200,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/format/gerenteValues.ts": {
+            "lines": 20,
+            "tokens": 223,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/format/fmtQuantidadeEstoque.ts": {
+            "lines": 6,
+            "tokens": 58,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/format/datetime.ts": {
+            "lines": 31,
+            "tokens": 357,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 10,
+            "duplicatedTokens": 186,
+            "percentage": 32.26,
+            "percentageTokens": 52.1,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/format/datetime.test.ts": {
+            "lines": 26,
+            "tokens": 320,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/etiqueta/types.ts": {
+            "lines": 39,
+            "tokens": 211,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/etiqueta/gerarPdf.ts": {
+            "lines": 120,
+            "tokens": 1013,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/etiqueta/gerarBarcode.ts": {
+            "lines": 70,
+            "tokens": 559,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/etiqueta/EtiquetaConfig.ts": {
+            "lines": 60,
+            "tokens": 372,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/errors/mensagemErroUsuario.ts": {
+            "lines": 15,
+            "tokens": 117,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/errors/mensagemErroUsuario.test.ts": {
+            "lines": 148,
+            "tokens": 962,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/config/caixaSalesRuntimeConfig.ts": {
+            "lines": 73,
+            "tokens": 743,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/config/caixaSalesRuntimeConfig.test.ts": {
+            "lines": 44,
+            "tokens": 454,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/caixa/resolveVendaIdForFinalize.ts": {
+            "lines": 11,
+            "tokens": 99,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/caixa/resolveVendaIdForFinalize.test.ts": {
+            "lines": 36,
+            "tokens": 355,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/caixa/resetCarrinhoPersistido.ts": {
+            "lines": 16,
+            "tokens": 114,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/caixa/metaProdutoUi.ts": {
+            "lines": 18,
+            "tokens": 234,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/auth/painelGerencial.ts": {
+            "lines": 20,
+            "tokens": 142,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/auth/lojaUsuario.ts": {
+            "lines": 16,
+            "tokens": 158,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/auth/gerenteOuDono.ts": {
+            "lines": 28,
+            "tokens": 284,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/auth/clientLogout.ts": {
+            "lines": 31,
+            "tokens": 266,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/xlsx.ts": {
+            "lines": 35,
+            "tokens": 356,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/utils.ts": {
+            "lines": 5,
+            "tokens": 63,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "lib/csv.ts": {
+            "lines": 29,
+            "tokens": 410,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 2978,
+          "tokens": 30432,
+          "sources": 63,
+          "clones": 3,
+          "duplicatedLines": 23,
+          "duplicatedTokens": 290,
+          "percentage": 0.77,
+          "percentageTokens": 0.95,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      }
+    },
+    "total": {
+      "lines": 2978,
+      "tokens": 30432,
+      "sources": 63,
+      "clones": 3,
+      "duplicatedLines": 23,
+      "duplicatedTokens": 290,
+      "percentage": 0.77,
+      "percentageTokens": 0.95,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    }
+  },
+  "duplicates": [
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": ", () => {\r\n  const line = { cn: '主控台', pt: 'Dashboard' }\r\n\r\n  beforeEach(() => {\r\n    vi.unstubAllEnvs()\r\n    delete process.env[ENV_KEY]\r\n  })\r\n\r\n  afterEach(() => {\r\n    vi.unstubAllEnvs()\r\n    delete process.env[ENV_KEY]\r\n  })\r\n\r\n  it('com UI chinesa ativa, primária CN e secundária PT'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "lib\\i18n\\adminChineseUiLabels.test.ts",
+        "start": 119,
+        "end": 132,
+        "startLoc": {
+          "line": 119,
+          "column": 26,
+          "position": 1037
+        },
+        "endLoc": {
+          "line": 132,
+          "column": 57,
+          "position": 1149
+        }
+      },
+      "secondFile": {
+        "name": "lib\\i18n\\adminChineseUiLabels.test.ts",
+        "start": 61,
+        "end": 74,
+        "startLoc": {
+          "line": 61,
+          "column": 25,
+          "position": 513
+        },
+        "endLoc": {
+          "line": 74,
+          "column": 64,
+          "position": 625
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 6,
+      "fragment": "[] {\r\n  if (!Array.isArray(raw)) return []\r\n  return raw\r\n    .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')\r\n    .map((x) => ({\r\n      id",
+      "tokens": 0,
+      "firstFile": {
+        "name": "lib\\gerente\\dashboardResumoParse.ts",
+        "start": 54,
+        "end": 59,
+        "startLoc": {
+          "line": 54,
+          "column": 75,
+          "position": 673
+        },
+        "endLoc": {
+          "line": 59,
+          "column": 9,
+          "position": 758
+        }
+      },
+      "secondFile": {
+        "name": "lib\\gerente\\dashboardResumoParse.ts",
+        "start": 43,
+        "end": 48,
+        "startLoc": {
+          "line": 43,
+          "column": 68,
+          "position": 513
+        },
+        "endLoc": {
+          "line": 48,
+          "column": 11,
+          "position": 598
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 6,
+      "fragment": ",\r\n): string {\r\n  if (value == null || value === '') return '—'\r\n  const d = typeof value === 'string' ? new Date(value) : value\r\n  if (Number.isNaN(d.getTime())) return '—'\r\n  return d.toLocaleString(locale)",
+      "tokens": 0,
+      "firstFile": {
+        "name": "lib\\format\\datetime.ts",
+        "start": 21,
+        "end": 26,
+        "startLoc": {
+          "line": 21,
+          "column": 17,
+          "position": 202
+        },
+        "endLoc": {
+          "line": 26,
+          "column": 34,
+          "position": 295
+        }
+      },
+      "secondFile": {
+        "name": "lib\\format\\datetime.ts",
+        "start": 8,
+        "end": 13,
+        "startLoc": {
+          "line": 8,
+          "column": 42,
+          "position": 52
+        },
+        "endLoc": {
+          "line": 13,
+          "column": 34,
+          "position": 145
+        }
+      }
+    }
+  ]
+}

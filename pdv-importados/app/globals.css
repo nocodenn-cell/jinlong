@@ -15,7 +15,8 @@
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* ~5:1 em fundo branco — texto secundário legível (WCAG AA corpo) */
+    --muted-foreground: 215.4 18% 38%;
     --accent: 210 40% 96%;
     --accent-foreground: 222.2 47.4% 11.2%;
     /** Par destino: mesmo “peso” perceptivo em chips/toasts (sat + L similares). */
@@ -34,21 +35,22 @@
   }
 
   body {
-    font-family: var(--font-noto-sc), 'Noto Sans SC', system-ui, sans-serif;
+    font-family: var(--font-noto-sc), 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui,
+      sans-serif;
+    font-size: 0.9375rem; /* 15px — base operacional entre 14–16px */
   }
 
   /* Regras específicas para textos em chinês */
   .chinese-text {
     word-break: break-word;
     overflow-wrap: break-word;
-    line-height: 1.5;
+    line-height: 1.55;
+    letter-spacing: 0.02em;
   }
 
-  /* Ajuste para botões com texto chinês */
-  button, .btn {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    min-width: 80px;
+  /* Página produtos (e outras) usam `font-chinese` com idioma zh */
+  .font-chinese {
+    letter-spacing: 0.02em;
   }
 
   .dark {

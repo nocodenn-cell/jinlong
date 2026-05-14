@@ -43,3 +43,6 @@ backend/artifacts/*.json
 # TypeScript build info
 **/*.tsbuildinfo
 .aider*
+
+# Repositório Git aninhado (clone local dentro do monorepo)
+fastproduct/

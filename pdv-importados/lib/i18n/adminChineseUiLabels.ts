@@ -143,11 +143,16 @@ function isAdminUiShape(value: unknown): value is typeof legacyAdminUi {
  * 1) tenta namespace `admin` do JSON único (`getMessages().admin`)
  * 2) fallback para o dicionário legado inline.
  */
+function readAdminNamespace(messages: unknown): unknown {
+  if (!messages || typeof messages !== 'object') return undefined
+  return (messages as Record<string, unknown>).admin
+}
+
 function readAdminUiFromMessages(): typeof legacyAdminUi | null {
-  const fromPt = (getMessagesWithFallback('pt') as any)?.admin
+  const fromPt = readAdminNamespace(getMessagesWithFallback('pt'))
   if (isAdminUiShape(fromPt)) return fromPt
 
-  const fromZh = (getMessagesWithFallback('zh') as any)?.admin
+  const fromZh = readAdminNamespace(getMessagesWithFallback('zh'))
   if (isAdminUiShape(fromZh)) return fromZh
 
   

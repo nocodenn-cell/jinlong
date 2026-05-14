@@ -17,6 +17,8 @@ Estado atual: MVP com web (Next + Supabase), desktop (Tauri + SQLite), sync outb
 
 ## Curto prazo
 
+- [ ] **Invariantes operacionais PDV** (decisão + bip + offline + telemetria humana) — roteiro faseado: [ROADMAP_PDV_INVARIANTES_OPERACIONAIS.md](./ROADMAP_PDV_INVARIANTES_OPERACIONAIS.md); ADR [docs/adr/ADR-PDV-centro-de-gravidade.md](./adr/ADR-PDV-centro-de-gravidade.md); contrato bip [CONTRATO_PIPELINE_BIP.md](./CONTRATO_PIPELINE_BIP.md)
+
 ### Operação e ambientes (checklists — marcar ao concluir em cada ref)
 
 - [ ] **P0 operacional** — roteiro linear: [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) (trilha T1–T12: link → migrations → `verify_p0_producao.sql` → Edge `sync-outbox` + secrets se desktop → web §5 → teste **§4b** ou **§4**)
