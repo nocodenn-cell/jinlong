@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useState } from 'react'
 import { onGerenteToast, type GerenteToastKind } from '@/lib/gerente/toast'
+import { cn } from '@/lib/utils'
 
 type ToastItem = {
   id: number
@@ -10,10 +11,12 @@ type ToastItem = {
   message: string
 }
 
-const TOAST_STYLE: Record<GerenteToastKind, { bg: string; border: string; color: string }> = {
-  info: { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
-  success: { bg: '#ecfdf5', border: '#86efac', color: '#166534' },
-  error: { bg: '#fef2f2', border: '#fecaca', color: '#991b1b' },
+const TOAST_KIND_CLASS: Record<GerenteToastKind, string> = {
+  info: 'border-blue-200/90 bg-blue-50 text-blue-950 dark:border-blue-500/40 dark:bg-blue-950/90 dark:text-blue-50',
+  success:
+    'border-emerald-300/90 bg-emerald-50 text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-950/90 dark:text-emerald-50',
+  error:
+    'border-red-200/90 bg-red-50 text-red-950 dark:border-red-500/45 dark:bg-red-950/90 dark:text-red-50',
 }
 
 function createToastItem(kind: GerenteToastKind, message: string): ToastItem {
@@ -24,34 +27,22 @@ function createToastItem(kind: GerenteToastKind, message: string): ToastItem {
   }
 }
 
-function removeToast(
-  setItems: Dispatch<SetStateAction<ToastItem[]>>,
-  id: number,
-) {
+function removeToast(setItems: Dispatch<SetStateAction<ToastItem[]>>, id: number) {
   setItems((prev) => prev.filter((item) => item.id !== id))
 }
 
-function scheduleToastRemoval(
-  setItems: Dispatch<SetStateAction<ToastItem[]>>,
-  id: number,
-) {
-  window.setTimeout(() => removeToast(setItems, id), 2800)
+function scheduleToastRemoval(setItems: Dispatch<SetStateAction<ToastItem[]>>, id: number) {
+  window.setTimeout(() => removeToast(setItems, id), 3200)
 }
 
 function renderToastItem(item: ToastItem) {
-  const style = TOAST_STYLE[item.kind]
   return (
     <div
       key={item.id}
-      style={{
-        border: `1px solid ${style.border}`,
-        background: style.bg,
-        color: style.color,
-        borderRadius: 10,
-        padding: '10px 12px',
-        fontSize: 13,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-      }}
+      className={cn(
+        'rounded-[10px] border px-3 py-2.5 text-sm leading-snug shadow-lg backdrop-blur-sm',
+        TOAST_KIND_CLASS[item.kind],
+      )}
     >
       {item.message}
     </div>
@@ -75,15 +66,7 @@ export function GerenteToastViewport() {
   return (
     <div
       aria-live="polite"
-      style={{
-        position: 'fixed',
-        top: 14,
-        right: 14,
-        display: 'grid',
-        gap: 8,
-        zIndex: 60,
-        maxWidth: 340,
-      }}
+      className="fixed right-3.5 top-3.5 z-[60] grid max-w-[min(22rem,calc(100vw-1.75rem))] gap-2"
     >
       {items.map(renderToastItem)}
     </div>

@@ -1,0 +1,49 @@
+'use client'
+
+import type { ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+export type CadastroRapidoBlockProps = Readonly<{
+  title: string
+  subtitle?: string
+  defaultOpen?: boolean
+  children: ReactNode
+  className?: string
+}>
+
+/**
+ * Bloco de cadastro rápido colapsável (`<details>`).
+ * Campos configuráveis: passe o formulário (ou fragmentos) em `children`.
+ */
+export function CadastroRapidoBlock({
+  title,
+  subtitle,
+  defaultOpen = true,
+  children,
+  className,
+}: CadastroRapidoBlockProps) {
+  return (
+    <details
+      open={defaultOpen}
+      className={cn('dragon-glass-card group overflow-hidden rounded-xl', className)}
+    >
+      <summary
+        className={cn(
+          'gerente-fin-divider flex cursor-pointer list-none items-center justify-between gap-2 border-b px-3 py-2.5',
+          '[&::-webkit-details-marker]:hidden',
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <h2 className="gerente-section-accent text-sm font-semibold">{title}</h2>
+          {subtitle ? <p className="gerente-fin-muted mt-0.5 text-xs leading-relaxed">{subtitle}</p> : null}
+        </div>
+        <ChevronDown
+          aria-hidden
+          className="h-4 w-4 shrink-0 opacity-70 transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="p-3">{children}</div>
+    </details>
+  )
+}

@@ -2,6 +2,8 @@ export type FiscalDoc = {
   id: string;
   venda_id: string;
   tipo_doc: string;
+  tentativas?: number;
+  correlation_id?: string;
   payload: Record<string, unknown> | null;
 };
 
