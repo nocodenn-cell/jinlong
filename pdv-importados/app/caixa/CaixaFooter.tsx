@@ -6,9 +6,13 @@ import type { Idioma } from "@/idioma/normalizeIdioma"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 
+export type CaixaFooterLayout = "full" | "classic_summary"
+
 type Props = {
   m: Mensagens
   idioma: Idioma
+  /** `classic_summary`: apenas resumo financeiro (PDV clássico — total e finalizar ficam na coluna do carrinho). */
+  layout?: CaixaFooterLayout
   onValidarGerente: () => void
   onAbrirSuprimento: () => void
   onAbrirSangria: () => void
@@ -46,6 +50,7 @@ function timeLocale(idioma: Idioma) {
 export function CaixaFooter({
   m,
   idioma,
+  layout = "full",
   onValidarGerente,
   onAbrirSuprimento,
   onAbrirSangria,
@@ -85,6 +90,63 @@ export function CaixaFooter({
       pct: descontoGerentePercentual.toFixed(2),
       max: maxDescontoGerentePercentual.toFixed(2),
     })
+
+  if (layout === "classic_summary") {
+    return (
+      <footer className="shrink-0 border-t border-border backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-card">
+        <div className="flex flex-col gap-3 text-sm md:flex-row md:flex-wrap md:items-end md:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <span className="text-sm text-foreground/85">{resumoItens}</span>
+            {gerenteLinha && (
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                <ImperialSealIcon
+                  className="h-5 w-5 shrink-0 text-[color:var(--caixa-imperial-red,#b91c1c)]"
+                  title={m.caixa.aria_selo_gerente}
+                />
+                {gerenteLinha}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-end justify-start gap-4 sm:gap-6 md:justify-end">
+            <div className="text-left text-xs font-semibold uppercase tracking-wide text-foreground/70 md:hidden w-full">
+              {m.caixa.bloco_resumo_financeiro}
+            </div>
+            <div className="text-right text-sm text-foreground/85">
+              <div>{m.caixa.bruto}</div>
+              <div className="text-lg font-semibold tabular-nums text-foreground">
+                {moedaPrefixo} {fmt(totalBruto)}
+              </div>
+            </div>
+            <div className="text-right text-sm text-primary">
+              <div>{m.caixa.descontos_regras}</div>
+              <div className="text-lg font-bold tabular-nums">
+                - {moedaPrefixo} {fmt(totalDesconto)}
+              </div>
+              {economiaPrecoAtacadoAuto > 0.005 && (
+                <div className="text-xs font-normal text-foreground/80 mt-0.5 max-w-[14rem] ml-auto">
+                  {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
+                    valor: fmt(economiaPrecoAtacadoAuto),
+                  })}
+                </div>
+              )}
+            </div>
+            {descontoGerentePercentual > 0 && (
+              <div className="text-right text-sm text-primary">
+                <div>
+                  {caixaFmt(m.caixa.desconto_gerente_label, {
+                    pct: descontoGerentePercentual.toFixed(2),
+                  })}
+                </div>
+                <div className="text-lg font-bold tabular-nums">
+                  - {moedaPrefixo} {fmt(valorDescontoGerente)}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </footer>
+    )
+  }
 
   return (
     <footer className="shrink-0 border-t border-border backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-card">

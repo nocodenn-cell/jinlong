@@ -17,11 +17,15 @@ import type { OrigemProdutoCaixa } from "@/app/caixa/caixaActionTypes"
 /** Chip “positivo” no caixa (atacado, NF, origem BR com NF) — alinhado aos tokens `success`. */
 const CAIXA_CHIP_SUCCESS = 'border-success/40 bg-success/15 text-success'
 
+export type CaixaCartListEmptyVariant = "default" | "pdv_classic"
+
 type Props = {
   m: Mensagens
   idioma: Idioma
   itens: ItemCarrinhoComPreco[]
   moeda: string
+  /** Empty state alinhado ao mockup PDV clássico (sem o guardião). */
+  listEmptyVariant?: CaixaCartListEmptyVariant
   onAlterarQuantidade: (itemId: string, quantidade: number) => void
   onRemover: (itemId: string) => void
 }
@@ -128,12 +132,35 @@ export function CaixaCartList({
   idioma,
   itens,
   moeda,
+  listEmptyVariant = "default",
   onAlterarQuantidade,
   onRemover,
 }: Props) {
   const locale = listLocale(idioma)
 
   if (itens.length === 0) {
+    if (listEmptyVariant === "pdv_classic") {
+      return (
+        <div className="h-full min-h-[14rem] flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <p className="text-base font-semibold text-foreground/95">
+            {m.caixa.cart_empty_sem_pedido}
+          </p>
+          <p className="text-sm text-muted-foreground">{m.caixa.empty_cta_scan}</p>
+          <p className="text-sm text-muted-foreground">{m.caixa.empty_cta_type_enter}</p>
+          <div className="flex flex-wrap justify-center gap-2 pt-1">
+            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground/90">
+              Enter · {m.caixa.adicionar_enter}
+            </span>
+            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground/90">
+              Ctrl+B · {m.caixa.empty_shortcut_focus}
+            </span>
+            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground/90">
+              F4 · {m.caixa.finalizar_venda}
+            </span>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="h-full min-h-[14rem] flex flex-col items-center justify-center gap-4 px-6 text-center">
         <DragonIcon className="h-24 w-24 app-subtle shrink-0 opacity-40" />

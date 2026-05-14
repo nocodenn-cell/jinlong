@@ -7,7 +7,7 @@ type Props = Readonly<{
   m: Mensagens
 }>
 
-/** Aviso quando `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic` (homologação / staging). */
+/** Aviso quando `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic` — texto em `m.caixa.layout_preview_banner` (Fase B + atalhos). */
 export function CaixaPdvLayoutPreviewBanner({ m }: Props) {
   return (
     <div
