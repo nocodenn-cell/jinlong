@@ -188,6 +188,13 @@ GERENTE_DASHBOARD_META_DIA_JSON={"default":2000}
 - [ ] `CAMBIO_USD_BRL_FALLBACK`
 - [ ] `RELATORIO_TIMEZONE`
 - [ ] `GERENTE_DASHBOARD_META_DIA_JSON`
+- [ ] `NEXT_PUBLIC_CAIXA_PDV_LAYOUT` (definir como `classic` **apenas** em Preview/staging para homologação visual do `/caixa`; a UI mostra aviso de pré-visualização; **não** em Production até decisão explícita)
+
+---
+
+### **Preview / staging — layout PDV (opcional)**
+
+Para o cliente validar o visual antes da **Fase B** (carrinho + barra inferior): no dashboard Vercel do projeto de homologação (ex.: deploy associado a `fastproduct-staging` ou branch de preview), em **Settings → Environment Variables**, adicione `NEXT_PUBLIC_CAIXA_PDV_LAYOUT` = `classic` para o ambiente **Preview** (ou o environment group usado em staging), faça **redeploy**, e abra `/caixa`. O aviso no ecrã deixa claro que é layout opcional em pré-visualização.
 
 ---
 

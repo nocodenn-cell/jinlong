@@ -44,6 +44,8 @@ import { CaixaConfirmModal } from "@/app/caixa/CaixaConfirmModal"
 import { useScannerDetector } from "@/hooks/useScannerDetector"
 import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipeline"
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
+import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
+import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import "@/styles/theme-oriental.css"
 
 function newCupomSessionId(): string {
@@ -61,9 +63,13 @@ function localeFromIdioma(idioma: Idioma): string {
 type Props = {
   messages: Mensagens
   idioma: Idioma
+  operadorLabel: string
 }
 
-export function CaixaPageClient({ messages: m, idioma }: Props) {
+export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
+  const pdvLayoutVariant: CaixaPdvLayoutVariant =
+    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "classic" ? "classic" : "default"
+
   const {
     mensagem,
     msgVendaOk,
@@ -662,10 +668,15 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
 
   return (
     <>
-      <div className="min-h-[100dvh] caixa-oriental-root flex flex-col text-[14px] leading-5">
+      <div
+        data-caixa-layout={pdvLayoutVariant === "classic" ? "classic" : undefined}
+        className="min-h-[100dvh] caixa-oriental-root flex flex-col text-[14px] leading-5"
+      >
         <CaixaHeader
           m={m}
           idioma={idioma}
+          layoutVariant={pdvLayoutVariant}
+          operadorLabel={operadorLabel}
           carregandoRegras={carregandoRegras}
           caixaStatus={caixaStatus}
           processandoCaixa={processandoCaixa}
@@ -673,35 +684,59 @@ export function CaixaPageClient({ messages: m, idioma }: Props) {
           onFecharCaixa={() => void handleFecharCaixa()}
         />
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2 space-y-3">
-            <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
-            <CaixaSearchBar
-              ref={buscaInputRef}
-              m={m}
-              codigo={codigo}
-              onCodigoChange={setCodigo}
-              onSubmit={handleAdicionar}
-              onNovoCupom={handleNovoCupom}
-              buscando={buscandoPipeline}
-              carregandoRegras={carregandoRegras}
-              categoriasAtalho={categoriasAtalho}
-              somAtivo={somFeedbackAtivo}
-              onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
-            />
-            <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
-          </div>
-          <section className="flex-1 min-h-0 flex flex-col mx-4 sm:mx-6 rounded-xl border border-border bg-card overflow-hidden mb-2">
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-              <CaixaCartList
+          {pdvLayoutVariant === "classic" && <CaixaPdvLayoutPreviewBanner m={m} />}
+          <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
+            <div className="min-h-0 flex flex-col gap-3 md:min-h-0">
+              <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+              <CaixaSearchBar
+                ref={buscaInputRef}
                 m={m}
-                idioma={idioma}
-                itens={itens}
-                moeda={m.caixa.moeda_prefixo}
-                onAlterarQuantidade={handleAlterarQuantidade}
-                onRemover={handleRemover}
+                codigo={codigo}
+                onCodigoChange={setCodigo}
+                onSubmit={handleAdicionar}
+                onNovoCupom={handleNovoCupom}
+                buscando={buscandoPipeline}
+                carregandoRegras={carregandoRegras}
+                categoriasAtalho={categoriasAtalho}
+                somAtivo={somFeedbackAtivo}
+                onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
               />
+              <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
             </div>
-          </section>
+            <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card md:min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                <CaixaCartList
+                  m={m}
+                  idioma={idioma}
+                  itens={itens}
+                  moeda={m.caixa.moeda_prefixo}
+                  onAlterarQuantidade={handleAlterarQuantidade}
+                  onRemover={handleRemover}
+                />
+              </div>
+            </section>
+            <aside className="hidden min-h-0 flex-col gap-3 rounded-xl border border-border bg-card/90 p-3 text-sm md:flex">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {m.caixa.rail_titulo_nova_venda}
+              </div>
+              <button
+                type="button"
+                className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground hover:bg-secondary/90 disabled:pointer-events-none disabled:opacity-50"
+                onClick={handleNovoCupom}
+                disabled={carregandoRegras}
+              >
+                {m.caixa.novo_cupom}
+              </button>
+              <div className="border-t border-border pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {m.caixa.rail_titulo_operacoes}
+              </div>
+              <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
+              <div className="mt-auto border-t border-border pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {m.caixa.rail_titulo_em_aberto}
+              </div>
+              <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
+            </aside>
+          </div>
           {caixaStatus?.aberto && (
             <CaixaMovimentacoesTimeline
               m={m}

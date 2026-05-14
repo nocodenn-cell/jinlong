@@ -40,9 +40,12 @@ export const Default: Story = {
   args: {
     m,
     idioma: 'pt',
+    layoutVariant: 'default',
+    operadorLabel: 'operador@exemplo.com',
     carregandoRegras: false,
     caixaStatus: {
       aberto: true,
+      caixaId: 'a0000001-0000-4000-8000-0000000000ca',
       dataAbertura: '2026-04-30T08:00:00.000Z',
       valorInicial: 1000,
       valorSistemaDinheiro: 2500.5,
@@ -58,6 +61,8 @@ export const Closed: Story = {
   args: {
     m,
     idioma: 'pt',
+    layoutVariant: 'default',
+    operadorLabel: 'operador@exemplo.com',
     carregandoRegras: false,
     caixaStatus: { aberto: false },
     processandoCaixa: false,
@@ -70,9 +75,12 @@ export const Loading: Story = {
   args: {
     m,
     idioma: 'pt',
+    layoutVariant: 'default',
+    operadorLabel: 'operador@exemplo.com',
     carregandoRegras: true,
     caixaStatus: {
       aberto: true,
+      caixaId: 'a0000001-0000-4000-8000-0000000000ca',
       dataAbertura: '2026-04-30T08:00:00.000Z',
       valorInicial: 1000,
       valorSistemaDinheiro: 2500.5,
@@ -88,9 +96,12 @@ export const BlindClosure: Story = {
   args: {
     m,
     idioma: 'pt',
+    layoutVariant: 'default',
+    operadorLabel: 'operador@exemplo.com',
     carregandoRegras: false,
     caixaStatus: {
       aberto: true,
+      caixaId: 'b0000002-0000-4000-8000-0000000000ca',
       dataAbertura: '2026-04-30T08:00:00.000Z',
       valorInicial: 1000,
       valorSistemaDinheiro: 2500.5,
@@ -99,5 +110,20 @@ export const BlindClosure: Story = {
     processandoCaixa: false,
     onAbrirCaixa: noop,
     onFecharCaixa: noop,
+  },
+}
+
+export const ClassicTopBar: Story = {
+  args: {
+    ...BlindClosure.args,
+    layoutVariant: 'classic',
+    caixaStatus: {
+      aberto: true,
+      caixaId: 'c0000003-0000-4000-8000-0000000000ca',
+      dataAbertura: '2026-04-30T08:00:00.000Z',
+      valorInicial: 500,
+      valorSistemaDinheiro: 1200.25,
+      blindClosureEnabled: false,
+    },
   },
 }

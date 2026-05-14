@@ -569,6 +569,34 @@ html:has(.login-premium-root) body {
   z-index: 1;
 }
 
+/*
+ * Variante “clínica PDV” (NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic): fundo mais claro/azulado
+ * sem alterar o tema Dragon global; escopo só no root do caixa.
+ */
+.caixa-oriental-root[data-caixa-layout='classic'] {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(59, 130, 246, 0.22) 0%, transparent 45%),
+    linear-gradient(180deg, #e8f0fe 0%, #f0f6ff 42%, #e2e8f0 100%);
+  color: rgb(30 41 59);
+}
+
+.caixa-oriental-root[data-caixa-layout='classic']::before {
+  opacity: 0.06;
+  background-image:
+    radial-gradient(ellipse 80% 45% at 15% 12%, rgba(37, 99, 235, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 85% 8%, rgba(59, 130, 246, 0.1) 0%, transparent 52%);
+}
+
+[data-app-theme='novem'] .caixa-oriental-root[data-caixa-layout='classic'] {
+  background:
+    radial-gradient(circle at 50% -12%, rgba(59, 130, 246, 0.18) 0%, transparent 46%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 55%, #e2e8f0 100%);
+}
+
+[data-app-theme='novem'] .caixa-oriental-root[data-caixa-layout='classic']::before {
+  opacity: 0.05;
+}
+
 /* Tema app global */
 [data-app-theme='novem'] .bg-oriental-clouds {
   background:
