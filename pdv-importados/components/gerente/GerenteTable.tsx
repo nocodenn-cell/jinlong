@@ -40,7 +40,7 @@ export const GerenteTable = memo(function GerenteTable({
     <div
       data-gerente-table-density={density}
       className={cn(
-        'overflow-x-auto rounded-xl border shadow-sm',
+        'overflow-x-auto overscroll-x-contain rounded-xl border shadow-sm [-webkit-overflow-scrolling:touch]',
         dragon ? 'gerente-table-dragon app-border app-surface-soft' : 'app-border app-surface',
       )}
     >
@@ -63,7 +63,7 @@ export const GerenteTable = memo(function GerenteTable({
                 key={column.key}
                 className={cn(
                   'whitespace-nowrap font-semibold uppercase tracking-wide',
-                  compact ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-3 text-xs',
+                  compact ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-3 text-sm',
                   dragon ? 'app-muted' : 'app-muted',
                 )}
                 style={column.width !== undefined ? { width: column.width } : undefined}

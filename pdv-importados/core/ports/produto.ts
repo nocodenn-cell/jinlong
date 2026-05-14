@@ -13,6 +13,8 @@ export interface NovoProdutoInput {
   preco_atacado?: number | null
   origem: OrigemProduto
   tem_nf: boolean
+  /** Se omitido, o repositório assume `true` (cadastro rápido). Importação CSV pode enviar `false`. */
+  ativo?: boolean
 }
 
 export interface ProdutoRepositoryPort {

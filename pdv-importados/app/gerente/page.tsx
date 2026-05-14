@@ -17,17 +17,12 @@ import { getDashboardMetrics } from './dashboard-actions'
 import { MetricCard } from '@/components/gerente/MetricCard'
 import { DashboardHeader } from '@/components/gerente/DashboardHeader'
 import { Sparkline } from '@/components/gerente/Sparkline'
-import { GerenteHomeDock } from '@/components/gerente/GerenteHomeDock'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
-import {
-  gerenteInicioAtalhoKeys,
-  gerenteNavLabel,
-  painelGerencialHref,
-} from '@/lib/navigation/painelGerencialNav'
+import { painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { formatLinhaAtividade, interpolateTemplate } from '@/lib/gerente/formatDashboardAtividade'
 
 export const revalidate = 30
@@ -115,18 +110,13 @@ export default async function GerenteInicioPage() {
     resumo.ticket_medio_semana_anterior,
   )
 
-  const atalhos = gerenteInicioAtalhoKeys(false).map((key) => ({
-    href: painelGerencialHref(key),
-    label: gerenteNavLabel(m, key),
-  }))
-
   const margemRotulo =
     resumo.custo_confiavel && resumo.margem_estimada !== null
       ? formatBRL(resumo.margem_estimada, locale)
       : m.relatorios.kpi_margem_indisponivel
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-28 pt-8 sm:px-6 sm:pb-24 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pb-12 lg:px-8 lg:pb-14">
       <DashboardHeader
         m={m}
         documentosFiscaisPendentes={headerMetrics.documentosFiscaisPendentes}
@@ -145,7 +135,7 @@ export default async function GerenteInicioPage() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title={di.kpi_faturamento_hoje}
           value={formatBRL(resumo.faturamento_hoje, locale)}
@@ -186,7 +176,7 @@ export default async function GerenteInicioPage() {
           {di.secao_semana_titulo}
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">{di.secao_semana_subtitulo}</p>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <MetricCard
             title={di.kpi_faturamento_semana}
             value={formatBRL(resumo.faturamento_semana_atual, locale)}
@@ -338,21 +328,6 @@ export default async function GerenteInicioPage() {
         </section>
       </div>
 
-      <div className="mt-10">
-        <h2 className="text-lg font-semibold text-foreground">{m.gerente.atalhos_modulos}</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {atalhos.map((atalho) => (
-            <Link
-              key={atalho.href}
-              href={atalho.href}
-              className="block rounded-lg border border-border bg-card p-4 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              {atalho.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-
       {perfil === 'DONO' && (
         <div className="mt-10">
           <h2 className="text-lg font-semibold text-foreground">{m.gerente.secao_dono_titulo}</h2>
@@ -375,8 +350,6 @@ export default async function GerenteInicioPage() {
           </div>
         </div>
       )}
-
-      <GerenteHomeDock items={atalhos} ariaLabel={di.dock_aria} />
     </div>
   )
 }

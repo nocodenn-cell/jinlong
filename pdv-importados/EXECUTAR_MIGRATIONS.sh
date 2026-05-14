@@ -45,7 +45,7 @@ echo -e "\n${YELLOW}🔍 Verificando arquivos de migration...${NC}"
 FILES=(
     "supabase/migrations/performance_indices.sql"
     "supabase/migrations/rls_policies.sql"
-    "supabase/migrations/finalizar_venda_unificada.sql"
+    "supabase/migrations/obsolete/finalizar_venda_unificada.sql"
 )
 
 for file in "${FILES[@]}"; do
@@ -73,7 +73,7 @@ if ! executar_migration "supabase/migrations/rls_policies.sql" "Segurança - Row
 fi
 
 # 3. Robustez - Idempotência
-if ! executar_migration "supabase/migrations/finalizar_venda_unificada.sql" "Robustez - Idempotência na RPC" "3"; then
+if ! executar_migration "supabase/migrations/obsolete/finalizar_venda_unificada.sql" "Robustez - Idempotência na RPC" "3"; then
     echo -e "${RED}❌ Falha na migration de idempotência. Abortando.${NC}"
     exit 1
 fi

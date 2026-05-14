@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
+import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
 import { formatarDiaRelatorioParaLocale } from '@/lib/relatorios/periodoRelatorio'
@@ -17,7 +18,7 @@ import { useRelatoriosGerenteExports } from '@/app/gerente/relatorios/useRelator
 import { cn } from '@/lib/utils'
 
 const REL_EXPORT_BTN_CLASS =
-  'gerente-btn-csv inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45'
+  'gerente-btn-csv inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -119,7 +120,7 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
   const custoConfiavel = data?.resumoExecutivo.custo_confiavel ?? false
 
   return (
-    <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-[1100px] px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <div className="mb-4">
         <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
           ← {m.gerente.inicio}
@@ -131,56 +132,58 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
         {m.relatorios.vendas_periodo} · {m.relatorios.mais_vendidos} · {m.relatorios.estoque_baixo}
       </p>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          const q = new URLSearchParams()
-          if (de) q.set('de', de)
-          if (ate) q.set('ate', ate)
-          router.push(`/gerente/relatorios?${q.toString()}`)
-          refetch().catch(() => undefined)
-        }}
-        className="gerente-period-form mb-4 flex flex-wrap items-end gap-3"
-      >
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="gerente-fin-label font-medium">{m.relatorios.periodo_de}</span>
-          <input
-            type="date"
-            value={de}
-            onChange={(e) => setDe(e.target.value)}
-            required
-            className="rounded-lg px-2.5 py-2 text-sm app-input"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="gerente-fin-label font-medium">{m.relatorios.periodo_ate}</span>
-          <input
-            type="date"
-            value={ate}
-            onChange={(e) => setAte(e.target.value)}
-            required
-            className="rounded-lg px-2.5 py-2 text-sm app-input"
-          />
-        </label>
-        <button
-          type="submit"
-          className="rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-[filter] app-btn-accent"
-        >
-          {m.relatorios.aplicar_periodo}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setDe('')
-            setAte('')
-            router.push('/gerente/relatorios')
+      <GerenteStickyToolbar className="mb-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const q = new URLSearchParams()
+            if (de) q.set('de', de)
+            if (ate) q.set('ate', ate)
+            router.push(`/gerente/relatorios?${q.toString()}`)
             refetch().catch(() => undefined)
           }}
-          className="gerente-fin-muted pb-2 text-sm app-link-accent"
+          className="gerente-period-form flex flex-wrap items-end gap-3"
         >
-          {m.relatorios.limpar_periodo}
-        </button>
-      </form>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="gerente-fin-label font-medium">{m.relatorios.periodo_de}</span>
+            <input
+              type="date"
+              value={de}
+              onChange={(e) => setDe(e.target.value)}
+              required
+              className="rounded-lg px-2.5 py-2 text-sm app-input"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="gerente-fin-label font-medium">{m.relatorios.periodo_ate}</span>
+            <input
+              type="date"
+              value={ate}
+              onChange={(e) => setAte(e.target.value)}
+              required
+              className="rounded-lg px-2.5 py-2 text-sm app-input"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-[filter] app-btn-accent"
+          >
+            {m.relatorios.aplicar_periodo}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDe('')
+              setAte('')
+              router.push('/gerente/relatorios')
+              refetch().catch(() => undefined)
+            }}
+            className="gerente-fin-muted pb-2 text-sm app-link-accent"
+          >
+            {m.relatorios.limpar_periodo}
+          </button>
+        </form>
+      </GerenteStickyToolbar>
 
       {data ? (
         <p className="gerente-fin-muted mb-3 text-xs opacity-90">

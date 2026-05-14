@@ -7,9 +7,10 @@ import { usePathname } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { GerenteNavLink } from '@/components/gerente/GerenteNavLink'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
+import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { fmtQuantidadeEstoque } from '@/lib/format/fmtQuantidadeEstoque'
-import { objectsToCsv } from '@/lib/csv'
+import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -44,10 +45,6 @@ type Props = Readonly<{
   importacaoNfeEnabled?: boolean
 }>
 
-function interpolate(template: string, vars: Record<string, string | number>) {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => String(vars[key] ?? ''))
-}
-
 function skuCurtoDeId(id: string): string {
   const d = id.replace(/-/g, '')
   return d.slice(-6)
@@ -71,17 +68,6 @@ function origemLabel(m: ReturnType<typeof getMessages>, origem: string): string 
     default:
       return origem
   }
-}
-
-function downloadCsv(filename: string, columns: { key: string; header: string }[], rows: Record<string, unknown>[]) {
-  const csv = objectsToCsv(columns, rows)
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
 }
 
 export function EstoqueGerentePageClient({
@@ -244,7 +230,7 @@ export function EstoqueGerentePageClient({
 
   async function handleExportCsv() {
     if (selected.size > 0) {
-      downloadCsv(
+      downloadCsvBrowser(
         somenteBaixoNav ? 'gerente-estoque-baixo-selecao.csv' : 'gerente-estoque-selecao.csv',
         csvColumns,
         [...selected.values()].map(rowToCsvRecord),
@@ -262,7 +248,7 @@ export function EstoqueGerentePageClient({
         dir_asc: listParams.dir_asc,
       }
       const todas = await obterListaEstoqueGerenteCompletaParaExport(filtrosExport)
-      downloadCsv(
+      downloadCsvBrowser(
         somenteBaixoNav ? 'gerente-estoque-baixo.csv' : 'gerente-estoque-visao-geral.csv',
         csvColumns,
         todas.map(rowToCsvRecord),
@@ -295,7 +281,7 @@ export function EstoqueGerentePageClient({
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-[1200px] px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <GerenteFilterBar title={m.estoque.titulo} />
       <p className="gerente-fin-muted mb-4 text-sm">{m.estoque.subtitulo}</p>
 
@@ -318,7 +304,7 @@ export function EstoqueGerentePageClient({
 
       <div className="mb-4 rounded-xl border border-border bg-card p-3 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.estoque.buscar_label}
             <input
               value={busca}
@@ -327,7 +313,7 @@ export function EstoqueGerentePageClient({
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.produtos.categoria}
             <select
               value={categoriaId}
@@ -342,7 +328,7 @@ export function EstoqueGerentePageClient({
               ))}
             </select>
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.produtos.origem_label}
             <select
               value={origem}
@@ -355,7 +341,7 @@ export function EstoqueGerentePageClient({
               <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
             </select>
           </label>
-          <label className="flex w-[140px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex w-[140px] flex-col gap-1 text-sm font-medium text-muted-foreground">
             {m.produtos.pag_linhas_por_pagina}
             <select
               value={pageSize}
@@ -371,21 +357,23 @@ export function EstoqueGerentePageClient({
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-        {loading ? null : (
-          <button
-            type="button"
-            disabled={exporting || total === 0}
-            onClick={() => void handleExportCsv()}
-            className={cn(
-              'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors app-btn-neutral',
-              (exporting || total === 0) && 'cursor-not-allowed opacity-45',
-            )}
-          >
-            {exporting ? m.comum.carregando : m.gerente.exportar_csv}
-          </button>
-        )}
-      </div>
+      <GerenteStickyToolbar className="mb-4">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {loading ? null : (
+            <button
+              type="button"
+              disabled={exporting || total === 0}
+              onClick={() => void handleExportCsv()}
+              className={cn(
+                'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors app-btn-neutral',
+                (exporting || total === 0) && 'cursor-not-allowed opacity-45',
+              )}
+            >
+              {exporting ? m.comum.carregando : m.gerente.exportar_csv}
+            </button>
+          )}
+        </div>
+      </GerenteStickyToolbar>
 
       {loading && !data ? <p className="gerente-fin-muted text-sm">{m.comum.carregando}</p> : null}
 
@@ -520,7 +508,7 @@ export function EstoqueGerentePageClient({
       {!loading && total > 0 ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            {interpolate(m.produtos.pag_mostrar, { visiveis: String(rows.length), total: String(total) })}
+            {interpolateTemplate(m.produtos.pag_mostrar, { visiveis: String(rows.length), total: String(total) })}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -533,7 +521,7 @@ export function EstoqueGerentePageClient({
               {m.produtos.pag_prev}
             </button>
             <span className="text-xs text-muted-foreground">
-              {interpolate(m.produtos.pag_info, { atual: String(pageSegura), total: String(pageCount) })}
+              {interpolateTemplate(m.produtos.pag_info, { atual: String(pageSegura), total: String(pageCount) })}
             </span>
             <button
               type="button"
