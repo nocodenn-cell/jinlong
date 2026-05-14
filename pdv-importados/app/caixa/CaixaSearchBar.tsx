@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
 import { DragonOuroLoader } from "@/components/branding/DragonOuroLoader"
+import { cn } from "@/lib/utils"
 
 type CategoriaChip = { id: string; nome: string }
 
@@ -19,6 +20,10 @@ type Props = {
   categoriasAtalho?: CategoriaChip[]
   somAtivo: boolean
   onToggleSom: () => void
+  /** Quando true, o botão «Novo cupom» não é renderizado (ex.: classic com ação no trilho). */
+  hideNovoCupom?: boolean
+  /** PDV clássico: reduz altura quando há texto na busca (prepara área de staging). */
+  compact?: boolean
 }
 
 export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function CaixaSearchBar(
@@ -33,24 +38,37 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     categoriasAtalho = [],
     somAtivo,
     onToggleSom,
+    hideNovoCupom = false,
+    compact = false,
   },
   ref,
 ) {
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", compact && "space-y-1")}>
       <div className="flex items-center justify-between gap-2">
-        <label className="text-sm font-semibold text-foreground/95">
+        <label
+          className={cn(
+            "font-semibold text-foreground/95",
+            compact ? "text-xs" : "text-sm",
+          )}
+        >
           {m.caixa.busca_label_principal}
         </label>
         <button
           type="button"
           onClick={onToggleSom}
-          className="rounded-md border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground/90 hover:bg-accent"
+          className={cn(
+            "rounded-md border border-border bg-muted font-semibold text-foreground/90 hover:bg-accent",
+            compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-xs",
+          )}
         >
           {somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
         </button>
       </div>
-      <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+      <form
+        onSubmit={onSubmit}
+        className={cn("flex flex-col sm:flex-row", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-3")}
+      >
         <Input
           ref={ref}
           autoFocus
@@ -59,7 +77,10 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
           placeholder={m.caixa.busca_placeholder}
           aria-label={m.caixa.busca_placeholder}
           disabled={buscando || carregandoRegras}
-          className="flex-1 bg-background border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-amber-300"
+          className={cn(
+            "flex-1 bg-background border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-amber-300",
+            compact ? "py-1.5 text-sm" : "py-2 text-base",
+          )}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.preventDefault()
@@ -67,12 +88,18 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             }
           }}
         />
-        <div className="flex gap-2 sm:shrink-0">
+        <div className={cn("flex gap-2 sm:shrink-0", compact && "gap-1.5")}>
           <Button
             type="submit"
             disabled={buscando || carregandoRegras}
             aria-busy={buscando}
-            className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 min-w-[7rem] bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 py-2 text-base font-semibold transition-colors"
+            className={cn(
+              "inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-semibold transition-colors",
+              hideNovoCupom
+                ? "w-full sm:w-auto flex-1 sm:flex-none min-w-[7rem]"
+                : "flex-1 sm:flex-none min-w-[7rem]",
+              compact ? "px-2.5 py-1.5 text-sm" : "px-3 py-2 text-base",
+            )}
           >
             {buscando ? (
               <>
@@ -83,18 +110,25 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               m.caixa.adicionar_enter
             )}
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onNovoCupom}
-            className="flex-1 sm:flex-none bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 rounded-md px-3 py-2 text-base font-semibold transition-colors"
-          >
-            {m.caixa.novo_cupom}
-          </Button>
+          {!hideNovoCupom && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onNovoCupom}
+              className={cn(
+                "flex-1 sm:flex-none bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 rounded-md font-semibold transition-colors",
+                compact ? "px-2.5 py-1.5 text-sm" : "px-3 py-2 text-base",
+              )}
+            >
+              {m.caixa.novo_cupom}
+            </Button>
+          )}
         </div>
       </form>
-      <p className="text-sm text-foreground/85 leading-snug">{m.caixa.busca_dica}</p>
-      {categoriasAtalho.length > 0 && (
+      {!compact ? (
+        <p className="text-sm text-foreground/85 leading-snug">{m.caixa.busca_dica}</p>
+      ) : null}
+      {categoriasAtalho.length > 0 && !compact ? (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {m.caixa.atalhos_categoria}
@@ -114,7 +148,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             ))}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 })

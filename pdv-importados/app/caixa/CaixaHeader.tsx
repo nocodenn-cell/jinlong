@@ -69,30 +69,32 @@ export function CaixaHeader({
         onAbrirCaixa={onAbrirCaixa}
         onFecharCaixa={onFecharCaixa}
       />
-      <div className="px-4 sm:px-6 py-2 border-b border-border bg-card/60 text-xs sm:text-sm text-foreground/90">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
-            <span className="tabular-nums text-foreground/95">
-              {new Date().toLocaleString(localeString)}
-            </span>
-            {caixaStatus?.aberto === true && (
-              <span className="text-foreground/85">
-                Abertura:{" "}
-                {new Date(caixaStatus.dataAbertura).toLocaleString(localeString)}
-                {" · "}
-                Inicial: R$ {caixaStatus.valorInicial.toFixed(2)}
+      {layoutVariant !== "classic" ? (
+        <div className="px-4 sm:px-6 py-2 border-b border-border bg-card/60 text-xs sm:text-sm text-foreground/90">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
+              <span className="tabular-nums text-foreground/95">
+                {new Date().toLocaleString(localeString)}
               </span>
-            )}
+              {caixaStatus?.aberto === true && (
+                <span className="text-foreground/85">
+                  Abertura:{" "}
+                  {new Date(caixaStatus.dataAbertura).toLocaleString(localeString)}
+                  {" · "}
+                  Inicial: R$ {caixaStatus.valorInicial.toFixed(2)}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-border/60 space-y-1">
+            <div>{m.caixa.atalhos_placeholder}</div>
+            <div>
+              {m.caixa.regras_catalogo} <code className="text-muted-foreground">regras_preco</code>
+              {carregandoRegras ? ` · ${m.caixa.regras_carregando}` : ""}
+            </div>
           </div>
         </div>
-        <div className="mt-2 pt-2 border-t border-border/60 space-y-1">
-          <div>{m.caixa.atalhos_placeholder}</div>
-          <div>
-            {m.caixa.regras_catalogo} <code className="text-muted-foreground">regras_preco</code>
-            {carregandoRegras ? ` · ${m.caixa.regras_carregando}` : ""}
-          </div>
-        </div>
-      </div>
+      ) : null}
     </div>
   )
 }

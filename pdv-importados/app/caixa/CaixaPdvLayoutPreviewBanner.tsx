@@ -7,7 +7,7 @@ type Props = Readonly<{
   m: Mensagens
 }>
 
-/** Aviso quando `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic` — texto em `m.caixa.layout_preview_banner` (Fase B + atalhos). */
+/** Aviso quando `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic` — visibilidade: `CaixaPageClient` (env `NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER` + `NODE_ENV`). Texto em `m.caixa.layout_preview_banner`. */
 export function CaixaPdvLayoutPreviewBanner({ m }: Props) {
   return (
     <div

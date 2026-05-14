@@ -114,6 +114,14 @@ export const BlindClosure: Story = {
 }
 
 export const ClassicTopBar: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Layout classic: barra superior azul; a faixa secundária (data, atalhos, regras) fica oculta — use o botão «Sistema / Catálogo» no trilho «Operações». O banner azul «PDV clássico» na página real segue `NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER` (produção: oculto salvo `1`; dev: visível salvo `0`).",
+      },
+    },
+  },
   args: {
     ...BlindClosure.args,
     layoutVariant: 'classic',
