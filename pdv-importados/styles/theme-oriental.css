@@ -49,6 +49,14 @@
     linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
 }
 
+/**
+ * Fallback se JS não medir o header (ResizeObserver em `GerenteLayoutShell`).
+ * Valor padrão sobrescrito por `--gerente-sticky-top` em px no elemento `.gerente-shell`.
+ */
+.gerente-shell {
+  --gerente-sticky-top: 6.75rem;
+}
+
 .logo-wordmark-main {
   color: var(--logo-wordmark-main);
   text-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
@@ -718,15 +726,15 @@ html:has(.login-premium-root) body {
   animation: dragon-subtitle-glow 2.6s ease-in-out infinite;
 }
 
-/* Troca de rota (App Router template) — “respiração” suave */
+/* Troca de rota (App Router template) — “respiração” suave.
+ * Sem `transform` no wrapper: `transform` (ex.: scale) com `animation-fill: both`
+ * mantém containing block e quebra `position: sticky` das toolbars gerente na viewport. */
 @keyframes dragon-page-enter {
   from {
     opacity: 0.88;
-    transform: scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 

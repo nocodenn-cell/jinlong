@@ -19,7 +19,7 @@
 \i supabase/migrations/rls_policies.sql
 
 -- 4. RPC com idempotência fortalecida
-\i supabase/migrations/finalizar_venda_unificada.sql
+\i supabase/migrations/obsolete/finalizar_venda_unificada.sql
 
 -- Validação final do sistema
 SELECT 

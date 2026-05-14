@@ -185,7 +185,7 @@ FILES=(
     "supabase/migrations/073_feature_flags.sql"
     "supabase/migrations/performance_indices.sql"
     "supabase/migrations/rls_policies.sql"
-    "supabase/migrations/finalizar_venda_unificada.sql"
+    "supabase/migrations/obsolete/finalizar_venda_unificada.sql"
 )
 
 for file in "${FILES[@]}"; do
@@ -220,7 +220,7 @@ if ! execututar_migration_segura "supabase/migrations/rls_policies.sql" "Seguran
 fi
 
 # 4. Robustez (RPC com idempotência)
-if ! execututar_migration_segura "supabase/migrations/finalizar_venda_unificada.sql" "Robustez - Idempotência na RPC" "4"; then
+if ! execututar_migration_segura "supabase/migrations/obsolete/finalizar_venda_unificada.sql" "Robustez - Idempotência na RPC" "4"; then
     echo -e "${RED}❌ Falha crítica: RPC. Abortando.${NC}"
     exit 1
 fi

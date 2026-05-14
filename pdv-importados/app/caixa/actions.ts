@@ -13,6 +13,7 @@ import type {
   FecharCaixaOperadorResult,
   FinalizarVendaCaixaResult,
   LimiteSangriaResult,
+  ConfiguracoesCaixaWebResult,
   ListarCategoriasCaixaResult,
   ObterMovimentacoesCaixaResult,
   RegistrarMovimentacaoInput,
@@ -39,6 +40,7 @@ import {
   obterLimiteSangriaSemGerenteImpl,
   validarGerenteDescontoImpl,
 } from '@/app/caixa/server/caixaGerenteDesconto.impl'
+import { obterConfiguracoesParaCaixaWebImpl } from '@/app/caixa/server/caixaConfiguracoes.impl'
 import {
   autorizarMovimentacaoGerenteImpl,
   cancelarMovimentacaoCaixaImpl,
@@ -62,6 +64,7 @@ export type {
   FinalizarVendaCaixaResult,
   FormaMovimentacaoCaixa,
   LimiteSangriaResult,
+  ConfiguracoesCaixaWebResult,
   ListarCategoriasCaixaResult,
   MovimentacaoCaixaDTO,
   ObterMovimentacoesCaixaResult,
@@ -133,6 +136,11 @@ export async function validarGerenteDesconto(input: {
 
 export async function obterLimiteSangriaSemGerente(): Promise<LimiteSangriaResult> {
   return obterLimiteSangriaSemGerenteImpl()
+}
+
+/** Subconjunto de `configuracoes_gerais` exposto ao caixa (RPC). */
+export async function obterConfiguracoesParaCaixaWeb(): Promise<ConfiguracoesCaixaWebResult> {
+  return obterConfiguracoesParaCaixaWebImpl()
 }
 
 export async function registrarMovimentacao(

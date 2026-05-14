@@ -19,6 +19,41 @@ type ActionResult<T = null> =
   | { success: true; data: T }
   | { success: false; error: string }
 
+type EstoqueJoinRow = { quantidade_atual: unknown; estoque_minimo: unknown }
+
+type ProdutoComEstoqueSelectRow = {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  preco_varejo: number | null
+  unidade_medida: string | null
+  estoque: EstoqueJoinRow | EstoqueJoinRow[]
+}
+
+function normalizaEstoqueDaRow(estoque: ProdutoComEstoqueSelectRow['estoque']): {
+  quantidade_atual: number
+  estoque_minimo: number
+} {
+  const row = Array.isArray(estoque) ? estoque[0] : estoque
+  return {
+    quantidade_atual: Number(row?.quantidade_atual ?? 0),
+    estoque_minimo: Number(row?.estoque_minimo ?? 0),
+  }
+}
+
+function rowParaProdutoComEstoqueDTO(p: ProdutoComEstoqueSelectRow): ProdutoComEstoqueDTO {
+  const estoque = normalizaEstoqueDaRow(p.estoque)
+  return {
+    id: p.id,
+    nome: p.nome,
+    codigo_barras: p.codigo_barras || '',
+    preco_varejo: Number(p.preco_varejo ?? 0),
+    unidade_medida: p.unidade_medida ?? 'UN',
+    quantidade_atual: estoque.quantidade_atual,
+    estoque_minimo: estoque.estoque_minimo,
+  }
+}
+
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
   const supabase = await createClient()
   const {
@@ -88,20 +123,11 @@ export async function buscarProdutoPorCodigo(
     }
   }
 
-  const produto = data as any
-  const estoque = produto.estoque
+  const produto = data as ProdutoComEstoqueSelectRow
 
   return {
     success: true,
-    data: {
-      id: produto.id,
-      nome: produto.nome,
-      codigo_barras: produto.codigo_barras || '',
-      preco_varejo: produto.preco_varejo,
-      unidade_medida: produto.unidade_medida,
-      quantidade_atual: estoque.quantidade_atual,
-      estoque_minimo: estoque.estoque_minimo,
-    },
+    data: rowParaProdutoComEstoqueDTO(produto),
   }
 }
 
@@ -157,16 +183,8 @@ export async function buscarEstoqueAtual(
     }
   }
 
-  const produtos = (data as any[]) || []
-  const resultado: ProdutoComEstoqueDTO[] = produtos.map((p) => ({
-    id: p.id,
-    nome: p.nome,
-    codigo_barras: p.codigo_barras || '',
-    preco_varejo: p.preco_varejo,
-    unidade_medida: p.unidade_medida,
-    quantidade_atual: p.estoque.quantidade_atual,
-    estoque_minimo: p.estoque.estoque_minimo,
-  }))
+  const produtos = (data ?? []) as ProdutoComEstoqueSelectRow[]
+  const resultado: ProdutoComEstoqueDTO[] = produtos.map(rowParaProdutoComEstoqueDTO)
 
   return { success: true, data: resultado }
 }
@@ -228,16 +246,8 @@ export async function buscarProdutosPorCategoria(
     }
   }
 
-  const produtos = (data as any[]) || []
-  const resultado: ProdutoComEstoqueDTO[] = produtos.map((p) => ({
-    id: p.id,
-    nome: p.nome,
-    codigo_barras: p.codigo_barras || '',
-    preco_varejo: p.preco_varejo,
-    unidade_medida: p.unidade_medida,
-    quantidade_atual: p.estoque.quantidade_atual,
-    estoque_minimo: p.estoque.estoque_minimo,
-  }))
+  const produtos = (data ?? []) as ProdutoComEstoqueSelectRow[]
+  const resultado: ProdutoComEstoqueDTO[] = produtos.map(rowParaProdutoComEstoqueDTO)
 
   return { success: true, data: resultado }
 }

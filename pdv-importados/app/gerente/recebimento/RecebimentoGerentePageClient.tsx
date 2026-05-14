@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
+import { CadastroRapidoBlock } from '@/components/gerente/cadastro'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
@@ -99,7 +100,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
   )
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-3xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
@@ -130,9 +131,10 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         </div>
       ) : null}
 
+      <CadastroRapidoBlock title={r.sec_formulario} defaultOpen className="mt-8">
       <form
         id="recebimento-form"
-        className="dragon-glass-card mt-8 rounded-xl p-5"
+        className="space-y-0"
         onSubmit={(e) => {
           e.preventDefault()
           if (semProdutos) return
@@ -155,7 +157,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-origem" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-origem" className="gerente-fin-label text-sm font-medium">
               {r.label_origem}
             </label>
             <input
@@ -168,7 +170,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-prod" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-prod" className="gerente-fin-label text-sm font-medium">
               {r.label_produto}
             </label>
             <select
@@ -191,7 +193,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             </select>
           </div>
           <div className="flex flex-col gap-1 md:col-span-2">
-            <label htmlFor="rec-obs" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-obs" className="gerente-fin-label text-sm font-medium">
               {r.label_observacao}
             </label>
             <input
@@ -203,7 +205,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-q-esp" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-q-esp" className="gerente-fin-label text-sm font-medium">
               {r.label_qtd_esperada}
             </label>
             <input
@@ -220,7 +222,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="rec-q-conf" className="gerente-fin-label text-xs font-medium">
+            <label htmlFor="rec-q-conf" className="gerente-fin-label text-sm font-medium">
               {r.label_qtd_conferida}
             </label>
             <input
@@ -278,6 +280,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
           </button>
         </div>
       </form>
+      </CadastroRapidoBlock>
 
       <section className="dragon-glass-card mt-10 rounded-xl p-5">
         <h2 className="gerente-section-accent text-lg font-semibold">{r.sec_recentes}</h2>

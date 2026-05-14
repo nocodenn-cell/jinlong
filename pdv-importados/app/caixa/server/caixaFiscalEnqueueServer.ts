@@ -12,6 +12,10 @@ function resolveFiscalDocType(rawValue: string | undefined): FiscalDocType {
   return 'NFC_E_STUB'
 }
 
+/**
+ * Enfileira documento fiscal após venda (fluxo legado / chamadas explícitas).
+ * Não engole erros: regista ERRO_ENQUEUE quando existe documento alvo e relança.
+ */
 export async function enfileirarDocumentoFiscalPosVenda(
   supabase: Awaited<ReturnType<typeof createClient>>,
   input: FinalizarVendaInput,
@@ -60,6 +64,21 @@ export async function enfileirarDocumentoFiscalPosVenda(
   })
 
   if (error) {
-    // Silently handle fiscal enqueue errors
+    const detalhe = {
+      venda_id: dados.vendaId,
+      tipo_doc: tipoDoc,
+      code: error.code,
+    }
+    const { error: logErr } = await supabase.rpc('fiscal_registrar_evento_enqueue_erro', {
+      p_venda_id: dados.vendaId,
+      p_tipo_doc: tipoDoc,
+      p_erro_mensagem: error.message,
+      p_detalhe: detalhe,
+    })
+    if (logErr) {
+      console.error('[caixa.fiscal_enqueue.evento_erro_rpc]', logErr.message)
+    }
+    console.error('[caixa.fiscal_enqueue.rpc_error]', { ...detalhe, message: error.message })
+    throw new Error(`FISCAL_ENQUEUE:${error.message}`)
   }
 }

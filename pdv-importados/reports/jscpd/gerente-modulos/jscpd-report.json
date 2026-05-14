@@ -1,0 +1,1245 @@
+{
+  "statistics": {
+    "detectionDate": "2026-05-11T20:14:34.953Z",
+    "formats": {
+      "typescript": {
+        "sources": {
+          "app/gerente/relatorios/useRelatoriosGerenteExports.ts": {
+            "lines": 151,
+            "tokens": 1416,
+            "sources": 1,
+            "clones": 6,
+            "duplicatedLines": 92,
+            "duplicatedTokens": 774,
+            "percentage": 60.93,
+            "percentageTokens": 54.66,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/relatorios/relatoriosGerenteUtils.ts": {
+            "lines": 26,
+            "tokens": 316,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/relatorios/actions.ts": {
+            "lines": 121,
+            "tokens": 1116,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/actions.validation.ts": {
+            "lines": 36,
+            "tokens": 372,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/actions.ts": {
+            "lines": 252,
+            "tokens": 2260,
+            "sources": 1,
+            "clones": 12,
+            "duplicatedLines": 162,
+            "duplicatedTokens": 1694,
+            "percentage": 64.29,
+            "percentageTokens": 74.96,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/importar-nfe/actions.validation.ts": {
+            "lines": 23,
+            "tokens": 313,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/importar-nfe/actions.ts": {
+            "lines": 210,
+            "tokens": 2402,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 34,
+            "duplicatedTokens": 378,
+            "percentage": 16.19,
+            "percentageTokens": 15.74,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/actions.validation.ts": {
+            "lines": 44,
+            "tokens": 594,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/actions.validation.test.ts": {
+            "lines": 30,
+            "tokens": 294,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/actions.ts": {
+            "lines": 249,
+            "tokens": 2796,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 18,
+            "duplicatedTokens": 212,
+            "percentage": 7.23,
+            "percentageTokens": 7.58,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/vendas/parseCancelarVendaGerenteForm.ts": {
+            "lines": 8,
+            "tokens": 133,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/vendas/parseCancelarVendaGerenteForm.test.ts": {
+            "lines": 19,
+            "tokens": 201,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/vendas/actions.ts": {
+            "lines": 9,
+            "tokens": 90,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/produtos/actions.ts": {
+            "lines": 115,
+            "tokens": 1292,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 24,
+            "duplicatedTokens": 354,
+            "percentage": 20.87,
+            "percentageTokens": 27.4,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 1293,
+          "tokens": 13595,
+          "sources": 14,
+          "clones": 12,
+          "duplicatedLines": 165,
+          "duplicatedTokens": 1706,
+          "percentage": 12.76,
+          "percentageTokens": 12.55,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "javascript": {
+        "sources": {
+          "app/gerente/relatorios/RelatoriosGerentePageClient.tsx": {
+            "lines": 283,
+            "tokens": 2965,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/relatorios/page.tsx": {
+            "lines": 4,
+            "tokens": 40,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/caixas/page.tsx": {
+            "lines": 79,
+            "tokens": 980,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/page.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/ImprimirEtiquetasPageClient.tsx": {
+            "lines": 76,
+            "tokens": 624,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/EtiquetaCarrinho.tsx": {
+            "lines": 46,
+            "tokens": 413,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/importar-nfe/page.tsx": {
+            "lines": 0,
+            "tokens": 3,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/importar-nfe/ImportarNfePageClient.tsx": {
+            "lines": 175,
+            "tokens": 1796,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/page.tsx": {
+            "lines": 3,
+            "tokens": 25,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/EstoqueGerentePageClient.tsx": {
+            "lines": 285,
+            "tokens": 3039,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 5,
+            "duplicatedTokens": 87,
+            "percentage": 1.75,
+            "percentageTokens": 2.86,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/EstoqueAjusteModal.tsx": {
+            "lines": 128,
+            "tokens": 1319,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/vendas/[id]/page.tsx": {
+            "lines": 110,
+            "tokens": 1265,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/vendas/page.tsx": {
+            "lines": 95,
+            "tokens": 1013,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/produtos/ProdutosGerentePageClient.tsx": {
+            "lines": 465,
+            "tokens": 5076,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 5,
+            "duplicatedTokens": 87,
+            "percentage": 1.08,
+            "percentageTokens": 1.71,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/produtos/page.tsx": {
+            "lines": 0,
+            "tokens": 9,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 1749,
+          "tokens": 18570,
+          "sources": 15,
+          "clones": 1,
+          "duplicatedLines": 5,
+          "duplicatedTokens": 87,
+          "percentage": 0.29,
+          "percentageTokens": 0.47,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "tsx": {
+        "sources": {
+          "app/gerente/relatorios/RelatoriosGerentePageClient.tsx": {
+            "lines": 432,
+            "tokens": 4696,
+            "sources": 1,
+            "clones": 5,
+            "duplicatedLines": 103,
+            "duplicatedTokens": 962,
+            "percentage": 23.84,
+            "percentageTokens": 20.49,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/relatorios/page.tsx": {
+            "lines": 18,
+            "tokens": 168,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/caixas/page.tsx": {
+            "lines": 156,
+            "tokens": 1826,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/page.tsx": {
+            "lines": 7,
+            "tokens": 78,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/ImprimirEtiquetasPageClient.tsx": {
+            "lines": 286,
+            "tokens": 2604,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/imprimir-etiquetas/EtiquetaCarrinho.tsx": {
+            "lines": 120,
+            "tokens": 1013,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/importar-nfe/page.tsx": {
+            "lines": 15,
+            "tokens": 176,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/importar-nfe/ImportarNfePageClient.tsx": {
+            "lines": 315,
+            "tokens": 3273,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/page.tsx": {
+            "lines": 34,
+            "tokens": 399,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/EstoqueGerentePageClient.tsx": {
+            "lines": 559,
+            "tokens": 6069,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 5,
+            "duplicatedTokens": 77,
+            "percentage": 0.89,
+            "percentageTokens": 1.27,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/estoque/EstoqueAjusteModal.tsx": {
+            "lines": 220,
+            "tokens": 2067,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/vendas/[id]/page.tsx": {
+            "lines": 333,
+            "tokens": 3657,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 16,
+            "duplicatedTokens": 156,
+            "percentage": 4.8,
+            "percentageTokens": 4.27,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/vendas/page.tsx": {
+            "lines": 148,
+            "tokens": 1535,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 9,
+            "duplicatedTokens": 76,
+            "percentage": 6.08,
+            "percentageTokens": 4.95,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/produtos/ProdutosGerentePageClient.tsx": {
+            "lines": 527,
+            "tokens": 5579,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 5,
+            "duplicatedTokens": 77,
+            "percentage": 0.95,
+            "percentageTokens": 1.38,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "app/gerente/produtos/page.tsx": {
+            "lines": 15,
+            "tokens": 198,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 3185,
+          "tokens": 33338,
+          "sources": 15,
+          "clones": 5,
+          "duplicatedLines": 69,
+          "duplicatedTokens": 674,
+          "percentage": 2.17,
+          "percentageTokens": 2.02,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      }
+    },
+    "total": {
+      "lines": 6227,
+      "tokens": 65503,
+      "sources": 44,
+      "clones": 18,
+      "duplicatedLines": 239,
+      "duplicatedTokens": 2467,
+      "percentage": 3.84,
+      "percentageTokens": 3.77,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    }
+  },
+  "duplicates": [
+    {
+      "format": "typescript",
+      "lines": 16,
+      "fragment": "`,\r\n        vendasDiaColumns,\r\n        data.porDia.map((row) => ({\r\n          dia: row.dia ? String(row.dia).slice(0, 10) : '',\r\n          num_vendas: row.num_vendas,\r\n          total_liquido: Number(row.total_liquido),\r\n          ticket_medio: Number(row.ticket_medio),\r\n          total_desconto: Number(row.total_desconto),\r\n        })),\r\n      )\r\n      return null\r\n    },\r\n    exportVendasOpts,\r\n  )\r\n\r\n  const { mutate: exportTop",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\relatorios\\useRelatoriosGerenteExports.ts",
+        "start": 45,
+        "end": 60,
+        "startLoc": {
+          "line": 45,
+          "column": 48,
+          "position": 495
+        },
+        "endLoc": {
+          "line": 60,
+          "column": 28,
+          "position": 642
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\relatorios\\useRelatoriosGerenteExports.ts",
+        "start": 26,
+        "end": 41,
+        "startLoc": {
+          "line": 26,
+          "column": 47,
+          "position": 291
+        },
+        "endLoc": {
+          "line": 41,
+          "column": 38,
+          "position": 438
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": "`,\r\n        topProdutosColumns,\r\n        data.top.map((row) => ({\r\n          id: row.id,\r\n          nome: row.nome,\r\n          origem: row.origem,\r\n          total_quantidade: row.total_quantidade,\r\n          total_valor: row.total_valor,\r\n          num_vendas: row.num_vendas,\r\n        })),\r\n      )\r\n      return null\r\n    },\r\n    exportVendasOpts,\r\n  )\r\n\r\n  const { mutate: exportBaixo",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\relatorios\\useRelatoriosGerenteExports.ts",
+        "start": 84,
+        "end": 100,
+        "startLoc": {
+          "line": 84,
+          "column": 50,
+          "position": 883
+        },
+        "endLoc": {
+          "line": 100,
+          "column": 30,
+          "position": 1010
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\relatorios\\useRelatoriosGerenteExports.ts",
+        "start": 64,
+        "end": 80,
+        "startLoc": {
+          "line": 64,
+          "column": 49,
+          "position": 699
+        },
+        "endLoc": {
+          "line": 80,
+          "column": 32,
+          "position": 826
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 16,
+      "fragment": ",\r\n        estoqueBaixoColumns,\r\n        data.baixo.map((row) => ({\r\n          nome: row.nome,\r\n          codigo_barras: row.codigo_barras ?? '',\r\n          quantidade_atual: row.quantidade_atual,\r\n          estoque_minimo: row.estoque_minimo,\r\n          deficit: row.deficit,\r\n        })),\r\n      )\r\n      return null\r\n    },\r\n    exportVendasOpts,\r\n  )\r\n\r\n  return",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\relatorios\\useRelatoriosGerenteExports.ts",
+        "start": 123,
+        "end": 138,
+        "startLoc": {
+          "line": 123,
+          "column": 39,
+          "position": 1234
+        },
+        "endLoc": {
+          "line": 138,
+          "column": 9,
+          "position": 1347
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\relatorios\\useRelatoriosGerenteExports.ts",
+        "start": 104,
+        "end": 119,
+        "startLoc": {
+          "line": 104,
+          "column": 38,
+          "position": 1062
+        },
+        "endLoc": {
+          "line": 119,
+          "column": 8,
+          "position": 1175
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 19,
+      "fragment": "<div className=\"mb-2 flex flex-wrap justify-end gap-2\">\r\n              <button\r\n                type=\"button\"\r\n                disabled={expTop || data.top.length === 0}\r\n                onClick={() => void exportTop(null)}\r\n                className={REL_EXPORT_BTN_CLASS}\r\n              >\r\n                {m.gerente.exportar_csv}\r\n              </button>\r\n              <button\r\n                type=\"button\"\r\n                disabled={expTopXlsx || data.top.length === 0}\r\n                onClick={() => void exportTopXlsx(null)}\r\n                className={REL_EXPORT_BTN_CLASS}\r\n              >\r\n                {m.gerente.exportar_xlsx}\r\n              </button>\r\n            </div>\r\n            <p",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\relatorios\\RelatoriosGerentePageClient.tsx",
+        "start": 318,
+        "end": 336,
+        "startLoc": {
+          "line": 318,
+          "column": 13,
+          "position": 3491
+        },
+        "endLoc": {
+          "line": 336,
+          "column": 15,
+          "position": 3648
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\relatorios\\RelatoriosGerentePageClient.tsx",
+        "start": 242,
+        "end": 260,
+        "startLoc": {
+          "line": 242,
+          "column": 13,
+          "position": 2678
+        },
+        "endLoc": {
+          "line": 260,
+          "column": 17,
+          "position": 2835
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 30,
+      "fragment": ">\r\n            <div className=\"mb-2 flex flex-wrap justify-end gap-2\">\r\n              <button\r\n                type=\"button\"\r\n                disabled={expBaixo || data.baixo.length === 0}\r\n                onClick={() => void exportBaixo(null)}\r\n                className={REL_EXPORT_BTN_CLASS}\r\n              >\r\n                {m.gerente.exportar_csv}\r\n              </button>\r\n              <button\r\n                type=\"button\"\r\n                disabled={expBaixoXlsx || data.baixo.length === 0}\r\n                onClick={() => void exportBaixoXlsx(null)}\r\n                className={REL_EXPORT_BTN_CLASS}\r\n              >\r\n                {m.gerente.exportar_xlsx}\r\n              </button>\r\n            </div>\r\n            <div className=\"gerente-table-wrap overflow-x-auto rounded-lg\">\r\n              <GerenteTable\r\n                tone=\"dragon\"\r\n                columns={[\r\n                  { key: 'p', header: m.relatorios.produto },\r\n                  { key: 'a', header: m.relatorios.estoque_atual },\r\n                  { key: 'm', header: m.relatorios.minimo },\r\n                  { key: 'd', header: m.relatorios.deficit },\r\n                ]}\r\n              >\r\n                {data.baixo",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\relatorios\\RelatoriosGerentePageClient.tsx",
+        "start": 375,
+        "end": 404,
+        "startLoc": {
+          "line": 375,
+          "column": 102,
+          "position": 4130
+        },
+        "endLoc": {
+          "line": 404,
+          "column": 28,
+          "position": 4416
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\relatorios\\RelatoriosGerentePageClient.tsx",
+        "start": 317,
+        "end": 271,
+        "startLoc": {
+          "line": 317,
+          "column": 113,
+          "position": 3487
+        },
+        "endLoc": {
+          "line": 271,
+          "column": 29,
+          "position": 2982
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": ">> {\r\n  const auth = await assertGerenteOuDono()\r\n  if (!auth.ok) return { success: false, error: auth.error }\r\n\r\n  const lojaId = await lojaIdDoUsuarioLogado()\r\n  if (!lojaId) {\r\n    const { idioma } = await getUsuarioIdioma()\r\n    return { \r\n      success: false, \r\n      error: mensagemErroComSecao('Impressão de Etiquetas', 'Não foi possível identificar sua loja. Faça login novamente.', idioma) \r\n    }\r\n  }\r\n\r\n  const parsed = buscarEstoqueAtualSchema",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 139,
+        "end": 152,
+        "startLoc": {
+          "line": 139,
+          "column": 47,
+          "position": 1223
+        },
+        "endLoc": {
+          "line": 152,
+          "column": 42,
+          "position": 1364
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 76,
+        "end": 89,
+        "startLoc": {
+          "line": 76,
+          "column": 45,
+          "position": 706
+        },
+        "endLoc": {
+          "line": 89,
+          "column": 46,
+          "position": 847
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 23,
+      "fragment": ", loja_id: lojaId })\r\n  if (!parsed.success) {\r\n    const msg = parsed.error.issues.map((i) => i.message).join('; ')\r\n    const { idioma } = await getUsuarioIdioma()\r\n    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }\r\n  }\r\n\r\n  const supabase = await createClient()\r\n  \r\n  const { data, error } = await supabase\r\n    .from('produtos')\r\n    .select(`\r\n      id,\r\n      nome,\r\n      codigo_barras,\r\n      preco_varejo,\r\n      unidade_medida,\r\n      estoque!inner (\r\n        quantidade_atual,\r\n        estoque_minimo\r\n      )\r\n    `)\r\n    .in",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 152,
+        "end": 174,
+        "startLoc": {
+          "line": 152,
+          "column": 78,
+          "position": 1374
+        },
+        "endLoc": {
+          "line": 174,
+          "column": 8,
+          "position": 1534
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 89,
+        "end": 111,
+        "startLoc": {
+          "line": 89,
+          "column": 86,
+          "position": 857
+        },
+        "endLoc": {
+          "line": 111,
+          "column": 8,
+          "position": 1017
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": "): Promise<ActionResult<ProdutoComEstoqueDTO[]>> {\r\n  const auth = await assertGerenteOuDono()\r\n  if (!auth.ok) return { success: false, error: auth.error }\r\n\r\n  const lojaId = await lojaIdDoUsuarioLogado()\r\n  if (!lojaId) {\r\n    const { idioma } = await getUsuarioIdioma()\r\n    return { \r\n      success: false, \r\n      error: mensagemErroComSecao('Impressão de Etiquetas', 'Não foi possível identificar sua loja. Faça login novamente.', idioma) \r\n    }\r\n  }\r\n\r\n  const parsed = buscarProdutosPorCategoriaSchema",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 197,
+        "end": 210,
+        "startLoc": {
+          "line": 197,
+          "column": 1,
+          "position": 1731
+        },
+        "endLoc": {
+          "line": 210,
+          "column": 50,
+          "position": 1882
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 139,
+        "end": 89,
+        "startLoc": {
+          "line": 139,
+          "column": 1,
+          "position": 1213
+        },
+        "endLoc": {
+          "line": 89,
+          "column": 46,
+          "position": 847
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": ", loja_id: lojaId })\r\n  if (!parsed.success) {\r\n    const msg = parsed.error.issues.map((i) => i.message).join('; ')\r\n    const { idioma } = await getUsuarioIdioma()\r\n    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }\r\n  }\r\n\r\n  const supabase = await createClient()\r\n  \r\n  let",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 210,
+        "end": 219,
+        "startLoc": {
+          "line": 210,
+          "column": 88,
+          "position": 1892
+        },
+        "endLoc": {
+          "line": 219,
+          "column": 6,
+          "position": 2014
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 89,
+        "end": 98,
+        "startLoc": {
+          "line": 89,
+          "column": 86,
+          "position": 857
+        },
+        "endLoc": {
+          "line": 98,
+          "column": 8,
+          "position": 979
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 13,
+      "fragment": "if (error) {\r\n    const { idioma } = await getUsuarioIdioma()\r\n    return { \r\n      success: false, \r\n      error: mensagemErroComSecao('Impressão de Etiquetas', error.message, idioma) \r\n    }\r\n  }\r\n\r\n  const produtos = (data ?? []) as ProdutoComEstoqueSelectRow[]\r\n  const resultado: ProdutoComEstoqueDTO[] = produtos.map(rowParaProdutoComEstoqueDTO)\r\n\r\n  return { success: true, data: resultado }\r\n}",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 241,
+        "end": 253,
+        "startLoc": {
+          "line": 241,
+          "column": 3,
+          "position": 2127
+        },
+        "endLoc": {
+          "line": 253,
+          "column": 2,
+          "position": 2260
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 178,
+        "end": 190,
+        "startLoc": {
+          "line": 178,
+          "column": 3,
+          "position": 1572
+        },
+        "endLoc": {
+          "line": 190,
+          "column": 2,
+          "position": 1705
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": "}\r\n\r\nasync function lojaIdDoUsuarioLogado(): Promise<string | null> {\r\n  const supabase = await createClient()\r\n  const {\r\n    data: { user },\r\n  } = await supabase.auth.getUser()\r\n  if (!user) return null\r\n  const { data } = await supabase\r\n    .from('usuarios')\r\n    .select('loja_id')\r\n    .eq('id', user.id)\r\n    .maybeSingle()\r\n  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID\r\n}\r\n\r\nfunction",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\estoque\\importar-nfe\\actions.ts",
+        "start": 17,
+        "end": 33,
+        "startLoc": {
+          "line": 17,
+          "column": 37,
+          "position": 174
+        },
+        "endLoc": {
+          "line": 33,
+          "column": 9,
+          "position": 340
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 55,
+        "end": 73,
+        "startLoc": {
+          "line": 55,
+          "column": 1,
+          "position": 512
+        },
+        "endLoc": {
+          "line": 73,
+          "column": 4,
+          "position": 678
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 19,
+      "fragment": "<T = null> =\r\n  | { success: true; data: T }\r\n  | { success: false; error: string }\r\n\r\nasync function lojaIdDoUsuarioLogado(): Promise<string | null> {\r\n  const supabase = await createClient()\r\n  const {\r\n    data: { user },\r\n  } = await supabase.auth.getUser()\r\n  if (!user) return null\r\n  const { data } = await supabase\r\n    .from('usuarios')\r\n    .select('loja_id')\r\n    .eq('id', user.id)\r\n    .maybeSingle()\r\n  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID\r\n}\r\n\r\nexport",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\estoque\\actions.ts",
+        "start": 19,
+        "end": 37,
+        "startLoc": {
+          "line": 19,
+          "column": 33,
+          "position": 145
+        },
+        "endLoc": {
+          "line": 37,
+          "column": 7,
+          "position": 357
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\importar-nfe\\actions.ts",
+        "start": 15,
+        "end": 73,
+        "startLoc": {
+          "line": 15,
+          "column": 18,
+          "position": 128
+        },
+        "endLoc": {
+          "line": 73,
+          "column": 4,
+          "position": 678
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 9,
+      "fragment": "\">\r\n        <table className=\"w-full border-collapse text-sm\">\r\n          <thead>\r\n            <tr className=\"border-b text-left\">\r\n              <th className=\"gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide\">\r\n                {m.estoque.col_produto}\r\n              </th>\r\n              <th className=\"gerente-fin-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wide\">\r\n                {m.gerente",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\vendas\\[id]\\page.tsx",
+        "start": 300,
+        "end": 308,
+        "startLoc": {
+          "line": 300,
+          "column": 107,
+          "position": 3307
+        },
+        "endLoc": {
+          "line": 308,
+          "column": 27,
+          "position": 3385
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\vendas\\[id]\\page.tsx",
+        "start": 174,
+        "end": 182,
+        "startLoc": {
+          "line": 174,
+          "column": 112,
+          "position": 1874
+        },
+        "endLoc": {
+          "line": 182,
+          "column": 27,
+          "position": 1952
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 10,
+      "fragment": "return (\r\n    <div className=\"mx-auto max-w-[1100px] px-4 py-6 sm:px-6\">\r\n      <div className=\"mb-4\">\r\n        <Link href=\"/gerente\" className=\"gerente-nav-back text-sm font-medium hover:underline\">\r\n          ← {m.gerente.inicio}\r\n        </Link>\r\n      </div>\r\n\r\n      <GerenteFilterBar\r\n        ",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\vendas\\page.tsx",
+        "start": 37,
+        "end": 46,
+        "startLoc": {
+          "line": 37,
+          "column": 3,
+          "position": 391
+        },
+        "endLoc": {
+          "line": 46,
+          "column": 9,
+          "position": 467
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\relatorios\\RelatoriosGerentePageClient.tsx",
+        "start": 121,
+        "end": 129,
+        "startLoc": {
+          "line": 121,
+          "column": 3,
+          "position": 1460
+        },
+        "endLoc": {
+          "line": 129,
+          "column": 25,
+          "position": 1536
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 6,
+      "fragment": "\">{m.produtos.filtro_todas_origens}</option>\r\n                <option value=\"china_manual\">{m.produtos.origem_china}</option>\r\n                <option value=\"brasil_nf\">{m.produtos.origem_brasil_nf}</option>\r\n                <option value=\"brasil_sem_nf\">{m.produtos.origem_brasil_sem_nf}</option>\r\n              </select>\r\n              <",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\produtos\\ProdutosGerentePageClient.tsx",
+        "start": 357,
+        "end": 362,
+        "startLoc": {
+          "line": 357,
+          "column": 35,
+          "position": 3802
+        },
+        "endLoc": {
+          "line": 362,
+          "column": 16,
+          "position": 3889
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\EstoqueGerentePageClient.tsx",
+        "start": 337,
+        "end": 342,
+        "startLoc": {
+          "line": 337,
+          "column": 30,
+          "position": 3670
+        },
+        "endLoc": {
+          "line": 342,
+          "column": 13,
+          "position": 3757
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 6,
+      "fragment": ">\r\n            <option value=\"china_manual\">{m.produtos.origem_china}</option>\r\n            <option value=\"brasil_nf\">{m.produtos.origem_brasil_nf}</option>\r\n            <option value=\"brasil_sem_nf\">{m.produtos.origem_brasil_sem_nf}</option>\r\n          </select>\r\n          <button",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\produtos\\ProdutosGerentePageClient.tsx",
+        "start": 310,
+        "end": 315,
+        "startLoc": {
+          "line": 310,
+          "column": 82,
+          "position": 3361
+        },
+        "endLoc": {
+          "line": 315,
+          "column": 18,
+          "position": 3438
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\EstoqueGerentePageClient.tsx",
+        "start": 337,
+        "end": 362,
+        "startLoc": {
+          "line": 337,
+          "column": 73,
+          "position": 3681
+        },
+        "endLoc": {
+          "line": 362,
+          "column": 22,
+          "position": 3890
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": ")\r\n  if (!parsed.success) {\r\n    const msg = parsed.error.issues.map((i) => i.message).join('; ')\r\n    const { idioma } = await getUsuarioIdioma()\r\n    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }\r\n  }\r\n\r\n  const supabase = await createClient()\r\n  const repo",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\produtos\\actions.ts",
+        "start": 48,
+        "end": 56,
+        "startLoc": {
+          "line": 48,
+          "column": 51,
+          "position": 519
+        },
+        "endLoc": {
+          "line": 56,
+          "column": 13,
+          "position": 633
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\estoque\\imprimir-etiquetas\\actions.ts",
+        "start": 89,
+        "end": 98,
+        "startLoc": {
+          "line": 89,
+          "column": 105,
+          "position": 865
+        },
+        "endLoc": {
+          "line": 98,
+          "column": 10,
+          "position": 981
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": ".safeParse(input)\r\n  if (!parsed.success) {\r\n    const msg = parsed.error.issues.map((i) => i.message).join('; ')\r\n    const { idioma } = await getUsuarioIdioma()\r\n    return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }\r\n  }\r\n\r\n  const supabase = await createClient()\r\n  const { error",
+      "tokens": 0,
+      "firstFile": {
+        "name": "app\\gerente\\produtos\\actions.ts",
+        "start": 76,
+        "end": 84,
+        "startLoc": {
+          "line": 76,
+          "column": 38,
+          "position": 838
+        },
+        "endLoc": {
+          "line": 84,
+          "column": 16,
+          "position": 958
+        }
+      },
+      "secondFile": {
+        "name": "app\\gerente\\produtos\\actions.ts",
+        "start": 48,
+        "end": 98,
+        "startLoc": {
+          "line": 48,
+          "column": 35,
+          "position": 515
+        },
+        "endLoc": {
+          "line": 98,
+          "column": 15,
+          "position": 983
+        }
+      }
+    }
+  ]
+}

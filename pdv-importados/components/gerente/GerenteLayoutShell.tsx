@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { Logo } from '@/components/branding/Logo'
 import { GerenteHeaderNav } from '@/components/gerente/GerenteHeaderNav'
@@ -28,6 +29,8 @@ type Props = Readonly<{
 }>
 
 function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props) {
+  const shellRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
   const { theme } = useGerenteUiTheme()
   const chromeLight = isGerenteLightChrome(theme)
   const podeTrocarIdioma = isPerfilPainelGerencial(normalizePerfilUsuario(perfil))
@@ -47,12 +50,30 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
     zh: 'var(--font-noto-sc),"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif',
   }
 
+  useEffect(() => {
+    const shell = shellRef.current
+    const header = headerRef.current
+    if (!shell || !header || typeof ResizeObserver === 'undefined') return
+
+    const applyStickyTop = () => {
+      const h = header.getBoundingClientRect().height
+      const gapPx = 8
+      shell.style.setProperty('--gerente-sticky-top', `${Math.max(Math.ceil(h + gapPx), 48)}px`)
+    }
+
+    applyStickyTop()
+    const ro = new ResizeObserver(applyStickyTop)
+    ro.observe(header)
+    return () => ro.disconnect()
+  }, [theme, idioma])
+
   return (
     <div
+      ref={shellRef}
       data-app-theme={theme}
       data-gerente-ui-theme={theme === 'novem' ? 'dragon-light' : 'dragon-dark'}
       className={cn(
-        'gerente-shell relative min-h-screen antialiased transition-[background-color,color] duration-200',
+        'gerente-shell relative min-h-screen overflow-x-visible overflow-y-visible antialiased transition-[background-color,color] duration-200',
         theme === 'noturno' && 'app-surface app-surface-text',
         theme === 'novem' && 'app-surface app-surface-text',
       )}
@@ -64,9 +85,10 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
       <GerenteToastViewport />
 
       <header
+        ref={headerRef}
         className={cn(
-          'gerente-compact-header relative overflow-hidden border-b bg-oriental-clouds',
-          'app-divider',
+          'gerente-compact-header sticky top-0 z-30 relative overflow-hidden border-b bg-oriental-clouds print:hidden',
+          'app-divider shadow-sm',
         )}
       >
         <div
@@ -86,7 +108,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
               aria-label={m.login.nav_marca}
               className={cn('gerente-compact-brand shrink-0 sm:items-end app-accent-text')}
             />
-            <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden sm:min-w-[12rem]">
               <div
                 className={cn(
                   'text-[11px] font-semibold uppercase tracking-wide',
@@ -119,11 +141,15 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
         </div>
       </header>
 
-      <main className="relative z-[1]">{children}</main>
+      {/*
+        Sticky (ex.: GerenteStickyToolbar) ancora ao viewport; um ancestral com overflow
+        não-visible quebra esse comportamento. Manter overflow visível no main.
+      */}
+      <main className="relative z-[1] overflow-x-visible overflow-y-visible">{children}</main>
 
       <div
         className={cn(
-          'gerente-watermark-char pointer-events-none fixed bottom-4 right-2 z-0 select-none font-serif text-9xl leading-none',
+          'gerente-watermark-char pointer-events-none fixed bottom-4 right-2 z-0 select-none font-serif text-9xl leading-none print:hidden',
           'app-subtle opacity-35',
         )}
         aria-hidden
