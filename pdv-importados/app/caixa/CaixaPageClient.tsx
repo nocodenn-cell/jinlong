@@ -862,6 +862,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               {pdvLayoutVariant === "classic" ? (
                 <CaixaPdvOperacoesButtons
                   m={m}
+                  idioma={idioma}
                   variant="classic"
                   carregandoRegras={carregandoRegras}
                   caixaStatus={caixaStatus}
@@ -910,6 +911,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               <div className="mt-2">
                 <CaixaPdvOperacoesButtons
                   m={m}
+                  idioma={idioma}
                   variant="classic"
                   carregandoRegras={carregandoRegras}
                   caixaStatus={caixaStatus}
