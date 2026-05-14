@@ -720,6 +720,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 idioma={idioma}
                 tab={abaPdvAtiva}
                 onTabChange={setAbaPdvAtiva}
+                layoutVariant={pdvLayoutVariant}
                 mostrarAtalhos={pdvLayoutVariant === "classic"}
                 operadorLabel={operadorLabel}
                 pagamentos={pagamentos}
@@ -795,6 +796,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               {pdvLayoutVariant === "classic" ? (
                 <CaixaPdvOperacoesButtons
                   m={m}
+                  idioma={idioma}
+                  carregandoRegras={carregandoRegras}
+                  caixaStatus={caixaStatus}
                   caixaAberto={caixaStatus?.aberto === true}
                   movimentandoCaixa={movimentandoCaixa}
                   finalizando={finalizando}
@@ -821,6 +825,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               <div className="mt-2">
                 <CaixaPdvOperacoesButtons
                   m={m}
+                  idioma={idioma}
+                  carregandoRegras={carregandoRegras}
+                  caixaStatus={caixaStatus}
                   caixaAberto={caixaStatus?.aberto === true}
                   movimentandoCaixa={movimentandoCaixa}
                   finalizando={finalizando}

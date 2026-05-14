@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 
 export type CaixaPdvOperadorTabId = "produto" | "cliente" | "pgto"
@@ -18,6 +19,7 @@ type Props = {
   idioma: Idioma
   tab: CaixaPdvOperadorTabId
   onTabChange: (id: CaixaPdvOperadorTabId) => void
+  layoutVariant?: CaixaPdvLayoutVariant
   /** Mostra dicas de atalho (layout PDV clássico). */
   mostrarAtalhos: boolean
   operadorLabel: string
@@ -36,6 +38,7 @@ export function CaixaPdvOperadorTabs({
   idioma,
   tab,
   onTabChange,
+  layoutVariant = "default",
   mostrarAtalhos,
   operadorLabel,
   pagamentos,
@@ -43,6 +46,7 @@ export function CaixaPdvOperadorTabs({
   moedaPrefixo,
   produtoPanel,
 }: Props) {
+  const classicChrome = layoutVariant === "classic"
   const loc = moneyLocale(idioma)
   const fmt = (n: number) => n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const somaParcelas = pagamentos.reduce((acc, p) => acc + p.valor, 0)
@@ -58,11 +62,27 @@ export function CaixaPdvOperadorTabs({
       <div
         role="tablist"
         aria-label={m.caixa.pdv_tabs_lista_aria}
-        className="flex shrink-0 gap-1 rounded-lg border border-border bg-muted/40 p-1"
+        className={
+          classicChrome
+            ? "flex shrink-0 gap-1 border-b border-border/80 bg-muted/25 px-0.5 pt-1"
+            : "flex shrink-0 gap-1 rounded-lg border border-border bg-muted/40 p-1"
+        }
       >
         {tabs.map((t) => {
           const selected = tab === t.id
           const title = mostrarAtalhos && t.atalho ? `${t.aria} (${t.atalho})` : t.aria
+          const tabButtonClass = classicChrome
+            ? selected
+              ? "relative z-[1] -mb-px flex-1 rounded-t-md border-x-0 border-b-2 border-b-background border-t-2 border-t-primary bg-background px-2 py-2 text-center text-sm font-semibold text-foreground shadow-[0_-1px_6px_rgba(0,0,0,0.05)]"
+              : "flex-1 rounded-t-md border border-transparent bg-muted/60 px-2 py-2 text-center text-sm font-medium text-foreground/80 ring-1 ring-border/70 hover:bg-muted/90 hover:text-foreground"
+            : selected
+              ? "flex-1 rounded-md border border-border bg-card px-2 py-2 text-center text-sm font-semibold text-foreground shadow-sm"
+              : "flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          const atalhoClass = classicChrome
+            ? selected
+              ? "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-foreground/70"
+              : "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-foreground/55"
+            : "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-muted-foreground"
           return (
             <button
               key={t.id}
@@ -73,25 +93,23 @@ export function CaixaPdvOperadorTabs({
               aria-controls={`caixa-pdv-panel-${t.id}`}
               tabIndex={selected ? 0 : -1}
               title={title}
-              className={
-                selected
-                  ? "flex-1 rounded-md border border-border bg-card px-2 py-2 text-center text-sm font-semibold text-foreground shadow-sm"
-                  : "flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-              }
+              className={tabButtonClass}
               onClick={() => onTabChange(t.id)}
             >
               <span className="block leading-tight">{t.label}</span>
-              {mostrarAtalhos && t.atalho ? (
-                <span className="mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
-                  {t.atalho}
-                </span>
-              ) : null}
+              {mostrarAtalhos && t.atalho ? <span className={atalhoClass}>{t.atalho}</span> : null}
             </button>
           )
         })}
       </div>
 
-      <div className="min-h-0 flex flex-1 flex-col gap-3 overflow-hidden">
+      <div
+        className={
+          classicChrome
+            ? "min-h-0 flex flex-1 flex-col gap-2 overflow-hidden"
+            : "min-h-0 flex flex-1 flex-col gap-3 overflow-hidden"
+        }
+      >
         <div
           role="tabpanel"
           id="caixa-pdv-panel-produto"
@@ -109,7 +127,9 @@ export function CaixaPdvOperadorTabs({
           hidden={tab !== "cliente"}
           className={
             tab === "cliente"
-              ? "flex flex-1 flex-col gap-3 rounded-lg border border-border bg-card/60 p-4"
+              ? classicChrome
+                ? "flex flex-1 flex-col gap-3 rounded-lg border-x border-b border-border/60 border-t-2 border-t-primary bg-card/60 p-4 shadow-sm"
+                : "flex flex-1 flex-col gap-3 rounded-lg border border-border bg-card/60 p-4"
               : "hidden"
           }
         >
@@ -131,7 +151,11 @@ export function CaixaPdvOperadorTabs({
           aria-labelledby="caixa-pdv-tab-pgto"
           hidden={tab !== "pgto"}
           className={
-            tab === "pgto" ? "flex flex-1 flex-col gap-3 rounded-lg border border-border bg-card/60 p-4" : "hidden"
+            tab === "pgto"
+              ? classicChrome
+                ? "flex flex-1 flex-col gap-3 rounded-lg border-x border-b border-border/60 border-t-2 border-t-primary bg-card/60 p-4 shadow-sm"
+                : "flex flex-1 flex-col gap-3 rounded-lg border border-border bg-card/60 p-4"
+              : "hidden"
           }
         >
           <div>
