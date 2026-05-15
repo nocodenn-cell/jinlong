@@ -8,12 +8,28 @@
 --     ('fiscal_worker_key',  '<FISCAL_WORKER_KEY>');
 --
 -- Após isso, o cron job dispara automaticamente a cada minuto.
+--
+-- Em ambientes locais (desenvolvimento/CI) pg_cron e pg_net podem não estar
+-- disponíveis; a migration degrada graciosamente com RAISE WARNING.
 
 -- ============================================================
--- EXTENSÕES
+-- EXTENSÕES (best-effort — indisponíveis em stack local)
 -- ============================================================
-create extension if not exists pg_net    with schema extensions;
-create extension if not exists pg_cron   with schema extensions;
+do $$
+begin
+  create extension if not exists pg_net  with schema extensions;
+exception when others then
+  raise warning 'pg_net não disponível neste ambiente: %', sqlerrm;
+end;
+$$;
+
+do $$
+begin
+  create extension if not exists pg_cron with schema extensions;
+exception when others then
+  raise warning 'pg_cron não disponível neste ambiente: %', sqlerrm;
+end;
+$$;
 
 -- ============================================================
 -- FUNÇÃO INVOCADORA
@@ -46,7 +62,7 @@ begin
     return;
   end if;
 
-  select extensions.http_post(
+  select net.http_post(
     url     := v_url,
     headers := jsonb_build_object(
                  'Content-Type',        'application/json',
@@ -61,10 +77,16 @@ $$;
 revoke all on function internal.fiscal_worker_invoke() from public;
 
 -- ============================================================
--- CRON JOB — a cada minuto
+-- CRON JOB — a cada minuto (best-effort)
 -- ============================================================
-select cron.schedule(
-  'fiscal-worker-every-minute',
-  '* * * * *',
-  'select internal.fiscal_worker_invoke()'
-);
+do $$
+begin
+  perform cron.schedule(
+    'fiscal-worker-every-minute',
+    '* * * * *',
+    'select internal.fiscal_worker_invoke()'
+  );
+exception when others then
+  raise warning 'cron.schedule não disponível neste ambiente: %', sqlerrm;
+end;
+$$;
