@@ -1,5 +1,11 @@
 const path = require('path');
 
+/** Aliases compartilhados entre Turbopack e Webpack para evitar duplicação. */
+const sharedResolveAlias = {
+  '@': './src',
+  '@/shared': './shared',
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
@@ -14,16 +20,12 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   turbopack: {
-    resolveAlias: {
-      '@': './src',
-      '@/shared': './shared',
-    },
+    resolveAlias: sharedResolveAlias,
   },
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': './src',
-      '@/shared': './shared',
+      ...sharedResolveAlias,
     }
     
     // Fix for client-side builds

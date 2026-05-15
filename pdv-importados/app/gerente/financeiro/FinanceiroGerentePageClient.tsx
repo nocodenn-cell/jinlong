@@ -267,6 +267,27 @@ export function FinanceiroGerentePageClient({
 
   const novoTituloAnchorRef = useRef<HTMLDivElement>(null)
   const [draftFilters, setDraftFilters] = useState<FinanceiroTituloFilters>(() => ({ ...tituloQuery.filters }))
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const loadingMoreRef = useRef(false)
+
+  // Scroll infinito: ao atingir o fim da lista, navega com limite maior
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return
+        if (!tituloQuery.listCapped || loadingMoreRef.current) return
+        loadingMoreRef.current = true
+        const sp = serializeTituloFiltersToSearchParams(tituloQuery.filters, tituloQuery.limite + 20)
+        const qs = sp.toString()
+        router.replace(qs ? `/gerente/financeiro?${qs}` : '/gerente/financeiro')
+      },
+      { rootMargin: '300px' },
+    )
+    obs.observe(el)
+    return () => { obs.disconnect(); loadingMoreRef.current = false }
+  }, [router, tituloQuery.filters, tituloQuery.limite, tituloQuery.listCapped])
 
   useEffect(() => {
     setDraftFilters({ ...tituloQuery.filters })
@@ -516,6 +537,9 @@ export function FinanceiroGerentePageClient({
                 {interStub(f.lista_limite_aviso, { limite: String(tituloQuery.limite) })}
               </p>
             ) : null}
+
+            {/* Sentinel para scroll infinito — só ativo quando há mais itens */}
+            {tituloQuery.listCapped && <div ref={sentinelRef} className="h-1" aria-hidden />}
           </section>
         </div>
 
