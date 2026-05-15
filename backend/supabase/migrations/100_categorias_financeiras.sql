@@ -19,25 +19,64 @@ create index if not exists idx_cat_fin_nome   on public.categorias_financeiras(l
 -- RLS
 alter table public.categorias_financeiras enable row level security;
 
--- Dono: acesso total
+-- Dono: acesso total (SELECT, INSERT, UPDATE, DELETE)
 create policy "dono_all_cat_fin" on public.categorias_financeiras
   for all
-  using  (auth.jwt() ->> 'role' = 'dono')
-  with check (auth.jwt() ->> 'role' = 'dono');
+  using (
+    exists (
+      select 1 from public.usuarios u
+      where u.id = auth.uid() and u.perfil = 'DONO'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.usuarios u
+      where u.id = auth.uid() and u.perfil = 'DONO'
+    )
+  );
 
--- Gerente: leitura + escrita (sem delete)
+-- Gerente: leitura + escrita + exclusão
 create policy "gerente_select_cat_fin" on public.categorias_financeiras
   for select
-  using (auth.jwt() ->> 'role' = 'gerente');
+  using (
+    exists (
+      select 1 from public.usuarios u
+      where u.id = auth.uid() and u.perfil = 'GERENTE'
+    )
+  );
 
 create policy "gerente_insert_cat_fin" on public.categorias_financeiras
   for insert
-  with check (auth.jwt() ->> 'role' = 'gerente');
+  with check (
+    exists (
+      select 1 from public.usuarios u
+      where u.id = auth.uid() and u.perfil = 'GERENTE'
+    )
+  );
 
 create policy "gerente_update_cat_fin" on public.categorias_financeiras
   for update
-  using  (auth.jwt() ->> 'role' = 'gerente')
-  with check (auth.jwt() ->> 'role' = 'gerente');
+  using (
+    exists (
+      select 1 from public.usuarios u
+      where u.id = auth.uid() and u.perfil = 'GERENTE'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.usuarios u
+      where u.id = auth.uid() and u.perfil = 'GERENTE'
+    )
+  );
+
+create policy "gerente_delete_cat_fin" on public.categorias_financeiras
+  for delete
+  using (
+    exists (
+      select 1 from public.usuarios u
+      where u.id = auth.uid() and u.perfil = 'GERENTE'
+    )
+  );
 
 -- Seed: algumas categorias padrão
 insert into public.categorias_financeiras (nome, tipo) values

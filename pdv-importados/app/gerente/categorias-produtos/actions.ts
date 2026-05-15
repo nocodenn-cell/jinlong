@@ -107,23 +107,21 @@ export async function listarCategoriasProdutos(
     }
   }
 
-  // Contar produtos vinculados por categoria em uma query separada
+  // Contar produtos vinculados por categoria usando count (evita limite de 1000 linhas do PostgREST)
   const ids = (data ?? []).map((r) => r.id)
   const produtosPorCategoria: Record<string, number> = {}
 
   if (ids.length > 0) {
-    const { data: prodData } = await supabase
-      .from('produtos')
-      .select('categoria_id')
-      .in('categoria_id', ids)
-
-    if (prodData) {
-      for (const p of prodData as { categoria_id: string | null }[]) {
-        if (p.categoria_id) {
-          produtosPorCategoria[p.categoria_id] =
-            (produtosPorCategoria[p.categoria_id] ?? 0) + 1
-        }
-      }
+    const countPromises = ids.map((catId) =>
+      supabase
+        .from('produtos')
+        .select('id', { count: 'exact', head: true })
+        .eq('categoria_id', catId)
+        .then(({ count }) => [catId, count ?? 0] as const),
+    )
+    const results = await Promise.all(countPromises)
+    for (const [catId, qtd] of results) {
+      produtosPorCategoria[catId] = qtd
     }
   }
 

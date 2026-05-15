@@ -554,8 +554,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         }
       }
       if (idxDinheiro >= 0) {
-        parcelasNormalizadas[idxDinheiro].valor = roundMoney2(
-          parcelasNormalizadas[idxDinheiro].valor - excesso,
+        parcelasNormalizadas[idxDinheiro].valor = Math.max(
+          0,
+          roundMoney2(parcelasNormalizadas[idxDinheiro].valor - excesso),
         )
       }
     }
@@ -880,20 +881,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 {m.caixa.novo_cupom}
               </button>
               <div
-                className={cn(
-                  "text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic" ? "text-muted-foreground" : "text-muted-foreground",
-                )}
+                className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {m.caixa.rail_titulo_nova_venda}
               </div>
               <div
-                className={cn(
-                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic"
-                    ? "border-border text-muted-foreground"
-                    : "border-border text-muted-foreground",
-                )}
+                className="border-t border-border pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {m.caixa.rail_titulo_operacoes}
               </div>
@@ -917,20 +910,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
               )}
               <div
-                className={cn(
-                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic"
-                    ? "border-border text-muted-foreground"
-                    : "border-border text-muted-foreground",
-                )}
+                className="border-t border-border pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {m.caixa.rail_titulo_em_aberto}
               </div>
               <p
-                className={cn(
-                  "text-xs leading-snug",
-                  pdvLayoutVariant === "classic" ? "text-muted-foreground" : "text-muted-foreground",
-                )}
+                className="text-xs leading-snug text-muted-foreground"
               >
                 {m.caixa.rail_placeholder}
               </p>
