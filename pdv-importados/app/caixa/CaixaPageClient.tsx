@@ -181,6 +181,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
 
   const {
     pagamentos,
+    somaParcelas,
+    diferenca: diferencaPagamento,
+    podeAdicionarParcela,
+    formasDisponiveis,
+    adicionarParcela,
+    removerParcela,
+    atualizarForma,
+    atualizarValor,
+    autoCompletarUltima,
     resetPagamentos,
   } = useCaixaPagamentos(totalLiquidoComGerente)
 
@@ -520,7 +529,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     const totalPagamentos = roundMoney2(
       pagamentos.reduce((acc, pagamento) => acc + pagamento.valor, 0),
     )
-    if (Math.abs(totalPagamentos - totalLiquidoComGerente) > 0.01) {
+    if (totalPagamentos < totalLiquidoComGerente - 0.01) {
       setCaixaMensagem(
         caixaFmt(m.caixa.msg_pagamento_split_invalido, {
           esperado: totalLiquidoComGerente.toFixed(2),
@@ -529,6 +538,26 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         { kind: "warning" },
       )
       return
+    }
+    // Normalizar parcelas: desconta troco da última parcela DINHEIRO
+    const parcelasNormalizadas = pagamentos.map((p) => ({
+      formaPagamento: p.formaPagamento,
+      valor: p.valor,
+    }))
+    const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
+    if (excesso > 0.01) {
+      let idxDinheiro = -1
+      for (let i = parcelasNormalizadas.length - 1; i >= 0; i--) {
+        if (parcelasNormalizadas[i].formaPagamento === "DINHEIRO") {
+          idxDinheiro = i
+          break
+        }
+      }
+      if (idxDinheiro >= 0) {
+        parcelasNormalizadas[idxDinheiro].valor = roundMoney2(
+          parcelasNormalizadas[idxDinheiro].valor - excesso,
+        )
+      }
     }
     setFinalizando(true)
     setCaixaMensagem(null)
@@ -549,10 +578,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           descontoGerentePercentualEfetivo > 0 ? gerenteToken ?? undefined : undefined,
         descontoGerentePercentual:
           descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
-        pagamentos: pagamentos.map((p) => ({
-          formaPagamento: p.formaPagamento,
-          valor: p.valor,
-        })),
+        pagamentos: parcelasNormalizadas,
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
@@ -737,6 +763,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 operadorLabel={operadorLabel}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
+                somaParcelas={somaParcelas}
+                diferenca={diferencaPagamento}
+                podeAdicionarParcela={podeAdicionarParcela}
+                formasDisponiveis={formasDisponiveis}
+                onAdicionarParcela={adicionarParcela}
+                onRemoverParcela={removerParcela}
+                onAtualizarForma={atualizarForma}
+                onAtualizarValor={atualizarValor}
+                onAutoCompletar={autoCompletarUltima}
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 produtoPanel={
                   pdvLayoutVariant === "classic" ? (
