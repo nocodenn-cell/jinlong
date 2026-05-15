@@ -59,6 +59,25 @@ export interface CarrinhoState {
   setMaxDescontoGerentePercentual: (valor: number) => void
 }
 
+type CartDiscountSlice = Pick<
+  CarrinhoState,
+  'descontoGerentePercentual' | 'maxDescontoGerentePercentual'
+>
+
+type CartPersistedContext = Pick<CarrinhoState, 'regras' | 'pricingCtx'>
+
+type ItensComTotais = Pick<
+  CarrinhoState,
+  | 'itens'
+  | 'totalBruto'
+  | 'totalDesconto'
+  | 'totalLiquido'
+  | 'totalItens'
+  | 'totalUnidades'
+  | 'descontoGerentePercentual'
+  | 'descontoGerenteValor'
+>
+
 function roundMoney(valor: number) {
   return Math.round(valor * 100) / 100
 }
@@ -121,6 +140,80 @@ function aplicarDescontoSobreTotais(
   }
 }
 
+function commitItensComTotais(
+  state: CartDiscountSlice,
+  novosItens: ItemCarrinho[],
+): ItensComTotais {
+  const totais = aplicarDescontoSobreTotais(
+    recalcularTotais(novosItens),
+    state.descontoGerentePercentual,
+    state.maxDescontoGerentePercentual,
+  )
+  return { itens: novosItens, ...totais }
+}
+
+function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
+  return {
+    itens: [],
+    cartOwnerUserId: null,
+    totalBruto: 0,
+    totalDesconto: 0,
+    totalLiquido: 0,
+    totalItens: 0,
+    totalUnidades: 0,
+    regras: ctx.regras,
+    pricingCtx: ctx.pricingCtx,
+    descontoGerentePercentual: 0,
+    descontoGerenteValor: 0,
+    descontoGerenteToken: null,
+  }
+}
+
+function updateItemQuantity(itens: ItemCarrinho[], id: string, quantidade: number): ItemCarrinho[] {
+  if (quantidade <= 0) {
+    return itens.filter((i) => i.id !== id)
+  }
+  return itens.map((i) => (i.id === id ? normalizarItemCarrinho({ ...i, quantidade }) : i))
+}
+
+function applyItemDiscount(item: ItemCarrinho, descontoValor: number): ItemCarrinho {
+  const precoOriginal = item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
+  const precoComDesconto = Math.max(0, roundMoney(precoOriginal - descontoValor))
+  return normalizarItemCarrinho({
+    ...item,
+    precoOriginal,
+    precoUnitario: precoComDesconto,
+    resultado: {
+      precoOriginal,
+      precoUnitario: precoComDesconto,
+      descontoUnitario: roundMoney(precoOriginal - precoComDesconto),
+      tipoPreco: 'MANUAL',
+    },
+  })
+}
+
+function mergeItemByProdutoId(itens: ItemCarrinho[], item: ItemCarrinho): ItemCarrinho[] {
+  const existe = itens.find((i) => i.produtoId === item.produtoId)
+  if (!existe) {
+    return [...itens, item]
+  }
+  return itens.map((i) =>
+    i.produtoId === item.produtoId
+      ? normalizarItemCarrinho({ ...i, quantidade: i.quantidade + item.quantidade })
+      : i,
+  )
+}
+
+function resolveMaxDescontoGerente(
+  maxClamp: number | null | undefined,
+  stateMax: number,
+): number {
+  if (typeof maxClamp === 'number' && Number.isFinite(maxClamp)) {
+    return Math.max(0, maxClamp)
+  }
+  return stateMax
+}
+
 export const useCartStore = create<CarrinhoState>()(
   persist(
     (set) => ({
@@ -141,89 +234,25 @@ export const useCartStore = create<CarrinhoState>()(
       adicionarItem: (item) =>
         set((state) => {
           const itemNormalizado = normalizarItemCarrinho(item)
-          const existe = state.itens.find((i) => i.produtoId === itemNormalizado.produtoId)
-          const novosItens = existe
-            ? state.itens.map((i) =>
-                i.produtoId === itemNormalizado.produtoId
-                  ? normalizarItemCarrinho({ ...i, quantidade: i.quantidade + itemNormalizado.quantidade })
-                  : i,
-              )
-            : [...state.itens, itemNormalizado]
-
-          const totais = aplicarDescontoSobreTotais(
-            recalcularTotais(novosItens),
-            state.descontoGerentePercentual,
-            state.maxDescontoGerentePercentual,
-          )
-          return { itens: novosItens, ...totais }
+          const novosItens = mergeItemByProdutoId(state.itens, itemNormalizado)
+          return commitItensComTotais(state, novosItens)
         }),
 
       removerItem: (id) =>
         set((state) => {
           const novosItens = state.itens.filter((i) => i.id !== id)
-          const totais = aplicarDescontoSobreTotais(
-            recalcularTotais(novosItens),
-            state.descontoGerentePercentual,
-            state.maxDescontoGerentePercentual,
-          )
-          return { itens: novosItens, ...totais }
+          return commitItensComTotais(state, novosItens)
         }),
 
       atualizarQuantidade: (id, quantidade) =>
-        set((state) => {
-          if (quantidade <= 0) {
-            const novosItens = state.itens.filter((i) => i.id !== id)
-            const totais = aplicarDescontoSobreTotais(
-              recalcularTotais(novosItens),
-              state.descontoGerentePercentual,
-              state.maxDescontoGerentePercentual,
-            )
-            return { itens: novosItens, ...totais }
-          }
-          const novosItens = state.itens.map((i) =>
-            i.id === id ? normalizarItemCarrinho({ ...i, quantidade }) : i,
-          )
-          const totais = aplicarDescontoSobreTotais(
-            recalcularTotais(novosItens),
-            state.descontoGerentePercentual,
-            state.maxDescontoGerentePercentual,
-          )
-          return { itens: novosItens, ...totais }
-        }),
+        set((state) => commitItensComTotais(state, updateItemQuantity(state.itens, id, quantidade))),
 
-      limparCarrinho: () =>
-        set((state) => ({
-          itens: [],
-          cartOwnerUserId: null,
-          totalBruto: 0,
-          totalDesconto: 0,
-          totalLiquido: 0,
-          totalItens: 0,
-          totalUnidades: 0,
-          regras: state.regras,
-          pricingCtx: state.pricingCtx,
-          descontoGerentePercentual: 0,
-          descontoGerenteValor: 0,
-          descontoGerenteToken: null,
-        })),
+      limparCarrinho: () => set((state) => emptyCartFields(state)),
 
       setCartOwnerForSession: (userId) =>
         set((state) => {
           if (userId === null) {
-            return {
-              itens: [],
-              cartOwnerUserId: null,
-              totalBruto: 0,
-              totalDesconto: 0,
-              totalLiquido: 0,
-              totalItens: 0,
-              totalUnidades: 0,
-              regras: state.regras,
-              pricingCtx: state.pricingCtx,
-              descontoGerentePercentual: 0,
-              descontoGerenteValor: 0,
-              descontoGerenteToken: null,
-            }
+            return emptyCartFields(state)
           }
 
           if (state.cartOwnerUserId === null) {
@@ -231,57 +260,25 @@ export const useCartStore = create<CarrinhoState>()(
           }
 
           if (userId !== state.cartOwnerUserId) {
-            return {
-              itens: [],
-              cartOwnerUserId: userId,
-              totalBruto: 0,
-              totalDesconto: 0,
-              totalLiquido: 0,
-              totalItens: 0,
-              totalUnidades: 0,
-              regras: state.regras,
-              pricingCtx: state.pricingCtx,
-              descontoGerentePercentual: 0,
-              descontoGerenteValor: 0,
-              descontoGerenteToken: null,
-            }
+            return { ...emptyCartFields(state), cartOwnerUserId: userId }
           }
 
           return { cartOwnerUserId: userId }
         }),
 
       setRegras: (regras) => set({ regras }),
+
       aplicarDescontoManual: (id, descontoValor) =>
         set((state) => {
-          const novosItens = state.itens.map((item) => {
-            if (item.id !== id) return item
-            const precoOriginal = item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
-            const precoComDesconto = Math.max(0, roundMoney(precoOriginal - descontoValor))
-            return normalizarItemCarrinho({
-              ...item,
-              precoOriginal,
-              precoUnitario: precoComDesconto,
-              resultado: {
-                precoOriginal,
-                precoUnitario: precoComDesconto,
-                descontoUnitario: roundMoney(precoOriginal - precoComDesconto),
-                tipoPreco: 'MANUAL',
-              },
-            })
-          })
-          const totais = aplicarDescontoSobreTotais(
-            recalcularTotais(novosItens),
-            state.descontoGerentePercentual,
-            state.maxDescontoGerentePercentual,
+          const novosItens = state.itens.map((item) =>
+            item.id === id ? applyItemDiscount(item, descontoValor) : item,
           )
-          return { itens: novosItens, ...totais }
+          return commitItensComTotais(state, novosItens)
         }),
+
       aplicarDescontoGerente: (percentual, token = null, maxClamp = null) =>
         set((state) => {
-          const maxPermitido =
-            typeof maxClamp === 'number' && Number.isFinite(maxClamp)
-              ? Math.max(0, maxClamp)
-              : state.maxDescontoGerentePercentual
+          const maxPermitido = resolveMaxDescontoGerente(maxClamp, state.maxDescontoGerentePercentual)
           const percentualClamped = clampPercentualDesconto(percentual, maxPermitido)
           const totais = aplicarDescontoSobreTotais(
             recalcularTotais(state.itens),
@@ -295,6 +292,7 @@ export const useCartStore = create<CarrinhoState>()(
             maxDescontoGerentePercentual: maxPermitido,
           }
         }),
+
       setMaxDescontoGerentePercentual: (valor) =>
         set((state) => {
           const maxPermitido = Math.max(0, Number.isFinite(valor) ? valor : state.maxDescontoGerentePercentual)
@@ -312,18 +310,7 @@ export const useCartStore = create<CarrinhoState>()(
         }),
 
       alterarQuantidade: (id, quantidade) =>
-        set((state) => {
-          const novosItens =
-            quantidade <= 0
-              ? state.itens.filter((i) => i.id !== id)
-              : state.itens.map((i) => (i.id === id ? normalizarItemCarrinho({ ...i, quantidade }) : i))
-          const totais = aplicarDescontoSobreTotais(
-            recalcularTotais(novosItens),
-            state.descontoGerentePercentual,
-            state.maxDescontoGerentePercentual,
-          )
-          return { itens: novosItens, ...totais }
-        }),
+        set((state) => commitItensComTotais(state, updateItemQuantity(state.itens, id, quantidade))),
 
       sincronizarPrecoCalculadoRpc: (itemId, patch) =>
         set((state) => {
@@ -360,12 +347,7 @@ export const useCartStore = create<CarrinhoState>()(
                 })
               : i,
           )
-          const totais = aplicarDescontoSobreTotais(
-            recalcularTotais(novosItens),
-            state.descontoGerentePercentual,
-            state.maxDescontoGerentePercentual,
-          )
-          return { itens: novosItens, ...totais }
+          return commitItensComTotais(state, novosItens)
         }),
     }),
     { name: 'pdv-carrinho' },

@@ -3,13 +3,13 @@
  * Este arquivo agora redireciona para o logger unificado para compatibilidade
  */
 
-export { 
-  logJson, 
-  logCaughtServerError, 
+export {
+  logJson,
+  logCaughtServerError,
   logger,
   redactForLog,
   type LogEntry,
   EdgeLogger,
   DesktopLogger,
-  ServerLogger
-} from './unified-logger.ts';
+  ServerLogger,
+} from './unified-logger'
