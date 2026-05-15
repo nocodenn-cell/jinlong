@@ -734,7 +734,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     <>
       <div
         data-caixa-layout={pdvLayoutVariant === "classic" ? "classic" : undefined}
-        className="min-h-[100dvh] caixa-oriental-root flex flex-col text-[14px] leading-5"
+        className={cn(
+          "min-h-[100dvh] flex flex-col text-[14px] leading-5",
+          pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "caixa-oriental-root",
+        )}
       >
         <CaixaHeader
           m={m}
@@ -859,7 +862,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               className={cn(
                 "hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex",
                 pdvLayoutVariant === "classic"
-                  ? "border-blue-800/70 bg-gradient-to-b from-blue-950/95 via-blue-900/90 to-blue-800/85 text-blue-50 shadow-sm"
+                  ? "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]"
                   : "border-border bg-card/90",
               )}
             >
@@ -868,7 +871,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 className={cn(
                   "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
                   pdvLayoutVariant === "classic"
-                    ? "border-white/35 bg-white/10 text-white hover:bg-white/20"
+                    ? "border-border bg-primary text-primary-foreground hover:bg-primary/90"
                     : "border-border bg-secondary text-secondary-foreground hover:bg-secondary/90",
                 )}
                 onClick={handleNovoCupom}
@@ -879,7 +882,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               <div
                 className={cn(
                   "text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic" ? "text-blue-200/85" : "text-muted-foreground",
+                  pdvLayoutVariant === "classic" ? "text-muted-foreground" : "text-muted-foreground",
                 )}
               >
                 {m.caixa.rail_titulo_nova_venda}
@@ -888,7 +891,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 className={cn(
                   "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
                   pdvLayoutVariant === "classic"
-                    ? "border-white/15 text-blue-200/85"
+                    ? "border-border text-muted-foreground"
                     : "border-border text-muted-foreground",
                 )}
               >
@@ -917,7 +920,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 className={cn(
                   "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
                   pdvLayoutVariant === "classic"
-                    ? "border-white/15 text-blue-200/85"
+                    ? "border-border text-muted-foreground"
                     : "border-border text-muted-foreground",
                 )}
               >
@@ -926,7 +929,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               <p
                 className={cn(
                   "text-xs leading-snug",
-                  pdvLayoutVariant === "classic" ? "text-blue-100/75" : "text-muted-foreground",
+                  pdvLayoutVariant === "classic" ? "text-muted-foreground" : "text-muted-foreground",
                 )}
               >
                 {m.caixa.rail_placeholder}
@@ -937,10 +940,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
             <div
               className={cn(
                 "border-t px-4 py-3 sm:px-6 md:hidden",
-                "border-blue-800/80 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-blue-50 shadow-sm",
+                "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]",
               )}
             >
-              <div className="text-xs font-semibold uppercase tracking-wide text-blue-200/85">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {m.caixa.rail_titulo_operacoes}
               </div>
               <div className="mt-2">
