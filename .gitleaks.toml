@@ -1,11 +1,14 @@
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = "Allowlist for Claude Code session URLs in commit messages"
+[allowlist]
+description = "False positives: Claude session URLs and HMAC security utilities"
+# Claude Code appends session URLs to commit messages; the session ID suffix
+# has high entropy and can match generic-api-key rules.
 regexTarget = "line"
-# Claude session IDs in commit message trailers look like high-entropy tokens
-# but are not secrets — they are public session URLs used for traceability.
 regexes = [
-  'https://claude\.ai/code/session_[A-Za-z0-9]+',
+  '''https://claude\.ai/code/session_[A-Za-z0-9]+''',
+]
+paths = [
+  '''pdv-importados/lib/security/gerenteTokenHmac\.ts''',
 ]
