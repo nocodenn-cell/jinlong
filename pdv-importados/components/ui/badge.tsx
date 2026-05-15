@@ -15,6 +15,15 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // Jinlong Dragon variants
+        dragonGold:
+          "border-[var(--dragon-gold,#d4af37)]/30 bg-[var(--dragon-gold,#d4af37)]/15 text-[var(--dragon-gold,#d4af37)]",
+        dragonJade:
+          "border-[var(--dragon-jade,#10b981)]/30 bg-[var(--dragon-jade,#10b981)]/15 text-[var(--dragon-jade,#10b981)]",
+        dragonImperial:
+          "border-[var(--dragon-imperial-red,#b91c1c)]/30 bg-[var(--dragon-imperial-red,#b91c1c)]/15 text-[var(--dragon-imperial-red,#b91c1c)]",
+        success:
+          "border-transparent bg-success text-success-foreground hover:bg-success/80",
       },
     },
     defaultVariants: {
