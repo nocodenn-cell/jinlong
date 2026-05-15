@@ -27,6 +27,8 @@ type Props = {
   totalLiquidoComGerente: number
   moedaPrefixo: string
   produtoPanel: ReactNode
+  /** Seletor de forma de pagamento (aba Pgto). */
+  metodoPagamentoPanel?: ReactNode
 }
 
 function moneyLocale(idioma: Idioma) {
@@ -45,6 +47,7 @@ export function CaixaPdvOperadorTabs({
   totalLiquidoComGerente,
   moedaPrefixo,
   produtoPanel,
+  metodoPagamentoPanel,
 }: Props) {
   const classicChrome = layoutVariant === "classic"
   const loc = moneyLocale(idioma)
@@ -161,6 +164,7 @@ export function CaixaPdvOperadorTabs({
           <div>
             <h3 className="text-sm font-semibold text-foreground">{m.caixa.pdv_pgto_parcelas_titulo}</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.caixa.pdv_pgto_um_meio_dinheiro}</p>
+            {metodoPagamentoPanel ? <div className="mt-3">{metodoPagamentoPanel}</div> : null}
           </div>
           <ul className="space-y-2 border-t border-border pt-3">
             {pagamentos.map((p, idx) => (

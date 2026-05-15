@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -17,6 +18,7 @@ type Props = {
   carregandoRegras: boolean
   totalLiquidoComGerente: number
   moedaPrefixo: string
+  metodoPagamentoPanel?: ReactNode
 }
 
 function moneyLocale(idioma: Idioma) {
@@ -37,6 +39,7 @@ export function CaixaPdvCartSaleBar({
   carregandoRegras,
   totalLiquidoComGerente,
   moedaPrefixo,
+  metodoPagamentoPanel,
 }: Props) {
   const loc = moneyLocale(idioma)
   const fmt = (n: number) =>
@@ -50,7 +53,9 @@ export function CaixaPdvCartSaleBar({
       className="shrink-0 border-t border-blue-800/80 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 px-3 py-3 text-white shadow-[0_-4px_14px_rgba(0,0,0,0.12)] sm:px-4"
       data-caixa-cart-sale-bar
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+      <div className="flex flex-col gap-3">
+        {metodoPagamentoPanel ? <div className="w-full">{metodoPagamentoPanel}</div> : null}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -88,6 +93,7 @@ export function CaixaPdvCartSaleBar({
           >
             {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
           </Button>
+        </div>
         </div>
       </div>
     </div>

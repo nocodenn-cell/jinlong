@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -37,6 +38,8 @@ type Props = {
   valorDescontoGerente: number
   totalLiquidoComGerente: number
   moedaPrefixo: string
+  /** Layout padrão: seletor de forma de pagamento acima do botão finalizar. */
+  metodoPagamentoPanel?: ReactNode
 }
 
 function moneyLocale(idioma: Idioma) {
@@ -74,6 +77,7 @@ export function CaixaFooter({
   valorDescontoGerente,
   totalLiquidoComGerente,
   moedaPrefixo,
+  metodoPagamentoPanel,
 }: Props) {
   const loc = moneyLocale(idioma)
   const fmt = (n: number) =>
@@ -256,6 +260,9 @@ export function CaixaFooter({
               </div>
             </div>
           )}
+          {metodoPagamentoPanel ? (
+            <div className="w-full min-w-[12rem] max-w-md">{metodoPagamentoPanel}</div>
+          ) : null}
           <div className="text-right min-w-[7rem]">
             <div className="text-sm font-medium text-foreground/90">{m.caixa.total_pagar}</div>
             <div

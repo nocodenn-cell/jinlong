@@ -6,19 +6,22 @@ import {
   type FinalizarVendaInput,
 } from "@/app/caixa/finalizarVendaValidation"
 
-/** Uma única parcela em dinheiro com valor igual ao total — UI de split foi removida do PDV. */
-export function useCaixaPagamentos(totalLiquidoComGerente: number) {
+/** Uma única parcela com valor igual ao total — forma escolhida pelo operador. */
+export function useCaixaPagamentos(
+  totalLiquidoComGerente: number,
+  formaPagamento: FinalizarVendaInput["formaPagamento"],
+) {
   const pagamentos = useMemo(
     (): Array<{
       formaPagamento: FinalizarVendaInput["formaPagamento"]
       valor: number
     }> => [
       {
-        formaPagamento: "DINHEIRO",
+        formaPagamento,
         valor: roundMoney2(Math.max(0, totalLiquidoComGerente)),
       },
     ],
-    [totalLiquidoComGerente],
+    [totalLiquidoComGerente, formaPagamento],
   )
 
   const resetPagamentos = useCallback(() => {}, [])
