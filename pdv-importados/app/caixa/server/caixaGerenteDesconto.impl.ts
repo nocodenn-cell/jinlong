@@ -5,6 +5,7 @@ import {
   mensagemErroDeExcecao,
   mensagemErroParaUsuario,
 } from '@/lib/errors/mensagemErroUsuario'
+import { gerarTokenHmacGerente } from '@/lib/security/gerenteTokenHmac'
 import type { LimiteSangriaResult, ValidarGerenteDescontoResult } from '@/app/caixa/caixaActionTypes'
 
 export async function validarGerenteDescontoImpl(input: {
@@ -63,13 +64,26 @@ export async function validarGerenteDescontoImpl(input: {
       }
     }
 
-    return {
-      ok: true,
-      token: String(payload.token ?? ''),
-      expiraEm: String(payload.expira_em ?? ''),
-      maxDescontoPercentual: Number(payload.max_desconto_percentual ?? 0),
-      gerenteId: String(payload.gerente_id ?? ''),
-    }
+    const edgeToken = String(payload.token ?? '')
+    const expiraEm = String(payload.expira_em ?? '')
+    const maxDescontoPercentual = Number(payload.max_desconto_percentual ?? 0)
+    const gerenteId = String(payload.gerente_id ?? '')
+
+    const secret = process.env.GERENTE_TOKEN_SECRET
+    const token = secret
+      ? gerarTokenHmacGerente(
+          {
+            edgeToken,
+            gerenteId,
+            deviceFingerprint: (input.deviceFingerprint ?? '').trim().toLowerCase().slice(0, 200),
+            expiraEm,
+            maxDesconto: maxDescontoPercentual,
+          },
+          secret,
+        )
+      : edgeToken
+
+    return { ok: true, token, expiraEm, maxDescontoPercentual, gerenteId }
   } catch (e) {
     return {
       ok: false,

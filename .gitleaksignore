@@ -1,0 +1,8 @@
+# False positives — not real secrets
+# JWT in .env.test is a well-known placeholder (sub=1234567890, role=anon)
+3f623524886a0d454d535e4f07a5243fe7f9e1a0:pdv-importados/.env.test:jwt:5
+# UUIDs used as idempotency keys in unit tests
+c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/app/caixa/finalizarVendaValidation.test.ts:generic-api-key:110
+c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:6
+c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:25
+c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:30
