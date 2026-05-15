@@ -108,7 +108,7 @@ export async function listarCategoriasProdutos(
   }
 
   // Contar produtos vinculados por categoria em uma query separada
-  const ids = (data ?? []).map((r: DbCategoriaRow) => r.id)
+  const ids = (data ?? []).map((r) => r.id)
   const produtosPorCategoria: Record<string, number> = {}
 
   if (ids.length > 0) {
@@ -127,7 +127,7 @@ export async function listarCategoriasProdutos(
     }
   }
 
-  const rows: CategoriaProdutoRow[] = (data ?? []).map((r: DbCategoriaRow) =>
+  const rows: CategoriaProdutoRow[] = (data ?? []).map((r) =>
     toRow({ ...r, qtd_produtos: produtosPorCategoria[r.id] ?? 0 }),
   )
 
