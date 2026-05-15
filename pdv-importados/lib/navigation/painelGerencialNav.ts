@@ -9,6 +9,7 @@ export type PainelGerencialNavKey =
   | 'dashboard'
   | 'produtos'
   | 'categorias_produtos'
+  | 'categorias_financeiras'
   | 'vendas'
   | 'estoque'
   | 'recebimento'
@@ -23,6 +24,7 @@ export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'dashboard') return '/admin/dashboard'
   if (key === 'configuracoes') return '/gerente/configuracoes'
   if (key === 'categorias_produtos') return '/gerente/categorias-produtos'
+  if (key === 'categorias_financeiras') return '/gerente/categorias-financeiras'
   return `/gerente/${key}`
 }
 
@@ -44,6 +46,8 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
       return m.produtos.titulo
     case 'categorias_produtos':
       return m.categorias_produtos.nav_label
+    case 'categorias_financeiras':
+      return m.categorias_financeiras.nav_label
     case 'estoque':
       return m.estoque.titulo
     case 'recebimento':
@@ -102,7 +106,7 @@ export const GERENTE_NAV_TOPICS: readonly GerenteNavTopic[] = [
   { id: 'catalogo', items: ['produtos', 'categorias_produtos'] },
   { id: 'estoque_logistica', items: ['estoque', 'recebimento', 'transferencias'] },
   { id: 'vendas_caixa', items: ['vendas', 'caixas'] },
-  { id: 'financeiro', items: ['financeiro'] },
+  { id: 'financeiro', items: ['financeiro', 'categorias_financeiras'] },
   { id: 'analise', items: ['relatorios'] },
   { id: 'sistema', items: ['configuracoes', 'dashboard'] },
 ] as const
