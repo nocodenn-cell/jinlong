@@ -240,7 +240,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     const obs = new IntersectionObserver(
       async (entries) => {
         if (!entries[0]?.isIntersecting) return
-        const { paginaAtual: cur, totalPaginas, loadingList: busy, filtros: f, itensPorPagina: ipp } = scrollStateRef.current
+        const { paginaAtual: cur, totalPaginas, loadingList: busy, filtros: f } = scrollStateRef.current
         if (cur >= totalPaginas || busy) return
         const nextPage = cur + 1
         setPaginaAtual(nextPage)
