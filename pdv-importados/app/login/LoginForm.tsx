@@ -122,12 +122,27 @@ export function LoginForm({ messages: m }: Props) {
 
   return (
     <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center bg-black px-4 py-12 sm:py-16">
-      <h1 className="login-premium-wordmark mb-10 max-w-md text-center text-lg leading-snug sm:mb-12 sm:text-xl">
-        <span className="inline-block">Jīn Lóng</span>
-        <span className="mx-2 inline-block align-middle text-[#bfa76a]/45" aria-hidden>
-          |
-        </span>
-        <span className="login-premium-wordmark-han inline-block align-middle">{m.brand.logo_subtitle}</span>
+      <div className="login-premium-art-wrap">
+        <div className="login-premium-dragon-frame">
+          <div className="login-premium-dragon-media">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/branding/brand-double-dragon.png"
+              alt=""
+              width={280}
+              height={280}
+              className="login-premium-dragon-img"
+              draggable={false}
+            />
+          </div>
+          <div className="login-premium-vignette" aria-hidden />
+        </div>
+      </div>
+
+      <h1 className="login-premium-wordmark mb-8 text-center">
+        <span className="login-premium-wordmark-han">{m.brand.logo_subtitle}</span>
+        <span className="mx-2 text-[#bfa76a]/45" aria-hidden>|</span>
+        <span>Jīn Lóng</span>
       </h1>
 
       <div className="login-premium-form-block w-full max-w-[380px]">
