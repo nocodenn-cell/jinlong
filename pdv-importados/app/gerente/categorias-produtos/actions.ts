@@ -109,7 +109,7 @@ export async function listarCategoriasProdutos(
 
   // Contar produtos vinculados por categoria em uma query separada
   const ids = (data ?? []).map((r: DbCategoriaRow) => r.id)
-  let produtosPorCategoria: Record<string, number> = {}
+  const produtosPorCategoria: Record<string, number> = {}
 
   if (ids.length > 0) {
     const { data: prodData } = await supabase
