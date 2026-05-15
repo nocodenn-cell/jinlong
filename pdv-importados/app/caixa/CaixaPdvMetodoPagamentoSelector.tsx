@@ -12,11 +12,12 @@ type Props = Readonly<{
   variant?: "default" | "classic"
 }>
 
-const OPCOES: ReadonlyArray<{ id: MetodoPagamentoUi; labelKey: keyof Mensagens["gerente"] }> = [
-  { id: "dinheiro", labelKey: "pagamento_dinheiro" },
-  { id: "pix", labelKey: "pagamento_pix" },
-  { id: "debito", labelKey: "forma_cartao_debito" },
-  { id: "credito", labelKey: "forma_cartao_credito" },
+// Mapeamento usando as chaves corretas de m.caixa
+const OPCOES: ReadonlyArray<{ id: MetodoPagamentoUi; labelKey: keyof Mensagens["caixa"] }> = [
+  { id: "dinheiro", labelKey: "pdv_metodo_pagamento_dinheiro" },
+  { id: "pix", labelKey: "pdv_metodo_pagamento_pix" },
+  { id: "debito", labelKey: "pdv_metodo_pagamento_debito" },
+  { id: "credito", labelKey: "pdv_metodo_pagamento_credito" },
 ]
 
 export function CaixaPdvMetodoPagamentoSelector({
@@ -45,6 +46,8 @@ export function CaixaPdvMetodoPagamentoSelector({
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         {OPCOES.map((op) => {
           const selected = value === op.id
+          // Obtém o texto da chave correta em m.caixa (como string)
+          const label = m.caixa[op.labelKey] as string
           return (
             <button
               key={op.id}
@@ -52,7 +55,7 @@ export function CaixaPdvMetodoPagamentoSelector({
               role="radio"
               aria-checked={selected}
               disabled={disabled}
-              title={m.gerente[op.labelKey]}
+              title={label}
               className={cn(
                 "min-h-9 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
                 classic
@@ -65,7 +68,7 @@ export function CaixaPdvMetodoPagamentoSelector({
               )}
               onClick={() => onChange(op.id)}
             >
-              {m.gerente[op.labelKey]}
+              {label}
             </button>
           )
         })}
