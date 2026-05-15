@@ -19,62 +19,19 @@ create index if not exists idx_cat_fin_nome   on public.categorias_financeiras(l
 -- RLS
 alter table public.categorias_financeiras enable row level security;
 
--- Dono: acesso total (SELECT, INSERT, UPDATE, DELETE)
-create policy "dono_all_cat_fin" on public.categorias_financeiras
+-- Dono + Gerente: CRUD completo (mesma permissão para ambos nesta tabela)
+create policy "dono_gerente_all_cat_fin" on public.categorias_financeiras
   for all
   using (
     exists (
       select 1 from public.usuarios u
-      where u.id = auth.uid() and u.perfil = 'DONO'
+      where u.id = auth.uid() and u.perfil in ('DONO', 'GERENTE')
     )
   )
   with check (
     exists (
       select 1 from public.usuarios u
-      where u.id = auth.uid() and u.perfil = 'DONO'
-    )
-  );
-
--- Gerente: leitura + escrita + exclusão
-create policy "gerente_select_cat_fin" on public.categorias_financeiras
-  for select
-  using (
-    exists (
-      select 1 from public.usuarios u
-      where u.id = auth.uid() and u.perfil = 'GERENTE'
-    )
-  );
-
-create policy "gerente_insert_cat_fin" on public.categorias_financeiras
-  for insert
-  with check (
-    exists (
-      select 1 from public.usuarios u
-      where u.id = auth.uid() and u.perfil = 'GERENTE'
-    )
-  );
-
-create policy "gerente_update_cat_fin" on public.categorias_financeiras
-  for update
-  using (
-    exists (
-      select 1 from public.usuarios u
-      where u.id = auth.uid() and u.perfil = 'GERENTE'
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.usuarios u
-      where u.id = auth.uid() and u.perfil = 'GERENTE'
-    )
-  );
-
-create policy "gerente_delete_cat_fin" on public.categorias_financeiras
-  for delete
-  using (
-    exists (
-      select 1 from public.usuarios u
-      where u.id = auth.uid() and u.perfil = 'GERENTE'
+      where u.id = auth.uid() and u.perfil in ('DONO', 'GERENTE')
     )
   );
 

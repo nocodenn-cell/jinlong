@@ -4,18 +4,13 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
-import {
-  mensagemErroComSecao,
-  mensagemErroValidacaoZod,
-} from '@/lib/errors/mensagemErroUsuario'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { type CadastroActionResult, zodValidationError } from '../shared/actionHelpers'
 import type { CategoriaProdutoRow } from './categoriasProdutosTypes'
 
 const REVALIDATE_PATH = '/gerente/categorias-produtos'
 
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string }
+type ActionResult<T> = CadastroActionResult<T>
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -68,16 +63,7 @@ export async function listarCategoriasProdutos(
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = ListarCategoriasSchema.safeParse(input)
-  if (!parsed.success) {
-    const { idioma } = await getUsuarioIdioma()
-    return {
-      success: false,
-      error: mensagemErroValidacaoZod(
-        parsed.error.issues.map((i: { message: string }) => i.message).join('; '),
-        idioma,
-      ),
-    }
-  }
+  if (!parsed.success) return zodValidationError(parsed.error.issues)
 
   const { situacao, busca, page, pageSize } = parsed.data
   const supabase = await createClient()
@@ -139,16 +125,7 @@ export async function criarCategoriaProduto(
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = NovaCategoriaSchema.safeParse(input)
-  if (!parsed.success) {
-    const { idioma } = await getUsuarioIdioma()
-    return {
-      success: false,
-      error: mensagemErroValidacaoZod(
-        parsed.error.issues.map((i: { message: string }) => i.message).join('; '),
-        idioma,
-      ),
-    }
-  }
+  if (!parsed.success) return zodValidationError(parsed.error.issues)
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -176,16 +153,7 @@ export async function atualizarCategoriaProduto(
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = AtualizarCategoriaSchema.safeParse(input)
-  if (!parsed.success) {
-    const { idioma } = await getUsuarioIdioma()
-    return {
-      success: false,
-      error: mensagemErroValidacaoZod(
-        parsed.error.issues.map((i: { message: string }) => i.message).join('; '),
-        idioma,
-      ),
-    }
-  }
+  if (!parsed.success) return zodValidationError(parsed.error.issues)
 
   const supabase = await createClient()
   const { error } = await supabase
