@@ -5,10 +5,16 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
-import { type CadastroActionResult, zodValidationError } from '../shared/actionHelpers'
+import {
+  type CadastroActionResult,
+  zodValidationError,
+  alternarAtivoCadastro,
+  excluirCadastro,
+} from '../shared/actionHelpers'
 import type { CategoriaFinanceiraRow, CategoriaFinanceiraTipo } from './categoriasFinanceirasTypes'
 
 const REVALIDATE_PATH = '/gerente/categorias-financeiras'
+const TABELA = 'categorias_financeiras'
 
 type ActionResult<T> = CadastroActionResult<T>
 
@@ -72,7 +78,7 @@ export async function listarCategoriasFinanceiras(
   const supabase = await createClient()
 
   let query = supabase
-    .from('categorias_financeiras')
+    .from(TABELA)
     .select('id, nome, tipo, ativo, created_at', { count: 'exact' })
 
   if (tipo !== 'todos') query = query.eq('tipo', tipo)
@@ -109,7 +115,7 @@ export async function criarCategoriaFinanceira(
 
   const supabase = await createClient()
   const { data, error } = await supabase
-    .from('categorias_financeiras')
+    .from(TABELA)
     .insert({ nome: parsed.data.nome.trim(), tipo: parsed.data.tipo, ativo: true })
     .select('id')
     .single()
@@ -136,7 +142,7 @@ export async function atualizarCategoriaFinanceira(
 
   const supabase = await createClient()
   const { error } = await supabase
-    .from('categorias_financeiras')
+    .from(TABELA)
     .update({ nome: parsed.data.nome.trim(), tipo: parsed.data.tipo })
     .eq('id', parsed.data.id)
 
@@ -155,51 +161,11 @@ export async function alternarAtivoCategoriaFinanceira(
   id: string,
   ativo: boolean,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
-  const idParsed = z.string().uuid().safeParse(id)
-  if (!idParsed.success) return { success: false, error: 'ID inválido.' }
-
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('categorias_financeiras')
-    .update({ ativo })
-    .eq('id', idParsed.data)
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Alterar situação', error.message),
-    }
-  }
-
-  revalidatePath(REVALIDATE_PATH)
-  return { success: true, data: null }
+  return alternarAtivoCadastro(TABELA, id, ativo, [REVALIDATE_PATH])
 }
 
 export async function excluirCategoriaFinanceira(
   id: string,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
-  const idParsed = z.string().uuid().safeParse(id)
-  if (!idParsed.success) return { success: false, error: 'ID inválido.' }
-
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('categorias_financeiras')
-    .delete()
-    .eq('id', idParsed.data)
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Excluir categoria financeira', error.message),
-    }
-  }
-
-  revalidatePath(REVALIDATE_PATH)
-  return { success: true, data: null }
+  return excluirCadastro(TABELA, id, 'Excluir categoria financeira', [REVALIDATE_PATH])
 }

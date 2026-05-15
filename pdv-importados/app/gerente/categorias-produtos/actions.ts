@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
-import { type CadastroActionResult, zodValidationError } from '../shared/actionHelpers'
+import { type CadastroActionResult, zodValidationError, alternarAtivoCadastro } from '../shared/actionHelpers'
 import type { CategoriaProdutoRow } from './categoriasProdutosTypes'
 
 const REVALIDATE_PATH = '/gerente/categorias-produtos'
@@ -177,30 +177,7 @@ export async function alternarAtivoCategoriaProduto(
   id: string,
   ativo: boolean,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
-  const idParsed = z.string().uuid().safeParse(id)
-  if (!idParsed.success) {
-    return { success: false, error: 'ID inválido.' }
-  }
-
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('categorias')
-    .update({ ativo })
-    .eq('id', idParsed.data)
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Alterar situação', error.message),
-    }
-  }
-
-  revalidatePath(REVALIDATE_PATH)
-  revalidatePath('/gerente/produtos')
-  return { success: true, data: null }
+  return alternarAtivoCadastro('categorias', id, ativo, [REVALIDATE_PATH, '/gerente/produtos'])
 }
 
 export async function excluirCategoriaProduto(

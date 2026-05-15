@@ -65,10 +65,7 @@ function showClassicLayoutPreviewBanner(): boolean {
 }
 
 function newCupomSessionId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID()
-  }
-  return `cupom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  return crypto.randomUUID()
 }
 
 function localeFromIdioma(idioma: Idioma): string {
