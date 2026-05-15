@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Allowlist for Claude Code session URLs in commit messages"
+regexTarget = "line"
+# Claude session IDs in commit message trailers look like high-entropy tokens
+# but are not secrets — they are public session URLs used for traceability.
+regexes = [
+  'https://claude\.ai/code/session_[A-Za-z0-9]+',
+]
