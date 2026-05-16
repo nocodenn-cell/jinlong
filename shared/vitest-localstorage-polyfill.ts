@@ -4,6 +4,11 @@
  */
 const memory = new Map<string, string>()
 
+function readMemoryItem(key: string): string | null {
+  const value = memory.get(key)
+  return value === undefined ? null : value
+}
+
 const localStoragePolyfill: Storage = {
   get length() {
     return memory.size
@@ -12,7 +17,7 @@ const localStoragePolyfill: Storage = {
     memory.clear()
   },
   getItem(key: string) {
-    return memory.has(key) ? memory.get(key)! : null
+    return readMemoryItem(key)
   },
   key(index: number) {
     const keys = Array.from(memory.keys())

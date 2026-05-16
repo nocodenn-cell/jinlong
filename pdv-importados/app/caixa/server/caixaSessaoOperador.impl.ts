@@ -135,6 +135,19 @@ export async function fecharCaixaOperadorImpl(input: {
     if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message) }
     if (!caixaAberto) return { ok: false, error: 'Não há caixa aberto para fechar.' }
 
+    const { count: pendentes, error: pendErr } = await supabase
+      .from('movimentacoes_caixa')
+      .select('id', { count: 'exact', head: true })
+      .eq('caixa_id', caixaAberto.id)
+      .eq('status', 'pendente')
+    if (pendErr) return { ok: false, error: mensagemErroComSecao('Caixa', pendErr.message) }
+    if ((pendentes ?? 0) > 0) {
+      return {
+        ok: false,
+        error: 'Existem movimentações pendentes. Aprove ou cancele antes de fechar o caixa.',
+      }
+    }
+
     const valorSistemaDinheiro = await calcularValorSistemaDinheiroCaixa(supabase, caixaAberto.id)
     const diferenca = roundMoney2(valorContado - valorSistemaDinheiro)
     if (Math.abs(diferenca) > LIMITE_DIVERGENCIA_FECHAMENTO && motivo.length < 5) {

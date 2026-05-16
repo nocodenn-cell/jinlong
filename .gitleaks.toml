@@ -1,0 +1,20 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "False positives: placeholder test credentials and Claude session URLs"
+# JWT in .env.test is a well-known placeholder (sub=1234567890, role=anon) — not a real credential.
+# UUIDs in test files (idempotency keys) match generic-api-key rule but are not secrets.
+# Claude Code session URLs in commit trailers match high-entropy token patterns.
+regexTarget = "line"
+regexes = [
+  '''https://claude\.ai/code/session_[A-Za-z0-9]+''',
+]
+paths = [
+  '''pdv-importados/lib/security/gerenteTokenHmac\.ts''',
+  '''pdv-importados/\.env\.test''',
+]
+commits = [
+  "3f623524886a0d454d535e4f07a5243fe7f9e1a0",
+  "c101d045cda89a5239a5df7315759797031aedc1",
+]

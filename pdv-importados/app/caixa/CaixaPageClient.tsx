@@ -48,6 +48,11 @@ import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipe
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
 import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
 import { CaixaPdvItemStagingPlaceholder } from "@/app/caixa/CaixaPdvItemStagingPlaceholder"
+import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
+import {
+  metodoPagamentoToForma,
+  type MetodoPagamentoUi,
+} from "@/app/caixa/caixaMetodoPagamento"
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
@@ -130,6 +135,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
+  const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
 
   const {
     caixaStatus,
@@ -176,6 +182,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   const totalLiquidoComGerente = descontoGerenteAplicado.totalLiquidoComDesconto
   const descontoGerentePercentualEfetivo = descontoGerenteAplicado.percentualClamped
 
+  const formaPagamento = useMemo(
+    () => metodoPagamentoToForma(metodoPagamento),
+    [metodoPagamento],
+  )
+
   const {
     pagamentos,
     somaParcelas,
@@ -188,7 +199,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     atualizarValor,
     autoCompletarUltima,
     resetPagamentos,
-  } = useCaixaPagamentos(totalLiquidoComGerente)
+  } = useCaixaPagamentos(totalLiquidoComGerente, formaPagamento)
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
@@ -264,6 +275,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     aplicarPrecoRpcParaLinha,
     getActiveCupomSessionId: () => cupomSessionIdRef.current,
   })
+
+  const pagamentoControlesDesabilitados =
+    finalizando || buscandoPipeline || carregandoRegras
+
+  const metodoPagamentoSelector = (
+    <CaixaPdvMetodoPagamentoSelector
+      m={m}
+      value={metodoPagamento}
+      onChange={setMetodoPagamento}
+      disabled={pagamentoControlesDesabilitados}
+      variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+    />
+  )
 
   const limparEstadoDescontoGerente = useCallback(() => {
     setGerenteValidadoAte(null)
@@ -370,6 +394,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
     resetPagamentos()
+    setMetodoPagamento("dinheiro")
     setCodigo("")
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
@@ -774,6 +799,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 onAtualizarValor={atualizarValor}
                 onAutoCompletar={autoCompletarUltima}
                 moedaPrefixo={m.caixa.moeda_prefixo}
+                metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
                   pdvLayoutVariant === "classic" ? (
                     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
@@ -853,6 +879,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                   carregandoRegras={carregandoRegras}
                   totalLiquidoComGerente={totalLiquidoComGerente}
                   moedaPrefixo={m.caixa.moeda_prefixo}
+                  metodoPagamentoPanel={metodoPagamentoSelector}
                 />
               )}
             </section>
@@ -988,6 +1015,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
             valorDescontoGerente={valorDescontoGerente}
             totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}
+            metodoPagamentoPanel={
+              pdvLayoutVariant === "default" ? metodoPagamentoSelector : undefined
+            }
           />
         </div>
       </div>

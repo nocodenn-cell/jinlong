@@ -16,13 +16,16 @@ export type ParcelaPagamento = {
 
 const MAX_PARCELAS = 4
 
-function parcelaInicial(total: number): ParcelaPagamento[] {
-  return [{ formaPagamento: "DINHEIRO", valor: roundMoney2(Math.max(0, total)) }]
+function parcelaInicial(forma: FormaPagamento, total: number): ParcelaPagamento[] {
+  return [{ formaPagamento: forma, valor: roundMoney2(Math.max(0, total)) }]
 }
 
-export function useCaixaPagamentos(totalLiquidoComGerente: number) {
+export function useCaixaPagamentos(
+  totalLiquidoComGerente: number,
+  formaPagamento?: FormaPagamento,
+) {
   const [parcelas, setParcelas] = useState<ParcelaPagamento[]>(() =>
-    parcelaInicial(totalLiquidoComGerente),
+    parcelaInicial(formaPagamento ?? "DINHEIRO", totalLiquidoComGerente),
   )
 
   const prevTotalRef = useRef(totalLiquidoComGerente)
@@ -89,8 +92,8 @@ export function useCaixaPagamentos(totalLiquidoComGerente: number) {
   }, [totalLiquidoComGerente])
 
   const resetPagamentos = useCallback(() => {
-    setParcelas(parcelaInicial(totalLiquidoComGerente))
-  }, [totalLiquidoComGerente])
+    setParcelas(parcelaInicial(formaPagamento ?? "DINHEIRO", totalLiquidoComGerente))
+  }, [totalLiquidoComGerente, formaPagamento])
 
   const somaParcelas = roundMoney2(parcelas.reduce((s, p) => s + p.valor, 0))
   const diferenca = roundMoney2(somaParcelas - totalLiquidoComGerente)

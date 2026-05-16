@@ -18,6 +18,34 @@ export function parseEnv(content) {
   return out
 }
 
+function keysMissing(parsed, keys) {
+  return keys.filter((k) => !parsed.get(k))
+}
+
+function keysEmpty(parsed, keys) {
+  return keys.filter((k) => !(parsed.get(k) ?? '').trim())
+}
+
+function printKeysAndExit(level, title, keys) {
+  const log = level === 'error' ? console.error : console.warn
+  log(`[env-check] ${title}`)
+  for (const k of keys) log(` - ${k}`)
+  if (level === 'error') process.exit(1)
+}
+
+function isConditionalBlockActive(parsed, block) {
+  const raw = parsed.get(block.whenKey)
+  const want = (block.whenValueEquals ?? 'true').trim().toLowerCase()
+  return (raw ?? '').trim().toLowerCase() === want
+}
+
+function assertEnvFileExists(envPath, missingFileHint) {
+  if (fs.existsSync(envPath)) return
+  console.error(`[env-check] Arquivo não encontrado: ${envPath}`)
+  console.error(`[env-check] ${missingFileHint}`)
+  process.exit(1)
+}
+
 /**
  * @param {{
  *   cwd?: string
@@ -48,32 +76,24 @@ export function runEnvCheck(opts) {
   } = opts
 
   const envPath = path.join(cwd, envFileName)
-  if (!fs.existsSync(envPath)) {
-    console.error(`[env-check] Arquivo não encontrado: ${envPath}`)
-    console.error(`[env-check] ${missingFileHint}`)
-    process.exit(1)
-  }
+  assertEnvFileExists(envPath, missingFileHint)
 
   const parsed = parseEnv(fs.readFileSync(envPath, 'utf8'))
-  const missing = required.filter((k) => !parsed.get(k))
-  if (missing.length > 0) {
-    console.error('[env-check] Variáveis obrigatórias ausentes:')
-    for (const k of missing) console.error(` - ${k}`)
-    process.exit(1)
+
+  const missingRequired = keysMissing(parsed, required)
+  if (missingRequired.length > 0) {
+    printKeysAndExit('error', 'Variáveis obrigatórias ausentes:', missingRequired)
   }
 
   for (const block of conditionalRequired) {
-    const raw = parsed.get(block.whenKey)
-    const want = (block.whenValueEquals ?? 'true').trim().toLowerCase()
-    const isOn = (raw ?? '').trim().toLowerCase() === want
-    if (!isOn) continue
-    const miss = block.keys.filter((k) => !(parsed.get(k) ?? '').trim())
+    if (!isConditionalBlockActive(parsed, block)) continue
+    const miss = keysEmpty(parsed, block.keys)
     if (miss.length > 0) {
-      console.error(
-        `[env-check] Com ${block.whenKey} ativo, faltam variáveis (${block.description}):`,
+      printKeysAndExit(
+        'error',
+        `Com ${block.whenKey} ativo, faltam variáveis (${block.description}):`,
+        miss,
       )
-      for (const k of miss) console.error(` - ${k}`)
-      process.exit(1)
     }
   }
 
@@ -85,10 +105,9 @@ export function runEnvCheck(opts) {
     }
   }
 
-  const missingRecommended = recommended.filter((k) => !parsed.get(k))
+  const missingRecommended = keysMissing(parsed, recommended)
   if (missingRecommended.length > 0) {
-    console.warn('[env-check] Aviso: variáveis recomendadas ausentes:')
-    for (const k of missingRecommended) console.warn(` - ${k}`)
+    printKeysAndExit('warn', 'Aviso: variáveis recomendadas ausentes:', missingRecommended)
   }
 
   console.log(`[env-check] OK: ${okMessage}`)

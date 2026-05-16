@@ -37,6 +37,8 @@ type Props = {
   onAutoCompletar: () => void
   moedaPrefixo: string
   produtoPanel: ReactNode
+  /** Seletor de forma de pagamento (aba Pgto). */
+  metodoPagamentoPanel?: ReactNode
 }
 
 function moneyLocale(idioma: Idioma) {
@@ -64,6 +66,7 @@ export function CaixaPdvOperadorTabs({
   onAutoCompletar,
   moedaPrefixo,
   produtoPanel,
+  metodoPagamentoPanel,
 }: Props) {
   const classicChrome = layoutVariant === "classic"
   const loc = moneyLocale(idioma)
@@ -191,6 +194,7 @@ export function CaixaPdvOperadorTabs({
               </button>
             )}
           </div>
+          {metodoPagamentoPanel ? <div className="mb-1">{metodoPagamentoPanel}</div> : null}
 
           {/* Lista de parcelas */}
           <div className="space-y-3">

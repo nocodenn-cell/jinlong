@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+
+const ITEMS_POR_PAGINA_PADRAO = 20
 import type { GerenteTableColumn } from '@/components/gerente/GerenteTable'
 import type { CampoFiltro } from '@/components/gerente/cadastro'
 import { CadastroRapidoBlock, FiltroLateralCadastro, TabelaCadastroPadrao } from '@/components/gerente/cadastro'
@@ -191,7 +193,8 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const [total, setTotal] = useState(inicial.total)
   const [filtros, setFiltros] = useState<FiltrosUi>(FILTROS_UI_INITIAL)
   const [paginaAtual, setPaginaAtual] = useState(1)
-  const [itensPorPagina, setItensPorPagina] = useState(10)
+  const [itensPorPagina, setItensPorPagina] = useState(ITEMS_POR_PAGINA_PADRAO)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const [loadingList, setLoadingList] = useState(false)
   const tinhaProdutosAoCarregar = useRef(inicial.total > 0)
 
@@ -203,7 +206,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const [produtoEditar, setProdutoEditar] = useState<ProdutoGerenteRow | null>(null)
   const [linhasImpressao, setLinhasImpressao] = useState<ProdutoGerenteRow[]>([])
 
-  const fetchList = useCallback(async (f: FiltrosUi, page: number) => {
+  const fetchList = useCallback(async (f: FiltrosUi, page: number, append = false) => {
     setLoadingList(true)
     try {
       const r = await buscarProdutosComFiltros(toBuscarInput(f, page, itensPorPagina))
@@ -211,12 +214,43 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      setRows(r.data.rows)
+      setRows((prev) => append ? [...prev, ...r.data.rows] : r.data.rows)
       setTotal(r.data.total)
     } finally {
       setLoadingList(false)
     }
   }, [itensPorPagina])
+
+  // Ref estável para leitura no observer sem recriar o efeito
+  const scrollStateRef = useRef({ paginaAtual, totalPaginas: 1, loadingList: false, filtros, itensPorPagina })
+  useEffect(() => {
+    scrollStateRef.current = {
+      paginaAtual,
+      totalPaginas: Math.max(1, Math.ceil(total / itensPorPagina)),
+      loadingList,
+      filtros,
+      itensPorPagina,
+    }
+  })
+
+  // IntersectionObserver: carrega próxima página e adiciona ao final da lista
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      async (entries) => {
+        if (!entries[0]?.isIntersecting) return
+        const { paginaAtual: cur, totalPaginas, loadingList: busy, filtros: f } = scrollStateRef.current
+        if (cur >= totalPaginas || busy) return
+        const nextPage = cur + 1
+        setPaginaAtual(nextPage)
+        await fetchList(f, nextPage, true)
+      },
+      { rootMargin: '300px' },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [fetchList])
 
   const primeiraMontagem = useRef(true)
   useEffect(() => {
@@ -224,11 +258,13 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       primeiraMontagem.current = false
       return
     }
+    // Ao mudar filtros ou tamanho da página, reseta para página 1 e substitui linhas
+    setPaginaAtual(1)
     const id = setTimeout(() => {
-      void fetchList(filtros, paginaAtual)
+      void fetchList(filtros, 1, false)
     }, 320)
     return () => clearTimeout(id)
-  }, [filtros, paginaAtual, itensPorPagina, fetchList])
+  }, [filtros, itensPorPagina, fetchList])
 
   const refetch = useCallback(() => {
     void fetchList(filtros, paginaAtual)
@@ -887,6 +923,9 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           </TabelaCadastroPadrao>
         </div>
       </div>
+      {/* Sentinel para scroll infinito */}
+      <div ref={sentinelRef} className="h-1" aria-hidden />
+
       <ProdutosListaImpressao rows={linhasImpressao.length > 0 ? linhasImpressao : rows} m={m} idioma={idioma} />
     </>
   )
