@@ -29,6 +29,19 @@ export function useCaixaPagamentos(
   )
 
   const prevTotalRef = useRef(totalLiquidoComGerente)
+  const prevFormaRef = useRef(formaPagamento)
+
+  useEffect(() => {
+    if (formaPagamento && formaPagamento !== prevFormaRef.current) {
+      prevFormaRef.current = formaPagamento
+      setParcelas((old) => {
+        if (old.length === 1) {
+          return [{ ...old[0], formaPagamento }]
+        }
+        return old
+      })
+    }
+  }, [formaPagamento])
 
   useEffect(() => {
     const prev = prevTotalRef.current
