@@ -45,6 +45,7 @@ export type DashboardResumoDTO = {
   margem_estimada: number | null
   cobertura_custo: number
   custo_confiavel: boolean
+  produto_mais_vendido: string
   serie_horaria_hoje: DashboardSerieHora[]
   estoque_critico: DashboardEstoqueCritico[]
   atividades_recentes: DashboardAtividadeRecente[]
