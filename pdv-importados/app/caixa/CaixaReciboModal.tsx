@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import type { Mensagens } from "@/i18n/getMessages"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { useThermalPrinter } from "@/hooks/useThermalPrinter"
 import { cn } from "@/lib/utils"
@@ -28,7 +27,6 @@ export type ReciboVenda = {
 }
 
 type Props = Readonly<{
-  m: Mensagens
   venda: ReciboVenda
   onClose: () => void
 }>
@@ -54,7 +52,7 @@ function fmtData(d: Date): string {
   })
 }
 
-export function CaixaReciboModal({ m, venda, onClose }: Props) {
+export function CaixaReciboModal({ venda, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const thermal = useThermalPrinter()
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
@@ -134,7 +132,7 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
             {supportsWebUSB ? (
               <button
                 type="button"
-                onClick={() => { handleThermalPrint().catch((_e: unknown) => undefined) }}
+                onClick={() => { void handleThermalPrint().catch(() => { }) }}
                 disabled={thermal.status === "connecting" || thermal.status === "printing"}
                 aria-label="Imprimir (térmica direta)"
                 title="Imprime diretamente na impressora térmica (sem confirmação)"

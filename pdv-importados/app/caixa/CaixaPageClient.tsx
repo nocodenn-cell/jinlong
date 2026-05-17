@@ -276,7 +276,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     <CaixaSplitPagamentos
       m={m}
       linhas={linhas}
-      totalLiquidoComGerente={totalLiquidoComGerente}
       restante={restante}
       valido={pagamentosValidos}
       disabled={pagamentoControlesDesabilitados}
@@ -1122,7 +1121,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
       )}
       {reciboVenda && (
         <CaixaReciboModal
-          m={m}
           venda={reciboVenda}
           onClose={() => setReciboVenda(null)}
         />

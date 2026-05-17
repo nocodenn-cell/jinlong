@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils"
 type Props = Readonly<{
   m: Mensagens
   linhas: PagamentoLinha[]
-  totalLiquidoComGerente: number
   restante: number
   valido: boolean
   disabled: boolean
@@ -24,7 +23,6 @@ type Props = Readonly<{
 export function CaixaSplitPagamentos({
   m,
   linhas,
-  totalLiquidoComGerente,
   restante,
   valido,
   disabled,

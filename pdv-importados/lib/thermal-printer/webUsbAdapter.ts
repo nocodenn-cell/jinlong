@@ -100,7 +100,7 @@ export class WebUsbPrinter {
   async disconnect(): Promise<void> {
     if (this.device) {
       // Device may already be closed by the OS; ignore the error
-      await this.device.close().catch((_e: unknown) => undefined)
+      await this.device.close().catch(() => { })
       this.device = null
     }
     _savedInfo = null

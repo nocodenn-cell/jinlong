@@ -1,6 +1,5 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { verificarTokenHmacGerente } from '@/lib/security/gerenteTokenHmac'
 import {
   finalizarVendaInputSchema,
   roundMoney2,
@@ -171,26 +170,6 @@ export async function finalizarVendaCaixaImpl(
     const gerentePercentual = input.descontoGerentePercentual ?? null
     const hasDescontoGerente = !!input.descontoGerenteToken && gerentePercentual !== null
 
-    // Verifica token HMAC quando o segredo está configurado.
-    // Tokens legados (sem prefixo v1.) são aceitos se o segredo não estiver definido.
-    let resolvedGerenteToken = input.descontoGerenteToken ?? null
-    if (hasDescontoGerente && resolvedGerenteToken) {
-      const secret = process.env.GERENTE_TOKEN_SECRET
-      if (secret && resolvedGerenteToken.startsWith('v1.')) {
-        const verification = await verificarTokenHmacGerente(resolvedGerenteToken, secret)
-        if (!verification.ok) {
-          return {
-            ok: false,
-            error:
-              verification.reason === 'expirado'
-                ? 'O desconto do gerente expirou. Solicite uma nova autorização.'
-                : 'Token de desconto do gerente inválido. Solicite uma nova autorização.',
-          }
-        }
-        resolvedGerenteToken = verification.payload.edgeToken
-      }
-    }
-
     if (!hasDescontoGerente && computedBase.totalBruto > 0.009) {
       const cfgMap = await obterMapaConfiguracoesParaCaixaWeb(supabase)
       const maxPctOp = parsePercentConfig(cfgMap.desconto_maximo_operador_percentual, 10)
@@ -286,7 +265,7 @@ export async function finalizarVendaCaixaImpl(
         }),
       ),
       p_itens: itensRpc,
-      p_desconto_gerente_token: resolvedGerenteToken,
+      p_desconto_gerente_token: input.descontoGerenteToken ?? null,
       p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
       p_strict_manager_discount_auth: strictManagerDiscountAuth,
       p_fiscal_auto_enqueue: runtimeCfg.autoEnqueueFiscalOnSale,

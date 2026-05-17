@@ -11,7 +11,6 @@ regexes = [
   '''https://claude\.ai/code/session_[A-Za-z0-9]+''',
 ]
 paths = [
-  '''pdv-importados/lib/security/gerenteTokenHmac\.ts''',
   '''pdv-importados/\.env\.test''',
 ]
 commits = [
