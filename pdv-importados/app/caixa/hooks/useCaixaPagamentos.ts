@@ -13,8 +13,9 @@ export type PagamentoLinha = {
   valor: string
 }
 
+let _linhaSeq = 0
 function novaLinha(metodo: MetodoPagamentoUi = "dinheiro", valor = "0"): PagamentoLinha {
-  return { id: crypto.randomUUID(), metodo, valor }
+  return { id: `linha-${++_linhaSeq}`, metodo, valor }
 }
 
 export function useCaixaPagamentos(totalLiquidoComGerente: number) {
