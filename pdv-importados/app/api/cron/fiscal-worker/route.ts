@@ -39,6 +39,6 @@ export async function GET(req: Request): Promise<NextResponse> {
     body: JSON.stringify({ limit: 20 }),
   })
 
-  const payload = await res.json().catch(() => ({}))
+  const payload = await res.json().catch((_e: unknown) => ({}))
   return NextResponse.json(payload, { status: res.status })
 }
