@@ -69,18 +69,8 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
   const handlePrint = () => {
     const el = printRef.current
     if (!el) return
-    const win = window.open("", "_blank", "width=400,height=600") // NOSONAR
-    if (!win) return
 
-    // Build print document via DOM API (avoids document.write XSS flag)
-    const doc = win.document
-    doc.documentElement.lang = "pt-BR"
-    doc.title = "Recibo"
-    const meta = doc.createElement("meta")
-    meta.setAttribute("charset", "UTF-8")
-    doc.head.appendChild(meta)
-    const style = doc.createElement("style")
-    style.textContent = [
+    const PRINT_CSS = [
       "* { box-sizing: border-box; margin: 0; padding: 0; }",
       "body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; padding: 8px; width: 300px; }",
       ".recibo-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
@@ -96,14 +86,24 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
       ".recibo-linha.total { font-weight: bold; font-size: 14px; }",
       ".recibo-pgto { margin-bottom: 6px; }",
       ".recibo-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; }",
-      ".luck { color: #b45309; }",
     ].join("\n")
+
+    // Use a hidden same-page iframe so we avoid window.open (S5148) while
+    // still getting an isolated print context with clean styles.
+    const iframe = document.createElement("iframe")
+    iframe.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden"
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentDocument
+    if (!doc) { document.body.removeChild(iframe); return }
+
+    const style = doc.createElement("style")
+    style.textContent = PRINT_CSS
     doc.head.appendChild(style)
     doc.body.appendChild(el.cloneNode(true))
-    doc.close()
-    win.focus()
-    win.print()
-    win.close()
+
+    iframe.contentWindow?.print()
+    document.body.removeChild(iframe)
   }
 
   // Fecha com Escape
