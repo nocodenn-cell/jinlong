@@ -57,41 +57,43 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
 
   const handlePrint = () => {
-    const conteudo = printRef.current?.innerHTML
-    if (!conteudo) return
+    const el = printRef.current
+    if (!el) return
     const win = window.open("", "_blank", "width=400,height=600")
     if (!win) return
-    win.document.write(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8"/>
-  <title>Recibo</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; padding: 8px; width: 300px; }
-    .recibo-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
-    .recibo-header h1 { font-size: 14px; font-weight: bold; }
-    .recibo-header p { font-size: 11px; color: #555; }
-    .recibo-id { font-size: 10px; color: #777; }
-    .recibo-itens { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
-    .recibo-item { margin-bottom: 3px; }
-    .recibo-item-nome { font-weight: bold; }
-    .recibo-item-detalhe { display: flex; justify-content: space-between; font-size: 11px; color: #444; }
-    .recibo-totais { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
-    .recibo-linha { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }
-    .recibo-linha.total { font-weight: bold; font-size: 14px; }
-    .recibo-pgto { margin-bottom: 6px; }
-    .recibo-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; }
-  </style>
-</head>
-<body>${conteudo}</body>
-</html>`)
-    win.document.close()
+
+    // Build print document via DOM API (avoids document.write XSS flag)
+    const doc = win.document
+    doc.documentElement.lang = "pt-BR"
+    doc.title = "Recibo"
+    const meta = doc.createElement("meta")
+    meta.setAttribute("charset", "UTF-8")
+    doc.head.appendChild(meta)
+    const style = doc.createElement("style")
+    style.textContent = [
+      "* { box-sizing: border-box; margin: 0; padding: 0; }",
+      "body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; padding: 8px; width: 300px; }",
+      ".recibo-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
+      ".recibo-header h1 { font-size: 14px; font-weight: bold; }",
+      ".recibo-header p { font-size: 11px; color: #555; }",
+      ".recibo-id { font-size: 10px; color: #777; }",
+      ".recibo-itens { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
+      ".recibo-item { margin-bottom: 3px; }",
+      ".recibo-item-nome { font-weight: bold; }",
+      ".recibo-item-detalhe { display: flex; justify-content: space-between; font-size: 11px; color: #444; }",
+      ".recibo-totais { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
+      ".recibo-linha { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }",
+      ".recibo-linha.total { font-weight: bold; font-size: 14px; }",
+      ".recibo-pgto { margin-bottom: 6px; }",
+      ".recibo-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; }",
+      ".luck { color: #b45309; }",
+    ].join("\n")
+    doc.head.appendChild(style)
+    doc.body.appendChild(el.cloneNode(true))
+    doc.close()
     win.focus()
-    setTimeout(() => {
-      win.print()
-      win.close()
-    }, 250)
+    win.print()
+    win.close()
   }
 
   // Fecha com Escape
@@ -141,7 +143,11 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
           <div ref={printRef} className="flex flex-col gap-3 font-mono text-xs text-foreground">
             {/* Cabeçalho */}
             <div className="recibo-header text-center border-b border-dashed border-border pb-3">
-              <h1 className="text-sm font-bold">CUPOM NÃO FISCAL</h1>
+              <h1 className="text-sm font-bold">
+                <span className="mr-1 text-amber-500" aria-hidden="true">福</span>
+                CUPOM NÃO FISCAL
+                <span className="ml-1 text-amber-500" aria-hidden="true">福</span>
+              </h1>
               <p className="text-muted-foreground">{fmtData(venda.data)}</p>
               <p className="recibo-id text-muted-foreground/70 text-[10px]">
                 #{venda.vendaId.slice(0, 8).toUpperCase()}
