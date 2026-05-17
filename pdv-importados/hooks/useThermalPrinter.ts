@@ -1,0 +1,89 @@
+"use client"
+
+import { useState, useCallback, useEffect } from "react"
+import { WebUsbPrinter, type ThermalPrinterInfo } from "@/lib/thermal-printer/webUsbAdapter"
+import { buildReciboEscPos } from "@/lib/thermal-printer/escpos"
+import type { ReciboVenda } from "@/app/caixa/CaixaReciboModal"
+
+export type ThermalStatus = "idle" | "connecting" | "connected" | "printing" | "error"
+
+export type UseThermalPrinterReturn = {
+  supported: boolean
+  status: ThermalStatus
+  deviceInfo: ThermalPrinterInfo | null
+  savedInfo: ThermalPrinterInfo | null
+  errorMsg: string | null
+  connect: () => Promise<void>
+  printRecibo: (venda: ReciboVenda, cols?: number) => Promise<void>
+  disconnect: () => Promise<void>
+}
+
+export function useThermalPrinter(): UseThermalPrinterReturn {
+  const printer = WebUsbPrinter.getInstance()
+
+  const [status, setStatus]         = useState<ThermalStatus>(() =>
+    printer.isConnected() ? "connected" : "idle",
+  )
+  const [deviceInfo, setDeviceInfo] = useState<ThermalPrinterInfo | null>(() =>
+    printer.getInfo(),
+  )
+  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
+  const [savedInfo]                 = useState<ThermalPrinterInfo | null>(() =>
+    WebUsbPrinter.getSavedInfo(),
+  )
+
+  // Keep status in sync if the singleton was already connected before mount
+  useEffect(() => {
+    if (printer.isConnected()) {
+      setStatus("connected")
+      setDeviceInfo(printer.getInfo())
+    }
+  }, [printer])
+
+  const connect = useCallback(async () => {
+    setStatus("connecting")
+    setErrorMsg(null)
+    try {
+      const info = await printer.connect()
+      setDeviceInfo(info)
+      setStatus("connected")
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Erro ao conectar impressora.")
+      setStatus("error")
+    }
+  }, [printer])
+
+  const printRecibo = useCallback(
+    async (venda: ReciboVenda, cols = 32) => {
+      setStatus("printing")
+      setErrorMsg(null)
+      try {
+        const buffer = buildReciboEscPos(venda, cols)
+        await printer.print(buffer)
+        setStatus("connected")
+      } catch (e) {
+        setErrorMsg(e instanceof Error ? e.message : "Erro ao imprimir.")
+        setStatus("error")
+      }
+    },
+    [printer],
+  )
+
+  const disconnect = useCallback(async () => {
+    await printer.disconnect()
+    setDeviceInfo(null)
+    setStatus("idle")
+    setErrorMsg(null)
+  }, [printer])
+
+  return {
+    supported: WebUsbPrinter.isSupported(),
+    status,
+    deviceInfo,
+    savedInfo,
+    errorMsg,
+    connect,
+    printRecibo,
+    disconnect,
+  }
+}
