@@ -22,7 +22,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   let endpointUrl: URL
   try {
     endpointUrl = new URL(endpoint)
-  } catch {
+  } catch (_e: unknown) {
     return NextResponse.json({ ok: false, error: "FISCAL_WORKER_ENDPOINT is not a valid URL" }, { status: 500 })
   }
   if (endpointUrl.protocol !== "https:") {
