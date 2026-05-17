@@ -1,9 +1,6 @@
 'use server'
 
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
   type CadastroActionResult,
   zodValidationError,
@@ -11,6 +8,7 @@ import {
   excluirCadastro,
   criarCadastro,
   atualizarCadastro,
+  listarCadastro,
 } from '../shared/actionHelpers'
 import type { CategoriaFinanceiraRow, CategoriaFinanceiraTipo } from './categoriasFinanceirasTypes'
 
@@ -18,8 +16,6 @@ const REVALIDATE_PATH = '/gerente/categorias-financeiras'
 const TABELA = 'categorias_financeiras'
 
 type ActionResult<T> = CadastroActionResult<T>
-
-// ─── Schemas ─────────────────────────────────────────────────────────────────
 
 const TIPOS_VALIDOS = ['RECEITA', 'DESPESA', 'AMBOS'] as const
 
@@ -44,65 +40,29 @@ const ListarCategoriasFinSchema = z.object({
 
 export type ListarCategoriasFinInput = z.infer<typeof ListarCategoriasFinSchema>
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
-
-type DbRow = {
-  id: string
-  nome: string
-  tipo: string
-  ativo: boolean
-  created_at: string
-}
-
-function toRow(r: DbRow): CategoriaFinanceiraRow {
+function toRow(r: Record<string, unknown>): CategoriaFinanceiraRow {
   return {
-    id: r.id,
-    nome: r.nome,
+    id: r.id as string,
+    nome: r.nome as string,
     tipo: r.tipo as CategoriaFinanceiraTipo,
     ativo: Boolean(r.ativo),
-    created_at: r.created_at,
+    created_at: r.created_at as string,
   }
 }
-
-// ─── Actions ─────────────────────────────────────────────────────────────────
 
 export async function listarCategoriasFinanceiras(
   input: unknown,
 ): Promise<ActionResult<{ rows: CategoriaFinanceiraRow[]; total: number }>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
-  const parsed = ListarCategoriasFinSchema.safeParse(input)
-  if (!parsed.success) return zodValidationError(parsed.error.issues)
-
-  const { tipo, situacao, busca, page, pageSize } = parsed.data
-  const supabase = await createClient()
-
-  let query = supabase
-    .from(TABELA)
-    .select('id, nome, tipo, ativo, created_at', { count: 'exact' })
-
-  if (tipo !== 'todos') query = query.eq('tipo', tipo)
-  if (situacao === 'ativos') query = query.eq('ativo', true)
-  else if (situacao === 'inativos') query = query.eq('ativo', false)
-  if (busca.trim()) query = query.ilike('nome', `%${busca.trim()}%`)
-
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
-
-  const { data, error, count } = await query
-    .order('nome', { ascending: true })
-    .range(from, to)
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Categorias Financeiras', error.message),
-    }
-  }
-
-  const rows = (data ?? []).map((r: DbRow) => toRow(r))
-  return { success: true, data: { rows, total: count ?? 0 } }
+  return listarCadastro(input, ListarCategoriasFinSchema, {
+    tabela: TABELA,
+    selectCols: 'id, nome, tipo, ativo, created_at',
+    secaoErro: 'Categorias Financeiras',
+    toRow,
+    extraFilters: (query, filtros) => {
+      const tipo = filtros.tipo as string
+      return tipo !== 'todos' ? query.eq('tipo', tipo) : query
+    },
+  })
 }
 
 export async function criarCategoriaFinanceira(
@@ -110,13 +70,7 @@ export async function criarCategoriaFinanceira(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = NovaCategoriaFinSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-
-  return criarCadastro(
-    TABELA,
-    { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo, ativo: true },
-    'Criar categoria financeira',
-    [REVALIDATE_PATH],
-  )
+  return criarCadastro(TABELA, { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo, ativo: true }, 'Criar categoria financeira', [REVALIDATE_PATH])
 }
 
 export async function atualizarCategoriaFinanceira(
@@ -124,25 +78,13 @@ export async function atualizarCategoriaFinanceira(
 ): Promise<ActionResult<null>> {
   const parsed = AtualizarCategoriaFinSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-
-  return atualizarCadastro(
-    TABELA,
-    parsed.data.id,
-    { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo },
-    'Atualizar categoria financeira',
-    [REVALIDATE_PATH],
-  )
+  return atualizarCadastro(TABELA, parsed.data.id, { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo }, 'Atualizar categoria financeira', [REVALIDATE_PATH])
 }
 
-export async function alternarAtivoCategoriaFinanceira(
-  id: string,
-  ativo: boolean,
-): Promise<ActionResult<null>> {
+export async function alternarAtivoCategoriaFinanceira(id: string, ativo: boolean): Promise<ActionResult<null>> {
   return alternarAtivoCadastro(TABELA, id, ativo, [REVALIDATE_PATH])
 }
 
-export async function excluirCategoriaFinanceira(
-  id: string,
-): Promise<ActionResult<null>> {
+export async function excluirCategoriaFinanceira(id: string): Promise<ActionResult<null>> {
   return excluirCadastro(TABELA, id, 'Excluir categoria financeira', [REVALIDATE_PATH])
 }

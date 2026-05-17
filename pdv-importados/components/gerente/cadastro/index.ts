@@ -1,3 +1,4 @@
+export { CadastroFormModal } from './CadastroFormModal'
 export { CadastroPageShell } from './CadastroPageShell'
 export { CadastroRapidoBlock } from './CadastroRapidoBlock'
 export { CadastroRowActions } from './CadastroRowActions'

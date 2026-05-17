@@ -130,3 +130,57 @@ export async function atualizarCadastro(
   for (const p of revalidatePaths) revalidatePath(p)
   return { success: true, data: null }
 }
+
+type ListarFiltros = {
+  situacao?: string
+  busca?: string
+  page: number
+  pageSize: number
+}
+
+type QueryBuilder = ReturnType<Awaited<ReturnType<typeof createClient>>['from']>
+
+type ListarConfig<R> = {
+  tabela: string
+  selectCols: string
+  secaoErro: string
+  toRow: (raw: Record<string, unknown>) => R
+  extraFilters?: (query: QueryBuilder, filtros: Record<string, unknown>) => QueryBuilder
+}
+
+export async function listarCadastro<R, F extends ListarFiltros>(
+  input: unknown,
+  schema: z.ZodType<F>,
+  config: ListarConfig<R>,
+): Promise<CadastroActionResult<{ rows: R[]; total: number }>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = schema.safeParse(input)
+  if (!parsed.success) return zodValidationError((parsed as { error: z.ZodError }).error.issues)
+
+  const filtros = parsed.data
+  const supabase = await createClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
+    .from(config.tabela)
+    .select(config.selectCols, { count: 'exact' })
+
+  if (filtros.situacao === 'ativos') query = query.eq('ativo', true)
+  else if (filtros.situacao === 'inativos') query = query.eq('ativo', false)
+  if (filtros.busca?.trim()) query = query.ilike('nome', `%${filtros.busca.trim()}%`)
+  if (config.extraFilters) query = config.extraFilters(query, filtros as Record<string, unknown>)
+
+  const from = (filtros.page - 1) * filtros.pageSize
+  const to = from + filtros.pageSize - 1
+
+  const { data, error, count } = await query.order('nome', { ascending: true }).range(from, to)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao(config.secaoErro, (error as { message: string }).message) }
+  }
+
+  const rows = ((data ?? []) as Record<string, unknown>[]).map((r) => config.toRow(r))
+  return { success: true, data: { rows, total: (count as number | null) ?? 0 } }
+}

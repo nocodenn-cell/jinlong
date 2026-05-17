@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Plus, FolderOpen } from 'lucide-react'
 import type { CampoFiltro } from '@/components/gerente/cadastro'
 import {
+  CadastroFormModal,
   CadastroPageShell,
   CadastroRowActions,
   ConfirmExcluirCadastroModal,
@@ -26,77 +27,6 @@ import type { ListarCategoriasInput } from './actions'
 type SituacaoFiltro = 'todos' | 'ativos' | 'inativos'
 type FiltrosUi = { situacao: SituacaoFiltro; busca: string }
 const FILTROS_INICIAL: FiltrosUi = { situacao: 'ativos', busca: '' }
-
-// ─── Modal de criar/editar ────────────────────────────────────────────────────
-
-function CategoriaModal({
-  state,
-  onClose,
-  onSaved,
-  idioma,
-}: Readonly<{
-  state: { tipo: 'fechado' } | { tipo: 'criar' } | { tipo: 'editar'; row: CategoriaProdutoRow }
-  onClose: () => void
-  onSaved: () => void
-  idioma: Idioma
-}>) {
-  const m = getMessages(idioma).categorias_produtos
-  const [nome, setNome] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (state.tipo === 'fechado') return
-    setNome(state.tipo === 'editar' ? state.row.nome : '')
-    setTimeout(() => inputRef.current?.focus(), 60)
-  }, [state])
-
-  const { mutate: salvar, loading } = useGerenteMutation(
-    async () => {
-      const nomeTrimmed = nome.trim()
-      if (nomeTrimmed.length < 2) throw new Error(m.nome_minimo)
-      if (state.tipo === 'criar') {
-        const r = await criarCategoriaProduto({ nome: nomeTrimmed })
-        if (!r.success) throw new Error(r.error)
-      } else if (state.tipo === 'editar') {
-        const r = await atualizarCategoriaProduto({ id: state.row.id, nome: nomeTrimmed })
-        if (!r.success) throw new Error(r.error)
-      }
-      onSaved()
-      onClose()
-      return null
-    },
-    { successMessage: m.salvo_sucesso },
-  )
-
-  if (state.tipo === 'fechado') return null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cat-modal-title">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="dragon-glass-card relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-2xl app-border">
-        <h2 id="cat-modal-title" className="mb-5 text-lg font-semibold app-accent-text">
-          {state.tipo === 'criar' ? m.nova_categoria : m.editar_categoria}
-        </h2>
-        <label className="flex flex-col gap-1">
-          <span className="gerente-fin-label text-[11px] font-medium app-muted">{m.nome_label}</span>
-          <input
-            ref={inputRef} type="text" value={nome} maxLength={120}
-            onChange={(e) => setNome(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') salvar(undefined); if (e.key === 'Escape') onClose() }}
-            placeholder={m.nome_placeholder}
-            className="h-10 rounded-lg border px-3 text-sm app-input app-border focus:border-amber-500/80 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
-          />
-        </label>
-        <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onClose} disabled={loading} className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:underline">{m.cancelar}</button>
-          <button type="button" onClick={() => salvar(undefined)} disabled={loading || nome.trim().length < 2} className="app-btn-accent inline-flex min-w-[120px] items-center justify-center rounded-lg px-5 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-50">
-            {loading ? m.salvando : m.salvar}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -194,7 +124,20 @@ export function CategoriasProdutosPageClient({ idioma, inicial }: Props) {
       ]}
       modals={
         <>
-          <CategoriaModal state={modal} onClose={() => setModal({ tipo: 'fechado' })} onSaved={refetch} idioma={idioma} />
+          <CadastroFormModal<CategoriaProdutoRow>
+            state={modal} onClose={() => setModal({ tipo: 'fechado' })} onSaved={refetch}
+            modalId="cat-modal-title"
+            labels={{ nova: m.nova_categoria, editar: m.editar_categoria, cancelar: m.cancelar, salvando: m.salvando, salvar: m.salvar, salvo_sucesso: m.salvo_sucesso }}
+            onSubmit={async (nome, st) => {
+              if (st.tipo === 'criar') {
+                const r = await criarCategoriaProduto({ nome }); if (!r.success) throw new Error(r.error)
+              } else if (st.tipo === 'editar') {
+                const r = await atualizarCategoriaProduto({ id: st.row.id, nome }); if (!r.success) throw new Error(r.error)
+              }
+            }}
+            getInitialNome={(st) => st.tipo === 'editar' ? st.row.nome : ''}
+            nomeLabel={m.nome_label} nomePlaceholder={m.nome_placeholder}
+          />
           <ConfirmExcluirCadastroModal
             row={rowParaExcluir} onClose={() => setRowParaExcluir(null)} onConfirmed={refetch}
             excluirAction={excluirCategoriaProduto}

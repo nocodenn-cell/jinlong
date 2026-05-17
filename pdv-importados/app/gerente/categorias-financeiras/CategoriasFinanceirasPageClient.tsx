@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Plus, Landmark } from 'lucide-react'
 import type { CampoFiltro } from '@/components/gerente/cadastro'
 import {
+  CadastroFormModal,
   CadastroPageShell,
   CadastroRowActions,
   ConfirmExcluirCadastroModal,
@@ -34,90 +35,27 @@ function TipoBadge({ tipo }: { tipo: CategoriaFinanceiraTipo }) {
   return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${classes[tipo]}`}>{labels[tipo]}</span>
 }
 
-// ─── Modal de criar/editar ────────────────────────────────────────────────────
-
-function CategoriaFinModal({
-  state, onClose, onSaved, idioma,
-}: Readonly<{
-  state: { tipo: 'fechado' } | { tipo: 'criar' } | { tipo: 'editar'; row: CategoriaFinanceiraRow }
-  onClose: () => void; onSaved: () => void; idioma: Idioma
-}>) {
-  const m = getMessages(idioma).categorias_financeiras
-  const [nome, setNome] = useState('')
-  const [tipo, setTipo] = useState<CategoriaFinanceiraTipo>('AMBOS')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (state.tipo === 'fechado') return
-    if (state.tipo === 'editar') { setNome(state.row.nome); setTipo(state.row.tipo) }
-    else { setNome(''); setTipo('AMBOS') }
-    setTimeout(() => inputRef.current?.focus(), 60)
-  }, [state])
-
-  const { mutate: salvar, loading } = useGerenteMutation(
-    async () => {
-      const nomeTrimmed = nome.trim()
-      if (nomeTrimmed.length < 2) throw new Error(m.nome_minimo)
-      if (state.tipo === 'criar') {
-        const r = await criarCategoriaFinanceira({ nome: nomeTrimmed, tipo })
-        if (!r.success) throw new Error(r.error)
-      } else if (state.tipo === 'editar') {
-        const r = await atualizarCategoriaFinanceira({ id: state.row.id, nome: nomeTrimmed, tipo })
-        if (!r.success) throw new Error(r.error)
-      }
-      onSaved(); onClose()
-      return null
-    },
-    { successMessage: m.salvo_sucesso },
-  )
-
-  if (state.tipo === 'fechado') return null
-
-  const tipoOpcoes: { value: CategoriaFinanceiraTipo; label: string }[] = [
-    { value: 'RECEITA', label: m.tipo_receita }, { value: 'DESPESA', label: m.tipo_despesa }, { value: 'AMBOS', label: m.tipo_ambos },
-  ]
-
+function TipoSelectorField({ tipoRef, opcoes, label }: {
+  tipoRef: React.MutableRefObject<CategoriaFinanceiraTipo>
+  opcoes: { value: CategoriaFinanceiraTipo; label: string }[]
+  label: string
+}) {
+  const [selected, setSelected] = useState<CategoriaFinanceiraTipo>(tipoRef.current)
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="catfin-modal-title">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="dragon-glass-card relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-2xl app-border">
-        <h2 id="catfin-modal-title" className="mb-5 text-lg font-semibold app-accent-text">
-          {state.tipo === 'criar' ? m.nova_categoria : m.editar_categoria}
-        </h2>
-        <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium app-muted">{m.nome_label}</span>
-            <input ref={inputRef} type="text" value={nome} maxLength={120}
-              onChange={(e) => setNome(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') salvar(undefined); if (e.key === 'Escape') onClose() }}
-              placeholder={m.nome_placeholder}
-              className="h-10 rounded-lg border px-3 text-sm app-input app-border focus:border-amber-500/80 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
-            />
-          </label>
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium app-muted">{m.tipo_label}</span>
-            <div className="flex gap-2">
-              {tipoOpcoes.map((op) => (
-                <button key={op.value} type="button" onClick={() => setTipo(op.value)}
-                  className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition ${
-                    tipo === op.value
-                      ? op.value === 'RECEITA' ? 'app-badge-positive border-emerald-500/40'
-                        : op.value === 'DESPESA' ? 'app-badge-danger border-red-500/40' : 'app-badge-warn border-amber-500/40'
-                      : 'app-border opacity-50 hover:opacity-80'
-                  }`}>
-                  {op.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onClose} disabled={loading} className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:underline">{m.cancelar}</button>
-          <button type="button" onClick={() => salvar(undefined)} disabled={loading || nome.trim().length < 2}
-            className="app-btn-accent inline-flex min-w-[120px] items-center justify-center rounded-lg px-5 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-50">
-            {loading ? m.salvando : m.salvar}
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] font-medium app-muted">{label}</span>
+      <div className="flex gap-2">
+        {opcoes.map((op) => (
+          <button key={op.value} type="button" onClick={() => { setSelected(op.value); tipoRef.current = op.value }}
+            className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition ${
+              selected === op.value
+                ? op.value === 'RECEITA' ? 'app-badge-positive border-emerald-500/40'
+                  : op.value === 'DESPESA' ? 'app-badge-danger border-red-500/40' : 'app-badge-warn border-amber-500/40'
+                : 'app-border opacity-50 hover:opacity-80'
+            }`}>
+            {op.label}
           </button>
-        </div>
+        ))}
       </div>
     </div>
   )
@@ -145,6 +83,12 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
     toggleAtivoAction: alternarAtivoCategoriaFinanceira,
     labels: { situacao_atualizada: m.situacao_atualizada },
   })
+
+  const tipoModalRef = useRef<CategoriaFinanceiraTipo>('AMBOS')
+
+  const tipoOpcoes: { value: CategoriaFinanceiraTipo; label: string }[] = [
+    { value: 'RECEITA', label: m.tipo_receita }, { value: 'DESPESA', label: m.tipo_despesa }, { value: 'AMBOS', label: m.tipo_ambos },
+  ]
 
   const [nomeRapido, setNomeRapido] = useState('')
   const [tipoRapido, setTipoRapido] = useState<CategoriaFinanceiraTipo>('RECEITA')
@@ -243,7 +187,25 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
       ]}
       modals={
         <>
-          <CategoriaFinModal state={modal} onClose={() => setModal({ tipo: 'fechado' })} onSaved={refetch} idioma={idioma} />
+          <CadastroFormModal<CategoriaFinanceiraRow>
+            state={modal} onClose={() => setModal({ tipo: 'fechado' })} onSaved={refetch}
+            modalId="catfin-modal-title"
+            labels={{ nova: m.nova_categoria, editar: m.editar_categoria, cancelar: m.cancelar, salvando: m.salvando, salvar: m.salvar, salvo_sucesso: m.salvo_sucesso }}
+            onSubmit={async (nome, st) => {
+              const tipo = tipoModalRef.current
+              if (st.tipo === 'criar') {
+                const r = await criarCategoriaFinanceira({ nome, tipo }); if (!r.success) throw new Error(r.error)
+              } else if (st.tipo === 'editar') {
+                const r = await atualizarCategoriaFinanceira({ id: st.row.id, nome, tipo }); if (!r.success) throw new Error(r.error)
+              }
+            }}
+            getInitialNome={(st) => {
+              tipoModalRef.current = st.tipo === 'editar' ? st.row.tipo : 'AMBOS'
+              return st.tipo === 'editar' ? st.row.nome : ''
+            }}
+            nomeLabel={m.nome_label} nomePlaceholder={m.nome_placeholder}
+            extraFields={() => <TipoSelectorField tipoRef={tipoModalRef} opcoes={tipoOpcoes} label={m.tipo_label} />}
+          />
           <ConfirmExcluirCadastroModal
             row={rowParaExcluir} onClose={() => setRowParaExcluir(null)} onConfirmed={refetch}
             excluirAction={excluirCategoriaFinanceira}
