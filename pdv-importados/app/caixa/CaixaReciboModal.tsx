@@ -57,6 +57,7 @@ function fmtData(d: Date): string {
 export function CaixaReciboModal({ m, venda, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const thermal = useThermalPrinter()
+  const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
 
   const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {
@@ -130,12 +131,13 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-semibold text-foreground">Recibo da venda</span>
           <div className="flex gap-2">
-            {thermal.supported && (
+            {supportsWebUSB ? (
               <button
                 type="button"
                 onClick={handleThermalPrint}
                 disabled={thermal.status === "connecting" || thermal.status === "printing"}
-                title={thermal.deviceInfo ? `Impressora: ${thermal.deviceInfo.name}` : "Conectar impressora térmica"}
+                aria-label="Imprimir (térmica direta)"
+                title="Imprime diretamente na impressora térmica (sem confirmação)"
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-semibold",
                   thermal.status === "connected" || thermal.status === "printing"
@@ -145,16 +147,19 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
               >
                 {thermal.status === "connecting" ? "Conectando…" :
                  thermal.status === "printing"   ? "Imprimindo…" :
-                 thermal.deviceInfo              ? "🖨 Térmica" : "🔌 Térmica"}
+                 "🖨️ Imprimir (térmica direta)"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePrint}
+                aria-label="Imprimir (janela)"
+                title="Imprime usando a janela do navegador (clique em OK)"
+                className="app-btn-accent rounded-md px-3 py-1.5 text-xs font-semibold"
+              >
+                🖨️ Imprimir (janela)
               </button>
             )}
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="app-btn-accent rounded-md px-3 py-1.5 text-xs font-semibold"
-            >
-              🖨 Imprimir
-            </button>
             <button
               type="button"
               onClick={onClose}
