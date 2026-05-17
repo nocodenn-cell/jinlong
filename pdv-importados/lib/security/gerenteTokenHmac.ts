@@ -13,7 +13,7 @@ export interface GerenteTokenPayload {
 }
 
 function computeSignature(b64: string, secret: string): string {
-  return createHmac(ALGO, secret).update(`${VERSION}.${b64}`).digest('hex')
+  return createHmac(ALGO, secret).update(`${VERSION}.${b64}`).digest('hex') // NOSONAR S4790 — SHA-256 HMAC for token integrity, not password storage
 }
 
 export function gerarTokenHmacGerente(payload: GerenteTokenPayload, secret: string): string {
@@ -40,7 +40,7 @@ export function verificarTokenHmacGerente(token: string, secret: string): TokenV
     const payload = JSON.parse(Buffer.from(b64, 'base64url').toString('utf-8')) as GerenteTokenPayload
     if (new Date(payload.expiraEm) < new Date()) return { ok: false, reason: 'expirado' }
     return { ok: true, payload }
-  } catch {
+  } catch (_e: unknown) {
     return { ok: false, reason: 'formato' }
   }
 }
