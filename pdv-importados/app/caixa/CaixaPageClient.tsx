@@ -48,11 +48,7 @@ import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipe
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
 import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
 import { CaixaPdvItemStagingPlaceholder } from "@/app/caixa/CaixaPdvItemStagingPlaceholder"
-import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
-import {
-  metodoPagamentoToForma,
-  type MetodoPagamentoUi,
-} from "@/app/caixa/caixaMetodoPagamento"
+import { CaixaSplitPagamentos } from "@/app/caixa/CaixaSplitPagamentos"
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
@@ -138,7 +134,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
-  const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
 
   const {
     caixaStatus,
@@ -185,15 +180,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   const totalLiquidoComGerente = descontoGerenteAplicado.totalLiquidoComDesconto
   const descontoGerentePercentualEfetivo = descontoGerenteAplicado.percentualClamped
 
-  const formaPagamento = useMemo(
-    () => metodoPagamentoToForma(metodoPagamento),
-    [metodoPagamento],
-  )
-
   const {
+    linhas,
     pagamentos,
+    restante,
+    valido: pagamentosValidos,
+    adicionarLinha,
+    removerLinha,
+    setMetodo: setPagamentoMetodo,
+    setValor: setPagamentoValor,
     resetPagamentos,
-  } = useCaixaPagamentos(totalLiquidoComGerente, formaPagamento)
+  } = useCaixaPagamentos(totalLiquidoComGerente)
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
@@ -273,13 +270,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   const pagamentoControlesDesabilitados =
     finalizando || buscandoPipeline || carregandoRegras
 
-  const metodoPagamentoSelector = (
-    <CaixaPdvMetodoPagamentoSelector
+  const splitPagamentosPanel = (
+    <CaixaSplitPagamentos
       m={m}
-      value={metodoPagamento}
-      onChange={setMetodoPagamento}
+      linhas={linhas}
+      totalLiquidoComGerente={totalLiquidoComGerente}
+      restante={restante}
+      valido={pagamentosValidos}
       disabled={pagamentoControlesDesabilitados}
       variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+      onSetMetodo={setPagamentoMetodo}
+      onSetValor={setPagamentoValor}
+      onAdicionarLinha={adicionarLinha}
+      onRemoverLinha={removerLinha}
     />
   )
 
@@ -388,7 +391,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
     resetPagamentos()
-    setMetodoPagamento("dinheiro")
     setCodigo("")
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
@@ -763,7 +765,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 moedaPrefixo={m.caixa.moeda_prefixo}
-                metodoPagamentoPanel={metodoPagamentoSelector}
+                metodoPagamentoPanel={splitPagamentosPanel}
                 produtoPanel={
                   pdvLayoutVariant === "classic" ? (
                     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
@@ -843,7 +845,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                   carregandoRegras={carregandoRegras}
                   totalLiquidoComGerente={totalLiquidoComGerente}
                   moedaPrefixo={m.caixa.moeda_prefixo}
-                  metodoPagamentoPanel={metodoPagamentoSelector}
+                  metodoPagamentoPanel={splitPagamentosPanel}
                 />
               )}
             </section>
@@ -996,7 +998,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
             totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}
             metodoPagamentoPanel={
-              pdvLayoutVariant === "default" ? metodoPagamentoSelector : undefined
+              pdvLayoutVariant === "default" ? splitPagamentosPanel : undefined
             }
           />
         </div>
