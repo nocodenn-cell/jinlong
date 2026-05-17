@@ -177,7 +177,7 @@ export async function finalizarVendaCaixaImpl(
     if (hasDescontoGerente && resolvedGerenteToken) {
       const secret = process.env.GERENTE_TOKEN_SECRET
       if (secret && resolvedGerenteToken.startsWith('v1.')) {
-        const verification = verificarTokenHmacGerente(resolvedGerenteToken, secret)
+        const verification = await verificarTokenHmacGerente(resolvedGerenteToken, secret)
         if (!verification.ok) {
           return {
             ok: false,

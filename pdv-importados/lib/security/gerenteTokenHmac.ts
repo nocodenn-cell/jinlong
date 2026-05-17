@@ -1,10 +1,8 @@
-import { createHmac, timingSafeEqual } from 'crypto'
-
 const VERSION = 'v1'
-const ALGO = 'sha256'
+const ENC = new TextEncoder()
+const DEC = new TextDecoder()
 
 export interface GerenteTokenPayload {
-  /** Token original emitido pela edge function (repassado ao RPC). */
   edgeToken: string
   gerenteId: string
   deviceFingerprint: string
@@ -12,32 +10,42 @@ export interface GerenteTokenPayload {
   maxDesconto: number
 }
 
-function computeSignature(b64: string, secret: string): string {
-  return createHmac(ALGO, secret).update(`${VERSION}.${b64}`).digest('hex') // NOSONAR S4790 — SHA-256 HMAC for token integrity, not password storage
-}
-
-export function gerarTokenHmacGerente(payload: GerenteTokenPayload, secret: string): string {
-  const b64 = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  const sig = computeSignature(b64, secret)
-  return `${VERSION}.${b64}.${sig}`
-}
-
 export type TokenVerifyResult =
   | { ok: true; payload: GerenteTokenPayload }
   | { ok: false; reason: 'formato' | 'assinatura' | 'expirado' }
 
-export function verificarTokenHmacGerente(token: string, secret: string): TokenVerifyResult {
+async function hmacKey(secret: string, usage: KeyUsage[]): Promise<CryptoKey> {
+  return globalThis.crypto.subtle.importKey(
+    'raw', ENC.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, usage,
+  )
+}
+
+function toBase64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+function fromBase64url(b64: string): Uint8Array {
+  return Uint8Array.from(atob(b64.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
+}
+
+export async function gerarTokenHmacGerente(payload: GerenteTokenPayload, secret: string): Promise<string> {
+  const b64 = toBase64url(ENC.encode(JSON.stringify(payload)))
+  const key = await hmacKey(secret, ['sign'])
+  const sig = await globalThis.crypto.subtle.sign('HMAC', key, ENC.encode(`${VERSION}.${b64}`))
+  return `${VERSION}.${b64}.${toBase64url(new Uint8Array(sig))}`
+}
+
+export async function verificarTokenHmacGerente(token: string, secret: string): Promise<TokenVerifyResult> {
   const parts = token.split('.')
   if (parts.length !== 3 || parts[0] !== VERSION) return { ok: false, reason: 'formato' }
-  const [, b64, sig] = parts
-  const expected = computeSignature(b64, secret)
-  const sigBuf = Buffer.from(sig, 'hex')
-  const expBuf = Buffer.from(expected, 'hex')
-  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
-    return { ok: false, reason: 'assinatura' }
-  }
+  const [, b64, sigB64] = parts
   try {
-    const payload = JSON.parse(Buffer.from(b64, 'base64url').toString('utf-8')) as GerenteTokenPayload
+    const key = await hmacKey(secret, ['verify'])
+    const sigBytes = fromBase64url(sigB64)
+    const valid = await globalThis.crypto.subtle.verify('HMAC', key, sigBytes, ENC.encode(`${VERSION}.${b64}`))
+    if (!valid) return { ok: false, reason: 'assinatura' }
+    const payload = JSON.parse(DEC.decode(fromBase64url(b64))) as GerenteTokenPayload
     if (new Date(payload.expiraEm) < new Date()) return { ok: false, reason: 'expirado' }
     return { ok: true, payload }
   } catch (_e: unknown) {
