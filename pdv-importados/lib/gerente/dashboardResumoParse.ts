@@ -34,6 +34,7 @@ export function parseDashboardResumo(raw: unknown): DashboardResumoDTO {
         : Number(r.margem_estimada),
     cobertura_custo: num(r.cobertura_custo),
     custo_confiavel: Boolean(r.custo_confiavel),
+    produto_mais_vendido: typeof r.produto_mais_vendido === 'string' ? r.produto_mais_vendido : 'Nenhum hoje (0 un)',
     serie_horaria_hoje: parseSerieHoraria(r.serie_horaria_hoje),
     estoque_critico: parseEstoqueCritico(r.estoque_critico),
     atividades_recentes: parseAtividades(r.atividades_recentes),
