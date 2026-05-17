@@ -109,7 +109,7 @@ function errorToLogPayload(err: unknown): Record<string, unknown> {
 
 function readStoredLogs(storageKey: string): LogEntry[] {
   try {
-    const raw = localStorage.getItem(storageKey) // NOSONAR S2255 — non-sensitive debug log entries
+    const raw = typeof globalThis !== 'undefined' && globalThis.localStorage ? globalThis.localStorage.getItem(storageKey) : null
     if (!raw) return []
     return JSON.parse(raw) as LogEntry[]
   } catch {
@@ -120,7 +120,9 @@ function readStoredLogs(storageKey: string): LogEntry[] {
 function writeStoredLogs(storageKey: string, logs: LogEntry[], maxLogs: number): void {
   try {
     const bounded = logs.slice(-maxLogs)
-    localStorage.setItem(storageKey, JSON.stringify(bounded)) // NOSONAR S2255 — non-sensitive debug log entries
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+      globalThis.localStorage.setItem(storageKey, JSON.stringify(bounded))
+    }
   } catch {
     // Persistência opcional; falhas de quota ou ambiente sem storage são ignoradas
   }

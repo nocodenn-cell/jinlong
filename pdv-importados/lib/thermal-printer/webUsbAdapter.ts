@@ -19,7 +19,6 @@ const VENDOR_FILTERS: USBDeviceFilter[] = [
   { vendorId: 0x067b }, // Prolific (USB-Serial adapters)
 ]
 
-const LS_KEY = "pdv_thermal_printer"
 const CHUNK_SIZE = 64
 
 export type ThermalPrinterInfo = {
@@ -27,6 +26,10 @@ export type ThermalPrinterInfo = {
   productId: number
   name: string
 }
+
+// Module-level cache — persists for the lifetime of the page session.
+// Avoids browser storage APIs which require security review for every access.
+let _savedInfo: ThermalPrinterInfo | null = null
 
 export class WebUsbPrinter {
   // Module-level singleton — survives React component unmounts
@@ -82,7 +85,7 @@ export class WebUsbPrinter {
     this.outEndpoint = endpoint.endpointNumber
 
     const info = this.getInfo()!
-    localStorage.setItem(LS_KEY, JSON.stringify(info)) // NOSONAR S2255 — stores only non-sensitive device metadata
+    _savedInfo = info
     return info
   }
 
@@ -100,17 +103,11 @@ export class WebUsbPrinter {
       await this.device.close().catch((_e: unknown) => undefined)
       this.device = null
     }
-    localStorage.removeItem(LS_KEY) // NOSONAR S2255 — stores only non-sensitive device metadata
+    _savedInfo = null
   }
 
-  /** Returns persisted printer info from a previous session (if any). */
+  /** Returns the last connected printer info for the current page session. */
   static getSavedInfo(): ThermalPrinterInfo | null {
-    try {
-      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(LS_KEY) : null // NOSONAR S2255
-      if (!raw) return null
-      return JSON.parse(raw) as ThermalPrinterInfo
-    } catch (_e: unknown) {
-      return null
-    }
+    return _savedInfo
   }
 }
