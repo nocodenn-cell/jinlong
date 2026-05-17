@@ -195,12 +195,13 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
                 const r = await atualizarCategoriaFinanceira({ id: st.row.id, nome, tipo }); if (!r.success) throw new Error(r.error)
               }
             }}
-            getInitialNome={(st) => {
-              tipoModalRef.current = st.tipo === 'editar' ? st.row.tipo : 'AMBOS'
-              return st.tipo === 'editar' ? st.row.nome : ''
-            }}
+            getInitialNome={(st) => st.tipo === 'editar' ? st.row.nome : ''}
             nomeLabel={m.nome_label} nomePlaceholder={m.nome_placeholder}
-            extraFields={() => <TipoSelectorField tipoRef={tipoModalRef} opcoes={tipoOpcoes} label={m.tipo_label} />}
+            extraFields={(st) => {
+              const tipo = st.tipo === 'editar' ? st.row.tipo : 'AMBOS'
+              tipoModalRef.current = tipo
+              return <TipoSelectorField key={st.tipo === 'editar' ? st.row.id : 'new'} tipoRef={tipoModalRef} opcoes={tipoOpcoes} label={m.tipo_label} />
+            }}
           />
           <ConfirmExcluirCadastroModal
             row={rowParaExcluir} onClose={() => setRowParaExcluir(null)} onConfirmed={refetch}

@@ -138,14 +138,14 @@ type ListarFiltros = {
   pageSize: number
 }
 
-type QueryBuilder = ReturnType<Awaited<ReturnType<typeof createClient>>['from']>
-
 type ListarConfig<R> = {
   tabela: string
   selectCols: string
   secaoErro: string
   toRow: (raw: Record<string, unknown>) => R
-  extraFilters?: (query: QueryBuilder, filtros: Record<string, unknown>) => QueryBuilder
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  extraFilters?: (query: any, filtros: Record<string, unknown>) => any
+  postProcess?: (rows: R[], supabase: Awaited<ReturnType<typeof createClient>>) => Promise<R[]>
 }
 
 export async function listarCadastro<R, F extends ListarFiltros>(
@@ -181,6 +181,7 @@ export async function listarCadastro<R, F extends ListarFiltros>(
     return { success: false, error: mensagemErroComSecao(config.secaoErro, (error as { message: string }).message) }
   }
 
-  const rows = ((data ?? []) as Record<string, unknown>[]).map((r) => config.toRow(r))
+  let rows = ((data ?? []) as Record<string, unknown>[]).map((r) => config.toRow(r))
+  if (config.postProcess) rows = await config.postProcess(rows, supabase)
   return { success: true, data: { rows, total: (count as number | null) ?? 0 } }
 }
