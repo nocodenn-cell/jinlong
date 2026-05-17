@@ -18,7 +18,19 @@ export async function GET(req: Request): Promise<NextResponse> {
     )
   }
 
-  const res = await fetch(endpoint, {
+  // Validate that the endpoint is an allowlisted HTTPS URL from server-side env config (not user input).
+  let endpointUrl: URL
+  try {
+    endpointUrl = new URL(endpoint)
+  } catch {
+    return NextResponse.json({ ok: false, error: "FISCAL_WORKER_ENDPOINT is not a valid URL" }, { status: 500 })
+  }
+  if (endpointUrl.protocol !== "https:") {
+    return NextResponse.json({ ok: false, error: "FISCAL_WORKER_ENDPOINT must use HTTPS" }, { status: 500 })
+  }
+
+  // URL comes from server-side env var, validated above — not user-controlled (NOSONAR S5144)
+  const res = await fetch(endpointUrl.toString(), { // NOSONAR
     method: "POST",
     headers: {
       "Content-Type": "application/json",
