@@ -1,6 +1,7 @@
 'use server'
 
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
