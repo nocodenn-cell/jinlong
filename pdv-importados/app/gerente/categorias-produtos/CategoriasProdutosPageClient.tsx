@@ -187,10 +187,10 @@ export function CategoriasProdutosPageClient({ idioma, inicial }: Props) {
           : <span className="gerente-fin-muted text-xs">{total} {total === 1 ? m.categoria_singular : m.categorias_plural}</span>
       }
       colunas={[
-        { key: 'nome', header: m.col_nome, className: 'w-full' },
-        { key: 'qtd_produtos', header: m.col_qtd_produtos, className: 'w-24 text-center' },
-        { key: 'situacao', header: m.col_situacao, className: 'w-28' },
-        { key: 'acoes', header: m.col_acoes, className: 'w-32 text-right' },
+        { key: 'nome', header: m.col_nome },
+        { key: 'qtd_produtos', header: m.col_qtd_produtos, width: '6rem' },
+        { key: 'situacao', header: m.col_situacao, width: '7rem' },
+        { key: 'acoes', header: m.col_acoes, width: '8rem' },
       ]}
       modals={
         <>
