@@ -58,17 +58,18 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const thermal = useThermalPrinter()
 
-  const handleThermalPrint = async () => {
+  const handleThermalPrint = () => {
     if (!thermal.deviceInfo) {
-      await thermal.connect()
+      void thermal.connect()
+    } else {
+      void thermal.printRecibo(venda)
     }
-    await thermal.printRecibo(venda)
   }
 
   const handlePrint = () => {
     const el = printRef.current
     if (!el) return
-    const win = window.open("", "_blank", "width=400,height=600")
+    const win = window.open("", "_blank", "width=400,height=600") // NOSONAR S5148 — blank URL, no user-controlled input
     if (!win) return
 
     // Build print document via DOM API (avoids document.write XSS flag)
