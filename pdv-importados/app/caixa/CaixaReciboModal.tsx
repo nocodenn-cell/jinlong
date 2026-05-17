@@ -58,11 +58,11 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const thermal = useThermalPrinter()
 
-  const handleThermalPrint = () => {
+  const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {
-      void thermal.connect()
+      await thermal.connect()
     } else {
-      void thermal.printRecibo(venda)
+      await thermal.printRecibo(venda)
     }
   }
 
