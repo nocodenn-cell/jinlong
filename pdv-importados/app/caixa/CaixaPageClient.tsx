@@ -49,6 +49,7 @@ import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPi
 import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
 import { CaixaPdvItemStagingPlaceholder } from "@/app/caixa/CaixaPdvItemStagingPlaceholder"
 import { CaixaSplitPagamentos } from "@/app/caixa/CaixaSplitPagamentos"
+import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal"
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
@@ -131,6 +132,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
+  const [reciboVenda, setReciboVenda] = useState<ReciboVenda | null>(null)
 
   const {
     caixaStatus,
@@ -388,6 +390,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
     resetPagamentos()
+    setReciboVenda(null)
     setCodigo("")
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
@@ -606,6 +609,26 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
       const res = await finalizarVendaCaixa(payload)
       if (res.ok) {
         vendaIdempotenciaRef.current = null
+        setReciboVenda({
+          vendaId: res.vendaId,
+          data: new Date(),
+          itens: itens.map((i) => ({
+            nome: i.nome,
+            quantidade: i.quantidade,
+            precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
+            precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
+            tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
+          })),
+          pagamentos: pagamentos.map((p) => ({ formaPagamento: p.formaPagamento, valor: p.valor })),
+          totalBruto,
+          totalDesconto: descontoGerentePercentualEfetivo > 0
+            ? roundMoney2(totalDesconto + valorDescontoGerente)
+            : totalDesconto,
+          totalLiquidoComGerente,
+          descontoGerentePercentual: descontoGerentePercentualEfetivo,
+          valorDescontoGerente,
+          moeda: m.caixa.moeda_prefixo,
+        })
         limparCarrinho()
         limparEstadoDescontoGerente()
         resetPagamentos()
@@ -1106,6 +1129,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           }
           m={m}
           onConfirm={onConfirmMotivoFechar}
+        />
+      )}
+      {reciboVenda && (
+        <CaixaReciboModal
+          m={m}
+          venda={reciboVenda}
+          onClose={() => setReciboVenda(null)}
         />
       )}
       <CaixaConfirmModal
