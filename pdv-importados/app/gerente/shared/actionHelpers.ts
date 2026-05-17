@@ -80,3 +80,53 @@ export async function excluirCadastro(
   for (const p of revalidatePaths) revalidatePath(p)
   return { success: true, data: null }
 }
+
+/** Insere uma linha em uma tabela de cadastro e retorna o ID. */
+export async function criarCadastro(
+  tabela: string,
+  payload: Record<string, unknown>,
+  secaoErro: string,
+  revalidatePaths: string[],
+): Promise<CadastroActionResult<{ id: string }>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from(tabela)
+    .insert(payload)
+    .select('id')
+    .single()
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao(secaoErro, error.message) }
+  }
+
+  for (const p of revalidatePaths) revalidatePath(p)
+  return { success: true, data: { id: (data as { id: string }).id } }
+}
+
+/** Atualiza uma linha em uma tabela de cadastro por ID. */
+export async function atualizarCadastro(
+  tabela: string,
+  id: string,
+  payload: Record<string, unknown>,
+  secaoErro: string,
+  revalidatePaths: string[],
+): Promise<CadastroActionResult<null>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from(tabela)
+    .update(payload)
+    .eq('id', id)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao(secaoErro, error.message) }
+  }
+
+  for (const p of revalidatePaths) revalidatePath(p)
+  return { success: true, data: null }
+}

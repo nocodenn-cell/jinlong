@@ -1,7 +1,6 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -10,6 +9,8 @@ import {
   zodValidationError,
   alternarAtivoCadastro,
   excluirCadastro,
+  criarCadastro,
+  atualizarCadastro,
 } from '../shared/actionHelpers'
 import type { CategoriaFinanceiraRow, CategoriaFinanceiraTipo } from './categoriasFinanceirasTypes'
 
@@ -107,54 +108,30 @@ export async function listarCategoriasFinanceiras(
 export async function criarCategoriaFinanceira(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
   const parsed = NovaCategoriaFinSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from(TABELA)
-    .insert({ nome: parsed.data.nome.trim(), tipo: parsed.data.tipo, ativo: true })
-    .select('id')
-    .single()
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Criar categoria financeira', error.message),
-    }
-  }
-
-  revalidatePath(REVALIDATE_PATH)
-  return { success: true, data: { id: (data as { id: string }).id } }
+  return criarCadastro(
+    TABELA,
+    { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo, ativo: true },
+    'Criar categoria financeira',
+    [REVALIDATE_PATH],
+  )
 }
 
 export async function atualizarCategoriaFinanceira(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
   const parsed = AtualizarCategoriaFinSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
 
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from(TABELA)
-    .update({ nome: parsed.data.nome.trim(), tipo: parsed.data.tipo })
-    .eq('id', parsed.data.id)
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Atualizar categoria financeira', error.message),
-    }
-  }
-
-  revalidatePath(REVALIDATE_PATH)
-  return { success: true, data: null }
+  return atualizarCadastro(
+    TABELA,
+    parsed.data.id,
+    { nome: parsed.data.nome.trim(), tipo: parsed.data.tipo },
+    'Atualizar categoria financeira',
+    [REVALIDATE_PATH],
+  )
 }
 
 export async function alternarAtivoCategoriaFinanceira(

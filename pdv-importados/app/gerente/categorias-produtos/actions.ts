@@ -1,11 +1,10 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
-import { type CadastroActionResult, zodValidationError, alternarAtivoCadastro } from '../shared/actionHelpers'
+import { type CadastroActionResult, zodValidationError, alternarAtivoCadastro, criarCadastro, atualizarCadastro } from '../shared/actionHelpers'
 import type { CategoriaProdutoRow } from './categoriasProdutosTypes'
 
 const REVALIDATE_PATH = '/gerente/categorias-produtos'
@@ -121,56 +120,30 @@ export async function listarCategoriasProdutos(
 export async function criarCategoriaProduto(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
   const parsed = NovaCategoriaSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('categorias')
-    .insert({ nome: parsed.data.nome.trim(), ativo: true })
-    .select('id')
-    .single()
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Criar categoria', error.message),
-    }
-  }
-
-  revalidatePath(REVALIDATE_PATH)
-  revalidatePath('/gerente/produtos')
-  return { success: true, data: { id: (data as { id: string }).id } }
+  return criarCadastro(
+    'categorias',
+    { nome: parsed.data.nome.trim(), ativo: true },
+    'Criar categoria',
+    [REVALIDATE_PATH, '/gerente/produtos'],
+  )
 }
 
 export async function atualizarCategoriaProduto(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
-  if (!auth.ok) return { success: false, error: auth.error }
-
   const parsed = AtualizarCategoriaSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
 
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('categorias')
-    .update({ nome: parsed.data.nome.trim() })
-    .eq('id', parsed.data.id)
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Atualizar categoria', error.message),
-    }
-  }
-
-  revalidatePath(REVALIDATE_PATH)
-  revalidatePath('/gerente/produtos')
-  return { success: true, data: null }
+  return atualizarCadastro(
+    'categorias',
+    parsed.data.id,
+    { nome: parsed.data.nome.trim() },
+    'Atualizar categoria',
+    [REVALIDATE_PATH, '/gerente/produtos'],
+  )
 }
 
 export async function alternarAtivoCategoriaProduto(
