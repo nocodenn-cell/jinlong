@@ -71,7 +71,7 @@ export async function validarGerenteDescontoImpl(input: {
 
     const secret = process.env.GERENTE_TOKEN_SECRET
     const token = secret
-      ? gerarTokenHmacGerente(
+      ? await gerarTokenHmacGerente(
           {
             edgeToken,
             gerenteId,
