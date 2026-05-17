@@ -135,16 +135,16 @@ export async function fecharCaixaOperadorImpl(input: {
     if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message) }
     if (!caixaAberto) return { ok: false, error: 'Não há caixa aberto para fechar.' }
 
-    const { count: pendentes, error: pendErr } = await supabase
+    const { count: pendingMovCount, error: movErr } = await supabase
       .from('movimentacoes_caixa')
       .select('id', { count: 'exact', head: true })
       .eq('caixa_id', caixaAberto.id)
       .eq('status', 'pendente')
-    if (pendErr) return { ok: false, error: mensagemErroComSecao('Caixa', pendErr.message) }
-    if ((pendentes ?? 0) > 0) {
+    if (movErr) return { ok: false, error: mensagemErroComSecao('Movimentações', movErr.message) }
+    if (pendingMovCount && pendingMovCount > 0) {
       return {
         ok: false,
-        error: 'Existem movimentações pendentes. Aprove ou cancele antes de fechar o caixa.',
+        error: `Há ${pendingMovCount} movimentação(ões) pendente(s) de aprovação. Resolva-as antes de fechar o caixa.`,
       }
     }
 
