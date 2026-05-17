@@ -69,7 +69,7 @@ export function CaixaReciboModal({ m, venda, onClose }: Props) {
   const handlePrint = () => {
     const el = printRef.current
     if (!el) return
-    const win = window.open("", "_blank", "width=400,height=600") // NOSONAR S5148 — blank URL, no user-controlled input
+    const win = window.open("", "_blank", "width=400,height=600") // NOSONAR
     if (!win) return
 
     // Build print document via DOM API (avoids document.write XSS flag)

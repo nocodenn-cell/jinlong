@@ -82,7 +82,7 @@ export class WebUsbPrinter {
     this.outEndpoint = endpoint.endpointNumber
 
     const info = this.getInfo()!
-    localStorage.setItem(LS_KEY, JSON.stringify(info))
+    localStorage.setItem(LS_KEY, JSON.stringify(info)) // NOSONAR S2255 — stores only non-sensitive device metadata
     return info
   }
 
@@ -96,19 +96,20 @@ export class WebUsbPrinter {
 
   async disconnect(): Promise<void> {
     if (this.device) {
-      try { await this.device.close() } catch { /* ignore if already closed */ }
+      // Device may already be closed by the OS; ignore the error
+      await this.device.close().catch((_e: unknown) => undefined)
       this.device = null
     }
-    localStorage.removeItem(LS_KEY)
+    localStorage.removeItem(LS_KEY) // NOSONAR S2255 — stores only non-sensitive device metadata
   }
 
   /** Returns persisted printer info from a previous session (if any). */
   static getSavedInfo(): ThermalPrinterInfo | null {
     try {
-      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(LS_KEY) : null
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(LS_KEY) : null // NOSONAR S2255
       if (!raw) return null
       return JSON.parse(raw) as ThermalPrinterInfo
-    } catch {
+    } catch (_e: unknown) {
       return null
     }
   }
