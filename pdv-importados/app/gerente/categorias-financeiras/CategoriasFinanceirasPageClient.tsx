@@ -105,10 +105,6 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
     { successMessage: m.salvo_sucesso },
   )
 
-  const tipoRapidoOpcoes: { value: CategoriaFinanceiraTipo; label: string }[] = [
-    { value: 'RECEITA', label: m.tipo_receita }, { value: 'DESPESA', label: m.tipo_despesa }, { value: 'AMBOS', label: m.tipo_ambos },
-  ]
-
   const camposFiltro: CampoFiltro[] = [
     {
       id: 'tipo', label: m.filtro_tipo, tipo: 'radio', valor: filtros.tipo,
@@ -149,7 +145,7 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
       cadastroRapidoContent={
         <div className="flex flex-col gap-2">
           <div className="flex gap-1">
-            {tipoRapidoOpcoes.map((op) => (
+            {tipoOpcoes.map((op) => (
               <button key={op.value} type="button" onClick={() => setTipoRapido(op.value)}
                 className={`flex-1 rounded-md border py-1 text-[10px] font-semibold transition ${
                   tipoRapido === op.value

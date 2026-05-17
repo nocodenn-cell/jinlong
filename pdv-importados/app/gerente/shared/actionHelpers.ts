@@ -150,7 +150,7 @@ type ListarConfig<R> = {
 
 export async function listarCadastro<R, F extends ListarFiltros>(
   input: unknown,
-  schema: z.ZodType<F>,
+  schema: z.ZodType<F, z.ZodTypeDef, unknown>,
   config: ListarConfig<R>,
 ): Promise<CadastroActionResult<{ rows: R[]; total: number }>> {
   const auth = await assertGerenteOuDono()
