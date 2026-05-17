@@ -1,18 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Pencil, Trash2, ToggleLeft, ToggleRight, Plus, Landmark } from 'lucide-react'
+import { Plus, Landmark } from 'lucide-react'
 import type { CampoFiltro } from '@/components/gerente/cadastro'
 import {
   CadastroRapidoBlock,
+  CadastroRowActions,
+  ConfirmExcluirCadastroModal,
   FiltroLateralCadastro,
   TabelaCadastroPadrao,
+  useCadastroListState,
 } from '@/components/gerente/cadastro'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
-import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
@@ -63,18 +64,13 @@ function TipoBadge({ tipo }: { tipo: CategoriaFinanceiraTipo }) {
 
 // ─── Modal de criar/editar ────────────────────────────────────────────────────
 
-type ModalState =
-  | { tipo: 'fechado' }
-  | { tipo: 'criar' }
-  | { tipo: 'editar'; row: CategoriaFinanceiraRow }
-
 function CategoriaFinModal({
   state,
   onClose,
   onSaved,
   idioma,
 }: Readonly<{
-  state: ModalState
+  state: { tipo: 'fechado' } | { tipo: 'criar' } | { tipo: 'editar'; row: CategoriaFinanceiraRow }
   onClose: () => void
   onSaved: () => void
   idioma: Idioma
@@ -141,7 +137,6 @@ function CategoriaFinModal({
         <h2 id="catfin-modal-title" className="mb-5 text-lg font-semibold app-accent-text">
           {titulo}
         </h2>
-
         <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-medium app-muted">{m.nome_label}</span>
@@ -159,7 +154,6 @@ function CategoriaFinModal({
               className="h-10 rounded-lg border px-3 text-sm app-input app-border focus:border-amber-500/80 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
             />
           </label>
-
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-medium app-muted">{m.tipo_label}</span>
             <div className="flex gap-2">
@@ -184,7 +178,6 @@ function CategoriaFinModal({
             </div>
           </div>
         </div>
-
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
@@ -208,132 +201,6 @@ function CategoriaFinModal({
   )
 }
 
-// ─── Confirm exclusão ─────────────────────────────────────────────────────────
-
-function ConfirmExcluirModal({
-  row,
-  onClose,
-  onConfirmed,
-  idioma,
-}: Readonly<{
-  row: CategoriaFinanceiraRow | null
-  onClose: () => void
-  onConfirmed: () => void
-  idioma: Idioma
-}>) {
-  const m = getMessages(idioma).categorias_financeiras
-
-  const { mutate: excluir, loading } = useGerenteMutation(
-    async () => {
-      if (!row) return null
-      const r = await excluirCategoriaFinanceira(row.id)
-      if (!r.success) throw new Error(r.error)
-      onConfirmed()
-      onClose()
-      return null
-    },
-    { successMessage: m.excluido_sucesso },
-  )
-
-  if (!row) return null
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="dragon-glass-card relative z-10 w-full max-w-sm rounded-2xl border p-6 shadow-2xl app-border">
-        <h2 className="mb-2 text-base font-semibold app-surface-text">{m.confirmar_excluir_titulo}</h2>
-        <p className="mb-6 text-sm app-muted">
-          {m.confirmar_excluir_texto.replace('{{nome}}', row.nome)}
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:underline"
-          >
-            {m.cancelar}
-          </button>
-          <button
-            type="button"
-            onClick={() => excluir(undefined)}
-            disabled={loading}
-            className="inline-flex min-w-[100px] items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
-          >
-            {loading ? m.excluindo : m.excluir}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Linha da tabela ──────────────────────────────────────────────────────────
-
-function CategoriaFinRow({
-  row,
-  onEditar,
-  onExcluir,
-  onToggleAtivo,
-  idioma,
-}: Readonly<{
-  row: CategoriaFinanceiraRow
-  onEditar: (row: CategoriaFinanceiraRow) => void
-  onExcluir: (row: CategoriaFinanceiraRow) => void
-  onToggleAtivo: (row: CategoriaFinanceiraRow) => void
-  idioma: Idioma
-}>) {
-  const m = getMessages(idioma).categorias_financeiras
-
-  return (
-    <tr className="gerente-fin-row-hover border-b border-border/30 transition-colors last:border-0">
-      <td className="gerente-fin-cell px-3 py-3 text-sm font-medium">{row.nome}</td>
-      <td className="px-3 py-3">
-        <TipoBadge tipo={row.tipo} />
-      </td>
-      <td className="px-3 py-3">
-        <GerenteStatusBadge status={row.ativo ? 'ATIVO' : 'INATIVO'} />
-      </td>
-      <td className="px-3 py-3">
-        <div className="flex items-center justify-end gap-1">
-          <button
-            type="button"
-            title={row.ativo ? m.inativar : m.ativar}
-            onClick={() => onToggleAtivo(row)}
-            className="gerente-chip-action rounded-md border p-1.5 opacity-70 transition hover:opacity-100 app-border"
-          >
-            {row.ativo ? (
-              <ToggleRight className="h-4 w-4 text-emerald-400" />
-            ) : (
-              <ToggleLeft className="h-4 w-4 app-muted" />
-            )}
-          </button>
-          <button
-            type="button"
-            title={m.editar_categoria}
-            onClick={() => onEditar(row)}
-            className="gerente-chip-action rounded-md border p-1.5 opacity-70 transition hover:opacity-100 app-border"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            title={m.excluir}
-            onClick={() => onExcluir(row)}
-            className="gerente-chip-action rounded-md border p-1.5 opacity-70 transition hover:opacity-100 app-border app-badge-danger"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </td>
-    </tr>
-  )
-}
-
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 type Props = Readonly<{
@@ -343,17 +210,6 @@ type Props = Readonly<{
 
 export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
   const m = getMessages(idioma).categorias_financeiras
-  const router = useRouter()
-
-  const [rows, setRows] = useState<CategoriaFinanceiraRow[]>(inicial.rows)
-  const [total, setTotal] = useState(inicial.total)
-  const [filtros, setFiltros] = useState<FiltrosUi>(FILTROS_INICIAL)
-  const [filtrosAplicados, setFiltrosAplicados] = useState<FiltrosUi>(FILTROS_INICIAL)
-  const [loadingList, setLoadingList] = useState(false)
-  const [modal, setModal] = useState<ModalState>({ tipo: 'fechado' })
-  const [rowParaExcluir, setRowParaExcluir] = useState<CategoriaFinanceiraRow | null>(null)
-  const [nomeRapido, setNomeRapido] = useState('')
-  const [tipoRapido, setTipoRapido] = useState<CategoriaFinanceiraTipo>('RECEITA')
 
   const toInput = useCallback(
     (f: FiltrosUi): ListarCategoriasFinInput => ({
@@ -366,46 +222,21 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
     [],
   )
 
-  const fetchList = useCallback(async (f: FiltrosUi) => {
-    setLoadingList(true)
-    try {
-      const r = await listarCategoriasFinanceiras(toInput(f))
-      if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error })
-        return
-      }
-      setRows(r.data.rows)
-      setTotal(r.data.total)
-    } finally {
-      setLoadingList(false)
-    }
-  }, [toInput])
+  const {
+    rows, total, filtros, setFiltros, loadingList,
+    modal, setModal, rowParaExcluir, setRowParaExcluir,
+    refetch, handleFiltrar, handleLimpar, toggleAtivo,
+  } = useCadastroListState<CategoriaFinanceiraRow, FiltrosUi, ListarCategoriasFinInput>({
+    inicial,
+    filtrosInicial: FILTROS_INICIAL,
+    toInput,
+    listarAction: listarCategoriasFinanceiras,
+    toggleAtivoAction: alternarAtivoCategoriaFinanceira,
+    labels: { situacao_atualizada: m.situacao_atualizada },
+  })
 
-  const refetch = useCallback(() => {
-    void fetchList(filtrosAplicados)
-    router.refresh()
-  }, [fetchList, filtrosAplicados, router])
-
-  const handleFiltrar = useCallback(() => {
-    setFiltrosAplicados(filtros)
-    void fetchList(filtros)
-  }, [filtros, fetchList])
-
-  const handleLimpar = useCallback(() => {
-    setFiltros(FILTROS_INICIAL)
-    setFiltrosAplicados(FILTROS_INICIAL)
-    void fetchList(FILTROS_INICIAL)
-  }, [fetchList])
-
-  const { mutate: toggleAtivo } = useGerenteMutation(
-    async (row: CategoriaFinanceiraRow) => {
-      const r = await alternarAtivoCategoriaFinanceira(row.id, !row.ativo)
-      if (!r.success) throw new Error(r.error)
-      refetch()
-      return null
-    },
-    { successMessage: m.situacao_atualizada },
-  )
+  const [nomeRapido, setNomeRapido] = useState('')
+  const [tipoRapido, setTipoRapido] = useState<CategoriaFinanceiraTipo>('RECEITA')
 
   const { mutate: criarRapido, loading: criarRapidoLoading } = useGerenteMutation(
     async () => {
@@ -420,7 +251,6 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
     { successMessage: m.salvo_sucesso },
   )
 
-  // Campos do filtro lateral
   const camposFiltro: CampoFiltro[] = [
     {
       id: 'tipo',
@@ -478,11 +308,19 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
         onSaved={refetch}
         idioma={idioma}
       />
-      <ConfirmExcluirModal
+      <ConfirmExcluirCadastroModal
         row={rowParaExcluir}
         onClose={() => setRowParaExcluir(null)}
         onConfirmed={refetch}
-        idioma={idioma}
+        excluirAction={excluirCategoriaFinanceira}
+        labels={{
+          confirmar_excluir_titulo: m.confirmar_excluir_titulo,
+          confirmar_excluir_texto: m.confirmar_excluir_texto,
+          cancelar: m.cancelar,
+          excluindo: m.excluindo,
+          excluir: m.excluir,
+          excluido_sucesso: m.excluido_sucesso,
+        }}
       />
 
       <GerenteStickyToolbar>
@@ -502,7 +340,6 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
       </GerenteStickyToolbar>
 
       <div className="grid gap-4 px-4 py-4 md:px-6 lg:grid-cols-[260px_1fr]">
-        {/* Sidebar */}
         <div className="flex flex-col gap-4">
           <FiltroLateralCadastro
             title={m.filtros_titulo}
@@ -512,10 +349,8 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
             labelFiltrar={m.filtrar}
             labelLimpar={m.limpar_filtros}
           />
-
           <CadastroRapidoBlock title={m.cadastro_rapido} subtitle={m.cadastro_rapido_hint}>
             <div className="flex flex-col gap-2">
-              {/* Seletor de tipo rápido */}
               <div className="flex gap-1">
                 {tipoRapidoOpcoes.map((op) => (
                   <button
@@ -558,7 +393,6 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
           </CadastroRapidoBlock>
         </div>
 
-        {/* Tabela */}
         <div className="flex flex-col gap-3">
           <TabelaCadastroPadrao
             sectionTitle={m.lista_titulo}
@@ -592,14 +426,29 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
               </tr>
             ) : (
               rows.map((row) => (
-                <CategoriaFinRow
-                  key={row.id}
-                  row={row}
-                  idioma={idioma}
-                  onEditar={(r) => setModal({ tipo: 'editar', row: r })}
-                  onExcluir={(r) => setRowParaExcluir(r)}
-                  onToggleAtivo={(r) => toggleAtivo(r)}
-                />
+                <tr key={row.id} className="gerente-fin-row-hover border-b border-border/30 transition-colors last:border-0">
+                  <td className="gerente-fin-cell px-3 py-3 text-sm font-medium">{row.nome}</td>
+                  <td className="px-3 py-3">
+                    <TipoBadge tipo={row.tipo} />
+                  </td>
+                  <td className="px-3 py-3">
+                    <GerenteStatusBadge status={row.ativo ? 'ATIVO' : 'INATIVO'} />
+                  </td>
+                  <td className="px-3 py-3">
+                    <CadastroRowActions
+                      row={row}
+                      onEditar={(r) => setModal({ tipo: 'editar', row: r })}
+                      onExcluir={(r) => setRowParaExcluir(r)}
+                      onToggleAtivo={(r) => toggleAtivo(r)}
+                      labels={{
+                        inativar: m.inativar,
+                        ativar: m.ativar,
+                        editar: m.editar_categoria,
+                        excluir: m.excluir,
+                      }}
+                    />
+                  </td>
+                </tr>
               ))
             )}
           </TabelaCadastroPadrao>
