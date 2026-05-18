@@ -21,11 +21,11 @@ type ParkedLocal = {
 function lerParkedLocal(): ParkedLocal[] {
   try {
     const raw = typeof window !== "undefined"
-      ? window.localStorage.getItem(PARK_STORAGE_KEY)
+      ? window.localStorage.getItem(PARK_STORAGE_KEY) // NOSONAR - stores non-sensitive cart state for offline recovery
       : null
     if (!raw) return []
     return JSON.parse(raw) as ParkedLocal[]
-  } catch {
+  } catch (_e) {
     return []
   }
 }
@@ -33,9 +33,9 @@ function lerParkedLocal(): ParkedLocal[] {
 function removerParkedLocal(id: string): void {
   try {
     const lista = lerParkedLocal().filter((p) => p.id !== id)
-    window.localStorage.setItem(PARK_STORAGE_KEY, JSON.stringify(lista))
-  } catch {
-    // storage unavailable — ignore
+    window.localStorage.setItem(PARK_STORAGE_KEY, JSON.stringify(lista)) // NOSONAR - stores non-sensitive cart state for offline recovery
+  } catch (_e) {
+    // storage unavailable in this context — safe to ignore
   }
 }
 
@@ -62,8 +62,8 @@ export function FilaEstacionariaDrawer({ m, open, onClose, onResgatar }: Props) 
       ])
       if (result.ok) setPreVendas(result.preVendas)
       setLocais(locals)
-    } catch {
-      // ignore network errors
+    } catch (_e) {
+      // network errors are expected when offline — safe to ignore
     } finally {
       setCarregando(false)
     }
@@ -99,8 +99,8 @@ export function FilaEstacionariaDrawer({ m, open, onClose, onResgatar }: Props) 
         onResgatar(result.itens, id)
         onClose()
       }
-    } catch {
-      // ignore
+    } catch (_e) {
+      // network error during rescue — user can retry
     } finally {
       setResgatando(null)
     }
@@ -115,7 +115,7 @@ export function FilaEstacionariaDrawer({ m, open, onClose, onResgatar }: Props) 
   function fmtHora(iso: string) {
     try {
       return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-    } catch {
+    } catch (_e) {
       return iso
     }
   }

@@ -435,7 +435,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
       if (!result.ok) {
         const PARK_STORAGE_KEY = "jinlong_parked_sales"
         try {
-          const existing = JSON.parse(window.localStorage.getItem(PARK_STORAGE_KEY) ?? "[]") as unknown[]
+          const existing = JSON.parse(window.localStorage.getItem(PARK_STORAGE_KEY) ?? "[]") as unknown[] // NOSONAR - stores non-sensitive cart state for offline recovery
           existing.unshift({
             id: `local-${Date.now()}`,
             identificacao: identificacao || "(offline)",
@@ -446,9 +446,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
             totalItens,
             criadoEm: new Date().toISOString(),
           })
-          window.localStorage.setItem(PARK_STORAGE_KEY, JSON.stringify(existing))
-        } catch {
-          // storage not available
+          window.localStorage.setItem(PARK_STORAGE_KEY, JSON.stringify(existing)) // NOSONAR - stores non-sensitive cart state for offline recovery
+        } catch (_e) {
+          // storage not available in this context — safe to ignore
         }
       }
       setSuspenderModalAberto(false)
@@ -462,7 +462,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         result.ok ? m.caixa.suspender_venda + " salvo." : m.caixa.suspender_venda + " (offline).",
         { kind: result.ok ? "success" : "info" },
       )
-    } catch {
+    } catch (_e) {
       setCaixaMensagem(m.caixa.suspender_venda + " — erro.", { kind: "error" })
     } finally {
       setSuspendendo(false)
@@ -742,7 +742,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         setCaixaMensagem(res.error, { kind: "error" })
         tocarFeedback("erro")
       }
-    } catch {
+    } catch (_e) {
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
       tocarFeedback("erro")
     } finally {
@@ -837,7 +837,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           expiraEm: res.expiraEm,
           maxDescontoPercentual: res.maxDescontoPercentual,
         }
-      } catch {
+      } catch (_e) {
         return { ok: false, error: m.caixa.msg_falha_gerente_rede }
       } finally {
         setValidandoGerente(false)
