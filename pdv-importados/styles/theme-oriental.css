@@ -393,6 +393,7 @@ html:has(.login-premium-root) body {
   align-items: center;
   justify-content: center;
   width: 100%;
+  margin-bottom: 2rem;
 }
 
 /* Sem sombras internas aqui: elas liam-se como “moldura” retangular em volta do dragão. */
@@ -427,6 +428,7 @@ html:has(.login-premium-root) body {
   letter-spacing: 0.14em;
   color: #bfa76a;
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.85);
+  margin-top: 1rem;
 }
 
 .login-premium-wordmark-han {
