@@ -187,7 +187,7 @@ jobs:
           echo "=== sync-outbox ==="
           deno check --no-lock backend/supabase/functions/sync-outbox/index.ts
           echo "=== validar-gerente ==="
-          deno check --no-lock backend/supabase/functions/validar-gerente/index.ts
+          deno check --no-lock --config backend/supabase/functions/validar-gerente/deno.json backend/supabase/functions/validar-gerente/index.ts
           echo "=== fiscal-worker ==="
           deno check --no-lock --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
 
