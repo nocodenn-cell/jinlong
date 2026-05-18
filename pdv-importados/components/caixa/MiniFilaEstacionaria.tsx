@@ -15,7 +15,7 @@ type Props = Readonly<{
 function fmtHora(iso: string): string {
   try {
     return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-  } catch {
+  } catch (_e) {
     return iso
   }
 }
@@ -77,7 +77,7 @@ export function MiniFilaEstacionaria({ m, onResgatar, lojaId }: Props) {
             },
           )
           .subscribe()
-      } catch {
+      } catch (_e) {
         // realtime unavailable — polling fallback not needed, FilaEstacionariaDrawer handles that
       }
     }
@@ -107,7 +107,7 @@ export function MiniFilaEstacionaria({ m, onResgatar, lojaId }: Props) {
         }
         removerSuspensao(suspensao.id)
         onResgatar(result.itens, suspensao.id)
-      } catch {
+      } catch (_e) {
         console.warn("[MiniFilaEstacionaria] Falha ao resgatar venda", suspensao.id)
       }
     },
