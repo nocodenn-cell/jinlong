@@ -69,7 +69,7 @@ export async function obterDetalhamentoItens(
       .order("criado_em", { ascending: false })
     if (error) { return [] }
     return (data ?? []).map((r: Record<string, unknown>) => {
-      const prod = r.produtos as Record<string, unknown> | null
+      const prod = typeof r.produtos === 'object' && r.produtos !== null ? (r.produtos as Record<string, unknown>) : null
       return {
         vendaId: String(r.venda_id ?? ""),
         produtoNome: prod ? String(prod.nome ?? "") : "—",
