@@ -278,13 +278,15 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   }, [filtros, paginaAtual, itensPorPagina])
 
   useLayoutEffect(() => {
+    // Print is initiated by the user via Ctrl+P after the print rows are set.
+    // We clear linhasImpressao on the afterprint event so the print preview
+    // rows are removed once the dialog closes.
     if (linhasImpressao.length === 0) return
     const onAfterPrint = () => {
       setLinhasImpressao([])
       window.removeEventListener('afterprint', onAfterPrint)
     }
     window.addEventListener('afterprint', onAfterPrint)
-    window.print()
     return () => window.removeEventListener('afterprint', onAfterPrint)
   }, [linhasImpressao])
 

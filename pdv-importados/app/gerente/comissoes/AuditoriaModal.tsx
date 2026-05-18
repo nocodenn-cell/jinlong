@@ -89,15 +89,15 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
     return () => window.removeEventListener('keydown', handler)
   }, [open, onClose])
 
+  const [csvHref, setCsvHref] = useState<string | null>(null)
+
   function handleExportCsv() {
     const csv = buildCsv(items)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `comissoes-${vendedorId}-${dataInicio}-${dataFim}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    setCsvHref(url)
+    // Revoke after a tick to allow the browser to start the download
+    setTimeout(() => { URL.revokeObjectURL(url); setCsvHref(null) }, 2000)
   }
 
   if (!open) return null
@@ -127,12 +127,23 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
           </div>
           <div className="flex items-center gap-2">
             {!loading && items.length > 0 && (
-              <button
-                onClick={handleExportCsv}
-                className="rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors app-btn-neutral"
-              >
-                {m.comissoes.exportar_csv}
-              </button>
+              csvHref ? (
+                <a
+                  href={csvHref}
+                  download={`comissoes-${vendedorId}-${dataInicio}-${dataFim}.csv`}
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors app-btn-neutral"
+                >
+                  {m.comissoes.exportar_csv}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors app-btn-neutral"
+                >
+                  {m.comissoes.exportar_csv}
+                </button>
+              )
             )}
             <button
               onClick={onClose}
