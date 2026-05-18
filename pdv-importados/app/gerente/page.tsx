@@ -59,6 +59,7 @@ const ZERO_RESUMO: DashboardResumoDTO = {
   margem_estimada: null,
   cobertura_custo: 0,
   custo_confiavel: false,
+  produto_mais_vendido: '',
   serie_horaria_hoje: [],
   estoque_critico: [],
   atividades_recentes: [],
