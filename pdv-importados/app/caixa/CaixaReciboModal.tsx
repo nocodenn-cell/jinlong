@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { cn } from "@/lib/utils"
 
 export type ReciboItem = {
   nome: string
@@ -53,46 +54,6 @@ function fmtData(d: Date): string {
 }
 
 export function CaixaReciboModal({ venda, onClose }: Props) {
-  const printRef = useRef<HTMLDivElement>(null)
-
-  const handlePrint = () => {
-    const el = printRef.current
-    if (!el) return
-
-    const PRINT_CSS = [
-      "@media print { body > *:not(#jl-receipt-print) { display: none !important; } }",
-      "#jl-receipt-print { position: fixed; top: 0; left: 0; width: 300px; background: #fff; padding: 8px; font-family: 'Courier New', monospace; font-size: 12px; color: #000; }",
-      "#jl-receipt-print * { box-sizing: border-box; margin: 0; padding: 0; }",
-      "#jl-receipt-print .recibo-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
-      "#jl-receipt-print .recibo-header h1 { font-size: 14px; font-weight: bold; }",
-      "#jl-receipt-print .recibo-header p { font-size: 11px; color: #555; }",
-      "#jl-receipt-print .recibo-id { font-size: 10px; color: #777; }",
-      "#jl-receipt-print .recibo-itens { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
-      "#jl-receipt-print .recibo-item { margin-bottom: 3px; }",
-      "#jl-receipt-print .recibo-item-nome { font-weight: bold; }",
-      "#jl-receipt-print .recibo-item-detalhe { display: flex; justify-content: space-between; font-size: 11px; color: #444; }",
-      "#jl-receipt-print .recibo-totais { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
-      "#jl-receipt-print .recibo-linha { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }",
-      "#jl-receipt-print .recibo-linha.total { font-weight: bold; font-size: 14px; }",
-      "#jl-receipt-print .recibo-pgto { margin-bottom: 6px; }",
-      "#jl-receipt-print .recibo-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; }",
-    ].join("\n")
-
-    const style = document.createElement("style")
-    style.textContent = PRINT_CSS
-    document.head.appendChild(style)
-
-    const printRoot = document.createElement("div")
-    printRoot.id = "jl-receipt-print"
-    printRoot.appendChild(el.cloneNode(true))
-    document.body.appendChild(printRoot)
-
-    window.print()
-
-    document.body.removeChild(printRoot)
-    document.head.removeChild(style)
-  }
-
   // Fecha com Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -116,15 +77,8 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-semibold text-foreground">Recibo da venda</span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              aria-label="Imprimir recibo"
-              className="app-btn-accent rounded-md px-3 py-1.5 text-xs font-semibold"
-            >
-              🖨️ Imprimir
-            </button>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-[11px] text-muted-foreground sm:inline">Ctrl+P para imprimir</span>
             <button
               type="button"
               onClick={onClose}
@@ -138,7 +92,7 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
 
         {/* Conteúdo rolável */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div ref={printRef} className="flex flex-col gap-3 font-mono text-xs text-foreground">
+          <div className="flex flex-col gap-3 font-mono text-xs text-foreground">
             {/* Cabeçalho */}
             <div className="recibo-header text-center border-b border-dashed border-border pb-3">
               <h1 className="text-sm font-bold">
