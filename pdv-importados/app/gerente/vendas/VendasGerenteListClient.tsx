@@ -52,6 +52,8 @@ export function VendasGerenteListClient({ idioma, locale, initialVendas, initial
       pageRef.current = nextPage
       setVendas((prev) => [...prev, ...result.vendas])
       setHasMore(result.hasMore)
+    } catch {
+      // network or server error — loading spinner will clear in finally
     } finally {
       setLoading(false)
     }

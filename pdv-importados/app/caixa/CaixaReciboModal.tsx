@@ -3,8 +3,6 @@
 import { useEffect, useRef } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
-import { useThermalPrinter } from "@/hooks/useThermalPrinter"
-import { cn } from "@/lib/utils"
 
 export type ReciboItem = {
   nome: string
@@ -56,16 +54,6 @@ function fmtData(d: Date): string {
 
 export function CaixaReciboModal({ venda, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
-  const thermal = useThermalPrinter()
-  const supportsWebUSB = thermal.supported
-
-  const handleThermalPrint = async () => {
-    if (!thermal.deviceInfo) {
-      await thermal.connect()
-    } else {
-      await thermal.printRecibo(venda)
-    }
-  }
 
   const handlePrint = () => {
     const el = printRef.current
@@ -129,35 +117,14 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-semibold text-foreground">Recibo da venda</span>
           <div className="flex gap-2">
-            {supportsWebUSB ? (
-              <button
-                type="button"
-                onClick={() => { handleThermalPrint().catch(() => undefined) }}
-                disabled={thermal.status === "connecting" || thermal.status === "printing"}
-                aria-label="Imprimir (térmica direta)"
-                title="Imprime diretamente na impressora térmica (sem confirmação)"
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-semibold",
-                  thermal.status === "connected" || thermal.status === "printing"
-                    ? "app-btn-accent"
-                    : "app-btn-neutral",
-                )}
-              >
-                {thermal.status === "connecting" ? "Conectando…" :
-                 thermal.status === "printing"   ? "Imprimindo…" :
-                 "🖨️ Imprimir (térmica direta)"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handlePrint}
-                aria-label="Imprimir (janela)"
-                title="Imprime usando a janela do navegador (clique em OK)"
-                className="app-btn-accent rounded-md px-3 py-1.5 text-xs font-semibold"
-              >
-                🖨️ Imprimir (janela)
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handlePrint}
+              aria-label="Imprimir recibo"
+              className="app-btn-accent rounded-md px-3 py-1.5 text-xs font-semibold"
+            >
+              🖨️ Imprimir
+            </button>
             <button
               type="button"
               onClick={onClose}
@@ -168,13 +135,6 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
             </button>
           </div>
         </div>
-
-        {/* Erro térmica */}
-        {thermal.errorMsg && (
-          <div className="border-b border-border bg-destructive/10 px-4 py-2 text-xs text-destructive">
-            {thermal.errorMsg}
-          </div>
-        )}
 
         {/* Conteúdo rolável */}
         <div className="flex-1 overflow-y-auto p-4">
