@@ -33,8 +33,10 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
+      # Rollup v4 requer binário nativo Linux; lock gerado em Windows pode omiti-lo.
+      # --include=optional garante que @rollup/rollup-linux-x64-gnu seja instalado.
       - name: Install (workspaces na raiz)
-        run: npm ci
+        run: npm ci --include=optional
 
       - name: Typecheck, unit tests e build (Turborepo)
         run: npx turbo run typecheck test build --filter=pdv-local
