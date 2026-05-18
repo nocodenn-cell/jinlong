@@ -77,7 +77,10 @@ export class WebUsbPrinter {
 
     await device.claimInterface(iface.interfaceNumber)
 
-    const alt      = iface.alternates[0]
+    const alt = iface.alternates.find((a) =>
+      a.endpoints.some((e) => e.type === "bulk" && e.direction === "out"),
+    )
+    if (!alt) throw new Error("Alternate de interface não encontrado.")
     const endpoint = alt.endpoints.find((e) => e.type === "bulk" && e.direction === "out")
     if (!endpoint) throw new Error("Endpoint bulk-out não encontrado.")
 

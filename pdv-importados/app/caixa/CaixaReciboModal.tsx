@@ -134,7 +134,7 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
             {supportsWebUSB ? (
               <button
                 type="button"
-                onClick={() => { handleThermalPrint().catch((_e: unknown) => undefined) }}
+                onClick={() => { handleThermalPrint().catch(() => undefined) }}
                 disabled={thermal.status === "connecting" || thermal.status === "printing"}
                 aria-label="Imprimir (térmica direta)"
                 title="Imprime diretamente na impressora térmica (sem confirmação)"
