@@ -24,7 +24,6 @@ type Props = Readonly<{
 export function CaixaSplitPagamentos({
   m,
   linhas,
-  totalLiquidoComGerente: _totalLiquidoComGerente,
   restante,
   valido,
   disabled,

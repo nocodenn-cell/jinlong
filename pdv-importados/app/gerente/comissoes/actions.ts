@@ -44,8 +44,8 @@ export async function obterResumoComissoes(
       quantidadeItens: Number(r.quantidade_itens ?? 0),
       quantidadeVendas: Number(r.quantidade_vendas ?? 0),
     }))
-  } catch (_e) {
-    console.error("[comissoes] obterResumoComissoes unexpected:", _e)
+  } catch (err) {
+    console.error("[comissoes] obterResumoComissoes unexpected:", err)
     return []
   }
 }
@@ -80,8 +80,8 @@ export async function obterDetalhamentoItens(
         criadoEm: String(r.criado_em ?? ""),
       }
     })
-  } catch (_e) {
-    console.error("[comissoes] obterDetalhamentoItens unexpected:", _e)
+  } catch (err) {
+    console.error("[comissoes] obterDetalhamentoItens unexpected:", err)
     return []
   }
 }

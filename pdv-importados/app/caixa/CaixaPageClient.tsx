@@ -459,7 +459,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         result.ok ? m.caixa.suspender_venda + " salvo." : m.caixa.suspender_venda + " (offline).",
         { kind: result.ok ? "success" : "info" },
       )
-    } catch (_e) {
+    } catch {
       setCaixaMensagem(m.caixa.suspender_venda + " — erro.", { kind: "error" })
     } finally {
       setSuspendendo(false)
@@ -739,7 +739,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         setCaixaMensagem(res.error, { kind: "error" })
         tocarFeedback("erro")
       }
-    } catch (_e) {
+    } catch {
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
       tocarFeedback("erro")
     } finally {
@@ -763,6 +763,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     recarregarStatusCaixa,
     setCaixaMensagem,
     setCaixaMensagemVendaOk,
+    suspensaoIdAtiva,
+    setSuspensaoIdAtiva,
     tocarFeedback,
   ])
 
@@ -834,7 +836,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           expiraEm: res.expiraEm,
           maxDescontoPercentual: res.maxDescontoPercentual,
         }
-      } catch (_e) {
+      } catch {
         return { ok: false, error: m.caixa.msg_falha_gerente_rede }
       } finally {
         setValidandoGerente(false)

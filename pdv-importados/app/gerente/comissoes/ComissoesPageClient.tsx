@@ -55,7 +55,7 @@ export function ComissoesPageClient({ m }: Props) {
     try {
       const result = await obterResumoComissoes(dataInicio, dataFim)
       setRows(result)
-    } catch (_e) {
+    } catch {
       /* fetch error — rows remain empty */
     } finally {
       setLoading(false)

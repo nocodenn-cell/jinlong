@@ -34,7 +34,7 @@ function fmtDate(iso: string): string {
   if (!iso) return '—'
   try {
     return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-  } catch (_e) {
+  } catch {
     /* invalid date */
     return iso
   }
@@ -76,7 +76,7 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
     setLoading(true)
     obterDetalhamentoItens(vendedorId, dataInicio, dataFim)
       .then((data) => setItems(data))
-      .catch((_e) => { /* fetch error — items remain empty */ })
+      .catch(() => { /* fetch error — items remain empty */ })
       .finally(() => setLoading(false))
   }, [open, vendedorId, dataInicio, dataFim])
 
