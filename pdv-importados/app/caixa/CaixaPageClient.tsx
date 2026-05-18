@@ -181,6 +181,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   const valorDescontoGerente = descontoGerenteAplicado.descontoValor
   const totalLiquidoComGerente = descontoGerenteAplicado.totalLiquidoComDesconto
   const descontoGerentePercentualEfetivo = descontoGerenteAplicado.percentualClamped
+  const somaParcelas = totalLiquidoComGerente ?? 0
 
   const formaPagamento = useMemo(
     () => metodoPagamentoToForma(metodoPagamento),
@@ -189,7 +190,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
 
   const {
     pagamentos,
-    somaParcelas,
     diferenca: diferencaPagamento,
     podeAdicionarParcela,
     formasDisponiveis,

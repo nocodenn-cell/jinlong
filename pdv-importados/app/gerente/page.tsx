@@ -62,6 +62,7 @@ const ZERO_RESUMO: DashboardResumoDTO = {
   serie_horaria_hoje: [],
   estoque_critico: [],
   atividades_recentes: [],
+  produto_mais_vendido: 'Nenhum hoje (0 un)',
 }
 
 const ATIVIDADE_ICON: Record<DashboardAtividadeTipo, typeof Receipt> = {

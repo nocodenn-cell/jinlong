@@ -2,8 +2,13 @@
 
 import type { Mensagens } from "@/i18n/getMessages"
 import type { MetodoPagamentoUi } from "@/app/caixa/caixaMetodoPagamento"
-import type { PagamentoLinha } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
+
+type PagamentoLinha = {
+  id: string
+  metodo: MetodoPagamentoUi
+  valor: string
+}
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { cn } from "@/lib/utils"
 
