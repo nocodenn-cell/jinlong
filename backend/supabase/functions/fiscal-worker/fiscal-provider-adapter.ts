@@ -3,7 +3,9 @@ import { asString, isRecord, randomHex } from "./fiscal_http.ts";
 
 function encodeFocusBasicAuth(token: string): string {
   const t = token.trim();
-  return btoa(`${t}:`);
+  // Focus API requires HTTP Basic Auth with token as user, empty password
+  // btoa() is required for RFC 7617 Basic authentication encoding
+  return btoa(`${t}:`); // NOSONAR - HTTP Basic Auth requires base64 encoding per RFC 7617
 }
 
 function buildFocusRequestUrl(baseUrl: string, ref: string): string {
