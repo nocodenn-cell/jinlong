@@ -721,6 +721,8 @@
     "origem_brasil_sem_nf": "Brasil s/ NF",
     "badge_nf": "Com NF",
     "badge_sem_nf": "Sem NF",
+    "badge_atacado": "Atacado",
+    "economizou": "economizou",
     "cambio_carregando": "Câmbio USD…",
     "cambio_usd": "USD 1 ≈ R$ {{valor}} · {{data}}",
     "cambio_usd_fallback": "USD 1 ≈ R$ {{valor}} · ref. interna ({{data}})",

@@ -761,6 +761,8 @@
     "origem_brasil_sem_nf": "巴西（无发票）",
     "badge_nf": "有发票",
     "badge_sem_nf": "无发票",
+    "badge_atacado": "批发",
+    "economizou": "节省",
     "cambio_carregando": "美元汇率…",
     "cambio_usd": "USD 1 ≈ R$ {{valor}} · {{data}}",
     "cambio_usd_fallback": "USD 1 ≈ R$ {{valor}} · 内部参考（{{data}}）",

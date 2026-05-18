@@ -22,6 +22,12 @@ export interface ItemCarrinho {
   imagem?: string
   metaPdv?: Record<string, unknown>
   variantes?: Record<string, unknown>
+  /** Preço original imutável vindo do banco de dados */
+  preco_venda_original?: number
+  /** Preço de atacado configurado no produto */
+  preco_atacado?: number | null
+  /** Quantidade mínima para ativar preço de atacado */
+  quantidade_gatilho_atacado?: number | null
   resultado?: {
     precoUnitario: number
     precoOriginal: number
@@ -86,15 +92,67 @@ function roundMoney(valor: number) {
   return Math.round(valor * 100) / 100
 }
 
+/**
+ * Calcula o preço unitário final com suporte a atacado automático.
+ * Usa sempre precoVendaOriginal como referência base.
+ */
+function calcularPrecoUnitario(params: {
+  precoVendaOriginal: number
+  precoAtacado: number | null | undefined
+  gatilho: number | null | undefined
+  quantidade: number
+  descontoManual?: number | null
+}): number {
+  const { precoVendaOriginal, precoAtacado, gatilho, quantidade, descontoManual } = params
+  let precoBase = precoVendaOriginal
+
+  // Aplicar preço de atacado se condições forem atendidas
+  if (
+    gatilho &&
+    gatilho > 0 &&
+    precoAtacado !== null &&
+    precoAtacado !== undefined &&
+    quantidade >= gatilho
+  ) {
+    precoBase = precoAtacado
+  }
+
+  // Aplicar desconto manual se for menor que preço base
+  if (descontoManual !== null && descontoManual !== undefined && descontoManual < precoBase) {
+    precoBase = descontoManual
+  }
+
+  return roundMoney(precoBase)
+}
+
 function normalizarItemCarrinho(item: ItemCarrinho): ItemCarrinho {
-  const precoBase = item.precoVariejo ?? item.precoOriginal ?? item.precoUnitario ?? 0
-  const resultadoPrecoUnitario = item.resultado?.precoUnitario ?? item.precoUnitario ?? precoBase
-  const resultadoPrecoOriginal = item.resultado?.precoOriginal ?? item.precoOriginal ?? precoBase
+  const precoBase = item.precoVariejo ?? item.precoOriginal ?? item.preco_venda_original ?? item.precoUnitario ?? 0
+  const precoVendaOriginal = item.preco_venda_original ?? precoBase
+
+  // Usar atacado automático se disponível
+  const precoUnitarioCalculado = calcularPrecoUnitario({
+    precoVendaOriginal,
+    precoAtacado: item.preco_atacado ?? null,
+    gatilho: item.quantidade_gatilho_atacado ?? null,
+    quantidade: item.quantidade,
+    descontoManual: item.precoUnitario !== precoBase ? item.precoUnitario : undefined,
+  })
+
+  const resultadoPrecoUnitario = item.resultado?.precoUnitario ?? precoUnitarioCalculado
+  const resultadoPrecoOriginal = item.resultado?.precoOriginal ?? precoVendaOriginal
   const descontoUnitario = item.resultado?.descontoUnitario ?? roundMoney(resultadoPrecoOriginal - resultadoPrecoUnitario)
-  const tipoPreco = item.resultado?.tipoPreco ?? 'VAREJO'
+  const tipoPreco = item.resultado?.tipoPreco ?? (
+    item.quantidade_gatilho_atacado &&
+    item.quantidade_gatilho_atacado > 0 &&
+    item.preco_atacado &&
+    item.quantidade >= item.quantidade_gatilho_atacado
+      ? 'ATACADO'
+      : 'VAREJO'
+  )
 
   return {
     ...item,
+    preco_venda_original: precoVendaOriginal,
     precoVariejo: item.precoVariejo ?? precoBase,
     precoUnitario: resultadoPrecoUnitario,
     precoOriginal: resultadoPrecoOriginal,

@@ -211,11 +211,16 @@ export function CaixaCartList({
                       variant="outline"
                       className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
                     >
-                      {m.relatorios.atacado}
+                      {m.caixa.badge_atacado}
                     </Badge>
                   ) : null}
                 </div>
                 <MetaPdvBloco item={item} m={m} compact={false} />
+                {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
+                  <div className="text-xs text-green-600 dark:text-green-400">
+                    {`(${m.caixa.economizou} ${moeda} ${formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)})`}
+                  </div>
+                ) : null}
                 <span className="text-xs text-foreground/70 font-mono truncate opacity-90">
                   {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
                 </span>
@@ -280,11 +285,16 @@ export function CaixaCartList({
                       variant="outline"
                       className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
                     >
-                      {m.relatorios.atacado}
+                      {m.caixa.badge_atacado}
                     </Badge>
                   ) : null}
                 </div>
                 <MetaPdvBloco item={item} m={m} compact />
+                {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
+                  <div className="text-[9px] text-green-600 dark:text-green-400">
+                    {`(${m.caixa.economizou} ${moeda} ${formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)})`}
+                  </div>
+                ) : null}
                 <div className="text-[9px] text-muted-foreground font-mono truncate opacity-60">
                   {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
                 </div>
