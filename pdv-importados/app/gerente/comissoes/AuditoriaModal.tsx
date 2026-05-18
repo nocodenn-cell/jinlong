@@ -76,7 +76,7 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
     setLoading(true)
     obterDetalhamentoItens(vendedorId, dataInicio, dataFim)
       .then((data) => setItems(data))
-      .catch(() => { /* fetch error — items remain empty */ })
+      .catch(() => { setItems([]) })
       .finally(() => setLoading(false))
   }, [open, vendedorId, dataInicio, dataFim])
 
@@ -93,11 +93,9 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
 
   function handleExportCsv() {
     const csv = buildCsv(items)
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    setCsvHref(url)
-    // Revoke after a tick to allow the browser to start the download
-    setTimeout(() => { URL.revokeObjectURL(url); setCsvHref(null) }, 2000)
+    const dataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`
+    setCsvHref(dataUri)
+    setTimeout(() => setCsvHref(null), 3000)
   }
 
   if (!open) return null
