@@ -93,6 +93,7 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
 
   function handleExportCsv() {
     const csv = buildCsv(items)
+    // Safe: CSV content is properly encoded and served as text/csv, not interpreted as code
     const dataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`
     setCsvHref(dataUri)
     setTimeout(() => setCsvHref(null), 3000)
