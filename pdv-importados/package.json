@@ -59,6 +59,7 @@
     "postcss": "^8.4.38",
     "react": "19",
     "react-dom": "^19.2.5",
+    "react-dropzone": "^15.0.0",
     "react-is": "^19.0.0-rc.692d5b8d-20241004",
     "recharts": "^3.8.1",
     "source-map-js": "^1.2.1",

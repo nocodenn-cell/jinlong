@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Pencil } from 'lucide-react'
 import { atualizarDadosProdutoGerente } from '@/app/gerente/produtos/actions'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
+import { ProdutosUploadDropzone } from '@/components/gerente/produtos/ProdutosUploadDropzone'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -23,6 +24,7 @@ export type ProdutosEditarCatalogoModalProps = Readonly<{
   produto: ProdutoGerenteRow | null
   m: Mensagens
   onSalvo: () => void
+  onImagemAlterada?: () => void
 }>
 
 export function ProdutosEditarCatalogoModal({
@@ -31,6 +33,7 @@ export function ProdutosEditarCatalogoModal({
   produto,
   m,
   onSalvo,
+  onImagemAlterada,
 }: ProdutosEditarCatalogoModalProps) {
   const p = m.produtos
   const [nome, setNome] = useState('')
@@ -38,6 +41,11 @@ export function ProdutosEditarCatalogoModal({
   const [origem, setOrigem] = useState<OrigemCode>('china_manual')
   const [temNf, setTemNf] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [imagemAtual, setImagemAtual] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) setImagemAtual(produto?.imagem_url ?? null)
+  }, [open, produto])
 
   const fechar = useCallback(() => {
     onOpenChange(false)
@@ -114,6 +122,21 @@ export function ProdutosEditarCatalogoModal({
           </div>
         </CardHeader>
         <CardContent className="space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
+          {produto && (
+            <ProdutosUploadDropzone
+              produtoId={produto.id}
+              imagemAtual={imagemAtual}
+              m={m}
+              onUploadSuccess={(url) => {
+                setImagemAtual(url)
+                onImagemAlterada?.()
+              }}
+              onRemoveSuccess={() => {
+                setImagemAtual(null)
+                onImagemAlterada?.()
+              }}
+            />
+          )}
           <label className="block text-xs font-medium text-muted-foreground">
             {p.nome}
             <input className={`${finIn} mt-1`} value={nome} onChange={(e) => setNome(e.target.value)} disabled={saving} />

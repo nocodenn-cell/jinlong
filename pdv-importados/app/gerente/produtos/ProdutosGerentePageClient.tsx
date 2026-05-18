@@ -292,6 +292,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
 
   const totalPaginas = Math.max(1, Math.ceil(total / itensPorPagina))
   const paginaSegura = Math.min(paginaAtual, totalPaginas)
+  const totalSemFoto = useMemo(() => rows.filter((r) => !r.imagem_url).length, [rows])
 
   useEffect(() => {
     setPaginaAtual((prev) => Math.min(prev, totalPaginas))
@@ -657,6 +658,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           produto={produtoEditar}
           m={m}
           onSalvo={refetch}
+          onImagemAlterada={refetch}
         />
         <ProdutosImportarModal
           open={importModalAberto}
@@ -741,6 +743,16 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 <span>{interpolateTemplate(m.produtos.contador_encontrados, { count: total })}</span>
                 {loadingList ? (
                   <span className="text-[11px] font-normal opacity-70">{m.produtos.filtro_carregando}</span>
+                ) : null}
+                {totalSemFoto > 0 && filtros.imagens !== 'sem_imagem' ? (
+                  <button
+                    type="button"
+                    onClick={() => patchFiltro('imagens', 'sem_imagem')}
+                    className="inline-flex items-center rounded-full border border-amber-400/50 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 transition hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-600/40 dark:hover:bg-amber-950/60"
+                    title={m.produtos.filtro_imagens_sem}
+                  >
+                    {interpolateTemplate(m.produtos.sem_foto_badge, { count: totalSemFoto })}
+                  </button>
                 ) : null}
               </span>
             }
