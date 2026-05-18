@@ -61,7 +61,7 @@ export function VendasGerenteListClient({ idioma, locale, initialVendas, initial
     const el = sentinelRef.current
     if (!el) return
     const obs = new IntersectionObserver(
-      (entries) => { if (entries[0]?.isIntersecting) void loadNextPage() },
+      (entries) => { if (entries[0]?.isIntersecting) loadNextPage().catch(() => undefined) },
       { rootMargin: '300px' },
     )
     obs.observe(el)

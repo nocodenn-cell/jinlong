@@ -93,6 +93,7 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
     // still getting an isolated print context with clean styles.
     const iframe = document.createElement("iframe")
     iframe.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden"
+    iframe.setAttribute("sandbox", "allow-same-origin allow-scripts allow-modals")
     document.body.appendChild(iframe)
 
     const doc = iframe.contentDocument
