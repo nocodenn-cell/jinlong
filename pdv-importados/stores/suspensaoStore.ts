@@ -31,7 +31,7 @@ function lerParkedLocal(): ParkedLocal[] {
       typeof window !== "undefined" ? window.localStorage.getItem(PARK_STORAGE_KEY) : null // NOSONAR - stores non-sensitive cart state for offline recovery
     if (!raw) return []
     return JSON.parse(raw) as ParkedLocal[]
-  } catch (_e) {
+  } catch {
     return []
   }
 }
@@ -39,7 +39,7 @@ function lerParkedLocal(): ParkedLocal[] {
 function salvarParkedLocal(lista: ParkedLocal[]): void {
   try {
     window.localStorage.setItem(PARK_STORAGE_KEY, JSON.stringify(lista)) // NOSONAR - stores non-sensitive cart state for offline recovery
-  } catch (_e) {
+  } catch {
     // storage unavailable in this context — safe to ignore
   }
 }
@@ -63,7 +63,7 @@ export const useSuspensaoStore = create<SuspensaoState>((set) => ({
           .map((l) => ({ ...l, fonte: "local" as const })),
       ]
       set({ suspensoes: merged })
-    } catch (_e) {
+    } catch {
       // network errors are expected when offline — keep existing state
     } finally {
       set({ carregando: false })
