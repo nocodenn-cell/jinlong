@@ -72,15 +72,15 @@ describe('usePdvLocalOutboxSync', () => {
       }),
     )
 
-    await act(async () => {
-      await result.current.reprocessarDlq()
-    })
+    void result.current.reprocessarDlq()
 
-    expect(invokeMock).toHaveBeenCalledWith('outbox_reprocessar_dlq_cmd')
-    expect(invokeMock).toHaveBeenCalledWith('sync_outbox_real_cmd', { limite: 50 })
-    expect(onSyncElapsedMs).toHaveBeenCalledTimes(1)
-    expect(onMensagem).toHaveBeenCalledWith('Eventos repostos na fila. Sync executada em seguida.')
-    expect(result.current.reprocessandoDlq).toBe(false)
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith('outbox_reprocessar_dlq_cmd')
+      expect(invokeMock).toHaveBeenCalledWith('sync_outbox_real_cmd', { limite: 50 })
+      expect(onSyncElapsedMs).toHaveBeenCalledTimes(1)
+      expect(onMensagem).toHaveBeenCalledWith('Eventos repostos na fila. Sync executada em seguida.')
+      expect(result.current.reprocessandoDlq).toBe(false)
+    })
   })
 
   it('retorna mensagem formatada quando reprocessar DLQ falha', async () => {
@@ -109,11 +109,11 @@ describe('usePdvLocalOutboxSync', () => {
       }),
     )
 
-    await act(async () => {
-      await result.current.reprocessarDlq()
-    })
+    void result.current.reprocessarDlq()
 
-    expect(onMensagem).toHaveBeenCalledWith('erro-formatado')
-    expect(result.current.reprocessandoDlq).toBe(false)
+    await waitFor(() => {
+      expect(onMensagem).toHaveBeenCalledWith('erro-formatado')
+      expect(result.current.reprocessandoDlq).toBe(false)
+    })
   })
 })
