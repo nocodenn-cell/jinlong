@@ -40,8 +40,10 @@ export async function buscarVendasPaginadasAction(
   }
 }
 
-export async function cancelarVendaGerenteAction(formData: FormData) {
+export async function cancelarVendaGerenteAction(
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
   const parsed = parseCancelarVendaGerenteForm(formData)
-  if (!parsed) return
-  await cancelarVenda(parsed.vendaId, parsed.motivo)
+  if (!parsed) return { ok: false, error: 'Dados inválidos.' }
+  return cancelarVenda(parsed.vendaId, parsed.motivo)
 }
