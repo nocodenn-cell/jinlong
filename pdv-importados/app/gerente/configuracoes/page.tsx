@@ -1,7 +1,13 @@
-export default function ConfiguracoesPage() {
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getMessages } from '@/i18n/getMessages'
+
+export default async function ConfiguracoesPage() {
+  const { idioma } = await getUsuarioIdioma()
+  const m = getMessages(idioma)
+
   return (
-    <div className="p-8 text-center text-gray-500">
-      Página de configurações (em breve)
+    <div className="px-4 py-8 text-center opacity-60">
+      <p className="text-sm">{m.gerente.nav_configuracoes}</p>
     </div>
-  );
+  )
 }
