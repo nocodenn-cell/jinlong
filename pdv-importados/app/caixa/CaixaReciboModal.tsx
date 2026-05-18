@@ -57,7 +57,7 @@ function fmtData(d: Date): string {
 export function CaixaReciboModal({ venda, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const thermal = useThermalPrinter()
-  const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
+  const supportsWebUSB = thermal.supported
 
   const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {

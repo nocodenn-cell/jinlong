@@ -609,16 +609,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
       const res = await finalizarVendaCaixa(payload)
       if (res.ok) {
         vendaIdempotenciaRef.current = null
+        const itensRecibo = itens.map((i) => ({
+          nome: i.nome,
+          quantidade: i.quantidade,
+          precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
+          precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
+          tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
+        }))
         setReciboVenda({
           vendaId: res.vendaId,
           data: new Date(),
-          itens: itens.map((i) => ({
-            nome: i.nome,
-            quantidade: i.quantidade,
-            precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
-            precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
-            tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
-          })),
+          itens: itensRecibo,
           pagamentos: pagamentos.map((p) => ({ formaPagamento: p.formaPagamento, valor: p.valor })),
           totalBruto,
           totalDesconto: descontoGerentePercentualEfetivo > 0
