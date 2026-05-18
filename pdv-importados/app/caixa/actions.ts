@@ -188,3 +188,145 @@ export async function cancelarVenda(
 export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaCaixaResult> {
   return finalizarVendaCaixaImpl(raw)
 }
+
+// ─── Suspensão de Vendas (Park / Hold) ────────────────────────────────────────
+
+export type VendaSuspensaItem = {
+  produtoId: string
+  nome: string
+  quantidade: number
+  precoUnitario: number
+  precoOriginal: number
+  tipoPreco: string
+}
+
+export type PreVendaRow = {
+  id: string
+  identificacao: string
+  itens: VendaSuspensaItem[]
+  totalBruto: number
+  totalDesconto: number
+  totalLiquido: number
+  totalItens: number
+  criadoEm: string
+}
+
+export type PreVendaResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string }
+
+export type ListarPreVendasResult =
+  | { ok: true; preVendas: PreVendaRow[] }
+  | { ok: false; error: string }
+
+export type AcaoPreVendaResult =
+  | { ok: true; itens: VendaSuspensaItem[] }
+  | { ok: false; error: string }
+
+export type CancelarPreVendaResult =
+  | { ok: true }
+  | { ok: false; error: string }
+
+export async function criarPreVenda(input: {
+  identificacao: string
+  itens: VendaSuspensaItem[]
+  totalBruto: number
+  totalDesconto: number
+  totalLiquido: number
+  totalItens: number
+}): Promise<PreVendaResult> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const { getLojaIdUsuario, LOJA_MATRIZ_ID } = await import('@/lib/auth/lojaUsuario')
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return { ok: false, error: 'Não autenticado.' }
+
+    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+
+    const { data, error } = await supabase
+      .from('vendas_suspensas')
+      .insert({
+        loja_id: lojaId,
+        operador_id: user.id,
+        identificacao: input.identificacao.trim(),
+        itens: input.itens,
+        total_bruto: input.totalBruto,
+        total_desconto: input.totalDesconto,
+        total_liquido: input.totalLiquido,
+        total_itens: input.totalItens,
+        status: 'ATIVA',
+      })
+      .select('id')
+      .single()
+
+    if (error) return { ok: false, error: error.message }
+    return { ok: true, id: data.id }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao suspender venda.' }
+  }
+}
+
+export async function listarPreVendasAtivas(): Promise<ListarPreVendasResult> {
+  const { createClient } = await import('@/lib/supabase/server')
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('vendas_suspensas')
+      .select('id, identificacao, itens, total_bruto, total_desconto, total_liquido, total_itens, criado_em')
+      .eq('status', 'ATIVA')
+      .order('criado_em', { ascending: false })
+
+    if (error) return { ok: false, error: error.message }
+
+    const preVendas: PreVendaRow[] = (data ?? []).map((r) => ({
+      id: r.id,
+      identificacao: r.identificacao,
+      itens: r.itens as VendaSuspensaItem[],
+      totalBruto: Number(r.total_bruto),
+      totalDesconto: Number(r.total_desconto),
+      totalLiquido: Number(r.total_liquido),
+      totalItens: Number(r.total_itens),
+      criadoEm: r.criado_em,
+    }))
+    return { ok: true, preVendas }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao listar vendas suspensas.' }
+  }
+}
+
+export async function resgatarPreVenda(id: string): Promise<AcaoPreVendaResult> {
+  const { createClient } = await import('@/lib/supabase/server')
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('vendas_suspensas')
+      .update({ status: 'RESGATADA', atualizado_em: new Date().toISOString() })
+      .eq('id', id)
+      .eq('status', 'ATIVA')
+      .select('itens')
+      .single()
+
+    if (error) return { ok: false, error: error.message }
+    return { ok: true, itens: data.itens as VendaSuspensaItem[] }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao resgatar venda suspensa.' }
+  }
+}
+
+export async function cancelarPreVenda(id: string): Promise<CancelarPreVendaResult> {
+  const { createClient } = await import('@/lib/supabase/server')
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase
+      .from('vendas_suspensas')
+      .update({ status: 'CANCELADA', atualizado_em: new Date().toISOString() })
+      .eq('id', id)
+      .eq('status', 'ATIVA')
+
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao cancelar venda suspensa.' }
+  }
+}

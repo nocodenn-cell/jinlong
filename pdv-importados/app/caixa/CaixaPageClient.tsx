@@ -8,6 +8,9 @@ import {
   abrirCaixaOperador,
   fecharCaixaOperador,
   validarGerenteDesconto,
+  criarPreVenda,
+  cancelarPreVenda,
+  type VendaSuspensaItem,
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
@@ -50,6 +53,8 @@ import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBa
 import { CaixaPdvItemStagingPlaceholder } from "@/app/caixa/CaixaPdvItemStagingPlaceholder"
 import { CaixaSplitPagamentos } from "@/app/caixa/CaixaSplitPagamentos"
 import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal"
+import { CaixaIdentificacaoModal } from "@/app/caixa/CaixaIdentificacaoModal"
+import { FilaEstacionariaDrawer } from "@/components/caixa/FilaEstacionariaDrawer"
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
@@ -133,6 +138,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
   const [reciboVenda, setReciboVenda] = useState<ReciboVenda | null>(null)
+  const [suspenderModalAberto, setSuspenderModalAberto] = useState(false)
+  const [suspendendo, setSuspendendo] = useState(false)
+  const [filaDrawerAberto, setFilaDrawerAberto] = useState(false)
 
   const {
     caixaStatus,
@@ -152,12 +160,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     totalLiquido,
     totalItens,
     totalUnidades,
+    suspensaoIdAtiva,
     setRegras,
     setCartOwnerForSession,
     adicionarItem,
     alterarQuantidade,
     removerItem,
     limparCarrinho,
+    setSuspensaoIdAtiva,
   } = useCarrinhoStore()
 
   const economiaPrecoAtacadoAuto = useMemo(() => {
@@ -403,6 +413,91 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     setCaixaMensagem,
   ])
 
+  const handleSuspender = useCallback(async (identificacao: string) => {
+    setSuspendendo(true)
+    try {
+      const itensParaSuspender: VendaSuspensaItem[] = itens.map((i) => ({
+        produtoId: i.produtoId,
+        nome: i.nome,
+        quantidade: i.quantidade,
+        precoUnitario: i.precoUnitario ?? 0,
+        precoOriginal: i.precoOriginal ?? i.precoVariejo ?? i.precoUnitario ?? 0,
+        tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
+      }))
+      const result = await criarPreVenda({
+        identificacao,
+        itens: itensParaSuspender,
+        totalBruto,
+        totalDesconto,
+        totalLiquido,
+        totalItens,
+      })
+      if (!result.ok) {
+        const PARK_STORAGE_KEY = "jinlong_parked_sales"
+        try {
+          const existing = JSON.parse(window.localStorage.getItem(PARK_STORAGE_KEY) ?? "[]") as unknown[]
+          existing.unshift({
+            id: `local-${Date.now()}`,
+            identificacao: identificacao || "(offline)",
+            itens: itensParaSuspender,
+            totalBruto,
+            totalDesconto,
+            totalLiquido,
+            totalItens,
+            criadoEm: new Date().toISOString(),
+          })
+          window.localStorage.setItem(PARK_STORAGE_KEY, JSON.stringify(existing))
+        } catch {
+          // storage not available
+        }
+      }
+      setSuspenderModalAberto(false)
+      limparCarrinho()
+      resetPagamentos()
+      limparEstadoDescontoGerente()
+      setAbaPdvAtiva("produto")
+      setCodigo("")
+      setSuspensaoIdAtiva(null)
+      setCaixaMensagem(
+        result.ok ? m.caixa.suspender_venda + " salvo." : m.caixa.suspender_venda + " (offline).",
+        { kind: result.ok ? "success" : "info" },
+      )
+    } catch {
+      setCaixaMensagem(m.caixa.suspender_venda + " — erro.", { kind: "error" })
+    } finally {
+      setSuspendendo(false)
+    }
+  }, [
+    itens, totalBruto, totalDesconto, totalLiquido, totalItens,
+    limparCarrinho, resetPagamentos, limparEstadoDescontoGerente,
+    setCaixaMensagem, setSuspensaoIdAtiva, m,
+  ])
+
+  const handleResgatar = useCallback((itensResgatados: VendaSuspensaItem[], suspensaoId: string) => {
+    limparCarrinho()
+    limparEstadoDescontoGerente()
+    resetPagamentos()
+    itensResgatados.forEach((item) => {
+      adicionarItem({
+        id: `${item.produtoId}-${Date.now()}`,
+        produtoId: item.produtoId,
+        nome: item.nome,
+        quantidade: item.quantidade,
+        precoUnitario: item.precoUnitario,
+        precoOriginal: item.precoOriginal,
+        precoVariejo: item.precoOriginal,
+        precoMinimo: 0,
+        tipoPreco: item.tipoPreco as 'VAREJO' | 'ATACADO',
+      })
+    })
+    setSuspensaoIdAtiva(suspensaoId)
+    setAbaPdvAtiva("produto")
+    setCaixaMensagem(m.caixa.venda_suspensa_resgate + " — itens restaurados.", { kind: "success" })
+  }, [
+    limparCarrinho, limparEstadoDescontoGerente, resetPagamentos,
+    adicionarItem, setSuspensaoIdAtiva, setCaixaMensagem, m,
+  ])
+
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
     if (raw == null) return null
     const normalizado = raw.trim().replace(",", ".")
@@ -633,6 +728,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         limparCarrinho()
         limparEstadoDescontoGerente()
         resetPagamentos()
+        if (suspensaoIdAtiva) {
+          cancelarPreVenda(suspensaoIdAtiva).catch(() => undefined)
+          setSuspensaoIdAtiva(null)
+        }
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
           { kind: "success" },
@@ -955,11 +1054,26 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               >
                 {m.caixa.rail_titulo_em_aberto}
               </div>
-              <p
-                className="text-xs leading-snug text-muted-foreground"
+              <button
+                type="button"
+                disabled={itens.length === 0 || suspendendo || carregandoRegras}
+                onClick={() => setSuspenderModalAberto(true)}
+                className="w-full rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-sm font-semibold text-amber-500 hover:bg-amber-500/20 disabled:pointer-events-none disabled:opacity-50"
               >
-                {m.caixa.rail_placeholder}
-              </p>
+                {suspendendo ? "…" : m.caixa.suspender_venda}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilaDrawerAberto(true)}
+                className={cn(
+                  "w-full rounded-md border px-3 py-1.5 text-center text-xs font-semibold",
+                  pdvLayoutVariant === "classic"
+                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                    : "border-border bg-secondary text-secondary-foreground hover:bg-secondary/90",
+                )}
+              >
+                {m.caixa.fila_estacionaria}
+              </button>
             </aside>
           </div>
           {pdvLayoutVariant === "classic" && (
@@ -1161,6 +1275,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           if (!open) setConfirmacaoPendente(null)
         }}
         onConfirm={handleConfirmarAcaoSensivel}
+      />
+      <CaixaIdentificacaoModal
+        m={m}
+        open={suspenderModalAberto}
+        onClose={() => setSuspenderModalAberto(false)}
+        onConfirmar={(id) => { handleSuspender(id).catch(() => undefined) }}
+        salvando={suspendendo}
+      />
+      <FilaEstacionariaDrawer
+        m={m}
+        open={filaDrawerAberto}
+        onClose={() => setFilaDrawerAberto(false)}
+        onResgatar={handleResgatar}
       />
     </>
   )

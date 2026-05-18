@@ -44,11 +44,13 @@ export interface CarrinhoState {
   descontoGerenteValor: number
   descontoGerenteToken: string | null
   maxDescontoGerentePercentual: number
+  suspensaoIdAtiva: string | null
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (id: string) => void
   atualizarQuantidade: (id: string, quantidade: number) => void
   limparCarrinho: () => void
   setCartOwnerForSession: (userId: string | null) => void
+  setSuspensaoIdAtiva: (id: string | null) => void
   setRegras: (regras: unknown[]) => void
   alterarQuantidade: (id: string, quantidade: number) => void
   /** Atualiza preço unitário / tipo após RPC `calcular_preco_produto` (ignora linhas MANUAL / PROMOCAO). */
@@ -168,6 +170,7 @@ function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
     descontoGerentePercentual: 0,
     descontoGerenteValor: 0,
     descontoGerenteToken: null,
+    suspensaoIdAtiva: null,
   }
 }
 
@@ -233,6 +236,9 @@ export const useCartStore = create<CarrinhoState>()(
       descontoGerenteValor: 0,
       descontoGerenteToken: null,
       maxDescontoGerentePercentual: DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL,
+      suspensaoIdAtiva: null,
+
+      setSuspensaoIdAtiva: (id) => set({ suspensaoIdAtiva: id }),
 
       adicionarItem: (item) =>
         set((state) => {
