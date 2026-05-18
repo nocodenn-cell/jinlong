@@ -216,8 +216,8 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       }
       setRows((prev) => append ? [...prev, ...r.data.rows] : r.data.rows)
       setTotal(r.data.total)
-    } catch {
-      // network error — loading spinner cleared in finally
+    } catch (e) {
+      emitGerenteToast({ kind: 'error', message: e instanceof Error ? e.message : 'Erro ao carregar produtos.' })
     } finally {
       setLoadingList(false)
     }
