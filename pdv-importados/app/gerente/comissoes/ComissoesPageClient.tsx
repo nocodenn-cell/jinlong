@@ -56,14 +56,14 @@ export function ComissoesPageClient({ m }: Props) {
       const result = await obterResumoComissoes(dataInicio, dataFim)
       setRows(result)
     } catch {
-      // silently fail and show empty list
+      setRows([])
     } finally {
       setLoading(false)
     }
   }, [dataInicio, dataFim])
 
   useEffect(() => {
-    fetchData().catch(() => undefined)
+    void fetchData()
   }, [fetchData])
 
   const meses = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -99,7 +99,7 @@ export function ComissoesPageClient({ m }: Props) {
             ))}
           </select>
           <button
-            onClick={() => fetchData().catch(() => undefined)}
+            onClick={() => { void fetchData() }}
             className="rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors app-btn-neutral"
           >
             {m.comissoes.filtrar}

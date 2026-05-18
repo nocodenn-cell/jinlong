@@ -726,7 +726,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         limparEstadoDescontoGerente()
         resetPagamentos()
         if (suspensaoIdAtiva) {
-          cancelarPreVenda(suspensaoIdAtiva).catch(() => undefined)
+          void cancelarPreVenda(suspensaoIdAtiva)
           setSuspensaoIdAtiva(null)
         }
         setCaixaMensagemVendaOk(
@@ -1279,7 +1279,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         m={m}
         open={suspenderModalAberto}
         onClose={() => setSuspenderModalAberto(false)}
-        onConfirmar={(id) => { handleSuspender(id).catch(() => undefined) }}
+        onConfirmar={(id) => { void handleSuspender(id) }}
         salvando={suspendendo}
       />
       <FilaEstacionariaDrawer
