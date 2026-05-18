@@ -673,7 +673,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     setCaixaMensagem(null)
     try {
       if (!vendaIdempotenciaRef.current) {
-        vendaIdempotenciaRef.current = crypto.randomUUID()
+        vendaIdempotenciaRef.current = newCupomSessionId()
       }
       const firstPayment = pagamentos.length > 0 ? pagamentos[0] : { formaPagamento: "DINHEIRO" as const, valor: 0 }
       const payload: FinalizarVendaInput = {

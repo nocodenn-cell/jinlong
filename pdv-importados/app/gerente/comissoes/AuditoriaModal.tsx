@@ -35,7 +35,6 @@ function fmtDate(iso: string): string {
   try {
     return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
   } catch {
-    /* invalid date */
     return iso
   }
 }
@@ -76,7 +75,7 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
     setLoading(true)
     obterDetalhamentoItens(vendedorId, dataInicio, dataFim)
       .then((data) => setItems(data))
-      .catch(() => { setItems([]) })
+      .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [open, vendedorId, dataInicio, dataFim])
 
@@ -93,10 +92,13 @@ export function AuditoriaModal({ m, vendedorId, vendedorNome, dataInicio, dataFi
 
   function handleExportCsv() {
     const csv = buildCsv(items)
-    // Safe: CSV content is properly encoded and served as text/csv, not interpreted as code
-    const dataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`
-    setCsvHref(dataUri)
-    setTimeout(() => setCsvHref(null), 3000)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    setCsvHref(url)
+    setTimeout(() => {
+      URL.revokeObjectURL(url)
+      setCsvHref(null)
+    }, 3000)
   }
 
   if (!open) return null
