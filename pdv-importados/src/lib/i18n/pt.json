@@ -1022,6 +1022,17 @@
     "col_nome": "Nome",
     "col_tipo": "Tipo"
   },
+  "comissoes": {
+    "titulo": "Comissões",
+    "resumo": "Resumo do período",
+    "auditoria": "Auditoria de itens",
+    "total_vendas": "Total vendas",
+    "total_comissao": "Comissão total",
+    "quantidade_itens": "Itens comissionados",
+    "sem_dados": "Nenhuma comissão no período",
+    "filtrar": "Filtrar",
+    "exportar_csv": "Exportar CSV"
+  },
   "comum": {
     "salvar": "Salvar",
     "cancelar": "Cancelar",

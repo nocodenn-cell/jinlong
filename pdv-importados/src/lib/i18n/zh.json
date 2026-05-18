@@ -1111,5 +1111,16 @@
     "divergencia": "🔴 {operador} 的收银差额为 R$ {diferenca}",
     "sem_alertas": "✅ 无活动警报",
     "ver_detalhes": "查看详情"
+  },
+  "comissoes": {
+    "titulo": "佣金",
+    "resumo": "期间汇总",
+    "auditoria": "明细审计",
+    "total_vendas": "销售总额",
+    "total_comissao": "佣金合计",
+    "quantidade_itens": "佣金商品",
+    "sem_dados": "本期无佣金记录",
+    "filtrar": "筛选",
+    "exportar_csv": "导出CSV"
   }
 }
