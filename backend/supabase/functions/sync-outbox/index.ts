@@ -18,7 +18,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
-import { logJson } from "../../../../shared/logger.ts";
+import { logJson } from "../_shared/logJson.ts";
 import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
 
 type OutboxEvent = {
