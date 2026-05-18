@@ -756,6 +756,8 @@
     "modal_confirmacao_cancelar_titulo": "确认取消",
     "estoque_baixo": "注意：库存偏低或为零。",
     "estoque_abaixo_minimo": "注意：库存已达到或低于最低线。",
+    "alerta_estoque_zerado_titulo": "商品无库存！",
+    "alerta_estoque_zerado_mensagem": "销售需经理授权。",
     "origem_china_manual": "中国（手工）",
     "origem_brasil_nf": "巴西（有发票）",
     "origem_brasil_sem_nf": "巴西（无发票）",

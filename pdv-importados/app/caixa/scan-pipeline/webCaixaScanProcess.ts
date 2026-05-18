@@ -146,7 +146,9 @@ export async function runWebCaixaScanProcess(
     const q = p.quantidade_estoque
     const min = p.estoque_minimo
     let avisoEstoqueMsg: string | null = null
-    if (q !== null && q < 1) {
+    if (q !== null && q <= 0) {
+      avisoEstoqueMsg = `${m.caixa.alerta_estoque_zerado_titulo} ${m.caixa.alerta_estoque_zerado_mensagem}`
+    } else if (q !== null && q < 1) {
       avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_baixo}`
     } else if (q !== null && min !== null && q <= min) {
       avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_abaixo_minimo}`
