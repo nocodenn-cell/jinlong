@@ -181,15 +181,26 @@ jobs:
 
       - name: Type-check Edge Functions (sync-outbox + validar-gerente + fiscal-worker)
         run: |
-          set -euo pipefail
-          echo "=== deno version ==="
           deno --version
-          echo "=== sync-outbox ==="
-          deno check --no-lock backend/supabase/functions/sync-outbox/index.ts
-          echo "=== validar-gerente ==="
-          deno check --no-lock --config backend/supabase/functions/validar-gerente/deno.json backend/supabase/functions/validar-gerente/index.ts
-          echo "=== fiscal-worker ==="
-          deno check --no-lock --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
+          FAIL=0
+
+          echo "--- sync-outbox ---"
+          deno check --no-lock backend/supabase/functions/sync-outbox/index.ts \
+            && echo "sync-outbox OK" || { echo "sync-outbox FAILED"; FAIL=1; }
+
+          echo "--- validar-gerente ---"
+          deno check --no-lock \
+            --config backend/supabase/functions/validar-gerente/deno.json \
+            backend/supabase/functions/validar-gerente/index.ts \
+            && echo "validar-gerente OK" || { echo "validar-gerente FAILED"; FAIL=1; }
+
+          echo "--- fiscal-worker ---"
+          deno check --no-lock \
+            --config backend/supabase/functions/fiscal-worker/deno.json \
+            backend/supabase/functions/fiscal-worker/index.ts \
+            && echo "fiscal-worker OK" || { echo "fiscal-worker FAILED"; FAIL=1; }
+
+          exit $FAIL
 
   outbox-contract:
     runs-on: ubuntu-latest
