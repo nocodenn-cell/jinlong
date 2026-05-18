@@ -56,6 +56,7 @@ import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal
 import { CaixaIdentificacaoModal } from "@/app/caixa/CaixaIdentificacaoModal"
 import { FilaEstacionariaDrawer } from "@/components/caixa/FilaEstacionariaDrawer"
 import { MiniFilaEstacionaria } from "@/components/caixa/MiniFilaEstacionaria"
+import { useSuspensaoStore } from "@/stores/suspensaoStore"
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
@@ -170,6 +171,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     limparCarrinho,
     setSuspensaoIdAtiva,
   } = useCarrinhoStore()
+
+  const adicionarSuspensaoLocal = useSuspensaoStore((s) => s.adicionarSuspensaoLocal)
 
   const economiaPrecoAtacadoAuto = useMemo(() => {
     return itens.reduce((acc, it) => {
@@ -434,23 +437,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         totalItens,
       })
       if (!result.ok) {
-        const PARK_STORAGE_KEY = "jinlong_parked_sales"
-        try {
-          const existing = JSON.parse(window.localStorage.getItem(PARK_STORAGE_KEY) ?? "[]") as unknown[] // NOSONAR - stores non-sensitive cart state for offline recovery
-          existing.unshift({
-            id: `local-${Date.now()}`,
-            identificacao: identificacao || "(offline)",
-            itens: itensParaSuspender,
-            totalBruto,
-            totalDesconto,
-            totalLiquido,
-            totalItens,
-            criadoEm: new Date().toISOString(),
-          })
-          window.localStorage.setItem(PARK_STORAGE_KEY, JSON.stringify(existing)) // NOSONAR - stores non-sensitive cart state for offline recovery
-        } catch (_e) {
-          // storage not available in this context — safe to ignore
-        }
+        adicionarSuspensaoLocal({
+          id: `local-${Date.now()}`,
+          identificacao: identificacao || "(offline)",
+          itens: itensParaSuspender,
+          totalBruto,
+          totalDesconto,
+          totalLiquido,
+          totalItens,
+          criadoEm: new Date().toISOString(),
+        })
       }
       setSuspenderModalAberto(false)
       limparCarrinho()
@@ -471,7 +467,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   }, [
     itens, totalBruto, totalDesconto, totalLiquido, totalItens,
     limparCarrinho, resetPagamentos, limparEstadoDescontoGerente,
-    setCaixaMensagem, setSuspensaoIdAtiva, m,
+    setCaixaMensagem, setSuspensaoIdAtiva, adicionarSuspensaoLocal, m,
   ])
 
   const handleResgatar = useCallback((itensResgatados: VendaSuspensaItem[], suspensaoId: string) => {
