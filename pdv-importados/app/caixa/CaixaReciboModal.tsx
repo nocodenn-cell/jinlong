@@ -72,40 +72,37 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
     if (!el) return
 
     const PRINT_CSS = [
-      "* { box-sizing: border-box; margin: 0; padding: 0; }",
-      "body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; padding: 8px; width: 300px; }",
-      ".recibo-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
-      ".recibo-header h1 { font-size: 14px; font-weight: bold; }",
-      ".recibo-header p { font-size: 11px; color: #555; }",
-      ".recibo-id { font-size: 10px; color: #777; }",
-      ".recibo-itens { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
-      ".recibo-item { margin-bottom: 3px; }",
-      ".recibo-item-nome { font-weight: bold; }",
-      ".recibo-item-detalhe { display: flex; justify-content: space-between; font-size: 11px; color: #444; }",
-      ".recibo-totais { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
-      ".recibo-linha { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }",
-      ".recibo-linha.total { font-weight: bold; font-size: 14px; }",
-      ".recibo-pgto { margin-bottom: 6px; }",
-      ".recibo-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; }",
+      "@media print { body > *:not(#jl-receipt-print) { display: none !important; } }",
+      "#jl-receipt-print { position: fixed; top: 0; left: 0; width: 300px; background: #fff; padding: 8px; font-family: 'Courier New', monospace; font-size: 12px; color: #000; }",
+      "#jl-receipt-print * { box-sizing: border-box; margin: 0; padding: 0; }",
+      "#jl-receipt-print .recibo-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
+      "#jl-receipt-print .recibo-header h1 { font-size: 14px; font-weight: bold; }",
+      "#jl-receipt-print .recibo-header p { font-size: 11px; color: #555; }",
+      "#jl-receipt-print .recibo-id { font-size: 10px; color: #777; }",
+      "#jl-receipt-print .recibo-itens { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
+      "#jl-receipt-print .recibo-item { margin-bottom: 3px; }",
+      "#jl-receipt-print .recibo-item-nome { font-weight: bold; }",
+      "#jl-receipt-print .recibo-item-detalhe { display: flex; justify-content: space-between; font-size: 11px; color: #444; }",
+      "#jl-receipt-print .recibo-totais { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }",
+      "#jl-receipt-print .recibo-linha { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }",
+      "#jl-receipt-print .recibo-linha.total { font-weight: bold; font-size: 14px; }",
+      "#jl-receipt-print .recibo-pgto { margin-bottom: 6px; }",
+      "#jl-receipt-print .recibo-footer { text-align: center; font-size: 10px; color: #888; border-top: 1px dashed #000; padding-top: 6px; }",
     ].join("\n")
 
-    // Use a hidden same-page iframe so we avoid window.open (S5148) while
-    // still getting an isolated print context with clean styles.
-    const iframe = document.createElement("iframe")
-    iframe.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden"
-    iframe.setAttribute("sandbox", "allow-same-origin allow-modals")
-    document.body.appendChild(iframe)
-
-    const doc = iframe.contentDocument
-    if (!doc) { document.body.removeChild(iframe); return }
-
-    const style = doc.createElement("style")
+    const style = document.createElement("style")
     style.textContent = PRINT_CSS
-    doc.head.appendChild(style)
-    doc.body.appendChild(el.cloneNode(true))
+    document.head.appendChild(style)
 
-    iframe.contentWindow?.print()
-    document.body.removeChild(iframe)
+    const printRoot = document.createElement("div")
+    printRoot.id = "jl-receipt-print"
+    printRoot.appendChild(el.cloneNode(true))
+    document.body.appendChild(printRoot)
+
+    window.print()
+
+    document.body.removeChild(printRoot)
+    document.head.removeChild(style)
   }
 
   // Fecha com Escape
