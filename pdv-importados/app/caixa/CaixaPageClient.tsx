@@ -675,9 +675,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
       if (!vendaIdempotenciaRef.current) {
         vendaIdempotenciaRef.current = crypto.randomUUID()
       }
+      const firstPayment = pagamentos.length > 0 ? pagamentos[0] : { formaPagamento: "DINHEIRO" as const, valor: 0 }
       const payload: FinalizarVendaInput = {
         idempotencyKey: vendaIdempotenciaRef.current,
-        formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
+        formaPagamento: firstPayment.formaPagamento,
         totalBruto,
         totalDesconto:
           descontoGerentePercentualEfetivo > 0
