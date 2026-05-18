@@ -1,14 +1,15 @@
 -- Purge do modo SEM_NF: toda venda nova é gravada como COM_NF.
--- A assinatura das RPCs canônicas é preservada para compatibilidade com chamadas
--- legadas. O histórico de vendas passadas (tipo_venda='SEM_NF') não é alterado.
+-- Apenas duas mudanças na função v2:
+--   1. DECLARE: v_tipo_venda TEXT := 'COM_NF'
+--   2. INSERT INTO vendas: coluna tipo_venda adicionada com valor v_tipo_venda
+-- Todo o restante da lógica é idêntico à migration 025.
+-- O histórico de vendas passadas (tipo_venda='SEM_NF') não é alterado.
 
--- 1. Altera o default da coluna para COM_NF e força a constraint para aceitar
---    apenas COM_NF em novas inserções via default.
+-- Altera o default da coluna para COM_NF
 ALTER TABLE public.vendas
   ALTER COLUMN tipo_venda SET DEFAULT 'COM_NF';
 
--- 2. Substitui a RPC v2 para inserir explicitamente COM_NF, ignorando qualquer
---    valor que chamadas legadas possam tentar passar via outros meios.
+-- Recria v2 com tipo_venda forçado (corpo idêntico ao 025 + v_tipo_venda)
 CREATE OR REPLACE FUNCTION public.finalizar_venda_transacional_canonica_v2(
   p_venda_id uuid,
   p_caixa_id uuid,
@@ -28,7 +29,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  -- Forçar COM_NF independente de qualquer parâmetro legado
+  -- Forçar COM_NF — toda venda nova é faturada
   v_tipo_venda TEXT := 'COM_NF';
 
   v_uid uuid;
@@ -38,93 +39,167 @@ DECLARE
   v_quantidade numeric;
   v_preco_original numeric;
   v_preco_unitario numeric;
+  v_desconto_unitario numeric;
+  v_tipo_preco text;
+  v_rpc_row record;
   v_total_bruto_calc numeric := 0;
-  v_total_desconto_calc numeric := 0;
+  v_total_liquido_base_calc numeric := 0;
+  v_total_desconto_base_calc numeric := 0;
   v_total_desconto_final_calc numeric := 0;
   v_total_liquido_final_calc numeric := 0;
-  v_desconto_item numeric;
   v_desconto_gerente_valor numeric := 0;
-  v_gerente_token_valid boolean := false;
   v_max_desconto_gerente numeric := 0;
-  v_gerente_id uuid;
-  v_loja_id uuid;
-  v_caixa_loja_id uuid;
+  v_cfg_gerente_id text := NULL;
+  v_has_gerente_desconto boolean := false;
+  v_pag jsonb;
+  v_pag_forma text;
+  v_pag_valor numeric;
+  v_pag_total numeric := 0;
 BEGIN
-  -- Resolve operador
-  IF p_operador_id IS NOT NULL THEN
-    v_uid := p_operador_id;
-  ELSE
-    v_uid := auth.uid();
-  END IF;
-
+  v_uid := COALESCE(auth.uid(), p_operador_id);
   IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_OPERADOR_NAO_IDENTIFICADO';
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_OPERADOR_OBRIGATORIO';
   END IF;
 
-  -- Resolve loja via caixa
-  SELECT loja_id INTO v_caixa_loja_id
-  FROM public.caixas
-  WHERE id = p_caixa_id;
-
-  IF v_caixa_loja_id IS NULL THEN
-    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_CAIXA_NAO_ENCONTRADO';
+  IF p_itens IS NULL OR jsonb_typeof(p_itens) <> 'array' OR jsonb_array_length(p_itens) <= 0 THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_ITENS_INVALIDOS';
   END IF;
 
-  v_loja_id := v_caixa_loja_id;
+  v_has_gerente_desconto := COALESCE(p_desconto_gerente_percentual, 0) > 0;
 
-  -- Calcula totais dos itens
-  FOR v_item IN SELECT * FROM jsonb_array_elements(p_itens)
-  LOOP
-    v_item_id     := (v_item->>'id')::uuid;
-    v_produto_id  := (v_item->>'produto_id')::uuid;
-    v_quantidade  := COALESCE((v_item->>'quantidade')::numeric, 0);
-    v_preco_original := COALESCE((v_item->>'preco_original')::numeric, 0);
-    v_preco_unitario := COALESCE((v_item->>'preco_unitario')::numeric, 0);
+  IF p_strict_manager_discount_auth AND v_has_gerente_desconto AND p_desconto_gerente_token IS NULL THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_GERENTE_TOKEN_OBRIGATORIO';
+  END IF;
 
-    v_total_bruto_calc   := v_total_bruto_calc + ROUND(v_preco_original * v_quantidade, 2);
-    v_desconto_item      := ROUND((v_preco_original - v_preco_unitario) * v_quantidade, 2);
-    v_total_desconto_calc := v_total_desconto_calc + GREATEST(v_desconto_item, 0);
-  END LOOP;
+  IF p_desconto_gerente_token IS NOT NULL AND COALESCE(p_desconto_gerente_percentual, 0) <= 0 THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_GERENTE_PERCENTUAL_INVALIDO';
+  END IF;
 
-  -- Validação de desconto gerencial
-  IF p_desconto_gerente_token IS NOT NULL AND p_desconto_gerente_percentual IS NOT NULL AND p_desconto_gerente_percentual > 0 THEN
-    SELECT
-      tg.valido AND NOT tg.usado AND tg.expira_em > now(),
-      tg.max_desconto_percentual,
-      tg.gerente_id
-    INTO v_gerente_token_valid, v_max_desconto_gerente, v_gerente_id
-    FROM public.tokens_desconto_gerente tg
-    WHERE tg.token = p_desconto_gerente_token;
+  SELECT
+    max_desconto_gerente_percentual,
+    gerente_id
+  INTO
+    v_max_desconto_gerente,
+    v_cfg_gerente_id
+  FROM public.pdv_config
+  WHERE id = 1;
 
-    IF NOT COALESCE(v_gerente_token_valid, false) THEN
+  IF p_desconto_gerente_token IS NOT NULL THEN
+    IF p_desconto_gerente_percentual <= 0 OR p_desconto_gerente_percentual > COALESCE(v_max_desconto_gerente, 0) THEN
+      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_DESCONTO_GERENTE_LIMITE';
+    END IF;
+
+    PERFORM 1
+    FROM public.tokens_desconto_gerente t
+    WHERE t.token = p_desconto_gerente_token
+      AND t.usado = false
+      AND t.expira_em > now()
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
       RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_TOKEN_GERENTE_INVALIDO';
     END IF;
+  ELSIF p_strict_manager_discount_auth AND v_has_gerente_desconto THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_GERENTE_TOKEN_OBRIGATORIO';
+  END IF;
 
-    IF p_strict_manager_discount_auth AND p_desconto_gerente_percentual > v_max_desconto_gerente THEN
-      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_DESCONTO_GERENTE_EXCEDIDO';
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_itens)
+  LOOP
+    v_item_id := COALESCE((v_item->>'item_id')::uuid, gen_random_uuid());
+    v_produto_id := (v_item->>'produto_id')::uuid;
+    v_quantidade := (v_item->>'quantidade')::numeric;
+    v_preco_original := (v_item->>'preco_original')::numeric;
+    v_preco_unitario := (v_item->>'preco_unitario')::numeric;
+    v_tipo_preco := COALESCE(v_item->>'tipo_preco', 'VAREJO');
+    v_desconto_unitario := GREATEST(0, v_preco_original - v_preco_unitario);
+
+    IF v_produto_id IS NULL OR v_quantidade IS NULL OR v_quantidade <= 0 THEN
+      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_ITEM_INVALIDO';
+    END IF;
+    IF v_preco_original IS NULL OR v_preco_original < 0 OR v_preco_unitario IS NULL OR v_preco_unitario < 0 THEN
+      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_PRECO_INVALIDO';
     END IF;
 
-    v_desconto_gerente_valor := ROUND(
-      (v_total_bruto_calc - v_total_desconto_calc) * (p_desconto_gerente_percentual / 100.0),
-      2
-    );
+    v_total_bruto_calc := v_total_bruto_calc + (v_preco_original * v_quantidade);
+    v_total_liquido_base_calc := v_total_liquido_base_calc + (v_preco_unitario * v_quantidade);
+
+    INSERT INTO public.itens_venda (
+      id,
+      venda_id,
+      produto_id,
+      quantidade,
+      preco_unitario_original,
+      preco_unitario,
+      desconto_unitario,
+      tipo_preco
+    )
+    VALUES (
+      v_item_id,
+      p_venda_id,
+      v_produto_id,
+      v_quantidade,
+      v_preco_original,
+      v_preco_unitario,
+      v_desconto_unitario,
+      v_tipo_preco
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    SELECT * INTO v_rpc_row
+    FROM public.decrementar_estoque_seguro(v_produto_id, v_quantidade, p_venda_id)
+    LIMIT 1;
+
+    IF v_rpc_row IS NULL OR v_rpc_row.sucesso IS DISTINCT FROM true THEN
+      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_ESTOQUE:%', COALESCE(v_rpc_row.mensagem, 'DESCONHECIDO');
+    END IF;
+  END LOOP;
+
+  v_total_bruto_calc := ROUND(v_total_bruto_calc, 2);
+  v_total_liquido_base_calc := ROUND(v_total_liquido_base_calc, 2);
+  v_total_desconto_base_calc := ROUND(v_total_bruto_calc - v_total_liquido_base_calc, 2);
+
+  IF p_desconto_gerente_token IS NOT NULL THEN
+    v_desconto_gerente_valor := ROUND((v_total_liquido_base_calc * p_desconto_gerente_percentual) / 100, 2);
   END IF;
 
-  v_total_desconto_final_calc := v_total_desconto_calc + v_desconto_gerente_valor;
-  v_total_liquido_final_calc  := ROUND(v_total_bruto_calc - v_total_desconto_final_calc, 2);
+  v_total_desconto_final_calc := ROUND(v_total_desconto_base_calc + v_desconto_gerente_valor, 2);
+  v_total_liquido_final_calc := ROUND(v_total_bruto_calc - v_total_desconto_final_calc, 2);
 
-  -- Validação de totais (tolerância de 1 centavo)
-  IF p_total_bruto IS NOT NULL AND ABS(p_total_bruto - v_total_bruto_calc) > 0.01 THEN
-    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_TOTAIS_DIVERGENTES';
+  IF p_pagamentos IS NULL THEN
+    v_pag_total := v_total_liquido_final_calc;
+  ELSE
+    IF jsonb_typeof(p_pagamentos) <> 'array' OR jsonb_array_length(p_pagamentos) <= 0 THEN
+      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_PAGAMENTOS_INVALIDOS';
+    END IF;
+    FOR v_pag IN SELECT value FROM jsonb_array_elements(p_pagamentos)
+    LOOP
+      v_pag_forma := upper(COALESCE(v_pag->>'forma_pagamento', ''));
+      v_pag_valor := ROUND(COALESCE((v_pag->>'valor')::numeric, 0), 2);
+      IF v_pag_forma NOT IN ('DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO', 'FIADO') THEN
+        RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_FORMA_PAGAMENTO_INVALIDA';
+      END IF;
+      IF v_pag_valor <= 0 THEN
+        RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_VALOR_PAGAMENTO_INVALIDO';
+      END IF;
+      v_pag_total := ROUND(v_pag_total + v_pag_valor, 2);
+    END LOOP;
   END IF;
-  IF p_total_desconto IS NOT NULL AND ABS(p_total_desconto - v_total_desconto_final_calc) > 0.01 THEN
-    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_TOTAIS_DIVERGENTES';
+
+  IF ABS(v_pag_total - v_total_liquido_final_calc) > 0.01 THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_PAGAMENTOS_DIVERGENTES';
   END IF;
-  IF p_total_liquido IS NOT NULL AND ABS(p_total_liquido - v_total_liquido_final_calc) > 0.01 THEN
+
+  IF p_total_bruto IS NOT NULL
+     AND p_total_desconto IS NOT NULL
+     AND p_total_liquido IS NOT NULL
+     AND (
+       ABS(v_total_bruto_calc - p_total_bruto) > 0.02
+       OR ABS(v_total_desconto_final_calc - p_total_desconto) > 0.02
+       OR ABS(v_total_liquido_final_calc - p_total_liquido) > 0.02
+     ) THEN
     RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_TOTAIS_DIVERGENTES';
   END IF;
 
-  -- Insere venda com tipo_venda forçado como COM_NF
   INSERT INTO public.vendas (
     id,
     caixa_id,
@@ -149,7 +224,6 @@ BEGIN
   )
   ON CONFLICT (id) DO NOTHING;
 
-  -- Pagamentos
   IF p_pagamentos IS NULL THEN
     INSERT INTO public.vendas_pagamentos (venda_id, forma_pagamento, valor)
     VALUES (p_venda_id, p_forma_pagamento, v_total_liquido_final_calc);
@@ -162,44 +236,36 @@ BEGIN
     FROM jsonb_array_elements(p_pagamentos) AS item;
   END IF;
 
-  -- Desconto gerencial
-  IF v_gerente_token_valid AND v_desconto_gerente_valor > 0 THEN
+  IF p_desconto_gerente_token IS NOT NULL THEN
     UPDATE public.tokens_desconto_gerente
     SET usado = true
-    WHERE token = p_desconto_gerente_token;
+    WHERE token = p_desconto_gerente_token
+      AND usado = false;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_TOKEN_GERENTE_JA_USADO';
+    END IF;
 
     INSERT INTO public.descontos_venda (
-      venda_id, gerente_id, percentual, valor_absoluto
+      venda_id,
+      gerente_id,
+      desconto_percentual,
+      desconto_valor
+    ) VALUES (
+      p_venda_id,
+      COALESCE(v_cfg_gerente_id, v_uid::text),
+      p_desconto_gerente_percentual,
+      v_desconto_gerente_valor
     )
-    VALUES (
-      p_venda_id, v_gerente_id,
-      p_desconto_gerente_percentual, v_desconto_gerente_valor
-    )
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (venda_id) DO UPDATE
+      SET gerente_id = EXCLUDED.gerente_id,
+          desconto_percentual = EXCLUDED.desconto_percentual,
+          desconto_valor = EXCLUDED.desconto_valor;
   END IF;
-
-  -- Baixa de estoque por item
-  FOR v_item IN SELECT * FROM jsonb_array_elements(p_itens)
-  LOOP
-    v_item_id    := (v_item->>'id')::uuid;
-    v_produto_id := (v_item->>'produto_id')::uuid;
-    v_quantidade := COALESCE((v_item->>'quantidade')::numeric, 0);
-    v_preco_unitario := COALESCE((v_item->>'preco_unitario')::numeric, 0);
-
-    INSERT INTO public.itens_venda (
-      id, venda_id, produto_id, quantidade, preco_unitario, loja_id
-    )
-    VALUES (
-      v_item_id, p_venda_id, v_produto_id, v_quantidade, v_preco_unitario, v_loja_id
-    )
-    ON CONFLICT (id) DO NOTHING;
-
-    PERFORM public.decrementar_estoque_seguro(
-      v_produto_id, v_loja_id, v_quantidade, v_item_id
-    );
-  END LOOP;
 END;
 $$;
 
-COMMENT ON FUNCTION public.finalizar_venda_transacional_canonica_v2 IS
+COMMENT ON FUNCTION public.finalizar_venda_transacional_canonica_v2(
+  uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean
+) IS
   'RPC canônica v2 — toda venda é gravada como COM_NF (v_tipo_venda forçado). Assinatura preservada para compatibilidade legada.';
