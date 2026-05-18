@@ -146,10 +146,8 @@ export async function runWebCaixaScanProcess(
     const q = p.quantidade_estoque
     const min = p.estoque_minimo
     let avisoEstoqueMsg: string | null = null
-    // Stock zero alert takes priority; triggers when q <= 0
     if (q !== null && q <= 0) {
-      // Safe: Message keys are i18n literals from trusted pt.json; no user input concatenated
-      avisoEstoqueMsg = `${m.caixa.alerta_estoque_zerado_titulo} ${m.caixa.alerta_estoque_zerado_mensagem}`
+      avisoEstoqueMsg = m.caixa.alerta_estoque_zerado
     } else if (q !== null && q < 1) {
       avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_baixo}`
     } else if (q !== null && min !== null && q <= min) {
