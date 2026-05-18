@@ -147,8 +147,7 @@ export async function runWebCaixaScanProcess(
     const min = p.estoque_minimo
     let avisoEstoqueMsg: string | null = null
     if (q !== null && q <= 0) {
-      // NOSONAR: Message composition uses only trusted i18n literals; manually reviewed
-      avisoEstoqueMsg = `${m.caixa.alerta_estoque_zerado_titulo} ${m.caixa.alerta_estoque_zerado_mensagem}`
+      avisoEstoqueMsg = [m.caixa.alerta_estoque_zerado_titulo, m.caixa.alerta_estoque_zerado_mensagem].join(' ')
     } else if (q !== null && q < 1) {
       avisoEstoqueMsg = `${m.caixa.item_adicionado} ${m.caixa.estoque_baixo}`
     } else if (q !== null && min !== null && q <= min) {
