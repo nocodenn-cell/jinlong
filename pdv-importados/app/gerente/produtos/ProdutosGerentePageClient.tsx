@@ -246,7 +246,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
         if (cur >= totalPaginas || busy) return
         const nextPage = cur + 1
         setPaginaAtual(nextPage)
-        fetchList(f, nextPage, true).catch(() => undefined)
+        void fetchList(f, nextPage, true)
       },
       { rootMargin: '300px' },
     )
@@ -263,13 +263,13 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     // Ao mudar filtros ou tamanho da página, reseta para página 1 e substitui linhas
     setPaginaAtual(1)
     const id = setTimeout(() => {
-      fetchList(filtros, 1, false).catch(() => undefined)
+      void fetchList(filtros, 1, false)
     }, 320)
     return () => clearTimeout(id)
   }, [filtros, itensPorPagina, fetchList])
 
   const refetch = useCallback(() => {
-    fetchList(filtros, paginaAtual).catch(() => undefined)
+    void fetchList(filtros, paginaAtual)
     router.refresh()
   }, [fetchList, filtros, paginaAtual, router])
 
