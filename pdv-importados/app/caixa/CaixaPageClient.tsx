@@ -55,6 +55,7 @@ import { CaixaSplitPagamentos } from "@/app/caixa/CaixaSplitPagamentos"
 import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal"
 import { CaixaIdentificacaoModal } from "@/app/caixa/CaixaIdentificacaoModal"
 import { FilaEstacionariaDrawer } from "@/components/caixa/FilaEstacionariaDrawer"
+import { MiniFilaEstacionaria } from "@/components/caixa/MiniFilaEstacionaria"
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
@@ -1288,6 +1289,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         open={filaDrawerAberto}
         onClose={() => setFilaDrawerAberto(false)}
         onResgatar={handleResgatar}
+      />
+      <MiniFilaEstacionaria
+        m={m}
+        onResgatar={handleResgatar}
+        lojaId={configCaixaWeb["loja_id"] ?? configCaixaWeb["lojaId"] ?? ""}
       />
     </>
   )
