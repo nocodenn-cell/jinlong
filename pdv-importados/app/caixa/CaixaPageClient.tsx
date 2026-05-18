@@ -484,7 +484,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         precoOriginal: item.precoOriginal,
         precoVariejo: item.precoOriginal,
         precoMinimo: 0,
-        tipoPreco: item.tipoPreco as 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO',
       })
     })
     setSuspensaoIdAtiva(suspensaoId)
