@@ -100,15 +100,14 @@ export function MiniFilaEstacionaria({ m, onResgatar, lojaId }: Props) {
       try {
         const result = await resgatarPreVenda(suspensao.id)
         if (!result.ok) {
-          alert(m.caixa.mini_fila_ja_resgatada ?? "Esta venda já foi resgatada em outro caixa")
-          // Remove stale entry from local view
+          // Already rescued by another terminal — silently remove stale card
           removerSuspensao(suspensao.id)
           return
         }
         removerSuspensao(suspensao.id)
         onResgatar(result.itens, suspensao.id)
       } catch (_e) {
-        console.warn("[MiniFilaEstacionaria] Falha ao resgatar venda", suspensao.id)
+        // network error — user can retry by clicking again
       }
     },
     [m, onResgatar, removerSuspensao],
