@@ -902,18 +902,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 layoutVariant={pdvLayoutVariant}
                 mostrarAtalhos={pdvLayoutVariant === "classic"}
                 operadorLabel={operadorLabel}
-                pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
-                somaParcelas={somaParcelas}
-                diferenca={diferencaPagamento}
-                podeAdicionarParcela={podeAdicionarParcela}
-                formasDisponiveis={formasDisponiveis}
-                onAdicionarParcela={adicionarParcela}
-                onRemoverParcela={removerParcela}
-                onAtualizarForma={atualizarForma}
-                onAtualizarValor={atualizarValor}
-                onAutoCompletar={autoCompletarUltima}
-                moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={splitPagamentosPanel}
                 produtoPanel={
                   pdvLayoutVariant === "classic" ? (
