@@ -56,7 +56,7 @@ export function ComissoesPageClient({ m }: Props) {
       const result = await obterResumoComissoes(dataInicio, dataFim)
       setRows(result)
     } catch {
-      console.warn("[comissoes] falha ao carregar resumo — exibindo lista vazia")
+      // silently fail and show empty list
     } finally {
       setLoading(false)
     }

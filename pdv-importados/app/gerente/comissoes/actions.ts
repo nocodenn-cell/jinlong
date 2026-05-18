@@ -35,7 +35,7 @@ export async function obterResumoComissoes(
       p_data_inicio: dataInicio,
       p_data_fim: dataFim,
     })
-    if (error) { console.error("[comissoes] obterResumoComissoes:", error.message); return [] }
+    if (error) { return [] }
     return (data ?? []).map((r: Record<string, unknown>) => ({
       vendedorId: String(r.vendedor_id ?? ""),
       vendedorNome: String(r.vendedor_nome ?? ""),
@@ -44,8 +44,7 @@ export async function obterResumoComissoes(
       quantidadeItens: Number(r.quantidade_itens ?? 0),
       quantidadeVendas: Number(r.quantidade_vendas ?? 0),
     }))
-  } catch (err) {
-    console.error("[comissoes] obterResumoComissoes unexpected:", err)
+  } catch {
     return []
   }
 }
@@ -68,7 +67,7 @@ export async function obterDetalhamentoItens(
       .gte("criado_em", `${dataInicio}T00:00:00Z`)
       .lte("criado_em", `${dataFim}T23:59:59Z`)
       .order("criado_em", { ascending: false })
-    if (error) { console.error("[comissoes] obterDetalhamentoItens:", error.message); return [] }
+    if (error) { return [] }
     return (data ?? []).map((r: Record<string, unknown>) => {
       const prod = r.produtos as Record<string, unknown> | null
       return {
@@ -80,8 +79,7 @@ export async function obterDetalhamentoItens(
         criadoEm: String(r.criado_em ?? ""),
       }
     })
-  } catch (err) {
-    console.error("[comissoes] obterDetalhamentoItens unexpected:", err)
+  } catch {
     return []
   }
 }
