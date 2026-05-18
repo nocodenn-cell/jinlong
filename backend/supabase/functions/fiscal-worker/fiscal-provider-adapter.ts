@@ -178,10 +178,10 @@ export class HttpProvider implements FiscalProvider {
     } catch (e) {
       const isAbort = e instanceof Error && e.name === "AbortError";
       const msg = e instanceof Error ? e.message : String(e);
-      
+
       return {
         ok: false,
-        erro: isAbort ? "HTTP_PROVIDER_TIMEOUT" : `HTTP_PROVIDER_ERROR:${msg}`,
+        erro: isAbort ? "HTTP_PROVIDER_TIMEOUT" : "HTTP_PROVIDER_ERROR",
         transitorio: true,
         provider_code: isAbort ? "HTTP_PROVIDER_TIMEOUT" : "HTTP_PROVIDER_ERROR",
         provider_message: msg,
@@ -294,7 +294,7 @@ export class FocusProvider implements FiscalProvider {
 
       return {
         ok: false,
-        erro: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : `FOCUS_PROVIDER_ERROR:${msg}`,
+        erro: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : "FOCUS_PROVIDER_ERROR",
         transitorio: true,
         provider_code: isAbort ? "FOCUS_PROVIDER_TIMEOUT" : "FOCUS_PROVIDER_ERROR",
         provider_message: msg,
