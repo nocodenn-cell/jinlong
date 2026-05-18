@@ -48,8 +48,11 @@ import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipe
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
 import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
 import { CaixaPdvItemStagingPlaceholder } from "@/app/caixa/CaixaPdvItemStagingPlaceholder"
-import { CaixaSplitPagamentos } from "@/app/caixa/CaixaSplitPagamentos"
-import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal"
+import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
+import {
+  metodoPagamentoToForma,
+  type MetodoPagamentoUi,
+} from "@/app/caixa/caixaMetodoPagamento"
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
@@ -67,10 +70,7 @@ function showClassicLayoutPreviewBanner(): boolean {
 }
 
 function newCupomSessionId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID()
-  }
-  return `cupom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  return crypto.randomUUID()
 }
 
 function localeFromIdioma(idioma: Idioma): string {
@@ -135,7 +135,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
-  const [reciboVenda, setReciboVenda] = useState<ReciboVenda | null>(null)
+  const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
 
   const {
     caixaStatus,
@@ -182,17 +182,24 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   const totalLiquidoComGerente = descontoGerenteAplicado.totalLiquidoComDesconto
   const descontoGerentePercentualEfetivo = descontoGerenteAplicado.percentualClamped
 
+  const formaPagamento = useMemo(
+    () => metodoPagamentoToForma(metodoPagamento),
+    [metodoPagamento],
+  )
+
   const {
-    linhas,
     pagamentos,
-    restante,
-    valido: pagamentosValidos,
-    adicionarLinha,
-    removerLinha,
-    setMetodo: setPagamentoMetodo,
-    setValor: setPagamentoValor,
+    somaParcelas,
+    diferenca: diferencaPagamento,
+    podeAdicionarParcela,
+    formasDisponiveis,
+    adicionarParcela,
+    removerParcela,
+    atualizarForma,
+    atualizarValor,
+    autoCompletarUltima,
     resetPagamentos,
-  } = useCaixaPagamentos(totalLiquidoComGerente)
+  } = useCaixaPagamentos(totalLiquidoComGerente, formaPagamento)
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
@@ -272,18 +279,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   const pagamentoControlesDesabilitados =
     finalizando || buscandoPipeline || carregandoRegras
 
-  const splitPagamentosPanel = (
-    <CaixaSplitPagamentos
+  const metodoPagamentoSelector = (
+    <CaixaPdvMetodoPagamentoSelector
       m={m}
-      linhas={linhas}
-      restante={restante}
-      valido={pagamentosValidos}
+      value={metodoPagamento}
+      onChange={setMetodoPagamento}
       disabled={pagamentoControlesDesabilitados}
       variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
-      onSetMetodo={setPagamentoMetodo}
-      onSetValor={setPagamentoValor}
-      onAdicionarLinha={adicionarLinha}
-      onRemoverLinha={removerLinha}
     />
   )
 
@@ -392,7 +394,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
     resetPagamentos()
-    setReciboVenda(null)
+    setMetodoPagamento("dinheiro")
     setCodigo("")
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
@@ -549,7 +551,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     const totalPagamentos = roundMoney2(
       pagamentos.reduce((acc, pagamento) => acc + pagamento.valor, 0),
     )
-    if (Math.abs(totalPagamentos - totalLiquidoComGerente) > 0.01) {
+    if (totalPagamentos < totalLiquidoComGerente - 0.01) {
       setCaixaMensagem(
         caixaFmt(m.caixa.msg_pagamento_split_invalido, {
           esperado: totalLiquidoComGerente.toFixed(2),
@@ -558,6 +560,27 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         { kind: "warning" },
       )
       return
+    }
+    // Normalizar parcelas: desconta troco da última parcela DINHEIRO
+    const parcelasNormalizadas = pagamentos.map((p) => ({
+      formaPagamento: p.formaPagamento,
+      valor: p.valor,
+    }))
+    const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
+    if (excesso > 0.01) {
+      let idxDinheiro = -1
+      for (let i = parcelasNormalizadas.length - 1; i >= 0; i--) {
+        if (parcelasNormalizadas[i].formaPagamento === "DINHEIRO") {
+          idxDinheiro = i
+          break
+        }
+      }
+      if (idxDinheiro >= 0) {
+        parcelasNormalizadas[idxDinheiro].valor = Math.max(
+          0,
+          roundMoney2(parcelasNormalizadas[idxDinheiro].valor - excesso),
+        )
+      }
     }
     setFinalizando(true)
     setCaixaMensagem(null)
@@ -578,10 +601,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           descontoGerentePercentualEfetivo > 0 ? gerenteToken ?? undefined : undefined,
         descontoGerentePercentual:
           descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
-        pagamentos: pagamentos.map((p) => ({
-          formaPagamento: p.formaPagamento,
-          valor: p.valor,
-        })),
+        pagamentos: parcelasNormalizadas,
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
@@ -593,26 +613,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
       const res = await finalizarVendaCaixa(payload)
       if (res.ok) {
         vendaIdempotenciaRef.current = null
-        setReciboVenda({
-          vendaId: res.vendaId,
-          data: new Date(),
-          itens: itens.map((i) => ({
-            nome: i.nome,
-            quantidade: i.quantidade,
-            precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
-            precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
-            tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
-          })),
-          pagamentos: pagamentos.map((p) => ({ formaPagamento: p.formaPagamento, valor: p.valor })),
-          totalBruto,
-          totalDesconto: descontoGerentePercentualEfetivo > 0
-            ? roundMoney2(totalDesconto + valorDescontoGerente)
-            : totalDesconto,
-          totalLiquidoComGerente,
-          descontoGerentePercentual: descontoGerentePercentualEfetivo,
-          valorDescontoGerente,
-          moeda: m.caixa.moeda_prefixo,
-        })
         limparCarrinho()
         limparEstadoDescontoGerente()
         resetPagamentos()
@@ -757,7 +757,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
     <>
       <div
         data-caixa-layout={pdvLayoutVariant === "classic" ? "classic" : undefined}
-        className="min-h-[100dvh] caixa-oriental-root flex flex-col text-[14px] leading-5"
+        className={cn(
+          "min-h-[100dvh] flex flex-col text-[14px] leading-5",
+          pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "caixa-oriental-root",
+        )}
       >
         <CaixaHeader
           m={m}
@@ -786,8 +789,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 operadorLabel={operadorLabel}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
+                somaParcelas={somaParcelas}
+                diferenca={diferencaPagamento}
+                podeAdicionarParcela={podeAdicionarParcela}
+                formasDisponiveis={formasDisponiveis}
+                onAdicionarParcela={adicionarParcela}
+                onRemoverParcela={removerParcela}
+                onAtualizarForma={atualizarForma}
+                onAtualizarValor={atualizarValor}
+                onAutoCompletar={autoCompletarUltima}
                 moedaPrefixo={m.caixa.moeda_prefixo}
-                metodoPagamentoPanel={splitPagamentosPanel}
+                metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
                   pdvLayoutVariant === "classic" ? (
                     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
@@ -867,7 +879,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                   carregandoRegras={carregandoRegras}
                   totalLiquidoComGerente={totalLiquidoComGerente}
                   moedaPrefixo={m.caixa.moeda_prefixo}
-                  metodoPagamentoPanel={splitPagamentosPanel}
+                  metodoPagamentoPanel={metodoPagamentoSelector}
                 />
               )}
             </section>
@@ -875,7 +887,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
               className={cn(
                 "hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex",
                 pdvLayoutVariant === "classic"
-                  ? "border-blue-800/70 bg-gradient-to-b from-blue-950/95 via-blue-900/90 to-blue-800/85 text-blue-50 shadow-sm"
+                  ? "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]"
                   : "border-border bg-card/90",
               )}
             >
@@ -884,7 +896,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 className={cn(
                   "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
                   pdvLayoutVariant === "classic"
-                    ? "border-white/35 bg-white/10 text-white hover:bg-white/20"
+                    ? "border-border bg-primary text-primary-foreground hover:bg-primary/90"
                     : "border-border bg-secondary text-secondary-foreground hover:bg-secondary/90",
                 )}
                 onClick={handleNovoCupom}
@@ -893,20 +905,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 {m.caixa.novo_cupom}
               </button>
               <div
-                className={cn(
-                  "text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic" ? "text-blue-200/85" : "text-muted-foreground",
-                )}
+                className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {m.caixa.rail_titulo_nova_venda}
               </div>
               <div
-                className={cn(
-                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic"
-                    ? "border-white/15 text-blue-200/85"
-                    : "border-border text-muted-foreground",
-                )}
+                className="border-t border-border pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {m.caixa.rail_titulo_operacoes}
               </div>
@@ -930,20 +934,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
                 <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
               )}
               <div
-                className={cn(
-                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic"
-                    ? "border-white/15 text-blue-200/85"
-                    : "border-border text-muted-foreground",
-                )}
+                className="border-t border-border pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {m.caixa.rail_titulo_em_aberto}
               </div>
               <p
-                className={cn(
-                  "text-xs leading-snug",
-                  pdvLayoutVariant === "classic" ? "text-blue-100/75" : "text-muted-foreground",
-                )}
+                className="text-xs leading-snug text-muted-foreground"
               >
                 {m.caixa.rail_placeholder}
               </p>
@@ -953,10 +949,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
             <div
               className={cn(
                 "border-t px-4 py-3 sm:px-6 md:hidden",
-                "border-blue-800/80 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-blue-50 shadow-sm",
+                "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]",
               )}
             >
-              <div className="text-xs font-semibold uppercase tracking-wide text-blue-200/85">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {m.caixa.rail_titulo_operacoes}
               </div>
               <div className="mt-2">
@@ -1020,7 +1016,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
             totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}
             metodoPagamentoPanel={
-              pdvLayoutVariant === "default" ? splitPagamentosPanel : undefined
+              pdvLayoutVariant === "default" ? metodoPagamentoSelector : undefined
             }
           />
         </div>
@@ -1117,12 +1113,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           }
           m={m}
           onConfirm={onConfirmMotivoFechar}
-        />
-      )}
-      {reciboVenda && (
-        <CaixaReciboModal
-          venda={reciboVenda}
-          onClose={() => setReciboVenda(null)}
         />
       )}
       <CaixaConfirmModal

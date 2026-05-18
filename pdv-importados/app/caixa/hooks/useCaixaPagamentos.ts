@@ -1,79 +1,127 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
-import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { useState, useCallback, useEffect, useRef } from "react"
 import {
-  metodoPagamentoToForma,
-  type MetodoPagamentoUi,
-} from "@/app/caixa/caixaMetodoPagamento"
+  roundMoney2,
+  FORMAS_PAGAMENTO_CAIXA,
+  type FinalizarVendaInput,
+} from "@/app/caixa/finalizarVendaValidation"
 
-export type PagamentoLinha = {
-  id: string
-  metodo: MetodoPagamentoUi
-  valor: string
+export type FormaPagamento = FinalizarVendaInput["formaPagamento"]
+
+export type ParcelaPagamento = {
+  formaPagamento: FormaPagamento
+  valor: number
 }
 
-let _linhaSeq = 0
-function novaLinha(metodo: MetodoPagamentoUi = "dinheiro", valor = "0"): PagamentoLinha {
-  return { id: `linha-${++_linhaSeq}`, metodo, valor }
+const MAX_PARCELAS = 4
+
+function parcelaInicial(forma: FormaPagamento, total: number): ParcelaPagamento[] {
+  return [{ formaPagamento: forma, valor: roundMoney2(Math.max(0, total)) }]
 }
 
-export function useCaixaPagamentos(totalLiquidoComGerente: number) {
-  const [linhas, setLinhas] = useState<PagamentoLinha[]>(() => [
-    novaLinha("dinheiro", Math.max(0, totalLiquidoComGerente).toFixed(2)),
-  ])
-
-  const pagamentos = useMemo(
-    (): Array<{ formaPagamento: FinalizarVendaInput["formaPagamento"]; valor: number }> =>
-      linhas.map((l) => ({
-        formaPagamento: metodoPagamentoToForma(l.metodo),
-        valor: roundMoney2(Math.max(0, parseFloat(l.valor) || 0)),
-      })),
-    [linhas],
+export function useCaixaPagamentos(
+  totalLiquidoComGerente: number,
+  formaPagamento?: FormaPagamento,
+) {
+  const [parcelas, setParcelas] = useState<ParcelaPagamento[]>(() =>
+    parcelaInicial(formaPagamento ?? "DINHEIRO", totalLiquidoComGerente),
   )
 
-  const totalInformado = useMemo(
-    () => roundMoney2(pagamentos.reduce((acc, p) => acc + p.valor, 0)),
-    [pagamentos],
-  )
+  const prevTotalRef = useRef(totalLiquidoComGerente)
+  const prevFormaRef = useRef(formaPagamento)
 
-  const restante = useMemo(
-    () => roundMoney2(totalLiquidoComGerente - totalInformado),
-    [totalLiquidoComGerente, totalInformado],
-  )
+  useEffect(() => {
+    if (formaPagamento && formaPagamento !== prevFormaRef.current) {
+      prevFormaRef.current = formaPagamento
+      setParcelas((old) => {
+        if (old.length === 1) {
+          return [{ ...old[0], formaPagamento }]
+        }
+        return old
+      })
+    }
+  }, [formaPagamento])
 
-  const valido = Math.abs(restante) <= 0.01
+  useEffect(() => {
+    const prev = prevTotalRef.current
+    prevTotalRef.current = totalLiquidoComGerente
+    if (Math.abs(prev - totalLiquidoComGerente) < 0.005) return
 
-  const adicionarLinha = useCallback(() => {
-    setLinhas((prev) => [...prev, novaLinha("dinheiro", "0")])
-  }, [])
-
-  const removerLinha = useCallback((id: string) => {
-    setLinhas((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev))
-  }, [])
-
-  const setMetodo = useCallback((id: string, metodo: MetodoPagamentoUi) => {
-    setLinhas((prev) => prev.map((l) => (l.id === id ? { ...l, metodo } : l)))
-  }, [])
-
-  const setValor = useCallback((id: string, valor: string) => {
-    setLinhas((prev) => prev.map((l) => (l.id === id ? { ...l, valor } : l)))
-  }, [])
-
-  const resetPagamentos = useCallback(() => {
-    setLinhas([novaLinha("dinheiro", Math.max(0, totalLiquidoComGerente).toFixed(2))])
+    setParcelas((old) => {
+      if (old.length === 1) {
+        return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
+      }
+      const somaOutras = old.slice(0, -1).reduce((s, p) => s + p.valor, 0)
+      const restante = roundMoney2(Math.max(0, totalLiquidoComGerente - somaOutras))
+      const copy = [...old]
+      copy[copy.length - 1] = { ...copy[copy.length - 1], valor: restante }
+      return copy
+    })
   }, [totalLiquidoComGerente])
 
+  const adicionarParcela = useCallback(
+    (forma: FormaPagamento = "PIX") => {
+      setParcelas((old) => {
+        if (old.length >= MAX_PARCELAS) return old
+        return [...old, { formaPagamento: forma, valor: 0 }]
+      })
+    },
+    [],
+  )
+
+  const removerParcela = useCallback((index: number) => {
+    setParcelas((old) => {
+      if (old.length <= 1 || index < 0 || index >= old.length) return old
+      return old.filter((_, i) => i !== index)
+    })
+  }, [])
+
+  const atualizarForma = useCallback((index: number, forma: FormaPagamento) => {
+    setParcelas((old) =>
+      old.map((p, i) => (i === index ? { ...p, formaPagamento: forma } : p)),
+    )
+  }, [])
+
+  const atualizarValor = useCallback((index: number, valor: number) => {
+    setParcelas((old) =>
+      old.map((p, i) =>
+        i === index ? { ...p, valor: roundMoney2(Math.max(0, valor)) } : p,
+      ),
+    )
+  }, [])
+
+  const autoCompletarUltima = useCallback(() => {
+    setParcelas((old) => {
+      if (old.length < 2) {
+        return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
+      }
+      const somaOutras = old.slice(0, -1).reduce((s, p) => s + p.valor, 0)
+      const restante = roundMoney2(Math.max(0, totalLiquidoComGerente - somaOutras))
+      const copy = [...old]
+      copy[copy.length - 1] = { ...copy[copy.length - 1], valor: restante }
+      return copy
+    })
+  }, [totalLiquidoComGerente])
+
+  const resetPagamentos = useCallback(() => {
+    setParcelas(parcelaInicial(formaPagamento ?? "DINHEIRO", totalLiquidoComGerente))
+  }, [totalLiquidoComGerente, formaPagamento])
+
+  const somaParcelas = roundMoney2(parcelas.reduce((s, p) => s + p.valor, 0))
+  const diferenca = roundMoney2(somaParcelas - totalLiquidoComGerente)
+
   return {
-    linhas,
-    pagamentos,
-    totalInformado,
-    restante,
-    valido,
-    adicionarLinha,
-    removerLinha,
-    setMetodo,
-    setValor,
+    pagamentos: parcelas,
+    somaParcelas,
+    diferenca,
+    podeAdicionarParcela: parcelas.length < MAX_PARCELAS,
+    formasDisponiveis: FORMAS_PAGAMENTO_CAIXA,
+    adicionarParcela,
+    removerParcela,
+    atualizarForma,
+    atualizarValor,
+    autoCompletarUltima,
     resetPagamentos,
   }
 }
