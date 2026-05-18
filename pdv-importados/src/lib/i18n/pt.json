@@ -827,7 +827,11 @@
     "aria_adicionar_parcela": "Adicionar parcela de pagamento",
     "aria_qtde_item": "Quantidade — {{nome}}",
     "aria_qtde_aumentar": "Aumentar 1 unidade — {{nome}}",
-    "aria_qtde_diminuir": "Diminuir 1 unidade — {{nome}}"
+    "aria_qtde_diminuir": "Diminuir 1 unidade — {{nome}}",
+    "mini_fila_titulo": "Fila estacionária",
+    "mini_fila_vazia": "Nenhuma venda suspensa",
+    "mini_fila_ja_resgatada": "Esta venda já foi resgatada em outro caixa",
+    "mini_fila_carregando": "Carregando…"
   },
   "pdv": {
     "scan_placeholder": "Escanear código ou digitar nome...",
