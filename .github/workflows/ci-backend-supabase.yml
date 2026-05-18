@@ -181,9 +181,15 @@ jobs:
 
       - name: Type-check Edge Functions (sync-outbox + validar-gerente + fiscal-worker)
         run: |
-          deno check backend/supabase/functions/sync-outbox/index.ts
-          deno check backend/supabase/functions/validar-gerente/index.ts
-          deno check --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
+          set -euo pipefail
+          echo "=== deno version ==="
+          deno --version
+          echo "=== sync-outbox ==="
+          deno check --no-lock backend/supabase/functions/sync-outbox/index.ts
+          echo "=== validar-gerente ==="
+          deno check --no-lock backend/supabase/functions/validar-gerente/index.ts
+          echo "=== fiscal-worker ==="
+          deno check --no-lock --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
 
   outbox-contract:
     runs-on: ubuntu-latest
@@ -208,24 +214,68 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         shell: bash
         env:
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
-          RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          RLS_TEST_GERENTE_EMAIL: ${{ secrets.RLS_TEST_GERENTE_EMAIL }}
+          RLS_TEST_GERENTE_PASSWORD: ${{ secrets.RLS_TEST_GERENTE_PASSWORD }}
+          RLS_TEST_OPERADOR_EMAIL: ${{ secrets.RLS_TEST_OPERADOR_EMAIL }}
+          RLS_TEST_OPERADOR_PASSWORD: ${{ secrets.RLS_TEST_OPERADOR_PASSWORD }}
         run: |
           set -euo pipefail
-          [ -n "${SUPABASE_URL:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL" && exit 1)
-          [ -n "${SUPABASE_ANON_KEY:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY" && exit 1)
-          [ -n "${RLS_SMOKE_JWT_PAINEL:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_PAINEL" && exit 1)
-          [ -n "${RLS_SMOKE_JWT_CAIXA:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_CAIXA" && exit 1)
+          [ -n "${SUPABASE_URL:-}" ]                || (echo "Secret ausente: NEXT_PUBLIC_SUPABASE_URL" && exit 1)
+          [ -n "${SUPABASE_ANON_KEY:-}" ]           || (echo "Secret ausente: NEXT_PUBLIC_SUPABASE_ANON_KEY" && exit 1)
+          [ -n "${RLS_TEST_GERENTE_EMAIL:-}" ]      || (echo "Secret ausente: RLS_TEST_GERENTE_EMAIL" && exit 1)
+          [ -n "${RLS_TEST_GERENTE_PASSWORD:-}" ]   || (echo "Secret ausente: RLS_TEST_GERENTE_PASSWORD" && exit 1)
+          [ -n "${RLS_TEST_OPERADOR_EMAIL:-}" ]     || (echo "Secret ausente: RLS_TEST_OPERADOR_EMAIL" && exit 1)
+          [ -n "${RLS_TEST_OPERADOR_PASSWORD:-}" ]  || (echo "Secret ausente: RLS_TEST_OPERADOR_PASSWORD" && exit 1)
+
+      - name: Generate JWT para gerente (RLS_SMOKE_JWT_PAINEL)
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          TEST_EMAIL: ${{ secrets.RLS_TEST_GERENTE_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.RLS_TEST_GERENTE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -fsSL -X POST \
+            "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${TEST_EMAIL}\",\"password\":\"${TEST_PASSWORD}\"}")
+          JWT=$(echo "${RESPONSE}" | jq -r '.access_token')
+          if [ -z "${JWT}" ] || [ "${JWT}" = "null" ]; then
+            echo "::error::Falha ao autenticar gerente — verifique RLS_TEST_GERENTE_EMAIL e RLS_TEST_GERENTE_PASSWORD"
+            exit 1
+          fi
+          echo "RLS_SMOKE_JWT_PAINEL=${JWT}" >> "$GITHUB_ENV"
+
+      - name: Generate JWT para operador (RLS_SMOKE_JWT_CAIXA)
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          TEST_EMAIL: ${{ secrets.RLS_TEST_OPERADOR_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.RLS_TEST_OPERADOR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -fsSL -X POST \
+            "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${TEST_EMAIL}\",\"password\":\"${TEST_PASSWORD}\"}")
+          JWT=$(echo "${RESPONSE}" | jq -r '.access_token')
+          if [ -z "${JWT}" ] || [ "${JWT}" = "null" ]; then
+            echo "::error::Falha ao autenticar operador — verifique RLS_TEST_OPERADOR_EMAIL e RLS_TEST_OPERADOR_PASSWORD"
+            exit 1
+          fi
+          echo "RLS_SMOKE_JWT_CAIXA=${JWT}" >> "$GITHUB_ENV"
 
       - name: Run mandatory REST RLS smoke
         env:
           CI_RLS_SMOKE_REQUIRED: 'true'
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
-          RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          RLS_SMOKE_JWT_PAINEL: ${{ env.RLS_SMOKE_JWT_PAINEL }}
+          RLS_SMOKE_JWT_CAIXA: ${{ env.RLS_SMOKE_JWT_CAIXA }}
         run: node backend/scripts/p0-rls-rest-smoke.mjs
 
   migration-remote-drift:

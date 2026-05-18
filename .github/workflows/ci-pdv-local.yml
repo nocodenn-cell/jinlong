@@ -33,10 +33,18 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # Rollup v4 requer binário nativo Linux; lock gerado em Windows pode omiti-lo.
-      # --include=optional garante que @rollup/rollup-linux-x64-gnu seja instalado.
+      # Rollup v4 e @swc/core requerem binários nativos Linux; lock gerado em
+      # Windows/macOS pode omiti-los. --include=optional instala os do lock;
+      # o passo seguinte garante fallback para qualquer binding ainda ausente.
       - name: Install (workspaces na raiz)
         run: npm ci --include=optional
+
+      - name: Ensure Linux native bindings (SWC + Rollup)
+        run: |
+          node -e "try{require('@swc/core')}catch{process.exit(1)}" \
+            || npm install --no-save \
+                 "@swc/core-linux-x64-gnu@$(node -p "require('./node_modules/@swc/core/package.json').optionalDependencies['@swc/core-linux-x64-gnu']")" \
+                 "@rollup/rollup-linux-x64-gnu" 2>/dev/null || true
 
       - name: Typecheck, unit tests e build (Turborepo)
         run: npx turbo run typecheck test build --filter=pdv-local
