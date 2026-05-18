@@ -238,13 +238,13 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     const el = sentinelRef.current
     if (!el) return
     const obs = new IntersectionObserver(
-      async (entries) => {
+      (entries) => {
         if (!entries[0]?.isIntersecting) return
         const { paginaAtual: cur, totalPaginas, loadingList: busy, filtros: f } = scrollStateRef.current
         if (cur >= totalPaginas || busy) return
         const nextPage = cur + 1
         setPaginaAtual(nextPage)
-        await fetchList(f, nextPage, true)
+        fetchList(f, nextPage, true).catch(() => undefined)
       },
       { rootMargin: '300px' },
     )
@@ -261,13 +261,13 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     // Ao mudar filtros ou tamanho da página, reseta para página 1 e substitui linhas
     setPaginaAtual(1)
     const id = setTimeout(() => {
-      void fetchList(filtros, 1, false)
+      fetchList(filtros, 1, false).catch(() => undefined)
     }, 320)
     return () => clearTimeout(id)
   }, [filtros, itensPorPagina, fetchList])
 
   const refetch = useCallback(() => {
-    void fetchList(filtros, paginaAtual)
+    fetchList(filtros, paginaAtual).catch(() => undefined)
     router.refresh()
   }, [fetchList, filtros, paginaAtual, router])
 
