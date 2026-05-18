@@ -13,15 +13,22 @@ import { rowsToCsv } from '@/lib/csv'
  * - `venda_itens` / vendas: ver `050_cancelar_venda_transacional.sql` (`ON DELETE RESTRICT`)
  * - `034_remessas_movimentos_transferencias.sql`: movimentos com `produto_id`
  *
- * **Cabeçalho canónico:** validação estrita usa esta ordem fixa, após normalizar BOM (`\uFEFF`) e `trim` nas células.
+ * **Cabeçalho canónico:** validação estrita usa esta ordem fixa, após normalizar BOM (`﻿`) e `trim` nas células.
  * O modelo usa chaves estáveis em inglês (sem depender do idioma da UI). Apenas estas colunas são lidas;
  * campos sensíveis da tabela que não aparecem no CSV não são alteráveis por importação.
+ *
+ * Campos opcionais no CSV: `preco_atacado`, `quantidade_gatilho_atacado`, `unidade_medida`, `observacao`.
+ * Deixe em branco para usar o valor padrão (null / 'UN' / null).
  */
 export const PRODUTO_IMPORT_CSV_HEADER_KEYS = [
   'id',
   'nome',
   'codigo_barras',
   'preco_varejo',
+  'preco_atacado',
+  'quantidade_gatilho_atacado',
+  'unidade_medida',
+  'observacao',
   'origem',
   'tem_nf',
   'ativo',

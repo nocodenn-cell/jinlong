@@ -652,6 +652,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           onOpenChange={onEditarModalOpenChange}
           produto={produtoEditar}
           m={m}
+          opcoes={opcoes}
           onSalvo={refetch}
         />
         <ProdutosImportarModal

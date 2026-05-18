@@ -50,10 +50,17 @@ const NovoProdutoSchema = z.object({
       'Código de barras: mínimo 3 caracteres ou deixe em branco',
     ),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
+  preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
   origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf'], {
     errorMap: () => ({ message: 'Origem do produto inválida.' }),
   }),
   tem_nf: z.coerce.boolean(),
+  unidade_medida: z.enum(['UN', 'KG', 'CX', 'FD', 'M']).optional().default('UN'),
+  observacao: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  categoria_id: z.string().uuid().nullable().optional().transform((v) => v || null),
+  marca_id: z.string().uuid().nullable().optional().transform((v) => v || null),
+  fornecedor_id: z.string().uuid().nullable().optional().transform((v) => v || null),
   /** Cadastro rápido não envia o campo; importação pode enviar explicitamente. */
   ativo: z.boolean().optional().transform((v) => v ?? true),
 })
@@ -70,7 +77,7 @@ export async function criarProduto(
 
   const parsed = NovoProdutoSchema.safeParse(input)
   if (!parsed.success) {
-    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    const msg = parsed.error.issues[0]?.message ?? 'Erro de validação.'
     const { idioma } = await getUsuarioIdioma()
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
@@ -98,7 +105,7 @@ export async function atualizarPrecoVarejoProduto(
 
   const parsed = AtualizarPrecoSchema.safeParse(input)
   if (!parsed.success) {
-    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    const msg = parsed.error.issues[0]?.message ?? 'Erro de validação.'
     const { idioma } = await getUsuarioIdioma()
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
@@ -221,6 +228,10 @@ export async function importarProdutosCsv(
           nome: row.nome,
           codigo_barras: row.codigo_barras,
           preco_varejo: row.preco_varejo,
+          preco_atacado: row.preco_atacado ?? null,
+          quantidade_gatilho_atacado: row.quantidade_gatilho_atacado ?? null,
+          unidade_medida: row.unidade_medida ?? 'UN',
+          observacao: row.observacao ?? null,
           origem: row.origem,
           tem_nf: row.tem_nf,
           ativo: row.ativo,
@@ -242,6 +253,10 @@ export async function importarProdutosCsv(
       nome: row.nome,
       codigo_barras: row.codigo_barras,
       preco_varejo: row.preco_varejo,
+      preco_atacado: row.preco_atacado ?? null,
+      quantidade_gatilho_atacado: row.quantidade_gatilho_atacado ?? null,
+      unidade_medida: row.unidade_medida ?? 'UN',
+      observacao: row.observacao ?? null,
       origem: row.origem,
       tem_nf: row.tem_nf,
       ativo: row.ativo,
@@ -431,6 +446,14 @@ const EditarProdutoCatalogoSchema = z.object({
     errorMap: () => ({ message: 'Origem do produto inválida.' }),
   }),
   tem_nf: z.coerce.boolean(),
+  preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
+  preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
+  categoria_id: z.string().uuid().nullable().optional().transform((v) => v || null),
+  marca_id: z.string().uuid().nullable().optional().transform((v) => v || null),
+  fornecedor_id: z.string().uuid().nullable().optional().transform((v) => v || null),
+  unidade_medida: z.enum(['UN', 'KG', 'CX', 'FD', 'M']).default('UN'),
+  observacao: z.string().nullable().optional().transform((v) => v?.trim() || null),
 })
 
 export type ResultadoExclusaoLote = Readonly<{
@@ -490,7 +513,7 @@ export async function aplicarExclusaoOuInativacaoEmLote(
 
   const parsed = LoteExclusaoSchema.safeParse(rawIds)
   if (!parsed.success) {
-    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    const msg = parsed.error.issues[0]?.message ?? 'Erro de validação.'
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
@@ -585,7 +608,7 @@ export async function atualizarDadosProdutoGerente(
 
   const parsed = EditarProdutoCatalogoSchema.safeParse(input)
   if (!parsed.success) {
-    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    const msg = parsed.error.issues[0]?.message ?? 'Erro de validação.'
     const { idioma } = await getUsuarioIdioma()
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
@@ -598,6 +621,14 @@ export async function atualizarDadosProdutoGerente(
       codigo_barras: parsed.data.codigo_barras,
       origem: parsed.data.origem,
       tem_nf: parsed.data.tem_nf,
+      preco_varejo: parsed.data.preco_varejo,
+      preco_atacado: parsed.data.preco_atacado,
+      quantidade_gatilho_atacado: parsed.data.quantidade_gatilho_atacado,
+      categoria_id: parsed.data.categoria_id,
+      marca_id: parsed.data.marca_id,
+      fornecedor_id: parsed.data.fornecedor_id,
+      unidade_medida: parsed.data.unidade_medida,
+      observacao: parsed.data.observacao,
     })
     .eq('id', parsed.data.produto_id)
 
@@ -681,12 +712,16 @@ type RpcProdutoRow = {
   nome: string
   codigo_barras: string | null
   preco_varejo: number
+  preco_atacado: number | null
+  quantidade_gatilho_atacado: number | null
   origem: string
   tem_nf: boolean
   ativo: boolean
   categoria_id: string | null
   fornecedor_id: string | null
   marca_id: string | null
+  unidade_medida: string | null
+  observacao: string | null
   imagem_url: string | null
   tags: string[] | null
   total_count: number
@@ -703,7 +738,7 @@ export async function buscarProdutosComFiltros(
 
   const parsed = BuscarProdutosComFiltrosInputSchema.safeParse(input)
   if (!parsed.success) {
-    const msg = parsed.error.issues.map((i) => i.message).join('; ')
+    const msg = parsed.error.issues[0]?.message ?? 'Erro de validação.'
     const { idioma } = await getUsuarioIdioma()
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
@@ -742,10 +777,17 @@ export async function buscarProdutosComFiltros(
     nome: r.nome,
     codigo_barras: r.codigo_barras,
     preco_varejo: Number(r.preco_varejo),
+    preco_atacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
+    quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
     origem: r.origem,
     tem_nf: r.tem_nf,
     ativo: r.ativo,
     imagem_url: r.imagem_url ?? null,
+    categoria_id: r.categoria_id ?? null,
+    marca_id: r.marca_id ?? null,
+    fornecedor_id: r.fornecedor_id ?? null,
+    unidade_medida: r.unidade_medida ?? 'UN',
+    observacao: r.observacao ?? null,
   }))
 
   return { success: true, data: { rows, total } }

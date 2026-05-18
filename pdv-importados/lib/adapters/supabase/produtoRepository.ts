@@ -38,9 +38,14 @@ export function createProdutoRepository(
           codigo_barras: input.codigo_barras?.trim() || null,
           preco_varejo: input.preco_varejo,
           preco_atacado: pa,
+          quantidade_gatilho_atacado: input.quantidade_gatilho_atacado ?? null,
           origem: input.origem,
           tem_nf: input.tem_nf,
-          unidade_medida: 'UN',
+          unidade_medida: input.unidade_medida ?? 'UN',
+          observacao: input.observacao ?? null,
+          categoria_id: input.categoria_id ?? null,
+          marca_id: input.marca_id ?? null,
+          fornecedor_id: input.fornecedor_id ?? null,
           ativo,
         })
         .select('id')

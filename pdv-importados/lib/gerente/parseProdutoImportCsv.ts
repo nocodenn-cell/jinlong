@@ -104,6 +104,34 @@ function parsePrecoLoose(raw: string): { ok: true; value: number } | { ok: false
   return { ok: true, value: n }
 }
 
+/** Parse optional positive decimal — empty string → null, invalid → error. */
+function parsePrecoOpcional(raw: string): { ok: true; value: number | null } | { ok: false } {
+  const t = raw.trim()
+  if (t === '') return { ok: true, value: null }
+  const r = parsePrecoLoose(t)
+  if (!r.ok || r.value <= 0) return { ok: false }
+  return { ok: true, value: r.value }
+}
+
+/** Parse optional positive integer — empty string → null, invalid/non-int → error. */
+function parseIntOpcional(raw: string): { ok: true; value: number | null } | { ok: false } {
+  const t = raw.trim()
+  if (t === '') return { ok: true, value: null }
+  const n = Number(t)
+  if (!Number.isInteger(n) || n < 1) return { ok: false }
+  return { ok: true, value: n }
+}
+
+const UNIDADES_VALIDAS = ['UN', 'KG', 'CX', 'FD', 'M'] as const
+type UnidadeValida = (typeof UNIDADES_VALIDAS)[number]
+
+function parseUnidade(raw: string): { ok: true; value: UnidadeValida } | { ok: false } {
+  const t = raw.trim().toUpperCase()
+  if (t === '') return { ok: true, value: 'UN' }
+  if ((UNIDADES_VALIDAS as readonly string[]).includes(t)) return { ok: true, value: t as UnidadeValida }
+  return { ok: false }
+}
+
 const ImportRowZ = z
   .object({
     id: z.union([z.literal(''), z.string().uuid()]),
@@ -114,6 +142,10 @@ const ImportRowZ = z
       .transform((t) => (t.length === 0 ? null : t))
       .refine((s) => s === null || s.length >= 3),
     preco_varejo: z.number().positive(),
+    preco_atacado: z.number().positive().nullable().optional(),
+    quantidade_gatilho_atacado: z.number().int().min(1).nullable().optional(),
+    unidade_medida: z.enum(['UN', 'KG', 'CX', 'FD', 'M']).default('UN'),
+    observacao: z.string().nullable().optional(),
     origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf']),
     tem_nf: z.boolean(),
     ativo: z.boolean(),
@@ -169,17 +201,32 @@ export function parseAndValidateImportRow(
     }
   }
 
+  const precoAtacadoRaw = parsePrecoOpcional(raw.preco_atacado ?? '')
+  if (!precoAtacadoRaw.ok) return { ok: false, reason: { t: 'atacado_invalid' } }
+
+  const gatilhoRaw = parseIntOpcional(raw.quantidade_gatilho_atacado ?? '')
+  if (!gatilhoRaw.ok) return { ok: false, reason: { t: 'gatilho_invalid' } }
+
+  const unidadeRaw = parseUnidade(raw.unidade_medida ?? '')
+  if (!unidadeRaw.ok) return { ok: false, reason: { t: 'unidade_invalid' } }
+
   const temNf = parseBoolLoose(raw.tem_nf ?? '')
   if (!temNf.ok) return { ok: false, reason: { t: 'boolean_invalid', field: 'tem_nf' } }
 
   const ativo = parseBoolLoose(raw.ativo ?? '')
   if (!ativo.ok) return { ok: false, reason: { t: 'boolean_invalid', field: 'ativo' } }
 
+  const observacaoRaw = (raw.observacao ?? '').trim()
+
   const parsed = ImportRowZ.safeParse({
     id,
     nome: raw.nome ?? '',
     codigo_barras: raw.codigo_barras ?? '',
     preco_varejo: precoRaw.value,
+    preco_atacado: precoAtacadoRaw.value,
+    quantidade_gatilho_atacado: gatilhoRaw.value,
+    unidade_medida: unidadeRaw.value,
+    observacao: observacaoRaw || null,
     origem: raw.origem ?? '',
     tem_nf: temNf.value,
     ativo: ativo.value,

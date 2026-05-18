@@ -18,6 +18,9 @@ export type ImportCsvRowFailReason =
   | { t: 'codigo_invalid' }
   | { t: 'origem_invalid' }
   | { t: 'preco_not_positive' }
+  | { t: 'atacado_invalid' }
+  | { t: 'gatilho_invalid' }
+  | { t: 'unidade_invalid' }
   | { t: 'zod_other'; detail: string }
 
 export function importCsvFatalToString(
@@ -69,6 +72,12 @@ export function importCsvRowFailToString(
       return p.import_row_origem_invalid
     case 'preco_not_positive':
       return p.import_row_preco_not_positive
+    case 'atacado_invalid':
+      return p.import_row_atacado_invalid
+    case 'gatilho_invalid':
+      return p.import_row_gatilho_invalid
+    case 'unidade_invalid':
+      return p.import_row_unidade_invalid
     case 'zod_other':
       return interpolateTemplate(p.import_row_zod_other, { detail: reason.detail })
   }
