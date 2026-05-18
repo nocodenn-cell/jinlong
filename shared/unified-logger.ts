@@ -58,17 +58,17 @@ function redactObject(value: Record<string, unknown>, depth: number): Record<str
  * Retorna uma cópia segura para log, mascarando chaves sensíveis
  */
 export function redactForLog<T>(value: T, depth = 0): T {
-  if (depth > MAX_REDACT_DEPTH) return '[MAX_DEPTH]' as unknown as T
+  if (depth > MAX_REDACT_DEPTH) return '[MAX_DEPTH]' as T
   if (value === null || value === undefined) return value
 
   const valueType = typeof value
-  if (valueType === 'string') return redactString(value as string) as unknown as T
+  if (valueType === 'string') return redactString(value as string) as T
   if (valueType === 'number' || valueType === 'boolean') return value
   if (Array.isArray(value)) {
-    return (value as unknown[]).map((item) => redactForLog(item, depth + 1)) as unknown as T
+    return (value as unknown[]).map((item) => redactForLog(item, depth + 1)) as T
   }
   if (valueType === 'object') {
-    return redactObject(value as Record<string, unknown>, depth) as unknown as T
+    return redactObject(value as Record<string, unknown>, depth) as T
   }
 
   return value
