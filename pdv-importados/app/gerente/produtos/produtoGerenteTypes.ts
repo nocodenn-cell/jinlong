@@ -9,4 +9,8 @@ export type ProdutoGerenteRow = {
   ativo: boolean
   /** URL pública (Storage) ou null. */
   imagem_url: string | null
+  categoria_id: string | null
+  marca_id: string | null
+  fornecedor_id: string | null
+  tags: string[] | null
 }

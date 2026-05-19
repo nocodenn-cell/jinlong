@@ -746,6 +746,10 @@ export async function buscarProdutosComFiltros(
     tem_nf: r.tem_nf,
     ativo: r.ativo,
     imagem_url: r.imagem_url ?? null,
+    categoria_id: r.categoria_id ?? null,
+    marca_id: r.marca_id ?? null,
+    fornecedor_id: r.fornecedor_id ?? null,
+    tags: r.tags ?? null,
   }))
 
   return { success: true, data: { rows, total } }

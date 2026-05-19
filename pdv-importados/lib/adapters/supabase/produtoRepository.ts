@@ -63,6 +63,7 @@ export function createProdutoRepository(
       })
 
       if (estoqueError) {
+        await supabase.from('produtos').delete().eq('id', data.id)
         return {
           ok: false,
           message: mensagemErroComSecao(
