@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePdvLocalOutboxSync } from './usePdvLocalOutboxSync'
 
 const invokeMock = vi.fn()
@@ -13,6 +13,10 @@ describe('usePdvLocalOutboxSync', () => {
   beforeEach(() => {
     invokeMock.mockReset()
     vi.useRealTimers()
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
   })
 
   it('carrega resumo no mount e expõe status pendente', async () => {
