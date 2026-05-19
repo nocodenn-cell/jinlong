@@ -185,7 +185,9 @@ jobs:
           FAIL=0
 
           echo "--- sync-outbox ---"
-          deno check --no-lock backend/supabase/functions/sync-outbox/index.ts \
+          deno check --no-lock \
+            --config backend/supabase/functions/sync-outbox/deno.json \
+            backend/supabase/functions/sync-outbox/index.ts \
             && echo "sync-outbox OK" || { echo "sync-outbox FAILED"; FAIL=1; }
 
           echo "--- validar-gerente ---"

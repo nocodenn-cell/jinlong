@@ -1,4 +1,5 @@
 import { timingSafeEqualStr } from "./crypto.ts";
+// @deno-types="npm:@types/bcryptjs@2.4.6"
 import bcrypt from "npm:bcryptjs@2.4.3";
 
 const RATE_WINDOW_MS = 15 * 60 * 1000;
