@@ -1,5 +1,5 @@
 import { timingSafeEqualStr } from "./crypto.ts";
-import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
+import bcrypt from "npm:bcryptjs@2.4.3";
 
 const RATE_WINDOW_MS = 15 * 60 * 1000;
 const LOCK_MS = 15 * 60 * 1000;
