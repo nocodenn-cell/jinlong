@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from '@testing-library/react'
+import { cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePdvLocalOutboxSync } from './usePdvLocalOutboxSync'
 
@@ -15,8 +15,11 @@ describe('usePdvLocalOutboxSync', () => {
     vi.useRealTimers()
   })
 
-  afterEach(() => {
-    vi.clearAllTimers()
+  afterEach(async () => {
+    cleanup()
+    // Drena a fila setImmediate do Node.js (React scheduler) antes do teardown jsdom
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    await new Promise<void>((resolve) => setImmediate(resolve))
   })
 
   it('carrega resumo no mount e expõe status pendente', async () => {
