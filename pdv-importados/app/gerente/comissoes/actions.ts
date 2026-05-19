@@ -83,3 +83,26 @@ export async function obterDetalhamentoItens(
     return []
   }
 }
+
+export async function marcarComissoesPagas(
+  vendedorId: string,
+  dataInicio: string,
+  dataFim: string,
+): Promise<{ ok: boolean; atualizados: number; erro?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return { ok: false, atualizados: 0, erro: "Não autenticado" }
+    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+    const { data, error } = await supabase.rpc("marcar_comissoes_pagas", {
+      p_loja_id:     lojaId,
+      p_vendedor_id: vendedorId,
+      p_data_inicio: dataInicio,
+      p_data_fim:    dataFim,
+    })
+    if (error) return { ok: false, atualizados: 0, erro: error.message }
+    return { ok: true, atualizados: Number(data ?? 0) }
+  } catch (e) {
+    return { ok: false, atualizados: 0, erro: String(e) }
+  }
+}

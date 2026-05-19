@@ -751,6 +751,66 @@ export async function buscarProdutosComFiltros(
   return { success: true, data: { rows, total } }
 }
 
+const LoteAtivoSchema = z.object({
+  produto_ids: z.array(z.string().uuid()).min(1).max(100),
+  ativo: z.boolean(),
+})
+
+export async function alternarAtivoProdutosEmLote(
+  rawInput: unknown,
+): Promise<{ success: boolean; atualizados: number; error?: string }> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, atualizados: 0, error: auth.error }
+
+  const parsed = LoteAtivoSchema.safeParse(rawInput)
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, atualizados: 0, error: mensagemErroValidacaoZod(parsed.error.issues.map(i => i.message).join('; '), idioma) }
+  }
+
+  const { produto_ids, ativo } = parsed.data
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('produtos')
+    .update({ ativo, updated_at: new Date().toISOString() })
+    .in('id', produto_ids)
+    .select('id')
+
+  if (error) return { success: false, atualizados: 0, error: error.message }
+  revalidatePath('/gerente/produtos')
+  return { success: true, atualizados: data?.length ?? 0 }
+}
+
+const LoteCategoriaSchema = z.object({
+  produto_ids: z.array(z.string().uuid()).min(1).max(100),
+  categoria_id: z.string().uuid('ID de categoria inválido.'),
+})
+
+export async function alterarCategoriaEmLote(
+  rawInput: unknown,
+): Promise<{ success: boolean; atualizados: number; error?: string }> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, atualizados: 0, error: auth.error }
+
+  const parsed = LoteCategoriaSchema.safeParse(rawInput)
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, atualizados: 0, error: mensagemErroValidacaoZod(parsed.error.issues.map(i => i.message).join('; '), idioma) }
+  }
+
+  const { produto_ids, categoria_id } = parsed.data
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('produtos')
+    .update({ categoria_id, updated_at: new Date().toISOString() })
+    .in('id', produto_ids)
+    .select('id')
+
+  if (error) return { success: false, atualizados: 0, error: error.message }
+  revalidatePath('/gerente/produtos')
+  return { success: true, atualizados: data?.length ?? 0 }
+}
+
 /**
  * Export CSV: até `limite` linhas com os mesmos filtros da listagem.
  */

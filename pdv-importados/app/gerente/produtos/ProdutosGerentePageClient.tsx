@@ -26,6 +26,8 @@ import { getMessages } from '@/i18n/getMessages'
 import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
 import {
   alternarAtivoProduto,
+  alternarAtivoProdutosEmLote,
+  alterarCategoriaEmLote,
   atualizarPrecoVarejoProduto,
   buscarProdutosComFiltros,
   buscarProdutosParaExportacao,
@@ -79,6 +81,51 @@ function toBuscarInput(f: FiltrosUi, page: number, pageSize: number): BuscarProd
     page,
     pageSize,
   }
+}
+
+function CategoriaLoteModal({
+  categorias,
+  onConfirmar,
+  onCancelar,
+}: Readonly<{
+  categorias: { id: string; nome: string }[]
+  onConfirmar: (categoriaId: string) => Promise<void>
+  onCancelar: () => void
+}>) {
+  const [categoriaId, setCategoriaId] = useState(categorias[0]?.id ?? '')
+  const [loading, setLoading] = useState(false)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl">
+        <h2 className="mb-4 text-base font-semibold">Alterar Categoria em Lote</h2>
+        <select
+          value={categoriaId}
+          onChange={(e) => setCategoriaId(e.target.value)}
+          className="mb-4 w-full rounded-lg px-3 py-2 text-sm app-input"
+        >
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
+        </select>
+        <div className="flex justify-end gap-2">
+          <button onClick={onCancelar} className="rounded-md px-4 py-2 text-sm app-btn-neutral">
+            Cancelar
+          </button>
+          <button
+            disabled={!categoriaId || loading}
+            onClick={async () => {
+              setLoading(true)
+              await onConfirmar(categoriaId)
+              setLoading(false)
+            }}
+            className="rounded-md px-4 py-2 text-sm font-semibold app-btn-accent disabled:opacity-50"
+          >
+            {loading ? '…' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function OrigemBadgeUi({
@@ -202,6 +249,8 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [exclusaoModalAberto, setExclusaoModalAberto] = useState(false)
   const [idsExclusaoLote, setIdsExclusaoLote] = useState<readonly string[]>([])
+  const [ativoLoteLoading, setAtivoLoteLoading] = useState(false)
+  const [categoriaLoteModalAberto, setCategoriaLoteModalAberto] = useState(false)
   const [editarModalAberto, setEditarModalAberto] = useState(false)
   const [produtoEditar, setProdutoEditar] = useState<ProdutoGerenteRow | null>(null)
   const [linhasImpressao, setLinhasImpressao] = useState<ProdutoGerenteRow[]>([])
@@ -415,6 +464,23 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       block: 'nearest',
     })
   }, [])
+
+  const handleAtivoLote = useCallback(async (novoAtivo: boolean) => {
+    if (selectedIds.size === 0) return
+    setAtivoLoteLoading(true)
+    try {
+      const r = await alternarAtivoProdutosEmLote({ produto_ids: Array.from(selectedIds), ativo: novoAtivo })
+      if (!r.success) {
+        emitGerenteToast({ kind: 'error', message: r.error ?? 'Erro' })
+      } else {
+        emitGerenteToast({ kind: 'success', message: `${r.atualizados} produto(s) ${novoAtivo ? 'ativado(s)' : 'inativado(s)'}` })
+        setSelectedIds(new Set())
+        void refetch()
+      }
+    } finally {
+      setAtivoLoteLoading(false)
+    }
+  }, [selectedIds])
 
   const abrirExclusaoLote = useCallback(() => {
     const arr = Array.from(selectedIds)
@@ -637,12 +703,18 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
             printDisabled={total === 0}
             fotoDisabled={total === 0}
             exclusaoDisabled={selectedIds.size === 0 || selectedIds.size > 100}
+            ativoLoteDisabled={selectedIds.size === 0}
+            ativoLoteLoading={ativoLoteLoading}
+            categoriaLoteDisabled={selectedIds.size === 0}
             onExport={() => void exportCsv(null)}
             onImport={() => setImportModalAberto(true)}
             onIncluirCadastro={irParaCadastroRapido}
             onPrint={() => void imprimirLista()}
             onFotoColuna={irParaColunaFoto}
             onExcluir={abrirExclusaoLote}
+            onAtivarLote={() => void handleAtivoLote(true)}
+            onInativarLote={() => void handleAtivoLote(false)}
+            onAlterarCategoriaLote={() => setCategoriaLoteModalAberto(true)}
           />
         </GerenteStickyToolbar>
         <ProdutosExcluirLoteModal
@@ -666,6 +738,23 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           m={m}
           onImportComplete={refetch}
         />
+        {categoriaLoteModalAberto && (
+          <CategoriaLoteModal
+            categorias={opcoes.categorias}
+            onConfirmar={async (categoriaId) => {
+              setCategoriaLoteModalAberto(false)
+              const r = await alterarCategoriaEmLote({ produto_ids: Array.from(selectedIds), categoria_id: categoriaId })
+              if (!r.success) {
+                emitGerenteToast({ kind: 'error', message: r.error ?? 'Erro' })
+              } else {
+                emitGerenteToast({ kind: 'success', message: `${r.atualizados} produto(s) com categoria alterada` })
+                setSelectedIds(new Set())
+                void refetch()
+              }
+            }}
+            onCancelar={() => setCategoriaLoteModalAberto(false)}
+          />
+        )}
         <p className="gerente-fin-muted -mt-2 text-xs">
           {idioma === 'pt'
             ? 'Gestão de catálogo com visão densa para operação diária.'

@@ -178,6 +178,15 @@
     "import_modal_atualizar_por_id": "Permitir atualização por id: linhas com id alteram o produto existente; id vazio cria novo.",
     "toolbar_excluir_title": "Remover ou inativar produtos selecionados",
     "toolbar_excluir_aria": "Abrir confirmação de exclusão em lote",
+    "toolbar_ativar": "Ativar",
+    "toolbar_ativar_title": "Ativar produtos selecionados",
+    "toolbar_ativar_aria": "Ativar produtos selecionados em lote",
+    "toolbar_inativar": "Inativar",
+    "toolbar_inativar_title": "Inativar produtos selecionados",
+    "toolbar_inativar_aria": "Inativar produtos selecionados em lote",
+    "toolbar_categoria": "Categoria",
+    "toolbar_categoria_title": "Alterar categoria dos produtos selecionados",
+    "toolbar_categoria_aria": "Alterar categoria em lote",
     "exclusao_secao_leitura": "Leitura do produto",
     "exclusao_secao_regras_preco": "Regras de preço",
     "exclusao_secao_estoque": "Estoque",
@@ -1042,7 +1051,8 @@
     "quantidade_itens": "Itens comissionados",
     "sem_dados": "Nenhuma comissão no período",
     "filtrar": "Filtrar",
-    "exportar_csv": "Exportar CSV"
+    "exportar_csv": "Exportar CSV",
+    "marcar_pago": "Marcar como Paga"
   },
   "comum": {
     "salvar": "Salvar",

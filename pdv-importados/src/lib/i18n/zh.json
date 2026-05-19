@@ -178,6 +178,15 @@
     "import_modal_atualizar_por_id": "允许按 id 更新：有 id 的行会更新已有商品；id 留空则新增。",
     "toolbar_excluir_title": "删除或停用所选商品",
     "toolbar_excluir_aria": "打开批量删除确认",
+    "toolbar_ativar": "启用",
+    "toolbar_ativar_title": "启用所选商品",
+    "toolbar_ativar_aria": "批量启用所选商品",
+    "toolbar_inativar": "停用",
+    "toolbar_inativar_title": "停用所选商品",
+    "toolbar_inativar_aria": "批量停用所选商品",
+    "toolbar_categoria": "分类",
+    "toolbar_categoria_title": "更改所选商品分类",
+    "toolbar_categoria_aria": "批量更改分类",
     "exclusao_secao_leitura": "读取商品",
     "exclusao_secao_regras_preco": "价格规则",
     "exclusao_secao_estoque": "库存",
@@ -1132,6 +1141,7 @@
     "quantidade_itens": "佣金商品",
     "sem_dados": "本期无佣金记录",
     "filtrar": "筛选",
-    "exportar_csv": "导出CSV"
+    "exportar_csv": "导出CSV",
+    "marcar_pago": "标记为已支付"
   }
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { Mensagens } from '@/i18n/getMessages'
-import { obterResumoComissoes, type ResumoComissaoRow } from './actions'
+import { obterResumoComissoes, marcarComissoesPagas, type ResumoComissaoRow } from './actions'
 import { AuditoriaModal } from './AuditoriaModal'
 
 type Props = { m: Mensagens }
@@ -46,6 +46,7 @@ export function ComissoesPageClient({ m }: Props) {
   const [rows, setRows] = useState<ResumoComissaoRow[]>([])
   const [loading, setLoading] = useState(true)
   const [auditoria, setAuditoria] = useState<AuditoriaState>(null)
+  const [pagandoId, setPagandoId] = useState<string | null>(null)
 
   const dataInicio = toDateStr(ano, mes)
   const dataFim = toDateStrEnd(ano, mes)
@@ -151,19 +152,37 @@ export function ComissoesPageClient({ m }: Props) {
                     {row.quantidadeVendas}
                   </td>
                   <td className="px-3 py-3 text-center">
-                    <button
-                      onClick={() =>
-                        setAuditoria({
-                          vendedorId: row.vendedorId,
-                          vendedorNome: row.vendedorNome,
-                          dataInicio,
-                          dataFim,
-                        })
-                      }
-                      className="gerente-section-accent text-sm font-medium hover:underline"
-                    >
-                      {m.comissoes.auditoria}
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() =>
+                          setAuditoria({
+                            vendedorId: row.vendedorId,
+                            vendedorNome: row.vendedorNome,
+                            dataInicio,
+                            dataFim,
+                          })
+                        }
+                        className="gerente-section-accent text-sm font-medium hover:underline"
+                      >
+                        {m.comissoes.auditoria}
+                      </button>
+                      <button
+                        disabled={pagandoId === row.vendedorId || row.totalComissao === 0}
+                        onClick={async () => {
+                          if (!confirm(`Marcar comissões de ${row.vendedorNome} (${fmtBRL(row.totalComissao)}) como pagas?`)) return
+                          setPagandoId(row.vendedorId)
+                          try {
+                            await marcarComissoesPagas(row.vendedorId, dataInicio, dataFim)
+                            void fetchData()
+                          } finally {
+                            setPagandoId(null)
+                          }
+                        }}
+                        className="rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:opacity-40 app-btn-success"
+                      >
+                        {pagandoId === row.vendedorId ? '…' : m.comissoes.marcar_pago}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
