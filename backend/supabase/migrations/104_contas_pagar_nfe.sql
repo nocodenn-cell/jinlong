@@ -56,6 +56,12 @@ CREATE POLICY contas_pagar_gerente
     )
   );
 
+-- Prevent duplicate product rows when the same supplier ref appears in multiple
+-- NF-e lines. ON CONFLICT DO NOTHING in importar_nfe_transacao relies on this.
+CREATE UNIQUE INDEX IF NOT EXISTS produtos_fornecedor_ref_loja_uniq
+  ON public.produtos (fornecedor_id, referencia_fornecedor, loja_id)
+  WHERE referencia_fornecedor IS NOT NULL AND referencia_fornecedor <> '';
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Atualizar importar_nfe_transacao para aceitar duplicatas
 -- ─────────────────────────────────────────────────────────────────────────────

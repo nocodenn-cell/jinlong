@@ -603,6 +603,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
       }
     }
     const parcelasFiltradas = parcelasNormalizadas.filter((p) => p.valor > 0)
+    const parcelasParaEnviar =
+      parcelasFiltradas.length > 0
+        ? parcelasFiltradas
+        : [{ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", valor: 0 }]
     setFinalizando(true)
     setCaixaMensagem(null)
     try {
@@ -622,7 +626,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           descontoGerentePercentualEfetivo > 0 ? gerenteToken ?? undefined : undefined,
         descontoGerentePercentual:
           descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
-        pagamentos: parcelasFiltradas,
+        pagamentos: parcelasParaEnviar,
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,

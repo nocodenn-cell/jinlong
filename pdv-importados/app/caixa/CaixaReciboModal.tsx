@@ -102,8 +102,10 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
     doc.head.appendChild(style)
     doc.body.appendChild(el.cloneNode(true))
 
-    iframe.contentWindow?.print()
-    document.body.removeChild(iframe)
+    const win = iframe.contentWindow
+    if (!win) { document.body.removeChild(iframe); return }
+    win.onafterprint = () => document.body.removeChild(iframe)
+    win.print()
   }
 
   // Fecha com Escape
