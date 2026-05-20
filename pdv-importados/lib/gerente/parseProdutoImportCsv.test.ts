@@ -29,8 +29,8 @@ describe('parseProdutoImportCsv', () => {
 
   it('valida uma linha de dados válida', () => {
     const csv = [
-      'id,nome,codigo_barras,preco_varejo,origem,tem_nf,ativo',
-      ',Arroz,,12.5,china_manual,1,1',
+      'id,nome,codigo_barras,preco_varejo,preco_atacado,quantidade_gatilho_atacado,unidade_medida,observacao,origem,tem_nf,ativo',
+      ',Arroz,,12.5,,,,,china_manual,1,1',
     ].join('\n')
     const r = validateProdutoImportCsvDocument(csv)
     expect(r.ok).toBe(true)
@@ -45,8 +45,8 @@ describe('parseProdutoImportCsv', () => {
 
   it('rejeita id preenchido sem atualização por id', () => {
     const csv = [
-      'id,nome,codigo_barras,preco_varejo,origem,tem_nf,ativo',
-      '550e8400-e29b-41d4-a716-446655440000,X,,1,china_manual,0,1',
+      'id,nome,codigo_barras,preco_varejo,preco_atacado,quantidade_gatilho_atacado,unidade_medida,observacao,origem,tem_nf,ativo',
+      '550e8400-e29b-41d4-a716-446655440000,X,,1,,,,,china_manual,0,1',
     ].join('\n')
     const r = validateProdutoImportCsvDocument(csv)
     expect(r.ok).toBe(true)
@@ -56,8 +56,8 @@ describe('parseProdutoImportCsv', () => {
 
   it('aceita id UUID quando permiteAtualizacaoPorId', () => {
     const csv = [
-      'id,nome,codigo_barras,preco_varejo,origem,tem_nf,ativo',
-      '550e8400-e29b-41d4-a716-446655440000,Arroz Integral,,12.5,china_manual,1,1',
+      'id,nome,codigo_barras,preco_varejo,preco_atacado,quantidade_gatilho_atacado,unidade_medida,observacao,origem,tem_nf,ativo',
+      '550e8400-e29b-41d4-a716-446655440000,Arroz Integral,,12.5,,,,,china_manual,1,1',
     ].join('\n')
     const r = validateProdutoImportCsvDocument(csv, { permiteAtualizacaoPorId: true })
     expect(r.ok).toBe(true)
@@ -70,10 +70,10 @@ describe('parseProdutoImportCsv', () => {
 
   it('documento misto no parser: criar, atualizar por id e linha inválida', () => {
     const csv = [
-      'id,nome,codigo_barras,preco_varejo,origem,tem_nf,ativo',
-      ',Novo A,,10,china_manual,1,1',
-      '6ba7b810-9dad-11d1-80b4-00c04fd430c8,Novo B,,11,brasil_nf,0,1',
-      ',A,,12,china_manual,1,1',
+      'id,nome,codigo_barras,preco_varejo,preco_atacado,quantidade_gatilho_atacado,unidade_medida,observacao,origem,tem_nf,ativo',
+      ',Novo A,,10,,,,,china_manual,1,1',
+      '6ba7b810-9dad-11d1-80b4-00c04fd430c8,Novo B,,11,,,,,brasil_nf,0,1',
+      ',A,,12,,,,,china_manual,1,1',
     ].join('\n')
     const r = validateProdutoImportCsvDocument(csv, { permiteAtualizacaoPorId: true })
     expect(r.ok).toBe(true)
