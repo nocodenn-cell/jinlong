@@ -25,6 +25,8 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
 import {
+  alterarAtivoLoteProdutos,
+  alterarCategoriaLoteProdutos,
   alternarAtivoProduto,
   atualizarPrecoVarejoProduto,
   buscarProdutosComFiltros,
@@ -205,6 +207,8 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const [editarModalAberto, setEditarModalAberto] = useState(false)
   const [produtoEditar, setProdutoEditar] = useState<ProdutoGerenteRow | null>(null)
   const [linhasImpressao, setLinhasImpressao] = useState<ProdutoGerenteRow[]>([])
+  const [categoriaLoteModalAberto, setCategoriaLoteModalAberto] = useState(false)
+  const [categoriaLoteSelecionada, setCategoriaLoteSelecionada] = useState<string>('')
 
   const fetchList = useCallback(async (f: FiltrosUi, page: number, append = false) => {
     setLoadingList(true)
@@ -361,6 +365,46 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     async (p: { id: string; ativo: boolean }) => {
       const r = await alternarAtivoProduto(p.id, p.ativo)
       if (!r.success) throw new Error(r.error)
+      void fetchList(filtros, paginaAtual)
+      router.refresh()
+      return null
+    },
+    { successMessage: m.comum.sucesso },
+  )
+
+  const { mutate: ativarLote, loading: ativarLoteLoading } = useGerenteMutation(
+    async () => {
+      const ids = Array.from(selectedIds)
+      const r = await alterarAtivoLoteProdutos(ids, true)
+      if (!r.success) throw new Error(r.error)
+      setSelectedIds(new Set())
+      void fetchList(filtros, paginaAtual)
+      router.refresh()
+      return null
+    },
+    { successMessage: m.comum.sucesso },
+  )
+
+  const { mutate: inativarLote, loading: inativarLoteLoading } = useGerenteMutation(
+    async () => {
+      const ids = Array.from(selectedIds)
+      const r = await alterarAtivoLoteProdutos(ids, false)
+      if (!r.success) throw new Error(r.error)
+      setSelectedIds(new Set())
+      void fetchList(filtros, paginaAtual)
+      router.refresh()
+      return null
+    },
+    { successMessage: m.comum.sucesso },
+  )
+
+  const { mutate: categoriaLote, loading: categoriaLoteLoading } = useGerenteMutation(
+    async (categoriaId: string | null) => {
+      const ids = Array.from(selectedIds)
+      const r = await alterarCategoriaLoteProdutos(ids, categoriaId)
+      if (!r.success) throw new Error(r.error)
+      setSelectedIds(new Set())
+      setCategoriaLoteModalAberto(false)
       void fetchList(filtros, paginaAtual)
       router.refresh()
       return null
@@ -632,13 +676,52 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
             printDisabled={total === 0}
             fotoDisabled={total === 0}
             exclusaoDisabled={selectedIds.size === 0 || selectedIds.size > 100}
+            selecaoAtiva={selectedIds.size > 0}
+            ativarLoteLoading={ativarLoteLoading}
+            inativarLoteLoading={inativarLoteLoading}
+            categoriaLoteLoading={categoriaLoteLoading}
             onExport={() => void exportCsv(null)}
             onImport={() => setImportModalAberto(true)}
             onIncluirCadastro={irParaCadastroRapido}
             onPrint={() => void imprimirLista()}
             onFotoColuna={irParaColunaFoto}
             onExcluir={abrirExclusaoLote}
+            onAtivarLote={() => void ativarLote(null)}
+            onInativarLote={() => void inativarLote(null)}
+            onAlterarCategoriaLote={() => setCategoriaLoteModalAberto(true)}
           />
+          {categoriaLoteModalAberto && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-50/50 px-3 py-2 dark:bg-blue-950/20">
+              <span className="text-sm text-foreground">
+                Alterar categoria de {selectedIds.size} produto(s):
+              </span>
+              <select
+                className="h-9 rounded-md border border-border bg-background px-3 text-xs"
+                value={categoriaLoteSelecionada}
+                onChange={(e) => setCategoriaLoteSelecionada(e.target.value)}
+              >
+                <option value="">— sem categoria —</option>
+                {opcoes.categorias.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => void categoriaLote(categoriaLoteSelecionada || null)}
+                disabled={categoriaLoteLoading}
+                className="inline-flex h-9 items-center gap-1 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {categoriaLoteLoading ? '…' : 'Aplicar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoriaLoteModalAberto(false)}
+                className="inline-flex h-9 items-center px-3 text-sm text-muted-foreground hover:text-foreground"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
         </GerenteStickyToolbar>
         <ProdutosExcluirLoteModal
           open={exclusaoModalAberto}

@@ -793,6 +793,74 @@ export async function buscarProdutosComFiltros(
   return { success: true, data: { rows, total } }
 }
 
+// ─── Bulk: ativar / inativar em lote ─────────────────────────────────────────
+
+const LoteAtivoSchema = z.object({
+  produto_ids: z.array(z.string().uuid()).min(1).max(200),
+  ativo: z.boolean(),
+})
+
+export async function alterarAtivoLoteProdutos(
+  rawIds: string[],
+  ativo: boolean,
+): Promise<ActionResult<{ atualizados: number }>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = LoteAtivoSchema.safeParse({ produto_ids: rawIds, ativo })
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'Erro', idioma) }
+  }
+
+  const supabase = await createClient()
+  const { error, count } = await supabase
+    .from('produtos')
+    .update({ ativo: parsed.data.ativo })
+    .in('id', parsed.data.produto_ids)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Bulk ativo', error.message) }
+  }
+
+  revalidatePath('/gerente/produtos')
+  return { success: true, data: { atualizados: count ?? parsed.data.produto_ids.length } }
+}
+
+// ─── Bulk: alterar categoria em lote ─────────────────────────────────────────
+
+const LoteCategoriaSchema = z.object({
+  produto_ids: z.array(z.string().uuid()).min(1).max(200),
+  categoria_id: z.string().uuid().nullable(),
+})
+
+export async function alterarCategoriaLoteProdutos(
+  rawIds: string[],
+  categoriaId: string | null,
+): Promise<ActionResult<{ atualizados: number }>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = LoteCategoriaSchema.safeParse({ produto_ids: rawIds, categoria_id: categoriaId })
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'Erro', idioma) }
+  }
+
+  const supabase = await createClient()
+  const { error, count } = await supabase
+    .from('produtos')
+    .update({ categoria_id: parsed.data.categoria_id })
+    .in('id', parsed.data.produto_ids)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Bulk categoria', error.message) }
+  }
+
+  revalidatePath('/gerente/produtos')
+  return { success: true, data: { atualizados: count ?? parsed.data.produto_ids.length } }
+}
+
 /**
  * Export CSV: até `limite` linhas com os mesmos filtros da listagem.
  */

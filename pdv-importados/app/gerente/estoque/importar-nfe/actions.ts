@@ -196,6 +196,7 @@ export async function executarImportacaoNfe(input: unknown): Promise<ActionResul
     p_loja_id: lojaId,
     p_itens: itensJson,
     p_atualizar_custo: p.atualizar_custo_padrao,
+    p_duplicatas: p.duplicatas.length > 0 ? p.duplicatas : null,
   })
 
   if (error) {

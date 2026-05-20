@@ -17,11 +17,18 @@ export type NfeEmitenteParsed = {
   cnpj: string
 }
 
+export type NfeDuplicataParsed = {
+  numero: string | null
+  data_vencimento: string  // YYYY-MM-DD
+  valor: number
+}
+
 export type NfeParsed = {
   chave_acesso: string
   numero_nf: string | null
   emitente: NfeEmitenteParsed
   itens: NfeItemParsed[]
+  duplicatas: NfeDuplicataParsed[]
 }
 
 function asRecord(v: unknown): Record<string, unknown> | null {
@@ -134,10 +141,29 @@ export function parseNfeXml(xmlString: string): NfeParsed {
     throw new Error('Nenhum item (<det>/<prod>) encontrado na NF-e.')
   }
 
+  // Duplicatas (contas a pagar) — seção <cobr>/<dup>
+  const duplicatas: NfeDuplicataParsed[] = []
+  const cobr = asRecord(infNFe.cobr)
+  if (cobr) {
+    for (const d of asArray(cobr.dup)) {
+      const dupRec = asRecord(d)
+      if (!dupRec) continue
+      const rawData = str(dupRec.dVenc)
+      const valor = num(dupRec.vDup)
+      if (!rawData || valor <= 0) continue
+      duplicatas.push({
+        numero: str(dupRec.nDup) || null,
+        data_vencimento: rawData,
+        valor,
+      })
+    }
+  }
+
   return {
     chave_acesso: chave,
     numero_nf: numeroNf,
     emitente: { nome: nomeEmit || 'Emitente', cnpj: cnpjEmit },
     itens,
+    duplicatas,
   }
 }

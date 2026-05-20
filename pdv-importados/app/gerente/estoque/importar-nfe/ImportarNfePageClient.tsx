@@ -112,6 +112,7 @@ export function ImportarNfePageClient({ idioma }: Props) {
       emitente_cnpj: onlyDigits(parsed.emitente.cnpj),
       emitente_nome: parsed.emitente.nome,
       atualizar_custo_padrao: atualizarGlobal,
+      duplicatas: parsed.duplicatas ?? [],
       linhas: linhas.map((l) => ({
         nome_produto: l.nome_produto,
         gtin: l.gtin,

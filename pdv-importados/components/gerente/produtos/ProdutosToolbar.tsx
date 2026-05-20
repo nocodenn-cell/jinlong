@@ -2,9 +2,12 @@
 
 import {
   FileDown,
+  FolderInput,
   ImageIcon,
   Plus,
   Printer,
+  ToggleLeft,
+  ToggleRight,
   Trash2,
   UploadCloud,
 } from 'lucide-react'
@@ -22,12 +25,19 @@ export type ProdutosToolbarProps = Readonly<{
   fotoDisabled: boolean
   exclusaoDisabled: boolean
   exclusaoLoading?: boolean
+  selecaoAtiva: boolean
+  ativarLoteLoading?: boolean
+  inativarLoteLoading?: boolean
+  categoriaLoteLoading?: boolean
   onExport: () => void
   onImport: () => void
   onIncluirCadastro: () => void
   onPrint: () => void
   onFotoColuna: () => void
   onExcluir: () => void
+  onAtivarLote: () => void
+  onInativarLote: () => void
+  onAlterarCategoriaLote: () => void
 }>
 
 export function ProdutosToolbar({
@@ -38,12 +48,19 @@ export function ProdutosToolbar({
   fotoDisabled,
   exclusaoDisabled,
   exclusaoLoading = false,
+  selecaoAtiva,
+  ativarLoteLoading = false,
+  inativarLoteLoading = false,
+  categoriaLoteLoading = false,
   onExport,
   onImport,
   onIncluirCadastro,
   onPrint,
   onFotoColuna,
   onExcluir,
+  onAtivarLote,
+  onInativarLote,
+  onAlterarCategoriaLote,
 }: ProdutosToolbarProps) {
   const p = m.produtos
 
@@ -86,6 +103,61 @@ export function ProdutosToolbar({
         <Printer className="h-4 w-4 shrink-0 text-[color:var(--accent)]" aria-hidden />
         <span className="hidden sm:inline">{p.toolbar_imprimir}</span>
       </button>
+
+      {selecaoAtiva && (
+        <>
+          <button
+            type="button"
+            disabled={ativarLoteLoading}
+            onClick={onAtivarLote}
+            className={cn(
+              btnBase,
+              ativarLoteLoading
+                ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
+                : 'app-border app-surface-soft text-foreground hover:bg-green-500/15',
+            )}
+            title="Ativar selecionados"
+            aria-label="Ativar produtos selecionados"
+          >
+            <ToggleRight className="h-4 w-4 shrink-0 text-green-600" aria-hidden />
+            <span className="hidden sm:inline">{ativarLoteLoading ? '…' : 'Ativar'}</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={inativarLoteLoading}
+            onClick={onInativarLote}
+            className={cn(
+              btnBase,
+              inativarLoteLoading
+                ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
+                : 'app-border app-surface-soft text-foreground hover:bg-amber-500/15',
+            )}
+            title="Inativar selecionados"
+            aria-label="Inativar produtos selecionados"
+          >
+            <ToggleLeft className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
+            <span className="hidden sm:inline">{inativarLoteLoading ? '…' : 'Inativar'}</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={categoriaLoteLoading}
+            onClick={onAlterarCategoriaLote}
+            className={cn(
+              btnBase,
+              categoriaLoteLoading
+                ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
+                : 'app-border app-surface-soft text-foreground hover:bg-blue-500/15',
+            )}
+            title="Alterar categoria dos selecionados"
+            aria-label="Alterar categoria dos produtos selecionados"
+          >
+            <FolderInput className="h-4 w-4 shrink-0 text-blue-500" aria-hidden />
+            <span className="hidden sm:inline">{categoriaLoteLoading ? '…' : 'Categoria'}</span>
+          </button>
+        </>
+      )}
 
       <button
         type="button"
