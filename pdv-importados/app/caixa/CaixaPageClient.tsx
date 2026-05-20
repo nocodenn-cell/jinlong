@@ -586,19 +586,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           break
         }
       }
-      if (idxDinheiro >= 0) {
-        parcelasNormalizadas[idxDinheiro].valor = Math.max(
-          0,
-          roundMoney2(parcelasNormalizadas[idxDinheiro].valor - excesso),
+      // Always distribute from back to front; prioritise DINHEIRO parcel first
+      let remaining = excesso
+      if (idxDinheiro >= 0 && remaining > 0.001) {
+        const deduct = Math.min(parcelasNormalizadas[idxDinheiro].valor, remaining)
+        parcelasNormalizadas[idxDinheiro].valor = roundMoney2(
+          parcelasNormalizadas[idxDinheiro].valor - deduct,
         )
-      } else {
-        // No DINHEIRO parcel: distribute excess from last to first so sum stays at totalLiquido
-        let remaining = excesso
-        for (let i = parcelasNormalizadas.length - 1; i >= 0 && remaining > 0.001; i--) {
-          const deduct = Math.min(parcelasNormalizadas[i].valor, remaining)
-          parcelasNormalizadas[i].valor = roundMoney2(parcelasNormalizadas[i].valor - deduct)
-          remaining = roundMoney2(remaining - deduct)
-        }
+        remaining = roundMoney2(remaining - deduct)
+      }
+      for (let i = parcelasNormalizadas.length - 1; i >= 0 && remaining > 0.001; i--) {
+        if (i === idxDinheiro) continue
+        const deduct = Math.min(parcelasNormalizadas[i].valor, remaining)
+        parcelasNormalizadas[i].valor = roundMoney2(parcelasNormalizadas[i].valor - deduct)
+        remaining = roundMoney2(remaining - deduct)
       }
     }
     const parcelasFiltradas = parcelasNormalizadas.filter((p) => p.valor > 0)
