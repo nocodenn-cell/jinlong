@@ -906,6 +906,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                   buscando={buscandoPipeline}
                   carregandoRegras={carregandoRegras}
                   totalLiquidoComGerente={totalLiquidoComGerente}
+                  totalBruto={totalBruto}
+                  totalDesconto={totalDesconto}
                   moedaPrefixo={m.caixa.moeda_prefixo}
                   metodoPagamentoPanel={metodoPagamentoSelector}
                 />

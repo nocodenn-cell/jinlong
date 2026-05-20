@@ -64,7 +64,7 @@ export function CaixaPdvMetodoPagamentoSelector({
                     : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
                   : selected
                     ? "app-btn-accent"
-                    : "app-btn-neutral",
+                    : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 transition-colors hover:border-amber-400/70 hover:bg-amber-400/10 hover:text-jl-fg-1",
               )}
               onClick={() => onChange(op.id)}
             >
