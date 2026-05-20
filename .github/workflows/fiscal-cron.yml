@@ -1,0 +1,20 @@
+name: Fiscal Worker Cron
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # a cada 5 minutos
+  workflow_dispatch:
+
+jobs:
+  call-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar Edge Function fiscal-worker
+        env:
+          URL: ${{ secrets.FISCAL_WORKER_URL }}
+          KEY: ${{ secrets.FISCAL_WORKER_KEY }}
+        run: |
+          curl -X POST "$URL" \
+            -H "apikey: $KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"action": "processPending"}'
