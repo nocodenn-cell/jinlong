@@ -13,7 +13,9 @@ export type PainelGerencialNavKey =
   | 'recebimento'
   | 'transferencias'
   | 'financeiro'
+  | 'comissoes'
   | 'configuracoes'
+  | 'suspensao'
   | 'caixas'
   | 'relatorios'
 
@@ -21,6 +23,8 @@ export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'home') return '/gerente'
   if (key === 'dashboard') return '/admin/dashboard'
   if (key === 'configuracoes') return '/gerente/configuracoes'
+  if (key === 'comissoes') return '/gerente/comissoes'
+  if (key === 'suspensao') return '/gerente/suspensao'
   return `/gerente/${key}`
 }
 
@@ -48,8 +52,12 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
       return m.gerente.nav_transferencias
     case 'financeiro':
       return m.gerente.nav_financeiro
+    case 'comissoes':
+      return m.gerente.nav_comissoes
     case 'configuracoes':
       return m.gerente.nav_configuracoes
+    case 'suspensao':
+      return m.gerente.nav_suspensao
     case 'vendas':
       return m.gerente.nav_vendas
     case 'caixas':
@@ -98,9 +106,9 @@ export const GERENTE_NAV_TOPICS: readonly GerenteNavTopic[] = [
   { id: 'catalogo', items: ['produtos'] },
   { id: 'estoque_logistica', items: ['estoque', 'recebimento', 'transferencias'] },
   { id: 'vendas_caixa', items: ['vendas', 'caixas'] },
-  { id: 'financeiro', items: ['financeiro'] },
+  { id: 'financeiro', items: ['financeiro', 'comissoes'] },
   { id: 'analise', items: ['relatorios'] },
-  { id: 'sistema', items: ['configuracoes', 'dashboard'] },
+  { id: 'sistema', items: ['configuracoes', 'suspensao', 'dashboard'] },
 ] as const
 
 function pathMatchesGerenteHref(href: string, pathname: string): boolean {

@@ -542,6 +542,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
 
   const handleFinalizar = useCallback(async () => {
     if (itens.length === 0 || finalizando) return
+    if (configCaixaWeb.vendas_suspensas === 'true') {
+      const motivo = configCaixaWeb.motivo_suspensao?.trim()
+      setCaixaMensagem(
+        motivo ? `Vendas suspensas: ${motivo}` : 'Vendas suspensas pelo gerente.',
+        { kind: 'error' },
+      )
+      return
+    }
     if (gerenteValidadoAte && Date.now() >= Date.parse(gerenteValidadoAte)) {
       limparEstadoDescontoGerente()
       setCaixaMensagem(m.caixa.msg_token_expirado, { kind: "warning" })
