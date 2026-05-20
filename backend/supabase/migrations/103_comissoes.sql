@@ -62,6 +62,7 @@ CREATE POLICY comissoes_select_gerencial
       SELECT 1 FROM public.usuarios u
       WHERE u.id = auth.uid()
         AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+        AND (u.perfil IN ('DONO', 'ADMIN') OR u.loja_id = comissoes_vendedores.loja_id)
     )
   );
 
@@ -73,6 +74,7 @@ CREATE POLICY comissoes_update_gerencial
       SELECT 1 FROM public.usuarios u
       WHERE u.id = auth.uid()
         AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+        AND (u.perfil IN ('DONO', 'ADMIN') OR u.loja_id = comissoes_vendedores.loja_id)
     )
   );
 

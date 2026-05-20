@@ -194,6 +194,16 @@ BEGIN
       ON CONFLICT DO NOTHING
       RETURNING id INTO v_produto_id;
 
+      -- ON CONFLICT DO NOTHING doesn't return id on conflict; reload it.
+      IF v_produto_id IS NULL THEN
+        IF v_gtin IS NOT NULL AND length(v_gtin) >= 8 THEN
+          SELECT p.id INTO v_produto_id FROM public.produtos p WHERE p.codigo_barras = v_gtin AND p.loja_id = p_loja_id LIMIT 1;
+        END IF;
+        IF v_produto_id IS NULL THEN
+          SELECT p.id INTO v_produto_id FROM public.produtos p WHERE p.fornecedor_id = v_forn_id AND p.referencia_fornecedor = v_ref AND p.loja_id = p_loja_id LIMIT 1;
+        END IF;
+      END IF;
+
       IF v_produto_id IS NOT NULL THEN
         INSERT INTO public.estoque (produto_id, loja_id, quantidade_atual, estoque_minimo, version)
         VALUES (v_produto_id, p_loja_id, 0, 0, 0)

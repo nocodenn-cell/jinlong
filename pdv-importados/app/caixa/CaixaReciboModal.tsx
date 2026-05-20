@@ -60,9 +60,10 @@ export function CaixaReciboModal({ venda, onClose }: Props) {
   const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {
       await thermal.connect()
-    } else {
-      await thermal.printRecibo(venda)
     }
+    // deviceInfo state is stale in this closure; the printer singleton is connected after connect()
+    // printRecibo uses the singleton directly and will error gracefully if connect failed
+    await thermal.printRecibo(venda)
   }
 
   const handlePrint = () => {

@@ -82,9 +82,10 @@ type Props = {
   messages: Mensagens
   idioma: Idioma
   operadorLabel: string
+  perfil: string
 }
 
-export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
+export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: Props) {
   const pdvLayoutVariant: CaixaPdvLayoutVariant =
     process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "classic" ? "classic" : "default"
 
@@ -542,7 +543,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
 
   const handleFinalizar = useCallback(async () => {
     if (itens.length === 0 || finalizando) return
-    if (configCaixaWeb.vendas_suspensas === 'true') {
+    if (
+      configCaixaWeb.vendas_suspensas === 'true' &&
+      !['GERENTE', 'DONO', 'ADMIN'].includes(perfil)
+    ) {
       const motivo = configCaixaWeb.motivo_suspensao?.trim()
       setCaixaMensagem(
         motivo ? `Vendas suspensas: ${motivo}` : 'Vendas suspensas pelo gerente.',

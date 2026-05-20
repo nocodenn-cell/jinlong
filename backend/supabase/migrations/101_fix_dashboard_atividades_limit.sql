@@ -221,7 +221,7 @@ BEGIN
       SELECT COALESCE(jsonb_agg(a ORDER BY a->>'data_hora' DESC), '[]'::jsonb)
       FROM (
         SELECT jsonb_build_object(
-          'tipo', 'venda',
+          'tipo', 'VENDA',
           'data_hora', v.data,
           'payload', jsonb_build_object('total', v.total_liquido, 'venda_id', v.id)
         ) AS a
@@ -231,7 +231,7 @@ BEGIN
           AND v.data >= v_inicio_atividades
         UNION ALL
         SELECT jsonb_build_object(
-          'tipo', 'movimento_estoque',
+          'tipo', 'ESTOQUE',
           'data_hora', m.created_at,
           'payload', jsonb_build_object(
             'produto_nome', p.nome,
@@ -245,7 +245,7 @@ BEGIN
           AND m.created_at >= v_inicio_atividades
         UNION ALL
         SELECT jsonb_build_object(
-          'tipo', 'caixa',
+          'tipo', 'CAIXA',
           'data_hora', c.updated_at,
           'payload', jsonb_build_object('status', c.status, 'caixa_id', c.id)
         ) AS a
