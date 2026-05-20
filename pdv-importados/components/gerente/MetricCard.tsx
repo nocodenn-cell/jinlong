@@ -16,13 +16,13 @@ interface MetricCardProps {
 export function MetricCard({ title, value, icon: Icon, trend, className }: MetricCardProps) {
   return (
     <div className={cn(
-      "bg-card border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow",
+      "dragon-glass-card border border-jl-border-1 rounded-xl p-6 shadow-sm hover:bg-white/[0.06] transition-colors",
       className
     )}>
       <div className="flex items-start justify-between">
         <div className="space-y-2 flex-1">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold text-foreground tabular-nums">{value}</p>
+          <p className="text-sm font-medium text-jl-fg-3">{title}</p>
+          <p className="text-2xl font-bold text-jl-fg-1 tabular-nums">{value}</p>
           {trend && (
             <div
               className={cn(
@@ -37,8 +37,8 @@ export function MetricCard({ title, value, icon: Icon, trend, className }: Metri
             </div>
           )}
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-          <Icon className="h-6 w-6 text-muted-foreground" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/[0.06]">
+          <Icon className="h-6 w-6 text-jl-fg-3" />
         </div>
       </div>
     </div>
