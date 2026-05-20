@@ -19,7 +19,6 @@ import {
   painelGerencialHref,
   type GerenteNavTopicId,
 } from '@/lib/navigation/painelGerencialNav'
-import { GerenteTableDensityToggle } from '@/components/gerente/GerenteTableDensityToggle'
 import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import { cn } from '@/lib/utils'
 
@@ -315,11 +314,6 @@ export function GerenteHeaderNav({
           <Store className="w-3.5 h-3.5 text-jl-fg-3 flex-shrink-0" />
           <span className="truncate">{logoSubtitle}</span>
         </div>
-
-        <div className="h-5 w-px bg-jl-border-1 hidden sm:block" />
-
-        {/* Densidade da tabela */}
-        <GerenteTableDensityToggle m={m} />
 
         {/* Idioma */}
         {podeTrocarIdioma && <LanguageToggle idiomaAtual={idioma} variant="dragon" />}

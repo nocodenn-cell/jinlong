@@ -12,7 +12,6 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
 import { normalizePerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
-import { GerenteTableDensityProvider } from '@/components/gerente/GerenteTableDensityContext'
 import { cn } from '@/lib/utils'
 
 type Props = Readonly<{
@@ -85,9 +84,5 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 }
 
 export function GerenteLayoutShell(props: Props) {
-  return (
-    <GerenteTableDensityProvider>
-      <GerenteLayoutInner {...props} />
-    </GerenteTableDensityProvider>
-  )
+  return <GerenteLayoutInner {...props} />
 }
