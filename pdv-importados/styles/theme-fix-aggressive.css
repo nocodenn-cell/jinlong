@@ -25,15 +25,3 @@
   --jl-accent: var(--accent, #fbbf24);
 }
 
-/* Novem (light) overrides */
-[data-app-theme='novem'] {
-  --jl-surface-base: #f8fafc;
-  --jl-surface-elev: #f1f5f9;
-  --jl-surface-soft: rgba(255, 255, 255, 0.62);
-  --jl-border-1: rgba(226, 232, 240, 0.95);
-  --jl-border-2: rgba(203, 213, 225, 0.85);
-  --jl-fg-1: rgb(15 23 42);
-  --jl-fg-2: rgb(71 85 105);
-  --jl-fg-3: rgb(100 116 139);
-  --jl-accent: #d97706; /* amber-600 for better contrast on light */
-}
