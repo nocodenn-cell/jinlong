@@ -215,7 +215,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
                 </option>
               ))}
             </select>
-            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground border border-border">
+            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-jl-surface-elev text-jl-fg-2 border border-jl-border-1">
               {t.resumo_origem}: {nomeLoja(origemId)}
             </span>
           </label>
@@ -234,7 +234,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
                 </option>
               ))}
             </select>
-            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary border border-primary/30">
+            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-amber-400/10 text-amber-400 border border-amber-400/25">
               {t.resumo_destino}: {nomeLoja(destinoId)}
             </span>
           </label>

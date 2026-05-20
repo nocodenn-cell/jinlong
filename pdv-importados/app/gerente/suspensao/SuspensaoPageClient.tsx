@@ -77,7 +77,7 @@ export function SuspensaoPageClient() {
               disabled={salvando}
               onClick={() => handleToggle(!suspensas)}
               className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none disabled:opacity-60 ${
-                suspensas ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                suspensas ? 'bg-red-500' : 'bg-[#334155]'
               }`}
               aria-pressed={suspensas}
             >

@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
+import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -14,6 +16,9 @@ type Props = Readonly<{ idioma: Idioma }>
 
 const TODAY = new Date().toISOString().slice(0, 10)
 const TRINTA_DIAS_ATRAS = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+const inputClass =
+  'h-8 rounded-lg border border-jl-border-1 bg-[#0a0f1e] px-3 text-xs text-jl-fg-1 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/30'
 
 export function ComissoesPageClient({ idioma }: Props) {
   const locale = localeFromIdioma(idioma)
@@ -89,106 +94,116 @@ export function ComissoesPageClient({ idioma }: Props) {
     .reduce((s, r) => s + r.valor_comissao, 0)
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-6">
-      <div className="flex flex-wrap items-end gap-3">
-        <h1 className="text-xl font-bold text-foreground">Comissões por Vendedor</h1>
-      </div>
+    <>
+      {/* ── BARRA STICKY ──────────────────────────────────────────────────── */}
+      <GerenteStickyToolbar className="py-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-semibold text-jl-fg-1 mr-2 shrink-0">
+            Comissões por Vendedor
+          </h1>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card/60 px-4 py-3">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">De</label>
-          <input
-            type="date"
-            value={filtro.de ?? ''}
-            onChange={(e) => setFiltro((f) => ({ ...f, de: e.target.value || undefined }))}
-            className="h-9 rounded-md border border-border bg-background px-3 text-xs"
-          />
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">De</span>
+            <input
+              type="date"
+              value={filtro.de ?? ''}
+              onChange={(e) => setFiltro((f) => ({ ...f, de: e.target.value || undefined }))}
+              className={inputClass}
+            />
+          </label>
+
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">Até</span>
+            <input
+              type="date"
+              value={filtro.ate ?? ''}
+              onChange={(e) => setFiltro((f) => ({ ...f, ate: e.target.value || undefined }))}
+              className={inputClass}
+            />
+          </label>
+
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">Status</span>
+            <select
+              value={filtro.status}
+              onChange={(e) => setFiltro((f) => ({ ...f, status: e.target.value as FiltroComissoes['status'] }))}
+              className={inputClass}
+            >
+              <option value="todos">Todos</option>
+              <option value="pendente">Pendentes</option>
+              <option value="pago">Pagos</option>
+            </select>
+          </label>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Até</label>
-          <input
-            type="date"
-            value={filtro.ate ?? ''}
-            onChange={(e) => setFiltro((f) => ({ ...f, ate: e.target.value || undefined }))}
-            className="h-9 rounded-md border border-border bg-background px-3 text-xs"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Status</label>
-          <select
-            value={filtro.status}
-            onChange={(e) => setFiltro((f) => ({ ...f, status: e.target.value as FiltroComissoes['status'] }))}
-            className="h-9 rounded-md border border-border bg-background px-3 text-xs"
+      </GerenteStickyToolbar>
+
+      {/* ── CONTEÚDO ──────────────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6">
+        {loading ? (
+          <p className="text-sm app-muted">Carregando…</p>
+        ) : !resumo || resumo.length === 0 ? (
+          <p className="text-sm app-muted">Nenhuma comissão no período.</p>
+        ) : (
+          <GerenteTable
+            tone="dragon"
+            columns={[
+              { key: 'vendedor', header: 'Vendedor' },
+              { key: 'vendas', header: 'Vendas' },
+              { key: 'total', header: 'Total comissão' },
+              { key: 'pago', header: 'Pago' },
+              { key: 'pendente', header: 'Pendente' },
+              { key: 'acoes', header: '' },
+            ]}
           >
-            <option value="todos">Todos</option>
-            <option value="pendente">Pendentes</option>
-            <option value="pago">Pagos</option>
-          </select>
-        </div>
+            {resumo.map((row) => (
+              <tr key={row.operador_id} className="gerente-fin-row-hover transition-colors">
+                <td className="gerente-fin-cell px-4 py-3 font-medium">{row.operador_nome}</td>
+                <td className="gerente-fin-cell px-4 py-3 text-right tabular-nums">{row.total_vendas}</td>
+                <td className="gerente-fin-cell px-4 py-3 text-right tabular-nums">{formatBRL(row.total_comissao, locale)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-emerald-400">
+                  {formatBRL(row.total_pago, locale)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-amber-400 font-semibold">
+                  {formatBRL(row.total_pendente, locale)}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => void abrirDetalhe(row)}
+                    className="rounded-md border px-3 py-1 text-xs font-medium transition-colors app-border app-btn-neutral"
+                  >
+                    Detalhes
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </GerenteTable>
+        )}
       </div>
 
-      {/* Tabela resumo */}
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Carregando…</p>
-      ) : !resumo || resumo.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma comissão no período.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-card/50 text-xs text-muted-foreground">
-                <th className="px-4 py-2 text-left font-medium">Vendedor</th>
-                <th className="px-4 py-2 text-right font-medium">Vendas</th>
-                <th className="px-4 py-2 text-right font-medium">Total comissão</th>
-                <th className="px-4 py-2 text-right font-medium">Pago</th>
-                <th className="px-4 py-2 text-right font-medium">Pendente</th>
-                <th className="px-4 py-2 text-right font-medium" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {resumo.map((row) => (
-                <tr key={row.operador_id} className="hover:bg-accent/5">
-                  <td className="px-4 py-3 font-medium text-foreground">{row.operador_nome}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{row.total_vendas}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatBRL(row.total_comissao, locale)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-600">{formatBRL(row.total_pago, locale)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-amber-600 font-semibold">
-                    {formatBRL(row.total_pendente, locale)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => void abrirDetalhe(row)}
-                      className="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-accent/10"
-                    >
-                      Detalhes
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal de auditoria */}
+      {/* ── MODAL DE AUDITORIA ────────────────────────────────────────────── */}
       {operadorDetalhe && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-12">
-          <div className="w-full max-w-2xl rounded-2xl border border-border bg-background shadow-xl">
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto dragon-glass-backdrop px-4 py-12"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setOperadorDetalhe(null) }}
+        >
+          <div
+            className="dragon-glass-card w-full max-w-2xl rounded-2xl border border-jl-border-1 shadow-xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-4">
               <div>
-                <h2 className="text-base font-semibold text-foreground">
+                <h2 className="text-base font-semibold text-jl-fg-1">
                   {operadorDetalhe.operador_nome}
                 </h2>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs app-muted">
                   Pendente: {formatBRL(operadorDetalhe.total_pendente, locale)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOperadorDetalhe(null)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-jl-fg-3 hover:text-jl-fg-1 transition-colors"
                 aria-label="Fechar"
               >
                 ✕
@@ -197,15 +212,15 @@ export function ComissoesPageClient({ idioma }: Props) {
 
             <div className="px-5 py-4">
               {detalheLoading ? (
-                <p className="text-sm text-muted-foreground">Carregando…</p>
+                <p className="text-sm app-muted">Carregando…</p>
               ) : detalheRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum registro.</p>
+                <p className="text-sm app-muted">Nenhum registro.</p>
               ) : (
                 <>
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="overflow-x-auto rounded-lg border border-jl-border-1">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="border-b border-border bg-card/50 text-muted-foreground">
+                        <tr className="border-b border-jl-border-1 bg-jl-surface-elev text-jl-fg-3">
                           <th className="px-3 py-2">
                             <input
                               type="checkbox"
@@ -217,15 +232,15 @@ export function ComissoesPageClient({ idioma }: Props) {
                               }
                             />
                           </th>
-                          <th className="px-3 py-2 text-left">Data</th>
-                          <th className="px-3 py-2 text-right">Base</th>
-                          <th className="px-3 py-2 text-right">Comissão</th>
-                          <th className="px-3 py-2 text-left">Status</th>
+                          <th className="px-3 py-2 text-left font-medium">Data</th>
+                          <th className="px-3 py-2 text-right font-medium">Base</th>
+                          <th className="px-3 py-2 text-right font-medium">Comissão</th>
+                          <th className="px-3 py-2 text-left font-medium">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border">
+                      <tbody className="divide-y divide-jl-border-1">
                         {detalheRows.map((r) => (
-                          <tr key={r.comissao_id} className="hover:bg-accent/5">
+                          <tr key={r.comissao_id} className="gerente-fin-row-hover">
                             <td className="px-3 py-2 text-center">
                               {r.status === 'pendente' && (
                                 <input
@@ -235,22 +250,22 @@ export function ComissoesPageClient({ idioma }: Props) {
                                 />
                               )}
                             </td>
-                            <td className="px-3 py-2 tabular-nums">
+                            <td className="gerente-fin-cell px-3 py-2 tabular-nums">
                               {new Date(r.created_at).toLocaleDateString(locale)}
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums">
+                            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">
                               {formatBRL(r.base_calculo, locale)}
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums font-semibold">
+                            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums font-semibold">
                               {formatBRL(r.valor_comissao, locale)}
                             </td>
                             <td className="px-3 py-2">
                               {r.status === 'pago' ? (
-                                <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold app-badge-positive">
                                   Pago
                                 </span>
                               ) : (
-                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold app-badge-warn">
                                   Pendente
                                 </span>
                               )}
@@ -262,15 +277,15 @@ export function ComissoesPageClient({ idioma }: Props) {
                   </div>
 
                   {selecionados.size > 0 && (
-                    <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-card/50 px-4 py-3">
-                      <span className="text-sm text-foreground">
+                    <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-jl-border-1 bg-jl-surface-elev px-4 py-3">
+                      <span className="text-sm text-jl-fg-1">
                         {selecionados.size} selecionado(s) · {formatBRL(totalPendente, locale)}
                       </span>
                       <button
                         type="button"
                         onClick={() => void marcarPagas(null)}
                         disabled={marcandoPagas}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-md bg-green-600 px-4 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-sm font-semibold transition-colors app-btn-accent disabled:opacity-60"
                       >
                         {marcandoPagas ? '…' : 'Marcar como Pago'}
                       </button>
@@ -282,6 +297,6 @@ export function ComissoesPageClient({ idioma }: Props) {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

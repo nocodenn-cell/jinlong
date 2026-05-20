@@ -163,7 +163,7 @@ export function CategoriasProdutosPageClient({ idioma, inicial }: Props) {
             <tr key={row.id} className="gerente-fin-row-hover border-b border-border/30 transition-colors last:border-0">
               <td className="gerente-fin-cell px-3 py-3 text-sm font-medium">{row.nome}</td>
               <td className="px-3 py-3">
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${row.qtd_produtos > 0 ? 'bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20' : 'app-muted'}`}>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${row.qtd_produtos > 0 ? 'bg-jl-surface-soft text-jl-fg-2 border border-jl-border-1' : 'app-muted'}`}>
                   {row.qtd_produtos}
                 </span>
               </td>
