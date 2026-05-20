@@ -19,7 +19,6 @@
       "Bash(git push *)",
       "Bash(npm run *)",
       "Bash(git commit -m ' *)",
-      "Bash(cd /c/Naturecode/fastproduct/.claude/worktrees/sad-rubin-3f6e75/pdv-importados && find app/caixa -type f -name \"*.tsx\" -o -name \"*.ts\" -o -name \"*.jsx\" -o -name \"*.js\" | head -50)",
       "Bash(npx tsc *)",
       "Bash(gh api *)",
       "Bash(gh pr *)",
@@ -32,7 +31,9 @@
       "Bash(xargs ls -lt)",
       "PowerShell(git fetch origin main)",
       "Bash(python -c \"import sys,json; comments=json.load\\(sys.stdin\\); [print\\(c['body'][:500]\\) for c in comments if 'sonar' in c.get\\('body',''\\).lower\\(\\) or 'duplicat' in c.get\\('body',''\\).lower\\(\\)]\")",
-      "WebFetch(domain:sonarcloud.io)"
+      "WebFetch(domain:sonarcloud.io)",
+      "Bash(git fetch *)",
+      "Bash(git stash *)"
     ]
   }
 }

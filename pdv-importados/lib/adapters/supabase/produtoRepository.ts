@@ -47,6 +47,7 @@ export function createProdutoRepository(
           marca_id: input.marca_id ?? null,
           fornecedor_id: input.fornecedor_id ?? null,
           ativo,
+          loja_id: lojaId,
         })
         .select('id')
         .single()

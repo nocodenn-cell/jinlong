@@ -260,14 +260,19 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_uid     uuid := auth.uid();
-  v_perfil  text;
-  v_count   integer;
+  v_uid      uuid := auth.uid();
+  v_perfil   text;
+  v_loja_id  uuid;
+  v_count    integer;
 BEGIN
-  SELECT u.perfil INTO v_perfil
+  SELECT u.perfil, u.loja_id INTO v_perfil, v_loja_id
     FROM public.usuarios u WHERE u.id = v_uid;
 
   IF v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
+    RAISE EXCEPTION 'COMISSOES_MARCAR_PAGAS_PERMISSAO';
+  END IF;
+
+  IF v_perfil = 'GERENTE' AND v_loja_id IS DISTINCT FROM p_loja_id THEN
     RAISE EXCEPTION 'COMISSOES_MARCAR_PAGAS_PERMISSAO';
   END IF;
 

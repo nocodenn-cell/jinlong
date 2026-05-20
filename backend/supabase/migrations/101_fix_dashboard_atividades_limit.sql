@@ -205,24 +205,24 @@ BEGIN
         jsonb_build_object(
           'id', p.id,
           'nome', p.nome,
-          'quantidade_atual', e.quantidade,
+          'quantidade_atual', e.quantidade_atual,
           'estoque_minimo', COALESCE(p.estoque_minimo, 0)
         )
-        ORDER BY e.quantidade ASC
+        ORDER BY e.quantidade_atual ASC
       ), '[]'::jsonb)
       FROM public.estoque e
       JOIN public.produtos p ON p.id = e.produto_id
       WHERE e.loja_id = p_loja_id
         AND p.ativo = true
-        AND e.quantidade <= COALESCE(p.estoque_minimo, 0)
+        AND e.quantidade_atual <= COALESCE(p.estoque_minimo, 0)
       LIMIT 5
     ),
     'atividades_recentes', (
-      SELECT COALESCE(jsonb_agg(a ORDER BY a->>'ts' DESC), '[]'::jsonb)
+      SELECT COALESCE(jsonb_agg(a ORDER BY a->>'data_hora' DESC), '[]'::jsonb)
       FROM (
         SELECT jsonb_build_object(
           'tipo', 'venda',
-          'ts', v.data,
+          'data_hora', v.data,
           'payload', jsonb_build_object('total', v.total_liquido, 'venda_id', v.id)
         ) AS a
         FROM public.vendas v
@@ -232,7 +232,7 @@ BEGIN
         UNION ALL
         SELECT jsonb_build_object(
           'tipo', 'movimento_estoque',
-          'ts', m.created_at,
+          'data_hora', m.created_at,
           'payload', jsonb_build_object(
             'produto_nome', p.nome,
             'quantidade', m.quantidade,
@@ -246,13 +246,13 @@ BEGIN
         UNION ALL
         SELECT jsonb_build_object(
           'tipo', 'caixa',
-          'ts', c.updated_at,
+          'data_hora', c.updated_at,
           'payload', jsonb_build_object('status', c.status, 'caixa_id', c.id)
         ) AS a
         FROM public.caixas c
         WHERE c.loja_id = p_loja_id
           AND c.updated_at >= v_inicio_atividades
-        ORDER BY a->>'ts' DESC NULLS LAST
+        ORDER BY a->>'data_hora' DESC NULLS LAST
         LIMIT 20
       ) acts
     )

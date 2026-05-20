@@ -170,12 +170,12 @@ BEGIN
     -- Localizar produto (GTIN > ref_fornecedor)
     v_produto_id := NULL;
     IF v_gtin IS NOT NULL AND length(v_gtin) >= 8 THEN
-      SELECT p.id INTO v_produto_id FROM public.produtos p WHERE p.codigo_barras = v_gtin LIMIT 1;
+      SELECT p.id INTO v_produto_id FROM public.produtos p WHERE p.codigo_barras = v_gtin AND p.loja_id = p_loja_id LIMIT 1;
     END IF;
     IF v_produto_id IS NULL THEN
       SELECT p.id INTO v_produto_id
         FROM public.produtos p
-       WHERE p.fornecedor_id = v_forn_id AND p.referencia_fornecedor = v_ref
+       WHERE p.fornecedor_id = v_forn_id AND p.referencia_fornecedor = v_ref AND p.loja_id = p_loja_id
        LIMIT 1;
     END IF;
 

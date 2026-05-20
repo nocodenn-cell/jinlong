@@ -587,6 +587,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           0,
           roundMoney2(parcelasNormalizadas[idxDinheiro].valor - excesso),
         )
+      } else {
+        const lastIdx = parcelasNormalizadas.length - 1
+        if (lastIdx >= 0) {
+          parcelasNormalizadas[lastIdx].valor = Math.max(
+            0,
+            roundMoney2(parcelasNormalizadas[lastIdx].valor - excesso),
+          )
+        }
       }
     }
     const parcelasFiltradas = parcelasNormalizadas.filter((p) => p.valor > 0)
