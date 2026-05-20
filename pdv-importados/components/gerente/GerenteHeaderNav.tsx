@@ -1,7 +1,7 @@
 'use client'
 
 import type { ElementType } from 'react'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -13,6 +13,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
 import {
   GERENTE_NAV_TOPICS,
+  gerenteNavLabel,
   gerenteNavTopicLabel,
   gerenteNavTopicIdForPathname,
   painelGerencialHref,
@@ -24,7 +25,7 @@ import { cn } from '@/lib/utils'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
-export type SystemStatus = 'online' | 'degraded' | 'offline'
+type SystemStatus = 'online' | 'degraded' | 'offline'
 
 type Props = Readonly<{
   logoSubtitle: string
@@ -32,8 +33,6 @@ type Props = Readonly<{
   m: Mensagens
   idioma: Idioma
   podeTrocarIdioma: boolean
-  systemStatus?: SystemStatus
-  notificationCount?: number
   onSignOut?: () => void | Promise<void>
 }>
 
@@ -55,6 +54,9 @@ const STATUS_CFG: Record<SystemStatus, { pill: string; dot: string; text: string
   offline:  { pill: 'border-red-500/25     bg-red-500/[0.07]     text-red-400',      dot: 'bg-red-500',     text: 'Offline',   pulse: false },
 }
 
+const HEALTH_INTERVAL_MS  = 60_000
+const NOTIF_INTERVAL_MS   = 5 * 60_000
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function roleLabel(perfil: PerfilUsuario, m: Mensagens): string {
@@ -69,6 +71,12 @@ function roleInitials(perfil: PerfilUsuario): string {
   return 'GR'
 }
 
+function linkAtivo(href: string, pathname: string | null): boolean {
+  if (!pathname) return false
+  if (href === '/gerente') return pathname === '/gerente'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
 
 export function GerenteHeaderNav({
@@ -77,13 +85,65 @@ export function GerenteHeaderNav({
   m,
   idioma,
   podeTrocarIdioma,
-  systemStatus = 'online',
-  notificationCount = 0,
   onSignOut,
 }: Props) {
-  const pathname    = usePathname()
-  const topicAtivo  = gerenteNavTopicIdForPathname(pathname)
-  const status      = STATUS_CFG[systemStatus]
+  const pathname   = usePathname()
+  const topicAtivo = gerenteNavTopicIdForPathname(pathname)
+
+  // ── PR-2: health status ──────────────────────────────────────────────────
+  const [sysStatus, setSysStatus] = useState<SystemStatus>('online')
+
+  const checkHealth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/gerente/health')
+      if (!res.ok) { setSysStatus('degraded'); return }
+      const data = (await res.json()) as { status: SystemStatus }
+      setSysStatus(data.status ?? 'online')
+    } catch {
+      setSysStatus('offline')
+    }
+  }, [])
+
+  useEffect(() => {
+    void checkHealth()
+    const t = setInterval(() => void checkHealth(), HEALTH_INTERVAL_MS)
+    return () => clearInterval(t)
+  }, [checkHealth])
+
+  // ── PR-3: notification count ─────────────────────────────────────────────
+  const [notifCount, setNotifCount] = useState(0)
+
+  const fetchNotifCount = useCallback(async () => {
+    try {
+      const res = await fetch('/api/gerente/notificacoes/count')
+      if (!res.ok) return
+      const data = (await res.json()) as { count: number }
+      setNotifCount(data.count ?? 0)
+    } catch { /* silently ignore */ }
+  }, [])
+
+  useEffect(() => {
+    void fetchNotifCount()
+    const t = setInterval(() => void fetchNotifCount(), NOTIF_INTERVAL_MS)
+    return () => clearInterval(t)
+  }, [fetchNotifCount])
+
+  // ── PR-4: topic dropdown ─────────────────────────────────────────────────
+  const [openTopic, setOpenTopic] = useState<GerenteNavTopicId | null>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const openDropdown = (id: GerenteNavTopicId) => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    setOpenTopic(id)
+  }
+  const scheduleClose = () => {
+    closeTimer.current = setTimeout(() => setOpenTopic(null), 120)
+  }
+  const cancelClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+  }
+
+  // ── user dropdown ────────────────────────────────────────────────────────
   const [ddOpen, setDdOpen] = useState(false)
   const ddRef = useRef<HTMLDivElement>(null)
 
@@ -94,6 +154,8 @@ export function GerenteHeaderNav({
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  const status = STATUS_CFG[sysStatus]
 
   return (
     <header
@@ -121,36 +183,86 @@ export function GerenteHeaderNav({
         style={{ scrollbarWidth: 'none' }}
       >
         {GERENTE_NAV_TOPICS.map((topic) => {
-          const Icon     = TOPIC_ICONS[topic.id]
-          const href     = painelGerencialHref(topic.items[0])
-          const isActive = topicAtivo === topic.id
+          const Icon        = TOPIC_ICONS[topic.id]
+          const href        = painelGerencialHref(topic.items[0])
+          const isActive    = topicAtivo === topic.id
+          const hasChildren = topic.items.length > 1
+          const isOpen      = openTopic === topic.id
+
           return (
-            <Link
+            <div
               key={topic.id}
-              href={href}
-              className={cn(
-                'group relative flex items-center gap-[5px] px-3',
-                'text-[12px] font-medium whitespace-nowrap transition-colors duration-150',
-                isActive
-                  ? 'text-amber-400'
-                  : 'text-jl-fg-2 hover:text-jl-fg-1 hover:bg-white/[0.025]',
-              )}
-              aria-current={isActive ? 'page' : undefined}
+              className="relative flex items-stretch"
+              onMouseEnter={() => hasChildren && openDropdown(topic.id)}
+              onMouseLeave={scheduleClose}
             >
-              <Icon className="w-[14px] h-[14px] flex-shrink-0" />
-              <span>{gerenteNavTopicLabel(m, topic.id)}</span>
-              {isActive && (
-                <span
-                  className="absolute bottom-0 left-0 right-0 h-[2px] bg-amber-400/70 rounded-t"
-                  aria-hidden="true"
-                />
+              <Link
+                href={href}
+                className={cn(
+                  'group flex items-center gap-[5px] px-3',
+                  'text-[12px] font-medium whitespace-nowrap transition-colors duration-150',
+                  isActive
+                    ? 'text-amber-400'
+                    : 'text-jl-fg-2 hover:text-jl-fg-1 hover:bg-white/[0.025]',
+                )}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon className="w-[14px] h-[14px] flex-shrink-0" />
+                <span>{gerenteNavTopicLabel(m, topic.id)}</span>
+                {hasChildren && (
+                  <ChevronDown
+                    className={cn(
+                      'w-2.5 h-2.5 opacity-40 flex-shrink-0 transition-transform duration-150',
+                      isOpen && 'rotate-180 opacity-70',
+                    )}
+                  />
+                )}
+                {isActive && (
+                  <span
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-amber-400/70 rounded-t"
+                    aria-hidden="true"
+                  />
+                )}
+              </Link>
+
+              {/* ── sub-nav dropdown (PR-4) ──────────────────────────── */}
+              {hasChildren && isOpen && (
+                <div
+                  className={cn(
+                    'absolute top-full left-0 z-[50] min-w-[11rem]',
+                    'bg-jl-surface-elev border border-jl-border-1 border-t-0',
+                    'rounded-b-lg shadow-lg overflow-hidden py-1',
+                  )}
+                  onMouseEnter={cancelClose}
+                  onMouseLeave={scheduleClose}
+                >
+                  {topic.items.map((key) => {
+                    const subHref   = painelGerencialHref(key)
+                    const subActive = linkAtivo(subHref, pathname)
+                    return (
+                      <Link
+                        key={key}
+                        href={subHref}
+                        onClick={() => setOpenTopic(null)}
+                        className={cn(
+                          'flex items-center px-3 py-[7px] text-[12px] transition-colors duration-100',
+                          subActive
+                            ? 'text-amber-400 bg-amber-400/[0.06]'
+                            : 'text-jl-fg-2 hover:text-jl-fg-1 hover:bg-white/[0.05]',
+                        )}
+                      >
+                        {gerenteNavLabel(m, key)}
+                      </Link>
+                    )
+                  })}
+                </div>
               )}
-            </Link>
+            </div>
           )
         })}
       </nav>
 
-      {/* ── ZONA B: ÍCONES (mobile) ─────────────────────────────────────── */}
+      {/* ── ZONA B: ÍCONES (mobile < lg) ────────────────────────────────── */}
       <nav
         aria-label={m.gerente.titulo_painel}
         className="lg:hidden flex items-center gap-0.5 px-2 flex-1 overflow-x-auto"
@@ -181,13 +293,15 @@ export function GerenteHeaderNav({
       {/* ── ZONA C: CONTEXTO OPERACIONAL ────────────────────────────────── */}
       <div className="flex items-center gap-1.5 px-3 border-l border-jl-border-1 flex-shrink-0">
 
-        {/* Status operacional */}
+        {/* Status do sistema (PR-2) */}
         <div
           className={cn(
-            'hidden sm:flex items-center gap-[5px] px-2 py-0.5 rounded-full',
+            'hidden sm:flex items-center gap-[5px] px-2 py-0.5 rounded-full cursor-default',
             'border text-[10px] font-semibold font-mono tracking-[0.04em] uppercase',
             status.pill,
           )}
+          title={`Sistema ${status.text.toLowerCase()}`}
+          onClick={() => void checkHealth()}
         >
           <span
             className={cn('w-[5px] h-[5px] rounded-full flex-shrink-0', status.dot, status.pulse && 'animate-pulse')}
@@ -210,15 +324,19 @@ export function GerenteHeaderNav({
         {/* Idioma */}
         {podeTrocarIdioma && <LanguageToggle idiomaAtual={idioma} variant="dragon" />}
 
-        {/* Notificações */}
+        {/* Notificações (PR-3) */}
         <button
           type="button"
-          aria-label={notificationCount > 0 ? `Notificações — ${notificationCount} novas` : 'Notificações'}
+          onClick={() => void fetchNotifCount()}
+          aria-label={notifCount > 0 ? `${notifCount} produtos com estoque crítico` : 'Notificações'}
           className="relative w-[30px] h-[30px] rounded-md flex items-center justify-center text-jl-fg-2 hover:text-jl-fg-1 hover:bg-white/[0.05] transition-colors"
         >
           <Bell className="w-[15px] h-[15px]" />
-          {notificationCount > 0 && (
-            <span className="absolute top-[5px] right-[5px] w-[5px] h-[5px] rounded-full bg-red-500 border-[1.5px] border-jl-surface-base" aria-hidden="true" />
+          {notifCount > 0 && (
+            <span
+              className="absolute top-[5px] right-[5px] w-[5px] h-[5px] rounded-full bg-red-500 border-[1.5px] border-jl-surface-base"
+              aria-hidden="true"
+            />
           )}
         </button>
 
