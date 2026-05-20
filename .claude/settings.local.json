@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep -l \"comiss\")",
+      "Bash(xargs grep -l \"suspend\\\\|park\\\\|hold.*venda\\\\|pendente.*venda\")"
+    ]
+  }
+}

@@ -181,8 +181,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
   const valorDescontoGerente = descontoGerenteAplicado.descontoValor
   const totalLiquidoComGerente = descontoGerenteAplicado.totalLiquidoComDesconto
   const descontoGerentePercentualEfetivo = descontoGerenteAplicado.percentualClamped
-  const somaParcelas = totalLiquidoComGerente ?? 0
-
   const formaPagamento = useMemo(
     () => metodoPagamentoToForma(metodoPagamento),
     [metodoPagamento],
@@ -190,6 +188,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
 
   const {
     pagamentos,
+    somaParcelas,
     diferenca: diferencaPagamento,
     podeAdicionarParcela,
     formasDisponiveis,
@@ -582,6 +581,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
         )
       }
     }
+    const parcelasFiltradas = parcelasNormalizadas.filter((p) => p.valor > 0)
     setFinalizando(true)
     setCaixaMensagem(null)
     try {
@@ -601,7 +601,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
           descontoGerentePercentualEfetivo > 0 ? gerenteToken ?? undefined : undefined,
         descontoGerentePercentual:
           descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
-        pagamentos: parcelasNormalizadas,
+        pagamentos: parcelasFiltradas,
         itens: itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
