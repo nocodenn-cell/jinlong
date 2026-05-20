@@ -1,0 +1,25 @@
+/**
+ * Unstick gerente — prevents the gerente token/modal from clipping behind
+ * the PDV fixed header and from inheriting overflow:hidden on the caixa
+ * layout root.
+ *
+ * Applied globally so the modal portal (rendered at document.body) is always
+ * above the PDV chrome.
+ */
+
+/* Gerente token overlay: sits above PDV top-bar (z-50) */
+[data-gerente-overlay] {
+  z-index: 60;
+  position: fixed;
+}
+
+/* Allow the gerente modal body to scroll independently */
+[data-gerente-modal] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Prevent the caixa page root from clipping portal layers */
+.caixa-pdv-root {
+  isolation: isolate;
+}

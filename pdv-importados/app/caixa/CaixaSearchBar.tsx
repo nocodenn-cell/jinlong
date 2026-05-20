@@ -1,6 +1,7 @@
 "use client"
 
-import { forwardRef, type FormEvent } from "react"
+import { forwardRef, useCallback, useEffect, useRef, type FormEvent, type MutableRefObject } from "react"
+import { Barcode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -41,8 +42,29 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     hideNovoCupom = false,
     compact = false,
   },
-  ref,
+  forwardedRef,
 ) {
+  const innerRef = useRef<HTMLInputElement>(null)
+
+  // Garante foco ao montar e ao sair do modo compact — mais confiável que
+  // autoFocus puro em navegação SPA e re-hidratação Next.js.
+  useEffect(() => {
+    if (!compact) innerRef.current?.focus()
+  }, [compact])
+
+  // Mescla innerRef (para foco imperativo) + forwardedRef (API externa).
+  const setRef = useCallback(
+    (el: HTMLInputElement | null) => {
+      (innerRef as MutableRefObject<HTMLInputElement | null>).current = el
+      if (typeof forwardedRef === "function") {
+        forwardedRef(el)
+      } else if (forwardedRef) {
+        (forwardedRef as MutableRefObject<HTMLInputElement | null>).current = el
+      }
+    },
+    [forwardedRef],
+  )
+
   return (
     <div className={cn("space-y-2", compact && "space-y-1")}>
       <div className="flex items-center justify-between gap-2">
@@ -69,25 +91,36 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
         onSubmit={onSubmit}
         className={cn("flex flex-col sm:flex-row", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-3")}
       >
-        <Input
-          ref={ref}
-          autoFocus
-          value={codigo}
-          onChange={(e) => onCodigoChange(e.target.value)}
-          placeholder={m.caixa.busca_placeholder}
-          aria-label={m.caixa.busca_placeholder}
-          disabled={buscando || carregandoRegras}
-          className={cn(
-            "flex-1 bg-background border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-amber-300",
-            compact ? "py-1.5 text-sm" : "py-2 text-base",
-          )}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              e.preventDefault()
-              onCodigoChange("")
-            }
-          }}
-        />
+        {/* Input de código de barras — ponto de entrada principal */}
+        <div className="relative flex-1">
+          <Barcode
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 text-jl-fg-3 pointer-events-none",
+              compact ? "left-2.5 h-4 w-4" : "left-3 h-5 w-5",
+            )}
+            aria-hidden
+          />
+          <Input
+            ref={setRef}
+            value={codigo}
+            onChange={(e) => onCodigoChange(e.target.value)}
+            placeholder={m.caixa.busca_placeholder}
+            aria-label={m.caixa.busca_placeholder}
+            disabled={buscando || carregandoRegras}
+            className={cn(
+              "w-full bg-jl-surface-soft border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md focus:outline-none focus:ring-2 focus:ring-jl-accent focus:border-transparent",
+              compact
+                ? "py-1.5 pl-8 pr-3 text-sm"
+                : "h-14 pl-10 pr-3 text-base",
+            )}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault()
+                onCodigoChange("")
+              }
+            }}
+          />
+        </div>
         <div className={cn("flex gap-2 sm:shrink-0", compact && "gap-1.5")}>
           <Button
             type="submit"
@@ -98,7 +131,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               hideNovoCupom
                 ? "w-full sm:w-auto flex-1 sm:flex-none min-w-[7rem]"
                 : "flex-1 sm:flex-none min-w-[7rem]",
-              compact ? "px-2.5 py-1.5 text-sm" : "px-3 py-2 text-base",
+              compact ? "px-2.5 py-1.5 text-sm" : "h-14 px-4 text-base",
             )}
           >
             {buscando ? (
@@ -116,8 +149,8 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               variant="secondary"
               onClick={onNovoCupom}
               className={cn(
-                "flex-1 sm:flex-none bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 rounded-md font-semibold transition-colors",
-                compact ? "px-2.5 py-1.5 text-sm" : "px-3 py-2 text-base",
+                "flex-1 sm:flex-none bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev rounded-md font-semibold transition-colors",
+                compact ? "px-2.5 py-1.5 text-sm" : "h-14 px-4 text-base",
               )}
             >
               {m.caixa.novo_cupom}
@@ -130,7 +163,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
       ) : null}
       {categoriasAtalho.length > 0 && !compact ? (
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-wide text-jl-fg-2">
             {m.caixa.atalhos_categoria}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -141,7 +174,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
                 disabled={buscando || carregandoRegras}
                 onClick={() => onCodigoChange(c.nome)}
                 title={c.nome}
-                className="min-h-9 shrink-0 rounded-full border border-border bg-muted px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                className="min-h-9 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-1 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jl-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               >
                 {c.nome}
               </button>

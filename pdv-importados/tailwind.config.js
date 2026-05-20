@@ -55,6 +55,18 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Jin Long design-system surface / text / border tokens
+        jl: {
+          "surface-base": "var(--jl-surface-base)",
+          "surface-elev": "var(--jl-surface-elev)",
+          "surface-soft": "var(--jl-surface-soft)",
+          "border-1": "var(--jl-border-1)",
+          "border-2": "var(--jl-border-2)",
+          "fg-1": "var(--jl-fg-1)",
+          "fg-2": "var(--jl-fg-2)",
+          "fg-3": "var(--jl-fg-3)",
+          "accent": "var(--jl-accent)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

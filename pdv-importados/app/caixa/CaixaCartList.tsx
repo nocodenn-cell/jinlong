@@ -141,20 +141,20 @@ export function CaixaCartList({
   if (itens.length === 0) {
     if (listEmptyVariant === "pdv_classic") {
       return (
-        <div className="flex h-full min-h-[10rem] flex-col items-stretch justify-start gap-2 px-4 pt-3 text-left">
-          <p className="text-base font-semibold text-foreground/95">
-            {m.caixa.cart_empty_sem_pedido}
+        <div className="flex h-full min-h-[10rem] flex-col justify-between px-4 py-3">
+          {/* Mensagem discreta — sem ícone grande */}
+          <p className="text-sm text-jl-fg-2">
+            {m.caixa.cart_empty_sem_pedido} · {m.caixa.empty_cta_scan}
           </p>
-          <p className="text-sm text-muted-foreground">{m.caixa.empty_cta_scan}</p>
-          <p className="text-sm text-muted-foreground">{m.caixa.empty_cta_type_enter}</p>
-          <div className="flex flex-wrap items-center gap-1.5 pt-1 sm:flex-nowrap sm:gap-2">
-            <span className="inline-flex shrink-0 rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] leading-tight text-foreground/90">
+          {/* Atalhos de teclado: rodapé, linha única, opacidade reduzida */}
+          <div className="flex flex-wrap items-center gap-1.5 opacity-60">
+            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
               Enter · {m.caixa.adicionar_enter}
             </span>
-            <span className="inline-flex shrink-0 rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] leading-tight text-foreground/90">
+            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
               Ctrl+B · {m.caixa.empty_shortcut_focus}
             </span>
-            <span className="inline-flex shrink-0 rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] leading-tight text-foreground/90">
+            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
               F4 · {m.caixa.finalizar_venda}
             </span>
           </div>
@@ -168,14 +168,14 @@ export function CaixaCartList({
         <div className="max-w-md space-y-2">
           <p className="text-sm font-semibold text-foreground/95">{m.caixa.empty_cta_scan}</p>
           <p className="text-sm text-foreground/85">{m.caixa.empty_cta_type_enter}</p>
-          <div className="flex flex-wrap justify-center gap-2 pt-1">
-            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground/90">
+          <div className="flex flex-wrap justify-center gap-2 pt-1 opacity-60">
+            <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
               Enter · {m.caixa.adicionar_enter}
             </span>
-            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground/90">
+            <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
               Ctrl+B · {m.caixa.empty_shortcut_focus}
             </span>
-            <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground/90">
+            <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
               F4 · {m.caixa.finalizar_venda}
             </span>
           </div>

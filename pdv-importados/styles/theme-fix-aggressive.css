@@ -1,0 +1,39 @@
+/**
+ * Jin Long Design System — surface/fg/border token aliases (jl-*)
+ *
+ * Anchors to --surface* / --border from theme-oriental.css (already loaded
+ * globally) and raw night-scale values for base/elev layers that have no
+ * matching variable yet.  Theme-aware: novem (light) overrides below.
+ */
+
+:root {
+  /* Surfaces */
+  --jl-surface-base: #020617;                          /* night-950 — darkest bg */
+  --jl-surface-elev: #0f172a;                          /* night-900 — topbar / elevated panels */
+  --jl-surface-soft: var(--surface-soft, rgba(15, 23, 42, 0.42)); /* frosted glass */
+
+  /* Borders */
+  --jl-border-1: var(--border, rgba(148, 163, 184, 0.38)); /* primary divider */
+  --jl-border-2: rgba(71, 85, 105, 0.50);                  /* secondary divider */
+
+  /* Foreground */
+  --jl-fg-1: var(--surface-text, rgb(241 245 249));    /* primary text  ~slate-100 */
+  --jl-fg-2: rgb(203 213 225);                          /* secondary text  slate-300 */
+  --jl-fg-3: rgb(148 163 184);                          /* tertiary text   slate-400 */
+
+  /* Accent (dragon gold / amber-400) */
+  --jl-accent: var(--accent, #fbbf24);
+}
+
+/* Novem (light) overrides */
+[data-app-theme='novem'] {
+  --jl-surface-base: #f8fafc;
+  --jl-surface-elev: #f1f5f9;
+  --jl-surface-soft: rgba(255, 255, 255, 0.62);
+  --jl-border-1: rgba(226, 232, 240, 0.95);
+  --jl-border-2: rgba(203, 213, 225, 0.85);
+  --jl-fg-1: rgb(15 23 42);
+  --jl-fg-2: rgb(71 85 105);
+  --jl-fg-3: rgb(100 116 139);
+  --jl-accent: #d97706; /* amber-600 for better contrast on light */
+}
