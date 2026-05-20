@@ -115,11 +115,12 @@ function New-SignatureHex {
     [Parameter(Mandatory = $true)][string]$Key,
     [Parameter(Mandatory = $true)][string]$Ts,
     [Parameter(Mandatory = $true)][string]$Nonce,
+    [Parameter(Mandatory = $true)][string]$DeviceFingerprint,
     [AllowEmptyString()]
     [Parameter(Mandatory = $true)][string]$Body
   )
 
-  $payload = "$Ts.$Nonce.$Body"
+  $payload = "$Ts.$Nonce.$($DeviceFingerprint.ToLower()).$Body"
   $hmac = [System.Security.Cryptography.HMACSHA256]::new([System.Text.Encoding]::UTF8.GetBytes($Key))
   try {
     $bytes = $hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
@@ -236,7 +237,7 @@ if (-not $OutputJson) {
 # 1) GET válido (deve funcionar)
 $tsValid = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
 $nonceValid = [guid]::NewGuid().ToString()
-$sigValid = New-SignatureHex -Key $SyncKey -Ts $tsValid -Nonce $nonceValid -Body $getBody
+$sigValid = New-SignatureHex -Key $SyncKey -Ts $tsValid -Nonce $nonceValid -DeviceFingerprint $DeviceFingerprint -Body $getBody
 $headersValid = @{
   "X-SYNC-KEY"         = $SyncKey
   "X-SYNC-TS"          = $tsValid
@@ -285,7 +286,7 @@ $results += [pscustomobject]@{
 # 3) Timestamp drift (muito antigo) deve ser bloqueado
 $tsOld = ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 3600).ToString()
 $nonceOld = [guid]::NewGuid().ToString()
-$sigOld = New-SignatureHex -Key $SyncKey -Ts $tsOld -Nonce $nonceOld -Body $getBody
+$sigOld = New-SignatureHex -Key $SyncKey -Ts $tsOld -Nonce $nonceOld -DeviceFingerprint $DeviceFingerprint -Body $getBody
 $headersOld = @{
   "X-SYNC-KEY"         = $SyncKey
   "X-SYNC-TS"          = $tsOld
@@ -346,7 +347,7 @@ $results += [pscustomobject]@{
 # 5) POST com payload mínimo assinado deve funcionar
 $tsPost = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
 $noncePost = [guid]::NewGuid().ToString()
-$sigPost = New-SignatureHex -Key $SyncKey -Ts $tsPost -Nonce $noncePost -Body $postBody
+$sigPost = New-SignatureHex -Key $SyncKey -Ts $tsPost -Nonce $noncePost -DeviceFingerprint $DeviceFingerprint -Body $postBody
 $headersPost = @{
   "X-SYNC-KEY"         = $SyncKey
   "X-SYNC-TS"          = $tsPost
@@ -397,7 +398,7 @@ if ($runValidarGerente) {
   $vgBodyOk = (@{ senha = $senhaGerenteDiag.Trim() } | ConvertTo-Json -Compress)
   $tsVg1 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
   $nonceVg1 = [guid]::NewGuid().ToString()
-  $sigVg1 = New-SignatureHex -Key $SyncKey -Ts $tsVg1 -Nonce $nonceVg1 -Body $vgBodyOk
+  $sigVg1 = New-SignatureHex -Key $SyncKey -Ts $tsVg1 -Nonce $nonceVg1 -DeviceFingerprint $DeviceFingerprint -Body $vgBodyOk
   $headersVg1 = @{
     "X-SYNC-KEY"            = $SyncKey
     "X-SYNC-TS"             = $tsVg1
@@ -429,7 +430,7 @@ if ($runValidarGerente) {
   $vgBodyBad = '{"senha":"__sync_diag_invalid_password__"}'
   $tsVg2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds().ToString()
   $nonceVg2 = [guid]::NewGuid().ToString()
-  $sigVg2 = New-SignatureHex -Key $SyncKey -Ts $tsVg2 -Nonce $nonceVg2 -Body $vgBodyBad
+  $sigVg2 = New-SignatureHex -Key $SyncKey -Ts $tsVg2 -Nonce $nonceVg2 -DeviceFingerprint $DeviceFingerprint -Body $vgBodyBad
   $headersVg2 = @{
     "X-SYNC-KEY"            = $SyncKey
     "X-SYNC-TS"             = $tsVg2
