@@ -45,6 +45,7 @@ BEGIN
             FROM public.usuarios u
             WHERE u.id = v_uid
               AND u.perfil = ANY(v_admin_profiles)
+              AND (u.perfil IN ('DONO', 'ADMIN') OR u.loja_id = v.loja_id)
           )
         )
     ) THEN

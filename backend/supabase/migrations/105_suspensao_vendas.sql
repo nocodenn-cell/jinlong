@@ -98,7 +98,7 @@ BEGIN
   SELECT u.perfil INTO v_perfil
   FROM public.usuarios u WHERE u.id = v_uid;
 
-  IF v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
+  IF v_perfil IS NULL OR v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
     SELECT c.valor INTO v_suspensas
     FROM public.configuracoes_gerais c
     WHERE c.chave = 'vendas_suspensas';
