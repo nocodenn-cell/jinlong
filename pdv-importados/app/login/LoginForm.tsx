@@ -121,89 +121,96 @@ export function LoginForm({ messages: m }: Props) {
   }
 
   return (
-    <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center bg-black px-4 py-12 sm:py-16">
-      <div className="login-premium-art-wrap">
-        <div className="login-premium-dragon-frame">
-          <div className="login-premium-dragon-media">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/branding/brand-double-dragon.png"
-              alt=""
-              width={280}
-              height={280}
-              className="login-premium-dragon-img"
-              draggable={false}
-            />
+    <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center bg-black px-4 py-10 sm:py-14">
+      <div className="flex w-full max-w-[380px] flex-col items-center">
+
+        {/* 1 — Hero dragão */}
+        <div className="login-premium-art-wrap mb-2 w-full">
+          <div className="login-premium-dragon-frame">
+            <div className="login-premium-dragon-media">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/branding/brand-double-dragon.png"
+                alt=""
+                width={240}
+                height={240}
+                className="login-premium-dragon-img mx-auto block"
+                draggable={false}
+              />
+            </div>
+            <div className="login-premium-vignette" aria-hidden />
           </div>
-          <div className="login-premium-vignette" aria-hidden />
         </div>
-      </div>
 
-      <h1 className="login-premium-wordmark mb-8 text-center">
-        <span className="login-premium-wordmark-han">{m.brand.logo_subtitle}</span>
-        <span className="mx-2 text-[#bfa76a]/45" aria-hidden>|</span>
-        <span>Jīn Lóng</span>
-      </h1>
+        {/* 2 — Wordmark */}
+        <h1 className="login-premium-wordmark mb-8 text-center text-2xl">
+          <span className="login-premium-wordmark-han">{m.brand.logo_subtitle}</span>
+          <span className="mx-2 text-[#bfa76a]/45" aria-hidden>|</span>
+          <span>Jīn Lóng</span>
+        </h1>
 
-      <div className="login-premium-form-block w-full max-w-[380px]">
-        {avisoInatividade ? (
-          <p className="login-premium-inactivity mb-6 rounded-md px-3 py-2.5 text-center text-sm" role="status">
-            {L.sessao_inatividade}
-          </p>
-        ) : null}
-
-        <form onSubmit={login} className="flex w-full flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="login-email" className="login-premium-label">
-              {L.email_placeholder}
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={L.email_placeholder}
-              autoComplete="username"
-              required
-              autoFocus
-              className="login-premium-input"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="login-senha" className="login-premium-label">
-              {L.senha_placeholder}
-            </label>
-            <input
-              id="login-senha"
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder={L.senha_placeholder}
-              autoComplete="current-password"
-              required
-              className="login-premium-input"
-            />
-          </div>
-          {erro ? (
-            <p className="text-center text-sm text-destructive" role="alert">
-              {erro}
+        {/* 3 — Formulário */}
+        <div className="login-premium-form-block w-full">
+          {avisoInatividade ? (
+            <p className="login-premium-inactivity mb-6 rounded-md px-3 py-2.5 text-center text-sm" role="status">
+              {L.sessao_inatividade}
             </p>
           ) : null}
-          <button
-            type="submit"
-            disabled={loading}
-            className="login-premium-submit flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <DragonOuroLoader className="text-black" iconClassName="h-4 w-4 text-black" />
-                {L.entrando}
-              </>
-            ) : (
-              L.entrar
-            )}
-          </button>
-        </form>
+
+          <form onSubmit={login} className="flex w-full flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="login-email" className="login-premium-label">
+                {L.email_placeholder}
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={L.email_placeholder}
+                autoComplete="username"
+                required
+                autoFocus
+                className="login-premium-input"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="login-senha" className="login-premium-label">
+                {L.senha_placeholder}
+              </label>
+              <input
+                id="login-senha"
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder={L.senha_placeholder}
+                autoComplete="current-password"
+                required
+                className="login-premium-input"
+              />
+            </div>
+            {erro ? (
+              <p className="text-center text-sm text-destructive" role="alert">
+                {erro}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={loading}
+              className="login-premium-submit flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <DragonOuroLoader className="text-black" iconClassName="h-4 w-4 text-black" />
+                  {L.entrando}
+                </>
+              ) : (
+                L.entrar
+              )}
+            </button>
+          </form>
+        </div>
+
       </div>
     </div>
   )

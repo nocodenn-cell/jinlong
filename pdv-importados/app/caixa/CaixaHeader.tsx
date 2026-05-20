@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { CaixaPdvTopBar, type CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
@@ -13,12 +13,12 @@ type Props = {
   carregandoRegras: boolean
   caixaStatus:
     | {
-        aberto: true,
-        caixaId: string,
-        dataAbertura: string,
-        valorInicial: number,
-        valorSistemaDinheiro: number,
-        blindClosureEnabled: boolean,
+        aberto: true
+        caixaId: string
+        dataAbertura: string
+        valorInicial: number
+        valorSistemaDinheiro: number
+        blindClosureEnabled: boolean
       }
     | { aberto: false }
     | null
@@ -38,12 +38,22 @@ export function CaixaHeader({
   onAbrirCaixa,
   onFecharCaixa,
 }: Props) {
+  const [currentDateTime, setCurrentDateTime] = useState<string>("")
+
   const fontStack =
     idioma === "zh"
       ? 'var(--font-noto-sc),"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif'
       : undefined
 
   const localeString = idioma === "pt" ? "pt-BR" : "zh-CN"
+
+  useEffect(() => {
+    setCurrentDateTime(new Date().toLocaleString(localeString))
+    const interval = setInterval(() => {
+      setCurrentDateTime(new Date().toLocaleString(localeString))
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [localeString])
 
   const statusTop =
     caixaStatus?.aberto === true
@@ -74,7 +84,7 @@ export function CaixaHeader({
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
               <span className="tabular-nums text-foreground/95">
-                {new Date().toLocaleString(localeString)}
+                {currentDateTime}
               </span>
               {caixaStatus?.aberto === true && (
                 <span className="text-foreground/85">

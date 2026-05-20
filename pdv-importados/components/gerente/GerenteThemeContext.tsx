@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { GERENTE_UI_THEME_STORAGE_KEY, parseGerenteUiTheme, type GerenteUiTheme } from './gerenteUiTheme'
+import { GERENTE_UI_THEME_STORAGE_KEY, type GerenteUiTheme } from './gerenteUiTheme'
 
 type Ctx = Readonly<{
   theme: GerenteUiTheme
@@ -20,14 +20,6 @@ const GerenteUiThemeContext = createContext<Ctx | null>(null)
 
 export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [theme, setThemeState] = useState<GerenteUiTheme>('noturno')
-
-  useLayoutEffect(() => {
-    try {
-      setThemeState(parseGerenteUiTheme(localStorage.getItem(GERENTE_UI_THEME_STORAGE_KEY)))
-    } catch {
-      /* ignore */
-    }
-  }, [])
 
   const setTheme = useCallback((t: GerenteUiTheme) => {
     setThemeState(t)
@@ -43,7 +35,7 @@ export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactN
   useLayoutEffect(() => {
     document.documentElement.dataset.appTheme = theme
     document.documentElement.dataset.gerenteUiTheme = theme
-    document.documentElement.dataset.gerenteUiThemeLegacy = theme === 'novem' ? 'dragon-light' : 'dragon-dark'
+    document.documentElement.dataset.gerenteUiThemeLegacy = 'dragon-dark'
   }, [theme])
 
   return <GerenteUiThemeContext.Provider value={value}>{children}</GerenteUiThemeContext.Provider>

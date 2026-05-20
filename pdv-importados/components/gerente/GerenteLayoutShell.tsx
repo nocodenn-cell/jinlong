@@ -72,12 +72,11 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
   return (
     <div
       ref={shellRef}
-      data-app-theme={theme}
-      data-gerente-ui-theme={theme === 'novem' ? 'dragon-light' : 'dragon-dark'}
+      data-app-theme="noturno"
+      data-gerente-ui-theme="dragon-dark"
       className={cn(
         'gerente-shell relative min-h-screen overflow-x-visible overflow-y-visible antialiased transition-[background-color,color] duration-200',
-        theme === 'noturno' && 'app-surface app-surface-text',
-        theme === 'novem' && 'app-surface app-surface-text',
+        'app-surface app-surface-text',
       )}
       style={{
         fontFamily: FONT_FAMILY[idioma] ?? 'inherit',
