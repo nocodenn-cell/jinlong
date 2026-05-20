@@ -935,20 +935,20 @@ html:has(.login-premium-root) body {
 }
 
 [data-gerente-ui-theme='dragon-dark'] button.gerente-btn-csv:not(:disabled) {
-  border-color: rgba(71, 85, 105, 0.75);
-  background: rgba(30, 41, 59, 0.55);
-  color: rgb(241 245 249);
+  border-color: rgba(71, 85, 105, 0.75) !important;
+  background: rgba(30, 41, 59, 0.55) !important;
+  color: rgb(241 245 249) !important;
 }
 
 [data-gerente-ui-theme='dragon-dark'] button.gerente-btn-csv:not(:disabled):hover {
-  border-color: rgba(245, 158, 11, 0.45);
-  background: rgba(51, 65, 85, 0.65);
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  background: rgba(51, 65, 85, 0.65) !important;
 }
 
 [data-gerente-ui-theme='dragon-dark'] button.gerente-btn-csv:disabled {
-  border-color: rgba(51, 65, 85, 0.6);
-  background: rgba(15, 23, 42, 0.45);
-  color: rgb(100 116 139);
+  border-color: rgba(51, 65, 85, 0.6) !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  color: rgb(100 116 139) !important;
 }
 
 /* Financeiro / formulários gerente */
@@ -1163,14 +1163,14 @@ html:has(.login-premium-root) body {
 }
 
 [data-gerente-ui-theme='dragon-dark'] .gerente-chip-action {
-  border-color: rgba(100, 116, 139, 0.45);
-  background: rgba(15, 23, 42, 0.35);
-  color: rgb(241 245 249);
+  border-color: rgba(100, 116, 139, 0.45) !important;
+  background: rgba(15, 23, 42, 0.35) !important;
+  color: rgb(241 245 249) !important;
 }
 
 [data-gerente-ui-theme='dragon-dark'] .gerente-chip-action:hover {
-  border-color: rgba(245, 158, 11, 0.4);
-  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  background: rgba(30, 41, 59, 0.55) !important;
 }
 
 [data-gerente-ui-theme='dragon-light'] .gerente-chip-action {
