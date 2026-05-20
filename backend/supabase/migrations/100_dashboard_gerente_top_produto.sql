@@ -50,10 +50,10 @@ DECLARE
 
 BEGIN
   -- ── Autorização ─────────────────────────────────────────────────────────────
-  SELECT ur.perfil, ur.loja_id
+  SELECT u.perfil, u.loja_id
     INTO v_perfil, v_loja_usuario
-    FROM public.usuario_roles ur
-   WHERE ur.user_id = v_uid
+    FROM public.usuarios u
+   WHERE u.id = v_uid
    LIMIT 1;
 
   IF v_perfil IS NULL THEN
