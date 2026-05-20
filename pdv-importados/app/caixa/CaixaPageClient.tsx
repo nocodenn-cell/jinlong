@@ -592,12 +592,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           roundMoney2(parcelasNormalizadas[idxDinheiro].valor - excesso),
         )
       } else {
-        const lastIdx = parcelasNormalizadas.length - 1
-        if (lastIdx >= 0) {
-          parcelasNormalizadas[lastIdx].valor = Math.max(
-            0,
-            roundMoney2(parcelasNormalizadas[lastIdx].valor - excesso),
-          )
+        // No DINHEIRO parcel: distribute excess from last to first so sum stays at totalLiquido
+        let remaining = excesso
+        for (let i = parcelasNormalizadas.length - 1; i >= 0 && remaining > 0.001; i--) {
+          const deduct = Math.min(parcelasNormalizadas[i].valor, remaining)
+          parcelasNormalizadas[i].valor = roundMoney2(parcelasNormalizadas[i].valor - deduct)
+          remaining = roundMoney2(remaining - deduct)
         }
       }
     }

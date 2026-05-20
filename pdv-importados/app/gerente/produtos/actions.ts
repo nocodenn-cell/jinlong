@@ -814,10 +814,12 @@ export async function alterarAtivoLoteProdutos(
   }
 
   const supabase = await createClient()
+  const lojaId = await lojaIdParaListagemProdutos(supabase)
   const { error, count } = await supabase
     .from('produtos')
     .update({ ativo: parsed.data.ativo })
     .in('id', parsed.data.produto_ids)
+    .eq('loja_id', lojaId)
 
   if (error) {
     return { success: false, error: mensagemErroComSecao('Bulk ativo', error.message) }
@@ -848,10 +850,12 @@ export async function alterarCategoriaLoteProdutos(
   }
 
   const supabase = await createClient()
+  const lojaId = await lojaIdParaListagemProdutos(supabase)
   const { error, count } = await supabase
     .from('produtos')
     .update({ categoria_id: parsed.data.categoria_id })
     .in('id', parsed.data.produto_ids)
+    .eq('loja_id', lojaId)
 
   if (error) {
     return { success: false, error: mensagemErroComSecao('Bulk categoria', error.message) }

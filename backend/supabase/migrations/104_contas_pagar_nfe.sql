@@ -44,6 +44,7 @@ CREATE POLICY contas_pagar_gerente
       SELECT 1 FROM public.usuarios u
       WHERE u.id = auth.uid()
         AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+        AND (u.perfil IN ('DONO', 'ADMIN') OR u.loja_id = contas_pagar.loja_id)
     )
   )
   WITH CHECK (
@@ -51,6 +52,7 @@ CREATE POLICY contas_pagar_gerente
       SELECT 1 FROM public.usuarios u
       WHERE u.id = auth.uid()
         AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+        AND (u.perfil IN ('DONO', 'ADMIN') OR u.loja_id = contas_pagar.loja_id)
     )
   );
 
