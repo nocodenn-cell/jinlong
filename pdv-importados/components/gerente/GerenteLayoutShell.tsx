@@ -32,7 +32,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
   const shellRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   const { theme } = useGerenteUiTheme()
-  const chromeLight = isGerenteLightChrome(theme)
+  const chromeLight = isGerenteLightChrome()
   const podeTrocarIdioma = isPerfilPainelGerencial(normalizePerfilUsuario(perfil))
   const langToggleVariant = chromeLight ? 'dragon-light' : 'dragon'
   const roleBadgeLabel =

@@ -24,7 +24,7 @@ function linkAtivo(href: string, pathname: string | null): boolean {
 export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
   const pathname = usePathname()
   const { theme } = useGerenteUiTheme()
-  const light = isGerenteLightChrome(theme)
+  const light = isGerenteLightChrome()
   const topicAtivoId = gerenteNavTopicIdForPathname(pathname)
   const topicAtivo = GERENTE_NAV_TOPICS.find((t) => t.id === topicAtivoId) ?? GERENTE_NAV_TOPICS[0]
   const mostrarSubNav = topicAtivo.items.length > 1

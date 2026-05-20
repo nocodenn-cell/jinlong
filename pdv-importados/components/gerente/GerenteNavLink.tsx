@@ -15,7 +15,7 @@ export type GerenteNavLinkProps = {
 /** Abas / filtros secundários no painel gerente — responde ao tema claro/escuro. */
 export function GerenteNavLink({ href, active, children }: GerenteNavLinkProps) {
   const { theme } = useGerenteUiTheme()
-  const light = isGerenteLightChrome(theme)
+  const light = isGerenteLightChrome()
 
   return (
     <Link
