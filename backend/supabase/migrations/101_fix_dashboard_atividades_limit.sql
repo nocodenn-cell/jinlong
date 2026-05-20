@@ -59,11 +59,11 @@ BEGIN
    LIMIT 1;
 
   IF v_perfil IS NULL THEN
-    RETURN jsonb_build_object('error', 'UNAUTHORIZED');
+    RAISE EXCEPTION 'DASHBOARD_UNAUTHORIZED';
   END IF;
 
   IF v_perfil = 'GERENTE' AND v_loja_usuario IS DISTINCT FROM p_loja_id THEN
-    RETURN jsonb_build_object('error', 'FORBIDDEN');
+    RAISE EXCEPTION 'DASHBOARD_FORBIDDEN';
   END IF;
 
   -- ── Fuso horário ─────────────────────────────────────────────────────────────
