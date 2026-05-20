@@ -199,21 +199,22 @@ BEGIN
       ) s
     ),
     'estoque_critico', (
-      SELECT COALESCE(jsonb_agg(
-        jsonb_build_object(
+      SELECT COALESCE(jsonb_agg(sub), '[]'::jsonb)
+      FROM (
+        SELECT jsonb_build_object(
           'id', p.id,
           'nome', p.nome,
           'quantidade_atual', e.quantidade_atual,
           'estoque_minimo', COALESCE(p.estoque_minimo, 0)
-        )
+        ) AS sub
+        FROM public.estoque e
+        JOIN public.produtos p ON p.id = e.produto_id
+        WHERE e.loja_id = p_loja_id
+          AND p.ativo = true
+          AND e.quantidade_atual <= COALESCE(p.estoque_minimo, 0)
         ORDER BY e.quantidade_atual ASC
-      ), '[]'::jsonb)
-      FROM public.estoque e
-      JOIN public.produtos p ON p.id = e.produto_id
-      WHERE e.loja_id = p_loja_id
-        AND p.ativo = true
-        AND e.quantidade_atual <= COALESCE(p.estoque_minimo, 0)
-      LIMIT 5
+        LIMIT 5
+      ) t
     ),
     'atividades_recentes', (
       SELECT COALESCE(jsonb_agg(a ORDER BY a->>'data_hora' DESC), '[]'::jsonb)

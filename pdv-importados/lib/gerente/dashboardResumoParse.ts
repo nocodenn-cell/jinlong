@@ -9,6 +9,9 @@ import type {
 /** Parser puro da resposta JSON da RPC — usado pela server action e pelos testes. */
 export function parseDashboardResumo(raw: unknown): DashboardResumoDTO {
   const r = (raw ?? {}) as Record<string, unknown>
+  if (typeof r.error === 'string') {
+    throw new Error(r.error)
+  }
   const num = (v: unknown) => Number(v ?? 0)
   return {
     tz: String(r.tz ?? 'America/Sao_Paulo'),

@@ -110,7 +110,7 @@ BEGIN
     RAISE EXCEPTION 'IMPORT_NFE_PERFIL';
   END IF;
 
-  IF v_loja_usuario IS DISTINCT FROM p_loja_id THEN
+  IF v_perfil = 'GERENTE' AND v_loja_usuario IS DISTINCT FROM p_loja_id THEN
     RAISE EXCEPTION 'IMPORT_NFE_LOJA';
   END IF;
 
