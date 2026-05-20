@@ -65,6 +65,7 @@ module.exports = {
           "fg-1": "var(--jl-fg-1)",
           "fg-2": "var(--jl-fg-2)",
           "fg-3": "var(--jl-fg-3)",
+          "accent": "var(--jl-accent)",
         },
       },
       borderRadius: {

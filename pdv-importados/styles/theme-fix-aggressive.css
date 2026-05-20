@@ -20,6 +20,9 @@
   --jl-fg-1: var(--surface-text, rgb(241 245 249));    /* primary text  ~slate-100 */
   --jl-fg-2: rgb(203 213 225);                          /* secondary text  slate-300 */
   --jl-fg-3: rgb(148 163 184);                          /* tertiary text   slate-400 */
+
+  /* Accent (dragon gold / amber-400) */
+  --jl-accent: var(--accent, #fbbf24);
 }
 
 /* Novem (light) overrides */
@@ -32,4 +35,5 @@
   --jl-fg-1: rgb(15 23 42);
   --jl-fg-2: rgb(71 85 105);
   --jl-fg-3: rgb(100 116 139);
+  --jl-accent: #d97706; /* amber-600 for better contrast on light */
 }
