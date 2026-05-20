@@ -78,7 +78,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
           aria-label={m.caixa.busca_placeholder}
           disabled={buscando || carregandoRegras}
           className={cn(
-            "flex-1 bg-background border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-amber-300",
+            "flex-1 bg-jl-surface-soft border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-amber-300",
             compact ? "py-1.5 text-sm" : "py-2 text-base",
           )}
           onKeyDown={(e) => {
@@ -116,7 +116,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               variant="secondary"
               onClick={onNovoCupom}
               className={cn(
-                "flex-1 sm:flex-none bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 rounded-md font-semibold transition-colors",
+                "flex-1 sm:flex-none bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev rounded-md font-semibold transition-colors",
                 compact ? "px-2.5 py-1.5 text-sm" : "px-3 py-2 text-base",
               )}
             >
@@ -130,7 +130,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
       ) : null}
       {categoriasAtalho.length > 0 && !compact ? (
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-wide text-jl-fg-2">
             {m.caixa.atalhos_categoria}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -141,7 +141,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
                 disabled={buscando || carregandoRegras}
                 onClick={() => onCodigoChange(c.nome)}
                 title={c.nome}
-                className="min-h-9 shrink-0 rounded-full border border-border bg-muted px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                className="min-h-9 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-1 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               >
                 {c.nome}
               </button>
