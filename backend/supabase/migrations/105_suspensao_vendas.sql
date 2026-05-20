@@ -177,21 +177,30 @@ BEGIN
       ))
     );
 
-    v_doc_id := public.fiscal_enfileirar_documento_venda(
-      p_venda_id,
-      'NFC_E_STUB',
-      v_payload
-    );
+    BEGIN
+      v_doc_id := public.fiscal_enfileirar_documento_venda(
+        p_venda_id,
+        'NFC_E_STUB',
+        v_payload
+      );
+    EXCEPTION
+      WHEN raise_exception THEN
+        IF SQLERRM = 'FISCAL_ENQUEUE_VENDA_SEM_NF' THEN
+          v_doc_id := NULL;
+        ELSE
+          RAISE;
+        END IF;
+    END;
 
     RETURN QUERY
     SELECT
       p_venda_id,
       'CONCLUIDA'::text,
       NULL::text,
-      jsonb_build_object(
-        'documento_fiscal_id', v_doc_id,
-        'tipo_doc', 'NFC_E_STUB'
-      ),
+      CASE WHEN v_doc_id IS NOT NULL
+        THEN jsonb_build_object('documento_fiscal_id', v_doc_id, 'tipo_doc', 'NFC_E_STUB')
+        ELSE NULL
+      END,
       NULL::jsonb,
       NULL::jsonb;
   ELSE

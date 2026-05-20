@@ -270,7 +270,7 @@ BEGIN
   SELECT u.perfil, u.loja_id INTO v_perfil, v_loja_id
     FROM public.usuarios u WHERE u.id = v_uid;
 
-  IF v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
+  IF v_perfil IS NULL OR v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
     RAISE EXCEPTION 'COMISSOES_MARCAR_PAGAS_PERMISSAO';
   END IF;
 
