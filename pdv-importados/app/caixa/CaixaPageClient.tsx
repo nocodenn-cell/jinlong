@@ -82,7 +82,7 @@ type Props = {
   messages: Mensagens
   idioma: Idioma
   operadorLabel: string
-  perfil: string
+  perfil: string | null
 }
 
 export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: Props) {
@@ -545,6 +545,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     if (itens.length === 0 || finalizando) return
     if (
       configCaixaWeb.vendas_suspensas === 'true' &&
+      perfil !== null &&
       !['GERENTE', 'DONO', 'ADMIN'].includes(perfil)
     ) {
       const motivo = configCaixaWeb.motivo_suspensao?.trim()
