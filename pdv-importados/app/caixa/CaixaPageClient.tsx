@@ -672,6 +672,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     setCaixaMensagem,
     setCaixaMensagemVendaOk,
     tocarFeedback,
+    perfil,
   ])
 
   useCaixaGerenteTokenExpiry({

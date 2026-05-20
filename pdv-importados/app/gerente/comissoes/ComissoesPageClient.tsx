@@ -29,7 +29,11 @@ export function ComissoesPageClient({ idioma }: Props) {
   const [detalheLoading, setDetalheLoading] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
-  const queryFn = useCallback(() => carregarResumoComissoes(filtro), [filtro])
+  const queryFn = useCallback(async () => {
+    const r = await carregarResumoComissoes(filtro)
+    if (!r.success) throw new Error(r.error)
+    return r.data
+  }, [filtro])
   const { data: resumo, loading, refetch } = useGerenteQuery(queryFn)
 
   const abrirDetalhe = useCallback(async (row: ComissaoResumoRow) => {
