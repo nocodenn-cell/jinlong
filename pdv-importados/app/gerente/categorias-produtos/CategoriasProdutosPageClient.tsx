@@ -160,7 +160,7 @@ export function CategoriasProdutosPageClient({ idioma, inicial }: Props) {
           </tr>
         ) : (
           rows.map((row) => (
-            <tr key={row.id} className="gerente-fin-row-hover border-b border-border/30 transition-colors last:border-0">
+            <tr key={row.id} className="gerente-fin-row-hover border-b border-white/10 transition-colors last:border-0">
               <td className="gerente-fin-cell px-3 py-3 text-sm font-medium">{row.nome}</td>
               <td className="px-3 py-3">
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${row.qtd_produtos > 0 ? 'bg-jl-surface-soft text-jl-fg-2 border border-jl-border-1' : 'app-muted'}`}>

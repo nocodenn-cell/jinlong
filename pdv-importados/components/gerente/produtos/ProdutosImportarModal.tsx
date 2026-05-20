@@ -147,16 +147,16 @@ export function ProdutosImportarModal({
         className="dragon-glass-card flex max-h-[90vh] w-full max-w-lg flex-col rounded-none border shadow-xl sm:rounded-lg"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <CardHeader className="border-b border-border px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
+        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
           <div className="flex items-start gap-2">
-            <UploadCloud className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--accent)]" aria-hidden />
-            <CardTitle id="produtos-importar-titulo" className="text-lg font-semibold text-foreground">
+            <UploadCloud className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+            <CardTitle id="produtos-importar-titulo" className="text-lg font-semibold text-jl-fg-1">
               {p.import_modal_titulo}
             </CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
-          <div className="rounded-md border border-[color:var(--accent)]/35 border-l-4 border-l-[color:var(--accent)] bg-[color:var(--surface-soft)] px-3 py-2.5 text-sm text-foreground">
+          <div className="rounded-md border border-[color:var(--accent)]/35 border-l-4 border-l-[color:var(--accent)] bg-[color:var(--surface-soft)] px-3 py-2.5 text-sm text-jl-fg-1">
             <p className="font-medium">{p.import_modal_passo1}</p>
             <button
               type="button"
@@ -167,8 +167,8 @@ export function ProdutosImportarModal({
             </button>
           </div>
 
-          <div className="rounded-md border border-border bg-card/80 p-3">
-            <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
+          <div className="rounded-md border border-jl-border-1 bg-jl-surface-elev/80 p-3">
+            <label className="flex cursor-pointer items-start gap-2 text-xs text-jl-fg-1">
               <input
                 type="checkbox"
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded app-border app-surface-soft"
@@ -183,14 +183,14 @@ export function ProdutosImportarModal({
             </label>
           </div>
 
-          <div className="rounded-md border border-border bg-card/80 p-3">
-            <label className="block text-xs font-medium text-muted-foreground">
+          <div className="rounded-md border border-jl-border-1 bg-jl-surface-elev/80 p-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
               {p.import_modal_arquivo}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".csv,text/csv"
-                className="mt-2 block w-full text-xs text-foreground file:mr-2 file:rounded-md file:border file:border-border file:bg-muted file:px-2 file:py-1 file:text-xs"
+                className="mt-2 block w-full text-xs text-jl-fg-1 file:mr-2 file:rounded-md file:border file:border-jl-border-1 file:bg-jl-surface-soft file:px-2 file:py-1 file:text-xs"
                 disabled={isPending}
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null
@@ -200,17 +200,17 @@ export function ProdutosImportarModal({
                 }}
               />
             </label>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs text-jl-fg-3">
               {fileName ?? p.import_modal_nenhum_arquivo}
             </p>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-jl-fg-3">
             {atualizarPorId ? p.import_modal_fase2_aviso_atualizar_id : p.import_modal_fase2_aviso}
           </p>
 
           {ultimoResumo && ultimoResumo.falhas.length > 0 ? (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-jl-fg-1">
               <p className="font-semibold text-amber-900 dark:text-amber-100">{p.import_falhas_titulo}</p>
               <ul className="mt-2 max-h-36 list-inside list-disc space-y-1 overflow-y-auto text-[11px]">
                 {ultimoResumo.falhas.slice(0, 40).map((f) => (
@@ -220,12 +220,12 @@ export function ProdutosImportarModal({
                 ))}
               </ul>
               {ultimoResumo.falhas.length > 40 ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">…</p>
+                <p className="mt-1 text-[11px] text-jl-fg-3">…</p>
               ) : null}
             </div>
           ) : null}
         </CardContent>
-        <CardFooter className="flex justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
+        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
           <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={isPending}>
             {m.comum.cancelar}
           </Button>

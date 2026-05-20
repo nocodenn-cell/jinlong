@@ -691,12 +691,12 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
             onAlterarCategoriaLote={() => setCategoriaLoteModalAberto(true)}
           />
           {categoriaLoteModalAberto && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-50/50 px-3 py-2 dark:bg-blue-950/20">
-              <span className="text-sm text-foreground">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-jl-border-1 bg-jl-surface-elev px-3 py-2">
+              <span className="text-sm text-jl-fg-1">
                 Alterar categoria de {selectedIds.size} produto(s):
               </span>
               <select
-                className="h-9 rounded-md border border-border bg-background px-3 text-xs"
+                className="h-9 rounded-md border border-jl-border-1 bg-jl-surface-base px-3 text-xs text-jl-fg-1"
                 value={categoriaLoteSelecionada}
                 onChange={(e) => setCategoriaLoteSelecionada(e.target.value)}
               >
@@ -709,14 +709,14 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 type="button"
                 onClick={() => void categoriaLote(categoriaLoteSelecionada || null)}
                 disabled={categoriaLoteLoading}
-                className="inline-flex h-9 items-center gap-1 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                className="app-btn-accent inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-semibold disabled:opacity-60"
               >
                 {categoriaLoteLoading ? '…' : 'Aplicar'}
               </button>
               <button
                 type="button"
                 onClick={() => setCategoriaLoteModalAberto(false)}
-                className="inline-flex h-9 items-center px-3 text-sm text-muted-foreground hover:text-foreground"
+                className="inline-flex h-9 items-center px-3 text-sm text-jl-fg-3 hover:text-jl-fg-1"
               >
                 Cancelar
               </button>

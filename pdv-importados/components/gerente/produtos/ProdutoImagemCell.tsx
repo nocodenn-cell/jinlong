@@ -94,14 +94,14 @@ export function ProdutoImagemCell({
         aria-label={aria}
         title={aria}
         onClick={pickFile}
-        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40 transition hover:bg-accent/10 disabled:opacity-50"
+        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-jl-border-1 bg-white/[0.06] transition hover:bg-white/[0.10] disabled:opacity-50"
       >
         {pending ? (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
+          <Loader2 className="h-4 w-4 animate-spin text-jl-fg-3" aria-hidden />
         ) : imagemUrl ? (
           <img src={imagemUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
-          <ImageIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <ImageIcon className="h-4 w-4 text-jl-fg-3" aria-hidden />
         )}
       </button>
       {imagemUrl && !pending ? (
@@ -110,7 +110,7 @@ export function ProdutoImagemCell({
           aria-label={p.foto_remover_aria}
           title={p.foto_remover_aria}
           onClick={remover}
-          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-destructive/30 bg-background text-[10px] font-bold text-destructive opacity-0 shadow transition hover:bg-destructive/10 group-hover:opacity-100"
+          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-destructive/30 bg-jl-surface-base text-[10px] font-bold text-destructive opacity-0 shadow transition hover:bg-destructive/10 group-hover:opacity-100"
         >
           <X className="h-3 w-3" aria-hidden />
         </button>

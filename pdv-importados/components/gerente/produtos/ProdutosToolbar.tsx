@@ -66,7 +66,7 @@ export function ProdutosToolbar({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2.5 backdrop-blur-sm"
+      className="flex flex-wrap items-center gap-2 rounded-xl border border-jl-border-1 bg-jl-surface-elev/60 px-3 py-2.5 backdrop-blur-sm"
       role="toolbar"
       aria-label={p.toolbar_aria}
     >
@@ -77,8 +77,8 @@ export function ProdutosToolbar({
         className={cn(
           btnBase,
           fotoDisabled
-            ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
-            : 'app-border app-surface-soft text-foreground hover:bg-accent/15',
+            ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+            : 'app-border app-surface-soft text-jl-fg-1 hover:bg-white/[0.06]',
         )}
         title={p.toolbar_foto_title}
         aria-label={p.toolbar_foto_aria}
@@ -94,8 +94,8 @@ export function ProdutosToolbar({
         className={cn(
           btnBase,
           printDisabled
-            ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
-            : 'app-border app-surface-soft text-foreground hover:bg-accent/15',
+            ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+            : 'app-border app-surface-soft text-jl-fg-1 hover:bg-white/[0.06]',
         )}
         title={p.toolbar_imprimir_title}
         aria-label={p.toolbar_imprimir_aria}
@@ -113,8 +113,8 @@ export function ProdutosToolbar({
             className={cn(
               btnBase,
               ativarLoteLoading
-                ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
-                : 'app-border app-surface-soft text-foreground hover:bg-green-500/15',
+                ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+                : 'app-border app-surface-soft text-jl-fg-1 hover:bg-green-500/15',
             )}
             title="Ativar selecionados"
             aria-label="Ativar produtos selecionados"
@@ -130,8 +130,8 @@ export function ProdutosToolbar({
             className={cn(
               btnBase,
               inativarLoteLoading
-                ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
-                : 'app-border app-surface-soft text-foreground hover:bg-amber-500/15',
+                ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+                : 'app-border app-surface-soft text-jl-fg-1 hover:bg-amber-500/15',
             )}
             title="Inativar selecionados"
             aria-label="Inativar produtos selecionados"
@@ -147,8 +147,8 @@ export function ProdutosToolbar({
             className={cn(
               btnBase,
               categoriaLoteLoading
-                ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
-                : 'app-border app-surface-soft text-foreground hover:bg-blue-500/15',
+                ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+                : 'app-border app-surface-soft text-jl-fg-1 hover:bg-blue-500/15',
             )}
             title="Alterar categoria dos selecionados"
             aria-label="Alterar categoria dos produtos selecionados"
@@ -166,8 +166,8 @@ export function ProdutosToolbar({
         className={cn(
           btnBase,
           exclusaoDisabled || exclusaoLoading
-            ? 'app-border app-surface-soft text-muted-foreground opacity-60 cursor-not-allowed'
-            : 'app-border app-surface-soft text-foreground hover:bg-destructive/15 hover:border-destructive/40',
+            ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+            : 'app-border app-surface-soft text-jl-fg-1 hover:bg-destructive/15 hover:border-destructive/40',
         )}
         title={p.toolbar_excluir_title}
         aria-label={p.toolbar_excluir_aria}
@@ -179,7 +179,7 @@ export function ProdutosToolbar({
       <button
         type="button"
         onClick={onImport}
-        className={cn(btnBase, 'app-border app-surface-soft text-foreground hover:bg-accent/15')}
+        className={cn(btnBase, 'app-border app-surface-soft text-jl-fg-1 hover:bg-white/[0.06]')}
         aria-label={p.toolbar_importar_aria}
       >
         <UploadCloud className="h-4 w-4 shrink-0 text-[color:var(--accent)]" aria-hidden />
@@ -190,7 +190,7 @@ export function ProdutosToolbar({
         type="button"
         disabled={exportDisabled || exportLoading}
         onClick={onExport}
-        className={cn(btnBase, 'gerente-btn-csv border-border')}
+        className={cn(btnBase, 'gerente-btn-csv border-jl-border-1')}
         aria-label={p.toolbar_exportar_aria}
       >
         <FileDown className="h-4 w-4 shrink-0" aria-hidden />

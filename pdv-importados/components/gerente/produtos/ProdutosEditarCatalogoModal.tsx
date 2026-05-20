@@ -30,7 +30,7 @@ export type ProdutosEditarCatalogoModalProps = Readonly<{
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-4 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 first:mt-0">
+    <p className="mt-4 mb-2 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3 first:mt-0">
       {children}
     </p>
   )
@@ -163,10 +163,10 @@ export function ProdutosEditarCatalogoModal({
         className="dragon-glass-card flex max-h-[90vh] w-full max-w-lg flex-col rounded-none border shadow-xl sm:rounded-lg"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <CardHeader className="border-b border-border px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
+        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
           <div className="flex items-start gap-2">
-            <Pencil className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--accent)]" aria-hidden />
-            <CardTitle id="produtos-editar-catalogo-titulo" className="text-lg font-semibold text-foreground">
+            <Pencil className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+            <CardTitle id="produtos-editar-catalogo-titulo" className="text-lg font-semibold text-jl-fg-1">
               {p.editar_modal_titulo}
             </CardTitle>
           </div>
@@ -177,7 +177,7 @@ export function ProdutosEditarCatalogoModal({
           {/* ── Identificação ── */}
           <SectionTitle>{p.secao_identificacao}</SectionTitle>
           <div className="space-y-3">
-            <label className="block text-xs font-medium text-muted-foreground">
+            <label className="block text-xs font-medium text-jl-fg-3">
               {p.nome}
               <input
                 className={`${finIn} mt-1`}
@@ -186,7 +186,7 @@ export function ProdutosEditarCatalogoModal({
                 disabled={saving}
               />
             </label>
-            <label className="block text-xs font-medium text-muted-foreground">
+            <label className="block text-xs font-medium text-jl-fg-3">
               {p.codigo_barras}
               <input
                 className={`${finInMono} mt-1`}
@@ -197,7 +197,7 @@ export function ProdutosEditarCatalogoModal({
               />
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-xs font-medium text-muted-foreground">
+              <label className="block text-xs font-medium text-jl-fg-3">
                 {p.origem_label}
                 <select
                   className={`${finSelect} mt-1`}
@@ -210,7 +210,7 @@ export function ProdutosEditarCatalogoModal({
                   <option value="brasil_sem_nf">{p.origem_brasil_sem_nf}</option>
                 </select>
               </label>
-              <label className="block text-xs font-medium text-muted-foreground">
+              <label className="block text-xs font-medium text-jl-fg-3">
                 {p.unidade_medida}
                 <select
                   className={`${finSelect} mt-1`}
@@ -226,7 +226,7 @@ export function ProdutosEditarCatalogoModal({
                 </select>
               </label>
             </div>
-            <label className="flex items-center gap-2 text-xs text-foreground">
+            <label className="flex items-center gap-2 text-xs text-jl-fg-1">
               <input
                 type="checkbox"
                 className="h-3.5 w-3.5 rounded app-border app-surface-soft"
@@ -241,7 +241,7 @@ export function ProdutosEditarCatalogoModal({
           {/* ── Precificação ── */}
           <SectionTitle>{p.secao_precificacao}</SectionTitle>
           <div className="grid grid-cols-3 gap-3">
-            <label className="block text-xs font-medium text-muted-foreground">
+            <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_varejo}
               <input
                 type="text"
@@ -252,7 +252,7 @@ export function ProdutosEditarCatalogoModal({
                 disabled={saving}
               />
             </label>
-            <label className="block text-xs font-medium text-muted-foreground">
+            <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_atacado}
               <input
                 type="text"
@@ -264,7 +264,7 @@ export function ProdutosEditarCatalogoModal({
                 placeholder="—"
               />
             </label>
-            <label className="block text-xs font-medium text-muted-foreground">
+            <label className="block text-xs font-medium text-jl-fg-3">
               {p.qtd_gatilho_atacado}
               <input
                 type="text"
@@ -281,7 +281,7 @@ export function ProdutosEditarCatalogoModal({
           {/* ── Classificação ── */}
           <SectionTitle>{p.secao_classificacao}</SectionTitle>
           <div className="space-y-3">
-            <label className="block text-xs font-medium text-muted-foreground">
+            <label className="block text-xs font-medium text-jl-fg-3">
               {p.categoria_label}
               <select
                 className={`${finSelect} mt-1`}
@@ -296,7 +296,7 @@ export function ProdutosEditarCatalogoModal({
               </select>
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-xs font-medium text-muted-foreground">
+              <label className="block text-xs font-medium text-jl-fg-3">
                 {p.marca_label}
                 <select
                   className={`${finSelect} mt-1`}
@@ -310,7 +310,7 @@ export function ProdutosEditarCatalogoModal({
                   ))}
                 </select>
               </label>
-              <label className="block text-xs font-medium text-muted-foreground">
+              <label className="block text-xs font-medium text-jl-fg-3">
                 {p.fornecedor_label}
                 <select
                   className={`${finSelect} mt-1`}
@@ -329,7 +329,7 @@ export function ProdutosEditarCatalogoModal({
 
           {/* ── Complementar ── */}
           <SectionTitle>{p.secao_complementar}</SectionTitle>
-          <label className="block text-xs font-medium text-muted-foreground">
+          <label className="block text-xs font-medium text-jl-fg-3">
             {p.observacao}
             <textarea
               rows={3}
@@ -343,7 +343,7 @@ export function ProdutosEditarCatalogoModal({
 
         </CardContent>
 
-        <CardFooter className="flex justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
+        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
           <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={saving}>
             {m.comum.cancelar}
           </Button>

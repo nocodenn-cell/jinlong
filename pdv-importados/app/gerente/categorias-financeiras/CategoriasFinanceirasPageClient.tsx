@@ -225,7 +225,7 @@ export function CategoriasFinanceirasPageClient({ idioma, inicial }: Props) {
           </tr>
         ) : (
           rows.map((row) => (
-            <tr key={row.id} className="gerente-fin-row-hover border-b border-border/30 transition-colors last:border-0">
+            <tr key={row.id} className="gerente-fin-row-hover border-b border-white/10 transition-colors last:border-0">
               <td className="gerente-fin-cell px-3 py-3 text-sm font-medium">{row.nome}</td>
               <td className="px-3 py-3"><TipoBadge tipo={row.tipo} /></td>
               <td className="px-3 py-3"><GerenteStatusBadge status={row.ativo ? 'ATIVO' : 'INATIVO'} /></td>

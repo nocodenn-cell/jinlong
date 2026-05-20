@@ -117,10 +117,10 @@ export function ProdutosExcluirLoteModal({
         className="dragon-glass-card flex max-h-[90vh] w-full max-w-lg flex-col rounded-none border shadow-xl sm:rounded-lg"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <CardHeader className="border-b border-border px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
+        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
           <div className="flex items-start gap-2">
             <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
-            <CardTitle id="produtos-excluir-lote-titulo" className="text-lg font-semibold text-foreground">
+            <CardTitle id="produtos-excluir-lote-titulo" className="text-lg font-semibold text-jl-fg-1">
               {p.exclusao_modal_titulo}
             </CardTitle>
           </div>
@@ -128,7 +128,7 @@ export function ProdutosExcluirLoteModal({
         <CardContent className="space-y-4 overflow-y-auto px-4 py-4 text-sm sm:px-6">
           {phase === 'done' && resumo ? (
             <>
-              <ul className="list-inside list-disc space-y-1 text-foreground">
+              <ul className="list-inside list-disc space-y-1 text-jl-fg-1">
                 {resumo.removidos > 0 ? (
                   <li>{interpolate(p.exclusao_resumo_removidos, { n: resumo.removidos })}</li>
                 ) : null}
@@ -140,7 +140,7 @@ export function ProdutosExcluirLoteModal({
                 ) : null}
               </ul>
               {resumo.falhas.length > 0 ? (
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-jl-fg-1">
                   <p className="font-semibold text-amber-900 dark:text-amber-100">{p.exclusao_falhas_titulo}</p>
                   <ul className="mt-2 max-h-36 list-inside list-disc space-y-1 overflow-y-auto font-mono text-[11px]">
                     {resumo.falhas.slice(0, 30).map((f) => (
@@ -150,21 +150,21 @@ export function ProdutosExcluirLoteModal({
                     ))}
                   </ul>
                   {resumo.falhas.length > 30 ? (
-                    <p className="mt-1 text-[11px] text-muted-foreground">…</p>
+                    <p className="mt-1 text-[11px] text-jl-fg-3">…</p>
                   ) : null}
                 </div>
               ) : null}
             </>
           ) : (
-            <p className="leading-relaxed text-muted-foreground">{p.exclusao_modal_descricao}</p>
+            <p className="leading-relaxed text-jl-fg-3">{p.exclusao_modal_descricao}</p>
           )}
           {phase === 'confirm' ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-jl-fg-3">
               {interpolate(p.exclusao_modal_contagem, { n: produtoIds.length })}
             </p>
           ) : null}
         </CardContent>
-        <CardFooter className="flex justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
+        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
           {phase === 'done' ? (
             <Button type="button" className="app-btn-accent" onClick={fechar}>
               {p.exclusao_modal_fechar}

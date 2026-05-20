@@ -271,7 +271,7 @@ export function EstoqueGerentePageClient({
         onClick={() => toggleOrdem(col)}
         className={cn(
           'inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-left font-semibold uppercase tracking-wide transition-colors',
-          ativo ? 'text-foreground' : 'app-muted hover:text-foreground',
+          ativo ? 'text-jl-fg-1' : 'app-muted hover:text-jl-fg-1',
         )}
       >
         {label}
@@ -304,21 +304,21 @@ export function EstoqueGerentePageClient({
 
       <GerenteStickyToolbar className="mb-4 py-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-jl-fg-3">
             {m.estoque.buscar_label}
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder={m.estoque.buscar_placeholder}
-              className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             />
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
             {m.produtos.categoria}
             <select
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
-              className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             >
               <option value="">{m.estoque.filtro_todas_categorias}</option>
               {categorias.map((c) => (
@@ -328,12 +328,12 @@ export function EstoqueGerentePageClient({
               ))}
             </select>
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
             {m.produtos.origem_label}
             <select
               value={origem}
               onChange={(e) => setOrigem(e.target.value)}
-              className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             >
               <option value="">{m.produtos.filtro_todas_origens}</option>
               <option value="china_manual">{m.produtos.origem_china}</option>
@@ -342,12 +342,12 @@ export function EstoqueGerentePageClient({
             </select>
           </label>
           <div className="flex items-end gap-2">
-            <label className="flex w-[130px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+            <label className="flex w-[130px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
               {m.produtos.pag_linhas_por_pagina}
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -385,7 +385,7 @@ export function EstoqueGerentePageClient({
                 checked={todosSelecionadosPagina}
                 onChange={alternarSelecionarPagina}
                 disabled={rows.length === 0}
-                className="h-4 w-4 rounded border-border"
+                className="h-4 w-4 rounded border-jl-border-1"
                 aria-label={m.estoque.selecionar_pagina_aria}
               />
             ),
@@ -433,7 +433,7 @@ export function EstoqueGerentePageClient({
                     type="checkbox"
                     checked={selected.has(row.id)}
                     onChange={() => alternarLinha(row)}
-                    className="h-4 w-4 rounded border-border"
+                    className="h-4 w-4 rounded border-jl-border-1"
                     aria-label={m.estoque.selecionar_linha_aria}
                   />
                 </td>
@@ -453,11 +453,11 @@ export function EstoqueGerentePageClient({
                 </td>
                 <td className="px-3 py-2.5">
                   {semLinha ? (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-jl-fg-3">—</span>
                   ) : critico ? (
                     <Badge variant="destructive">{m.estoque.badge_critico}</Badge>
                   ) : (
-                    <Badge variant="secondary" className="border border-border bg-emerald-500/15 text-emerald-800 dark:text-emerald-200">
+                    <Badge variant="secondary" className="border border-jl-border-1 bg-emerald-500/15 text-emerald-300">
                       {m.estoque.badge_normal}
                     </Badge>
                   )}
@@ -489,7 +489,7 @@ export function EstoqueGerentePageClient({
                           const r = await criarLinhaEstoque({ produto_id: row.id })
                           if (r !== null) await refetch()
                         }}
-                        className="gerente-chip-action rounded-lg border border-border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-55"
+                        className="gerente-chip-action rounded-lg border border-jl-border-1 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-55"
                       >
                         {m.estoque.inicializar_estoque}
                       </button>
@@ -504,7 +504,7 @@ export function EstoqueGerentePageClient({
 
       {!loading && total > 0 ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-jl-fg-3">
             {interpolateTemplate(m.produtos.pag_mostrar, { visiveis: String(rows.length), total: String(total) })}
           </p>
           <div className="flex flex-wrap items-center gap-2">
@@ -512,19 +512,19 @@ export function EstoqueGerentePageClient({
               type="button"
               disabled={pageIndex <= 0}
               onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-jl-border-1 bg-jl-surface-elev px-3 py-1.5 text-xs font-medium disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
               {m.produtos.pag_prev}
             </button>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-jl-fg-3">
               {interpolateTemplate(m.produtos.pag_info, { atual: String(pageSegura), total: String(pageCount) })}
             </span>
             <button
               type="button"
               disabled={pageIndex + 1 >= pageCount}
               onClick={() => setPageIndex((p) => p + 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-jl-border-1 bg-jl-surface-elev px-3 py-1.5 text-xs font-medium disabled:opacity-40"
             >
               {m.produtos.pag_next}
               <ChevronRight className="h-4 w-4" aria-hidden />
