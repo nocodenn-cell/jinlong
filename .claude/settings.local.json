@@ -33,7 +33,15 @@
       "Bash(python -c \"import sys,json; comments=json.load\\(sys.stdin\\); [print\\(c['body'][:500]\\) for c in comments if 'sonar' in c.get\\('body',''\\).lower\\(\\) or 'duplicat' in c.get\\('body',''\\).lower\\(\\)]\")",
       "WebFetch(domain:sonarcloud.io)",
       "Bash(git fetch *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(loja_id: lojaId)",
+      "Bash(produtos)",
+      "Bash(createWithDefaultEstoque)",
+      "Bash(git -C /c/Naturecode/fastproduct add pdv-importados/lib/gerente/parseProdutoImportCsv.test.ts)",
+      "Bash(git -C /c/Naturecode/fastproduct commit -m ' *)",
+      "Bash(git -C /c/Naturecode/fastproduct push origin fix/pdv-sonar-build-unblock)",
+      "Bash(git -C /c/Naturecode/fastproduct add backend/scripts/sync-outbox-anti-replay-diagnostic.ps1)",
+      "Bash(git -C /c/Naturecode/fastproduct add backend/supabase/migrations/105_suspensao_vendas.sql backend/supabase/migrations/099_fiscal_enqueue_valida_tipo_venda.sql)"
     ]
   }
 }

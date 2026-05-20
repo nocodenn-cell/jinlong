@@ -21,7 +21,7 @@ export default async function CaixaPage() {
   const { data: usuarioData } = user
     ? await supabase.from('usuarios').select('perfil').eq('id', user.id).maybeSingle()
     : { data: null }
-  const perfil = usuarioData?.perfil ?? 'OPERADOR'
+  const perfil = usuarioData?.perfil ?? null
 
   return <CaixaPageClient messages={messages} idioma={idioma} operadorLabel={operadorLabel} perfil={perfil} />
 }
