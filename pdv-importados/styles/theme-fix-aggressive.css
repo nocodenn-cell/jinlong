@@ -3,7 +3,7 @@
  *
  * Anchors to --surface* / --border from theme-oriental.css (already loaded
  * globally) and raw night-scale values for base/elev layers that have no
- * matching variable yet.  Theme-aware: novem (light) overrides below.
+ * matching variable yet.  System is locked to dark mode (noturno).
  */
 
 :root {

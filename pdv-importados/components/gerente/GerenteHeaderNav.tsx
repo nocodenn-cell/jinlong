@@ -3,8 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { Mensagens } from '@/i18n/getMessages'
-import { useGerenteUiTheme } from '@/components/gerente/GerenteThemeContext'
-import { isGerenteLightChrome } from '@/components/gerente/gerenteUiTheme'
 import {
   GERENTE_NAV_TOPICS,
   gerenteNavLabel,
@@ -23,8 +21,6 @@ function linkAtivo(href: string, pathname: string | null): boolean {
 
 export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
   const pathname = usePathname()
-  const { theme } = useGerenteUiTheme()
-  const light = isGerenteLightChrome()
   const topicAtivoId = gerenteNavTopicIdForPathname(pathname)
   const topicAtivo = GERENTE_NAV_TOPICS.find((t) => t.id === topicAtivoId) ?? GERENTE_NAV_TOPICS[0]
   const mostrarSubNav = topicAtivo.items.length > 1
@@ -33,7 +29,7 @@ export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
     const ativo = topicId === topicAtivoId
     return cn(
       'whitespace-nowrap rounded-md border px-2.5 py-1 text-[13px] font-semibold transition-colors sm:text-[14px]',
-      light ? 'app-muted hover:app-accent-text' : 'app-muted hover:app-accent-text',
+      'app-muted hover:app-accent-text',
       ativo
         ? 'border-[color:var(--accent)] app-accent-text bg-[color:var(--accent)]/10'
         : 'border-transparent hover:border-[color:var(--accent)]/35',
@@ -45,7 +41,7 @@ export function GerenteHeaderNav({ m }: Readonly<{ m: Mensagens }>) {
     const ativo = linkAtivo(href, pathname)
     return cn(
       'whitespace-nowrap border-b-2 border-transparent pb-0.5 text-[13px] font-medium transition-colors sm:text-[14px]',
-      light ? 'app-muted hover:app-accent-text' : 'app-muted hover:app-accent-text',
+      'app-muted hover:app-accent-text',
       ativo && 'border-[color:var(--accent)] app-accent-text',
     )
   }

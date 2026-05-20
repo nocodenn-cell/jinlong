@@ -7,9 +7,6 @@ import { Logo } from '@/components/branding/Logo'
 import { GerenteHeaderNav } from '@/components/gerente/GerenteHeaderNav'
 import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
-import { GerenteThemeToggle } from '@/components/gerente/GerenteThemeToggle'
-import { useGerenteUiTheme } from '@/components/gerente/GerenteThemeContext'
-import { isGerenteLightChrome } from '@/components/gerente/gerenteUiTheme'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
@@ -31,10 +28,7 @@ type Props = Readonly<{
 function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props) {
   const shellRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
-  const { theme } = useGerenteUiTheme()
-  const chromeLight = isGerenteLightChrome()
   const podeTrocarIdioma = isPerfilPainelGerencial(normalizePerfilUsuario(perfil))
-  const langToggleVariant = chromeLight ? 'dragon-light' : 'dragon'
   const roleBadgeLabel =
     perfil === 'DONO'
       ? m.gerente.badge_dono
@@ -67,7 +61,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
     const ro = new ResizeObserver(applyStickyTop)
     ro.observe(header)
     return () => ro.disconnect()
-  }, [theme, idioma])
+  }, [idioma])
 
   return (
     <div
@@ -93,11 +87,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
         )}
       >
         <div
-          className={cn(
-            'pointer-events-none absolute inset-0 z-0 dragon-glass-backdrop',
-            theme === 'noturno' && 'opacity-[0.82]',
-            chromeLight && 'opacity-[0.55]',
-          )}
+          className="pointer-events-none absolute inset-0 z-0 dragon-glass-backdrop opacity-[0.82]"
           aria-hidden
         />
         <div className="relative z-[1] flex flex-wrap items-start justify-between gap-3 px-4 py-2.5 sm:px-6">
@@ -124,13 +114,8 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
             <span className={roleBadgeClass}>{roleBadgeLabel}</span>
-            <GerenteThemeToggle
-              labelDark={m.gerente.theme_escuro}
-              labelLight={m.gerente.theme_claro}
-              ariaLabel={m.gerente.theme_toggle_aria}
-            />
             <GerenteTableDensityToggle m={m} />
-            {podeTrocarIdioma ? <LanguageToggle idiomaAtual={idioma} variant={langToggleVariant} /> : null}
+            {podeTrocarIdioma ? <LanguageToggle idiomaAtual={idioma} variant="dragon" /> : null}
             <SignOutButton
               label={m.comum.sair}
               className={cn(

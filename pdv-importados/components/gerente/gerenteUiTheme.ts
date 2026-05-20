@@ -1,6 +1,6 @@
 export const GERENTE_UI_THEME_STORAGE_KEY = 'dragonpos-gerente-ui-theme'
 
-export type GerenteUiTheme = 'noturno' | 'novem'
+export type GerenteUiTheme = 'noturno'
 
 export function parseGerenteUiTheme(): GerenteUiTheme {
   return 'noturno'
