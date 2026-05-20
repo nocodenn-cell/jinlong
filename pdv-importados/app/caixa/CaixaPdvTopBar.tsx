@@ -112,7 +112,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[11rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-border bg-muted/30",
+              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
             )}
             title={turnoText}
           >
@@ -121,7 +121,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[14rem] truncate rounded-md border px-2 py-1 font-medium",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-border bg-muted/30",
+              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
             )}
             title={operadorText}
           >
@@ -130,7 +130,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[12rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-border bg-muted/30",
+              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
             )}
             title={fundoText}
           >

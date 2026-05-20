@@ -120,7 +120,7 @@ export function CaixaPdvOperacoesButtons({
             "w-full text-xs sm:text-sm",
             classic
               ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              : "bg-secondary text-secondary-foreground border border-border",
+              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]",
           )}
           aria-expanded={sistemaAberto}
           aria-haspopup="dialog"
@@ -138,21 +138,21 @@ export function CaixaPdvOperacoesButtons({
             aria-labelledby={tituloPainelId}
             aria-describedby={descricaoPainelId}
             tabIndex={-1}
-            className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[min(70vh,24rem)] overflow-y-auto rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none text-xs sm:text-sm"
+            className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[min(70vh,24rem)] overflow-y-auto rounded-md border border-jl-border-1 bg-jl-surface-elev p-3 text-jl-fg-1 shadow-md outline-none text-xs sm:text-sm"
           >
             <p id={descricaoPainelId} className="sr-only">
               {m.caixa.aria_pd_sistema_catalogo}
             </p>
-            <div className="mb-2 flex items-start justify-between gap-2 border-b border-border pb-2">
+            <div className="mb-2 flex items-start justify-between gap-2 border-b border-jl-border-1 pb-2">
               <h2
                 id={tituloPainelId}
-                className="font-semibold text-foreground leading-tight"
+                className="font-semibold text-jl-fg-1 leading-tight"
               >
                 {m.caixa.pdv_sistema_catalogo_trigger}
               </h2>
               <button
                 type="button"
-                className="shrink-0 rounded-sm px-2 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="shrink-0 rounded-sm px-2 py-0.5 text-jl-fg-3 hover:bg-white/10 hover:text-jl-fg-1"
                 aria-label={m.caixa.aria_pd_sistema_catalogo_fechar}
                 onClick={fecharSistema}
               >
@@ -162,15 +162,14 @@ export function CaixaPdvOperacoesButtons({
             <div className="space-y-3">
               {turnoResumo ? (
                 <p className="text-foreground/90 leading-snug">{turnoResumo}</p>
-              ) : null}
-              <p className="text-foreground/90 leading-snug">
-                {m.caixa.atalhos_placeholder}
-              </p>
-              <p className="text-foreground/90 leading-snug">
-                {m.caixa.regras_catalogo}{" "}
-                <code className="text-muted-foreground">regras_preco</code>
-                {carregandoRegras ? ` · ${m.caixa.regras_carregando}` : ""}
-              </p>
+              ) : (
+                <p className="text-foreground/60 leading-snug text-xs italic">
+                  {m.caixa.topbar_turno_fechado}
+                </p>
+              )}
+              {carregandoRegras && (
+                <p className="text-xs text-muted-foreground">{m.caixa.regras_carregando}</p>
+              )}
             </div>
           </div>
         ) : null}
@@ -182,7 +181,7 @@ export function CaixaPdvOperacoesButtons({
           className={cn(
             classic
               ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              : "bg-secondary text-secondary-foreground border border-border",
+              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]",
           )}
           onClick={onAbrirSuprimento}
           disabled={!caixaAberto || movimentandoCaixa || finalizando}
@@ -215,7 +214,7 @@ export function CaixaPdvOperacoesButtons({
             "inline-flex items-center gap-2",
             classic
               ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
-              : "bg-yellow-900/30 text-yellow-400 border border-yellow-700",
+              : "border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
           )}
           onClick={onValidarGerente}
           disabled={validandoGerente || movimentandoCaixa}

@@ -159,16 +159,16 @@ export function CaixaFooter({
   }
 
   return (
-    <footer className="shrink-0 border-t border-border backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-card">
+    <footer className="shrink-0 border-t border-jl-border-1 backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-jl-surface-elev">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-foreground/80">{m.caixa.bloco_operacao_atual}</span>
+            <span className="text-xs font-semibold text-jl-fg-3">{m.caixa.bloco_operacao_atual}</span>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="secondary"
-                className="bg-secondary text-secondary-foreground border border-border"
+                className="border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]"
                 onClick={onAbrirSuprimento}
                 disabled={!caixaAberto || movimentandoCaixa || finalizando}
                 aria-busy={movimentandoCaixa}
@@ -190,19 +190,19 @@ export function CaixaFooter({
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-foreground/80">{m.caixa.bloco_autorizacao}</span>
+            <span className="text-xs font-semibold text-jl-fg-3">{m.caixa.bloco_autorizacao}</span>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="secondary"
-                className="inline-flex items-center gap-2 bg-yellow-900/30 text-yellow-400 border border-yellow-700"
+                className="inline-flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
                 onClick={onValidarGerente}
                 disabled={validandoGerente || movimentandoCaixa}
                 aria-busy={validandoGerente}
               >
                 {!gerenteValidadoAte ? (
                   <ImperialSealIcon
-                    className="h-4 w-4 shrink-0 app-accent-text"
+                    className="h-4 w-4 shrink-0 text-amber-400"
                     title={m.caixa.aria_selo_gerente}
                     pulse
                   />
@@ -213,11 +213,11 @@ export function CaixaFooter({
               </Button>
             </div>
           </div>
-          <span className="text-sm text-foreground/85">{resumoItens}</span>
+          <span className="text-sm text-jl-fg-2">{resumoItens}</span>
           {gerenteLinha && (
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-amber-400">
               <ImperialSealIcon
-                className="h-5 w-5 shrink-0 text-[color:var(--caixa-imperial-red,#b91c1c)]"
+                className="h-5 w-5 shrink-0 text-amber-400"
                 title={m.caixa.aria_selo_gerente}
               />
               {gerenteLinha}
@@ -226,22 +226,22 @@ export function CaixaFooter({
         </div>
 
         <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-6 md:gap-8">
-          <div className="w-full text-right text-xs font-semibold uppercase tracking-wide text-foreground/70">
+          <div className="w-full text-right text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
             {m.caixa.bloco_resumo_financeiro}
           </div>
-          <div className="text-right text-sm text-foreground/85">
+          <div className="text-right text-sm text-jl-fg-2">
             <div>{m.caixa.bruto}</div>
-            <div className="text-lg font-semibold tabular-nums text-foreground">
+            <div className="text-lg font-semibold tabular-nums text-jl-fg-1">
               {moedaPrefixo} {fmt(totalBruto)}
             </div>
           </div>
-          <div className="text-right text-sm text-primary">
+          <div className="text-right text-sm text-amber-400">
             <div>{m.caixa.descontos_regras}</div>
             <div className="text-lg font-bold tabular-nums">
               - {moedaPrefixo} {fmt(totalDesconto)}
             </div>
             {economiaPrecoAtacadoAuto > 0.005 && (
-              <div className="text-xs font-normal text-foreground/80 mt-0.5 max-w-[14rem] ml-auto">
+              <div className="text-xs font-normal text-jl-fg-3 mt-0.5 max-w-[14rem] ml-auto">
                 {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
                   valor: fmt(economiaPrecoAtacadoAuto),
                 })}
@@ -249,7 +249,7 @@ export function CaixaFooter({
             )}
           </div>
           {descontoGerentePercentual > 0 && (
-            <div className="text-right text-sm text-primary">
+            <div className="text-right text-sm text-amber-400">
               <div>
                 {caixaFmt(m.caixa.desconto_gerente_label, {
                   pct: descontoGerentePercentual.toFixed(2),
@@ -264,11 +264,11 @@ export function CaixaFooter({
             <div className="w-full min-w-[12rem] max-w-md">{metodoPagamentoPanel}</div>
           ) : null}
           <div className="text-right min-w-[7rem]">
-            <div className="text-sm font-medium text-foreground/90">{m.caixa.total_pagar}</div>
+            <div className="text-sm font-medium text-jl-fg-2">{m.caixa.total_pagar}</div>
             <div
               data-testid="caixa-total-liquido"
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-2xl sm:text-3xl font-extrabold tabular-nums text-primary"
+              className="text-2xl sm:text-3xl font-extrabold tabular-nums text-amber-400"
             >
               {moedaPrefixo} {fmt(totalLiquidoComGerente)}
             </div>
@@ -276,7 +276,7 @@ export function CaixaFooter({
           <div className="pl-1">
             <Button
               type="button"
-              className="h-11 min-w-[11rem] bg-primary text-primary-foreground text-base font-bold hover:bg-primary/90"
+              className="app-btn-accent h-11 min-w-[11rem] text-base font-bold"
               onClick={onFinalizar}
               disabled={
                 finalizando || itensLength === 0 || buscando || carregandoRegras

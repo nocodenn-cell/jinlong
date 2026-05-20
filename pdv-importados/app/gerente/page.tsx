@@ -126,11 +126,11 @@ export default async function GerenteInicioPage() {
       {erroResumo && (
         <div
           role="alert"
-          className="mt-6 flex items-start gap-3 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground"
+          className="mt-6 flex items-start gap-3 rounded-lg border border-jl-border-1 dragon-glass-card p-4 text-sm text-jl-fg-3"
         >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-jl-fg-1" aria-hidden />
           <div>
-            <div className="font-medium text-foreground">{di.erro_kpis_titulo}</div>
+            <div className="font-medium text-jl-fg-1">{di.erro_kpis_titulo}</div>
             <div className="mt-1">{erroResumo}</div>
           </div>
         </div>
@@ -170,13 +170,13 @@ export default async function GerenteInicioPage() {
         <MetricCard title={di.kpi_margem_hoje} value={margemRotulo} icon={Percent} />
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground">{m.gerente.vs_dia_anterior}</p>
+      <p className="mt-2 text-xs text-jl-fg-3">{m.gerente.vs_dia_anterior}</p>
 
       <section className="mt-8" aria-labelledby="dashboard-semana-heading">
-        <h2 id="dashboard-semana-heading" className="text-sm font-semibold text-foreground">
+        <h2 id="dashboard-semana-heading" className="text-sm font-semibold text-jl-fg-1">
           {di.secao_semana_titulo}
         </h2>
-        <p className="mt-1 text-xs text-muted-foreground">{di.secao_semana_subtitulo}</p>
+        <p className="mt-1 text-xs text-jl-fg-3">{di.secao_semana_subtitulo}</p>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <MetricCard
             title={di.kpi_faturamento_semana}
@@ -206,23 +206,23 @@ export default async function GerenteInicioPage() {
             }}
           />
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">{m.gerente.vs_semana_anterior}</p>
+        <p className="mt-2 text-xs text-jl-fg-3">{m.gerente.vs_semana_anterior}</p>
       </section>
 
       <section
         aria-labelledby="dashboard-sparkline-heading"
-        className="mt-8 rounded-lg border border-border bg-card p-5"
+        className="mt-8 rounded-lg border border-jl-border-1 dragon-glass-card p-5"
       >
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 id="dashboard-sparkline-heading" className="text-sm font-semibold text-foreground">
+            <h2 id="dashboard-sparkline-heading" className="text-sm font-semibold text-jl-fg-1">
               {di.sparkline_titulo}
             </h2>
-            <p className="mt-1 text-xs text-muted-foreground">{di.sparkline_subtitulo}</p>
+            <p className="mt-1 text-xs text-jl-fg-3">{di.sparkline_subtitulo}</p>
           </div>
           <div className="text-right">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">{di.sparkline_pico}</div>
-            <div className="text-sm font-semibold text-foreground tabular-nums">
+            <div className="text-xs uppercase tracking-wide text-jl-fg-3">{di.sparkline_pico}</div>
+            <div className="text-sm font-semibold text-jl-fg-1 tabular-nums">
               {formatBRL(picoFaturamentoHora(resumo.serie_horaria_hoje), locale)}
             </div>
           </div>
@@ -232,7 +232,7 @@ export default async function GerenteInicioPage() {
             ariaLabel={di.sparkline_aria}
             points={resumo.serie_horaria_hoje.map((p) => ({ x: p.hora, y: p.faturamento }))}
           />
-          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+          <div className="mt-1 flex justify-between text-[10px] text-jl-fg-3">
             <span>{di.sparkline_eixo_00}</span>
             <span>{di.sparkline_eixo_06}</span>
             <span>{di.sparkline_eixo_12}</span>
@@ -245,36 +245,36 @@ export default async function GerenteInicioPage() {
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <section
           aria-labelledby="dashboard-estoque-heading"
-          className="rounded-lg border border-border bg-card p-5"
+          className="rounded-lg border border-jl-border-1 dragon-glass-card p-5"
         >
           <div className="flex items-center gap-2">
-            <PackageX className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <h2 id="dashboard-estoque-heading" className="text-sm font-semibold text-foreground">
+            <PackageX className="h-4 w-4 text-jl-fg-3" aria-hidden />
+            <h2 id="dashboard-estoque-heading" className="text-sm font-semibold text-jl-fg-1">
               {di.estoque_critico_titulo}
             </h2>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{di.estoque_critico_subtitulo}</p>
+          <p className="mt-1 text-xs text-jl-fg-3">{di.estoque_critico_subtitulo}</p>
           {resumo.estoque_critico.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">{di.estoque_critico_empty}</p>
+            <p className="mt-4 text-sm text-jl-fg-3">{di.estoque_critico_empty}</p>
           ) : (
-            <ul className="mt-4 divide-y divide-border">
+            <ul className="mt-4 divide-y divide-jl-border-1">
               {resumo.estoque_critico.map((item) => (
                 <li key={item.id} className="flex items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-foreground">{item.nome}</div>
+                    <div className="truncate text-sm font-medium text-jl-fg-1">{item.nome}</div>
                     {item.sku && (
-                      <div className="truncate text-xs text-muted-foreground">{item.sku}</div>
+                      <div className="truncate text-xs text-jl-fg-3">{item.sku}</div>
                     )}
                   </div>
                   <div className="shrink-0 text-right tabular-nums">
-                    <div className="text-sm font-semibold text-foreground">
+                    <div className="text-sm font-semibold text-jl-fg-1">
                       {formatNumberLocale(item.quantidade_atual, locale)}
-                      <span className="text-muted-foreground">
+                      <span className="text-jl-fg-3">
                         {' '}
                         / {formatNumberLocale(item.estoque_minimo, locale)}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-jl-fg-3">
                       {interpolateTemplate(di.estoque_critico_deficit, {
                         valor: formatNumberLocale(item.deficit, locale),
                       })}
@@ -287,7 +287,7 @@ export default async function GerenteInicioPage() {
           <div className="mt-4">
             <Link
               href={painelGerencialHref('estoque')}
-              className="text-xs font-medium text-foreground underline-offset-4 hover:underline"
+              className="text-xs font-medium text-jl-fg-2 underline-offset-4 hover:underline"
             >
               {di.estoque_critico_ver_todos} →
             </Link>
@@ -296,28 +296,28 @@ export default async function GerenteInicioPage() {
 
         <section
           aria-labelledby="dashboard-atividades-heading"
-          className="rounded-lg border border-border bg-card p-5"
+          className="rounded-lg border border-jl-border-1 dragon-glass-card p-5"
         >
           <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <h2 id="dashboard-atividades-heading" className="text-sm font-semibold text-foreground">
+            <Activity className="h-4 w-4 text-jl-fg-3" aria-hidden />
+            <h2 id="dashboard-atividades-heading" className="text-sm font-semibold text-jl-fg-1">
               {di.atividades_titulo}
             </h2>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{di.atividades_subtitulo}</p>
+          <p className="mt-1 text-xs text-jl-fg-3">{di.atividades_subtitulo}</p>
           {resumo.atividades_recentes.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">{di.atividades_empty}</p>
+            <p className="mt-4 text-sm text-jl-fg-3">{di.atividades_empty}</p>
           ) : (
-            <ul className="mt-4 divide-y divide-border">
+            <ul className="mt-4 divide-y divide-jl-border-1">
               {resumo.atividades_recentes.map((ativ, idx) => {
                 const Icon = ATIVIDADE_ICON[ativ.tipo] ?? Receipt
                 const linha = formatLinhaAtividade(di, locale, ativ)
                 return (
                   <li key={`${ativ.data_hora}-${idx}`} className="flex items-start gap-3 py-3">
-                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-jl-fg-3" aria-hidden />
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm text-foreground">{linha}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                      <div className="text-sm text-jl-fg-1">{linha}</div>
+                      <div className="mt-0.5 text-xs text-jl-fg-3 tabular-nums">
                         {formatDateTimeOrDash(ativ.data_hora, locale)}
                       </div>
                     </div>
@@ -331,22 +331,22 @@ export default async function GerenteInicioPage() {
 
       {perfil === 'DONO' && (
         <div className="mt-10">
-          <h2 className="text-lg font-semibold text-foreground">{m.gerente.secao_dono_titulo}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{m.gerente.secao_dono_subtitulo}</p>
+          <h2 className="text-lg font-semibold text-jl-fg-1">{m.gerente.secao_dono_titulo}</h2>
+          <p className="mt-2 text-sm text-jl-fg-3">{m.gerente.secao_dono_subtitulo}</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Link
               href="/admin/dashboard"
-              className="block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="block rounded-lg border border-jl-border-1 dragon-glass-card p-4 transition-colors hover:bg-white/[0.06]"
             >
-              <div className="text-sm font-semibold text-foreground">{m.gerente.secao_dono_admin_titulo}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{m.gerente.secao_dono_admin_desc}</div>
+              <div className="text-sm font-semibold text-jl-fg-1">{m.gerente.secao_dono_admin_titulo}</div>
+              <div className="mt-1 text-xs text-jl-fg-3">{m.gerente.secao_dono_admin_desc}</div>
             </Link>
             <Link
               href={painelGerencialHref('financeiro')}
-              className="block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="block rounded-lg border border-jl-border-1 dragon-glass-card p-4 transition-colors hover:bg-white/[0.06]"
             >
-              <div className="text-sm font-semibold text-foreground">{m.gerente.secao_dono_fin_titulo}</div>
-              <div className="mt-1 text-xs text-muted-foreground">{m.gerente.secao_dono_fin_desc}</div>
+              <div className="text-sm font-semibold text-jl-fg-1">{m.gerente.secao_dono_fin_titulo}</div>
+              <div className="mt-1 text-xs text-jl-fg-3">{m.gerente.secao_dono_fin_desc}</div>
             </Link>
           </div>
         </div>

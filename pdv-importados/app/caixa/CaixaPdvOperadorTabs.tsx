@@ -89,7 +89,7 @@ export function CaixaPdvOperadorTabs({
         className={
           classicChrome
             ? "flex shrink-0 gap-1 border-b border-border/80 bg-muted/25 px-0.5 pt-1"
-            : "flex shrink-0 gap-1 rounded-lg border border-border bg-muted/40 p-1"
+            : "flex shrink-0 gap-1 rounded-lg border border-jl-border-1 bg-jl-surface-base p-1"
         }
       >
         {tabs.map((t) => {
@@ -100,13 +100,13 @@ export function CaixaPdvOperadorTabs({
               ? "relative z-[1] -mb-px flex-1 rounded-t-md border-x-0 border-b-2 border-b-background border-t-2 border-t-primary bg-background px-2 py-2 text-center text-sm font-semibold text-foreground shadow-[0_-1px_6px_rgba(0,0,0,0.05)]"
               : "flex-1 rounded-t-md border border-transparent bg-muted/60 px-2 py-2 text-center text-sm font-medium text-foreground/80 ring-1 ring-border/70 hover:bg-muted/90 hover:text-foreground"
             : selected
-              ? "flex-1 rounded-md border border-border bg-card px-2 py-2 text-center text-sm font-semibold text-foreground shadow-sm"
-              : "flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              ? "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-elev px-2 py-2 text-center text-sm font-semibold text-jl-fg-1 shadow-sm"
+              : "flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-jl-fg-3 hover:bg-white/[0.06] hover:text-jl-fg-1"
           const atalhoClass = classicChrome
             ? selected
               ? "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-foreground/70"
               : "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-foreground/55"
-            : "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-muted-foreground"
+            : "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-jl-fg-3"
           return (
             <button
               key={t.id}
@@ -153,18 +153,18 @@ export function CaixaPdvOperadorTabs({
             tab === "cliente"
               ? classicChrome
                 ? "flex flex-1 flex-col gap-3 rounded-lg border-x border-b border-border/60 border-t-2 border-t-primary bg-card/60 p-4 shadow-sm"
-                : "flex flex-1 flex-col gap-3 rounded-lg border border-border bg-card/60 p-4"
+                : "flex flex-1 flex-col gap-3 rounded-lg border border-jl-border-1 bg-jl-surface-elev p-4"
               : "hidden"
           }
         >
           <div>
-            <h3 className="text-sm font-semibold text-foreground">{m.caixa.pdv_cliente_cupom_titulo}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.caixa.pdv_cliente_sem_cadastro_desc}</p>
+            <h3 className={`text-sm font-semibold ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>{m.caixa.pdv_cliente_cupom_titulo}</h3>
+            <p className={`mt-2 text-sm leading-relaxed ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>{m.caixa.pdv_cliente_sem_cadastro_desc}</p>
           </div>
-          <dl className="space-y-2 border-t border-border pt-3 text-sm">
+          <dl className={`space-y-2 border-t pt-3 text-sm ${classicChrome ? "border-border" : "border-jl-border-1"}`}>
             <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">{m.caixa.pdv_cliente_operador_label}</dt>
-              <dd className="max-w-[65%] text-right font-medium text-foreground break-words">{operadorLabel}</dd>
+              <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.pdv_cliente_operador_label}</dt>
+              <dd className={`max-w-[65%] text-right font-medium break-words ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>{operadorLabel}</dd>
             </div>
           </dl>
         </div>
@@ -178,17 +178,19 @@ export function CaixaPdvOperadorTabs({
             tab === "pgto"
               ? classicChrome
                 ? "flex flex-1 flex-col gap-3 rounded-lg border-x border-b border-border/60 border-t-2 border-t-primary bg-card/60 p-4 shadow-sm overflow-y-auto"
-                : "flex flex-1 flex-col gap-3 rounded-lg border border-border bg-card/60 p-4 overflow-y-auto"
+                : "flex flex-1 flex-col gap-3 rounded-lg border border-jl-border-1 bg-jl-surface-elev p-4 overflow-y-auto"
               : "hidden"
           }
         >
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">{m.caixa.pdv_pgto_parcelas_titulo}</h3>
+            <h3 className={`text-sm font-semibold ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>{m.caixa.pdv_pgto_parcelas_titulo}</h3>
             {pagamentos.length > 1 && (
               <button
                 type="button"
                 onClick={onAutoCompletar}
-                className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[10px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
+                className={classicChrome
+                  ? "rounded-md border border-border bg-muted/60 px-2 py-1 text-[10px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
+                  : "rounded-md border border-jl-border-1 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold text-jl-fg-2 transition hover:bg-white/[0.10] hover:text-jl-fg-1"}
               >
                 {m.caixa.pdv_pgto_auto_completar}
               </button>
@@ -201,14 +203,16 @@ export function CaixaPdvOperadorTabs({
             {pagamentos.map((p, idx) => (
               <div
                 key={`parcela-${idx}`}
-                className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-muted/20 p-2.5"
+                className={`flex flex-col gap-1.5 rounded-lg border p-2.5 ${classicChrome ? "border-border/60 bg-muted/20" : "border-jl-border-1 bg-white/[0.04]"}`}
               >
                 <div className="flex items-center gap-2">
                   <select
                     value={p.formaPagamento}
                     onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
                     aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
-                    className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    className={classicChrome
+                      ? "flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                      : "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-xs font-medium text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"}
                   >
                     {formasDisponiveis.map((f) => (
                       <option key={f} value={f}>
@@ -228,7 +232,7 @@ export function CaixaPdvOperadorTabs({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="shrink-0 text-[10px] font-medium text-muted-foreground">{moedaPrefixo}</span>
+                  <span className={`shrink-0 text-[10px] font-medium ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>{moedaPrefixo}</span>
                   <input
                     type="number"
                     inputMode="decimal"
@@ -241,7 +245,9 @@ export function CaixaPdvOperadorTabs({
                     }}
                     aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
                     data-caixa-atalho-bloqueado="true"
-                    className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    className={classicChrome
+                      ? "w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                      : "w-full rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"}
                   />
                 </div>
               </div>
@@ -254,26 +260,28 @@ export function CaixaPdvOperadorTabs({
               type="button"
               onClick={() => onAdicionarParcela()}
               aria-label={m.caixa.aria_adicionar_parcela}
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              className={classicChrome
+              ? "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              : "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-jl-border-1 py-2 text-xs font-semibold text-jl-fg-3 transition hover:border-amber-400/50 hover:text-jl-fg-1"}
             >
               + {m.caixa.pdv_pgto_adicionar_forma}
             </button>
           ) : (
-            <p className="text-center text-[10px] text-muted-foreground">
+            <p className={`text-center text-[10px] ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>
               {m.caixa.pdv_pgto_max_parcelas}
             </p>
           )}
 
           {/* Resumo financeiro */}
-          <dl className="space-y-2 border-t border-border pt-3 text-sm">
+          <dl className={`space-y-2 border-t pt-3 text-sm ${classicChrome ? "border-border" : "border-jl-border-1"}`}>
             <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">{m.caixa.total_pagar}</dt>
-              <dd className="font-semibold tabular-nums text-foreground">
+              <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.total_pagar}</dt>
+              <dd className={`font-semibold tabular-nums ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>
                 {moedaPrefixo} {fmt(totalLiquidoComGerente)}
               </dd>
             </div>
             <div className="flex justify-between gap-3 text-xs">
-              <dt className="text-muted-foreground">{m.caixa.pdv_pgto_soma_parcelas}</dt>
+              <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.pdv_pgto_soma_parcelas}</dt>
               <dd className={`tabular-nums font-semibold ${somaOk ? "text-emerald-500" : "text-destructive"}`}>
                 {moedaPrefixo} {fmt(somaParcelas)}
               </dd>

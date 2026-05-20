@@ -29,6 +29,7 @@ import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaFooter } from "@/app/caixa/CaixaFooter"
 import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
 import { CaixaPdvOperacoesButtons } from "@/app/caixa/CaixaPdvOperacoesButtons"
+import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
 import {
   CaixaGerenteModal,
   type ValidarSenhaGerenteResult,
@@ -102,6 +103,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
   const [finalizando, setFinalizando] = useState(false)
+  const [turnoRefreshToken, setTurnoRefreshToken] = useState(0)
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
   const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
@@ -642,6 +644,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         limparCarrinho()
         limparEstadoDescontoGerente()
         resetPagamentos()
+        setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
           { kind: "success" },
@@ -795,7 +798,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           idioma={idioma}
           layoutVariant={pdvLayoutVariant}
           operadorLabel={operadorLabel}
-          carregandoRegras={carregandoRegras}
           caixaStatus={caixaStatus}
           processandoCaixa={processandoCaixa}
           onAbrirCaixa={() => void handleAbrirCaixa()}
@@ -918,7 +920,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                 "hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex",
                 pdvLayoutVariant === "classic"
                   ? "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]"
-                  : "border-border bg-card/90",
+                  : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
               )}
             >
               <button
@@ -927,7 +929,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                   "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
                   pdvLayoutVariant === "classic"
                     ? "border-border bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "border-border bg-secondary text-secondary-foreground hover:bg-secondary/90",
+                    : "app-btn-accent",
                 )}
                 onClick={handleNovoCupom}
                 disabled={carregandoRegras}
@@ -935,44 +937,43 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                 {m.caixa.novo_cupom}
               </button>
               <div
-                className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-              >
-                {m.caixa.rail_titulo_nova_venda}
-              </div>
-              <div
-                className="border-t border-border pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                className={cn(
+                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
+                  pdvLayoutVariant === "classic" ? "border-border text-muted-foreground" : "border-jl-border-1 text-jl-fg-3",
+                )}
               >
                 {m.caixa.rail_titulo_operacoes}
               </div>
-              {pdvLayoutVariant === "classic" ? (
-                <CaixaPdvOperacoesButtons
-                  m={m}
-                  idioma={idioma}
-                  variant="classic"
-                  carregandoRegras={carregandoRegras}
-                  caixaStatus={caixaStatus}
-                  caixaAberto={caixaStatus?.aberto === true}
-                  movimentandoCaixa={movimentandoCaixa}
-                  finalizando={finalizando}
-                  validandoGerente={validandoGerente}
-                  gerenteValidadoAte={gerenteValidadoAte}
-                  onAbrirSuprimento={handleAbrirSuprimento}
-                  onAbrirSangria={handleAbrirSangria}
-                  onValidarGerente={() => setGerenteModalAberto(true)}
-                />
-              ) : (
-                <p className="text-xs text-muted-foreground leading-snug">{m.caixa.rail_placeholder}</p>
-              )}
+              <CaixaPdvOperacoesButtons
+                m={m}
+                idioma={idioma}
+                variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+                carregandoRegras={carregandoRegras}
+                caixaStatus={caixaStatus}
+                caixaAberto={caixaStatus?.aberto === true}
+                movimentandoCaixa={movimentandoCaixa}
+                finalizando={finalizando}
+                validandoGerente={validandoGerente}
+                gerenteValidadoAte={gerenteValidadoAte}
+                onAbrirSuprimento={handleAbrirSuprimento}
+                onAbrirSangria={handleAbrirSangria}
+                onValidarGerente={() => setGerenteModalAberto(true)}
+              />
               <div
-                className="border-t border-border pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                className={cn(
+                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
+                  pdvLayoutVariant === "classic" ? "border-border text-muted-foreground" : "border-jl-border-1 text-jl-fg-3",
+                )}
               >
                 {m.caixa.rail_titulo_em_aberto}
               </div>
-              <p
-                className="text-xs leading-snug text-muted-foreground"
-              >
-                {m.caixa.rail_placeholder}
-              </p>
+              <CaixaRailTurnoSummary
+                m={m}
+                idioma={idioma}
+                caixaAberto={caixaStatus?.aberto === true}
+                layoutVariant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+                refreshToken={turnoRefreshToken}
+              />
             </aside>
           </div>
           {pdvLayoutVariant === "classic" && (

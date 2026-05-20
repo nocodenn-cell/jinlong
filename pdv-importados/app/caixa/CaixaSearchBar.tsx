@@ -127,7 +127,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             disabled={buscando || carregandoRegras}
             aria-busy={buscando}
             className={cn(
-              "inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-semibold transition-colors",
+              "app-btn-accent inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors",
               hideNovoCupom
                 ? "w-full sm:w-auto flex-1 sm:flex-none min-w-[7rem]"
                 : "flex-1 sm:flex-none min-w-[7rem]",

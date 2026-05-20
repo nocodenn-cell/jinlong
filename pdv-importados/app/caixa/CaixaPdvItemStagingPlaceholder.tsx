@@ -32,9 +32,6 @@ export function CaixaPdvItemStagingPlaceholder({ m, dense }: Props) {
         <p className="text-xs leading-relaxed text-muted-foreground">
           {m.caixa.pdv_item_staging_desc}
         </p>
-        <span className="rounded-full border border-border/80 bg-background/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          {m.caixa.pdv_item_staging_em_breve}
-        </span>
       </div>
     </section>
   )

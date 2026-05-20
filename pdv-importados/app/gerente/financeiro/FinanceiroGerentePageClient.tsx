@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Calendar, Plus, Search } from 'lucide-react'
 import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
+import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -315,22 +316,22 @@ export function FinanceiroGerentePageClient({
   )
 
   return (
-    <div
-      className={`mx-auto max-w-[1580px] px-4 py-5 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}
-    >
-      <Link href="/gerente" className="gerente-nav-back text-sm font-medium transition-colors hover:underline">
-        ← {m.gerente.inicio}
-      </Link>
-
-      <header className="gerente-fin-header-border mt-4 border-b pb-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="gerente-fin-page-title text-2xl font-semibold tracking-tight sm:text-3xl">{f.titulo}</h1>
+    <>
+      <GerenteStickyToolbar>
+        <div className="flex flex-wrap items-center gap-3 px-4 sm:px-6">
+          <h1 className="gerente-fin-page-title text-xl font-semibold tracking-tight">{f.titulo}</h1>
           <span className="gerente-fin-badge rounded-full border px-2.5 py-0.5 text-xs font-semibold ring-1">
             {f.badge}
           </span>
         </div>
-        <p className="gerente-fin-muted mt-2 max-w-3xl text-sm leading-relaxed">{f.subtitulo}</p>
-      </header>
+      </GerenteStickyToolbar>
+      <div
+        className={`mx-auto max-w-[1580px] px-4 py-5 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}
+      >
+        <Link href="/gerente" className="gerente-nav-back text-sm font-medium transition-colors hover:underline">
+          ← {m.gerente.inicio}
+        </Link>
+        <p className="gerente-fin-muted mt-3 max-w-3xl text-sm leading-relaxed">{f.subtitulo}</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="dragon-glass-card rounded-xl border p-3 app-border">
@@ -339,7 +340,7 @@ export function FinanceiroGerentePageClient({
           <div className="mt-0.5 text-[11px] app-muted">
             {f.kpi_valor_aberto_total}: {fmtGerenteBRL(kpis.valorAbertoTotal, locale)}
             {kpis.kpiValorTruncado ? (
-              <span className="mt-1 block text-[10px] leading-snug text-amber-600/90 dark:text-amber-400/90">
+              <span className="mt-1 block text-[10px] leading-snug text-amber-400">
                 {interStub(f.kpi_soma_truncada, { n: String(FIN_KPI_SOMA_CAP) })}
               </span>
             ) : null}
@@ -475,7 +476,7 @@ export function FinanceiroGerentePageClient({
                       key={t.id}
                       className={cn(
                         'gerente-fin-row-hover transition-colors',
-                        idx % 2 === 1 && 'bg-muted/25',
+                        idx % 2 === 1 && 'bg-white/[0.025]',
                       )}
                     >
                       <td className="gerente-fin-cell px-3 py-2.5 font-medium">{t.cliente_nome ?? f.dash}</td>
@@ -738,5 +739,6 @@ export function FinanceiroGerentePageClient({
         </div>
       </section>
     </div>
+    </>
   )
 }

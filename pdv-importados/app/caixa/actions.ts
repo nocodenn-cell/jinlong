@@ -48,6 +48,9 @@ import {
   obterMovimentacoesCaixaImpl,
   registrarMovimentacaoImpl,
 } from '@/app/caixa/server/caixaMovimentacoes.impl'
+import { obterResumoVendasTurnoImpl } from '@/app/caixa/server/caixaTurnoResumo.impl'
+
+export type { TurnoResumoResult } from '@/app/caixa/server/caixaTurnoResumo.impl'
 
 export type {
   AbrirCaixaOperadorResult,
@@ -172,6 +175,10 @@ export async function estornarMovimentacaoCaixa(
   motivo: string,
 ): Promise<AcaoMovimentacaoCaixaResult> {
   return estornarMovimentacaoCaixaImpl(movimentacaoOrigemId, motivo)
+}
+
+export async function obterResumoVendasTurno() {
+  return obterResumoVendasTurnoImpl()
 }
 
 export async function cancelarVenda(

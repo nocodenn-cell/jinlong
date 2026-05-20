@@ -10,7 +10,6 @@ type Props = {
   idioma: Idioma
   layoutVariant: CaixaPdvLayoutVariant
   operadorLabel: string
-  carregandoRegras: boolean
   caixaStatus:
     | {
         aberto: true
@@ -32,7 +31,6 @@ export function CaixaHeader({
   idioma,
   layoutVariant,
   operadorLabel,
-  carregandoRegras,
   caixaStatus,
   processandoCaixa,
   onAbrirCaixa,
@@ -79,30 +77,16 @@ export function CaixaHeader({
         onAbrirCaixa={onAbrirCaixa}
         onFecharCaixa={onFecharCaixa}
       />
-      {layoutVariant !== "classic" ? (
-        <div className="px-4 sm:px-6 py-2 border-b border-border bg-card/60 text-xs sm:text-sm text-foreground/90">
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
-              <span className="tabular-nums text-foreground/95">
-                {currentDateTime}
-              </span>
-              {caixaStatus?.aberto === true && (
-                <span className="text-foreground/85">
-                  Abertura:{" "}
-                  {new Date(caixaStatus.dataAbertura).toLocaleString(localeString)}
-                  {" · "}
-                  Inicial: R$ {caixaStatus.valorInicial.toFixed(2)}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="mt-2 pt-2 border-t border-border/60 space-y-1">
-            <div>{m.caixa.atalhos_placeholder}</div>
-            <div>
-              {m.caixa.regras_catalogo} <code className="text-muted-foreground">regras_preco</code>
-              {carregandoRegras ? ` · ${m.caixa.regras_carregando}` : ""}
-            </div>
-          </div>
+      {layoutVariant !== "classic" && currentDateTime ? (
+        <div className="flex items-center gap-3 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 text-[11px] text-jl-fg-3 sm:px-6">
+          <span className="tabular-nums">{currentDateTime}</span>
+          {caixaStatus?.aberto === true && (
+            <span className="truncate">
+              {new Date(caixaStatus.dataAbertura).toLocaleString(localeString)}
+              {" · "}
+              {m.caixa.moeda_prefixo} {caixaStatus.valorInicial.toFixed(2)}
+            </span>
+          )}
         </div>
       ) : null}
     </div>
