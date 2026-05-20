@@ -1052,7 +1052,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
-      {pipelineDebug && (
+      {process.env.NODE_ENV === 'development' && pipelineDebug && (
         <CaixaScanPipelineDevPanel
           buscandoPipeline={buscandoPipeline}
           snapshot={pipelineDebug.snapshot}
