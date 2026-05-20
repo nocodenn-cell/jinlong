@@ -1,4 +1,4 @@
--- Migration 099: adiciona coluna ativo à tabela categorias
+-- Migration 106: adiciona coluna ativo à tabela categorias
 -- Necessário para o módulo Categorias de Produtos no painel gerente.
 
 alter table public.categorias

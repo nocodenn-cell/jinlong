@@ -1,4 +1,4 @@
--- Migration 100: Tabela categorias_financeiras
+-- Migration 107: Tabela categorias_financeiras
 -- Categorias para o plano de contas / DRE (Receita, Despesa, Ambos)
 
 create type public.categoria_financeira_tipo as enum ('RECEITA', 'DESPESA', 'AMBOS');
