@@ -119,7 +119,7 @@ export function CaixaPdvOperacoesButtons({
           className={cn(
             "w-full text-xs sm:text-sm",
             classic
-              ? "border border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
               : "bg-secondary text-secondary-foreground border border-border",
           )}
           aria-expanded={sistemaAberto}
@@ -181,7 +181,7 @@ export function CaixaPdvOperacoesButtons({
           variant="secondary"
           className={cn(
             classic
-              ? "border border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+              ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
               : "bg-secondary text-secondary-foreground border border-border",
           )}
           onClick={onAbrirSuprimento}
@@ -196,7 +196,7 @@ export function CaixaPdvOperacoesButtons({
           variant="secondary"
           className={cn(
             classic
-              ? "border-red-300/45 bg-red-500/15 text-red-100 hover:bg-red-500/25 hover:text-white"
+              ? "border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20"
               : "border-destructive/45 bg-destructive/15 text-destructive hover:bg-destructive/25",
           )}
           onClick={onAbrirSangria}
@@ -214,7 +214,7 @@ export function CaixaPdvOperacoesButtons({
           className={cn(
             "inline-flex items-center gap-2",
             classic
-              ? "border border-amber-200/50 bg-amber-500/20 text-amber-50 hover:bg-amber-500/30 hover:text-white"
+              ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
               : "bg-yellow-900/30 text-yellow-400 border border-yellow-700",
           )}
           onClick={onValidarGerente}
@@ -225,7 +225,7 @@ export function CaixaPdvOperacoesButtons({
             <ImperialSealIcon
               className={cn(
                 "h-4 w-4 shrink-0",
-                classic ? "text-red-950 drop-shadow-sm" : "app-accent-text",
+                classic ? "text-primary drop-shadow-sm" : "app-accent-text",
               )}
               title={m.caixa.aria_selo_gerente}
               pulse

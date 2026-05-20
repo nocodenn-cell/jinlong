@@ -73,7 +73,7 @@ export function CaixaPdvTopBar({
       className={cn(
         "shrink-0 px-3 sm:px-5 py-2.5 border-b flex flex-wrap items-center gap-x-3 gap-y-2",
         classic
-          ? "border-blue-800/80 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-white shadow-sm"
+          ? "border-border bg-primary text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]"
           : "border-border bg-card text-foreground",
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}
@@ -85,7 +85,7 @@ export function CaixaPdvTopBar({
           size="icon"
           className={cn(
             "shrink-0 h-9 w-9",
-            classic ? "text-white hover:bg-white/15 hover:text-white" : "text-foreground",
+            classic ? "text-primary-foreground hover:bg-white/15 hover:text-primary-foreground" : "text-foreground",
           )}
           aria-label={m.caixa.topbar_menu_aria}
           title={m.caixa.topbar_menu_aria}
@@ -96,13 +96,13 @@ export function CaixaPdvTopBar({
         <span
           className={cn(
             "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
-            classic ? "border-white/25 bg-white/10 text-white" : "border-border bg-muted/40 text-foreground",
+            classic ? "border-primary-foreground/25 bg-white/10 text-primary-foreground" : "border-border bg-muted/40 text-foreground",
           )}
           aria-hidden
         >
           <SquareTerminal className="h-5 w-5" aria-hidden />
         </span>
-        <h1 className={cn("min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg", classic && "text-white")}>
+        <h1 className={cn("min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg", classic && "text-primary-foreground")}>
           {m.caixa.topbar_titulo}
         </h1>
       </div>
@@ -112,7 +112,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[11rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-white/30 bg-white/10" : "border-border bg-muted/30",
+              classic ? "border-primary-foreground/30 bg-white/10" : "border-border bg-muted/30",
             )}
             title={turnoText}
           >
@@ -121,7 +121,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[14rem] truncate rounded-md border px-2 py-1 font-medium",
-              classic ? "border-white/30 bg-white/10" : "border-border bg-muted/30",
+              classic ? "border-primary-foreground/30 bg-white/10" : "border-border bg-muted/30",
             )}
             title={operadorText}
           >
@@ -130,7 +130,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[12rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-white/30 bg-white/10" : "border-border bg-muted/30",
+              classic ? "border-primary-foreground/30 bg-white/10" : "border-border bg-muted/30",
             )}
             title={fundoText}
           >
@@ -141,7 +141,7 @@ export function CaixaPdvTopBar({
         <div
           className={cn(
             "flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3",
-            classic ? "border-white/25" : "border-border/60",
+            classic ? "border-primary-foreground/25" : "border-border/60",
           )}
         >
           {caixaStatus?.aberto ? (
@@ -152,7 +152,7 @@ export function CaixaPdvTopBar({
               className={cn(
                 "text-xs font-semibold sm:text-sm",
                 classic &&
-                  "border-amber-200/80 bg-amber-500/20 text-amber-50 hover:bg-amber-500/30 hover:text-white",
+                  "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
               )}
               onClick={onFecharCaixa}
               disabled={processandoCaixa}
@@ -167,7 +167,7 @@ export function CaixaPdvTopBar({
               variant="outline"
               className={cn(
                 "text-xs font-semibold sm:text-sm",
-                classic && "border-emerald-200/70 bg-emerald-500/20 text-emerald-50 hover:bg-emerald-500/30",
+                classic && "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
               )}
               onClick={onAbrirCaixa}
               disabled={processandoCaixa}
@@ -182,7 +182,7 @@ export function CaixaPdvTopBar({
             className={cn(
               "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
               classic
-                ? "border border-white/35 bg-white/10 text-white hover:bg-white/20"
+                ? "border border-primary-foreground/35 bg-white/10 text-primary-foreground hover:bg-white/20"
                 : "bg-secondary text-secondary-foreground border border-border",
             )}
           />

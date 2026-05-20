@@ -641,6 +641,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel }: Props) {
       setFinalizando(false)
     }
   }, [
+    configCaixaWeb,
     descontoGerentePercentualEfetivo,
     valorDescontoGerente,
     finalizando,

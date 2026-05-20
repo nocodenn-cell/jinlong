@@ -50,7 +50,7 @@ export function CaixaPdvCartSaleBar({
 
   return (
     <div
-      className="shrink-0 border-t border-blue-800/80 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 px-3 py-3 text-white shadow-[0_-4px_14px_rgba(0,0,0,0.12)] sm:px-4"
+      className="shrink-0 border-t border-border bg-primary px-3 py-3 text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] sm:px-4"
       data-caixa-cart-sale-bar
     >
       <div className="flex flex-col gap-3">
@@ -60,7 +60,7 @@ export function CaixaPdvCartSaleBar({
           <Button
             type="button"
             variant="outline"
-            className="min-h-11 border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            className="min-h-11 border-primary-foreground/35 bg-white/10 text-primary-foreground hover:bg-white/20 hover:text-primary-foreground"
             onClick={onExcluirVenda}
             disabled={excluirDisabled}
             title={m.caixa.cart_bar_excluir_title}
@@ -71,20 +71,20 @@ export function CaixaPdvCartSaleBar({
         </div>
         <div className="flex flex-1 flex-col gap-2 min-w-0 sm:flex-row sm:items-end sm:justify-end sm:gap-6">
           <div className="text-right sm:min-w-[9rem]">
-            <div className="text-xs font-semibold uppercase tracking-wide text-blue-100/85">
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary-foreground/85">
               {m.caixa.cart_bar_total_label}
             </div>
             <div
               data-testid="caixa-total-liquido"
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-2xl font-extrabold tabular-nums leading-tight text-white sm:text-3xl"
+              className="text-2xl font-extrabold tabular-nums leading-tight text-primary-foreground sm:text-3xl"
             >
               {moedaPrefixo} {fmt(totalLiquidoComGerente)}
             </div>
           </div>
           <Button
             type="button"
-            className="h-11 min-w-[11rem] shrink-0 bg-white text-base font-bold text-blue-900 shadow-sm hover:bg-blue-50"
+            className="h-11 min-w-[11rem] shrink-0 bg-secondary text-secondary-foreground text-base font-bold shadow-sm hover:bg-secondary/80"
             onClick={onFinalizar}
             disabled={
               finalizando || itensLength === 0 || buscando || carregandoRegras

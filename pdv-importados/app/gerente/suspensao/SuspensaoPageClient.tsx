@@ -4,13 +4,10 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
-import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { SuspensaoStatus } from './actions'
 import { atualizarSuspensaoVendas, carregarSuspensaoVendas } from './actions'
 
-type Props = Readonly<{ idioma: Idioma }>
-
-export function SuspensaoPageClient({ idioma: _idioma }: Props) {
+export function SuspensaoPageClient() {
   const [suspensas, setSuspensas] = useState(false)
   const [motivo, setMotivo] = useState('')
   const [carregando, setCarregando] = useState(true)

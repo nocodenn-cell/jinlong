@@ -2,7 +2,37 @@
   "permissions": {
     "allow": [
       "Bash(xargs grep -l \"comiss\")",
-      "Bash(xargs grep -l \"suspend\\\\|park\\\\|hold.*venda\\\\|pendente.*venda\")"
+      "Bash(xargs grep -l \"suspend\\\\|park\\\\|hold.*venda\\\\|pendente.*venda\")",
+      "Bash(Expand-Archive -Path \"C:\\\\Users\\\\User\\\\Downloads\\\\v0-nocodenn-cell-8157339a.zip\" -DestinationPath \"C:\\\\Users\\\\User\\\\Downloads\\\\v0-nocodenn-cell-8157339a\" -Force)",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\User\\\\Downloads\\\\v0-nocodenn-cell-8157339a\")",
+      "Bash(Select-Object FullName, Length)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(grep -v \"\\\\.md$\")",
+      "Bash(grep -v \"\\\\.sh$\\\\|\\\\.bat$\")",
+      "Bash(node -e \"const d=require\\('./pdv-importados/src/lib/i18n/pt.json'\\); console.log\\(Object.keys\\(d\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(xargs grep -l \"categorias\")",
+      "Bash(git add *)",
+      "Bash(xargs grep -l \"categori.*financ\\\\|financ.*categori\\\\|dre\")",
+      "Bash(git push *)",
+      "Bash(npm run *)",
+      "Bash(git commit -m ' *)",
+      "Bash(cd /c/Naturecode/fastproduct/.claude/worktrees/sad-rubin-3f6e75/pdv-importados && find app/caixa -type f -name \"*.tsx\" -o -name \"*.ts\" -o -name \"*.jsx\" -o -name \"*.js\" | head -50)",
+      "Bash(npx tsc *)",
+      "Bash(gh api *)",
+      "Bash(gh pr *)",
+      "Bash(gh run *)",
+      "mcp__c392d280-5eed-4f95-ab60-52bcbf75d144__list_teams",
+      "mcp__c392d280-5eed-4f95-ab60-52bcbf75d144__get_deployment_build_logs",
+      "mcp__c392d280-5eed-4f95-ab60-52bcbf75d144__get_project",
+      "Bash(find \"C:\\\\Naturecode\\\\fastproduct\" -type f \\\\\\( -name \"*caixa*\" -o -name \"*Caixa*\" \\\\\\) 2>/dev/null | head -30)",
+      "Bash(xargs grep -l \"cron\\\\|schedule\\\\|timeout\\\\|interval\")",
+      "Bash(xargs ls -lt)",
+      "PowerShell(git fetch origin main)",
+      "Bash(python -c \"import sys,json; comments=json.load\\(sys.stdin\\); [print\\(c['body'][:500]\\) for c in comments if 'sonar' in c.get\\('body',''\\).lower\\(\\) or 'duplicat' in c.get\\('body',''\\).lower\\(\\)]\")",
+      "WebFetch(domain:sonarcloud.io)"
     ]
   }
 }
