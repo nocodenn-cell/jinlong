@@ -32,22 +32,16 @@ CREATE INDEX IF NOT EXISTS idx_doc_fiscal_eventos_doc_created
 
 ALTER TABLE public.documentos_fiscais_eventos ENABLE ROW LEVEL SECURITY;
 
--- Constantes de perfis administrativos
-DO $$
-DECLARE
-  v_admin_profiles TEXT[] := ARRAY['GERENTE', 'DONO', 'ADMIN'];
-BEGIN
-  -- Policy para gerentes
-  DROP POLICY IF EXISTS "doc_fiscal_eventos_gerente_select" ON public.documentos_fiscais_eventos;
-  CREATE POLICY "doc_fiscal_eventos_gerente_select"
-    ON public.documentos_fiscais_eventos FOR SELECT TO authenticated
-    USING (
-      EXISTS (
-        SELECT 1 FROM public.usuarios u
-        WHERE u.id = auth.uid() AND u.perfil = ANY(v_admin_profiles)
-      )
-    );
-END $$;
+DROP POLICY IF EXISTS "doc_fiscal_eventos_gerente_select" ON public.documentos_fiscais_eventos;
+CREATE POLICY "doc_fiscal_eventos_gerente_select"
+  ON public.documentos_fiscais_eventos FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.usuarios u
+      WHERE u.id = auth.uid()
+        AND u.perfil = ANY(ARRAY['GERENTE', 'DONO', 'ADMIN'])
+    )
+  );
 
 -- ---------------------------------------------------------------------------
 -- Triggers: INSERT (enfileiramento) + UPDATE (claim / erro / emitido / cancelado)
