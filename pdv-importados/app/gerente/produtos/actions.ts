@@ -1,7 +1,7 @@
 'use server'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { randomUUID } from 'crypto'
+import crypto from 'crypto'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -314,7 +314,7 @@ export async function uploadImagemProduto(
   }
 
   const supabase = await createClient()
-  const objectPath = `${produtoId}/${randomUUID()}.${ext}`
+  const objectPath = `${produtoId}/${crypto.randomUUID()}.${ext}`
   const bytes = new Uint8Array(await file.arrayBuffer())
 
   const { data: oldRow } = await supabase
@@ -788,6 +788,7 @@ export async function buscarProdutosComFiltros(
     fornecedor_id: r.fornecedor_id ?? null,
     unidade_medida: r.unidade_medida ?? 'UN',
     observacao: r.observacao ?? null,
+    tags: r.tags ?? null,
   }))
 
   return { success: true, data: { rows, total } }

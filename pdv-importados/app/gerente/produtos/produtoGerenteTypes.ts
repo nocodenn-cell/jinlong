@@ -16,4 +16,5 @@ export type ProdutoGerenteRow = {
   fornecedor_id: string | null
   unidade_medida: string
   observacao: string | null
+  tags: string[] | null
 }
