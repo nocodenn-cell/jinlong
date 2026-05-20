@@ -302,23 +302,23 @@ export function EstoqueGerentePageClient({
         ) : null}
       </div>
 
-      <div className="mb-4 rounded-xl border border-border bg-card p-3 shadow-sm">
+      <GerenteStickyToolbar className="mb-4 py-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-sm font-medium text-muted-foreground">
+          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-muted-foreground">
             {m.estoque.buscar_label}
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder={m.estoque.buscar_placeholder}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             />
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-sm font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
             {m.produtos.categoria}
             <select
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             >
               <option value="">{m.estoque.filtro_todas_categorias}</option>
               {categorias.map((c) => (
@@ -328,12 +328,12 @@ export function EstoqueGerentePageClient({
               ))}
             </select>
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-sm font-medium text-muted-foreground">
+          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-muted-foreground">
             {m.produtos.origem_label}
             <select
               value={origem}
               onChange={(e) => setOrigem(e.target.value)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
             >
               <option value="">{m.produtos.filtro_todas_origens}</option>
               <option value="china_manual">{m.produtos.origem_china}</option>
@@ -341,37 +341,34 @@ export function EstoqueGerentePageClient({
               <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
             </select>
           </label>
-          <label className="flex w-[140px] flex-col gap-1 text-sm font-medium text-muted-foreground">
-            {m.produtos.pag_linhas_por_pagina}
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <GerenteStickyToolbar className="mb-4">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {loading ? null : (
-            <button
-              type="button"
-              disabled={exporting || total === 0}
-              onClick={() => void handleExportCsv()}
-              className={cn(
-                'gerente-btn-csv inline-flex shrink-0 items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors app-btn-neutral',
-                (exporting || total === 0) && 'cursor-not-allowed opacity-45',
-              )}
-            >
-              {exporting ? m.comum.carregando : m.gerente.exportar_csv}
-            </button>
-          )}
+          <div className="flex items-end gap-2">
+            <label className="flex w-[130px] flex-col gap-1 text-xs font-medium text-muted-foreground">
+              {m.produtos.pag_linhas_por_pagina}
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="h-9 rounded-lg border border-[color:var(--border)] bg-[#0a0f1e] px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </label>
+            {!loading && (
+              <button
+                type="button"
+                disabled={exporting || total === 0}
+                onClick={() => void handleExportCsv()}
+                className={cn(
+                  'gerente-btn-csv inline-flex h-9 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors app-btn-neutral',
+                  (exporting || total === 0) && 'cursor-not-allowed opacity-45',
+                )}
+              >
+                {exporting ? m.comum.carregando : m.gerente.exportar_csv}
+              </button>
+            )}
+          </div>
         </div>
       </GerenteStickyToolbar>
 
