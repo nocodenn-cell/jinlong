@@ -168,8 +168,7 @@ export function GerenteHeaderNav({
       <div className="flex items-center px-4 border-r border-jl-border-1 flex-shrink-0">
         <div className="flex flex-col items-center gap-[1px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/branding/dragon-imperial-amber.png" alt="Jinlong" className="h-6 w-auto" />
-          <span className="font-serif text-[9px] leading-none text-amber-400/80 tracking-wider select-none">龍</span>
+          <img src="/branding/brand-double-dragon.png" alt="Jīn Lóng" className="h-7 w-auto" />
         </div>
       </div>
 

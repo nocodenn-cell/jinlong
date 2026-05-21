@@ -10,16 +10,20 @@ export type PainelGerencialNavKey =
   | 'produtos'
   | 'categorias_produtos'
   | 'categorias_financeiras'
+  | 'clientes'
   | 'vendas'
   | 'estoque'
   | 'recebimento'
   | 'transferencias'
+  | 'fornecedores'
   | 'financeiro'
   | 'comissoes'
+  | 'contas_pagar'
   | 'configuracoes'
   | 'suspensao'
   | 'caixas'
   | 'relatorios'
+  | 'relatorios_vendas'
 
 export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'home') return '/gerente'
@@ -29,6 +33,8 @@ export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'suspensao') return '/gerente/suspensao'
   if (key === 'categorias_produtos') return '/gerente/categorias-produtos'
   if (key === 'categorias_financeiras') return '/gerente/categorias-financeiras'
+  if (key === 'contas_pagar') return '/gerente/financeiro/contas-pagar'
+  if (key === 'relatorios_vendas') return '/gerente/relatorios/vendas'
   return `/gerente/${key}`
 }
 
@@ -52,6 +58,10 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
       return m.categorias_produtos.nav_label
     case 'categorias_financeiras':
       return m.categorias_financeiras.nav_label
+    case 'clientes':
+      return m.clientes.titulo
+    case 'fornecedores':
+      return m.fornecedores.titulo
     case 'estoque':
       return m.estoque.titulo
     case 'recebimento':
@@ -62,6 +72,8 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
       return m.gerente.nav_financeiro
     case 'comissoes':
       return m.gerente.nav_comissoes
+    case 'contas_pagar':
+      return m.contas_pagar.titulo
     case 'configuracoes':
       return m.gerente.nav_configuracoes
     case 'suspensao':
@@ -72,6 +84,8 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
       return m.gerente.nav_caixas
     case 'relatorios':
       return m.gerente.nav_relatorios
+    case 'relatorios_vendas':
+      return m.relatorios_vendas.titulo
     default: {
       const _exhaustive: never = key
       return _exhaustive
@@ -111,11 +125,11 @@ export type GerenteNavTopic = {
 
 export const GERENTE_NAV_TOPICS: readonly GerenteNavTopic[] = [
   { id: 'inicio', items: ['home'] },
-  { id: 'catalogo', items: ['produtos', 'categorias_produtos'] },
-  { id: 'estoque_logistica', items: ['estoque', 'recebimento', 'transferencias'] },
+  { id: 'catalogo', items: ['produtos', 'categorias_produtos', 'clientes'] },
+  { id: 'estoque_logistica', items: ['estoque', 'recebimento', 'transferencias', 'fornecedores'] },
   { id: 'vendas_caixa', items: ['vendas', 'caixas'] },
-  { id: 'financeiro', items: ['financeiro', 'comissoes', 'categorias_financeiras'] },
-  { id: 'analise', items: ['relatorios'] },
+  { id: 'financeiro', items: ['financeiro', 'comissoes', 'categorias_financeiras', 'contas_pagar'] },
+  { id: 'analise', items: ['relatorios', 'relatorios_vendas'] },
   { id: 'sistema', items: ['configuracoes', 'suspensao', 'dashboard'] },
 ] as const
 
