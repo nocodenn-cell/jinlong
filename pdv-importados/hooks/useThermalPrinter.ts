@@ -40,6 +40,22 @@ export function useThermalPrinter(): UseThermalPrinterReturn {
     }
   }, [printer])
 
+  // React to physical cable disconnect via the WebUSB event (no polling needed)
+  useEffect(() => {
+    if (!WebUsbPrinter.isSupported()) return
+    const usbBus = navigator.usb as unknown as EventTarget
+    const onDisconnect = (e: Event) => {
+      const device = (e as Event & { device?: USBDevice }).device
+      if (device && printer.markDisconnected(device)) {
+        setStatus("idle")
+        setDeviceInfo(null)
+        setErrorMsg("Impressora desconectada.")
+      }
+    }
+    usbBus.addEventListener("disconnect", onDisconnect)
+    return () => usbBus.removeEventListener("disconnect", onDisconnect)
+  }, [printer])
+
   const connect = useCallback(async () => {
     setStatus("connecting")
     setErrorMsg(null)

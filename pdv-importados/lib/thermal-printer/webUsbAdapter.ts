@@ -89,12 +89,27 @@ export class WebUsbPrinter {
     return info
   }
 
-  /** Sends an ESC/POS buffer to the printer in 64-byte chunks. */
+  /** Sends an ESC/POS buffer to the printer in 64-byte chunks with a 10ms inter-chunk delay.
+   *  The delay lets slower print buffers drain and prevents GS V cut commands from arriving
+   *  before the preceding text bytes have been processed. */
   async print(data: Uint8Array): Promise<void> {
     if (!this.device) throw new Error("Impressora não conectada.")
     for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
       await this.device.transferOut(this.outEndpoint, data.slice(offset, offset + CHUNK_SIZE))
+      if (offset + CHUNK_SIZE < data.length) {
+        await new Promise<void>((r) => setTimeout(r, 10))
+      }
     }
+  }
+
+  /** Called by the WebUSB disconnect event handler.
+   *  Returns true if this was the active device, in which case callers should update their state. */
+  markDisconnected(device: USBDevice): boolean {
+    if (this.device === device) {
+      this.device = null
+      return true
+    }
+    return false
   }
 
   async disconnect(): Promise<void> {

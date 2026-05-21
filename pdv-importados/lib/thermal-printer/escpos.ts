@@ -14,8 +14,8 @@ const CMD = {
   BOLD_ON:          [0x1b, 0x45, 0x01],
   BOLD_OFF:         [0x1b, 0x45, 0x00],
   LF:               [0x0a],
-  // Partial cut with 3-line feed (GS V m n)
-  CUT:              [0x1d, 0x56, 0x42, 0x03],
+  // Partial cut — no built-in line feed; rely on explicit LFs before this command
+  CUT:              [0x1d, 0x56, 0x42, 0x00],
 } as const
 
 const FORMA_LABEL: Record<string, string> = {
