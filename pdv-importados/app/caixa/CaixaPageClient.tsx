@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
   calcularPrecoProdutoCaixa,
@@ -46,6 +46,8 @@ import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
 import { CaixaConfirmModal } from "@/app/caixa/CaixaConfirmModal"
 import { useScannerDetector } from "@/hooks/useScannerDetector"
 import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipeline"
+import { useThermalPrinter } from "@/hooks/useThermalPrinter"
+import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal"
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
 import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
 import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
@@ -208,12 +210,35 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   const vendaIdempotenciaRef = useRef<string | null>(null)
 
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
+  const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
+  const lastReciboRef = useRef<ReciboVenda | null>(null)
+  const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
+
+  const thermal = useThermalPrinter()
 
   const focarCampoBusca = useCallback(() => {
     requestAnimationFrame(() => {
       buscaInputRef.current?.focus()
     })
   }, [])
+
+  // Idle focus magnet: after 3s of no keyboard/pointer activity, refocus the search field
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const reset = () => {
+      if (timer !== null) clearTimeout(timer)
+      timer = setTimeout(focarCampoBusca, 3000)
+    }
+    const clear = () => { if (timer !== null) { clearTimeout(timer); timer = null } }
+    window.addEventListener('keydown', reset)
+    window.addEventListener('pointerdown', reset)
+    reset()
+    return () => {
+      clear()
+      window.removeEventListener('keydown', reset)
+      window.removeEventListener('pointerdown', reset)
+    }
+  }, [focarCampoBusca])
 
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
@@ -275,6 +300,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     setCartOwnerForSession,
     aplicarPrecoRpcParaLinha,
     getActiveCupomSessionId: () => cupomSessionIdRef.current,
+    onItemAdded: useCallback(
+      (info: { codigo: string; itemId: string; produtoId: string }) => {
+        lastScanItemRef.current = { ...info, ts: Date.now() }
+      },
+      [],
+    ),
   })
 
   const pagamentoControlesDesabilitados =
@@ -328,6 +359,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   useScannerDetector(
     useCallback(
       (scannedCode: string) => {
+        // 500ms dedupe: same barcode → increment quantity instead of a new scan
+        const now = Date.now()
+        const last = lastScanItemRef.current
+        if (last && last.codigo === scannedCode && now - last.ts < 500) {
+          const item = useCarrinhoStore.getState().itens.find((i) => i.id === last.itemId)
+          if (item) {
+            alterarQuantidade(last.itemId, item.quantidade + 1)
+            lastScanItemRef.current = { ...last, ts: now }
+            return
+          }
+        }
         const sid = cupomSessionIdRef.current
         const r = enqueueLeitura(scannedCode, {
           source: "scanner",
@@ -340,7 +382,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
         }
       },
-      [enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
+      [alterarQuantidade, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
     ),
     {
       enabled: true,
@@ -641,6 +683,25 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
       }
       const res = await finalizarVendaCaixa(payload)
       if (res.ok) {
+        lastReciboRef.current = {
+          vendaId: res.vendaId,
+          data: new Date(),
+          itens: itens.map((i) => ({
+            nome: i.nome,
+            quantidade: i.quantidade,
+            precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
+            precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
+            tipoPreco: i.resultado?.tipoPreco ?? 'VAREJO',
+          })),
+          pagamentos: parcelasParaEnviar,
+          totalBruto,
+          totalDesconto: payload.totalDesconto,
+          totalLiquidoComGerente,
+          descontoGerentePercentual: descontoGerentePercentualEfetivo,
+          valorDescontoGerente,
+          moeda: m.caixa.moeda_prefixo,
+        }
+        setReimprimirModalAberto(true)
         vendaIdempotenciaRef.current = null
         limparCarrinho()
         limparEstadoDescontoGerente()
@@ -721,6 +782,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     onFecharCaixa: () => void handleFecharCaixa(),
     onFocarBusca: focarCampoBusca,
     onNovoCupom: handleNovoCupom,
+    onReimprimir: useCallback(() => {
+      if (lastReciboRef.current) setReimprimirModalAberto(true)
+    }, []),
     pdvClassicAtalhos,
   })
 
@@ -811,6 +875,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           processandoCaixa={processandoCaixa}
           onAbrirCaixa={() => void handleAbrirCaixa()}
           onFecharCaixa={() => void handleFecharCaixa()}
+          printerStatus={thermal.status}
+          printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
         />
         <div className="flex-1 flex flex-col min-h-0">
           {pdvLayoutVariant === "classic" && showClassicLayoutPreviewBanner() ? (
@@ -941,6 +1007,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
               >
                 {m.caixa.novo_cupom}
               </button>
+              {lastReciboRef.current && (
+                <button
+                  type="button"
+                  className={cn(
+                    "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
+                    pdvLayoutVariant === "classic"
+                      ? "border-border bg-card text-foreground hover:bg-muted"
+                      : "app-btn-neutral",
+                  )}
+                  onClick={() => setReimprimirModalAberto(true)}
+                >
+                  {m.caixa.reimprimir_cupom}
+                </button>
+              )}
               <div
                 className={cn(
                   "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
@@ -1058,6 +1138,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
+      {reimprimirModalAberto && lastReciboRef.current && (
+        <CaixaReciboModal
+          venda={lastReciboRef.current}
+          onClose={() => setReimprimirModalAberto(false)}
+          thermal={thermal}
+        />
+      )}
       {process.env.NODE_ENV === 'development' && pipelineDebug && (
         <CaixaScanPipelineDevPanel
           buscandoPipeline={buscandoPipeline}

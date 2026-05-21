@@ -843,7 +843,8 @@
     "aria_qtde_aumentar": "Aumentar 1 unidade — {{nome}}",
     "aria_qtde_diminuir": "Diminuir 1 unidade — {{nome}}",
     "status_aberto": "Aberto",
-    "status_fechado": "Fechado"
+    "status_fechado": "Fechado",
+    "reimprimir_cupom": "Reimprimir (F12)"
   },
   "pdv": {
     "scan_placeholder": "Escanear código ou digitar nome...",

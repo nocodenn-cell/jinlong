@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
-import { useThermalPrinter } from "@/hooks/useThermalPrinter"
+import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import { cn } from "@/lib/utils"
 
 export type ReciboItem = {
@@ -29,6 +29,7 @@ export type ReciboVenda = {
 type Props = Readonly<{
   venda: ReciboVenda
   onClose: () => void
+  thermal: UseThermalPrinterReturn
 }>
 
 const FORMA_LABEL: Record<string, string> = {
@@ -52,9 +53,8 @@ function fmtData(d: Date): string {
   })
 }
 
-export function CaixaReciboModal({ venda, onClose }: Props) {
+export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
-  const thermal = useThermalPrinter()
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
 
   const handleThermalPrint = async () => {

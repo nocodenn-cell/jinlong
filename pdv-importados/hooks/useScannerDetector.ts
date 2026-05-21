@@ -61,7 +61,7 @@ export function useScannerDetector(
         return
       }
 
-      if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) {
+      if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey || !/[\x20-\x7E]/.test(e.key)) {
         clearBuffer()
         return
       }

@@ -60,6 +60,8 @@ export type WebCaixaScanDeps = {
   getActiveCupomSessionId: () => string
   /** Telemetria humana (runtime + adapter); injetada por `useCaixaScanPipeline`. */
   telemetry?: ScanPipelineSink
+  /** Chamado após scan bem-sucedido — usado para dedupe (500ms) no nível do scanner. */
+  onItemAdded?: (info: { codigo: string; itemId: string; produtoId: string }) => void
 }
 
 /**
@@ -73,7 +75,7 @@ export async function runWebCaixaScanProcess(
   const signal = ctx.signal
   /** Linha criada neste scan; rollback até commit explícito (P0 stale_cupom / abort). */
   let linhaPendenteRollback: string | null = null
-  const trimmed = ctx.scan.event.codigo.trim()
+  const trimmed = ctx.scan.event.codigo.trim().replace(/[^\x20-\x7E]/g, '')
   if (!trimmed) {
     return { ok: false, reason: 'validation', message: 'Código vazio.' }
   }
@@ -275,6 +277,7 @@ export async function runWebCaixaScanProcess(
     )
     tocarFeedback('ok')
     linhaPendenteRollback = null
+    deps.onItemAdded?.({ codigo: trimmed, itemId: novaLinhaId, produtoId: p.id })
     return { ok: true }
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {

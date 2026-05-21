@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
+import type { ThermalStatus } from "@/hooks/useThermalPrinter"
 import { CaixaPdvTopBar, type CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { cn } from "@/lib/utils"
 
@@ -25,6 +26,8 @@ type Props = {
   processandoCaixa: boolean
   onAbrirCaixa: () => void
   onFecharCaixa: () => void
+  printerStatus?: ThermalStatus
+  printerDeviceName?: string | null
 }
 
 export function CaixaHeader({
@@ -36,6 +39,8 @@ export function CaixaHeader({
   processandoCaixa,
   onAbrirCaixa,
   onFecharCaixa,
+  printerStatus,
+  printerDeviceName,
 }: Props) {
   const [currentDateTime, setCurrentDateTime] = useState<string>("")
 
@@ -77,6 +82,8 @@ export function CaixaHeader({
         processandoCaixa={processandoCaixa}
         onAbrirCaixa={onAbrirCaixa}
         onFecharCaixa={onFecharCaixa}
+        printerStatus={printerStatus}
+        printerDeviceName={printerDeviceName}
       />
       {layoutVariant !== "classic" && currentDateTime ? (
         <div className="flex items-center gap-2 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 sm:px-6">

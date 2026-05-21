@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
+import type { ThermalStatus } from "@/hooks/useThermalPrinter"
 import LanguageToggle from "@/app/caixa/idioma/LanguageToggle"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
@@ -31,6 +32,8 @@ type Props = {
   processandoCaixa: boolean
   onAbrirCaixa: () => void
   onFecharCaixa: () => void
+  printerStatus?: ThermalStatus
+  printerDeviceName?: string | null
 }
 
 export function CaixaPdvTopBar({
@@ -42,6 +45,8 @@ export function CaixaPdvTopBar({
   processandoCaixa,
   onAbrirCaixa,
   onFecharCaixa,
+  printerStatus,
+  printerDeviceName,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -136,6 +141,27 @@ export function CaixaPdvTopBar({
           >
             {fundoText}
           </span>
+          {printerStatus && printerStatus !== "idle" && (
+            <span
+              title={printerDeviceName ?? "Impressora"}
+              className={cn(
+                "max-w-[10rem] truncate rounded-md border px-2 py-1 text-xs font-medium",
+                printerStatus === "connected"
+                  ? classic
+                    ? "border-emerald-400/50 bg-emerald-400/20 text-emerald-100"
+                    : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  : printerStatus === "error"
+                    ? classic
+                      ? "border-red-400/50 bg-red-400/20 text-red-100"
+                      : "border-destructive/40 bg-destructive/10 text-destructive"
+                    : classic
+                      ? "border-primary-foreground/30 bg-white/10"
+                      : "border-jl-border-1 bg-jl-surface-base",
+              )}
+            >
+              {printerStatus === "connected" ? "🖨 OK" : printerStatus === "error" ? "🖨 Erro" : "🖨 …"}
+            </span>
+          )}
         </div>
 
         <div

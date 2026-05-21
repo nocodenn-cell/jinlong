@@ -894,7 +894,8 @@
     "tabela_cabecalho": ["收银员", "开启金额", "销售额", "抽款", "补款", "结算金额", "状态"],
     "divergencia_alerta": "差异金额 R$ {diferenca} 超过限额",
     "status_aberto": "开启",
-    "status_fechado": "已结算"
+    "status_fechado": "已结算",
+    "reimprimir_cupom": "重印 (F12)"
   },
   "pdv": {
     "scan_placeholder": "扫描条形码或输入商品名...",

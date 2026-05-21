@@ -21,6 +21,7 @@ type Params = {
   onFecharCaixa: () => void
   onFocarBusca: () => void
   onNovoCupom: () => void
+  onReimprimir?: () => void
   pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
 }
 
@@ -42,6 +43,7 @@ export function useCaixaKeyboardShortcuts({
   onFecharCaixa,
   onFocarBusca,
   onNovoCupom,
+  onReimprimir,
   pdvClassicAtalhos = null,
 }: Params) {
   useEffect(() => {
@@ -83,6 +85,11 @@ export function useCaixaKeyboardShortcuts({
       if (e.code === "F8") {
         e.preventDefault()
         onNovoCupom()
+        return
+      }
+      if (e.code === "F12") {
+        e.preventDefault()
+        onReimprimir?.()
         return
       }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyB") {
@@ -132,6 +139,7 @@ export function useCaixaKeyboardShortcuts({
     onFinalizar,
     onFocarBusca,
     onNovoCupom,
+    onReimprimir,
     pdvClassicAtalhos,
   ])
 }
