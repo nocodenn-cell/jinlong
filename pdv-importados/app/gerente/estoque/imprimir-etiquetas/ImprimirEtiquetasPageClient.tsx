@@ -144,11 +144,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
         nomeArquivo: `etiquetas-${Date.now()}.pdf`,
       })
     } catch {
-      alert(
-        idioma === 'zh'
-          ? '生成PDF时出错'
-          : 'Erro ao gerar PDF'
-      )
+      alert(m.estoque.etiquetas.erro_gerar_pdf)
     } finally {
       setGerandoPdf(false)
     }
@@ -158,7 +154,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
-      <GerenteFilterBar title={idioma === 'zh' ? '打印标签' : 'Imprimir Etiquetas'} />
+      <GerenteFilterBar title={m.estoque.etiquetas.titulo} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Coluna Esquerda: Busca e Carrinho */}
@@ -166,7 +162,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
           {/* Campo de Busca */}
           <div className="rounded-lg border bg-white p-4 shadow-sm">
             <label className="mb-2 block text-sm font-medium">
-              {idioma === 'zh' ? '扫描条形码' : 'Escanear Código de Barras'}
+              {m.estoque.etiquetas.titulo}
             </label>
             <div className="flex gap-2">
               <input
@@ -175,7 +171,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
                 value={codigoBusca}
                 onChange={(e) => setCodigoBusca(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={idioma === 'zh' ? '条形码...' : 'Código de barras...'}
+                placeholder={m.estoque.etiquetas.buscar_placeholder}
                 className="flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={buscando}
               />

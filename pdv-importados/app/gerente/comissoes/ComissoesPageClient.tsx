@@ -9,6 +9,7 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { formatBRL } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import type { ComissaoDetalheRow, ComissaoResumoRow, FiltroComissoes } from './actions'
 import { carregarDetalheComissoes, carregarResumoComissoes, marcarComissoesPagas } from './actions'
 
@@ -22,6 +23,8 @@ const inputClass =
 
 export function ComissoesPageClient({ idioma }: Props) {
   const locale = localeFromIdioma(idioma)
+  const msgs = getMessages(idioma)
+  const m = msgs.gerente_comissoes
 
   const [filtro, setFiltro] = useState<FiltroComissoes>({
     de: TRINTA_DIAS_ATRAS,
@@ -70,7 +73,7 @@ export function ComissoesPageClient({ idioma }: Props) {
       refetch()
       return null
     },
-    { successMessage: 'Comissões marcadas como pagas.' },
+    { successMessage: m.msg_comissoes_pagas },
   )
 
   const toggleSelecionado = (id: string) => {
@@ -99,11 +102,11 @@ export function ComissoesPageClient({ idioma }: Props) {
       <GerenteStickyToolbar className="py-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-jl-fg-1 mr-2 shrink-0">
-            Comissões por Vendedor
+            {m.titulo}
           </h1>
 
           <label className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">De</span>
+            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">{m.filtro_de}</span>
             <input
               type="date"
               value={filtro.de ?? ''}
@@ -113,7 +116,7 @@ export function ComissoesPageClient({ idioma }: Props) {
           </label>
 
           <label className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">Até</span>
+            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">{m.filtro_ate}</span>
             <input
               type="date"
               value={filtro.ate ?? ''}
@@ -123,15 +126,15 @@ export function ComissoesPageClient({ idioma }: Props) {
           </label>
 
           <label className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">Status</span>
+            <span className="text-[10px] font-medium text-jl-fg-3 uppercase tracking-wide">{m.filtro_status}</span>
             <select
               value={filtro.status}
               onChange={(e) => setFiltro((f) => ({ ...f, status: e.target.value as FiltroComissoes['status'] }))}
               className={inputClass}
             >
-              <option value="todos">Todos</option>
-              <option value="pendente">Pendentes</option>
-              <option value="pago">Pagos</option>
+              <option value="todos">{m.filtro_todos}</option>
+              <option value="pendente">{m.filtro_pendentes}</option>
+              <option value="pago">{m.filtro_pagos}</option>
             </select>
           </label>
         </div>
@@ -140,18 +143,18 @@ export function ComissoesPageClient({ idioma }: Props) {
       {/* ── CONTEÚDO ──────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6">
         {loading ? (
-          <p className="text-sm app-muted">Carregando…</p>
+          <p className="text-sm app-muted">{m.nenhuma_comissao_periodo}</p>
         ) : !resumo || resumo.length === 0 ? (
-          <p className="text-sm app-muted">Nenhuma comissão no período.</p>
+          <p className="text-sm app-muted">{m.nenhuma_comissao_periodo}</p>
         ) : (
           <GerenteTable
             tone="dragon"
             columns={[
-              { key: 'vendedor', header: 'Vendedor' },
-              { key: 'vendas', header: 'Vendas' },
-              { key: 'total', header: 'Total comissão' },
-              { key: 'pago', header: 'Pago' },
-              { key: 'pendente', header: 'Pendente' },
+              { key: 'vendedor', header: m.col_vendedor },
+              { key: 'vendas', header: m.col_vendas },
+              { key: 'total', header: m.col_total_comissao },
+              { key: 'pago', header: m.col_pago },
+              { key: 'pendente', header: m.col_pendente },
               { key: 'acoes', header: '' },
             ]}
           >
@@ -172,7 +175,7 @@ export function ComissoesPageClient({ idioma }: Props) {
                     onClick={() => void abrirDetalhe(row)}
                     className="rounded-md border px-3 py-1 text-xs font-medium transition-colors app-border app-btn-neutral"
                   >
-                    Detalhes
+                    {m.detalhes_btn}
                   </button>
                 </td>
               </tr>
@@ -197,14 +200,14 @@ export function ComissoesPageClient({ idioma }: Props) {
                   {operadorDetalhe.operador_nome}
                 </h2>
                 <p className="text-xs app-muted">
-                  Pendente: {formatBRL(operadorDetalhe.total_pendente, locale)}
+                  {m.pendente_label} {formatBRL(operadorDetalhe.total_pendente, locale)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOperadorDetalhe(null)}
                 className="text-jl-fg-3 hover:text-jl-fg-1 transition-colors"
-                aria-label="Fechar"
+                aria-label={msgs.comum.fechar}
               >
                 ✕
               </button>
@@ -212,9 +215,9 @@ export function ComissoesPageClient({ idioma }: Props) {
 
             <div className="px-5 py-4">
               {detalheLoading ? (
-                <p className="text-sm app-muted">Carregando…</p>
+                <p className="text-sm app-muted">{msgs.comum.carregando}</p>
               ) : detalheRows.length === 0 ? (
-                <p className="text-sm app-muted">Nenhum registro.</p>
+                <p className="text-sm app-muted">{m.nenhum_registro}</p>
               ) : (
                 <>
                   <div className="overflow-x-auto rounded-lg border border-jl-border-1">
@@ -232,10 +235,10 @@ export function ComissoesPageClient({ idioma }: Props) {
                               }
                             />
                           </th>
-                          <th className="px-3 py-2 text-left font-medium">Data</th>
-                          <th className="px-3 py-2 text-right font-medium">Base</th>
-                          <th className="px-3 py-2 text-right font-medium">Comissão</th>
-                          <th className="px-3 py-2 text-left font-medium">Status</th>
+                          <th className="px-3 py-2 text-left font-medium">{m.col_data}</th>
+                          <th className="px-3 py-2 text-right font-medium">{m.col_base}</th>
+                          <th className="px-3 py-2 text-right font-medium">{m.col_comissao}</th>
+                          <th className="px-3 py-2 text-left font-medium">{m.filtro_status}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-jl-border-1">
@@ -262,11 +265,11 @@ export function ComissoesPageClient({ idioma }: Props) {
                             <td className="px-3 py-2">
                               {r.status === 'pago' ? (
                                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold app-badge-positive">
-                                  Pago
+                                  {m.status_pago_badge}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold app-badge-warn">
-                                  Pendente
+                                  {m.status_pendente_badge}
                                 </span>
                               )}
                             </td>
@@ -287,7 +290,7 @@ export function ComissoesPageClient({ idioma }: Props) {
                         disabled={marcandoPagas}
                         className="inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-sm font-semibold transition-colors app-btn-accent disabled:opacity-60"
                       >
-                        {marcandoPagas ? '…' : 'Marcar como Pago'}
+                        {marcandoPagas ? '…' : m.marcar_pago}
                       </button>
                     </div>
                   )}

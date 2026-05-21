@@ -223,10 +223,10 @@ export function CaixaGridLayout({
               <div 
                 className="animate-pulse flex items-center text-sm text-muted-foreground"
                 role="status"
-                aria-label="Carregando"
+                aria-label={m.comum?.carregando ?? 'Carregando...'}
               >
                 <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2 animate-bounce"></span>
-                Carregando...
+                {m.comum?.carregando ?? 'Carregando...'}
               </div>
             )}
           </div>
@@ -307,11 +307,11 @@ export function CaixaGridLayout({
             <div 
               className="flex items-center justify-center h-full"
               role="status"
-              aria-label="Carregando itens"
+              aria-label={m.comum?.carregando ?? 'Carregando itens'}
             >
               <div className="text-center">
                 <div className="inline-block w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-500">Carregando produtos...</p>
+                <p className="text-gray-500">{m.comum?.carregando ?? 'Carregando...'}</p>
               </div>
             </div>
           ) : itens.length === 0 ? (
