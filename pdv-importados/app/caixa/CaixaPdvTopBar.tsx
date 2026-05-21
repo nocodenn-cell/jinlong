@@ -74,7 +74,7 @@ export function CaixaPdvTopBar({
         "shrink-0 px-3 sm:px-5 py-2.5 border-b flex flex-wrap items-center gap-x-3 gap-y-2",
         classic
           ? "border-border bg-primary text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]"
-          : "border-jl-border-1 bg-jl-surface-elev text-foreground",
+          : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
@@ -85,7 +85,7 @@ export function CaixaPdvTopBar({
           size="icon"
           className={cn(
             "shrink-0 h-9 w-9",
-            classic ? "text-primary-foreground hover:bg-white/15 hover:text-primary-foreground" : "text-foreground",
+            classic ? "text-primary-foreground hover:bg-white/15 hover:text-primary-foreground" : "text-jl-fg-1",
           )}
           aria-label={m.caixa.topbar_menu_aria}
           title={m.caixa.topbar_menu_aria}
@@ -96,7 +96,7 @@ export function CaixaPdvTopBar({
         <span
           className={cn(
             "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
-            classic ? "border-primary-foreground/25 bg-white/10 text-primary-foreground" : "border-border bg-muted/40 text-foreground",
+            classic ? "border-primary-foreground/25 bg-white/10 text-primary-foreground" : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1",
           )}
           aria-hidden
         >
@@ -141,7 +141,7 @@ export function CaixaPdvTopBar({
         <div
           className={cn(
             "flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3",
-            classic ? "border-primary-foreground/25" : "border-border/60",
+            classic ? "border-primary-foreground/25" : "border-jl-border-1/60",
           )}
         >
           {caixaStatus?.aberto ? (
@@ -183,7 +183,7 @@ export function CaixaPdvTopBar({
               "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
               classic
                 ? "border border-primary-foreground/35 bg-white/10 text-primary-foreground hover:bg-white/20"
-                : "bg-secondary text-secondary-foreground border border-border",
+                : "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
             )}
           />
         </div>

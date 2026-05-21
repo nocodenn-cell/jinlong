@@ -161,14 +161,14 @@ export function CaixaPdvOperacoesButtons({
             </div>
             <div className="space-y-3">
               {turnoResumo ? (
-                <p className="text-foreground/90 leading-snug">{turnoResumo}</p>
+                <p className="text-jl-fg-1 leading-snug">{turnoResumo}</p>
               ) : (
-                <p className="text-foreground/60 leading-snug text-xs italic">
+                <p className="text-jl-fg-3 leading-snug text-xs italic">
                   {m.caixa.topbar_turno_fechado}
                 </p>
               )}
               {carregandoRegras && (
-                <p className="text-xs text-muted-foreground">{m.caixa.regras_carregando}</p>
+                <p className="text-xs text-jl-fg-3">{m.caixa.regras_carregando}</p>
               )}
             </div>
           </div>

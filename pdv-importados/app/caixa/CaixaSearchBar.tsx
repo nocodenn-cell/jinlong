@@ -70,7 +70,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
       <div className="flex items-center justify-between gap-2">
         <label
           className={cn(
-            "font-semibold text-foreground/95",
+            "font-semibold text-jl-fg-1",
             compact ? "text-xs" : "text-sm",
           )}
         >
@@ -80,7 +80,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
           type="button"
           onClick={onToggleSom}
           className={cn(
-            "rounded-md border border-border bg-muted font-semibold text-foreground/90 hover:bg-accent",
+            "rounded-md border border-jl-border-1 bg-jl-surface-soft font-semibold text-jl-fg-1 hover:bg-jl-surface-elev",
             compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-xs",
           )}
         >
@@ -108,7 +108,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             aria-label={m.caixa.busca_placeholder}
             disabled={buscando || carregandoRegras}
             className={cn(
-              "w-full bg-jl-surface-soft border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md focus:outline-none focus:ring-2 focus:ring-jl-accent focus:border-transparent",
+              "w-full bg-jl-surface-soft border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-jl-fg-1 placeholder:text-jl-fg-3 rounded-md focus:outline-none focus:ring-2 focus:ring-jl-accent focus:border-transparent",
               compact
                 ? "py-1.5 pl-8 pr-3 text-sm"
                 : "h-14 pl-10 pr-3 text-base",
@@ -159,7 +159,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
         </div>
       </form>
       {!compact ? (
-        <p className="text-sm text-foreground/85 leading-snug">{m.caixa.busca_dica}</p>
+        <p className="text-sm text-jl-fg-2 leading-snug">{m.caixa.busca_dica}</p>
       ) : null}
       {categoriasAtalho.length > 0 && !compact ? (
         <div className="space-y-1.5">

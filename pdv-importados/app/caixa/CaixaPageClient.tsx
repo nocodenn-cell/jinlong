@@ -48,7 +48,6 @@ import { useScannerDetector } from "@/hooks/useScannerDetector"
 import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipeline"
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
 import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
-import { CaixaPdvItemStagingPlaceholder } from "@/app/caixa/CaixaPdvItemStagingPlaceholder"
 import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
 import {
   metodoPagamentoToForma,
@@ -851,10 +850,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                           compact={codigo.trim().length > 0}
                         />
                       </div>
-                      <CaixaPdvItemStagingPlaceholder
-                        m={m}
-                        dense={codigo.trim().length > 0}
-                      />
                       <div className="shrink-0">
                         <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
                       </div>

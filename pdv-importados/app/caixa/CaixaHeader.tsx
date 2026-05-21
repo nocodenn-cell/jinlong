@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { CaixaPdvTopBar, type CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
+import { cn } from "@/lib/utils"
 
 type Props = {
   m: Mensagens
@@ -78,15 +79,20 @@ export function CaixaHeader({
         onFecharCaixa={onFecharCaixa}
       />
       {layoutVariant !== "classic" && currentDateTime ? (
-        <div className="flex items-center gap-3 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 text-[11px] text-jl-fg-3 sm:px-6">
-          <span className="tabular-nums">{currentDateTime}</span>
-          {caixaStatus?.aberto === true && (
-            <span className="truncate">
-              {new Date(caixaStatus.dataAbertura).toLocaleString(localeString)}
-              {" · "}
-              {m.caixa.moeda_prefixo} {caixaStatus.valorInicial.toFixed(2)}
-            </span>
-          )}
+        <div className="flex items-center gap-2 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 sm:px-6">
+          <span className="inline-flex items-center rounded border border-jl-border-1 bg-jl-surface-soft px-2 py-0.5 text-[11px] tabular-nums text-jl-fg-3">
+            {currentDateTime}
+          </span>
+          <span
+            className={cn(
+              "inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-medium",
+              caixaStatus?.aberto === true
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-3",
+            )}
+          >
+            {caixaStatus?.aberto === true ? m.caixa.status_aberto : m.caixa.status_fechado}
+          </span>
         </div>
       ) : null}
     </div>
