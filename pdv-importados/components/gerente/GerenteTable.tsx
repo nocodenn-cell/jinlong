@@ -31,7 +31,7 @@ export const GerenteTable = memo(function GerenteTable({
   return (
     <div
       className={cn(
-        'overflow-x-auto overscroll-x-contain rounded-xl border shadow-sm [-webkit-overflow-scrolling:touch]',
+        'overflow-x-auto overscroll-x-contain rounded-xl border shadow-sm transform-gpu [-webkit-overflow-scrolling:touch]',
         dragon ? 'gerente-table-dragon app-border app-surface-soft' : 'app-border app-surface',
       )}
     >

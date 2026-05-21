@@ -194,6 +194,9 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const [rows, setRows] = useState<ProdutoGerenteRow[]>(inicial.rows)
   const [total, setTotal] = useState(inicial.total)
   const [filtros, setFiltros] = useState<FiltrosUi>(FILTROS_UI_INITIAL)
+  // buscaInput: estado local isolado do campo de texto — não causa re-render da tabela.
+  // Um useEffect abaixo debounce-ia o valor para filtros.busca após 320 ms.
+  const [buscaInput, setBuscaInput] = useState('')
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(ITEMS_POR_PAGINA_PADRAO)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -255,6 +258,18 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     obs.observe(el)
     return () => obs.disconnect()
   }, [fetchList])
+
+  // Debounce do campo de busca: propaga para filtros.busca só após 320 ms de inatividade.
+  // Mantém buscaInput como estado local para que o <input> re-renderize isoladamente.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setFiltros((prev) => {
+        if (prev.busca === buscaInput.trim()) return prev
+        return { ...prev, busca: buscaInput.trim() }
+      })
+    }, 320)
+    return () => clearTimeout(id)
+  }, [buscaInput])
 
   const primeiraMontagem = useRef(true)
   useEffect(() => {
@@ -426,6 +441,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   }, [fetchList, filtros])
 
   const onLimpar = useCallback(() => {
+    setBuscaInput('')
     setFiltros(FILTROS_UI_INITIAL)
     setPaginaAtual(1)
   }, [])
@@ -525,8 +541,8 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
         id: 'busca',
         label: m.produtos.buscar,
         tipo: 'search',
-        valor: filtros.busca,
-        onChange: (v) => patchFiltro('busca', typeof v === 'string' ? v : '', false),
+        valor: buscaInput,
+        onChange: (v) => setBuscaInput(typeof v === 'string' ? v : ''),
         placeholder: m.produtos.buscar,
       },
       {
@@ -624,7 +640,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
         placeholder: m.produtos.filtro_tags_placeholder,
       },
     ],
-    [filtros, m.produtos, opCategorias, opMarcas, opFornecedores, patchFiltro],
+    [filtros, buscaInput, m.produtos, opCategorias, opMarcas, opFornecedores, patchFiltro],
   )
 
   const colunasProdutos: GerenteTableColumn[] = [

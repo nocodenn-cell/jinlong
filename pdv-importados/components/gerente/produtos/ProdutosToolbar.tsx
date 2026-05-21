@@ -66,7 +66,7 @@ export function ProdutosToolbar({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2 rounded-xl border border-jl-border-1 bg-jl-surface-elev/60 px-3 py-2.5 backdrop-blur-sm"
+      className="flex flex-wrap items-center gap-2 rounded-xl border border-jl-border-1 bg-jl-surface-elev px-3 py-2.5"
       role="toolbar"
       aria-label={p.toolbar_aria}
     >
