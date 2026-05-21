@@ -38,8 +38,6 @@ const mockMensagens = {
     aria_qtde_aumentar: "Aumentar 1 unidade — {{nome}}",
     aria_qtde_diminuir: "Diminuir 1 unidade — {{nome}}",
     id_label: "ID",
-    badge_nf: "NF",
-    badge_sem_nf: "Sem NF",
     empty_guardiao: "",
     empty_cta_scan: "",
     empty_cta_type_enter: "",

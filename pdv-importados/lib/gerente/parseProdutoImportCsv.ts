@@ -210,8 +210,9 @@ export function parseAndValidateImportRow(
   const unidadeRaw = parseUnidade(raw.unidade_medida ?? '')
   if (!unidadeRaw.ok) return { ok: false, reason: { t: 'unidade_invalid' } }
 
+  // tem_nf is kept for backward compat with old CSV exports; invalid or missing → false
   const temNf = parseBoolLoose(raw.tem_nf ?? '')
-  if (!temNf.ok) return { ok: false, reason: { t: 'boolean_invalid', field: 'tem_nf' } }
+  const temNfValue = temNf.ok ? temNf.value : false
 
   const ativo = parseBoolLoose(raw.ativo ?? '')
   if (!ativo.ok) return { ok: false, reason: { t: 'boolean_invalid', field: 'ativo' } }
@@ -228,7 +229,7 @@ export function parseAndValidateImportRow(
     unidade_medida: unidadeRaw.value,
     observacao: observacaoRaw || null,
     origem: raw.origem ?? '',
-    tem_nf: temNf.value,
+    tem_nf: temNfValue,
     ativo: ativo.value,
   })
 

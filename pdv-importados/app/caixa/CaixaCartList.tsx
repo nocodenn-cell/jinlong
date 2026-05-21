@@ -366,26 +366,18 @@ function MetaPdvBloco({
   const origem: OrigemProdutoCaixa =
     origemRaw === "china_manual" || origemRaw === "brasil_nf" || origemRaw === "brasil_sem_nf"
       ? origemRaw
-      : "brasil_sem_nf"
+      : "brasil_nf"
 
-  const getOrigemClass = (o: OrigemProdutoCaixa) => {
-    if (o === "china_manual") return "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
-    if (o === 'brasil_nf') return CAIXA_CHIP_SUCCESS
-    return "border border-border text-muted-foreground bg-muted"
-  }
-
-  const origemClass = getOrigemClass(origem)
-
-  const nfClass = meta.tem_nf ? CAIXA_CHIP_SUCCESS : 'border border-border text-muted-foreground'
+  const origemClass =
+    origem === "china_manual"
+      ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
+      : CAIXA_CHIP_SUCCESS
 
   return (
     <div className="space-y-1">
       <div className={`flex flex-wrap items-center gap-1 ${compact ? "" : "max-w-full"}`}>
         <Badge variant="outline" className={`text-xs font-medium px-1.5 py-0 ${origemClass}`}>
           {labelOrigemCaixa(origem, m)}
-        </Badge>
-        <Badge variant="outline" className={`text-xs px-1.5 py-0 ${nfClass}`}>
-          {meta.tem_nf ? m.caixa.badge_nf : m.caixa.badge_sem_nf}
         </Badge>
       </div>
     </div>

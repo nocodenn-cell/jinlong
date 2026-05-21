@@ -38,12 +38,11 @@ import { parseTagsFiltroTexto } from './produtoGerenteFiltrosUtils'
 
 export type { ProdutoGerenteRow } from './produtoGerenteTypes'
 
-type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
+type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'  // brasil_sem_nf is legacy DB value
 
 type FiltrosUi = {
   situacao: 'todos' | 'ativos' | 'inativos'
-  origem: 'all' | OrigemCode
-  nf: 'all' | 'sim' | 'nao'
+  origem: 'all' | 'china_manual' | 'brasil_nf'
   estoque: 'todos' | 'abaixo_minimo' | 'em_falta'
   imagens: 'todos' | 'com_imagem' | 'sem_imagem'
   tagsTexto: string
@@ -56,7 +55,6 @@ type FiltrosUi = {
 const FILTROS_UI_INITIAL: FiltrosUi = {
   situacao: 'todos',
   origem: 'all',
-  nf: 'all',
   estoque: 'todos',
   imagens: 'todos',
   tagsTexto: '',
@@ -70,7 +68,7 @@ function toBuscarInput(f: FiltrosUi, page: number, pageSize: number): BuscarProd
   return {
     situacao: f.situacao,
     origem: f.origem,
-    nf: f.nf,
+    nf: 'all',
     estoque: f.estoque,
     imagens: f.imagens,
     tags: parseTagsFiltroTexto(f.tagsTexto),
@@ -326,7 +324,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           { key: 'codigo_barras', header: m.produtos.codigo_barras },
           { key: 'preco_varejo', header: m.produtos.preco_varejo },
           { key: 'origem', header: m.produtos.origem_label },
-          { key: 'tem_nf', header: m.produtos.tem_nf },
           { key: 'ativo', header: m.produtos.status },
         ],
         r.data.map((p) => ({
@@ -335,7 +332,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           codigo_barras: p.codigo_barras ?? '',
           preco_varejo: Number(p.preco_varejo),
           origem: p.origem,
-          tem_nf: p.tem_nf ? '1' : '0',
           ativo: p.ativo ? '1' : '0',
         })),
       )
@@ -350,7 +346,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       codigo_barras: string
       preco_varejo: number
       origem: string
-      tem_nf: boolean
     }) => {
       const r = await criarProduto(input)
       if (!r.success) throw new Error(r.error)
@@ -539,7 +534,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           { value: 'all', label: m.produtos.filtro_todas_origens },
           { value: 'china_manual', label: m.produtos.origem_china },
           { value: 'brasil_nf', label: m.produtos.origem_brasil_nf },
-          { value: 'brasil_sem_nf', label: m.produtos.origem_brasil_sem_nf },
         ],
       },
       {
@@ -553,18 +547,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           { value: 'todos', label: m.produtos.filtro_situacao_todos },
           { value: 'ativos', label: m.produtos.filtro_situacao_somente_ativos },
           { value: 'inativos', label: m.produtos.filtro_situacao_somente_inativos },
-        ],
-      },
-      {
-        id: 'nf',
-        label: m.produtos.tem_nf,
-        tipo: 'select',
-        valor: filtros.nf,
-        onChange: (v) => patchFiltro('nf', (typeof v === 'string' ? v : 'all') as FiltrosUi['nf']),
-        opcoes: [
-          { value: 'all', label: m.produtos.filtro_todas_nf },
-          { value: 'sim', label: m.produtos.filtro_nf_sim },
-          { value: 'nao', label: m.produtos.filtro_nf_nao },
         ],
       },
       {
@@ -657,7 +639,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     { key: 'cb', header: m.produtos.codigo_barras },
     { key: 'preco', header: m.produtos.preco_varejo, width: '7rem' },
     { key: 'origem', header: m.produtos.origem_label },
-    { key: 'nf', header: m.produtos.tem_nf },
     { key: 'st', header: m.produtos.status },
     { key: 'ac', header: m.produtos.acoes, width: '8.75rem' },
   ]
@@ -766,7 +747,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                   codigo_barras: readFormDataString(fd, 'codigo_barras'),
                   preco_varejo: Number(fd.get('preco_varejo')),
                   origem: readFormDataString(fd, 'origem'),
-                  tem_nf: fd.get('tem_nf') === 'on',
                 })
                 e.currentTarget.reset()
               }}
@@ -786,7 +766,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
               <select name="origem" defaultValue="china_manual" className={finSelect}>
                 <option value="china_manual">{m.produtos.origem_china}</option>
                 <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-                <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
               </select>
               <button
                 type="submit"
@@ -795,11 +774,9 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
               >
                 {criarLoading ? '…' : m.comum.salvar}
               </button>
-              <label className="gerente-fin-muted md:col-span-6 inline-flex items-center gap-2 text-xs">
-                <input type="checkbox" name="tem_nf" className="h-3.5 w-3.5 rounded app-border app-surface-soft" />
-                {m.produtos.tem_nf}
-                <span className="opacity-80">· {m.produtos.codigo_barras_opcional}</span>
-              </label>
+              <p className="gerente-fin-muted md:col-span-6 text-xs opacity-80">
+                · {m.produtos.codigo_barras_opcional}
+              </p>
             </form>
           </CadastroRapidoBlock>
         </section>
@@ -946,22 +923,13 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                         tooltip={m.produtos.tooltip_origem_china_manual}
                         className="border-amber-500/50 bg-amber-500/15 text-amber-100"
                       />
-                    ) : p.origem === 'brasil_sem_nf' ? (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_brasil_sem_nf}
-                        tooltip={m.produtos.tooltip_origem_brasil_sem_nf}
-                        className="border-slate-500/50 bg-slate-500/20 text-slate-100"
-                      />
                     ) : (
                       <OrigemBadgeUi
                         label={m.produtos.origem_brasil_nf}
-                        tooltip={m.produtos.tooltip_origem_brasil_nf}
+                        tooltip={m.produtos.tooltip_origem_brasil}
                         className="border-success/45 bg-success/15 text-success"
                       />
                     )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <GerenteStatusBadge status={p.tem_nf ? 'TEM_NF' : 'SEM_NF'} label={p.tem_nf ? m.comum.sim : m.comum.nao} />
                   </td>
                   <td className="px-3 py-2">
                     <GerenteStatusBadge

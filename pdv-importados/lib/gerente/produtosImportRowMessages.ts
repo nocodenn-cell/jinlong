@@ -13,7 +13,7 @@ export type ImportCsvRowFailReason =
   | { t: 'wrong_columns'; expected: number; got: number }
   | { t: 'preco_empty' }
   | { t: 'preco_invalid' }
-  | { t: 'boolean_invalid'; field: 'tem_nf' | 'ativo' }
+  | { t: 'boolean_invalid'; field: 'ativo' }
   | { t: 'nome_short' }
   | { t: 'codigo_invalid' }
   | { t: 'origem_invalid' }
@@ -61,9 +61,7 @@ export function importCsvRowFailToString(
     case 'preco_invalid':
       return p.import_row_preco_invalid
     case 'boolean_invalid':
-      return reason.field === 'tem_nf'
-        ? p.import_row_boolean_tem_nf
-        : p.import_row_boolean_ativo
+      return p.import_row_boolean_ativo
     case 'nome_short':
       return p.import_row_nome_short
     case 'codigo_invalid':

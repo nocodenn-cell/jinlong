@@ -7,7 +7,6 @@ import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTyp
 
 function origemTexto(p: ProdutoGerenteRow, mp: Mensagens['produtos']): string {
   if (p.origem === 'china_manual') return mp.origem_china
-  if (p.origem === 'brasil_sem_nf') return mp.origem_brasil_sem_nf
   return mp.origem_brasil_nf
 }
 
@@ -52,7 +51,6 @@ export function ProdutosListaImpressao({ className, rows, m, idioma }: ProdutosL
             <th className="border border-neutral-400 px-1.5 py-1.5">{p.codigo_barras}</th>
             <th className="border border-neutral-400 px-1.5 py-1.5 text-right">{p.preco_varejo}</th>
             <th className="border border-neutral-400 px-1.5 py-1.5">{p.origem_label}</th>
-            <th className="border border-neutral-400 px-1.5 py-1.5">{p.tem_nf}</th>
             <th className="border border-neutral-400 px-1.5 py-1.5">{p.status}</th>
           </tr>
         </thead>
@@ -81,9 +79,6 @@ export function ProdutosListaImpressao({ className, rows, m, idioma }: ProdutosL
                 {formatBRL(Number(row.preco_varejo), locale)}
               </td>
               <td className="border border-neutral-400 px-1.5 py-1">{origemTexto(row, p)}</td>
-              <td className="border border-neutral-400 px-1.5 py-1">
-                {row.tem_nf ? m.comum.sim : m.comum.nao}
-              </td>
               <td className="border border-neutral-400 px-1.5 py-1">
                 {row.ativo ? p.ativo : p.inativo}
               </td>

@@ -16,7 +16,7 @@ import {
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 
-type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
+type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'  // brasil_sem_nf is legacy DB value
 type UnidadeCode = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
 
 export type ProdutosEditarCatalogoModalProps = Readonly<{
@@ -50,7 +50,6 @@ export function ProdutosEditarCatalogoModal({
   const [nome, setNome] = useState('')
   const [codigoBarras, setCodigoBarras] = useState('')
   const [origem, setOrigem] = useState<OrigemCode>('china_manual')
-  const [temNf, setTemNf] = useState(false)
 
   // --- precificação ---
   const [precoVarejo, setPrecoVarejo] = useState('')
@@ -76,8 +75,8 @@ export function ProdutosEditarCatalogoModal({
     if (!open || !produto) return
     setNome(produto.nome)
     setCodigoBarras(produto.codigo_barras ?? '')
-    setOrigem(produto.origem as OrigemCode)
-    setTemNf(produto.tem_nf)
+    // Map legacy brasil_sem_nf to brasil_nf so the dropdown selects "Brasil"
+    setOrigem(produto.origem === 'brasil_sem_nf' ? 'brasil_nf' : produto.origem as OrigemCode)
     setPrecoVarejo(String(produto.preco_varejo))
     setPrecoAtacado(produto.preco_atacado != null ? String(produto.preco_atacado) : '')
     setQtdGatilho(produto.quantidade_gatilho_atacado != null ? String(produto.quantidade_gatilho_atacado) : '')
@@ -115,7 +114,7 @@ export function ProdutosEditarCatalogoModal({
         nome: nome.trim(),
         codigo_barras: codigoBarras.trim(),
         origem,
-        tem_nf: temNf,
+        tem_nf: produto.tem_nf,
         preco_varejo: precoVarejoNum,
         preco_atacado: precoAtacadoNum,
         quantidade_gatilho_atacado: qtdGatilhoNum,
@@ -136,7 +135,7 @@ export function ProdutosEditarCatalogoModal({
       setSaving(false)
     }
   }, [
-    produto, nome, codigoBarras, origem, temNf,
+    produto, nome, codigoBarras, origem,
     precoVarejo, precoAtacado, qtdGatilho,
     unidadeMedida, observacao,
     categoriaId, marcaId, fornecedorId,
@@ -207,7 +206,6 @@ export function ProdutosEditarCatalogoModal({
                 >
                   <option value="china_manual">{p.origem_china}</option>
                   <option value="brasil_nf">{p.origem_brasil_nf}</option>
-                  <option value="brasil_sem_nf">{p.origem_brasil_sem_nf}</option>
                 </select>
               </label>
               <label className="block text-xs font-medium text-jl-fg-3">
@@ -226,16 +224,6 @@ export function ProdutosEditarCatalogoModal({
                 </select>
               </label>
             </div>
-            <label className="flex items-center gap-2 text-xs text-jl-fg-1">
-              <input
-                type="checkbox"
-                className="h-3.5 w-3.5 rounded app-border app-surface-soft"
-                checked={temNf}
-                onChange={(e) => setTemNf(e.target.checked)}
-                disabled={saving}
-              />
-              {p.tem_nf}
-            </label>
           </div>
 
           {/* ── Precificação ── */}

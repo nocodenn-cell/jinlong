@@ -6,8 +6,7 @@ export function labelOrigemCaixa(
   m: Mensagens,
 ): string {
   if (origem === 'china_manual') return m.caixa.origem_china_manual
-  if (origem === 'brasil_nf') return m.caixa.origem_brasil_nf
-  return m.caixa.origem_brasil_sem_nf
+  return m.caixa.origem_brasil_nf
 }
 
 export function truncarObservacaoCaixa(texto: string | null | undefined, max = 72): string {

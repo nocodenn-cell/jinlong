@@ -58,16 +58,9 @@ function isCriticoLinha(row: EstoqueGerenteLinhaDTO): boolean {
 }
 
 function origemLabel(m: ReturnType<typeof getMessages>, origem: string): string {
-  switch (origem) {
-    case 'china_manual':
-      return m.produtos.origem_china
-    case 'brasil_nf':
-      return m.produtos.origem_brasil_nf
-    case 'brasil_sem_nf':
-      return m.produtos.origem_brasil_sem_nf
-    default:
-      return origem
-  }
+  if (origem === 'china_manual') return m.produtos.origem_china
+  if (origem === 'brasil_nf' || origem === 'brasil_sem_nf') return m.produtos.origem_brasil_nf
+  return origem
 }
 
 export function EstoqueGerentePageClient({
@@ -122,7 +115,7 @@ export function EstoqueGerentePageClient({
       busca: buscaDebounced,
       categoria_id: categoriaId ? categoriaId : null,
       origem:
-        origem === 'china_manual' || origem === 'brasil_nf' || origem === 'brasil_sem_nf'
+        origem === 'china_manual' || origem === 'brasil_nf'
           ? origem
           : '',
       ordem,
@@ -338,7 +331,6 @@ export function EstoqueGerentePageClient({
               <option value="">{m.produtos.filtro_todas_origens}</option>
               <option value="china_manual">{m.produtos.origem_china}</option>
               <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-              <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
             </select>
           </label>
           <div className="flex items-end gap-2">
