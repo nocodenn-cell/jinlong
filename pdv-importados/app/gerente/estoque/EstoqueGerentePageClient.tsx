@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Download } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -295,51 +295,71 @@ export function EstoqueGerentePageClient({
         ) : null}
       </div>
 
-      <GerenteStickyToolbar className="mb-4 py-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-jl-fg-3">
-            {m.estoque.buscar_label}
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder={m.estoque.buscar_placeholder}
-              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-            />
+      <GerenteStickyToolbar className="mb-4">
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-2.5 py-2.5">
+
+          {/* ── Busca ──────────────────────────────── */}
+          <label className="flex min-w-[200px] flex-1 flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+              {m.estoque.buscar_label}
+            </span>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-40"
+                aria-hidden
+              />
+              <input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder={m.estoque.buscar_placeholder}
+                className="h-9 w-full rounded-lg pl-8 pr-3 text-sm app-input"
+              />
+            </div>
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
-            {m.produtos.categoria}
+
+          {/* ── Categoria ─────────────────────────── */}
+          <label className="flex min-w-[155px] flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+              {m.produtos.categoria}
+            </span>
             <select
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
-              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              className="h-9 rounded-lg px-3 text-sm app-select"
             >
               <option value="">{m.estoque.filtro_todas_categorias}</option>
               {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
+                <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
           </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
-            {m.produtos.origem_label}
+
+          {/* ── Origem ────────────────────────────── */}
+          <label className="flex min-w-[140px] flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+              {m.produtos.origem_label}
+            </span>
             <select
               value={origem}
               onChange={(e) => setOrigem(e.target.value)}
-              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+              className="h-9 rounded-lg px-3 text-sm app-select"
             >
               <option value="">{m.produtos.filtro_todas_origens}</option>
               <option value="china_manual">{m.produtos.origem_china}</option>
               <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
             </select>
           </label>
+
+          {/* ── Linhas + Exportar ─────────────────── */}
           <div className="flex items-end gap-2">
-            <label className="flex w-[130px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
-              {m.produtos.pag_linhas_por_pagina}
+            <label className="flex w-[110px] flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                {m.produtos.pag_linhas_por_pagina}
+              </span>
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                className="h-9 rounded-lg px-3 text-sm app-select"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -353,14 +373,16 @@ export function EstoqueGerentePageClient({
                 disabled={exporting || total === 0}
                 onClick={() => void handleExportCsv()}
                 className={cn(
-                  'gerente-btn-csv inline-flex h-9 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors app-btn-neutral',
+                  'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium app-btn-neutral',
                   (exporting || total === 0) && 'cursor-not-allowed opacity-45',
                 )}
               >
+                <Download className="h-3.5 w-3.5" aria-hidden />
                 {exporting ? m.comum.carregando : m.gerente.exportar_csv}
               </button>
             )}
           </div>
+
         </div>
       </GerenteStickyToolbar>
 
