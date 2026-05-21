@@ -38,8 +38,6 @@ import { parseTagsFiltroTexto } from './produtoGerenteFiltrosUtils'
 
 export type { ProdutoGerenteRow } from './produtoGerenteTypes'
 
-type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'  // brasil_sem_nf is legacy DB value
-
 type FiltrosUi = {
   situacao: 'todos' | 'ativos' | 'inativos'
   origem: 'all' | 'china_manual' | 'brasil_nf'
