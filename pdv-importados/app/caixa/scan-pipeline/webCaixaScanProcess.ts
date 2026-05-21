@@ -199,6 +199,8 @@ export async function runWebCaixaScanProcess(
       linhaPendenteRollback = rollbackLinhaDoScan(linhaPendenteRollback, deps)
     }
     const linhaAntes = useCarrinhoStore.getState().itens.find((i) => i.produtoId === p.id)
+    const itemIdAntes = linhaAntes?.id ?? null
+    const quantidadeAntes = linhaAntes?.quantidade ?? null
 
     deps.adicionarItem({
       id: novaLinhaId,
@@ -224,9 +226,9 @@ export async function runWebCaixaScanProcess(
         precoVarejoReferencia: p.preco_varejo,
       },
     })
-    const itemIdReal = linhaAntes?.id ?? novaLinhaId
-    linhaPendenteRollback = linhaAntes
-      ? { kind: 'merged', itemId: linhaAntes.id, quantidadeAnterior: linhaAntes.quantidade }
+    const itemIdReal = itemIdAntes ?? novaLinhaId
+    linhaPendenteRollback = itemIdAntes && quantidadeAntes !== null
+      ? { kind: 'merged', itemId: itemIdAntes, quantidadeAnterior: quantidadeAntes }
       : { kind: 'new', itemId: novaLinhaId }
 
     if (signal?.aborted) {
