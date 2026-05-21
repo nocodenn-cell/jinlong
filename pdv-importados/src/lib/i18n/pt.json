@@ -944,23 +944,6 @@
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
   },
-  "configuracoes": {
-    "titulo": "Configurações gerenciais",
-    "subtitulo": "Parâmetros globais de comissão, caixa, estoque e importação. Alterações aplicam-se após recarregar o caixa.",
-    "grupo_financeiro": "Financeiro",
-    "grupo_caixa": "Caixa",
-    "grupo_estoque": "Estoque",
-    "grupo_importacao": "Importação",
-    "chave_comissao_padrao_percentual": "Comissão padrão (%)",
-    "chave_desconto_maximo_operador_percentual": "Desconto máximo sem gerente (%)",
-    "chave_cancelamento_maximo_valor_sem_gerente": "Limite de cancelamento — operador (R$)",
-    "chave_estoque_minimo_padrao": "Estoque mínimo padrão (novos produtos)",
-    "chave_lead_time_min_dias": "Lead time mínimo (dias)",
-    "chave_lead_time_max_dias": "Lead time máximo (dias)",
-    "botao_salvar": "Salvar",
-    "salvo_sucesso": "Configuração atualizada.",
-    "erro_valor_vazio": "Informe um valor."
-  },
   "brand": {
     "logo_subtitle": "金龍"
   },
@@ -1253,7 +1236,19 @@
     "btn_salvar": "Salvar alterações",
     "toast_loja_salva": "Dados da loja atualizados.",
     "toast_pdv_salvo": "Configurações do PDV atualizadas.",
-    "toast_logo_enviado": "Logo enviado com sucesso."
+    "toast_logo_enviado": "Logo enviado com sucesso.",
+    "grupo_financeiro": "Financeiro",
+    "grupo_caixa": "Caixa",
+    "grupo_estoque": "Estoque",
+    "grupo_importacao": "Importação",
+    "chave_comissao_padrao_percentual": "Comissão padrão (%)",
+    "chave_desconto_maximo_operador_percentual": "Desconto máximo sem gerente (%)",
+    "chave_cancelamento_maximo_valor_sem_gerente": "Limite de cancelamento — operador (R$)",
+    "chave_estoque_minimo_padrao": "Estoque mínimo padrão (novos produtos)",
+    "chave_lead_time_min_dias": "Lead time mínimo (dias)",
+    "chave_lead_time_max_dias": "Lead time máximo (dias)",
+    "salvo_sucesso": "Configuração atualizada.",
+    "erro_valor_vazio": "Informe um valor."
   },
   "clientes": {
     "titulo": "Clientes",

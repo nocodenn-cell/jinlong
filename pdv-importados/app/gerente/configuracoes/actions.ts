@@ -5,6 +5,31 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
+export type ConfiguracaoGeralRow = {
+  chave: string
+  valor: string
+  descricao: string | null
+  tipo_dado: 'text' | 'integer' | 'percent' | 'money' | 'boolean'
+}
+
+export async function atualizarConfiguracao(
+  input: { chave: string; valor: string },
+): Promise<{ success: true } | { success: false; error: string }> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('configuracoes_gerais')
+    .update({ valor: input.valor.trim() })
+    .eq('chave', input.chave)
+  if (error) return { success: false, error: mensagemErroComSecao('Configuração', error.message) }
+
+  revalidatePath('/gerente/configuracoes')
+  revalidatePath('/caixa')
+  return { success: true }
+}
+
 export type LojaConfig = {
   id?: string
   nome: string

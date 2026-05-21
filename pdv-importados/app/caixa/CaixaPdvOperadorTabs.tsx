@@ -139,7 +139,7 @@ export function CaixaPdvOperadorTabs({
           id="caixa-pdv-panel-produto"
           aria-labelledby="caixa-pdv-tab-produto"
           hidden={tab !== "produto"}
-          className={tab === "produto" ? "flex min-h-0 flex-1 flex-col gap-3 overflow-hidden" : "hidden"}
+          className={tab === "produto" ? "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto" : "hidden"}
         >
           {produtoPanel}
         </div>

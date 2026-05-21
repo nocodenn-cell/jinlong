@@ -995,23 +995,6 @@
       "cancelada": { "cn": "已取消", "pt": "Cancelada" }
     }
   },
-  "configuracoes": {
-    "titulo": "管理设置",
-    "subtitulo": "佣金、收银、库存与进口的全局参数。更改后请刷新收银端生效。",
-    "grupo_financeiro": "财务",
-    "grupo_caixa": "收银",
-    "grupo_estoque": "库存",
-    "grupo_importacao": "进口",
-    "chave_comissao_padrao_percentual": "默认佣金 (%)",
-    "chave_desconto_maximo_operador_percentual": "无店长授权最大折扣 (%)",
-    "chave_cancelamento_maximo_valor_sem_gerente": "操作员取消上限 (R$)",
-    "chave_estoque_minimo_padrao": "新商品默认最低库存",
-    "chave_lead_time_min_dias": "交期下限（天）",
-    "chave_lead_time_max_dias": "交期上限（天）",
-    "botao_salvar": "保存",
-    "salvo_sucesso": "已更新。",
-    "erro_valor_vazio": "请填写数值。"
-  },
   "brand": {
     "logo_subtitle": "金龍"
   },
@@ -1304,7 +1287,19 @@
     "btn_salvar": "保存修改",
     "toast_loja_salva": "门店数据已更新。",
     "toast_pdv_salvo": "PDV 设置已更新。",
-    "toast_logo_enviado": "Logo 上传成功。"
+    "toast_logo_enviado": "Logo 上传成功。",
+    "grupo_financeiro": "财务",
+    "grupo_caixa": "收银",
+    "grupo_estoque": "库存",
+    "grupo_importacao": "进口",
+    "chave_comissao_padrao_percentual": "默认佣金 (%)",
+    "chave_desconto_maximo_operador_percentual": "无店长授权最大折扣 (%)",
+    "chave_cancelamento_maximo_valor_sem_gerente": "操作员取消上限 (R$)",
+    "chave_estoque_minimo_padrao": "新商品默认最低库存",
+    "chave_lead_time_min_dias": "交期下限（天）",
+    "chave_lead_time_max_dias": "交期上限（天）",
+    "salvo_sucesso": "已更新。",
+    "erro_valor_vazio": "请填写数值。"
   },
   "clientes": {
     "titulo": "客户",

@@ -400,8 +400,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     setCaixaMensagem(null)
     limparEstadoDescontoGerente()
     setAbaPdvAtiva("produto")
+    focarCampoBusca()
   }, [
     flushLeiturasPendentes,
+    focarCampoBusca,
     limparCarrinho,
     limparEstadoDescontoGerente,
     resetPagamentos,
@@ -788,7 +790,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
       <div
         data-caixa-layout={pdvLayoutVariant === "classic" ? "classic" : undefined}
         className={cn(
-          "min-h-[100dvh] flex flex-col text-[14px] leading-5",
+          "h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5",
           pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "caixa-oriental-root",
         )}
       >
