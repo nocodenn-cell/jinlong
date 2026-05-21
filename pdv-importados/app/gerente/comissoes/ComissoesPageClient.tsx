@@ -282,7 +282,7 @@ export function ComissoesPageClient({ idioma }: Props) {
                   {selecionados.size > 0 && (
                     <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-jl-border-1 bg-jl-surface-elev px-4 py-3">
                       <span className="text-sm text-jl-fg-1">
-                        {selecionados.size} selecionado(s) · {formatBRL(totalPendente, locale)}
+                        {m.selecionados_info.replace('{{count}}', String(selecionados.size)).replace('{{valor}}', formatBRL(totalPendente, locale))}
                       </span>
                       <button
                         type="button"
