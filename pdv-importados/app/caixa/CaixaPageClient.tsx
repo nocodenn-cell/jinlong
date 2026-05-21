@@ -272,6 +272,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     tocarFeedback,
     focarCampoBusca,
     adicionarItem,
+    alterarQuantidade,
     setCartOwnerForSession,
     aplicarPrecoRpcParaLinha,
     getActiveCupomSessionId: () => cupomSessionIdRef.current,

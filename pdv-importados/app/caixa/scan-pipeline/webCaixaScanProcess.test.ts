@@ -9,9 +9,14 @@ const scanStoreTest = vi.hoisted(() => {
     const ix = itens.findIndex((x) => x.id === id)
     if (ix >= 0) itens.splice(ix, 1)
   })
+  const alterarQuantidade = vi.fn((id: string, quantidade: number) => {
+    const item = itens.find((x) => x.id === id)
+    if (item) item.quantidade = quantidade
+  })
   return {
     itens,
     removerItem,
+    alterarQuantidade,
     getState() {
       return { itens: [...itens], removerItem }
     },
@@ -88,6 +93,7 @@ function minimalDeps(overrides: Partial<WebCaixaScanDeps> = {}): WebCaixaScanDep
         resultado: item.resultado as { tipoPreco: string },
       })
     }),
+    alterarQuantidade: scanStoreTest.alterarQuantidade,
     setCartOwnerForSession: vi.fn(),
     aplicarPrecoRpcParaLinha: vi.fn().mockResolvedValue(undefined),
     getActiveCupomSessionId: () => 'cupom-a',
@@ -101,6 +107,7 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     vi.mocked(buscarProdutoParaCaixa).mockReset()
     scanStoreTest.itens.length = 0
     scanStoreTest.removerItem.mockClear()
+    scanStoreTest.alterarQuantidade.mockClear()
   })
 
   it('stale_cupom: retorna sem toast e sem chamar busca quando cupom ativo difere do meta', async () => {
@@ -211,5 +218,102 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     expect(deps.adicionarItem).toHaveBeenCalledTimes(1)
     expect(scanStoreTest.itens).toHaveLength(0)
     expect(scanStoreTest.removerItem).toHaveBeenCalled()
+  })
+
+  it('stale_cupom após merge: desfaz apenas a quantidade adicionada no item existente', async () => {
+    let cupomCalls = 0
+    scanStoreTest.itens.push({ id: 'linha-existente', produtoId: 'p1', quantidade: 3 })
+    vi.mocked(buscarProdutoParaCaixa).mockResolvedValue({
+      ok: true,
+      status: 'encontrado',
+      produto: {
+        id: 'p1',
+        nome: 'Produto teste',
+        codigo_barras: '789',
+        preco_varejo: 9.99,
+        preco_atacado: null,
+        categoria_id: null,
+        origem: 'brasil_sem_nf',
+        tem_nf: false,
+        observacao: null,
+        quantidade_estoque: 5,
+        estoque_minimo: null,
+      },
+    } as Awaited<ReturnType<typeof buscarProdutoParaCaixa>>)
+
+    const deps = minimalDeps({
+      adicionarItem: vi.fn((item) => {
+        const existente = scanStoreTest.itens.find((i) => i.produtoId === item.produtoId)
+        if (existente) {
+          existente.quantidade += item.quantidade
+          return
+        }
+        scanStoreTest.itens.push({
+          id: item.id,
+          produtoId: item.produtoId,
+          quantidade: item.quantidade,
+          resultado: item.resultado as { tipoPreco: string },
+        })
+      }),
+      getActiveCupomSessionId: () => {
+        cupomCalls += 1
+        return cupomCalls <= 4 ? 'cupom-a' : 'cupom-b'
+      },
+    })
+
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+    expect(r).toEqual({ ok: false, reason: 'stale_cupom' })
+    expect(scanStoreTest.itens).toEqual([
+      { id: 'linha-existente', produtoId: 'p1', quantidade: 3 },
+    ])
+    expect(scanStoreTest.removerItem).not.toHaveBeenCalled()
+    expect(scanStoreTest.alterarQuantidade).toHaveBeenCalledWith('linha-existente', 3)
+  })
+
+  it('scan bem-sucedido após merge: recalcula preço usando a linha existente', async () => {
+    scanStoreTest.itens.push({ id: 'linha-existente', produtoId: 'p1', quantidade: 1 })
+    vi.mocked(buscarProdutoParaCaixa).mockResolvedValue({
+      ok: true,
+      status: 'encontrado',
+      produto: {
+        id: 'p1',
+        nome: 'Produto teste',
+        codigo_barras: '789',
+        preco_varejo: 9.99,
+        preco_atacado: 8.99,
+        categoria_id: null,
+        origem: 'brasil_sem_nf',
+        tem_nf: false,
+        observacao: null,
+        quantidade_estoque: 5,
+        estoque_minimo: null,
+      },
+    } as Awaited<ReturnType<typeof buscarProdutoParaCaixa>>)
+
+    const deps = minimalDeps({
+      adicionarItem: vi.fn((item) => {
+        const existente = scanStoreTest.itens.find((i) => i.produtoId === item.produtoId)
+        if (existente) {
+          existente.quantidade += item.quantidade
+          return
+        }
+        scanStoreTest.itens.push({
+          id: item.id,
+          produtoId: item.produtoId,
+          quantidade: item.quantidade,
+          resultado: item.resultado as { tipoPreco: string },
+        })
+      }),
+    })
+
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+    expect(r).toEqual({ ok: true })
+    expect(deps.aplicarPrecoRpcParaLinha).toHaveBeenCalledWith(
+      { produtoId: 'p1', itemId: 'linha-existente', quantidade: 2 },
+      { scanSignal: undefined },
+    )
+    expect(scanStoreTest.itens).toEqual([
+      { id: 'linha-existente', produtoId: 'p1', quantidade: 2 },
+    ])
   })
 })

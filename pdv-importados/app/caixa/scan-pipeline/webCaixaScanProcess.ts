@@ -51,6 +51,7 @@ export type WebCaixaScanDeps = {
   tocarFeedback: (kind: 'ok' | 'erro') => void
   focarCampoBusca: () => void
   adicionarItem: CarrinhoState['adicionarItem']
+  alterarQuantidade: CarrinhoState['alterarQuantidade']
   setCartOwnerForSession: CarrinhoState['setCartOwnerForSession']
   aplicarPrecoRpcParaLinha: (
     params: { produtoId: string; itemId: string; quantidade: number },
@@ -60,6 +61,20 @@ export type WebCaixaScanDeps = {
   getActiveCupomSessionId: () => string
   /** Telemetria humana (runtime + adapter); injetada por `useCaixaScanPipeline`. */
   telemetry?: ScanPipelineSink
+}
+
+type RollbackScanLine =
+  | { kind: 'new'; itemId: string }
+  | { kind: 'merged'; itemId: string; quantidadeAnterior: number }
+
+function rollbackLinhaDoScan(rollback: RollbackScanLine | null, deps: WebCaixaScanDeps): null {
+  if (!rollback) return null
+  if (rollback.kind === 'new') {
+    useCarrinhoStore.getState().removerItem(rollback.itemId)
+    return null
+  }
+  deps.alterarQuantidade(rollback.itemId, rollback.quantidadeAnterior)
+  return null
 }
 
 /**
@@ -72,7 +87,7 @@ export async function runWebCaixaScanProcess(
   const { m, setCaixaMensagem, setCodigo, tocarFeedback, focarCampoBusca } = deps
   const signal = ctx.signal
   /** Linha criada neste scan; rollback até commit explícito (P0 stale_cupom / abort). */
-  let linhaPendenteRollback: string | null = null
+  let linhaPendenteRollback: RollbackScanLine | null = null
   const trimmed = ctx.scan.event.codigo.trim()
   if (!trimmed) {
     return { ok: false, reason: 'validation', message: 'Código vazio.' }
@@ -181,10 +196,9 @@ export async function runWebCaixaScanProcess(
      */
     const novaLinhaId = `${p.id}-${Date.now()}`
     const abandonarLinhaDoScan = () => {
-      if (!linhaPendenteRollback) return
-      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
-      linhaPendenteRollback = null
+      linhaPendenteRollback = rollbackLinhaDoScan(linhaPendenteRollback, deps)
     }
+    const linhaAntes = useCarrinhoStore.getState().itens.find((i) => i.produtoId === p.id)
 
     deps.adicionarItem({
       id: novaLinhaId,
@@ -210,14 +224,17 @@ export async function runWebCaixaScanProcess(
         precoVarejoReferencia: p.preco_varejo,
       },
     })
-    linhaPendenteRollback = novaLinhaId
+    const itemIdReal = linhaAntes?.id ?? novaLinhaId
+    linhaPendenteRollback = linhaAntes
+      ? { kind: 'merged', itemId: linhaAntes.id, quantidadeAnterior: linhaAntes.quantidade }
+      : { kind: 'new', itemId: novaLinhaId }
 
     if (signal?.aborted) {
       abandonarLinhaDoScan()
       return { ok: false, reason: 'aborted' }
     }
 
-    const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.id === novaLinhaId)
+    const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.id === itemIdReal)
     if (linhaApos) {
       const tp = linhaApos.resultado?.tipoPreco
       if (tp !== 'MANUAL' && tp !== 'PROMOCAO') {
@@ -284,10 +301,7 @@ export async function runWebCaixaScanProcess(
     tocarFeedback('erro')
     return { ok: false, reason: 'unknown', message: m.caixa.falha_busca }
   } finally {
-    if (linhaPendenteRollback != null && linhaPendenteRollback !== '') {
-      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
-      linhaPendenteRollback = null
-    }
+    linhaPendenteRollback = rollbackLinhaDoScan(linhaPendenteRollback, deps)
     focarCampoBusca()
   }
 }
