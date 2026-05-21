@@ -144,9 +144,9 @@ export function ProdutosEditarCatalogoModal({
 
   if (!open || !produto) return null
 
-  const finIn = 'h-9 w-full rounded-md px-3 text-xs app-input'
+  const finIn = 'h-9 w-full rounded-md px-3 text-xs app-input !bg-white/[.08] !border-white/[.18]'
   const finInMono = `${finIn} font-mono`
-  const finSelect = 'h-9 w-full rounded-md px-3 text-xs app-select'
+  const finSelect = 'h-9 w-full rounded-md px-3 text-xs app-select !bg-white/[.08] !border-white/[.18]'
 
   return (
     <div
@@ -321,7 +321,7 @@ export function ProdutosEditarCatalogoModal({
             {p.observacao}
             <textarea
               rows={3}
-              className="mt-1 w-full resize-none rounded-md px-3 py-2 text-xs app-input"
+              className="mt-1 w-full resize-none rounded-md px-3 py-2 text-xs app-input !bg-white/[.08] !border-white/[.18]"
               value={observacao}
               onChange={(e) => setObservacao(e.target.value)}
               disabled={saving}

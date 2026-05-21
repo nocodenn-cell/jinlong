@@ -350,6 +350,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       codigo_barras: string
       preco_varejo: number
       origem: string
+      categoria_id?: string
     }) => {
       const r = await criarProduto(input)
       if (!r.success) throw new Error(r.error)
@@ -872,11 +873,18 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 emitGerenteToast({ kind: 'error', message: m.produtos.nome_obrigatorio })
                 return
               }
+              const precoRaw = readFormDataString(fd, 'preco_varejo').trim().replace(',', '.')
+              const precoVarejo = Number(precoRaw)
+              if (!precoRaw || !Number.isFinite(precoVarejo) || precoVarejo <= 0) {
+                emitGerenteToast({ kind: 'error', message: m.produtos.preco_invalido })
+                return
+              }
               void criar({
                 nome,
                 codigo_barras: readFormDataString(fd, 'codigo_barras'),
-                preco_varejo: Number(fd.get('preco_varejo')),
+                preco_varejo: precoVarejo,
                 origem: readFormDataString(fd, 'origem'),
+                categoria_id: readFormDataString(fd, 'categoria_id') || undefined,
               })
               e.currentTarget.reset()
               // Auto-foca o campo Nome após salvar para cadastro sequencial
@@ -913,9 +921,8 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
               </span>
               <input
                 name="preco_varejo"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 placeholder="0,00"
                 required
                 className="h-9 w-full rounded-lg px-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
@@ -934,6 +941,23 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
               </select>
             </label>
+            {opcoes.categorias.length > 0 && (
+              <label className="flex min-w-[150px] flex-1 flex-col gap-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                  {m.produtos.categoria}
+                </span>
+                <select
+                  name="categoria_id"
+                  defaultValue=""
+                  className="h-9 rounded-lg px-3 text-sm app-select !bg-white/[.08] !border-white/[.18]"
+                >
+                  <option value="">{m.produtos.filtro_categoria_todas}</option>
+                  {opcoes.categorias.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <button
               type="submit"
               disabled={criarLoading}
