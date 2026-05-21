@@ -28,9 +28,9 @@
     "origem": "来源",
     "periodo_de": "从",
     "periodo_ate": "到",
-    "periodo_fuso_legenda": "时区：{{tz}}。",
     "aplicar_periodo": "应用",
     "limpar_periodo": "最近 30 天（默认）",
+    "periodo_fuso_legenda": "时区：{{tz}}。",
     "aviso_datas_invalidas": "日期无效；已使用默认区间（最近 30 天，巴西日历）。",
     "aviso_periodo_invertido": "开始日晚于结束日；已自动对调。",
     "aviso_periodo_limitado": "区间已限制为最多 366 天（含结束日）。",
@@ -616,46 +616,6 @@
       "erro_preview": "无法读取 XML。",
       "sem_preview": "请先加载 XML 以核对明细。",
       "limpar": "清除"
-    },
-    "dashboard_novo": {
-      "titulo": "新版控制面板",
-      "resumo_vendas": "销售概览",
-      "vendas_hoje": "今日销售",
-      "vendas_semana": "本周销售",
-      "vendas_mes": "本月销售",
-      "meta_vendas": "销售目标",
-      "desempenho": "业绩表现",
-      "produtos_destaque": "热销商品",
-      "estoque_critico": "库存预警",
-      "movimentacoes_recentes": "最近动态",
-      "graficos_interativos": "交互图表",
-      "filtros_avancados": "高级筛选",
-      "exportar_dados": "导出数据",
-      "personalizar_painel": "自定义面板",
-      "atualizacao_automatica": "自动更新",
-      "notificacoes": "通知提醒",
-      "comparativo_periodos": "期间对比",
-      "indicadores_chave": "关键指标",
-      "tendencias_mercado": "市场趋势"
-    },
-    "relatorios_avancados": {
-      "titulo": "高级报告",
-      "analise_vendas": "销售分析",
-      "rentabilidade_produtos": "商品盈利能力",
-      "curva_abc": "ABC曲线分析",
-      "giro_estoque": "库存周转率",
-      "margem_lucro": "利润率",
-      "performance_categorias": "分类表现",
-      "relatorio_fiscal": "税务报告",
-      "conciliacao_bancaria": "银行对账",
-      "analise_clientes": "客户分析",
-      "previsao_demanda": "需求预测",
-      "relatorio_customizado": "自定义报告",
-      "agendamentos_automaticos": "定时生成",
-      "compartilhamento": "分享功能",
-      "exportar_multiplos_formatos": "多格式导出",
-      "filtros_personalizados": "自定义筛选",
-      "drill_down_details": "下钻详情"
     }
   },
   "caixa": {
@@ -698,20 +658,13 @@
     "pdv_pgto_troco_cliente": "找零",
     "pdv_pgto_diferenca": "差额",
     "pdv_pgto_max_parcelas": "最多支持4种付款方式。",
+    "pdv_pgto_soma_parcelas": "各笔合计",
     "pdv_metodo_pagamento_titulo": "付款方式",
     "pdv_metodo_pagamento_aria": "选择本单付款方式",
     "pdv_metodo_pagamento_dinheiro": "现金",
     "pdv_metodo_pagamento_pix": "PIX",
     "pdv_metodo_pagamento_debito": "借记卡",
     "pdv_metodo_pagamento_credito": "信用卡",
-    "pdv_pgto_adicionar_forma": "添加方式",
-    "pdv_pgto_remover": "删除",
-    "pdv_pgto_auto_completar": "自动补全",
-    "pdv_pgto_valor_recebido": "已收",
-    "pdv_pgto_troco_cliente": "找零",
-    "pdv_pgto_diferenca": "差额",
-    "pdv_pgto_max_parcelas": "最多支持4种付款方式。",
-    "pdv_pgto_soma_parcelas": "各笔合计",
     "cart_empty_sem_pedido": "暂无订单",
     "cart_bar_excluir_venda": "删除销售",
     "cart_bar_excluir_aria": "删除销售 — 清空当前小票",
@@ -878,10 +831,6 @@
     "aria_qtde_item": "数量 — {{nome}}",
     "aria_qtde_aumentar": "增加 1 件 — {{nome}}",
     "aria_qtde_diminuir": "减少 1 件 — {{nome}}",
-    "fechamento": "收银结算",
-    "resumo": "今日收银总结",
-    "tabela_cabecalho": ["收银员", "开启金额", "销售额", "抽款", "补款", "结算金额", "状态"],
-    "divergencia_alerta": "差异金额 R$ {diferenca} 超过限额",
     "status_aberto": "开启",
     "status_fechado": "已结算",
     "reimprimir_cupom": "重印 (F12)"
@@ -904,21 +853,60 @@
   },
   "admin": {
     "header": {
-      "brand": { "cn": "金龍", "pt": "Jīn Lóng" },
-      "tagline": { "cn": "管理层 · 销售 · 库存 · 财务", "pt": "Painel administrativo" }
+      "brand": {
+        "cn": "金龍",
+        "pt": "Jīn Lóng"
+      },
+      "tagline": {
+        "cn": "管理层 · 销售 · 库存 · 财务",
+        "pt": "Painel administrativo"
+      }
     },
     "nav": {
-      "dashboard": { "cn": "主控台", "pt": "Dashboard" },
-      "gerente": { "cn": "经理面板", "pt": "Gerente" },
-      "produtos": { "cn": "商品", "pt": "Produtos" },
-      "vendas": { "cn": "销售", "pt": "Vendas" },
-      "estoque": { "cn": "库存", "pt": "Estoque" },
-      "recebimento": { "cn": "收货", "pt": "Recebimento" },
-      "transferencias": { "cn": "调拨", "pt": "Transferências" },
-      "relatorios": { "cn": "报告", "pt": "Relatórios" },
-      "caixas": { "cn": "钱箱", "pt": "Caixas" },
-      "financeiro": { "cn": "财务", "pt": "Financeiro" },
-      "configuracoes": { "cn": "设置", "pt": "Configurações" }
+      "dashboard": {
+        "cn": "主控台",
+        "pt": "Dashboard"
+      },
+      "gerente": {
+        "cn": "经理面板",
+        "pt": "Gerente"
+      },
+      "produtos": {
+        "cn": "商品",
+        "pt": "Produtos"
+      },
+      "vendas": {
+        "cn": "销售",
+        "pt": "Vendas"
+      },
+      "estoque": {
+        "cn": "库存",
+        "pt": "Estoque"
+      },
+      "recebimento": {
+        "cn": "收货",
+        "pt": "Recebimento"
+      },
+      "transferencias": {
+        "cn": "调拨",
+        "pt": "Transferências"
+      },
+      "relatorios": {
+        "cn": "报告",
+        "pt": "Relatórios"
+      },
+      "caixas": {
+        "cn": "钱箱",
+        "pt": "Caixas"
+      },
+      "financeiro": {
+        "cn": "财务",
+        "pt": "Financeiro"
+      },
+      "configuracoes": {
+        "cn": "设置",
+        "pt": "Configurações"
+      }
     },
     "navHints": {
       "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
@@ -934,55 +922,181 @@
       "configuracoes": "全局参数（佣金、收银限制、交期、最低库存）。"
     },
     "dashboard": {
-      "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
-      "pageSubtitle": { "cn": "实时数据", "pt": "Dados do período selecionado" },
-      "newUsers": { "cn": "新客户", "pt": "Novos usuários no período" },
-      "periodToday": { "cn": "今天", "pt": "Hoje" },
-      "period7d": { "cn": "7天", "pt": "7 dias" },
-      "period30d": { "cn": "30天", "pt": "30 dias" },
-      "statusAll": { "cn": "全部", "pt": "Todos" },
-      "statusDone": { "cn": "完成", "pt": "Concluída" },
-      "statusCancelled": { "cn": "取消", "pt": "Cancelada" },
-      "chartTitle": { "cn": "销售趋势", "pt": "Tendência de vendas" },
-      "tableTitle": { "cn": "最近订单", "pt": "Últimos pedidos" },
-      "tableEmpty": { "cn": "此筛选条件下没有订单。", "pt": "Nenhum pedido encontrado para este filtro." },
-      "footer": { "cn": "生意兴隆 · 财源广进", "pt": "Prosperidade nos negócios" },
-      "metricTotalSales": { "cn": "总销售额", "pt": "Vendas totais no período" },
-      "metricOrders": { "cn": "订单量", "pt": "Pedidos registrados" },
-      "metricTicket": { "cn": "客单价", "pt": "Ticket médio" },
-      "metricStock": { "cn": "库存预警", "pt": "Alertas de estoque baixo" },
-      "trendStockOk": { "cn": "正常", "pt": "OK" },
-      "trendStockWarn": { "cn": "注意", "pt": "Atenção" },
-      "tableColId": { "cn": "编号", "pt": "ID" },
-      "tableColOperador": { "cn": "操作员", "pt": "Operador" },
-      "tableColData": { "cn": "日期", "pt": "Data" },
-      "tableColValor": { "cn": "金额", "pt": "Valor" },
-      "tableColPagamento": { "cn": "支付", "pt": "Pagamento" },
-      "tableColStatus": { "cn": "状态", "pt": "Status" },
-      "errorSourceSalesPeriod": { "cn": "销售（本期）", "pt": "Vendas (período)" },
-      "errorSourceSalesPreviousPeriod": { "cn": "销售（上期）", "pt": "Vendas (período anterior)" },
-      "errorSourceRecentOrders": { "cn": "最近订单", "pt": "Pedidos recentes" },
-      "errorSourceLowStock": { "cn": "低库存预警", "pt": "Alertas de estoque (v_estoque_baixo)" },
-      "errorSourceNewUsersPeriod": { "cn": "新用户（本期）", "pt": "Novos usuários (período)" },
-      "errorSourceNewUsersPreviousPeriod": { "cn": "新用户（上期）", "pt": "Novos usuários (período anterior)" },
-      "errorSourceOperators": { "cn": "操作员（姓名）", "pt": "Operadores (nomes)" }
+      "pageTitle": {
+        "cn": "生意看板",
+        "pt": "Dashboard comercial"
+      },
+      "pageSubtitle": {
+        "cn": "实时数据",
+        "pt": "Dados do período selecionado"
+      },
+      "newUsers": {
+        "cn": "新客户",
+        "pt": "Novos usuários no período"
+      },
+      "periodToday": {
+        "cn": "今天",
+        "pt": "Hoje"
+      },
+      "period7d": {
+        "cn": "7天",
+        "pt": "7 dias"
+      },
+      "period30d": {
+        "cn": "30天",
+        "pt": "30 dias"
+      },
+      "statusAll": {
+        "cn": "全部",
+        "pt": "Todos"
+      },
+      "statusDone": {
+        "cn": "完成",
+        "pt": "Concluída"
+      },
+      "statusCancelled": {
+        "cn": "取消",
+        "pt": "Cancelada"
+      },
+      "chartTitle": {
+        "cn": "销售趋势",
+        "pt": "Tendência de vendas"
+      },
+      "tableTitle": {
+        "cn": "最近订单",
+        "pt": "Últimos pedidos"
+      },
+      "tableEmpty": {
+        "cn": "此筛选条件下没有订单。",
+        "pt": "Nenhum pedido encontrado para este filtro."
+      },
+      "footer": {
+        "cn": "生意兴隆 · 财源广进",
+        "pt": "Prosperidade nos negócios"
+      },
+      "metricTotalSales": {
+        "cn": "总销售额",
+        "pt": "Vendas totais no período"
+      },
+      "metricOrders": {
+        "cn": "订单量",
+        "pt": "Pedidos registrados"
+      },
+      "metricTicket": {
+        "cn": "客单价",
+        "pt": "Ticket médio"
+      },
+      "metricStock": {
+        "cn": "库存预警",
+        "pt": "Alertas de estoque baixo"
+      },
+      "trendStockOk": {
+        "cn": "正常",
+        "pt": "OK"
+      },
+      "trendStockWarn": {
+        "cn": "注意",
+        "pt": "Atenção"
+      },
+      "tableColId": {
+        "cn": "编号",
+        "pt": "ID"
+      },
+      "tableColOperador": {
+        "cn": "操作员",
+        "pt": "Operador"
+      },
+      "tableColData": {
+        "cn": "日期",
+        "pt": "Data"
+      },
+      "tableColValor": {
+        "cn": "金额",
+        "pt": "Valor"
+      },
+      "tableColPagamento": {
+        "cn": "支付",
+        "pt": "Pagamento"
+      },
+      "tableColStatus": {
+        "cn": "状态",
+        "pt": "Status"
+      },
+      "errorSourceSalesPeriod": {
+        "cn": "销售（本期）",
+        "pt": "Vendas (período)"
+      },
+      "errorSourceSalesPreviousPeriod": {
+        "cn": "销售（上期）",
+        "pt": "Vendas (período anterior)"
+      },
+      "errorSourceRecentOrders": {
+        "cn": "最近订单",
+        "pt": "Pedidos recentes"
+      },
+      "errorSourceLowStock": {
+        "cn": "低库存预警",
+        "pt": "Alertas de estoque (v_estoque_baixo)"
+      },
+      "errorSourceNewUsersPeriod": {
+        "cn": "新用户（本期）",
+        "pt": "Novos usuários (período)"
+      },
+      "errorSourceNewUsersPreviousPeriod": {
+        "cn": "新用户（上期）",
+        "pt": "Novos usuários (período anterior)"
+      },
+      "errorSourceOperators": {
+        "cn": "操作员（姓名）",
+        "pt": "Operadores (nomes)"
+      }
     },
     "common": {
-      "signOut": { "cn": "退出登录", "pt": "Sair" },
-      "trendError": { "cn": "错误", "pt": "Erro" },
-      "unavailable": { "cn": "不可用", "pt": "Indisponível" },
+      "signOut": {
+        "cn": "退出登录",
+        "pt": "Sair"
+      },
+      "trendError": {
+        "cn": "错误",
+        "pt": "Erro"
+      },
+      "unavailable": {
+        "cn": "不可用",
+        "pt": "Indisponível"
+      },
       "emDash": "—"
     },
     "errors": {
-      "partialTitle": { "cn": "部分数据加载失败", "pt": "Falha ao carregar alguns dados" },
-      "criticalSalesTitle": { "cn": "无法加载本期销售数据", "pt": "Não foi possível carregar as vendas do período" },
-      "criticalSalesBody": { "cn": "下方数字可能为零或不完整，请勿用于决策。请检查网络、Supabase 与权限 (RLS)。", "pt": "Os números abaixo podem aparecer como zero ou incompletos — não use para decisões. Verifique rede, Supabase e permissões (RLS)." },
-      "chartUnavailable": { "cn": "图表暂不可用（销售数据加载失败）。", "pt": "Gráfico indisponível: falha ao carregar vendas do período." },
-      "tableLoadFailed": { "cn": "无法加载订单列表。", "pt": "Não foi possível carregar a lista de pedidos." }
+      "partialTitle": {
+        "cn": "部分数据加载失败",
+        "pt": "Falha ao carregar alguns dados"
+      },
+      "criticalSalesTitle": {
+        "cn": "无法加载本期销售数据",
+        "pt": "Não foi possível carregar as vendas do período"
+      },
+      "criticalSalesBody": {
+        "cn": "下方数字可能为零或不完整，请勿用于决策。请检查网络、Supabase 与权限 (RLS)。",
+        "pt": "Os números abaixo podem aparecer como zero ou incompletos — não use para decisões. Verifique rede, Supabase e permissões (RLS)."
+      },
+      "chartUnavailable": {
+        "cn": "图表暂不可用（销售数据加载失败）。",
+        "pt": "Gráfico indisponível: falha ao carregar vendas do período."
+      },
+      "tableLoadFailed": {
+        "cn": "无法加载订单列表。",
+        "pt": "Não foi possível carregar a lista de pedidos."
+      }
     },
     "statusBadge": {
-      "concluida": { "cn": "已完成", "pt": "Concluída" },
-      "cancelada": { "cn": "已取消", "pt": "Cancelada" }
+      "concluida": {
+        "cn": "已完成",
+        "pt": "Concluída"
+      },
+      "cancelada": {
+        "cn": "已取消",
+        "pt": "Cancelada"
+      }
     }
   },
   "brand": {
@@ -1351,33 +1465,5 @@
     "sair": "退出登录",
     "fechar": "关闭",
     "limpar_filtros": "清除筛选"
-  },
-  "dashboard_novo": {
-    "title": "仪表板",
-    "loading": "加载中...",
-    "error": "加载数据时出错",
-    "cards": {
-      "faturamento_hoje": "今日收入",
-      "ticket_medio": "平均客单价",
-      "estoque_baixo": "低库存产品",
-      "vendas_hoje": "今日订单数"
-    }
-  },
-  "vendas": {
-    "titulo": "销售报告",
-    "periodo": "销售周期",
-    "grafico_label": "日销售额",
-    "tabela_cabecalho": ["日期", "总金额", "订单数量", "平均客单价"],
-    "filtro_data_inicio": "开始日期",
-    "filtro_data_fim": "结束日期",
-    "filtro_operador": "销售人员",
-    "exportar_csv": "导出CSV"
-  },
-  "alertas": {
-    "titulo": "智能警报",
-    "estoque": "⚠️ {quantidade} 个产品库存过低",
-    "divergencia": "🔴 {operador} 的收银差额为 R$ {diferenca}",
-    "sem_alertas": "✅ 无活动警报",
-    "ver_detalhes": "查看详情"
   }
 }
