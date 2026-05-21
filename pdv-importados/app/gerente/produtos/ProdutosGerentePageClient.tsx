@@ -1,13 +1,26 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileDown,
+  Filter,
+  FolderInput,
+  Pencil,
+  Plus,
+  Printer,
+  Search,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  UploadCloud,
+} from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 const ITEMS_POR_PAGINA_PADRAO = 20
 import type { GerenteTableColumn } from '@/components/gerente/GerenteTable'
-import type { CampoFiltro } from '@/components/gerente/cadastro'
-import { CadastroRapidoBlock, FiltroLateralCadastro, TabelaCadastroPadrao } from '@/components/gerente/cadastro'
+import { TabelaCadastroPadrao } from '@/components/gerente/cadastro'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
@@ -15,12 +28,12 @@ import { ProdutosExcluirLoteModal } from '@/components/gerente/produtos/Produtos
 import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImportarModal'
 import { ProdutoImagemCell } from '@/components/gerente/produtos/ProdutoImagemCell'
 import { ProdutosListaImpressao } from '@/components/gerente/produtos/ProdutosListaImpressao'
-import { ProdutosToolbar } from '@/components/gerente/produtos/ProdutosToolbar'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { cn } from '@/lib/utils'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
@@ -137,10 +150,7 @@ function PrecoVarejoCell({
       onBlur={async () => {
         const n = parseValor(draft)
         if (n === null) {
-          emitGerenteToast({
-            kind: 'error',
-            message: msgInvalido,
-          })
+          emitGerenteToast({ kind: 'error', message: msgInvalido })
           setDraft(String(precoVarejo))
           return
         }
@@ -155,10 +165,7 @@ function PrecoVarejoCell({
         }
         setSaving(true)
         try {
-          const r = await atualizarPrecoVarejoProduto({
-            produto_id: produtoId,
-            preco_varejo: n,
-          })
+          const r = await atualizarPrecoVarejoProduto({ produto_id: produtoId, preco_varejo: n })
           if (!r.success) {
             emitGerenteToast({ kind: 'error', message: r.error })
             setDraft(String(precoVarejo))
@@ -193,8 +200,10 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(ITEMS_POR_PAGINA_PADRAO)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const nomeInputRef = useRef<HTMLInputElement>(null)
   const [loadingList, setLoadingList] = useState(false)
   const tinhaProdutosAoCarregar = useRef(inicial.total > 0)
+  const [filtrosAvancadosAbertos, setFiltrosAvancadosAbertos] = useState(false)
 
   const [importModalAberto, setImportModalAberto] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
@@ -221,7 +230,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     }
   }, [itensPorPagina])
 
-  // Ref estável para leitura no observer sem recriar o efeito
   const scrollStateRef = useRef({ paginaAtual, totalPaginas: 1, loadingList: false, filtros, itensPorPagina })
   useEffect(() => {
     scrollStateRef.current = {
@@ -233,7 +241,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     }
   })
 
-  // IntersectionObserver: carrega próxima página e adiciona ao final da lista
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -258,7 +265,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       primeiraMontagem.current = false
       return
     }
-    // Ao mudar filtros ou tamanho da página, reseta para página 1 e substitui linhas
     setPaginaAtual(1)
     const id = setTimeout(() => {
       void fetchList(filtros, 1, false)
@@ -405,26 +411,14 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     { successMessage: m.comum.sucesso },
   )
 
-  const finIn = 'h-9 rounded-md px-3 text-xs app-input'
-  const finSelect = 'h-9 rounded-md px-3 text-xs app-select'
-
   const patchFiltro = useCallback(<K extends keyof FiltrosUi>(k: K, v: FiltrosUi[K], resetPage = true) => {
     setFiltros((prev) => ({ ...prev, [k]: v }))
     if (resetPage) setPaginaAtual(1)
   }, [])
 
-  const onFiltrar = useCallback(() => {
-    setPaginaAtual(1)
-    void fetchList(filtros, 1)
-  }, [fetchList, filtros])
-
   const onLimpar = useCallback(() => {
     setFiltros(FILTROS_UI_INITIAL)
     setPaginaAtual(1)
-  }, [])
-
-  const irParaCadastroRapido = useCallback(() => {
-    document.getElementById('cadastro-rapido')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
   const imprimirLista = useCallback(async () => {
@@ -440,13 +434,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     }
     setLinhasImpressao(r.data)
   }, [filtros, itensPorPagina, m.produtos.nenhum_resultado_filtro, total])
-
-  const irParaColunaFoto = useCallback(() => {
-    document.getElementById('produtos-foto-col-anchor')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-    })
-  }, [])
 
   const abrirExclusaoLote = useCallback(() => {
     const arr = Array.from(selectedIds)
@@ -512,100 +499,17 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     [m.produtos.filtro_fornecedor_todos, opcoes.fornecedores],
   )
 
-  const camposFiltro: CampoFiltro[] = useMemo(
-    () => [
-      {
-        id: 'busca',
-        label: m.produtos.buscar,
-        tipo: 'search',
-        valor: filtros.busca,
-        onChange: (v) => patchFiltro('busca', typeof v === 'string' ? v : '', false),
-        placeholder: m.produtos.buscar,
-      },
-      {
-        id: 'origem',
-        label: m.produtos.origem_label,
-        tipo: 'select',
-        valor: filtros.origem,
-        onChange: (v) => patchFiltro('origem', (typeof v === 'string' ? v : 'all') as FiltrosUi['origem']),
-        opcoes: [
-          { value: 'all', label: m.produtos.filtro_todas_origens },
-          { value: 'china_manual', label: m.produtos.origem_china },
-          { value: 'brasil_nf', label: m.produtos.origem_brasil_nf },
-        ],
-      },
-      {
-        id: 'situacao',
-        label: m.produtos.filtro_situacao_label,
-        tipo: 'select',
-        valor: filtros.situacao,
-        onChange: (v) =>
-          patchFiltro('situacao', (typeof v === 'string' ? v : 'todos') as FiltrosUi['situacao']),
-        opcoes: [
-          { value: 'todos', label: m.produtos.filtro_situacao_todos },
-          { value: 'ativos', label: m.produtos.filtro_situacao_somente_ativos },
-          { value: 'inativos', label: m.produtos.filtro_situacao_somente_inativos },
-        ],
-      },
-      {
-        id: 'estoque',
-        label: m.produtos.filtro_estoque_label,
-        tipo: 'select',
-        valor: filtros.estoque,
-        onChange: (v) => patchFiltro('estoque', (typeof v === 'string' ? v : 'todos') as FiltrosUi['estoque']),
-        opcoes: [
-          { value: 'todos', label: m.produtos.filtro_estoque_todos },
-          { value: 'abaixo_minimo', label: m.produtos.filtro_estoque_abaixo_minimo },
-          { value: 'em_falta', label: m.produtos.filtro_estoque_em_falta },
-        ],
-      },
-      {
-        id: 'imagens',
-        label: m.produtos.filtro_imagens_label,
-        tipo: 'select',
-        valor: filtros.imagens,
-        onChange: (v) => patchFiltro('imagens', (typeof v === 'string' ? v : 'todos') as FiltrosUi['imagens']),
-        opcoes: [
-          { value: 'todos', label: m.produtos.filtro_imagens_todos },
-          { value: 'com_imagem', label: m.produtos.filtro_imagens_com },
-          { value: 'sem_imagem', label: m.produtos.filtro_imagens_sem },
-        ],
-      },
-      {
-        id: 'categoria',
-        label: m.produtos.categoria,
-        tipo: 'select',
-        valor: filtros.categoriaId,
-        onChange: (v) => patchFiltro('categoriaId', typeof v === 'string' ? v : ''),
-        opcoes: opCategorias,
-      },
-      {
-        id: 'marca',
-        label: m.produtos.filtro_marca_label,
-        tipo: 'select',
-        valor: filtros.marcaId,
-        onChange: (v) => patchFiltro('marcaId', typeof v === 'string' ? v : ''),
-        opcoes: opMarcas,
-      },
-      {
-        id: 'fornecedor',
-        label: m.produtos.filtro_fornecedor_label,
-        tipo: 'select',
-        valor: filtros.fornecedorId,
-        onChange: (v) => patchFiltro('fornecedorId', typeof v === 'string' ? v : ''),
-        opcoes: opFornecedores,
-      },
-      {
-        id: 'tags',
-        label: m.produtos.filtro_tags_label,
-        tipo: 'search',
-        valor: filtros.tagsTexto,
-        onChange: (v) => patchFiltro('tagsTexto', typeof v === 'string' ? v : '', false),
-        placeholder: m.produtos.filtro_tags_placeholder,
-      },
-    ],
-    [filtros, m.produtos, opCategorias, opMarcas, opFornecedores, patchFiltro],
-  )
+  /** Conta quantos filtros avançados estão ativos (excluindo situação e origem, que ficam nos chips) */
+  const filtrosAtivos = useMemo(() => {
+    let n = 0
+    if (filtros.estoque !== 'todos') n++
+    if (filtros.imagens !== 'todos') n++
+    if (filtros.categoriaId !== '') n++
+    if (filtros.marcaId !== '') n++
+    if (filtros.fornecedorId !== '') n++
+    if (filtros.tagsTexto !== '') n++
+    return n
+  }, [filtros])
 
   const colunasProdutos: GerenteTableColumn[] = [
     {
@@ -623,85 +527,313 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       ),
       width: '2.75rem',
     },
-    { key: 'id', header: 'ID' },
-    {
-      key: 'foto',
-      header: (
-        <span id="produtos-foto-col-anchor" className="inline-flex">
-          {m.produtos.foto_coluna}
-        </span>
-      ),
-      width: '3.75rem',
-    },
+    { key: 'foto', header: m.produtos.foto_coluna, width: '3.75rem' },
     { key: 'nome', header: m.produtos.nome },
-    { key: 'cb', header: m.produtos.codigo_barras },
     { key: 'preco', header: m.produtos.preco_varejo, width: '7rem' },
     { key: 'origem', header: m.produtos.origem_label },
     { key: 'st', header: m.produtos.status },
-    { key: 'ac', header: m.produtos.acoes, width: '8.75rem' },
+    { key: 'ac', header: m.produtos.acoes, width: '6.5rem' },
   ]
 
   const colSpanVazio = colunasProdutos.length
+
+  /* ─── chip helpers ─────────────────────────────────────────── */
+  const chipBase = 'inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors'
+  const chipInativo = 'border-white/[.1] app-muted hover:border-white/[.2] hover:text-slate-200'
+  const chipAtivo = 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+  const iconBtnBase =
+    'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/[.1] app-muted transition-colors hover:border-white/[.2] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40'
 
   return (
     <>
       <div className={`print:hidden mx-auto w-full max-w-7xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
         <GerenteFilterBar title={m.produtos.titulo} />
-        <GerenteStickyToolbar>
-          <ProdutosToolbar
-            m={m}
-            exportDisabled={expLoading || total === 0}
-            exportLoading={expLoading}
-            printDisabled={total === 0}
-            fotoDisabled={total === 0}
-            exclusaoDisabled={selectedIds.size === 0 || selectedIds.size > 100}
-            selecaoAtiva={selectedIds.size > 0}
-            ativarLoteLoading={ativarLoteLoading}
-            inativarLoteLoading={inativarLoteLoading}
-            categoriaLoteLoading={categoriaLoteLoading}
-            onExport={() => void exportCsv(null)}
-            onImport={() => setImportModalAberto(true)}
-            onIncluirCadastro={irParaCadastroRapido}
-            onPrint={() => void imprimirLista()}
-            onFotoColuna={irParaColunaFoto}
-            onExcluir={abrirExclusaoLote}
-            onAtivarLote={() => void ativarLote(null)}
-            onInativarLote={() => void inativarLote(null)}
-            onAlterarCategoriaLote={() => setCategoriaLoteModalAberto(true)}
-          />
-          {categoriaLoteModalAberto && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-jl-border-1 bg-jl-surface-elev px-3 py-2">
-              <span className="text-sm text-jl-fg-1">
-                Alterar categoria de {selectedIds.size} produto(s):
-              </span>
-              <select
-                className="h-9 rounded-md border border-jl-border-1 bg-jl-surface-base px-3 text-xs text-jl-fg-1"
-                value={categoriaLoteSelecionada}
-                onChange={(e) => setCategoriaLoteSelecionada(e.target.value)}
-              >
-                <option value="">— sem categoria —</option>
-                {opcoes.categorias.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
+
+        {/* ─── TOOLBAR STICKY ─────────────────────────────────────── */}
+        <GerenteStickyToolbar className="mb-0">
+          <div className="flex flex-col gap-2 py-1.5">
+
+            {/* Linha 1: busca + chips + ações secundárias */}
+            <div className="flex flex-wrap items-center gap-2">
+
+              {/* Campo de busca */}
+              <div className="relative h-9 min-w-[180px] max-w-xs flex-1">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50"
+                  aria-hidden
+                />
+                <input
+                  value={filtros.busca}
+                  onChange={(e) => patchFiltro('busca', e.target.value, false)}
+                  placeholder={m.produtos.buscar}
+                  className="h-9 w-full rounded-lg pl-8 pr-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
+                />
+              </div>
+
+              {/* Chips situação */}
+              {(['todos', 'ativos', 'inativos'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => patchFiltro('situacao', s)}
+                  className={cn(chipBase, filtros.situacao === s ? chipAtivo : chipInativo)}
+                >
+                  {s === 'todos'
+                    ? m.produtos.filtro_situacao_todos
+                    : s === 'ativos'
+                      ? m.produtos.filtro_situacao_somente_ativos
+                      : m.produtos.filtro_situacao_somente_inativos}
+                </button>
+              ))}
+
+              {/* Chips origem */}
+              {(['all', 'china_manual', 'brasil_nf'] as const).map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => patchFiltro('origem', o)}
+                  className={cn(chipBase, filtros.origem === o ? chipAtivo : chipInativo)}
+                >
+                  {o === 'all'
+                    ? m.produtos.filtro_todas_origens
+                    : o === 'china_manual'
+                      ? m.produtos.origem_china
+                      : m.produtos.origem_brasil_nf}
+                </button>
+              ))}
+
+              {/* Botão filtros avançados */}
               <button
                 type="button"
-                onClick={() => void categoriaLote(categoriaLoteSelecionada || null)}
-                disabled={categoriaLoteLoading}
-                className="app-btn-accent inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-semibold disabled:opacity-60"
+                onClick={() => setFiltrosAvancadosAbertos((prev) => !prev)}
+                className={cn(
+                  chipBase,
+                  filtrosAtivos > 0 || filtrosAvancadosAbertos ? chipAtivo : chipInativo,
+                )}
               >
-                {categoriaLoteLoading ? '…' : 'Aplicar'}
+                <Filter className="mr-1 h-3 w-3" aria-hidden />
+                {m.produtos.filtros_lateral_titulo}
+                {filtrosAtivos > 0 && (
+                  <span className="ml-1.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-500/30 px-1 text-[10px] font-bold text-amber-200">
+                    {filtrosAtivos}
+                  </span>
+                )}
               </button>
-              <button
-                type="button"
-                onClick={() => setCategoriaLoteModalAberto(false)}
-                className="inline-flex h-9 items-center px-3 text-sm text-jl-fg-3 hover:text-jl-fg-1"
-              >
-                Cancelar
-              </button>
+
+              {/* Ações secundárias */}
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setImportModalAberto(true)}
+                  title={m.produtos.toolbar_importar}
+                  aria-label={m.produtos.toolbar_importar_aria}
+                  className={iconBtnBase}
+                >
+                  <UploadCloud className="h-4 w-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  disabled={expLoading || total === 0}
+                  onClick={() => void exportCsv(null)}
+                  title={m.produtos.toolbar_exportar}
+                  aria-label={m.produtos.toolbar_exportar_aria}
+                  className={iconBtnBase}
+                >
+                  <FileDown className="h-4 w-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  disabled={total === 0}
+                  onClick={() => void imprimirLista()}
+                  title={m.produtos.toolbar_imprimir}
+                  aria-label={m.produtos.toolbar_imprimir_aria}
+                  className={iconBtnBase}
+                >
+                  <Printer className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
             </div>
-          )}
+
+            {/* Linha 2: filtros avançados (colapsável) */}
+            {filtrosAvancadosAbertos && (
+              <div className="flex flex-wrap items-end gap-2 border-t border-white/[.08] pt-2">
+                <label className="flex min-w-[130px] flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                    {m.produtos.categoria}
+                  </span>
+                  <select
+                    value={filtros.categoriaId}
+                    onChange={(e) => patchFiltro('categoriaId', e.target.value)}
+                    className="h-8 rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
+                  >
+                    {opCategorias.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex min-w-[130px] flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                    {m.produtos.filtro_marca_label}
+                  </span>
+                  <select
+                    value={filtros.marcaId}
+                    onChange={(e) => patchFiltro('marcaId', e.target.value)}
+                    className="h-8 rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
+                  >
+                    {opMarcas.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex min-w-[130px] flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                    {m.produtos.filtro_fornecedor_label}
+                  </span>
+                  <select
+                    value={filtros.fornecedorId}
+                    onChange={(e) => patchFiltro('fornecedorId', e.target.value)}
+                    className="h-8 rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
+                  >
+                    {opFornecedores.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex min-w-[130px] flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                    {m.produtos.filtro_estoque_label}
+                  </span>
+                  <select
+                    value={filtros.estoque}
+                    onChange={(e) => patchFiltro('estoque', e.target.value as FiltrosUi['estoque'])}
+                    className="h-8 rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
+                  >
+                    <option value="todos">{m.produtos.filtro_estoque_todos}</option>
+                    <option value="abaixo_minimo">{m.produtos.filtro_estoque_abaixo_minimo}</option>
+                    <option value="em_falta">{m.produtos.filtro_estoque_em_falta}</option>
+                  </select>
+                </label>
+                <label className="flex min-w-[130px] flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                    {m.produtos.filtro_imagens_label}
+                  </span>
+                  <select
+                    value={filtros.imagens}
+                    onChange={(e) => patchFiltro('imagens', e.target.value as FiltrosUi['imagens'])}
+                    className="h-8 rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
+                  >
+                    <option value="todos">{m.produtos.filtro_imagens_todos}</option>
+                    <option value="com_imagem">{m.produtos.filtro_imagens_com}</option>
+                    <option value="sem_imagem">{m.produtos.filtro_imagens_sem}</option>
+                  </select>
+                </label>
+                <label className="flex min-w-[160px] flex-1 flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                    {m.produtos.filtro_tags_label}
+                  </span>
+                  <input
+                    type="search"
+                    value={filtros.tagsTexto}
+                    onChange={(e) => patchFiltro('tagsTexto', e.target.value, false)}
+                    placeholder={m.produtos.filtro_tags_placeholder}
+                    className="h-8 rounded-md px-2 text-xs app-input !bg-white/[.08] !border-white/[.18]"
+                  />
+                </label>
+                {filtrosAtivos > 0 && (
+                  <button
+                    type="button"
+                    onClick={onLimpar}
+                    className="h-8 rounded-md px-3 text-xs font-medium app-muted hover:text-slate-200 transition-colors"
+                  >
+                    {m.comum.limpar_filtros}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Linha 3: ações em lote (visível somente com seleção) */}
+            {selectedIds.size > 0 && (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[.07] px-3 py-1.5">
+                <span className="text-xs font-semibold text-amber-400">
+                  {selectedIds.size}{' '}
+                  {selectedIds.size === 1 ? 'produto selecionado' : 'produtos selecionados'}
+                </span>
+                <button
+                  type="button"
+                  disabled={ativarLoteLoading}
+                  onClick={() => void ativarLote(null)}
+                  className="inline-flex h-7 items-center gap-1 rounded-md border border-green-500/30 bg-green-500/10 px-2.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+                >
+                  <ToggleRight className="h-3.5 w-3.5" aria-hidden />
+                  {ativarLoteLoading ? '…' : 'Ativar'}
+                </button>
+                <button
+                  type="button"
+                  disabled={inativarLoteLoading}
+                  onClick={() => void inativarLote(null)}
+                  className="inline-flex h-7 items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+                >
+                  <ToggleLeft className="h-3.5 w-3.5" aria-hidden />
+                  {inativarLoteLoading ? '…' : 'Inativar'}
+                </button>
+                <button
+                  type="button"
+                  disabled={categoriaLoteLoading}
+                  onClick={() => setCategoriaLoteModalAberto(true)}
+                  className="inline-flex h-7 items-center gap-1 rounded-md border border-blue-500/30 bg-blue-500/10 px-2.5 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
+                >
+                  <FolderInput className="h-3.5 w-3.5" aria-hidden />
+                  {categoriaLoteLoading ? '…' : 'Categoria'}
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedIds.size === 0 || selectedIds.size > 100}
+                  onClick={abrirExclusaoLote}
+                  className="inline-flex h-7 items-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 text-xs font-medium text-destructive/80 transition-colors hover:bg-destructive/20 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  {m.produtos.toolbar_excluir}
+                </button>
+              </div>
+            )}
+
+            {/* Linha 4: seletor de categoria em lote (inline) */}
+            {categoriaLoteModalAberto && (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-500/25 bg-blue-500/[.06] px-3 py-2">
+                <span className="text-xs text-slate-300">
+                  Categoria de {selectedIds.size} produto(s):
+                </span>
+                <select
+                  className="h-8 rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
+                  value={categoriaLoteSelecionada}
+                  onChange={(e) => setCategoriaLoteSelecionada(e.target.value)}
+                >
+                  <option value="">— sem categoria —</option>
+                  {opcoes.categorias.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => void categoriaLote(categoriaLoteSelecionada || null)}
+                  disabled={categoriaLoteLoading}
+                  className="inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold app-btn-accent disabled:opacity-60"
+                >
+                  {categoriaLoteLoading ? '…' : 'Aplicar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoriaLoteModalAberto(false)}
+                  className="h-8 rounded-md px-3 text-xs app-muted hover:text-slate-200"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+          </div>
         </GerenteStickyToolbar>
+
+        {/* Modais */}
         <ProdutosExcluirLoteModal
           open={exclusaoModalAberto}
           onOpenChange={onExclusaoModalOpenChange}
@@ -723,260 +855,305 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           m={m}
           onImportComplete={refetch}
         />
-        <p className="gerente-fin-muted -mt-2 text-xs">
-          {idioma === 'pt'
-            ? 'Gestão de catálogo com visão densa para operação diária.'
-            : '高密度商品管理视图，适合日常运营。'}
-        </p>
 
-        <section id="cadastro-rapido" className="scroll-mt-24">
-          <CadastroRapidoBlock title={m.produtos.cadastro_rapido} defaultOpen>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                const fd = new FormData(e.currentTarget)
-                const nome = readFormDataString(fd, 'nome').trim()
-                if (!nome) {
-                  emitGerenteToast({ kind: 'error', message: m.produtos.nome_obrigatorio })
-                  return
-                }
-                void criar({
-                  nome,
-                  codigo_barras: readFormDataString(fd, 'codigo_barras'),
-                  preco_varejo: Number(fd.get('preco_varejo')),
-                  origem: readFormDataString(fd, 'origem'),
-                })
-                e.currentTarget.reset()
-              }}
-              className="grid grid-cols-1 gap-2.5 md:grid-cols-6"
-            >
-              <input name="nome" placeholder={m.produtos.nome} className={`${finIn} md:col-span-2`} />
-              <input name="codigo_barras" placeholder={m.produtos.codigo_barras} className={finIn} />
+        {/* ─── FORMULÁRIO NOVO PRODUTO ─────────────────────────────── */}
+        <div className="dragon-glass-card rounded-xl border p-4 app-border">
+          <div className="mb-3 flex items-center gap-2">
+            <Plus className="h-4 w-4 text-amber-400" aria-hidden />
+            <h2 className="text-sm font-semibold app-accent-text">{m.produtos.cadastro_rapido}</h2>
+            <span className="text-[11px] app-muted">· {m.produtos.codigo_barras_opcional}</span>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              const nome = readFormDataString(fd, 'nome').trim()
+              if (!nome) {
+                emitGerenteToast({ kind: 'error', message: m.produtos.nome_obrigatorio })
+                return
+              }
+              void criar({
+                nome,
+                codigo_barras: readFormDataString(fd, 'codigo_barras'),
+                preco_varejo: Number(fd.get('preco_varejo')),
+                origem: readFormDataString(fd, 'origem'),
+              })
+              e.currentTarget.reset()
+              // Auto-foca o campo Nome após salvar para cadastro sequencial
+              setTimeout(() => nomeInputRef.current?.focus(), 60)
+            }}
+            className="flex flex-wrap items-end gap-2"
+          >
+            <label className="flex min-w-[200px] flex-[2] flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                {m.produtos.nome} *
+              </span>
+              <input
+                ref={nomeInputRef}
+                name="nome"
+                placeholder={m.produtos.nome}
+                autoComplete="off"
+                className="h-9 w-full rounded-lg px-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
+              />
+            </label>
+            <label className="flex min-w-[140px] flex-1 flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                {m.produtos.codigo_barras}
+              </span>
+              <input
+                name="codigo_barras"
+                placeholder={m.produtos.codigo_barras}
+                autoComplete="off"
+                className="h-9 w-full rounded-lg px-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
+              />
+            </label>
+            <label className="flex w-[110px] flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                {m.produtos.preco_varejo}
+              </span>
               <input
                 name="preco_varejo"
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder={m.produtos.preco_varejo}
+                placeholder="0,00"
                 required
-                className={finIn}
+                className="h-9 w-full rounded-lg px-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
               />
-              <select name="origem" defaultValue="china_manual" className={finSelect}>
+            </label>
+            <label className="flex w-[140px] flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
+                {m.produtos.origem_label}
+              </span>
+              <select
+                name="origem"
+                defaultValue="china_manual"
+                className="h-9 rounded-lg px-3 text-sm app-select !bg-white/[.08] !border-white/[.18]"
+              >
                 <option value="china_manual">{m.produtos.origem_china}</option>
                 <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
               </select>
-              <button
-                type="submit"
-                disabled={criarLoading}
-                className="h-9 rounded-md px-3 text-xs font-semibold shadow-sm transition-[filter] disabled:opacity-60 app-btn-accent"
-              >
-                {criarLoading ? '…' : m.comum.salvar}
-              </button>
-              <p className="gerente-fin-muted md:col-span-6 text-xs opacity-80">
-                · {m.produtos.codigo_barras_opcional}
-              </p>
-            </form>
-          </CadastroRapidoBlock>
-        </section>
+            </label>
+            <button
+              type="submit"
+              disabled={criarLoading}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold shadow-sm transition-[filter] disabled:opacity-60 app-btn-accent"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              {criarLoading ? '…' : m.comum.salvar}
+            </button>
+          </form>
+        </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(14rem,18rem)_1fr] lg:items-start">
-          <FiltroLateralCadastro
-            title={m.produtos.filtros_lateral_titulo}
-            labelFiltrar={m.produtos.filtrar}
-            labelLimpar={m.comum.limpar_filtros}
-            onFiltrar={onFiltrar}
-            onLimpar={onLimpar}
-            campos={camposFiltro}
-          />
-
-          <TabelaCadastroPadrao
-            sectionTitle={m.produtos.lista_produtos}
-            sectionMeta={
-              <span className="inline-flex flex-wrap items-center gap-2">
-                <span>{interpolateTemplate(m.produtos.contador_encontrados, { count: total })}</span>
-                {loadingList ? (
-                  <span className="text-[11px] font-normal opacity-70">{m.produtos.filtro_carregando}</span>
-                ) : null}
-              </span>
-            }
-            columns={colunasProdutos}
-            footer={
-              total > 0 ? (
-                <div className="gerente-fin-divider flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="gerente-fin-muted text-xs">
-                    {interpolateTemplate(m.produtos.pag_mostrar, {
-                      visiveis: rows.length,
-                      total,
-                    })}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-                    <label className="flex items-center gap-2 text-xs gerente-fin-muted">
-                      <span>{m.produtos.pag_linhas_por_pagina}</span>
-                      <select
-                        value={itensPorPagina}
-                        onChange={(e) => {
-                          setItensPorPagina(Number(e.target.value))
-                          setPaginaAtual(1)
-                        }}
-                        className={`${finSelect} h-8 min-w-[4.5rem]`}
-                      >
-                        {[10, 25, 50].map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={paginaSegura <= 1 || loadingList}
-                        onClick={() => setPaginaAtual((x) => Math.max(1, x - 1))}
-                        className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label={m.produtos.pag_prev}
-                      >
-                        <ChevronLeft size={20} className="shrink-0" />
-                      </button>
-                      <span className="text-xs font-medium tabular-nums">
-                        {interpolateTemplate(m.produtos.pag_info, { atual: paginaSegura, total: totalPaginas })}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={paginaSegura >= totalPaginas || loadingList}
-                        onClick={() => setPaginaAtual((x) => Math.min(totalPaginas, x + 1))}
-                        className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label={m.produtos.pag_next}
-                      >
-                        <ChevronRight size={20} className="shrink-0" />
-                      </button>
-                    </div>
+        {/* ─── TABELA DE PRODUTOS (largura total) ──────────────────── */}
+        <TabelaCadastroPadrao
+          sectionTitle={m.produtos.lista_produtos}
+          sectionMeta={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <span>{interpolateTemplate(m.produtos.contador_encontrados, { count: total })}</span>
+              {loadingList ? (
+                <span className="text-[11px] font-normal opacity-70">{m.produtos.filtro_carregando}</span>
+              ) : null}
+            </span>
+          }
+          columns={colunasProdutos}
+          footer={
+            total > 0 ? (
+              <div className="gerente-fin-divider flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="gerente-fin-muted text-xs">
+                  {interpolateTemplate(m.produtos.pag_mostrar, { visiveis: rows.length, total })}
+                </div>
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                  <label className="flex items-center gap-2 text-xs gerente-fin-muted">
+                    <span>{m.produtos.pag_linhas_por_pagina}</span>
+                    <select
+                      value={itensPorPagina}
+                      onChange={(e) => {
+                        setItensPorPagina(Number(e.target.value))
+                        setPaginaAtual(1)
+                      }}
+                      className="h-8 min-w-[4.5rem] rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
+                    >
+                      {[10, 25, 50].map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={paginaSegura <= 1 || loadingList}
+                      onClick={() => setPaginaAtual((x) => Math.max(1, x - 1))}
+                      className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={m.produtos.pag_prev}
+                    >
+                      <ChevronLeft size={20} className="shrink-0" />
+                    </button>
+                    <span className="text-xs font-medium tabular-nums">
+                      {interpolateTemplate(m.produtos.pag_info, { atual: paginaSegura, total: totalPaginas })}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={paginaSegura >= totalPaginas || loadingList}
+                      onClick={() => setPaginaAtual((x) => Math.min(totalPaginas, x + 1))}
+                      className="rounded-full p-2 opacity-90 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={m.produtos.pag_next}
+                    >
+                      <ChevronRight size={20} className="shrink-0" />
+                    </button>
                   </div>
                 </div>
-              ) : null
-            }
-          >
-            {loadingList && rows.length === 0 ? (
-              <tr>
-                <td colSpan={colSpanVazio} className="gerente-fin-empty px-3 py-4 text-xs">
-                  {m.produtos.filtro_carregando}
+              </div>
+            ) : null
+          }
+        >
+          {loadingList && rows.length === 0 ? (
+            <tr>
+              <td colSpan={colSpanVazio} className="gerente-fin-empty px-3 py-4 text-xs">
+                {m.produtos.filtro_carregando}
+              </td>
+            </tr>
+          ) : total === 0 ? (
+            <tr>
+              <td colSpan={colSpanVazio} className="gerente-fin-empty px-3 py-4 text-xs">
+                {!tinhaProdutosAoCarregar.current
+                  ? m.produtos.nenhum_produto_cadastrado
+                  : m.produtos.nenhum_resultado_filtro}
+              </td>
+            </tr>
+          ) : (
+            rows.map((p) => (
+              <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
+                {/* ☐ Seleção */}
+                <td className="gerente-fin-cell px-2 py-2 text-center align-middle">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 rounded app-border app-surface-soft"
+                    checked={selectedIds.has(p.id)}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev)
+                        if (e.target.checked) next.add(p.id)
+                        else next.delete(p.id)
+                        return next
+                      })
+                    }}
+                    aria-label={m.produtos.coluna_selecionar}
+                  />
                 </td>
-              </tr>
-            ) : total === 0 ? (
-              <tr>
-                <td colSpan={colSpanVazio} className="gerente-fin-empty px-3 py-4 text-xs">
-                  {!tinhaProdutosAoCarregar.current
-                    ? m.produtos.nenhum_produto_cadastrado
-                    : m.produtos.nenhum_resultado_filtro}
+                {/* Foto */}
+                <td className="gerente-fin-cell px-1 py-1 align-middle">
+                  <ProdutoImagemCell
+                    produtoId={p.id}
+                    nome={p.nome}
+                    imagemUrl={p.imagem_url}
+                    disabled={toggleLoading}
+                    m={m}
+                    onDone={refetch}
+                  />
                 </td>
-              </tr>
-            ) : (
-              rows.map((p) => (
-                <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
-                  <td className="gerente-fin-cell px-2 py-2 text-center align-middle">
-                    <input
-                      type="checkbox"
-                      className="h-3.5 w-3.5 rounded app-border app-surface-soft"
-                      checked={selectedIds.has(p.id)}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev)
-                          if (e.target.checked) next.add(p.id)
-                          else next.delete(p.id)
-                          return next
-                        })
-                      }}
-                      aria-label={m.produtos.coluna_selecionar}
+                {/* Nome + Código de barras (merged — ID disponível via title) */}
+                <td className="gerente-fin-cell px-3 py-2" title={p.id}>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium leading-tight">{p.nome}</span>
+                    {p.codigo_barras ? (
+                      <span className="font-mono text-[11px] opacity-50">{p.codigo_barras}</span>
+                    ) : null}
+                  </div>
+                </td>
+                {/* Preço (edição inline) */}
+                <td className="gerente-fin-cell px-1 py-1 text-right">
+                  <PrecoVarejoCell
+                    produtoId={p.id}
+                    precoVarejo={Number(p.preco_varejo)}
+                    onSaved={refetch}
+                    msgInvalido={m.produtos.preco_invalido}
+                    msgMaiorZero={m.produtos.preco_maior_zero}
+                    atualizadoMessage={m.produtos.preco_atualizado}
+                  />
+                </td>
+                {/* Origem */}
+                <td className="gerente-fin-cell px-3 py-2">
+                  {p.origem === 'china_manual' ? (
+                    <OrigemBadgeUi
+                      label={m.produtos.origem_china}
+                      tooltip={m.produtos.tooltip_origem_china_manual}
+                      className="border-amber-500/50 bg-amber-500/15 text-amber-100"
                     />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
-                    <span title={p.id}>{p.id.length <= 6 ? p.id : p.id.slice(-6)}</span>
-                  </td>
-                  <td className="gerente-fin-cell px-1 py-1 align-middle">
-                    <ProdutoImagemCell
-                      produtoId={p.id}
-                      nome={p.nome}
-                      imagemUrl={p.imagem_url}
+                  ) : (
+                    <OrigemBadgeUi
+                      label={m.produtos.origem_brasil_nf}
+                      tooltip={m.produtos.tooltip_origem_brasil}
+                      className="border-success/45 bg-success/15 text-success"
+                    />
+                  )}
+                </td>
+                {/* Status */}
+                <td className="px-3 py-2">
+                  <GerenteStatusBadge
+                    status={p.ativo ? 'ATIVO' : 'INATIVO'}
+                    label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
+                  />
+                </td>
+                {/* Ações compactas — 3 ícones em linha */}
+                <td className="px-2 py-1 text-center">
+                  <div className="flex items-center justify-center gap-0.5">
+                    <button
+                      type="button"
                       disabled={toggleLoading}
-                      m={m}
-                      onDone={refetch}
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2 font-medium leading-relaxed">{p.nome}</td>
-                  <td className="gerente-fin-cell px-3 py-2 font-mono">{p.codigo_barras ?? '-'}</td>
-                  <td className="gerente-fin-cell px-1 py-1 text-right">
-                    <PrecoVarejoCell
-                      produtoId={p.id}
-                      precoVarejo={Number(p.preco_varejo)}
-                      onSaved={refetch}
-                      msgInvalido={m.produtos.preco_invalido}
-                      msgMaiorZero={m.produtos.preco_maior_zero}
-                      atualizadoMessage={m.produtos.preco_atualizado}
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2">
-                    {p.origem === 'china_manual' ? (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_china}
-                        tooltip={m.produtos.tooltip_origem_china_manual}
-                        className="border-amber-500/50 bg-amber-500/15 text-amber-100"
-                      />
-                    ) : (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_brasil_nf}
-                        tooltip={m.produtos.tooltip_origem_brasil}
-                        className="border-success/45 bg-success/15 text-success"
-                      />
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <GerenteStatusBadge
-                      status={p.ativo ? 'ATIVO' : 'INATIVO'}
-                      label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <div className="flex flex-col items-stretch gap-1.5">
-                      <button
-                        type="button"
-                        disabled={toggleLoading}
-                        onClick={() => abrirEditar(p)}
-                        className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40 app-border app-surface-soft focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500/50"
-                      >
-                        <Pencil className="h-3 w-3 shrink-0" aria-hidden />
-                        {m.produtos.editar_catalogo}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={toggleLoading}
-                        onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
-                        className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40"
-                      >
-                        {p.ativo ? m.produtos.inativar : m.produtos.ativar}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={toggleLoading}
-                        onClick={() => abrirExclusaoIndividual(p.id)}
-                        title={m.produtos.exclusao_linha_title}
-                        aria-label={m.produtos.exclusao_linha_aria}
-                        className="inline-flex items-center justify-center gap-1 rounded-md border border-destructive/35 px-2 py-1 text-[11px] font-medium text-destructive opacity-90 transition hover:bg-destructive/10 group-hover:opacity-100 disabled:opacity-40"
-                      >
-                        <Trash2 className="h-3 w-3 shrink-0" aria-hidden />
-                        <span className="hidden min-[380px]:inline">{m.produtos.exclusao_linha_botao}</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </TabelaCadastroPadrao>
-        </div>
+                      onClick={() => abrirEditar(p)}
+                      title={m.produtos.editar_catalogo}
+                      aria-label={m.produtos.editar_catalogo}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors app-muted hover:bg-white/[.08] hover:text-slate-100 disabled:opacity-40"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={toggleLoading}
+                      onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
+                      title={p.ativo ? m.produtos.inativar : m.produtos.ativar}
+                      aria-label={p.ativo ? m.produtos.inativar : m.produtos.ativar}
+                      className={cn(
+                        'inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors disabled:opacity-40',
+                        p.ativo
+                          ? 'text-green-400/60 hover:bg-green-500/10 hover:text-green-400'
+                          : 'app-muted hover:bg-amber-500/10 hover:text-amber-400',
+                      )}
+                    >
+                      {p.ativo ? (
+                        <ToggleRight className="h-4 w-4" aria-hidden />
+                      ) : (
+                        <ToggleLeft className="h-4 w-4" aria-hidden />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={toggleLoading}
+                      onClick={() => abrirExclusaoIndividual(p.id)}
+                      title={m.produtos.exclusao_linha_title}
+                      aria-label={m.produtos.exclusao_linha_aria}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-destructive/40 transition-colors hover:bg-destructive/10 hover:text-destructive/80 disabled:opacity-40"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </TabelaCadastroPadrao>
       </div>
+
       {/* Sentinel para scroll infinito */}
       <div ref={sentinelRef} className="h-1" aria-hidden />
 
-      <ProdutosListaImpressao rows={linhasImpressao.length > 0 ? linhasImpressao : rows} m={m} idioma={idioma} />
+      <ProdutosListaImpressao
+        rows={linhasImpressao.length > 0 ? linhasImpressao : rows}
+        m={m}
+        idioma={idioma}
+      />
     </>
   )
 }
