@@ -303,16 +303,18 @@ export function EstoqueGerentePageClient({
             <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
               {m.estoque.buscar_label}
             </span>
-            <div className="relative">
+            {/* h-9 explícito no wrapper garante mesma altura dos selects e evita
+                discrepância de alinhamento do contexto inline do input */}
+            <div className="relative h-9">
               <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-40"
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50"
                 aria-hidden
               />
               <input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder={m.estoque.buscar_placeholder}
-                className="h-9 w-full rounded-lg pl-8 pr-3 text-sm app-input"
+                className="h-9 w-full rounded-lg pl-8 pr-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
               />
             </div>
           </label>
@@ -325,7 +327,7 @@ export function EstoqueGerentePageClient({
             <select
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
-              className="h-9 rounded-lg px-3 text-sm app-select"
+              className="h-9 rounded-lg px-3 text-sm app-select !bg-white/[.08] !border-white/[.18]"
             >
               <option value="">{m.estoque.filtro_todas_categorias}</option>
               {categorias.map((c) => (
@@ -342,7 +344,7 @@ export function EstoqueGerentePageClient({
             <select
               value={origem}
               onChange={(e) => setOrigem(e.target.value)}
-              className="h-9 rounded-lg px-3 text-sm app-select"
+              className="h-9 rounded-lg px-3 text-sm app-select !bg-white/[.08] !border-white/[.18]"
             >
               <option value="">{m.produtos.filtro_todas_origens}</option>
               <option value="china_manual">{m.produtos.origem_china}</option>
@@ -359,7 +361,7 @@ export function EstoqueGerentePageClient({
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="h-9 rounded-lg px-3 text-sm app-select"
+                className="h-9 rounded-lg px-3 text-sm app-select !bg-white/[.08] !border-white/[.18]"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
