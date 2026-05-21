@@ -194,8 +194,8 @@ export function CaixaFooter({
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="secondary"
-                className="inline-flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                variant="ghost"
+                className="inline-flex items-center gap-2 app-btn-accent"
                 onClick={onValidarGerente}
                 disabled={validandoGerente || movimentandoCaixa}
                 aria-busy={validandoGerente}

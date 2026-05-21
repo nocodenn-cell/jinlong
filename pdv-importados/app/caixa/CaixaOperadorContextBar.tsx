@@ -19,8 +19,10 @@ export function CaixaOperadorContextBar({ m, idioma, configCaixaWeb }: Props) {
     return null
   }
   return (
-    <div className="text-xs text-muted-foreground">
-      {caixaFmt(m.caixa.lead_time_importacao_banner, { min: leadMin, max: leadMax })}
+    <div className="flex flex-wrap gap-2">
+      <span className="app-chip inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+        {caixaFmt(m.caixa.lead_time_importacao_banner, { min: leadMin, max: leadMax })}
+      </span>
     </div>
   )
 }

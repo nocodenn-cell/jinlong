@@ -88,6 +88,7 @@ export async function criarProduto(
 
   if (result.success) {
     revalidatePath('/gerente/produtos')
+    revalidatePath('/gerente/estoque')
   }
   return result
 }

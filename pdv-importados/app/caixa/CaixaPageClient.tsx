@@ -792,6 +792,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "caixa-oriental-root",
         )}
       >
+        {pdvLayoutVariant !== "classic" && (
+          <span
+            aria-hidden
+            className="pointer-events-none fixed right-6 bottom-6 select-none text-[7rem] leading-none font-black text-amber-400/[0.06] z-0"
+          >
+            龍
+          </span>
+        )}
         <CaixaHeader
           m={m}
           idioma={idioma}
@@ -876,7 +884,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                 }
               />
             </div>
-            <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card md:min-h-0">
+            <section className={cn("flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl md:min-h-0", pdvLayoutVariant === "classic" ? "border border-border bg-card" : "dragon-glass-card")}>
               <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                 <CaixaCartList
                   m={m}
