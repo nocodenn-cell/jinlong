@@ -23,7 +23,7 @@ import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardSho
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
-import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
+import { CaixaSearchBar, type CaixaSearchBarHandle } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaFooter } from "@/app/caixa/CaixaFooter"
@@ -99,7 +99,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     dismissCaixaToast,
   } = useCaixaMensagens()
 
-  const [codigo, setCodigo] = useState("")
+  // denseStaging: true apenas quando o SearchBar tem texto (transição, não por keystroke).
+  const [denseStaging, setDenseStaging] = useState(false)
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
   const [finalizando, setFinalizando] = useState(false)
@@ -204,7 +205,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   } = useCaixaPagamentos(totalLiquidoComGerente, formaPagamento)
 
   const loc = localeFromIdioma(idioma)
-  const buscaInputRef = useRef<HTMLInputElement>(null)
+  const buscaInputRef = useRef<CaixaSearchBarHandle>(null)
   /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». Só usado com `USE_UNIFIED_SALES_FLOW` no servidor. */
   const vendaIdempotenciaRef = useRef<string | null>(null)
 
@@ -265,6 +266,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     [setCaixaMensagem],
   )
 
+  // Pipeline só chama setCodigo('') para limpar o campo; delegamos ao handle imperativo.
+  const setCodigo = useCallback((v: string) => {
+    if (v === "") buscaInputRef.current?.clear()
+  }, [])
+
   const { enqueueLeitura, buscandoPipeline, flushLeiturasPendentes, pipelineDebug } = useCaixaScanPipeline({
     m,
     setCaixaMensagem,
@@ -312,7 +318,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     (e: FormEvent) => {
       e.preventDefault()
       const sid = cupomSessionIdRef.current
-      const r = enqueueLeitura(codigo, {
+      // Lê o valor diretamente do handle imperativo — sem depender de estado no pai.
+      const codigoAtual = buscaInputRef.current?.getValue() ?? ""
+      const r = enqueueLeitura(codigoAtual, {
         source: "form_submit",
         cupomSessionId: sid,
         // Temporário: mesmo valor que cupomSessionId; futuro = trace por evento (não contrato eterno).
@@ -323,7 +331,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
       }
     },
-    [codigo, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
+    [enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
   )
 
   useScannerDetector(
@@ -838,8 +846,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                         <CaixaSearchBar
                           ref={buscaInputRef}
                           m={m}
-                          codigo={codigo}
-                          onCodigoChange={setCodigo}
                           onSubmit={handleAdicionar}
                           onNovoCupom={handleNovoCupom}
                           buscando={buscandoPipeline}
@@ -848,12 +854,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                           somAtivo={somFeedbackAtivo}
                           onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
                           hideNovoCupom
-                          compact={codigo.trim().length > 0}
+                          onHasText={setDenseStaging}
                         />
                       </div>
                       <CaixaPdvItemStagingPlaceholder
                         m={m}
-                        dense={codigo.trim().length > 0}
+                        dense={denseStaging}
                       />
                       <div className="shrink-0">
                         <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
@@ -865,8 +871,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                       <CaixaSearchBar
                         ref={buscaInputRef}
                         m={m}
-                        codigo={codigo}
-                        onCodigoChange={setCodigo}
                         onSubmit={handleAdicionar}
                         onNovoCupom={handleNovoCupom}
                         buscando={buscandoPipeline}
@@ -882,7 +886,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
               />
             </div>
             <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card md:min-h-0">
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain transform-gpu">
                 <CaixaCartList
                   m={m}
                   idioma={idioma}

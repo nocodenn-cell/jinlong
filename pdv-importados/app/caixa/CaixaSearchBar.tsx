@@ -1,6 +1,14 @@
 "use client"
 
-import { forwardRef, useCallback, useEffect, useRef, type FormEvent, type MutableRefObject } from "react"
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react"
 import { Barcode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,10 +18,15 @@ import { cn } from "@/lib/utils"
 
 type CategoriaChip = { id: string; nome: string }
 
+/** Handle imperativo exposto pelo forwardRef — permite que o pai limpe/foque sem manter estado. */
+export type CaixaSearchBarHandle = {
+  focus: () => void
+  clear: () => void
+  getValue: () => string
+}
+
 type Props = {
   m: Mensagens
-  codigo: string
-  onCodigoChange: (v: string) => void
   onSubmit: (e: FormEvent) => void
   onNovoCupom: () => void
   buscando: boolean
@@ -23,15 +36,16 @@ type Props = {
   onToggleSom: () => void
   /** Quando true, o botão «Novo cupom» não é renderizado (ex.: classic com ação no trilho). */
   hideNovoCupom?: boolean
-  /** PDV clássico: reduz altura quando há texto na busca (prepara área de staging). */
-  compact?: boolean
+  /**
+   * Chamado somente nas transições vazio↔com-texto.
+   * Permite que o pai ajuste o staging placeholder sem re-renderizar no ritmo da digitação.
+   */
+  onHasText?: (hasText: boolean) => void
 }
 
-export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function CaixaSearchBar(
+export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function CaixaSearchBar(
   {
     m,
-    codigo,
-    onCodigoChange,
     onSubmit,
     onNovoCupom,
     buscando,
@@ -40,29 +54,40 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     somAtivo,
     onToggleSom,
     hideNovoCupom = false,
-    compact = false,
+    onHasText,
   },
   forwardedRef,
 ) {
+  // Estado local isolado: re-renderiza apenas este componente a cada bipe/tecla,
+  // nunca o CaixaPageClient pai (carrinho + totais permanecem intocados).
+  const [codigoLocal, setCodigoLocal] = useState("")
+  const compact = codigoLocal.trim().length > 0
+
   const innerRef = useRef<HTMLInputElement>(null)
 
-  // Garante foco ao montar e ao sair do modo compact — mais confiável que
-  // autoFocus puro em navegação SPA e re-hidratação Next.js.
+  // Garante foco ao montar e ao sair do modo compact.
   useEffect(() => {
     if (!compact) innerRef.current?.focus()
   }, [compact])
 
-  // Mescla innerRef (para foco imperativo) + forwardedRef (API externa).
-  const setRef = useCallback(
-    (el: HTMLInputElement | null) => {
-      (innerRef as MutableRefObject<HTMLInputElement | null>).current = el
-      if (typeof forwardedRef === "function") {
-        forwardedRef(el)
-      } else if (forwardedRef) {
-        (forwardedRef as MutableRefObject<HTMLInputElement | null>).current = el
-      }
-    },
-    [forwardedRef],
+  // Notifica o pai apenas nas transições vazio↔com-texto (nunca por keystroke).
+  const prevHasTextRef = useRef(false)
+  useEffect(() => {
+    const hasText = compact
+    if (hasText !== prevHasTextRef.current) {
+      prevHasTextRef.current = hasText
+      onHasText?.(hasText)
+    }
+  }, [compact, onHasText])
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      focus: () => innerRef.current?.focus(),
+      clear: () => setCodigoLocal(""),
+      getValue: () => codigoLocal,
+    }),
+    [codigoLocal],
   )
 
   return (
@@ -101,9 +126,9 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             aria-hidden
           />
           <Input
-            ref={setRef}
-            value={codigo}
-            onChange={(e) => onCodigoChange(e.target.value)}
+            ref={innerRef}
+            value={codigoLocal}
+            onChange={(e) => setCodigoLocal(e.target.value)}
             placeholder={m.caixa.busca_placeholder}
             aria-label={m.caixa.busca_placeholder}
             disabled={buscando || carregandoRegras}
@@ -116,7 +141,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             onKeyDown={(e) => {
               if (e.key === "Escape") {
                 e.preventDefault()
-                onCodigoChange("")
+                setCodigoLocal("")
               }
             }}
           />
@@ -172,7 +197,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
                 key={c.id}
                 type="button"
                 disabled={buscando || carregandoRegras}
-                onClick={() => onCodigoChange(c.nome)}
+                onClick={() => setCodigoLocal(c.nome)}
                 title={c.nome}
                 className="min-h-9 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-1 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jl-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
               >

@@ -100,7 +100,7 @@ export function CaixaFooter({
     return (
       <footer
         className={cn(
-          "shrink-0 border-t backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10",
+          "shrink-0 border-t transform-gpu px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10",
           "border-border bg-primary text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]",
         )}
       >
@@ -159,7 +159,7 @@ export function CaixaFooter({
   }
 
   return (
-    <footer className="shrink-0 border-t border-jl-border-1 backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-jl-surface-elev">
+    <footer className="shrink-0 border-t border-jl-border-1 transform-gpu px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-jl-surface-elev">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <div className="flex flex-col gap-1">

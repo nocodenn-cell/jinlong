@@ -56,7 +56,7 @@ export function CaixaPdvCartSaleBar({
 
   return (
     <div
-      className="shrink-0 border-t border-jl-border-1 bg-jl-surface-elev px-3 py-3 shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] sm:px-4"
+      className="shrink-0 border-t border-jl-border-1 bg-jl-surface-elev px-3 py-3 shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] sm:px-4 transform-gpu"
       data-caixa-cart-sale-bar
     >
       <div className="flex flex-col gap-3">
