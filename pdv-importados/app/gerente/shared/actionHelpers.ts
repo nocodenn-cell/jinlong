@@ -7,6 +7,34 @@ import {
   mensagemErroComSecao,
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase/database.types'
+
+/** Union of all public table names in the Supabase schema. */
+type PublicTable = keyof Database['public']['Tables']
+
+/**
+ * A fully-typed Supabase client shaped against the generated Database type.
+ * Used as the `supabase` parameter type in `postProcess` callbacks so callers
+ * get typed query access. The factory functions (server.ts / client.ts) return
+ * `SupabaseClient<any>`, which TypeScript's `any`-assignability rules make
+ * compatible with this type at the call site.
+ */
+type TypedClient = SupabaseClient<Database>
+
+/**
+ * The filter-builder type returned by `.from(table).select(cols)` on an
+ * untyped Supabase client (SupabaseClient without the Database generic).
+ *
+ * We derive from the bare `SupabaseClient` (which defaults to `any` generics)
+ * rather than `SupabaseClient<Database>` because the typed variant resolves
+ * the column-name parameter of `.eq`/`.ilike`/`.order` to the intersection of
+ * column names across ALL tables — which collapses to `never` when used with a
+ * union of table names. The bare client keeps column: string wide-open, which
+ * is what this generic list helper needs.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyPublicFilterBuilder = ReturnType<ReturnType<SupabaseClient<any>['from']>['select']>
 
 /** Resultado padronizado para server actions de cadastro (formato legado). */
 export type CadastroActionResult<T> =
@@ -29,7 +57,7 @@ export async function zodValidationError(
 
 /** Alterna o campo `ativo` de uma linha em uma tabela de cadastro. */
 export async function alternarAtivoCadastro(
-  tabela: string,
+  tabela: PublicTable,
   id: string,
   ativo: boolean,
   revalidatePaths: string[],
@@ -43,7 +71,10 @@ export async function alternarAtivoCadastro(
   const supabase = await createClient()
   const { error } = await supabase
     .from(tabela)
-    .update({ ativo })
+    // `as never`: the helper works for any public table; the typed client can't
+    // statically verify that each union-table's Update type includes `ativo`.
+    // Callers are responsible for using this only on tables with an `ativo` field.
+    .update({ ativo } as never)
     .eq('id', idParsed.data)
 
   if (error) {
@@ -56,7 +87,7 @@ export async function alternarAtivoCadastro(
 
 /** Exclui uma linha de uma tabela de cadastro por ID. */
 export async function excluirCadastro(
-  tabela: string,
+  tabela: PublicTable,
   id: string,
   secaoErro: string,
   revalidatePaths: string[],
@@ -83,7 +114,7 @@ export async function excluirCadastro(
 
 /** Insere uma linha em uma tabela de cadastro e retorna o ID. */
 export async function criarCadastro(
-  tabela: string,
+  tabela: PublicTable,
   payload: Record<string, unknown>,
   secaoErro: string,
   revalidatePaths: string[],
@@ -94,7 +125,9 @@ export async function criarCadastro(
   const supabase = await createClient()
   const { data, error } = await supabase
     .from(tabela)
-    .insert(payload)
+    // `as never`: payload is validated by Zod at the call site; the typed client
+    // can't verify the shape matches the specific table's Insert type statically.
+    .insert(payload as never)
     .select('id')
     .single()
 
@@ -108,7 +141,7 @@ export async function criarCadastro(
 
 /** Atualiza uma linha em uma tabela de cadastro por ID. */
 export async function atualizarCadastro(
-  tabela: string,
+  tabela: PublicTable,
   id: string,
   payload: Record<string, unknown>,
   secaoErro: string,
@@ -120,7 +153,8 @@ export async function atualizarCadastro(
   const supabase = await createClient()
   const { error } = await supabase
     .from(tabela)
-    .update(payload)
+    // `as never`: payload is validated by Zod at the call site.
+    .update(payload as never)
     .eq('id', id)
 
   if (error) {
@@ -139,13 +173,17 @@ type ListarFiltros = {
 }
 
 type ListarConfig<R> = {
-  tabela: string
+  tabela: PublicTable
   selectCols: string
   secaoErro: string
   toRow: (raw: Record<string, unknown>) => R
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  extraFilters?: (query: any, filtros: Record<string, unknown>) => any
-  postProcess?: (rows: R[], supabase: Awaited<ReturnType<typeof createClient>>) => Promise<R[]>
+  /**
+   * Optional callback to apply extra filters on the query builder.
+   * The builder's `.eq`, `.ilike`, `.order` methods accept `column: string`
+   * so any column name is valid without additional casts in the callback.
+   */
+  extraFilters?: (query: AnyPublicFilterBuilder, filtros: Record<string, unknown>) => AnyPublicFilterBuilder
+  postProcess?: (rows: R[], supabase: TypedClient) => Promise<R[]>
 }
 
 export async function listarCadastro<R, F extends ListarFiltros>(
@@ -162,10 +200,12 @@ export async function listarCadastro<R, F extends ListarFiltros>(
   const filtros = parsed.data
   const supabase = await createClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase
+  // The typed client resolves .from(union-table).select() to a filter builder
+  // that carries the union of all row types.  The string overloads on .eq /
+  // .ilike / .order accept any column name, so built-in filters below are safe.
+  let query: AnyPublicFilterBuilder = supabase
     .from(config.tabela)
-    .select(config.selectCols, { count: 'exact' })
+    .select(config.selectCols, { count: 'exact' }) as AnyPublicFilterBuilder
 
   if (filtros.situacao === 'ativos') query = query.eq('ativo', true)
   else if (filtros.situacao === 'inativos') query = query.eq('ativo', false)
