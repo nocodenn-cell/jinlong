@@ -8,7 +8,7 @@ import type { Idioma } from "@/idioma/normalizeIdioma"
 import LanguageToggle from "@/app/caixa/idioma/LanguageToggle"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
-import { Clock, User, Wallet, LogOut, Languages } from "lucide-react"
+import { Clock, User, Wallet } from "lucide-react"
 import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { cn } from "@/lib/utils"
 
