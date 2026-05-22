@@ -38,6 +38,22 @@ export type RelatorioVendasAvancadoPayload = {
 }
 
 /**
+ * Shape do resultado bruto da query com joins de cliente e vendedor.
+ * Sem tipos gerados pelo Supabase, FK joins são inferidos como array —
+ * usamos `as unknown as VendaQueryRow[]` para a conversão controlada.
+ */
+type VendaQueryRow = {
+  id: string
+  data: string | null
+  total_liquido: number | null
+  forma_pagamento: string | null
+  status: string | null
+  categoria_principal: string | null
+  cliente: { nome: string } | { nome: string }[] | null
+  vendedor: { nome: string } | { nome: string }[] | null
+}
+
+/**
  * Consulta principal do relatório avançado de vendas.
  * - `vendas` é a listagem (até 1 000 linhas por chamada).
  * - `serie_por_dia` é a agregação diária para o gráfico.
@@ -82,18 +98,20 @@ export async function buscarRelatorioVendasAvancadoAction(
     const { data, error } = await query
     if (error) return { ok: false, error: mensagemErroComSecao('Relatório', error.message) }
 
-    const vendas: VendaReportRow[] = (data ?? []).map((r) => {
-      const cli = (r as any).cliente
-      const vd = (r as any).vendedor
+    const vendas: VendaReportRow[] = (
+      (data ?? []) as unknown as VendaQueryRow[]
+    ).map((r) => {
+      const cli = Array.isArray(r.cliente) ? r.cliente[0] : r.cliente
+      const vd = Array.isArray(r.vendedor) ? r.vendedor[0] : r.vendedor
       return {
-        id: String((r as any).id),
-        data: ((r as any).data as string | null) ?? null,
-        cliente_nome: cli && typeof cli === 'object' && 'nome' in cli ? String(cli.nome) : null,
-        vendedor_nome: vd && typeof vd === 'object' && 'nome' in vd ? String(vd.nome) : null,
-        categoria_principal: ((r as any).categoria_principal as string | null) ?? null,
-        total_liquido: Number((r as any).total_liquido ?? 0),
-        forma_pagamento: ((r as any).forma_pagamento as string | null) ?? null,
-        status: String((r as any).status ?? 'CONCLUIDA').toUpperCase(),
+        id: r.id,
+        data: r.data,
+        cliente_nome: cli?.nome ?? null,
+        vendedor_nome: vd?.nome ?? null,
+        categoria_principal: r.categoria_principal,
+        total_liquido: r.total_liquido ?? 0,
+        forma_pagamento: r.forma_pagamento,
+        status: (r.status ?? 'CONCLUIDA').toUpperCase(),
       }
     })
 
