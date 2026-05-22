@@ -140,6 +140,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
+  const [inputHasError, setInputHasError] = useState(false)
+  const inputErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const {
     caixaStatus,
@@ -217,6 +219,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     })
   }, [])
 
+  const flashInputError = useCallback(() => {
+    if (inputErrorTimerRef.current) clearTimeout(inputErrorTimerRef.current)
+    setInputHasError(true)
+    inputErrorTimerRef.current = setTimeout(() => {
+      setInputHasError(false)
+      inputErrorTimerRef.current = null
+    }, 1500)
+  }, [])
+
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
       if (!somFeedbackAtivo) return
@@ -277,6 +288,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     setCaixaMensagemScannerInfo: setCaixaMensagem,
     setCodigo,
     tocarFeedback,
+    onErroBusca: flashInputError,
     focarCampoBusca,
     adicionarItem,
     setCartOwnerForSession,
@@ -864,6 +876,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                           onToggleSom={handleToggleSom}
                           hideNovoCupom
                           onHasText={setDenseStaging}
+                          hasError={inputHasError}
                         />
                       </div>
                       <CaixaPdvItemStagingPlaceholder
@@ -887,6 +900,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                         categoriasAtalho={categoriasAtalho}
                         somAtivo={somFeedbackAtivo}
                         onToggleSom={handleToggleSom}
+                        hasError={inputHasError}
                       />
                       <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
                     </>
@@ -1076,7 +1090,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
       )}
       <CaixaGerenteModal
         open={gerenteModalAberto}
-        onOpenChange={setGerenteModalAberto}
+        onOpenChange={(open) => {
+          setGerenteModalAberto(open)
+          if (!open) focarCampoBusca()
+        }}
         m={m}
         validando={validandoGerente}
         onValidateSenha={handleValidateSenhaGerente}
@@ -1091,7 +1108,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           saldoEstimado={caixaStatus?.aberto ? caixaStatus.valorSistemaDinheiro : 0}
           m={m}
           onOpenChange={(open) => {
-            if (!open) setMovimentacaoModalTipo(null)
+            if (!open) { setMovimentacaoModalTipo(null); focarCampoBusca() }
           }}
           onSubmit={handleSalvarMovimentacao}
         />
@@ -1103,7 +1120,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           processando={processandoAcaoMovimentacao}
           m={m}
           onOpenChange={(open) => {
-            if (!open) setAcaoMovimentacao(null)
+            if (!open) { setAcaoMovimentacao(null); focarCampoBusca() }
           }}
           onConfirm={handleConfirmarAcaoMovimentacao}
         />
@@ -1112,7 +1129,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         <CaixaValorNumericoModal
           open
           onOpenChange={(open) => {
-            if (!open) setValorNumericoModal(null)
+            if (!open) { setValorNumericoModal(null); focarCampoBusca() }
           }}
           title={
             valorNumericoModal.fluxo === "abrir_caixa"
@@ -1141,7 +1158,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         <CaixaMotivoMinModal
           open
           onOpenChange={(open) => {
-            if (!open) setMotivoFecharModal(null)
+            if (!open) { setMotivoFecharModal(null); focarCampoBusca() }
           }}
           title={
             motivoFecharModal.tipo === "diferenca"
@@ -1178,7 +1195,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         m={m}
         initialFocus="cancel"
         onOpenChange={(open) => {
-          if (!open) setConfirmacaoPendente(null)
+          if (!open) { setConfirmacaoPendente(null); focarCampoBusca() }
         }}
         onConfirm={handleConfirmarAcaoSensivel}
       />

@@ -49,6 +49,8 @@ export type WebCaixaScanDeps = {
   setCaixaMensagemScannerInfo?: SetCaixaMensagemFn
   setCodigo: (v: string) => void
   tocarFeedback: (kind: 'ok' | 'erro') => void
+  /** Chamado quando o produto não é encontrado — acende borda vermelha no input. */
+  onErroBusca?: () => void
   focarCampoBusca: () => void
   adicionarItem: CarrinhoState['adicionarItem']
   setCartOwnerForSession: CarrinhoState['setCartOwnerForSession']
@@ -71,8 +73,10 @@ export async function runWebCaixaScanProcess(
 ): Promise<ScanProcessResult> {
   const { m, setCaixaMensagem, setCodigo, tocarFeedback, focarCampoBusca } = deps
   const signal = ctx.signal
-  /** Linha criada neste scan; rollback até commit explícito (P0 stale_cupom / abort). */
+  /** ID da linha afetada neste scan; null = nenhuma mutação pendente. */
   let linhaPendenteRollback: string | null = null
+  /** null = nova linha (remover em rollback); number = linha existente (restaurar quantidade). */
+  let quantidadeParaRollback: number | null = null
   const trimmed = ctx.scan.event.codigo.trim()
   if (!trimmed) {
     return { ok: false, reason: 'validation', message: 'Código vazio.' }
@@ -126,12 +130,14 @@ export async function runWebCaixaScanProcess(
     if (res.status === 'nao_encontrado') {
       setCaixaMensagem(m.caixa.msg_produto_nao_encontrado_acao, { kind: 'warning' })
       tocarFeedback('erro')
+      deps.onErroBusca?.()
       return { ok: false, reason: 'not_found' }
     }
 
     if (res.status === 'ambiguo') {
       setCaixaMensagem(res.mensagem, { kind: 'warning' })
       tocarFeedback('erro')
+      deps.onErroBusca?.()
       return { ok: false, reason: 'ambiguous' }
     }
 
@@ -176,48 +182,70 @@ export async function runWebCaixaScanProcess(
 
     /**
      * Política P0: mutação do carrinho só é “confirmada” quando o scan termina com sucesso.
-     * Qualquer abort / stale_cupom / falha de pricing após `adicionarItem` faz rollback da linha
-     * deste bip (evita divergência invisível scan failed vs carrinho mutado).
+     * Merge: se já existe linha para o mesmo produto (não MANUAL/PROMOCAO), incrementa a
+     * quantidade em vez de criar nova linha — rollback restaura a quantidade anterior.
+     * New: cria nova linha — rollback remove.
      */
-    const novaLinhaId = `${p.id}-${Date.now()}`
-    const abandonarLinhaDoScan = () => {
-      if (!linhaPendenteRollback) return
-      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
-      linhaPendenteRollback = null
-    }
+    const existingLine = useCarrinhoStore
+      .getState()
+      .itens.find(
+        (i) =>
+          i.produtoId === p.id &&
+          i.resultado?.tipoPreco !== 'MANUAL' &&
+          i.resultado?.tipoPreco !== 'PROMOCAO',
+      )
 
-    deps.adicionarItem({
-      id: novaLinhaId,
-      produtoId: p.id,
-      nome: p.nome,
-      quantidade: 1,
-      precoUnitario: p.preco_varejo,
-      precoOriginal: p.preco_varejo,
-      resultado: {
+    let linhaIdAtiva: string
+
+    if (existingLine) {
+      linhaIdAtiva = existingLine.id
+      quantidadeParaRollback = existingLine.quantidade
+      useCarrinhoStore.getState().alterarQuantidade(existingLine.id, existingLine.quantidade + 1)
+    } else {
+      linhaIdAtiva = `${p.id}-${Date.now()}`
+      deps.adicionarItem({
+        id: linhaIdAtiva,
+        produtoId: p.id,
+        nome: p.nome,
+        quantidade: 1,
         precoUnitario: p.preco_varejo,
         precoOriginal: p.preco_varejo,
-        descontoUnitario: 0,
-        tipoPreco: 'VAREJO',
-      },
-      metaPdv: {
-        origem: p.origem,
-        tem_nf: p.tem_nf,
-        observacao: p.observacao,
-        estoque_atual: p.quantidade_estoque,
-        estoque_minimo: p.estoque_minimo,
-        categoriaId: p.categoria_id,
-        precoAtacado: p.preco_atacado,
-        precoVarejoReferencia: p.preco_varejo,
-      },
-    })
-    linhaPendenteRollback = novaLinhaId
+        resultado: {
+          precoUnitario: p.preco_varejo,
+          precoOriginal: p.preco_varejo,
+          descontoUnitario: 0,
+          tipoPreco: 'VAREJO',
+        },
+        metaPdv: {
+          origem: p.origem,
+          tem_nf: p.tem_nf,
+          observacao: p.observacao,
+          estoque_atual: p.quantidade_estoque,
+          estoque_minimo: p.estoque_minimo,
+          categoriaId: p.categoria_id,
+          precoAtacado: p.preco_atacado,
+          precoVarejoReferencia: p.preco_varejo,
+        },
+      })
+    }
+    linhaPendenteRollback = linhaIdAtiva
+
+    const abandonarLinhaDoScan = () => {
+      if (!linhaPendenteRollback) return
+      if (quantidadeParaRollback !== null) {
+        useCarrinhoStore.getState().alterarQuantidade(linhaPendenteRollback, quantidadeParaRollback)
+      } else {
+        useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
+      }
+      linhaPendenteRollback = null
+    }
 
     if (signal?.aborted) {
       abandonarLinhaDoScan()
       return { ok: false, reason: 'aborted' }
     }
 
-    const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.id === novaLinhaId)
+    const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.id === linhaIdAtiva)
     if (linhaApos) {
       const tp = linhaApos.resultado?.tipoPreco
       if (tp !== 'MANUAL' && tp !== 'PROMOCAO') {
@@ -285,7 +313,11 @@ export async function runWebCaixaScanProcess(
     return { ok: false, reason: 'unknown', message: m.caixa.falha_busca }
   } finally {
     if (linhaPendenteRollback != null && linhaPendenteRollback !== '') {
-      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
+      if (quantidadeParaRollback !== null) {
+        useCarrinhoStore.getState().alterarQuantidade(linhaPendenteRollback, quantidadeParaRollback)
+      } else {
+        useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
+      }
       linhaPendenteRollback = null
     }
     focarCampoBusca()

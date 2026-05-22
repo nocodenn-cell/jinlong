@@ -40,6 +40,8 @@ type Props = {
    * Permite que o pai ajuste o staging placeholder sem re-renderizar no ritmo da digitação.
    */
   onHasText?: (hasText: boolean) => void
+  /** Quando true, aplica borda vermelha temporária para sinalizar produto não encontrado. */
+  hasError?: boolean
 }
 
 export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function CaixaSearchBar(
@@ -54,6 +56,7 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
     onToggleSom,
     hideNovoCupom = false,
     onHasText,
+    hasError = false,
   },
   forwardedRef,
 ) {
@@ -132,7 +135,10 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
             aria-label={m.caixa.busca_placeholder}
             disabled={buscando || carregandoRegras}
             className={cn(
-              "w-full bg-jl-surface-soft border-2 border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] text-foreground placeholder:text-foreground/70 rounded-md focus:outline-none focus:ring-2 focus:ring-jl-accent focus:border-transparent",
+              "w-full bg-jl-surface-soft border-2 text-foreground placeholder:text-foreground/70 rounded-md focus:outline-none focus:ring-2 focus:border-transparent transition-colors",
+              hasError
+                ? "border-destructive shadow-[0_0_0_1px_rgba(239,68,68,0.4)] focus:ring-destructive"
+                : "border-amber-400/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25)] focus:ring-jl-accent",
               compact
                 ? "py-1.5 pl-8 pr-3 text-sm"
                 : "h-14 pl-10 pr-3 text-base",
