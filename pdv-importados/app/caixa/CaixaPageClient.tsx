@@ -287,14 +287,22 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   const pagamentoControlesDesabilitados =
     finalizando || buscandoPipeline || carregandoRegras
 
-  const metodoPagamentoSelector = (
-    <CaixaPdvMetodoPagamentoSelector
-      m={m}
-      value={metodoPagamento}
-      onChange={setMetodoPagamento}
-      disabled={pagamentoControlesDesabilitados}
-      variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
-    />
+  const metodoPagamentoSelector = useMemo(
+    () => (
+      <CaixaPdvMetodoPagamentoSelector
+        m={m}
+        value={metodoPagamento}
+        onChange={setMetodoPagamento}
+        disabled={pagamentoControlesDesabilitados}
+        variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+      />
+    ),
+    [m, metodoPagamento, setMetodoPagamento, pagamentoControlesDesabilitados, pdvLayoutVariant],
+  )
+
+  const handleToggleSom = useCallback(
+    () => setSomFeedbackAtivo((prev) => !prev),
+    [],
   )
 
   const limparEstadoDescontoGerente = useCallback(() => {
@@ -809,8 +817,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           operadorLabel={operadorLabel}
           caixaStatus={caixaStatus}
           processandoCaixa={processandoCaixa}
-          onAbrirCaixa={() => void handleAbrirCaixa()}
-          onFecharCaixa={() => void handleFecharCaixa()}
+          onAbrirCaixa={handleAbrirCaixa}
+          onFecharCaixa={handleFecharCaixa}
         />
         <div className="flex-1 flex flex-col min-h-0">
           {pdvLayoutVariant === "classic" && showClassicLayoutPreviewBanner() ? (
@@ -853,7 +861,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                           carregandoRegras={carregandoRegras}
                           categoriasAtalho={categoriasAtalho}
                           somAtivo={somFeedbackAtivo}
-                          onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                          onToggleSom={handleToggleSom}
                           hideNovoCupom
                           onHasText={setDenseStaging}
                         />
@@ -878,7 +886,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                         carregandoRegras={carregandoRegras}
                         categoriasAtalho={categoriasAtalho}
                         somAtivo={somFeedbackAtivo}
-                        onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                        onToggleSom={handleToggleSom}
                       />
                       <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
                     </>

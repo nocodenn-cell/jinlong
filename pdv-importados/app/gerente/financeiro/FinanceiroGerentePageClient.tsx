@@ -315,6 +315,112 @@ export function FinanceiroGerentePageClient({
     [titulos],
   )
 
+  const titulosRows = useMemo(
+    () =>
+      titulos.map((t, idx) => (
+        <tr
+          key={t.id}
+          className={cn(
+            'gerente-fin-row-hover transition-colors',
+            idx % 2 === 1 && 'bg-white/[0.025]',
+          )}
+        >
+          <td className="gerente-fin-cell px-3 py-2.5 font-medium">{t.cliente_nome ?? f.dash}</td>
+          <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 tabular-nums">
+            {formatDateOnlyOrDash(t.vencimento, locale)}
+          </td>
+          <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 text-sm font-semibold tabular-nums app-accent-text">
+            {fmtGerenteBRL(Number(t.valor_aberto), locale)}
+          </td>
+          <td className="px-3 py-2.5">
+            <GerenteStatusBadge status={t.status} />
+          </td>
+          <td className="min-w-[220px] px-3 py-2.5">
+            <form
+              className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const fd = new FormData(e.currentTarget)
+                const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
+                void mutLiquidar({
+                  titulo_id: t.id,
+                  valor: Number(fd.get('valor')),
+                  forma_pagamento: forma,
+                })
+              }}
+            >
+              <input
+                name="valor"
+                type="number"
+                min={0.01}
+                step="0.01"
+                placeholder={f.liq_placeholder_valor}
+                className={`${inputClass} sm:max-w-[120px]`}
+              />
+              <select name="forma" className={`${selectClass} sm:max-w-[200px]`}>
+                <option value="DINHEIRO">DINHEIRO</option>
+                <option value="PIX">PIX</option>
+                <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
+                <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
+                <option value="OUTROS">OUTROS</option>
+              </select>
+              <button
+                type="submit"
+                disabled={loadLiquidar}
+                className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
+              >
+                {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
+                {loadLiquidar ? f.liq_loading : f.liq_ok}
+              </button>
+            </form>
+          </td>
+        </tr>
+      )),
+    [titulos, locale, f, loadLiquidar, mutLiquidar],
+  )
+
+  const docsFiscaisRows = useMemo(
+    () =>
+      docsFiscais.map((d) => (
+        <tr key={d.id} className="gerente-fin-row-hover transition-colors">
+          <td className="px-3 py-3">
+            <GerenteStatusBadge status={d.status} />
+          </td>
+          <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{String(d.venda_id).slice(0, 8)}…</td>
+          <td className="gerente-fin-cell px-3 py-3">{d.tipo_doc}</td>
+          <td className="gerente-fin-cell px-3 py-3 tabular-nums">{Number(d.tentativas ?? 0)}</td>
+          <td className="max-w-[200px] truncate px-3 py-3 text-sm app-badge-danger" title={d.ultimo_erro ?? ''}>
+            {d.ultimo_erro ?? f.dash}
+          </td>
+          <td className="px-3 py-3">
+            <Link
+              href={`/gerente/financeiro/documento/${d.id}`}
+              className="gerente-nav-back text-sm font-medium hover:underline"
+            >
+              {f.link_timeline}
+            </Link>
+          </td>
+          <td className="px-3 py-3">
+            {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
+              <ConfirmActionButton
+                type="button"
+                disabled={loadReprocessar}
+                confirmMessage={`Confirma reprocessar o documento ${String(d.id).slice(0, 8)}…? O item voltará para a fila fiscal.`}
+                onClick={() => void mutReprocessar(d.id)}
+                className="inline-flex min-w-[100px] items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-danger"
+              >
+                {loadReprocessar ? <DragonOuroLoader className="app-surface-text" iconClassName="h-3.5 w-3.5" /> : null}
+                {loadReprocessar ? f.liq_loading : f.btn_reprocessar}
+              </ConfirmActionButton>
+            ) : (
+              <span className="gerente-fin-empty text-sm">{f.dash}</span>
+            )}
+          </td>
+        </tr>
+      )),
+    [docsFiscais, f, loadReprocessar, mutReprocessar],
+  )
+
   return (
     <>
       <GerenteStickyToolbar>
@@ -471,65 +577,7 @@ export function FinanceiroGerentePageClient({
                     </td>
                   </tr>
                 ) : (
-                  titulos.map((t, idx) => (
-                    <tr
-                      key={t.id}
-                      className={cn(
-                        'gerente-fin-row-hover transition-colors',
-                        idx % 2 === 1 && 'bg-white/[0.025]',
-                      )}
-                    >
-                      <td className="gerente-fin-cell px-3 py-2.5 font-medium">{t.cliente_nome ?? f.dash}</td>
-                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 tabular-nums">
-                        {formatDateOnlyOrDash(t.vencimento, locale)}
-                      </td>
-                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 text-sm font-semibold tabular-nums app-accent-text">
-                        {fmtGerenteBRL(Number(t.valor_aberto), locale)}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <GerenteStatusBadge status={t.status} />
-                      </td>
-                      <td className="min-w-[220px] px-3 py-2.5">
-                        <form
-                          className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
-                          onSubmit={(e) => {
-                            e.preventDefault()
-                            const fd = new FormData(e.currentTarget)
-                            const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
-                            void mutLiquidar({
-                              titulo_id: t.id,
-                              valor: Number(fd.get('valor')),
-                              forma_pagamento: forma,
-                            })
-                          }}
-                        >
-                          <input
-                            name="valor"
-                            type="number"
-                            min={0.01}
-                            step="0.01"
-                            placeholder={f.liq_placeholder_valor}
-                            className={`${inputClass} sm:max-w-[120px]`}
-                          />
-                          <select name="forma" className={`${selectClass} sm:max-w-[200px]`}>
-                            <option value="DINHEIRO">DINHEIRO</option>
-                            <option value="PIX">PIX</option>
-                            <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
-                            <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
-                            <option value="OUTROS">OUTROS</option>
-                          </select>
-                          <button
-                            type="submit"
-                            disabled={loadLiquidar}
-                            className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
-                          >
-                            {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
-                            {loadLiquidar ? f.liq_loading : f.liq_ok}
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))
+                  titulosRows
                 )}
               </GerenteTable>
             </div>
@@ -697,43 +745,7 @@ export function FinanceiroGerentePageClient({
                 </td>
               </tr>
             ) : (
-              docsFiscais.map((d) => (
-                <tr key={d.id} className="gerente-fin-row-hover transition-colors">
-                  <td className="px-3 py-3">
-                    <GerenteStatusBadge status={d.status} />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{String(d.venda_id).slice(0, 8)}…</td>
-                  <td className="gerente-fin-cell px-3 py-3">{d.tipo_doc}</td>
-                  <td className="gerente-fin-cell px-3 py-3 tabular-nums">{Number(d.tentativas ?? 0)}</td>
-                  <td className="max-w-[200px] truncate px-3 py-3 text-sm app-badge-danger" title={d.ultimo_erro ?? ''}>
-                    {d.ultimo_erro ?? f.dash}
-                  </td>
-                  <td className="px-3 py-3">
-                    <Link
-                      href={`/gerente/financeiro/documento/${d.id}`}
-                      className="gerente-nav-back text-sm font-medium hover:underline"
-                    >
-                      {f.link_timeline}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-3">
-                    {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
-                      <ConfirmActionButton
-                        type="button"
-                        disabled={loadReprocessar}
-                        confirmMessage={`Confirma reprocessar o documento ${String(d.id).slice(0, 8)}…? O item voltará para a fila fiscal.`}
-                        onClick={() => void mutReprocessar(d.id)}
-                        className="inline-flex min-w-[100px] items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-danger"
-                      >
-                        {loadReprocessar ? <DragonOuroLoader className="app-surface-text" iconClassName="h-3.5 w-3.5" /> : null}
-                        {loadReprocessar ? f.liq_loading : f.btn_reprocessar}
-                      </ConfirmActionButton>
-                    ) : (
-                      <span className="gerente-fin-empty text-sm">{f.dash}</span>
-                    )}
-                  </td>
-                </tr>
-              ))
+              docsFiscaisRows
             )}
           </GerenteTable>
         </div>

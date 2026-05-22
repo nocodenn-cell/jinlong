@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
@@ -68,6 +68,79 @@ export function VendasGerenteListClient({ idioma, locale, initialVendas, initial
     return () => obs.disconnect()
   }, [loadNextPage])
 
+  const csvRows = useMemo(
+    () =>
+      vendas.map((v) => ({
+        data: v.data ? new Date(v.data).toISOString() : '',
+        total_liquido: Number(v.total_liquido),
+        forma_pagamento: labelFormaPagamentoVenda(v.forma_pagamento, m),
+        status: labelStatusVenda(v.status, m),
+        caixa_id: v.caixa_id ?? '',
+      })),
+    [vendas, m],
+  )
+
+  const vendasRows = useMemo(
+    () =>
+      vendas.map((v) => (
+        <tr key={v.id} className="gerente-fin-row-hover transition-colors">
+          <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 tabular-nums">
+            {fmtGerenteDateTime(v.data, locale)}
+          </td>
+          <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 font-medium tabular-nums">
+            {fmtGerenteBRL(Number(v.total_liquido), locale)}
+          </td>
+          <td className="gerente-fin-cell px-3 py-3">
+            {labelFormaPagamentoVenda(v.forma_pagamento, m)}
+          </td>
+          <td className="px-3 py-3">
+            <span className={statusBadgeClasses(v.status ?? '')}>
+              {labelStatusVenda(v.status, m)}
+            </span>
+          </td>
+          <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">
+            {fmtGerenteIdCurto(v.caixa_id ?? undefined)}
+          </td>
+          <td className="px-3 py-3">
+            <Link
+              href={`/gerente/vendas/${v.id}`}
+              className="gerente-section-accent text-sm font-medium hover:underline"
+            >
+              {m.gerente.ver_detalhes}
+            </Link>
+          </td>
+          <td className="min-w-[min(100%,280px)] max-w-[360px] px-3 py-3">
+            {v.status !== 'CANCELADA' ? (
+              <form
+                action={cancelarVendaGerenteAction}
+                className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch"
+              >
+                <input type="hidden" name="venda_id" value={v.id} />
+                <input
+                  name="motivo"
+                  placeholder={m.gerente.venda_motivo_cancel_placeholder}
+                  required
+                  minLength={2}
+                  maxLength={500}
+                  className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm shadow-inner app-input"
+                />
+                <ConfirmActionButton
+                  type="submit"
+                  confirmMessage={`Confirma o cancelamento da venda ${fmtGerenteIdCurto(v.id)}? Esta ação não pode ser desfeita.`}
+                  className="gerente-btn-cancel app-btn-danger shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
+                >
+                  {m.comum.cancelar}
+                </ConfirmActionButton>
+              </form>
+            ) : (
+              <span className="gerente-fin-empty text-sm">{m.gerente.venda_ja_cancelada}</span>
+            )}
+          </td>
+        </tr>
+      )),
+    [vendas, locale, m],
+  )
+
   return (
     <>
       <div className="mb-4 flex items-center justify-end">
@@ -81,13 +154,7 @@ export function VendasGerenteListClient({ idioma, locale, initialVendas, initial
             { key: 'status', header: m.gerente.col_status },
             { key: 'caixa_id', header: m.gerente.col_caixa },
           ]}
-          rows={vendas.map((v) => ({
-            data: v.data ? new Date(v.data).toISOString() : '',
-            total_liquido: Number(v.total_liquido),
-            forma_pagamento: labelFormaPagamentoVenda(v.forma_pagamento, m),
-            status: labelStatusVenda(v.status, m),
-            caixa_id: v.caixa_id ?? '',
-          }))}
+          rows={csvRows}
         />
       </div>
 
@@ -103,62 +170,7 @@ export function VendasGerenteListClient({ idioma, locale, initialVendas, initial
           { key: 'acoes', header: m.gerente.col_acoes },
         ]}
       >
-        {vendas.map((v) => (
-          <tr key={v.id} className="gerente-fin-row-hover transition-colors">
-            <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 tabular-nums">
-              {fmtGerenteDateTime(v.data, locale)}
-            </td>
-            <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 font-medium tabular-nums">
-              {fmtGerenteBRL(Number(v.total_liquido), locale)}
-            </td>
-            <td className="gerente-fin-cell px-3 py-3">
-              {labelFormaPagamentoVenda(v.forma_pagamento, m)}
-            </td>
-            <td className="px-3 py-3">
-              <span className={statusBadgeClasses(v.status ?? '')}>
-                {labelStatusVenda(v.status, m)}
-              </span>
-            </td>
-            <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">
-              {fmtGerenteIdCurto(v.caixa_id ?? undefined)}
-            </td>
-            <td className="px-3 py-3">
-              <Link
-                href={`/gerente/vendas/${v.id}`}
-                className="gerente-section-accent text-sm font-medium hover:underline"
-              >
-                {m.gerente.ver_detalhes}
-              </Link>
-            </td>
-            <td className="min-w-[min(100%,280px)] max-w-[360px] px-3 py-3">
-              {v.status !== 'CANCELADA' ? (
-                <form
-                  action={cancelarVendaGerenteAction}
-                  className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch"
-                >
-                  <input type="hidden" name="venda_id" value={v.id} />
-                  <input
-                    name="motivo"
-                    placeholder={m.gerente.venda_motivo_cancel_placeholder}
-                    required
-                    minLength={2}
-                    maxLength={500}
-                    className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm shadow-inner app-input"
-                  />
-                  <ConfirmActionButton
-                    type="submit"
-                    confirmMessage={`Confirma o cancelamento da venda ${fmtGerenteIdCurto(v.id)}? Esta ação não pode ser desfeita.`}
-                    className="gerente-btn-cancel app-btn-danger shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
-                  >
-                    {m.comum.cancelar}
-                  </ConfirmActionButton>
-                </form>
-              ) : (
-                <span className="gerente-fin-empty text-sm">{m.gerente.venda_ja_cancelada}</span>
-              )}
-            </td>
-          </tr>
-        ))}
+        {vendasRows}
         {vendas.length === 0 && (
           <tr>
             <td colSpan={7} className="gerente-fin-empty px-4 py-8 text-center">

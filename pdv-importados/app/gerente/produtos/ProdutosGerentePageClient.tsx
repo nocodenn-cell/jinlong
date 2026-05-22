@@ -680,6 +680,119 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
 
   const colSpanVazio = colunasProdutos.length
 
+  const tableRows = useMemo(
+    () =>
+      rows.map((p) => (
+        <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
+          <td className="gerente-fin-cell px-2 py-2 text-center align-middle">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 rounded app-border app-surface-soft"
+              checked={selectedIds.has(p.id)}
+              onChange={(e) => {
+                e.stopPropagation()
+                setSelectedIds((prev) => {
+                  const next = new Set(prev)
+                  if (e.target.checked) next.add(p.id)
+                  else next.delete(p.id)
+                  return next
+                })
+              }}
+              aria-label={m.produtos.coluna_selecionar}
+            />
+          </td>
+          <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
+            <span title={p.id}>{p.id.length <= 6 ? p.id : p.id.slice(-6)}</span>
+          </td>
+          <td className="gerente-fin-cell px-1 py-1 align-middle">
+            <ProdutoImagemCell
+              produtoId={p.id}
+              nome={p.nome}
+              imagemUrl={p.imagem_url}
+              disabled={toggleLoading}
+              m={m}
+              onDone={refetch}
+            />
+          </td>
+          <td className="gerente-fin-cell px-3 py-2 font-medium leading-relaxed">{p.nome}</td>
+          <td className="gerente-fin-cell px-3 py-2 font-mono">{p.codigo_barras ?? '-'}</td>
+          <td className="gerente-fin-cell px-1 py-1 text-right">
+            <PrecoVarejoCell
+              produtoId={p.id}
+              precoVarejo={Number(p.preco_varejo)}
+              onSaved={refetch}
+              msgInvalido={m.produtos.preco_invalido}
+              msgMaiorZero={m.produtos.preco_maior_zero}
+              atualizadoMessage={m.produtos.preco_atualizado}
+            />
+          </td>
+          <td className="gerente-fin-cell px-3 py-2">
+            {p.origem === 'china_manual' ? (
+              <OrigemBadgeUi
+                label={m.produtos.origem_china}
+                tooltip={m.produtos.tooltip_origem_china_manual}
+                className="border-amber-500/50 bg-amber-500/15 text-amber-100"
+              />
+            ) : p.origem === 'brasil_sem_nf' ? (
+              <OrigemBadgeUi
+                label={m.produtos.origem_brasil_sem_nf}
+                tooltip={m.produtos.tooltip_origem_brasil_sem_nf}
+                className="border-slate-500/50 bg-slate-500/20 text-slate-100"
+              />
+            ) : (
+              <OrigemBadgeUi
+                label={m.produtos.origem_brasil_nf}
+                tooltip={m.produtos.tooltip_origem_brasil_nf}
+                className="border-success/45 bg-success/15 text-success"
+              />
+            )}
+          </td>
+          <td className="px-3 py-2">
+            <GerenteStatusBadge status={p.tem_nf ? 'TEM_NF' : 'SEM_NF'} label={p.tem_nf ? m.comum.sim : m.comum.nao} />
+          </td>
+          <td className="px-3 py-2">
+            <GerenteStatusBadge
+              status={p.ativo ? 'ATIVO' : 'INATIVO'}
+              label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
+            />
+          </td>
+          <td className="px-3 py-2 text-center">
+            <div className="flex flex-col items-stretch gap-1.5">
+              <button
+                type="button"
+                disabled={toggleLoading}
+                onClick={() => abrirEditar(p)}
+                className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40 app-border app-surface-soft focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500/50"
+              >
+                <Pencil className="h-3 w-3 shrink-0" aria-hidden />
+                {m.produtos.editar_catalogo}
+              </button>
+              <button
+                type="button"
+                disabled={toggleLoading}
+                onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
+                className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40"
+              >
+                {p.ativo ? m.produtos.inativar : m.produtos.ativar}
+              </button>
+              <button
+                type="button"
+                disabled={toggleLoading}
+                onClick={() => abrirExclusaoIndividual(p.id)}
+                title={m.produtos.exclusao_linha_title}
+                aria-label={m.produtos.exclusao_linha_aria}
+                className="inline-flex items-center justify-center gap-1 rounded-md border border-destructive/35 px-2 py-1 text-[11px] font-medium text-destructive opacity-90 transition hover:bg-destructive/10 group-hover:opacity-100 disabled:opacity-40"
+              >
+                <Trash2 className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="hidden min-[380px]:inline">{m.produtos.exclusao_linha_botao}</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      )),
+    [rows, selectedIds, toggleLoading, m, refetch, abrirEditar, abrirExclusaoIndividual, toggle],
+  )
+
   return (
     <>
       <div className={`print:hidden mx-auto w-full max-w-7xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
@@ -911,114 +1024,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 </td>
               </tr>
             ) : (
-              rows.map((p) => (
-                <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
-                  <td className="gerente-fin-cell px-2 py-2 text-center align-middle">
-                    <input
-                      type="checkbox"
-                      className="h-3.5 w-3.5 rounded app-border app-surface-soft"
-                      checked={selectedIds.has(p.id)}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev)
-                          if (e.target.checked) next.add(p.id)
-                          else next.delete(p.id)
-                          return next
-                        })
-                      }}
-                      aria-label={m.produtos.coluna_selecionar}
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2 font-mono text-[11px] opacity-80">
-                    <span title={p.id}>{p.id.length <= 6 ? p.id : p.id.slice(-6)}</span>
-                  </td>
-                  <td className="gerente-fin-cell px-1 py-1 align-middle">
-                    <ProdutoImagemCell
-                      produtoId={p.id}
-                      nome={p.nome}
-                      imagemUrl={p.imagem_url}
-                      disabled={toggleLoading}
-                      m={m}
-                      onDone={refetch}
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2 font-medium leading-relaxed">{p.nome}</td>
-                  <td className="gerente-fin-cell px-3 py-2 font-mono">{p.codigo_barras ?? '-'}</td>
-                  <td className="gerente-fin-cell px-1 py-1 text-right">
-                    <PrecoVarejoCell
-                      produtoId={p.id}
-                      precoVarejo={Number(p.preco_varejo)}
-                      onSaved={refetch}
-                      msgInvalido={m.produtos.preco_invalido}
-                      msgMaiorZero={m.produtos.preco_maior_zero}
-                      atualizadoMessage={m.produtos.preco_atualizado}
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-3 py-2">
-                    {p.origem === 'china_manual' ? (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_china}
-                        tooltip={m.produtos.tooltip_origem_china_manual}
-                        className="border-amber-500/50 bg-amber-500/15 text-amber-100"
-                      />
-                    ) : p.origem === 'brasil_sem_nf' ? (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_brasil_sem_nf}
-                        tooltip={m.produtos.tooltip_origem_brasil_sem_nf}
-                        className="border-slate-500/50 bg-slate-500/20 text-slate-100"
-                      />
-                    ) : (
-                      <OrigemBadgeUi
-                        label={m.produtos.origem_brasil_nf}
-                        tooltip={m.produtos.tooltip_origem_brasil_nf}
-                        className="border-success/45 bg-success/15 text-success"
-                      />
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <GerenteStatusBadge status={p.tem_nf ? 'TEM_NF' : 'SEM_NF'} label={p.tem_nf ? m.comum.sim : m.comum.nao} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <GerenteStatusBadge
-                      status={p.ativo ? 'ATIVO' : 'INATIVO'}
-                      label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <div className="flex flex-col items-stretch gap-1.5">
-                      <button
-                        type="button"
-                        disabled={toggleLoading}
-                        onClick={() => abrirEditar(p)}
-                        className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40 app-border app-surface-soft focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500/50"
-                      >
-                        <Pencil className="h-3 w-3 shrink-0" aria-hidden />
-                        {m.produtos.editar_catalogo}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={toggleLoading}
-                        onClick={() => void toggle({ id: p.id, ativo: !p.ativo })}
-                        className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition group-hover:opacity-100 disabled:opacity-40"
-                      >
-                        {p.ativo ? m.produtos.inativar : m.produtos.ativar}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={toggleLoading}
-                        onClick={() => abrirExclusaoIndividual(p.id)}
-                        title={m.produtos.exclusao_linha_title}
-                        aria-label={m.produtos.exclusao_linha_aria}
-                        className="inline-flex items-center justify-center gap-1 rounded-md border border-destructive/35 px-2 py-1 text-[11px] font-medium text-destructive opacity-90 transition hover:bg-destructive/10 group-hover:opacity-100 disabled:opacity-40"
-                      >
-                        <Trash2 className="h-3 w-3 shrink-0" aria-hidden />
-                        <span className="hidden min-[380px]:inline">{m.produtos.exclusao_linha_botao}</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              tableRows
             )}
           </TabelaCadastroPadrao>
         </div>
