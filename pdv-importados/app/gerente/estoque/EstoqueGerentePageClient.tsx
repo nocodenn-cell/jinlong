@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { GerenteNavLink } from '@/components/gerente/GerenteNavLink'
@@ -70,16 +70,141 @@ function origemLabel(m: ReturnType<typeof getMessages>, origem: string): string 
   }
 }
 
+// ─── EstoqueFilterBar ────────────────────────────────────────────────────────
+// Componente memoizado que isola o estado do input de busca.
+// A cada keystroke, apenas este componente re-renderiza — a tabela de linhas
+// permanece intacta até o debounce disparar onBuscaChange.
+
+type EstoqueFilterBarProps = Readonly<{
+  m: ReturnType<typeof getMessages>
+  categorias: EstoqueCategoriaOpcao[]
+  categoriaId: string
+  origem: string
+  pageSize: number
+  loading: boolean
+  exporting: boolean
+  total: number
+  onBuscaChange: (v: string) => void
+  onCategoriaChange: (v: string) => void
+  onOrigemChange: (v: string) => void
+  onPageSizeChange: (v: number) => void
+  onExport: () => void
+}>
+
+const EstoqueFilterBar = memo(function EstoqueFilterBar({
+  m,
+  categorias,
+  categoriaId,
+  origem,
+  pageSize,
+  loading,
+  exporting,
+  total,
+  onBuscaChange,
+  onCategoriaChange,
+  onOrigemChange,
+  onPageSizeChange,
+  onExport,
+}: EstoqueFilterBarProps) {
+  const [buscaLocal, setBuscaLocal] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => onBuscaChange(buscaLocal.trim()), 320)
+    return () => clearTimeout(t)
+  }, [buscaLocal, onBuscaChange])
+
+  const inputCls = 'h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50'
+
+  return (
+    <GerenteStickyToolbar className="mb-4 py-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+        <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-jl-fg-3">
+          {m.estoque.buscar_label}
+          <input
+            value={buscaLocal}
+            onChange={(e) => setBuscaLocal(e.target.value)}
+            placeholder={m.estoque.buscar_placeholder}
+            className={inputCls}
+          />
+        </label>
+
+        <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
+          {m.produtos.categoria}
+          <select
+            value={categoriaId}
+            onChange={(e) => onCategoriaChange(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">{m.estoque.filtro_todas_categorias}</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
+          {m.produtos.origem_label}
+          <select
+            value={origem}
+            onChange={(e) => onOrigemChange(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">{m.produtos.filtro_todas_origens}</option>
+            <option value="china_manual">{m.produtos.origem_china}</option>
+            <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
+            <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
+          </select>
+        </label>
+
+        <div className="flex items-end gap-2">
+          <label className="flex w-[130px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
+            {m.produtos.pag_linhas_por_pagina}
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              className={inputCls}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+          {!loading && (
+            <button
+              type="button"
+              disabled={exporting || total === 0}
+              onClick={onExport}
+              className={cn(
+                'gerente-btn-csv inline-flex h-9 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors app-btn-neutral',
+                (exporting || total === 0) && 'cursor-not-allowed opacity-45',
+              )}
+            >
+              {exporting ? m.comum.carregando : m.gerente.exportar_csv}
+            </button>
+          )}
+        </div>
+      </div>
+    </GerenteStickyToolbar>
+  )
+})
+
+// ─── EstoqueGerentePageClient ────────────────────────────────────────────────
+
 export function EstoqueGerentePageClient({
   idioma,
   filtro,
   categorias,
   importacaoNfeEnabled = false,
 }: Props) {
-  const m = getMessages(idioma)
+  // m estabilizado: idioma é prop de servidor, nunca muda em runtime —
+  // evita que a referência nova quebre o memo do EstoqueFilterBar.
+  const m = useMemo(() => getMessages(idioma), [idioma])
+
   const pathname = usePathname()
   const [modal, setModal] = useState<ModalState>(null)
-  const [busca, setBusca] = useState('')
   const [buscaDebounced, setBuscaDebounced] = useState('')
   const [categoriaId, setCategoriaId] = useState<string>('')
   const [origem, setOrigem] = useState<string>('')
@@ -93,10 +218,11 @@ export function EstoqueGerentePageClient({
   const visao = filtro === 'baixo' ? 'critico' : 'geral'
   const somenteBaixoNav = filtro === 'baixo'
 
-  useEffect(() => {
-    const t = setTimeout(() => setBuscaDebounced(busca.trim()), 320)
-    return () => clearTimeout(t)
-  }, [busca])
+  // Callbacks estáveis passados ao EstoqueFilterBar — não quebram o memo.
+  const onBuscaChange = useCallback((v: string) => setBuscaDebounced(v), [])
+  const onCategoriaChange = useCallback((v: string) => setCategoriaId(v), [])
+  const onOrigemChange = useCallback((v: string) => setOrigem(v), [])
+  const onPageSizeChange = useCallback((v: number) => setPageSize(v), [])
 
   useEffect(() => {
     setPageIndex(0)
@@ -148,17 +274,14 @@ export function EstoqueGerentePageClient({
   }, [data, pageIndex, pageSize])
 
   const mutationOpts = useMemo(
-    () => ({
-      successMessage: m.comum.sucesso,
-    }),
+    () => ({ successMessage: m.comum.sucesso }),
     [m.comum.sucesso],
   )
 
   const { mutate: salvarEstoque, loading: salvando } = useGerenteMutation(atualizarEstoqueProdutoThrow, mutationOpts)
-
   const { mutate: criarLinhaEstoque, loading: criandoLinha } = useGerenteMutation(garantirLinhaEstoqueThrow, mutationOpts)
 
-  const modalLabels = labelsAjusteEstoque(m)
+  const modalLabels = useMemo(() => labelsAjusteEstoque(m), [m])
 
   const rows = useMemo(() => data?.rows ?? [], [data])
   const total = data?.total ?? 0
@@ -212,23 +335,23 @@ export function EstoqueGerentePageClient({
     [m],
   )
 
-  function rowToCsvRecord(row: EstoqueGerenteLinhaDTO): Record<string, unknown> {
-    const crit = isCriticoLinha(row)
-    const sem = row.estoque_id == null
-    return {
-      sku_ref: skuCurtoDeId(row.id),
-      nome: row.nome,
-      codigo_barras: row.codigo_barras ?? '',
-      origem: origemLabel(m, row.origem),
-      unidade_medida: row.unidade_medida,
-      quantidade_atual: row.quantidade_atual ?? '',
-      estoque_minimo: row.estoque_minimo ?? '',
-      deficit: row.deficit ?? '',
-      status: sem ? '—' : crit ? m.estoque.badge_critico : m.estoque.badge_normal,
+  const handleExportCsv = useCallback(async () => {
+    function rowToCsvRecord(row: EstoqueGerenteLinhaDTO): Record<string, unknown> {
+      const crit = isCriticoLinha(row)
+      const sem = row.estoque_id == null
+      return {
+        sku_ref: skuCurtoDeId(row.id),
+        nome: row.nome,
+        codigo_barras: row.codigo_barras ?? '',
+        origem: origemLabel(m, row.origem),
+        unidade_medida: row.unidade_medida,
+        quantidade_atual: row.quantidade_atual ?? '',
+        estoque_minimo: row.estoque_minimo ?? '',
+        deficit: row.deficit ?? '',
+        status: sem ? '—' : crit ? m.estoque.badge_critico : m.estoque.badge_normal,
+      }
     }
-  }
 
-  async function handleExportCsv() {
     if (selected.size > 0) {
       downloadCsvBrowser(
         somenteBaixoNav ? 'gerente-estoque-baixo-selecao.csv' : 'gerente-estoque-selecao.csv',
@@ -261,7 +384,7 @@ export function EstoqueGerentePageClient({
     } finally {
       setExporting(false)
     }
-  }
+  }, [selected, csvColumns, listParams, somenteBaixoNav, m])
 
   function cabecalhoOrdenavel(col: OrdemCol, label: string) {
     const ativo = ordem === col
@@ -279,6 +402,111 @@ export function EstoqueGerentePageClient({
       </button>
     )
   }
+
+  // Memoiza as linhas da tabela — só recalcula quando rows/selected/estado de
+  // mutação mudam. Keystrokes no input (buscaLocal em EstoqueFilterBar) não
+  // chegam aqui enquanto o debounce não disparar.
+  const tableRows = useMemo(() => {
+    if (!loading && rows.length === 0) {
+      return (
+        <tr>
+          <td colSpan={11} className="gerente-fin-empty px-3 py-5 text-sm">
+            <div className="flex flex-col items-center gap-2">
+              <span>{somenteBaixoNav ? m.estoque.vazio_baixo : m.estoque.vazio_geral_filtrado}</span>
+              <Link href="/gerente/produtos" className="rounded-lg px-3 py-1.5 text-xs font-semibold app-btn-accent">
+                {m.gerente.nav_produtos}
+              </Link>
+            </div>
+          </td>
+        </tr>
+      )
+    }
+
+    return rows.map((row) => {
+      const critico = isCriticoLinha(row)
+      const semLinha = row.estoque_id == null
+      return (
+        <tr
+          key={row.id}
+          className={cn(
+            'gerente-fin-row-hover transition-colors',
+            critico &&
+              !semLinha &&
+              'bg-destructive/[0.08] hover:bg-destructive/[0.12] dark:bg-destructive/15 dark:hover:bg-destructive/25',
+          )}
+        >
+          <td className="gerente-fin-cell px-3 py-2.5 align-middle">
+            <input
+              type="checkbox"
+              checked={selected.has(row.id)}
+              onChange={() => alternarLinha(row)}
+              className="h-4 w-4 rounded border-jl-border-1"
+              aria-label={m.estoque.selecionar_linha_aria}
+            />
+          </td>
+          <td className="gerente-fin-cell px-3 py-2.5 font-mono text-xs">{skuCurtoDeId(row.id)}</td>
+          <td className="gerente-fin-cell px-3 py-2.5">{row.nome}</td>
+          <td className="gerente-fin-cell px-3 py-2.5">{row.codigo_barras?.trim() ? row.codigo_barras : '—'}</td>
+          <td className="gerente-fin-cell px-3 py-2.5 text-xs">{origemLabel(m, row.origem)}</td>
+          <td className="gerente-fin-cell px-3 py-2.5">{row.unidade_medida}</td>
+          <td className="gerente-fin-cell px-3 py-2.5">
+            {semLinha ? '—' : fmtQuantidadeEstoque(Number(row.quantidade_atual ?? 0))}
+          </td>
+          <td className="gerente-fin-cell px-3 py-2.5">
+            {semLinha ? '—' : fmtQuantidadeEstoque(Number(row.estoque_minimo ?? 0))}
+          </td>
+          <td className="gerente-fin-cell px-3 py-2.5">
+            {semLinha || row.deficit == null ? '—' : fmtQuantidadeEstoque(Number(row.deficit))}
+          </td>
+          <td className="px-3 py-2.5">
+            {semLinha ? (
+              <span className="text-jl-fg-3">—</span>
+            ) : critico ? (
+              <Badge variant="destructive">{m.estoque.badge_critico}</Badge>
+            ) : (
+              <Badge variant="secondary" className="border border-jl-border-1 bg-emerald-500/15 text-emerald-300">
+                {m.estoque.badge_normal}
+              </Badge>
+            )}
+          </td>
+          <td className="min-w-[200px] px-3 py-2.5">
+            {row.estoque_id != null && row.quantidade_atual != null && row.estoque_minimo != null ? (
+              <button
+                type="button"
+                disabled={salvando || criandoLinha}
+                onClick={() =>
+                  setModal({
+                    produtoId: row.id,
+                    nome: row.nome,
+                    quantidadeAtual: Number(row.quantidade_atual),
+                    estoqueMinimo: Number(row.estoque_minimo),
+                  })
+                }
+                className="rounded-lg px-3 py-2 text-xs font-semibold shadow-sm transition-[filter] disabled:cursor-not-allowed disabled:opacity-55 app-btn-accent"
+              >
+                {m.estoque.col_ajuste}
+              </button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="gerente-fin-empty text-sm">{m.estoque.sem_linha}</span>
+                <button
+                  type="button"
+                  disabled={salvando || criandoLinha}
+                  onClick={async () => {
+                    const r = await criarLinhaEstoque({ produto_id: row.id })
+                    if (r !== null) await refetch()
+                  }}
+                  className="gerente-chip-action rounded-lg border border-jl-border-1 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  {m.estoque.inicializar_estoque}
+                </button>
+              </div>
+            )}
+          </td>
+        </tr>
+      )
+    })
+  }, [rows, loading, selected, salvando, criandoLinha, m, somenteBaixoNav, criarLinhaEstoque, refetch])
 
   return (
     <div className={`mx-auto max-w-[1200px] px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
@@ -302,75 +530,21 @@ export function EstoqueGerentePageClient({
         ) : null}
       </div>
 
-      <GerenteStickyToolbar className="mb-4 py-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-medium text-jl-fg-3">
-            {m.estoque.buscar_label}
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder={m.estoque.buscar_placeholder}
-              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-            />
-          </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
-            {m.produtos.categoria}
-            <select
-              value={categoriaId}
-              onChange={(e) => setCategoriaId(e.target.value)}
-              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-            >
-              <option value="">{m.estoque.filtro_todas_categorias}</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex min-w-[160px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
-            {m.produtos.origem_label}
-            <select
-              value={origem}
-              onChange={(e) => setOrigem(e.target.value)}
-              className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-            >
-              <option value="">{m.produtos.filtro_todas_origens}</option>
-              <option value="china_manual">{m.produtos.origem_china}</option>
-              <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-              <option value="brasil_sem_nf">{m.produtos.origem_brasil_sem_nf}</option>
-            </select>
-          </label>
-          <div className="flex items-end gap-2">
-            <label className="flex w-[130px] flex-col gap-1 text-xs font-medium text-jl-fg-3">
-              {m.produtos.pag_linhas_por_pagina}
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="h-9 rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </label>
-            {!loading && (
-              <button
-                type="button"
-                disabled={exporting || total === 0}
-                onClick={() => void handleExportCsv()}
-                className={cn(
-                  'gerente-btn-csv inline-flex h-9 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors app-btn-neutral',
-                  (exporting || total === 0) && 'cursor-not-allowed opacity-45',
-                )}
-              >
-                {exporting ? m.comum.carregando : m.gerente.exportar_csv}
-              </button>
-            )}
-          </div>
-        </div>
-      </GerenteStickyToolbar>
+      <EstoqueFilterBar
+        m={m}
+        categorias={categorias}
+        categoriaId={categoriaId}
+        origem={origem}
+        pageSize={pageSize}
+        loading={loading}
+        exporting={exporting}
+        total={total}
+        onBuscaChange={onBuscaChange}
+        onCategoriaChange={onCategoriaChange}
+        onOrigemChange={onOrigemChange}
+        onPageSizeChange={onPageSizeChange}
+        onExport={() => void handleExportCsv()}
+      />
 
       {loading && !data ? <p className="gerente-fin-muted text-sm">{m.comum.carregando}</p> : null}
 
@@ -403,103 +577,7 @@ export function EstoqueGerentePageClient({
           { key: 'aj', header: m.estoque.col_ajuste },
         ]}
       >
-        {!loading && rows.length === 0 ? (
-          <tr>
-            <td colSpan={11} className="gerente-fin-empty px-3 py-5 text-sm">
-              <div className="flex flex-col items-center gap-2">
-                <span>{somenteBaixoNav ? m.estoque.vazio_baixo : m.estoque.vazio_geral_filtrado}</span>
-                <Link href="/gerente/produtos" className="rounded-lg px-3 py-1.5 text-xs font-semibold app-btn-accent">
-                  {m.gerente.nav_produtos}
-                </Link>
-              </div>
-            </td>
-          </tr>
-        ) : (
-          rows.map((row) => {
-            const critico = isCriticoLinha(row)
-            const semLinha = row.estoque_id == null
-            return (
-              <tr
-                key={row.id}
-                className={cn(
-                  'gerente-fin-row-hover transition-colors',
-                  critico &&
-                    !semLinha &&
-                    'bg-destructive/[0.08] hover:bg-destructive/[0.12] dark:bg-destructive/15 dark:hover:bg-destructive/25',
-                )}
-              >
-                <td className="gerente-fin-cell px-3 py-2.5 align-middle">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(row.id)}
-                    onChange={() => alternarLinha(row)}
-                    className="h-4 w-4 rounded border-jl-border-1"
-                    aria-label={m.estoque.selecionar_linha_aria}
-                  />
-                </td>
-                <td className="gerente-fin-cell px-3 py-2.5 font-mono text-xs">{skuCurtoDeId(row.id)}</td>
-                <td className="gerente-fin-cell px-3 py-2.5">{row.nome}</td>
-                <td className="gerente-fin-cell px-3 py-2.5">{row.codigo_barras?.trim() ? row.codigo_barras : '—'}</td>
-                <td className="gerente-fin-cell px-3 py-2.5 text-xs">{origemLabel(m, row.origem)}</td>
-                <td className="gerente-fin-cell px-3 py-2.5">{row.unidade_medida}</td>
-                <td className="gerente-fin-cell px-3 py-2.5">
-                  {semLinha ? '—' : fmtQuantidadeEstoque(Number(row.quantidade_atual ?? 0))}
-                </td>
-                <td className="gerente-fin-cell px-3 py-2.5">
-                  {semLinha ? '—' : fmtQuantidadeEstoque(Number(row.estoque_minimo ?? 0))}
-                </td>
-                <td className="gerente-fin-cell px-3 py-2.5">
-                  {semLinha || row.deficit == null ? '—' : fmtQuantidadeEstoque(Number(row.deficit))}
-                </td>
-                <td className="px-3 py-2.5">
-                  {semLinha ? (
-                    <span className="text-jl-fg-3">—</span>
-                  ) : critico ? (
-                    <Badge variant="destructive">{m.estoque.badge_critico}</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="border border-jl-border-1 bg-emerald-500/15 text-emerald-300">
-                      {m.estoque.badge_normal}
-                    </Badge>
-                  )}
-                </td>
-                <td className="min-w-[200px] px-3 py-2.5">
-                  {row.estoque_id != null && row.quantidade_atual != null && row.estoque_minimo != null ? (
-                    <button
-                      type="button"
-                      disabled={salvando || criandoLinha}
-                      onClick={() =>
-                        setModal({
-                          produtoId: row.id,
-                          nome: row.nome,
-                          quantidadeAtual: Number(row.quantidade_atual),
-                          estoqueMinimo: Number(row.estoque_minimo),
-                        })
-                      }
-                      className="rounded-lg px-3 py-2 text-xs font-semibold shadow-sm transition-[filter] disabled:cursor-not-allowed disabled:opacity-55 app-btn-accent"
-                    >
-                      {m.estoque.col_ajuste}
-                    </button>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="gerente-fin-empty text-sm">{m.estoque.sem_linha}</span>
-                      <button
-                        type="button"
-                        disabled={salvando || criandoLinha}
-                        onClick={async () => {
-                          const r = await criarLinhaEstoque({ produto_id: row.id })
-                          if (r !== null) await refetch()
-                        }}
-                        className="gerente-chip-action rounded-lg border border-jl-border-1 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-55"
-                      >
-                        {m.estoque.inicializar_estoque}
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            )
-          })
-        )}
+        {tableRows}
       </GerenteTable>
 
       {!loading && total > 0 ? (
