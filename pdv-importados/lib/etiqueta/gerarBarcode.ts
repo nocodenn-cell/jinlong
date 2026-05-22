@@ -56,15 +56,33 @@ export async function gerarBarcodeDataUrl(
 }
 
 /**
+ * Detecta o tipo de código de barras mais adequado para o código fornecido.
+ * EAN-13: exatamente 13 dígitos numéricos com checksum válido.
+ * Caso contrário: CODE128 (aceita qualquer string ASCII).
+ */
+function detectarTipoBarcode(codigo: string): 'EAN13' | 'CODE128' {
+  if (!/^\d{13}$/.test(codigo)) return 'CODE128'
+  // Verificar checksum EAN-13
+  let soma = 0
+  for (let i = 0; i < 12; i++) {
+    soma += parseInt(codigo[i]) * (i % 2 === 0 ? 1 : 3)
+  }
+  const check = (10 - (soma % 10)) % 10
+  return check === parseInt(codigo[12]) ? 'EAN13' : 'CODE128'
+}
+
+/**
  * Gera código de barras como imagem para uso no PDF.
+ * Detecta automaticamente EAN-13 ou CODE128 conforme o código.
  * Retorna Promise com data URL base64.
  */
 export async function gerarBarcodeParaPdf(
   codigo: string
 ): Promise<string> {
+  const tipo = detectarTipoBarcode(codigo)
   return gerarBarcodeDataUrl({
     codigo,
-    tipo: 'EAN13',
+    tipo,
     largura: 150,
     altura: 50,
   })

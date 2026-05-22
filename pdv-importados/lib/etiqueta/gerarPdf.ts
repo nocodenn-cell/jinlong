@@ -17,13 +17,12 @@ function truncarTexto(texto: string, max: number): string {
 }
 
 /**
- * Formata preço para exibição (R$ 99,99).
+ * Formata preço respeitando o idioma selecionado.
  */
-function formatarPreco(preco: number): string {
-  return preco.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
+function formatarPreco(preco: number, idioma?: 'pt' | 'zh' | 'zh-HK'): string {
+  const locale = idioma === 'pt' || !idioma ? 'pt-BR' : 'zh-CN'
+  const currency = idioma === 'pt' || !idioma ? 'BRL' : 'CNY'
+  return preco.toLocaleString(locale, { style: 'currency', currency })
 }
 
 /**
@@ -35,17 +34,19 @@ export async function gerarPdfEtiquetas(
   options: GerarPdfOptions
 ): Promise<Blob> {
   const config = options.config || getEtiquetaConfig()
-  
-  // Validar limite de etiquetas
-  if (itens.length > config.maxEtiquetasPorPdf) {
+  const idioma = options.idioma
+
+  // Contar total real de etiquetas (expandindo quantidades)
+  const totalEtiquetas = itens.reduce((sum, item) => sum + item.quantidade, 0)
+  if (totalEtiquetas > config.maxEtiquetasPorPdf) {
     throw new Error(
-      `Máximo de ${config.maxEtiquetasPorPdf} etiquetas por PDF. Você tem ${itens.length} itens.`
+      `Máximo de ${config.maxEtiquetasPorPdf} etiquetas por PDF. Você tem ${totalEtiquetas}.`
     )
   }
 
   // Dynamic import do jsPDF
   const { default: jsPDF } = await import('jspdf')
-  
+
   // Criar PDF com dimensões em mm
   const pdf = new jsPDF({
     orientation: 'landscape',
@@ -53,48 +54,50 @@ export async function gerarPdfEtiquetas(
     format: [config.largura, config.altura],
   })
 
-  // Gerar etiquetas
-  for (let i = 0; i < itens.length; i++) {
-    const item = itens[i]
-    
-    // Adicionar nova página para cada etiqueta (exceto a primeira)
-    if (i > 0) {
-      pdf.addPage([config.largura, config.altura])
-    }
+  let paginaAtual = 0
 
-    // Nome do produto (truncado)
-    const nomeTruncado = truncarTexto(item.nome, config.maxCaracteresNome)
-    pdf.setFontSize(config.fontSizeNome)
-    pdf.text(nomeTruncado, config.margem, config.margem + 2)
+  // Expandir cada item pela sua quantidade — cada iteração = 1 etiqueta física
+  for (const item of itens) {
+    for (let q = 0; q < item.quantidade; q++) {
+      if (paginaAtual > 0) {
+        pdf.addPage([config.largura, config.altura])
+      }
+      paginaAtual++
 
-    // Preço (negrito e maior)
-    pdf.setFontSize(config.fontSizePreco)
-    pdf.setFont('helvetica', 'bold')
-    const precoFormatado = formatarPreco(item.precoVarejo)
-    pdf.text(precoFormatado, config.margem, config.margem + 8)
-    pdf.setFont('helvetica', 'normal')
+      // Nome do produto (truncado)
+      const nomeTruncado = truncarTexto(item.nome, config.maxCaracteresNome)
+      pdf.setFontSize(config.fontSizeNome)
+      pdf.text(nomeTruncado, config.margem, config.margem + 2)
 
-    // Atributo (opcional)
-    if (item.atributo) {
-      pdf.setFontSize(config.fontSizeAtributo)
-      pdf.text(item.atributo, config.margem, config.margem + 12)
-    }
+      // Preço (negrito e maior)
+      pdf.setFontSize(config.fontSizePreco)
+      pdf.setFont('helvetica', 'bold')
+      const precoFormatado = formatarPreco(item.precoVarejo, idioma)
+      pdf.text(precoFormatado, config.margem, config.margem + 8)
+      pdf.setFont('helvetica', 'normal')
 
-    // Código de barras
-    try {
-      const barcodeDataUrl = await gerarBarcodeParaPdf(item.codigoBarras)
-      pdf.addImage(
-        barcodeDataUrl,
-        'PNG',
-        config.margem,
-        config.altura - config.margem - 8,
-        config.largura - config.margem * 2,
-        6
-      )
-    } catch {
-      // Fallback: mostrar código em texto se falhar
-      pdf.setFontSize(config.fontSizeCodigo)
-      pdf.text(item.codigoBarras, config.margem, config.altura - config.margem - 2)
+      // Atributo (opcional)
+      if (item.atributo) {
+        pdf.setFontSize(config.fontSizeAtributo)
+        pdf.text(item.atributo, config.margem, config.margem + 12)
+      }
+
+      // Código de barras
+      try {
+        const barcodeDataUrl = await gerarBarcodeParaPdf(item.codigoBarras)
+        pdf.addImage(
+          barcodeDataUrl,
+          'PNG',
+          config.margem,
+          config.altura - config.margem - 8,
+          config.largura - config.margem * 2,
+          6
+        )
+      } catch {
+        // Fallback: mostrar código em texto se o barcode falhar
+        pdf.setFontSize(config.fontSizeCodigo)
+        pdf.text(item.codigoBarras, config.margem, config.altura - config.margem - 2)
+      }
     }
   }
 

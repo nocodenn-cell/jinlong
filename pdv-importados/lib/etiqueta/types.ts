@@ -37,4 +37,6 @@ export interface GerarPdfOptions {
   config: EtiquetaConfig
   /** Nome do arquivo PDF */
   nomeArquivo?: string
+  /** Idioma para formatação de moeda */
+  idioma?: 'pt' | 'zh' | 'zh-HK'
 }
