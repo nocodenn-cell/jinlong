@@ -6,7 +6,12 @@ import {
   stripLeadingBom,
   validateProdutoImportCsvDocument,
 } from '@/lib/gerente/parseProdutoImportCsv'
-import { buildProdutoImportTemplateCsv } from '@/lib/gerente/produtosCsvContract'
+import {
+  buildProdutoImportTemplateCsv,
+  produtoImportCsvColumns,
+  produtoToImportCsvRow,
+  PRODUTO_IMPORT_CSV_HEADER_KEYS,
+} from '@/lib/gerente/produtosCsvContract'
 
 describe('parseProdutoImportCsv', () => {
   it('stripLeadingBom remove FEFF', () => {
@@ -25,6 +30,42 @@ describe('parseProdutoImportCsv', () => {
   it('cabeçalho do modelo é aceite', () => {
     const header = parseCsvLine(buildProdutoImportTemplateCsv().split('\n')[0])
     expect(canonicalImportHeadersMatch(header)).toBe(true)
+  })
+
+  it('exportação usa o cabeçalho canónico de importação', () => {
+    expect(produtoImportCsvColumns().map((c) => c.header)).toEqual([
+      ...PRODUTO_IMPORT_CSV_HEADER_KEYS,
+    ])
+  })
+
+  it('mapeia exportação com campos opcionais sem truncar contrato', () => {
+    const row = produtoToImportCsvRow({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      nome: 'Arroz',
+      codigo_barras: null,
+      preco_varejo: 12.5,
+      preco_atacado: 10,
+      quantidade_gatilho_atacado: 6,
+      unidade_medida: 'KG',
+      observacao: 'pacote',
+      origem: 'china_manual',
+      tem_nf: true,
+      ativo: false,
+    })
+
+    expect(PRODUTO_IMPORT_CSV_HEADER_KEYS.map((key) => row[key])).toEqual([
+      '550e8400-e29b-41d4-a716-446655440000',
+      'Arroz',
+      '',
+      12.5,
+      10,
+      6,
+      'KG',
+      'pacote',
+      'china_manual',
+      '1',
+      '0',
+    ])
   })
 
   it('valida uma linha de dados válida', () => {

@@ -30,6 +30,7 @@ import { ProdutoImagemCell } from '@/components/gerente/produtos/ProdutoImagemCe
 import { ProdutosListaImpressao } from '@/components/gerente/produtos/ProdutosListaImpressao'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
+import { produtoImportCsvColumns, produtoToImportCsvRow } from '@/lib/gerente/produtosCsvContract'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -322,22 +323,8 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       if (!r.success) throw new Error(r.error)
       downloadCsvBrowser(
         'gerente-produtos.csv',
-        [
-          { key: 'id', header: 'id' },
-          { key: 'nome', header: m.produtos.nome },
-          { key: 'codigo_barras', header: m.produtos.codigo_barras },
-          { key: 'preco_varejo', header: m.produtos.preco_varejo },
-          { key: 'origem', header: m.produtos.origem_label },
-          { key: 'ativo', header: m.produtos.status },
-        ],
-        r.data.map((p) => ({
-          id: p.id,
-          nome: p.nome,
-          codigo_barras: p.codigo_barras ?? '',
-          preco_varejo: Number(p.preco_varejo),
-          origem: p.origem,
-          ativo: p.ativo ? '1' : '0',
-        })),
+        produtoImportCsvColumns(),
+        r.data.map(produtoToImportCsvRow),
       )
       return null
     },

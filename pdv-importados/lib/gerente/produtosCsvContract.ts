@@ -36,6 +36,40 @@ export const PRODUTO_IMPORT_CSV_HEADER_KEYS = [
 
 export type ProdutoImportCsvHeaderKey = (typeof PRODUTO_IMPORT_CSV_HEADER_KEYS)[number]
 
+export type ProdutoImportExportRow = Readonly<{
+  id: string
+  nome: string
+  codigo_barras: string | null
+  preco_varejo: number
+  preco_atacado: number | null
+  quantidade_gatilho_atacado: number | null
+  unidade_medida: string
+  observacao: string | null
+  origem: string
+  tem_nf: boolean
+  ativo: boolean
+}>
+
+export function produtoImportCsvColumns(): { key: ProdutoImportCsvHeaderKey; header: ProdutoImportCsvHeaderKey }[] {
+  return PRODUTO_IMPORT_CSV_HEADER_KEYS.map((key) => ({ key, header: key }))
+}
+
+export function produtoToImportCsvRow(row: ProdutoImportExportRow): Record<ProdutoImportCsvHeaderKey, string | number> {
+  return {
+    id: row.id,
+    nome: row.nome,
+    codigo_barras: row.codigo_barras ?? '',
+    preco_varejo: row.preco_varejo,
+    preco_atacado: row.preco_atacado ?? '',
+    quantidade_gatilho_atacado: row.quantidade_gatilho_atacado ?? '',
+    unidade_medida: row.unidade_medida || 'UN',
+    observacao: row.observacao ?? '',
+    origem: row.origem,
+    tem_nf: row.tem_nf ? '1' : '0',
+    ativo: row.ativo ? '1' : '0',
+  }
+}
+
 /** Limites sugeridos para a server action (Fase 3); reutilizar constantes aqui evita drift. */
 export const PRODUTO_IMPORT_MAX_FILE_BYTES = 5 * 1024 * 1024
 export const PRODUTO_IMPORT_MAX_ROWS = 5000

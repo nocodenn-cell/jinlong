@@ -341,6 +341,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   const handleAdicionar = useCallback(
     (e: FormEvent) => {
       e.preventDefault()
+      if (finalizando) return
       const sid = cupomSessionIdRef.current
       const r = enqueueLeitura(codigo, {
         source: "form_submit",
@@ -353,12 +354,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
       }
     },
-    [codigo, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
+    [codigo, enqueueLeitura, finalizando, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
   )
 
   useScannerDetector(
     useCallback(
       (scannedCode: string) => {
+        if (finalizando) return
         // 500ms dedupe: same barcode → increment quantity instead of a new scan
         const now = Date.now()
         const last = lastScanItemRef.current
@@ -382,7 +384,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
         }
       },
-      [alterarQuantidade, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
+      [alterarQuantidade, enqueueLeitura, finalizando, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
     ),
     {
       enabled: true,
@@ -432,6 +434,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   )
 
   const handleNovoCupom = useCallback(() => {
+    if (finalizando) return
     vendaIdempotenciaRef.current = null
     flushLeiturasPendentes({ reason: "new_cupom" })
     cupomSessionIdRef.current = newCupomSessionId()
@@ -446,6 +449,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   }, [
     flushLeiturasPendentes,
     focarCampoBusca,
+    finalizando,
     limparCarrinho,
     limparEstadoDescontoGerente,
     resetPagamentos,
@@ -653,14 +657,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
       parcelasFiltradas.length > 0
         ? parcelasFiltradas
         : [{ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", valor: 0 }]
+    const cupomSessionIdInicial = cupomSessionIdRef.current
     setFinalizando(true)
     setCaixaMensagem(null)
     try {
-      if (!vendaIdempotenciaRef.current) {
-        vendaIdempotenciaRef.current = crypto.randomUUID()
-      }
+      const idempotencyKey = vendaIdempotenciaRef.current ?? crypto.randomUUID()
+      vendaIdempotenciaRef.current = idempotencyKey
       const payload: FinalizarVendaInput = {
-        idempotencyKey: vendaIdempotenciaRef.current,
+        idempotencyKey,
         formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
         totalBruto,
         totalDesconto:
@@ -702,10 +706,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           moeda: m.caixa.moeda_prefixo,
         }
         setReimprimirModalAberto(true)
-        vendaIdempotenciaRef.current = null
-        limparCarrinho()
-        limparEstadoDescontoGerente()
-        resetPagamentos()
+        if (cupomSessionIdRef.current === cupomSessionIdInicial) {
+          vendaIdempotenciaRef.current = null
+          limparCarrinho()
+          limparEstadoDescontoGerente()
+          resetPagamentos()
+        }
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
@@ -1003,7 +1009,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                     : "app-btn-accent",
                 )}
                 onClick={handleNovoCupom}
-                disabled={carregandoRegras}
+                disabled={carregandoRegras || finalizando}
               >
                 {m.caixa.novo_cupom}
               </button>
