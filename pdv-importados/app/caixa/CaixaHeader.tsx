@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { CaixaPdvTopBar, type CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
@@ -36,22 +35,12 @@ export function CaixaHeader({
   onAbrirCaixa,
   onFecharCaixa,
 }: Props) {
-  const [currentDateTime, setCurrentDateTime] = useState<string>("")
-
   const fontStack =
     idioma === "zh"
       ? 'var(--font-noto-sc),"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif'
       : undefined
 
   const localeString = idioma === "pt" ? "pt-BR" : "zh-CN"
-
-  useEffect(() => {
-    setCurrentDateTime(new Date().toLocaleString(localeString))
-    const interval = setInterval(() => {
-      setCurrentDateTime(new Date().toLocaleString(localeString))
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [localeString])
 
   const statusTop =
     caixaStatus?.aberto === true
@@ -65,6 +54,22 @@ export function CaixaHeader({
         ? null
         : { aberto: false as const }
 
+  const abertoAs =
+    layoutVariant !== "classic" && caixaStatus?.aberto === true
+      ? new Date(caixaStatus.dataAbertura).toLocaleTimeString(localeString, {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null
+
+  const fundoInicial =
+    abertoAs && caixaStatus?.aberto === true && !caixaStatus.blindClosureEnabled
+      ? `${m.caixa.moeda_prefixo} ${caixaStatus.valorInicial.toLocaleString(localeString, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : null
+
   return (
     <div className="shrink-0 flex flex-col" style={fontStack ? { fontFamily: fontStack } : undefined}>
       <CaixaPdvTopBar
@@ -77,15 +82,15 @@ export function CaixaHeader({
         onAbrirCaixa={onAbrirCaixa}
         onFecharCaixa={onFecharCaixa}
       />
-      {layoutVariant !== "classic" && currentDateTime ? (
-        <div className="flex items-center gap-3 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 text-[11px] text-jl-fg-3 sm:px-6">
-          <span className="tabular-nums">{currentDateTime}</span>
-          {caixaStatus?.aberto === true && (
-            <span className="truncate">
-              {new Date(caixaStatus.dataAbertura).toLocaleString(localeString)}
-              {" · "}
-              {m.caixa.moeda_prefixo} {caixaStatus.valorInicial.toFixed(2)}
-            </span>
+      {abertoAs ? (
+        <div className="flex items-center gap-2 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 text-[11px] text-jl-fg-3 sm:px-6">
+          <span className="font-medium">{m.caixa.topbar_aberto_as}</span>
+          <span className="tabular-nums font-semibold text-jl-fg-2">{abertoAs}</span>
+          {fundoInicial && (
+            <>
+              <span className="text-jl-fg-3/40" aria-hidden>·</span>
+              <span className="tabular-nums text-jl-fg-2">{fundoInicial}</span>
+            </>
           )}
         </div>
       ) : null}

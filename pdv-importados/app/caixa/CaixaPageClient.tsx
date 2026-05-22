@@ -415,6 +415,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     limparEstadoDescontoGerente,
     resetPagamentos,
     setCaixaMensagem,
+    setCodigo,
   ])
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
