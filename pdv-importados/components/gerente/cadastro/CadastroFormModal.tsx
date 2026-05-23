@@ -50,7 +50,7 @@ export function CadastroFormModal<R>({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={modalId}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="dragon-glass-card relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-2xl app-border">
+      <div className="dragon-elev-2 relative z-10 w-full max-w-md rounded-2xl p-6">
         <h2 id={modalId} className="mb-5 text-lg font-semibold app-accent-text">
           {state.tipo === 'criar' ? labels.nova : labels.editar}
         </h2>

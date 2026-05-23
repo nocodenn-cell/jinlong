@@ -146,34 +146,37 @@ export function ComissoesPageClient({ idioma }: Props) {
         ) : (
           <GerenteTable
             tone="dragon"
+            compact
             columns={[
-              { key: 'vendedor', header: 'Vendedor' },
-              { key: 'vendas', header: 'Vendas' },
-              { key: 'total', header: 'Total comissão' },
-              { key: 'pago', header: 'Pago' },
-              { key: 'pendente', header: 'Pendente' },
-              { key: 'acoes', header: '' },
+              { key: 'vendedor', header: 'Vendedor',        priority: 'primary'    },
+              { key: 'vendas',   header: 'Vendas',          numeric: true          },
+              { key: 'total',    header: 'Total comissão',  numeric: true, priority: 'primary' },
+              { key: 'pago',     header: 'Pago',            numeric: true          },
+              { key: 'pendente', header: 'Pendente',        numeric: true, priority: 'primary' },
+              { key: 'acoes',    header: '',                align: 'right', width: 90, priority: 'contextual' },
             ]}
           >
             {resumo.map((row) => (
               <tr key={row.operador_id} className="gerente-fin-row-hover transition-colors">
-                <td className="gerente-fin-cell px-4 py-3 font-medium">{row.operador_nome}</td>
-                <td className="gerente-fin-cell px-4 py-3 text-right tabular-nums">{row.total_vendas}</td>
-                <td className="gerente-fin-cell px-4 py-3 text-right tabular-nums">{formatBRL(row.total_comissao, locale)}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-emerald-400">
+                <td className="gerente-fin-cell px-4 py-2 font-medium">{row.operador_nome}</td>
+                <td className="gerente-fin-cell px-4 py-2 text-right tabular-nums">{row.total_vendas}</td>
+                <td className="gerente-fin-cell px-4 py-2 text-right tabular-nums">{formatBRL(row.total_comissao, locale)}</td>
+                <td className="px-4 py-2 text-right tabular-nums text-emerald-400">
                   {formatBRL(row.total_pago, locale)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-amber-400 font-semibold">
+                <td className="px-4 py-2 text-right tabular-nums text-amber-400 font-semibold">
                   {formatBRL(row.total_pendente, locale)}
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => void abrirDetalhe(row)}
-                    className="rounded-md border px-3 py-1 text-xs font-medium transition-colors app-border app-btn-neutral"
-                  >
-                    Detalhes
-                  </button>
+                <td className="px-4 py-2 text-right">
+                  <div className="gerente-row-actions flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void abrirDetalhe(row)}
+                      className="rounded-md border px-3 py-1 text-xs font-medium transition-colors app-border app-btn-neutral"
+                    >
+                      Detalhes
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -188,7 +191,7 @@ export function ComissoesPageClient({ idioma }: Props) {
           onMouseDown={(e) => { if (e.target === e.currentTarget) setOperadorDetalhe(null) }}
         >
           <div
-            className="dragon-glass-card w-full max-w-2xl rounded-2xl border border-jl-border-1 shadow-xl"
+            className="dragon-elev-2 w-full max-w-2xl rounded-2xl"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-4">

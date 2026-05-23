@@ -136,7 +136,7 @@ export function FiltroLateralCadastro({
   return (
     <aside
       className={cn(
-        'dragon-glass-card flex flex-col gap-3 rounded-xl border p-4 app-border lg:sticky lg:top-4',
+        'dragon-glass-card flex flex-col gap-3 rounded-xl p-4 lg:sticky lg:top-4',
         className,
       )}
     >

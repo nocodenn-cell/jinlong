@@ -10,6 +10,7 @@ export type TabelaCadastroPadraoProps = Readonly<{
   columns: GerenteTableColumn[]
   children: ReactNode
   tone?: 'paper' | 'dragon'
+  compact?: boolean
   footer?: ReactNode
   className?: string
 }>
@@ -21,6 +22,7 @@ export function TabelaCadastroPadrao({
   columns,
   children,
   tone = 'dragon',
+  compact = true,
   footer,
   className,
 }: TabelaCadastroPadraoProps) {
@@ -31,7 +33,7 @@ export function TabelaCadastroPadrao({
         {sectionMeta ? <div className="gerente-fin-muted text-xs font-medium">{sectionMeta}</div> : null}
       </div>
       <div className="p-3">
-        <GerenteTable tone={tone} columns={columns}>
+        <GerenteTable tone={tone} compact={compact} columns={columns}>
           {children}
         </GerenteTable>
       </div>
@@ -51,12 +53,12 @@ export type CadastroLinhaAcoesPadraoProps<T> = Readonly<{
 export function CadastroLinhaAcoesPadrao<T>({ row, onEditar, onExcluir, labels }: CadastroLinhaAcoesPadraoProps<T>) {
   if (!onEditar && !onExcluir) return null
   return (
-    <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:gap-2">
+    <div className="gerente-row-actions flex items-center justify-center gap-1 sm:gap-2">
       {onEditar ? (
         <button
           type="button"
           onClick={() => onEditar(row)}
-          className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition hover:opacity-100"
+          className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium transition"
         >
           {labels.editar}
         </button>
@@ -65,7 +67,7 @@ export function CadastroLinhaAcoesPadrao<T>({ row, onEditar, onExcluir, labels }
         <button
           type="button"
           onClick={() => onExcluir(row)}
-          className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium opacity-90 transition hover:opacity-100 app-badge-danger"
+          className="gerente-chip-action rounded-md border px-2 py-1 text-[11px] font-medium transition app-badge-danger"
         >
           {labels.excluir}
         </button>

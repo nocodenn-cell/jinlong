@@ -340,7 +340,7 @@ export function FinanceiroGerentePageClient({
         <p className="gerente-fin-muted mt-3 max-w-3xl text-sm leading-relaxed">{f.subtitulo}</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="dragon-glass-card rounded-xl border p-3 app-border">
+        <div className="dragon-glass-card rounded-xl p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wide app-muted">{f.kpi_titulos_abertos}</div>
           <div className="mt-0.5 text-xl font-bold tabular-nums">{kpis.titulosAbertosCount}</div>
           <div className="mt-0.5 text-[11px] app-muted">
@@ -352,18 +352,18 @@ export function FinanceiroGerentePageClient({
             ) : null}
           </div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-3 app-border">
+        <div className="dragon-glass-card rounded-xl p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wide app-muted">{f.kpi_fila_pendente}</div>
           <div className="mt-0.5 text-xl font-bold tabular-nums">{kpis.filaPendenteCount}</div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-3 app-border">
+        <div className="dragon-glass-card rounded-xl p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wide app-muted">{f.kpi_erros_fiscais}</div>
           <div className="mt-0.5 text-xl font-bold tabular-nums">{kpis.errosFiscaisCount}</div>
         </div>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(200px,260px)] lg:items-start">
-        <aside className="dragon-glass-card flex flex-col gap-3 rounded-xl border p-4 app-border lg:sticky lg:top-4">
+        <aside className="dragon-glass-card flex flex-col gap-3 rounded-xl p-4 lg:sticky lg:top-4">
           <h2 className="text-sm font-semibold tracking-wide app-accent-text">{f.layout_filters_title}</h2>
           <FinField id="fin-filter-opcao" label={f.filter_opcao}>
             <select
@@ -399,7 +399,7 @@ export function FinanceiroGerentePageClient({
         </aside>
 
         <div className="flex min-w-0 flex-col gap-3">
-          <div className="dragon-glass-card flex flex-col gap-3 rounded-xl border p-3 app-border sm:p-4">
+          <div className="dragon-glass-card flex flex-col gap-3 rounded-xl p-3 sm:p-4">
             <div className="relative min-w-0 flex-1">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-70 app-muted"
@@ -455,11 +455,12 @@ export function FinanceiroGerentePageClient({
             <div className="overflow-x-auto">
               <GerenteTable
                 tone="dragon"
+                compact
                 columns={[
                   { key: 'c', header: f.col_cliente },
                   { key: 'v', header: f.col_vencimento },
-                  { key: 'a', header: f.col_valor },
-                  { key: 's', header: m.gerente.col_status },
+                  { key: 'a', header: f.col_valor,           numeric: true },
+                  { key: 's', header: m.gerente.col_status,  align: 'center' },
                   { key: 'l', header: f.col_liquidar },
                 ]}
               >
@@ -485,14 +486,14 @@ export function FinanceiroGerentePageClient({
                         idx % 2 === 1 && 'bg-white/[0.025]',
                       )}
                     >
-                      <td className="gerente-fin-cell px-3 py-2.5 font-medium">{t.cliente_nome ?? f.dash}</td>
-                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 tabular-nums">
+                      <td className="gerente-fin-cell px-3 py-2 font-medium">{t.cliente_nome ?? f.dash}</td>
+                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2 tabular-nums">
                         {formatDateOnlyOrDash(t.vencimento, locale)}
                       </td>
-                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2.5 text-sm font-semibold tabular-nums app-accent-text">
+                      <td className="gerente-fin-cell whitespace-nowrap px-3 py-2 text-right text-sm font-semibold tabular-nums app-accent-text">
                         {fmtGerenteBRL(Number(t.valor_aberto), locale)}
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-2 text-center">
                         <GerenteStatusBadge status={t.status} />
                       </td>
                       <td className="min-w-[220px] px-3 py-2.5">
@@ -559,7 +560,7 @@ export function FinanceiroGerentePageClient({
             <Plus className="h-4 w-4 shrink-0" aria-hidden />
             <span>{f.btn_nova_conta}</span>
           </button>
-          <div className="dragon-glass-card rounded-xl border p-4 app-border">
+          <div className="dragon-glass-card rounded-xl p-4">
             <div className="text-[11px] font-semibold uppercase tracking-wide app-muted">{f.rail_valor_total}</div>
             <div className="mt-2 text-2xl font-bold tabular-nums app-accent-text">
               {fmtGerenteBRL(valorTotalLista, locale)}
@@ -686,14 +687,15 @@ export function FinanceiroGerentePageClient({
         <div className="mt-4 overflow-x-auto">
           <GerenteTable
             tone="dragon"
+            compact
             columns={[
               { key: 'st', header: m.gerente.col_status },
               { key: 'v', header: f.col_venda },
               { key: 'tp', header: f.col_tipo },
-              { key: 't', header: f.col_tentativas },
+              { key: 't', header: f.col_tentativas, numeric: true },
               { key: 'e', header: f.col_erro },
               { key: 'dt', header: f.col_detalhe },
-              { key: 'ac', header: f.col_acoes },
+              { key: 'ac', header: f.col_acoes, align: 'right', width: 48 },
             ]}
           >
             {docsFiscais.length === 0 ? (
@@ -705,16 +707,16 @@ export function FinanceiroGerentePageClient({
             ) : (
               docsFiscais.map((d) => (
                 <tr key={d.id} className="gerente-fin-row-hover transition-colors">
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2">
                     <GerenteStatusBadge status={d.status} />
                   </td>
-                  <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{String(d.venda_id).slice(0, 8)}…</td>
-                  <td className="gerente-fin-cell px-3 py-3">{d.tipo_doc}</td>
-                  <td className="gerente-fin-cell px-3 py-3 tabular-nums">{Number(d.tentativas ?? 0)}</td>
-                  <td className="max-w-[200px] truncate px-3 py-3 text-sm app-badge-danger" title={d.ultimo_erro ?? ''}>
+                  <td className="gerente-fin-cell px-3 py-2 font-mono text-xs">{String(d.venda_id).slice(0, 8)}…</td>
+                  <td className="gerente-fin-cell px-3 py-2">{d.tipo_doc}</td>
+                  <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">{Number(d.tentativas ?? 0)}</td>
+                  <td className="max-w-[200px] truncate px-3 py-2 text-sm app-badge-danger" title={d.ultimo_erro ?? ''}>
                     {d.ultimo_erro ?? f.dash}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2">
                     <Link
                       href={`/gerente/financeiro/documento/${d.id}`}
                       className="gerente-nav-back text-sm font-medium hover:underline"
@@ -722,21 +724,23 @@ export function FinanceiroGerentePageClient({
                       {f.link_timeline}
                     </Link>
                   </td>
-                  <td className="px-3 py-3">
-                    {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
-                      <ConfirmActionButton
-                        type="button"
-                        disabled={loadReprocessar}
-                        confirmMessage={`Confirma reprocessar o documento ${String(d.id).slice(0, 8)}…? O item voltará para a fila fiscal.`}
-                        onClick={() => void mutReprocessar(d.id)}
-                        className="inline-flex min-w-[100px] items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-danger"
-                      >
-                        {loadReprocessar ? <DragonOuroLoader className="app-surface-text" iconClassName="h-3.5 w-3.5" /> : null}
-                        {loadReprocessar ? f.liq_loading : f.btn_reprocessar}
-                      </ConfirmActionButton>
-                    ) : (
-                      <span className="gerente-fin-empty text-sm">{f.dash}</span>
-                    )}
+                  <td className="px-3 py-2 text-right">
+                    <div className="gerente-row-actions flex justify-end">
+                      {d.status === 'ERRO' || d.status === 'PENDENTE' ? (
+                        <ConfirmActionButton
+                          type="button"
+                          disabled={loadReprocessar}
+                          confirmMessage={`Confirma reprocessar o documento ${String(d.id).slice(0, 8)}…? O item voltará para a fila fiscal.`}
+                          onClick={() => void mutReprocessar(d.id)}
+                          className="inline-flex min-w-[100px] items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-danger"
+                        >
+                          {loadReprocessar ? <DragonOuroLoader className="app-surface-text" iconClassName="h-3.5 w-3.5" /> : null}
+                          {loadReprocessar ? f.liq_loading : f.btn_reprocessar}
+                        </ConfirmActionButton>
+                      ) : (
+                        <span className="gerente-fin-empty text-sm">{f.dash}</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

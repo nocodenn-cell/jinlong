@@ -66,6 +66,15 @@ module.exports = {
           "fg-2": "var(--jl-fg-2)",
           "fg-3": "var(--jl-fg-3)",
           "accent": "var(--jl-accent)",
+          // Card hierarchy tokens
+          "card-l1-bg":     "var(--jl-card-l1-bg)",
+          "card-l1-border": "var(--jl-card-l1-border)",
+          "card-l1-accent": "var(--jl-card-l1-accent)",
+          "card-l1-strip":  "var(--jl-card-l1-strip)",
+          "card-l2-bg":     "var(--jl-card-l2-bg)",
+          "card-l2-border": "var(--jl-card-l2-border)",
+          "card-l3-bg":     "var(--jl-card-l3-bg)",
+          "card-l3-border": "var(--jl-card-l3-border)",
         },
       },
       borderRadius: {

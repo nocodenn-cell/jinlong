@@ -36,7 +36,7 @@
  * Valor padrão sobrescrito por `--gerente-sticky-top` em px no elemento `.gerente-shell`.
  */
 .gerente-shell {
-  --gerente-sticky-top: 6.75rem;
+  --gerente-sticky-top: 60px;
 }
 
 .logo-wordmark-main {
@@ -543,7 +543,23 @@ html:has(.login-premium-root) body {
 [data-app-theme] .gerente-table-dragon tbody tr:hover,
 [data-app-theme] .gerente-fin-row-hover:hover,
 [data-app-theme] .gerente-inicio-table tbody tr:hover {
-  background: color-mix(in srgb, var(--surface) 84%, transparent) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+/* Terminal row hover — lift suave sem ruído visual */
+[data-app-theme] .gerente-table-dragon tbody tr {
+  transition: background-color 0.1s ease;
+}
+
+/* Ações de linha: invisíveis por padrão, surgem no hover da linha */
+[data-app-theme] .gerente-row-actions {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+[data-app-theme] tr:hover .gerente-row-actions,
+[data-app-theme] .gerente-fin-row-hover:hover .gerente-row-actions {
+  opacity: 1;
 }
 
 [data-app-theme] .gerente-chip-action,
@@ -606,14 +622,20 @@ html:has(.login-premium-root) body {
   background-color: rgba(2, 6, 23, 0.58) !important;
 }
 
+/* Elevation 1 — cards, panels, toolbars, filtros.
+   UMA ferramenta: box-shadow via --jl-elev-1.
+   Sem blur (zero efeito em fundos sólidos), sem border-color. */
 .dragon-glass-card {
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  background-color: rgba(15, 23, 42, 0.78) !important;
-  border-color: rgba(71, 85, 105, 0.85) !important;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  background-color: rgba(15, 23, 42, 0.82) !important;
+  box-shadow: var(--jl-elev-1) !important;
+}
+
+/* Elevation 2 — modals, dropdowns, popovers.
+   UMA ferramenta: box-shadow via --jl-elev-2.
+   Fundo mais sólido (#0f172a) para flutuar claramente acima do conteúdo. */
+.dragon-elev-2 {
+  background-color: #0f172a !important;
+  box-shadow: var(--jl-elev-2) !important;
 }
 
 /* Login — dragão hero */
@@ -883,11 +905,19 @@ html:has(.login-premium-root) body {
 
 [data-gerente-ui-theme='dragon-light'] .dragon-glass-card {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 252, 245, 0.92) 100%) !important;
-  border-color: rgba(226, 232, 240, 0.98) !important;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 252, 245, 0.93) 100%) !important;
   box-shadow:
-    0 12px 30px -18px rgba(15, 23, 42, 0.18),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+    0 0 0 1px rgba(15, 23, 42, 0.07),
+    0 2px 8px rgba(15, 23, 42, 0.10),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-gerente-ui-theme='dragon-light'] .dragon-elev-2 {
+  background-color: #ffffff !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.10),
+    0 8px 28px rgba(15, 23, 42, 0.16),
+    0 2px 6px rgba(15, 23, 42, 0.08) !important;
 }
 
 [data-gerente-ui-theme='dragon-light'] .dragon-glass-backdrop {
@@ -1019,7 +1049,7 @@ html:has(.login-premium-root) body {
 }
 
 [data-gerente-ui-theme='dragon-dark'] .gerente-fin-row-hover:hover {
-  background-color: rgba(30 41 59, 0.45);
+  background-color: rgba(255, 255, 255, 0.038) !important;
 }
 
 [data-gerente-ui-theme='dragon-light'] .gerente-fin-row-hover:hover {

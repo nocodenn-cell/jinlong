@@ -3,15 +3,37 @@ import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
+export type HealthPayload = {
+  status: 'online' | 'degraded' | 'offline'
+  latency: number
+  fiscal_erro: number
+  fiscal_fila: number
+}
+
 export async function GET() {
   const t0 = Date.now()
   try {
     const supabase = await createClient()
-    const { error } = await supabase.from('lojas').select('id').limit(1)
+
+    const [pingRes, fiscalRes] = await Promise.all([
+      supabase.from('lojas').select('id').limit(1),
+      supabase
+        .from('documentos_fiscais_pendentes')
+        .select('status')
+        .in('status', ['PENDENTE', 'ERRO'])
+        .is('deleted_at', null),
+    ])
+
     const latency = Date.now() - t0
-    if (error) return NextResponse.json({ status: 'degraded', latency })
-    return NextResponse.json({ status: 'online', latency })
+    const fiscalRows = fiscalRes.data ?? []
+    const fiscal_erro  = fiscalRows.filter((r) => r.status === 'ERRO').length
+    const fiscal_fila  = fiscalRows.filter((r) => r.status === 'PENDENTE').length
+
+    if (pingRes.error) {
+      return NextResponse.json({ status: 'degraded', latency, fiscal_erro, fiscal_fila } satisfies HealthPayload)
+    }
+    return NextResponse.json({ status: 'online', latency, fiscal_erro, fiscal_fila } satisfies HealthPayload)
   } catch {
-    return NextResponse.json({ status: 'offline', latency: Date.now() - t0 })
+    return NextResponse.json({ status: 'offline', latency: Date.now() - t0, fiscal_erro: 0, fiscal_fila: 0 } satisfies HealthPayload)
   }
 }

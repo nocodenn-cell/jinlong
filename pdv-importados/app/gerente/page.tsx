@@ -24,6 +24,7 @@ import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { formatLinhaAtividade, interpolateTemplate } from '@/lib/gerente/formatDashboardAtividade'
+import { GerentePageZone } from '@/components/gerente/GerentePageZone'
 
 export const revalidate = 30
 
@@ -136,49 +137,51 @@ export default async function GerenteInicioPage() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title={di.kpi_faturamento_hoje}
-          value={formatBRL(resumo.faturamento_hoje, locale)}
-          icon={DollarSign}
-          trend={{
-            value: Number(variacaoFaturamento.toFixed(1)),
-            isPositive: variacaoFaturamento >= 0,
-          }}
-        />
+      <GerentePageZone kind="kpi-critico" className="mt-8">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            tier={1}
+            title={di.kpi_faturamento_hoje}
+            value={formatBRL(resumo.faturamento_hoje, locale)}
+            icon={DollarSign}
+            trend={{
+              value: Number(variacaoFaturamento.toFixed(1)),
+              isPositive: variacaoFaturamento >= 0,
+            }}
+          />
+          <MetricCard
+            tier={1}
+            title={di.kpi_ticket_hoje}
+            value={formatBRL(resumo.ticket_medio_hoje, locale)}
+            icon={TrendingUp}
+            trend={{
+              value: Number(variacaoTicket.toFixed(1)),
+              isPositive: variacaoTicket >= 0,
+            }}
+          />
+          <MetricCard
+            tier={1}
+            title={di.kpi_vendas_hoje}
+            value={formatNumberLocale(resumo.quantidade_vendas_hoje, locale)}
+            icon={ShoppingCart}
+            trend={{
+              value: Number(variacaoVendas.toFixed(1)),
+              isPositive: variacaoVendas >= 0,
+            }}
+          />
+          <MetricCard tier={1} title={di.kpi_margem_hoje} value={margemRotulo} icon={Percent} />
+        </div>
+        <p className="mt-2 text-xs text-jl-fg-3">{m.gerente.vs_dia_anterior}</p>
+      </GerentePageZone>
 
-        <MetricCard
-          title={di.kpi_ticket_hoje}
-          value={formatBRL(resumo.ticket_medio_hoje, locale)}
-          icon={TrendingUp}
-          trend={{
-            value: Number(variacaoTicket.toFixed(1)),
-            isPositive: variacaoTicket >= 0,
-          }}
-        />
-
-        <MetricCard
-          title={di.kpi_vendas_hoje}
-          value={formatNumberLocale(resumo.quantidade_vendas_hoje, locale)}
-          icon={ShoppingCart}
-          trend={{
-            value: Number(variacaoVendas.toFixed(1)),
-            isPositive: variacaoVendas >= 0,
-          }}
-        />
-
-        <MetricCard title={di.kpi_margem_hoje} value={margemRotulo} icon={Percent} />
-      </div>
-
-      <p className="mt-2 text-xs text-jl-fg-3">{m.gerente.vs_dia_anterior}</p>
-
-      <section className="mt-8" aria-labelledby="dashboard-semana-heading">
+      <GerentePageZone kind="kpi-oper" aria-labelledby="dashboard-semana-heading">
         <h2 id="dashboard-semana-heading" className="text-sm font-semibold text-jl-fg-1">
           {di.secao_semana_titulo}
         </h2>
         <p className="mt-1 text-xs text-jl-fg-3">{di.secao_semana_subtitulo}</p>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <MetricCard
+            tier={2}
             title={di.kpi_faturamento_semana}
             value={formatBRL(resumo.faturamento_semana_atual, locale)}
             icon={DollarSign}
@@ -188,6 +191,7 @@ export default async function GerenteInicioPage() {
             }}
           />
           <MetricCard
+            tier={2}
             title={di.kpi_vendas_semana}
             value={formatNumberLocale(resumo.quantidade_vendas_semana_atual, locale)}
             icon={ShoppingCart}
@@ -197,6 +201,7 @@ export default async function GerenteInicioPage() {
             }}
           />
           <MetricCard
+            tier={2}
             title={di.kpi_ticket_semana}
             value={formatBRL(resumo.ticket_medio_semana_atual, locale)}
             icon={TrendingUp}
@@ -207,11 +212,11 @@ export default async function GerenteInicioPage() {
           />
         </div>
         <p className="mt-2 text-xs text-jl-fg-3">{m.gerente.vs_semana_anterior}</p>
-      </section>
+      </GerentePageZone>
 
       <section
         aria-labelledby="dashboard-sparkline-heading"
-        className="mt-8 rounded-lg border border-jl-border-1 dragon-glass-card p-5"
+        className="mt-8 rounded-xl dragon-glass-card p-5"
       >
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -245,7 +250,7 @@ export default async function GerenteInicioPage() {
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <section
           aria-labelledby="dashboard-estoque-heading"
-          className="rounded-lg border border-jl-border-1 dragon-glass-card p-5"
+          className="rounded-xl dragon-glass-card p-5"
         >
           <div className="flex items-center gap-2">
             <PackageX className="h-4 w-4 text-jl-fg-3" aria-hidden />
@@ -296,7 +301,7 @@ export default async function GerenteInicioPage() {
 
         <section
           aria-labelledby="dashboard-atividades-heading"
-          className="rounded-lg border border-jl-border-1 dragon-glass-card p-5"
+          className="rounded-xl dragon-glass-card p-5"
         >
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-jl-fg-3" aria-hidden />
@@ -336,14 +341,14 @@ export default async function GerenteInicioPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Link
               href="/admin/dashboard"
-              className="block rounded-lg border border-jl-border-1 dragon-glass-card p-4 transition-colors hover:bg-white/[0.06]"
+              className="block rounded-xl border border-white/[0.07] dragon-glass-card p-4 transition-colors hover:bg-white/[0.05]"
             >
               <div className="text-sm font-semibold text-jl-fg-1">{m.gerente.secao_dono_admin_titulo}</div>
               <div className="mt-1 text-xs text-jl-fg-3">{m.gerente.secao_dono_admin_desc}</div>
             </Link>
             <Link
               href={painelGerencialHref('financeiro')}
-              className="block rounded-lg border border-jl-border-1 dragon-glass-card p-4 transition-colors hover:bg-white/[0.06]"
+              className="block rounded-xl border border-white/[0.07] dragon-glass-card p-4 transition-colors hover:bg-white/[0.05]"
             >
               <div className="text-sm font-semibold text-jl-fg-1">{m.gerente.secao_dono_fin_titulo}</div>
               <div className="mt-1 text-xs text-jl-fg-3">{m.gerente.secao_dono_fin_desc}</div>

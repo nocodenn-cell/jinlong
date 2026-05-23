@@ -6,6 +6,7 @@ interface MetricCardProps {
   title: string
   value: string | number
   icon: LucideIcon
+  tier?: 1 | 2 | 3
   trend?: {
     value: number
     isPositive: boolean
@@ -13,32 +14,119 @@ interface MetricCardProps {
   className?: string
 }
 
-export function MetricCard({ title, value, icon: Icon, trend, className }: MetricCardProps) {
+export function MetricCard({
+  title,
+  value,
+  icon: Icon,
+  tier = 2,
+  trend,
+  className,
+}: MetricCardProps) {
+  if (tier === 1) {
+    return (
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-xl border transition-colors',
+          'border-jl-card-l1-border bg-jl-card-l1-bg',
+          'hover:bg-white/[0.04]',
+          className,
+        )}
+      >
+        {/* Left accent strip */}
+        <div
+          className="absolute inset-y-0 left-0 w-[3px] rounded-l-xl bg-jl-card-l1-strip"
+          aria-hidden="true"
+        />
+        <div className="pl-5 pr-4 py-5 flex items-start justify-between gap-3">
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-jl-fg-3">
+              {title}
+            </p>
+            <p className="text-[26px] leading-none font-bold text-jl-fg-1 tabular-nums truncate">
+              {value}
+            </p>
+            {trend && (
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                  trend.isPositive
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : 'border-destructive/30 bg-destructive/10 text-destructive',
+                )}
+              >
+                {trend.isPositive ? '↑' : '↓'}
+                {Math.abs(trend.value)}%
+              </div>
+            )}
+          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-jl-card-l1-accent flex-shrink-0">
+            <Icon className="h-5 w-5 text-amber-400/70" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (tier === 3) {
+    return (
+      <div
+        className={cn(
+          'rounded-lg border px-4 py-3 flex items-center justify-between gap-3',
+          'border-jl-card-l3-border bg-jl-card-l3-bg',
+          className,
+        )}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className="h-3.5 w-3.5 text-jl-fg-3 flex-shrink-0" />
+          <p className="text-xs text-jl-fg-3 truncate">{title}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <p className="text-sm font-semibold text-jl-fg-2 tabular-nums">{value}</p>
+          {trend && (
+            <span
+              className={cn(
+                'text-[10px] font-medium',
+                trend.isPositive ? 'text-success' : 'text-destructive',
+              )}
+            >
+              {trend.isPositive ? '↑' : '↓'}{Math.abs(trend.value)}%
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // tier === 2 (default) — operacional
   return (
-    <div className={cn(
-      "dragon-glass-card border border-jl-border-1 rounded-xl p-6 shadow-sm hover:bg-white/[0.06] transition-colors",
-      className
-    )}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
-          <p className="text-sm font-medium text-jl-fg-3">{title}</p>
-          <p className="text-2xl font-bold text-jl-fg-1 tabular-nums">{value}</p>
+    <div
+      className={cn(
+        'rounded-xl border p-4 transition-colors',
+        'border-jl-card-l2-border bg-jl-card-l2-bg',
+        'hover:bg-white/[0.03]',
+        className,
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1 flex-1 min-w-0">
+          <p className="text-xs font-medium text-jl-fg-3">{title}</p>
+          <p className="text-xl font-semibold text-jl-fg-1 tabular-nums truncate">{value}</p>
           {trend && (
             <div
               className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium',
+                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
                 trend.isPositive
-                  ? 'border-success/35 bg-success/10 text-success'
-                  : 'border-destructive/35 bg-destructive/10 text-destructive',
+                  ? 'border-success/30 bg-success/10 text-success'
+                  : 'border-destructive/30 bg-destructive/10 text-destructive',
               )}
             >
-              {trend.isPositive ? "↑" : "↓"}
+              {trend.isPositive ? '↑' : '↓'}
               {Math.abs(trend.value)}%
             </div>
           )}
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/[0.06]">
-          <Icon className="h-6 w-6 text-jl-fg-3" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.04] flex-shrink-0">
+          <Icon className="h-4 w-4 text-jl-fg-3" />
         </div>
       </div>
     </div>

@@ -49,7 +49,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
       )}
       style={{
         fontFamily: FONT_FAMILY[idioma] ?? 'inherit',
-        '--gerente-sticky-top': '52px',
+        '--gerente-sticky-top': '60px',
       } as React.CSSProperties}
     >
       <SessionIdleLogout />

@@ -6,8 +6,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Home, Package, Box, ShoppingCart, Coins, TrendingUp, Settings,
-  Store, ChevronDown, LogOut, Bell,
+  ChevronDown, LogOut, Bell, AlertTriangle, Clock, Activity,
 } from 'lucide-react'
+import type { FilaStatusPayload } from '@/app/api/gerente/fila/status/route'
+import type { HealthPayload } from '@/app/api/gerente/health/route'
+import { useActivityFeed } from '@/lib/hooks/useActivityFeed'
+import { ActivityRailDrawer } from '@/components/gerente/ActivityRailDrawer'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
@@ -24,7 +28,7 @@ import { cn } from '@/lib/utils'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
-type SystemStatus = 'online' | 'degraded' | 'offline'
+type SystemStatus = 'online' | 'attention' | 'degraded' | 'offline'
 
 type Props = Readonly<{
   logoSubtitle: string
@@ -47,14 +51,43 @@ const TOPIC_ICONS: Record<GerenteNavTopicId, ElementType> = {
   sistema:           Settings,
 }
 
-const STATUS_CFG: Record<SystemStatus, { pill: string; dot: string; text: string; pulse: boolean }> = {
-  online:   { pill: 'border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400', dot: 'bg-emerald-500', text: 'Online',    pulse: true  },
-  degraded: { pill: 'border-amber-500/25   bg-amber-500/[0.07]   text-amber-400',   dot: 'bg-amber-400',   text: 'Degradado', pulse: false },
-  offline:  { pill: 'border-red-500/25     bg-red-500/[0.07]     text-red-400',      dot: 'bg-red-500',     text: 'Offline',   pulse: false },
+const STATUS_CFG: Record<SystemStatus, {
+  dot: string
+  textCn: string
+  pulse: boolean
+}> = {
+  online:    { dot: 'bg-emerald-500', textCn: 'text-emerald-400', pulse: true  },
+  attention: { dot: 'bg-amber-400',   textCn: 'text-amber-300',   pulse: true  },
+  degraded:  { dot: 'bg-amber-400',   textCn: 'text-amber-400',   pulse: false },
+  offline:   { dot: 'bg-red-500',     textCn: 'text-red-400',     pulse: false },
 }
 
-const HEALTH_INTERVAL_MS  = 60_000
-const NOTIF_INTERVAL_MS   = 5 * 60_000
+function buildStatusLine(
+  sysStatus: SystemStatus,
+  fiscalErro: number,
+  fiscalFila: number,
+  relTime: string,
+  latency: number | null,
+): { primary: string; secondary: string } {
+  if (sysStatus === 'offline')   return { primary: 'Offline',   secondary: '' }
+  if (sysStatus === 'degraded')  return { primary: 'Degradado', secondary: relTime }
+
+  if (fiscalErro > 0) {
+    return { primary: `${fiscalErro} erro${fiscalErro > 1 ? 's' : ''} fiscal`, secondary: relTime }
+  }
+  if (fiscalFila > 0) {
+    return { primary: `Fila: ${fiscalFila}`, secondary: relTime }
+  }
+  const lat = latency !== null ? `${latency}ms` : ''
+  return { primary: '0 pendências', secondary: [relTime, lat].filter(Boolean).join(' · ') }
+}
+
+const HEALTH_INTERVAL_MS = 60_000
+const NOTIF_INTERVAL_MS  = 5 * 60_000
+const FILA_INTERVAL_MS   = 30_000
+const TICK_INTERVAL_MS   = 10_000
+
+const FILA_ZERO: FilaStatusPayload = { fiscal: { pendente: 0, erro: 0 }, aprovacoes: 0 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +109,16 @@ function linkAtivo(href: string, pathname: string | null): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+function relativeTimeShort(date: Date | null): string {
+  if (!date) return '...'
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (diff < 10) return 'agora'
+  if (diff < 60) return `há ${diff}s`
+  const mins = Math.floor(diff / 60)
+  if (mins < 60) return `há ${mins}min`
+  return `há ${Math.floor(mins / 60)}h`
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
 
 export function GerenteHeaderNav({
@@ -89,15 +132,26 @@ export function GerenteHeaderNav({
   const pathname   = usePathname()
   const topicAtivo = gerenteNavTopicIdForPathname(pathname)
 
-  // ── PR-2: health status ──────────────────────────────────────────────────
-  const [sysStatus, setSysStatus] = useState<SystemStatus>('online')
+  // ── sistema: status + latência + timestamp + fiscal ─────────────────────
+  const [sysStatus,    setSysStatus]    = useState<SystemStatus>('online')
+  const [latency,      setLatency]      = useState<number | null>(null)
+  const [lastCheckAt,  setLastCheckAt]  = useState<Date | null>(null)
+  const [fiscalErro,   setFiscalErro]   = useState(0)
+  const [fiscalFila,   setFiscalFila]   = useState(0)
+  const [tick,         setTick]         = useState(0)
 
   const checkHealth = useCallback(async () => {
     try {
       const res = await fetch('/api/gerente/health')
       if (!res.ok) { setSysStatus('degraded'); return }
-      const data = (await res.json()) as { status: SystemStatus }
-      setSysStatus(data.status ?? 'online')
+      const data = (await res.json()) as HealthPayload
+      const base = data.status ?? 'online'
+      const hasErro = (data.fiscal_erro ?? 0) > 0
+      setSysStatus(base === 'online' && hasErro ? 'attention' : base)
+      if (typeof data.latency === 'number') setLatency(data.latency)
+      setFiscalErro(data.fiscal_erro ?? 0)
+      setFiscalFila(data.fiscal_fila ?? 0)
+      setLastCheckAt(new Date())
     } catch {
       setSysStatus('offline')
     }
@@ -109,7 +163,31 @@ export function GerenteHeaderNav({
     return () => clearInterval(t)
   }, [checkHealth])
 
-  // ── PR-3: notification count ─────────────────────────────────────────────
+  // tick para atualizar tempo relativo a cada 10s
+  useEffect(() => {
+    const t = setInterval(() => setTick((v) => v + 1), TICK_INTERVAL_MS)
+    return () => clearInterval(t)
+  }, [])
+
+  // ── fila operacional (fiscal + aprovações) ───────────────────────────────
+  const [filaStatus, setFilaStatus] = useState<FilaStatusPayload>(FILA_ZERO)
+
+  const fetchFilaStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/gerente/fila/status')
+      if (!res.ok) return
+      const data = (await res.json()) as FilaStatusPayload
+      setFilaStatus(data)
+    } catch { /* silently ignore */ }
+  }, [])
+
+  useEffect(() => {
+    void fetchFilaStatus()
+    const t = setInterval(() => void fetchFilaStatus(), FILA_INTERVAL_MS)
+    return () => clearInterval(t)
+  }, [fetchFilaStatus])
+
+  // ── notificações ─────────────────────────────────────────────────────────
   const [notifCount, setNotifCount] = useState(0)
 
   const fetchNotifCount = useCallback(async () => {
@@ -127,7 +205,7 @@ export function GerenteHeaderNav({
     return () => clearInterval(t)
   }, [fetchNotifCount])
 
-  // ── PR-4: topic dropdown ─────────────────────────────────────────────────
+  // ── topic dropdown ───────────────────────────────────────────────────────
   const [openTopic, setOpenTopic] = useState<GerenteNavTopicId | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -142,6 +220,15 @@ export function GerenteHeaderNav({
     if (closeTimer.current) clearTimeout(closeTimer.current)
   }
 
+  // ── activity rail ─────────────────────────────────────────────────────────
+  const [railOpen, setRailOpen] = useState(false)
+  const { items: activityItems, newCount: activityNew, isLoading: activityLoading, markSeen } = useActivityFeed()
+
+  const openRail = () => {
+    setRailOpen(true)
+    markSeen()
+  }
+
   // ── user dropdown ────────────────────────────────────────────────────────
   const [ddOpen, setDdOpen] = useState(false)
   const ddRef = useRef<HTMLDivElement>(null)
@@ -154,21 +241,35 @@ export function GerenteHeaderNav({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const status = STATUS_CFG[sysStatus]
+  const status       = STATUS_CFG[sysStatus]
+  const relTime      = relativeTimeShort(lastCheckAt)
+  const statusLine   = buildStatusLine(sysStatus, fiscalErro, fiscalFila, relTime, latency)
+  void tick          // garante re-render periódico para relTime
 
   return (
+    <>
     <header
       className={cn(
         'sticky top-0 z-30 w-full select-none print:hidden',
-        'h-[52px] flex items-stretch',
+        'h-[60px] flex items-stretch',
         'bg-jl-surface-base border-b border-jl-border-1',
       )}
     >
-      {/* ── ZONA A: IDENTIDADE ──────────────────────────────────────────── */}
-      <div className="flex items-center px-4 border-r border-jl-border-1 flex-shrink-0">
-        <div className="flex flex-col items-center gap-[1px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/branding/brand-double-dragon.png" alt="Jīn Lóng" className="h-7 w-auto" />
+      {/* ── ZONA A: IDENTIDADE + LOJA ───────────────────────────────────── */}
+      <div className="flex items-center gap-3 px-4 border-r border-jl-border-1 flex-shrink-0">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/branding/brand-double-dragon.png"
+          alt="Jīn Lóng"
+          className="h-7 w-auto flex-shrink-0"
+        />
+        <div className="hidden sm:flex flex-col justify-center gap-[3px] min-w-0">
+          <span className="text-[12px] font-semibold leading-none text-jl-fg-1 truncate max-w-[160px]">
+            {logoSubtitle}
+          </span>
+          <span className="text-[9px] font-mono tracking-[0.07em] uppercase leading-none text-jl-fg-3">
+            FastProduct
+          </span>
         </div>
       </div>
 
@@ -195,7 +296,7 @@ export function GerenteHeaderNav({
               <Link
                 href={href}
                 className={cn(
-                  'group flex items-center gap-[5px] px-3',
+                  'group relative flex items-center gap-[5px] px-3',
                   'text-[12px] font-medium whitespace-nowrap transition-colors duration-150',
                   isActive
                     ? 'text-amber-400'
@@ -221,13 +322,12 @@ export function GerenteHeaderNav({
                 )}
               </Link>
 
-              {/* ── sub-nav dropdown (PR-4) ──────────────────────────── */}
+              {/* sub-nav dropdown */}
               {hasChildren && isOpen && (
                 <div
                   className={cn(
                     'absolute top-full left-0 z-[50] min-w-[11rem]',
-                    'bg-jl-surface-elev border border-jl-border-1 border-t-0',
-                    'rounded-b-lg shadow-lg overflow-hidden py-1',
+                    'dragon-elev-2 rounded-b-lg overflow-hidden py-1',
                   )}
                   onMouseEnter={cancelClose}
                   onMouseLeave={scheduleClose}
@@ -287,35 +387,103 @@ export function GerenteHeaderNav({
       </nav>
 
       {/* ── ZONA C: CONTEXTO OPERACIONAL ────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 px-3 border-l border-jl-border-1 flex-shrink-0">
+      <div className="flex items-center gap-2 px-3 border-l border-jl-border-1 flex-shrink-0">
 
-        {/* Status do sistema (PR-2) */}
-        <div
-          className={cn(
-            'hidden sm:flex items-center gap-[5px] px-2 py-0.5 rounded-full cursor-default',
-            'border text-[10px] font-semibold font-mono tracking-[0.04em] uppercase',
-            status.pill,
-          )}
-          title={`Sistema ${status.text.toLowerCase()}`}
+        {/* Bloco de status operacional */}
+        <button
+          type="button"
           onClick={() => void checkHealth()}
+          title="Verificar status do sistema"
+          className="hidden md:flex flex-col justify-center gap-[3px] px-2 py-1 rounded-md hover:bg-white/[0.04] transition-colors cursor-pointer min-w-[88px]"
+        >
+          <div className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                'w-[5px] h-[5px] rounded-full flex-shrink-0',
+                status.dot,
+                status.pulse && 'animate-pulse',
+              )}
+              aria-hidden="true"
+            />
+            <span className={cn('text-[11px] font-semibold leading-none', status.textCn)}>
+              {statusLine.primary}
+            </span>
+          </div>
+          {statusLine.secondary && (
+            <span className="font-mono leading-none text-[9px] text-jl-fg-3">
+              {statusLine.secondary}
+            </span>
+          )}
+        </button>
+
+        {/* Status dot compacto — só mobile */}
+        <button
+          type="button"
+          onClick={() => void checkHealth()}
+          aria-label={`Sistema ${statusLine.primary.toLowerCase()}`}
+          className="md:hidden flex items-center justify-center w-7 h-7 rounded-md hover:bg-white/[0.04] transition-colors"
         >
           <span
-            className={cn('w-[5px] h-[5px] rounded-full flex-shrink-0', status.dot, status.pulse && 'animate-pulse')}
+            className={cn('w-[6px] h-[6px] rounded-full', status.dot, status.pulse && 'animate-pulse')}
             aria-hidden="true"
           />
-          {status.text}
-        </div>
+        </button>
 
-        {/* Chip da loja */}
-        <div className="hidden sm:flex items-center gap-[5px] px-2 py-[3px] rounded-[5px] border border-jl-border-1 bg-jl-surface-elev text-[11px] font-medium text-jl-fg-1 cursor-default max-w-[140px]">
-          <Store className="w-3.5 h-3.5 text-jl-fg-3 flex-shrink-0" />
-          <span className="truncate">{logoSubtitle}</span>
-        </div>
+        {/* Fila fiscal — só aparece quando há pendências */}
+        {(filaStatus.fiscal.pendente > 0 || filaStatus.fiscal.erro > 0) && (
+          <Link
+            href="/gerente/financeiro"
+            title={
+              filaStatus.fiscal.erro > 0
+                ? `${filaStatus.fiscal.erro} erro(s) fiscal(is)`
+                : `${filaStatus.fiscal.pendente} documento(s) pendente(s)`
+            }
+            className={cn(
+              'hidden sm:inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold tabular-nums transition-colors',
+              filaStatus.fiscal.erro > 0
+                ? 'bg-red-500/10 text-red-300 hover:bg-red-500/20'
+                : 'bg-amber-400/10 text-amber-300 hover:bg-amber-400/20',
+            )}
+          >
+            <AlertTriangle className="h-2.5 w-2.5 flex-shrink-0" aria-hidden />
+            {filaStatus.fiscal.erro > 0
+              ? `${filaStatus.fiscal.erro} fiscal`
+              : `${filaStatus.fiscal.pendente} fila`}
+          </Link>
+        )}
+
+        {/* Aprovações pendentes — só aparece quando há */}
+        {filaStatus.aprovacoes > 0 && (
+          <Link
+            href="/gerente/financeiro"
+            title={`${filaStatus.aprovacoes} movimentação(ões) aguardando aprovação`}
+            className="hidden sm:inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-1 text-[10px] font-semibold tabular-nums text-sky-300 transition-colors hover:bg-sky-500/20"
+          >
+            <Clock className="h-2.5 w-2.5 flex-shrink-0" aria-hidden />
+            {filaStatus.aprovacoes} aprov.
+          </Link>
+        )}
+
+        {/* Activity Rail trigger */}
+        <button
+          type="button"
+          onClick={openRail}
+          aria-label={activityNew > 0 ? `${activityNew} nova(s) atividade(s)` : 'Atividades recentes'}
+          className="relative w-[30px] h-[30px] rounded-md flex items-center justify-center text-jl-fg-2 hover:text-jl-fg-1 hover:bg-white/[0.05] transition-colors"
+        >
+          <Activity className="w-[15px] h-[15px]" />
+          {activityNew > 0 && (
+            <span
+              className="absolute top-[5px] right-[5px] min-w-[5px] h-[5px] rounded-full bg-amber-400 border-[1.5px] border-jl-surface-base"
+              aria-hidden="true"
+            />
+          )}
+        </button>
 
         {/* Idioma */}
         {podeTrocarIdioma && <LanguageToggle idiomaAtual={idioma} variant="dragon" />}
 
-        {/* Notificações (PR-3) */}
+        {/* Notificações */}
         <button
           type="button"
           onClick={() => void fetchNotifCount()}
@@ -365,7 +533,7 @@ export function GerenteHeaderNav({
             <div
               role="menu"
               aria-label="Menu do usuário"
-              className="absolute right-0 mt-1 w-48 z-[60] bg-jl-surface-elev border border-jl-border-1 rounded-lg overflow-hidden shadow-lg"
+              className="absolute right-0 mt-1 w-48 z-[60] dragon-elev-2 rounded-lg overflow-hidden"
             >
               <div className="px-3 py-2.5 border-b border-jl-border-1">
                 <p className="text-[12px] font-semibold text-jl-fg-1">{roleLabel(perfil, m)}</p>
@@ -388,5 +556,13 @@ export function GerenteHeaderNav({
 
       </div>
     </header>
+
+    <ActivityRailDrawer
+      open={railOpen}
+      onClose={() => setRailOpen(false)}
+      items={activityItems}
+      isLoading={activityLoading}
+    />
+  </>
   )
 }

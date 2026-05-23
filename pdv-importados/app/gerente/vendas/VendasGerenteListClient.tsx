@@ -1,17 +1,74 @@
 'use client'
 
-import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
-import { ExportCsvButton } from '@/components/gerente/ExportCsvButton'
-import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
+import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { labelFormaPagamentoVenda, labelStatusVenda } from '@/lib/format/vendaLabels'
+import { cn } from '@/lib/utils'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
-import { buscarVendasPaginadasAction, cancelarVendaGerenteAction } from './actions'
-import type { VendaListRow } from './actions'
+import {
+  buscarVendasPaginadasAction,
+  obterKpisVendas,
+  obterVendasCompletaParaExport,
+  type VendaListRow,
+  type VendasFiltro,
+} from './actions'
+import { VendaActionsMenu } from './VendaActionsMenu'
+import { VendaCancelarModal } from './VendaCancelarModal'
+
+type PeriodoPreset = 'hoje' | 'ontem' | '7d' | 'mes' | 'tudo'
+
+const PERIODOS: ReadonlyArray<{ key: PeriodoPreset; label: string }> = [
+  { key: 'hoje', label: 'Hoje' },
+  { key: 'ontem', label: 'Ontem' },
+  { key: '7d', label: '7 dias' },
+  { key: 'mes', label: 'Mês' },
+  { key: 'tudo', label: 'Tudo' },
+]
+
+const FORMAS_PAGAMENTO: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'DINHEIRO', label: 'Dinheiro' },
+  { value: 'PIX', label: 'PIX' },
+  { value: 'CARTAO_DEBITO', label: 'Cartão débito' },
+  { value: 'CARTAO_CREDITO', label: 'Cartão crédito' },
+  { value: 'CARTAO', label: 'Cartão' },
+  { value: 'OUTROS', label: 'Outros' },
+]
+
+function computeIntervalo(p: PeriodoPreset): { inicio: string | null; fim: string | null } {
+  const now = new Date()
+  const startOfDay = new Date(now)
+  startOfDay.setHours(0, 0, 0, 0)
+  const endOfDay = new Date(now)
+  endOfDay.setHours(23, 59, 59, 999)
+
+  switch (p) {
+    case 'hoje':
+      return { inicio: startOfDay.toISOString(), fim: endOfDay.toISOString() }
+    case 'ontem': {
+      const yest = new Date(startOfDay)
+      yest.setDate(yest.getDate() - 1)
+      const yestEnd = new Date(yest)
+      yestEnd.setHours(23, 59, 59, 999)
+      return { inicio: yest.toISOString(), fim: yestEnd.toISOString() }
+    }
+    case '7d': {
+      const wk = new Date(startOfDay)
+      wk.setDate(wk.getDate() - 6)
+      return { inicio: wk.toISOString(), fim: endOfDay.toISOString() }
+    }
+    case 'mes': {
+      const m1 = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+      return { inicio: m1.toISOString(), fim: endOfDay.toISOString() }
+    }
+    case 'tudo':
+      return { inicio: null, fim: null }
+  }
+}
 
 function statusBadgeClasses(status: string): string {
   const s = status.toUpperCase()
@@ -20,31 +77,221 @@ function statusBadgeClasses(status: string): string {
   return 'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold app-btn-neutral'
 }
 
+function diaChave(iso: string | null): string {
+  if (!iso) return 'sem-data'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'sem-data'
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function diaLabel(iso: string | null, locale: string): string {
+  if (!iso) return 'Sem data'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'Sem data'
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const alvo = new Date(d)
+  alvo.setHours(0, 0, 0, 0)
+  const deltaDias = Math.round((hoje.getTime() - alvo.getTime()) / 86_400_000)
+  if (deltaDias === 0) return 'Hoje'
+  if (deltaDias === 1) return 'Ontem'
+  return d.toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+type GrupoDia = {
+  chave: string
+  label: string
+  vendas: VendaListRow[]
+  totalDia: number
+  qtdConcluidas: number
+}
+
+function agruparPorDia(vendas: VendaListRow[], locale: string): GrupoDia[] {
+  const map = new Map<string, GrupoDia>()
+  for (const v of vendas) {
+    const chave = diaChave(v.data)
+    const total = Number(v.total_liquido ?? 0)
+    const ehConcluida = String(v.status ?? '').toUpperCase() === 'CONCLUIDA'
+    const existing = map.get(chave)
+    if (existing) {
+      existing.vendas.push(v)
+      if (ehConcluida) {
+        existing.totalDia += total
+        existing.qtdConcluidas++
+      }
+    } else {
+      map.set(chave, {
+        chave,
+        label: diaLabel(v.data, locale),
+        vendas: [v],
+        totalDia: ehConcluida ? total : 0,
+        qtdConcluidas: ehConcluida ? 1 : 0,
+      })
+    }
+  }
+  return [...map.values()]
+}
+
+function formatPreviewItens(v: VendaListRow): string {
+  const { qtd_itens_distintos: distintos, qtd_itens_total: total, primeiro_produto: nome } = v
+  if (distintos === 0 || !nome) return '—'
+  const safeName = nome.length > 28 ? `${nome.slice(0, 28).trim()}…` : nome
+  if (distintos === 1) {
+    return total > 1 ? `${total}× ${safeName}` : safeName
+  }
+  return `${safeName} +${distintos - 1}`
+}
+
+function PeriodoChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'h-8 rounded-full border px-3 text-xs font-medium transition-all',
+        active
+          ? 'border-amber-400/50 bg-amber-400/15 text-amber-200'
+          : 'border-jl-border-1 bg-jl-surface-base text-jl-fg-3 hover:text-jl-fg-1',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+function KpiCard({
+  label,
+  value,
+  accent,
+  active,
+  onClick,
+  loading,
+}: {
+  label: string
+  value: string
+  accent: 'neutral' | 'green' | 'red' | 'amber'
+  active?: boolean
+  onClick?: () => void
+  loading?: boolean
+}) {
+  const clickable = typeof onClick === 'function'
+  const Tag = clickable ? 'button' : 'div'
+  return (
+    <Tag
+      type={clickable ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        'flex flex-col gap-1.5 rounded-xl border p-4 text-left transition-all duration-150',
+        clickable && 'hover:border-jl-fg-3/50',
+        active
+          ? accent === 'red'
+            ? 'border-red-500/40 bg-red-500/10 ring-1 ring-red-500/20'
+            : accent === 'green'
+              ? 'border-emerald-500/40 bg-emerald-500/10 ring-1 ring-emerald-500/20'
+              : accent === 'amber'
+                ? 'border-amber-500/40 bg-amber-500/10 ring-1 ring-amber-500/20'
+                : 'border-jl-fg-3/40 bg-jl-surface-elev ring-1 ring-jl-fg-3/10'
+          : 'border-jl-border-1 bg-jl-surface-base',
+      )}
+    >
+      <span
+        className={cn(
+          'text-2xl font-bold tabular-nums leading-tight',
+          active && accent === 'red'
+            ? 'text-red-400'
+            : active && accent === 'green'
+              ? 'text-emerald-400'
+              : active && accent === 'amber'
+                ? 'text-amber-400'
+                : 'text-jl-fg-1',
+        )}
+      >
+        {loading ? '…' : value}
+      </span>
+      <span className="text-xs text-jl-fg-3">{label}</span>
+    </Tag>
+  )
+}
+
 type Props = {
   idioma: Idioma
   locale: string
-  initialVendas: VendaListRow[]
-  initialHasMore: boolean
 }
 
-export function VendasGerenteListClient({ idioma, locale, initialVendas, initialHasMore }: Props) {
+export function VendasGerenteListClient({ idioma, locale }: Props) {
   const m = getMessages(idioma)
-  const [vendas, setVendas] = useState<VendaListRow[]>(initialVendas)
-  const [hasMore, setHasMore] = useState(initialHasMore)
-  const [loading, setLoading] = useState(false)
+
+  const [periodo, setPeriodo] = useState<PeriodoPreset>('mes')
+  const [statusSel, setStatusSel] = useState<string>('')
+  const [pagamentoSel, setPagamentoSel] = useState<string>('')
+
+  const filtros = useMemo<VendasFiltro>(() => {
+    const { inicio, fim } = computeIntervalo(periodo)
+    return {
+      inicio,
+      fim,
+      status: statusSel ? [statusSel] : [],
+      formaPagamento: pagamentoSel ? [pagamentoSel] : [],
+    }
+  }, [periodo, statusSel, pagamentoSel])
+
+  const [vendas, setVendas] = useState<VendaListRow[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [vendaCancelar, setVendaCancelar] = useState<VendaListRow | null>(null)
+  const [exporting, setExporting] = useState(false)
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  // Stable ref to avoid recreating the observer on each render
-  const stateRef = useRef({ hasMore, loading })
-  useEffect(() => { stateRef.current = { hasMore, loading } })
+  // KPI query — refetches whenever filtros change
+  const kpiFn = useCallback(() => obterKpisVendas(filtros), [filtros])
+  const { data: kpis, loading: kpisLoading, refetch: refetchKpis } = useGerenteQuery(kpiFn)
+
+  // Stable ref so the IntersectionObserver doesn't need to be rebuilt every render
+  const stateRef = useRef({ hasMore, loading, filtros })
+  useEffect(() => {
+    stateRef.current = { hasMore, loading, filtros }
+  })
+
+  // Reset and reload list whenever filtros change
+  useEffect(() => {
+    let cancelled = false
+    pageRef.current = 1
+    setLoading(true)
+    buscarVendasPaginadasAction(1, filtros)
+      .then((result) => {
+        if (cancelled) return
+        if (result.ok) {
+          setVendas(result.vendas)
+          setHasMore(result.hasMore)
+        } else {
+          emitGerenteToast({ kind: 'error', message: result.error })
+          setVendas([])
+          setHasMore(false)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [filtros])
 
   const loadNextPage = useCallback(async () => {
     if (stateRef.current.loading || !stateRef.current.hasMore) return
     setLoading(true)
     const nextPage = pageRef.current + 1
     try {
-      const result = await buscarVendasPaginadasAction(nextPage)
+      const result = await buscarVendasPaginadasAction(nextPage, stateRef.current.filtros)
       if (!result.ok) {
         emitGerenteToast({ kind: 'error', message: result.error })
         return
@@ -61,105 +308,243 @@ export function VendasGerenteListClient({ idioma, locale, initialVendas, initial
     const el = sentinelRef.current
     if (!el) return
     const obs = new IntersectionObserver(
-      (entries) => { if (entries[0]?.isIntersecting) void loadNextPage() },
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadNextPage()
+      },
       { rootMargin: '300px' },
     )
     obs.observe(el)
     return () => obs.disconnect()
   }, [loadNextPage])
 
+  function toggleStatusFromKpi(target: 'CONCLUIDA' | 'CANCELADA') {
+    setStatusSel((prev) => (prev === target ? '' : target))
+  }
+
+  const grupos = useMemo(() => agruparPorDia(vendas, locale), [vendas, locale])
+
+  async function handleExportCsv() {
+    if (exporting) return
+    setExporting(true)
+    emitGerenteToast({ kind: 'info', message: 'Gerando CSV com os filtros atuais…' })
+    try {
+      const todas = await obterVendasCompletaParaExport(filtros)
+      if (todas.length === 0) {
+        emitGerenteToast({ kind: 'info', message: 'Nenhuma venda no período filtrado.' })
+        return
+      }
+      const hoje = new Date().toISOString().slice(0, 10)
+      downloadCsvBrowser(
+        `gerente-vendas-${hoje}.csv`,
+        [
+          { key: 'data', header: m.gerente.col_data },
+          { key: 'total_liquido', header: m.gerente.col_total },
+          { key: 'forma_pagamento', header: m.gerente.col_forma },
+          { key: 'status', header: m.gerente.col_status },
+          { key: 'caixa_id', header: m.gerente.col_caixa },
+          { key: 'qtd_itens', header: 'Qtd. unidades' },
+          { key: 'qtd_distintos', header: 'Itens distintos' },
+          { key: 'primeiro_produto', header: 'Produto principal' },
+          { key: 'venda_id', header: 'ID' },
+        ],
+        todas.map((v) => ({
+          data: v.data ? new Date(v.data).toISOString() : '',
+          total_liquido: Number(v.total_liquido ?? 0),
+          forma_pagamento: labelFormaPagamentoVenda(v.forma_pagamento, m),
+          status: labelStatusVenda(v.status, m),
+          caixa_id: v.caixa_id ?? '',
+          qtd_itens: v.qtd_itens_total,
+          qtd_distintos: v.qtd_itens_distintos,
+          primeiro_produto: v.primeiro_produto ?? '',
+          venda_id: v.id,
+        })),
+      )
+      emitGerenteToast({
+        kind: 'success',
+        message: `${todas.length} ${todas.length === 1 ? 'venda exportada' : 'vendas exportadas'}.`,
+      })
+    } catch (e) {
+      emitGerenteToast({
+        kind: 'error',
+        message: e instanceof Error ? e.message : m.comum.erro,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <>
-      <div className="mb-4 flex items-center justify-end">
-        <ExportCsvButton
-          label={m.gerente.exportar_csv}
-          filename="gerente-vendas.csv"
-          columns={[
-            { key: 'data', header: m.gerente.col_data },
-            { key: 'total_liquido', header: m.gerente.col_total },
-            { key: 'forma_pagamento', header: m.gerente.col_forma },
-            { key: 'status', header: m.gerente.col_status },
-            { key: 'caixa_id', header: m.gerente.col_caixa },
-          ]}
-          rows={vendas.map((v) => ({
-            data: v.data ? new Date(v.data).toISOString() : '',
-            total_liquido: Number(v.total_liquido),
-            forma_pagamento: labelFormaPagamentoVenda(v.forma_pagamento, m),
-            status: labelStatusVenda(v.status, m),
-            caixa_id: v.caixa_id ?? '',
-          }))}
+      {/* Period chips */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {PERIODOS.map((p) => (
+          <PeriodoChip key={p.key} active={periodo === p.key} onClick={() => setPeriodo(p.key)}>
+            {p.label}
+          </PeriodoChip>
+        ))}
+      </div>
+
+      {/* Secondary filters + Export */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={statusSel}
+            onChange={(e) => setStatusSel(e.target.value)}
+            className="h-8 w-[160px] rounded-lg border border-jl-border-1 bg-jl-surface-base px-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+          >
+            <option value="">Todos os status</option>
+            <option value="CONCLUIDA">{labelStatusVenda('CONCLUIDA', m)}</option>
+            <option value="CANCELADA">{labelStatusVenda('CANCELADA', m)}</option>
+          </select>
+          <select
+            value={pagamentoSel}
+            onChange={(e) => setPagamentoSel(e.target.value)}
+            className="h-8 w-[180px] rounded-lg border border-jl-border-1 bg-jl-surface-base px-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+          >
+            <option value="">Todos os pagamentos</option>
+            {FORMAS_PAGAMENTO.map((fp) => (
+              <option key={fp.value} value={fp.value}>
+                {fp.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleExportCsv()}
+          disabled={exporting}
+          className={cn(
+            'gerente-btn-csv inline-flex h-8 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors app-btn-neutral',
+            exporting && 'cursor-not-allowed opacity-60',
+          )}
+        >
+          {exporting ? 'Exportando…' : m.gerente.exportar_csv}
+        </button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          label="Faturado no período"
+          value={fmtGerenteBRL(kpis?.faturado ?? 0, locale)}
+          accent="neutral"
+          loading={kpisLoading}
+        />
+        <KpiCard
+          label="Vendas concluídas"
+          value={String(kpis?.qtdConcluidas ?? 0)}
+          accent="green"
+          active={statusSel === 'CONCLUIDA'}
+          onClick={() => toggleStatusFromKpi('CONCLUIDA')}
+          loading={kpisLoading}
+        />
+        <KpiCard
+          label="Ticket médio"
+          value={fmtGerenteBRL(kpis?.ticketMedio ?? 0, locale)}
+          accent="neutral"
+          loading={kpisLoading}
+        />
+        <KpiCard
+          label={`Canceladas${kpis && kpis.valorCanceladas > 0 ? ` · ${fmtGerenteBRL(kpis.valorCanceladas, locale)}` : ''}`}
+          value={String(kpis?.qtdCanceladas ?? 0)}
+          accent="red"
+          active={statusSel === 'CANCELADA'}
+          onClick={() => toggleStatusFromKpi('CANCELADA')}
+          loading={kpisLoading}
         />
       </div>
 
       <GerenteTable
         tone="dragon"
+        compact
         columns={[
-          { key: 'data', header: m.gerente.col_data },
-          { key: 'total', header: m.gerente.col_total },
-          { key: 'forma', header: m.gerente.col_forma },
-          { key: 'status', header: m.gerente.col_status },
-          { key: 'caixa', header: m.gerente.col_caixa },
-          { key: 'detalhes', header: m.gerente.col_detalhes },
-          { key: 'acoes', header: m.gerente.col_acoes },
+          { key: 'data',   header: m.gerente.col_data },
+          { key: 'total',  header: m.gerente.col_total,  numeric: true,  priority: 'primary'     },
+          { key: 'itens',  header: 'Itens',              numeric: true                             },
+          { key: 'forma',  header: m.gerente.col_forma },
+          { key: 'status', header: m.gerente.col_status, align: 'center'                           },
+          { key: 'caixa',  header: m.gerente.col_caixa,  priority: 'contextual'                    },
+          { key: 'acoes',  header: m.gerente.col_acoes,  align: 'right',  width: 48, priority: 'contextual' },
         ]}
       >
-        {vendas.map((v) => (
-          <tr key={v.id} className="gerente-fin-row-hover transition-colors">
-            <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 tabular-nums">
-              {fmtGerenteDateTime(v.data, locale)}
+        {grupos.flatMap((g) => [
+          <tr key={`hdr-${g.chave}`} className="border-y border-jl-border-1 bg-jl-surface-elev/50">
+            <td colSpan={7} className="px-3 py-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="font-semibold uppercase tracking-wide text-amber-300/90">
+                  {g.label}
+                </span>
+                <span className="text-jl-fg-3">·</span>
+                <span className="text-jl-fg-3">
+                  {g.qtdConcluidas} {g.qtdConcluidas === 1 ? 'venda concluída' : 'vendas concluídas'}
+                </span>
+                <span className="text-jl-fg-3">·</span>
+                <span className="font-semibold tabular-nums text-jl-fg-1">
+                  {fmtGerenteBRL(g.totalDia, locale)}
+                </span>
+                {g.vendas.length > g.qtdConcluidas && (
+                  <>
+                    <span className="text-jl-fg-3">·</span>
+                    <span className="text-red-400/70">
+                      {g.vendas.length - g.qtdConcluidas} canceladas
+                    </span>
+                  </>
+                )}
+              </div>
             </td>
-            <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 font-medium tabular-nums">
-              {fmtGerenteBRL(Number(v.total_liquido), locale)}
-            </td>
-            <td className="gerente-fin-cell px-3 py-3">
-              {labelFormaPagamentoVenda(v.forma_pagamento, m)}
-            </td>
-            <td className="px-3 py-3">
-              <span className={statusBadgeClasses(v.status ?? '')}>
-                {labelStatusVenda(v.status, m)}
-              </span>
-            </td>
-            <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">
-              {fmtGerenteIdCurto(v.caixa_id ?? undefined)}
-            </td>
-            <td className="px-3 py-3">
-              <Link
-                href={`/gerente/vendas/${v.id}`}
-                className="gerente-section-accent text-sm font-medium hover:underline"
-              >
-                {m.gerente.ver_detalhes}
-              </Link>
-            </td>
-            <td className="min-w-[min(100%,280px)] max-w-[360px] px-3 py-3">
-              {v.status !== 'CANCELADA' ? (
-                <form
-                  action={cancelarVendaGerenteAction}
-                  className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch"
+          </tr>,
+          ...g.vendas.map((v) => (
+            <tr key={v.id} className="gerente-fin-row-hover transition-colors">
+              <td className="gerente-fin-cell whitespace-nowrap px-3 py-2 tabular-nums text-sm">
+                {fmtGerenteDateTime(v.data, locale)}
+              </td>
+              <td className="gerente-fin-cell whitespace-nowrap px-3 py-2 text-right tabular-nums font-semibold text-sm">
+                {fmtGerenteBRL(Number(v.total_liquido), locale)}
+              </td>
+              <td className="gerente-fin-cell max-w-[220px] px-3 py-2">
+                <span
+                  className="block truncate text-sm text-jl-fg-1"
+                  title={v.primeiro_produto ?? undefined}
                 >
-                  <input type="hidden" name="venda_id" value={v.id} />
-                  <input
-                    name="motivo"
-                    placeholder={m.gerente.venda_motivo_cancel_placeholder}
-                    required
-                    minLength={2}
-                    maxLength={500}
-                    className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm shadow-inner app-input"
+                  {formatPreviewItens(v)}
+                </span>
+                {v.qtd_itens_distintos > 0 && (
+                  <span className="text-[10px] text-jl-fg-3 tabular-nums">
+                    {v.qtd_itens_total} {v.qtd_itens_total === 1 ? 'unid' : 'unids'} ·{' '}
+                    {v.qtd_itens_distintos} {v.qtd_itens_distintos === 1 ? 'item' : 'itens'}
+                  </span>
+                )}
+              </td>
+              <td className="gerente-fin-cell px-3 py-2 text-sm">
+                {labelFormaPagamentoVenda(v.forma_pagamento, m)}
+              </td>
+              <td className="px-3 py-2 text-center">
+                <span className={statusBadgeClasses(v.status ?? '')}>
+                  {labelStatusVenda(v.status, m)}
+                </span>
+              </td>
+              <td className="gerente-fin-cell px-3 py-2 font-mono text-xs text-jl-fg-3">
+                {fmtGerenteIdCurto(v.caixa_id ?? undefined)}
+              </td>
+              <td className="px-3 py-2 text-right">
+                <div className="gerente-row-actions inline-flex justify-end">
+                  <VendaActionsMenu
+                    vendaId={v.id}
+                    isCancelada={v.status === 'CANCELADA'}
+                    labels={{
+                      abrirDetalhes: m.gerente.ver_detalhes,
+                      imprimirCupom: 'Imprimir cupom',
+                      cancelarVenda: m.comum.cancelar,
+                      acoesAria: m.gerente.col_acoes,
+                    }}
+                    onCancelar={() => setVendaCancelar(v)}
                   />
-                  <ConfirmActionButton
-                    type="submit"
-                    confirmMessage={`Confirma o cancelamento da venda ${fmtGerenteIdCurto(v.id)}? Esta ação não pode ser desfeita.`}
-                    className="gerente-btn-cancel app-btn-danger shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
-                  >
-                    {m.comum.cancelar}
-                  </ConfirmActionButton>
-                </form>
-              ) : (
-                <span className="gerente-fin-empty text-sm">{m.gerente.venda_ja_cancelada}</span>
-              )}
-            </td>
-          </tr>
-        ))}
-        {vendas.length === 0 && (
+                </div>
+              </td>
+            </tr>
+          )),
+        ])}
+        {!loading && vendas.length === 0 && (
           <tr>
             <td colSpan={7} className="gerente-fin-empty px-4 py-8 text-center">
               {m.gerente.nenhuma_venda}
@@ -174,6 +559,22 @@ export function VendasGerenteListClient({ idioma, locale, initialVendas, initial
       {loading && (
         <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
       )}
+
+      <VendaCancelarModal
+        venda={vendaCancelar}
+        locale={locale}
+        m={m}
+        onClose={() => setVendaCancelar(null)}
+        onCancelado={() => {
+          // Atualiza a linha localmente sem refetch completo da página
+          setVendas((prev) =>
+            prev.map((v) =>
+              vendaCancelar && v.id === vendaCancelar.id ? { ...v, status: 'CANCELADA' } : v,
+            ),
+          )
+          void refetchKpis()
+        }}
+      />
     </>
   )
 }

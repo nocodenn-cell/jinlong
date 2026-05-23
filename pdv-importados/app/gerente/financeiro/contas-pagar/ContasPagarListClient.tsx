@@ -267,7 +267,7 @@ export function ContasPagarListClient({
             {kpis.qtdAtrasados} {m.contas_pagar.atrasadas}
           </div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-4">
+        <div className="dragon-glass-card rounded-xl p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.contas_pagar.kpi_filtrado}
           </div>
@@ -278,7 +278,7 @@ export function ContasPagarListClient({
             {m.contas_pagar.contas_carregadas}
           </div>
         </div>
-        <div className="dragon-glass-card flex flex-col items-start justify-between rounded-xl border p-4">
+        <div className="dragon-glass-card flex flex-col items-start justify-between rounded-xl p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.contas_pagar.acoes_rapidas}
           </div>
@@ -289,7 +289,7 @@ export function ContasPagarListClient({
       </div>
 
       {/* Filtros */}
-      <div className="dragon-glass-card mb-4 flex flex-wrap items-center gap-2 rounded-xl border p-3">
+      <div className="dragon-glass-card mb-4 flex flex-wrap items-center gap-2 rounded-xl p-3">
         <div className="relative min-w-[240px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
           <input
@@ -368,13 +368,14 @@ export function ContasPagarListClient({
 
       <GerenteTable
         tone="dragon"
+        compact
         columns={[
-          { key: 'fornecedor', header: m.contas_pagar.col_fornecedor },
-          { key: 'descricao', header: m.contas_pagar.col_descricao },
-          { key: 'venc', header: m.contas_pagar.col_vencimento, width: 140 },
-          { key: 'valor', header: m.contas_pagar.col_valor, width: 200 },
-          { key: 'status', header: m.contas_pagar.col_status, width: 110 },
-          { key: 'acoes', header: <span className="sr-only">{m.contas_pagar.col_acoes}</span>, width: 150 },
+          { key: 'fornecedor', header: m.contas_pagar.col_fornecedor, priority: 'primary'     },
+          { key: 'descricao',  header: m.contas_pagar.col_descricao                            },
+          { key: 'venc',       header: m.contas_pagar.col_vencimento, width: 140               },
+          { key: 'valor',      header: m.contas_pagar.col_valor,      width: 200, numeric: true, priority: 'primary' },
+          { key: 'status',     header: m.contas_pagar.col_status,     width: 110, align: 'center'                     },
+          { key: 'acoes',      header: <span className="sr-only">{m.contas_pagar.col_acoes}</span>, width: 150, align: 'right', priority: 'contextual' },
         ]}
       >
         {contas.map((c) => {
@@ -393,10 +394,10 @@ export function ContasPagarListClient({
 
           return (
             <tr key={c.id} className="gerente-fin-row-hover transition-colors">
-              <td className="gerente-fin-cell px-3 py-3">
+              <td className="gerente-fin-cell px-3 py-2">
                 <strong className="text-jl-fg-1">{c.fornecedor_nome ?? '—'}</strong>
               </td>
-              <td className="px-3 py-3">
+              <td className="px-3 py-2">
                 <div className="font-medium text-jl-fg-1">{c.descricao}</div>
                 <div className="mt-0.5 text-[11px] text-jl-fg-3">
                   {m.contas_pagar.lancado_em} {fmtGerenteDateTime(c.criado_em, locale)}
@@ -412,7 +413,7 @@ export function ContasPagarListClient({
                   </Link>
                 )}
               </td>
-              <td className={cn('gerente-fin-cell px-3 py-3 tabular-nums', vencCls)}>
+              <td className={cn('gerente-fin-cell px-3 py-2 tabular-nums', vencCls)}>
                 {fmtDate(c.vencimento, locale)}
                 {podePagar && (
                   <div className="mt-0.5 text-[10px] uppercase tracking-[0.10em] opacity-85">
@@ -420,7 +421,7 @@ export function ContasPagarListClient({
                   </div>
                 )}
               </td>
-              <td className="px-3 py-3">
+              <td className="px-3 py-2">
                 <div className="text-right text-sm font-bold tabular-nums text-jl-fg-1">
                   {fmtGerenteBRL(c.valor_total, locale)}
                 </div>
@@ -450,13 +451,13 @@ export function ContasPagarListClient({
                   </>
                 )}
               </td>
-              <td className="px-3 py-3">
+              <td className="px-3 py-2 text-center">
                 <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold', statusClass(c.status))}>
                   {m.contas_pagar[`status_${c.status.toLowerCase()}` as keyof typeof m.contas_pagar] as string ?? c.status}
                 </span>
               </td>
-              <td className="px-3 py-3">
-                <div className="flex items-center justify-end gap-2">
+              <td className="px-3 py-2 text-right">
+                <div className="gerente-row-actions flex items-center justify-end gap-2">
                   {podePagar && (
                     <button
                       type="button"

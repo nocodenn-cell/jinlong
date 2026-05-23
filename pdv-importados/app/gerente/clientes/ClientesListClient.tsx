@@ -186,12 +186,13 @@ export function ClientesListClient({
 
       <GerenteTable
         tone="dragon"
+        compact
         columns={[
-          { key: 'cliente', header: m.clientes.col_cliente },
-          { key: 'doc', header: m.clientes.col_documento },
-          { key: 'tel', header: m.clientes.col_telefone },
-          { key: 'saldo', header: m.clientes.col_saldo, width: 220 },
-          { key: 'acoes', header: <span className="sr-only">{m.clientes.col_acoes}</span>, width: 90 },
+          { key: 'cliente', header: m.clientes.col_cliente,   priority: 'primary'    },
+          { key: 'doc',     header: m.clientes.col_documento,  priority: 'contextual' },
+          { key: 'tel',     header: m.clientes.col_telefone                           },
+          { key: 'saldo',   header: m.clientes.col_saldo,     width: 220, numeric: true, priority: 'primary' },
+          { key: 'acoes',   header: <span className="sr-only">{m.clientes.col_acoes}</span>, width: 90, align: 'right', priority: 'contextual' },
         ]}
       >
         {clientes.map((c) => {
@@ -203,7 +204,7 @@ export function ClientesListClient({
           return (
             <tr key={c.id} className="gerente-fin-row-hover transition-colors">
               {/* Nome + tipo + e-mail */}
-              <td className="px-3 py-3">
+              <td className="px-3 py-2">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-700 text-xs font-bold text-slate-900">
                     {initials(c.nome)}
@@ -228,11 +229,11 @@ export function ClientesListClient({
                 </div>
               </td>
 
-              <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{maskDoc(c.documento)}</td>
-              <td className="gerente-fin-cell px-3 py-3 tabular-nums">{maskTel(c.telefone)}</td>
+              <td className="gerente-fin-cell px-3 py-2 font-mono text-xs">{maskDoc(c.documento)}</td>
+              <td className="gerente-fin-cell px-3 py-2 tabular-nums">{maskTel(c.telefone)}</td>
 
               {/* Saldo crediário */}
-              <td className="gerente-fin-cell px-3 py-3">
+              <td className="gerente-fin-cell px-3 py-2">
                 <div className="flex items-baseline justify-between gap-2.5">
                   <span
                     className={`font-semibold tabular-nums ${
@@ -269,8 +270,8 @@ export function ClientesListClient({
               </td>
 
               {/* Ações */}
-              <td className="px-3 py-3">
-                <div className="flex items-center justify-end gap-1">
+              <td className="px-3 py-2 text-right">
+                <div className="gerente-row-actions flex items-center justify-end gap-1">
                   <button
                     type="button"
                     className="app-btn-neutral inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors"
