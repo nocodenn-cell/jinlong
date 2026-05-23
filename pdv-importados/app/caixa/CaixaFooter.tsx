@@ -73,7 +73,6 @@ export const CaixaFooter = memo(function CaixaFooter({
   maxDescontoGerentePercentual,
   totalBruto,
   totalDesconto,
-  economiaPrecoAtacadoAuto,
   valorDescontoGerente,
   totalLiquidoComGerente,
   moedaPrefixo,
