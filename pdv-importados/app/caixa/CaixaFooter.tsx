@@ -117,42 +117,24 @@ export const CaixaFooter = memo(function CaixaFooter({
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-end justify-start gap-4 sm:gap-6 md:justify-end">
-            <div className="text-left text-xs font-semibold uppercase tracking-wide text-primary-foreground/85 md:hidden w-full">
-              {m.caixa.bloco_resumo_financeiro}
-            </div>
-            <div className="text-right text-sm text-primary-foreground/90">
-              <div>{m.caixa.bruto}</div>
-              <div className="text-lg font-semibold tabular-nums text-white">
+          {totalDesconto > 0.005 && (
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 tabular-nums text-sm">
+              <span className="text-primary-foreground/80">
                 {moedaPrefixo} {fmt(totalBruto)}
-              </div>
-            </div>
-            <div className="text-right text-sm text-primary-foreground/90">
-              <div>{m.caixa.descontos_regras}</div>
-              <div className="text-lg font-bold tabular-nums text-white">
-                - {moedaPrefixo} {fmt(totalDesconto)}
-              </div>
-              {economiaPrecoAtacadoAuto > 0.005 && (
-                <div className="text-xs font-normal text-primary-foreground/75 mt-0.5 max-w-[14rem] ml-auto">
-                  {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
-                    valor: fmt(economiaPrecoAtacadoAuto),
-                  })}
-                </div>
+              </span>
+              <span className="font-semibold text-white">
+                -{moedaPrefixo} {fmt(totalDesconto)}
+              </span>
+              {descontoGerentePercentual > 0 && (
+                <span className="font-semibold text-white">
+                  -{moedaPrefixo} {fmt(valorDescontoGerente)}
+                  <span className="ml-1 text-[10px] opacity-70">
+                    ({descontoGerentePercentual.toFixed(0)}%)
+                  </span>
+                </span>
               )}
             </div>
-            {descontoGerentePercentual > 0 && (
-              <div className="text-right text-sm text-primary-foreground/90">
-                <div>
-                  {caixaFmt(m.caixa.desconto_gerente_label, {
-                    pct: descontoGerentePercentual.toFixed(2),
-                  })}
-                </div>
-                <div className="text-lg font-bold tabular-nums text-white">
-                  - {moedaPrefixo} {fmt(valorDescontoGerente)}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </footer>
     )
@@ -225,67 +207,45 @@ export const CaixaFooter = memo(function CaixaFooter({
           )}
         </div>
 
-        <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-6 md:gap-8">
-          <div className="w-full text-right text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
-            {m.caixa.bloco_resumo_financeiro}
-          </div>
-          <div className="text-right text-sm text-jl-fg-2">
-            <div>{m.caixa.bruto}</div>
-            <div className="text-lg font-semibold tabular-nums text-jl-fg-1">
-              {moedaPrefixo} {fmt(totalBruto)}
-            </div>
-          </div>
-          <div className="text-right text-sm text-amber-400">
-            <div>{m.caixa.descontos_regras}</div>
-            <div className="text-lg font-bold tabular-nums">
-              - {moedaPrefixo} {fmt(totalDesconto)}
-            </div>
-            {economiaPrecoAtacadoAuto > 0.005 && (
-              <div className="text-xs font-normal text-jl-fg-3 mt-0.5 max-w-[14rem] ml-auto">
-                {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
-                  valor: fmt(economiaPrecoAtacadoAuto),
-                })}
-              </div>
-            )}
-          </div>
-          {descontoGerentePercentual > 0 && (
-            <div className="text-right text-sm text-amber-400">
-              <div>
-                {caixaFmt(m.caixa.desconto_gerente_label, {
-                  pct: descontoGerentePercentual.toFixed(2),
-                })}
-              </div>
-              <div className="text-lg font-bold tabular-nums">
-                - {moedaPrefixo} {fmt(valorDescontoGerente)}
-              </div>
+        <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
+          {/* Resumo financeiro compacto — só aparece quando há desconto */}
+          {totalDesconto > 0.005 && (
+            <div className="flex items-center gap-3 text-sm tabular-nums text-jl-fg-3">
+              <span>{moedaPrefixo} {fmt(totalBruto)}</span>
+              <span className="text-amber-400/90 font-medium">
+                -{moedaPrefixo} {fmt(totalDesconto)}
+              </span>
+              {descontoGerentePercentual > 0 && (
+                <span className="text-amber-400/90 font-medium">
+                  -{moedaPrefixo} {fmt(valorDescontoGerente)}
+                  <span className="ml-1 text-[10px] opacity-70">
+                    ({descontoGerentePercentual.toFixed(0)}%)
+                  </span>
+                </span>
+              )}
             </div>
           )}
           {metodoPagamentoPanel ? (
             <div className="w-full min-w-[12rem] max-w-md">{metodoPagamentoPanel}</div>
           ) : null}
-          <div className="text-right min-w-[7rem]">
-            <div className="text-sm font-medium text-jl-fg-2">{m.caixa.total_pagar}</div>
-            <div
-              data-testid="caixa-total-liquido"
-              data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-2xl sm:text-3xl font-extrabold tabular-nums text-amber-400"
-            >
-              {moedaPrefixo} {fmt(totalLiquidoComGerente)}
-            </div>
+          <div
+            data-testid="caixa-total-liquido"
+            data-total-liquido={totalLiquidoComGerente.toFixed(2)}
+            className="text-2xl sm:text-3xl font-extrabold tabular-nums text-amber-400 leading-none"
+          >
+            {moedaPrefixo} {fmt(totalLiquidoComGerente)}
           </div>
-          <div className="pl-1">
-            <Button
-              type="button"
-              className="app-btn-accent h-11 min-w-[11rem] text-base font-bold"
-              onClick={onFinalizar}
-              disabled={
-                finalizando || itensLength === 0 || buscando || carregandoRegras
-              }
-              aria-busy={finalizando}
-            >
-              {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            className="app-btn-accent h-11 min-w-[11rem] text-base font-bold"
+            onClick={onFinalizar}
+            disabled={
+              finalizando || itensLength === 0 || buscando || carregandoRegras
+            }
+            aria-busy={finalizando}
+          >
+            {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
+          </Button>
         </div>
       </div>
     </footer>

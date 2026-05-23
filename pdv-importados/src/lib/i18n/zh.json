@@ -718,7 +718,7 @@
     "pdv_metodo_pagamento_credito": "信用卡",
     "pdv_pgto_soma_parcelas": "各笔合计",
     "cart_empty_sem_pedido": "暂无订单",
-    "cart_bar_excluir_venda": "删除销售",
+    "cart_bar_excluir_venda": "删除",
     "cart_bar_excluir_aria": "删除销售 — 清空当前小票",
     "cart_bar_excluir_title": "清空当前小票，不结算（快捷键：F8 新小票）。",
     "cart_bar_total_label": "合计",

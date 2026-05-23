@@ -678,7 +678,7 @@
     "pdv_metodo_pagamento_debito": "Débito",
     "pdv_metodo_pagamento_credito": "Crédito",
     "cart_empty_sem_pedido": "Nenhum pedido cadastrado",
-    "cart_bar_excluir_venda": "Excluir venda",
+    "cart_bar_excluir_venda": "Excluir",
     "cart_bar_excluir_aria": "Excluir venda — limpa o cupom atual",
     "cart_bar_excluir_title": "Limpa o cupom sem finalizar (atalho: F8 Novo cupom).",
     "cart_bar_total_label": "Total",

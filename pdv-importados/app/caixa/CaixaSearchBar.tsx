@@ -63,6 +63,7 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
   // Estado local isolado: re-renderiza apenas este componente a cada bipe/tecla,
   // nunca o CaixaPageClient pai (carrinho + totais permanecem intocados).
   const [codigoLocal, setCodigoLocal] = useState("")
+  const [atalhoExpandido, setAtalhoExpandido] = useState(false)
   const compact = codigoLocal.trim().length > 0
 
   const innerRef = useRef<HTMLInputElement>(null)
@@ -169,19 +170,31 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
         </div>
       </form>
       {categoriasAtalho.length > 0 && !compact ? (
-        <div className="flex flex-wrap gap-2">
-          {categoriasAtalho.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              disabled={buscando || carregandoRegras}
-              onClick={() => setCodigoLocal(c.nome)}
-              title={c.nome}
-              className="min-h-9 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-1 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jl-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
-            >
-              {c.nome}
-            </button>
-          ))}
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={() => setAtalhoExpandido((v) => !v)}
+            className="flex items-center gap-1 text-[11px] text-jl-fg-3 hover:text-jl-fg-1 transition-colors"
+          >
+            <span>{atalhoExpandido ? "▾" : "▸"}</span>
+            <span>{m.caixa.atalhos_categoria}</span>
+          </button>
+          {atalhoExpandido && (
+            <div className="flex flex-wrap gap-1.5">
+              {categoriasAtalho.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={buscando || carregandoRegras}
+                  onClick={() => { setCodigoLocal(c.nome); setAtalhoExpandido(false) }}
+                  title={c.nome}
+                  className="min-h-8 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-0.5 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jl-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                >
+                  {c.nome}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
     </div>
