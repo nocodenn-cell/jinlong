@@ -19,12 +19,6 @@ export type ProdutoCaixaDTO = {
   estoque_minimo: number | null
 }
 
-export type CategoriaAtalhoDTO = { id: string; nome: string }
-
-export type ListarCategoriasCaixaResult =
-  | { ok: true; categorias: CategoriaAtalhoDTO[] }
-  | { ok: false; error: string }
-
 export type CotacaoUsdBrlResult =
   | { ok: true; brlPorUsd: number; fonte: 'api' | 'fallback'; dataReferencia: string }
   | { ok: false }

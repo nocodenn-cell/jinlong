@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import {
   carregarRegrasPrecoCaixa,
-  listarCategoriasAtalhoCaixa,
+
   obterLimiteSangriaSemGerente,
   obterConfiguracoesParaCaixaWeb,
 } from "@/app/caixa/actions"
@@ -12,7 +12,6 @@ type Params = {
   setRegras: (regras: unknown[]) => void
   setCaixaMensagem: (mensagem: string | null) => void
   setLimiteSangriaSemGerente: (value: number) => void
-  setCategoriasAtalho: (value: { id: string; nome: string }[]) => void
   setConfigCaixaWeb: (value: Record<string, string>) => void
 }
 
@@ -22,7 +21,6 @@ export function useCaixaBootstrapData({
   setRegras,
   setCaixaMensagem,
   setLimiteSangriaSemGerente,
-  setCategoriasAtalho,
   setConfigCaixaWeb,
 }: Params) {
   useEffect(() => {
@@ -70,15 +68,4 @@ export function useCaixaBootstrapData({
     }
   }, [setConfigCaixaWeb])
 
-  useEffect(() => {
-    let cancelado = false
-    ;(async () => {
-      const res = await listarCategoriasAtalhoCaixa()
-      if (cancelado) return
-      if (res.ok) setCategoriasAtalho(res.categorias)
-    })()
-    return () => {
-      cancelado = true
-    }
-  }, [setCategoriasAtalho])
 }

@@ -129,7 +129,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     useState<number>(0)
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
-  const [categoriasAtalho, setCategoriasAtalho] = useState<{ id: string; nome: string }[]>([])
   const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
@@ -334,7 +333,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     setRegras,
     setCaixaMensagem,
     setLimiteSangriaSemGerente,
-    setCategoriasAtalho,
     setConfigCaixaWeb,
   })
 
@@ -923,7 +921,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                           onNovoCupom={handleNovoCupom}
                           buscando={buscandoPipeline}
                           carregandoRegras={carregandoRegras}
-                          categoriasAtalho={categoriasAtalho}
+
                           somAtivo={somFeedbackAtivo}
                           onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
                           hideNovoCupom
@@ -946,7 +944,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                         onNovoCupom={handleNovoCupom}
                         buscando={buscandoPipeline}
                         carregandoRegras={carregandoRegras}
-                        categoriasAtalho={categoriasAtalho}
                         somAtivo={somFeedbackAtivo}
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
                       />

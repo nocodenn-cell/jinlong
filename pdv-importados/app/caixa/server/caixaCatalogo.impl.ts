@@ -7,7 +7,6 @@ import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/men
 import type {
   BuscarProdutoResult,
   CarregarRegrasResult,
-  ListarCategoriasCaixaResult,
 } from '@/app/caixa/caixaActionTypes'
 import {
   estoqueResumoParaCaixa,
@@ -157,31 +156,6 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.'),
-    }
-  }
-}
-
-export async function listarCategoriasAtalhoCaixaImpl(): Promise<ListarCategoriasCaixaResult> {
-  try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
-
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('id, nome')
-      .order('nome', { ascending: true })
-      .limit(14)
-
-    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
-    const categorias = (data ?? []).map((r) => ({ id: r.id, nome: r.nome }))
-    return { ok: true, categorias }
-  } catch (e) {
-    return {
-      ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível carregar categorias.'),
     }
   }
 }

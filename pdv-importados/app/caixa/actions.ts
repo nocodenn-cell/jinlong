@@ -14,7 +14,6 @@ import type {
   FinalizarVendaCaixaResult,
   LimiteSangriaResult,
   ConfiguracoesCaixaWebResult,
-  ListarCategoriasCaixaResult,
   ObterMovimentacoesCaixaResult,
   RegistrarMovimentacaoInput,
   RegistrarMovimentacaoResult,
@@ -23,7 +22,7 @@ import type {
 import {
   buscarProdutoParaCaixaImpl,
   carregarRegrasPrecoCaixaImpl,
-  listarCategoriasAtalhoCaixaImpl,
+
 } from '@/app/caixa/server/caixaCatalogo.impl'
 import { calcularPrecoProdutoCaixaImpl } from '@/app/caixa/server/caixaPrecoProduto.impl'
 import { obterCotacaoUsdBrlImpl } from '@/app/caixa/server/caixaCambioServer'
@@ -61,14 +60,12 @@ export type {
   CancelarVendaResult,
   CarregarRegrasResult,
   CaixaStatusOperadorResult,
-  CategoriaAtalhoDTO,
   CotacaoUsdBrlResult,
   FecharCaixaOperadorResult,
   FinalizarVendaCaixaResult,
   FormaMovimentacaoCaixa,
   LimiteSangriaResult,
   ConfiguracoesCaixaWebResult,
-  ListarCategoriasCaixaResult,
   MovimentacaoCaixaDTO,
   ObterMovimentacoesCaixaResult,
   OrigemProdutoCaixa,
@@ -102,11 +99,6 @@ export async function calcularPrecoProdutoCaixa(input: {
   lojaId?: string | null
 }): Promise<CalcularPrecoProdutoCaixaResult> {
   return calcularPrecoProdutoCaixaImpl(input)
-}
-
-/** Categorias para atalhos de busca no campo principal (preenchimento + Enter). */
-export async function listarCategoriasAtalhoCaixa(): Promise<ListarCategoriasCaixaResult> {
-  return listarCategoriasAtalhoCaixaImpl()
 }
 
 /** Referência USD→BRL (Frankfurter); fallback opcional via env. */

@@ -8,8 +8,6 @@ import type { Mensagens } from "@/i18n/getMessages"
 import { DragonOuroLoader } from "@/components/branding/DragonOuroLoader"
 import { cn } from "@/lib/utils"
 
-type CategoriaChip = { id: string; nome: string }
-
 type Props = {
   m: Mensagens
   codigo: string
@@ -18,7 +16,6 @@ type Props = {
   onNovoCupom: () => void
   buscando: boolean
   carregandoRegras: boolean
-  categoriasAtalho?: CategoriaChip[]
   somAtivo: boolean
   onToggleSom: () => void
   /** Quando true, o botão «Novo cupom» não é renderizado (ex.: classic com ação no trilho). */
@@ -36,7 +33,6 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     onNovoCupom,
     buscando,
     carregandoRegras,
-    categoriasAtalho = [],
     somAtivo,
     onToggleSom,
     hideNovoCupom = false,
@@ -160,27 +156,6 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
       </form>
       {!compact ? (
         <p className="text-sm text-jl-fg-2 leading-snug">{m.caixa.busca_dica}</p>
-      ) : null}
-      {categoriasAtalho.length > 0 && !compact ? (
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-jl-fg-2">
-            {m.caixa.atalhos_categoria}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {categoriasAtalho.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                disabled={buscando || carregandoRegras}
-                onClick={() => onCodigoChange(c.nome)}
-                title={c.nome}
-                className="min-h-9 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-1 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jl-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
-              >
-                {c.nome}
-              </button>
-            ))}
-          </div>
-        </div>
       ) : null}
     </div>
   )
