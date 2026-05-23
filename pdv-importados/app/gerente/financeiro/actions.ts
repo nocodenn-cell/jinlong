@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao, mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
+  runServerActionWithObservability,
+} from '@/lib/observability/runServerAction'
+import { actionResultToLegacyData } from '@/lib/observability/actionResultAdapters'
+import {
   validarCriarClienteInput,
   validarCriarTituloInput,
   validarLiquidarTituloInput,
@@ -56,28 +60,31 @@ export async function criarTituloReceber(input: {
   if (erro) return { success: false, error: erro }
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('contas_receber')
-    .insert({
-      cliente_id: input.cliente_id,
-      valor_total: input.valor_total,
-      valor_aberto: input.valor_total,
-      descricao: input.descricao?.trim() || null,
-      vencimento: input.vencimento?.trim() || null,
-      status: 'ABERTO',
-    })
-    .select('id')
-    .single()
-  if (error || !data) {
-    return {
-      success: false,
-      error: error
-        ? mensagemErroComSecao('Conta a receber', error.message)
-        : 'Não foi possível criar o título. Tente de novo.',
-    }
-  }
-  revalidatePath('/gerente/financeiro')
-  return { success: true, data: data.id as string }
+  return actionResultToLegacyData(
+    await runServerActionWithObservability('gerente/financeiro/criar-titulo', async () => {
+      const { data, error } = await supabase
+        .from('contas_receber')
+        .insert({
+          cliente_id: input.cliente_id,
+          valor_total: input.valor_total,
+          valor_aberto: input.valor_total,
+          descricao: input.descricao?.trim() || null,
+          vencimento: input.vencimento?.trim() || null,
+          status: 'ABERTO',
+        })
+        .select('id')
+        .single()
+      if (error || !data) {
+        throw new Error(
+          error
+            ? mensagemErroComSecao('Conta a receber', error.message)
+            : 'Não foi possível criar o título. Tente de novo.',
+        )
+      }
+      revalidatePath('/gerente/financeiro')
+      return data.id as string
+    }),
+  )
 }
 
 export async function liquidarTitulo(input: {

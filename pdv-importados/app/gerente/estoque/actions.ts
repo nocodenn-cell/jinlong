@@ -248,3 +248,41 @@ export async function garantirLinhaEstoqueThrow(input: unknown): Promise<void> {
   const r = await garantirLinhaEstoque(input)
   if (!r.success) throw new Error(r.error)
 }
+
+export type EstoqueKpisDTO = Readonly<{
+  total_geral: number
+  total_critico: number
+  total_zerado: number
+}>
+
+export async function obterKpisEstoque(): Promise<EstoqueKpisDTO> {
+  const supabase = await createClient()
+  const lojaId = await lojaIdResolvidaGestao()
+
+  const base = {
+    visao: 'geral' as const,
+    busca: '',
+    categoria_id: null,
+    origem: '',
+    ordem: 'nome' as const,
+    dir_asc: true,
+    limite: 1,
+    offset: 0,
+  }
+
+  const [geralRes, criticoRes, zeradoRes] = await Promise.all([
+    obterListaEstoqueGerente(base),
+    obterListaEstoqueGerente({ ...base, visao: 'critico' }),
+    supabase
+      .from('estoque')
+      .select('id', { count: 'exact', head: true })
+      .eq('loja_id', lojaId)
+      .eq('quantidade_atual', 0),
+  ])
+
+  return {
+    total_geral: geralRes.total,
+    total_critico: criticoRes.total,
+    total_zerado: zeradoRes.count ?? 0,
+  }
+}

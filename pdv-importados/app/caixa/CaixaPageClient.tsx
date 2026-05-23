@@ -717,7 +717,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         setCaixaMensagem(res.error, { kind: "error" })
         tocarFeedback("erro")
       }
-    } catch {
+    } catch (e) {
+      console.error('[caixa/finalizar-venda]', {
+        idempotencyKey: vendaIdempotenciaRef.current,
+        error: e instanceof Error ? e.message : String(e),
+      })
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
       tocarFeedback("erro")
     } finally {
