@@ -31,8 +31,6 @@ type Props = {
   buscando: boolean
   carregandoRegras: boolean
   categoriasAtalho?: CategoriaChip[]
-  somAtivo?: boolean
-  onToggleSom?: () => void
   /** Quando true, o botão «Novo cupom» não é renderizado (ex.: classic com ação no trilho). */
   hideNovoCupom?: boolean
   /**
@@ -52,8 +50,6 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
     buscando,
     carregandoRegras,
     categoriasAtalho = [],
-    somAtivo,
-    onToggleSom,
     hideNovoCupom = false,
     onHasText,
     hasError = false,

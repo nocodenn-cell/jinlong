@@ -875,8 +875,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                           buscando={buscandoPipeline}
                           carregandoRegras={carregandoRegras}
                           categoriasAtalho={categoriasAtalho}
-                          somAtivo={somFeedbackAtivo}
-                          onToggleSom={handleToggleSom}
                           hideNovoCupom
                           onHasText={setDenseStaging}
                           hasError={inputHasError}
@@ -901,8 +899,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
                         buscando={buscandoPipeline}
                         carregandoRegras={carregandoRegras}
                         categoriasAtalho={categoriasAtalho}
-                        somAtivo={somFeedbackAtivo}
-                        onToggleSom={handleToggleSom}
                         hasError={inputHasError}
                       />
                       <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
