@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
@@ -427,6 +428,15 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                   ))
                 )}
               </GerenteTable>
+            </div>
+            <div className="mt-3 border-t border-jl-border-1 pt-3">
+              <Link
+                href="/gerente/relatorios/estoque"
+                className="inline-flex items-center gap-1.5 text-xs text-jl-fg-3 transition-colors hover:text-jl-fg-1"
+              >
+                <span>{m.relatorios_estoque.link_ver_relatorio}</span>
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
             </div>
           </section>
         </>

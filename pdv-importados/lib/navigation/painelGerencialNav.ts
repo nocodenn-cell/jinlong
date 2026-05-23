@@ -24,6 +24,7 @@ export type PainelGerencialNavKey =
   | 'caixas'
   | 'relatorios'
   | 'relatorios_vendas'
+  | 'compras'
 
 export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'home') return '/gerente'
@@ -35,6 +36,7 @@ export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'categorias_financeiras') return '/gerente/categorias-financeiras'
   if (key === 'contas_pagar') return '/gerente/financeiro/contas-pagar'
   if (key === 'relatorios_vendas') return '/gerente/relatorios/vendas'
+  if (key === 'compras') return '/gerente/compras'
   return `/gerente/${key}`
 }
 
@@ -86,6 +88,8 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
       return m.gerente.nav_relatorios
     case 'relatorios_vendas':
       return m.relatorios_vendas.titulo
+    case 'compras':
+      return m.compras.titulo
     default: {
       const _exhaustive: never = key
       return _exhaustive
@@ -126,7 +130,7 @@ export type GerenteNavTopic = {
 export const GERENTE_NAV_TOPICS: readonly GerenteNavTopic[] = [
   { id: 'inicio', items: ['home'] },
   { id: 'catalogo', items: ['produtos', 'categorias_produtos', 'clientes'] },
-  { id: 'estoque_logistica', items: ['estoque', 'recebimento', 'transferencias', 'fornecedores'] },
+  { id: 'estoque_logistica', items: ['estoque', 'recebimento', 'compras', 'transferencias', 'fornecedores'] },
   { id: 'vendas_caixa', items: ['vendas', 'caixas'] },
   { id: 'financeiro', items: ['financeiro', 'comissoes', 'categorias_financeiras', 'contas_pagar'] },
   { id: 'analise', items: ['relatorios', 'relatorios_vendas'] },
