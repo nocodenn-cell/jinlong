@@ -127,7 +127,7 @@ function QuantidadeStepper({
   )
 }
 
-export function CaixaCartList({
+export const CaixaCartList = React.memo(function CaixaCartList({
   m,
   idioma,
   itens,
@@ -348,7 +348,7 @@ export function CaixaCartList({
       </ul>
     </>
   )
-}
+})
 
 function MetaPdvBloco({
   item,

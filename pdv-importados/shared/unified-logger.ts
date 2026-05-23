@@ -156,8 +156,13 @@ export class DesktopLogger {
   private log(level: LogEntry['level'], message: string, context?: Record<string, unknown>): void {
     const entry = createLogEntry(level, message, context)
     this.pushToBuffer(entry)
-    writeConsole(entry)
-    this.persistLog(entry)
+    if (process.env.NODE_ENV !== 'production') {
+      writeConsole(entry)
+      this.persistLog(entry)
+    } else if (level === 'error') {
+      // In production, only errors reach the console
+      console.error(`[${entry.timestamp}] ERROR:`, entry.message, entry.context)
+    }
   }
 
   info(message: string, context?: Record<string, unknown>): void {

@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { MetodoPagamentoUi } from "@/app/caixa/caixaMetodoPagamento"
 import { cn } from "@/lib/utils"
@@ -20,7 +21,7 @@ const OPCOES: ReadonlyArray<{ id: MetodoPagamentoUi; labelKey: keyof Mensagens["
   { id: "credito", labelKey: "pdv_metodo_pagamento_credito" },
 ]
 
-export function CaixaPdvMetodoPagamentoSelector({
+export const CaixaPdvMetodoPagamentoSelector = memo(function CaixaPdvMetodoPagamentoSelector({
   m,
   value,
   onChange,
@@ -75,4 +76,4 @@ export function CaixaPdvMetodoPagamentoSelector({
       </div>
     </div>
   )
-}
+})
