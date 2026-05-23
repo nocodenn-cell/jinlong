@@ -114,7 +114,7 @@ export function ProdutosExcluirLoteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="produtos-excluir-lote-titulo"
-        className="dragon-glass-card flex max-h-[90vh] w-full max-w-lg flex-col rounded-none border shadow-xl sm:rounded-lg"
+        className="dragon-elev-2 flex max-h-[90vh] w-full max-w-lg flex-col rounded-none sm:rounded-lg"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">

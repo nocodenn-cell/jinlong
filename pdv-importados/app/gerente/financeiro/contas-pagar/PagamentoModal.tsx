@@ -152,7 +152,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
         role="dialog"
         aria-modal="true"
         aria-labelledby="pg-titulo"
-        className="dragon-glass-card flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-2xl border shadow-2xl sm:rounded-2xl"
+        className="dragon-elev-2 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-2xl sm:rounded-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="border-b border-jl-border-1 px-5 pb-3 pt-5 sm:px-6">

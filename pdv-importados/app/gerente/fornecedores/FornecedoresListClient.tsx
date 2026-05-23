@@ -264,7 +264,7 @@ export function FornecedoresListClient({
         <div
           role="region"
           aria-label={`${selecionados.size} selecionados`}
-          className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-400/45 bg-amber-400/10 px-4 py-3"
+          className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-400/45 bg-amber-400/10 px-4 py-2"
         >
           <span className="text-sm font-medium text-jl-fg-1">
             <strong className="font-bold text-amber-400 tabular-nums">{selecionados.size}</strong>{' '}
@@ -293,6 +293,7 @@ export function FornecedoresListClient({
 
       <GerenteTable
         tone="dragon"
+        compact
         columns={[
           {
             key: 'sel',
@@ -309,12 +310,12 @@ export function FornecedoresListClient({
             ),
             width: 36,
           },
-          { key: 'nome', header: m.fornecedores.col_nome },
-          { key: 'doc', header: m.fornecedores.col_documento },
-          { key: 'tel', header: m.fornecedores.col_telefone },
+          { key: 'nome', header: m.fornecedores.col_nome, priority: 'primary' },
+          { key: 'doc', header: m.fornecedores.col_documento, priority: 'contextual' },
+          { key: 'tel', header: m.fornecedores.col_telefone, priority: 'contextual' },
           { key: 'email', header: m.fornecedores.col_email },
           { key: 'status', header: m.fornecedores.col_status, width: 100 },
-          { key: 'acoes', header: <span className="sr-only">{m.fornecedores.col_acoes}</span>, width: 90 },
+          { key: 'acoes', header: <span className="sr-only">{m.fornecedores.col_acoes}</span>, width: 90, priority: 'contextual' },
         ]}
       >
         {fornecedores.map((f) => (
@@ -325,7 +326,7 @@ export function FornecedoresListClient({
               !f.ativo && 'opacity-60',
             )}
           >
-            <td className="px-3 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
+            <td className="px-3 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 checked={selecionados.has(f.id)}
@@ -334,7 +335,7 @@ export function FornecedoresListClient({
                 className="h-4 w-4 rounded app-border"
               />
             </td>
-            <td className="px-3 py-3">
+            <td className="px-3 py-2">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-700 text-xs font-bold text-slate-900">
                   {initials(f.nome)}
@@ -356,9 +357,9 @@ export function FornecedoresListClient({
                 </div>
               </div>
             </td>
-            <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{maskCNPJ(f.documento)}</td>
-            <td className="gerente-fin-cell px-3 py-3 tabular-nums">{maskTel(f.telefone)}</td>
-            <td className="px-3 py-3">
+            <td className="gerente-fin-cell px-3 py-2 font-mono text-xs">{maskCNPJ(f.documento)}</td>
+            <td className="gerente-fin-cell px-3 py-2 tabular-nums">{maskTel(f.telefone)}</td>
+            <td className="px-3 py-2">
               {f.email ? (
                 <a
                   href={`mailto:${f.email}`}
@@ -372,7 +373,7 @@ export function FornecedoresListClient({
                 <span className="text-jl-fg-3">—</span>
               )}
             </td>
-            <td className="px-3 py-3">
+            <td className="px-3 py-2">
               {f.ativo ? (
                 <span className="app-badge-positive inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
                   {m.fornecedores.status_ativo}
@@ -383,7 +384,7 @@ export function FornecedoresListClient({
                 </span>
               )}
             </td>
-            <td className="px-3 py-3">
+            <td className="px-3 py-2">
               <div className="flex items-center justify-end gap-1">
                 <button
                   type="button"

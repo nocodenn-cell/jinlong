@@ -858,7 +858,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
         />
 
         {/* ─── FORMULÁRIO NOVO PRODUTO ─────────────────────────────── */}
-        <div className="dragon-glass-card rounded-xl border p-4 app-border">
+        <div className="dragon-glass-card rounded-xl p-4">
           <div className="mb-3 flex items-center gap-2">
             <Plus className="h-4 w-4 text-amber-400" aria-hidden />
             <h2 className="text-sm font-semibold app-accent-text">{m.produtos.cadastro_rapido}</h2>

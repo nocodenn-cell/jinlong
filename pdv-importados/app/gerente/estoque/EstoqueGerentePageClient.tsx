@@ -485,6 +485,7 @@ export function EstoqueGerentePageClient({
 
       <GerenteTable
         tone="dragon"
+        compact
         columns={[
           {
             key: 'x',
@@ -500,14 +501,14 @@ export function EstoqueGerentePageClient({
             ),
             width: 40,
           },
-          { key: 'sku', header: m.estoque.col_sku },
-          { key: 'p', header: cabecalhoOrdenavel('nome', m.estoque.col_produto) },
-          { key: 'o', header: m.produtos.origem_label },
-          { key: 'u', header: m.estoque.col_unidade },
-          { key: 'qa', header: cabecalhoOrdenavel('quantidade_atual', m.estoque.col_quantidade_atual) },
-          { key: 'qm', header: cabecalhoOrdenavel('estoque_minimo', m.estoque.col_estoque_minimo) },
-          { key: 'd', header: cabecalhoOrdenavel('deficit', m.estoque.col_deficit) },
-          { key: 'aj', header: m.estoque.col_ajuste },
+          { key: 'sku', header: m.estoque.col_sku, priority: 'contextual' },
+          { key: 'p', header: cabecalhoOrdenavel('nome', m.estoque.col_produto), priority: 'primary' },
+          { key: 'o', header: m.produtos.origem_label, priority: 'contextual' },
+          { key: 'u', header: m.estoque.col_unidade, priority: 'contextual' },
+          { key: 'qa', header: cabecalhoOrdenavel('quantidade_atual', m.estoque.col_quantidade_atual), priority: 'primary', numeric: true },
+          { key: 'qm', header: cabecalhoOrdenavel('estoque_minimo', m.estoque.col_estoque_minimo), numeric: true },
+          { key: 'd', header: cabecalhoOrdenavel('deficit', m.estoque.col_deficit), numeric: true },
+          { key: 'aj', header: m.estoque.col_ajuste, priority: 'contextual' },
         ]}
       >
         {!loading && displayRows.length === 0 ? (

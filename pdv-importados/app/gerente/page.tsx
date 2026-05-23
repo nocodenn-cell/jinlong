@@ -127,7 +127,7 @@ export default async function GerenteInicioPage() {
       {erroResumo && (
         <div
           role="alert"
-          className="mt-6 flex items-start gap-3 rounded-lg border border-jl-border-1 dragon-glass-card p-4 text-sm text-jl-fg-3"
+          className="mt-6 flex items-start gap-3 rounded-lg dragon-glass-card p-4 text-sm text-jl-fg-3"
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-jl-fg-1" aria-hidden />
           <div>

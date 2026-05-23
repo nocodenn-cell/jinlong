@@ -77,7 +77,7 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
         onClick={isPending ? undefined : onClose}
         aria-hidden
       />
-      <div className="dragon-glass-card relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border shadow-2xl app-border">
+      <div className="dragon-elev-2 relative z-10 w-full max-w-lg overflow-hidden rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-3.5">
           <h2 id="cancelar-venda-titulo" className="text-base font-semibold app-surface-text">

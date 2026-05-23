@@ -168,7 +168,7 @@ export function ConfiguracoesClient({ idioma, lojaInicial, pdvConfigInicial }: P
 
       {/* ABA LOJA */}
       {aba === 'loja' && (
-        <Card role="tabpanel" id="config-panel-loja" aria-labelledby="config-tab-loja" className="dragon-glass-card border">
+        <Card role="tabpanel" id="config-panel-loja" aria-labelledby="config-tab-loja" className="dragon-glass-card">
           <CardHeader className="border-b border-jl-border-1 px-5 pb-3 pt-5 sm:px-6">
             <div className="flex items-center gap-3">
               <Store className="h-5 w-5 text-[color:var(--accent)]" aria-hidden />
@@ -303,7 +303,7 @@ export function ConfiguracoesClient({ idioma, lojaInicial, pdvConfigInicial }: P
 
       {/* ABA FISCAL */}
       {aba === 'fiscal' && (
-        <Card role="tabpanel" id="config-panel-fiscal" aria-labelledby="config-tab-fiscal" className="dragon-glass-card border">
+        <Card role="tabpanel" id="config-panel-fiscal" aria-labelledby="config-tab-fiscal" className="dragon-glass-card">
           <CardHeader className="border-b border-jl-border-1 px-5 pb-3 pt-5 sm:px-6">
             <div className="flex items-center gap-3">
               <Receipt className="h-5 w-5 text-[color:var(--accent)]" aria-hidden />
@@ -361,7 +361,7 @@ export function ConfiguracoesClient({ idioma, lojaInicial, pdvConfigInicial }: P
 
       {/* ABA PREFERÊNCIAS */}
       {aba === 'preferencias' && (
-        <Card role="tabpanel" id="config-panel-preferencias" aria-labelledby="config-tab-preferencias" className="dragon-glass-card border">
+        <Card role="tabpanel" id="config-panel-preferencias" aria-labelledby="config-tab-preferencias" className="dragon-glass-card">
           <CardHeader className="border-b border-jl-border-1 px-5 pb-3 pt-5 sm:px-6">
             <div className="flex items-center gap-3">
               <Settings className="h-5 w-5 text-[color:var(--accent)]" aria-hidden />

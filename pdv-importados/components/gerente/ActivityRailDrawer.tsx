@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { X, Receipt, Wallet, FileCheck, AlertCircle, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { X, Receipt, Wallet, FileCheck, AlertCircle, Loader2, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AtividadeRailItem } from '@/lib/hooks/useActivityFeed'
 
@@ -94,7 +95,7 @@ export function ActivityRailDrawer({ open, onClose, items, isLoading }: Props) {
         </div>
 
         {/* Feed */}
-        <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'thin' }} id="activity-rail-feed">
           {items.length === 0 && !isLoading && (
             <p className="px-4 py-8 text-center text-xs text-jl-fg-3">
               Nenhuma atividade nas últimas 2h
@@ -126,6 +127,18 @@ export function ActivityRailDrawer({ open, onClose, items, isLoading }: Props) {
               ))}
             </section>
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-jl-border-1 px-4 py-2.5">
+          <Link
+            href="/gerente/atividades"
+            onClick={onClose}
+            className="flex items-center justify-between text-xs text-jl-fg-3 transition-colors hover:text-jl-fg-1"
+          >
+            <span>Ver histórico completo</span>
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
         </div>
       </div>
     </>

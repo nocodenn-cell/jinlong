@@ -40,7 +40,7 @@ const inputClass = 'w-full rounded-lg px-3 py-2 text-sm shadow-sm app-input'
 const selectClass = 'w-full rounded-lg px-3 py-2 text-sm shadow-sm app-select'
 
 const btnPrimary =
-  'inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px] app-btn-accent'
+  'inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px] app-btn-accent'
 
 export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecentes }: Props) {
   const m = getMessages(idioma)
@@ -242,7 +242,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
           </div>
           {divergenciaDetalhe ? (
             <div
-              className={`rounded-lg border px-3 py-3 text-sm md:col-span-2 ${
+              className={`rounded-lg border px-3 py-2 text-sm md:col-span-2 ${
                 divergenciaDetalhe.grave ? 'app-badge-danger' : 'app-badge-warn'
               }`}
               role="status"
@@ -290,11 +290,12 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         <div className="mt-4 overflow-x-auto">
           <GerenteTable
             tone="dragon"
+            compact
             columns={[
-              { key: 'id', header: r.col_remessa },
+              { key: 'id', header: r.col_remessa, priority: 'primary' },
               { key: 'o', header: r.col_origem },
               { key: 's', header: m.gerente.col_status },
-              { key: 'd', header: r.col_data },
+              { key: 'd', header: r.col_data, priority: 'contextual' },
             ]}
           >
             {remessasRecentes.length === 0 ? (
@@ -311,9 +312,9 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             ) : (
               remessasRecentes.map((row) => (
                 <tr key={row.id} className="gerente-fin-row-hover transition-colors">
-                  <td className="gerente-fin-cell px-3 py-3 font-mono text-xs">{fmtGerenteIdCurto(row.id)}</td>
+                  <td className="gerente-fin-cell px-3 py-2 font-mono text-xs">{fmtGerenteIdCurto(row.id)}</td>
                   <td
-                    className="gerente-fin-cell max-w-[220px] truncate px-3 py-3 text-sm"
+                    className="gerente-fin-cell max-w-[220px] truncate px-3 py-2 text-sm"
                     title={row.origem_descricao}
                   >
                     {row.origem_descricao}
@@ -321,7 +322,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
                   <td className="px-3 py-3">
                     <GerenteStatusBadge status={row.status} />
                   </td>
-                  <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 text-sm tabular-nums">
+                  <td className="gerente-fin-cell whitespace-nowrap px-3 py-2 text-sm tabular-nums">
                     {fmtGerenteDateTime(row.created_at, locale)}
                   </td>
                 </tr>

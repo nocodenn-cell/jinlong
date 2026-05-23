@@ -132,7 +132,7 @@ export function RelatorioVendasClient({
   return (
     <>
       {/* Filtros */}
-      <div className="dragon-glass-card mb-4 rounded-xl border p-4">
+      <div className="dragon-glass-card mb-4 rounded-xl p-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <label className="flex flex-col gap-1 text-xs font-medium text-jl-fg-3">
             {m.relatorios_vendas.de}
@@ -240,7 +240,7 @@ export function RelatorioVendasClient({
             {totais.num_concluidas} {m.relatorios_vendas.vendas_concluidas}
           </div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-4">
+        <div className="dragon-glass-card rounded-xl p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.relatorios_vendas.kpi_ticket}
           </div>
@@ -248,7 +248,7 @@ export function RelatorioVendasClient({
             {fmtGerenteBRL(totais.ticket_medio, locale)}
           </div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-4">
+        <div className="dragon-glass-card rounded-xl p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.relatorios_vendas.kpi_concluidas}
           </div>
@@ -256,7 +256,7 @@ export function RelatorioVendasClient({
             {totais.num_concluidas}
           </div>
         </div>
-        <div className="dragon-glass-card rounded-xl border p-4">
+        <div className="dragon-glass-card rounded-xl p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.relatorios_vendas.kpi_canceladas}
           </div>
@@ -268,7 +268,7 @@ export function RelatorioVendasClient({
       </div>
 
       {/* Gráfico Recharts */}
-      <div className="dragon-glass-card mb-5 rounded-xl border p-5">
+      <div className="dragon-glass-card mb-5 rounded-xl p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h3 className="m-0 text-base font-semibold text-jl-fg-1">{m.relatorios_vendas.chart_titulo}</h3>
@@ -317,37 +317,38 @@ export function RelatorioVendasClient({
       {/* Tabela */}
       <GerenteTable
         tone="dragon"
+        compact
         columns={[
           { key: 'data', header: m.relatorios_vendas.col_data },
-          { key: 'id', header: m.relatorios_vendas.col_id, width: 100 },
-          { key: 'cliente', header: m.relatorios_vendas.col_cliente },
+          { key: 'id', header: m.relatorios_vendas.col_id, width: 100, priority: 'contextual' },
+          { key: 'cliente', header: m.relatorios_vendas.col_cliente, priority: 'primary' },
           { key: 'vendedor', header: m.relatorios_vendas.col_vendedor },
-          { key: 'total', header: m.relatorios_vendas.col_total, width: 130 },
-          { key: 'forma', header: m.relatorios_vendas.col_forma, width: 130 },
+          { key: 'total', header: m.relatorios_vendas.col_total, width: 130, priority: 'primary', numeric: true },
+          { key: 'forma', header: m.relatorios_vendas.col_forma, width: 130, priority: 'contextual' },
           { key: 'status', header: m.relatorios_vendas.col_status, width: 110 },
         ]}
       >
         {(payload?.vendas ?? []).map((v) => (
           <tr key={v.id} className="gerente-fin-row-hover">
-            <td className="gerente-fin-cell whitespace-nowrap px-3 py-3 tabular-nums">
+            <td className="gerente-fin-cell whitespace-nowrap px-3 py-2 tabular-nums">
               {v.data ? fmtGerenteDateTime(v.data, locale) : '—'}
             </td>
-            <td className="gerente-fin-cell px-3 py-3 font-mono text-xs text-jl-fg-3">
+            <td className="gerente-fin-cell px-3 py-2 font-mono text-xs text-jl-fg-3">
               #{v.id.slice(0, 8)}
             </td>
             <td className="gerente-fin-cell px-3 py-3">{v.cliente_nome ?? '—'}</td>
-            <td className="gerente-fin-cell px-3 py-3 text-xs text-jl-fg-2">
+            <td className="gerente-fin-cell px-3 py-2 text-xs text-jl-fg-2">
               {v.vendedor_nome ?? '—'}
             </td>
             <td
               className={cn(
-                'gerente-fin-cell px-3 py-3 text-right font-bold tabular-nums',
+                'gerente-fin-cell px-3 py-2 text-right font-bold tabular-nums',
                 v.status === 'CANCELADA' && 'text-jl-fg-3 line-through',
               )}
             >
               {fmtGerenteBRL(v.total_liquido, locale)}
             </td>
-            <td className="gerente-fin-cell px-3 py-3 text-xs">{v.forma_pagamento ?? '—'}</td>
+            <td className="gerente-fin-cell px-3 py-2 text-xs">{v.forma_pagamento ?? '—'}</td>
             <td className="px-3 py-3">
               {v.status === 'CONCLUIDA' ? (
                 <span className="app-badge-positive inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
