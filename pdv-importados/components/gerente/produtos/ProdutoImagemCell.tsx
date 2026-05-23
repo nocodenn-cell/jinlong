@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, MouseEvent } from 'react'
 import { useCallback, useRef, useTransition } from 'react'
+import Image from 'next/image'
 import { ImageIcon, Loader2, X } from 'lucide-react'
 import { removerImagemProduto, uploadImagemProduto } from '@/app/gerente/produtos/actions'
 import type { Mensagens } from '@/i18n/getMessages'
@@ -99,7 +100,7 @@ export function ProdutoImagemCell({
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin text-jl-fg-3" aria-hidden />
         ) : imagemUrl ? (
-          <img src={imagemUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+          <Image src={imagemUrl} alt="" width={40} height={40} className="h-full w-full object-cover" unoptimized />
         ) : (
           <ImageIcon className="h-4 w-4 text-jl-fg-3" aria-hidden />
         )}

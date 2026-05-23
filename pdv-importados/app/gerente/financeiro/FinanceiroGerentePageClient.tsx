@@ -291,7 +291,13 @@ export function FinanceiroGerentePageClient({
   }, [router, tituloQuery.filters, tituloQuery.limite, tituloQuery.listCapped])
 
   useEffect(() => {
-    setDraftFilters({ ...tituloQuery.filters })
+    setDraftFilters({
+      opcao: tituloQuery.filters.opcao,
+      nomeCliente: tituloQuery.filters.nomeCliente,
+      q: tituloQuery.filters.q,
+      de: tituloQuery.filters.de,
+      ate: tituloQuery.filters.ate,
+    })
   }, [
     tituloQuery.filters.opcao,
     tituloQuery.filters.nomeCliente,

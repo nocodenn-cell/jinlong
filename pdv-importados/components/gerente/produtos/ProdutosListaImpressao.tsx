@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { Mensagens } from '@/i18n/getMessages'
 import { formatBRL } from '@/lib/format/money'
@@ -62,10 +63,13 @@ export function ProdutosListaImpressao({ className, rows, m, idioma }: ProdutosL
               </td>
               <td className="border border-neutral-400 px-1 py-1 text-center align-middle">
                 {row.imagem_url ? (
-                  <img
+                  <Image
                     src={row.imagem_url}
                     alt=""
+                    width={36}
+                    height={36}
                     className="mx-auto max-h-9 max-w-[2.25rem] rounded object-cover"
+                    unoptimized
                   />
                 ) : (
                   <span className="text-neutral-400">—</span>
