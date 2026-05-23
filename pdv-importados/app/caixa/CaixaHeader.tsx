@@ -23,6 +23,8 @@ type Props = {
   processandoCaixa: boolean
   onAbrirCaixa: () => void
   onFecharCaixa: () => void
+  somAtivo?: boolean
+  onToggleSom?: () => void
 }
 
 export function CaixaHeader({
@@ -34,6 +36,8 @@ export function CaixaHeader({
   processandoCaixa,
   onAbrirCaixa,
   onFecharCaixa,
+  somAtivo,
+  onToggleSom,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -81,6 +85,8 @@ export function CaixaHeader({
         processandoCaixa={processandoCaixa}
         onAbrirCaixa={onAbrirCaixa}
         onFecharCaixa={onFecharCaixa}
+        somAtivo={somAtivo}
+        onToggleSom={onToggleSom}
       />
       {abertoAs ? (
         <div className="flex items-center gap-2 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 text-[11px] text-jl-fg-3 sm:px-6">

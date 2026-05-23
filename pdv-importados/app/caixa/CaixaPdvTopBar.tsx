@@ -8,7 +8,7 @@ import type { Idioma } from "@/idioma/normalizeIdioma"
 import LanguageToggle from "@/app/caixa/idioma/LanguageToggle"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
-import { Clock, User, Wallet } from "lucide-react"
+import { Clock, User, Wallet, Volume2, VolumeX } from "lucide-react"
 import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { cn } from "@/lib/utils"
 
@@ -33,6 +33,8 @@ type Props = {
   processandoCaixa: boolean
   onAbrirCaixa: () => void
   onFecharCaixa: () => void
+  somAtivo?: boolean
+  onToggleSom?: () => void
 }
 
 function UserMenuDropdown({
@@ -136,6 +138,17 @@ function StatusChip({
   )
 }
 
+function getOperadorInitials(label: string): string {
+  const base = label.includes("@") ? label.split("@")[0] : label
+  const words = base.split(".").filter(Boolean)
+  if (words.length === 0) return label.slice(0, 2).toUpperCase()
+  return words
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+}
+
 export function CaixaPdvTopBar({
   m,
   idioma,
@@ -145,6 +158,8 @@ export function CaixaPdvTopBar({
   processandoCaixa,
   onAbrirCaixa,
   onFecharCaixa,
+  somAtivo,
+  onToggleSom,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -218,12 +233,17 @@ export function CaixaPdvTopBar({
           label={turnoLabel}
           classic={classic}
         />
-        <StatusChip
-          icon={<User className="h-3.5 w-3.5" />}
-          label={operadorLabel}
-          title={caixaFmt(m.caixa.topbar_operador, { nome: operadorLabel })}
-          classic={classic}
-        />
+        <span
+          title={operadorLabel}
+          className={cn(
+            "inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold",
+            classic
+              ? "border-primary-foreground/30 bg-white/10 text-primary-foreground"
+              : "border-amber-400/30 bg-amber-400/10 text-amber-400",
+          )}
+        >
+          {getOperadorInitials(operadorLabel)}
+        </span>
         {fundoLabel && (
           <StatusChip
             icon={<Wallet className="h-3.5 w-3.5" />}
@@ -274,6 +294,25 @@ export function CaixaPdvTopBar({
           </Button>
         )}
 
+        {onToggleSom && (
+          <button
+            type="button"
+            onClick={onToggleSom}
+            title={somAtivo ? "Som: ligado" : "Som: desligado"}
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
+              classic
+                ? "border-primary-foreground/30 bg-white/10 text-primary-foreground hover:bg-white/25"
+                : "border-amber-400/30 bg-amber-400/5 text-amber-400 hover:bg-amber-400/15",
+            )}
+          >
+            {somAtivo ? (
+              <Volume2 className="h-4 w-4" aria-hidden />
+            ) : (
+              <VolumeX className="h-4 w-4" aria-hidden />
+            )}
+          </button>
+        )}
         <UserMenuDropdown m={m} idioma={idioma} classic={classic} />
       </div>
     </header>

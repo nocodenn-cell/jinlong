@@ -31,8 +31,8 @@ type Props = {
   buscando: boolean
   carregandoRegras: boolean
   categoriasAtalho?: CategoriaChip[]
-  somAtivo: boolean
-  onToggleSom: () => void
+  somAtivo?: boolean
+  onToggleSom?: () => void
   /** Quando true, o botão «Novo cupom» não é renderizado (ex.: classic com ação no trilho). */
   hideNovoCupom?: boolean
   /**
@@ -94,26 +94,6 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
 
   return (
     <div className={cn("space-y-2", compact && "space-y-1")}>
-      <div className="flex items-center justify-between gap-2">
-        <label
-          className={cn(
-            "font-semibold text-foreground/95",
-            compact ? "text-xs" : "text-sm",
-          )}
-        >
-          {m.caixa.busca_label_principal}
-        </label>
-        <button
-          type="button"
-          onClick={onToggleSom}
-          className={cn(
-            "rounded-md border border-border bg-muted font-semibold text-foreground/90 hover:bg-accent",
-            compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-xs",
-          )}
-        >
-          {somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
-        </button>
-      </div>
       <form
         onSubmit={onSubmit}
         className={cn("flex flex-col sm:flex-row", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-3")}
@@ -188,28 +168,20 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
           )}
         </div>
       </form>
-      {!compact ? (
-        <p className="text-sm text-foreground/85 leading-snug">{m.caixa.busca_dica}</p>
-      ) : null}
       {categoriasAtalho.length > 0 && !compact ? (
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-jl-fg-2">
-            {m.caixa.atalhos_categoria}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {categoriasAtalho.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                disabled={buscando || carregandoRegras}
-                onClick={() => setCodigoLocal(c.nome)}
-                title={c.nome}
-                className="min-h-9 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-1 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jl-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
-              >
-                {c.nome}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {categoriasAtalho.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              disabled={buscando || carregandoRegras}
+              onClick={() => setCodigoLocal(c.nome)}
+              title={c.nome}
+              className="min-h-9 shrink-0 rounded-full border border-jl-border-1 bg-jl-surface-soft px-3 py-1 text-sm text-jl-fg-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jl-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+            >
+              {c.nome}
+            </button>
+          ))}
         </div>
       ) : null}
     </div>

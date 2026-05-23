@@ -132,6 +132,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   const [categoriasAtalho, setCategoriasAtalho] = useState<{ id: string; nome: string }[]>([])
   const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
+  const [operacoesExpandidas, setOperacoesExpandidas] = useState(false)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
     | null
     | { tipo: "sangria" }
@@ -831,6 +832,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           processandoCaixa={processandoCaixa}
           onAbrirCaixa={handleAbrirCaixa}
           onFecharCaixa={handleFecharCaixa}
+          somAtivo={somFeedbackAtivo}
+          onToggleSom={handleToggleSom}
         />
         <div className="flex-1 flex flex-col min-h-0">
           {pdvLayoutVariant === "classic" && showClassicLayoutPreviewBanner() ? (
@@ -963,29 +966,34 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
               >
                 {m.caixa.novo_cupom}
               </button>
-              <div
+              <button
+                type="button"
+                onClick={() => setOperacoesExpandidas((v) => !v)}
                 className={cn(
-                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
+                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide flex items-center gap-1 w-full text-left",
                   pdvLayoutVariant === "classic" ? "border-border text-muted-foreground" : "border-jl-border-1 text-jl-fg-3",
                 )}
               >
+                <span>{operacoesExpandidas ? "▾" : "▸"}</span>
                 {m.caixa.rail_titulo_operacoes}
-              </div>
-              <CaixaPdvOperacoesButtons
-                m={m}
-                idioma={idioma}
-                variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
-                carregandoRegras={carregandoRegras}
-                caixaStatus={caixaStatus}
-                caixaAberto={caixaStatus?.aberto === true}
-                movimentandoCaixa={movimentandoCaixa}
-                finalizando={finalizando}
-                validandoGerente={validandoGerente}
-                gerenteValidadoAte={gerenteValidadoAte}
-                onAbrirSuprimento={handleAbrirSuprimento}
-                onAbrirSangria={handleAbrirSangria}
-                onValidarGerente={() => setGerenteModalAberto(true)}
-              />
+              </button>
+              {operacoesExpandidas && (
+                <CaixaPdvOperacoesButtons
+                  m={m}
+                  idioma={idioma}
+                  variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+                  carregandoRegras={carregandoRegras}
+                  caixaStatus={caixaStatus}
+                  caixaAberto={caixaStatus?.aberto === true}
+                  movimentandoCaixa={movimentandoCaixa}
+                  finalizando={finalizando}
+                  validandoGerente={validandoGerente}
+                  gerenteValidadoAte={gerenteValidadoAte}
+                  onAbrirSuprimento={handleAbrirSuprimento}
+                  onAbrirSangria={handleAbrirSangria}
+                  onValidarGerente={() => setGerenteModalAberto(true)}
+                />
+              )}
               <div
                 className={cn(
                   "border-t pt-2 text-xs font-semibold uppercase tracking-wide",

@@ -13,14 +13,11 @@ type Props = Readonly<{
 
 export function CaixaOperadorContextBar({ m, idioma, configCaixaWeb }: Props) {
   void idioma
+  void m
+  void caixaFmt
   const leadMin = parseIntegerConfig(configCaixaWeb.lead_time_min_dias, 30)
   const leadMax = parseIntegerConfig(configCaixaWeb.lead_time_max_dias, 60)
-  if (!Number.isFinite(leadMin) || !Number.isFinite(leadMax) || leadMin <= 0 || leadMax <= 0) {
-    return null
-  }
-  return (
-    <div className="text-xs text-muted-foreground">
-      {caixaFmt(m.caixa.lead_time_importacao_banner, { min: leadMin, max: leadMax })}
-    </div>
-  )
+  void leadMin
+  void leadMax
+  return null
 }
