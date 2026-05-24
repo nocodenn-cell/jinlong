@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -21,7 +21,7 @@ type Props = {
   onConfirm: (motivo: string) => Promise<{ ok: true } | { ok: false; error: string }>
 }
 
-export function CaixaMovimentacaoAcaoModal({
+export const CaixaMovimentacaoAcaoModal = memo(function CaixaMovimentacaoAcaoModal({
   open,
   tipo,
   processando,
@@ -133,4 +133,6 @@ export function CaixaMovimentacaoAcaoModal({
       </Card>
     </div>
   )
-}
+})
+
+CaixaMovimentacaoAcaoModal.displayName = "CaixaMovimentacaoAcaoModal"

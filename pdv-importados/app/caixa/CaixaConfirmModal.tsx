@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { memo, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -16,7 +16,7 @@ type Props = {
   onConfirm: () => void
 }
 
-export function CaixaConfirmModal({
+export const CaixaConfirmModal = memo(function CaixaConfirmModal({
   open,
   title,
   description,
@@ -98,4 +98,6 @@ export function CaixaConfirmModal({
       </Card>
     </div>
   )
-}
+})
+
+CaixaConfirmModal.displayName = "CaixaConfirmModal"

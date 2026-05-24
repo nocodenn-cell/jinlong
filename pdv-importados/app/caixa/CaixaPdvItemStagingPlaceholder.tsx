@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import { Package } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -11,7 +12,7 @@ type Props = Readonly<{
 }>
 
 /** Área reservada para quantidade / desconto / confirmar item (Fase D). */
-export function CaixaPdvItemStagingPlaceholder({ m, dense }: Props) {
+export const CaixaPdvItemStagingPlaceholder = memo(function CaixaPdvItemStagingPlaceholder({ m, dense }: Props) {
   return (
     <section
       aria-label={m.caixa.pdv_item_staging_aria}
@@ -35,4 +36,6 @@ export function CaixaPdvItemStagingPlaceholder({ m, dense }: Props) {
       </div>
     </section>
   )
-}
+})
+
+CaixaPdvItemStagingPlaceholder.displayName = "CaixaPdvItemStagingPlaceholder"

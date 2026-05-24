@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -21,7 +22,7 @@ function localeFromIdioma(idioma: Idioma): string {
   return "zh-CN"
 }
 
-export function CaixaMovimentacoesTimeline({
+export const CaixaMovimentacoesTimeline = memo(function CaixaMovimentacoesTimeline({
   m,
   idioma,
   itens,
@@ -131,4 +132,6 @@ export function CaixaMovimentacoesTimeline({
       </div>
     </section>
   )
-}
+})
+
+CaixaMovimentacoesTimeline.displayName = "CaixaMovimentacoesTimeline"

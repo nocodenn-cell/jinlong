@@ -505,6 +505,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     setConfirmacaoPendente({ tipo: "sangria" })
   }, [])
 
+  const handleToggleOperacoes = useCallback(() => {
+    setOperacoesExpandidas((v) => !v)
+  }, [])
+
+  const handleTimelineCancelar = useCallback((item: MovimentacaoCaixaDTO) => {
+    setConfirmacaoPendente({ tipo: "cancelar", item })
+  }, [])
+
+  const handleTimelineEstornar = useCallback((item: MovimentacaoCaixaDTO) => {
+    setConfirmacaoPendente({ tipo: "estornar", item })
+  }, [])
+
   const handleConfirmarAcaoSensivel = useCallback(() => {
     if (!confirmacaoPendente) return
     if (confirmacaoPendente.tipo === "sangria") {
@@ -964,7 +976,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
               </button>
               <button
                 type="button"
-                onClick={() => setOperacoesExpandidas((v) => !v)}
+                onClick={handleToggleOperacoes}
                 className={cn(
                   "border-t pt-2 text-xs font-semibold uppercase tracking-wide flex items-center gap-1 w-full text-left",
                   pdvLayoutVariant === "classic" ? "border-border text-muted-foreground" : "border-jl-border-1 text-jl-fg-3",
@@ -1043,12 +1055,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
               itens={movimentacoes}
               carregando={carregandoMovimentacoes}
               processandoAcao={processandoAcaoMovimentacao}
-              onCancelar={(item) => {
-                setConfirmacaoPendente({ tipo: "cancelar", item })
-              }}
-              onEstornar={(item) => {
-                setConfirmacaoPendente({ tipo: "estornar", item })
-              }}
+              onCancelar={handleTimelineCancelar}
+              onEstornar={handleTimelineEstornar}
             />
           )}
           <CaixaFooter

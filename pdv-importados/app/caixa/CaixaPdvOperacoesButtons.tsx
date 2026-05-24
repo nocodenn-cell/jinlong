@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -37,7 +37,7 @@ type Props = {
   variant?: "default" | "classic"
 }
 
-export function CaixaPdvOperacoesButtons({
+export const CaixaPdvOperacoesButtons = memo(function CaixaPdvOperacoesButtons({
   m,
   idioma,
   carregandoRegras,
@@ -235,4 +235,6 @@ export function CaixaPdvOperacoesButtons({
       </div>
     </div>
   )
-}
+})
+
+CaixaPdvOperacoesButtons.displayName = "CaixaPdvOperacoesButtons"

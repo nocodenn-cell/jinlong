@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -37,7 +37,7 @@ type Props = {
   }) => void
 }
 
-export function CaixaGerenteModal({
+export const CaixaGerenteModal = memo(function CaixaGerenteModal({
   open,
   onOpenChange,
   m,
@@ -268,4 +268,6 @@ export function CaixaGerenteModal({
       </Card>
     </div>
   )
-}
+})
+
+CaixaGerenteModal.displayName = "CaixaGerenteModal"

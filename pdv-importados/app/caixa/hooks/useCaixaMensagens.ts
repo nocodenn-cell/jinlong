@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 export type CaixaToastKind = "info" | "success" | "warning" | "error"
 
@@ -19,13 +19,22 @@ export function useCaixaMensagens() {
   const [mensagem, setMensagemState] = useState<string | null>(null)
   const [msgVendaOk, setMsgVendaOk] = useState(false)
   const [toasts, setToasts] = useState<CaixaToastItem[]>([])
+  const timerRefs = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
+
+  useEffect(() => {
+    return () => {
+      timerRefs.current.forEach((t) => clearTimeout(t))
+    }
+  }, [])
 
   const pushCaixaToast = useCallback((kind: CaixaToastKind, text: string) => {
     const id = Date.now() + Math.floor(Math.random() * 1000)
     setToasts((prev) => [...prev, { id, kind, text }])
-    globalThis.setTimeout(() => {
+    const t = globalThis.setTimeout(() => {
+      timerRefs.current.delete(id)
       setToasts((prev) => prev.filter((item) => item.id !== id))
     }, 2600)
+    timerRefs.current.set(id, t)
   }, [])
 
   const dismissCaixaToast = useCallback((id: number) => {
