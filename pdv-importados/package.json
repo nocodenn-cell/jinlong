@@ -27,7 +27,13 @@
     "seed:dev-users": "node scripts/seed-dev-users.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test-storybook": "test-storybook"
+    "test-storybook": "test-storybook",
+    "dragon:score": "bash scripts/dragon-ui-score.sh",
+    "dragon:score:caixa": "bash scripts/dragon-ui-score.sh caixa",
+    "dragon:score:gerente": "bash scripts/dragon-ui-score.sh gerente",
+    "dragon:check": "bash scripts/dragon-ui-check.sh",
+    "dragon:check:json": "bash scripts/dragon-ui-check.sh --json",
+    "dragon:baseline": "bash scripts/dragon-update-baseline.sh"
   },
   "dependencies": {
     "@fastproduct/shared-core": "0.1.0",

@@ -75,6 +75,19 @@ jobs:
           fi
           npx turbo run build --filter=pdv-importados
 
+  # Gate Dragon UI — bloqueia regressão de tokens visuais.
+  # Compara violações atuais vs scripts/dragon-baseline.json; falha se AUMENTAR.
+  # Não bloqueia dívida existente — só novas regressões.
+  dragon-ui-gate:
+    name: Dragon UI Gate (sem regressão visual)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Dragon UI — verificar regressão de tokens
+        working-directory: pdv-importados
+        run: bash scripts/dragon-ui-check.sh
+
   # Gate obrigatório: `npm run test:e2e:critical` (check-env + smoke sync + Playwright crítico).
   # PRs de fork são ignorados (sem secrets); push/PR no repositório base exige todos os secrets abaixo.
   e2e-critical:
@@ -153,11 +166,12 @@ jobs:
         run: npm run test:e2e:critical -w pdv-importados
 
   deploy:
-    needs: [build-and-test, e2e-critical]
+    needs: [build-and-test, e2e-critical, dragon-ui-gate]
     if: |
       always() &&
       github.ref == 'refs/heads/main' &&
       needs.build-and-test.result == 'success' &&
+      needs.dragon-ui-gate.result == 'success' &&
       (needs.e2e-critical.result == 'success' || needs.e2e-critical.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:

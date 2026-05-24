@@ -1,0 +1,10 @@
+{
+  "_comment": "Baseline de violações Dragon UI — gerado em 2026-05-24. Atualizar ao migrar dívida existente.",
+  "_howto": "npm run dragon:check compara o estado atual contra estes valores e falha se AUMENTAR.",
+  "text_violations": 1,
+  "bg_violations": 1,
+  "border_violations": 0,
+  "inline_color": 5,
+  "score": 84,
+  "grade": "B"
+}

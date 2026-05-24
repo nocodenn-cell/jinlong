@@ -1,0 +1,24 @@
+# CODEOWNERS — fastproduct/pdv-importados
+# Toda PR que toca estes paths requer aprovação do responsável.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Design System ─────────────────────────────────────────────────────────────
+# Qualquer mudança em tokens, componentes canônicos ou documentação do Dragon UI
+# requer revisão do time de design system.
+/pdv-importados/components/dragon/          @nocodenn-cell
+/pdv-importados/components/ui/dragon-*.tsx  @nocodenn-cell
+/pdv-importados/components/ui/section-label.tsx @nocodenn-cell
+/pdv-importados/docs/design-system/         @nocodenn-cell
+/pdv-importados/styles/tokens/              @nocodenn-cell
+/pdv-importados/tailwind.config.*           @nocodenn-cell
+/pdv-importados/scripts/dragon-*.sh        @nocodenn-cell
+/pdv-importados/scripts/dragon-baseline.json @nocodenn-cell
+/pdv-importados/.eslintrc.json              @nocodenn-cell
+
+# ── CI / Infra ────────────────────────────────────────────────────────────────
+/.github/workflows/                         @nocodenn-cell
+/pdv-importados/next.config.*               @nocodenn-cell
+
+# ── Supabase / Backend ────────────────────────────────────────────────────────
+/backend/supabase/migrations/               @nocodenn-cell
+/pdv-importados/lib/supabase/               @nocodenn-cell
