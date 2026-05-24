@@ -27,7 +27,7 @@ type Props = {
   onToggleSom?: () => void
 }
 
-export function CaixaHeader({
+export const CaixaHeader = memo(function CaixaHeader({
   m,
   idioma,
   layoutVariant,
@@ -102,4 +102,6 @@ export function CaixaHeader({
       ) : null}
     </div>
   )
-}
+})
+
+CaixaHeader.displayName = "CaixaHeader"

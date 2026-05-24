@@ -99,11 +99,11 @@ export function CaixaValorNumericoModal({
             {title}
           </CardTitle>
           {description ? (
-            <p className="text-xs text-slate-400 mt-1">{description}</p>
+            <p className="text-xs text-jl-fg-3 mt-1">{description}</p>
           ) : null}
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-2">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-jl-fg-3">
             {campoLabel}
             <Input
               ref={inputRef}
@@ -116,7 +116,7 @@ export function CaixaValorNumericoModal({
                 setErro(null)
               }}
               placeholder={placeholder}
-              className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+              className="mt-1 bg-jl-surface-elev border-jl-border-1 text-jl-fg-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault()

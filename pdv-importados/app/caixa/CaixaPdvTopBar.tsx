@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { memo, useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -149,7 +149,7 @@ function getOperadorInitials(label: string): string {
     .toUpperCase()
 }
 
-export function CaixaPdvTopBar({
+export const CaixaPdvTopBar = memo(function CaixaPdvTopBar({
   m,
   idioma,
   layoutVariant,
@@ -317,4 +317,6 @@ export function CaixaPdvTopBar({
       </div>
     </header>
   )
-}
+})
+
+CaixaPdvTopBar.displayName = "CaixaPdvTopBar"

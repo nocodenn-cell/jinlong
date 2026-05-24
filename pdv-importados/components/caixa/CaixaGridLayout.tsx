@@ -316,7 +316,7 @@ export function CaixaGridLayout({
             </div>
           ) : itens.length === 0 ? (
             <div 
-              className="flex items-center justify-center h-full text-gray-400"
+              className="flex items-center justify-center h-full text-jl-fg-3"
               role="status"
               aria-label="Carrinho vazio"
             >

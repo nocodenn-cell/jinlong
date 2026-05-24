@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { memo, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -28,7 +28,7 @@ function moneyLocale(idioma: Idioma) {
   return "zh-CN"
 }
 
-export function CaixaPdvCartSaleBar({
+export const CaixaPdvCartSaleBar = memo(function CaixaPdvCartSaleBar({
   m,
   idioma,
   onExcluirVenda,
@@ -115,4 +115,6 @@ export function CaixaPdvCartSaleBar({
       </div>
     </div>
   )
-}
+})
+
+CaixaPdvCartSaleBar.displayName = "CaixaPdvCartSaleBar"

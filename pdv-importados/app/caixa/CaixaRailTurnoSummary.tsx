@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { memo, useEffect, useRef, useState } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { obterResumoVendasTurno } from "@/app/caixa/actions"
@@ -17,7 +17,7 @@ type Props = {
 
 const POLL_MS = 30_000
 
-export function CaixaRailTurnoSummary({ m, idioma, caixaAberto, layoutVariant, refreshToken }: Props) {
+export const CaixaRailTurnoSummary = memo(function CaixaRailTurnoSummary({ m, idioma, caixaAberto, layoutVariant, refreshToken }: Props) {
   const [quantidadeVendas, setQuantidadeVendas] = useState(0)
   const [totalLiquido, setTotalLiquido] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -69,4 +69,6 @@ export function CaixaRailTurnoSummary({ m, idioma, caixaAberto, layoutVariant, r
       </div>
     </dl>
   )
-}
+})
+
+CaixaRailTurnoSummary.displayName = "CaixaRailTurnoSummary"

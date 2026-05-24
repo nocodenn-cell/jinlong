@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { memo, type ReactNode } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
@@ -45,7 +45,7 @@ function moneyLocale(idioma: Idioma) {
   return idioma === "pt" ? "pt-BR" : "zh-CN"
 }
 
-export function CaixaPdvOperadorTabs({
+export const CaixaPdvOperadorTabs = memo(function CaixaPdvOperadorTabs({
   m,
   idioma,
   tab,
@@ -307,4 +307,6 @@ export function CaixaPdvOperadorTabs({
       </div>
     </div>
   )
-}
+})
+
+CaixaPdvOperadorTabs.displayName = "CaixaPdvOperadorTabs"

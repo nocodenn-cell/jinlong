@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -40,7 +40,7 @@ const MOTIVOS_BASE = [
 
 const SUGESTOES = [50, 100, 200]
 
-export function CaixaMovimentacaoModal({
+export const CaixaMovimentacaoModal = memo(function CaixaMovimentacaoModal({
   open,
   tipo,
   saldoEstimado,
@@ -291,4 +291,6 @@ export function CaixaMovimentacaoModal({
       </Card>
     </div>
   )
-}
+})
+
+CaixaMovimentacaoModal.displayName = "CaixaMovimentacaoModal"
