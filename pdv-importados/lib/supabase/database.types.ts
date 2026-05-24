@@ -2066,6 +2066,18 @@ export type Database = {
           status_movimentacao: string
         }[]
       }
+      atualizar_ordem_compra_transacional: {
+        Args: {
+          p_data_emissao: string
+          p_data_prevista_chegada?: string | null
+          p_fornecedor_id?: string | null
+          p_fornecedor_nome?: string | null
+          p_itens: Json
+          p_observacao?: string | null
+          p_ordem_id: string
+        }
+        Returns: undefined
+      }
       auth_usuario_eh_dono: { Args: never; Returns: boolean }
       baixar_estoque_venda: {
         Args: { p_itens: Json; p_loja_id: string }

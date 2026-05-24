@@ -77,6 +77,14 @@ export type CriarOcInput = {
 
 export type AtualizarOcInput = CriarOcInput & { id: string }
 
+type OcItemRpcInput = {
+  produto_id: string | null
+  descricao: string | null
+  quantidade: number
+  preco_unitario: number
+  unidade_medida: string
+}
+
 async function lojaDoUsuario(): Promise<string | null> {
   const supabase = await createClient()
   const {
@@ -118,6 +126,16 @@ function mapOcListaRow(row: RawOcRow): OcListaDTO {
     total_itens: itens.length,
     valor_total: itens.reduce((sum, i) => sum + i.quantidade * i.preco_unitario, 0),
     created_at: row.created_at,
+  }
+}
+
+function mapOcItemRpcInput(item: OcItemInput): OcItemRpcInput {
+  return {
+    produto_id: item.produto_id ?? null,
+    descricao: item.descricao?.trim() || null,
+    quantidade: item.quantidade,
+    preco_unitario: item.preco_unitario,
+    unidade_medida: item.unidade_medida,
   }
 }
 
@@ -355,33 +373,17 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
     return { success: false, error: 'Só é possível editar ordens em rascunho ou confirmadas.' }
   }
 
-  const { error: e1 } = await supabase
-    .from('ordens_compra')
-    .update({
-      fornecedor_id: input.fornecedor_id ?? null,
-      fornecedor_nome: input.fornecedor_nome?.trim() || null,
-      data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
-      data_prevista_chegada: input.data_prevista_chegada ?? null,
-      observacao: input.observacao?.trim() || null,
-    })
-    .eq('id', input.id)
-    .eq('loja_id', lojaId)
+  const { error } = await supabase.rpc('atualizar_ordem_compra_transacional', {
+    p_ordem_id: input.id,
+    p_fornecedor_id: input.fornecedor_id ?? null,
+    p_fornecedor_nome: input.fornecedor_nome?.trim() || null,
+    p_data_emissao: input.data_emissao ?? new Date().toISOString().slice(0, 10),
+    p_data_prevista_chegada: input.data_prevista_chegada ?? null,
+    p_observacao: input.observacao?.trim() || null,
+    p_itens: input.itens.map(mapOcItemRpcInput),
+  })
 
-  if (e1) return { success: false, error: mensagemErroComSecao('Ordem de compra', e1.message) }
-
-  await supabase.from('ordens_compra_itens').delete().eq('ordem_id', input.id)
-
-  const itensRows = input.itens.map((i) => ({
-    ordem_id: input.id,
-    produto_id: i.produto_id ?? null,
-    descricao: i.descricao?.trim() || null,
-    quantidade: i.quantidade,
-    preco_unitario: i.preco_unitario,
-    unidade_medida: i.unidade_medida,
-  }))
-
-  const { error: e2 } = await supabase.from('ordens_compra_itens').insert(itensRows)
-  if (e2) return { success: false, error: mensagemErroComSecao('Itens da ordem', e2.message) }
+  if (error) return { success: false, error: mensagemErroComSecao('Ordem de compra', error.message) }
 
   revalidatePath('/gerente/compras')
   return { success: true, data: null }

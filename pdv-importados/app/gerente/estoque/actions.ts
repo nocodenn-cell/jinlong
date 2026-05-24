@@ -218,6 +218,8 @@ export async function obterListaEstoqueGerente(input: unknown): Promise<EstoqueG
 
 const EXPORT_PAGE = 400
 const EXPORT_MAX_ROWS = 12_000
+const EXPORT_LIMIT_MESSAGE =
+  'Exportação excede 12.000 itens. Refine os filtros antes de gerar o CSV.'
 
 /** Todas as linhas que batem nos filtros (paginação servidor em blocos); teto por segurança. */
 export async function obterListaEstoqueGerenteCompletaParaExport(input: unknown): Promise<EstoqueGerenteLinhaDTO[]> {
@@ -235,6 +237,10 @@ export async function obterListaEstoqueGerenteCompletaParaExport(input: unknown)
     acc.push(...chunk.rows)
     if (chunk.rows.length === 0 || acc.length >= chunk.total || chunk.rows.length < EXPORT_PAGE) break
     offset += EXPORT_PAGE
+  }
+  if (acc.length >= EXPORT_MAX_ROWS) {
+    const lastChunk = await obterListaEstoqueGerente({ ...base, limite: 1, offset: EXPORT_MAX_ROWS })
+    if (lastChunk.total > EXPORT_MAX_ROWS || lastChunk.rows.length > 0) throw new Error(EXPORT_LIMIT_MESSAGE)
   }
   return acc
 }
