@@ -91,11 +91,11 @@ export function CaixaValorNumericoModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-valor-modal-title"
-        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-slate-50 shadow-xl max-h-[90vh] flex flex-col"
+        className="dragon-glass-card w-full sm:max-w-md rounded-none sm:rounded-lg border text-jl-fg-1 shadow-xl max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle id="caixa-valor-modal-title" className="text-lg text-slate-50">
+          <CardTitle id="caixa-valor-modal-title" className="text-lg text-jl-fg-1">
             {title}
           </CardTitle>
           {description ? (

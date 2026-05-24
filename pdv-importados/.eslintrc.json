@@ -62,6 +62,55 @@
       }
     },
     {
+      "files": [
+        "app/caixa/**/*.{ts,tsx}",
+        "app/gerente/**/*.{ts,tsx}",
+        "components/caixa/**/*.{ts,tsx}",
+        "components/gerente/**/*.{ts,tsx}"
+      ],
+      "excludedFiles": [
+        "app/admin/**",
+        "app/error.tsx",
+        "app/global-error.tsx",
+        "**/page-old.tsx",
+        "**/scan-pipeline/CaixaScanPipelineDevPanel.tsx",
+        "**/ProdutosListaImpressao.tsx"
+      ],
+      "rules": {
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "selector": "JSXAttribute[name.name='className'][value.type='Literal'][value.value=/\\btext-gray-[3-9]/]",
+            "message": "Dragon UI: use text-jl-fg-3 (≈gray-400) ou text-jl-fg-2 (≈gray-300). Ver docs/design-system/tokens.md"
+          },
+          {
+            "selector": "JSXAttribute[name.name='className'][value.type='Literal'][value.value=/\\btext-slate-[3-9]/]",
+            "message": "Dragon UI: use text-jl-fg-3 (≈slate-400) ou text-jl-fg-2 (≈slate-300). Ver docs/design-system/tokens.md"
+          },
+          {
+            "selector": "JSXAttribute[name.name='className'][value.type='Literal'][value.value=/\\btext-zinc-[3-9]/]",
+            "message": "Dragon UI: use text-jl-fg-3 (≈zinc-400) ou text-jl-fg-2 (≈zinc-300). Ver docs/design-system/tokens.md"
+          },
+          {
+            "selector": "JSXAttribute[name.name='className'][value.type='Literal'][value.value=/\\bbg-slate-[89]/]",
+            "message": "Dragon UI: use bg-jl-surface-elev ou bg-jl-surface-base. Ver docs/design-system/tokens.md"
+          },
+          {
+            "selector": "JSXAttribute[name.name='className'][value.type='Literal'][value.value=/\\bbg-gray-[89]/]",
+            "message": "Dragon UI: use bg-jl-surface-elev ou bg-jl-surface-base. Ver docs/design-system/tokens.md"
+          },
+          {
+            "selector": "JSXAttribute[name.name='className'][value.type='Literal'][value.value=/\\bborder-slate-[4-9]/]",
+            "message": "Dragon UI: use border-jl-border-1. Ver docs/design-system/tokens.md"
+          },
+          {
+            "selector": "JSXAttribute[name.name='className'][value.type='Literal'][value.value=/\\bborder-gray-[4-9]/]",
+            "message": "Dragon UI: use border-jl-border-1. Ver docs/design-system/tokens.md"
+          }
+        ]
+      }
+    },
+    {
       "files": ["**/logger.ts", "**/logger/*.ts", "shared/logger.ts", "shared/unified-logger.ts"],
       "rules": {
         "no-console": "off"

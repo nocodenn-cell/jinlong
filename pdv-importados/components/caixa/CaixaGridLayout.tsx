@@ -311,7 +311,7 @@ export function CaixaGridLayout({
             >
               <div className="text-center">
                 <div className="inline-block w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-500">{m.comum?.carregando ?? 'Carregando...'}</p>
+                <p className="text-jl-fg-3">{m.comum?.carregando ?? 'Carregando...'}</p>
               </div>
             </div>
           ) : itens.length === 0 ? (
