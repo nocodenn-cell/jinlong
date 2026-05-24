@@ -22,8 +22,9 @@ export function useCaixaMensagens() {
   const timerRefs = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
+    const timers = timerRefs.current
     return () => {
-      timerRefs.current.forEach((t) => clearTimeout(t))
+      timers.forEach((t) => clearTimeout(t))
     }
   }, [])
 

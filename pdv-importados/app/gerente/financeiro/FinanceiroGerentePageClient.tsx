@@ -290,6 +290,8 @@ export function FinanceiroGerentePageClient({
     return () => { obs.disconnect(); loadingMoreRef.current = false }
   }, [router, tituloQuery.filters, tituloQuery.limite, tituloQuery.listCapped])
 
+  // Deps individuais são intencionais: sincroniza apenas quando campos mudam, não o objeto inteiro.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setDraftFilters({ ...tituloQuery.filters })
   }, [

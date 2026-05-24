@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { CaixaPdvTopBar, type CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
