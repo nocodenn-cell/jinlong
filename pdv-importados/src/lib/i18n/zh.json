@@ -813,6 +813,7 @@
     "msg_lock_ate": " · 锁定至 {{data}}",
     "msg_falha_gerente_rede": "验证失败，请检查网络。",
     "msg_falha_finalizar": "结账失败，请检查网络与权限。",
+    "msg_falha_finalizar_timeout": "服务器无响应。重试前请先在销售列表中确认本次销售是否已记录。",
     "msg_venda_ok": "已记录销售（单号 {{id}}…）。库存已更新。",
     "modal_gerente_titulo": "经理授权",
     "modal_gerente_passo_senha": "密码",

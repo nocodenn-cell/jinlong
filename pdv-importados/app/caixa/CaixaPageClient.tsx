@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
   calcularPrecoProdutoCaixa,
@@ -13,6 +13,7 @@ import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { aplicarDescontoGerenteSobreTotal } from "@/stores/managerDiscount"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
+import { measureOp, recordMetric } from "@/lib/pdvMetrics"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { useCaixaMensagens } from "@/app/caixa/hooks/useCaixaMensagens"
@@ -296,6 +297,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     aplicarPrecoRpcParaLinha,
     getActiveCupomSessionId: () => cupomSessionIdRef.current,
   })
+
+  // Métrica local: tempo de busca — mede de quando buscando vira true até virar false
+  const buscaInicioRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (buscandoPipeline) {
+      buscaInicioRef.current = performance.now()
+    } else if (buscaInicioRef.current !== null) {
+      const ms = Math.round(performance.now() - buscaInicioRef.current)
+      buscaInicioRef.current = null
+      recordMetric('busca_produto', ms, 'ok')
+    }
+  }, [buscandoPipeline])
 
   const pagamentoControlesDesabilitados =
     finalizando || buscandoPipeline || carregandoRegras
@@ -680,7 +693,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
         })),
       }
-      const res = await finalizarVendaCaixa(payload)
+      const res = await measureOp('finalizar_venda', () => finalizarVendaCaixa(payload), (r) => r.ok)
       if (res.ok) {
         vendaIdempotenciaRef.current = null
         limparCarrinho()
@@ -697,8 +710,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         setCaixaMensagem(res.error, { kind: "error" })
         tocarFeedback("erro")
       }
-    } catch {
-      setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+    } catch (err) {
+      // Distingue timeout (estado ambíguo) de erro definitivo.
+      // Em timeout, a venda pode ter sido salva — avisar o operador antes de tentar de novo.
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === 'TimeoutError' || err.message.toLowerCase().includes('timeout') || err.message.toLowerCase().includes('timed out'))
+      setCaixaMensagem(
+        isTimeout ? m.caixa.msg_falha_finalizar_timeout : m.caixa.msg_falha_finalizar,
+        { kind: "error" },
+      )
       tocarFeedback("erro")
     } finally {
       setFinalizando(false)

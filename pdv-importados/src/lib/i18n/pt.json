@@ -773,6 +773,7 @@
     "msg_lock_ate": " · bloqueado até {{data}}",
     "msg_falha_gerente_rede": "Falha ao validar gerente. Verifique a conexão.",
     "msg_falha_finalizar": "Falha ao finalizar. Verifique conexão e permissões.",
+    "msg_falha_finalizar_timeout": "Sem resposta do servidor. Antes de tentar novamente, verifique na lista de vendas se a venda foi registrada.",
     "msg_venda_ok": "Venda registrada (id {{id}}…). Estoque atualizado.",
     "modal_gerente_titulo": "Autorização do gerente",
     "modal_gerente_passo_senha": "Senha",
