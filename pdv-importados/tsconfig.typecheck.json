@@ -13,7 +13,6 @@
   ],
   "exclude": [
     "node_modules",
-    "app/caixa/**",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.integration.test.ts"

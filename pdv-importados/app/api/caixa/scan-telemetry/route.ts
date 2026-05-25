@@ -3,6 +3,7 @@
  * Fase inicial: volume baixo/medio. Se crescer: fila, fire-and-forget, edge ou batch writer.
  */
 import { NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/rateLimit'
 import { createClient } from '@/lib/supabase/server'
 import {
   normalizeHumanTelemetryPayload,
@@ -29,6 +30,11 @@ function isTelemetryEventInput(x: unknown): x is HumanTelemetryPayloadInput {
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, { limit: 60, windowMs: 60_000 })
+  if (!rl.ok) {
+    return NextResponse.json({ ok: false, error: 'too_many_requests' }, { status: 429 })
+  }
+
   let body: unknown
   try {
     body = await req.json()

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +9,10 @@ export const dynamic = 'force-dynamic'
  * Comparação coluna-a-coluna feita no cliente JS (evita migração de função no banco).
  * Para catálogos maiores que ~5 000 produtos, adicionar view indexada no banco.
  */
-export async function GET() {
+export async function GET(req: Request) {
+  const rl = rateLimit(req, { limit: 120, windowMs: 60_000 })
+  if (!rl.ok) return NextResponse.json({ count: 0 }, { status: 429 })
+
   try {
     const supabase = await createClient()
     const { data } = await supabase
