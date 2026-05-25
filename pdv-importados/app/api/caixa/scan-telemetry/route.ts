@@ -10,6 +10,8 @@ import {
   type HumanTelemetryPayloadInput,
 } from '../../../../../shared-core/src/pdv/scan-pipeline'
 
+export const maxDuration = 30
+
 const MAX_EVENTS = 40
 
 function isTelemetryEventInput(x: unknown): x is HumanTelemetryPayloadInput {

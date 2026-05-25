@@ -13,6 +13,7 @@ export type AtividadeHistoryPayload = {
 }
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 const PAGE_SIZE = 50
 

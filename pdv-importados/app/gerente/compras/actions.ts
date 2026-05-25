@@ -434,45 +434,14 @@ export async function registrarRecebimentoOC(
 
   const supabase = await createClient()
 
-  const { data: oc, error: eOc } = await supabase
-    .from('ordens_compra')
-    .select('status')
-    .eq('id', ocId)
-    .eq('loja_id', lojaId)
-    .single()
+  const { error } = await supabase.rpc('receber_ordem_compra', {
+    p_oc_id: ocId,
+    p_itens: itensRecebidos,
+  })
 
-  if (eOc || !oc) return { success: false, error: 'Ordem não encontrada.' }
-  if (oc.status !== 'EM_TRANSITO') {
-    return { success: false, error: 'Só é possível registrar recebimento em ordens em trânsito.' }
-  }
-
-  for (const item of itensRecebidos) {
-    const { error } = await supabase
-      .from('ordens_compra_itens')
-      .update({ quantidade_recebida: item.quantidade_recebida })
-      .eq('id', item.item_id)
-      .eq('ordem_id', ocId)
-
-    if (error) return { success: false, error: mensagemErroComSecao('Recebimento', error.message) }
-  }
-
-  const { data: todosItens } = await supabase
-    .from('ordens_compra_itens')
-    .select('quantidade, quantidade_recebida')
-    .eq('ordem_id', ocId)
-
-  const todosRecebidos = (todosItens ?? []).every(
-    (i) => (i.quantidade_recebida ?? 0) >= i.quantidade,
-  )
-
-  if (todosRecebidos) {
-    await supabase
-      .from('ordens_compra')
-      .update({ status: 'RECEBIDA' })
-      .eq('id', ocId)
-      .eq('loja_id', lojaId)
-  }
+  if (error) return { success: false, error: mensagemErroComSecao('Recebimento', error.message) }
 
   revalidatePath('/gerente/compras')
+  revalidatePath('/gerente/estoque')
   return { success: true, data: null }
 }

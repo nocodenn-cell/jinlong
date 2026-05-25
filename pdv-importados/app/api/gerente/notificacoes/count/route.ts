@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 /**
  * Conta produtos ativos com estoque abaixo do mínimo.
