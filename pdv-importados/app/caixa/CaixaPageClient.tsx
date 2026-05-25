@@ -433,6 +433,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   )
 
   const handleNovoCupom = useCallback(() => {
+    // Não permite limpar cupom enquanto finalização está em voo —
+    // evitaria que a key de idempotência fosse apagada antes do retry.
+    if (finalizando) return
     vendaIdempotenciaRef.current = null
     flushLeiturasPendentes({ reason: "new_cupom" })
     cupomSessionIdRef.current = newCupomSessionId()
@@ -444,6 +447,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     limparEstadoDescontoGerente()
     setAbaPdvAtiva("produto")
   }, [
+    finalizando,
     flushLeiturasPendentes,
     limparCarrinho,
     limparEstadoDescontoGerente,
@@ -600,6 +604,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
 
   const handleFinalizar = useCallback(async () => {
     if (itens.length === 0 || finalizando) return
+    // Trava imediatamente — antes de qualquer await ou validação longa.
+    // Evita race condition se dois caminhos chamarem handleFinalizar no mesmo tick.
+    setFinalizando(true)
     if (
       configCaixaWeb.vendas_suspensas === 'true' &&
       perfil !== null &&
@@ -610,11 +617,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         motivo ? `Vendas suspensas: ${motivo}` : 'Vendas suspensas pelo gerente.',
         { kind: 'error' },
       )
+      setFinalizando(false)
       return
     }
     if (gerenteValidadoAte && Date.now() >= Date.parse(gerenteValidadoAte)) {
       limparEstadoDescontoGerente()
       setCaixaMensagem(m.caixa.msg_token_expirado, { kind: "warning" })
+      setFinalizando(false)
       return
     }
     const totalPagamentos = roundMoney2(
@@ -628,6 +637,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         }),
         { kind: "warning" },
       )
+      setFinalizando(false)
       return
     }
     // Normalizar parcelas: desconta troco da última parcela DINHEIRO
@@ -665,7 +675,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
       parcelasFiltradas.length > 0
         ? parcelasFiltradas
         : [{ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", valor: 0 }]
-    setFinalizando(true)
     setCaixaMensagem(null)
     try {
       if (!vendaIdempotenciaRef.current) {

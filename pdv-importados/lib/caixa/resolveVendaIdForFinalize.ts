@@ -1,12 +1,14 @@
 /**
- * Escolhe o `p_venda_id` da finalização: fluxo unificado + chave estável = idempotência no RPC.
+ * Escolhe o `p_venda_id` da finalização: chave estável por cupom = idempotência no RPC.
+ * Retorna sempre o mesmo UUID enquanto o cupom não for limpo (handleNovoCupom),
+ * garantindo que retentativas não criem vendas duplicadas no banco.
  */
 export function resolveVendaIdForFinalize(args: {
   useUnifiedSalesFlow: boolean
   idempotencyKey?: string | undefined
   randomUuid: () => string
 }): string {
-  const { useUnifiedSalesFlow, idempotencyKey, randomUuid } = args
-  if (useUnifiedSalesFlow && idempotencyKey) return idempotencyKey
+  const { idempotencyKey, randomUuid } = args
+  if (idempotencyKey) return idempotencyKey
   return randomUuid()
 }
