@@ -88,11 +88,19 @@ export default async function GerenteVendaDetalhePage(props: PageProps) {
   }> = []
   if (caixaId) {
     const { data } = await supabase
-      .from('movimentos_caixa')
-      .select('id, tipo, valor, referencia_id, observacao, created_at')
+      .from('movimentacoes_caixa')
+      .select('id, tipo, valor, motivo, created_at, status')
       .eq('caixa_id', caixaId)
+      .eq('status', 'aprovado')
       .order('created_at', { ascending: true })
-    movimentosCaixa = (data ?? []) as typeof movimentosCaixa
+    movimentosCaixa = (data ?? []).map((row) => ({
+      id: row.id,
+      tipo: String(row.tipo ?? '').toUpperCase(),
+      valor: Number(row.valor ?? 0),
+      referencia_id: null,
+      observacao: row.motivo ?? null,
+      created_at: row.created_at,
+    }))
   }
 
   const money = (n: number) => formatBRL(Number(n), locale)

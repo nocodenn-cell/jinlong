@@ -47,7 +47,7 @@ export function useGerenteQuery<TData>(
     } finally {
       setLoading(false)
     }
-  }, [options, queryFn])
+  }, [queryFn, options?.enabled, options?.loadingMessage, options?.onSuccess])
 
   useEffect(() => {
     if (options?.enabled === false) {

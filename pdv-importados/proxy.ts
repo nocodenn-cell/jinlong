@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPerfilPainelGerencial, PREFIXOS_ROTAS_PAINEL_WEB } from '@/lib/auth/painelGerencial'
+import { isStaleAuthMessage } from '@/lib/auth/staleSession'
 import { normalizePerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 
 function supabaseConfigOk(url: string | undefined, anonKey: string | undefined): boolean {
@@ -73,7 +74,17 @@ export async function proxy(request: NextRequest) {
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+
+  if (authError && isStaleAuthMessage(authError.message)) {
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      /* noop */
+    }
+    return redirectLogin()
+  }
 
   if (isProtected && !user) {
     return redirectLogin()

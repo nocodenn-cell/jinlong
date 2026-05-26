@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { cancelarVenda } from '@/app/caixa/actions'
 import { parseCancelarVendaGerenteForm } from '@/app/gerente/vendas/parseCancelarVendaGerenteForm'
 
@@ -87,12 +88,25 @@ export type VendasKpisDTO = Readonly<{
 
 const PAGE_SIZE = 20
 
+async function createVendasSupabaseClient() {
+  const supabase = await createClient()
+  const { error: authError } = await supabase.auth.getUser()
+  if (authError) {
+    if (await clearStaleSessionIfNeeded(supabase, authError)) return null
+    throw authError
+  }
+  return supabase
+}
+
 export async function buscarVendasPaginadasAction(
   page: number,
   filtros: VendasFiltro = FILTRO_VENDAS_VAZIO,
 ): Promise<{ ok: true; vendas: VendaListRow[]; hasMore: boolean } | { ok: false; error: string }> {
   try {
-    const supabase = await createClient()
+    const supabase = await createVendasSupabaseClient()
+    if (!supabase) {
+      return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    }
     let query = supabase
       .from('vendas')
       .select(VENDAS_SELECT)
@@ -135,7 +149,8 @@ export async function obterKpisVendas(
     valorCanceladas: 0,
   }
   try {
-    const supabase = await createClient()
+    const supabase = await createVendasSupabaseClient()
+    if (!supabase) return vazio
     let query = supabase.from('vendas').select('total_liquido, status')
 
     if (filtros.inicio) query = query.gte('data', filtros.inicio)

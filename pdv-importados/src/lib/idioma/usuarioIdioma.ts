@@ -1,4 +1,6 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma, type Idioma } from './normalizeIdioma'
 import { normalizePerfilUsuario, type PerfilUsuario } from './normalizePerfilUsuario'
@@ -13,7 +15,15 @@ export async function getUsuarioIdioma(): Promise<{
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+
+  if (authError) {
+    if (await clearStaleSessionIfNeeded(supabase, authError)) {
+      redirect('/login?reason=sessao_expirada')
+    }
+    throw authError
+  }
 
   if (!user) {
     return { idioma: 'pt', perfil: 'OPERADOR' }

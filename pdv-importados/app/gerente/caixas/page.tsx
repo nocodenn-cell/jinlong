@@ -29,29 +29,18 @@ export default async function GerenteCaixasPage() {
 
   const valorSistemaPorCaixa = new Map<string, number>()
   if (caixasIds.length > 0) {
-    const { data: vendasDinheiro } = await supabase
-      .from('vendas')
-      .select('caixa_id, total_liquido')
-      .in('caixa_id', caixasIds)
-      .eq('forma_pagamento', 'DINHEIRO')
-      .eq('status', 'CONCLUIDA')
-
-    for (const row of vendasDinheiro ?? []) {
-      const atual = valorSistemaPorCaixa.get(row.caixa_id) ?? 0
-      valorSistemaPorCaixa.set(row.caixa_id, atual + Number(row.total_liquido ?? 0))
+    const { data: valoresRpc, error: rpcError } = await supabase.rpc(
+      'listar_valores_sistema_dinheiro_caixas',
+      { p_caixa_ids: caixasIds },
+    )
+    if (rpcError) {
+      console.error('[gerente/caixas] listar_valores_sistema_dinheiro_caixas:', rpcError.message)
     }
-
-    const { data: movimentos } = await supabase
-      .from('movimentos_caixa')
-      .select('caixa_id, tipo, valor')
-      .in('caixa_id', caixasIds)
-      .in('tipo', ['SUPRIMENTO', 'SANGRIA'])
-
-    for (const row of movimentos ?? []) {
-      const atual = valorSistemaPorCaixa.get(row.caixa_id) ?? 0
-      const valor = Number(row.valor ?? 0)
-      const delta = row.tipo === 'SUPRIMENTO' ? valor : -valor
-      valorSistemaPorCaixa.set(row.caixa_id, atual + delta)
+    for (const row of valoresRpc ?? []) {
+      const caixaRow = caixasList.find((c) => c.id === row.caixa_id)
+      const inicial = Number(caixaRow?.valor_inicial ?? 0)
+      // RPC já inclui valor_inicial; derivadosLinhaCaixaGerente soma inicial de novo.
+      valorSistemaPorCaixa.set(row.caixa_id, Number(row.valor ?? 0) - inicial)
     }
   }
 
