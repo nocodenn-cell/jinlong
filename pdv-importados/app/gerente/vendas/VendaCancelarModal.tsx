@@ -73,7 +73,7 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
       aria-labelledby="cancelar-venda-titulo"
     >
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60"
         onClick={isPending ? undefined : onClose}
         aria-hidden
       />

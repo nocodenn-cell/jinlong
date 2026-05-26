@@ -82,7 +82,7 @@ function KpiCard({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex flex-col gap-1.5 rounded-xl border p-4 text-left transition-all duration-150 hover:border-jl-fg-3/50',
+        'flex flex-col gap-1.5 rounded-xl border p-4 text-left transition-[border-color,background-color] duration-150 hover:border-jl-fg-3/50',
         active
           ? accent === 'red'
             ? 'border-red-500/40 bg-red-500/10 ring-1 ring-red-500/20'

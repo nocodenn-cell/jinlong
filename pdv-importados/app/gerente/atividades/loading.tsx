@@ -1,11 +1,11 @@
 export default function AtividadesLoading() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-      <div className="mb-6 animate-pulse space-y-2">
+      <div className="mb-6 space-y-2">
         <div className="h-6 w-56 rounded bg-white/[0.08]" />
         <div className="h-3 w-80 rounded bg-white/[0.05]" />
       </div>
-      <div className="animate-pulse space-y-4">
+      <div className="space-y-4">
         <div className="flex gap-2">
           {[80, 96, 64, 64].map((w, i) => (
             <div key={i} className="h-7 rounded-full bg-white/[0.07]" style={{ width: w }} />

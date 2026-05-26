@@ -56,8 +56,8 @@ const STATUS_CFG: Record<SystemStatus, {
   textCn: string
   pulse: boolean
 }> = {
-  online:    { dot: 'bg-emerald-500', textCn: 'text-emerald-400', pulse: true  },
-  attention: { dot: 'bg-amber-400',   textCn: 'text-amber-300',   pulse: true  },
+  online:    { dot: 'bg-emerald-500', textCn: 'text-emerald-400', pulse: false },
+  attention: { dot: 'bg-amber-400',   textCn: 'text-amber-300',   pulse: false },
   degraded:  { dot: 'bg-amber-400',   textCn: 'text-amber-400',   pulse: false },
   offline:   { dot: 'bg-red-500',     textCn: 'text-red-400',     pulse: false },
 }

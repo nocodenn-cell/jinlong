@@ -156,7 +156,7 @@ function PeriodoChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'h-8 rounded-full border px-3 text-xs font-medium transition-all',
+        'h-8 rounded-full border px-3 text-xs font-medium transition-colors duration-150',
         active
           ? 'border-amber-400/50 bg-amber-400/15 text-amber-200'
           : 'border-jl-border-1 bg-jl-surface-base text-jl-fg-3 hover:text-jl-fg-1',
@@ -189,7 +189,7 @@ function KpiCard({
       type={clickable ? 'button' : undefined}
       onClick={onClick}
       className={cn(
-        'flex flex-col gap-1.5 rounded-xl border p-4 text-left transition-all duration-150',
+        'flex flex-col gap-1.5 rounded-xl border p-4 text-left transition-[border-color,background-color] duration-150',
         clickable && 'hover:border-jl-fg-3/50',
         active
           ? accent === 'red'
@@ -556,7 +556,7 @@ export function VendasGerenteListClient({ idioma, locale }: Props) {
       {/* Sentinel para trigger do scroll infinito */}
       <div ref={sentinelRef} className="h-1" aria-hidden />
 
-      {loading && (
+      {loading && vendas.length === 0 && (
         <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
       )}
 

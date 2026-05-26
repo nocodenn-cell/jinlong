@@ -13,8 +13,11 @@ export function useActivityFeed(intervalMs = 15_000) {
   const [isLoading, setIsLoading] = useState(false)
   const lastTopIdRef = useRef<string | null>(null)
 
+  const hasLoadedRef = useRef(false)
+
   const fetchFeed = useCallback(async () => {
-    setIsLoading(true)
+    const showSpinner = !hasLoadedRef.current
+    if (showSpinner) setIsLoading(true)
     try {
       const res = await fetch('/api/gerente/atividades/recent')
       if (!res.ok) return
@@ -40,7 +43,8 @@ export function useActivityFeed(intervalMs = 15_000) {
         if (incoming[0]) lastTopIdRef.current = incoming[0].id
       }
     } catch { /* silently ignore */ } finally {
-      setIsLoading(false)
+      hasLoadedRef.current = true
+      if (showSpinner) setIsLoading(false)
     }
   }, [])
 

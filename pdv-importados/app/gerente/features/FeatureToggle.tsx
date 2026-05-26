@@ -55,7 +55,7 @@ export function FeatureGate({
   flagName, 
   children, 
   fallback = null, 
-  loadingComponent = <div className="animate-pulse h-4 w-20 bg-gray-200 rounded" /> 
+  loadingComponent = <div className="h-4 w-20 rounded bg-white/[0.07]" aria-hidden /> 
 }: FeatureGateProps) {
   const [isEnabled, setIsEnabled] = useState<boolean | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -164,7 +164,7 @@ export function useFeatureFlag(flagName: string) {
 // Componente de loading padrão
 export function FeatureGateSkeleton({ width = 'w-20', height = 'h-4' }: { width?: string; height?: string }) {
   return (
-    <div className={`animate-pulse ${width} ${height} bg-gray-200 rounded`} />
+    <div className={`${width} ${height} rounded bg-white/[0.07]`} aria-hidden />
   )
 }
 

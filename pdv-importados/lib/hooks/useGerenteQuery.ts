@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 
 type UseGerenteQueryOptions<TData> = {
@@ -27,9 +27,11 @@ export function useGerenteQuery<TData>(
   const [data, setData] = useState<TData | null>(null)
   const [loading, setLoading] = useState(Boolean(options?.enabled ?? true))
   const [error, setError] = useState<string | null>(null)
+  const dataRef = useRef<TData | null>(null)
+  dataRef.current = data
 
   const refetch = useCallback(async () => {
-    setLoading(true)
+    if (dataRef.current === null) setLoading(true)
     setError(null)
     if (options?.loadingMessage) {
       emitGerenteToast({ kind: 'info', message: options.loadingMessage })

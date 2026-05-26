@@ -3,13 +3,13 @@ function TableSkeleton({ cols, rows }: { cols: number[]; rows: number }) {
     <div className="dragon-glass-card overflow-hidden rounded-xl">
       <div className="flex gap-4 border-b border-jl-border-1 px-4 py-2.5">
         {cols.map((w, i) => (
-          <div key={i} className="h-2.5 animate-pulse rounded bg-white/[0.07]" style={{ width: w }} />
+          <div key={i} className="h-2.5 rounded bg-white/[0.07]" style={{ width: w }} />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex gap-4 border-b border-jl-border-1/40 px-4 py-[9px]">
           {cols.map((w, j) => (
-            <div key={j} className="h-2.5 animate-pulse rounded bg-white/[0.06]" style={{ width: w }} />
+            <div key={j} className="h-2.5 rounded bg-white/[0.06]" style={{ width: w }} />
           ))}
         </div>
       ))}
@@ -19,12 +19,12 @@ function TableSkeleton({ cols, rows }: { cols: number[]; rows: number }) {
 
 export default function FinanceiroLoading() {
   return (
-    <div className="animate-pulse space-y-6">
+    <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="dragon-glass-card rounded-xl p-4">
             <div className="h-2 w-14 rounded bg-white/[0.07]" />
-            <div className="mt-2 h-7 w-20 rounded bg-white/[0.09]" style={{ animationDelay: `${i * 80}ms` }} />
+            <div className="mt-2 h-7 w-20 rounded bg-white/[0.09]" />
           </div>
         ))}
       </div>

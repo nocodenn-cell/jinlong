@@ -95,8 +95,14 @@ export function ClientesListClient({
     return () => obs.disconnect()
   }, [carregarProxima])
 
+  const skipMountRefetch = useRef(true)
+
   // —— Busca com debounce ————————————————————
   useEffect(() => {
+    if (skipMountRefetch.current) {
+      skipMountRefetch.current = false
+      return
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
@@ -312,7 +318,7 @@ export function ClientesListClient({
 
       <div ref={sentinelRef} className="h-1" aria-hidden />
 
-      {loading && (
+      {loading && clientes.length === 0 && (
         <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
       )}
 

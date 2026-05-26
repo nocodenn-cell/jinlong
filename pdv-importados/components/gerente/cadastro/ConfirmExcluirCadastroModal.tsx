@@ -44,7 +44,7 @@ export function ConfirmExcluirCadastroModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
       <div className="dragon-elev-2 relative z-10 w-full max-w-sm rounded-2xl p-6">
         <h2 className="mb-2 text-base font-semibold app-surface-text">{labels.confirmar_excluir_titulo}</h2>
         <p className="mb-6 text-sm app-muted">

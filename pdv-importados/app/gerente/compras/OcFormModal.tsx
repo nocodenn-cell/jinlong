@@ -160,7 +160,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
       aria-modal="true"
     >
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/60"
         onClick={isPending ? undefined : onClose}
         aria-hidden
       />

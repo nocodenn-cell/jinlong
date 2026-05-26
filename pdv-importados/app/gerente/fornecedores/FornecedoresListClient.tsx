@@ -102,8 +102,14 @@ export function FornecedoresListClient({
     return () => obs.disconnect()
   }, [carregarProxima])
 
+  const skipMountRefetch = useRef(true)
+
   // Busca / filtro status com debounce
   useEffect(() => {
+    if (skipMountRefetch.current) {
+      skipMountRefetch.current = false
+      return
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
@@ -425,7 +431,7 @@ export function FornecedoresListClient({
 
       <div ref={sentinelRef} className="h-1" aria-hidden />
 
-      {loading && (
+      {loading && fornecedores.length === 0 && (
         <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
       )}
 

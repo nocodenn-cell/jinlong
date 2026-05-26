@@ -135,8 +135,14 @@ export function ContasPagarListClient({
     return () => obs.disconnect()
   }, [carregarProxima])
 
+  const skipMountRefetch = useRef(true)
+
   // Debounce de filtros
   useEffect(() => {
+    if (skipMountRefetch.current) {
+      skipMountRefetch.current = false
+      return
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
@@ -500,7 +506,7 @@ export function ContasPagarListClient({
       </GerenteTable>
 
       <div ref={sentinelRef} className="h-1" aria-hidden />
-      {loading && (
+      {loading && contas.length === 0 && (
         <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
       )}
 
