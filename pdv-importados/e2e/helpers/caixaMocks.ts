@@ -35,7 +35,7 @@ export async function setupCaixaMocks(page: Page): Promise<void> {
   const SB2 = '**/supabase.io/**'
 
   // Auth — retorna usuário operador válido
-  await page.route([`${SB}auth/**`, `${SB2}auth/**`], (route) => {
+  const authHandler = (route: Parameters<Parameters<typeof page.route>[1]>[0]) => {
     const url = route.request().url()
     if (url.includes('/token') || url.includes('/session')) {
       return route.fulfill(ok({
@@ -53,10 +53,12 @@ export async function setupCaixaMocks(page: Page): Promise<void> {
       }))
     }
     return route.continue()
-  })
+  }
+  await page.route(`${SB}auth/**`, authHandler)
+  await page.route(`${SB2}auth/**`, authHandler)
 
   // Tabela: usuarios (perfil do operador)
-  await page.route(['**/rest/v1/usuarios*', '**/rest/v1/usuarios*'], (route) => {
+  await page.route('**/rest/v1/usuarios*', (route) => {
     if (route.request().method() === 'GET') {
       return route.fulfill(ok([{ perfil: 'OPERADOR', idioma_preferido: 'pt' }]))
     }
