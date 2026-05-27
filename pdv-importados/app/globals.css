@@ -83,7 +83,7 @@
 
 @layer base {
   * {
-    border-color: var(--border);
+    border-color: var(--jl-border-2);
   }
   body {
     @apply bg-background text-foreground;
