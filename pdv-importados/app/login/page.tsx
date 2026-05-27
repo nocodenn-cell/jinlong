@@ -2,8 +2,8 @@ import { Suspense } from 'react'
 import { cookies } from 'next/headers'
 import { LoginForm } from './LoginForm'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
-import { normalizeIdioma } from '@/src/lib/idioma/normalizeIdioma'
-import { getMessages } from '@/src/lib/i18n/getMessages'
+import { normalizeIdioma } from '@/idioma/normalizeIdioma'
+import { getMessages } from '@/i18n/getMessages'
 
 export default async function LoginPage() {
   const cookieStore = await cookies()
