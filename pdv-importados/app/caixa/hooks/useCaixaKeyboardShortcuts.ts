@@ -67,7 +67,7 @@ export function useCaixaKeyboardShortcuts({
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return
       if (alvoEhCampoTexto(e.target)) return
-      if (e.code === "F4") {
+      if (e.code === "F4" || e.code === "F9") {
         e.preventDefault()
         onFinalizar()
         return

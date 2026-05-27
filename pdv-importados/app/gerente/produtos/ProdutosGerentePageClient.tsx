@@ -26,11 +26,11 @@ import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
 import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
 import { ProdutosExcluirLoteModal } from '@/components/gerente/produtos/ProdutosExcluirLoteModal'
 import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImportarModal'
+import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { ProdutoImagemCell } from '@/components/gerente/produtos/ProdutoImagemCell'
 import { ProdutosListaImpressao } from '@/components/gerente/produtos/ProdutosListaImpressao'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
-import { readFormDataString } from '@/lib/forms/readFormDataString'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
@@ -44,7 +44,6 @@ import {
   atualizarPrecoVarejoProduto,
   buscarProdutosComFiltros,
   buscarProdutosParaExportacao,
-  criarProduto,
 } from './actions'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 import { parseTagsFiltroTexto } from './produtoGerenteFiltrosUtils'
@@ -200,11 +199,11 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(ITEMS_POR_PAGINA_PADRAO)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const nomeInputRef = useRef<HTMLInputElement>(null)
   const [loadingList, setLoadingList] = useState(false)
   const tinhaProdutosAoCarregar = useRef(inicial.total > 0)
   const [filtrosAvancadosAbertos, setFiltrosAvancadosAbertos] = useState(false)
 
+  const [novoProdutoModalAberto, setNovoProdutoModalAberto] = useState(false)
   const [importModalAberto, setImportModalAberto] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [exclusaoModalAberto, setExclusaoModalAberto] = useState(false)
@@ -342,23 +341,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       return null
     },
     exportOpts,
-  )
-
-  const { mutate: criar, loading: criarLoading } = useGerenteMutation(
-    async (input: {
-      nome: string
-      codigo_barras: string
-      preco_varejo: number
-      origem: string
-      categoria_id?: string
-    }) => {
-      const r = await criarProduto(input)
-      if (!r.success) throw new Error(r.error)
-      void fetchList(filtros, paginaAtual)
-      router.refresh()
-      return r.data
-    },
-    { successMessage: m.comum.sucesso },
   )
 
   const { mutate: toggle, loading: toggleLoading } = useGerenteMutation(
@@ -530,10 +512,13 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
     },
     { key: 'foto', header: m.produtos.foto_coluna, width: '3.75rem' },
     { key: 'nome', header: m.produtos.nome },
+    { key: 'loc', header: 'Local', width: '5.5rem' },
     { key: 'preco', header: m.produtos.preco_varejo, width: '7rem' },
-    { key: 'origem', header: m.produtos.origem_label },
-    { key: 'st', header: m.produtos.status },
-    { key: 'ac', header: m.produtos.acoes, width: '6.5rem' },
+    { key: 'atacado', header: 'Atacado', width: '6rem' },
+    { key: 'estoque', header: 'Estoque', width: '5rem' },
+    { key: 'origem', header: m.produtos.origem_label, width: '7rem' },
+    { key: 'st', header: m.produtos.status, width: '5rem' },
+    { key: 'ac', header: m.produtos.acoes, width: '5.5rem' },
   ]
 
   const colSpanVazio = colunasProdutos.length
@@ -623,6 +608,16 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
 
               {/* Ações secundárias */}
               <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setNovoProdutoModalAberto(true)}
+                  title={m.produtos.cadastro_rapido}
+                  aria-label={m.produtos.cadastro_rapido}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 text-xs font-semibold text-amber-300 transition-colors hover:border-amber-500/60 hover:bg-amber-500/25"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden />
+                  {m.produtos.cadastro_rapido}
+                </button>
                 <button
                   type="button"
                   onClick={() => setImportModalAberto(true)}
@@ -835,6 +830,16 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
         </GerenteStickyToolbar>
 
         {/* Modais */}
+        <NovoProdutoModal
+          open={novoProdutoModalAberto}
+          onOpenChange={setNovoProdutoModalAberto}
+          m={m}
+          opcoes={opcoes}
+          onCriado={() => {
+            void fetchList(filtros, paginaAtual)
+            router.refresh()
+          }}
+        />
         <ProdutosExcluirLoteModal
           open={exclusaoModalAberto}
           onOpenChange={onExclusaoModalOpenChange}
@@ -856,118 +861,6 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
           m={m}
           onImportComplete={refetch}
         />
-
-        {/* ─── FORMULÁRIO NOVO PRODUTO ─────────────────────────────── */}
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Plus className="h-4 w-4 text-amber-400" aria-hidden />
-            <h2 className="text-sm font-semibold app-accent-text">{m.produtos.cadastro_rapido}</h2>
-            <span className="text-[11px] app-muted">· {m.produtos.codigo_barras_opcional}</span>
-          </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const fd = new FormData(e.currentTarget)
-              const nome = readFormDataString(fd, 'nome').trim()
-              if (!nome) {
-                emitGerenteToast({ kind: 'error', message: m.produtos.nome_obrigatorio })
-                return
-              }
-              const precoRaw = readFormDataString(fd, 'preco_varejo').trim().replace(',', '.')
-              const precoVarejo = Number(precoRaw)
-              if (!precoRaw || !Number.isFinite(precoVarejo) || precoVarejo <= 0) {
-                emitGerenteToast({ kind: 'error', message: m.produtos.preco_invalido })
-                return
-              }
-              void criar({
-                nome,
-                codigo_barras: readFormDataString(fd, 'codigo_barras'),
-                preco_varejo: precoVarejo,
-                origem: readFormDataString(fd, 'origem'),
-                categoria_id: readFormDataString(fd, 'categoria_id') || undefined,
-              })
-              e.currentTarget.reset()
-              // Auto-foca o campo Nome após salvar para cadastro sequencial
-              setTimeout(() => nomeInputRef.current?.focus(), 60)
-            }}
-            className="flex flex-wrap items-end gap-2"
-          >
-            <label className="flex min-w-[200px] flex-[2] flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
-                {m.produtos.nome} *
-              </span>
-              <input
-                ref={nomeInputRef}
-                name="nome"
-                placeholder={m.produtos.nome}
-                autoComplete="off"
-                className="h-9 w-full rounded-lg px-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
-              />
-            </label>
-            <label className="flex min-w-[140px] flex-1 flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
-                {m.produtos.codigo_barras}
-              </span>
-              <input
-                name="codigo_barras"
-                placeholder={m.produtos.codigo_barras}
-                autoComplete="off"
-                className="h-9 w-full rounded-lg px-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
-              />
-            </label>
-            <label className="flex w-[110px] flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
-                {m.produtos.preco_varejo}
-              </span>
-              <input
-                name="preco_varejo"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                required
-                className="h-9 w-full rounded-lg px-3 text-sm app-input !bg-white/[.08] !border-white/[.18]"
-              />
-            </label>
-            <label className="flex w-[140px] flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
-                {m.produtos.origem_label}
-              </span>
-              <select
-                name="origem"
-                defaultValue="china_manual"
-                className="h-9 rounded-lg px-3 text-sm app-select !bg-white/[.08] !border-white/[.18]"
-              >
-                <option value="china_manual">{m.produtos.origem_china}</option>
-                <option value="brasil_nf">{m.produtos.origem_brasil_nf}</option>
-              </select>
-            </label>
-            {opcoes.categorias.length > 0 && (
-              <label className="flex min-w-[150px] flex-1 flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wide app-muted">
-                  {m.produtos.categoria}
-                </span>
-                <select
-                  name="categoria_id"
-                  defaultValue=""
-                  className="h-9 rounded-lg px-3 text-sm app-select !bg-white/[.08] !border-white/[.18]"
-                >
-                  <option value="">{m.produtos.filtro_categoria_todas}</option>
-                  {opcoes.categorias.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <button
-              type="submit"
-              disabled={criarLoading}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold shadow-sm transition-[filter] disabled:opacity-60 app-btn-accent"
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              {criarLoading ? '…' : m.comum.salvar}
-            </button>
-          </form>
-        </div>
 
         {/* ─── TABELA DE PRODUTOS (largura total) ──────────────────── */}
         <TabelaCadastroPadrao
@@ -1049,7 +942,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
             rows.map((p) => (
               <tr key={p.id} className="group gerente-fin-row-hover transition-colors">
                 {/* ☐ Seleção */}
-                <td className="gerente-fin-cell px-2 py-2 text-center align-middle">
+                <td className="gerente-fin-cell px-2 py-1 text-center align-middle">
                   <input
                     type="checkbox"
                     className="h-3.5 w-3.5 rounded app-border app-surface-soft"
@@ -1077,16 +970,31 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                     onDone={refetch}
                   />
                 </td>
-                {/* Nome + Código de barras (merged — ID disponível via title) */}
-                <td className="gerente-fin-cell px-3 py-2" title={p.id}>
+                {/* Nome + SKU + Código de barras */}
+                <td className="gerente-fin-cell px-3 py-1" title={p.id}>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-medium leading-tight">{p.nome}</span>
-                    {p.codigo_barras ? (
-                      <span className="font-mono text-[11px] opacity-50">{p.codigo_barras}</span>
-                    ) : null}
+                    <span className="font-medium leading-tight text-sm">{p.nome}</span>
+                    <div className="flex flex-wrap gap-x-2 gap-y-0">
+                      {p.codigo_interno ? (
+                        <span className="font-mono text-[10px] text-amber-400/70">SKU {p.codigo_interno}</span>
+                      ) : null}
+                      {p.codigo_barras ? (
+                        <span className="font-mono text-[10px] opacity-45">{p.codigo_barras}</span>
+                      ) : null}
+                    </div>
                   </div>
                 </td>
-                {/* Preço (edição inline) */}
+                {/* Localização/Prateleira */}
+                <td className="gerente-fin-cell px-2 py-1 align-middle">
+                  {p.localizacao_prateleira ? (
+                    <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-white/[.06] text-slate-300">
+                      {p.localizacao_prateleira}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] opacity-25">—</span>
+                  )}
+                </td>
+                {/* Preço varejo (edição inline) */}
                 <td className="gerente-fin-cell px-1 py-1 text-right">
                   <PrecoVarejoCell
                     produtoId={p.id}
@@ -1097,8 +1005,42 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                     atualizadoMessage={m.produtos.preco_atualizado}
                   />
                 </td>
+                {/* Preço Atacado */}
+                <td className="gerente-fin-cell px-2 py-1 text-right align-middle">
+                  {p.preco_atacado != null ? (
+                    <div className="flex flex-col items-end gap-0">
+                      <span className="text-xs tabular-nums text-emerald-400">
+                        {p.preco_atacado.toFixed(2)}
+                      </span>
+                      {p.quantidade_gatilho_atacado != null && (
+                        <span className="text-[10px] text-slate-500">≥{p.quantidade_gatilho_atacado}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] opacity-25">—</span>
+                  )}
+                </td>
+                {/* Estoque Atual */}
+                <td className="gerente-fin-cell px-2 py-1 text-right align-middle">
+                  {p.quantidade_atual != null ? (
+                    <span
+                      className={cn(
+                        'text-xs tabular-nums font-semibold',
+                        p.quantidade_atual < 0
+                          ? 'text-red-400/80'
+                          : p.quantidade_atual === 0
+                            ? 'text-amber-400/70'
+                            : 'text-slate-300',
+                      )}
+                    >
+                      {p.quantidade_atual}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] opacity-25">—</span>
+                  )}
+                </td>
                 {/* Origem */}
-                <td className="gerente-fin-cell px-3 py-2">
+                <td className="gerente-fin-cell px-2 py-1">
                   {p.origem === 'china_manual' ? (
                     <OrigemBadgeUi
                       label={m.produtos.origem_china}
@@ -1114,14 +1056,14 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                   )}
                 </td>
                 {/* Status */}
-                <td className="px-3 py-2">
+                <td className="px-2 py-1">
                   <GerenteStatusBadge
                     status={p.ativo ? 'ATIVO' : 'INATIVO'}
                     label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
                   />
                 </td>
                 {/* Ações compactas — 3 ícones em linha */}
-                <td className="px-2 py-1 text-center">
+                <td className="px-1 py-1 text-center">
                   <div className="flex items-center justify-center gap-0.5">
                     <button
                       type="button"

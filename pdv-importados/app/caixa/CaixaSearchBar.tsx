@@ -103,6 +103,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             placeholder={m.caixa.busca_placeholder}
             aria-label={m.caixa.busca_placeholder}
             disabled={buscando || carregandoRegras}
+            data-caixa-busca="true"
             className={cn(
               "w-full app-input text-jl-fg-1 placeholder:text-jl-fg-3 rounded-md focus:outline-none focus:ring-2 focus:ring-jl-accent focus:border-transparent",
               compact

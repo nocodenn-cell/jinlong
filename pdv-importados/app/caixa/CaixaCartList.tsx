@@ -111,6 +111,14 @@ function QuantidadeStepper({
         onChange={(e) =>
           onAlterarQuantidade(item.id, parseQuantidadeInput(e.target.value))
         }
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            ;(e.currentTarget as HTMLInputElement).blur()
+            const busca = document.querySelector<HTMLElement>('[data-caixa-busca="true"]')
+            busca?.focus()
+          }
+        }}
         className={`${inputSizeClass} rounded-none border-0 text-center text-sm tabular-nums px-1 bg-background focus-visible:ring-1 focus-visible:ring-primary/40`}
       />
       <Button

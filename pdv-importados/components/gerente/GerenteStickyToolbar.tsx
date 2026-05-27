@@ -25,7 +25,7 @@ export function GerenteStickyToolbar({ children, className, bleed = 'page' }: Ge
     <div
       className={cn(
         'sticky z-[25] w-full border-b py-2 shadow-sm',
-        'bg-[#0f172a] border-[color:var(--border)]',
+        'bg-[#0f172a] border-[color:var(--jl-border-2)]',
         'top-[var(--gerente-sticky-top,6.75rem)]',
         'print:static print:border-0 print:bg-transparent print:p-0 print:shadow-none',
         bleed === 'page' && bleedPage,

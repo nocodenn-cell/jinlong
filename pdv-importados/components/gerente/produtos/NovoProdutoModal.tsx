@@ -1,0 +1,268 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { criarProduto } from '@/app/gerente/produtos/actions'
+import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import type { Mensagens } from '@/i18n/getMessages'
+import { emitGerenteToast } from '@/lib/gerente/toast'
+
+type OrigemCode = 'china_manual' | 'brasil_nf'
+
+export type NovoProdutoModalProps = Readonly<{
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  m: Mensagens
+  opcoes: OpcoesFiltrosProdutos
+  onCriado: () => void
+}>
+
+export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: NovoProdutoModalProps) {
+  const p = m.produtos
+  const nomeRef = useRef<HTMLInputElement>(null)
+
+  const [nome, setNome] = useState('')
+  const [codigoBarras, setCodigoBarras] = useState('')
+  const [origem, setOrigem] = useState<OrigemCode>('china_manual')
+  const [precoVarejo, setPrecoVarejo] = useState('')
+  const [precoAtacado, setPrecoAtacado] = useState('')
+  const [qtdGatilho, setQtdGatilho] = useState('')
+  const [categoriaId, setCategoriaId] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const fechar = useCallback(() => {
+    if (saving) return
+    onOpenChange(false)
+  }, [saving, onOpenChange])
+
+  useEffect(() => {
+    if (!open) return
+    setNome('')
+    setCodigoBarras('')
+    setOrigem('china_manual')
+    setPrecoVarejo('')
+    setPrecoAtacado('')
+    setQtdGatilho('')
+    setCategoriaId('')
+    setSaving(false)
+    // Auto-focus no nome ao abrir
+    requestAnimationFrame(() => nomeRef.current?.focus())
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !saving) {
+        e.preventDefault()
+        fechar()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, saving, fechar])
+
+  const salvar = useCallback(async () => {
+    const nomeTrim = nome.trim()
+    if (!nomeTrim) {
+      emitGerenteToast({ kind: 'error', message: p.nome_obrigatorio })
+      return
+    }
+    const precoVarejoNum = parseFloat(precoVarejo.replace(',', '.'))
+    if (!precoVarejo.trim() || !Number.isFinite(precoVarejoNum) || precoVarejoNum <= 0) {
+      emitGerenteToast({ kind: 'error', message: p.preco_invalido })
+      return
+    }
+    const precoAtacadoNum = precoAtacado.trim() ? parseFloat(precoAtacado.replace(',', '.')) : null
+    const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
+
+    setSaving(true)
+    try {
+      const r = await criarProduto({
+        nome: nomeTrim,
+        codigo_barras: codigoBarras.trim() || null,
+        preco_varejo: precoVarejoNum,
+        preco_atacado: precoAtacadoNum,
+        quantidade_gatilho_atacado: qtdGatilhoNum,
+        origem,
+        tem_nf: false,
+        categoria_id: categoriaId || null,
+      })
+      if (!r.success) {
+        emitGerenteToast({ kind: 'error', message: r.error })
+        return
+      }
+      emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      onCriado()
+      fechar()
+    } finally {
+      setSaving(false)
+    }
+  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, qtdGatilho, categoriaId, p, m.comum.sucesso, onCriado, fechar])
+
+  if (!open) return null
+
+  const finIn = 'h-9 w-full rounded-md px-3 text-xs app-input !bg-white/[.08] !border-white/[.18]'
+  const finInMono = `${finIn} font-mono`
+  const finSelect = 'h-9 w-full rounded-md px-3 text-xs app-select !bg-white/[.08] !border-white/[.18]'
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) fechar()
+      }}
+    >
+      <Card
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="novo-produto-modal-titulo"
+        className="dragon-elev-2 flex max-h-[90vh] w-full max-w-lg flex-col rounded-none sm:rounded-lg"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
+          <div className="flex items-start gap-2">
+            <Plus className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+            <CardTitle id="novo-produto-modal-titulo" className="text-lg font-semibold text-jl-fg-1">
+              {p.cadastro_rapido}
+            </CardTitle>
+          </div>
+          <p className="mt-0.5 text-xs text-jl-fg-3">{p.codigo_barras_opcional}</p>
+        </CardHeader>
+
+        <CardContent className="overflow-y-auto px-4 py-4 sm:px-6">
+
+          {/* Identificação */}
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+            {p.secao_identificacao}
+          </p>
+          <div className="space-y-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.nome} *
+              <input
+                ref={nomeRef}
+                className={`${finIn} mt-1`}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                disabled={saving}
+                placeholder={p.nome}
+                autoComplete="off"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void salvar() } }}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-xs font-medium text-jl-fg-3">
+                {p.codigo_barras}
+                <input
+                  className={`${finInMono} mt-1`}
+                  value={codigoBarras}
+                  onChange={(e) => setCodigoBarras(e.target.value)}
+                  disabled={saving}
+                  placeholder={p.codigo_barras_opcional}
+                  autoComplete="off"
+                />
+              </label>
+              <label className="block text-xs font-medium text-jl-fg-3">
+                {p.origem_label}
+                <select
+                  className={`${finSelect} mt-1`}
+                  value={origem}
+                  onChange={(e) => setOrigem(e.target.value as OrigemCode)}
+                  disabled={saving}
+                >
+                  <option value="china_manual">{p.origem_china}</option>
+                  <option value="brasil_nf">{p.origem_brasil_nf}</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          {/* Precificação — linha única compacta */}
+          <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+            {p.secao_precificacao}
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.preco_varejo} *
+              <input
+                type="text"
+                inputMode="decimal"
+                className={`${finInMono} mt-1`}
+                value={precoVarejo}
+                onChange={(e) => setPrecoVarejo(e.target.value)}
+                disabled={saving}
+                placeholder="0,00"
+              />
+            </label>
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.preco_atacado}
+              <input
+                type="text"
+                inputMode="decimal"
+                className={`${finInMono} mt-1`}
+                value={precoAtacado}
+                onChange={(e) => setPrecoAtacado(e.target.value)}
+                disabled={saving}
+                placeholder="—"
+              />
+            </label>
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.qtd_gatilho_atacado}
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`${finInMono} mt-1`}
+                value={qtdGatilho}
+                onChange={(e) => setQtdGatilho(e.target.value)}
+                disabled={saving}
+                placeholder="—"
+              />
+            </label>
+          </div>
+
+          {/* Categoria (opcional) */}
+          {opcoes.categorias.length > 0 && (
+            <>
+              <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+                {p.categoria}
+              </p>
+              <label className="block text-xs font-medium text-jl-fg-3">
+                <select
+                  className={`${finSelect} mt-1`}
+                  value={categoriaId}
+                  onChange={(e) => setCategoriaId(e.target.value)}
+                  disabled={saving}
+                >
+                  <option value="">{p.filtro_categoria_todas}</option>
+                  {opcoes.categorias.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            onClick={fechar}
+            disabled={saving}
+            className="h-9 rounded-md px-4 text-sm font-medium app-muted hover:text-slate-200 transition-colors disabled:opacity-50"
+          >
+            {m.comum.cancelar ?? 'Cancelar'}
+          </button>
+          <Button
+            type="button"
+            onClick={() => void salvar()}
+            disabled={saving}
+            className="h-9 app-btn-accent px-5 text-sm font-semibold disabled:opacity-60"
+          >
+            {saving ? '…' : m.comum.salvar}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}

@@ -773,24 +773,53 @@ export async function buscarProdutosComFiltros(
 
   const list = (data ?? []) as RpcProdutoRow[]
   const total = list.length > 0 ? Number(list[0].total_count) : 0
-  const rows: ProdutoGerenteRow[] = list.map((r) => ({
-    id: r.id,
-    nome: r.nome,
-    codigo_barras: r.codigo_barras,
-    preco_varejo: Number(r.preco_varejo),
-    preco_atacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
-    quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
-    origem: r.origem,
-    tem_nf: r.tem_nf,
-    ativo: r.ativo,
-    imagem_url: r.imagem_url ?? null,
-    categoria_id: r.categoria_id ?? null,
-    marca_id: r.marca_id ?? null,
-    fornecedor_id: r.fornecedor_id ?? null,
-    unidade_medida: r.unidade_medida ?? 'UN',
-    observacao: r.observacao ?? null,
-    tags: r.tags ?? null,
-  }))
+
+  // Queries suplementares: SKU/localização (produtos) + estoque atual
+  const productIds = list.map((r) => r.id)
+  const [estoqueRes, extraRes] = productIds.length > 0
+    ? await Promise.all([
+        supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
+        supabase.from('produtos').select('id, codigo_interno, localizacao_prateleira').in('id', productIds),
+      ])
+    : [{ data: [] as { produto_id: string; quantidade_atual: number }[] }, { data: [] as { id: string; codigo_interno: string | null; localizacao_prateleira?: string | null }[] }]
+
+  const estoqueMap = new Map<string, number>()
+  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
+    estoqueMap.set(e.produto_id, e.quantidade_atual)
+  }
+
+  const extraMap = new Map<string, { codigo_interno: string | null; localizacao_prateleira: string | null }>()
+  for (const p of ((extraRes.data ?? []) as { id: string; codigo_interno?: string | null; localizacao_prateleira?: string | null }[])) {
+    extraMap.set(p.id, {
+      codigo_interno: p.codigo_interno ?? null,
+      localizacao_prateleira: p.localizacao_prateleira ?? null,
+    })
+  }
+
+  const rows: ProdutoGerenteRow[] = list.map((r) => {
+    const extra = extraMap.get(r.id)
+    return {
+      id: r.id,
+      nome: r.nome,
+      codigo_barras: r.codigo_barras,
+      codigo_interno: extra?.codigo_interno ?? null,
+      localizacao_prateleira: extra?.localizacao_prateleira ?? null,
+      preco_varejo: Number(r.preco_varejo),
+      preco_atacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
+      quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
+      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id) ?? null) : null,
+      origem: r.origem,
+      tem_nf: r.tem_nf,
+      ativo: r.ativo,
+      imagem_url: r.imagem_url ?? null,
+      categoria_id: r.categoria_id ?? null,
+      marca_id: r.marca_id ?? null,
+      fornecedor_id: r.fornecedor_id ?? null,
+      unidade_medida: r.unidade_medida ?? 'UN',
+      observacao: r.observacao ?? null,
+      tags: r.tags ?? null,
+    }
+  })
 
   return { success: true, data: { rows, total } }
 }

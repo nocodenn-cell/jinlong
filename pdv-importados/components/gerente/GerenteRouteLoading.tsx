@@ -57,13 +57,22 @@ export function GerenteListPageRouteSkeleton({
   rows?: number
 }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-60 rounded-lg bg-white/[0.07]" aria-hidden />
-        <div className="h-9 w-28 rounded-lg bg-white/[0.07]" aria-hidden />
-        <div className="ml-auto h-9 w-36 rounded-lg bg-white/[0.07]" aria-hidden />
+    <div>
+      {/* Placeholder sticky que espelha GerenteStickyToolbar para evitar flash de borda durante navegação */}
+      <div
+        className="sticky z-[25] w-full border-b py-2 shadow-sm bg-[#0f172a] border-[color:var(--jl-border-2)] -mx-4 px-4 md:-mx-6 md:px-6"
+        style={{ top: 'var(--gerente-sticky-top, 60px)' }}
+        aria-hidden
+      >
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-60 rounded-lg bg-white/[0.07]" />
+          <div className="h-9 w-28 rounded-lg bg-white/[0.07]" />
+          <div className="ml-auto h-9 w-36 rounded-lg bg-white/[0.07]" />
+        </div>
       </div>
-      <GerenteTableRouteSkeleton cols={cols} rows={rows} />
+      <div className="mt-4">
+        <GerenteTableRouteSkeleton cols={cols} rows={rows} />
+      </div>
     </div>
   )
 }
