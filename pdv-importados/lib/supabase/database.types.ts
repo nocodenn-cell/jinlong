@@ -2076,7 +2076,7 @@ export type Database = {
         Returns: Json
       }
       calcular_valor_sistema_dinheiro_caixa: {
-        Args: { p_caixa_id: string; p_timezone?: string }
+        Args: { p_caixa_id: string }
         Returns: number
       }
       cancelar_movimentacao: {

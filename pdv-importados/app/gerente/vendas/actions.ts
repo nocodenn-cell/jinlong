@@ -71,7 +71,7 @@ export type VendasFiltro = Readonly<{
   formaPagamento: ReadonlyArray<string>
 }>
 
-export const FILTRO_VENDAS_VAZIO: VendasFiltro = {
+const FILTRO_VENDAS_VAZIO: VendasFiltro = {
   inicio: null,
   fim: null,
   status: [],
