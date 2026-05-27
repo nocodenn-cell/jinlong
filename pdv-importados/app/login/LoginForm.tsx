@@ -209,6 +209,24 @@ export function LoginForm({ messages: m }: Props) {
               )}
             </button>
           </form>
+
+          <p className="mt-6 text-center text-[11px] leading-relaxed text-white/25">
+            Ao acessar a plataforma, você concorda com nossos{' '}
+            <a
+              href="/termos"
+              className="text-white/40 underline underline-offset-2 transition-colors hover:text-white/60"
+            >
+              Termos de Serviço
+            </a>{' '}
+            e{' '}
+            <a
+              href="/privacidade"
+              className="text-white/40 underline underline-offset-2 transition-colors hover:text-white/60"
+            >
+              Política de Privacidade
+            </a>
+            .
+          </p>
         </div>
 
       </div>

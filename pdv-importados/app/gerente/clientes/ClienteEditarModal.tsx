@@ -64,6 +64,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
   )
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
+  const [consentimentoLgpd, setConsentimentoLgpd] = useState(false)
 
   const dialogRef = useRef<HTMLDivElement>(null)
   const nomeRef = useRef<HTMLInputElement>(null)
@@ -158,6 +159,9 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     if (tDigits && tDigits.length < 10) e.telefone = m.clientes.err_telefone
     const lim = parseFloat(limite.replace(',', '.')) || 0
     if (lim < 0) e.limite_crediario = m.clientes.err_limite_negativo
+    if (!editando && !consentimentoLgpd) {
+      e.consentimento_lgpd = 'Confirme o consentimento do titular antes de cadastrar.'
+    }
     setErros(e)
     return Object.keys(e).length === 0
   }
@@ -165,6 +169,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
   async function submeter(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!validar()) return
+    const now = new Date().toISOString()
     const input: ClienteInput = {
       id: cliente?.id,
       nome: nome.trim(),
@@ -174,6 +179,10 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
       telefone: telefone.replace(/\D/g, '') || null,
       endereco: endereco.trim() || null,
       limite_crediario: parseFloat(limite.replace(',', '.')) || 0,
+      // Registra o momento do consentimento LGPD apenas para novos clientes
+      ...(!editando && consentimentoLgpd
+        ? { termos_aceitos_em: now, consentimento_privacidade_em: now }
+        : {}),
     }
     setSalvando(true)
     try {
@@ -377,6 +386,36 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
               )}
             </label>
           </CardContent>
+
+          {/* Consentimento LGPD — obrigatório apenas para novos clientes */}
+          {!editando && (
+            <div className="border-t border-jl-border-1 px-5 py-3 sm:px-6">
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <input
+                  id="lgpd-consent"
+                  type="checkbox"
+                  checked={consentimentoLgpd}
+                  onChange={(e) => {
+                    setConsentimentoLgpd(e.target.checked)
+                    if (erros.consentimento_lgpd) setErros((x) => ({ ...x, consentimento_lgpd: null }))
+                  }}
+                  disabled={salvando}
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-amber-400"
+                  aria-describedby={erros.consentimento_lgpd ? 'err-lgpd' : undefined}
+                />
+                <span className="select-none text-xs leading-relaxed text-jl-fg-3">
+                  Confirmo que os dados pessoais acima foram coletados com o consentimento
+                  do titular em conformidade com a LGPD.
+                  <span className="ml-0.5 text-[color:var(--accent)]">*</span>
+                </span>
+              </label>
+              {erros.consentimento_lgpd && (
+                <p id="err-lgpd" className="mt-1 text-xs text-red-300" role="alert">
+                  {erros.consentimento_lgpd}
+                </p>
+              )}
+            </div>
+          )}
 
           <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-5 py-3 sm:px-6">
             <Button

@@ -26,6 +26,9 @@ export type ClienteInput = {
   telefone: string | null // somente dígitos
   endereco: string | null
   limite_crediario: number
+  // Consentimento LGPD — preenchidos apenas na criação de novo cliente
+  termos_aceitos_em?: string | null
+  consentimento_privacidade_em?: string | null
 }
 
 const PAGE_SIZE = 20
@@ -90,7 +93,7 @@ export async function salvarClienteAction(
 
   try {
     const supabase = await createClient()
-    const payload = {
+    const basePayload = {
       nome: input.nome.trim(),
       tipo: input.tipo,
       documento: input.documento.replace(/\D/g, ''),
@@ -99,6 +102,14 @@ export async function salvarClienteAction(
       endereco: input.endereco?.trim() || null,
       limite_crediario: input.limite_crediario,
     }
+    // Timestamps de consentimento LGPD — apenas para inserção de novo cliente
+    const payload = (!input.id && input.termos_aceitos_em)
+      ? {
+          ...basePayload,
+          termos_aceitos_em: input.termos_aceitos_em,
+          consentimento_privacidade_em: input.consentimento_privacidade_em ?? null,
+        }
+      : basePayload
 
     let query
     if (input.id) {
@@ -126,13 +137,22 @@ export async function salvarClienteAction(
 }
 
 // ————————————————————————————————————————————————————————————
-// Exclusão — falha se o cliente tem saldo de crediário aberto
+// Exclusão com conformidade LGPD (Art. 16)
+//
+// Regras:
+//  1. Saldo de crediário aberto → rejeita (não pode excluir).
+//  2. Possui histórico em contas_receber → anonimiza os campos
+//     de dados pessoais (nome, documento, telefone, email,
+//     endereco) e marca ativo = false. Os registros contábeis
+//     são preservados para fins de auditoria fiscal.
+//  3. Sem histórico → deleção física.
 // ————————————————————————————————————————————————————————————
 export async function excluirClienteAction(
   id: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; anonimizado?: boolean } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
+
     const { data: existente, error: getErr } = await supabase
       .from('clientes')
       .select('saldo_crediario, nome')
@@ -148,6 +168,35 @@ export async function excluirClienteAction(
       }
     }
 
+    // Verifica existência de histórico de fiado/vendas
+    const { count: historico, error: histErr } = await supabase
+      .from('contas_receber')
+      .select('id', { count: 'exact', head: true })
+      .eq('cliente_id', id)
+
+    if (histErr) return { ok: false, error: histErr.message }
+
+    if (historico && historico > 0) {
+      // Há histórico financeiro — anonimiza dados pessoais em vez de deletar
+      const { error: anonErr } = await supabase
+        .from('clientes')
+        .update({
+          nome: 'CLIENTE_ANONIMIZADO_LGPD',
+          documento: null,
+          telefone: null,
+          email: null,
+          endereco: null,
+          ativo: false,
+        })
+        .eq('id', id)
+
+      if (anonErr) return { ok: false, error: anonErr.message }
+
+      revalidatePath('/gerente/clientes')
+      return { ok: true, anonimizado: true }
+    }
+
+    // Sem histórico — remoção física permitida
     const { error: delErr } = await supabase.from('clientes').delete().eq('id', id)
     if (delErr) return { ok: false, error: delErr.message }
 
