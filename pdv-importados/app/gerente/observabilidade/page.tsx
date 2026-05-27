@@ -1,12 +1,7 @@
 import Link from 'next/link'
 import {
   Activity,
-  AlertTriangle,
-  RefreshCw,
-  MousePointerClick,
-  Clock,
   CheckCircle,
-  Layers,
   TrendingUp,
 } from 'lucide-react'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
@@ -228,7 +223,7 @@ export default async function ObservabilidadePage() {
           </li>
           <li>
             <span className="font-medium">venda_reconciled_after_timeout &gt; 0</span>
-            {' '}→ próxima prioridade: feedback operacional mais claro que "venda salva, verifique antes de tentar de novo".
+            {' '}→ próxima prioridade: feedback operacional mais claro que &quot;venda salva, verifique antes de tentar de novo&quot;.
           </li>
           <li>
             <span className="font-medium">p95 &gt; 5s</span>

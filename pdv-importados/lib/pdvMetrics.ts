@@ -93,6 +93,7 @@ export async function measureOp<T>(
     const ms = Math.round(performance.now() - start)
     recordMetric(op, ms, resultado)
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.debug(`[pdvMetrics] ${op}: ${ms}ms (${resultado})`)
     }
   }
