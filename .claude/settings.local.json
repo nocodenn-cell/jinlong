@@ -105,7 +105,8 @@
       "Bash(Get-ChildItem -Path . -Name)",
       "Bash(grep -E \"\\\\.\\(ts|tsx|sql\\)$\")",
       "Bash(xargs grep -l \"FIADO\\\\|fiado\")",
-      "Bash(grep -E \"\\\\.\\(ts|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|json\\)$\")",
+      "mcp__c392d280-5eed-4f95-ab60-52bcbf75d144__get_runtime_logs"
     ]
   }
 }
