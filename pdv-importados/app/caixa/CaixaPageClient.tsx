@@ -14,6 +14,7 @@ import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVend
 import { aplicarDescontoGerenteSobreTotal } from "@/stores/managerDiscount"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import { measureOp, recordMetric } from "@/lib/pdvMetrics"
+import { track } from "@/lib/pdvTelemetry"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { useCaixaMensagens } from "@/app/caixa/hooks/useCaixaMensagens"
@@ -435,7 +436,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   const handleNovoCupom = useCallback(() => {
     // Não permite limpar cupom enquanto finalização está em voo —
     // evitaria que a key de idempotência fosse apagada antes do retry.
-    if (finalizando) return
+    if (finalizando) {
+      track('novo_cupom_blocked_during_flight')
+      return
+    }
     vendaIdempotenciaRef.current = null
     flushLeiturasPendentes({ reason: "new_cupom" })
     cupomSessionIdRef.current = newCupomSessionId()
@@ -603,10 +607,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
   )
 
   const handleFinalizar = useCallback(async () => {
-    if (itens.length === 0 || finalizando) return
+    if (itens.length === 0) return
+    if (finalizando) {
+      track('double_click_blocked')
+      return
+    }
     // Trava imediatamente — antes de qualquer await ou validação longa.
     // Evita race condition se dois caminhos chamarem handleFinalizar no mesmo tick.
     setFinalizando(true)
+    track('finalize_started')
     if (
       configCaixaWeb.vendas_suspensas === 'true' &&
       perfil !== null &&
@@ -679,6 +688,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     try {
       if (!vendaIdempotenciaRef.current) {
         vendaIdempotenciaRef.current = crypto.randomUUID()
+      } else {
+        // Chave já existia = esta é uma retentativa para o mesmo cupom
+        track('finalize_retry', { metadata: { uuid_prefix: vendaIdempotenciaRef.current.slice(0, 8) } })
       }
       const payload: FinalizarVendaInput = {
         idempotencyKey: vendaIdempotenciaRef.current,
@@ -702,8 +714,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
           tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
         })),
       }
+      const t0 = performance.now()
       const res = await measureOp('finalizar_venda', () => finalizarVendaCaixa(payload), (r) => r.ok)
+      const duration_ms = Math.round(performance.now() - t0)
       if (res.ok) {
+        track('finalize_success', { duration_ms })
         vendaIdempotenciaRef.current = null
         limparCarrinho()
         limparEstadoDescontoGerente()
@@ -716,6 +731,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
         tocarFeedback("ok")
         await recarregarStatusCaixa()
       } else {
+        track('finalize_error', { duration_ms, metadata: { error: res.error } })
         setCaixaMensagem(res.error, { kind: "error" })
         tocarFeedback("erro")
       }
@@ -725,6 +741,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
       const isTimeout =
         err instanceof Error &&
         (err.name === 'TimeoutError' || err.message.toLowerCase().includes('timeout') || err.message.toLowerCase().includes('timed out'))
+      track(isTimeout ? 'finalize_timeout' : 'finalize_error')
       setCaixaMensagem(
         isTimeout ? m.caixa.msg_falha_finalizar_timeout : m.caixa.msg_falha_finalizar,
         { kind: "error" },

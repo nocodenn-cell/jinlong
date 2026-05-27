@@ -20,6 +20,7 @@ export type PainelGerencialNavKey =
   | 'suspensao'
   | 'caixas'
   | 'relatorios'
+  | 'observabilidade'
 
 export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'home') return '/gerente'
@@ -72,6 +73,8 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
       return m.gerente.nav_caixas
     case 'relatorios':
       return m.gerente.nav_relatorios
+    case 'observabilidade':
+      return m.gerente.nav_observabilidade
     default: {
       const _exhaustive: never = key
       return _exhaustive
@@ -115,7 +118,7 @@ export const GERENTE_NAV_TOPICS: readonly GerenteNavTopic[] = [
   { id: 'estoque_logistica', items: ['estoque', 'recebimento', 'transferencias'] },
   { id: 'vendas_caixa', items: ['vendas', 'caixas'] },
   { id: 'financeiro', items: ['financeiro', 'comissoes', 'categorias_financeiras'] },
-  { id: 'analise', items: ['relatorios'] },
+  { id: 'analise', items: ['relatorios', 'observabilidade'] },
   { id: 'sistema', items: ['configuracoes', 'suspensao', 'dashboard'] },
 ] as const
 
