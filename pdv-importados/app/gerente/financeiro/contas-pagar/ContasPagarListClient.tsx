@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Search, Download, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { Button } from '@/components/ui/button'
@@ -87,7 +88,6 @@ export function ContasPagarListClient({
 
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const stateRef = useRef({ hasMore, loading })
   useEffect(() => {
@@ -104,12 +104,14 @@ export function ContasPagarListClient({
     [status, fornecedorId, periodo, termo],
   )
 
+  const filtersDebounced = useDebounce(filters, 280)
+
   const carregarProxima = useCallback(async () => {
     if (stateRef.current.loading || !stateRef.current.hasMore) return
     setLoading(true)
     const prox = pageRef.current + 1
     try {
-      const r = await buscarContasPagarAction(prox, filters)
+      const r = await buscarContasPagarAction(prox, filtersDebounced)
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
@@ -120,7 +122,7 @@ export function ContasPagarListClient({
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [filtersDebounced])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -137,17 +139,17 @@ export function ContasPagarListClient({
 
   const skipMountRefetch = useRef(true)
 
-  // Debounce de filtros
+  // Filtros — dispara após debounce
   useEffect(() => {
     if (skipMountRefetch.current) {
       skipMountRefetch.current = false
       return
     }
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      pageRef.current = 1
-      const r = await buscarContasPagarAction(1, filters)
+    let cancelled = false
+    setLoading(true)
+    pageRef.current = 1
+    buscarContasPagarAction(1, filtersDebounced).then((r) => {
+      if (cancelled) return
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         setLoading(false)
@@ -156,11 +158,9 @@ export function ContasPagarListClient({
       setContas(r.contas)
       setHasMore(r.hasMore)
       setLoading(false)
-    }, 280)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [filters])
+    })
+    return () => { cancelled = true }
+  }, [filtersDebounced])
 
   function aplicarPagamentoLocal(c: ContaPagarRow) {
     setContas((cur) => cur.map((x) => (x.id === c.id ? c : x)))

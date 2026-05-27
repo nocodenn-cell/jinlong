@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Pencil, Trash2, Plus, Search } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { Button } from '@/components/ui/button'
@@ -54,9 +55,10 @@ export function ClientesListClient({
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<ClienteListRow | null>(null)
 
+  const termoDebounced = useDebounce(termo, 280)
+
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // —— Paginação ————————————————————————————
   const stateRef = useRef({ hasMore, loading })
@@ -69,7 +71,7 @@ export function ClientesListClient({
     setLoading(true)
     const prox = pageRef.current + 1
     try {
-      const r = await buscarClientesPaginadosAction(prox, termo || undefined)
+      const r = await buscarClientesPaginadosAction(prox, termoDebounced || undefined)
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
@@ -80,7 +82,7 @@ export function ClientesListClient({
     } finally {
       setLoading(false)
     }
-  }, [termo])
+  }, [termoDebounced])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -97,17 +99,17 @@ export function ClientesListClient({
 
   const skipMountRefetch = useRef(true)
 
-  // —— Busca com debounce ————————————————————
+  // Busca — dispara após debounce
   useEffect(() => {
     if (skipMountRefetch.current) {
       skipMountRefetch.current = false
       return
     }
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      pageRef.current = 1
-      const r = await buscarClientesPaginadosAction(1, termo || undefined)
+    let cancelled = false
+    setLoading(true)
+    pageRef.current = 1
+    buscarClientesPaginadosAction(1, termoDebounced || undefined).then((r) => {
+      if (cancelled) return
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         setLoading(false)
@@ -116,11 +118,9 @@ export function ClientesListClient({
       setClientes(r.clientes)
       setHasMore(r.hasMore)
       setLoading(false)
-    }, 280)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [termo])
+    })
+    return () => { cancelled = true }
+  }, [termoDebounced])
 
   // —— Handlers ————————————————————————————
   function abrirNovo() {

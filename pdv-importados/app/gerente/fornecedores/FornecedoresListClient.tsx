@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Pencil, Trash2, Plus, Search, Mail } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { Button } from '@/components/ui/button'
@@ -58,9 +59,11 @@ export function FornecedoresListClient({
   const [emEdicao, setEmEdicao] = useState<FornecedorListRow | null>(null)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
+  const termoDebounced = useDebounce(termo, 280)
+  const statusFDebounced = useDebounce(statusF, 280)
+
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // —— Paginação ————————————————————————————
   const stateRef = useRef({ hasMore, loading })
@@ -74,8 +77,8 @@ export function FornecedoresListClient({
     const prox = pageRef.current + 1
     try {
       const r = await buscarFornecedoresPaginadosAction(prox, {
-        termo: termo || undefined,
-        status: statusF,
+        termo: termoDebounced || undefined,
+        status: statusFDebounced,
       })
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -87,7 +90,7 @@ export function FornecedoresListClient({
     } finally {
       setLoading(false)
     }
-  }, [termo, statusF])
+  }, [termoDebounced, statusFDebounced])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -104,20 +107,20 @@ export function FornecedoresListClient({
 
   const skipMountRefetch = useRef(true)
 
-  // Busca / filtro status com debounce
+  // Busca / filtro status — dispara após debounce
   useEffect(() => {
     if (skipMountRefetch.current) {
       skipMountRefetch.current = false
       return
     }
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      pageRef.current = 1
-      const r = await buscarFornecedoresPaginadosAction(1, {
-        termo: termo || undefined,
-        status: statusF,
-      })
+    let cancelled = false
+    setLoading(true)
+    pageRef.current = 1
+    buscarFornecedoresPaginadosAction(1, {
+      termo: termoDebounced || undefined,
+      status: statusFDebounced,
+    }).then((r) => {
+      if (cancelled) return
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         setLoading(false)
@@ -127,11 +130,9 @@ export function FornecedoresListClient({
       setHasMore(r.hasMore)
       setSelecionados(new Set())
       setLoading(false)
-    }, 280)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [termo, statusF])
+    })
+    return () => { cancelled = true }
+  }, [termoDebounced, statusFDebounced])
 
   // —— Handlers ————————————————————————————
   function abrirNovo() {
