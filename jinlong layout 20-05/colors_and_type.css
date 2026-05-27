@@ -1,0 +1,414 @@
+/**
+ * Jīn Lóng (Dragon POS) — colors_and_type.css
+ *
+ * Distilled from `pdv-importados/styles/tokens/{base,semantic,component,theme}.css`
+ * and `theme-oriental.css`. Two themes ship: `noturno` (default dark, slate + amber)
+ * and `novem` (light cream + warm amber). All semantic vars resolve to one or the
+ * other so component CSS need only read the semantic layer.
+ *
+ * Load the fonts in HTML head:
+ *   <link rel="preconnect" href="https://fonts.googleapis.com">
+ *   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ *   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600&family=Inter:wght@400;500;600;700&family=Cinzel:wght@500;600&display=swap" rel="stylesheet">
+ */
+
+/* === 1. PRIMITIVES ====================================================== */
+:root {
+  /* —— Dragon brand palette —— */
+  /* Gold / amber — the decision-maker color (CTAs, totals, brand) */
+  --color-dragon-gold-50:  #fffbeb;
+  --color-dragon-gold-100: #fef3c7;
+  --color-dragon-gold-200: #fde68a;
+  --color-dragon-gold-300: #fcd34d;
+  --color-dragon-gold-400: #fbbf24;   /* ★ accent in dark theme */
+  --color-dragon-gold-500: #f59e0b;   /* ★ accent in light theme */
+  --color-dragon-gold-600: #d97706;
+  --color-dragon-gold-700: #b45309;
+  --color-dragon-gold-900: #78350f;
+  --color-dragon-gold-cinzel: #bfa76a;    /* ceremonial wordmark (login) */
+  --color-dragon-gold-luxury: #d4af37;    /* login submit / luxury surfaces */
+
+  /* Jade — entries, positive value, success */
+  --color-dragon-jade-50:  #ecfdf5;
+  --color-dragon-jade-100: #d1fae5;
+  --color-dragon-jade-200: #a7f3d0;
+  --color-dragon-jade-500: #10b981;
+  --color-dragon-jade-600: #059669;
+  --color-dragon-jade-700: #047857;
+  --color-dragon-jade-900: #064e3b;
+
+  /* Imperial red — alert, danger, seal stamp */
+  --color-dragon-imperial-50:  #fef2f2;
+  --color-dragon-imperial-100: #fee2e2;
+  --color-dragon-imperial-200: #fecaca;
+  --color-dragon-imperial-300: #fca5a5;
+  --color-dragon-imperial-500: #ef4444;
+  --color-dragon-imperial-600: #dc2626;
+  --color-dragon-imperial-700: #b91c1c;   /* ★ canonical imperial-red */
+  --color-dragon-imperial-900: #7f1d1d;
+
+  /* Night / slate neutrals */
+  --color-night-50:  #f8fafc;
+  --color-night-100: #f1f5f9;
+  --color-night-200: #e2e8f0;
+  --color-night-300: #cbd5e1;
+  --color-night-400: #94a3b8;
+  --color-night-500: #64748b;
+  --color-night-600: #475569;
+  --color-night-700: #334155;
+  --color-night-800: #1e293b;
+  --color-night-900: #0f172a;
+  --color-night-950: #020617;
+
+  /* Cloud cream — warm light surfaces (novem theme) */
+  --color-cloud-cream:    #fff7e8;
+  --color-cloud-cream-50: #fffbeb;
+  --color-cloud-cream-100: #fff3de;
+  --color-cloud-cream-200: #ffeed2;
+
+  /* —— Typography primitives —— */
+  /* Primary stack ships Noto Sans SC first because the product is bilingual
+     PT-BR + Simplified Chinese and many product screens are pure Chinese. */
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei',
+               'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+               'Segoe UI', Roboto, sans-serif;
+  --font-numeric: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif-han: 'Noto Serif SC', 'Songti SC', 'SimSun', ui-serif, serif;
+  --font-serif-display: 'Cinzel', 'Times New Roman', serif;  /* login wordmark only */
+  --font-mono: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --font-size-xs:   0.75rem;   /* 12 */
+  --font-size-sm:   0.875rem;  /* 14 */
+  --font-size-base: 1rem;      /* 16 — body */
+  --font-size-md:   1.0625rem; /* 17 — caixa body */
+  --font-size-lg:   1.125rem;  /* 18 */
+  --font-size-xl:   1.25rem;   /* 20 */
+  --font-size-2xl:  1.5rem;    /* 24 — section headers */
+  --font-size-3xl:  1.875rem;  /* 30 — page titles */
+  --font-size-4xl:  2.25rem;   /* 36 — total / hero KPI */
+  --font-size-5xl:  3rem;      /* 48 — Jīn Lóng wordmark */
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+  --font-weight-black:    900; /* totals only */
+
+  --line-height-tight:   1.15;
+  --line-height-snug:    1.35;
+  --line-height-normal:  1.5;
+  --line-height-relaxed: 1.65;
+  --line-height-han:     1.55;    /* Chinese — needs extra leading */
+
+  --letter-spacing-tight:   -0.01em;
+  --letter-spacing-normal:  0;
+  --letter-spacing-han:     0.02em;     /* CJK runs feel cramped without this */
+  --letter-spacing-wide:    0.12em;     /* subtitles, label caps */
+  --letter-spacing-wider:   0.18em;     /* hero subtitle / 金龍 */
+  --letter-spacing-cinzel:  0.14em;     /* ceremonial login wordmark */
+
+  /* —— Spacing primitives (4px scale) —— */
+  --space-0:  0;
+  --space-1:  0.25rem;   /* 4  */
+  --space-2:  0.5rem;    /* 8  */
+  --space-3:  0.75rem;   /* 12 */
+  --space-4:  1rem;      /* 16 */
+  --space-5:  1.25rem;   /* 20 */
+  --space-6:  1.5rem;    /* 24 */
+  --space-8:  2rem;      /* 32 */
+  --space-10: 2.5rem;    /* 40 */
+  --space-12: 3rem;      /* 48 */
+  --space-16: 4rem;      /* 64 */
+  --space-20: 5rem;      /* 80 */
+  --space-24: 6rem;      /* 96 */
+
+  /* —— Radii —— */
+  --radius-none: 0;
+  --radius-sm:   0.125rem;   /* 2  — chip-internal */
+  --radius-base: 0.25rem;    /* 4  */
+  --radius-md:   0.375rem;   /* 6  — buttons */
+  --radius-lg:   0.5rem;     /* 8  — cards */
+  --radius-xl:   0.75rem;    /* 12 — modals, panels */
+  --radius-2xl:  1rem;       /* 16 — payment buttons */
+  --radius-full: 9999px;     /* chips, badges, pills */
+
+  /* —— Shadows: subtle elevation + amber-tinted hover bloom —— */
+  --shadow-sm:   0 1px 2px 0 rgb(0 0 0 / 0.20);
+  --shadow-base: 0 1px 3px 0 rgb(0 0 0 / 0.30), 0 1px 2px -1px rgb(0 0 0 / 0.30);
+  --shadow-md:   0 4px 6px -1px rgb(0 0 0 / 0.30), 0 2px 4px -2px rgb(0 0 0 / 0.30);
+  --shadow-lg:   0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.30);
+  --shadow-xl:   0 20px 25px -5px rgb(0 0 0 / 0.40), 0 8px 10px -6px rgb(0 0 0 / 0.30);
+  --shadow-2xl:  0 25px 50px -12px rgb(0 0 0 / 0.45);
+  /* The signature amber-tinted hover bloom — characteristic of every hover state */
+  --shadow-amber-hover: 0 4px 12px color-mix(in srgb, var(--color-dragon-gold-400) 25%, transparent);
+  --shadow-amber-soft:  0 2px 8px  color-mix(in srgb, var(--color-dragon-gold-400) 20%, transparent);
+  /* Insets used on glass cards */
+  --shadow-glass-inset: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+
+  /* —— Motion —— */
+  --easing-default:  cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-emphatic: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-fast: 150ms var(--easing-default);
+  --transition-base: 200ms var(--easing-default);
+  --transition-slow: 300ms var(--easing-default);
+
+  /* —— Z-index scale —— */
+  --z-base: 1;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+}
+
+/* === 2. SEMANTIC TOKENS ================================================= */
+/* Default theme is `noturno` (dark slate + amber accent). */
+:root,
+[data-app-theme='noturno'] {
+  /* Surface — translucent slate with backdrop-blur in component */
+  --surface:         rgba(15, 23, 42, 0.68);   /* primary glass panel */
+  --surface-soft:    rgba(15, 23, 42, 0.42);   /* secondary surface, inputs */
+  --surface-overlay: rgba(2, 6, 23, 0.58);     /* modal backdrop */
+  --surface-solid:   #0b1220;                  /* solid app bg base */
+  --surface-elev:    rgba(15, 23, 42, 0.78);   /* dialog cards */
+
+  /* Foreground */
+  --fg-1:        rgb(241 245 249);   /* primary text */
+  --fg-2:        rgb(203 213 225);   /* secondary text */
+  --fg-3:        rgb(148 163 184);   /* tertiary / muted */
+  --fg-disabled: rgb(100 116 139);
+  --fg-inverse:  rgb(15 23 42);      /* on light surfaces */
+
+  /* Border */
+  --border-1:        rgba(148, 163, 184, 0.38);  /* default — translucent */
+  --border-2:        rgba(71, 85, 105, 0.50);
+  --border-strong:   rgba(71, 85, 105, 0.85);    /* modal edge */
+  --border-disabled: rgba(51, 65, 85, 0.60);
+
+  /* Brand (accent) */
+  --accent:           var(--color-dragon-gold-400);   /* primary accent */
+  --accent-strong:    var(--color-dragon-gold-500);
+  --accent-deep:      var(--color-dragon-gold-600);
+  --accent-contrast:  #111827;                        /* text on accent fills */
+
+  /* Semantic */
+  --success:         var(--color-dragon-jade-500);
+  --success-fg:      var(--color-dragon-jade-100);
+  --success-bg:      color-mix(in srgb, var(--color-dragon-jade-900) 35%, transparent);
+  --warning:         var(--color-dragon-gold-500);
+  --warning-fg:      color-mix(in srgb, var(--color-dragon-gold-400) 82%, #fff 18%);
+  --warning-bg:      color-mix(in srgb, var(--color-dragon-gold-500) 20%, transparent);
+  --danger:          var(--color-dragon-imperial-500);
+  --danger-deep:     var(--color-dragon-imperial-700);
+  --danger-fg:       var(--color-dragon-imperial-100);
+  --danger-bg:       color-mix(in srgb, var(--color-dragon-imperial-900) 20%, transparent);
+  --info:            #60a5fa;
+  --info-fg:         #bfdbfe;
+
+  /* Logo wordmark colors (vary by theme) */
+  --logo-wordmark-main:     #f8fafc;
+  --logo-wordmark-subtitle: rgba(251, 191, 36, 0.95);
+
+  /* Page background — full atmosphere with radial cloud gradient */
+  --bg-page: radial-gradient(circle at 50% -10%, rgba(251, 191, 36, 0.16) 0%, transparent 42%),
+             linear-gradient(180deg, #1f2937 0%, #111827 54%, #0b1220 100%);
+}
+
+/* —— Light theme: novem (cream + warm amber) —— */
+[data-app-theme='novem'] {
+  --surface:         rgba(255, 255, 255, 0.82);
+  --surface-soft:    rgba(255, 255, 255, 0.62);
+  --surface-overlay: rgba(255, 255, 255, 0.74);
+  --surface-solid:   #fff8eb;
+  --surface-elev:    rgba(255, 255, 255, 0.96);
+
+  --fg-1:        rgb(15 23 42);
+  --fg-2:        rgb(51 65 85);
+  --fg-3:        rgb(100 116 139);
+  --fg-disabled: rgb(148 163 184);
+  --fg-inverse:  rgb(255 251 235);
+
+  --border-1:        rgba(226, 232, 240, 0.95);
+  --border-2:        rgba(203, 213, 225, 0.85);
+  --border-strong:   rgba(245, 158, 11, 0.40);
+  --border-disabled: rgba(226, 232, 240, 0.60);
+
+  --accent:          var(--color-dragon-gold-700);
+  --accent-strong:   var(--color-dragon-gold-900);
+  --accent-deep:     #78350f;
+  --accent-contrast: var(--color-cloud-cream-50);
+
+  --success-fg:      rgb(22 101 52);
+  --success-bg:      rgba(220, 252, 231, 0.85);
+  --warning-fg:      rgb(154 52 18);
+  --warning-bg:      rgba(255, 247, 237, 0.92);
+  --danger-fg:       rgb(153 27 27);
+  --danger-bg:       rgba(254, 242, 242, 0.92);
+
+  --logo-wordmark-main:     #1e293b;
+  --logo-wordmark-subtitle: #92400e;
+
+  --bg-page: radial-gradient(circle at 50% -16%, rgba(251, 191, 36, 0.20) 0%, transparent 42%),
+             linear-gradient(180deg, #fff8eb 0%, #fff3de 100%);
+}
+
+/* === 3. SEMANTIC TYPE STYLES ============================================ */
+/* Apply these classes directly, or copy the rules to your own selectors. */
+
+.h-display {
+  /* Wordmark / hero / Jīn Lóng */
+  font-family: var(--font-sans);
+  font-size: var(--font-size-5xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--logo-wordmark-main);
+}
+
+.h-display-han {
+  /* 金龍 subtitle — Han characters under the wordmark */
+  font-family: var(--font-serif-han);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--logo-wordmark-subtitle);
+}
+
+.h-page {
+  /* Dashboard / page title — "Financeiro", "Estoque" */
+  font-family: var(--font-sans);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  color: var(--fg-1);
+}
+
+.h-section {
+  /* Section header inside a page */
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  color: var(--fg-1);
+}
+
+.h-card {
+  /* Card / panel title */
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  color: var(--fg-1);
+}
+
+.h-eyebrow {
+  /* Tracked-out label cap above sections — "RESUMO DA SEMANA" */
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--fg-3);
+}
+
+.t-body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--fg-1);
+}
+
+.t-body-sm {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--fg-2);
+}
+
+.t-muted {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--fg-3);
+}
+
+.t-caption {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--fg-3);
+}
+
+.t-label {
+  /* Form labels */
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--fg-2);
+}
+
+.t-numeric {
+  /* Money / counts — Inter, tabular-nums */
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.t-total {
+  /* Caixa grand total — bold accent */
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-black);
+  line-height: var(--line-height-tight);
+  color: var(--accent);
+}
+
+.t-han {
+  /* Chinese run inline with PT-BR */
+  font-family: var(--font-sans);
+  letter-spacing: var(--letter-spacing-han);
+  line-height: var(--line-height-han);
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.t-ceremonial {
+  /* Login screen Jīn Lóng — Cinzel serif, gold, all-caps feel */
+  font-family: var(--font-serif-display);
+  letter-spacing: var(--letter-spacing-cinzel);
+  color: var(--color-dragon-gold-cinzel);
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.85);
+}
+
+.t-mono {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+/* —— Body base —— */
+html {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color-scheme: dark;
+}
+[data-app-theme='novem'] { color-scheme: light; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;   /* 15 — operational base, matches product */
+  color: var(--fg-1);
+  background: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Pretty wrap for headings */
+h1, h2, h3, .h-page, .h-section, .h-card { text-wrap: balance; }
+p, .t-body { text-wrap: pretty; }

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60" fill="none" role="img" aria-labelledby="lockup-title">
+  <title id="lockup-title">Jīn Lóng 金龍</title>
+  <rect width="220" height="60" rx="8" fill="#0b1220"></rect>
+  <image href="brand-double-dragon.png" x="6" y="4" width="52" height="52" preserveAspectRatio="xMidYMid meet"></image>
+  <text x="68" y="32" font-family="&#39;Noto Serif SC&#39;, &#39;Songti SC&#39;, serif" font-weight="700" font-size="26" letter-spacing="2.6" fill="#FDE047">金龍</text>
+  <text x="68" y="48" font-family="system-ui, &#39;Segoe UI&#39;, sans-serif" font-weight="500" font-size="10" letter-spacing="2.4" fill="#94A3B8">JĪN LÓNG</text>
+</svg>

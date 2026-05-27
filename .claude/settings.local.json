@@ -90,7 +90,22 @@
       "Bash(node -e \"const pg = require\\('@supabase/postgrest-js'\\); console.log\\(Object.keys\\(pg\\).filter\\(k => k.includes\\('Filter'\\) || k.includes\\('Query'\\) || k.includes\\('Builder'\\)\\)\\)\")",
       "Bash(git check-ignore *)",
       "Bash(xargs grep -l \"registrar_liquidacao\")",
-      "Bash(xargs grep -l \"registrar_liquidacao_receber\")"
+      "Bash(xargs grep -l \"registrar_liquidacao_receber\")",
+      "Bash(git -C \"C:/Naturecode/fastproduct\" status)",
+      "Bash(grep \"^\\\\s\\\\s*[a-z_]*: {$\" lib/supabase/database.types.ts)",
+      "Bash(grep -v \"//\\\\|^\\\\s*//\")",
+      "Bash(xargs wc -l)",
+      "Bash(grep \"^      [a-z_]*: {$\" /c/Naturecode/fastproduct/pdv-importados/lib/supabase/database.types.ts)",
+      "Bash(grep -E \"^      [a-z_]+: \\\\{$\" /c/Naturecode/fastproduct/pdv-importados/lib/supabase/database.types.ts)",
+      "Bash(awk '{print $1}')",
+      "mcp__93d8e0ff-3306-4cc0-8b34-9d8a9750000d__apply_migration",
+      "Bash(Remove-Item \"C:\\\\Naturecode\\\\fastproduct\\\\pdv-importados\\\\supabase\\\\migrations\\\\performance_indices.sql\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Naturecode\\\\fastproduct\\\\pdv-importados\\\\supabase\\\\migrations\\\\rls_policies.sql\" -Force)",
+      "Bash(Write-Output \"Deletados.\")",
+      "Bash(Get-ChildItem -Path . -Name)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|sql\\)$\")",
+      "Bash(xargs grep -l \"FIADO\\\\|fiado\")",
+      "Bash(grep -E \"\\\\.\\(ts|json\\)$\")"
     ]
   }
 }

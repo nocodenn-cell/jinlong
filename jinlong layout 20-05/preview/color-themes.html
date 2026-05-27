@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="../components.css">
+<style>
+  html,body{margin:0;padding:0;background:transparent}
+  body{display:flex;justify-content:center}
+  .card{width:700px;box-sizing:border-box;padding:24px;background:var(--bg-page);border-radius:16px;display:flex;gap:18px}
+  .pane{flex:1;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;border:1px solid var(--border-1);position:relative;overflow:hidden}
+  .pane.noturno{background:
+    radial-gradient(circle at 50% -10%, rgba(251,191,36,0.16) 0%, transparent 42%),
+    linear-gradient(180deg, #1f2937 0%, #111827 54%, #0b1220 100%);
+    color:#f1f5f9}
+  .pane.novem{background:
+    radial-gradient(circle at 50% -16%, rgba(251,191,36,0.20) 0%, transparent 42%),
+    linear-gradient(180deg, #fff8eb 0%, #fff3de 100%);
+    color:#1e293b;border-color:rgba(245,158,11,0.30)}
+  .label{font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;opacity:0.72}
+  .name{font-family:var(--font-numeric);font-weight:600;font-size:20px;letter-spacing:-0.01em}
+  .han{font-family:var(--font-serif-han);font-size:13px;letter-spacing:0.18em}
+  .pane.noturno .han{color:rgba(251,191,36,0.95)}
+  .pane.novem .han{color:#92400e}
+  .swatches{display:flex;gap:6px;margin-top:4px}
+  .sw{width:32px;height:32px;border-radius:6px;border:1px solid rgba(0,0,0,0.08)}
+  .btn{font-family:var(--font-sans);font-size:13px;font-weight:500;padding:10px 18px;border-radius:6px;align-self:flex-start;border:1px solid;cursor:pointer}
+  .pane.noturno .btn{background:linear-gradient(180deg,#fcca48,#cc8c08);color:#111827;border-color:rgba(217,119,6,0.72);box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+  .pane.novem .btn{background:linear-gradient(180deg,#d97f0e,#9c5a06);color:#fffbeb;border-color:rgba(146,64,14,0.72);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="pane noturno">
+    <div class="label">data-app-theme="noturno"</div>
+    <div class="name">Jīn Lóng</div>
+    <div class="han">金龍 — default</div>
+    <div class="swatches">
+      <div class="sw" style="background:rgba(15,23,42,0.68)"></div>
+      <div class="sw" style="background:rgba(15,23,42,0.42)"></div>
+      <div class="sw" style="background:#fbbf24"></div>
+      <div class="sw" style="background:#10b981"></div>
+      <div class="sw" style="background:#b91c1c"></div>
+    </div>
+    <button class="btn">Finalizar venda</button>
+  </div>
+  <div class="pane novem">
+    <div class="label">data-app-theme="novem"</div>
+    <div class="name">Jīn Lóng</div>
+    <div class="han">金龍 — daylight</div>
+    <div class="swatches">
+      <div class="sw" style="background:rgba(255,255,255,0.82);border-color:rgba(245,158,11,0.30)"></div>
+      <div class="sw" style="background:#fff7e8;border-color:rgba(245,158,11,0.30)"></div>
+      <div class="sw" style="background:#b45309"></div>
+      <div class="sw" style="background:#059669"></div>
+      <div class="sw" style="background:#b91c1c"></div>
+    </div>
+    <button class="btn">Finalizar venda</button>
+  </div>
+</div>
+</body>
+</html>

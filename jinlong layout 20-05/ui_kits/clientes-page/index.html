@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clientes — Jīn Lóng</title>
+<link rel="icon" href="../../assets/favicon-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../colors_and_type.css">
+<link rel="stylesheet" href="../../components.css">
+<link rel="stylesheet" href="../gerente/gerente-extras.css">
+<link rel="stylesheet" href="../vendas-melhorada/vendas-melhorada.css">
+<link rel="stylesheet" href="clientes.css">
+</head>
+<body>
+  <div class="bg-oriental-clouds" style="min-height:100vh;">
+    <header class="ger-topbar">
+      <div class="ger-brand">
+        <img src="../../assets/brand-double-dragon.png" alt="" />
+        <div class="ger-brand-text">
+          <div class="ger-brand-han">金龍</div>
+          <div class="ger-brand-main">Jīn Lóng</div>
+        </div>
+      </div>
+      <nav class="ger-nav" aria-label="Painel gerente">
+        <a href="../gerente/index.html">Início</a>
+        <a href="../vendas-melhorada/index.html">Vendas</a>
+        <a href="#" class="active">Clientes</a>
+        <a href="#">Caixas</a>
+        <a href="#">Estoque</a>
+        <a href="#">Financeiro</a>
+        <a href="#">Relatórios</a>
+      </nav>
+      <div class="ger-user">
+        <span class="ger-user-text">
+          <span style="font-weight: 600; color: var(--fg-1);">M. Wei</span>
+          <span style="font-size: 11px; color: var(--fg-3);">Gerente</span>
+        </span>
+        <span class="ger-avatar">MW</span>
+      </div>
+    </header>
+
+    <div id="root"></div>
+  </div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="mock-data.jsx"></script>
+  <script type="text/babel" src="ClientesList.jsx"></script>
+  <script type="text/babel" src="ClienteEditarModal.jsx"></script>
+
+  <script type="text/babel">
+    function App() {
+      const [clientes, setClientes] = React.useState(window.MOCK_CLIENTES);
+      const [modalAberto, setModalAberto] = React.useState(false);
+      const [emEdicao, setEmEdicao] = React.useState(null);
+      const [toast, setToast] = React.useState(null);
+
+      function abrirNovo() {
+        setEmEdicao(null);
+        setModalAberto(true);
+      }
+      function abrirEditar(cli) {
+        setEmEdicao(cli);
+        setModalAberto(true);
+      }
+      function salvar(data) {
+        if (emEdicao) {
+          setClientes((cur) => cur.map((c) => c.id === emEdicao.id ? { ...c, ...data, atualizado_em: new Date().toISOString() } : c));
+          flashToast('ok', `Cliente "${data.nome}" atualizado.`);
+        } else {
+          const novo = { id: window.uuid(), ...data, saldo_crediario: 0, criado_em: new Date().toISOString() };
+          setClientes((cur) => [novo, ...cur]);
+          flashToast('ok', `Cliente "${data.nome}" criado.`);
+        }
+        setModalAberto(false);
+      }
+      function excluir(cli) {
+        if (!confirm(`Excluir o cliente "${cli.nome}"? Esta ação não pode ser desfeita.`)) return;
+        setClientes((cur) => cur.filter((c) => c.id !== cli.id));
+        flashToast('ok', `Cliente "${cli.nome}" excluído.`);
+      }
+      function flashToast(kind, msg) {
+        setToast({ kind, msg });
+        setTimeout(() => setToast(null), 2400);
+      }
+
+      return (
+        <main className="ger-page" data-screen-label="clientes-gerente">
+          <a href="#" className="gerente-nav-back" style={{display:'inline-block', marginBottom: 16, fontSize: 13, fontWeight: 500}}>
+            ← Início
+          </a>
+
+          <div className="ger-header">
+            <div>
+              <h1 className="ger-page-title">Clientes <span className="clientes-han">客户</span></h1>
+              <p className="ger-page-sub">
+                <b style={{color:'var(--fg-2)'}}>{clientes.length}</b> clientes cadastrados ·{' '}
+                <b style={{color:'var(--fg-2)'}}>{window.fmtBRL(clientes.reduce((s,c)=>s+c.saldo_crediario, 0))}</b> em crediário aberto
+              </p>
+            </div>
+            <div className="ger-header-aux">
+              <button className="app-btn app-btn-neutral">↓ Exportar CSV</button>
+              <button className="app-btn app-btn-accent" onClick={abrirNovo}>
+                <span style={{fontSize:16, lineHeight:1, marginRight:4}}>+</span> Novo cliente
+              </button>
+            </div>
+          </div>
+
+          <window.ClientesList
+            clientes={clientes}
+            onEditar={abrirEditar}
+            onExcluir={excluir}
+          />
+
+          {modalAberto && (
+            <window.ClienteEditarModal
+              cliente={emEdicao}
+              onClose={() => setModalAberto(false)}
+              onSalvar={salvar}
+            />
+          )}
+
+          {toast && (
+            <div className={'clientes-toast ' + toast.kind}>
+              <span className="clientes-toast-icon">{toast.kind === 'ok' ? '✓' : '!'}</span>
+              <span>{toast.msg}</span>
+            </div>
+          )}
+        </main>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

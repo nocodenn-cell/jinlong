@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="../components.css">
+<style>
+  html,body{margin:0;padding:0;background:transparent}
+  body{display:flex;justify-content:center}
+  .card{width:700px;box-sizing:border-box;padding:28px 32px;background:var(--bg-page);color:var(--fg-1);border-radius:16px;overflow:hidden;position:relative}
+  .heading{font-size:15px;font-weight:600;margin-bottom:4px}
+  .role{font-size:12px;color:var(--fg-3);margin-bottom:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  /* KPI card variant */
+  .kpi{padding:18px;background:rgba(15,23,42,0.68);border:1px solid var(--border-1);border-radius:8px}
+  .kpi-eyebrow{font-size:11px;color:var(--fg-3);margin-bottom:8px}
+  .kpi-row{display:flex;align-items:baseline;justify-content:space-between}
+  .kpi-val{font-family:var(--font-numeric);font-variant-numeric:tabular-nums;font-size:28px;font-weight:700;color:var(--fg-1)}
+  .delta{font-family:var(--font-numeric);font-size:12px;font-weight:600;color:#34d399}
+  .delta.neg{color:#fca5a5}
+  /* glass card */
+  .glass{padding:18px;border-radius:12px;background:rgba(15,23,42,0.78);border:1px solid rgba(71,85,105,0.85);backdrop-filter:blur(18px);box-shadow:0 20px 25px -5px rgb(0 0 0 / 0.40), inset 0 1px 0 0 rgb(255 255 255 / 0.04)}
+  .glass-title{font-size:14px;font-weight:600;margin-bottom:6px}
+  .glass-body{font-size:12px;color:var(--fg-2);line-height:1.55}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="heading">Cards · KPI vs Glass</div>
+  <div class="role">Standard card (matte) on the left · glass card (translucent + blur) for modals on the right.</div>
+  <div class="grid">
+    <div class="kpi">
+      <div class="kpi-eyebrow">Faturamento hoje</div>
+      <div class="kpi-row">
+        <div class="kpi-val">R$ 12.430,75</div>
+        <div class="delta">+12,4%</div>
+      </div>
+      <div class="kpi-eyebrow" style="margin-top:10px;margin-bottom:0">vs. dia anterior</div>
+    </div>
+    <div class="glass">
+      <div class="glass-title">Confirmar movimentação?</div>
+      <div class="glass-body">Esta sangria de R$ 200,00 retira valor do caixa 01 e exige aprovação do gerente. Continuar?</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

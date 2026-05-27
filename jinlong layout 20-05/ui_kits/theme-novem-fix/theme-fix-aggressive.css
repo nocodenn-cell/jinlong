@@ -1,0 +1,223 @@
+/**
+ * theme-fix-aggressive.css
+ * ============================================================
+ * Versão expandida do theme-fix.css — captura os hardcodes Tailwind
+ * via overrides quando `[data-app-theme='novem']` está ativo, SEM
+ * exigir find-and-replace em todas as telas existentes.
+ *
+ * Aplique APENDADO ao final de `pdv-importados/app/globals.css`,
+ * após a importação do `colors_and_type.css`.
+ *
+ * Cobre as telas: dashboard, produtos, clientes, estoque,
+ * fornecedores, contas a pagar.
+ */
+
+/* === 1. ALICERCE — re-mapeia tokens shadcn + base do <html> ============ */
+
+html {
+  background: var(--bg-page);
+  min-height: 100%;
+}
+body {
+  background: transparent;
+  color: var(--fg-1);
+}
+
+:root,
+[data-app-theme='noturno'] {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 96%;
+  --card: 215 28% 17%;
+  --card-foreground: 210 40% 96%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 38 92% 50%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 215 25% 27%;
+  --muted-foreground: 215 20% 65%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 86% 97%;
+  --border: 215 28% 22%;
+  --input: 215 28% 22%;
+  --ring: 38 92% 50%;
+  --radius: 0.5rem;
+}
+
+[data-app-theme='novem'] {
+  --background: 48 100% 96%;
+  --foreground: 222 47% 11%;
+  --card: 48 100% 99%;
+  --card-foreground: 222 47% 11%;
+  --popover: 48 100% 96%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 32 95% 36%;
+  --primary-foreground: 48 100% 96%;
+  --secondary: 48 80% 92%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 48 60% 90%;
+  --muted-foreground: 215 16% 47%;
+  --accent-foreground: 48 100% 96%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 48 100% 99%;
+  --border: 32 60% 80%;
+  --input: 32 40% 88%;
+  --ring: 32 95% 36%;
+}
+
+/* === 2. BLANKET OVERRIDES — captura os hardcodes Tailwind no novem ==== */
+/* Esses seletores só agem quando o tema Nuvem está ativo.
+   No noturno, as classes Tailwind originais permanecem inalteradas. */
+
+[data-app-theme='novem'] {
+
+  /* Backgrounds slate-escuros viram surface clara */
+  & .bg-slate-950,
+  & .bg-slate-950\/95,
+  & .bg-slate-950\/80,
+  & .bg-slate-950\/65,
+  & .bg-slate-950\/55,
+  & .bg-slate-950\/45,
+  & .bg-slate-950\/40,
+  & .bg-slate-950\/35,
+  & .bg-slate-950\/25,
+  & .bg-slate-900,
+  & .bg-slate-900\/80,
+  & .bg-slate-900\/62,
+  & .bg-slate-900\/55,
+  & .bg-slate-900\/45,
+  & .bg-slate-900\/42,
+  & .bg-slate-800,
+  & .bg-slate-800\/55,
+  & .bg-slate-800\/40 {
+    background-color: var(--surface-soft) !important;
+  }
+
+  /* Foregrounds slate-claros viram fg escuro */
+  & .text-slate-50,
+  & .text-slate-100,
+  & .text-slate-200 {
+    color: var(--fg-1) !important;
+  }
+  & .text-slate-300 {
+    color: var(--fg-2) !important;
+  }
+  & .text-slate-400,
+  & .text-slate-500 {
+    color: var(--fg-3) !important;
+  }
+
+  /* Borders slate viram border-1/strong do design system */
+  & .border-slate-700,
+  & .border-slate-700\/40,
+  & .border-slate-700\/50,
+  & .border-slate-700\/85,
+  & .border-slate-800,
+  & .border-slate-800\/40 {
+    border-color: var(--border-1) !important;
+  }
+
+  /* Decorativos âmbar — clarear ligeiramente para contraste no creme */
+  & .text-amber-200 { color: var(--accent-deep) !important; }
+  & .text-amber-300 { color: var(--accent-strong) !important; }
+
+  /* Gradientes from-slate / to-slate em headers e bandeirolas */
+  & .from-slate-950,
+  & .from-slate-900 { --tw-gradient-from: var(--surface-soft) !important; }
+  & .to-slate-950,
+  & .to-slate-900 { --tw-gradient-to: var(--surface-soft) !important; }
+
+  /* Glassmorphism backdrop precisa ficar branco translúcido */
+  & .dragon-glass-card,
+  & .dragon-glass-backdrop {
+    background: var(--surface-elev) !important;
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border-1)) !important;
+    box-shadow:
+      0 10px 30px -10px rgba(180, 83, 9, 0.18),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.6) !important;
+  }
+
+  /* Inputs do design system — fundo branco translúcido */
+  & .app-input,
+  & .app-select {
+    background: var(--surface) !important;
+    color: var(--fg-1) !important;
+    border-color: var(--border-1) !important;
+  }
+  & .app-input::placeholder {
+    color: var(--fg-3) !important;
+  }
+
+  /* Tabelas gerente — linhas hover em creme */
+  & .gerente-fin-row-hover:hover {
+    background: color-mix(in srgb, var(--accent) 12%, transparent) !important;
+  }
+  & .gerente-fin-muted {
+    color: var(--fg-3) !important;
+  }
+  & .gerente-fin-cell {
+    color: var(--fg-1) !important;
+  }
+  & .gerente-fin-empty {
+    color: var(--fg-3) !important;
+  }
+
+  /* Topbar gerente — header creme em vez de slate */
+  & .ger-topbar {
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--surface-elev) 92%, transparent) 0%,
+      color-mix(in srgb, var(--surface-elev) 70%, transparent) 100%) !important;
+    border-bottom-color: var(--border-1) !important;
+  }
+  & .ger-nav a { color: var(--fg-2) !important; }
+  & .ger-nav a.active {
+    color: var(--fg-1) !important;
+    background: color-mix(in srgb, var(--accent) 14%, transparent) !important;
+  }
+
+  /* KPIs do dashboard */
+  & .kpi {
+    background: var(--surface-elev) !important;
+    border-color: var(--border-1) !important;
+  }
+  & .kpi-val { color: var(--fg-1) !important; }
+  & .kpi-label { color: var(--fg-3) !important; }
+
+  /* Painéis genéricos */
+  & .panel,
+  & .proto-panel,
+  & .vendas-card {
+    background: var(--surface-elev) !important;
+    border-color: var(--border-1) !important;
+  }
+  & .panel-title,
+  & .proto-panel-title { color: var(--fg-1) !important; }
+  & .panel-sub,
+  & .proto-panel-sub { color: var(--fg-3) !important; }
+}
+
+/* === 3. HEADINGS sempre com contraste correto ========================= */
+.gerente-page-title,
+.ger-page-title,
+.h-page,
+.proto-page-title,
+.gerente-fin-page-title {
+  color: var(--fg-1);
+}
+
+/* === 4. Utilitários jl-* para uso direto em novos componentes ========= */
+.jl-surface       { background: var(--surface);      color: var(--fg-1); }
+.jl-surface-soft  { background: var(--surface-soft); color: var(--fg-1); }
+.jl-surface-elev  { background: var(--surface-elev); color: var(--fg-1); }
+.jl-text-1        { color: var(--fg-1); }
+.jl-text-2        { color: var(--fg-2); }
+.jl-text-3        { color: var(--fg-3); }
+.jl-border        { border-color: var(--border-1); }
+.jl-bg-page       { background: var(--bg-page); }
+.jl-glass-backdrop {
+  background: var(--surface-overlay);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}

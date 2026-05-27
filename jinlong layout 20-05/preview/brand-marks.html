@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Cinzel:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="../components.css">
+<style>
+  html,body{margin:0;padding:0;background:transparent}
+  body{display:flex;justify-content:center}
+  .card{width:700px;box-sizing:border-box;padding:24px;background:var(--bg-page);color:var(--fg-1);border-radius:16px;overflow:hidden;position:relative;isolation:isolate}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+  .mark-wrap{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#000;border:1px solid var(--border-1);border-radius:10px;padding:12px;box-sizing:border-box;position:relative;overflow:hidden}
+  .mark-wrap.amber-glow::before{content:'';position:absolute;inset:-20%;background:radial-gradient(circle, rgba(251,191,36,0.12) 0%, transparent 65%);pointer-events:none}
+  .mark-wrap img{max-width:100%;max-height:100%;position:relative;z-index:1}
+  .name{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-2);line-height:1.2}
+  .usage{font-size:9px;color:var(--fg-3);line-height:1.4}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid">
+    <div class="tile">
+      <div class="mark-wrap amber-glow"><img src="../assets/brand-double-dragon.png" alt=""></div>
+      <div class="name">Double-dragon ★</div>
+      <div class="usage">canonical · favicon · all headers</div>
+    </div>
+    <div class="tile">
+      <div class="mark-wrap"><img src="../assets/dragon-imperial-amber.png" alt=""></div>
+      <div class="name">Dragon · solo</div>
+      <div class="usage">legacy alt · receipts</div>
+    </div>
+    <div class="tile">
+      <div class="mark-wrap amber-glow"><img src="../assets/dragon-ouroboros-amber.png" alt=""></div>
+      <div class="name">Ouroboros</div>
+      <div class="usage">loader · spinner orbit</div>
+    </div>
+    <div class="tile">
+      <div class="mark-wrap"><img src="../assets/dragon-ouroboros-mark.png" alt=""></div>
+      <div class="name">Ouroboros · solid</div>
+      <div class="usage">alt mark</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

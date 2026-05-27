@@ -9,6 +9,22 @@
 -- Tudo numa única transação.
 -- ============================================================
 
+INSERT INTO public.tipos_movimento_estoque (
+  codigo,
+  rotulo,
+  exige_gerente,
+  permite_entrada,
+  permite_saida
+)
+VALUES (
+  'ENTRADA_OC',
+  'Entrada por recebimento de ordem de compra',
+  true,
+  true,
+  false
+)
+ON CONFLICT (codigo) DO NOTHING;
+
 CREATE OR REPLACE FUNCTION public.receber_ordem_compra(
   p_oc_id  uuid,
   p_itens  jsonb   -- [{"item_id": uuid, "quantidade_recebida": numeric}, ...]

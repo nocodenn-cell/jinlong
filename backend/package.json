@@ -11,6 +11,7 @@
     "test:rls-scope": "node scripts/test-rls-scope.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.104.0"
+    "@supabase/supabase-js": "^2.104.0",
+    "@vercel/analytics": "^2.0.1"
   }
 }
