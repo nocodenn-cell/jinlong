@@ -116,14 +116,16 @@ export const CaixaFooter = memo(function CaixaFooter({
               </span>
             )}
           </div>
-          {totalDesconto > 0.005 && (
+          {(totalDesconto > 0.005 || descontoGerentePercentual > 0) && (
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 tabular-nums text-sm">
               <span className="text-primary-foreground/80">
                 {moedaPrefixo} {fmt(totalBruto)}
               </span>
+              {totalDesconto > 0.005 && (
               <span className="font-semibold text-white">
                 -{moedaPrefixo} {fmt(totalDesconto)}
               </span>
+              )}
               {descontoGerentePercentual > 0 && (
                 <span className="font-semibold text-white">
                   -{moedaPrefixo} {fmt(valorDescontoGerente)}
@@ -207,13 +209,15 @@ export const CaixaFooter = memo(function CaixaFooter({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
-          {/* Resumo financeiro compacto — só aparece quando há desconto */}
-          {totalDesconto > 0.005 && (
+          {/* Resumo financeiro compacto — aparece quando há desconto de item ou de gerente */}
+          {(totalDesconto > 0.005 || descontoGerentePercentual > 0) && (
             <div className="flex items-center gap-3 text-sm tabular-nums text-jl-fg-3">
               <span>{moedaPrefixo} {fmt(totalBruto)}</span>
+              {totalDesconto > 0.005 && (
               <span className="text-amber-400/90 font-medium">
                 -{moedaPrefixo} {fmt(totalDesconto)}
               </span>
+              )}
               {descontoGerentePercentual > 0 && (
                 <span className="text-amber-400/90 font-medium">
                   -{moedaPrefixo} {fmt(valorDescontoGerente)}

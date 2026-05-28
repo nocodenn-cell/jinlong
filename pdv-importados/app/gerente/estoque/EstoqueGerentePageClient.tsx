@@ -543,7 +543,7 @@ export function EstoqueGerentePageClient({
         onCategoriaChange={onCategoriaChange}
         onOrigemChange={onOrigemChange}
         onPageSizeChange={onPageSizeChange}
-        onExport={() => void handleExportCsv()}
+        onExport={handleExportCsv}
       />
 
       {loading && !data ? <p className="gerente-fin-muted text-sm">{m.comum.carregando}</p> : null}

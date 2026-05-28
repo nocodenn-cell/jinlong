@@ -143,7 +143,7 @@ export function ComissoesPageClient({ idioma }: Props) {
       {/* ── CONTEÚDO ──────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6">
         {loading ? (
-          <p className="text-sm app-muted">{m.nenhuma_comissao_periodo}</p>
+          <p className="text-sm app-muted">{msgs.comum.carregando}</p>
         ) : !resumo || resumo.length === 0 ? (
           <p className="text-sm app-muted">{m.nenhuma_comissao_periodo}</p>
         ) : (

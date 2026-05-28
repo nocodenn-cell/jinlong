@@ -146,7 +146,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
           {/* Campo de Busca */}
           <div className="rounded-lg border border-jl-border-1 bg-jl-surface-elev p-4">
             <label className="mb-2 block text-sm font-medium text-jl-fg-1">
-              {m.estoque.etiquetas.titulo}
+              {m.estoque.etiquetas.label_busca}
             </label>
             <div className="flex gap-2">
               <input
@@ -250,7 +250,7 @@ export function ImprimirEtiquetasPageClient({ idioma }: Props) {
             </h4>
             <div className="space-y-1 text-xs text-jl-fg-3">
               <p>• {m.estoque.etiquetas.tamanho}: 40x25mm</p>
-              <p>• {m.estoque.etiquetas.maximo}: 500 {m.estoque.etiquetas.titulo.toLowerCase()}</p>
+              <p>• {m.estoque.etiquetas.maximo}: 500 {m.estoque.etiquetas.unidade}</p>
               <p>• {m.estoque.etiquetas.layout}: Dragon Standard</p>
             </div>
           </div>

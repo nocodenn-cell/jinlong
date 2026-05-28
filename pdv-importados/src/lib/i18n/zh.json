@@ -595,7 +595,9 @@
       "formato_info": "格式信息",
       "tamanho": "尺寸",
       "maximo": "最大",
-      "layout": "布局"
+      "layout": "布局",
+      "label_busca": "条形码",
+      "unidade": "张标签"
     },
     "import_nfe": {
       "titulo": "导入进货 NF-e",

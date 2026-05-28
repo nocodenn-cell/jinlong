@@ -595,7 +595,9 @@
       "formato_info": "Informações do Formato",
       "tamanho": "Tamanho",
       "maximo": "Máximo",
-      "layout": "Layout"
+      "layout": "Layout",
+      "label_busca": "Código de Barras",
+      "unidade": "etiquetas"
     },
     "import_nfe": {
       "titulo": "Importar NF-e de compra",
