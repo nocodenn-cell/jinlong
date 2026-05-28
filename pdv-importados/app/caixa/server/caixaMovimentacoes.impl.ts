@@ -122,9 +122,9 @@ export async function autorizarMovimentacaoGerenteImpl(
     const { data, error } = await admin.rpc('aprovar_movimentacao', {
       p_movimentacao_id: movimentacaoId,
       p_ip_address: ipAddress,
-      p_user_agent: userAgent,
-      p_device_id: null,
-      p_terminal_id: null,
+      p_user_agent: userAgent ?? undefined,
+      p_device_id: undefined,
+      p_terminal_id: undefined,
       p_gerente_id: validacao.gerenteId,
       p_autorizacao_token: validacao.token,
     })

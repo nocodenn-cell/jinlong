@@ -65,7 +65,7 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         p_quantidade_atual: parsed.data.quantidade_atual,
         p_estoque_minimo: parsed.data.estoque_minimo,
         p_motivo_codigo: parsed.data.motivo,
-        p_observacao: observacao,
+        p_observacao: observacao ?? undefined,
       })
       if (error) {
         throw new Error(mensagemErroComSecao('Estoque', error.message))
