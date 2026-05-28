@@ -13,8 +13,23 @@ import {
   validarCriarTituloInput,
   validarLiquidarTituloInput,
 } from './actions.validation'
+import { obterLojaAtualDoUsuario } from '@/app/gerente/shared/lojaAtual'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
+
+async function validarClienteNaLoja(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clienteId: string,
+  lojaId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('id')
+    .eq('id', clienteId)
+    .eq('loja_id', lojaId)
+    .maybeSingle()
+  return !error && Boolean(data)
+}
 
 export async function criarCliente(input: { nome: string; documento?: string; telefone?: string }): Promise<R<string>> {
   const auth = await assertGerenteOuDono()
@@ -24,10 +39,13 @@ export async function criarCliente(input: { nome: string; documento?: string; te
   const nome = input.nome.trim()
 
   const supabase = await createClient()
+  const lojaId = await obterLojaAtualDoUsuario(supabase)
+  if (!lojaId) return { success: false, error: 'Loja não identificada.' }
   const { data, error } = await supabase
     .from('clientes')
     .insert({
       nome,
+      loja_id: lojaId,
       documento: input.documento?.trim() || null,
       telefone: input.telefone?.trim() || null,
     })
@@ -60,12 +78,18 @@ export async function criarTituloReceber(input: {
   if (erro) return { success: false, error: erro }
 
   const supabase = await createClient()
+  const lojaId = await obterLojaAtualDoUsuario(supabase)
+  if (!lojaId) return { success: false, error: 'Loja não identificada.' }
   return actionResultToLegacyData(
     await runServerActionWithObservability('gerente/financeiro/criar-titulo', async () => {
+      const clienteValido = await validarClienteNaLoja(supabase, input.cliente_id, lojaId)
+      if (!clienteValido) throw new Error('Cliente não encontrado para a loja atual.')
+
       const { data, error } = await supabase
         .from('contas_receber')
         .insert({
           cliente_id: input.cliente_id,
+          loja_id: lojaId,
           valor_total: input.valor_total,
           valor_aberto: input.valor_total,
           descricao: input.descricao?.trim() || null,

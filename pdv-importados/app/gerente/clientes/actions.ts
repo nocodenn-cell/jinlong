@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { obterLojaAtualDoUsuario } from '@/app/gerente/shared/lojaAtual'
 
 export type ClienteListRow = {
   id: string
@@ -100,6 +101,8 @@ export async function salvarClienteAction(
 
   try {
     const supabase = await createClient()
+    const lojaId = await obterLojaAtualDoUsuario(supabase)
+    if (!lojaId) return { ok: false, error: 'Loja não identificada.' }
     const basePayload = {
       nome: input.nome.trim(),
       tipo: input.tipo,
@@ -129,7 +132,7 @@ export async function salvarClienteAction(
     } else {
       query = supabase
         .from('clientes')
-        .insert(payload)
+        .insert({ ...payload, loja_id: lojaId })
         .select('id, nome, tipo, documento, email, telefone, endereco, limite_crediario, saldo_crediario, ultima_compra, criado_em')
         .single()
     }
