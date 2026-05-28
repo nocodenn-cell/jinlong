@@ -85,9 +85,10 @@ type Props = {
   idioma: Idioma
   operadorLabel: string
   perfil: string | null
+  userId: string | null
 }
 
-export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: Props) {
+export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
   const pdvLayoutVariant: CaixaPdvLayoutVariant =
     process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "classic" ? "classic" : "default"
 
@@ -149,7 +150,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     recarregarStatusCaixa,
     handleSalvarMovimentacao,
     handleConfirmarAcaoMovimentacao,
-  } = useCaixaStatusMovimentacoes({ m, setCaixaMensagem, movimentacaoModalTipo, acaoMovimentacao })
+  } = useCaixaStatusMovimentacoes({ m, setCaixaMensagem, movimentacaoModalTipo, acaoMovimentacao, currentUserId: userId })
 
   const {
     itens,

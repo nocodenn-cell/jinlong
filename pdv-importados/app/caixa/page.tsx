@@ -33,5 +33,5 @@ export default async function CaixaPage() {
     : { data: null }
   const perfil = usuarioData?.perfil ?? null
 
-  return <CaixaPageClient messages={messages} idioma={idioma} operadorLabel={operadorLabel} perfil={perfil} />
+  return <CaixaPageClient messages={messages} idioma={idioma} operadorLabel={operadorLabel} perfil={perfil} userId={user?.id ?? null} />
 }

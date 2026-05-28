@@ -15,6 +15,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
+import { useMovimentacoesRealtime } from "@/app/caixa/hooks/useMovimentacoesRealtime"
 
 type CaixaStatusState =
   | {
@@ -38,6 +39,7 @@ type Params = {
   setCaixaMensagem: (text: string | null) => void
   movimentacaoModalTipo: TipoMovimentacaoUi | null
   acaoMovimentacao: AcaoState
+  currentUserId: string | null
 }
 
 export function useCaixaStatusMovimentacoes({
@@ -45,6 +47,7 @@ export function useCaixaStatusMovimentacoes({
   setCaixaMensagem,
   movimentacaoModalTipo,
   acaoMovimentacao,
+  currentUserId,
 }: Params) {
   const [caixaStatus, setCaixaStatus] = useState<CaixaStatusState>(null)
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>([])
@@ -100,6 +103,17 @@ export function useCaixaStatusMovimentacoes({
   useEffect(() => {
     void recarregarStatusCaixa()
   }, [recarregarStatusCaixa])
+
+  const handleExternalMovimentacao = useCallback(() => {
+    void recarregarStatusCaixa()
+    if (caixaStatus?.aberto) void recarregarMovimentacoes(caixaStatus.caixaId)
+  }, [recarregarStatusCaixa, recarregarMovimentacoes, caixaStatus])
+
+  useMovimentacoesRealtime({
+    caixaId: caixaStatus?.aberto ? caixaStatus.caixaId : null,
+    currentUserId,
+    onExternalChange: handleExternalMovimentacao,
+  })
 
   const handleSalvarMovimentacao = useCallback(
     async (payload: {
