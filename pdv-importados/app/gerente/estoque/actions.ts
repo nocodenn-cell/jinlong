@@ -46,7 +46,6 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
     return actionFail(mensagemErroValidacaoZod(msg, idioma), { errorCode: 'VALIDATION_FAILED' })
   }
 
-  const supabase = await createClient()
   const lojaId = await lojaIdDoUsuarioLogado()
   if (!lojaId) {
     return actionFail('Não foi possível identificar sua loja. Faça login novamente.', {
