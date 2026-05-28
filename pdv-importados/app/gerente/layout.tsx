@@ -1,10 +1,13 @@
 import React, { type ReactNode } from 'react'
+import { redirect } from 'next/navigation'
 import { GerenteLayoutShell } from '@/components/gerente/GerenteLayoutShell'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getMessages } from '@/i18n/getMessages'
+import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 
 export default async function GerenteLayout({ children }: { children: ReactNode }) {
   const { idioma, perfil } = await getUsuarioIdioma()
+  if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
   const m = getMessages(idioma)
   const logoSubtitle = m.brand?.logo_subtitle ?? '金龍'
 

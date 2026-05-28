@@ -106,7 +106,19 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx|sql\\)$\")",
       "Bash(xargs grep -l \"FIADO\\\\|fiado\")",
       "Bash(grep -E \"\\\\.\\(ts|json\\)$\")",
-      "mcp__c392d280-5eed-4f95-ab60-52bcbf75d144__get_runtime_logs"
+      "mcp__c392d280-5eed-4f95-ab60-52bcbf75d144__get_runtime_logs",
+      "Bash(not exist *)",
+      "mcp__c392d280-5eed-4f95-ab60-52bcbf75d144__list_deployments",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(Get-ChildItem -Path \"C:\\\\Naturecode\\\\fastproduct\\\\pdv-importados\" -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(xargs grep -l \"registro\\\\|signup\\\\|sign-up\\\\|cadastro\" -i)",
+      "Bash(grep -E \"\\(\\\\.ts|\\\\.tsx\\)$\")",
+      "Bash(grep -r \"termos\\\\|consent\\\\|lgpd\\\\|privacidade\" ./fastproduct/pdv-importados -i ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(xargs grep -l \"email\\\\|mail\\\\|notification\")",
+      "Bash(xargs grep -l \"checkbox\\\\|aceito\\\\|consent\\\\|termos\\\\|privacidade\" -i)",
+      "PowerShell(Get-ChildItem \"C:\\\\Naturecode\\\\fastproduct\\\\backend\\\\supabase\\\\migrations\" | Where-Object { $_.Name -match \"^11[2-4]\" } | Select-Object Name, Length)"
     ]
   }
 }

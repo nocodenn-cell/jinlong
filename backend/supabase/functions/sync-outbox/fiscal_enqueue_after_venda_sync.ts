@@ -98,6 +98,7 @@ export async function maybeEnqueueFiscalDocumentAfterSyncedVenda(
     p_venda_id: payload.venda_id,
     p_tipo_doc: tipoDoc,
     p_payload: fiscalPayload,
+    p_loja_id: loja_id,  // valida que a venda pertence à loja deste worker (migration 114)
   });
 
   if (rpcErr) {
