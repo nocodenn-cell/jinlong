@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import {
@@ -54,10 +55,11 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
   }
 
   const observacao = parsed.data.observacao?.trim() || null
+  const admin = createAdminClient()
   return runServerActionWithObservability(
     'gerente/estoque/atualizar',
     async () => {
-      const { error } = await supabase.rpc('ajustar_estoque_manual', {
+      const { error } = await admin.rpc('ajustar_estoque_manual', {
         p_produto_id: parsed.data.produto_id,
         p_loja_id: lojaId,
         p_quantidade_atual: parsed.data.quantidade_atual,

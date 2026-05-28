@@ -1,5 +1,6 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 import type {
   AcaoMovimentacaoCaixaResult,
@@ -117,7 +118,8 @@ export async function autorizarMovimentacaoGerenteImpl(
     }
 
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
-    const { data, error } = await supabase.rpc('aprovar_movimentacao', {
+    const admin = createAdminClient()
+    const { data, error } = await admin.rpc('aprovar_movimentacao', {
       p_movimentacao_id: movimentacaoId,
       p_ip_address: ipAddress,
       p_user_agent: userAgent,
