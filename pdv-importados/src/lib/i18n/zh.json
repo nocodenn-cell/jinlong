@@ -209,6 +209,8 @@
     "filtro_situacao_somente_ativos": "仅启用",
     "filtro_situacao_somente_inativos": "仅停用",
     "preco_atacado": "批发价",
+    "preco_custo": "成本价",
+    "permitir_abaixo_custo": "允许低于成本价",
     "qtd_gatilho_atacado": "批发最低数量",
     "unidade_medida": "计量单位",
     "unidade_medida_un": "件 (UN)",

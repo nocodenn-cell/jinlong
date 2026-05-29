@@ -13,6 +13,10 @@ export interface NovoProdutoInput {
   preco_varejo: number
   /** Preço atacado opcional (catálogo); exige quantidade mínima em pdv_config. */
   preco_atacado?: number | null
+  /** Preço de custo opcional; base para a trava de margem (NULL = sem checagem). */
+  preco_custo?: number | null
+  /** Override: permite preço de venda abaixo do custo (ex.: liquidação). */
+  permitir_abaixo_custo?: boolean
   /** Quantidade mínima de itens para acionar preço atacado. */
   quantidade_gatilho_atacado?: number | null
   origem: OrigemProduto

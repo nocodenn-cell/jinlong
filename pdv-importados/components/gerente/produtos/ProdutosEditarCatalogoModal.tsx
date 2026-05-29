@@ -54,6 +54,8 @@ export function ProdutosEditarCatalogoModal({
   // --- precificação ---
   const [precoVarejo, setPrecoVarejo] = useState('')
   const [precoAtacado, setPrecoAtacado] = useState('')
+  const [precoCusto, setPrecoCusto] = useState('')
+  const [permitirAbaixoCusto, setPermitirAbaixoCusto] = useState(false)
   const [qtdGatilho, setQtdGatilho] = useState('')
 
   // --- medida + complementar ---
@@ -79,6 +81,8 @@ export function ProdutosEditarCatalogoModal({
     setOrigem(produto.origem === 'brasil_sem_nf' ? 'brasil_nf' : produto.origem as OrigemCode)
     setPrecoVarejo(String(produto.preco_varejo))
     setPrecoAtacado(produto.preco_atacado != null ? String(produto.preco_atacado) : '')
+    setPrecoCusto(produto.preco_custo != null ? String(produto.preco_custo) : '')
+    setPermitirAbaixoCusto(produto.permitir_abaixo_custo)
     setQtdGatilho(produto.quantidade_gatilho_atacado != null ? String(produto.quantidade_gatilho_atacado) : '')
     setUnidadeMedida((produto.unidade_medida as UnidadeCode) || 'UN')
     setObservacao(produto.observacao ?? '')
@@ -107,6 +111,7 @@ export function ProdutosEditarCatalogoModal({
       const precoAtacadoNum = precoAtacado.trim()
         ? parseFloat(precoAtacado.replace(',', '.'))
         : null
+      const precoCustoNum = precoCusto.trim() ? parseFloat(precoCusto.replace(',', '.')) : null
       const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
       const r = await atualizarDadosProdutoGerente({
@@ -117,6 +122,8 @@ export function ProdutosEditarCatalogoModal({
         tem_nf: produto.tem_nf,
         preco_varejo: precoVarejoNum,
         preco_atacado: precoAtacadoNum,
+        preco_custo: precoCustoNum,
+        permitir_abaixo_custo: permitirAbaixoCusto,
         quantidade_gatilho_atacado: qtdGatilhoNum,
         unidade_medida: unidadeMedida,
         observacao: observacao.trim() || null,
@@ -136,7 +143,7 @@ export function ProdutosEditarCatalogoModal({
     }
   }, [
     produto, nome, codigoBarras, origem,
-    precoVarejo, precoAtacado, qtdGatilho,
+    precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho,
     unidadeMedida, observacao,
     categoriaId, marcaId, fornecedorId,
     m.comum.sucesso, onSalvo, fechar,
@@ -263,6 +270,30 @@ export function ProdutosEditarCatalogoModal({
                 disabled={saving}
                 placeholder="—"
               />
+            </label>
+          </div>
+          <div className="mt-3 grid grid-cols-2 items-end gap-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.preco_custo}
+              <input
+                type="text"
+                inputMode="decimal"
+                className={`${finInMono} mt-1`}
+                value={precoCusto}
+                onChange={(e) => setPrecoCusto(e.target.value)}
+                disabled={saving}
+                placeholder="—"
+              />
+            </label>
+            <label className="flex h-9 cursor-pointer items-center gap-2 text-xs font-medium text-jl-fg-3">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-amber-400"
+                checked={permitirAbaixoCusto}
+                onChange={(e) => setPermitirAbaixoCusto(e.target.checked)}
+                disabled={saving}
+              />
+              {p.permitir_abaixo_custo}
             </label>
           </div>
 

@@ -29,6 +29,11 @@ export function createProdutoRepository(
           ? Number(input.preco_atacado)
           : null
 
+      const pc =
+        input.preco_custo !== undefined && input.preco_custo !== null
+          ? Number(input.preco_custo)
+          : null
+
       const ativo = input.ativo !== false
 
       const { data, error } = await supabase
@@ -38,6 +43,8 @@ export function createProdutoRepository(
           codigo_barras: input.codigo_barras?.trim() || null,
           preco_varejo: input.preco_varejo,
           preco_atacado: pa,
+          preco_custo: pc,
+          permitir_abaixo_custo: input.permitir_abaixo_custo ?? false,
           quantidade_gatilho_atacado: input.quantidade_gatilho_atacado ?? null,
           origem: input.origem,
           tem_nf: input.tem_nf,

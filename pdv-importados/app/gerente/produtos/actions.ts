@@ -51,6 +51,8 @@ const NovoProdutoSchema = z.object({
     ),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
   preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
+  permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
   quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
   origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf'], {
     errorMap: () => ({ message: 'Origem do produto inválida.' }),
@@ -449,6 +451,8 @@ const EditarProdutoCatalogoSchema = z.object({
   tem_nf: z.coerce.boolean(),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
   preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
+  permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
   quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
   categoria_id: z.string().uuid().nullable().optional().transform((v) => v || null),
   marca_id: z.string().uuid().nullable().optional().transform((v) => v || null),
@@ -624,6 +628,8 @@ export async function atualizarDadosProdutoGerente(
       tem_nf: parsed.data.tem_nf,
       preco_varejo: parsed.data.preco_varejo,
       preco_atacado: parsed.data.preco_atacado,
+      preco_custo: parsed.data.preco_custo,
+      permitir_abaixo_custo: parsed.data.permitir_abaixo_custo,
       quantidade_gatilho_atacado: parsed.data.quantidade_gatilho_atacado,
       categoria_id: parsed.data.categoria_id,
       marca_id: parsed.data.marca_id,
@@ -779,20 +785,22 @@ export async function buscarProdutosComFiltros(
   const [estoqueRes, extraRes] = productIds.length > 0
     ? await Promise.all([
         supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
-        supabase.from('produtos').select('id, codigo_interno, localizacao_prateleira').in('id', productIds),
+        supabase.from('produtos').select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo').in('id', productIds),
       ])
-    : [{ data: [] as { produto_id: string; quantidade_atual: number }[] }, { data: [] as { id: string; codigo_interno: string | null; localizacao_prateleira?: string | null }[] }]
+    : [{ data: [] as { produto_id: string; quantidade_atual: number }[] }, { data: [] as { id: string; codigo_interno: string | null; localizacao_prateleira?: string | null; preco_custo?: number | null; permitir_abaixo_custo?: boolean }[] }]
 
   const estoqueMap = new Map<string, number>()
   for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
     estoqueMap.set(e.produto_id, e.quantidade_atual)
   }
 
-  const extraMap = new Map<string, { codigo_interno: string | null; localizacao_prateleira: string | null }>()
-  for (const p of ((extraRes.data ?? []) as { id: string; codigo_interno?: string | null; localizacao_prateleira?: string | null }[])) {
+  const extraMap = new Map<string, { codigo_interno: string | null; localizacao_prateleira: string | null; preco_custo: number | null; permitir_abaixo_custo: boolean }>()
+  for (const p of ((extraRes.data ?? []) as { id: string; codigo_interno?: string | null; localizacao_prateleira?: string | null; preco_custo?: number | null; permitir_abaixo_custo?: boolean }[])) {
     extraMap.set(p.id, {
       codigo_interno: p.codigo_interno ?? null,
       localizacao_prateleira: p.localizacao_prateleira ?? null,
+      preco_custo: p.preco_custo != null ? Number(p.preco_custo) : null,
+      permitir_abaixo_custo: p.permitir_abaixo_custo ?? false,
     })
   }
 
@@ -806,6 +814,8 @@ export async function buscarProdutosComFiltros(
       localizacao_prateleira: extra?.localizacao_prateleira ?? null,
       preco_varejo: Number(r.preco_varejo),
       preco_atacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
+      preco_custo: extra?.preco_custo ?? null,
+      permitir_abaixo_custo: extra?.permitir_abaixo_custo ?? false,
       quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
       quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id) ?? null) : null,
       origem: r.origem,

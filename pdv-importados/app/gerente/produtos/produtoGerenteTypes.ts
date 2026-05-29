@@ -9,6 +9,10 @@ export type ProdutoGerenteRow = {
   localizacao_prateleira: string | null
   preco_varejo: number
   preco_atacado: number | null
+  /** Preço de custo (base da trava de margem); null = não informado. */
+  preco_custo: number | null
+  /** Override: permite preço de venda abaixo do custo. */
+  permitir_abaixo_custo: boolean
   quantidade_gatilho_atacado: number | null
   /** Estoque atual (da tabela estoque). Negativo = ruptura. */
   quantidade_atual: number | null
