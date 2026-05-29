@@ -6,9 +6,10 @@
 -- em seguida, inserir linhas duplicadas em vendas_pagamentos, pois a tabela não
 -- possuía restrição de unicidade e os INSERTs da v2 não tinham ON CONFLICT.
 --
--- Solução em duas camadas:
---   1. UNIQUE(venda_id, forma_pagamento) na tabela  →  garante integridade no DB
---   2. ON CONFLICT DO NOTHING nos INSERTs da v2     →  torna o bloco idempotente
+-- Solução em três camadas:
+--   1. Normalizar duplicatas existentes somando o valor por forma de pagamento
+--   2. UNIQUE(venda_id, forma_pagamento) na tabela  →  garante integridade no DB
+--   3. ON CONFLICT DO NOTHING nos INSERTs da v2     →  torna o bloco idempotente
 --
 -- Nota de modelo de negócio: split payment entre formas distintas é suportado
 -- (ex.: DINHEIRO + PIX). Dois registros com a MESMA (venda_id, forma_pagamento)
@@ -16,16 +17,34 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. Eliminar eventuais duplicatas existentes (mantém o registro mais antigo)
+-- 1. Normalizar eventuais duplicatas existentes
 -- -----------------------------------------------------------------------------
--- uuid não tem MIN() nativo; usamos DISTINCT ON ordenado por created_at.
-WITH keep AS (
-  SELECT DISTINCT ON (venda_id, forma_pagamento) id
+-- Mantém a linha mais antiga por (venda_id, forma_pagamento), mas preserva o
+-- dinheiro registrado somando os valores antes de apagar as duplicatas.
+WITH ranked AS (
+  SELECT
+    id,
+    venda_id,
+    forma_pagamento,
+    ROW_NUMBER() OVER (
+      PARTITION BY venda_id, forma_pagamento
+      ORDER BY created_at ASC, id ASC
+    ) AS rn,
+    SUM(valor) OVER (PARTITION BY venda_id, forma_pagamento) AS valor_total
   FROM public.vendas_pagamentos
-  ORDER BY venda_id, forma_pagamento, created_at ASC
+),
+normalized AS (
+  UPDATE public.vendas_pagamentos vp
+  SET valor = ranked.valor_total
+  FROM ranked
+  WHERE vp.id = ranked.id
+    AND ranked.rn = 1
+  RETURNING vp.id
 )
-DELETE FROM public.vendas_pagamentos
-WHERE id NOT IN (SELECT id FROM keep);
+DELETE FROM public.vendas_pagamentos vp
+USING ranked
+WHERE vp.id = ranked.id
+  AND ranked.rn > 1;
 
 -- -----------------------------------------------------------------------------
 -- 2. Criar constraint de unicidade
