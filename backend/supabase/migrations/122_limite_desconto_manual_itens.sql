@@ -80,9 +80,9 @@ BEGIN
   IF v_pct > v_limite THEN
     RAISE EXCEPTION 'DESCONTO_MANUAL_EXCESSIVO'
       USING DETAIL = format(
-        'Desconto de %.2f%% no item excede o limite de %.2f%% (tipo_preco: %s). '
+        'Desconto de %s%% no item excede o limite de %s%% (tipo_preco: %s). '
         'Solicite autorização de gerente para prosseguir.',
-        v_pct, v_limite, NEW.tipo_preco
+        round(v_pct, 2), round(v_limite, 2), NEW.tipo_preco
       );
   END IF;
 

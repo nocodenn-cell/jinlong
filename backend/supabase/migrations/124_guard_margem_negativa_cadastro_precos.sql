@@ -79,9 +79,9 @@ BEGIN
   IF v_preco_efetivo < v_custo THEN
     RAISE EXCEPTION 'REGRA_PRECO_ABAIXO_CUSTO'
       USING DETAIL = format(
-        'Preço de venda efetivo (%.2f) abaixo do custo (%.2f) do produto %s. '
+        'Preço de venda efetivo (%s) abaixo do custo (%s) do produto %s. '
         'Defina permitir_abaixo_custo = true para autorizar margem negativa.',
-        v_preco_efetivo, v_custo, NEW.produto_id
+        round(v_preco_efetivo, 2), round(v_custo, 2), NEW.produto_id
       );
   END IF;
 
@@ -130,9 +130,9 @@ BEGIN
   IF NEW.preco_unitario < v_custo THEN
     RAISE EXCEPTION 'PRECO_ATACADO_ABAIXO_CUSTO'
       USING DETAIL = format(
-        'Preço de atacado (%.2f) abaixo do custo (%.2f) do produto %s. '
+        'Preço de atacado (%s) abaixo do custo (%s) do produto %s. '
         'Defina permitir_abaixo_custo = true para autorizar margem negativa.',
-        NEW.preco_unitario, v_custo, NEW.produto_id
+        round(NEW.preco_unitario, 2), round(v_custo, 2), NEW.produto_id
       );
   END IF;
 
