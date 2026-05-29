@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPreco'
+import { buildRegrasPrecoValidadeOrFilter } from '@/core/caixa/regrasPrecoValidadeFilter'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
@@ -32,7 +33,7 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
         )
         .eq('ativo', true)
         // Regras vencidas não devem ser carregadas/aplicadas (data_validade no passado).
-        .or(`data_validade.is.null,data_validade.gte.${new Date().toISOString()}`),
+        .or(buildRegrasPrecoValidadeOrFilter()),
       fetchPdvConfigParaCaixaWeb(supabase),
     ])
 
