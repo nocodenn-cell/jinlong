@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { memo } from "react"
 import { Minus, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -61,7 +61,7 @@ type StepperProps = {
   onRemover: (itemId: string) => void
 }
 
-function QuantidadeStepper({
+const QuantidadeStepper = memo(function QuantidadeStepper({
   m,
   item,
   size,
@@ -133,9 +133,177 @@ function QuantidadeStepper({
       </Button>
     </div>
   )
+})
+
+type CartRowProps = {
+  m: Mensagens
+  item: ItemCarrinhoComPreco
+  moeda: string
+  locale: string
+  onAlterarQuantidade: (itemId: string, quantidade: number) => void
+  onRemover: (itemId: string) => void
 }
 
-export function CaixaCartList({
+const CartRowDesktop = memo(function CartRowDesktop({
+  m,
+  item,
+  moeda,
+  locale,
+  onAlterarQuantidade,
+  onRemover,
+}: CartRowProps) {
+  const res = resultadoLinha(item)
+  return (
+    <li
+      className="grid grid-cols-[minmax(0,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
+    >
+      <div className="flex flex-col min-w-0 gap-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-semibold truncate text-base text-foreground">{item.nome}</span>
+          {res.tipoPreco === "ATACADO" ? (
+            <Badge
+              variant="outline"
+              className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
+            >
+              {m.relatorios.atacado}
+            </Badge>
+          ) : null}
+        </div>
+        <MetaPdvBloco item={item} m={m} compact={false} />
+        <span className="text-xs text-foreground/70 font-mono truncate opacity-90">
+          {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
+        </span>
+      </div>
+      <div className="flex items-center justify-end gap-1">
+        <QuantidadeStepper
+          m={m}
+          item={item}
+          size="sm"
+          onAlterarQuantidade={onAlterarQuantidade}
+          onRemover={onRemover}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 px-1 text-[11px] text-muted-foreground hover:text-primary"
+          onClick={() => onRemover(item.id)}
+        >
+          {m.caixa.remover}
+        </Button>
+      </div>
+      <div className="text-right tabular-nums text-sm">
+        {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
+          <div className="space-y-0.5">
+            <div className="line-through text-foreground/55 text-xs">
+              {moeda} {formatDecimal2(res.precoOriginal, locale)}
+            </div>
+            <div>
+              {moeda} {formatDecimal2(res.precoUnitario, locale)}
+            </div>
+          </div>
+        ) : (
+          <span>
+            {moeda} {formatDecimal2(res.precoUnitario, locale)}
+          </span>
+        )}
+      </div>
+      <div className="text-right tabular-nums text-sm">
+        {moeda}{" "}
+        {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
+      </div>
+      <TipoPrecoBadge m={m} tipo={res.tipoPreco} />
+    </li>
+  )
+})
+
+const CartCardMobile = memo(function CartCardMobile({
+  m,
+  item,
+  moeda,
+  locale,
+  onAlterarQuantidade,
+  onRemover,
+}: CartRowProps) {
+  const res = resultadoLinha(item)
+  return (
+    <li className="p-4 space-y-3 hover:bg-accent/50 transition-colors">
+      <div className="flex justify-between gap-2 min-w-0">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="font-semibold text-base truncate text-foreground">{item.nome}</div>
+            {res.tipoPreco === "ATACADO" ? (
+              <Badge
+                variant="outline"
+                className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
+              >
+                {m.relatorios.atacado}
+              </Badge>
+            ) : null}
+          </div>
+          <MetaPdvBloco item={item} m={m} compact />
+          <div className="text-[9px] text-muted-foreground font-mono truncate opacity-60">
+            {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
+          </div>
+        </div>
+        <TipoPrecoBadge m={m} tipo={res.tipoPreco} compact />
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <span className="text-foreground/85">{m.caixa.col_qtde}</span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <QuantidadeStepper
+              m={m}
+              item={item}
+              size="md"
+              onAlterarQuantidade={onAlterarQuantidade}
+              onRemover={onRemover}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-primary text-sm font-semibold hover:opacity-85 shrink-0"
+              onClick={() => onRemover(item.id)}
+            >
+              {m.caixa.remover}
+            </Button>
+          </div>
+        </div>
+        <div className="text-right space-y-1">
+          <div>
+            <span className="text-foreground/85 block">{m.caixa.col_unit}</span>
+            <span className="tabular-nums">
+              {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
+                <span className="block space-y-0.5">
+                  <span className="line-through text-foreground/55 text-[10px] block">
+                    {moeda} {formatDecimal2(res.precoOriginal, locale)}
+                  </span>
+                  <span>
+                    {moeda} {formatDecimal2(res.precoUnitario, locale)}
+                  </span>
+                </span>
+              ) : (
+                <span>
+                  {moeda} {formatDecimal2(res.precoUnitario, locale)}
+                </span>
+              )}
+            </span>
+          </div>
+          <div>
+            <span className="text-foreground/85 block">{m.caixa.col_total}</span>
+            <span className="tabular-nums font-medium">
+              {moeda}{" "}
+              {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </li>
+  )
+})
+
+function CaixaCartListInner({
   m,
   idioma,
   itens,
@@ -204,159 +372,39 @@ export function CaixaCartList({
           <span className="text-right">{m.caixa.col_tipo}</span>
         </header>
         <ul className="divide-y border-border text-sm">
-          {itens.map((item) => {
-            const res = resultadoLinha(item)
-            return (
-            <li
+          {itens.map((item) => (
+            <CartRowDesktop
               key={item.id}
-              className="grid grid-cols-[minmax(0,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
-            >
-              <div className="flex flex-col min-w-0 gap-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold truncate text-base text-foreground">{item.nome}</span>
-                  {res.tipoPreco === "ATACADO" ? (
-                    <Badge
-                      variant="outline"
-                      className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
-                    >
-                      {m.relatorios.atacado}
-                    </Badge>
-                  ) : null}
-                </div>
-                <MetaPdvBloco item={item} m={m} compact={false} />
-                <span className="text-xs text-foreground/70 font-mono truncate opacity-90">
-                  {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
-                </span>
-              </div>
-              <div className="flex items-center justify-end gap-1">
-                <QuantidadeStepper
-                  m={m}
-                  item={item}
-                  size="sm"
-                  onAlterarQuantidade={onAlterarQuantidade}
-                  onRemover={onRemover}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-1 text-[11px] text-muted-foreground hover:text-primary"
-                  onClick={() => onRemover(item.id)}
-                >
-                  {m.caixa.remover}
-                </Button>
-              </div>
-              <div className="text-right tabular-nums text-sm">
-                {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-                  <div className="space-y-0.5">
-                    <div className="line-through text-foreground/55 text-xs">
-                      {moeda} {formatDecimal2(res.precoOriginal, locale)}
-                    </div>
-                    <div>
-                      {moeda} {formatDecimal2(res.precoUnitario, locale)}
-                    </div>
-                  </div>
-                ) : (
-                  <span>
-                    {moeda} {formatDecimal2(res.precoUnitario, locale)}
-                  </span>
-                )}
-              </div>
-              <div className="text-right tabular-nums text-sm">
-                {moeda}{" "}
-                {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
-              </div>
-              <TipoPrecoBadge m={m} tipo={res.tipoPreco} />
-            </li>
-            )
-          })}
+              m={m}
+              item={item}
+              moeda={moeda}
+              locale={locale}
+              onAlterarQuantidade={onAlterarQuantidade}
+              onRemover={onRemover}
+            />
+          ))}
         </ul>
       </div>
 
       {/* Mobile: cards */}
       <ul className="md:hidden divide-y border-border">
-        {itens.map((item) => {
-          const res = resultadoLinha(item)
-          return (
-          <li key={item.id} className="p-4 space-y-3 hover:bg-accent/50 transition-colors">
-            <div className="flex justify-between gap-2 min-w-0">
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="font-semibold text-base truncate text-foreground">{item.nome}</div>
-                  {res.tipoPreco === "ATACADO" ? (
-                    <Badge
-                      variant="outline"
-                      className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
-                    >
-                      {m.relatorios.atacado}
-                    </Badge>
-                  ) : null}
-                </div>
-                <MetaPdvBloco item={item} m={m} compact />
-                <div className="text-[9px] text-muted-foreground font-mono truncate opacity-60">
-                  {m.caixa.id_label}: {item.produtoId.slice(0, 8)}…
-                </div>
-              </div>
-              <TipoPrecoBadge m={m} tipo={res.tipoPreco} compact />
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-foreground/85">{m.caixa.col_qtde}</span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <QuantidadeStepper
-                    m={m}
-                    item={item}
-                    size="md"
-                    onAlterarQuantidade={onAlterarQuantidade}
-                    onRemover={onRemover}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-primary text-sm font-semibold hover:opacity-85 shrink-0"
-                    onClick={() => onRemover(item.id)}
-                  >
-                    {m.caixa.remover}
-                  </Button>
-                </div>
-              </div>
-              <div className="text-right space-y-1">
-                <div>
-                  <span className="text-foreground/85 block">{m.caixa.col_unit}</span>
-                  <span className="tabular-nums">
-                    {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-                      <span className="block space-y-0.5">
-                        <span className="line-through text-foreground/55 text-[10px] block">
-                          {moeda} {formatDecimal2(res.precoOriginal, locale)}
-                        </span>
-                        <span>
-                          {moeda} {formatDecimal2(res.precoUnitario, locale)}
-                        </span>
-                      </span>
-                    ) : (
-                      <span>
-                        {moeda} {formatDecimal2(res.precoUnitario, locale)}
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-foreground/85 block">{m.caixa.col_total}</span>
-                  <span className="tabular-nums font-medium">
-                    {moeda}{" "}
-                    {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </li>
-          )
-        })}
+        {itens.map((item) => (
+          <CartCardMobile
+            key={item.id}
+            m={m}
+            item={item}
+            moeda={moeda}
+            locale={locale}
+            onAlterarQuantidade={onAlterarQuantidade}
+            onRemover={onRemover}
+          />
+        ))}
       </ul>
     </>
   )
 }
+
+export const CaixaCartList = memo(CaixaCartListInner)
 
 function MetaPdvBloco({
   item,

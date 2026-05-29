@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { memo, useState, useEffect } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { ThermalStatus } from "@/hooks/useThermalPrinter"
@@ -30,7 +30,7 @@ type Props = {
   printerDeviceName?: string | null
 }
 
-export function CaixaHeader({
+function CaixaHeaderImpl({
   m,
   idioma,
   layoutVariant,
@@ -105,3 +105,5 @@ export function CaixaHeader({
     </div>
   )
 }
+
+export const CaixaHeader = memo(CaixaHeaderImpl)

@@ -122,7 +122,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
           <Button
             type="submit"
             disabled={buscando || carregandoRegras}
-            aria-busy={buscando}
+            aria-busy={buscando || carregandoRegras}
             className={cn(
               "app-btn-accent inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors",
               hideNovoCupom
@@ -131,7 +131,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               compact ? "px-2.5 py-1.5 text-sm" : "h-14 px-4 text-base",
             )}
           >
-            {buscando ? (
+            {buscando || carregandoRegras ? (
               <>
                 <DragonOuroLoader iconClassName="h-4 w-4" />
                 {m.caixa.buscando}

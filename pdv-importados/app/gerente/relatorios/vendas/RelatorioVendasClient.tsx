@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Download, Printer, FilterX } from 'lucide-react'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -14,6 +14,15 @@ import {
   buscarRelatorioVendasAvancadoAction,
   type RelatorioVendasAvancadoPayload,
 } from './actions'
+
+const RelatorioVendasChart = dynamic(() => import('./RelatorioVendasChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[260px] w-full items-center justify-center text-sm text-jl-fg-3">
+      Carregando gráfico…
+    </div>
+  ),
+})
 
 type Props = Readonly<{
   idioma: Idioma
@@ -282,35 +291,11 @@ export function RelatorioVendasClient({
             {m.relatorios_vendas.chart_sem_dados}
           </p>
         ) : (
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
-                <XAxis
-                  dataKey="label"
-                  stroke="rgba(148,163,184,0.7)"
-                  style={{ fontSize: 11, fontFamily: 'var(--font-numeric)' }}
-                />
-                <YAxis
-                  stroke="rgba(148,163,184,0.7)"
-                  style={{ fontSize: 11, fontFamily: 'var(--font-numeric)' }}
-                  tickFormatter={(v) => fmtGerenteBRL(Number(v), locale)}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(251,191,36,0.08)' }}
-                  contentStyle={{
-                    background: 'rgba(2,6,23,0.95)',
-                    border: '1px solid rgba(148,163,184,0.38)',
-                    borderRadius: 8,
-                    color: '#f1f5f9',
-                    fontSize: 12,
-                  }}
-                  formatter={(value) => [fmtGerenteBRL(Number(value ?? 0), locale), m.relatorios_vendas.faturamento]}
-                />
-                <Bar dataKey="total_liquido" fill="#fbbf24" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <RelatorioVendasChart
+            data={chartData}
+            locale={locale}
+            faturamentoLabel={m.relatorios_vendas.faturamento}
+          />
         )}
       </div>
 

@@ -74,13 +74,15 @@ export async function cancelarVendaImpl(
       .eq('id', user.id)
       .maybeSingle()
     if (urow?.perfil === 'OPERADOR') {
-      const { data: vrow } = await supabase
-        .from('vendas')
-        .select('total_liquido')
-        .eq('id', vendaIdTrim)
-        .maybeSingle()
+      const [{ data: vrow }, cfgMap] = await Promise.all([
+        supabase
+          .from('vendas')
+          .select('total_liquido')
+          .eq('id', vendaIdTrim)
+          .maybeSingle(),
+        obterMapaConfiguracoesParaCaixaWeb(supabase),
+      ])
       const totalLiq = Number(vrow?.total_liquido ?? 0)
-      const cfgMap = await obterMapaConfiguracoesParaCaixaWeb(supabase)
       const maxCancel = parseMoneyConfig(cfgMap.cancelamento_maximo_valor_sem_gerente, 500)
       if (Number.isFinite(totalLiq) && totalLiq > maxCancel + 0.01) {
         return {

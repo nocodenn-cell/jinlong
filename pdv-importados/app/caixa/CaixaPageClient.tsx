@@ -311,14 +311,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const pagamentoControlesDesabilitados =
     finalizando || buscandoPipeline || carregandoRegras
 
-  const metodoPagamentoSelector = (
-    <CaixaPdvMetodoPagamentoSelector
-      m={m}
-      value={metodoPagamento}
-      onChange={setMetodoPagamento}
-      disabled={pagamentoControlesDesabilitados}
-      variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
-    />
+  const metodoPagamentoSelector = useMemo(
+    () => (
+      <CaixaPdvMetodoPagamentoSelector
+        m={m}
+        value={metodoPagamento}
+        onChange={setMetodoPagamento}
+        disabled={pagamentoControlesDesabilitados}
+        variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+      />
+    ),
+    [m, metodoPagamento, setMetodoPagamento, pagamentoControlesDesabilitados, pdvLayoutVariant],
   )
 
   const limparEstadoDescontoGerente = useCallback(() => {
@@ -852,6 +855,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     [m, loc, setCaixaMensagem, tocarFeedback],
   )
 
+  const handleAbrirCaixaClick = useCallback(() => void handleAbrirCaixa(), [handleAbrirCaixa])
+  const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
+  const handleFinalizarClick = useCallback(() => void handleFinalizar(), [handleFinalizar])
+  const abrirGerenteModal = useCallback(() => setGerenteModalAberto(true), [])
+  const handleCancelarMovimentacao = useCallback(
+    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "cancelar", item }),
+    [],
+  )
+  const handleEstornarMovimentacao = useCallback(
+    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "estornar", item }),
+    [],
+  )
+
   return (
     <>
       <div
@@ -876,8 +892,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           operadorLabel={operadorLabel}
           caixaStatus={caixaStatus}
           processandoCaixa={processandoCaixa}
-          onAbrirCaixa={() => void handleAbrirCaixa()}
-          onFecharCaixa={() => void handleFecharCaixa()}
+          onAbrirCaixa={handleAbrirCaixaClick}
+          onFecharCaixa={handleFecharCaixaClick}
           printerStatus={thermal.status}
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
         />
@@ -973,7 +989,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   m={m}
                   idioma={idioma}
                   onExcluirVenda={handleNovoCupom}
-                  onFinalizar={() => void handleFinalizar()}
+                  onFinalizar={handleFinalizarClick}
                   finalizando={finalizando}
                   movimentandoCaixa={movimentandoCaixa}
                   caixaAberto={caixaStatus?.aberto === true}
@@ -1044,7 +1060,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 gerenteValidadoAte={gerenteValidadoAte}
                 onAbrirSuprimento={handleAbrirSuprimento}
                 onAbrirSangria={handleAbrirSangria}
-                onValidarGerente={() => setGerenteModalAberto(true)}
+                onValidarGerente={abrirGerenteModal}
               />
               <div
                 className={cn(
@@ -1087,7 +1103,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   gerenteValidadoAte={gerenteValidadoAte}
                   onAbrirSuprimento={handleAbrirSuprimento}
                   onAbrirSangria={handleAbrirSangria}
-                  onValidarGerente={() => setGerenteModalAberto(true)}
+                  onValidarGerente={abrirGerenteModal}
                 />
               </div>
             </div>
@@ -1099,22 +1115,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               itens={movimentacoes}
               carregando={carregandoMovimentacoes}
               processandoAcao={processandoAcaoMovimentacao}
-              onCancelar={(item) => {
-                setConfirmacaoPendente({ tipo: "cancelar", item })
-              }}
-              onEstornar={(item) => {
-                setConfirmacaoPendente({ tipo: "estornar", item })
-              }}
+              onCancelar={handleCancelarMovimentacao}
+              onEstornar={handleEstornarMovimentacao}
             />
           )}
           <CaixaFooter
             m={m}
             idioma={idioma}
             layout={pdvLayoutVariant === "classic" ? "classic_summary" : "full"}
-            onValidarGerente={() => setGerenteModalAberto(true)}
+            onValidarGerente={abrirGerenteModal}
             onAbrirSuprimento={handleAbrirSuprimento}
             onAbrirSangria={handleAbrirSangria}
-            onFinalizar={() => void handleFinalizar()}
+            onFinalizar={handleFinalizarClick}
             validandoGerente={validandoGerente}
             finalizando={finalizando}
             movimentandoCaixa={movimentandoCaixa}

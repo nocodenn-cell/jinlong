@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
@@ -11,7 +12,7 @@ type Props = Readonly<{
   configCaixaWeb: Record<string, string>
 }>
 
-export function CaixaOperadorContextBar({ m, idioma, configCaixaWeb }: Props) {
+function CaixaOperadorContextBarImpl({ m, idioma, configCaixaWeb }: Props) {
   void idioma
   const leadMin = parseIntegerConfig(configCaixaWeb.lead_time_min_dias, 30)
   const leadMax = parseIntegerConfig(configCaixaWeb.lead_time_max_dias, 60)
@@ -26,3 +27,5 @@ export function CaixaOperadorContextBar({ m, idioma, configCaixaWeb }: Props) {
     </div>
   )
 }
+
+export const CaixaOperadorContextBar = memo(CaixaOperadorContextBarImpl)

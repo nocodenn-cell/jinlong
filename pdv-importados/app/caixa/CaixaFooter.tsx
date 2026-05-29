@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { memo, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -51,7 +51,7 @@ function timeLocale(idioma: Idioma) {
   return moneyLocale(idioma)
 }
 
-export function CaixaFooter({
+function CaixaFooterImpl({
   m,
   idioma,
   layout = "full",
@@ -291,3 +291,5 @@ export function CaixaFooter({
     </footer>
   )
 }
+
+export const CaixaFooter = memo(CaixaFooterImpl)

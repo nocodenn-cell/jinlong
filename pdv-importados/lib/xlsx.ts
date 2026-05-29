@@ -1,15 +1,14 @@
-import ExcelJS from 'exceljs'
-
 type ExportColumn = { key: string; header: string }
 
 /**
  * Exporta dados tabulares em arquivo XLSX no navegador.
  */
-export function downloadXlsx(
+export async function downloadXlsx(
   filename: string,
   columns: ExportColumn[],
   rows: Record<string, unknown>[],
-): void {
+): Promise<void> {
+  const { default: ExcelJS } = await import('exceljs')
   const workbook = new ExcelJS.Workbook()
   const worksheet = workbook.addWorksheet('Relatorio')
 

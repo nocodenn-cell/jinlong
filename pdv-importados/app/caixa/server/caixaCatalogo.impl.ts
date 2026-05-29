@@ -24,18 +24,20 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
-    const { data, error } = await supabase
-      .from('regras_preco')
-      .select(
-        'id, tipo_regra, produto_id, categoria_id, quantidade_minima, quantidade_maxima, tipo_desconto, valor_desconto, data_validade, ativo',
-      )
-      .eq('ativo', true)
+    const [{ data, error }, cfgRes] = await Promise.all([
+      supabase
+        .from('regras_preco')
+        .select(
+          'id, tipo_regra, produto_id, categoria_id, quantidade_minima, quantidade_maxima, tipo_desconto, valor_desconto, data_validade, ativo',
+        )
+        .eq('ativo', true),
+      fetchPdvConfigParaCaixaWeb(supabase),
+    ])
 
     if (error) {
       return { ok: false, error: mensagemErroParaUsuario(error.message) }
     }
 
-    const cfgRes = await fetchPdvConfigParaCaixaWeb(supabase)
     if (!cfgRes.ok) {
       return { ok: false, error: cfgRes.error }
     }
