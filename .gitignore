@@ -46,3 +46,6 @@ backend/artifacts/*.json
 
 # Repositório Git aninhado (clone local dentro do monorepo)
 fastproduct/
+
+# Claude Code local settings
+.claude/settings.local.json
