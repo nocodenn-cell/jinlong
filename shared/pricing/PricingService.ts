@@ -51,23 +51,26 @@ export class PricingService {
 
     const precoOriginal = precoOriginalBase
     let precoUnitario = precoOriginal
-    let descontoUnitario = 0
     let tipoPreco: ResultadoPreco['tipoPreco'] = 'VAREJO'
 
     if (regraAplicavel.tipo === 'ATAcado' && item.quantidade >= (regraAplicavel.minQuantidade || 1)) {
-      descontoUnitario = (precoOriginal * (regraAplicavel.descontoPercentual || 0)) / 100
-      precoUnitario = precoOriginal - descontoUnitario
+      const desconto = (precoOriginal * (regraAplicavel.descontoPercentual || 0)) / 100
+      precoUnitario = precoOriginal - desconto
       tipoPreco = 'ATACADO'
     } else if (regraAplicavel.tipo === 'PROMOCAO') {
-      if (regraAplicavel.precoFixo) {
+      if (regraAplicavel.precoFixo != null) {
         precoUnitario = regraAplicavel.precoFixo
-        descontoUnitario = precoOriginal - precoUnitario
       } else if (regraAplicavel.descontoPercentual) {
-        descontoUnitario = (precoOriginal * regraAplicavel.descontoPercentual) / 100
-        precoUnitario = precoOriginal - descontoUnitario
+        precoUnitario = precoOriginal - (precoOriginal * regraAplicavel.descontoPercentual) / 100
       }
       tipoPreco = 'PROMOCAO'
     }
+
+    // Guard de piso: preço unitário nunca negativo e nunca acima do original
+    // (ex.: descontoPercentual > 100 ou precoFixo inválido). O desconto é derivado
+    // do preço já clampado para manter precoOriginal - descontoUnitario === precoUnitario.
+    precoUnitario = Math.min(precoOriginal, Math.max(0, precoUnitario))
+    const descontoUnitario = precoOriginal - precoUnitario
 
     return {
       precoUnitario: Math.round(precoUnitario * 100) / 100,
@@ -112,6 +115,15 @@ export class PricingService {
     regra: RegraPreco,
     ctx: PricingContext
   ): boolean {
+    // Validade: regra vencida não se aplica (compara com dataReferencia do contexto ou agora).
+    if (regra.dataValidade) {
+      const validade = new Date(regra.dataValidade)
+      const referencia = ctx.dataReferencia ?? new Date()
+      if (!Number.isNaN(validade.getTime()) && validade.getTime() < referencia.getTime()) {
+        return false
+      }
+    }
+
     // Verificar limites de quantidade
     if (regra.minQuantidade && item.quantidade < regra.minQuantidade) {
       return false

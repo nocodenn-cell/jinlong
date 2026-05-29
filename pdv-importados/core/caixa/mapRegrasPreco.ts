@@ -31,6 +31,7 @@ export function mapRegraPrecoRow(row: RegraPrecoRow): RegraPreco {
     maxQuantidade: qMax,
     descontoPercentual: row.tipo_desconto === 'PERCENTUAL' ? Number(row.valor_desconto) : undefined,
     precoFixo: row.tipo_desconto === 'VALOR_FIXO' ? Number(row.valor_desconto) : undefined,
+    dataValidade: row.data_validade,
     ativo: row.ativo,
   }
 }

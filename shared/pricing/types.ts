@@ -10,6 +10,8 @@ export interface RegraPreco {
   maxQuantidade?: number
   descontoPercentual?: number
   precoFixo?: number
+  /** ISO date/timestamp. `null`/`undefined` = sem validade (vale indefinidamente). */
+  dataValidade?: string | null
   ativo: boolean
 }
 

@@ -30,7 +30,9 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
         .select(
           'id, tipo_regra, produto_id, categoria_id, quantidade_minima, quantidade_maxima, tipo_desconto, valor_desconto, data_validade, ativo',
         )
-        .eq('ativo', true),
+        .eq('ativo', true)
+        // Regras vencidas não devem ser carregadas/aplicadas (data_validade no passado).
+        .or(`data_validade.is.null,data_validade.gte.${new Date().toISOString()}`),
       fetchPdvConfigParaCaixaWeb(supabase),
     ])
 
