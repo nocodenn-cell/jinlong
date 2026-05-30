@@ -46,6 +46,22 @@
     "top_produtos_legenda": "Ranking no mesmo período (vendas concluídas). Até 50 produtos.",
     "estoque_baixo_sem_periodo": "Instantâneo atual (sem filtro de data)."
   },
+  "relatorios_sem_giro": {
+    "titulo": "Produtos sem giro",
+    "legenda": "Saldo positivo em estoque e sem nenhuma saída por venda no período. Ordenado por capital imobilizado (maior primeiro).",
+    "col_codigo_barras": "Código de barras",
+    "col_nome": "Nome",
+    "col_quantidade": "Qtd. atual",
+    "col_preco_custo": "Preço de custo",
+    "col_valor_imobilizado": "Valor imobilizado",
+    "col_ultima_venda": "Última venda",
+    "sem_custo": "—",
+    "nunca_vendido": "Nunca vendido",
+    "um_dia_parado": "1 dia parado",
+    "dias_parado": "{{dias}} dias parado",
+    "vazio": "Nenhum produto sem giro no período. 🎉",
+    "resumo": "{{n}} produto(s) parado(s) · {{valor}} imobilizados"
+  },
   "produtos": {
     "titulo": "Produtos",
     "novo": "Novo produto",

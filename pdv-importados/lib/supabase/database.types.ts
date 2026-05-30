@@ -176,33 +176,42 @@ export type Database = {
       clientes: {
         Row: {
           ativo: boolean
+          consentimento_privacidade_em: string | null
           created_at: string
           documento: string | null
+          email: string | null
           id: string
           limite_credito: number
           loja_id: string
           nome: string
           telefone: string | null
+          termos_aceitos_em: string | null
         }
         Insert: {
           ativo?: boolean
+          consentimento_privacidade_em?: string | null
           created_at?: string
           documento?: string | null
+          email?: string | null
           id?: string
           limite_credito?: number
           loja_id: string
           nome: string
           telefone?: string | null
+          termos_aceitos_em?: string | null
         }
         Update: {
           ativo?: boolean
+          consentimento_privacidade_em?: string | null
           created_at?: string
           documento?: string | null
+          email?: string | null
           id?: string
           limite_credito?: number
           loja_id?: string
           nome?: string
           telefone?: string | null
+          termos_aceitos_em?: string | null
         }
         Relationships: [
           {
@@ -218,6 +227,127 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
+          },
+        ]
+      }
+      contas_pagar: {
+        Row: {
+          cancelamento_em: string | null
+          cancelamento_motivo: string | null
+          criado_em: string
+          descricao: string | null
+          fornecedor_id: string
+          id: string
+          loja_id: string
+          nfe_importacao_id: string | null
+          nfe_numero: string | null
+          observacao: string | null
+          status: string
+          valor_pago: number
+          valor_total: number
+          vencimento: string
+        }
+        Insert: {
+          cancelamento_em?: string | null
+          cancelamento_motivo?: string | null
+          criado_em?: string
+          descricao?: string | null
+          fornecedor_id: string
+          id?: string
+          loja_id: string
+          nfe_importacao_id?: string | null
+          nfe_numero?: string | null
+          observacao?: string | null
+          status?: string
+          valor_pago?: number
+          valor_total: number
+          vencimento: string
+        }
+        Update: {
+          cancelamento_em?: string | null
+          cancelamento_motivo?: string | null
+          criado_em?: string
+          descricao?: string | null
+          fornecedor_id?: string
+          id?: string
+          loja_id?: string
+          nfe_importacao_id?: string | null
+          nfe_numero?: string | null
+          observacao?: string | null
+          status?: string
+          valor_pago?: number
+          valor_total?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_nfe_importacao_id_fkey"
+            columns: ["nfe_importacao_id"]
+            isOneToOne: false
+            referencedRelation: "importacoes_nfe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_pagar_pagamentos: {
+        Row: {
+          conta_id: string
+          created_at: string
+          data_pagamento: string
+          forma_pagamento: string
+          id: string
+          observacao: string | null
+          usuario_id: string | null
+          valor: number
+        }
+        Insert: {
+          conta_id: string
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento: string
+          id?: string
+          observacao?: string | null
+          usuario_id?: string | null
+          valor: number
+        }
+        Update: {
+          conta_id?: string
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento?: string
+          id?: string
+          observacao?: string | null
+          usuario_id?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_pagamentos_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1106,6 +1236,7 @@ export type Database = {
           remessa_id: string | null
           tipo_codigo: string
           usuario_id: string
+          venda_id: string | null
         }
         Insert: {
           anexo_url?: string | null
@@ -1118,6 +1249,7 @@ export type Database = {
           remessa_id?: string | null
           tipo_codigo: string
           usuario_id: string
+          venda_id?: string | null
         }
         Update: {
           anexo_url?: string | null
@@ -1130,6 +1262,7 @@ export type Database = {
           remessa_id?: string | null
           tipo_codigo?: string
           usuario_id?: string
+          venda_id?: string | null
         }
         Relationships: [
           {
@@ -1188,6 +1321,142 @@ export type Database = {
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "movimentos_estoque_log_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordens_compra: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_emissao: string
+          data_prevista_chegada: string | null
+          fornecedor_id: string | null
+          fornecedor_nome: string | null
+          id: string
+          loja_id: string
+          observacao: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_emissao?: string
+          data_prevista_chegada?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          loja_id: string
+          observacao?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_emissao?: string
+          data_prevista_chegada?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          loja_id?: string
+          observacao?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_compra_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+        ]
+      }
+      ordens_compra_itens: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          ordem_id: string
+          preco_unitario: number
+          produto_id: string | null
+          quantidade: number
+          quantidade_recebida: number
+          unidade_medida: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem_id: string
+          preco_unitario?: number
+          produto_id?: string | null
+          quantidade: number
+          quantidade_recebida?: number
+          unidade_medida?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem_id?: string
+          preco_unitario?: number
+          produto_id?: string | null
+          quantidade?: number
+          quantidade_recebida?: number
+          unidade_medida?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_compra_itens_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_compra_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pdv_config: {
@@ -1195,33 +1464,33 @@ export type Database = {
           blind_closure: boolean
           gerente_id: string
           gerente_senha_bcrypt: string | null
-          gerente_senha_sha256: string
           id: number
           limite_sangria_sem_gerente: number
           limite_transferencia_obs: number
           max_desconto_gerente_percentual: number
+          max_desconto_manual_item_percentual: number
           quantidade_minima_atacado_padrao: number
         }
         Insert: {
           blind_closure?: boolean
           gerente_id: string
           gerente_senha_bcrypt?: string | null
-          gerente_senha_sha256: string
           id?: number
           limite_sangria_sem_gerente?: number
           limite_transferencia_obs?: number
           max_desconto_gerente_percentual?: number
+          max_desconto_manual_item_percentual?: number
           quantidade_minima_atacado_padrao?: number
         }
         Update: {
           blind_closure?: boolean
           gerente_id?: string
           gerente_senha_bcrypt?: string | null
-          gerente_senha_sha256?: string
           id?: number
           limite_sangria_sem_gerente?: number
           limite_transferencia_obs?: number
           max_desconto_gerente_percentual?: number
+          max_desconto_manual_item_percentual?: number
           quantidade_minima_atacado_padrao?: number
         }
         Relationships: []
@@ -1271,6 +1540,7 @@ export type Database = {
           created_at: string
           id: string
           loja_id: string | null
+          permitir_abaixo_custo: boolean
           preco_unitario: number
           produto_id: string
           quantidade_minima: number
@@ -1280,6 +1550,7 @@ export type Database = {
           created_at?: string
           id?: string
           loja_id?: string | null
+          permitir_abaixo_custo?: boolean
           preco_unitario: number
           produto_id: string
           quantidade_minima: number
@@ -1289,6 +1560,7 @@ export type Database = {
           created_at?: string
           id?: string
           loja_id?: string | null
+          permitir_abaixo_custo?: boolean
           preco_unitario?: number
           produto_id?: string
           quantidade_minima?: number
@@ -1348,6 +1620,7 @@ export type Database = {
           nome: string
           observacao: string | null
           origem: string
+          permitir_abaixo_custo: boolean
           preco_atacado: number | null
           preco_custo: number | null
           preco_custo_medio: number
@@ -1375,6 +1648,7 @@ export type Database = {
           nome: string
           observacao?: string | null
           origem: string
+          permitir_abaixo_custo?: boolean
           preco_atacado?: number | null
           preco_custo?: number | null
           preco_custo_medio?: number
@@ -1402,6 +1676,7 @@ export type Database = {
           nome?: string
           observacao?: string | null
           origem?: string
+          permitir_abaixo_custo?: boolean
           preco_atacado?: number | null
           preco_custo?: number | null
           preco_custo_medio?: number
@@ -1459,6 +1734,7 @@ export type Database = {
           created_by: string | null
           data_validade: string | null
           id: string
+          permitir_abaixo_custo: boolean
           produto_id: string | null
           quantidade_maxima: number | null
           quantidade_minima: number
@@ -1473,6 +1749,7 @@ export type Database = {
           created_by?: string | null
           data_validade?: string | null
           id?: string
+          permitir_abaixo_custo?: boolean
           produto_id?: string | null
           quantidade_maxima?: number | null
           quantidade_minima: number
@@ -1487,6 +1764,7 @@ export type Database = {
           created_by?: string | null
           data_validade?: string | null
           id?: string
+          permitir_abaixo_custo?: boolean
           produto_id?: string | null
           quantidade_maxima?: number | null
           quantidade_minima?: number
@@ -2131,6 +2409,19 @@ export type Database = {
           status_movimentacao: string
         }[]
       }
+      fechar_caixa_atomico: {
+        Args: {
+          p_motivo?: string
+          p_operador_id: string
+          p_valor_contado: number
+        }
+        Returns: {
+          o_caixa_id: string
+          o_diferenca: number
+          o_valor_contado: number
+          o_valor_sistema: number
+        }[]
+      }
       finalizar_venda_transacional: {
         Args: {
           p_caixa_id: string
@@ -2341,18 +2632,32 @@ export type Database = {
         }
         Returns: Json
       }
-      importar_nfe_transacao: {
-        Args: {
-          p_atualizar_custo?: boolean
-          p_chave_acesso: string
-          p_fornecedor_cnpj: string
-          p_fornecedor_nome: string
-          p_itens: Json
-          p_loja_id: string
-          p_numero_nf: string
-        }
-        Returns: Json
-      }
+      importar_nfe_transacao:
+        | {
+            Args: {
+              p_atualizar_custo?: boolean
+              p_chave_acesso: string
+              p_fornecedor_cnpj: string
+              p_fornecedor_nome: string
+              p_itens: Json
+              p_loja_id: string
+              p_numero_nf: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_atualizar_custo?: boolean
+              p_chave_acesso: string
+              p_duplicatas?: Json
+              p_fornecedor_cnpj: string
+              p_fornecedor_nome: string
+              p_itens: Json
+              p_loja_id: string
+              p_numero_nf: string
+            }
+            Returns: Json
+          }
       is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
       list_produtos_gerente_filtrados: {
         Args: {
@@ -2422,6 +2727,10 @@ export type Database = {
           saldo_recalculado: number
         }[]
       }
+      receber_ordem_compra: {
+        Args: { p_itens: Json; p_oc_id: string }
+        Returns: undefined
+      }
       registrar_liquidacao_receber: {
         Args: {
           p_forma_pagamento: string
@@ -2455,6 +2764,16 @@ export type Database = {
           status_movimentacao: string
         }[]
       }
+      registrar_pagamento_contas_pagar: {
+        Args: {
+          p_conta_id: string
+          p_data?: string
+          p_forma: string
+          p_observacao?: string
+          p_valor: number
+        }
+        Returns: undefined
+      }
       registrar_venda_com_itens: {
         Args: {
           p_caixa_id: string
@@ -2470,6 +2789,19 @@ export type Database = {
           p_venda_id: string
         }
         Returns: undefined
+      }
+      relatorio_produtos_sem_giro_periodo: {
+        Args: { p_data_fim: string; p_data_inicio: string; p_loja_id: string }
+        Returns: {
+          codigo_barras: string
+          estoque_minimo: number
+          nome: string
+          preco_custo: number
+          produto_id: string
+          quantidade_atual: number
+          ultima_venda: string
+          valor_imobilizado: number
+        }[]
       }
       relatorio_resumo_executivo_periodo: {
         Args: { p_ate: string; p_de: string; p_tz?: string }
@@ -2511,8 +2843,6 @@ export type Database = {
         Args: { p_scale?: number; p_value: number }
         Returns: number
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       transferir_estoque_entre_lojas: {
         Args: {
           p_loja_destino: string

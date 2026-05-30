@@ -429,12 +429,19 @@ export function RelatoriosGerentePageClient({ idioma }: Props) {
                 )}
               </GerenteTable>
             </div>
-            <div className="mt-3 border-t border-jl-border-1 pt-3">
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 border-t border-jl-border-1 pt-3">
               <Link
                 href="/gerente/relatorios/estoque"
                 className="inline-flex items-center gap-1.5 text-xs text-jl-fg-3 transition-colors hover:text-jl-fg-1"
               >
                 <span>{m.relatorios_estoque.link_ver_relatorio}</span>
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+              <Link
+                href="/gerente/relatorios/sem-giro"
+                className="inline-flex items-center gap-1.5 text-xs text-jl-fg-3 transition-colors hover:text-jl-fg-1"
+              >
+                <span>{m.relatorios_sem_giro.titulo}</span>
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
             </div>

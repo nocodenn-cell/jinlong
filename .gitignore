@@ -46,3 +46,6 @@ backend/artifacts/*.json
 
 # Repositório Git aninhado (clone local dentro do monorepo)
 fastproduct/
+
+# MCP local (pode conter Personal Access Token do Supabase)
+.mcp.json

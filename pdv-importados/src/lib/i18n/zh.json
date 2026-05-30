@@ -46,6 +46,22 @@
     "top_produtos_legenda": "同一时段内排名（已完成销售），最多 50 个商品。",
     "estoque_baixo_sem_periodo": "当前快照（不按日期筛选）。"
   },
+  "relatorios_sem_giro": {
+    "titulo": "滞销商品",
+    "legenda": "库存为正且在所选期间内无任何销售出库。按占用资金（从高到低）排序。",
+    "col_codigo_barras": "条形码",
+    "col_nome": "名称",
+    "col_quantidade": "当前数量",
+    "col_preco_custo": "成本价",
+    "col_valor_imobilizado": "占用资金",
+    "col_ultima_venda": "最近销售",
+    "sem_custo": "—",
+    "nunca_vendido": "从未售出",
+    "um_dia_parado": "已滞销 1 天",
+    "dias_parado": "已滞销 {{dias}} 天",
+    "vazio": "所选期间无滞销商品。🎉",
+    "resumo": "{{n}} 件滞销 · 占用 {{valor}}"
+  },
   "produtos": {
     "titulo": "商品管理",
     "novo": "新增商品",
