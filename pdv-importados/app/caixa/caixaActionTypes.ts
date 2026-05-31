@@ -33,6 +33,18 @@ export type BuscarProdutoResult =
   | { ok: true; status: 'ambiguo'; mensagem: string }
   | { ok: false; error: string }
 
+export type BuscarProdutoComPrecoResult =
+  | {
+      ok: true
+      status: 'encontrado'
+      produto: ProdutoCaixaDTO
+      precoCalculado: number
+      tipoPrecoCalculado: 'VAREJO' | 'ATACADO'
+    }
+  | { ok: true; status: 'nao_encontrado' }
+  | { ok: true; status: 'ambiguo'; mensagem: string }
+  | { ok: false; error: string }
+
 export type CalcularPrecoProdutoCaixaResult =
   | { ok: true; preco: number; tipo: 'VAREJO' | 'ATACADO' }
   | { ok: false; error: string }

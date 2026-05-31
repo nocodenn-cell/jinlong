@@ -5,6 +5,7 @@ import type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
   BuscarProdutoResult,
+  BuscarProdutoComPrecoResult,
   CalcularPrecoProdutoCaixaResult,
   CancelarVendaResult,
   CarregarRegrasResult,
@@ -21,6 +22,7 @@ import type {
 } from '@/app/caixa/caixaActionTypes'
 import {
   buscarProdutoParaCaixaImpl,
+  buscarProdutoComPrecoCaixaImpl,
   carregarRegrasPrecoCaixaImpl,
 
 } from '@/app/caixa/server/caixaCatalogo.impl'
@@ -56,6 +58,7 @@ export type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
   BuscarProdutoResult,
+  BuscarProdutoComPrecoResult,
   CalcularPrecoProdutoCaixaResult,
   CancelarVendaResult,
   CarregarRegrasResult,
@@ -90,6 +93,18 @@ export async function carregarRegrasPrecoCaixa(): Promise<CarregarRegrasResult> 
  */
 export async function buscarProdutoParaCaixa(termo: string): Promise<BuscarProdutoResult> {
   return buscarProdutoParaCaixaImpl(termo)
+}
+
+/**
+ * Busca produto + calcula preço autoritativo em 1 round-trip.
+ * Elimina a 2ª server action no hot-path de scan.
+ * Fallback: se RPC falhar, retorna preco_varejo para não bloquear o carrinho.
+ */
+export async function buscarProdutoComPrecoCaixa(
+  termo: string,
+  quantidade?: number,
+): Promise<BuscarProdutoComPrecoResult> {
+  return buscarProdutoComPrecoCaixaImpl(termo, quantidade)
 }
 
 /** Preço unitário (varejo ou atacado) para a quantidade atual no carrinho, via RPC `calcular_preco_produto`. */

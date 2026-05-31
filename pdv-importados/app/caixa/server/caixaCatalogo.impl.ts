@@ -6,8 +6,10 @@ import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
+import { calcularPrecoProdutoCaixaImpl } from '@/app/caixa/server/caixaPrecoProduto.impl'
 import type {
   BuscarProdutoResult,
+  BuscarProdutoComPrecoResult,
   CarregarRegrasResult,
 } from '@/app/caixa/caixaActionTypes'
 import {
@@ -153,6 +155,59 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       ok: true,
       status: 'encontrado',
       produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível buscar o produto. Tente de novo.'),
+    }
+  }
+}
+
+/**
+ * Busca produto + preço autoritativo em 1 round-trip.
+ * Elimina a 2ª server action de `calcularPrecoProdutoCaixa` no hot-path de scan.
+ * Fallback: se RPC falhar, retorna preco_varejo para não bloquear o carrinho.
+ */
+export async function buscarProdutoComPrecoCaixaImpl(
+  termo: string,
+  quantidade: number = 1,
+): Promise<BuscarProdutoComPrecoResult> {
+  try {
+    // Valida quantidade
+    const q = Math.max(1, Math.floor(Number(quantidade)))
+    if (!Number.isFinite(q)) {
+      return { ok: false, error: 'Quantidade inválida.' }
+    }
+
+    // Busca produto
+    const buscaRes = await buscarProdutoParaCaixaImpl(termo)
+    if (!buscaRes.ok) {
+      return { ok: false, error: buscaRes.error }
+    }
+    if (buscaRes.status !== 'encontrado') {
+      // Propaga not_found / ambiguous
+      return buscaRes as BuscarProdutoComPrecoResult
+    }
+
+    const produto = buscaRes.produto
+
+    // Calcula preço autoritativo via RPC
+    const precoRes = await calcularPrecoProdutoCaixaImpl({
+      produtoId: produto.id,
+      quantidade: q,
+    })
+
+    // Fallback: se RPC falhar, usa preco_varejo (não bloqueia o item)
+    const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo
+    const tipoPrecoCalculado = precoRes.ok ? precoRes.tipo : 'VAREJO'
+
+    return {
+      ok: true,
+      status: 'encontrado',
+      produto,
+      precoCalculado,
+      tipoPrecoCalculado,
     }
   } catch (e) {
     return {

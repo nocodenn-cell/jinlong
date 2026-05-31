@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ScanProcessContext } from '../../../../shared-core/src/pdv/scan-pipeline'
-import { buscarProdutoParaCaixa } from '@/app/caixa/actions'
+import { buscarProdutoComPrecoCaixa } from '@/app/caixa/actions'
 import { runWebCaixaScanProcess, type WebCaixaScanDeps } from './webCaixaScanProcess'
 
 const scanStoreTest = vi.hoisted(() => {
@@ -19,7 +19,7 @@ const scanStoreTest = vi.hoisted(() => {
 })
 
 vi.mock('@/app/caixa/actions', () => ({
-  buscarProdutoParaCaixa: vi.fn(),
+  buscarProdutoComPrecoCaixa: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -89,7 +89,6 @@ function minimalDeps(overrides: Partial<WebCaixaScanDeps> = {}): WebCaixaScanDep
       })
     }),
     setCartOwnerForSession: vi.fn(),
-    aplicarPrecoRpcParaLinha: vi.fn().mockResolvedValue(undefined),
     getActiveCupomSessionId: () => 'cupom-a',
     telemetry: { emitTelemetry: vi.fn() },
     ...overrides,
@@ -98,7 +97,7 @@ function minimalDeps(overrides: Partial<WebCaixaScanDeps> = {}): WebCaixaScanDep
 
 describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
   beforeEach(() => {
-    vi.mocked(buscarProdutoParaCaixa).mockReset()
+    vi.mocked(buscarProdutoComPrecoCaixa).mockReset()
     scanStoreTest.itens.length = 0
     scanStoreTest.removerItem.mockClear()
   })
@@ -107,7 +106,7 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     const deps = minimalDeps({ getActiveCupomSessionId: () => 'cupom-b' })
     const r = await runWebCaixaScanProcess(baseCtx(), deps)
     expect(r).toEqual({ ok: false, reason: 'stale_cupom' })
-    expect(buscarProdutoParaCaixa).not.toHaveBeenCalled()
+    expect(buscarProdutoComPrecoCaixa).not.toHaveBeenCalled()
     expect(deps.setCaixaMensagem).not.toHaveBeenCalled()
   })
 
@@ -122,31 +121,31 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
         attempts: 1,
       },
     }
-    vi.mocked(buscarProdutoParaCaixa).mockResolvedValue({
+    vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
       ok: false,
       error: 'net',
-    } as Awaited<ReturnType<typeof buscarProdutoParaCaixa>>)
+    } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
     const deps = minimalDeps({ getActiveCupomSessionId: () => 'qualquer' })
     const r = await runWebCaixaScanProcess(ctx, deps)
     expect(r.ok).toBe(false)
-    expect(buscarProdutoParaCaixa).toHaveBeenCalled()
+    expect(buscarProdutoComPrecoCaixa).toHaveBeenCalled()
   })
 
-  it('abort antes da busca: não chama buscarProdutoParaCaixa', async () => {
+  it('abort antes da busca: não chama buscarProdutoComPrecoCaixa', async () => {
     const ac = new AbortController()
     ac.abort()
     const deps = minimalDeps()
     const r = await runWebCaixaScanProcess(baseCtx({}, { signal: ac.signal }), deps)
     expect(r).toEqual({ ok: false, reason: 'aborted' })
-    expect(buscarProdutoParaCaixa).not.toHaveBeenCalled()
+    expect(buscarProdutoComPrecoCaixa).not.toHaveBeenCalled()
   })
 
   it('abort durante busca pendente: retorna aborted sem adicionar ao carrinho', async () => {
-    let releaseBusca!: (v: Awaited<ReturnType<typeof buscarProdutoParaCaixa>>) => void
-    const buscaPromise = new Promise<Awaited<ReturnType<typeof buscarProdutoParaCaixa>>>((resolve) => {
+    let releaseBusca!: (v: Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>) => void
+    const buscaPromise = new Promise<Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>>((resolve) => {
       releaseBusca = resolve
     })
-    vi.mocked(buscarProdutoParaCaixa).mockImplementation(() => buscaPromise)
+    vi.mocked(buscarProdutoComPrecoCaixa).mockImplementation(() => buscaPromise)
 
     const ac = new AbortController()
     const deps = minimalDeps()
@@ -176,12 +175,14 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
         quantidade_estoque: 5,
         estoque_minimo: null,
       },
+      precoCalculado: 9.99,
+      tipoPrecoCalculado: 'VAREJO',
     })
   })
 
   it('stale_cupom após add: compensa removendo linha (P0 — carrinho alinhado ao scan)', async () => {
     let cupomCalls = 0
-    vi.mocked(buscarProdutoParaCaixa).mockResolvedValue({
+    vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
       ok: true,
       status: 'encontrado',
       produto: {
@@ -197,7 +198,9 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
         quantidade_estoque: 5,
         estoque_minimo: null,
       },
-    } as Awaited<ReturnType<typeof buscarProdutoParaCaixa>>)
+      precoCalculado: 9.99,
+      tipoPrecoCalculado: 'VAREJO',
+    } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
 
     const deps = minimalDeps({
       getActiveCupomSessionId: () => {

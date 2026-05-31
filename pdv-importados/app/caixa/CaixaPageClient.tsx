@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useShallow } from "zustand/react/shallow"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
-  calcularPrecoProdutoCaixa,
   finalizarVendaCaixa,
   abrirCaixaOperador,
   fecharCaixaOperador,
@@ -272,34 +271,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     [somFeedbackAtivo],
   )
 
-  const aplicarPrecoRpcParaLinha = useCallback(
-    async (
-      params: { produtoId: string; itemId: string; quantidade: number },
-      opts?: { scanSignal?: AbortSignal },
-    ) => {
-      const linha = useCarrinhoStore.getState().itens.find((i) => i.id === params.itemId)
-      if (!linha || linha.produtoId !== params.produtoId) return
-      const tp = linha.resultado?.tipoPreco
-      if (tp === "MANUAL" || tp === "PROMOCAO") return
-
-      const res = await calcularPrecoProdutoCaixa({
-        produtoId: params.produtoId,
-        quantidade: params.quantidade,
-      })
-      if (opts?.scanSignal?.aborted) return
-      if (!res.ok) {
-        setCaixaMensagem(res.error, { kind: "error" })
-        return
-      }
-      if (opts?.scanSignal?.aborted) return
-      useCarrinhoStore.getState().sincronizarPrecoCalculadoRpc(params.itemId, {
-        precoUnitario: res.preco,
-        tipoPreco: res.tipo,
-      })
-    },
-    [setCaixaMensagem],
-  )
-
   const { enqueueLeitura, buscandoPipeline, flushLeiturasPendentes, pipelineDebug } = useCaixaScanPipeline({
     m,
     setCaixaMensagem,
@@ -309,7 +280,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     focarCampoBusca,
     adicionarItem,
     setCartOwnerForSession,
-    aplicarPrecoRpcParaLinha,
     getActiveCupomSessionId: () => cupomSessionIdRef.current,
     onItemAdded: useCallback(
       (info: { codigo: string; itemId: string; produtoId: string }) => {
@@ -406,31 +376,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   )
 
   const handleAlterarQuantidade = useCallback(
-    async (itemId: string, quantidade: number) => {
+    (itemId: string, quantidade: number) => {
       if (Number.isNaN(quantidade)) return
       if (quantidade <= 0) {
         removerItem(itemId)
         setCaixaMensagem(m.caixa.msg_item_removido_qtde_zero, { kind: "info" })
         return
       }
-      const antes = useCarrinhoStore.getState().itens.find((i) => i.id === itemId)
-      const tpAntes = antes?.resultado?.tipoPreco
-      if (tpAntes === "MANUAL" || tpAntes === "PROMOCAO") {
-        alterarQuantidade(itemId, quantidade)
-        return
-      }
+      // Alteração de quantidade: preço já foi calculado no scan (ação unificada)
+      // Não é necessário recalcular no hot-path
       alterarQuantidade(itemId, quantidade)
-      const depois = useCarrinhoStore.getState().itens.find((i) => i.id === itemId)
-      if (!depois) return
-      await aplicarPrecoRpcParaLinha({
-        produtoId: depois.produtoId,
-        itemId: depois.id,
-        quantidade: depois.quantidade,
-      })
     },
     [
       alterarQuantidade,
-      aplicarPrecoRpcParaLinha,
       m.caixa.msg_item_removido_qtde_zero,
       removerItem,
       setCaixaMensagem,

@@ -6,7 +6,7 @@ import {
   type ScanProcessResult,
 } from '../../../../shared-core/src/pdv/scan-pipeline'
 import type { CarrinhoState } from '../../../../shared-core/src/stores/unifiedCartStore'
-import { buscarProdutoParaCaixa } from '@/app/caixa/actions'
+import { buscarProdutoComPrecoCaixa } from '@/app/caixa/actions'
 import { createClient } from '@/lib/supabase/client'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { CaixaToastKind } from '@/app/caixa/hooks/useCaixaMensagens'
@@ -52,10 +52,6 @@ export type WebCaixaScanDeps = {
   focarCampoBusca: () => void
   adicionarItem: CarrinhoState['adicionarItem']
   setCartOwnerForSession: CarrinhoState['setCartOwnerForSession']
-  aplicarPrecoRpcParaLinha: (
-    params: { produtoId: string; itemId: string; quantidade: number },
-    opts?: { scanSignal?: AbortSignal },
-  ) => Promise<void>
   /** Sessão operacional do cupom (novo cupom ⇒ novo id); usado com `meta.cupomSessionId` no enqueue. */
   getActiveCupomSessionId: () => string
   /** Telemetria humana (runtime + adapter); injetada por `useCaixaScanPipeline`. */
@@ -97,12 +93,14 @@ export async function runWebCaixaScanProcess(
 
     setCaixaMensagem(null)
     const tBusca = Date.now()
-    const buscaR = await raceWithScanAbort(signal, () => buscarProdutoParaCaixa(trimmed))
+    // Busca produto + calcula preço em 1 round-trip (elimina 2ª server action)
+    const buscaR = await raceWithScanAbort(signal, () => buscarProdutoComPrecoCaixa(trimmed, 1))
     if (!buscaR.ok) {
       return { ok: false, reason: 'aborted' }
     }
     const res = buscaR.value
     const dtBusca = Date.now() - tBusca
+    // Telemetria de busca unificada (produto + preço em 1 action)
     deps.telemetry?.emitTelemetry(
       normalizeHumanTelemetryPayload({
         ...telBase(ctx),
@@ -188,18 +186,19 @@ export async function runWebCaixaScanProcess(
       linhaPendenteRollback = null
     }
 
+    // Preço já é autoritativo (calculado na ação unificada)
     deps.adicionarItem({
       id: novaLinhaId,
       produtoId: p.id,
       nome: p.nome,
       quantidade: 1,
-      precoUnitario: p.preco_varejo,
-      precoOriginal: p.preco_varejo,
+      precoUnitario: res.precoCalculado,
+      precoOriginal: res.precoCalculado,
       resultado: {
-        precoUnitario: p.preco_varejo,
-        precoOriginal: p.preco_varejo,
+        precoUnitario: res.precoCalculado,
+        precoOriginal: res.precoCalculado,
         descontoUnitario: 0,
-        tipoPreco: 'VAREJO',
+        tipoPreco: res.tipoPrecoCalculado,
       },
       metaPdv: {
         origem: p.origem,
@@ -213,41 +212,6 @@ export async function runWebCaixaScanProcess(
       },
     })
     linhaPendenteRollback = novaLinhaId
-
-    if (signal?.aborted) {
-      abandonarLinhaDoScan()
-      return { ok: false, reason: 'aborted' }
-    }
-
-    const linhaApos = useCarrinhoStore.getState().itens.find((i) => i.id === novaLinhaId)
-    if (linhaApos) {
-      const tp = linhaApos.resultado?.tipoPreco
-      if (tp !== 'MANUAL' && tp !== 'PROMOCAO') {
-        const tPricing = Date.now()
-        const pricingR = await raceWithScanAbort(signal, () =>
-          deps.aplicarPrecoRpcParaLinha(
-            {
-              produtoId: p.id,
-              itemId: linhaApos.id,
-              quantidade: linhaApos.quantidade,
-            },
-            { scanSignal: signal },
-          ),
-        )
-        if (!pricingR.ok) {
-          abandonarLinhaDoScan()
-          return { ok: false, reason: 'aborted' }
-        }
-        deps.telemetry?.emitTelemetry(
-          normalizeHumanTelemetryPayload({
-            ...telBase(ctx),
-            event: 'pricing_rpc_duration_ms',
-            at: Date.now(),
-            durationMs: Date.now() - tPricing,
-          }),
-        )
-      }
-    }
 
     if (signal?.aborted) {
       abandonarLinhaDoScan()
