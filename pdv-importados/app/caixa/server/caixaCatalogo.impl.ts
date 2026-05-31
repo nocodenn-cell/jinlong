@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPreco'
 import { buildRegrasPrecoValidadeOrFilter } from '@/core/caixa/regrasPrecoValidadeFilter'
-import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
@@ -19,11 +20,9 @@ import {
 
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
   try {
+    const { userId } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
     const [{ data, error }, cfgRes] = await Promise.all([
       supabase
@@ -64,13 +63,11 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
 
 export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarProdutoResult> {
   try {
+    const { userId, lojaId: lojaUsuario } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
-    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+    const lojaId = lojaUsuario ?? LOJA_MATRIZ_ID
 
     const t = termo.trim()
     if (!t) return { ok: true, status: 'nao_encontrado' }

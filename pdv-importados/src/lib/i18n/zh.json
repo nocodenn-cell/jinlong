@@ -22,6 +22,7 @@
     "atacado": "批发",
     "varejo": "零售",
     "manual": "手动折扣",
+    "promocao": "促销",
     "estoque_atual": "当前库存",
     "minimo": "最低库存",
     "deficit": "缺口",
@@ -929,7 +930,22 @@
     "aria_qtde_diminuir": "减少 1 件 — {{nome}}",
     "status_aberto": "开启",
     "status_fechado": "已结算",
-    "reimprimir_cupom": "重印 (F12)"
+    "reimprimir_cupom": "重印 (F12)",
+    "msg_caixa_aberto": "收银台已开启（{{id}}…）。",
+    "msg_caixa_fechado": "收银台已关闭。系统：{{moeda}} {{sistema}} · 实点：{{moeda}} {{contado}} · 差额：{{sinal}}{{moeda}} {{diferenca}}",
+    "msg_vendas_suspensas_motivo": "已暂停销售：{{motivo}}",
+    "msg_vendas_suspensas": "经理已暂停销售。",
+    "recibo": {
+      "titulo": "非正式收据",
+      "subtotal": "小计",
+      "desconto_produtos": "商品折扣",
+      "desconto_gerente": "经理折扣",
+      "total": "合计",
+      "pagamento": "支付方式",
+      "rodape_obrigado": "感谢惠顾！",
+      "rodape_nao_fiscal": "本单据非正式财务凭证。",
+      "atacado": "批发"
+    }
   },
   "pdv": {
     "scan_placeholder": "扫描条形码或输入商品名...",

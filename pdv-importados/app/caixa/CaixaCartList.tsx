@@ -455,7 +455,7 @@ function TipoPrecoBadge({
       : tipo === "MANUAL"
         ? m.relatorios.manual
         : tipo === "PROMOCAO"
-          ? "PROMO"
+          ? m.relatorios.promocao
           : m.relatorios.varejo
   const className =
     tipo === 'ATACADO'

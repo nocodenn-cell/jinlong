@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+import { useShallow } from "zustand/react/shallow"
 import { useCarrinhoStore } from "@/stores/carrinhoStore"
 import {
   calcularPrecoProdutoCaixa,
@@ -152,20 +153,26 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     handleConfirmarAcaoMovimentacao,
   } = useCaixaStatusMovimentacoes({ m, setCaixaMensagem, movimentacaoModalTipo, acaoMovimentacao, currentUserId: userId })
 
-  const {
-    itens,
-    totalBruto,
-    totalDesconto,
-    totalLiquido,
-    totalItens,
-    totalUnidades,
-    setRegras,
-    setCartOwnerForSession,
-    adicionarItem,
-    alterarQuantidade,
-    removerItem,
-    limparCarrinho,
-  } = useCarrinhoStore()
+  // Selectors atômicos: a página só re-renderiza quando itens/totais mudam — não a
+  // cada `set` do store (ex.: setCartOwnerForSession/setRegras, disparados em todo bip).
+  const { itens, totalBruto, totalDesconto, totalLiquido, totalItens, totalUnidades } =
+    useCarrinhoStore(
+      useShallow((s) => ({
+        itens: s.itens,
+        totalBruto: s.totalBruto,
+        totalDesconto: s.totalDesconto,
+        totalLiquido: s.totalLiquido,
+        totalItens: s.totalItens,
+        totalUnidades: s.totalUnidades,
+      })),
+    )
+  // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
+  const setRegras = useCarrinhoStore((s) => s.setRegras)
+  const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
+  const adicionarItem = useCarrinhoStore((s) => s.adicionarItem)
+  const alterarQuantidade = useCarrinhoStore((s) => s.alterarQuantidade)
+  const removerItem = useCarrinhoStore((s) => s.removerItem)
+  const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
 
   const economiaPrecoAtacadoAuto = useMemo(() => {
     return itens.reduce((acc, it) => {
@@ -218,6 +225,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const focarCampoBusca = useCallback(() => {
     requestAnimationFrame(() => {
+      // Não roubar foco enquanto um modal está aberto (senha do gerente, valor de
+      // fechamento, confirmação, recibo): o ímã de 3s ou o refoco pós-venda não devem
+      // puxar o foco para a busca atrás do diálogo.
+      if (typeof document !== "undefined" && document.querySelector('[role="dialog"]')) return
       buscaInputRef.current?.focus()
     })
   }, [])
@@ -484,9 +495,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           tocarFeedback("erro")
           return
         }
-        const diferencaPrefixo = res.diferenca > 0 ? "+" : ""
         setCaixaMensagem(
-          `Caixa fechado. Sistema: R$ ${res.valorSistemaDinheiro.toFixed(2)} · Contado: R$ ${res.valorContado.toFixed(2)} · Diferença: ${diferencaPrefixo}R$ ${res.diferenca.toFixed(2)}`,
+          caixaFmt(m.caixa.msg_caixa_fechado, {
+            moeda: m.caixa.moeda_prefixo,
+            sistema: res.valorSistemaDinheiro.toFixed(2),
+            contado: res.valorContado.toFixed(2),
+            sinal: res.diferenca > 0 ? "+" : "",
+            diferenca: res.diferenca.toFixed(2),
+          }),
           { kind: "success" },
         )
         tocarFeedback("ok")
@@ -495,7 +511,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setProcessandoCaixa(false)
       }
     },
-    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback],
+    [caixaStatus, erroExigeMotivoFechamento, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback, m],
   )
 
   const handleAbrirCaixa = useCallback(() => {
@@ -547,7 +563,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               tocarFeedback("erro")
               return
             }
-            setCaixaMensagem(`Caixa aberto (${res.caixaId.slice(0, 8)}…).`, { kind: "success" })
+            setCaixaMensagem(
+              caixaFmt(m.caixa.msg_caixa_aberto, { id: res.caixaId.slice(0, 8) }),
+              { kind: "success" },
+            )
             tocarFeedback("ok")
             await recarregarStatusCaixa()
           } finally {
@@ -577,6 +596,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       recarregarStatusCaixa,
       setCaixaMensagem,
       tocarFeedback,
+      m,
     ],
   )
 
@@ -597,7 +617,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     ) {
       const motivo = configCaixaWeb.motivo_suspensao?.trim()
       setCaixaMensagem(
-        motivo ? `Vendas suspensas: ${motivo}` : 'Vendas suspensas pelo gerente.',
+        motivo
+          ? caixaFmt(m.caixa.msg_vendas_suspensas_motivo, { motivo })
+          : m.caixa.msg_vendas_suspensas,
         { kind: 'error' },
       )
       return
@@ -1155,6 +1177,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       {reimprimirModalAberto && lastReciboRef.current && (
         <CaixaReciboModal
           venda={lastReciboRef.current}
+          m={m}
           onClose={() => setReimprimirModalAberto(false)}
           thermal={thermal}
         />

@@ -353,7 +353,25 @@ export const useCartStore = create<CarrinhoState>()(
           return commitItensComTotais(state, novosItens)
         }),
     }),
-    { name: 'pdv-carrinho' },
+    {
+      name: 'pdv-carrinho',
+      // `regras`/`pricingCtx` são recarregadas no bootstrap a cada sessão; serializá-las
+      // no localStorage a cada mutação (todo bip do caixa) é custo desnecessário no hot-path.
+      // Persistimos só os dados do carrinho — itens/totais/dono/desconto — para rehidratar correto.
+      partialize: (state) => ({
+        itens: state.itens,
+        cartOwnerUserId: state.cartOwnerUserId,
+        totalBruto: state.totalBruto,
+        totalDesconto: state.totalDesconto,
+        totalLiquido: state.totalLiquido,
+        totalItens: state.totalItens,
+        totalUnidades: state.totalUnidades,
+        descontoGerentePercentual: state.descontoGerentePercentual,
+        descontoGerenteValor: state.descontoGerenteValor,
+        descontoGerenteToken: state.descontoGerenteToken,
+        maxDescontoGerentePercentual: state.maxDescontoGerentePercentual,
+      }),
+    },
   ),
 )
 

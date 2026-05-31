@@ -22,6 +22,7 @@
     "atacado": "Atacado",
     "varejo": "Varejo",
     "manual": "Desconto manual",
+    "promocao": "Promoção",
     "estoque_atual": "Estoque atual",
     "minimo": "Mínimo",
     "deficit": "Déficit",
@@ -929,7 +930,22 @@
     "aria_qtde_diminuir": "Diminuir 1 unidade — {{nome}}",
     "status_aberto": "Aberto",
     "status_fechado": "Fechado",
-    "reimprimir_cupom": "Reimprimir (F12)"
+    "reimprimir_cupom": "Reimprimir (F12)",
+    "msg_caixa_aberto": "Caixa aberto ({{id}}…).",
+    "msg_caixa_fechado": "Caixa fechado. Sistema: {{moeda}} {{sistema}} · Contado: {{moeda}} {{contado}} · Diferença: {{sinal}}{{moeda}} {{diferenca}}",
+    "msg_vendas_suspensas_motivo": "Vendas suspensas: {{motivo}}",
+    "msg_vendas_suspensas": "Vendas suspensas pelo gerente.",
+    "recibo": {
+      "titulo": "CUPOM NÃO FISCAL",
+      "subtotal": "Subtotal",
+      "desconto_produtos": "Desconto produtos",
+      "desconto_gerente": "Desconto gerente",
+      "total": "TOTAL",
+      "pagamento": "Pagamento",
+      "rodape_obrigado": "Obrigado pela preferência!",
+      "rodape_nao_fiscal": "Este não é um documento fiscal.",
+      "atacado": "atacado"
+    }
   },
   "pdv": {
     "scan_placeholder": "Escanear código ou digitar nome...",

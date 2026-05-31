@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import type { CalcularPrecoProdutoCaixaResult } from '@/app/caixa/caixaActionTypes'
 
@@ -15,11 +16,9 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
   lojaId?: string | null
 }): Promise<CalcularPrecoProdutoCaixaResult> {
   try {
+    const { userId, lojaId: lojaUsuario } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
     const q = Math.floor(Number(input.quantidade))
     if (!Number.isFinite(q) || q < 1) {
@@ -28,7 +27,7 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
 
     let lojaId = input.lojaId ?? null
     if (lojaId == null || lojaId === '') {
-      lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+      lojaId = lojaUsuario ?? LOJA_MATRIZ_ID
     }
 
     const { data, error } = await supabase.rpc('calcular_preco_produto', {

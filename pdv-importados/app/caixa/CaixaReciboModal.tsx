@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
+import type { Mensagens } from "@/i18n/getMessages"
 import { cn } from "@/lib/utils"
 
 export type ReciboItem = {
@@ -26,17 +27,48 @@ export type ReciboVenda = {
   moeda: string
 }
 
+/** Rótulos do cupom já resolvidos no idioma do operador — compartilhados entre a tela e o ESC/POS. */
+export type ReciboLabels = {
+  titulo: string
+  subtotal: string
+  descontoProdutos: string
+  descontoGerente: string
+  total: string
+  pagamento: string
+  rodapeObrigado: string
+  rodapeNaoFiscal: string
+  atacado: string
+  /** Forma de pagamento (DINHEIRO/PIX/CARTAO_DEBITO/CARTAO_CREDITO) → rótulo traduzido. */
+  formas: Record<string, string>
+}
+
 type Props = Readonly<{
   venda: ReciboVenda
+  m: Mensagens
   onClose: () => void
   thermal: UseThermalPrinterReturn
 }>
 
-const FORMA_LABEL: Record<string, string> = {
-  DINHEIRO: "Dinheiro",
-  PIX: "Pix",
-  CARTAO_DEBITO: "Débito",
-  CARTAO_CREDITO: "Crédito",
+/** Monta os rótulos do cupom a partir do dicionário ativo (pt/zh). */
+export function buildReciboLabels(m: Mensagens): ReciboLabels {
+  const r = m.caixa.recibo
+  return {
+    titulo: r.titulo,
+    subtotal: r.subtotal,
+    descontoProdutos: r.desconto_produtos,
+    descontoGerente: r.desconto_gerente,
+    total: r.total,
+    pagamento: r.pagamento,
+    rodapeObrigado: r.rodape_obrigado,
+    rodapeNaoFiscal: r.rodape_nao_fiscal,
+    atacado: r.atacado,
+    formas: {
+      DINHEIRO: m.caixa.pdv_metodo_pagamento_dinheiro,
+      PIX: m.caixa.pdv_metodo_pagamento_pix,
+      CARTAO_DEBITO: m.caixa.pdv_metodo_pagamento_debito,
+      CARTAO_CREDITO: m.caixa.pdv_metodo_pagamento_credito,
+    },
+  }
 }
 
 function fmtBRL(valor: number, moeda: string): string {
@@ -53,9 +85,10 @@ function fmtData(d: Date): string {
   })
 }
 
-export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
+export function CaixaReciboModal({ venda, m, onClose, thermal }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
+  const labels = buildReciboLabels(m)
 
   const handleThermalPrint = async () => {
     if (!thermal.deviceInfo) {
@@ -63,7 +96,7 @@ export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
     }
     // deviceInfo state is stale in this closure; the printer singleton is connected after connect()
     // printRecibo uses the singleton directly and will error gracefully if connect failed
-    await thermal.printRecibo(venda)
+    await thermal.printRecibo(venda, labels)
   }
 
   const handlePrint = () => {
@@ -186,7 +219,7 @@ export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
             <div className="recibo-header text-center border-b border-dashed border-border pb-3">
               <h1 className="text-sm font-bold">
                 <span className="mr-1 text-amber-500" aria-hidden="true">福</span>
-                CUPOM NÃO FISCAL
+                {labels.titulo}
                 <span className="ml-1 text-amber-500" aria-hidden="true">福</span>
               </h1>
               <p className="text-muted-foreground">{fmtData(venda.data)}</p>
@@ -204,7 +237,7 @@ export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
                     <span>
                       {item.quantidade} × {fmtBRL(item.precoUnitario, venda.moeda)}
                       {item.tipoPreco === "ATACADO" && (
-                        <span className="ml-1 text-[9px] uppercase opacity-60">[atac]</span>
+                        <span className="ml-1 text-[9px] uppercase opacity-60">[{labels.atacado}]</span>
                       )}
                     </span>
                     <span className="font-semibold text-foreground">
@@ -220,25 +253,25 @@ export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
               {temDesconto && (
                 <>
                   <div className="recibo-linha flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-muted-foreground">{labels.subtotal}</span>
                     <span>{fmtBRL(venda.totalBruto, venda.moeda)}</span>
                   </div>
                   {venda.totalDesconto > 0 && (
                     <div className="recibo-linha flex justify-between text-muted-foreground">
-                      <span>Desconto produtos</span>
+                      <span>{labels.descontoProdutos}</span>
                       <span>− {fmtBRL(venda.totalDesconto, venda.moeda)}</span>
                     </div>
                   )}
                   {venda.descontoGerentePercentual > 0 && (
                     <div className="recibo-linha flex justify-between text-muted-foreground">
-                      <span>Desconto gerente ({venda.descontoGerentePercentual.toFixed(1)}%)</span>
+                      <span>{labels.descontoGerente} ({venda.descontoGerentePercentual.toFixed(1)}%)</span>
                       <span>− {fmtBRL(venda.valorDescontoGerente, venda.moeda)}</span>
                     </div>
                   )}
                 </>
               )}
               <div className={cn("recibo-linha total flex justify-between font-bold", "text-sm")}>
-                <span>TOTAL</span>
+                <span>{labels.total}</span>
                 <span>{fmtBRL(venda.totalLiquidoComGerente, venda.moeda)}</span>
               </div>
             </div>
@@ -246,11 +279,11 @@ export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
             {/* Pagamentos */}
             <div className="recibo-pgto flex flex-col gap-1">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Pagamento
+                {labels.pagamento}
               </p>
               {venda.pagamentos.map((p, i) => (
                 <div key={i} className="recibo-linha flex justify-between">
-                  <span>{FORMA_LABEL[p.formaPagamento] ?? p.formaPagamento}</span>
+                  <span>{labels.formas[p.formaPagamento] ?? p.formaPagamento}</span>
                   <span>{fmtBRL(p.valor, venda.moeda)}</span>
                 </div>
               ))}
@@ -258,8 +291,8 @@ export function CaixaReciboModal({ venda, onClose, thermal }: Props) {
 
             {/* Rodapé */}
             <div className="recibo-footer border-t border-dashed border-border pt-3 text-center text-[10px] text-muted-foreground">
-              <p>Obrigado pela preferência!</p>
-              <p className="opacity-60">Este não é um documento fiscal.</p>
+              <p>{labels.rodapeObrigado}</p>
+              <p className="opacity-60">{labels.rodapeNaoFiscal}</p>
             </div>
           </div>
         </div>

@@ -61,11 +61,8 @@ export class WebUsbPrinter {
     }
   }
 
-  /** Prompts the browser's USB device picker and opens the selected printer. */
-  async connect(): Promise<ThermalPrinterInfo> {
-    if (!WebUsbPrinter.isSupported()) throw new Error("WebUSB não suportado neste navegador.")
-
-    const device = await navigator.usb.requestDevice({ filters: VENDOR_FILTERS })
+  /** Abre o dispositivo e reivindica a interface bulk-out. Compartilhado por connect/reconnect. */
+  private async openDevice(device: USBDevice): Promise<void> {
     await device.open()
     if (device.configuration === null) await device.selectConfiguration(1)
 
@@ -83,7 +80,39 @@ export class WebUsbPrinter {
 
     this.device      = device
     this.outEndpoint = endpoint.endpointNumber
+  }
 
+  /** Prompts the browser's USB device picker and opens the selected printer. */
+  async connect(): Promise<ThermalPrinterInfo> {
+    if (!WebUsbPrinter.isSupported()) throw new Error("WebUSB não suportado neste navegador.")
+
+    const device = await navigator.usb.requestDevice({ filters: VENDOR_FILTERS })
+    await this.openDevice(device)
+
+    const info = this.getInfo()!
+    _savedInfo = info
+    return info
+  }
+
+  /**
+   * Reabre silenciosamente uma impressora já autorizada (sem mostrar o picker), via
+   * `navigator.usb.getDevices()`. A permissão WebUSB persiste no navegador entre reloads,
+   * então o operador não precisa re-selecionar a impressora a cada recarregamento da página.
+   * Retorna `null` se não houver dispositivo autorizado ou se a abertura falhar.
+   */
+  async reconnect(): Promise<ThermalPrinterInfo | null> {
+    if (!WebUsbPrinter.isSupported()) return null
+    if (this.device) return this.getInfo()
+
+    const devices = await navigator.usb.getDevices()
+    const device = devices.find((d) => VENDOR_FILTERS.some((f) => f.vendorId === d.vendorId))
+    if (!device) return null
+
+    try {
+      await this.openDevice(device)
+    } catch {
+      return null
+    }
     const info = this.getInfo()!
     _savedInfo = info
     return info

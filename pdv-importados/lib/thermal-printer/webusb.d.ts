@@ -43,6 +43,8 @@ interface USBDevice {
 
 interface USB {
   requestDevice(options: { filters: USBDeviceFilter[] }): Promise<USBDevice>
+  /** Dispositivos já autorizados pelo usuário — usado para reconexão silenciosa (sem picker). */
+  getDevices(): Promise<USBDevice[]>
 }
 
 interface Navigator {
