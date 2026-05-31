@@ -10,6 +10,7 @@ import {
 } from '@/lib/errors/mensagemErroUsuario'
 import { parseNfeXml, type NfeParsed } from '@/lib/nfe/nfeParser'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { ImportNfePayloadSchema } from './actions.validation'
 
 type ActionResult<T = null> =
@@ -17,17 +18,9 @@ type ActionResult<T = null> =
   | { success: false; error: string }
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data } = await supabase
-    .from('usuarios')
-    .select('loja_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+  const { userId, lojaId } = await getUsuarioAtual()
+  if (!userId) return null
+  return lojaId ?? LOJA_MATRIZ_ID
 }
 
 function onlyDigits(s: string): string {

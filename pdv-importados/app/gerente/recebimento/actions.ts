@@ -4,23 +4,16 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { validarRemessaInput } from './actions.validation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
 async function lojaDoUsuario(): Promise<string | null> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data } = await supabase
-    .from('usuarios')
-    .select('loja_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+  const { userId, lojaId } = await getUsuarioAtual()
+  if (!userId) return null
+  return lojaId ?? LOJA_MATRIZ_ID
 }
 
 export async function criarRemessaConferencia(input: {
@@ -34,11 +27,9 @@ export async function criarRemessaConferencia(input: {
   const lojaId = await lojaDoUsuario()
   if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
 
+  const { userId } = await getUsuarioAtual()
+  if (!userId) return { success: false, error: 'Faça login novamente para registrar a remessa.' }
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Faça login novamente para registrar a remessa.' }
 
   const erro = validarRemessaInput({
     origem: input.origem,
@@ -54,7 +45,7 @@ export async function criarRemessaConferencia(input: {
       origem_descricao: origem,
       status: 'EM_CONFERENCIA',
       observacao: input.observacao?.trim() || null,
-      created_by: user.id,
+      created_by: userId,
     })
     .select('id')
     .single()

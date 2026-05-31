@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
@@ -78,17 +79,9 @@ export type CriarOcInput = {
 export type AtualizarOcInput = CriarOcInput & { id: string }
 
 async function lojaDoUsuario(): Promise<string | null> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data } = await supabase
-    .from('usuarios')
-    .select('loja_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+  const { userId, lojaId } = await getUsuarioAtual()
+  if (!userId) return null
+  return lojaId ?? LOJA_MATRIZ_ID
 }
 
 type RawOcItem = { quantidade: number; preco_unitario: number }
@@ -288,15 +281,12 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
 
   if (!input.itens.length) return { success: false, error: 'Adicione ao menos um item.' }
 
-  const lojaId = await lojaDoUsuario()
+  const { userId, lojaId: lojaIdOc } = await getUsuarioAtual()
+  if (!lojaIdOc && !userId) return { success: false, error: 'Faça login novamente.' }
+  const lojaId = lojaIdOc ?? (await lojaDoUsuario())
   if (!lojaId) return { success: false, error: 'Loja não identificada.' }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Faça login novamente.' }
-
   const { data: oc, error: e1 } = await supabase
     .from('ordens_compra')
     .insert({
@@ -307,7 +297,7 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
       data_prevista_chegada: input.data_prevista_chegada ?? null,
       observacao: input.observacao?.trim() || null,
       status: 'RASCUNHO',
-      created_by: user.id,
+      created_by: userId ?? '',
     })
     .select('id')
     .single()

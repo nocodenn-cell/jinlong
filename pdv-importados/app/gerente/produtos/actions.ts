@@ -3,9 +3,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { LOJA_MATRIZ_ID, getLojaIdUsuario } from '@/lib/auth/lojaUsuario'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { createProdutoRepository } from '@/lib/adapters/supabase/produtoRepository'
 import {
@@ -674,43 +675,52 @@ export type OpcoesFiltrosProdutos = {
   fornecedores: { id: string; nome: string }[]
 }
 
-async function lojaIdParaListagemProdutos(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<string> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user?.id) return LOJA_MATRIZ_ID
-  const loja = await getLojaIdUsuario(supabase, user.id)
-  return loja ?? LOJA_MATRIZ_ID
+async function lojaIdParaListagemProdutos(): Promise<string> {
+  // Reusa o SELECT já cacheado (perfil/idioma/loja) em vez de novo getUser + query.
+  const { lojaId } = await getUsuarioAtual()
+  return lojaId ?? LOJA_MATRIZ_ID
 }
 
 /**
  * Opções para selects de filtros (categorias, marcas, fornecedores).
  */
+/**
+ * Busca as opções de filtro do lado servidor, cacheada com TTL de 120 s.
+ * Categorias/marcas/fornecedores raramente mudam — não faz sentido buscá-los
+ * a cada clique de navegação. A tag `catalogo-opcoes-filtro` é revalidada
+ * sempre que uma categoria, marca ou fornecedor é criado/editado/excluído.
+ *
+ * `unstable_cache` exige que a função não use cookies/headers (são injetados
+ * no supabase client aqui de forma segura porque os dados são públicos do catálogo).
+ */
+const buscarOpcoesFiltrosCached = unstable_cache(
+  async (): Promise<OpcoesFiltrosProdutos> => {
+    const supabase = await createClient()
+    const [cat, mar, forn] = await Promise.all([
+      supabase.from('categorias').select('id, nome').order('nome', { ascending: true }),
+      supabase.from('marcas').select('id, nome').eq('ativo', true).order('nome', { ascending: true }),
+      supabase.from('fornecedores').select('id, nome').order('nome', { ascending: true }),
+    ])
+    return {
+      categorias: ((cat.data ?? []) as { id: string; nome: string }[]),
+      marcas: ((mar.data ?? []) as { id: string; nome: string }[]),
+      fornecedores: ((forn.data ?? []) as { id: string; nome: string }[]),
+    }
+  },
+  ['catalogo-opcoes-filtro'],
+  { revalidate: 120, tags: ['catalogo-opcoes-filtro'] },
+)
+
 export async function listarOpcoesFiltrosProdutos(): Promise<ActionResult<OpcoesFiltrosProdutos>> {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const supabase = await createClient()
-  const [cat, mar, forn] = await Promise.all([
-    supabase.from('categorias').select('id, nome').order('nome', { ascending: true }),
-    supabase.from('marcas').select('id, nome').eq('ativo', true).order('nome', { ascending: true }),
-    supabase.from('fornecedores').select('id, nome').order('nome', { ascending: true }),
-  ])
-
-  if (cat.error || mar.error || forn.error) {
-    const msg = [cat.error?.message, mar.error?.message, forn.error?.message].filter(Boolean).join(' · ')
-    return { success: false, error: msg || 'Falha ao carregar opções de filtro.' }
-  }
-
-  return {
-    success: true,
-    data: {
-      categorias: (cat.data ?? []) as { id: string; nome: string }[],
-      marcas: (mar.data ?? []) as { id: string; nome: string }[],
-      fornecedores: (forn.data ?? []) as { id: string; nome: string }[],
-    },
+  try {
+    const data = await buscarOpcoesFiltrosCached()
+    return { success: true, data }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Falha ao carregar opções de filtro.'
+    return { success: false, error: msg }
   }
 }
 
@@ -752,7 +762,7 @@ export async function buscarProdutosComFiltros(
 
   const p = parsed.data
   const supabase = await createClient()
-  const lojaId = await lojaIdParaListagemProdutos(supabase)
+  const lojaId = await lojaIdParaListagemProdutos()
 
   const { data, error } = await supabase.rpc('list_produtos_gerente_filtrados', {
     p_loja_id: lojaId,
@@ -855,7 +865,7 @@ export async function alterarAtivoLoteProdutos(
   }
 
   const supabase = await createClient()
-  const lojaId = await lojaIdParaListagemProdutos(supabase)
+  const lojaId = await lojaIdParaListagemProdutos()
   const { error, count } = await supabase
     .from('produtos')
     .update({ ativo: parsed.data.ativo })
@@ -891,7 +901,7 @@ export async function alterarCategoriaLoteProdutos(
   }
 
   const supabase = await createClient()
-  const lojaId = await lojaIdParaListagemProdutos(supabase)
+  const lojaId = await lojaIdParaListagemProdutos()
   const { error, count } = await supabase
     .from('produtos')
     .update({ categoria_id: parsed.data.categoria_id })

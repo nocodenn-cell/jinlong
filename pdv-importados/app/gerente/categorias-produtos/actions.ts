@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -136,5 +136,6 @@ export async function excluirCategoriaProduto(
 
   revalidatePath(REVALIDATE_PATH)
   revalidatePath('/gerente/produtos')
+  revalidateTag('catalogo-opcoes-filtro')
   return { success: true, data: null }
 }

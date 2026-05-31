@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -158,6 +158,7 @@ export async function salvarFornecedorAction(
       return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     }
     revalidatePath('/gerente/fornecedores')
+    revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, fornecedor: data as FornecedorListRow }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar fornecedor.' }
@@ -190,6 +191,7 @@ export async function excluirFornecedorAction(
     const { error } = await supabase.from('fornecedores').delete().eq('id', id)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     revalidatePath('/gerente/fornecedores')
+    revalidateTag('catalogo-opcoes-filtro')
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir fornecedor.' }
@@ -214,6 +216,7 @@ export async function bulkAtivarFornecedoresAction(
       .select('id')
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     revalidatePath('/gerente/fornecedores')
+    revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, afetados: data?.length ?? 0 }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao atualizar fornecedores.' }
@@ -244,6 +247,7 @@ export async function bulkExcluirFornecedoresAction(
     const { error } = await supabase.from('fornecedores').delete().in('id', liberados)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     revalidatePath('/gerente/fornecedores')
+    revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, excluidos: liberados.length, bloqueados: bloqueadosIds.size }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir fornecedores.' }

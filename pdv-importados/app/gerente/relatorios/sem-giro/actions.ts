@@ -6,7 +6,8 @@ import {
   resolverPeriodoRelatorio,
   type PeriodoRelatorioResolvido,
 } from '@/lib/relatorios/periodoRelatorio'
-import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 
 export type RelatorioSemGiroDTO = {
@@ -77,10 +78,8 @@ export async function carregarProdutosSemGiro(input: {
   const tzRelatorio = await getRelatorioTimezone(supabase)
   const periodo = resolverPeriodoRelatorio(input.de, input.ate, tzRelatorio)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const lojaId = user ? ((await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID) : LOJA_MATRIZ_ID
+  const { lojaId: lojaIdCached } = await getUsuarioAtual()
+  const lojaId = lojaIdCached ?? LOJA_MATRIZ_ID
 
   const { data, error } = await supabase.rpc('relatorio_produtos_sem_giro_periodo', {
     p_loja_id: lojaId,

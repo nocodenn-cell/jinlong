@@ -57,6 +57,8 @@ export default defineConfig(({ mode }) => {
         { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
         { find: '@', replacement: path.resolve(__dirname, './') },
         { find: '@/shared', replacement: path.resolve(__dirname, './shared') },
+        // `server-only` lança erro fora do bundle de servidor do Next; neutraliza em teste.
+        { find: 'server-only', replacement: path.resolve(__dirname, 'test-assets/server-only-stub.ts') },
       ],
     },
   }

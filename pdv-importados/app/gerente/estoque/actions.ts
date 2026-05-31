@@ -16,23 +16,16 @@ import {
 } from '@/lib/observability/runServerAction'
 import { AtualizarEstoqueSchema, EstoqueListagemInputSchema, ProdutoIdSchema } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 
 type LegacyEstoqueMutationResult<T = null> =
   | { success: true; data: T }
   | { success: false; error: string }
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data } = await supabase
-    .from('usuarios')
-    .select('loja_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+  const { userId, lojaId } = await getUsuarioAtual()
+  if (!userId) return null
+  return lojaId ?? LOJA_MATRIZ_ID
 }
 
 export async function atualizarEstoqueProduto(input: unknown): Promise<ActionResult<null>> {
@@ -143,17 +136,8 @@ export type EstoqueGerenteListaResult = Readonly<{
 }>
 
 async function lojaIdResolvidaGestao(): Promise<string> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user?.id) return LOJA_MATRIZ_ID
-  const { data: urow } = await supabase
-    .from('usuarios')
-    .select('loja_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  return (urow?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+  const { lojaId } = await getUsuarioAtual()
+  return lojaId ?? LOJA_MATRIZ_ID
 }
 
 function mapRpcRow(raw: Record<string, unknown>): EstoqueGerenteLinhaDTO {

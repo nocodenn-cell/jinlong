@@ -4,7 +4,8 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 type ActionResult<T> = { success: true; data: T } | { success: false; error: string }
@@ -45,11 +46,9 @@ export async function carregarResumoComissoes(
   const parsed = FiltroComissoesSchema.safeParse(filtro)
   if (!parsed.success) return { success: false, error: 'Filtro inválido.' }
 
+  const { lojaId: _lojaId } = await getUsuarioAtual()
+  const lojaId = _lojaId ?? LOJA_MATRIZ_ID
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const lojaId = user?.id ? (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID : LOJA_MATRIZ_ID
 
   const { data, error } = await supabase.rpc('resumo_comissoes_por_operador', {
     p_loja_id: lojaId,
@@ -80,11 +79,9 @@ export async function carregarDetalheComissoes(
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
 
+  const { lojaId: _lojaId } = await getUsuarioAtual()
+  const lojaId = _lojaId ?? LOJA_MATRIZ_ID
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const lojaId = user?.id ? (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID : LOJA_MATRIZ_ID
 
   const { data, error } = await supabase.rpc('detalhe_comissoes_operador', {
     p_loja_id: lojaId,
@@ -123,11 +120,9 @@ export async function marcarComissoesPagas(
   const parsed = MarcarPagasSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: 'Dados inválidos.' }
 
+  const { lojaId: _lojaId } = await getUsuarioAtual()
+  const lojaId = _lojaId ?? LOJA_MATRIZ_ID
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const lojaId = user?.id ? (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID : LOJA_MATRIZ_ID
 
   const { data, error } = await supabase.rpc('marcar_comissoes_pagas', {
     p_loja_id: lojaId,

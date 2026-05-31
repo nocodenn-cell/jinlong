@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import {
   actionFail,
@@ -33,15 +34,11 @@ export async function obterDashboardResumo(): Promise<ActionResult<DashboardResu
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return actionFail(auth.error, { errorCode: 'UNAUTHORIZED' })
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return actionFail('Faça login para continuar.', { errorCode: 'UNAUTHORIZED' })
-  }
+  // Reutiliza o resultado já cacheado (perfil + lojaId) em vez de novo getUser + query.
+  const { lojaId: lojaIdCached } = await getUsuarioAtual()
+  const lojaId = lojaIdCached ?? LOJA_MATRIZ_ID
 
-  const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+  const supabase = await createClient()
   const tz = await getRelatorioTimezone(supabase)
 
   return runServerActionWithObservability(

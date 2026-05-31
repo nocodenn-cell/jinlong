@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma } from '@/idioma/normalizeIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -11,25 +12,14 @@ export async function setIdiomaAction(formData: FormData) {
   const idioma: Idioma = normalizeIdioma(idiomaRaw)
   if (!idiomaRaw) return
 
+  const { userId, perfil } = await getUsuarioAtual()
+  if (!userId || !isPerfilPainelGerencial(perfil)) return
+
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return
-
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('perfil')
-    .eq('id', user.id)
-    .single()
-
-  if (!usuario || !isPerfilPainelGerencial(usuario.perfil)) return
-
   await supabase
     .from('usuarios')
     .update({ idioma_preferido: idioma })
-    .eq('id', user.id)
+    .eq('id', userId)
 
   // Revalidar rotas do painel para garantir atualização imediata.
   revalidatePath('/gerente/produtos')
@@ -38,4 +28,3 @@ export async function setIdiomaAction(formData: FormData) {
   revalidatePath('/admin')
   revalidatePath('/admin/dashboard')
 }
-

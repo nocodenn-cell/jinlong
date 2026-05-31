@@ -13,6 +13,7 @@ import {
   buscarEstoqueAtualSchema,
 } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import type { ProdutoComEstoqueDTO } from '@/lib/etiqueta/types'
 
 type ActionResult<T = null> =
@@ -55,17 +56,9 @@ function rowParaProdutoComEstoqueDTO(p: ProdutoComEstoqueSelectRow): ProdutoComE
 }
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data } = await supabase
-    .from('usuarios')
-    .select('loja_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  return (data?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+  const { userId, lojaId } = await getUsuarioAtual()
+  if (!userId) return null
+  return lojaId ?? LOJA_MATRIZ_ID
 }
 
 /**
