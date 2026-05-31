@@ -66,6 +66,12 @@ const NovoProdutoSchema = z.object({
   fornecedor_id: z.string().uuid().nullable().optional().transform((v) => v || null),
   /** Cadastro rápido não envia o campo; importação pode enviar explicitamente. */
   ativo: z.boolean().optional().transform((v) => v ?? true),
+  ncm: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim().replace(/\D/g, '') || null)
+    .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
+    .nullable(),
 })
 
 type ActionResult<T> =
@@ -460,6 +466,28 @@ const EditarProdutoCatalogoSchema = z.object({
   fornecedor_id: z.string().uuid().nullable().optional().transform((v) => v || null),
   unidade_medida: z.enum(['UN', 'KG', 'CX', 'FD', 'M']).default('UN'),
   observacao: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  // ── Campos fiscais (Focus NFe) ──────────────────────────────────────────
+  ncm: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim().replace(/\D/g, '') || null)
+    .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
+    .nullable(),
+  cfop_produto: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim().replace(/\D/g, '') || null)
+    .refine((s) => s === null || /^\d{4}$/.test(s), 'CFOP deve ter 4 dígitos.')
+    .nullable(),
+  csosn: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  cest: z
+    .string()
+    .optional()
+    .transform((s) => s?.trim().replace(/\D/g, '') || null)
+    .refine((s) => s === null || /^\d{7}$/.test(s), 'CEST deve ter 7 dígitos.')
+    .nullable(),
+  cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
 })
 
 export type ResultadoExclusaoLote = Readonly<{
@@ -637,6 +665,13 @@ export async function atualizarDadosProdutoGerente(
       fornecedor_id: parsed.data.fornecedor_id,
       unidade_medida: parsed.data.unidade_medida,
       observacao: parsed.data.observacao,
+      // Campos fiscais
+      ncm: parsed.data.ncm,
+      cfop_produto: parsed.data.cfop_produto,
+      csosn: parsed.data.csosn,
+      cest: parsed.data.cest,
+      cst_pis: parsed.data.cst_pis,
+      cst_cofins: parsed.data.cst_cofins,
     })
     .eq('id', parsed.data.produto_id)
 
@@ -742,6 +777,13 @@ type RpcProdutoRow = {
   imagem_url: string | null
   tags: string[] | null
   total_count: number
+  // Campos fiscais (retornados pelo RPC quando disponíveis)
+  ncm: string | null
+  cfop_produto: string | null
+  csosn: string | null
+  cest: string | null
+  cst_pis: string | null
+  cst_cofins: string | null
 }
 
 /**
@@ -838,6 +880,12 @@ export async function buscarProdutosComFiltros(
       unidade_medida: r.unidade_medida ?? 'UN',
       observacao: r.observacao ?? null,
       tags: r.tags ?? null,
+      ncm: r.ncm ?? null,
+      cfop_produto: r.cfop_produto ?? null,
+      csosn: r.csosn ?? null,
+      cest: r.cest ?? null,
+      cst_pis: r.cst_pis ?? null,
+      cst_cofins: r.cst_cofins ?? null,
     }
   })
 

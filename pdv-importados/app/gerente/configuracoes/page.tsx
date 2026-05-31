@@ -23,7 +23,9 @@ export default async function ConfiguracoesPage() {
         `
         id, nome, cnpj, inscricao_estadual, telefone, email, logo_url,
         endereco_logradouro, endereco_numero, endereco_complemento,
-        endereco_bairro, endereco_cidade, endereco_uf, endereco_cep
+        endereco_bairro, endereco_cidade, endereco_uf, endereco_cep,
+        razao_social, nome_fantasia, cnae,
+        numero_serie_nfce, numero_serie_nfe
       `,
       )
       .maybeSingle(),

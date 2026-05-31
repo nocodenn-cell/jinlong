@@ -67,6 +67,14 @@ export function ProdutosEditarCatalogoModal({
   const [marcaId, setMarcaId] = useState('')
   const [fornecedorId, setFornecedorId] = useState('')
 
+  // --- dados fiscais ---
+  const [ncm, setNcm] = useState('')
+  const [cfopProduto, setCfopProduto] = useState('')
+  const [csosn, setCsosn] = useState('400')
+  const [cest, setCest] = useState('')
+  const [cstPis, setCstPis] = useState('07')
+  const [cstCofins, setCstCofins] = useState('07')
+
   const [saving, setSaving] = useState(false)
 
   const fechar = useCallback(() => {
@@ -89,6 +97,13 @@ export function ProdutosEditarCatalogoModal({
     setCategoriaId(produto.categoria_id ?? '')
     setMarcaId(produto.marca_id ?? '')
     setFornecedorId(produto.fornecedor_id ?? '')
+    // campos fiscais
+    setNcm(produto.ncm ?? '')
+    setCfopProduto(produto.cfop_produto ?? '')
+    setCsosn(produto.csosn ?? '400')
+    setCest(produto.cest ?? '')
+    setCstPis(produto.cst_pis ?? '07')
+    setCstCofins(produto.cst_cofins ?? '07')
   }, [open, produto])
 
   useEffect(() => {
@@ -130,6 +145,13 @@ export function ProdutosEditarCatalogoModal({
         categoria_id: categoriaId || null,
         marca_id: marcaId || null,
         fornecedor_id: fornecedorId || null,
+        // campos fiscais
+        ncm: ncm.trim() || null,
+        cfop_produto: cfopProduto.trim() || null,
+        csosn: csosn.trim() || null,
+        cest: cest.trim() || null,
+        cst_pis: cstPis.trim() || null,
+        cst_cofins: cstCofins.trim() || null,
       })
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -146,6 +168,7 @@ export function ProdutosEditarCatalogoModal({
     precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho,
     unidadeMedida, observacao,
     categoriaId, marcaId, fornecedorId,
+    ncm, cfopProduto, csosn, cest, cstPis, cstCofins,
     m.comum.sucesso, onSalvo, fechar,
   ])
 
@@ -359,6 +382,92 @@ export function ProdutosEditarCatalogoModal({
               placeholder="—"
             />
           </label>
+
+          {/* ── Dados Fiscais (NF-e / NFC-e) ── */}
+          <SectionTitle>{p.secao_fiscal}</SectionTitle>
+          <div className="space-y-3">
+            <div className="grid grid-cols-[1fr_100px] gap-3">
+              <label className="block text-xs font-medium text-jl-fg-3">
+                {p.field_ncm}
+                <input
+                  className={`${finInMono} mt-1`}
+                  value={ncm}
+                  maxLength={8}
+                  inputMode="numeric"
+                  placeholder="00000000"
+                  onChange={(e) => setNcm(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  disabled={saving}
+                />
+                <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_ncm}</span>
+              </label>
+              <label className="block text-xs font-medium text-jl-fg-3">
+                {p.field_cfop_produto}
+                <input
+                  className={`${finInMono} mt-1`}
+                  value={cfopProduto}
+                  maxLength={4}
+                  inputMode="numeric"
+                  placeholder="5102"
+                  onChange={(e) => setCfopProduto(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  disabled={saving}
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="block text-xs font-medium text-jl-fg-3">
+                {p.field_csosn}
+                <select
+                  className={`${finSelect} mt-1 font-mono`}
+                  value={csosn}
+                  onChange={(e) => setCsosn(e.target.value)}
+                  disabled={saving}
+                >
+                  <option value="102">102 – Tributada s/ crédito</option>
+                  <option value="400">400 – Não tributada (SN)</option>
+                  <option value="500">500 – ICMS-ST cobrado ant.</option>
+                  <option value="900">900 – Outros</option>
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-jl-fg-3">
+                {p.field_cst_pis}
+                <select
+                  className={`${finSelect} mt-1 font-mono`}
+                  value={cstPis}
+                  onChange={(e) => setCstPis(e.target.value)}
+                  disabled={saving}
+                >
+                  <option value="07">07 – Isenta</option>
+                  <option value="49">49 – Outras saídas</option>
+                  <option value="01">01 – Alíq. básica</option>
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-jl-fg-3">
+                {p.field_cst_cofins}
+                <select
+                  className={`${finSelect} mt-1 font-mono`}
+                  value={cstCofins}
+                  onChange={(e) => setCstCofins(e.target.value)}
+                  disabled={saving}
+                >
+                  <option value="07">07 – Isenta</option>
+                  <option value="49">49 – Outras saídas</option>
+                  <option value="01">01 – Alíq. básica</option>
+                </select>
+              </label>
+            </div>
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.field_cest}
+              <input
+                className={`${finInMono} mt-1`}
+                value={cest}
+                maxLength={7}
+                inputMode="numeric"
+                placeholder={p.hint_cest}
+                onChange={(e) => setCest(e.target.value.replace(/\D/g, '').slice(0, 7))}
+                disabled={saving}
+              />
+            </label>
+          </div>
 
         </CardContent>
 

@@ -27,4 +27,17 @@ export type ProdutoGerenteRow = {
   unidade_medida: string
   observacao: string | null
   tags: string[] | null
+  // ── Campos fiscais (Focus NFe) ────────────────────────────────────────────
+  /** NCM de 8 dígitos — obrigatório pelo SEFAZ para NF-e/NFC-e. */
+  ncm: string | null
+  /** CFOP por produto; null usa o padrão da configuração da loja. */
+  cfop_produto: string | null
+  /** CSOSN para Simples Nacional (ex: '102', '400', '500'). */
+  csosn: string | null
+  /** Código CEST para produtos sujeitos a ICMS-ST. */
+  cest: string | null
+  /** CST PIS (ex: '07' = isenta, '49' = outras saídas). */
+  cst_pis: string | null
+  /** CST COFINS (ex: '07' = isenta, '49' = outras saídas). */
+  cst_cofins: string | null
 }

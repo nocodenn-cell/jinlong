@@ -28,6 +28,8 @@ export interface NovoProdutoInput {
   fornecedor_id?: string | null
   /** Se omitido, o repositório assume `true` (cadastro rápido). Importação CSV pode enviar `false`. */
   ativo?: boolean
+  /** NCM 8 dígitos — obrigatório pelo SEFAZ para NF-e/NFC-e (opcional no cadastro rápido). */
+  ncm?: string | null
 }
 
 export interface ProdutoRepositoryPort {

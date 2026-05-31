@@ -68,6 +68,11 @@ export function ConfiguracoesClient({ idioma, lojaInicial, pdvConfigInicial }: P
       endereco_cidade: '',
       endereco_uf: 'SP',
       endereco_cep: '',
+      razao_social: '',
+      nome_fantasia: '',
+      cnae: '',
+      numero_serie_nfce: 1,
+      numero_serie_nfe: 1,
     },
   )
   const [salvandoLoja, setSalvandoLoja] = useState(false)
@@ -238,6 +243,45 @@ export function ConfiguracoesClient({ idioma, lojaInicial, pdvConfigInicial }: P
                 )}
               </div>
               <p className="mt-1.5 text-[11px] text-jl-fg-3">{m.configuracoes.hint_logo}</p>
+            </div>
+
+            {/* Identidade fiscal (Focus NFe) */}
+            <div className="mt-2 border-t border-dashed border-jl-border-1 pt-4">
+              <div className="mb-3 flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
+                {m.configuracoes.section_identidade_fiscal}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="text-xs font-medium text-jl-fg-3 sm:col-span-2">
+                  {m.configuracoes.field_razao_social}
+                  <input className={`${finIn} mt-1`} value={loja.razao_social ?? ''}
+                    onChange={(e) => setLoja({ ...loja, razao_social: e.target.value })} />
+                </label>
+                <label className="text-xs font-medium text-jl-fg-3">
+                  {m.configuracoes.field_nome_fantasia}
+                  <input className={`${finIn} mt-1`} value={loja.nome_fantasia ?? ''}
+                    onChange={(e) => setLoja({ ...loja, nome_fantasia: e.target.value })} />
+                </label>
+                <label className="text-xs font-medium text-jl-fg-3">
+                  {m.configuracoes.field_cnae}
+                  <input className={`${finIn} mt-1 font-mono tabular-nums`} inputMode="numeric" maxLength={7}
+                    value={loja.cnae ?? ''}
+                    placeholder="0000000"
+                    onChange={(e) => setLoja({ ...loja, cnae: e.target.value.replace(/\D/g, '').slice(0, 7) })} />
+                  <span className="mt-1 block text-[11px] text-jl-fg-3">{m.configuracoes.hint_cnae}</span>
+                </label>
+                <label className="text-xs font-medium text-jl-fg-3">
+                  {m.configuracoes.field_serie_nfce}
+                  <input className={`${finIn} mt-1 font-mono tabular-nums`} inputMode="numeric" maxLength={3}
+                    value={loja.numero_serie_nfce}
+                    onChange={(e) => setLoja({ ...loja, numero_serie_nfce: Math.max(1, Math.min(999, Number(e.target.value.replace(/\D/g, '')) || 1)) })} />
+                </label>
+                <label className="text-xs font-medium text-jl-fg-3">
+                  {m.configuracoes.field_serie_nfe}
+                  <input className={`${finIn} mt-1 font-mono tabular-nums`} inputMode="numeric" maxLength={3}
+                    value={loja.numero_serie_nfe}
+                    onChange={(e) => setLoja({ ...loja, numero_serie_nfe: Math.max(1, Math.min(999, Number(e.target.value.replace(/\D/g, '')) || 1)) })} />
+                </label>
+              </div>
             </div>
 
             {/* Endereço */}

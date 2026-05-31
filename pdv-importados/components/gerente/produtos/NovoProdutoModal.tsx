@@ -32,6 +32,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const [permitirAbaixoCusto, setPermitirAbaixoCusto] = useState(false)
   const [qtdGatilho, setQtdGatilho] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
+  const [ncm, setNcm] = useState('')
   const [saving, setSaving] = useState(false)
 
   const fechar = useCallback(() => {
@@ -50,6 +51,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     setPermitirAbaixoCusto(false)
     setQtdGatilho('')
     setCategoriaId('')
+    setNcm('')
     setSaving(false)
     // Auto-focus no nome ao abrir
     requestAnimationFrame(() => nomeRef.current?.focus())
@@ -95,6 +97,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         origem,
         tem_nf: false,
         categoria_id: categoriaId || null,
+        ncm: ncm.trim() || undefined,
       })
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -106,7 +109,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     } finally {
       setSaving(false)
     }
-  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho, categoriaId, p, m.comum.sucesso, onCriado, fechar])
+  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, p, m.comum.sucesso, onCriado, fechar])
 
   if (!open) return null
 
@@ -251,6 +254,32 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
               {p.permitir_abaixo_custo}
             </label>
           </div>
+
+          {/* NCM (fiscal) */}
+          <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+            {p.secao_fiscal}
+          </p>
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.field_ncm}
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                className={`${finInMono} flex-1`}
+                value={ncm}
+                maxLength={8}
+                inputMode="numeric"
+                placeholder="00000000"
+                onChange={(e) => setNcm(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                disabled={saving}
+              />
+              {ncm.length > 0 && ncm.length < 8 && (
+                <span className="shrink-0 text-[10px] text-amber-400">{8 - ncm.length} dígito(s)</span>
+              )}
+              {ncm.length === 8 && (
+                <span className="shrink-0 text-[10px] text-emerald-400">✓</span>
+              )}
+            </div>
+            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_ncm}</span>
+          </label>
 
           {/* Categoria (opcional) */}
           {opcoes.categorias.length > 0 && (

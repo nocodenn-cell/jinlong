@@ -1078,24 +1078,75 @@ export type Database = {
       lojas: {
         Row: {
           ativo: boolean
+          cnae: string | null
+          cnpj: string | null
           codigo: string | null
           created_at: string
+          email: string | null
+          endereco_bairro: string | null
+          endereco_cep: string | null
+          endereco_cidade: string | null
+          endereco_complemento: string | null
+          endereco_logradouro: string | null
+          endereco_numero: string | null
+          endereco_uf: string | null
           id: string
+          inscricao_estadual: string | null
+          logo_url: string | null
           nome: string
+          nome_fantasia: string | null
+          numero_serie_nfe: number
+          numero_serie_nfce: number
+          razao_social: string | null
+          telefone: string | null
         }
         Insert: {
           ativo?: boolean
+          cnae?: string | null
+          cnpj?: string | null
           codigo?: string | null
           created_at?: string
+          email?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
+          endereco_uf?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          logo_url?: string | null
           nome: string
+          nome_fantasia?: string | null
+          numero_serie_nfe?: number
+          numero_serie_nfce?: number
+          razao_social?: string | null
+          telefone?: string | null
         }
         Update: {
           ativo?: boolean
+          cnae?: string | null
+          cnpj?: string | null
           codigo?: string | null
           created_at?: string
+          email?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
+          endereco_uf?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          logo_url?: string | null
           nome?: string
+          nome_fantasia?: string | null
+          numero_serie_nfe?: number
+          numero_serie_nfce?: number
+          razao_social?: string | null
+          telefone?: string | null
         }
         Relationships: []
       }
@@ -1607,9 +1658,14 @@ export type Database = {
         Row: {
           ativo: boolean
           categoria_id: string | null
+          cest: string | null
+          cfop_produto: string | null
           codigo_barras: string | null
           codigo_interno: string | null
           created_at: string
+          csosn: string | null
+          cst_cofins: string | null
+          cst_pis: string | null
           estoque_minimo: number
           fornecedor_id: string | null
           id: string
@@ -1617,6 +1673,7 @@ export type Database = {
           limite_transferencia_sem_observacao: number | null
           loja_id: string
           marca_id: string | null
+          ncm: string | null
           nome: string
           observacao: string | null
           origem: string
@@ -1635,9 +1692,14 @@ export type Database = {
         Insert: {
           ativo?: boolean
           categoria_id?: string | null
+          cest?: string | null
+          cfop_produto?: string | null
           codigo_barras?: string | null
           codigo_interno?: string | null
           created_at?: string
+          csosn?: string | null
+          cst_cofins?: string | null
+          cst_pis?: string | null
           estoque_minimo?: number
           fornecedor_id?: string | null
           id?: string
@@ -1645,6 +1707,7 @@ export type Database = {
           limite_transferencia_sem_observacao?: number | null
           loja_id: string
           marca_id?: string | null
+          ncm?: string | null
           nome: string
           observacao?: string | null
           origem: string
@@ -1663,9 +1726,14 @@ export type Database = {
         Update: {
           ativo?: boolean
           categoria_id?: string | null
+          cest?: string | null
+          cfop_produto?: string | null
           codigo_barras?: string | null
           codigo_interno?: string | null
           created_at?: string
+          csosn?: string | null
+          cst_cofins?: string | null
+          cst_pis?: string | null
           estoque_minimo?: number
           fornecedor_id?: string | null
           id?: string
@@ -1673,6 +1741,7 @@ export type Database = {
           limite_transferencia_sem_observacao?: number | null
           loja_id?: string
           marca_id?: string | null
+          ncm?: string | null
           nome?: string
           observacao?: string | null
           origem?: string

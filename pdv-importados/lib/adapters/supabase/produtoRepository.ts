@@ -53,6 +53,7 @@ export function createProdutoRepository(
           categoria_id: input.categoria_id ?? null,
           marca_id: input.marca_id ?? null,
           fornecedor_id: input.fornecedor_id ?? null,
+          ncm: input.ncm ?? null,
           ativo,
           loja_id: lojaId,
         })

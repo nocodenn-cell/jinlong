@@ -45,6 +45,15 @@ export type LojaConfig = {
   endereco_cidade: string | null
   endereco_uf: string | null
   endereco_cep: string | null
+  // ── Campos fiscais extras (Focus NFe) ───────────────────────────────────
+  razao_social: string | null
+  nome_fantasia: string | null
+  /** CNAE da atividade principal (7 dígitos). */
+  cnae: string | null
+  /** Série da NFC-e (1–999). */
+  numero_serie_nfce: number
+  /** Série da NF-e (1–999). */
+  numero_serie_nfe: number
 }
 
 export type RegimeTributario = 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL' | 'MEI'
@@ -96,6 +105,11 @@ export async function atualizarDadosLojaAction(
       endereco_cidade: input.endereco_cidade?.trim() || null,
       endereco_uf: input.endereco_uf?.trim() || null,
       endereco_cep: input.endereco_cep?.replace(/\D/g, '') || null,
+      razao_social: input.razao_social?.trim() || null,
+      nome_fantasia: input.nome_fantasia?.trim() || null,
+      cnae: input.cnae?.trim().replace(/\D/g, '') || null,
+      numero_serie_nfce: Number(input.numero_serie_nfce) || 1,
+      numero_serie_nfe: Number(input.numero_serie_nfe) || 1,
     }
 
     const query = input.id
