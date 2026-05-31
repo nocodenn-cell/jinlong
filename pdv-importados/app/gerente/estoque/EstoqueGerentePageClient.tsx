@@ -370,21 +370,21 @@ export function EstoqueGerentePageClient({
       {/* KPI Cards — clicáveis como filtros de um toque */}
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KpiCard
-          label="Total de Itens"
+          label={m.estoque.kpi_total_itens}
           value={kpis?.total_geral ?? (kpiFiltro === 'todos' && !loading ? total : null)}
           accent="neutral"
           active={kpiFiltro === 'todos'}
           onClick={() => handleKpiClick('todos')}
         />
         <KpiCard
-          label="Estoque Crítico"
+          label={m.estoque.kpi_estoque_critico}
           value={kpis?.total_critico}
           accent="red"
           active={kpiFiltro === 'critico'}
           onClick={() => handleKpiClick('critico')}
         />
         <KpiCard
-          label="Produtos Zerados"
+          label={m.estoque.kpi_produtos_zerados}
           value={kpis?.total_zerado}
           accent="orange"
           active={kpiFiltro === 'zerado'}
@@ -517,7 +517,7 @@ export function EstoqueGerentePageClient({
               <div className="flex flex-col items-center gap-2">
                 <span>
                   {kpiFiltro === 'zerado'
-                    ? 'Nenhum produto com estoque zerado nesta página.'
+                    ? m.estoque.vazio_zerado
                     : somenteBaixoNav
                       ? m.estoque.vazio_baixo
                       : m.estoque.vazio_geral_filtrado}

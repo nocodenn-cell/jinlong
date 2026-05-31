@@ -15,6 +15,53 @@ function idiomaSeguro(idioma?: string): IdiomaErro {
   return 'pt'
 }
 
+/**
+ * Dicionário das mensagens de negócio escritas em português (validações Zod e
+ * guardas de domínio das Server Actions de gestão) para o mandarim. A chave é a
+ * mensagem PT em minúsculas; o valor é a tradução polida e comercial.
+ */
+const MAPA_NEGOCIO_PT_ZH = new Map<string, string>([
+  ['o nome deve ter pelo menos 2 caracteres.', '商品名称至少需要 2 个字符。'],
+  ['o nome do produto é obrigatório', '请填写商品名称。'],
+  ['o preço de varejo deve ser maior que zero.', '零售价必须大于零。'],
+  ['informe um preço de varejo válido.', '请输入有效的零售价。'],
+  ['o preço deve ser maior que zero.', '价格必须大于零。'],
+  ['o preço de custo não pode ser negativo.', '成本价不能为负数。'],
+  ['origem do produto inválida.', '商品来源无效。'],
+  ['código de barras: mínimo 3 caracteres ou deixe em branco', '条形码：至少 3 个字符，或留空。'],
+  ['id do produto inválido.', '商品 ID 无效。'],
+  ['id inválido.', '标识符无效。'],
+  ['produto inválido.', '商品无效。'],
+  ['produto inválido', '商品无效。'],
+  ['quantidade atual não pode ser negativa.', '当前数量不能为负数。'],
+  ['estoque mínimo não pode ser negativo.', '最低库存不能为负数。'],
+  ['motivo de ajuste inválido.', '调整原因无效。'],
+  ['observação é obrigatória quando o motivo for outro.', '当原因为「其他」时，备注为必填项。'],
+  ['observação muito longa (máx. 500 caracteres).', '备注过长（最多 500 个字符）。'],
+  ['estoque já existe para este produto.', '该商品的库存记录已存在。'],
+  ['não foi possível identificar sua loja. faça login novamente.', '无法识别您的门店，请重新登录。'],
+  ['não foi possível salvar o produto. tente de novo.', '无法保存商品，请重试。'],
+  ['falha ao carregar opções de filtro.', '无法加载筛选选项。'],
+  ['erro de validação.', '提交的数据无效，请检查表单。'],
+])
+
+/**
+ * Rótulos de seção (prefixo "Seção: …") usados pelas Server Actions de gestão,
+ * traduzidos para o mandarim para que o prefixo não vaze em português na tela.
+ */
+const MAPA_SECAO_PT_ZH: Record<string, string> = {
+  'preço varejo': '零售价',
+  'preço de custo': '成本价',
+  produto: '商品',
+  produtos: '商品',
+  'cadastro de produto': '商品登记',
+  'estoque inicial do produto': '商品初始库存',
+  estoque: '库存',
+  'alterar situação': '更改状态',
+  'bulk ativo': '批量启用/停用',
+  'bulk categoria': '批量分类',
+}
+
 function t(idioma: IdiomaErro, pt: string, zh: string): string {
   if (idioma === 'pt') return pt
   return zh
@@ -263,6 +310,29 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
     return t(idioma, 'Use um número maior que zero onde for exigido.', '该字段必须大于 0。')
   }
 
+  // ── Mensagens de negócio em português (validações Zod / guardas de domínio) ──
+  // Quando o app está em mandarim, estas precisam aparecer em chinês polido; caso
+  // contrário cairiam no fallback genérico que embute o texto em português na tela.
+  // A entrada pode ser uma única mensagem ou várias unidas por "; " (Zod issues).
+  const partesNegocio = raw.split(/\s*;\s*/).map((p) => p.trim()).filter(Boolean)
+  if (partesNegocio.length > 0) {
+    const traduzidas = partesNegocio.map((parte) => MAPA_NEGOCIO_PT_ZH.get(parte.toLowerCase()))
+    if (traduzidas.every((tr) => tr !== undefined)) {
+      // PT é a língua-fonte dessas mensagens: devolve o texto original já polido.
+      if (idioma === 'pt') return raw
+      return (traduzidas as string[]).join('；')
+    }
+  }
+
+  // Guarda de estoque insuficiente (mensagem dinâmica vinda do banco com números).
+  if (lower.includes('estoque insuficiente')) {
+    return t(
+      idioma,
+      'Estoque insuficiente para concluir esta operação. Confira o saldo do produto e tente novamente.',
+      '库存不足，无法完成本次操作。请先核对该商品的库存余额后再试。',
+    )
+  }
+
   const parecePt =
     /(ção|ões|não|você|sessão|caixa|venda|dados|senha|permissão|gerente|operador|tente|inválido|erro|falha|salvar|carregar|abrir|fechar|obrigat)/i.test(
       raw,
@@ -279,9 +349,14 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
 
 /** Prefixa a mensagem traduzida (ex.: contexto "Caixa", "Venda"). */
 export function mensagemErroComSecao(secao: string, detalheTecnico: string, idiomaInput?: string): string {
+  const idioma = idiomaSeguro(idiomaInput)
   const s = secao.trim()
   const m = mensagemErroParaUsuario(detalheTecnico, idiomaInput)
   if (!s) return m
+  if (idioma === 'zh') {
+    const secaoZh = MAPA_SECAO_PT_ZH[s.toLowerCase()] ?? s
+    return `${secaoZh}：${m}`
+  }
   return `${s}: ${m}`
 }
 

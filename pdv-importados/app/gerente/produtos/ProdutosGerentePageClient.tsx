@@ -117,6 +117,7 @@ function PrecoVarejoCell({
   msgInvalido,
   msgMaiorZero,
   atualizadoMessage,
+  ariaLabel,
 }: Readonly<{
   produtoId: string
   precoVarejo: number
@@ -124,6 +125,7 @@ function PrecoVarejoCell({
   msgInvalido: string
   msgMaiorZero: string
   atualizadoMessage: string
+  ariaLabel: string
 }>) {
   const [draft, setDraft] = useState(() => String(precoVarejo))
   const [saving, setSaving] = useState(false)
@@ -177,7 +179,7 @@ function PrecoVarejoCell({
         }
       }}
       className="gerente-fin-cell w-full min-w-[6rem] rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-xs font-semibold tabular-nums app-border hover:border-[color:var(--gerente-ring,theme(colors.slate.500))] focus:border-amber-500/80 focus:outline-none focus:ring-1 focus:ring-amber-500/50 disabled:opacity-50"
-      aria-label="Preço varejo"
+      aria-label={ariaLabel}
     />
   )
 }
@@ -797,14 +799,14 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
             {categoriaLoteModalAberto && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-500/25 bg-blue-500/[.06] px-3 py-2">
                 <span className="text-xs text-slate-300">
-                  Categoria de {selectedIds.size} produto(s):
+                  {interpolateTemplate(m.produtos.categoria_lote_label, { n: selectedIds.size })}
                 </span>
                 <select
                   className="h-8 rounded-md px-2 text-xs app-select !bg-white/[.08] !border-white/[.18]"
                   value={categoriaLoteSelecionada}
                   onChange={(e) => setCategoriaLoteSelecionada(e.target.value)}
                 >
-                  <option value="">— sem categoria —</option>
+                  <option value="">{m.produtos.categoria_lote_sem}</option>
                   {opcoes.categorias.map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
@@ -1003,6 +1005,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                     msgInvalido={m.produtos.preco_invalido}
                     msgMaiorZero={m.produtos.preco_maior_zero}
                     atualizadoMessage={m.produtos.preco_atualizado}
+                    ariaLabel={m.produtos.preco_varejo_aria}
                   />
                 </td>
                 {/* Preço Atacado */}

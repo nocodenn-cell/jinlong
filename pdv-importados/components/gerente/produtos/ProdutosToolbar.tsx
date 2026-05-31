@@ -116,11 +116,11 @@ export function ProdutosToolbar({
                 ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
                 : 'app-border app-surface-soft text-jl-fg-1 hover:bg-green-500/15',
             )}
-            title="Ativar selecionados"
-            aria-label="Ativar produtos selecionados"
+            title={p.lote_ativar_title}
+            aria-label={p.lote_ativar_aria}
           >
             <ToggleRight className="h-4 w-4 shrink-0 text-green-600" aria-hidden />
-            <span className="hidden sm:inline">{ativarLoteLoading ? '…' : 'Ativar'}</span>
+            <span className="hidden sm:inline">{ativarLoteLoading ? '…' : p.lote_ativar}</span>
           </button>
 
           <button
@@ -133,11 +133,11 @@ export function ProdutosToolbar({
                 ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
                 : 'app-border app-surface-soft text-jl-fg-1 hover:bg-amber-500/15',
             )}
-            title="Inativar selecionados"
-            aria-label="Inativar produtos selecionados"
+            title={p.lote_inativar_title}
+            aria-label={p.lote_inativar_aria}
           >
             <ToggleLeft className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
-            <span className="hidden sm:inline">{inativarLoteLoading ? '…' : 'Inativar'}</span>
+            <span className="hidden sm:inline">{inativarLoteLoading ? '…' : p.lote_inativar}</span>
           </button>
 
           <button
@@ -150,11 +150,11 @@ export function ProdutosToolbar({
                 ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
                 : 'app-border app-surface-soft text-jl-fg-1 hover:bg-blue-500/15',
             )}
-            title="Alterar categoria dos selecionados"
-            aria-label="Alterar categoria dos produtos selecionados"
+            title={p.lote_categoria_title}
+            aria-label={p.lote_categoria_aria}
           >
             <FolderInput className="h-4 w-4 shrink-0 text-blue-500" aria-hidden />
-            <span className="hidden sm:inline">{categoriaLoteLoading ? '…' : 'Categoria'}</span>
+            <span className="hidden sm:inline">{categoriaLoteLoading ? '…' : p.lote_categoria}</span>
           </button>
         </>
       )}

@@ -143,6 +143,47 @@ describe('helpers de mensagemErroUsuario', () => {
     )
   })
 
+  it('traduz mensagens de negócio em PT para mandarim quando idioma=zh', () => {
+    expect(
+      mensagemErroParaUsuario('O preço de varejo deve ser maior que zero.', 'zh'),
+    ).toBe('零售价必须大于零。')
+    expect(
+      mensagemErroParaUsuario('O preço de custo não pode ser negativo.', 'zh'),
+    ).toBe('成本价不能为负数。')
+    expect(
+      mensagemErroParaUsuario('Motivo de ajuste inválido.', 'zh'),
+    ).toBe('调整原因无效。')
+  })
+
+  it('preserva a mensagem de negócio original quando idioma=pt', () => {
+    const msg = 'O preço de varejo deve ser maior que zero.'
+    expect(mensagemErroParaUsuario(msg, 'pt')).toBe(msg)
+  })
+
+  it('traduz lista de issues (unidas por ;) de negócio para mandarim', () => {
+    expect(
+      mensagemErroValidacaoZod(
+        'O nome deve ter pelo menos 2 caracteres.; O preço de varejo deve ser maior que zero.',
+        'zh',
+      ),
+    ).toBe('数据无效：商品名称至少需要 2 个字符。；零售价必须大于零。')
+  })
+
+  it('traduz guarda de estoque insuficiente para mandarim; mantém termo em PT', () => {
+    expect(
+      mensagemErroParaUsuario('Estoque insuficiente para produto X: solicitado 5, disponível 2.', 'zh'),
+    ).toBe('库存不足，无法完成本次操作。请先核对该商品的库存余额后再试。')
+    expect(
+      mensagemErroParaUsuario('Estoque insuficiente para produto X: solicitado 5, disponível 2.'),
+    ).toContain('Estoque insuficiente')
+  })
+
+  it('mensagemErroComSecao traduz o rótulo de seção quando idioma=zh', () => {
+    expect(
+      mensagemErroComSecao('Preço varejo', 'O preço de varejo deve ser maior que zero.', 'zh'),
+    ).toBe('零售价：零售价必须大于零。')
+  })
+
   it('mensagemErroDeExcecao usa fallback quando não recebe Error', () => {
     expect(mensagemErroDeExcecao(null, 'Falha genérica.')).toBe('Falha genérica.')
   })

@@ -16,6 +16,7 @@ export type EstoqueAjusteModalProps = Readonly<{
     minimo: string
     motivo: string
     observacao: string
+    observacaoPlaceholder: string
     motivos: ReadonlyArray<{ value: string; label: string }>
     salvar: string
     cancelar: string
@@ -159,7 +160,7 @@ export function EstoqueAjusteModal({
             <input
               name="observacao"
               maxLength={500}
-              placeholder="Detalhe do ajuste (obrigatório para OUTRO)"
+              placeholder={labels.observacaoPlaceholder}
               style={{ padding: 8, borderRadius: 8, border: '1px solid #d1d5db' }}
             />
           </label>
@@ -206,14 +207,15 @@ export function labelsAjusteEstoque(m: Mensagens): EstoqueAjusteModalProps['labe
     titulo: m.estoque.col_ajuste,
     atual: m.estoque.col_atual,
     minimo: m.estoque.col_minimo,
-    motivo: 'Motivo',
-    observacao: m.produtos.observacao ?? 'Observação',
+    motivo: m.estoque.ajuste_motivo_label,
+    observacao: m.produtos.observacao ?? m.estoque.ajuste_motivo_label,
+    observacaoPlaceholder: m.estoque.ajuste_observacao_placeholder,
     motivos: [
-      { value: 'ACERTO_INVENTARIO', label: 'Acerto de inventário' },
-      { value: 'COMPRA', label: 'Entrada por compra' },
-      { value: 'PERDA', label: 'Perda' },
-      { value: 'QUEBRA', label: 'Quebra/avaria' },
-      { value: 'OUTRO', label: 'Outro' },
+      { value: 'ACERTO_INVENTARIO', label: m.estoque.motivo_acerto_inventario },
+      { value: 'COMPRA', label: m.estoque.motivo_entrada_compra },
+      { value: 'PERDA', label: m.estoque.motivo_perda },
+      { value: 'QUEBRA', label: m.estoque.motivo_quebra_avaria },
+      { value: 'OUTRO', label: m.estoque.motivo_outro },
     ],
     salvar: m.estoque.atualizar,
     cancelar: m.comum?.cancelar ?? 'Cancelar',
