@@ -1,5 +1,8 @@
 import { timingSafeEqualStr } from "./crypto.ts";
-import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
+// @types/bcryptjs usa `export =` (sem default export), entao import default falha
+// no type-check (TS1192). Namespace import e a forma canonica e mantem o runtime
+// identico (esm.sh expoe compareSync como named export do modulo CJS).
+import * as bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
 const RATE_WINDOW_MS = 15 * 60 * 1000;
 const LOCK_MS = 15 * 60 * 1000;
