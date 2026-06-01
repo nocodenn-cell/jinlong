@@ -65,6 +65,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS produtos_fornecedor_ref_loja_uniq
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Atualizar importar_nfe_transacao para aceitar duplicatas
 -- ─────────────────────────────────────────────────────────────────────────────
+-- A nova assinatura adiciona p_duplicatas (8 args), criando uma sobrecarga
+-- distinta da versão de 7 args da migration 075. Removemos a antiga para que o
+-- catálogo passe a ter UMA única definição (como já ocorre em produção) e para
+-- evitar ambiguidade em referências sem assinatura (ex.: COMMENT na 211).
+DROP FUNCTION IF EXISTS public.importar_nfe_transacao(
+  text, text, text, text, uuid, jsonb, boolean
+);
+
 CREATE OR REPLACE FUNCTION public.importar_nfe_transacao(
   p_chave_acesso     text,
   p_numero_nf        text,

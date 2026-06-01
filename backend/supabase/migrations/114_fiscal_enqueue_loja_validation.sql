@@ -88,7 +88,12 @@ BEGIN
   VALUES (
     p_venda_id, v_tipo, 'PENDENTE', COALESCE(p_payload, '{}'::jsonb)
   )
-  ON CONFLICT (venda_id, tipo_doc) WHERE deleted_at IS NULL
+  -- Predicado alinhado ao índice único parcial idx_doc_fiscal_unique_venda_tipo
+  -- (migration 037: ON (venda_id, tipo_doc) WHERE status <> 'CANCELADO'), como já
+  -- fazia a 090/099. A 114 havia revertido para `deleted_at IS NULL`, que não casa
+  -- com o índice e quebra o UPSERT no build do zero ("no unique or exclusion
+  -- constraint matching the ON CONFLICT specification").
+  ON CONFLICT (venda_id, tipo_doc) WHERE status <> 'CANCELADO'
   DO UPDATE SET
     payload = COALESCE(EXCLUDED.payload, public.documentos_fiscais_pendentes.payload),
     status = CASE

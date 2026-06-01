@@ -113,4 +113,22 @@ CREATE POLICY oci_auth ON public.ordens_compra_itens
 -- sem qualificação de schema nas queries existentes.
 
 CREATE SCHEMA IF NOT EXISTS extensions;
-ALTER EXTENSION pg_trgm SET SCHEMA extensions;
+-- pg_trgm no schema isolado `extensions`, de forma idempotente e válida em todo
+-- ambiente. No Supabase hospedado a extensão já vem instalada (e pode já estar em
+-- `extensions`); num Postgres local fresco (CI: `db reset`) ela NÃO existe, e o
+-- antigo `ALTER EXTENSION pg_trgm SET SCHEMA extensions` falhava com
+-- `extension "pg_trgm" does not exist`. O bloco abaixo cobre os três casos
+-- (ausente / presente em outro schema / já em extensions) sem erro.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') THEN
+    CREATE EXTENSION pg_trgm WITH SCHEMA extensions;
+  ELSIF NOT EXISTS (
+    SELECT 1
+    FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE e.extname = 'pg_trgm' AND n.nspname = 'extensions'
+  ) THEN
+    ALTER EXTENSION pg_trgm SET SCHEMA extensions;
+  END IF;
+END $$;
