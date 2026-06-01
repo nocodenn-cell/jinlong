@@ -1,13 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
-import {
-  hasCaixaOperadorUser,
-  caixaOperadorEmail,
-  caixaOperadorPassword,
-  e2eProdutoCodigoBarras,
-} from './helpers/env'
+import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
 import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
-
-const LOGIN_PATH = '/login'
+import { loginCaixaOperador } from './helpers/login'
+import { gotoApp } from './helpers/url'
 const unifiedSalesFlowEnabled = process.env.USE_UNIFIED_SALES_FLOW === 'true'
 
 test.describe.configure({ mode: 'serial' })
@@ -21,16 +16,12 @@ test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas rem
       )
       return
     }
-    await page.goto(LOGIN_PATH)
-    await page.getByPlaceholder('Email').fill(caixaOperadorEmail())
-    await page.getByPlaceholder('Senha').fill(caixaOperadorPassword())
-    await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await page.waitForURL(/\/caixa/, { timeout: 20_000 })
+    await loginCaixaOperador(page)
   })
 
   test('duas parcelas somam ao total e finaliza com sucesso', async ({ page }) => {
     test.skip(!unifiedSalesFlowEnabled, 'Requer USE_UNIFIED_SALES_FLOW=true para persistir split.')
-    await page.goto('/caixa')
+    await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
@@ -88,7 +79,7 @@ test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas rem
 
   test('nao vaza parcelas para proximo cupom apos finalizar e novo cupom', async ({ page }) => {
     test.skip(!unifiedSalesFlowEnabled, 'Requer USE_UNIFIED_SALES_FLOW=true para persistir split.')
-    await page.goto('/caixa')
+    await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
@@ -158,7 +149,7 @@ test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas rem
 
   test('tres parcelas (DINHEIRO + PIX + CARTAO_DEBITO) somam ao total e finaliza', async ({ page }) => {
     test.skip(!unifiedSalesFlowEnabled, 'Requer USE_UNIFIED_SALES_FLOW=true para persistir split.')
-    await page.goto('/caixa')
+    await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })

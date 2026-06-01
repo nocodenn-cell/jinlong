@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { hasCaixaOperadorUser, caixaOperadorEmail, caixaOperadorPassword } from './helpers/env'
+import { hasCaixaOperadorUser } from './helpers/env'
+import { loginCaixaOperador } from './helpers/login'
+import { gotoApp } from './helpers/url'
 import {
   confirmarModalValorNumerico,
   MODAL_TITULO_ABRIR,
   MODAL_TITULO_FECHAR,
 } from './helpers/caixaModais'
-
-const LOGIN_PATH = '/login'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -19,17 +19,13 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
       )
       return
     }
-    await page.goto(LOGIN_PATH)
-    await page.getByPlaceholder('Email').fill(caixaOperadorEmail())
-    await page.getByPlaceholder('Senha').fill(caixaOperadorPassword())
-    await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await page.waitForURL(/\/(caixa|gerente)/, { timeout: 20_000 })
+    await loginCaixaOperador(page, { postLoginUrl: /\/(caixa|gerente)/ })
   })
 
   test('fluxo: abrir caixa → sangria R$50 → limpar cupom → fechar com valor do sistema', async ({
     page,
   }) => {
-    await page.goto('/caixa')
+    await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })

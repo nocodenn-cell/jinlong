@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { hasCaixaOperadorUser, caixaOperadorEmail, caixaOperadorPassword, e2eProdutoCodigoBarras } from './helpers/env'
+import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
 import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
-
-const LOGIN_PATH = '/login'
+import { loginCaixaOperador } from './helpers/login'
+import { gotoApp } from './helpers/url'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -15,15 +15,11 @@ test.describe('Caixa — finalizar venda (catálogo seed)', () => {
       )
       return
     }
-    await page.goto(LOGIN_PATH)
-    await page.getByPlaceholder('Email').fill(caixaOperadorEmail())
-    await page.getByPlaceholder('Senha').fill(caixaOperadorPassword())
-    await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await page.waitForURL(/\/caixa/, { timeout: 20_000 })
+    await loginCaixaOperador(page)
   })
 
   test('busca produto demo, adiciona ao cupom e finaliza venda (DINHEIRO)', async ({ page }) => {
-    await page.goto('/caixa')
+    await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })

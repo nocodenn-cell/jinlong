@@ -4,9 +4,7 @@ import {
   assertSupabasePublicEnvInCi,
   hasGerenteTestUser,
 } from './helpers/env'
-
-/** Navegação alinhada ao `next dev`: evita esperar `load` indefinidamente. */
-const GOTO = { waitUntil: 'domcontentloaded' as const }
+import { E2E_GOTO_DOMCONTENTLOADED, gotoApp } from './helpers/url'
 
 /**
  * Falha se o console do Chromium reportar erro/aviso típico de hidratação (SSR ≠ cliente).
@@ -16,14 +14,14 @@ const GOTO = { waitUntil: 'domcontentloaded' as const }
 test.describe('Hidratação — rotas públicas', () => {
   test('/login sem violações', async ({ page }) => {
     const violations = await collectHydrationViolationsDuring(page, async () => {
-      await page.goto('/login', GOTO)
+      await gotoApp(page, '/login', E2E_GOTO_DOMCONTENTLOADED)
     })
     expect.soft(violations, violations.join('\n')).toEqual([])
   })
 
   test('raiz / redireciona para login sem violações', async ({ page }) => {
     const violations = await collectHydrationViolationsDuring(page, async () => {
-      await page.goto('/', GOTO)
+      await gotoApp(page, '/', E2E_GOTO_DOMCONTENTLOADED)
     })
     await expect(page).toHaveURL(/\/login/)
     expect.soft(violations, violations.join('\n')).toEqual([])
@@ -31,7 +29,7 @@ test.describe('Hidratação — rotas públicas', () => {
 
   test('/gerente sem sessão redireciona e hidrata login', async ({ page }) => {
     const violations = await collectHydrationViolationsDuring(page, async () => {
-      await page.goto('/gerente/produtos', GOTO)
+      await gotoApp(page, '/gerente/produtos', E2E_GOTO_DOMCONTENTLOADED)
     })
     await expect(page).toHaveURL(/\/login/)
     expect.soft(violations, violations.join('\n')).toEqual([])
@@ -58,7 +56,7 @@ test.describe('Hidratação — após login (gerente)', () => {
     const violations = await collectHydrationViolationsDuring(
       page,
       async () => {
-        await page.goto('/login', GOTO)
+        await gotoApp(page, '/login', E2E_GOTO_DOMCONTENTLOADED)
         await page.getByPlaceholder('Email').fill(email)
         await page.getByPlaceholder('Senha').fill(password)
         await page.getByRole('button', { name: /^Entrar$/ }).click()
@@ -66,14 +64,14 @@ test.describe('Hidratação — após login (gerente)', () => {
 
         const path = new URL(page.url()).pathname
         if (path.startsWith('/gerente')) {
-          await page.goto('/gerente/estoque', GOTO)
-          await page.goto('/admin/dashboard', GOTO)
+          await gotoApp(page, '/gerente/estoque', E2E_GOTO_DOMCONTENTLOADED)
+          await gotoApp(page, '/admin/dashboard', E2E_GOTO_DOMCONTENTLOADED)
           await expect(page).toHaveURL(/\/admin\/dashboard/)
           return
         }
 
         if (path.startsWith('/caixa')) {
-          await page.goto('/caixa', GOTO)
+          await gotoApp(page, '/caixa', E2E_GOTO_DOMCONTENTLOADED)
           await expect(page).toHaveURL(/\/caixa\/?$/)
         }
       },
