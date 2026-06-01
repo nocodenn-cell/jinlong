@@ -174,23 +174,25 @@ async function ensureUsersAndSeed() {
     ('${IDS.vendaGerente}'::uuid, '${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 70, 0, 70, 'PIX', 'CONCLUIDA')
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, caixa_id = EXCLUDED.caixa_id;
 
-  INSERT INTO public.clientes (id, nome, documento)
-  VALUES ('${IDS.clienteReceber}'::uuid, 'Cliente RLS Fiado', '00000000000')
-  ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome;
+  INSERT INTO public.clientes (id, nome, documento, loja_id)
+  VALUES ('${IDS.clienteReceber}'::uuid, 'Cliente RLS Fiado', '00000000000', '${IDS.loja}'::uuid)
+  ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, loja_id = EXCLUDED.loja_id;
 
-  INSERT INTO public.contas_receber (id, cliente_id, descricao, valor_total, valor_aberto, status)
+  INSERT INTO public.contas_receber (id, cliente_id, descricao, valor_total, valor_aberto, status, loja_id)
   VALUES (
     '${IDS.tituloReceber}'::uuid,
     '${IDS.clienteReceber}'::uuid,
     'Título seed RLS',
     999.99,
     999.99,
-    'ABERTO'
+    'ABERTO',
+    '${IDS.loja}'::uuid
   )
   ON CONFLICT (id) DO UPDATE SET
     valor_aberto = EXCLUDED.valor_aberto,
     valor_total = EXCLUDED.valor_total,
-    status = 'ABERTO';
+    status = 'ABERTO',
+    loja_id = EXCLUDED.loja_id;
 `;
   const sqlOneLine = sql.replace(/\n/g, " ");
   const psqlCmd = process.env.PSQL_CMD?.trim();
