@@ -244,7 +244,7 @@ export const CaixaPdvTopBar = memo(function CaixaPdvTopBar({
         >
           {getOperadorInitials(operadorLabel)}
         </span>
-        {fundoLabel && (
+        {fundoLabel ? (
           <StatusChip
             icon={<Wallet className="h-3.5 w-3.5" />}
             label={`${m.caixa.moeda_prefixo} ${fundoLabel}`}
@@ -253,7 +253,13 @@ export const CaixaPdvTopBar = memo(function CaixaPdvTopBar({
             })}
             classic={classic}
           />
-        )}
+        ) : caixaStatus?.aberto && caixaStatus.blindClosureEnabled ? (
+          <StatusChip
+            icon={<Wallet className="h-3.5 w-3.5" />}
+            label={m.caixa.topbar_fundo_indisponivel}
+            classic={classic}
+          />
+        ) : null}
       </div>
 
       {/* ── Ações ────────────────────────────────────────────── */}
