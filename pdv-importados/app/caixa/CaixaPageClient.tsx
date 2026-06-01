@@ -221,6 +221,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     }, 1500)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (inputErrorTimerRef.current) clearTimeout(inputErrorTimerRef.current)
+    }
+  }, [])
+
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
       if (!somFeedbackAtivo) return
