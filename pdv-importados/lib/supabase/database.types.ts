@@ -2320,6 +2320,64 @@ export type Database = {
           },
         ]
       }
+      vinculos_fornecedor_produto: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          fornecedor_id: string
+          gtin_origem: string | null
+          id: string
+          loja_id: string
+          produto_id: string
+          ref_fornecedor: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          fornecedor_id: string
+          gtin_origem?: string | null
+          id?: string
+          loja_id: string
+          produto_id: string
+          ref_fornecedor: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          fornecedor_id?: string
+          gtin_origem?: string | null
+          id?: string
+          loja_id?: string
+          produto_id?: string
+          ref_fornecedor?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vinculos_fornecedor_produto_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vinculos_fornecedor_produto_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vinculos_fornecedor_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       v_estoque_baixo: {

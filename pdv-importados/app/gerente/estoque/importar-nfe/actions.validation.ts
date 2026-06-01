@@ -1,16 +1,28 @@
 import { z } from 'zod'
 
-export const ImportNfeLinhaSchema = z.object({
-  nome_produto: z.string().min(1),
-  gtin: z.string().nullable(),
-  ref_fornecedor: z.string().min(1),
-  ncm: z.string().nullable(),
-  u_com: z.string().nullable(),
-  q_com: z.number().nonnegative(),
-  v_un_com: z.number().nonnegative(),
-  fator: z.number().positive(),
-  atualizar_custo: z.boolean(),
-})
+export const ImportNfeLinhaSchema = z
+  .object({
+    nome_produto: z.string().min(1),
+    gtin: z.string().nullable(),
+    ref_fornecedor: z.string().min(1),
+    ncm: z.string().nullable(),
+    u_com: z.string().nullable(),
+    q_com: z.number().nonnegative(),
+    v_un_com: z.number().nonnegative(),
+    fator: z.number().positive(),
+    atualizar_custo: z.boolean(),
+    // Resolução decidida na conferência: VINCULAR usa produto_id_destino;
+    // CRIAR cadastra um produto novo a partir dos dados do XML.
+    acao: z.enum(['VINCULAR', 'CRIAR']),
+    produto_id_destino: z.string().uuid().nullable(),
+  })
+  .refine(
+    (l) => (l.acao === 'VINCULAR' ? l.produto_id_destino !== null : l.produto_id_destino === null),
+    {
+      message: 'Item não resolvido: vincule a um produto ou marque para cadastrar como novo.',
+      path: ['produto_id_destino'],
+    },
+  )
 
 const ImportNfeDuplicataSchema = z.object({
   numero: z.string().nullable(),

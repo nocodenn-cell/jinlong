@@ -52,6 +52,12 @@ function mapRpcImportNfe(message: string): string {
   if (message.includes('IMPORT_NFE_REF_OBRIGATORIA')) {
     return 'Item sem código do fornecedor (cProd).'
   }
+  if (message.includes('IMPORT_NFE_DESTINO_INVALIDO')) {
+    return 'Produto escolhido para vínculo não pertence à sua loja.'
+  }
+  if (message.includes('IMPORT_NFE_ITEM_NAO_RESOLVIDO')) {
+    return 'Há item sem resolução (vincular ou cadastrar). Revise a conferência.'
+  }
   if (message.includes('IMPORT_NFE_FATOR_INVALIDO')) {
     return 'Fator de conversão inválido.'
   }
@@ -67,6 +73,9 @@ function mapRpcImportNfe(message: string): string {
   return mensagemErroComSecao('Importação NF-e', message)
 }
 
+/** Estado de reconhecimento de cada item na conferência. */
+export type StatusItemNfe = 'RECONHECIDO_DEPARA' | 'RECONHECIDO_EAN' | 'DESCONHECIDO'
+
 export type LinhaPreviewNfe = {
   nome_produto: string
   gtin: string | null
@@ -75,8 +84,18 @@ export type LinhaPreviewNfe = {
   u_com: string | null
   q_com: number
   v_un_com: number
-  status_produto: 'NOVO' | 'EXISTENTE'
+  status_produto: StatusItemNfe
+  /** Produto do catálogo já reconhecido (De-Para ou GTIN); null se desconhecido. */
   produto_id: string | null
+  /** Nome do produto reconhecido, para exibir na conferência. */
+  produto_nome: string | null
+}
+
+export type ProdutoVinculoOpcao = {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  preco_custo: number | null
 }
 
 export async function previewImportacaoNfe(xml: string): Promise<
@@ -84,6 +103,9 @@ export async function previewImportacaoNfe(xml: string): Promise<
 > {
   const auth = await assertGerenteOuDono()
   if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
 
   let parsed: NfeParsed
   try {
@@ -106,36 +128,55 @@ export async function previewImportacaoNfe(xml: string): Promise<
   ]
   const refs = [...new Set(parsed.itens.map((i) => i.ref_fornecedor))]
 
-  const byGtin = new Map<string, string>()
-  if (gtins.length > 0) {
-    const { data: rows } = await supabase.from('produtos').select('id, codigo_barras').in('codigo_barras', gtins)
+  // (1) De-Para aprendido: [loja + fornecedor + ref] → produto
+  const byDePara = new Map<string, { id: string; nome: string }>()
+  if (fornId && refs.length > 0) {
+    const { data: rows } = await supabase
+      .from('vinculos_fornecedor_produto')
+      .select('ref_fornecedor, produto_id, produtos(id, nome)')
+      .eq('loja_id', lojaId)
+      .eq('fornecedor_id', fornId)
+      .in('ref_fornecedor', refs)
     for (const r of rows ?? []) {
-      const cb = r.codigo_barras as string | null
-      if (cb) byGtin.set(cb, r.id as string)
+      const ref = r.ref_fornecedor as string | null
+      const rel = (r as { produtos: { id: string; nome: string } | { id: string; nome: string }[] | null }).produtos
+      const prod = Array.isArray(rel) ? rel[0] : rel
+      if (ref && prod) byDePara.set(ref, { id: prod.id, nome: prod.nome })
     }
   }
 
-  const byRef = new Map<string, string>()
-  if (fornId && refs.length > 0) {
+  // (2) Código de barras (cEAN) na loja
+  const byGtin = new Map<string, { id: string; nome: string }>()
+  if (gtins.length > 0) {
     const { data: rows } = await supabase
       .from('produtos')
-      .select('id, referencia_fornecedor')
-      .eq('fornecedor_id', fornId)
-      .in('referencia_fornecedor', refs)
+      .select('id, nome, codigo_barras')
+      .eq('loja_id', lojaId)
+      .in('codigo_barras', gtins)
     for (const r of rows ?? []) {
-      const ref = r.referencia_fornecedor as string | null
-      if (ref) byRef.set(ref, r.id as string)
+      const cb = r.codigo_barras as string | null
+      if (cb) byGtin.set(cb, { id: r.id as string, nome: r.nome as string })
     }
   }
 
   const linhas: LinhaPreviewNfe[] = parsed.itens.map((item) => {
+    const dePara = byDePara.get(item.ref_fornecedor)
+    const ean = item.gtin && item.gtin.length >= 8 ? byGtin.get(item.gtin) : undefined
+
+    let status: StatusItemNfe = 'DESCONHECIDO'
     let produtoId: string | null = null
-    if (item.gtin && item.gtin.length >= 8) {
-      produtoId = byGtin.get(item.gtin) ?? null
+    let produtoNome: string | null = null
+
+    if (dePara) {
+      status = 'RECONHECIDO_DEPARA'
+      produtoId = dePara.id
+      produtoNome = dePara.nome
+    } else if (ean) {
+      status = 'RECONHECIDO_EAN'
+      produtoId = ean.id
+      produtoNome = ean.nome
     }
-    if (!produtoId && fornId) {
-      produtoId = byRef.get(item.ref_fornecedor) ?? null
-    }
+
     return {
       nome_produto: item.nome_produto,
       gtin: item.gtin,
@@ -144,12 +185,51 @@ export async function previewImportacaoNfe(xml: string): Promise<
       u_com: item.u_com,
       q_com: item.q_com,
       v_un_com: item.v_un_com,
-      status_produto: produtoId ? 'EXISTENTE' : 'NOVO',
+      status_produto: status,
       produto_id: produtoId,
+      produto_nome: produtoNome,
     }
   })
 
   return { success: true, data: { parsed, linhas } }
+}
+
+/** Busca produtos do catálogo da loja para amarrar o De-Para de um item desconhecido. */
+export async function buscarProdutosParaVinculo(
+  termo: string,
+): Promise<ActionResult<ProdutoVinculoOpcao[]>> {
+  const auth = await assertGerenteOuDono()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  // Sanitiza para o filtro .or() do PostgREST (vírgula/percent são separadores/curinga).
+  const t = termo.replace(/[%,()]/g, ' ').trim()
+  if (t.length < 2) return { success: true, data: [] }
+
+  const supabase = await createClient()
+  const padrao = `%${t}%`
+  const { data, error } = await supabase
+    .from('produtos')
+    .select('id, nome, codigo_barras, preco_custo')
+    .eq('loja_id', lojaId)
+    .eq('ativo', true)
+    .or(`nome.ilike.${padrao},codigo_barras.ilike.${padrao},codigo_interno.ilike.${padrao}`)
+    .order('nome', { ascending: true })
+    .limit(10)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
+  }
+
+  const rows = (data ?? []).map((r) => ({
+    id: r.id as string,
+    nome: r.nome as string,
+    codigo_barras: (r.codigo_barras as string | null) ?? null,
+    preco_custo: r.preco_custo != null ? Number(r.preco_custo) : null,
+  }))
+  return { success: true, data: rows }
 }
 
 export async function executarImportacaoNfe(input: unknown): Promise<ActionResult<{ itens_processados: number }>> {
@@ -179,6 +259,8 @@ export async function executarImportacaoNfe(input: unknown): Promise<ActionResul
     v_un_com: linha.v_un_com,
     fator: linha.fator,
     atualizar_custo: linha.atualizar_custo,
+    acao: linha.acao,
+    produto_id_destino: linha.produto_id_destino,
   }))
 
   const { data, error } = await supabase.rpc('importar_nfe_transacao', {
