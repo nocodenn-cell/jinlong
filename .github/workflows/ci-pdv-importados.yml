@@ -17,6 +17,7 @@
 #   PLAYWRIGHT_E2E_PRODUTO_CODIGO (opcional — caixa-venda.spec)
 #   PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY (service_role do projeto de teste — sync-fluxo-gerente no pipeline crítico)
 #   SYNC_ENDPOINT, SYNC_KEY (Edge sync-outbox — mesmo par do backend)
+#   FISCAL_WORKER_KEY (obrigatório com AUTO_ENQUEUE_FISCAL_ON_SALE=true no pipeline crítico)
 # Workflow só Playwright (sem lint/build): .github/workflows/e2e-playwright-only.yml
 name: CI pdv-importados
 
@@ -108,6 +109,7 @@ jobs:
           SR_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
           SYNC_EP: ${{ secrets.SYNC_ENDPOINT }}
           SYNC_K: ${{ secrets.SYNC_KEY }}
+          FISCAL_KEY: ${{ secrets.FISCAL_WORKER_KEY }}
         run: |
           set -euo pipefail
           missing=()
@@ -120,14 +122,20 @@ jobs:
           [ -z "${SR_KEY:-}" ] && missing+=(PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY)
           [ -z "${SYNC_EP:-}" ] && missing+=(SYNC_ENDPOINT)
           [ -z "${SYNC_K:-}" ] && missing+=(SYNC_KEY)
+          [ -z "${FISCAL_KEY:-}" ] && missing+=(FISCAL_WORKER_KEY)
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::error::E2E crítico obrigatório: defina os secrets ${missing[*]} (ver cabeçalho deste workflow e docs/E2E.md)."
             exit 1
           fi
+          FISCAL_EP="${PW_URL%/}/functions/v1/fiscal-worker"
           {
             printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$PW_URL"
             printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$PW_ANON"
             printf '%s\n' 'USE_UNIFIED_SALES_FLOW=true'
+            printf '%s\n' 'STRICT_MANAGER_DISCOUNT_AUTH=true'
+            printf '%s\n' 'AUTO_ENQUEUE_FISCAL_ON_SALE=true'
+            printf 'FISCAL_WORKER_ENDPOINT=%s\n' "$FISCAL_EP"
+            printf 'FISCAL_WORKER_KEY=%s\n' "$FISCAL_KEY"
           } > pdv-importados/.env.local
           {
             printf 'SYNC_ENDPOINT=%s\n' "$SYNC_EP"
@@ -150,6 +158,8 @@ jobs:
           SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
           SYNC_KEY: ${{ secrets.SYNC_KEY }}
           USE_UNIFIED_SALES_FLOW: 'true'
+          STRICT_MANAGER_DISCOUNT_AUTH: 'true'
+          AUTO_ENQUEUE_FISCAL_ON_SALE: 'true'
         run: npm run test:e2e:critical -w pdv-importados
 
   deploy:
