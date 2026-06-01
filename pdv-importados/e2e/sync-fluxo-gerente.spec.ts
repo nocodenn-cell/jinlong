@@ -7,9 +7,9 @@ import {
   assertSyncFlowEnvInCi,
   hasSyncFlowEnv,
 } from './helpers/env'
+import { loginGerente } from './helpers/login'
+import { gotoApp } from './helpers/url'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-
-const LOGIN_PATH = '/login'
 
 function hmacSha256Hex(secret: string, content: string): string {
   return crypto.createHmac('sha256', secret).update(content).digest('hex')
@@ -146,13 +146,9 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     const { produtoId, preco } = await garantirProdutoEEstoqueParaTeste()
     const { vendaId } = await enviarVendaViaSync({ produtoId, preco })
 
-    await page.goto(LOGIN_PATH)
-    await page.getByPlaceholder('Email').fill(process.env.PLAYWRIGHT_TEST_EMAIL!)
-    await page.getByPlaceholder('Senha').fill(process.env.PLAYWRIGHT_TEST_PASSWORD!)
-    await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await page.waitForURL(/\/(caixa|gerente)/, { timeout: 20_000 })
+    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
 
-    await page.goto('/gerente/vendas')
+    await gotoApp(page, '/gerente/vendas')
     await expect(page.getByRole('heading', { name: /vendas/i })).toBeVisible()
 
     const vendaPrefix = `${vendaId.slice(0, 8)}…`
@@ -201,13 +197,9 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     })
     expect(errRpc?.message).toBeFalsy()
 
-    await page.goto(LOGIN_PATH)
-    await page.getByPlaceholder('Email').fill(process.env.PLAYWRIGHT_TEST_EMAIL!)
-    await page.getByPlaceholder('Senha').fill(process.env.PLAYWRIGHT_TEST_PASSWORD!)
-    await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await page.waitForURL(/\/(caixa|gerente)/, { timeout: 20_000 })
+    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
 
-    await page.goto('/gerente/financeiro')
+    await gotoApp(page, '/gerente/financeiro')
     await expect(page.getByRole('heading', { name: /financeiro/i })).toBeVisible()
 
     const vendaPrefix = `${vendaId.slice(0, 8)}...`

@@ -3,13 +3,11 @@ import {
   assertSupabasePublicEnvInCi,
   isCi,
 } from './helpers/env'
-
-/** Alinhado a `app/login/page.tsx` — sem prefixo de locale. */
-const LOGIN_PATH = '/login'
+import { gotoApp, LOGIN_PATH } from './helpers/url'
 
 test.describe('Página de login — UI', () => {
   test('exibe formulário', async ({ page }) => {
-    await page.goto(LOGIN_PATH)
+    await gotoApp(page, LOGIN_PATH)
     await expect(page.getByRole('heading', { name: 'Jīn Lóng' })).toBeVisible()
     await expect(page.getByPlaceholder('Email')).toBeVisible()
     await expect(page.getByPlaceholder('Senha')).toBeVisible()
@@ -38,7 +36,7 @@ test.describe('Página de login — autenticação Supabase', () => {
       return
     }
 
-    await page.goto(LOGIN_PATH)
+    await gotoApp(page, LOGIN_PATH)
     await page.getByPlaceholder('Email').fill('invalido@teste.com')
     await page.getByPlaceholder('Senha').fill('errada123')
     await page.getByRole('button', { name: /^Entrar$/ }).click()
@@ -48,7 +46,7 @@ test.describe('Página de login — autenticação Supabase', () => {
 
 test.describe('Proteção de rota', () => {
   test('rota gerente sem sessão redireciona para login', async ({ page }) => {
-    await page.goto('/gerente/produtos')
+    await gotoApp(page, '/gerente/produtos')
     await expect(page).toHaveURL(/\/login/)
   })
 })
