@@ -224,24 +224,31 @@ export async function runWebCaixaScanProcess(
       return stale4
     }
 
-    setCodigo('')
-    if (avisoEstoqueMsg) {
-      setCaixaMensagem(avisoEstoqueMsg, { kind: 'warning' })
-    } else {
-      setCaixaMensagem(m.caixa.msg_item_adicionado_toast, { kind: 'success' })
-    }
-    const ackAt = Date.now()
-    deps.telemetry?.emitTelemetry(
-      normalizeHumanTelemetryPayload({
-        ...telBase(ctx),
-        event: 'scan_to_visual_ack_ms',
-        at: ackAt,
-        durationMs: Math.max(0, ackAt - ctx.scan.event.receivedAt),
-      }),
-    )
-    tocarFeedback('ok')
+    // Item comprometido no carrinho — limpa o guard aqui para que o finally
+    // não reverta. O bloco de UI abaixo tem try/catch próprio: falhas em
+    // toast/telemetria/áudio retornam ok:true pois o item já foi adicionado.
     linhaPendenteRollback = null
-    deps.onItemAdded?.({ codigo: trimmed, itemId: novaLinhaId, produtoId: p.id })
+    try {
+      setCodigo('')
+      if (avisoEstoqueMsg) {
+        setCaixaMensagem(avisoEstoqueMsg, { kind: 'warning' })
+      } else {
+        setCaixaMensagem(m.caixa.msg_item_adicionado_toast, { kind: 'success' })
+      }
+      const ackAt = Date.now()
+      deps.telemetry?.emitTelemetry(
+        normalizeHumanTelemetryPayload({
+          ...telBase(ctx),
+          event: 'scan_to_visual_ack_ms',
+          at: ackAt,
+          durationMs: Math.max(0, ackAt - ctx.scan.event.receivedAt),
+        }),
+      )
+      tocarFeedback('ok')
+      deps.onItemAdded?.({ codigo: trimmed, itemId: novaLinhaId, produtoId: p.id })
+    } catch {
+      // Feedback secundário falhou mas o item já está no carrinho — ok.
+    }
     return { ok: true }
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {

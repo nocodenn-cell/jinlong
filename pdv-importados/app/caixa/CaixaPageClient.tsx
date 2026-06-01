@@ -1001,7 +1001,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                     : "app-btn-accent",
                 )}
                 onClick={handleNovoCupom}
-                disabled={carregandoRegras}
+                disabled={carregandoRegras || finalizando}
               >
                 {m.caixa.novo_cupom}
               </button>
