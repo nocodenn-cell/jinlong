@@ -8,8 +8,9 @@ export const maxDuration = 30
 /**
  * Conta produtos ativos com estoque abaixo do mínimo.
  * Requer sessão autenticada com perfil GERENTE, DONO ou ADMIN.
- * Comparação coluna-a-coluna feita no cliente JS (evita migração de função no banco).
- * Para catálogos maiores que ~5 000 produtos, adicionar view indexada no banco.
+ * Usa a view v_estoque_baixo (p.ativo = true AND e.quantidade_atual <= e.estoque_minimo),
+ * mesma definição da tela de relatórios. A comparação é feita no banco (RLS por loja via
+ * security_invoker), evitando trazer o catálogo inteiro para o cliente.
  */
 export async function GET() {
   try {
@@ -33,15 +34,12 @@ export async function GET() {
     }
 
     // ── Lógica de negócio ─────────────────────────────────────────
+    // v_estoque_baixo já aplica ativo = true e quantidade_atual <= estoque_minimo.
     const { data } = await supabase
-      .from('produtos')
-      .select('quantidade_atual, estoque_minimo')
-      .eq('ativo', true)
-      .gt('estoque_minimo', 0)
+      .from('v_estoque_baixo')
+      .select('id')
 
-    const count = (data ?? []).filter(
-      (p) => Number(p.quantidade_atual) < Number(p.estoque_minimo),
-    ).length
+    const count = (data ?? []).length
 
     return NextResponse.json({ count })
   } catch {
