@@ -95,9 +95,11 @@ async function ensureUsersAndSeed() {
     authByPerfil[u.perfil] = userId;
   }
 
+  // SQL puro (sem bloco `DO $$ ... $$`): a string é passada ao psql via `-c "..."`
+  // dentro de aspas duplas, e no shell do runner Linux (/bin/sh) `$$` expandiria
+  // para o PID do processo (gerando `syntax error at or near "<pid>"`). Como o seed
+  // não usa nenhum recurso plpgsql, rodamos as instruções como script SQL simples.
   const sql = `
-DO $$
-BEGIN
   INSERT INTO public.lojas (id, nome, codigo, ativo)
   VALUES ('${IDS.loja}'::uuid, 'Loja Teste RLS', 'LOJA-RLS', true)
   ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, codigo = EXCLUDED.codigo, ativo = true;
@@ -189,7 +191,6 @@ BEGIN
     valor_aberto = EXCLUDED.valor_aberto,
     valor_total = EXCLUDED.valor_total,
     status = 'ABERTO';
-END$$;
 `;
   const sqlOneLine = sql.replace(/\n/g, " ");
   const psqlCmd = process.env.PSQL_CMD?.trim();
