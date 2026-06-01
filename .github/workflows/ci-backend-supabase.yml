@@ -181,8 +181,8 @@ jobs:
 
       - name: Type-check Edge Functions (sync-outbox + validar-gerente + fiscal-worker)
         run: |
-          deno check backend/supabase/functions/sync-outbox/index.ts
-          deno check backend/supabase/functions/validar-gerente/index.ts
+          deno check --config backend/supabase/functions/sync-outbox/deno.json backend/supabase/functions/sync-outbox/index.ts
+          deno check --config backend/supabase/functions/validar-gerente/deno.json backend/supabase/functions/validar-gerente/index.ts
           deno check --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
 
   outbox-contract:
