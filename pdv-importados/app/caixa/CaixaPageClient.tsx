@@ -172,16 +172,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
     limparCarrinho,
   } = useCarrinhoStore()
 
-  const economiaPrecoAtacadoAuto = useMemo(() => {
-    return itens.reduce((acc, it) => {
-      if (it.resultado?.tipoPreco !== "ATACADO") return acc
-      const o = it.resultado.precoOriginal
-      const u = it.resultado.precoUnitario
-      if (!Number.isFinite(o) || !Number.isFinite(u) || o <= u) return acc
-      return acc + (o - u) * it.quantidade
-    }, 0)
-  }, [itens])
-
   const descontoGerenteAplicado = aplicarDescontoGerenteSobreTotal({
     totalLiquido,
     percentual: descontoGerentePercentual,
