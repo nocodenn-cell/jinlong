@@ -13,6 +13,12 @@ import type { CaixaToastKind } from '@/app/caixa/hooks/useCaixaMensagens'
 import { useCarrinhoStore } from '@/stores/carrinhoStore'
 import { raceWithScanAbort } from './webCaixaScanAbort'
 
+type ScanRollbackGuard = {
+  itemId: string
+  quantidadeAnterior: number
+  removeLinhaCriada: boolean
+}
+
 type SetCaixaMensagemFn = (
   text: string | null,
   options?: { kind?: CaixaToastKind; toast?: boolean },
@@ -40,6 +46,25 @@ function staleCupomIfAny(ctx: ScanProcessContext, deps: WebCaixaScanDeps): ScanP
     return { ok: false, reason: 'stale_cupom' }
   }
   return null
+}
+
+function createRollbackGuard(produtoId: string, linhaCriadaId: string): ScanRollbackGuard {
+  const itemAtual = useCarrinhoStore.getState().itens.find((item) => item.produtoId === produtoId)
+  return {
+    itemId: itemAtual?.id ?? linhaCriadaId,
+    quantidadeAnterior: itemAtual?.quantidade ?? 0,
+    removeLinhaCriada: itemAtual == null,
+  }
+}
+
+function rollbackScanCartMutation(guard: ScanRollbackGuard | null): void {
+  if (!guard) return
+  const cart = useCarrinhoStore.getState()
+  if (guard.removeLinhaCriada) {
+    cart.removerItem(guard.itemId)
+    return
+  }
+  cart.atualizarQuantidade(guard.itemId, guard.quantidadeAnterior)
 }
 
 export type WebCaixaScanDeps = {
@@ -70,7 +95,7 @@ export async function runWebCaixaScanProcess(
   const { m, setCaixaMensagem, setCodigo, tocarFeedback, focarCampoBusca } = deps
   const signal = ctx.signal
   /** Linha criada neste scan; rollback até commit explícito (P0 stale_cupom / abort). */
-  let linhaPendenteRollback: string | null = null
+  let rollbackPendente: ScanRollbackGuard | null = null
   const trimmed = ctx.scan.event.codigo.trim().replace(/[^\x20-\x7E]/g, '')
   if (!trimmed) {
     return { ok: false, reason: 'validation', message: 'Código vazio.' }
@@ -181,10 +206,10 @@ export async function runWebCaixaScanProcess(
      */
     const novaLinhaId = `${p.id}-${Date.now()}`
     const abandonarLinhaDoScan = () => {
-      if (!linhaPendenteRollback) return
-      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
-      linhaPendenteRollback = null
+      rollbackScanCartMutation(rollbackPendente)
+      rollbackPendente = null
     }
+    rollbackPendente = createRollbackGuard(p.id, novaLinhaId)
 
     // Preço já é autoritativo (calculado na ação unificada)
     deps.adicionarItem({
@@ -211,7 +236,6 @@ export async function runWebCaixaScanProcess(
         precoVarejoReferencia: p.preco_varejo,
       },
     })
-    linhaPendenteRollback = novaLinhaId
 
     if (signal?.aborted) {
       abandonarLinhaDoScan()
@@ -227,7 +251,7 @@ export async function runWebCaixaScanProcess(
     // Item comprometido no carrinho — limpa o guard aqui para que o finally
     // não reverta. O bloco de UI abaixo tem try/catch próprio: falhas em
     // toast/telemetria/áudio retornam ok:true pois o item já foi adicionado.
-    linhaPendenteRollback = null
+    rollbackPendente = null
     try {
       setCodigo('')
       if (avisoEstoqueMsg) {
@@ -258,10 +282,8 @@ export async function runWebCaixaScanProcess(
     tocarFeedback('erro')
     return { ok: false, reason: 'unknown', message: m.caixa.falha_busca }
   } finally {
-    if (linhaPendenteRollback != null && linhaPendenteRollback !== '') {
-      useCarrinhoStore.getState().removerItem(linhaPendenteRollback)
-      linhaPendenteRollback = null
-    }
+    rollbackScanCartMutation(rollbackPendente)
+    rollbackPendente = null
     focarCampoBusca()
   }
 }
