@@ -8,6 +8,13 @@ import { defineConfig, devices } from '@playwright/test'
 const e2ePort = process.env.PLAYWRIGHT_TEST_PORT ?? '3000'
 const defaultBase = `http://localhost:${e2ePort}`
 
+/**
+ * `||` + trim em vez de `??`: no CI o secret `PLAYWRIGHT_BASE_URL` ausente é
+ * injetado como string vazia (`''`), que `??` NÃO trata, deixando `baseURL`
+ * vazia e fazendo `page.goto('/login')` falhar com "invalid URL".
+ */
+const baseURL = process.env.PLAYWRIGHT_BASE_URL?.trim() || defaultBase
+
 const isCi = process.env.CI === 'true'
 
 /** No CI, sobe Next localmente quando `PLAYWRIGHT_E2E_WITH_DEV=1` (ver workflow opcional). */
@@ -29,7 +36,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? defaultBase,
+    baseURL,
     trace: 'on-first-retry',
   },
   projects: [
