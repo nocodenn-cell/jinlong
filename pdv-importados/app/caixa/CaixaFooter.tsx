@@ -33,8 +33,6 @@ type Props = {
   maxDescontoGerentePercentual: number
   totalBruto: number
   totalDesconto: number
-  /** Parcela do desconto total explicada por preço atacado automático (varejo − atacado). */
-  economiaPrecoAtacadoAuto: number
   valorDescontoGerente: number
   totalLiquidoComGerente: number
   moedaPrefixo: string

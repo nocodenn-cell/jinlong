@@ -1128,7 +1128,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil }: 
             maxDescontoGerentePercentual={maxDescontoGerentePercentual}
             totalBruto={totalBruto}
             totalDesconto={totalDesconto}
-            economiaPrecoAtacadoAuto={economiaPrecoAtacadoAuto}
             valorDescontoGerente={valorDescontoGerente}
             totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}

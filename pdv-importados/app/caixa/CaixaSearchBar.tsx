@@ -59,6 +59,8 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
   // Estado local isolado: re-renderiza apenas este componente a cada bipe/tecla,
   // nunca o CaixaPageClient pai (carrinho + totais permanecem intocados).
   const [codigoLocal, setCodigoLocal] = useState("")
+  const codigoLocalRef = useRef(codigoLocal)
+  codigoLocalRef.current = codigoLocal
   const [atalhoExpandido, setAtalhoExpandido] = useState(false)
   const compact = codigoLocal.trim().length > 0
 
@@ -84,9 +86,10 @@ export const CaixaSearchBar = forwardRef<CaixaSearchBarHandle, Props>(function C
     () => ({
       focus: () => innerRef.current?.focus(),
       clear: () => setCodigoLocal(""),
-      getValue: () => codigoLocal,
+      getValue: () => codigoLocalRef.current,
     }),
-    [codigoLocal],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   )
 
   return (

@@ -43,12 +43,13 @@ CREATE POLICY "gerentes_leem_metricas"
     )
   );
 
--- Inserção: bloqueada direto pelo cliente (server action usa service-role).
--- Política explícita de negação para qualquer role que não seja service_role.
-CREATE POLICY "apenas_service_role_insere"
+-- Inserção: qualquer operador autenticado pode inserir sua própria linha.
+-- O route /api/caixa/telemetria-operacional valida a sessão via getUser()
+-- antes de inserir e preenche operador_id = auth.uid().
+CREATE POLICY "operadores_inserem_metricas"
   ON operational_metrics
   FOR INSERT
-  WITH CHECK (auth.role() = 'service_role');
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- View agregada para o dashboard — evita scan completo em toda query do /gerente/observabilidade
 CREATE OR REPLACE VIEW vw_opmetrics_hoje AS

@@ -64,7 +64,6 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const { event, duration_ms, caixa_id, metadata } = parsed.data
 
-  // Usa service_role implícito do createClient (server) para bypassar RLS de INSERT
   const { error } = await supabase.from('operational_metrics').insert({
     event,
     operador_id: user.id,
