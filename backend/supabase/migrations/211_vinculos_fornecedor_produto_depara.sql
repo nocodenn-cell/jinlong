@@ -410,5 +410,8 @@ REVOKE ALL ON FUNCTION public.importar_nfe_transacao(text, text, text, text, uui
 GRANT EXECUTE ON FUNCTION public.importar_nfe_transacao(text, text, text, text, uuid, jsonb, boolean, jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.importar_nfe_transacao(text, text, text, text, uuid, jsonb, boolean, jsonb) TO service_role;
 
-COMMENT ON FUNCTION public.importar_nfe_transacao IS
+-- Assinatura explícita: coexistem duas sobrecargas (a de 7 args criada na 075 e
+-- esta de 8 args criada na 104). Sem a assinatura, o COMMENT é ambíguo e quebra o
+-- build do zero com `function name "public.importar_nfe_transacao" is not unique`.
+COMMENT ON FUNCTION public.importar_nfe_transacao(text, text, text, text, uuid, jsonb, boolean, jsonb) IS
   'Importação atômica de NF-e de compra: idempotente por chave, honra o De-Para (vinculos_fornecedor_produto), aprende novos vínculos, enriquece NCM/GTIN no catálogo (sem sobrescrever) e registra ENTRADA_NFE no kardex.';
