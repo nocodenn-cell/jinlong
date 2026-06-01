@@ -56,6 +56,16 @@ async function assertRpcErrorContains(client, name, args, substring) {
   }
 }
 
+// Para RPCs privilegiadas (service_role-only): valida que a chamada direta via
+// JWT (authenticated) e negada com `permission denied` — propriedade de seguranca.
+async function assertRpcDenied(client, name, args = {}) {
+  const { error } = await client.rpc(name, args);
+  const msg = error?.message ?? "";
+  if (!/permission denied/i.test(msg)) {
+    throw new Error(`Esperava 'permission denied' em ${name}; obtido: ${msg || "(sem erro)"}`);
+  }
+}
+
 function monthDateRange() {
   const d = new Date();
   const y = d.getFullYear();
@@ -319,8 +329,11 @@ async function main() {
     await assertRpcOk(operador, "calcular_valor_sistema_dinheiro_caixa", { p_caixa_id: IDS.caixaOperador });
   });
 
-  await run("RPC finalizar_venda_transacional_canonica_v2 (idempotente CONCLUIDA)", async () => {
-    await assertRpcOk(operador, "finalizar_venda_transacional_canonica_v2", {
+  // Migration 123 revogou a v2 de `authenticated` para fechar o bypass de
+  // revalidacao de preco (clientes JWT devem passar pela v3). Validamos que a
+  // chamada direta a v2 e negada — a defesa em camadas que a auditoria pediu.
+  await run("RPC finalizar_venda_transacional_canonica_v2 negada a authenticated (bypass fechado)", async () => {
+    await assertRpcDenied(operador, "finalizar_venda_transacional_canonica_v2", {
       p_venda_id: IDS.vendaOperador,
       p_caixa_id: IDS.caixaOperador,
     });
@@ -339,10 +352,13 @@ async function main() {
   });
 
   await run("RPC fiscal_enfileirar_documento_venda", async () => {
+    // Passa p_loja_id para desambiguar entre as sobrecargas de 3 e 4 args
+    // (sem isso o PostgREST nao escolhe a melhor candidata).
     await assertRpcOk(operador, "fiscal_enfileirar_documento_venda", {
       p_venda_id: IDS.vendaOperador,
       p_tipo_doc: "NFC_E_STUB",
       p_payload: {},
+      p_loja_id: IDS.loja,
     });
   });
 
@@ -381,10 +397,12 @@ async function main() {
     }, "NAO_ENCONTRADA");
   });
 
-  await run("RPC aprovar_movimentacao (uuid inexistente)", async () => {
-    await assertRpcErrorContains(gerente, "aprovar_movimentacao", {
+  // aprovar_movimentacao e service_role-only: o server action caixaMovimentacoes.impl.ts
+  // a chama via admin client. Chamada direta por authenticated deve ser negada.
+  await run("RPC aprovar_movimentacao negada a authenticated (service_role-only)", async () => {
+    await assertRpcDenied(gerente, "aprovar_movimentacao", {
       p_movimentacao_id: randomUUID(),
-    }, "NAO_ENCONTRADA");
+    });
   });
 
   await run("RPC estornar_movimentacao (origem inexistente)", async () => {
@@ -435,34 +453,34 @@ async function main() {
     }, "LIQUIDACAO_PERFIL");
   });
 
+  // ajustar_estoque_manual e service_role-only: o server action gerente/estoque/actions.ts
+  // a chama via admin client. Nenhuma role JWT (OPERADOR/ADMIN/GERENTE) pode chama-la direto.
   await run("RPC ajustar_estoque_manual negado a OPERADOR", async () => {
-    await assertRpcErrorContains(operador, "ajustar_estoque_manual", {
+    await assertRpcDenied(operador, "ajustar_estoque_manual", {
       p_produto_id: IDS.produto,
       p_loja_id: IDS.loja,
       p_quantidade_atual: 100,
       p_estoque_minimo: 5,
       p_motivo_codigo: "ACERTO_INVENTARIO",
-    }, "PERFIL");
+    });
   });
 
   await run("RPC ajustar_estoque_manual negado a ADMIN", async () => {
-    await assertRpcErrorContains(admin, "ajustar_estoque_manual", {
+    await assertRpcDenied(admin, "ajustar_estoque_manual", {
       p_produto_id: IDS.produto,
       p_loja_id: IDS.loja,
       p_quantidade_atual: 100,
       p_estoque_minimo: 5,
       p_motivo_codigo: "ACERTO_INVENTARIO",
-    }, "PERFIL");
+    });
   });
 
-  await run("RPC ajustar_estoque_manual (GERENTE, sem delta)", async () => {
-    const { data, error } = await gerente.from("estoque").select("quantidade_atual,estoque_minimo").eq("loja_id", IDS.loja).eq("produto_id", IDS.produto).single();
-    if (error) throw new Error(error.message);
-    await assertRpcOk(gerente, "ajustar_estoque_manual", {
+  await run("RPC ajustar_estoque_manual negado a GERENTE direto (usa service_role)", async () => {
+    await assertRpcDenied(gerente, "ajustar_estoque_manual", {
       p_produto_id: IDS.produto,
       p_loja_id: IDS.loja,
-      p_quantidade_atual: data.quantidade_atual,
-      p_estoque_minimo: data.estoque_minimo,
+      p_quantidade_atual: 100,
+      p_estoque_minimo: 5,
       p_motivo_codigo: "ACERTO_INVENTARIO",
     });
   });
@@ -566,29 +584,21 @@ async function main() {
   await run("RPC fiscal_reprocessar_documento (documento inexistente)", async () => {
     await assertRpcErrorContains(gerente, "fiscal_reprocessar_documento", {
       p_documento_id: randomUUID(),
-    }, "FISCAL_REPROCESSO_STATUS_INVALIDO");
+    }, "FISCAL_DOCUMENTO_NAO_ENCONTRADO");
   });
 
-  await run("RPC registrar_venda_com_itens", async () => {
-    const vid = randomUUID();
-    const iid = randomUUID();
-    await assertRpcOk(operador, "registrar_venda_com_itens", {
-      p_venda_id: vid,
+  // registrar_venda_com_itens nao e exposta a authenticated (revogada no hardening
+  // 115; o fluxo de venda atual usa a v3). Chamada direta por JWT deve ser negada.
+  await run("RPC registrar_venda_com_itens negada a authenticated", async () => {
+    await assertRpcDenied(operador, "registrar_venda_com_itens", {
+      p_venda_id: randomUUID(),
       p_caixa_id: IDS.caixaOperador,
       p_operador_id: authByPerfil.OPERADOR,
       p_forma_pagamento: "PIX",
       p_total_bruto: 10,
       p_total_desconto: 0,
       p_total_liquido: 10,
-      p_itens: [
-        {
-          item_id: iid,
-          produto_id: IDS.produto,
-          quantidade: 1,
-          preco_original: 10,
-          preco_unitario: 10,
-        },
-      ],
+      p_itens: [],
     });
   });
 
