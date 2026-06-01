@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(req: Request) {
   const rl = rateLimit(req, { limit: 120, windowMs: 60_000 })
-  if (!rl.ok) return NextResponse.json({ count: 0 }, { status: 429 })
+  if (!rl.ok) return NextResponse.json({ count: null, rateLimited: true }, { status: 429 })
 
   try {
     const supabase = await createClient()

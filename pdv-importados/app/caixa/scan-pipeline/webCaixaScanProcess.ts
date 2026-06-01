@@ -262,6 +262,8 @@ export async function runWebCaixaScanProcess(
         )
         if (!pricingR.ok) {
           abandonarLinhaDoScan()
+          setCaixaMensagem(m.caixa.falha_busca, { kind: 'error' })
+          tocarFeedback('erro')
           return { ok: false, reason: 'aborted' }
         }
         deps.telemetry?.emitTelemetry(
