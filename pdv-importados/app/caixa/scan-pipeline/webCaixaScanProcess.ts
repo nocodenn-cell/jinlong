@@ -286,6 +286,9 @@ export async function runWebCaixaScanProcess(
       return stale4
     }
 
+    // Limpa o guard antes do bloco de sucesso: se toast/telemetria/áudio
+    // lançarem, o finally não reverte um item que já foi confirmado.
+    linhaPendenteRollback = null
     setCodigo('')
     if (avisoEstoqueMsg) {
       setCaixaMensagem(avisoEstoqueMsg, { kind: 'warning' })
@@ -302,7 +305,6 @@ export async function runWebCaixaScanProcess(
       }),
     )
     tocarFeedback('ok')
-    linhaPendenteRollback = null
     return { ok: true }
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {

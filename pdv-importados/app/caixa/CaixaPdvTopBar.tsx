@@ -298,7 +298,7 @@ export const CaixaPdvTopBar = memo(function CaixaPdvTopBar({
           <button
             type="button"
             onClick={onToggleSom}
-            title={somAtivo ? "Som: ligado" : "Som: desligado"}
+            title={somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
             className={cn(
               "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
               classic
