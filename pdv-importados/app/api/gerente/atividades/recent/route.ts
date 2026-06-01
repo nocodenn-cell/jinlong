@@ -47,7 +47,7 @@ export async function GET() {
       supabase
         .from('vendas')
         .select('id, total_liquido, created_at')
-        .eq('status', 'FINALIZADA')
+        .eq('status', 'CONCLUIDA')
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(20),
