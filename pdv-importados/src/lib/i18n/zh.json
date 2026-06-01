@@ -761,7 +761,7 @@
     "rail_turno_vendas": "销售：{{n}}",
     "rail_turno_total": "合计：",
     "rail_turno_caixa_fechado": "收银台已关",
-    "pdv_sistema_catalogo_trigger": "系统 / 目录",
+    "pdv_sistema_catalogo_trigger": "班次摘要",
     "aria_pd_sistema_catalogo": "快捷键、Supabase 目录与班次开盘信息",
     "aria_pd_sistema_catalogo_fechar": "关闭面板",
     "pdv_sistema_turno_resumo": "开盘：{{data}} · 备用金：{{valor}}",

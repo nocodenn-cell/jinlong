@@ -8,7 +8,7 @@ import type { ThermalStatus } from "@/hooks/useThermalPrinter"
 import LanguageToggle from "@/app/caixa/idioma/LanguageToggle"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
-import { Menu, SquareTerminal } from "lucide-react"
+import { SquareTerminal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type CaixaPdvLayoutVariant = "default" | "classic"
@@ -84,20 +84,6 @@ export function CaixaPdvTopBar({
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "shrink-0 h-9 w-9",
-            classic ? "text-primary-foreground hover:bg-white/15 hover:text-primary-foreground" : "text-jl-fg-1",
-          )}
-          aria-label={m.caixa.topbar_menu_aria}
-          title={m.caixa.topbar_menu_aria}
-          disabled
-        >
-          <Menu className="h-5 w-5" aria-hidden />
-        </Button>
         <span
           className={cn(
             "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",

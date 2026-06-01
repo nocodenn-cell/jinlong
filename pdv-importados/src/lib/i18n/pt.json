@@ -761,7 +761,7 @@
     "rail_turno_vendas": "Vendas: {{n}}",
     "rail_turno_total": "Total:",
     "rail_turno_caixa_fechado": "Caixa fechado",
-    "pdv_sistema_catalogo_trigger": "Sistema / Catálogo",
+    "pdv_sistema_catalogo_trigger": "Resumo do Turno",
     "aria_pd_sistema_catalogo": "Atalhos, catálogo Supabase e dados da abertura do turno",
     "aria_pd_sistema_catalogo_fechar": "Fechar painel",
     "pdv_sistema_turno_resumo": "Abertura: {{data}} · Inicial: {{valor}}",

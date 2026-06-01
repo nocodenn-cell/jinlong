@@ -15,14 +15,8 @@ type Props = {
   idioma: Idioma
   /** `classic_summary`: apenas resumo financeiro (PDV clássico — total e finalizar ficam na coluna do carrinho). */
   layout?: CaixaFooterLayout
-  onValidarGerente: () => void
-  onAbrirSuprimento: () => void
-  onAbrirSangria: () => void
   onFinalizar: () => void
-  validandoGerente: boolean
   finalizando: boolean
-  movimentandoCaixa: boolean
-  caixaAberto: boolean
   itensLength: number
   buscando: boolean
   carregandoRegras: boolean
@@ -55,14 +49,8 @@ function CaixaFooterImpl({
   m,
   idioma,
   layout = "full",
-  onValidarGerente,
-  onAbrirSuprimento,
-  onAbrirSangria,
   onFinalizar,
-  validandoGerente,
   finalizando,
-  movimentandoCaixa,
-  caixaAberto,
   itensLength,
   buscando,
   carregandoRegras,
@@ -162,57 +150,6 @@ function CaixaFooterImpl({
     <footer className="shrink-0 border-t border-jl-border-1 backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-jl-surface-elev">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-jl-fg-3">{m.caixa.bloco_operacao_atual}</span>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                className="border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]"
-                onClick={onAbrirSuprimento}
-                disabled={!caixaAberto || movimentandoCaixa || finalizando}
-                aria-busy={movimentandoCaixa}
-                title="Ctrl+Shift+S"
-              >
-                {m.caixa.suprimento} (+)
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="border-destructive/45 bg-destructive/15 text-destructive hover:bg-destructive/25"
-                onClick={onAbrirSangria}
-                disabled={!caixaAberto || movimentandoCaixa || finalizando}
-                aria-busy={movimentandoCaixa}
-                title="Ctrl+Shift+R"
-              >
-                {m.caixa.sangria} (-)
-              </Button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-jl-fg-3">{m.caixa.bloco_autorizacao}</span>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                className="inline-flex items-center gap-2 app-btn-accent"
-                onClick={onValidarGerente}
-                disabled={validandoGerente || movimentandoCaixa}
-                aria-busy={validandoGerente}
-              >
-                {!gerenteValidadoAte ? (
-                  <ImperialSealIcon
-                    className="h-4 w-4 shrink-0 text-amber-400"
-                    title={m.caixa.aria_selo_gerente}
-                    pulse
-                  />
-                ) : null}
-                {validandoGerente
-                  ? m.caixa.validando_gerente
-                  : m.caixa.validar_gerente}
-              </Button>
-            </div>
-          </div>
           <span className="text-sm text-jl-fg-2">{resumoItens}</span>
           {gerenteLinha && (
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-amber-400">

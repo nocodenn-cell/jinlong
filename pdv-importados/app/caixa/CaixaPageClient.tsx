@@ -1103,14 +1103,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             m={m}
             idioma={idioma}
             layout={pdvLayoutVariant === "classic" ? "classic_summary" : "full"}
-            onValidarGerente={abrirGerenteModal}
-            onAbrirSuprimento={handleAbrirSuprimento}
-            onAbrirSangria={handleAbrirSangria}
             onFinalizar={handleFinalizarClick}
-            validandoGerente={validandoGerente}
             finalizando={finalizando}
-            movimentandoCaixa={movimentandoCaixa}
-            caixaAberto={caixaStatus?.aberto === true}
             itensLength={itens.length}
             buscando={buscandoPipeline}
             carregandoRegras={carregandoRegras}
