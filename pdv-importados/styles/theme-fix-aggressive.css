@@ -13,7 +13,14 @@
   --jl-surface-soft: var(--surface-soft, rgba(15, 23, 42, 0.42)); /* frosted glass */
 
   /* Borders */
-  --jl-border-1: var(--border, rgba(148, 163, 184, 0.38)); /* primary divider */
+  /*
+   * Cor direta (NÃO var(--border)): --border é um triplet HSL cru
+   * ("217.2 32.6% 17.5%", p/ uso em hsl()). Usado direto como cor (Tailwind
+   * border-jl-border-1 = border-color: var(--jl-border-1)) o triplet é INVÁLIDO
+   * → o utilitário vence o `* { border-color }` mas cai em currentColor (texto
+   * claro) → divisores brancos no skeleton e nas listas. rgba direto corrige.
+   */
+  --jl-border-1: rgba(148, 163, 184, 0.38); /* primary divider */
   --jl-border-2: rgba(71, 85, 105, 0.50);                  /* secondary divider */
 
   /* Foreground */
