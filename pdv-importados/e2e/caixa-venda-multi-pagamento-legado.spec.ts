@@ -1,13 +1,9 @@
 import { test, expect } from '@playwright/test'
-import {
-  hasCaixaOperadorUser,
-  caixaOperadorEmail,
-  caixaOperadorPassword,
-  e2eProdutoCodigoBarras,
-} from './helpers/env'
+import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
 import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
+import { loginCaixaOperador } from './helpers/login'
+import { gotoApp } from './helpers/url'
 
-const LOGIN_PATH = '/login'
 const unifiedSalesFlowEnabled = process.env.USE_UNIFIED_SALES_FLOW === 'true'
 
 test.describe.configure({ mode: 'serial' })
@@ -21,11 +17,7 @@ test.describe.skip('Caixa — split bloqueado no fluxo legado (UI de parcelas re
       )
       return
     }
-    await page.goto(LOGIN_PATH)
-    await page.getByPlaceholder('Email').fill(caixaOperadorEmail())
-    await page.getByPlaceholder('Senha').fill(caixaOperadorPassword())
-    await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await page.waitForURL(/\/caixa/, { timeout: 20_000 })
+    await loginCaixaOperador(page)
   })
 
   test('bloqueia split quando USE_UNIFIED_SALES_FLOW=false', async ({ page }) => {
@@ -34,7 +26,7 @@ test.describe.skip('Caixa — split bloqueado no fluxo legado (UI de parcelas re
       'Cenário cobre fallback legado com USE_UNIFIED_SALES_FLOW=false.',
     )
 
-    await page.goto('/caixa')
+    await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
