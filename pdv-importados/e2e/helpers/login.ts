@@ -7,11 +7,14 @@ type LoginWaitOptions = {
   postLoginUrl?: RegExp
 }
 
+/** 45 s no CI (dev server local + Supabase frio); 20 s localmente. */
+const defaultLoginTimeout = process.env.CI ? 45_000 : 20_000
+
 export async function loginGerente(
   page: Page,
   options: LoginWaitOptions = {},
 ): Promise<void> {
-  const timeout = options.timeout ?? 20_000
+  const timeout = options.timeout ?? defaultLoginTimeout
   const postLoginUrl = options.postLoginUrl ?? /\/(caixa|gerente|admin)/
   await gotoApp(page, LOGIN_PATH)
   await page.getByPlaceholder('Email').fill(process.env.PLAYWRIGHT_TEST_EMAIL!)
@@ -24,7 +27,7 @@ export async function loginCaixaOperador(
   page: Page,
   options: LoginWaitOptions = {},
 ): Promise<void> {
-  const timeout = options.timeout ?? 20_000
+  const timeout = options.timeout ?? defaultLoginTimeout
   const postLoginUrl = options.postLoginUrl ?? /\/caixa/
   await gotoApp(page, LOGIN_PATH)
   await page.getByPlaceholder('Email').fill(caixaOperadorEmail())
