@@ -1,12 +1,14 @@
 import { defineConfig, devices } from '@playwright/test'
+import { getE2eBaseUrl, getE2eTestPort } from './e2e/helpers/url'
 
 /**
  * Porta do `webServer` / `baseURL` quando não há `PLAYWRIGHT_BASE_URL`.
  * Padrão **3000** = mesmo `npm run dev`; fora do CI, `reuseExistingServer` evita um segundo `next dev`.
  * Isolado (dev em 3000 + E2E próprio): `PLAYWRIGHT_TEST_PORT=3009`.
  */
-const e2ePort = process.env.PLAYWRIGHT_TEST_PORT ?? '3000'
-const defaultBase = `http://localhost:${e2ePort}`
+const e2ePort = getE2eTestPort()
+const defaultBase = getE2eBaseUrl()
+const baseURL = defaultBase
 
 const isCi = process.env.CI === 'true'
 
@@ -29,7 +31,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? defaultBase,
+    baseURL,
     trace: 'on-first-retry',
   },
   projects: [

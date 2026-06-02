@@ -4,8 +4,8 @@ import {
   assertSupabasePublicEnvInCi,
   hasGerenteTestUser,
 } from './helpers/env'
-
-const LOGIN_PATH = '/login'
+import { loginGerente } from './helpers/login'
+import { gotoApp } from './helpers/url'
 
 test.describe('Painel do gerente', () => {
   test.beforeAll(() => {
@@ -21,15 +21,11 @@ test.describe('Painel do gerente', () => {
       )
       return
     }
-    await page.goto(LOGIN_PATH)
-    await page.getByPlaceholder('Email').fill(process.env.PLAYWRIGHT_TEST_EMAIL!)
-    await page.getByPlaceholder('Senha').fill(process.env.PLAYWRIGHT_TEST_PASSWORD!)
-    await page.getByRole('button', { name: /^Entrar$/ }).click()
-    await page.waitForURL(/\/(caixa|gerente)/, { timeout: 20_000 })
+    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
   })
 
   test('painel inicial /gerente carrega', async ({ page }) => {
-    await page.goto('/gerente')
+    await gotoApp(page, '/gerente')
     await expect(page).toHaveURL(/\/gerente\/?$/)
     await expect(page.getByText(/Painel do Gerente|经理面板|經理面板/)).toBeVisible()
     const nav = page.getByRole('navigation')
@@ -46,19 +42,19 @@ test.describe('Painel do gerente', () => {
   })
 
   test('página de estoque carrega', async ({ page }) => {
-    await page.goto('/gerente/estoque')
+    await gotoApp(page, '/gerente/estoque')
     await expect(page.getByRole('heading', { name: 'Estoque' })).toBeVisible()
   })
 
   test('página de imprimir etiquetas carrega', async ({ page }) => {
-    await page.goto('/gerente/estoque/imprimir-etiquetas')
+    await gotoApp(page, '/gerente/estoque/imprimir-etiquetas')
     await expect(page.getByRole('heading', { name: /Imprimir Etiquetas|打印标签/ })).toBeVisible()
     await expect(page.getByPlaceholder(/Código de barras|条形码/)).toBeVisible()
     await expect(page.getByRole('button', { name: /Gerar PDF|生成PDF/ })).toBeVisible()
   })
 
   test('fluxo básico: bipar produto -> adicionar ao carrinho -> gerar PDF', async ({ page }) => {
-    await page.goto('/gerente/estoque/imprimir-etiquetas')
+    await gotoApp(page, '/gerente/estoque/imprimir-etiquetas')
     
     // Verificar campo de busca
     const searchInput = page.getByPlaceholder(/Código de barras|条形码/)
@@ -88,33 +84,33 @@ test.describe('Painel do gerente', () => {
   })
 
   test('página de produtos carrega', async ({ page }) => {
-    await page.goto('/gerente/produtos')
+    await gotoApp(page, '/gerente/produtos')
     await expect(page.getByRole('heading', { name: 'Produtos' })).toBeVisible()
     await expect(page.getByText(/erro interno/i)).not.toBeVisible()
   })
 
   test('página de vendas carrega sem erro interno', async ({ page }) => {
-    await page.goto('/gerente/vendas')
+    await gotoApp(page, '/gerente/vendas')
     await expect(page.getByRole('heading', { name: /vendas|销售/i })).toBeVisible()
     await expect(page.getByText(/erro interno/i)).not.toBeVisible()
   })
 
   test('página de caixas lista colunas e export CSV', async ({ page }) => {
-    await page.goto('/gerente/caixas')
+    await gotoApp(page, '/gerente/caixas')
     await expect(page.getByRole('heading', { level: 1, name: /Caixas|收银会话|收銀會話/ })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: /^(Data|时间)$/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Exportar CSV|导出 CSV|exportar csv/i })).toBeVisible()
   })
 
   test('página de relatórios exibe filtros de período', async ({ page }) => {
-    await page.goto('/gerente/relatorios')
+    await gotoApp(page, '/gerente/relatorios')
     await expect(page.getByRole('heading', { level: 1, name: /Relatórios|报告|報表/ })).toBeVisible()
     await expect(page.getByText(/Vendas por período|时段销售/)).toBeVisible()
     await expect(page.getByRole('button', { name: /^(Aplicar|应用)$/ })).toBeVisible()
   })
 
   test('toggle de idioma exibe mandarim no painel', async ({ page }) => {
-    await page.goto('/gerente/produtos')
+    await gotoApp(page, '/gerente/produtos')
     const zhBtn = page.getByRole('button', { name: '普通话' })
     await expect(zhBtn).toBeVisible()
     await zhBtn.click()
@@ -122,7 +118,7 @@ test.describe('Painel do gerente', () => {
   })
 
   test('fluxo crítico admin/gerente em chinês + validação traduzida', async ({ page }) => {
-    await page.goto('/gerente/produtos')
+    await gotoApp(page, '/gerente/produtos')
     await page.getByRole('button', { name: '普通话' }).click()
     await expect(page.getByText('经理面板')).toBeVisible({ timeout: 10_000 })
 
@@ -133,7 +129,7 @@ test.describe('Painel do gerente', () => {
     await page.getByRole('button', { name: /保存/ }).click()
     await expect(page.getByText(/数据无效：|資料無效：/)).toBeVisible({ timeout: 10_000 })
 
-    await page.goto('/admin/dashboard')
+    await gotoApp(page, '/admin/dashboard')
     await expect(page.getByText('主控台')).toBeVisible({ timeout: 10_000 })
     await expect(page.getByText('生意看板')).toBeVisible({ timeout: 10_000 })
   })
