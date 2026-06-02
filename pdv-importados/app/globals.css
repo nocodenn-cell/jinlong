@@ -82,6 +82,16 @@
 }
 
 @layer base {
+  /*
+   * Substrato dark no <html>: sem isto, só o body recebe bg-background e o
+   * <html> fica branco (default do browser). Em qualquer momento que o body
+   * não cobre 100% — troca de rota (skeleton mais curto que a viewport),
+   * overscroll/rubber-band — o branco do <html> vaza = "linhas brancas na
+   * troca de tela". Token-driven: resolve dark com .dark e claro sem ela.
+   */
+  html {
+    background-color: hsl(var(--background));
+  }
   * {
     border-color: var(--jl-border-2);
   }
