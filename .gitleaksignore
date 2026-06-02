@@ -1,8 +1,19 @@
 # False positives — not real secrets
 # JWT in .env.test is a well-known placeholder (sub=1234567890, role=anon)
 3f623524886a0d454d535e4f07a5243fe7f9e1a0:pdv-importados/.env.test:jwt:5
-# UUIDs used as idempotency keys in unit tests
+# UUIDs used as idempotency keys in unit tests (multiple commits where same files were modified)
 c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/app/caixa/finalizarVendaValidation.test.ts:generic-api-key:110
+de1c3c4b79486f65aa4d42109db510de6a130ca8:pdv-importados/app/caixa/finalizarVendaValidation.test.ts:generic-api-key:107
 c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:6
+6003935450860ff35b1fd3025aad3dbf596e3cb0:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:6
 c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:25
+6003935450860ff35b1fd3025aad3dbf596e3cb0:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:25
 c101d045cda89a5239a5df7315759797031aedc1:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:30
+6003935450860ff35b1fd3025aad3dbf596e3cb0:pdv-importados/lib/caixa/resolveVendaIdForFinalize.test.ts:generic-api-key:30
+# Supabase ANON keys in old commits — public/client-side key, not a service role secret.
+# The .env.example files now use placeholders. Rotate anon key if the project was public.
+b45b84a9aa88d3c944457146a935527059aa96f0:pdv-importados/.env.example:jwt:7
+b45b84a9aa88d3c944457146a935527059aa96f0:pdv-local/.env.example:jwt:9
+# CI workflow hardcoded anon key in old commits (before secret migration) — rotated
+53ecb5dbdf61d4a8570d81cb184c55424945d244:.github/workflows/ci-pdv-importados.yml:jwt:46
+30f7bf5624b35f461724bcd4fb9507bc70157407:.github/workflows/ci-pdv-importados.yml:jwt:44
