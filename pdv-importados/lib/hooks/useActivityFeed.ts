@@ -1,13 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { AtividadeFeedPayload, AtividadeRailItem } from '@/app/api/gerente/atividades/recent/route'
+import { usePolling } from '@/lib/hooks/usePolling'
 
 export type { AtividadeRailItem }
 
 const RING_SIZE = 40
 
-export function useActivityFeed(intervalMs = 15_000) {
+export function useActivityFeed(intervalMs = 60_000) {
   const [items,     setItems]     = useState<AtividadeRailItem[]>([])
   const [newCount,  setNewCount]  = useState(0)
   const [isLoading, setIsLoading] = useState(false)
@@ -15,12 +16,12 @@ export function useActivityFeed(intervalMs = 15_000) {
 
   const hasLoadedRef = useRef(false)
 
-  const fetchFeed = useCallback(async () => {
+  const fetchFeed = useCallback(async (): Promise<boolean> => {
     const showSpinner = !hasLoadedRef.current
     if (showSpinner) setIsLoading(true)
     try {
       const res = await fetch('/api/gerente/atividades/recent')
-      if (!res.ok) return
+      if (!res.ok) return false
       const data = (await res.json()) as AtividadeFeedPayload
       const incoming = data.items ?? []
 
@@ -42,17 +43,16 @@ export function useActivityFeed(intervalMs = 15_000) {
         if (added > 0) setNewCount((n) => n + added)
         if (incoming[0]) lastTopIdRef.current = incoming[0].id
       }
-    } catch { /* silently ignore */ } finally {
+      return true
+    } catch {
+      return false // backoff via usePolling
+    } finally {
       hasLoadedRef.current = true
       if (showSpinner) setIsLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    void fetchFeed()
-    const t = setInterval(() => void fetchFeed(), intervalMs)
-    return () => clearInterval(t)
-  }, [fetchFeed, intervalMs])
+  usePolling(fetchFeed, intervalMs)
 
   const markSeen = useCallback(() => {
     setNewCount(0)

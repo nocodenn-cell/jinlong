@@ -11,6 +11,7 @@ import {
 import type { FilaStatusPayload } from '@/app/api/gerente/fila/status/route'
 import type { HealthPayload } from '@/app/api/gerente/health/route'
 import { useActivityFeed } from '@/lib/hooks/useActivityFeed'
+import { usePolling } from '@/lib/hooks/usePolling'
 import { ActivityRailDrawer } from '@/components/gerente/ActivityRailDrawer'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -84,7 +85,7 @@ function buildStatusLine(
 
 const HEALTH_INTERVAL_MS = 60_000
 const NOTIF_INTERVAL_MS  = 5 * 60_000
-const FILA_INTERVAL_MS   = 30_000
+const FILA_INTERVAL_MS   = 60_000
 const TICK_INTERVAL_MS   = 10_000
 
 const FILA_ZERO: FilaStatusPayload = { fiscal: { pendente: 0, erro: 0 }, aprovacoes: 0 }
@@ -140,10 +141,10 @@ export function GerenteHeaderNav({
   const [fiscalFila,   setFiscalFila]   = useState(0)
   const [tick,         setTick]         = useState(0)
 
-  const checkHealth = useCallback(async () => {
+  const checkHealth = useCallback(async (): Promise<boolean> => {
     try {
       const res = await fetch('/api/gerente/health')
-      if (!res.ok) { setSysStatus('degraded'); return }
+      if (!res.ok) { setSysStatus('degraded'); return false }
       const data = (await res.json()) as HealthPayload
       const base = data.status ?? 'online'
       const hasErro = (data.fiscal_erro ?? 0) > 0
@@ -152,16 +153,14 @@ export function GerenteHeaderNav({
       setFiscalErro(data.fiscal_erro ?? 0)
       setFiscalFila(data.fiscal_fila ?? 0)
       setLastCheckAt(new Date())
+      return true
     } catch {
       setSysStatus('offline')
+      return false // backoff via usePolling
     }
   }, [])
 
-  useEffect(() => {
-    void checkHealth()
-    const t = setInterval(() => void checkHealth(), HEALTH_INTERVAL_MS)
-    return () => clearInterval(t)
-  }, [checkHealth])
+  usePolling(checkHealth, HEALTH_INTERVAL_MS)
 
   // tick para atualizar tempo relativo a cada 10s
   useEffect(() => {
@@ -172,38 +171,36 @@ export function GerenteHeaderNav({
   // ── fila operacional (fiscal + aprovações) ───────────────────────────────
   const [filaStatus, setFilaStatus] = useState<FilaStatusPayload>(FILA_ZERO)
 
-  const fetchFilaStatus = useCallback(async () => {
+  const fetchFilaStatus = useCallback(async (): Promise<boolean> => {
     try {
       const res = await fetch('/api/gerente/fila/status')
-      if (!res.ok) return
+      if (!res.ok) return false
       const data = (await res.json()) as FilaStatusPayload
       setFilaStatus(data)
-    } catch { /* silently ignore */ }
+      return true
+    } catch {
+      return false // backoff via usePolling
+    }
   }, [])
 
-  useEffect(() => {
-    void fetchFilaStatus()
-    const t = setInterval(() => void fetchFilaStatus(), FILA_INTERVAL_MS)
-    return () => clearInterval(t)
-  }, [fetchFilaStatus])
+  usePolling(fetchFilaStatus, FILA_INTERVAL_MS)
 
   // ── notificações ─────────────────────────────────────────────────────────
   const [notifCount, setNotifCount] = useState(0)
 
-  const fetchNotifCount = useCallback(async () => {
+  const fetchNotifCount = useCallback(async (): Promise<boolean> => {
     try {
       const res = await fetch('/api/gerente/notificacoes/count')
-      if (!res.ok) return
+      if (!res.ok) return false
       const data = (await res.json()) as { count: number }
       setNotifCount(data.count ?? 0)
-    } catch { /* silently ignore */ }
+      return true
+    } catch {
+      return false // backoff via usePolling
+    }
   }, [])
 
-  useEffect(() => {
-    void fetchNotifCount()
-    const t = setInterval(() => void fetchNotifCount(), NOTIF_INTERVAL_MS)
-    return () => clearInterval(t)
-  }, [fetchNotifCount])
+  usePolling(fetchNotifCount, NOTIF_INTERVAL_MS)
 
   // ── topic dropdown ───────────────────────────────────────────────────────
   const [openTopic, setOpenTopic] = useState<GerenteNavTopicId | null>(null)
