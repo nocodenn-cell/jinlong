@@ -52,7 +52,7 @@ npm run test:e2e:report
 |----------|-------------|-----|
 | `NEXT_PUBLIC_SUPABASE_URL` | Para testes de login | Cliente Supabase no browser |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Recomendado com URL | Auth real nos testes de login |
-| `PLAYWRIGHT_BASE_URL` | Não | Padrão `http://localhost:3000` (alinhado ao `next dev`). No CI, secret ausente pode virar string vazia — `playwright.config.ts` e `e2e/helpers/url.ts` (`gotoApp`) normalizam com `trim() \|\| localhost`. Sem `PLAYWRIGHT_E2E_WITH_DEV`, o Playwright **não** sobe `next dev`; use URL de deploy/staging via secret quando aplicável. |
+| `PLAYWRIGHT_BASE_URL` | Não | Padrão `http://localhost:3000` (alinhado ao `next dev`). No CI sem `PLAYWRIGHT_E2E_WITH_DEV`, o Playwright **não** sobe `next dev`; use URL de deploy/staging via secret quando aplicável. |
 | `PLAYWRIGHT_TEST_PORT` | Não | Porta do `webServer` / `baseURL` local (padrão `3000`). Ex.: `3009` para E2E isolado com dev ainda em `3000`. |
 | `PLAYWRIGHT_REUSE_SERVER` | Não | Fora do CI, reutilizar `next dev` já na mesma porta é o **padrão**. Defina `0` para forçar o Playwright a subir `next dev` via `webServer` (falha se a porta estiver ocupada). |
 | `PLAYWRIGHT_TEST_EMAIL` | Para suite gerente | Usuário **GERENTE** ou **DONO** |
