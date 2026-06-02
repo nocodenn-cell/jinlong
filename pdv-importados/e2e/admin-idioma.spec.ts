@@ -4,8 +4,16 @@ import {
   assertSupabasePublicEnvInCi,
   hasGerenteTestUser,
 } from './helpers/env'
-import { loginGerente } from './helpers/login'
-import { gotoApp } from './helpers/url'
+
+const LOGIN_PATH = '/login'
+
+async function loginGerente(page: Page) {
+  await page.goto(LOGIN_PATH)
+  await page.getByPlaceholder('Email').fill(process.env.PLAYWRIGHT_TEST_EMAIL!)
+  await page.getByPlaceholder('Senha').fill(process.env.PLAYWRIGHT_TEST_PASSWORD!)
+  await page.getByRole('button', { name: /^Entrar$/ }).click()
+  await page.waitForURL(/\/(caixa|gerente|admin)/, { timeout: 20_000 })
+}
 
 async function switchToPtIfNeeded(page: Page) {
   const ptBtn = page.getByRole('button', { name: /^PT$/ })
@@ -30,7 +38,7 @@ test.describe('Admin - i18n idioma', () => {
       return
     }
     await loginGerente(page)
-    await gotoApp(page, '/admin/dashboard')
+    await page.goto('/admin/dashboard')
     await switchToPtIfNeeded(page)
   })
 

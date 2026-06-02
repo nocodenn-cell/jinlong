@@ -4,7 +4,6 @@
  * Carrega pdv-importados/.env.local quando as variáveis não estão no processo do Playwright.
  */
 import { test, expect } from '@playwright/test'
-import { gotoApp } from './helpers/url'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -57,7 +56,7 @@ function hasGerenteCreds(): boolean {
 async function loginGerente(page: import('@playwright/test').Page): Promise<void> {
   const email = resolveGerenteEmail()!
   const pwd = resolveGerentePassword()!
-  await gotoApp(page, LOGIN)
+  await page.goto(LOGIN)
   await page.getByPlaceholder('Email').fill(email)
   await page.getByPlaceholder('Senha').fill(pwd)
   await page.getByRole('button', { name: /^Entrar$/ }).click()
@@ -69,7 +68,7 @@ test.describe('QA módulo produtos (gerente)', () => {
   test.beforeEach(async ({ page }) => {
     test.skip(!hasGerenteCreds(), 'Defina PLAYWRIGHT_TEST_EMAIL e PLAYWRIGHT_TEST_PASSWORD')
     await loginGerente(page)
-    await gotoApp(page, PRODUTOS)
+    await page.goto(PRODUTOS)
     await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible({ timeout: 60_000 })
   })
 

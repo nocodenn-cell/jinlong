@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { hasCaixaOperadorUser } from './helpers/env'
-import { loginCaixaOperador } from './helpers/login'
-import { gotoApp } from './helpers/url'
+import { hasCaixaOperadorUser, caixaOperadorEmail, caixaOperadorPassword } from './helpers/env'
+
+const LOGIN_PATH = '/login'
 
 test.describe('PDV Caixa', () => {
   test.beforeEach(async ({ page }, testInfo) => {
@@ -12,17 +12,21 @@ test.describe('PDV Caixa', () => {
       )
       return
     }
-    await loginCaixaOperador(page, { postLoginUrl: /\/(caixa|gerente)/ })
+    await page.goto(LOGIN_PATH)
+    await page.getByPlaceholder('Email').fill(caixaOperadorEmail())
+    await page.getByPlaceholder('Senha').fill(caixaOperadorPassword())
+    await page.getByRole('button', { name: /^Entrar$/ }).click()
+    await page.waitForURL(/\/(caixa|gerente)/, { timeout: 20_000 })
   })
 
   test('página /caixa carrega com cabeçalho do PDV', async ({ page }) => {
-    await gotoApp(page, '/caixa')
+    await page.goto('/caixa')
     await expect(page).toHaveURL(/\/caixa\/?$/)
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
   })
 
   test('busca de produto e ação de sair estão acessíveis', async ({ page }) => {
-    await gotoApp(page, '/caixa')
+    await page.goto('/caixa')
     await expect(
       page.getByRole('textbox', {
         name: /código de barras|nome do produto|条码|商品名称/i,

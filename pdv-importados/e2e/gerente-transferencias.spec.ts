@@ -5,8 +5,8 @@ import {
   assertSupabasePublicEnvInCi,
   hasGerenteTestUser,
 } from './helpers/env'
-import { loginGerente } from './helpers/login'
-import { gotoApp } from './helpers/url'
+
+const LOGIN_PATH = '/login'
 
 function hasTransferenciaE2eEnv() {
   return (
@@ -91,7 +91,11 @@ test.describe('Gerente transferências - feedback visual crítico', () => {
 
     const { origem, destino, produto } = await prepararDadosTransferenciaE2E()
 
-    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
+    await page.goto(LOGIN_PATH)
+    await page.getByPlaceholder('Email').fill(process.env.PLAYWRIGHT_TEST_EMAIL!)
+    await page.getByPlaceholder('Senha').fill(process.env.PLAYWRIGHT_TEST_PASSWORD!)
+    await page.getByRole('button', { name: /^Entrar$/ }).click()
+    await page.waitForURL(/\/(caixa|gerente)/, { timeout: 20_000 })
 
     // Atraso artificial da action para estabilizar verificação do estado "Processando...".
     await page.route('**/gerente/transferencias**', async (route) => {
@@ -99,7 +103,7 @@ test.describe('Gerente transferências - feedback visual crítico', () => {
       await route.continue()
     })
 
-    await gotoApp(page, '/gerente/transferencias')
+    await page.goto('/gerente/transferencias')
     await expect(page.getByRole('heading', { name: /Transferências|调拨/ })).toBeVisible()
 
     await page.locator('select[name="origem"]').selectOption(origem.id)
