@@ -30,16 +30,3 @@ export function GerenteRouteLoader() {
   )
 }
 
-/* ── Aliases retrocompatíveis (todos renderizam o mesmo loader) ───────────── */
-
-export function GerenteSegmentRouteSkeleton() {
-  return <GerenteRouteLoader />
-}
-
-export function GerenteListPageRouteSkeleton(_props?: { cols?: number[]; rows?: number }) {
-  return <GerenteRouteLoader />
-}
-
-export function GerenteTableRouteSkeleton(_props?: { cols?: number[]; rows?: number }) {
-  return <GerenteRouteLoader />
-}

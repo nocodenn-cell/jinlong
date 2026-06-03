@@ -1,5 +1,5 @@
-import { GerenteSegmentRouteSkeleton } from '@/components/gerente/GerenteRouteLoading'
+import { GerenteRouteLoader } from '@/components/gerente/GerenteRouteLoading'
 
 export default function GerenteLoading() {
-  return <GerenteSegmentRouteSkeleton />
+  return <GerenteRouteLoader />
 }

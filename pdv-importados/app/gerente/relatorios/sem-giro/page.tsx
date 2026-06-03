@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
-import { GerenteListPageRouteSkeleton } from '@/components/gerente/GerenteRouteLoading'
+import { GerenteRouteLoader } from '@/components/gerente/GerenteRouteLoading'
 import { RelatoriosSemGiroPageClient } from './RelatoriosSemGiroPageClient'
 
 export default async function GerenteRelatoriosSemGiroPage() {
@@ -8,11 +8,7 @@ export default async function GerenteRelatoriosSemGiroPage() {
 
   return (
     <Suspense
-      fallback={
-        <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6">
-          <GerenteListPageRouteSkeleton cols={[128, 200, 96, 112, 128, 160]} rows={8} />
-        </div>
-      }
+      fallback={<GerenteRouteLoader />}
     >
       <RelatoriosSemGiroPageClient idioma={idioma} />
     </Suspense>
