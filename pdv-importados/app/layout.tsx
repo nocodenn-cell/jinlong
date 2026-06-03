@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_SC } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -20,6 +20,17 @@ export const metadata: Metadata = {
     template: '%s | Jīn Lóng · 金龍',
   },
   description: 'Importados · operações seguras',
+}
+
+/**
+ * App é forçado dark (`<html class="dark">`). Sem `color-scheme: dark`, o browser
+ * trata a página como light-scheme e pinta o canvas/overscroll default BRANCO nos
+ * gaps de paint da navegação soft → "flash de fundo branco" na troca de tela.
+ * O meta `color-scheme` é aplicado no paint mais cedo (antes do CSS).
+ */
+export const viewport: Viewport = {
+  colorScheme: 'dark',
+  themeColor: '#020617',
 }
 
 export default function RootLayout({
