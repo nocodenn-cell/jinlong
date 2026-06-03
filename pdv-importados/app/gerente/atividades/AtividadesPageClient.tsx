@@ -60,7 +60,7 @@ function fmtDateTime(iso: string, locale: string): string {
 function ActivityRow({ item, locale }: Readonly<{ item: AtividadeRailItem; locale: string }>) {
   const Icon = TIPO_ICON[item.tipo]
   return (
-    <tr className={cn('border-b border-jl-border-1/40 transition-colors hover:bg-white/[0.025]', SEVERITY_ROW_CN[item.severity])}>
+    <tr className={cn('border-b border-white/[0.06] transition-colors hover:bg-white/[0.025]', SEVERITY_ROW_CN[item.severity])}>
       <td className="w-10 px-4 py-2">
         <Icon className={cn('h-3.5 w-3.5', TIPO_ICON_CN[item.tipo])} aria-hidden />
       </td>

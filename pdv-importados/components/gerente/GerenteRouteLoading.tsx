@@ -37,7 +37,7 @@ export function GerenteTableRouteSkeleton({
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="flex gap-4 border-b border-jl-border-1/40 px-4 py-[9px]"
+          className="flex gap-4 border-b border-white/[0.06] px-4 py-[9px]"
         >
           {cols.map((w, j) => (
             <Bone key={j} w={w} opacity="06" />

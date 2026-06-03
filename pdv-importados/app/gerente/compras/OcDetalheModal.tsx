@@ -216,7 +216,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                   {oc.itens.map((item, idx) => (
                     <div
                       key={item.id}
-                      className={cn('px-4 py-3', idx > 0 && 'border-t border-jl-border-1/40')}
+                      className={cn('px-4 py-3', idx > 0 && 'border-t border-white/[0.06]')}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">

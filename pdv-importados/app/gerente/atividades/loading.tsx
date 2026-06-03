@@ -23,7 +23,7 @@ export default function AtividadesLoading() {
             ))}
           </div>
           {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="flex gap-6 border-b border-jl-border-1/40 px-4 py-[9px]">
+            <div key={i} className="flex gap-6 border-b border-white/[0.06] px-4 py-[9px]">
               {[16, 48, 220, 112].map((w, j) => (
                 <div key={j} className="h-2.5 rounded bg-white/[0.06]" style={{ width: w }} />
               ))}

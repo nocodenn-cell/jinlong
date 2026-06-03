@@ -153,7 +153,7 @@ export function CaixaPdvTopBar({
         <div
           className={cn(
             "flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3",
-            classic ? "border-primary-foreground/25" : "border-jl-border-1/60",
+            classic ? "border-primary-foreground/25" : "border-white/[0.12]",
           )}
         >
           {caixaStatus?.aberto ? (
