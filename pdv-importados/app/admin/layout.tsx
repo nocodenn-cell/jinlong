@@ -1,11 +1,13 @@
 import React, { type ReactNode } from 'react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
 import { ADMIN_SIDEBAR_NAV } from '@/lib/navigation/adminSidebarNav'
 import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { getUsuarioIdioma, isGerenteOuDono } from '@/idioma/usuarioIdioma'
+import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { getMessages } from '@/i18n/getMessages'
 import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import { Logo } from '@/components/branding/Logo'
@@ -25,6 +27,9 @@ function navLabels(line: BilingualLine, chineseLanguage: boolean): { primary: st
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const chineseThemeOn = adminChineseUiEnabled()
   const { idioma, perfil } = await getUsuarioIdioma()
+  // Guard de rota: o middleware (proxy.ts) não está ativo, então a proteção de
+  // /admin precisa morar aqui — mesmo critério do layout de /gerente.
+  if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
   const m = getMessages(idioma)
   const admin = m.admin
   const chineseLanguage = idioma !== 'pt'
