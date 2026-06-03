@@ -23,11 +23,38 @@ export type ItemEntradaFinalizacao = {
 
 const EPS_PRECO = 0.02
 
+/**
+ * Concorrência das RPCs de revalidação de preço na finalização.
+ * Limitado de propósito: o projeto roda em Supabase FREE (teto de conexões /
+ * pool pequeno do PostgREST) e já saturou por chamadas concorrentes. Disparar
+ * 1 RPC por item em paralelo ilimitado (carrinho grande) reabriria esse risco.
+ */
+const PRECO_REVALIDACAO_CONCORRENCIA = 5
+
 /** Mesma convenção do caixa ao chamar `calcular_preco_produto` (inteiro). */
 function quantidadeInteiraParaRpcPreco(q: number): number {
   const n = Number(q)
   if (!Number.isFinite(n) || n <= 0) return 0
   return Math.max(1, Math.floor(n))
+}
+
+/** `map` com no máximo `limit` promessas em voo; preserva a ordem do índice. */
+async function mapComConcorrencia<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let next = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const idx = next++
+      if (idx >= items.length) return
+      results[idx] = await fn(items[idx], idx)
+    }
+  })
+  await Promise.all(workers)
+  return results
 }
 
 function parseCalcularPrecoProdutoRpc(
@@ -75,9 +102,42 @@ export async function recalcularItensNoServidor(
     return { ok: false, error: 'Há itens inválidos/inativos no carrinho. Atualize e tente novamente.' }
   }
 
+  /**
+   * Pré-busca dos preços autoritativos em paralelo (concorrência limitada).
+   * Antes era N+1: um `await rpc` por item dentro do loop, sequencial — um carrinho
+   * de 10 itens custava 10 round-trips em série. Agora as RPCs disparam em lotes de
+   * `PRECO_REVALIDACAO_CONCORRENCIA` e o loop só valida os resultados já resolvidos.
+   * MANUAL/PROMOCAO não consultam a RPC (usam o snapshot do cliente).
+   */
+  type PrecoPrefetch =
+    | { kind: 'snapshot' }
+    | { kind: 'qty_invalid' }
+    | { kind: 'rpc'; data: unknown; error: { message: string } | null }
+
+  const precoPrefetch = await mapComConcorrencia<ItemEntradaFinalizacao, PrecoPrefetch>(
+    itensInput,
+    PRECO_REVALIDACAO_CONCORRENCIA,
+    async (i): Promise<PrecoPrefetch> => {
+      if (i.tipoPreco === 'MANUAL' || i.tipoPreco === 'PROMOCAO') {
+        return { kind: 'snapshot' }
+      }
+      const qRpc = quantidadeInteiraParaRpcPreco(i.quantidade)
+      if (qRpc < 1) {
+        return { kind: 'qty_invalid' }
+      }
+      const { data, error } = await supabase.rpc('calcular_preco_produto', {
+        p_produto_id: i.produtoId,
+        p_quantidade: qRpc,
+        p_loja_id: lojaId,
+      })
+      return { kind: 'rpc', data, error }
+    },
+  )
+
   const itens: ItemAutoritativo[] = []
 
-  for (const i of itensInput) {
+  for (let idx = 0; idx < itensInput.length; idx++) {
+    const i = itensInput[idx]
     const p = produtos.get(i.produtoId)!
     const varejo = roundMoney2(Number(p.preco_varejo))
 
@@ -101,22 +161,23 @@ export async function recalcularItensNoServidor(
       continue
     }
 
-    const qRpc = quantidadeInteiraParaRpcPreco(i.quantidade)
-    if (qRpc < 1) {
+    const prefetch = precoPrefetch[idx]
+    if (prefetch.kind === 'qty_invalid') {
       return { ok: false, error: 'Quantidade inválida para cálculo de preço.' }
     }
-
-    const { data, error: rpcErr } = await supabase.rpc('calcular_preco_produto', {
-      p_produto_id: i.produtoId,
-      p_quantidade: qRpc,
-      p_loja_id: lojaId,
-    })
-
-    if (rpcErr) {
-      return { ok: false, error: mensagemErroComSecao('Preço do produto', rpcErr.message) }
+    // `snapshot` só ocorre para MANUAL/PROMOCAO (já tratados acima); guarda defensiva.
+    if (prefetch.kind !== 'rpc') {
+      return {
+        ok: false,
+        error: 'Não foi possível validar o preço do produto no servidor. Tente novamente.',
+      }
     }
 
-    const esperado = parseCalcularPrecoProdutoRpc(data)
+    if (prefetch.error) {
+      return { ok: false, error: mensagemErroComSecao('Preço do produto', prefetch.error.message) }
+    }
+
+    const esperado = parseCalcularPrecoProdutoRpc(prefetch.data)
     if (!esperado) {
       return {
         ok: false,
