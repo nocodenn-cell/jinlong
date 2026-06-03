@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { GerenteHeaderNav } from '@/components/gerente/GerenteHeaderNav'
+import { GerenteTopProgress } from '@/components/gerente/GerenteTopProgress'
 import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { performClientLogout } from '@/lib/auth/clientLogout'
@@ -53,6 +54,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
       } as React.CSSProperties}
     >
       <SessionIdleLogout />
+      <GerenteTopProgress />
       <GerenteToastViewport />
 
       <GerenteHeaderNav

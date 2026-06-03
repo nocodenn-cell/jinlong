@@ -630,6 +630,32 @@ html:has(.login-premium-root) body {
   box-shadow: var(--jl-elev-1) !important;
 }
 
+/* ── Loading de rota (gerente) ──────────────────────────────────────────────
+   Loader central com a marca + barra indeterminada. Substitui o ghost-table
+   estático (que lia como "tabela quebrada"). E a barra fina de progresso no
+   topo disparada a cada navegação. */
+@keyframes gerente-loader-sweep {
+  0%   { transform: translateX(-130%); }
+  100% { transform: translateX(360%); }
+}
+.gerente-loader-sweep {
+  animation: gerente-loader-sweep 1.05s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.gerente-loader-mark {
+  animation: dragon-breathe 1.9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gerente-loader-sweep,
+  .gerente-loader-mark { animation: none; }
+}
+
+/* Barra de progresso de topo (navegação) */
+@keyframes gerente-topbar-indeterminate {
+  0%   { transform: translateX(-100%) scaleX(0.4); }
+  50%  { transform: translateX(20%)  scaleX(0.6); }
+  100% { transform: translateX(110%) scaleX(0.5); }
+}
+
 /* Elevation 2 — modals, dropdowns, popovers.
    UMA ferramenta: box-shadow via --jl-elev-2.
    Fundo mais sólido (#0f172a) para flutuar claramente acima do conteúdo. */

@@ -1,87 +1,45 @@
 /**
- * Skeletons de rota estáveis (sem animate-pulse) para evitar flicker na demo.
+ * Loader de rota do gerente.
+ *
+ * Antes: ghost-table estático (linhas cinzas paradas) que lia como "tabela
+ * quebrada" e passava impressão de bug. Agora: loader central limpo com a marca
+ * (祿) + barra indeterminada varrendo — claramente "carregando", on-brand e sem
+ * listras. Os nomes de export antigos são mantidos como aliases para não quebrar
+ * os vários `loading.tsx` que já os importam.
  */
 
-function Bone({
-  w,
-  h = 'h-2.5',
-  opacity = '07',
-}: {
-  w: number
-  h?: string
-  opacity?: string
-}) {
+export function GerenteRouteLoader() {
   return (
     <div
-      className={`rounded ${h} bg-white/[0.${opacity}]`}
-      style={{ width: w }}
-      aria-hidden
-    />
-  )
-}
-
-export function GerenteTableRouteSkeleton({
-  cols,
-  rows,
-}: {
-  cols: number[]
-  rows: number
-}) {
-  return (
-    <div className="dragon-glass-card overflow-hidden rounded-xl">
-      <div className="flex gap-4 border-b border-jl-border-1 px-4 py-2.5">
-        {cols.map((w, i) => (
-          <Bone key={i} w={w} />
-        ))}
-      </div>
-      {Array.from({ length: rows }).map((_, i) => (
-        <div
-          key={i}
-          className="flex gap-4 border-b border-white/[0.06] px-4 py-[9px]"
+      className="flex min-h-[42vh] w-full items-center justify-center px-4 py-10"
+      role="status"
+      aria-label="Carregando"
+    >
+      <div className="flex flex-col items-center gap-4">
+        <span
+          className="gerente-loader-mark select-none font-serif text-5xl leading-none text-amber-400/85"
+          aria-hidden
         >
-          {cols.map((w, j) => (
-            <Bone key={j} w={w} opacity="06" />
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Toolbar + tabela — layout típico de listagens gerente */
-export function GerenteListPageRouteSkeleton({
-  cols,
-  rows = 10,
-}: {
-  cols: number[]
-  rows?: number
-}) {
-  return (
-    <div>
-      {/* Placeholder sticky que espelha GerenteStickyToolbar para evitar flash de borda durante navegação */}
-      <div
-        className="sticky z-[25] w-full border-b py-2 shadow-sm bg-[#0f172a] border-[color:var(--jl-border-2)] -mx-4 px-4 md:-mx-6 md:px-6"
-        style={{ top: 'var(--gerente-sticky-top, 60px)' }}
-        aria-hidden
-      >
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-60 rounded-lg bg-white/[0.07]" />
-          <div className="h-9 w-28 rounded-lg bg-white/[0.07]" />
-          <div className="ml-auto h-9 w-36 rounded-lg bg-white/[0.07]" />
-        </div>
-      </div>
-      <div className="mt-4">
-        <GerenteTableRouteSkeleton cols={cols} rows={rows} />
+          祿
+        </span>
+        <span className="block h-[3px] w-28 overflow-hidden rounded-full bg-white/[0.07]">
+          <span className="gerente-loader-sweep block h-full w-1/2 rounded-full bg-amber-400/80" />
+        </span>
       </div>
     </div>
   )
 }
 
-/** Fallback do segmento /gerente quando a rota filha não define loading próprio */
+/* ── Aliases retrocompatíveis (todos renderizam o mesmo loader) ───────────── */
+
 export function GerenteSegmentRouteSkeleton() {
-  return (
-    <div className="mx-auto max-w-[1100px] space-y-4 px-4 py-6 sm:px-6">
-      <GerenteListPageRouteSkeleton cols={[80, 96, 160, 112, 80, 80]} rows={8} />
-    </div>
-  )
+  return <GerenteRouteLoader />
+}
+
+export function GerenteListPageRouteSkeleton(_props?: { cols?: number[]; rows?: number }) {
+  return <GerenteRouteLoader />
+}
+
+export function GerenteTableRouteSkeleton(_props?: { cols?: number[]; rows?: number }) {
+  return <GerenteRouteLoader />
 }
