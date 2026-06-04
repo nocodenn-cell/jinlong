@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Download, Printer, FilterX } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
@@ -10,6 +11,11 @@ import { fmtGerenteBRL, fmtGerenteDateTime } from '@/lib/format/gerenteValues'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { cn } from '@/lib/utils'
+import {
+  computeDateRange,
+  matchDateRangePreset,
+  type DateRangePreset,
+} from '@/lib/gerente/dateRangePresets'
 import {
   buscarRelatorioVendasAvancadoAction,
   type RelatorioVendasAvancadoPayload,
@@ -59,6 +65,41 @@ export function RelatorioVendasClient({
   const [forma, setForma] = useState('')
   const [payload, setPayload] = useState<RelatorioVendasAvancadoPayload | null>(inicial)
   const [loading, setLoading] = useState(false)
+
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // #21: presets de período. A lib é pura/testada; aqui só mapeia label.
+  const presets = useMemo<Array<{ id: DateRangePreset; label: string }>>(
+    () => [
+      { id: 'hoje', label: m.relatorios_vendas.preset_hoje },
+      { id: 'ontem', label: m.relatorios_vendas.preset_ontem },
+      { id: '7d', label: m.relatorios_vendas.preset_7d },
+      { id: '30d', label: m.relatorios_vendas.preset_30d },
+      { id: 'esta_semana', label: m.relatorios_vendas.preset_esta_semana },
+      { id: 'mes_atual', label: m.relatorios_vendas.preset_mes_atual },
+      { id: 'mes_anterior', label: m.relatorios_vendas.preset_mes_anterior },
+    ],
+    [m],
+  )
+
+  const presetAtivo = useMemo(() => matchDateRangePreset({ de, ate }), [de, ate])
+
+  const aplicarPreset = useCallback((p: DateRangePreset) => {
+    const r = computeDateRange(p)
+    setDe(r.de)
+    setAte(r.ate)
+  }, [])
+
+  // #21: persiste de/ate na URL (link compartilhável) sem recarregar a página.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '')
+    if (params.get('de') === de && params.get('ate') === ate) return
+    params.set('de', de)
+    params.set('ate', ate)
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [de, ate, pathname, router, searchParams])
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -142,6 +183,41 @@ export function RelatorioVendasClient({
     <>
       {/* Filtros */}
       <div className="dragon-glass-card mb-4 rounded-xl p-4">
+        {/* #21: chips de preset de período + persistência em URL */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-jl-fg-3">
+            {m.relatorios_vendas.periodo}
+          </span>
+          {presets.map((p) => {
+            const ativo = presetAtivo === p.id
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => aplicarPreset(p.id)}
+                aria-pressed={ativo}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                  ativo
+                    ? 'border-amber-400/60 bg-amber-400/10 text-amber-300'
+                    : 'border-jl-border-2 text-jl-fg-2 hover:border-jl-accent hover:text-jl-fg-1',
+                )}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+          <span
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs font-medium',
+              presetAtivo === null
+                ? 'border-amber-400/60 bg-amber-400/10 text-amber-300'
+                : 'border-transparent text-jl-fg-3',
+            )}
+          >
+            {m.relatorios_vendas.preset_personalizado}
+          </span>
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <label className="flex flex-col gap-1 text-xs font-medium text-jl-fg-3">
             {m.relatorios_vendas.de}
