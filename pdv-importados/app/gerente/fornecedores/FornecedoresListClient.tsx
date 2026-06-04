@@ -295,19 +295,13 @@ export function FornecedoresListClient({
             </>
           ) : undefined
         }
-        pagination={
-          <>
-            <div ref={sentinelRef} className="h-1 w-full" aria-hidden />
-            {loading && fornecedores.length === 0 && (
-              <p className="text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-            )}
-          </>
-        }
+        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
 
       <GerenteTable
         tone="dragon"
         compact
+        loading={loading && fornecedores.length === 0}
         columns={[
           {
             key: 'sel',

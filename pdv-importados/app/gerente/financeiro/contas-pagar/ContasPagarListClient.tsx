@@ -374,19 +374,13 @@ export function ContasPagarListClient({
         </div>
           </div>
         }
-        pagination={
-          <>
-            <div ref={sentinelRef} className="h-1 w-full" aria-hidden />
-            {loading && contas.length === 0 && (
-              <p className="text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-            )}
-          </>
-        }
+        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
 
       <GerenteTable
         tone="dragon"
         compact
+        loading={loading && contas.length === 0}
         columns={[
           { key: 'fornecedor', header: m.contas_pagar.col_fornecedor, priority: 'primary'     },
           { key: 'descricao',  header: m.contas_pagar.col_descricao                            },

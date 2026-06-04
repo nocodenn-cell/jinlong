@@ -813,6 +813,30 @@ html:has(.login-premium-root) body {
   }
 }
 
+/* Skeleton shimmer (#28) — varredura amber-soft. 1.4s; para em reduced-motion. */
+.jl-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--jl-shimmer-base) 0%,
+    var(--jl-shimmer-highlight) 50%,
+    var(--jl-shimmer-base) 100%
+  );
+  background-size: 200% 100%;
+  animation: jl-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes jl-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jl-shimmer {
+    animation: none;
+    background: var(--jl-shimmer-base);
+  }
+}
+
 /* Loader — dragão em órbita (cauda perseguindo) */
 @keyframes dragon-orbit {
   to {

@@ -36,6 +36,10 @@
   /* Accent (dragon gold / amber-400) */
   --jl-accent: var(--accent, #fbbf24);
 
+  /* Shimmer de skeleton (#28) — base slate tênue + realce amber-soft que varre. */
+  --jl-shimmer-base: rgba(148, 163, 184, 0.08);
+  --jl-shimmer-highlight: rgba(251, 191, 36, 0.10);
+
   /* ── Elevation shadows — UMA ferramenta por nível ───────────────────── */
 
   /* Elev-1: cards, panels, toolbars, filtros. Glow de 1px + drop sutil. */

@@ -188,19 +188,13 @@ export function ClientesListClient({
             <Plus className="h-4 w-4" aria-hidden /> {m.clientes.novo}
           </Button>
         }
-        pagination={
-          <>
-            <div ref={sentinelRef} className="h-1 w-full" aria-hidden />
-            {loading && clientes.length === 0 && (
-              <p className="text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-            )}
-          </>
-        }
+        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
 
       <GerenteTable
         tone="dragon"
         compact
+        loading={loading && clientes.length === 0}
         columns={[
           { key: 'cliente', header: m.clientes.col_cliente,   priority: 'primary'    },
           { key: 'doc',     header: m.clientes.col_documento,  priority: 'contextual' },

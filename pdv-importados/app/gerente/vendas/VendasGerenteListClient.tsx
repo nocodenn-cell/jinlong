@@ -452,19 +452,13 @@ export function VendasGerenteListClient({ idioma, locale }: Props) {
             {exporting ? 'Exportando…' : m.gerente.exportar_csv}
           </button>
         }
-        pagination={
-          <>
-            <div ref={sentinelRef} className="h-1 w-full" aria-hidden />
-            {loading && vendas.length === 0 && (
-              <p className="text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-            )}
-          </>
-        }
+        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
 
       <GerenteTable
         tone="dragon"
         compact
+        loading={loading && vendas.length === 0}
         columns={[
           { key: 'data',   header: m.gerente.col_data },
           { key: 'total',  header: m.gerente.col_total,  numeric: true,  priority: 'primary'     },
