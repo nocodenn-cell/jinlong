@@ -1,8 +1,8 @@
 'use client'
 
-import type { ReactNode } from 'react'
-import { memo } from 'react'
+import React, { type ReactNode, memo } from 'react'
 import { cn } from '@/lib/utils'
+import { DataTableSkeletonRows } from '@/components/gerente/DataTableSkeleton'
 
 /**
  * Prioridade semântica da coluna — controla peso visual do cabeçalho.
@@ -44,6 +44,10 @@ type GerenteTableProps = Readonly<{
   tone?: 'paper' | 'dragon'
   /** Reduz padding das linhas — ideal para grids de alta densidade. */
   compact?: boolean
+  /** Quando true, substitui o corpo por linhas-fantasma com shimmer (#28). */
+  loading?: boolean
+  /** Nº de linhas-fantasma no estado loading. Default 6. */
+  skeletonRows?: number
 }>
 
 /**
@@ -63,6 +67,8 @@ export const GerenteTable = memo(function GerenteTable({
   children,
   tone = 'paper',
   compact = false,
+  loading = false,
+  skeletonRows = 6,
 }: GerenteTableProps) {
   const dragon = tone === 'dragon'
 
@@ -113,7 +119,11 @@ export const GerenteTable = memo(function GerenteTable({
           </tr>
         </thead>
         <tbody className="divide-y app-divider">
-          {children}
+          {loading ? (
+            <DataTableSkeletonRows columns={columns} rows={skeletonRows} compact={compact} />
+          ) : (
+            children
+          )}
         </tbody>
       </table>
     </div>

@@ -28,6 +28,8 @@ export default defineConfig(({ mode }) => {
         'src/**/*.test.tsx',
         'app/**/*.test.ts',
         'app/**/*.test.tsx',
+        'components/**/*.test.ts',
+        'components/**/*.test.tsx',
         '../shared-core/src/**/*.test.ts',
       ],
       // Testes de integração que exigem Next.js request scope (cookies()) e Supabase real.

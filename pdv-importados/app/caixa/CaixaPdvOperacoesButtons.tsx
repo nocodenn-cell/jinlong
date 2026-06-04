@@ -117,7 +117,7 @@ function CaixaPdvOperacoesButtonsImpl({
           type="button"
           variant="secondary"
           className={cn(
-            "w-full text-xs sm:text-sm",
+            "w-full min-h-11 text-xs sm:text-sm",
             classic
               ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
               : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]",
@@ -179,6 +179,7 @@ function CaixaPdvOperacoesButtonsImpl({
           type="button"
           variant="secondary"
           className={cn(
+            "min-h-11",
             classic
               ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
               : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]",
@@ -194,6 +195,7 @@ function CaixaPdvOperacoesButtonsImpl({
           type="button"
           variant="secondary"
           className={cn(
+            "min-h-11",
             classic
               ? "border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20"
               : "border-destructive/45 bg-destructive/15 text-destructive hover:bg-destructive/25",
@@ -211,7 +213,7 @@ function CaixaPdvOperacoesButtonsImpl({
           type="button"
           variant="secondary"
           className={cn(
-            "inline-flex items-center gap-2",
+            "inline-flex min-h-11 items-center gap-2",
             classic
               ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
               : "border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",

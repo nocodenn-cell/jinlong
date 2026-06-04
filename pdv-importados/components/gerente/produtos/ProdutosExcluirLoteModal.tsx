@@ -4,13 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { aplicarExclusaoOuInativacaoEmLote } from '@/app/gerente/produtos/actions'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 
@@ -52,18 +46,6 @@ export function ProdutosExcluirLoteModal({
     setResumo(null)
   }, [open])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && phase !== 'loading') {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, fechar, phase])
-
   const confirmar = useCallback(async () => {
     if (produtoIds.length === 0) {
       emitGerenteToast({ kind: 'error', message: p.exclusao_sem_selecao })
@@ -101,31 +83,46 @@ export function ProdutosExcluirLoteModal({
     }
   }, [produtoIds, p, onLoteAplicadoComSucesso])
 
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && phase !== 'loading') fechar()
-      }}
+    <DragonModal
+      open={open}
+      onClose={fechar}
+      variant="danger"
+      size="lg"
+      icon={Trash2}
+      title={p.exclusao_modal_titulo}
+      dismissable={phase !== 'loading'}
+      closeLabel={m.comum.cancelar}
+      footer={
+        phase === 'done' ? (
+          <Button type="button" className="app-btn-accent" onClick={fechar}>
+            {p.exclusao_modal_fechar}
+          </Button>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              className="app-btn-neutral"
+              onClick={fechar}
+              disabled={phase === 'loading'}
+              autoFocus={phase === 'confirm'}
+            >
+              {m.comum.cancelar}
+            </Button>
+            <Button
+              type="button"
+              className="app-btn-accent"
+              disabled={phase === 'loading' || produtoIds.length === 0 || produtoIds.length > 100}
+              onClick={() => void confirmar()}
+            >
+              {phase === 'loading' ? p.exclusao_modal_processando : p.exclusao_modal_confirmar}
+            </Button>
+          </>
+        )
+      }
     >
-      <Card
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="produtos-excluir-lote-titulo"
-        className="dragon-elev-2 flex max-h-[90vh] w-full max-w-lg flex-col rounded-none sm:rounded-lg"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
-          <div className="flex items-start gap-2">
-            <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
-            <CardTitle id="produtos-excluir-lote-titulo" className="text-lg font-semibold text-jl-fg-1">
-              {p.exclusao_modal_titulo}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 overflow-y-auto px-4 py-4 text-sm sm:px-6">
+        <div className="space-y-4 py-1 text-sm">
           {phase === 'done' && resumo ? (
             <>
               <ul className="list-inside list-disc space-y-1 text-jl-fg-1">
@@ -163,36 +160,7 @@ export function ProdutosExcluirLoteModal({
               {interpolate(p.exclusao_modal_contagem, { n: produtoIds.length })}
             </p>
           ) : null}
-        </CardContent>
-        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
-          {phase === 'done' ? (
-            <Button type="button" className="app-btn-accent" onClick={fechar}>
-              {p.exclusao_modal_fechar}
-            </Button>
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="secondary"
-                className="app-btn-neutral"
-                onClick={fechar}
-                disabled={phase === 'loading'}
-                autoFocus={phase === 'confirm'}
-              >
-                {m.comum.cancelar}
-              </Button>
-              <Button
-                type="button"
-                className="app-btn-accent"
-                disabled={phase === 'loading' || produtoIds.length === 0 || produtoIds.length > 100}
-                onClick={() => void confirmar()}
-              >
-                {phase === 'loading' ? p.exclusao_modal_processando : p.exclusao_modal_confirmar}
-              </Button>
-            </>
-          )}
-        </CardFooter>
-      </Card>
-    </div>
+        </div>
+    </DragonModal>
   )
 }

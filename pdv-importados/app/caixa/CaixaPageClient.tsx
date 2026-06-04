@@ -171,6 +171,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const adicionarItem = useCarrinhoStore((s) => s.adicionarItem)
   const alterarQuantidade = useCarrinhoStore((s) => s.alterarQuantidade)
   const removerItem = useCarrinhoStore((s) => s.removerItem)
+  const restaurarUltimoRemovido = useCarrinhoStore((s) => s.restaurarUltimoRemovido)
   const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
 
   const economiaPrecoAtacadoAuto = useMemo(() => {
@@ -398,9 +399,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const handleRemover = useCallback(
     (itemId: string) => {
       removerItem(itemId)
+      // #13: soft-undo. O store guarda a linha + posição; toast lembra o atalho.
+      setCaixaMensagem(m.caixa.msg_item_removido_desfazer, { kind: "info" })
     },
-    [removerItem],
+    [removerItem, setCaixaMensagem, m.caixa.msg_item_removido_desfazer],
   )
+
+  const handleDesfazerRemocao = useCallback(() => {
+    const reposto = useCarrinhoStore.getState().ultimoRemovido
+    if (!reposto) return
+    restaurarUltimoRemovido()
+    setCaixaMensagem(m.caixa.msg_item_restaurado, { kind: "success" })
+  }, [restaurarUltimoRemovido, setCaixaMensagem, m.caixa.msg_item_restaurado])
 
   const handleNovoCupom = useCallback(() => {
     vendaIdempotenciaRef.current = null
@@ -771,6 +781,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onReimprimir: useCallback(() => {
       if (lastReciboRef.current) setReimprimirModalAberto(true)
     }, []),
+    onDesfazerRemocao: handleDesfazerRemocao,
     pdvClassicAtalhos,
   })
 

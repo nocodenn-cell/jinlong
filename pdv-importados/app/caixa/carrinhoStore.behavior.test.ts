@@ -40,6 +40,7 @@ function resetCarrinhoStore() {
     totalLiquido: 0,
     totalItens: 0,
     totalUnidades: 0,
+    ultimoRemovido: null,
   })
 }
 
@@ -213,6 +214,63 @@ describe('useCarrinhoStore behavior', () => {
     useCarrinhoStore.setState({ cartOwnerUserId: 'user-a' })
     useCarrinhoStore.getState().limparCarrinho()
     expect(useCarrinhoStore.getState().cartOwnerUserId).toBeNull()
+  })
+
+  it('#13 restaurarUltimoRemovido repõe a linha na posição original', () => {
+    const add = (id: string, produtoId: string) =>
+      useCarrinhoStore.getState().adicionarItem({
+        id,
+        produtoId,
+        nome: produtoId,
+        quantidade: 1,
+        precoUnitario: 10,
+        precoOriginal: 10,
+      })
+    add('linha-1', 'p-1')
+    add('linha-2', 'p-2')
+    add('linha-3', 'p-3')
+
+    useCarrinhoStore.getState().removerItem('linha-2')
+    let state = useCarrinhoStore.getState()
+    expect(state.itens.map((i) => i.id)).toEqual(['linha-1', 'linha-3'])
+    expect(state.ultimoRemovido?.index).toBe(1)
+    expect(state.totalLiquido).toBe(20)
+
+    useCarrinhoStore.getState().restaurarUltimoRemovido()
+    state = useCarrinhoStore.getState()
+    expect(state.itens.map((i) => i.id)).toEqual(['linha-1', 'linha-2', 'linha-3'])
+    expect(state.ultimoRemovido).toBeNull()
+    expect(state.totalLiquido).toBe(30)
+  })
+
+  it('#13 restaurarUltimoRemovido é no-op sem buffer e não duplica linha já reposta', () => {
+    // sem buffer
+    useCarrinhoStore.getState().restaurarUltimoRemovido()
+    expect(useCarrinhoStore.getState().itens).toHaveLength(0)
+
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoUnitario: 10,
+      precoOriginal: 10,
+    })
+    useCarrinhoStore.getState().removerItem('linha-1')
+    // re-bipa o mesmo produto antes de desfazer
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoUnitario: 10,
+      precoOriginal: 10,
+    })
+    useCarrinhoStore.getState().restaurarUltimoRemovido()
+    const state = useCarrinhoStore.getState()
+    expect(state.itens).toHaveLength(1)
+    expect(state.itens[0]?.quantidade).toBe(1)
+    expect(state.ultimoRemovido).toBeNull()
   })
 })
 

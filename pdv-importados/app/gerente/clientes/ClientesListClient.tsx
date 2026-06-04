@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Pencil, Trash2, Plus, Search } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { Button } from '@/components/ui/button'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -154,21 +155,22 @@ export function ClientesListClient({
 
   return (
     <>
-      {/* Header com busca + botão "+ Novo cliente" */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="relative flex-1 min-w-[240px] max-w-[420px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
-          <input
-            type="search"
-            value={termo}
-            onChange={(e) => setTermo(e.target.value)}
-            placeholder={m.clientes.placeholder_busca}
-            aria-label={m.clientes.placeholder_busca}
-            className="app-input h-9 w-full rounded-md pl-9 pr-3 text-sm shadow-inner"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-jl-fg-3">
+      <DataTablePage
+        filters={
+          <div className="relative w-full min-w-[240px] max-w-[420px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
+            <input
+              type="search"
+              value={termo}
+              onChange={(e) => setTermo(e.target.value)}
+              placeholder={m.clientes.placeholder_busca}
+              aria-label={m.clientes.placeholder_busca}
+              className="app-input h-9 w-full rounded-md pl-9 pr-3 text-sm shadow-inner"
+            />
+          </div>
+        }
+        meta={
+          <>
             {clientes.length} {m.clientes.contagem}
             {totalCrediario > 0 && (
               <>
@@ -179,20 +181,20 @@ export function ClientesListClient({
                 {m.clientes.em_crediario}
               </>
             )}
-          </span>
-          <Button
-            type="button"
-            className="app-btn-accent gap-1.5"
-            onClick={abrirNovo}
-          >
+          </>
+        }
+        actions={
+          <Button type="button" className="app-btn-accent gap-1.5" onClick={abrirNovo}>
             <Plus className="h-4 w-4" aria-hidden /> {m.clientes.novo}
           </Button>
-        </div>
-      </div>
+        }
+        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
+      >
 
       <GerenteTable
         tone="dragon"
         compact
+        loading={loading && clientes.length === 0}
         columns={[
           { key: 'cliente', header: m.clientes.col_cliente,   priority: 'primary'    },
           { key: 'doc',     header: m.clientes.col_documento,  priority: 'contextual' },
@@ -315,12 +317,7 @@ export function ClientesListClient({
           </tr>
         )}
       </GerenteTable>
-
-      <div ref={sentinelRef} className="h-1" aria-hidden />
-
-      {loading && clientes.length === 0 && (
-        <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-      )}
+      </DataTablePage>
 
       {modalAberto && (
         <ClienteEditarModal

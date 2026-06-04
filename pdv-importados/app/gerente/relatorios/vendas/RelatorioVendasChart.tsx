@@ -14,6 +14,7 @@ export default function RelatorioVendasChart({ data, locale, faturamentoLabel }:
     <div className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          {/* stroke/fill viram ATRIBUTOS SVG → não resolvem var()/color-mix; ficam literais. */}
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
           <XAxis
             dataKey="label"
@@ -27,16 +28,18 @@ export default function RelatorioVendasChart({ data, locale, faturamentoLabel }:
           />
           <Tooltip
             cursor={{ fill: 'rgba(251,191,36,0.08)' }}
+            // contentStyle é estilo inline real (div) → tokens resolvem; corrige
+            // o tooltip preto sobre fundo creme no tema Nuvem (achado 04).
             contentStyle={{
-              background: 'rgba(2,6,23,0.95)',
-              border: '1px solid rgba(148,163,184,0.38)',
+              background: 'var(--jl-surface-elev)',
+              border: '1px solid var(--jl-border-1)',
               borderRadius: 8,
-              color: '#f1f5f9',
+              color: 'var(--jl-fg-1)',
               fontSize: 12,
             }}
             formatter={(value) => [fmtGerenteBRL(Number(value ?? 0), locale), faturamentoLabel]}
           />
-          <Bar dataKey="total_liquido" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="total_liquido" fill="var(--jl-accent)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

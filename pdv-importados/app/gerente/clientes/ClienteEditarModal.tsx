@@ -3,13 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { UserPlus, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { DragonModal } from '@/components/ui/DragonModal'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -66,47 +60,13 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
   const [salvando, setSalvando] = useState(false)
   const [consentimentoLgpd, setConsentimentoLgpd] = useState(false)
 
-  const dialogRef = useRef<HTMLDivElement>(null)
   const nomeRef = useRef<HTMLInputElement>(null)
 
-  // ESC + lock scroll + foco
+  // DragonModal cuida de Escape, scroll-lock e foco-trap; aqui só o foco inicial.
   useEffect(() => {
-    const triggerEl = document.activeElement as HTMLElement | null
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    setTimeout(() => nomeRef.current?.focus(), 30)
-
-    const onKey = (e: KeyboardEvent) => {
-      if (salvando) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        fechar()
-        return
-      }
-      if (e.key === 'Tab') {
-        const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        )
-        if (!focusables || focusables.length === 0) return
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-      triggerEl?.focus?.()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [salvando])
+    const t = setTimeout(() => nomeRef.current?.focus(), 30)
+    return () => clearTimeout(t)
+  }, [])
 
   function sujo(): boolean {
     if (!editando) return !!(nome || documento || email || telefone || endereco || limite !== '0,00')
@@ -202,41 +162,47 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
   const finIn = 'h-10 w-full rounded-md px-3 text-sm app-input'
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !salvando) fechar()
-      }}
+    <DragonModal
+      open
+      onClose={fechar}
+      sheet
+      size="lg"
+      icon={Icon}
+      title={editando ? cliente!.nome : titulo}
+      subtitle={
+        editando && Number(cliente!.saldo_crediario) > 0 ? (
+          <>
+            {m.clientes.saldo_atual}:{' '}
+            <strong className="tabular-nums text-amber-400">
+              {fmtGerenteBRL(Number(cliente!.saldo_crediario), locale)}
+            </strong>
+          </>
+        ) : undefined
+      }
+      dismissable={!salvando}
+      closeLabel={m.comum.cancelar}
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            className="app-btn-neutral"
+            onClick={fechar}
+            disabled={salvando}
+          >
+            {m.comum.cancelar}
+          </Button>
+          <Button type="submit" form="cliente-form" className="app-btn-accent" disabled={salvando}>
+            {salvando
+              ? m.comum.carregando ?? '…'
+              : editando
+                ? m.clientes.modal_salvar
+                : m.clientes.modal_cadastrar}
+          </Button>
+        </>
+      }
     >
-      <Card
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cliente-modal-titulo"
-        className="dragon-elev-2 flex max-h-[92vh] w-full max-w-xl flex-col rounded-t-2xl sm:rounded-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="border-b border-jl-border-1 px-5 pb-3 pt-5 sm:px-6">
-          <div className="flex items-start gap-3">
-            <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--accent)]" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <CardTitle id="cliente-modal-titulo" className="text-lg font-semibold text-jl-fg-1">
-                {editando ? cliente!.nome : titulo}
-              </CardTitle>
-              {editando && Number(cliente!.saldo_crediario) > 0 && (
-                <p className="mt-1 text-xs text-jl-fg-3">
-                  {m.clientes.saldo_atual}:{' '}
-                  <strong className="tabular-nums text-amber-400">
-                    {fmtGerenteBRL(Number(cliente!.saldo_crediario), locale)}
-                  </strong>
-                </p>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <form onSubmit={submeter} className="flex flex-1 min-h-0 flex-col">
-          <CardContent className="flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
+        <form id="cliente-form" onSubmit={submeter} className="space-y-4 pb-1">
             {/* Tipo PF/PJ */}
             <div>
               <span className="mb-1.5 block text-xs font-medium text-jl-fg-3">
@@ -385,7 +351,6 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
                 <span id="err-lim" className="mt-1 block text-xs text-red-300">{erros.limite_crediario}</span>
               )}
             </label>
-          </CardContent>
 
           {/* Consentimento LGPD — obrigatório apenas para novos clientes */}
           {!editando && (
@@ -417,26 +382,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
             </div>
           )}
 
-          <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-5 py-3 sm:px-6">
-            <Button
-              type="button"
-              variant="secondary"
-              className="app-btn-neutral"
-              onClick={fechar}
-              disabled={salvando}
-            >
-              {m.comum.cancelar}
-            </Button>
-            <Button type="submit" className="app-btn-accent" disabled={salvando}>
-              {salvando
-                ? m.comum.carregando ?? '…'
-                : editando
-                  ? m.clientes.modal_salvar
-                  : m.clientes.modal_cadastrar}
-            </Button>
-          </CardFooter>
         </form>
-      </Card>
-    </div>
+    </DragonModal>
   )
 }

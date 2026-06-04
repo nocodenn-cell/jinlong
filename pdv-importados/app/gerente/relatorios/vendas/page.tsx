@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -42,15 +43,18 @@ export default async function RelatorioVendasPage({
       <GerenteFilterBar title={m.relatorios_vendas.titulo} />
       <p className="gerente-fin-muted mb-4 text-sm">{m.relatorios_vendas.subtitulo}</p>
 
-      <RelatorioVendasClient
-        idioma={idioma}
-        locale={locale}
-        deInicial={deDefault}
-        ateInicial={ateDefault}
-        vendedores={(vendedores ?? []) as Array<{ id: string; nome: string }>}
-        categorias={(categorias ?? []) as Array<{ id: string; nome: string }>}
-        inicial={inicial.ok ? inicial : null}
-      />
+      {/* Suspense: RelatorioVendasClient usa useSearchParams (persistência de range em URL). */}
+      <Suspense>
+        <RelatorioVendasClient
+          idioma={idioma}
+          locale={locale}
+          deInicial={deDefault}
+          ateInicial={ateDefault}
+          vendedores={(vendedores ?? []) as Array<{ id: string; nome: string }>}
+          categorias={(categorias ?? []) as Array<{ id: string; nome: string }>}
+          inicial={inicial.ok ? inicial : null}
+        />
+      </Suspense>
     </div>
   )
 }

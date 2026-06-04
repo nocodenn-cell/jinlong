@@ -10,6 +10,12 @@ export function computeSparklineGeometry(
   width: number,
   height: number,
   padding = 2,
+  /**
+   * Escala Y compartilhada (#20). Quando a sparkline desenha uma curva fantasma
+   * junto, ambas precisam do MESMO yMax p/ "mais alto = mais faturamento" ser
+   * comparável. Sem override, usa o próprio máximo da série.
+   */
+  yMaxOverride?: number,
 ): {
   linePath: string
   areaPath: string
@@ -26,7 +32,7 @@ export function computeSparklineGeometry(
   const xMin = xs.length > 0 ? Math.min(...xs) : 0
   const xMax = xs.length > 0 ? Math.max(...xs) : 1
   const xSpan = xMax === xMin ? 1 : xMax - xMin
-  const yMax = Math.max(...ys, 0)
+  const yMax = yMaxOverride !== undefined ? yMaxOverride : Math.max(...ys, 0)
 
   const coords = ordered.map((p) => {
     const nx = padding + ((p.x - xMin) / xSpan) * innerW

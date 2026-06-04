@@ -13,6 +13,7 @@ import type { HealthPayload } from '@/app/api/gerente/health/route'
 import { useActivityFeed } from '@/lib/hooks/useActivityFeed'
 import { usePolling } from '@/lib/hooks/usePolling'
 import { ActivityRailDrawer } from '@/components/gerente/ActivityRailDrawer'
+import { GerenteMobileNavDrawer } from '@/components/gerente/GerenteMobileNavDrawer'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
@@ -252,6 +253,9 @@ export function GerenteHeaderNav({
         'bg-jl-surface-base border-b border-jl-border-1',
       )}
     >
+      {/* #33: hamburger + drawer de navegação (só < md) */}
+      <GerenteMobileNavDrawer m={m} userLabel={roleLabel(perfil, m)} onSignOut={onSignOut} />
+
       {/* ── ZONA A: IDENTIDADE + LOJA ───────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 border-r border-jl-border-1 flex-shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -355,10 +359,10 @@ export function GerenteHeaderNav({
         })}
       </nav>
 
-      {/* ── ZONA B: ÍCONES (mobile < lg) ────────────────────────────────── */}
+      {/* ── ZONA B: ÍCONES (tablet md→lg; < md vira o drawer #33) ───────── */}
       <nav
         aria-label={m.gerente.titulo_painel}
-        className="lg:hidden flex items-center gap-0.5 px-2 flex-1 overflow-x-auto"
+        className="hidden md:flex lg:hidden items-center gap-0.5 px-2 flex-1 overflow-x-auto"
         style={{ scrollbarWidth: 'none' }}
       >
         {GERENTE_NAV_TOPICS.map((topic) => {

@@ -26,10 +26,19 @@
   /* Foreground */
   --jl-fg-1: var(--surface-text, rgb(241 245 249));    /* primary text  ~slate-100 */
   --jl-fg-2: rgb(203 213 225);                          /* secondary text  slate-300 */
-  --jl-fg-3: rgb(148 163 184);                          /* tertiary text   slate-400 */
+  /*
+   * Terciário: slate-400 (#94a3b8) sobre --surface-soft dava ~3.1:1 — reprova
+   * WCAG AA (mín. 4.5:1 p/ texto pequeno). Elevado p/ #a8b3c4 (~4.6:1) sem
+   * perder a hierarquia de "metadado". Ver achado 07 da auditoria de front-end.
+   */
+  --jl-fg-3: rgb(168 179 196);                          /* tertiary text — AA-safe */
 
   /* Accent (dragon gold / amber-400) */
   --jl-accent: var(--accent, #fbbf24);
+
+  /* Shimmer de skeleton (#28) — base slate tênue + realce amber-soft que varre. */
+  --jl-shimmer-base: rgba(148, 163, 184, 0.08);
+  --jl-shimmer-highlight: rgba(251, 191, 36, 0.10);
 
   /* ── Elevation shadows — UMA ferramenta por nível ───────────────────── */
 

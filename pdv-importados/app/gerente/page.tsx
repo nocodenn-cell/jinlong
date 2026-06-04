@@ -22,6 +22,7 @@ import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
+import { cn } from '@/lib/utils'
 import { painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { formatLinhaAtividade, interpolateTemplate } from '@/lib/gerente/formatDashboardAtividade'
 import { GerentePageZone } from '@/components/gerente/GerentePageZone'
@@ -61,6 +62,7 @@ const ZERO_RESUMO: DashboardResumoDTO = {
   cobertura_custo: 0,
   custo_confiavel: false,
   serie_horaria_hoje: [],
+  serie_horaria_semana_anterior: [],
   estoque_critico: [],
   atividades_recentes: [],
   produto_mais_vendido: 'Nenhum hoje (0 un)',
@@ -85,6 +87,22 @@ export default async function GerenteInicioPage() {
 
   const resumo: DashboardResumoDTO = resumoResult.ok ? resumoResult.data : ZERO_RESUMO
   const erroResumo = resumoResult.ok ? null : resumoResult.error
+
+  // #20 curva fantasma: série do mesmo dia 7d atrás + delta JUSTO (compara só
+  // até a hora atual, senão hoje-parcial vs semana-anterior-completa enganaria).
+  const ghostPoints = resumo.serie_horaria_semana_anterior.map((p) => ({ x: p.hora, y: p.faturamento }))
+  const temFantasma = ghostPoints.some((p) => p.y > 0)
+  const horaAtualGerente = Number(
+    new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: resumo.tz }).format(new Date()),
+  )
+  const somaSerieAteHora = (serie: { hora: number; faturamento: number }[]) =>
+    serie.reduce((acc, p) => (p.hora <= horaAtualGerente ? acc + p.faturamento : acc), 0)
+  const fantasmaHojeAteAgora = somaSerieAteHora(resumo.serie_horaria_hoje)
+  const fantasmaAntAteAgora = somaSerieAteHora(resumo.serie_horaria_semana_anterior)
+  const fantasmaDeltaPct =
+    fantasmaAntAteAgora > 0
+      ? Math.round(((fantasmaHojeAteAgora - fantasmaAntAteAgora) / fantasmaAntAteAgora) * 100)
+      : null
 
   const variacaoFaturamento = getVariacaoPercentual(
     resumo.faturamento_hoje,
@@ -225,10 +243,26 @@ export default async function GerenteInicioPage() {
             </h2>
             <p className="mt-1 text-xs text-jl-fg-3">{di.sparkline_subtitulo}</p>
           </div>
-          <div className="text-right">
-            <div className="text-xs uppercase tracking-wide text-jl-fg-3">{di.sparkline_pico}</div>
-            <div className="text-sm font-semibold text-jl-fg-1 tabular-nums">
-              {formatBRL(picoFaturamentoHora(resumo.serie_horaria_hoje), locale)}
+          <div className="flex items-center gap-3 text-right">
+            {temFantasma && fantasmaDeltaPct !== null && (
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+                  fantasmaDeltaPct >= 0
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : 'border-destructive/30 bg-destructive/10 text-destructive',
+                )}
+                title={`${di.sparkline_legenda_hoje} ${di.sparkline_vs_anterior}`}
+              >
+                <span aria-hidden="true">{fantasmaDeltaPct >= 0 ? '↑' : '↓'}</span>
+                {Math.abs(fantasmaDeltaPct)}% <span className="font-normal opacity-80">{di.sparkline_vs_anterior}</span>
+              </div>
+            )}
+            <div>
+              <div className="text-xs uppercase tracking-wide text-jl-fg-3">{di.sparkline_pico}</div>
+              <div className="text-sm font-semibold text-jl-fg-1 tabular-nums">
+                {formatBRL(picoFaturamentoHora(resumo.serie_horaria_hoje), locale)}
+              </div>
             </div>
           </div>
         </div>
@@ -236,6 +270,7 @@ export default async function GerenteInicioPage() {
           <Sparkline
             ariaLabel={di.sparkline_aria}
             points={resumo.serie_horaria_hoje.map((p) => ({ x: p.hora, y: p.faturamento }))}
+            ghostPoints={temFantasma ? ghostPoints : undefined}
           />
           <div className="mt-1 flex justify-between text-[10px] text-jl-fg-3">
             <span>{di.sparkline_eixo_00}</span>
@@ -244,6 +279,22 @@ export default async function GerenteInicioPage() {
             <span>{di.sparkline_eixo_18}</span>
             <span>{di.sparkline_eixo_24}</span>
           </div>
+          {temFantasma && (
+            <div className="mt-2 flex items-center gap-4 text-[10px] text-jl-fg-3">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-[2px] w-4 bg-primary" aria-hidden="true" />
+                {di.sparkline_legenda_hoje}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block h-0 w-4 border-t border-dashed"
+                  style={{ borderColor: 'color-mix(in srgb, var(--jl-fg-3) 60%, transparent)' }}
+                  aria-hidden="true"
+                />
+                {di.sparkline_legenda_anterior}
+              </span>
+            </div>
+          )}
         </div>
       </section>
 

@@ -49,6 +49,19 @@ describe('dashboardResumoParse', () => {
     expect(dto.atividades_recentes[0]?.tipo).toBe('VENDA')
     expect(dto.atividades_recentes[0]?.payload?.total_liquido).toBe(42.5)
     expect(dto.serie_horaria_hoje[0]?.hora).toBe(10)
+    // #20 forward-compat: chave ausente (pré-migration 225) → [] em vez de quebrar.
+    expect(dto.serie_horaria_semana_anterior).toEqual([])
+  })
+
+  it('#20 parseia serie_horaria_semana_anterior quando presente (pós-migration 225)', () => {
+    const dto = parseDashboardResumo({
+      serie_horaria_semana_anterior: [
+        { hora: 14, faturamento: 1480, vendas: 9 },
+        { hora: 15, faturamento: 0, vendas: 0 },
+      ],
+    })
+    expect(dto.serie_horaria_semana_anterior).toHaveLength(2)
+    expect(dto.serie_horaria_semana_anterior[0]?.faturamento).toBe(1480)
   })
 
   it('parseAtividades aceita payload estruturado e legado descricao', () => {

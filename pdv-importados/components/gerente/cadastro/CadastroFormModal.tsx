@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 
 type ModalState<R> =
@@ -22,7 +23,7 @@ type Props<R> = Readonly<{
 }>
 
 export function CadastroFormModal<R>({
-  state, onClose, onSaved, modalId, labels,
+  state, onClose, onSaved, labels,
   onSubmit, getInitialNome, extraFields,
   nomeLabel, nomePlaceholder,
 }: Props<R>) {
@@ -45,36 +46,37 @@ export function CadastroFormModal<R>({
     { successMessage: labels.salvo_sucesso },
   )
 
-  if (state.tipo === 'fechado') return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={modalId}>
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <div className="dragon-elev-2 relative z-10 w-full max-w-md rounded-2xl p-6">
-        <h2 id={modalId} className="mb-5 text-lg font-semibold app-accent-text">
-          {state.tipo === 'criar' ? labels.nova : labels.editar}
-        </h2>
-        <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium app-muted">{nomeLabel}</span>
-            <input
-              ref={inputRef} type="text" value={nome} maxLength={120}
-              onChange={(e) => setNome(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') salvar(undefined); if (e.key === 'Escape') onClose() }}
-              placeholder={nomePlaceholder}
-              className="h-10 rounded-lg border px-3 text-sm app-input app-border focus:border-amber-500/80 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
-            />
-          </label>
-          {extraFields?.(state)}
-        </div>
-        <div className="mt-6 flex justify-end gap-3">
+    <DragonModal
+      open={state.tipo !== 'fechado'}
+      onClose={onClose}
+      title={state.tipo === 'editar' ? labels.editar : labels.nova}
+      size="md"
+      dismissable={!loading}
+      closeLabel={labels.cancelar}
+      footer={
+        <>
           <button type="button" onClick={onClose} disabled={loading} className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:underline">{labels.cancelar}</button>
           <button type="button" onClick={() => salvar(undefined)} disabled={loading || nome.trim().length < 2}
             className="app-btn-accent inline-flex min-w-[120px] items-center justify-center rounded-lg px-5 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-50">
             {loading ? labels.salvando : labels.salvar}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4 pb-1">
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium app-muted">{nomeLabel}</span>
+          <input
+            ref={inputRef} type="text" value={nome} maxLength={120}
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') salvar(undefined) }}
+            placeholder={nomePlaceholder}
+            className="h-10 rounded-lg border px-3 text-sm app-input app-border focus:border-amber-500/80 focus:outline-none focus:ring-1 focus:ring-amber-500/40"
+          />
+        </label>
+        {extraFields?.(state)}
       </div>
-    </div>
+    </DragonModal>
   )
 }

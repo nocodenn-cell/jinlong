@@ -102,3 +102,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * #36 — Transições entre rotas. `@view-transition { navigation: auto }` ativa
+ * a View Transitions API em navegações cross-document same-origin (ex.: o
+ * redirect pós-login → painel). Suaviza o "flash" duro entre páginas com um
+ * cross-fade curto. NOTA: navegação client-side do App Router (cliques em
+ * <Link>) não dispara cross-document VT — para as abas do gerente animarem é
+ * preciso a flag experimental do Next; a regra abaixo é inerte e inofensiva aí.
+ */
+@view-transition {
+  navigation: auto;
+}
+
+/* Cross-fade de 180ms no documento inteiro (fade do achado). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}

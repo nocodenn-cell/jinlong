@@ -47,6 +47,8 @@ export type DashboardResumoDTO = {
   custo_confiavel: boolean
   produto_mais_vendido: string
   serie_horaria_hoje: DashboardSerieHora[]
+  /** Mesma série horária do MESMO dia da semana, 7 dias atrás (curva fantasma #20). */
+  serie_horaria_semana_anterior: DashboardSerieHora[]
   estoque_critico: DashboardEstoqueCritico[]
   atividades_recentes: DashboardAtividadeRecente[]
 }

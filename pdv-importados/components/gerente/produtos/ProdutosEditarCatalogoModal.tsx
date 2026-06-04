@@ -6,13 +6,7 @@ import { atualizarDadosProdutoGerente } from '@/app/gerente/produtos/actions'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 
@@ -106,18 +100,6 @@ export function ProdutosEditarCatalogoModal({
     setCstCofins(produto.cst_cofins ?? '07')
   }, [open, produto])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, fechar, saving])
-
   const salvar = useCallback(async () => {
     if (!produto) return
     setSaving(true)
@@ -179,29 +161,27 @@ export function ProdutosEditarCatalogoModal({
   const finSelect = 'h-9 w-full rounded-md px-3 text-xs app-select !bg-white/[.08] !border-white/[.18]'
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !saving) fechar()
-      }}
+    <DragonModal
+      open
+      onClose={fechar}
+      sheet
+      size="lg"
+      icon={Pencil}
+      title={p.editar_modal_titulo}
+      dismissable={!saving}
+      closeLabel={m.comum.cancelar}
+      footer={
+        <>
+          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={saving}>
+            {m.comum.cancelar}
+          </Button>
+          <Button type="button" className="app-btn-accent" disabled={saving} onClick={() => void salvar()}>
+            {saving ? '…' : p.editar_modal_salvar}
+          </Button>
+        </>
+      }
     >
-      <Card
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="produtos-editar-catalogo-titulo"
-        className="dragon-elev-2 flex max-h-[90vh] w-full max-w-lg flex-col rounded-none sm:rounded-lg"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
-          <div className="flex items-start gap-2">
-            <Pencil className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
-            <CardTitle id="produtos-editar-catalogo-titulo" className="text-lg font-semibold text-jl-fg-1">
-              {p.editar_modal_titulo}
-            </CardTitle>
-          </div>
-        </CardHeader>
-
-        <CardContent className="overflow-y-auto px-4 py-4 sm:px-6">
+        <div className="pb-1">
 
           {/* ── Identificação ── */}
           <SectionTitle>{p.secao_identificacao}</SectionTitle>
@@ -469,17 +449,7 @@ export function ProdutosEditarCatalogoModal({
             </label>
           </div>
 
-        </CardContent>
-
-        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
-          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={saving}>
-            {m.comum.cancelar}
-          </Button>
-          <Button type="button" className="app-btn-accent" disabled={saving} onClick={() => void salvar()}>
-            {saving ? '…' : p.editar_modal_salvar}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+        </div>
+    </DragonModal>
   )
 }

@@ -39,6 +39,8 @@ export function parseDashboardResumo(raw: unknown): DashboardResumoDTO {
     custo_confiavel: Boolean(r.custo_confiavel),
     produto_mais_vendido: typeof r.produto_mais_vendido === 'string' ? r.produto_mais_vendido : 'Nenhum hoje (0 un)',
     serie_horaria_hoje: parseSerieHoraria(r.serie_horaria_hoje),
+    // Ausente até a migration 225 entrar → parseSerieHoraria devolve [] (forward-compat).
+    serie_horaria_semana_anterior: parseSerieHoraria(r.serie_horaria_semana_anterior),
     estoque_critico: parseEstoqueCritico(r.estoque_critico),
     atividades_recentes: parseAtividades(r.atividades_recentes),
   }

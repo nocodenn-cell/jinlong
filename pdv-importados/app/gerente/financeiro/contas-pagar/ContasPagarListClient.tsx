@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Search, Download, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { Button } from '@/components/ui/button'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
@@ -249,8 +250,9 @@ export function ContasPagarListClient({
 
   return (
     <>
-      {/* KPIs */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <DataTablePage
+        kpis={
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="dragon-glass-card rounded-xl border border-amber-400/40 p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.contas_pagar.kpi_em_aberto}
@@ -293,9 +295,9 @@ export function ContasPagarListClient({
           </Button>
         </div>
       </div>
-
-      {/* Filtros */}
-      <div className="dragon-glass-card mb-4 flex flex-wrap items-center gap-2 rounded-xl p-3">
+        }
+        filters={
+          <div className="dragon-glass-card flex w-full flex-wrap items-center gap-2 rounded-xl p-3">
         <div className="relative min-w-[240px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
           <input
@@ -370,11 +372,15 @@ export function ContasPagarListClient({
             {exporting ? m.comum.carregando : m.gerente.exportar_csv}
           </button>
         </div>
-      </div>
+          </div>
+        }
+        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
+      >
 
       <GerenteTable
         tone="dragon"
         compact
+        loading={loading && contas.length === 0}
         columns={[
           { key: 'fornecedor', header: m.contas_pagar.col_fornecedor, priority: 'primary'     },
           { key: 'descricao',  header: m.contas_pagar.col_descricao                            },
@@ -504,11 +510,7 @@ export function ContasPagarListClient({
           </tr>
         )}
       </GerenteTable>
-
-      <div ref={sentinelRef} className="h-1" aria-hidden />
-      {loading && contas.length === 0 && (
-        <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-      )}
+      </DataTablePage>
 
       {emPagamento && (
         <PagamentoModal

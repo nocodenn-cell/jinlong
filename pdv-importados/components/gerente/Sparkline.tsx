@@ -8,6 +8,8 @@ export type { SparklinePoint }
 
 interface SparklineProps {
   points: SparklinePoint[]
+  /** Curva fantasma (#20): mesma hora, 7 dias atrás. Compartilha a escala Y. */
+  ghostPoints?: SparklinePoint[]
   /** Largura do viewBox SVG; o componente renderiza 100% do contêiner pai. */
   width?: number
   /** Altura do viewBox SVG. */
@@ -25,13 +27,25 @@ interface SparklineProps {
  */
 export function Sparkline({
   points,
+  ghostPoints,
   width = 600,
   height = 80,
   ariaLabel,
   className,
 }: SparklineProps) {
   const padding = 2
-  const { linePath, areaPath, baseY } = computeSparklineGeometry(points, width, height, padding)
+  const hasGhost = Array.isArray(ghostPoints) && ghostPoints.length > 0
+  // Escala Y compartilhada: hoje e a curva fantasma usam o mesmo máximo, senão
+  // "mais alto" não seria comparável entre as duas semanas.
+  const sharedMax = Math.max(
+    0,
+    ...points.map((p) => p.y),
+    ...(hasGhost ? ghostPoints!.map((p) => p.y) : []),
+  )
+  const { linePath, areaPath, baseY } = computeSparklineGeometry(points, width, height, padding, sharedMax)
+  const ghost = hasGhost
+    ? computeSparklineGeometry(ghostPoints!, width, height, padding, sharedMax)
+    : null
 
   return (
     <svg
@@ -43,6 +57,20 @@ export function Sparkline({
     >
       {areaPath && (
         <path d={areaPath} fill="currentColor" fillOpacity={0.12} />
+      )}
+      {/* Curva fantasma da semana anterior (#20): tracejada, fg-3 esmaecido.
+          stroke via `style` (não atributo) p/ o var()/color-mix resolver. */}
+      {ghost?.linePath && (
+        <path
+          d={ghost.linePath}
+          fill="none"
+          style={{ stroke: 'color-mix(in srgb, var(--jl-fg-3) 38%, transparent)' }}
+          strokeWidth={1.25}
+          strokeDasharray="3 3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
       )}
       {linePath && (
         <path

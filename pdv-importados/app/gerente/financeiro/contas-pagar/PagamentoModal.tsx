@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CreditCard, X } from 'lucide-react'
+import { CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
@@ -42,46 +42,13 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
 
-  const dialogRef = useRef<HTMLDivElement>(null)
   const valorRef = useRef<HTMLInputElement>(null)
 
+  // DragonModal cuida de Escape, scroll-lock e foco-trap; aqui só o foco inicial.
   useEffect(() => {
-    const triggerEl = document.activeElement as HTMLElement | null
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    setTimeout(() => valorRef.current?.focus(), 30)
-
-    const onKey = (e: KeyboardEvent) => {
-      if (salvando) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        fechar()
-        return
-      }
-      if (e.key === 'Tab') {
-        const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        )
-        if (!focusables || focusables.length === 0) return
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-      triggerEl?.focus?.()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [salvando])
+    const t = setTimeout(() => valorRef.current?.focus(), 30)
+    return () => clearTimeout(t)
+  }, [])
 
   const valorNum = Number(String(valor).replace(/\./g, '').replace(',', '.')) || 0
   const novoAberto = Math.max(0, aberto - valorNum)
@@ -141,51 +108,44 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !salvando) fechar()
-      }}
+    <DragonModal
+      open
+      onClose={fechar}
+      sheet
+      size="lg"
+      icon={CreditCard}
+      title={
+        <>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-jl-fg-3">
+            {m.contas_pagar.modal_eyebrow} · 付款登记
+          </span>
+          <span className="block truncate">{conta.descricao}</span>
+        </>
+      }
+      subtitle={
+        <>
+          {conta.fornecedor_nome ?? '—'}
+          {conta.nfe_numero && ` · NF-e #${conta.nfe_numero}`}
+        </>
+      }
+      dismissable={!salvando}
+      closeLabel={m.comum.fechar ?? 'Fechar'}
+      footer={
+        <>
+          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={salvando}>
+            {m.comum.cancelar}
+          </Button>
+          <Button type="submit" form="pg-form" className="app-btn-accent" disabled={salvando || !valorNum}>
+            {salvando
+              ? m.comum.carregando ?? '…'
+              : quita
+                ? `${m.contas_pagar.btn_quitar} ${fmtGerenteBRL(valorNum, locale)}`
+                : `${m.contas_pagar.btn_registrar} ${fmtGerenteBRL(valorNum, locale)}`}
+          </Button>
+        </>
+      }
     >
-      <Card
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pg-titulo"
-        className="dragon-elev-2 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-2xl sm:rounded-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="border-b border-jl-border-1 px-5 pb-3 pt-5 sm:px-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
-              <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--accent)]" aria-hidden />
-              <div className="min-w-0">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-jl-fg-3">
-                  {m.contas_pagar.modal_eyebrow} · 付款登记
-                </p>
-                <CardTitle id="pg-titulo" className="truncate text-lg font-semibold text-jl-fg-1">
-                  {conta.descricao}
-                </CardTitle>
-                <p className="mt-1 truncate text-xs text-jl-fg-3">
-                  {conta.fornecedor_nome ?? '—'}
-                  {conta.nfe_numero && ` · NF-e #${conta.nfe_numero}`}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={fechar}
-              aria-label={m.comum.fechar ?? 'Fechar'}
-              disabled={salvando}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md app-border border text-jl-fg-3 transition-colors hover:border-[color:var(--accent)] hover:text-jl-fg-1 disabled:opacity-50"
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </button>
-          </div>
-        </CardHeader>
-
-        <form onSubmit={submeter} className="flex flex-1 min-h-0 flex-col">
-          <CardContent className="flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
+        <form id="pg-form" onSubmit={submeter} className="space-y-4 pb-1">
             {/* Resumo */}
             <div className="grid grid-cols-3 gap-2.5">
               <div className="rounded-lg app-border border bg-jl-surface-soft px-3 py-2.5">
@@ -328,22 +288,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                 />
               </label>
             </div>
-          </CardContent>
-
-          <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-5 py-3 sm:px-6">
-            <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={salvando}>
-              {m.comum.cancelar}
-            </Button>
-            <Button type="submit" className="app-btn-accent" disabled={salvando || !valorNum}>
-              {salvando
-                ? m.comum.carregando ?? '…'
-                : quita
-                  ? `${m.contas_pagar.btn_quitar} ${fmtGerenteBRL(valorNum, locale)}`
-                  : `${m.contas_pagar.btn_registrar} ${fmtGerenteBRL(valorNum, locale)}`}
-            </Button>
-          </CardFooter>
         </form>
-      </Card>
-    </div>
+    </DragonModal>
   )
 }
