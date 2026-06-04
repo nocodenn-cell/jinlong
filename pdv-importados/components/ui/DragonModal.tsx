@@ -100,8 +100,12 @@ export function DragonModal({
     document.addEventListener('keydown', onKeyDown)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    // foco inicial no cartão (evita foco preso no gatilho atrás do backdrop)
-    const raf = requestAnimationFrame(() => cardRef.current?.focus())
+    // foco inicial no cartão — mas só se o conteúdo não definiu o próprio foco
+    // (ex.: modal que dá autofocus num textarea); evita roubar o foco de volta.
+    const raf = requestAnimationFrame(() => {
+      const card = cardRef.current
+      if (card && !card.contains(document.activeElement)) card.focus()
+    })
 
     return () => {
       document.removeEventListener('keydown', onKeyDown)

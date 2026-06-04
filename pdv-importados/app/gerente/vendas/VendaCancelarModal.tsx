@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import type { Mensagens } from '@/i18n/getMessages'
@@ -28,15 +29,6 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
       queueMicrotask(() => textareaRef.current?.focus())
     }
   }, [venda])
-
-  useEffect(() => {
-    if (!venda) return
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !isPending) onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [venda, isPending, onClose])
 
   if (!venda) return null
   const vendaAtiva = venda
@@ -66,35 +58,36 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="cancelar-venda-titulo"
-    >
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={isPending ? undefined : onClose}
-        aria-hidden
-      />
-      <div className="dragon-elev-2 relative z-10 w-full max-w-lg overflow-hidden rounded-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-3.5">
-          <h2 id="cancelar-venda-titulo" className="text-base font-semibold app-surface-text">
-            Cancelar venda
-          </h2>
+    <DragonModal
+      open
+      onClose={onClose}
+      variant="danger"
+      size="lg"
+      icon={AlertTriangle}
+      title="Cancelar venda"
+      dismissable={!isPending}
+      footer={
+        <>
           <button
             type="button"
             onClick={onClose}
             disabled={isPending}
-            aria-label="Fechar"
-            className="rounded-md p-1 text-jl-fg-3 transition hover:bg-white/[0.06] hover:text-jl-fg-1 disabled:opacity-40"
+            className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:text-jl-fg-1 disabled:opacity-40"
           >
-            <X className="h-4 w-4" aria-hidden />
+            Voltar
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
+          <button
+            type="submit"
+            form="cancelar-venda-form"
+            disabled={!motivoValido || isPending}
+            className="inline-flex min-w-[180px] items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPending ? 'Cancelando…' : 'Confirmar cancelamento'}
+          </button>
+        </>
+      }
+    >
+        <form id="cancelar-venda-form" onSubmit={handleSubmit} className="space-y-4 pb-1">
           {/* Resumo da venda */}
           <div className="rounded-xl border border-jl-border-1 bg-jl-surface-base/60 px-4 py-3 text-sm">
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -158,27 +151,7 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
               </span>
             </div>
           </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isPending}
-              className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:text-jl-fg-1 disabled:opacity-40"
-            >
-              Voltar
-            </button>
-            <button
-              type="submit"
-              disabled={!motivoValido || isPending}
-              className="inline-flex min-w-[180px] items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isPending ? 'Cancelando…' : 'Confirmar cancelamento'}
-            </button>
-          </div>
         </form>
-      </div>
-    </div>
+    </DragonModal>
   )
 }
