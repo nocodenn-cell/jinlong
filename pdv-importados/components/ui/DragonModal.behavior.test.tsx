@@ -85,6 +85,33 @@ describe('DragonModal', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  it('variant sheet aplica bottom-sheet no mobile (items-end + rounded-t)', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" sheet size="lg">
+        corpo
+      </DragonModal>,
+    )
+    const wrapper = document.querySelector('[role="dialog"]') as HTMLElement
+    expect(wrapper.className).toContain('items-end')
+    expect(wrapper.className).toContain('sm:items-center')
+    const card = wrapper.querySelector('.dragon-elev-2') as HTMLElement
+    expect(card.className).toContain('rounded-t-2xl')
+    expect(card.className).toContain('sm:max-w-2xl')
+  })
+
+  it('sem sheet centraliza sempre (items-center, max-w aplicado direto)', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" size="md">
+        corpo
+      </DragonModal>,
+    )
+    const wrapper = document.querySelector('[role="dialog"]') as HTMLElement
+    expect(wrapper.className).toContain('items-center')
+    const card = wrapper.querySelector('.dragon-elev-2') as HTMLElement
+    expect(card.className).toContain('max-w-md')
+    expect(card.className).not.toContain('items-end')
+  })
+
   it('restaura o overflow do body ao fechar', () => {
     render(
       <DragonModal open onClose={() => {}} title="T">

@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Building2, X } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -65,46 +65,13 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
 
-  const dialogRef = useRef<HTMLDivElement>(null)
   const nomeRef = useRef<HTMLInputElement>(null)
 
+  // DragonModal cuida de Escape, scroll-lock e foco-trap; aqui só o foco inicial.
   useEffect(() => {
-    const triggerEl = document.activeElement as HTMLElement | null
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    setTimeout(() => nomeRef.current?.focus(), 30)
-
-    const onKey = (e: KeyboardEvent) => {
-      if (salvando) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        fechar()
-        return
-      }
-      if (e.key === 'Tab') {
-        const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        )
-        if (!focusables || focusables.length === 0) return
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-      triggerEl?.focus?.()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [salvando])
+    const t = setTimeout(() => nomeRef.current?.focus(), 30)
+    return () => clearTimeout(t)
+  }, [])
 
   function sujo(): boolean {
     if (!editando) {
@@ -207,47 +174,36 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
   const finIn = 'h-10 w-full rounded-md px-3 text-sm app-input'
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !salvando) fechar()
-      }}
+    <DragonModal
+      open
+      onClose={fechar}
+      sheet
+      size="lg"
+      icon={Building2}
+      title={
+        <>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-jl-fg-3">
+            {editando ? m.fornecedores.modal_editar_titulo : m.fornecedores.modal_novo_titulo} · 供应商
+          </span>
+          <span className="block truncate">
+            {editando ? fornecedor!.nome : m.fornecedores.modal_novo_titulo}
+          </span>
+        </>
+      }
+      dismissable={!salvando}
+      closeLabel={m.comum.fechar ?? 'Fechar'}
+      footer={
+        <>
+          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={salvando}>
+            {m.comum.cancelar}
+          </Button>
+          <Button type="submit" form="forn-form" className="app-btn-accent" disabled={salvando}>
+            {salvando ? m.comum.carregando ?? '…' : editando ? m.fornecedores.modal_salvar : m.fornecedores.modal_cadastrar}
+          </Button>
+        </>
+      }
     >
-      <Card
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="forn-modal-titulo"
-        className="dragon-elev-2 flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-2xl sm:rounded-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="border-b border-jl-border-1 px-5 pb-3 pt-5 sm:px-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
-              <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--accent)]" aria-hidden />
-              <div className="min-w-0">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-jl-fg-3">
-                  {editando ? m.fornecedores.modal_editar_titulo : m.fornecedores.modal_novo_titulo} · 供应商
-                </p>
-                <CardTitle id="forn-modal-titulo" className="truncate text-lg font-semibold text-jl-fg-1">
-                  {editando ? fornecedor!.nome : m.fornecedores.modal_novo_titulo}
-                </CardTitle>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={fechar}
-              aria-label={m.comum.fechar ?? 'Fechar'}
-              disabled={salvando}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md app-border border text-jl-fg-3 transition-colors hover:border-[color:var(--accent)] hover:text-jl-fg-1 disabled:opacity-50"
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </button>
-          </div>
-        </CardHeader>
-
-        <form onSubmit={submeter} className="flex flex-1 min-h-0 flex-col">
-          <CardContent className="flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
+        <form id="forn-form" onSubmit={submeter} className="space-y-4 pb-1">
             {/* PF/PJ */}
             <div>
               <span className="mb-1.5 block text-xs font-medium text-jl-fg-3">{m.fornecedores.tipo_label}</span>
@@ -428,18 +384,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
                 </label>
               </div>
             </div>
-          </CardContent>
-
-          <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-5 py-3 sm:px-6">
-            <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={salvando}>
-              {m.comum.cancelar}
-            </Button>
-            <Button type="submit" className="app-btn-accent" disabled={salvando}>
-              {salvando ? m.comum.carregando ?? '…' : editando ? m.fornecedores.modal_salvar : m.fornecedores.modal_cadastrar}
-            </Button>
-          </CardFooter>
         </form>
-      </Card>
-    </div>
+    </DragonModal>
   )
 }

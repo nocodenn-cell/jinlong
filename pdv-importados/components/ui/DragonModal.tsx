@@ -16,6 +16,12 @@ type Props = Readonly<{
   icon?: LucideIcon
   variant?: DragonModalVariant
   size?: DragonModalSize
+  /**
+   * `sheet`: em telas pequenas vira bottom-sheet (largura total, ancorado embaixo,
+   * cantos arredondados só no topo); de `sm` p/ cima centraliza como diálogo normal.
+   * Ideal p/ formulários longos no mobile. Default false (sempre centralizado).
+   */
+  sheet?: boolean
   /** Slot de ações no rodapé (botões). Sem footer, o rodapé não é renderizado. */
   footer?: ReactNode
   children: ReactNode
@@ -29,6 +35,13 @@ const sizeClass: Record<DragonModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-2xl',
+}
+
+// Strings literais (não `sm:${...}`) p/ o Tailwind JIT enxergar e gerar a classe.
+const sheetSizeClass: Record<DragonModalSize, string> = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-2xl',
 }
 
 function isFocusable(el: Element): el is HTMLElement {
@@ -50,6 +63,7 @@ export function DragonModal({
   icon: Icon,
   variant = 'default',
   size = 'md',
+  sheet = false,
   footer,
   children,
   dismissable = true,
@@ -124,7 +138,10 @@ export function DragonModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className={cn(
+        'fixed inset-0 z-50 flex justify-center',
+        sheet ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4',
+      )}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -139,8 +156,9 @@ export function DragonModal({
         ref={cardRef}
         tabIndex={-1}
         className={cn(
-          'dragon-elev-2 relative z-10 flex max-h-[90vh] w-full flex-col rounded-2xl outline-none',
-          sizeClass[size],
+          'dragon-elev-2 relative z-10 flex max-h-[90vh] w-full flex-col outline-none',
+          // sheet: largura total + cantos só no topo no mobile; vira diálogo em sm+
+          sheet ? cn('rounded-t-2xl sm:rounded-2xl', sheetSizeClass[size]) : cn('rounded-2xl', sizeClass[size]),
         )}
       >
         <div className="flex items-start gap-3 px-6 pb-4 pt-6">
