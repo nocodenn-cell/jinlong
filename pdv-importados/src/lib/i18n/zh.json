@@ -838,6 +838,8 @@
     "item_adicionado": "已添加。",
     "msg_item_adicionado_toast": "商品已加入小票。",
     "msg_item_removido_qtde_zero": "数量为 0，商品已从小票移除。",
+    "msg_item_removido_desfazer": "商品已移除 — 按 Ctrl+Z 撤销。",
+    "msg_item_restaurado": "商品已恢复。",
     "msg_pagamento_split_invalido": "分笔支付金额不一致。应为：R$ {{esperado}} · 当前：R$ {{informado}}。",
     "confirmar_sangria_curta": "确认开始取款（Sangria）？",
     "confirmar_estorno_curto": "确认开始冲正这条流水？",

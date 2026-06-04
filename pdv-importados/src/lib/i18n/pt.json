@@ -838,6 +838,8 @@
     "item_adicionado": "Adicionado.",
     "msg_item_adicionado_toast": "Item adicionado ao cupom.",
     "msg_item_removido_qtde_zero": "Item removido: quantidade ajustada para zero.",
+    "msg_item_removido_desfazer": "Item removido — Ctrl+Z para desfazer.",
+    "msg_item_restaurado": "Item restaurado.",
     "msg_pagamento_split_invalido": "Pagamento fracionado inválido. Esperado: R$ {{esperado}} · Informado: R$ {{informado}}.",
     "confirmar_sangria_curta": "Confirmar abertura de sangria?",
     "confirmar_estorno_curto": "Confirmar início do estorno desta movimentação?",

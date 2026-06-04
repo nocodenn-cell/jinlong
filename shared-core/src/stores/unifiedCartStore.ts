@@ -44,8 +44,12 @@ export interface CarrinhoState {
   descontoGerenteValor: number
   descontoGerenteToken: string | null
   maxDescontoGerentePercentual: number
+  /** Última linha removida (não persistida) — buffer para desfazer (Ctrl+Z). */
+  ultimoRemovido: { item: ItemCarrinho; index: number } | null
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (id: string) => void
+  /** Repõe a última linha removida na posição original; no-op se buffer vazio. */
+  restaurarUltimoRemovido: () => void
   atualizarQuantidade: (id: string, quantidade: number) => void
   limparCarrinho: () => void
   setCartOwnerForSession: (userId: string | null) => void
@@ -168,6 +172,7 @@ function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
     descontoGerentePercentual: 0,
     descontoGerenteValor: 0,
     descontoGerenteToken: null,
+    ultimoRemovido: null,
   }
 }
 
@@ -233,6 +238,7 @@ export const useCartStore = create<CarrinhoState>()(
       descontoGerenteValor: 0,
       descontoGerenteToken: null,
       maxDescontoGerentePercentual: DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL,
+      ultimoRemovido: null,
 
       adicionarItem: (item) =>
         set((state) => {
@@ -243,8 +249,24 @@ export const useCartStore = create<CarrinhoState>()(
 
       removerItem: (id) =>
         set((state) => {
+          const index = state.itens.findIndex((i) => i.id === id)
+          if (index === -1) return {}
+          const removido = state.itens[index]
           const novosItens = state.itens.filter((i) => i.id !== id)
-          return commitItensComTotais(state, novosItens)
+          return { ...commitItensComTotais(state, novosItens), ultimoRemovido: { item: removido, index } }
+        }),
+
+      restaurarUltimoRemovido: () =>
+        set((state) => {
+          const buffer = state.ultimoRemovido
+          if (!buffer) return {}
+          // Já reposto (ex.: operador re-bipou o mesmo produto) → só limpa o buffer.
+          if (state.itens.some((i) => i.id === buffer.item.id)) {
+            return { ultimoRemovido: null }
+          }
+          const novosItens = [...state.itens]
+          novosItens.splice(Math.min(buffer.index, novosItens.length), 0, buffer.item)
+          return { ...commitItensComTotais(state, novosItens), ultimoRemovido: null }
         }),
 
       atualizarQuantidade: (id, quantidade) =>

@@ -22,6 +22,8 @@ type Params = {
   onFocarBusca: () => void
   onNovoCupom: () => void
   onReimprimir?: () => void
+  /** Ctrl+Z: repõe o último item removido do carrinho (achado #13). */
+  onDesfazerRemocao?: () => void
   pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
 }
 
@@ -44,6 +46,7 @@ export function useCaixaKeyboardShortcuts({
   onFocarBusca,
   onNovoCupom,
   onReimprimir,
+  onDesfazerRemocao,
   pdvClassicAtalhos = null,
 }: Params) {
   useEffect(() => {
@@ -97,6 +100,13 @@ export function useCaixaKeyboardShortcuts({
         onFocarBusca()
         return
       }
+      // Ctrl+Z fora de campo de texto (guard no topo do handler) → desfazer
+      // remoção de item. Em input/textarea o undo nativo do navegador segue.
+      if (onDesfazerRemocao && e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.code === "KeyZ") {
+        e.preventDefault()
+        onDesfazerRemocao()
+        return
+      }
       if (
         pdvClassicAtalhos &&
         e.altKey &&
@@ -140,6 +150,7 @@ export function useCaixaKeyboardShortcuts({
     onFocarBusca,
     onNovoCupom,
     onReimprimir,
+    onDesfazerRemocao,
     pdvClassicAtalhos,
   ])
 }
