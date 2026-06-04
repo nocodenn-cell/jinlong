@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 import { criarProduto } from '@/app/gerente/produtos/actions'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 
@@ -57,18 +57,6 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     requestAnimationFrame(() => nomeRef.current?.focus())
   }, [open])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, saving, fechar])
-
   const salvar = useCallback(async () => {
     const nomeTrim = nome.trim()
     if (!nomeTrim) {
@@ -118,30 +106,38 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const finSelect = 'h-9 w-full rounded-md px-3 text-xs app-select !bg-white/[.08] !border-white/[.18]'
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) fechar()
-      }}
+    <DragonModal
+      open
+      onClose={fechar}
+      sheet
+      size="lg"
+      icon={Plus}
+      title={p.cadastro_rapido}
+      subtitle={p.codigo_barras_opcional}
+      dismissable={!saving}
+      closeLabel={m.comum.cancelar ?? 'Cancelar'}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={fechar}
+            disabled={saving}
+            className="h-9 rounded-md px-4 text-sm font-medium app-muted hover:text-slate-200 transition-colors disabled:opacity-50"
+          >
+            {m.comum.cancelar ?? 'Cancelar'}
+          </button>
+          <Button
+            type="button"
+            onClick={() => void salvar()}
+            disabled={saving}
+            className="h-9 app-btn-accent px-5 text-sm font-semibold disabled:opacity-60"
+          >
+            {saving ? '…' : m.comum.salvar}
+          </Button>
+        </>
+      }
     >
-      <Card
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="novo-produto-modal-titulo"
-        className="dragon-elev-2 flex max-h-[90vh] w-full max-w-lg flex-col rounded-none sm:rounded-lg"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
-          <div className="flex items-start gap-2">
-            <Plus className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
-            <CardTitle id="novo-produto-modal-titulo" className="text-lg font-semibold text-jl-fg-1">
-              {p.cadastro_rapido}
-            </CardTitle>
-          </div>
-          <p className="mt-0.5 text-xs text-jl-fg-3">{p.codigo_barras_opcional}</p>
-        </CardHeader>
-
-        <CardContent className="overflow-y-auto px-4 py-4 sm:px-6">
+        <div className="pb-1">
 
           {/* Identificação */}
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
@@ -302,27 +298,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
               </label>
             </>
           )}
-        </CardContent>
-
-        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
-          <button
-            type="button"
-            onClick={fechar}
-            disabled={saving}
-            className="h-9 rounded-md px-4 text-sm font-medium app-muted hover:text-slate-200 transition-colors disabled:opacity-50"
-          >
-            {m.comum.cancelar ?? 'Cancelar'}
-          </button>
-          <Button
-            type="button"
-            onClick={() => void salvar()}
-            disabled={saving}
-            className="h-9 app-btn-accent px-5 text-sm font-semibold disabled:opacity-60"
-          >
-            {saving ? '…' : m.comum.salvar}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+        </div>
+    </DragonModal>
   )
 }
