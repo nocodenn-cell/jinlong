@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { useGerenteQuery } from '@/lib/hooks/useGerenteQuery'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
@@ -375,84 +376,91 @@ export function VendasGerenteListClient({ idioma, locale }: Props) {
 
   return (
     <>
-      {/* Period chips */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {PERIODOS.map((p) => (
-          <PeriodoChip key={p.key} active={periodo === p.key} onClick={() => setPeriodo(p.key)}>
-            {p.label}
-          </PeriodoChip>
-        ))}
-      </div>
-
-      {/* Secondary filters + Export */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={statusSel}
-            onChange={(e) => setStatusSel(e.target.value)}
-            className="h-8 w-[160px] rounded-lg border border-jl-border-1 bg-jl-surface-base px-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-          >
-            <option value="">Todos os status</option>
-            <option value="CONCLUIDA">{labelStatusVenda('CONCLUIDA', m)}</option>
-            <option value="CANCELADA">{labelStatusVenda('CANCELADA', m)}</option>
-          </select>
-          <select
-            value={pagamentoSel}
-            onChange={(e) => setPagamentoSel(e.target.value)}
-            className="h-8 w-[180px] rounded-lg border border-jl-border-1 bg-jl-surface-base px-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
-          >
-            <option value="">Todos os pagamentos</option>
-            {FORMAS_PAGAMENTO.map((fp) => (
-              <option key={fp.value} value={fp.value}>
-                {fp.label}
-              </option>
+      <DataTablePage
+        kpis={
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <KpiCard
+              label="Faturado no período"
+              value={fmtGerenteBRL(kpis?.faturado ?? 0, locale)}
+              accent="neutral"
+              loading={kpisLoading}
+            />
+            <KpiCard
+              label="Vendas concluídas"
+              value={String(kpis?.qtdConcluidas ?? 0)}
+              accent="green"
+              active={statusSel === 'CONCLUIDA'}
+              onClick={() => toggleStatusFromKpi('CONCLUIDA')}
+              loading={kpisLoading}
+            />
+            <KpiCard
+              label="Ticket médio"
+              value={fmtGerenteBRL(kpis?.ticketMedio ?? 0, locale)}
+              accent="neutral"
+              loading={kpisLoading}
+            />
+            <KpiCard
+              label={`Canceladas${kpis && kpis.valorCanceladas > 0 ? ` · ${fmtGerenteBRL(kpis.valorCanceladas, locale)}` : ''}`}
+              value={String(kpis?.qtdCanceladas ?? 0)}
+              accent="red"
+              active={statusSel === 'CANCELADA'}
+              onClick={() => toggleStatusFromKpi('CANCELADA')}
+              loading={kpisLoading}
+            />
+          </div>
+        }
+        filters={
+          <>
+            {PERIODOS.map((p) => (
+              <PeriodoChip key={p.key} active={periodo === p.key} onClick={() => setPeriodo(p.key)}>
+                {p.label}
+              </PeriodoChip>
             ))}
-          </select>
-        </div>
-        <button
-          type="button"
-          onClick={() => void handleExportCsv()}
-          disabled={exporting}
-          className={cn(
-            'gerente-btn-csv inline-flex h-8 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors app-btn-neutral',
-            exporting && 'cursor-not-allowed opacity-60',
-          )}
-        >
-          {exporting ? 'Exportando…' : m.gerente.exportar_csv}
-        </button>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard
-          label="Faturado no período"
-          value={fmtGerenteBRL(kpis?.faturado ?? 0, locale)}
-          accent="neutral"
-          loading={kpisLoading}
-        />
-        <KpiCard
-          label="Vendas concluídas"
-          value={String(kpis?.qtdConcluidas ?? 0)}
-          accent="green"
-          active={statusSel === 'CONCLUIDA'}
-          onClick={() => toggleStatusFromKpi('CONCLUIDA')}
-          loading={kpisLoading}
-        />
-        <KpiCard
-          label="Ticket médio"
-          value={fmtGerenteBRL(kpis?.ticketMedio ?? 0, locale)}
-          accent="neutral"
-          loading={kpisLoading}
-        />
-        <KpiCard
-          label={`Canceladas${kpis && kpis.valorCanceladas > 0 ? ` · ${fmtGerenteBRL(kpis.valorCanceladas, locale)}` : ''}`}
-          value={String(kpis?.qtdCanceladas ?? 0)}
-          accent="red"
-          active={statusSel === 'CANCELADA'}
-          onClick={() => toggleStatusFromKpi('CANCELADA')}
-          loading={kpisLoading}
-        />
-      </div>
+            <select
+              value={statusSel}
+              onChange={(e) => setStatusSel(e.target.value)}
+              className="h-8 w-[160px] rounded-lg border border-jl-border-1 bg-jl-surface-base px-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+            >
+              <option value="">Todos os status</option>
+              <option value="CONCLUIDA">{labelStatusVenda('CONCLUIDA', m)}</option>
+              <option value="CANCELADA">{labelStatusVenda('CANCELADA', m)}</option>
+            </select>
+            <select
+              value={pagamentoSel}
+              onChange={(e) => setPagamentoSel(e.target.value)}
+              className="h-8 w-[180px] rounded-lg border border-jl-border-1 bg-jl-surface-base px-2 text-sm text-jl-fg-1 outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+            >
+              <option value="">Todos os pagamentos</option>
+              {FORMAS_PAGAMENTO.map((fp) => (
+                <option key={fp.value} value={fp.value}>
+                  {fp.label}
+                </option>
+              ))}
+            </select>
+          </>
+        }
+        actions={
+          <button
+            type="button"
+            onClick={() => void handleExportCsv()}
+            disabled={exporting}
+            className={cn(
+              'gerente-btn-csv inline-flex h-8 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors app-btn-neutral',
+              exporting && 'cursor-not-allowed opacity-60',
+            )}
+          >
+            {exporting ? 'Exportando…' : m.gerente.exportar_csv}
+          </button>
+        }
+        pagination={
+          <>
+            <div ref={sentinelRef} className="h-1 w-full" aria-hidden />
+            {loading && vendas.length === 0 && (
+              <p className="text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
+            )}
+          </>
+        }
+      >
 
       <GerenteTable
         tone="dragon"
@@ -552,13 +560,7 @@ export function VendasGerenteListClient({ idioma, locale }: Props) {
           </tr>
         )}
       </GerenteTable>
-
-      {/* Sentinel para trigger do scroll infinito */}
-      <div ref={sentinelRef} className="h-1" aria-hidden />
-
-      {loading && vendas.length === 0 && (
-        <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-      )}
+      </DataTablePage>
 
       <VendaCancelarModal
         venda={vendaCancelar}

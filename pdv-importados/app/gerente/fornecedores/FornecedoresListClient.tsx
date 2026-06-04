@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Pencil, Trash2, Plus, Search, Mail } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { Button } from '@/components/ui/button'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -230,73 +231,79 @@ export function FornecedoresListClient({
 
   return (
     <>
-      {/* Header (busca + filtros + botão novo) */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="relative max-w-[420px] min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
-          <input
-            type="search"
-            value={termo}
-            onChange={(e) => setTermo(e.target.value)}
-            placeholder={m.fornecedores.placeholder_busca}
-            aria-label={m.fornecedores.placeholder_busca}
-            className="app-input h-9 w-full rounded-md pl-9 pr-3 text-sm shadow-inner"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {(['todos', 'ativos', 'inativos'] as StatusFiltro[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatusF(s)}
-              className={cn(
-                'app-chip rounded-full px-3 py-1 text-xs font-medium',
-                statusF === s ? 'app-chip-active' : '',
-              )}
-            >
-              {m.fornecedores[`filtro_${s}` as const]}
-            </button>
-          ))}
-          <span className="ml-1 text-xs text-jl-fg-3">
-            {fornecedores.length} {m.fornecedores.contagem}
-          </span>
+      <DataTablePage
+        filters={
+          <>
+            <div className="relative max-w-[420px] min-w-[240px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
+              <input
+                type="search"
+                value={termo}
+                onChange={(e) => setTermo(e.target.value)}
+                placeholder={m.fornecedores.placeholder_busca}
+                aria-label={m.fornecedores.placeholder_busca}
+                className="app-input h-9 w-full rounded-md pl-9 pr-3 text-sm shadow-inner"
+              />
+            </div>
+            {(['todos', 'ativos', 'inativos'] as StatusFiltro[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatusF(s)}
+                className={cn(
+                  'app-chip rounded-full px-3 py-1 text-xs font-medium',
+                  statusF === s ? 'app-chip-active' : '',
+                )}
+              >
+                {m.fornecedores[`filtro_${s}` as const]}
+              </button>
+            ))}
+          </>
+        }
+        meta={<>{fornecedores.length} {m.fornecedores.contagem}</>}
+        actions={
           <Button type="button" className="app-btn-accent gap-1.5" onClick={abrirNovo}>
             <Plus className="h-4 w-4" aria-hidden /> {m.fornecedores.novo}
           </Button>
-        </div>
-      </div>
-
-      {/* Bulk action bar */}
-      {selecionados.size > 0 && (
-        <div
-          role="region"
-          aria-label={`${selecionados.size} selecionados`}
-          className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-400/45 bg-amber-400/10 px-4 py-2"
-        >
-          <span className="text-sm font-medium text-jl-fg-1">
-            <strong className="font-bold text-amber-400 tabular-nums">{selecionados.size}</strong>{' '}
-            {m.fornecedores.bulk_selecionados}
-          </span>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => onBulkAtivar(true)} className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-medium">
-              {m.fornecedores.bulk_ativar}
-            </button>
-            <button type="button" onClick={() => onBulkAtivar(false)} className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-medium">
-              {m.fornecedores.bulk_inativar}
-            </button>
-            <button
-              type="button"
-              onClick={() => void onBulkExcluir()}
-              className="app-btn-danger rounded-md px-3 py-1.5 text-xs font-semibold"
-            >
-              {m.fornecedores.bulk_excluir}
-            </button>
-            <button type="button" onClick={() => setSelecionados(new Set())} className="text-xs text-jl-fg-3 hover:text-jl-fg-1">
-              {m.fornecedores.bulk_limpar}
-            </button>
-          </div>
-        </div>
-      )}
+        }
+        bulkBarLabel={selecionados.size > 0 ? `${selecionados.size} selecionados` : undefined}
+        bulkBar={
+          selecionados.size > 0 ? (
+            <>
+              <span className="text-sm font-medium text-jl-fg-1">
+                <strong className="font-bold text-amber-400 tabular-nums">{selecionados.size}</strong>{' '}
+                {m.fornecedores.bulk_selecionados}
+              </span>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => onBulkAtivar(true)} className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-medium">
+                  {m.fornecedores.bulk_ativar}
+                </button>
+                <button type="button" onClick={() => onBulkAtivar(false)} className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-medium">
+                  {m.fornecedores.bulk_inativar}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onBulkExcluir()}
+                  className="app-btn-danger rounded-md px-3 py-1.5 text-xs font-semibold"
+                >
+                  {m.fornecedores.bulk_excluir}
+                </button>
+                <button type="button" onClick={() => setSelecionados(new Set())} className="text-xs text-jl-fg-3 hover:text-jl-fg-1">
+                  {m.fornecedores.bulk_limpar}
+                </button>
+              </div>
+            </>
+          ) : undefined
+        }
+        pagination={
+          <>
+            <div ref={sentinelRef} className="h-1 w-full" aria-hidden />
+            {loading && fornecedores.length === 0 && (
+              <p className="text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
+            )}
+          </>
+        }
+      >
 
       <GerenteTable
         tone="dragon"
@@ -429,12 +436,7 @@ export function FornecedoresListClient({
           </tr>
         )}
       </GerenteTable>
-
-      <div ref={sentinelRef} className="h-1" aria-hidden />
-
-      {loading && fornecedores.length === 0 && (
-        <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando ?? 'Carregando…'}</p>
-      )}
+      </DataTablePage>
 
       {modalAberto && (
         <FornecedorEditarModal

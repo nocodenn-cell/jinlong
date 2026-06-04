@@ -12,6 +12,8 @@ type Props = Readonly<{
   kpis?: ReactNode
   /** Barra de ações em massa — renderizada só quando passada (com seleção). */
   bulkBar?: ReactNode
+  /** aria-label do landmark da bulkBar (ex.: "3 selecionados"). */
+  bulkBarLabel?: string
   /** Rodapé: paginação ou sentinel de scroll infinito. */
   pagination?: ReactNode
   /** Corpo — normalmente um <GerenteTable>. */
@@ -32,6 +34,7 @@ export function DataTablePage({
   actions,
   kpis,
   bulkBar,
+  bulkBarLabel,
   pagination,
   children,
   className,
@@ -52,6 +55,8 @@ export function DataTablePage({
 
       {bulkBar && (
         <div
+          role={bulkBarLabel ? 'region' : undefined}
+          aria-label={bulkBarLabel}
           className={cn(
             'mb-3 flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2',
             'border-amber-400/40 bg-amber-400/10',
