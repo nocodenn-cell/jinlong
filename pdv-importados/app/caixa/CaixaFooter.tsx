@@ -200,12 +200,16 @@ function CaixaFooterImpl({
           {metodoPagamentoPanel ? (
             <div className="w-full min-w-[12rem] max-w-md">{metodoPagamentoPanel}</div>
           ) : null}
+          {/* #12: total dominante — eyebrow uppercase tracked-out + número maior
+              p/ não competir com bruto/descontos (que já estão adjacentes). */}
           <div className="text-right min-w-[7rem]">
-            <div className="text-sm font-medium text-jl-fg-2">{m.caixa.total_pagar}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
+              {m.caixa.total_pagar}
+            </div>
             <div
               data-testid="caixa-total-liquido"
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-2xl sm:text-3xl font-extrabold tabular-nums text-amber-400"
+              className="text-3xl sm:text-4xl font-extrabold leading-none tabular-nums text-amber-400"
             >
               {moedaPrefixo} {fmt(totalLiquidoComGerente)}
             </div>
@@ -219,6 +223,7 @@ function CaixaFooterImpl({
                 finalizando || itensLength === 0 || buscando || carregandoRegras
               }
               aria-busy={finalizando}
+              aria-keyshortcuts="F9 F4"
             >
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
             </Button>
