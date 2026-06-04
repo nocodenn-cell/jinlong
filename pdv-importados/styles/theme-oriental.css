@@ -253,6 +253,25 @@
 }
 
 
+/*
+ * A11y achado 08: anel de foco âmbar GLOBAL. As classes app-* já têm foco
+ * próprio; o buraco eram inputs/selects/botões nativos (modais de cliente,
+ * fornecedor, etc.) que caíam no outline azul default do Chrome. .jl-focus-ring
+ * é o utilitário base; as regras de elemento cobrem o resto sem duplicar nas
+ * classes app-* / login-premium-* (que mantêm o foco já desenhado).
+ */
+.jl-focus-ring:focus-visible,
+input:focus-visible:not(.app-input):not(.login-premium-input),
+select:focus-visible:not(.app-select),
+textarea:focus-visible,
+[role='button']:focus-visible,
+button:focus-visible:not(.app-btn-accent):not(.app-btn-neutral):not(.app-btn-danger):not(.app-chip):not(.login-premium-submit):not(.gerente-btn-csv):not(.gerente-nav-back):not(.gerente-chip-action) {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--surface) 65%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
 /* A11y Fase 2.3: compatibilidade para classes legadas ainda usadas no gerente */
 .gerente-nav-back:focus-visible,
 .gerente-section-accent:focus-visible,
@@ -371,7 +390,7 @@ html:has(.login-premium-root) body {
 .login-premium-wordmark {
   font-family: var(--font-login-cinzel), 'Times New Roman', serif;
   letter-spacing: 0.14em;
-  color: #bfa76a;
+  color: var(--color-dragon-gold-cinzel);
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.85);
 }
 
@@ -386,14 +405,14 @@ html:has(.login-premium-root) body {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(212, 175, 55, 0.52);
+  color: color-mix(in srgb, var(--color-dragon-gold-luxury) 52%, transparent);
 }
 
 .login-premium-input {
   width: 100%;
   border-radius: 0;
   border: none;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-dragon-gold-luxury) 35%, transparent);
   background: rgba(13, 13, 13, 0.85);
   padding: 0.65rem 0.25rem 0.55rem;
   font-size: 0.875rem;
@@ -410,8 +429,8 @@ html:has(.login-premium-root) body {
 }
 
 .login-premium-input:focus {
-  border-bottom-color: rgba(212, 175, 55, 0.95);
-  box-shadow: 0 1px 0 0 rgba(212, 175, 55, 0.65);
+  border-bottom-color: color-mix(in srgb, var(--color-dragon-gold-luxury) 95%, transparent);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--color-dragon-gold-luxury) 65%, transparent);
   background: rgba(13, 13, 13, 0.95);
 }
 
@@ -420,7 +439,7 @@ html:has(.login-premium-root) body {
   width: 100%;
   border-radius: 0.35rem;
   border: none;
-  background: #d4af37;
+  background: var(--color-dragon-gold-luxury);
   color: #000000;
   padding: 0.72rem 1rem;
   font-size: 0.875rem;
@@ -436,12 +455,12 @@ html:has(.login-premium-root) body {
 }
 
 .login-premium-submit:focus-visible {
-  outline: 2px solid rgba(212, 175, 55, 0.85);
+  outline: 2px solid color-mix(in srgb, var(--color-dragon-gold-luxury) 85%, transparent);
   outline-offset: 3px;
 }
 
 .login-premium-submit:active:not(:disabled) {
-  box-shadow: 0 6px 22px -6px rgba(212, 175, 55, 0.55);
+  box-shadow: 0 6px 22px -6px color-mix(in srgb, var(--color-dragon-gold-luxury) 55%, transparent);
 }
 
 .login-premium-submit:disabled {
@@ -450,7 +469,7 @@ html:has(.login-premium-root) body {
 }
 
 .login-premium-inactivity {
-  border: 1px solid rgba(212, 175, 55, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-dragon-gold-luxury) 35%, transparent);
   background: rgba(0, 0, 0, 0.55);
   color: rgba(253, 230, 138, 0.95);
 }

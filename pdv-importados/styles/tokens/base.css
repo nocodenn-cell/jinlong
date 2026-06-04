@@ -20,6 +20,13 @@
   --color-dragon-gold-600: #d97706;
   --color-dragon-gold-700: #b45309;
   --color-dragon-gold-900: #78350f;
+  /*
+   * Paleta cerimonial do LOGIN (uso exclusivo da tela de entrada — "login =
+   * paleta luxury, app = paleta accent"). Ouro mais escuro/serif, não o
+   * amber-400 do app. Antes hardcoded como #d4af37/#bfa76a em theme-oriental.
+   */
+  --color-dragon-gold-luxury: #d4af37; /* ouro do botão/realces do login */
+  --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 
   --color-dragon-imperial-red-50: #fef2f2;
   --color-dragon-imperial-red-100: #fee2e2;
