@@ -1,0 +1,178 @@
+'use client'
+
+import React, { useEffect, useId, useRef, type ReactNode } from 'react'
+import { X, type LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+export type DragonModalVariant = 'default' | 'danger'
+export type DragonModalSize = 'sm' | 'md' | 'lg'
+
+type Props = Readonly<{
+  open: boolean
+  onClose: () => void
+  title: ReactNode
+  subtitle?: ReactNode
+  /** Ícone Lucide à esquerda do título. Default = nenhum (ou AlertTriangle no danger). */
+  icon?: LucideIcon
+  variant?: DragonModalVariant
+  size?: DragonModalSize
+  /** Slot de ações no rodapé (botões). Sem footer, o rodapé não é renderizado. */
+  footer?: ReactNode
+  children: ReactNode
+  /** Trava fechar por backdrop/Escape — útil durante submit. Default true. */
+  dismissable?: boolean
+  /** rótulo acessível do botão fechar (i18n). */
+  closeLabel?: string
+}>
+
+const sizeClass: Record<DragonModalSize, string> = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-2xl',
+}
+
+function isFocusable(el: Element): el is HTMLElement {
+  return el instanceof HTMLElement && !el.hasAttribute('disabled') && el.tabIndex !== -1
+}
+
+/**
+ * DragonModal — primitivo único de diálogo (achados #06/#14/#31 da auditoria).
+ * Backdrop glass + cartão `dragon-elev-2`, header com ícone âmbar (imperial-red
+ * no `variant="danger"`) + título + subtítulo + X, e slot de footer para ações.
+ * Cuida de Escape, clique no backdrop, trava de scroll e foco (move ao abrir,
+ * restaura ao fechar, ciclo de Tab contido). É o único caminho aceito p/ dialog.
+ */
+export function DragonModal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  icon: Icon,
+  variant = 'default',
+  size = 'md',
+  footer,
+  children,
+  dismissable = true,
+  closeLabel = 'Fechar',
+}: Props) {
+  const titleId = useId()
+  const subtitleId = useId()
+  const cardRef = useRef<HTMLDivElement>(null)
+  // Ref estável p/ onClose: evita re-rodar o effect (scroll/foco) a cada render
+  // quando o pai passa um onClose com identidade nova.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // Escape + trava de scroll + foco (abre → move p/ o cartão; fecha → restaura).
+  useEffect(() => {
+    if (!open) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && dismissable) {
+        e.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (e.key === 'Tab') {
+        const card = cardRef.current
+        if (!card) return
+        const focusables = Array.from(card.querySelectorAll<HTMLElement>(
+          'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])',
+        )).filter(isFocusable)
+        if (focusables.length === 0) {
+          e.preventDefault()
+          card.focus()
+          return
+        }
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    // foco inicial no cartão (evita foco preso no gatilho atrás do backdrop)
+    const raf = requestAnimationFrame(() => cardRef.current?.focus())
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = prevOverflow
+      cancelAnimationFrame(raf)
+      previouslyFocused?.focus?.()
+    }
+  }, [open, dismissable])
+
+  if (!open) return null
+
+  const accent =
+    variant === 'danger'
+      ? 'text-red-400 bg-red-500/10'
+      : 'text-amber-400 bg-amber-400/10'
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={subtitle ? subtitleId : undefined}
+    >
+      <div
+        className="dragon-glass-backdrop absolute inset-0"
+        onClick={dismissable ? onClose : undefined}
+        aria-hidden
+      />
+      <div
+        ref={cardRef}
+        tabIndex={-1}
+        className={cn(
+          'dragon-elev-2 relative z-10 flex max-h-[90vh] w-full flex-col rounded-2xl outline-none',
+          sizeClass[size],
+        )}
+      >
+        <div className="flex items-start gap-3 px-6 pb-4 pt-6">
+          {Icon && (
+            <span className={cn('mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg', accent)}>
+              <Icon className="h-5 w-5" aria-hidden />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <h2 id={titleId} className="text-lg font-semibold text-jl-fg-1">
+              {title}
+            </h2>
+            {subtitle && (
+              <p id={subtitleId} className="mt-0.5 text-sm text-jl-fg-3">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={closeLabel}
+            className="-mr-1.5 -mt-1.5 flex-shrink-0 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06] hover:text-jl-fg-1"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6">{children}</div>
+
+        {footer && (
+          <div className="flex flex-wrap items-center justify-end gap-3 px-6 pb-6 pt-5">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

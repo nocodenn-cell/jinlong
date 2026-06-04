@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertTriangle } from 'lucide-react'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 
 type Props = Readonly<{
@@ -36,21 +38,18 @@ export function ConfirmExcluirCadastroModal({
     { successMessage: labels.excluido_sucesso },
   )
 
-  if (!row) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <div className="dragon-elev-2 relative z-10 w-full max-w-sm rounded-2xl p-6">
-        <h2 className="mb-2 text-base font-semibold app-surface-text">{labels.confirmar_excluir_titulo}</h2>
-        <p className="mb-6 text-sm app-muted">
-          {labels.confirmar_excluir_texto.replace('{{nome}}', row.nome)}
-        </p>
-        <div className="flex justify-end gap-3">
+    <DragonModal
+      open={row !== null}
+      onClose={onClose}
+      variant="danger"
+      size="sm"
+      icon={AlertTriangle}
+      title={labels.confirmar_excluir_titulo}
+      dismissable={!loading}
+      closeLabel={labels.cancelar}
+      footer={
+        <>
           <button
             type="button"
             onClick={onClose}
@@ -67,8 +66,12 @@ export function ConfirmExcluirCadastroModal({
           >
             {loading ? labels.excluindo : labels.excluir}
           </button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <p className="pb-1 text-sm app-muted">
+        {row ? labels.confirmar_excluir_texto.replace('{{nome}}', row.nome) : ''}
+      </p>
+    </DragonModal>
   )
 }
