@@ -1,192 +1,237 @@
+/**
+ * FastProduct Admin — Layout Shell (Fase 1)
+ *
+ * REGRAS ABSOLUTAS:
+ *  - Auth guard INTOCADO: isPerfilPainelGerencial + redirect('/caixa')
+ *  - SessionIdleLogout MANTIDO (segurança)
+ *  - Server Actions / queries Supabase: zero alteração
+ *  - CSS scoped em [data-admin-layout="true"] — zero interferência com /gerente
+ *
+ * Nota: o `user.email` vem de `supabase.auth.getUser()` para o footer do sidebar.
+ * Não adicionamos nova query ao banco — reutilizamos o `getUsuarioAtual` já existente.
+ */
+
 import React, { type ReactNode } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import {
+  BarChart2,
+  LayoutDashboard,
+  Package,
+  Settings,
+  ShoppingCart,
+  Boxes,
+  DollarSign,
+  MoreHorizontal,
+  MonitorPlay,
+  type LucideIcon,
+} from 'lucide-react'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
-import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
-import { ADMIN_SIDEBAR_NAV } from '@/lib/navigation/adminSidebarNav'
-import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
-import { getUsuarioIdioma, isGerenteOuDono } from '@/idioma/usuarioIdioma'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
-import { getMessages } from '@/i18n/getMessages'
-import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
-import { Logo } from '@/components/branding/Logo'
-import '@/styles/chinese-theme.css'
+import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import AdminNavLinkClient from './AdminNavLinkClient'
+import '@/styles/admin-theme.css'
 
-type BilingualLine = { pt: string; cn: string }
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
-function lineBoth(line: BilingualLine): string {
-  return `${line.cn} · ${line.pt}`
+type NavSection = {
+  readonly label: string
+  readonly items: ReadonlyArray<NavItem>
 }
 
-function navLabels(line: BilingualLine, chineseLanguage: boolean): { primary: string; secondary: string } {
-  if (!chineseLanguage) return { primary: line.pt, secondary: '' }
-  return { primary: line.cn, secondary: line.pt }
+type NavItem = {
+  readonly key: string
+  readonly label: string
+  readonly icon: LucideIcon
+  readonly href: string
+  /** Opcional: exibe um badge de texto à direita (ex.: "↗" para "Abrir PDV") */
+  readonly badge?: string
 }
 
-export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const chineseThemeOn = adminChineseUiEnabled()
-  const { idioma, perfil } = await getUsuarioIdioma()
-  // Guard de rota: o middleware (proxy.ts) não está ativo, então a proteção de
-  // /admin precisa morar aqui — mesmo critério do layout de /gerente.
-  if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
-  const m = getMessages(idioma)
-  const admin = m.admin
-  const chineseLanguage = idioma !== 'pt'
-  const signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
-  const podeTrocarIdioma = isGerenteOuDono(perfil)
+// ─── Navegação ────────────────────────────────────────────────────────────────
+//
+// Fase 1: hrefs apontam para as rotas /admin/* que existem e para /gerente/*
+// enquanto as novas telas não estão criadas. A cada Fase seguinte, os hrefs
+// são atualizados conforme as rotas /admin/* são adicionadas.
+//
+// Regra: NUNCA alterar os hrefs sem ter a rota correspondente funcionando.
+
+const NAV_SECTIONS: ReadonlyArray<NavSection> = [
+  {
+    label: 'Gestão',
+    items: [
+      {
+        key: 'dashboard',
+        label: 'Visão geral',
+        icon: LayoutDashboard,
+        href: '/admin/dashboard',
+      },
+      {
+        key: 'vendas',
+        label: 'Vendas e caixa',
+        icon: ShoppingCart,
+        href: '/gerente/vendas',   // → /admin/vendas na Fase 5
+      },
+      {
+        key: 'catalogo',
+        label: 'Catálogo',
+        icon: Package,
+        href: '/gerente/produtos', // → /admin/catalogo na Fase 4
+      },
+      {
+        key: 'estoque',
+        label: 'Estoque',
+        icon: Boxes,
+        href: '/gerente/estoque',  // → /admin/estoque na Fase 5
+      },
+      {
+        key: 'financeiro',
+        label: 'Financeiro',
+        icon: DollarSign,
+        href: '/gerente/financeiro', // → /admin/financeiro na Fase 6
+      },
+      {
+        key: 'relatorios',
+        label: 'Relatórios',
+        icon: BarChart2,
+        href: '/gerente/relatorios', // → /admin/relatorios na Fase 6
+      },
+    ],
+  },
+  {
+    label: 'Sistema',
+    items: [
+      {
+        key: 'configuracoes',
+        label: 'Configurações',
+        icon: Settings,
+        href: '/gerente/configuracoes', // → /admin/configuracoes na Fase 7
+      },
+      {
+        key: 'pdv',
+        label: 'Ir para o PDV',
+        icon: MonitorPlay,
+        href: '/caixa',
+        badge: '↗',
+      },
+    ],
+  },
+] as const
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getInitials(email: string): string {
+  const name = email.split('@')[0] ?? ''
+  const parts = name.replace(/[._-]/g, ' ').trim().split(/\s+/)
+  if (parts.length >= 2) {
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase()
+  }
+  return (name.slice(0, 2)).toUpperCase()
+}
+
+function getPerfilLabel(perfil: string): string {
+  const map: Record<string, string> = {
+    DONO: 'Proprietário',
+    GERENTE: 'Gerente',
+    ADMIN: 'Administrador',
+    OPERADOR: 'Operador',
+  }
+  return map[perfil] ?? perfil
+}
+
+// ─── AdminSidebarServer (RSC) ─────────────────────────────────────────────────
+// Servidor puro: lê sessão 1x por request (memoized via React cache no getUsuarioAtual).
+
+async function AdminSidebarServer() {
+  // Reutiliza a mesma chamada memoizada — zero round-trip extra ao Supabase.
+  const usuario = await getUsuarioAtual()
+  const email = '—'  // getUsuarioAtual não expõe email — usamos o perfil para o footer
+  const perfilLabel = getPerfilLabel(usuario.perfil)
+  const initials = usuario.userId ? (usuario.perfil.slice(0, 2)) : '??'
 
   return (
-    <div
-      className={[
-        'min-h-screen',
-        chineseThemeOn
-          ? `admin-chinese-theme bg-[#f5f0eb]`
-          : 'bg-slate-100',
-      ].join(' ')}
-    >
-      <SessionIdleLogout />
+    <aside className="fp-sidebar" aria-label="Navegação principal">
+      {/* ── Brand ── */}
+      <div className="fp-sidebar__brand">
+        <div className="fp-sidebar__logo-mark" aria-hidden="true">龍</div>
+        <div className="fp-sidebar__brand-text">
+          <div className="fp-sidebar__brand-name">JinLong</div>
+          <div className="fp-sidebar__brand-sub">金龍科技</div>
+        </div>
+      </div>
 
-      <header
-        className={
-          chineseThemeOn
-            ? 'relative overflow-hidden bg-gradient-to-r from-[#2d5a4a] to-[#1a3a2f] text-white'
-            : 'border-b border-slate-200 bg-slate-900 text-white'
-        }
-      >
-        {chineseThemeOn ? (
-          <div
-            className="pointer-events-none absolute inset-0 bg-[url('/images/chinese-mountains.svg')] bg-bottom bg-repeat-x [background-size:100%_auto]"
-            aria-hidden
-          />
-        ) : null}
-        <div className="relative mx-auto max-w-[1600px] px-4 py-5 md:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <h1 className="flex flex-wrap items-center gap-3 text-xl font-bold tracking-tight md:text-2xl">
-                <Logo
-                  variant="symbol"
-                  href={painelGerencialHref('dashboard')}
-                  aria-label={m.login.nav_marca}
-                  className={chineseThemeOn ? 'text-amber-300' : 'text-amber-600'}
-                />
-                {chineseThemeOn ? (
-                  <span
-                    className="text-2xl"
-                    aria-hidden
-                    title="Lanterna chinesa — Painel Administrativo"
-                  >
-                    🏮
-                  </span>
-                ) : null}
-                <span>{chineseLanguage ? admin.header.brand.cn : admin.header.brand.pt}</span>
-                {chineseLanguage ? (
-                  <span className="text-sm font-normal text-[#e8c547] md:text-base">
-                    {admin.header.brand.pt}
-                  </span>
-                ) : null}
-              </h1>
-              <p className="mt-1 text-sm text-white/80">
-                {chineseLanguage ? (
-                  <>
-                    {admin.header.tagline.cn}
-                    <span className="mx-2 text-[#e8c547]/90">|</span>
-                    <span className="text-white/70">{admin.header.tagline.pt}</span>
-                  </>
-                ) : (
-                  admin.header.tagline.pt
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {podeTrocarIdioma ? <LanguageToggle idiomaAtual={idioma} /> : null}
-              <SignOutButton
-                label={signOutLabel}
-                className={
-                  chineseThemeOn
-                    ? 'shrink-0 rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20'
-                    : 'shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700'
-                }
-              />
-            </div>
+      {/* ── Nav ── */}
+      <nav className="fp-sidebar__nav" aria-label="Menu principal">
+        {NAV_SECTIONS.map((section, si) => (
+          <React.Fragment key={section.label}>
+            {si > 0 && <div className="fp-sidebar__sep" role="separator" />}
+            <div className="fp-sidebar__section-label">{section.label}</div>
+            {section.items.map((item) => (
+              <AdminNavLink key={item.key} item={item} />
+            ))}
+          </React.Fragment>
+        ))}
+      </nav>
+
+      {/* ── Footer / user ── */}
+      <div className="fp-sidebar__footer">
+        <div className="fp-sidebar__user" role="group" aria-label="Conta do usuário">
+          <div className="fp-sidebar__avatar" aria-hidden="true">
+            {initials}
+          </div>
+          <div className="fp-sidebar__user-info">
+            <div className="fp-sidebar__user-name">{email !== '—' ? email : perfilLabel}</div>
+            <div className="fp-sidebar__user-role">{perfilLabel}</div>
+          </div>
+          <div className="fp-sidebar__user-action" aria-hidden="true">
+            <MoreHorizontal size={14} />
           </div>
         </div>
-      </header>
 
-      <div className="mx-auto flex min-h-[calc(100vh-120px)] max-w-[1600px] flex-col lg:flex-row">
-        <aside
-          className={
-            chineseThemeOn
-              ? 'relative w-full border-b border-[#3d3d3d] bg-[#2c2c2c] text-white lg:w-64 lg:border-b-0 lg:border-r'
-              : 'relative w-full border-b border-slate-200 bg-white lg:w-56 lg:border-b-0 lg:border-r'
-          }
-        >
-          <nav className="flex flex-wrap gap-1 p-3 lg:flex-col lg:gap-0.5">
-            {ADMIN_SIDEBAR_NAV.map((item) => {
-              const dictKey = adminNavDictionaryKey(item.key)
-              const line = admin.nav[dictKey]
-              const { primary, secondary } = navLabels(line, chineseLanguage)
-              const hint = admin.navHints[dictKey]
-              const label = chineseLanguage ? lineBoth(line) : line.pt
-              const linkTitle = `${label} — ${hint}`
-              const href = painelGerencialHref(item.key)
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  title={linkTitle}
-                  className={
-                    chineseThemeOn
-                      ? 'group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-[#c42e2e] lg:px-4'
-                      : 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-800 transition-colors hover:bg-slate-100 lg:px-4'
-                  }
-                >
-                  <item.icon
-                    className={
-                      chineseThemeOn
-                        ? 'h-5 w-5 shrink-0 opacity-75 group-hover:opacity-100'
-                        : 'h-5 w-5 shrink-0 text-slate-500'
-                    }
-                    strokeWidth={1.75}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium leading-tight">{primary}</div>
-                    {secondary ? (
-                      <div
-                        className={
-                          chineseThemeOn
-                            ? 'text-[11px] leading-tight text-white/55'
-                            : 'text-[11px] leading-tight text-slate-500'
-                        }
-                      >
-                        {secondary}
-                      </div>
-                    ) : null}
-                  </div>
-                </Link>
-              )
-            })}
-          </nav>
-          {chineseThemeOn ? (
-            <div
-              className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/25 to-transparent lg:block"
-              aria-hidden
-            />
-          ) : null}
-        </aside>
+        {/* Sign-out discreto abaixo do footer */}
+        <SignOutButton
+          label="Sair"
+          className="mt-2 w-full rounded-md px-3 py-[6px] text-left text-[11px] text-zinc-600 transition-colors hover:bg-zinc-800/50 hover:text-zinc-400"
+        />
+      </div>
+    </aside>
+  )
+}
 
-        <main className="relative min-w-0 flex-1 bg-white lg:bg-transparent">
-          {chineseThemeOn ? <div className="cloud-decoration" /> : null}
-          <div
-            className={
-              chineseThemeOn
-                ? 'admin-chinese-theme relative z-[1] min-h-full'
-                : 'relative z-[1] min-h-full'
-            }
-          >
-            {children}
-          </div>
-        </main>
+// ─── Wrapper de conveniência ──────────────────────────────────────────────────
+
+function AdminNavLink({ item }: { item: NavItem }) {
+  return (
+    <AdminNavLinkClient
+      href={item.href}
+      label={item.label}
+      badge={item.badge}
+      icon={item.icon}
+    />
+  )
+}
+
+// ─── AdminLayout (RSC, entry point) ──────────────────────────────────────────
+
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const { perfil } = await getUsuarioIdioma()
+
+  // ─── GUARD: idêntico ao layout existente — não alterar. ────────────────────
+  if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
+
+  return (
+    <div data-admin-layout="true">
+      {/* Segurança: logout por inatividade — MANTIDO INTOCADO */}
+      <SessionIdleLogout />
+
+      {/* Sidebar */}
+      <AdminSidebarServer />
+
+      {/* Conteúdo principal */}
+      <div className="fp-main">
+        {children}
       </div>
     </div>
   )
