@@ -58,7 +58,9 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
               disabled={disabled}
               title={label}
               className={cn(
-                "min-h-9 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
+                // #32 hit-target de toque (tablet/touch): 44px (antes 36px) p/ os
+                // botões mais tocados do PDV — PIX/Cartão/Dinheiro/Débito.
+                "min-h-11 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
                 classic
                   ? selected
                     ? "border border-white/50 bg-white text-blue-900 shadow-sm"
