@@ -4,13 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { UploadCloud } from 'lucide-react'
 import { importarProdutosCsv } from '@/app/gerente/produtos/actions'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { downloadProdutoImportTemplateCsv } from '@/lib/gerente/produtosCsvContract'
 import { interpolateTemplate } from '@/lib/gerente/formatDashboardAtividade'
@@ -52,18 +46,6 @@ export function ProdutosImportarModal({
     setAtualizarPorId(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, fechar])
 
   const p = m.produtos
 
@@ -134,28 +116,33 @@ export function ProdutosImportarModal({
   const podeImportar = Boolean(selectedFile) && !isPending
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) fechar()
-      }}
+    <DragonModal
+      open
+      onClose={fechar}
+      sheet
+      size="lg"
+      icon={UploadCloud}
+      title={p.import_modal_titulo}
+      dismissable={!isPending}
+      closeLabel={m.comum.cancelar}
+      footer={
+        <>
+          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={isPending}>
+            {m.comum.cancelar}
+          </Button>
+          <Button
+            type="button"
+            disabled={!podeImportar}
+            className="app-btn-accent"
+            title={!selectedFile ? p.import_modal_em_breve_title : undefined}
+            onClick={() => void iniciarImportacao()}
+          >
+            {isPending ? p.import_modal_importando : p.import_modal_em_breve}
+          </Button>
+        </>
+      }
     >
-      <Card
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="produtos-importar-titulo"
-        className="dragon-elev-2 flex max-h-[90vh] w-full max-w-lg flex-col rounded-none sm:rounded-lg"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="border-b border-jl-border-1 px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
-          <div className="flex items-start gap-2">
-            <UploadCloud className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
-            <CardTitle id="produtos-importar-titulo" className="text-lg font-semibold text-jl-fg-1">
-              {p.import_modal_titulo}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+        <div className="space-y-4 pb-1">
           <div className="rounded-md border border-[color:var(--accent)]/35 border-l-4 border-l-[color:var(--accent)] bg-[color:var(--surface-soft)] px-3 py-2.5 text-sm text-jl-fg-1">
             <p className="font-medium">{p.import_modal_passo1}</p>
             <button
@@ -224,22 +211,7 @@ export function ProdutosImportarModal({
               ) : null}
             </div>
           ) : null}
-        </CardContent>
-        <CardFooter className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3 sm:px-6">
-          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={isPending}>
-            {m.comum.cancelar}
-          </Button>
-          <Button
-            type="button"
-            disabled={!podeImportar}
-            className="app-btn-accent"
-            title={!selectedFile ? p.import_modal_em_breve_title : undefined}
-            onClick={() => void iniciarImportacao()}
-          >
-            {isPending ? p.import_modal_importando : p.import_modal_em_breve}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+        </div>
+    </DragonModal>
   )
 }
