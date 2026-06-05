@@ -44,6 +44,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "autoprefixer": "^10.0.0",
     "bwip-js": "^4.10.1",
+    "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "eslint": "^8",
