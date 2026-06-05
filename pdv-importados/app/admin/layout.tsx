@@ -12,7 +12,6 @@ import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import { Logo } from '@/components/branding/Logo'
-import '@/styles/chinese-theme.css'
 
 type BilingualLine = { pt: string; cn: string }
 
@@ -26,6 +25,7 @@ function navLabels(line: BilingualLine, chineseLanguage: boolean): { primary: st
 }
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
+  console.log('[AdminLayout] Rendering...')
   const chineseThemeOn = adminChineseUiEnabled()
   let idioma: Idioma = 'pt'
   let perfil: PerfilUsuario = 'GERENTE'
