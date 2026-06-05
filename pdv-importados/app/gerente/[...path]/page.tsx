@@ -29,12 +29,13 @@ const ROTA_MAP: Record<string, string> = {
   'atividades': '/admin/dashboard',
 }
 
-export default function GerenteRedirect({
+export default async function GerenteRedirect({
   params,
 }: {
-  params: { path?: string[] }
+  params: Promise<{ path?: string[] }>
 }) {
-  const slug = (params.path ?? []).join('/')
+  const { path } = await params
+  const slug = (path ?? []).join('/')
   const destino = ROTA_MAP[slug] ?? '/admin/dashboard'
   redirect(destino)
 }
