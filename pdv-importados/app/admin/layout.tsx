@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
