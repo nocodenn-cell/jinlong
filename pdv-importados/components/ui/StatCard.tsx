@@ -1,8 +1,5 @@
-'use client'
-
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { DeltaChip } from './badges'
 
 type StatCardProps = {
   label: string
