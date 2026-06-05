@@ -42,11 +42,16 @@ export const getUsuarioAtual = cache(async (): Promise<UsuarioAtual> => {
     return { userId: null, perfil: 'OPERADOR', idioma: 'pt', lojaId: null }
   }
 
-  const { data: usuario } = await supabase
+  const { data: usuario, error: dbError } = await supabase
     .from('usuarios')
     .select('perfil, idioma_preferido, loja_id')
     .eq('id', user.id)
     .single()
+
+  if (dbError) {
+    console.error('Erro ao buscar usuário:', dbError)
+    throw dbError
+  }
 
   return {
     userId: user.id,
