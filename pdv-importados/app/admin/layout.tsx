@@ -6,10 +6,9 @@ import { SignOutButton } from '@/components/auth/SignOutButton'
 import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
 import { ADMIN_SIDEBAR_NAV } from '@/lib/navigation/adminSidebarNav'
 import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
-import { getUsuarioIdioma, isGerenteOuDono } from '@/idioma/usuarioIdioma'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { getMessages } from '@/i18n/getMessages'
-import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import { Logo } from '@/components/branding/Logo'
 import '@/styles/chinese-theme.css'
 
@@ -34,7 +33,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const admin = m.admin
   const chineseLanguage = idioma !== 'pt'
   const signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
-  const podeTrocarIdioma = isGerenteOuDono(perfil)
 
   return (
     <div
@@ -99,7 +97,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {podeTrocarIdioma ? <LanguageToggle idiomaAtual={idioma} /> : null}
               <SignOutButton
                 label={signOutLabel}
                 className={
