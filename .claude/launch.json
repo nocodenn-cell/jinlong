@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pdv-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "pdv-importados"],
+      "port": 3000
+    },
+    {
+      "name": "pdv-local-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "pdv-local"],
+      "port": 4173
+    }
+  ]
+}
