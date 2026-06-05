@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   let admin: Mensagens['admin'] | undefined = undefined
   let chineseLanguage = false
   let signOutLabel = 'Sair'
+  let m: Mensagens | undefined = undefined
 
   try {
     const user = await getUsuarioIdioma()
@@ -39,12 +40,17 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     perfil = user.perfil
     chineseLanguage = idioma !== 'pt'
     if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
-    const m = getMessages(idioma)
+    m = getMessages(idioma)
     admin = m.admin
     signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
   } catch (err) {
     console.error('[AdminLayout] Failed to load user:', err)
     redirect('/login?reason=erro_carregamento')
+  }
+
+  if (!m) {
+    // Fallback para mensagens padrão em caso de erro
+    m = getMessages('pt')
   }
 
   return (
