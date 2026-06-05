@@ -113,7 +113,7 @@ export function LoginForm({ messages: m }: Props) {
       return
     }
 
-    const padraoPerfil = u.perfil === 'OPERADOR' ? '/caixa' : '/gerente'
+    const padraoPerfil = u.perfil === 'OPERADOR' ? '/caixa' : '/admin/dashboard'
     const destino = destinoAposLogin(searchParams.get('next'), padraoPerfil)
 
     router.push(destino)
