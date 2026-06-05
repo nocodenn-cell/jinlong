@@ -8,7 +8,9 @@ import { ADMIN_SIDEBAR_NAV } from '@/lib/navigation/adminSidebarNav'
 import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
-import { getMessages } from '@/i18n/getMessages'
+import { getMessages, type Mensagens } from '@/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
+import type { PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import { Logo } from '@/components/branding/Logo'
 import '@/styles/chinese-theme.css'
 
@@ -25,9 +27,9 @@ function navLabels(line: BilingualLine, chineseLanguage: boolean): { primary: st
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const chineseThemeOn = adminChineseUiEnabled()
-  let idioma = 'pt' as const
-  let perfil = 'GERENTE' as const
-  let admin = undefined as any
+  let idioma: Idioma = 'pt'
+  let perfil: PerfilUsuario = 'GERENTE'
+  let admin: Mensagens['admin'] | undefined = undefined
   let chineseLanguage = false
   let signOutLabel = 'Sair'
 
