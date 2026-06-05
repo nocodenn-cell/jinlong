@@ -25,14 +25,25 @@ function navLabels(line: BilingualLine, chineseLanguage: boolean): { primary: st
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const chineseThemeOn = adminChineseUiEnabled()
-  const { idioma, perfil } = await getUsuarioIdioma()
-  // Guard de rota: o middleware (proxy.ts) não está ativo, então a proteção de
-  // /admin precisa morar aqui — mesmo critério do layout de /gerente.
-  if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
-  const m = getMessages(idioma)
-  const admin = m.admin
-  const chineseLanguage = idioma !== 'pt'
-  const signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
+  let idioma = 'pt' as const
+  let perfil = 'GERENTE' as const
+  let admin = undefined as any
+  let chineseLanguage = false
+  let signOutLabel = 'Sair'
+
+  try {
+    const user = await getUsuarioIdioma()
+    idioma = user.idioma
+    perfil = user.perfil
+    chineseLanguage = idioma !== 'pt'
+    if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
+    const m = getMessages(idioma)
+    admin = m.admin
+    signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
+  } catch (err) {
+    console.error('[AdminLayout] Failed to load user:', err)
+    redirect('/login?reason=erro_carregamento')
+  }
 
   return (
     <div
