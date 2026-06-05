@@ -29,13 +29,17 @@ export type PainelGerencialNavKey =
 export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'home') return '/gerente'
   if (key === 'dashboard') return '/admin/dashboard'
-  if (key === 'configuracoes') return '/gerente/configuracoes'
+  if (key === 'configuracoes') return '/admin/configuracoes'
+  if (key === 'estoque') return '/admin/estoque'
+  if (key === 'vendas') return '/admin/vendas'
+  if (key === 'financeiro') return '/admin/financeiro'
+  if (key === 'relatorios') return '/admin/relatorios'
+  if (key === 'relatorios_vendas') return '/admin/relatorios'
   if (key === 'comissoes') return '/gerente/comissoes'
   if (key === 'suspensao') return '/gerente/suspensao'
   if (key === 'categorias_produtos') return '/gerente/categorias-produtos'
   if (key === 'categorias_financeiras') return '/gerente/categorias-financeiras'
   if (key === 'contas_pagar') return '/gerente/financeiro/contas-pagar'
-  if (key === 'relatorios_vendas') return '/gerente/relatorios/vendas'
   if (key === 'compras') return '/gerente/compras'
   return `/gerente/${key}`
 }
