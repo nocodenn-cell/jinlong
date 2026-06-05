@@ -394,7 +394,7 @@ function PageNumber({
       className={
         'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-[11px] font-medium transition-colors ' +
         (active
-          ? 'bg-white text-zinc-950'
+          ? 'bg-zinc-900 text-zinc-950'
           : 'border border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100')
       }
     >

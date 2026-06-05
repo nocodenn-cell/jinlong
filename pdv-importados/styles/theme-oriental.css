@@ -4,20 +4,19 @@
  */
 
 :root {
-  --dragon-jade: #10b981;
-  --dragon-gold: #f59e0b;
-  --dragon-imperial-red: #b91c1c;
-  --dragon-night-900: #12090b;
-  --dragon-cloud-cream: #fff7e8;
   --surface: rgba(15, 23, 42, 0.68);
   --surface-soft: rgba(15, 23, 42, 0.42);
   --surface-text: rgb(241 245 249);
   --border: rgba(148, 163, 184, 0.38);
-  --accent: #fbbf24;
-  --accent-strong: #f59e0b;
-  --accent-contrast: #111827;
-  --logo-wordmark-main: #f8fafc;
-  --logo-wordmark-subtitle: rgba(251, 191, 36, 0.95);
+
+  /*
+   * Paleta cerimonial do LOGIN. Espelha tokens/base.css, que só é carregado no
+   * Storybook (.storybook/preview.ts) — sem isto o app não tem o token, o
+   * `.login-premium-submit` perde o `background` e o botão "Entrar" some
+   * (preto sobre bg-black). Definir aqui, que é importado em app/layout.tsx.
+   */
+  --color-dragon-gold-luxury: #d4af37; /* ouro do botão/realces do login */
+  --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 }
 
 [data-app-theme='noturno'] {
@@ -582,18 +581,10 @@ html:has(.login-premium-root) body {
 }
 
 [data-app-theme] .gerente-chip-action,
-[data-app-theme] .gerente-inicio-chip,
-[data-app-theme] .filter-pill {
+[data-app-theme] .gerente-inicio-chip {
   border-color: var(--border) !important;
   background: var(--surface-soft) !important;
   color: var(--surface-text) !important;
-}
-
-[data-app-theme] .filter-pill-active,
-[data-app-theme] .filter-pill-status-active {
-  border-color: var(--accent) !important;
-  background: color-mix(in srgb, var(--accent-strong) 42%, transparent) !important;
-  color: var(--accent-contrast) !important;
 }
 
 [data-app-theme] .gerente-table-dragon table,
