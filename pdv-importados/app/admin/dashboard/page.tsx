@@ -444,49 +444,41 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     `/admin/dashboard?period=${p}&status=${s}`
 
   const pillPeriod = (active: boolean) =>
-    chineseThemeOn
-      ? active
-        ? 'filter-pill-active'
-        : 'filter-pill'
-      : active
-        ? 'border border-slate-800 bg-slate-900 text-white shadow-sm'
-        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+    active
+      ? 'border border-zinc-700 bg-zinc-800 text-white'
+      : 'border border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
 
   const pillStatus = (active: boolean) =>
-    chineseThemeOn
-      ? active
-        ? 'filter-pill-status-active'
-        : 'filter-pill'
-      : active
-        ? 'border border-success bg-success text-success-foreground shadow-sm hover:bg-success/90'
-        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+    active
+      ? 'border border-success bg-success text-success-foreground hover:bg-success/90'
+      : 'border border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
 
-  const cardShell = chineseThemeOn ? 'card-chinese mb-8 p-6' : 'mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
-  const cardShellLast = chineseThemeOn ? 'card-chinese p-6' : 'rounded-lg border border-slate-200 bg-white p-6 shadow-sm'
-  const sectionHeadBorder = chineseThemeOn ? 'border-[rgba(212,175,55,0.2)]' : 'border-slate-200'
+  const cardShell = 'mb-8 rounded-lg border border-zinc-800 bg-zinc-900 p-6'
+  const cardShellLast = 'rounded-lg border border-zinc-800 bg-zinc-900 p-6'
+  const sectionHeadBorder = 'border-zinc-800'
 
-  const pageTitleBlock = chineseThemeOn ? 'border-chinese mb-6 pb-4' : 'mb-6 border-b border-slate-200 pb-4'
+  const pageTitleBlock = 'mb-6 border-b border-zinc-800 pb-4'
 
   return (
     <div className="p-4 pb-12 md:p-8">
       <div className={pageTitleBlock}>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-zinc-100">
           {chineseLanguage ? L.pageTitle.cn : L.pageTitle.pt}
-          <span className="ml-2 text-lg font-normal text-slate-500">
+          <span className="ml-2 text-lg font-normal text-zinc-500">
             {chineseLanguage ? `· ${L.pageTitle.pt}` : ''}
           </span>
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-zinc-400">
           {chineseLanguage ? (
             <>
-              <span className="font-medium text-[#5c4d28]">{L.newUsers.cn}</span>
-              <span className="text-slate-500"> · </span>
+              <span className="font-medium text-zinc-300">{L.newUsers.cn}</span>
+              <span className="text-zinc-500"> · </span>
             </>
           ) : null}
           {L.newUsers.pt}: {formatNumberLocale(novosUsuariosAtual, locale)} ({novosTrend.label})
         </p>
         {chineseLanguage ? (
-          <p className="mt-1 text-xs text-slate-500">{lineBoth(L.pageSubtitle)}</p>
+          <p className="mt-1 text-xs text-zinc-500">{lineBoth(L.pageSubtitle)}</p>
         ) : null}
       </div>
 
@@ -539,9 +531,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
       <div className={cardShell}>
         <div className={`mb-5 flex items-center justify-between border-b pb-3 ${sectionHeadBorder}`}>
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-zinc-100">
             {chineseLanguage ? L.chartTitle.cn : L.chartTitle.pt}
-            <span className="ml-2 text-sm font-normal text-slate-500">
+            <span className="ml-2 text-sm font-normal text-zinc-500">
               {chineseLanguage ? `/ ${L.chartTitle.pt}` : ''}
             </span>
           </h2>
@@ -558,9 +550,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       </div>
 
       <div className={cardShellLast}>
-        <h2 className={`mb-4 border-b pb-3 text-lg font-semibold text-slate-900 ${sectionHeadBorder}`}>
+        <h2 className={`mb-4 border-b pb-3 text-lg font-semibold text-zinc-100 ${sectionHeadBorder}`}>
           {chineseLanguage ? L.tableTitle.cn : L.tableTitle.pt}
-          <span className="ml-2 text-sm font-normal text-slate-500">
+          <span className="ml-2 text-sm font-normal text-zinc-500">
             {chineseLanguage ? `/ ${L.tableTitle.pt}` : ''}
           </span>
         </h2>

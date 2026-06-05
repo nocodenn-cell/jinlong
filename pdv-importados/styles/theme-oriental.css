@@ -18,6 +18,15 @@
   --accent-contrast: #111827;
   --logo-wordmark-main: #f8fafc;
   --logo-wordmark-subtitle: rgba(251, 191, 36, 0.95);
+
+  /*
+   * Paleta cerimonial do LOGIN. Espelha tokens/base.css, que só é carregado no
+   * Storybook (.storybook/preview.ts) — sem isto o app não tem o token, o
+   * `.login-premium-submit` perde o `background` e o botão "Entrar" some
+   * (preto sobre bg-black). Definir aqui, que é importado em app/layout.tsx.
+   */
+  --color-dragon-gold-luxury: #d4af37; /* ouro do botão/realces do login */
+  --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 }
 
 [data-app-theme='noturno'] {
