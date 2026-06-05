@@ -39,7 +39,7 @@ export function painelGerencialHref(key: PainelGerencialNavKey): string {
   if (key === 'categorias_produtos') return '/admin/categorias-produtos'
   if (key === 'suspensao') return '/admin/suspensao'
   if (key === 'categorias_financeiras') return '/admin/categorias-financeiras'
-  if (key === 'contas_pagar') return '/admin/contas-pagar'
+  if (key === 'contas_pagar') return '/gerente/financeiro/contas-pagar'
   if (key === 'compras') return '/admin/compras'
   return `/gerente/${key}`
 }
