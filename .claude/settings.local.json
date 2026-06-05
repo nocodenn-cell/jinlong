@@ -118,7 +118,18 @@
       "Bash(grep -r \"termos\\\\|consent\\\\|lgpd\\\\|privacidade\" ./fastproduct/pdv-importados -i ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" --include=\"*.tsx\" --include=\"*.ts\")",
       "Bash(xargs grep -l \"email\\\\|mail\\\\|notification\")",
       "Bash(xargs grep -l \"checkbox\\\\|aceito\\\\|consent\\\\|termos\\\\|privacidade\" -i)",
-      "PowerShell(Get-ChildItem \"C:\\\\Naturecode\\\\fastproduct\\\\backend\\\\supabase\\\\migrations\" | Where-Object { $_.Name -match \"^11[2-4]\" } | Select-Object Name, Length)"
+      "PowerShell(Get-ChildItem \"C:\\\\Naturecode\\\\fastproduct\\\\backend\\\\supabase\\\\migrations\" | Where-Object { $_.Name -match \"^11[2-4]\" } | Select-Object Name, Length)",
+      "Bash(git commit -m 'fix\\(admin\\): remove unused React import from layout.tsx *)",
+      "Bash(git commit -m 'docs: auditoria completa do painel admin \\(/admin/*\\) *)",
+      "Bash(cp /c/Naturecode/fastproduct/AUDITORIA_PAINEL_ADMIN.md /c/Naturecode/fastproduct/pdv-importados/ && git add ../AUDITORIA_PAINEL_ADMIN.md && git commit -m \"docs: auditoria completa do painel admin \\(/admin/*\\) *)",
+      "Bash(git commit -m 'feat\\(nav\\): ativa todas as 4 rotas Fase 9 em /admin/* *)",
+      "Bash(git commit -m 'fix\\(nav\\): revert contas-pagar to /gerente fallback *)",
+      "Bash(git rm *)",
+      "Bash(git commit -m 'fix: remove compras route \\(broken import\\) *)",
+      "Bash(git commit -m 'fix\\(nav\\): revert compras to /gerente fallback *)",
+      "Bash(npx eslint *)",
+      "Bash(npm install *)",
+      "Bash(git commit -m 'deps: install chart.js for admin dashboard *)"
     ]
   }
 }
