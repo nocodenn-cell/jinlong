@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdminSessionApi } from '@/lib/admin/auth/requireAdminSessionApi'
 import type { AtividadeRailItem, AtividadeRailTipo, AtividadeRailSeverity } from '../recent/route'
 
 export type { AtividadeRailItem, AtividadeRailTipo }
@@ -47,6 +48,9 @@ export async function GET(req: NextRequest) {
   const page        = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
 
   try {
+    const auth = await requireAdminSessionApi()
+    if (auth instanceof NextResponse) return auth
+
     const supabase = await createClient()
     const since    = sinceISO(windowParam)
     const items: AtividadeRailItem[] = []

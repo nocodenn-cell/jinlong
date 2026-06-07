@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requireAdminSessionApi } from '@/lib/admin/auth/requireAdminSessionApi'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -40,6 +41,9 @@ function fiscalSeverity(statusDepois: string | null): AtividadeRailSeverity {
 
 export async function GET() {
   try {
+    const auth = await requireAdminSessionApi()
+    if (auth instanceof NextResponse) return auth
+
     const supabase = await createClient()
     const since = windowISO()
 

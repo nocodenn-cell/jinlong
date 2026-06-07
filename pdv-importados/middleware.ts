@@ -15,13 +15,13 @@ function supabaseConfigOk(url: string | undefined, anonKey: string | undefined):
 }
 
 /**
- * Protege rotas do PDV autenticadas e mantém a sessão Supabase atualizada (cookies).
- * Sem config válida: rotas protegidas redirecionam para /login (fail-safe; evita crash do client).
+ * Protege rotas autenticadas e mantém sessão Supabase (cookies) no edge.
  */
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isPainelWeb =
-    pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[0]) || pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[1])
+    pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[0]) ||
+    pathname.startsWith(PREFIXOS_ROTAS_PAINEL_WEB[1])
   const isCaixaWeb = pathname === '/caixa' || pathname.startsWith('/caixa/')
   const isProtected = isPainelWeb || isCaixaWeb
 
@@ -35,7 +35,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  /** Preserva cookies da sessao (ex.: refresh do Supabase) ao redirecionar. */
   const redirectWithSession = (target: URL, cookieSource: NextResponse) => {
     const redir = NextResponse.redirect(target)
     cookieSource.cookies.getAll().forEach((cookie) => {
@@ -50,19 +49,18 @@ export async function proxy(request: NextRequest) {
     }
     return NextResponse.next()
   }
+
   const publicSupabaseUrl = (supabaseUrl ?? '').trim()
   const publicSupabaseKey = (supabaseKey ?? '').trim()
 
-  const response = NextResponse.next({
-    request,
-  })
+  const response = NextResponse.next({ request })
   const supabase = createServerClient(publicSupabaseUrl, publicSupabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll()
       },
       setAll(
-        cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[],
+        cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]
       ) {
         cookiesToSet.forEach(({ name, value, options }) => {
           request.cookies.set(name, value)

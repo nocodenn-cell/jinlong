@@ -13,6 +13,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -58,6 +59,9 @@ function nomeRelacao(rel: unknown, campo: string): string | null {
  */
 export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe | null> {
   if (!UUID_RE.test(vendaId)) return null
+
+  const auth = await assertAdminSession()
+  if (!auth.ok) return null
 
   const supabase = await createClient()
 

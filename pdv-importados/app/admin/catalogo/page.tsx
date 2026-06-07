@@ -18,7 +18,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { Download, Plus, Upload } from 'lucide-react'
-import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getAdminContext } from '@/lib/admin/auth/getAdminContext'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import {
@@ -74,7 +74,7 @@ type SearchParams = {
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminCatalogoPage({ searchParams }: PageProps) {
-  const { idioma } = await getUsuarioIdioma()
+  const { idioma } = await getAdminContext()
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
   const q = (sp.q ?? '').slice(0, 200)

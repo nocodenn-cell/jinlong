@@ -1,6 +1,5 @@
 import 'server-only'
 import { cache } from 'react'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { normalizeIdioma, type Idioma } from '@/idioma/normalizeIdioma'
@@ -33,7 +32,7 @@ export const getUsuarioAtual = cache(async (): Promise<UsuarioAtual> => {
 
   if (authError) {
     if (await clearStaleSessionIfNeeded(supabase, authError)) {
-      redirect('/login?reason=sessao_expirada')
+      return { userId: null, perfil: 'OPERADOR', idioma: 'pt', lojaId: null }
     }
     throw authError
   }

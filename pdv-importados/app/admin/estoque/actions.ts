@@ -14,7 +14,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -36,9 +36,11 @@ const KARDEX_LIMITE = 60
 export async function obterKardexProduto(produtoId: string): Promise<KardexMovimento[]> {
   if (!UUID_RE.test(produtoId)) return []
 
+  const auth = await assertAdminSession()
+  if (!auth.ok) return []
+
   const supabase = await createClient()
-  const { lojaId } = await getUsuarioAtual()
-  const loja = lojaId ?? LOJA_MATRIZ_ID
+  const loja = auth.session.lojaId ?? LOJA_MATRIZ_ID
 
   const { data, error } = await supabase
     .from('movimentos_estoque_log')

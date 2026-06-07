@@ -1,53 +1,31 @@
 import { type ReactNode } from 'react'
-import { redirect } from 'next/navigation'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
 import { painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
-import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
-import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
-import type { Idioma } from '@/idioma/normalizeIdioma'
-import type { PerfilUsuario } from '@/idioma/normalizePerfilUsuario'
+import type { AdminSession } from '@/lib/admin/auth/types'
 import { Logo } from '@/components/branding/Logo'
-import { AdminSidebar } from './_components/AdminSidebar'
+import { AdminSidebar } from './AdminSidebar'
 
-export default async function AdminLayout({ children }: { children: ReactNode }) {
-  console.log('[AdminLayout] Rendering...')
+type AdminShellProps = {
+  session: AdminSession
+  children: ReactNode
+}
+
+export function AdminShell({ session, children }: AdminShellProps) {
   const chineseThemeOn = adminChineseUiEnabled()
-  let idioma: Idioma = 'pt'
-  let perfil: PerfilUsuario = 'GERENTE'
-  let admin: Mensagens['admin'] | undefined = undefined
-  let chineseLanguage = false
-  let signOutLabel = 'Sair'
-  let m: Mensagens | undefined = undefined
-
-  try {
-    const user = await getUsuarioIdioma()
-    idioma = user.idioma
-    perfil = user.perfil
-    chineseLanguage = idioma !== 'pt'
-    if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
-    m = getMessages(idioma)
-    admin = m.admin
-    signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
-  } catch (err) {
-    console.error('[AdminLayout] Failed to load user:', err)
-    redirect('/login?reason=erro_carregamento')
-  }
-
-  if (!m) {
-    // Fallback para mensagens padrão em caso de erro
-    m = getMessages('pt')
-  }
+  const { idioma } = session
+  const chineseLanguage = idioma !== 'pt'
+  const m: Mensagens = getMessages(idioma)
+  const admin = m.admin
+  const signOutLabel = chineseLanguage ? admin.common.signOut.cn : admin.common.signOut.pt
 
   return (
     <div
       className={[
         'min-h-screen',
-        chineseThemeOn
-          ? `admin-chinese-theme bg-[#f5f0eb]`
-          : 'bg-slate-100',
+        chineseThemeOn ? `admin-chinese-theme bg-[#f5f0eb]` : 'bg-slate-100',
       ].join(' ')}
     >
       <SessionIdleLogout />
@@ -118,13 +96,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </header>
 
       <div className="mx-auto flex min-h-[calc(100vh-120px)] max-w-[1600px] flex-col lg:flex-row">
-        {m && (
-          <AdminSidebar
-            admin={m.admin}
-            chineseLanguage={chineseLanguage}
-            chineseThemeOn={chineseThemeOn}
-          />
-        )}
+        <AdminSidebar
+          admin={admin}
+          chineseLanguage={chineseLanguage}
+          chineseThemeOn={chineseThemeOn}
+        />
 
         <main className="relative min-w-0 flex-1 bg-white lg:bg-transparent">
           {chineseThemeOn ? <div className="cloud-decoration" /> : null}

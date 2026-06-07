@@ -17,7 +17,7 @@ import {
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
-import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getAdminContext } from '@/lib/admin/auth/getAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
@@ -54,49 +54,6 @@ function collectSupabaseErrors(
     if (error) out.push(`${label}: ${mensagemErroParaUsuario(error.message, idioma)}`)
   }
   return out
-}
-
-function DashboardErrorBanner({
-  title,
-  messages,
-  oriental,
-}: {
-  title: string
-  messages: string[]
-  oriental: boolean
-}) {
-  if (messages.length === 0) return null
-  const box = oriental
-    ? 'error-banner-chinese mb-4 rounded-lg border px-4 py-3 text-sm text-[#2c2c2c] shadow-sm'
-    : 'mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm'
-  return (
-    <div className={box} role="alert">
-      <div className="mb-1 flex items-center gap-2 font-semibold">
-        <AlertCircle className="shrink-0 text-amber-800 dark:text-amber-200" size={18} />
-        {title}
-      </div>
-      <ul className={`list-inside list-disc ${oriental ? 'text-[#5c4030]' : 'text-amber-900/90'}`}>
-        {messages.map((msg, i) => (
-          <li key={`${i}-${msg.slice(0, 48)}`}>{msg}</li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function CriticalSalesAlert({ title, body }: { title: string; body: string }) {
-  return (
-    <div
-      className="mb-6 rounded-lg border-2 border-destructive/35 bg-destructive/10 px-4 py-4 text-sm text-foreground shadow-sm"
-      role="alert"
-    >
-      <div className="flex gap-2 font-semibold text-destructive">
-        <AlertCircle className="mt-0.5 shrink-0" size={18} />
-        {title}
-      </div>
-      <p className="mt-2 leading-relaxed text-foreground/90">{body}</p>
-    </div>
-  )
 }
 
 function ErrorBanner({ messages }: { messages: string[] }) {
@@ -138,7 +95,7 @@ type PageProps = {
 }
 
 export default async function AdminDashboardPage({ searchParams }: PageProps) {
-  const { idioma } = await getUsuarioIdioma()
+  const { idioma } = await getAdminContext()
   const m = getMessages(idioma)
   const adminUi = m.admin
   const L = adminUi.dashboard
@@ -319,7 +276,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev)
   const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev)
 
-  const trendErr = adminUi.common.trendError.pt
   const unavail = adminUi.common.unavailable.pt
 
   let stockTrendLabel: string
