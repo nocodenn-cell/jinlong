@@ -16,9 +16,12 @@ Documento de apoio à homologação e à demo. **Não** inclua credenciais, `ser
 
 ## 3. Rollback de aplicação (Next / Vercel / outro host)
 
-1. Reverter o deploy para o **build/commit** anterior estável (mecanismo depende do provedor).
-2. Garantir que **variáveis de ambiente** do build anterior estão preservadas.
-3. Validar login, `/caixa` e uma venda de teste em **staging** antes de repetir em produção.
+Gatilhos típicos: falha em **sistema de risco** (`e2e-critical`, smoke manual) com regressão confirmada — não confundir com falha SSRA (`validate-production`), que invalida a identidade do deployment em prod. Ver [SSRA_RELEASE.md](./SSRA_RELEASE.md).
+
+1. Vercel → projeto `pdv-importados` → **Promote to Production** no deployment estável anterior.
+2. `npm run validate:production` — confirmar `deploymentId` alinhado (gate de decisão).
+3. Garantir que **variáveis de ambiente** do build promovido estão preservadas.
+4. Validar login, `/caixa` e uma venda de teste em **staging** antes de repetir em produção.
 
 ## 4. Rollback de banco (Postgres)
 

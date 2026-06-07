@@ -4,15 +4,31 @@
 
 ## O que já fica automatizado no CI (após merge em `main`)
 
+Princípio: **E2E = sistema de risco, não sistema de decisão.** Só as linhas abaixo em “Decisão” podem impedir ou invalidar release; E2E gera alerta operacional.
+
+### Sistemas de decisão (release authority)
+
 | Gate | Onde |
 |------|------|
-| Lint + testes unitários + build Next | Job `build-and-test` em [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml) |
-| Deploy Vercel (com secrets configurados) | Job `deploy` — output `vercel_url` = `preview-url` da action `amondnet/vercel-action` |
-| Smoke Playwright **leve** na URL implantada | Job `smoke-test` — `npm run test:e2e:post-deploy-smoke` (login + `/caixa`), **sem** `pdv-local`, **sem** sync Edge |
+| Lint + typecheck + testes unitários + build Next | Job `build-and-test` |
+| Deploy Vercel produção (`--prod`) | Job `deploy` — projeto `pdv-importados`, host `https://pdv-importados.vercel.app` |
+| **SSRA** — platform `deploymentId` === `/api/health` | Job `validate-production` — `npm run validate:production` |
 
-Secrets mínimos para o smoke pós-deploy: `VERCEL_*`, `CI_NEXT_PUBLIC_*` (build/deploy), `PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_*`, `PLAYWRIGHT_CAIXA_TEST_*`. Se `vercel_url` vier vazio, o job `smoke-test` **não corre** (evita falso verde com `BASE_URL` indefinido).
+Workflow: [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml).
 
-**Se o deploy na Vercel passar mas o smoke for ignorado:** confira nos logs do job `deploy` o output `preview-url` da action; em projetos antigos pode ser preciso ajustar flags da Vercel (ex. domínio de produção) ou usar `vercel-args` na action conforme a documentação do `amondnet/vercel-action`.
+**Autoridade de release:** apenas o Deployment ID da Vercel no host de produção — não comparar `origin/main` nem `github.sha` com runtime. Ver [SSRA_RELEASE.md](./SSRA_RELEASE.md).
+
+Secrets mínimos para deploy + SSRA: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `CI_NEXT_PUBLIC_*`. Opcional: variable `EXPECTED_VERCEL_PROJECT_ID` (fail-fast se secret divergir).
+
+### Sistemas de risco (observação — não bloqueiam deploy)
+
+| Observador | Onde | Se falhar |
+|------------|------|-----------|
+| E2E crítico (sync + vendas) | Job `e2e-critical` (paralelo a `deploy`) | Issue + investigação; rollback manual se regressão em prod |
+| Playwright suíte completa | Job `e2e-playwright` (opcional, `ENABLE_PLAYWRIGHT_E2E`) | Idem |
+| Smoke pós-deploy | `test:e2e:post-deploy-smoke` — manual ou agendado | Idem |
+
+Falha em sistema de risco **não** reverte nem impede um release que passou `validate-production`.
 
 ## O que a equipa **tem** de fazer fora do Git (P0)
 
@@ -34,6 +50,9 @@ Seguir na ordem [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md) e [
 ```bash
 # Na raiz do monorepo (check + lint + test + build Next — sem build Vite do pdv-local)
 npm run ci
+
+# SSRA — após deploy em produção (requer VERCEL_TOKEN)
+npm run validate:production
 ```
 
 Build do desktop (`pdv-local`): workflow [`.github/workflows/ci-pdv-local.yml`](../.github/workflows/ci-pdv-local.yml) ou `npm run build:all` na raiz.

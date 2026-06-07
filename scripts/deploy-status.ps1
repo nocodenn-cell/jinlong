@@ -43,7 +43,7 @@ function Get-EnvironmentStatus {
     if ($Env -eq "staging") {
         $status.WebUrl = "https://fastproduct-staging.vercel.app"
     } else {
-        $status.WebUrl = "https://fastproduct.vercel.app"
+        $status.WebUrl = "https://pdv-importados.vercel.app"
     }
     
     # Verificar link Supabase

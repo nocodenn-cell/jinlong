@@ -133,7 +133,7 @@ NEXT_PUBLIC_IDLE_LOGOUT_MINUTES=0
 
 ### **1. Health Check:**
 ```bash
-curl https://fastproduct.vercel.app/api/health
+curl https://pdv-importados.vercel.app/api/health
 ```
 
 ### **2. Funcionalidades Críticas:**
@@ -210,7 +210,7 @@ git push origin main
 
 ### **URL de Produção:**
 ```
-https://fastproduct.vercel.app
+https://pdv-importados.vercel.app
 ```
 
 ### **Features Ativas:**

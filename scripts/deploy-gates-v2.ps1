@@ -56,7 +56,7 @@ function Get-EnvironmentConfig {
             VercelCommand = "npx vercel deploy --prebuilt"
         }
         prod = @{
-            WebUrl = "https://fastproduct.vercel.app"
+            WebUrl = "https://pdv-importados.vercel.app"
             SecretsFile = ".env.supabase.prod"
             Functions = @("sync-outbox", "validar-gerente", "fiscal-worker")
             VercelCommand = "npx vercel deploy --prod"

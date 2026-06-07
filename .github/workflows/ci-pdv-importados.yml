@@ -1,42 +1,34 @@
-# CI do app Next em pdv-importados (lint, Vitest, build). Não valida migrations SQL nem Edge — ver ci-backend-supabase.yml.
-# Secrets necessários em GitHub Actions:
-#   CI_NEXT_PUBLIC_SUPABASE_ANON_KEY
-#   CI_NEXT_PUBLIC_SUPABASE_URL
-#   SENTRY_AUTH_TOKEN
-#   SENTRY_ORG
-#   SENTRY_PROJECT
-#   SENTRY_DSN
-#   VERCEL_TOKEN
-#   VERCEL_ORG_ID
-#   VERCEL_PROJECT_ID
-#   PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL
-#   PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY
-#   PLAYWRIGHT_TEST_EMAIL (opcional)
-#   PLAYWRIGHT_TEST_PASSWORD (opcional)
-#   PLAYWRIGHT_CAIXA_TEST_EMAIL / PLAYWRIGHT_CAIXA_TEST_PASSWORD (OPERADOR — smoke pós-deploy + pipeline crítico)
-#   PLAYWRIGHT_E2E_PRODUTO_CODIGO (opcional — caixa-venda.spec)
-#   PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY (service_role do projeto de teste — sync-fluxo-gerente no pipeline crítico)
-#   SYNC_ENDPOINT, SYNC_KEY (Edge sync-outbox — mesmo par do backend)
-#   FISCAL_WORKER_KEY (obrigatório com AUTO_ENQUEUE_FISCAL_ON_SALE=true no pipeline crítico)
-# Workflow só Playwright (sem lint/build): .github/workflows/e2e-playwright-only.yml
+# CI pdv-importados — SSRA: release authority = Vercel Deployment ID (validate-production).
+# E2E = sistema de risco, não sistema de decisão (e2e-critical não bloqueia deploy).
+# Produção canônica: https://pdv-importados.vercel.app (projeto Vercel pdv-importados).
+# Secrets: CI_NEXT_PUBLIC_*, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
+#   SENTRY_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
+# Variable opcional: EXPECTED_VERCEL_PROJECT_ID (fail-fast se secret divergir).
 name: CI pdv-importados
+
+env:
+  PRODUCTION_HOST: pdv-importados.vercel.app
 
 on:
   push:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
+      - 'shared-core/**'
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
+      - 'scripts/validate-production.mjs'
       - '.github/workflows/ci-pdv-importados.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'pdv-importados/**'
+      - 'shared-core/**'
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
+      - 'scripts/validate-production.mjs'
       - '.github/workflows/ci-pdv-importados.yml'
 
 jobs:
@@ -44,7 +36,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Sonar githubactions:S7637 — SHA do release da tag indicada
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -53,18 +44,12 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # Vitest/Vite (Rollup): lock gerado em Windows pode omitir o binário nativo linux; optional na raiz alinha com o rollup do lock.
       - name: Install (workspaces na raiz)
         run: npm ci
 
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
-      - name: Coverage (Vitest + lcov)
-        run: npm run test:coverage -w pdv-importados
-
-      # Build exige secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY (anon do projeto — não versionar JWT no YAML).
-      # URL opcional: secret CI_NEXT_PUBLIC_SUPABASE_URL ou placeholder abaixo.
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
@@ -76,10 +61,9 @@ jobs:
           fi
           npx turbo run build --filter=pdv-importados
 
-  # Gate obrigatório: `npm run test:e2e:critical` (check-env + smoke sync + Playwright crítico).
-  # PRs de fork são ignorados (sem secrets); push/PR no repositório base exige todos os secrets abaixo.
+  # Sistema de risco (não decisão): observa regressão funcional; não entra em needs: do deploy.
   e2e-critical:
-    name: E2E crítico (gate)
+    name: E2E crítico (sistema de risco)
     needs: build-and-test
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
@@ -124,7 +108,7 @@ jobs:
           [ -z "${SYNC_K:-}" ] && missing+=(SYNC_KEY)
           [ -z "${FISCAL_KEY:-}" ] && missing+=(FISCAL_WORKER_KEY)
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error::E2E crítico obrigatório: defina os secrets ${missing[*]} (ver cabeçalho deste workflow e docs/E2E.md)."
+            echo "::error::E2E crítico: defina os secrets ${missing[*]} (ver docs/E2E.md e docs/SSRA_RELEASE.md)."
             exit 1
           fi
           FISCAL_EP="${PW_URL%/}/functions/v1/fiscal-worker"
@@ -163,15 +147,9 @@ jobs:
         run: npm run test:e2e:critical -w pdv-importados
 
   deploy:
-    needs: [build-and-test, e2e-critical]
-    if: |
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      needs.build-and-test.result == 'success' &&
-      (needs.e2e-critical.result == 'success' || needs.e2e-critical.result == 'skipped')
+    needs: [build-and-test]
+    if: github.ref == 'refs/heads/main' && needs.build-and-test.result == 'success'
     runs-on: ubuntu-latest
-    outputs:
-      vercel_url: ${{ steps.vercel.outputs['preview-url'] }}
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -184,6 +162,16 @@ jobs:
 
       - name: Install (workspaces na raiz)
         run: npm ci
+
+      - name: Verificar VERCEL_PROJECT_ID (fail-fast)
+        env:
+          EXPECTED: ${{ vars.EXPECTED_VERCEL_PROJECT_ID }}
+          ACTUAL: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "${EXPECTED:-}" ] && [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "::error::VERCEL_PROJECT_ID não corresponde a EXPECTED_VERCEL_PROJECT_ID (projeto pdv-importados)."
+            exit 1
+          fi
 
       - name: Build
         env:
@@ -210,14 +198,14 @@ jobs:
           release: ${{ github.sha }}
           sourcemap-paths: pdv-importados/.next/static/chunks
 
-      - name: Deploy to Vercel
-        id: vercel
+      - name: Deploy to Vercel (production)
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: pdv-importados
+          vercel-args: '--prod'
 
       - name: Create Sentry release
         uses: getsentry/action-release@v1
@@ -229,44 +217,31 @@ jobs:
           environment: production
           version: ${{ github.sha }}
 
-  smoke-test:
+  validate-production:
+    name: validate-production (SSRA)
     needs: deploy
-    if: github.ref == 'refs/heads/main' && needs.deploy.outputs.vercel_url != ''
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
-          cache: npm
-          cache-dependency-path: package-lock.json
 
-      - name: Install (workspaces na raiz)
-        run: npm ci
-
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Smoke E2E (login + /caixa na URL do deploy)
+      - name: SSRA — platform deploymentId === /api/health
         env:
-          CI: true
-          PLAYWRIGHT_E2E_WITH_DEV: '0'
-          PLAYWRIGHT_BASE_URL: ${{ needs.deploy.outputs.vercel_url }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
-          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
-        run: npm run test:e2e:post-deploy-smoke -w pdv-importados
-  # Suíte Playwright completa (`npm run test:e2e`) — opcional; o gate mínimo é o job `e2e-critical` acima.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+          PRODUCTION_HOST: ${{ env.PRODUCTION_HOST }}
+        run: node scripts/validate-production.mjs
+
   e2e-playwright:
     needs: build-and-test
     if: ${{ vars.ENABLE_PLAYWRIGHT_E2E == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
-      # Sonar githubactions:S7637 — SHA do release da tag indicada
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

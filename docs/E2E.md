@@ -83,13 +83,29 @@ Documentação completa: [SEED_DEV_E2E](../pdv-importados/docs/SEED_DEV_E2E.md).
 
 ## CI
 
+### E2E = sistema de risco, não sistema de decisão
+
+Neste repositório, **todos** os pipelines Playwright são **sistemas de risco**: detectam regressão funcional possível, mas **não** decidem se um release foi promovido em produção.
+
+| Camada | Papel | Bloqueia deploy em `main`? |
+|--------|-------|----------------------------|
+| `build-and-test` | Decisão — integridade técnica (lint, typecheck, unit, build) | **Sim** |
+| `validate-production` | Decisão — SSRA (Deployment ID plataforma ↔ `/api/health`) | **Sim** (pós-deploy) |
+| `e2e-critical` | Risco — sync, vendas, fluxos críticos | **Não** |
+| `e2e-playwright` (opcional) | Risco — suíte completa | **Não** |
+| `test:e2e:post-deploy-smoke` | Risco — manual/agendado | **Não** |
+
+Autoridade de release: [SSRA_RELEASE.md](./SSRA_RELEASE.md). Falha E2E → alerta + investigação + rollback **se** regressão confirmada — não veto automático de release.
+
+---
+
 O workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml) roda **build + lint + Vitest** quando há mudanças em `pdv-importados/`. Alterações só em `backend/` disparam [`.github/workflows/ci-backend-supabase.yml`](../.github/workflows/ci-backend-supabase.yml) (`deno check` na Edge `sync-outbox`).
 
-Em **`main`**, após deploy na Vercel, o job **smoke-test** corre **`npm run test:e2e:post-deploy-smoke`** (`e2e/login.spec.ts` + `e2e/caixa.spec.ts`) com `PLAYWRIGHT_BASE_URL` = URL do deploy e `PLAYWRIGHT_E2E_WITH_DEV=0`. Ver [PRODUCAO_GO_NO_GO.md](./PRODUCAO_GO_NO_GO.md).
+Em **`main`**, o único gate pós-deploy de **decisão** é **SSRA** (`validate-production`). Ver também [PRODUCAO_GO_NO_GO.md](./PRODUCAO_GO_NO_GO.md).
 
-### E2E crítico obrigatório (gate em `main` / `develop`)
+### E2E crítico (sistema de risco, assíncrono)
 
-No workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), após **build-and-test**, o job **`e2e-critical`** roda sempre **`npm run test:e2e:critical`** (check-env, smoke `sync-outbox`, `sync-fluxo-gerente`, vendas caixa e fluxos críticos). O **deploy em `main` na Vercel só prossegue** se esse job tiver sucesso (ou for ignorado em PR de fork, sem secrets).
+No workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), após **build-and-test**, o job **`e2e-critical`** corre **`npm run test:e2e:critical`** em **paralelo** com `deploy`. Não participa da cadeia `deploy` → `validate-production`. Falha → tratar como risco (issue, repro, rollback manual se necessário).
 
 Secrets **obrigatórios** no repositório (Actions):
 

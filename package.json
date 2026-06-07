@@ -22,7 +22,8 @@
     "ci": "turbo run check lint typecheck test && turbo run build --filter=pdv-importados",
     "dev:web": "npm run dev -w pdv-importados",
     "dev:desktop": "npm run dev -w pdv-local",
-    "dev:tauri": "npm run tauri -w pdv-local"
+    "dev:tauri": "npm run tauri -w pdv-local",
+    "validate:production": "node scripts/validate-production.mjs"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Smoke Playwright contra URL já implantada (sem `next dev`, sem pdv-local, sem sync Edge).
- * Usado pelo job `smoke-test` em `.github/workflows/ci-pdv-importados.yml` após deploy Vercel.
+ * Sistema de risco (não decisão) — uso manual ou agendado. Ver docs/SSRA_RELEASE.md.
  *
  * Exige: PLAYWRIGHT_BASE_URL, CI=true, NEXT_PUBLIC_SUPABASE_*, PLAYWRIGHT_CAIXA_TEST_*.
  */

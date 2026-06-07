@@ -10,8 +10,6 @@ import {
   fetchRawSession,
   normalizeAdminSession,
   normalizeSession,
-  getRawSession,
-  getCachedAdminSession,
 } from './sessionConsistency'
 
 const gerenteUser = { id: 'mgr-1', email: 'gerente@test.local' }

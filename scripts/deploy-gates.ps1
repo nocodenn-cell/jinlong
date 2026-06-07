@@ -54,7 +54,7 @@ function Get-EnvironmentConfig {
             CriticalSecrets = @("NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY")
         }
         prod = @{
-            WebUrl = "https://fastproduct.vercel.app"
+            WebUrl = "https://pdv-importados.vercel.app"
             RequiresDesktop = $true
             CriticalSecrets = @("NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SYNC_ENDPOINT", "SYNC_KEY")
         }

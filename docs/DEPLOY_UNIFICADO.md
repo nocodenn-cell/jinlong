@@ -12,7 +12,7 @@ Use este arquivo como **única referência** para deploy em staging/produção.
 | Ambiente | URL | Desktop | Quando usar |
 |----------|-----|---------|-------------|
 | **staging** | `https://fastproduct-staging.vercel.app` | Não | Homologação antes de produção |
-| **prod** | `https://fastproduct.vercel.app` | Sim | Loja piloto/produção |
+| **prod** | `https://pdv-importados.vercel.app` | Sim | Loja piloto/produção (projeto Vercel `pdv-importados`) |
 
 ---
 

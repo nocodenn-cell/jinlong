@@ -207,7 +207,7 @@ Para o cliente validar o visual antes da **Fase B** (carrinho + barra inferior):
 
 #### **Testar Health Check:**
 ```bash
-curl https://fastproduct.vercel.app/api/health
+curl https://pdv-importados.vercel.app/api/health
 ```
 
 #### **Expected Response:**

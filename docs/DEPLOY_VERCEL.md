@@ -68,13 +68,12 @@ Após alterações em `backend/supabase/migrations/`, aplicar no projeto Supabas
 3. Login com usuário válido (perfil conforme fluxo: gerente/dono → `/gerente/produtos`, operador → `/caixa`; query `next` respeitada quando segura).
 4. Logs da Vercel: build sem erros de TypeScript.
 
-### CI em `main` (smoke automático)
+### CI em `main` (SSRA — gate de release)
 
-No workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), após o deploy, o job `smoke-test` exporta a URL do passo **Deploy to Vercel** (`outputs.vercel_url` ← `steps.vercel.outputs.preview-url` da `amondnet/vercel-action`) e corre:
+No workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), após `deploy` com `--prod`, o job **`validate-production`** compara o **Deployment ID** da API Vercel com `GET https://pdv-importados.vercel.app/api/health`. Ver [SSRA_RELEASE.md](./SSRA_RELEASE.md).
 
-`npm run test:e2e:post-deploy-smoke -w pdv-importados`
+E2E (incluindo `test:e2e:critical` e smoke pós-deploy) é **sistema de risco**, não decisão de release — ver [SSRA_RELEASE.md](./SSRA_RELEASE.md) e [E2E.md](./E2E.md).
 
-Isto executa apenas `e2e/login.spec.ts` e `e2e/caixa.spec.ts` contra `PLAYWRIGHT_BASE_URL`, com `PLAYWRIGHT_E2E_WITH_DEV=0` (sem subir `next dev`). **Não** substitui o pipeline `test:e2e:critical` (sync + vendas), que continua a ser usado em homologação / Actions opcionais — ver [E2E.md](./E2E.md).
 
 ## Ambientes sugeridos
 

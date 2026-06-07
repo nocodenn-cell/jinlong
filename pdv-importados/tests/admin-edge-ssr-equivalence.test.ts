@@ -10,8 +10,6 @@ import {
   fetchRawSession,
   normalizeAdminSession,
   normalizeSession,
-  getCachedAdminNormalization,
-  getCachedAdminSession,
 } from '@/lib/admin/auth/sessionConsistency'
 import {
   actionAdminDecision,
@@ -43,7 +41,8 @@ function contractWithoutSource(
   contract: ReturnType<typeof normalizeAdminSession>['contract']
 ) {
   if (!contract) return null
-  const { source: _source, ...rest } = contract
+  const { source, ...rest } = contract
+  void source
   return rest
 }
 
