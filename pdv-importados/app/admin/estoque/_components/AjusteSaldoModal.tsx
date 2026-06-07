@@ -5,27 +5,13 @@
  *
  * Modal de ajuste de saldo/mínimo. Reusa a server action EXISTENTE
  * `atualizarEstoqueProduto` (RPC `ajustar_estoque_manual`) — nenhuma query nova.
- * Visual zinc-950 do painel /admin (o modal do gerente é branco/Dragon POS).
- *
- * Overlay fixo próprio (não usa DragonModal, que é temado p/ o POS): Escape e
- * clique no backdrop fecham; trava scroll do body enquanto aberto.
  */
 
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { atualizarEstoqueProduto } from '@/app/gerente/estoque/actions'
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '7px 10px',
-  borderRadius: 8,
-  fontSize: 12,
-  background: 'var(--fp-bg-secondary)',
-  border: '1px solid var(--fp-border)',
-  color: 'var(--fp-text-primary)',
-  outline: 'none',
-}
+import { cn } from '@/lib/utils'
 
 const MOTIVOS = [
   { value: 'ACERTO_INVENTARIO', label: 'Acerto de inventário' },
@@ -34,6 +20,9 @@ const MOTIVOS = [
   { value: 'QUEBRA', label: 'Quebra / avaria' },
   { value: 'OUTRO', label: 'Outro (descreva)' },
 ] as const
+
+const inputClassName =
+  'admin-v2-input w-full px-2.5 py-[7px] text-[12px] outline-none transition-colors'
 
 export type AjusteAlvo = Readonly<{
   produtoId: string
@@ -53,7 +42,6 @@ export function AjusteSaldoModal({
   const [pending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
 
-  // Trava scroll + fecha no Escape enquanto aberto.
   useEffect(() => {
     if (!alvo) return
     const onKey = (e: KeyboardEvent) => {
@@ -68,7 +56,6 @@ export function AjusteSaldoModal({
     }
   }, [alvo, pending, onClose])
 
-  // Reseta erro a cada (re)abertura.
   useEffect(() => {
     if (alvo) setErro(null)
   }, [alvo])
@@ -105,35 +92,24 @@ export function AjusteSaldoModal({
       aria-labelledby="ajuste-saldo-titulo"
     >
       <div
-        className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.6)' }}
+        className="absolute inset-0 bg-black/60"
         onClick={pending ? undefined : onClose}
         aria-hidden
       />
-      <div
-        className="relative z-10 w-full max-w-md rounded-[14px] p-5"
-        style={{ background: 'var(--fp-bg-card)', border: '1px solid var(--fp-border)' }}
-      >
+      <div className="admin-v2-panel relative z-10 w-full max-w-md rounded-[14px] p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2
-              id="ajuste-saldo-titulo"
-              className="text-[15px] font-semibold"
-              style={{ color: 'var(--fp-text-primary)' }}
-            >
+            <h2 id="ajuste-saldo-titulo" className="text-[15px] font-semibold text-jl-fg-1">
               Ajustar saldo
             </h2>
-            <p className="mt-0.5 truncate text-[12px]" style={{ color: 'var(--fp-text-secondary)' }}>
-              {alvo.produtoNome}
-            </p>
+            <p className="mt-0.5 truncate text-[12px] text-jl-fg-2">{alvo.produtoNome}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={pending}
             aria-label="Fechar"
-            className="-mr-1 -mt-1 rounded-lg p-1.5 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
-            style={{ color: 'var(--fp-text-muted)' }}
+            className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
           >
             <X size={16} aria-hidden />
           </button>
@@ -149,7 +125,7 @@ export function AjusteSaldoModal({
                 step="0.001"
                 required
                 defaultValue={alvo.quantidadeAtual}
-                style={inputStyle}
+                className={inputClassName}
               />
             </Field>
             <Field label="Estoque mínimo">
@@ -160,13 +136,13 @@ export function AjusteSaldoModal({
                 step="0.001"
                 required
                 defaultValue={alvo.estoqueMinimo}
-                style={inputStyle}
+                className={inputClassName}
               />
             </Field>
           </div>
 
           <Field label="Motivo">
-            <select name="motivo" required defaultValue="ACERTO_INVENTARIO" style={inputStyle}>
+            <select name="motivo" required defaultValue="ACERTO_INVENTARIO" className={inputClassName}>
               {MOTIVOS.map((m) => (
                 <option key={m.value} value={m.value}>
                   {m.label}
@@ -180,33 +156,19 @@ export function AjusteSaldoModal({
               name="observacao"
               maxLength={500}
               placeholder="Opcional (obrigatória se o motivo for “Outro”)"
-              style={inputStyle}
+              className={inputClassName}
             />
           </Field>
 
           {erro ? (
-            <p
-              className="rounded-lg px-3 py-2 text-[12px]"
-              style={{
-                background: 'var(--fp-danger-bg)',
-                border: '1px solid var(--fp-danger-border)',
-                color: 'var(--fp-danger)',
-              }}
-            >
-              {erro}
-            </p>
+            <p className={cn('admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]')}>{erro}</p>
           ) : null}
 
           <div className="mt-1 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={pending}
-              className="fp-btn fp-btn--secondary"
-            >
+            <button type="button" onClick={onClose} disabled={pending} className="admin-v2-btn-secondary">
               Cancelar
             </button>
-            <button type="submit" disabled={pending} className="fp-btn fp-btn--primary">
+            <button type="submit" disabled={pending} className="admin-v2-btn-primary">
               {pending ? 'Salvando…' : 'Salvar ajuste'}
             </button>
           </div>
@@ -219,9 +181,7 @@ export function AjusteSaldoModal({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] font-medium" style={{ color: 'var(--fp-text-muted)' }}>
-        {label}
-      </span>
+      <span className="text-[11px] font-medium text-jl-fg-3">{label}</span>
       {children}
     </label>
   )

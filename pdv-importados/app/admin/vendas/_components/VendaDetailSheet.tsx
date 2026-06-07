@@ -4,9 +4,7 @@
  * FastProduct Admin — VendaDetailSheet (Fase 5)
  *
  * Painel lateral com o detalhe de uma venda (header + itens). Carrega sob demanda
- * ao abrir via a action read-only `obterDetalheVenda`. Visual zinc-950 do /admin.
- * Status/pagamento/fiscal pelos badges da Fase 2 (StatusBadge/PaymentBadge/
- * FiscalBadge). Sheet espelha o KardexSheet do /admin/estoque.
+ * ao abrir via a action read-only `obterDetalheVenda`.
  */
 
 import { useEffect, useState } from 'react'
@@ -14,6 +12,7 @@ import { X } from 'lucide-react'
 import { StatusBadge, PaymentBadge, FiscalBadge } from '@/components/ui/badges'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
+import { cn } from '@/lib/utils'
 import { obterDetalheVenda, type VendaDetalhe } from '../actions'
 import { toPayment, toVendaStatus, toFiscal } from './vendaMaps'
 
@@ -30,7 +29,6 @@ export function VendaDetailSheet({
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState(false)
 
-  // Trava scroll + fecha no Escape enquanto aberto.
   useEffect(() => {
     if (!alvo) return
     const onKey = (e: KeyboardEvent) => {
@@ -45,7 +43,6 @@ export function VendaDetailSheet({
     }
   }, [alvo, onClose])
 
-  // Carrega ao abrir; cancela escrita se fechar/trocar antes de resolver.
   useEffect(() => {
     if (!alvo) return
     let vivo = true
@@ -80,29 +77,20 @@ export function VendaDetailSheet({
       aria-modal="true"
       aria-labelledby="venda-detalhe-titulo"
     >
-      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose} aria-hidden />
-      <aside
-        className="relative z-10 flex h-full w-full max-w-lg flex-col"
-        style={{ background: 'var(--fp-bg-card)', borderLeft: '1px solid var(--fp-border)' }}
-      >
-        <div
-          className="flex items-start justify-between gap-3 px-5 py-4"
-          style={{ borderBottom: '1px solid var(--fp-border)' }}
-        >
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
+      <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-lg flex-col">
+        <div className="flex items-start justify-between gap-3 border-b border-[#242424] px-5 py-4">
           <div className="min-w-0">
-            <h2 id="venda-detalhe-titulo" className="text-[15px] font-semibold" style={{ color: 'var(--fp-text-primary)' }}>
+            <h2 id="venda-detalhe-titulo" className="text-[15px] font-semibold text-jl-fg-1">
               Detalhe da venda
             </h2>
-            <p className="mt-0.5 truncate font-mono text-[11px]" style={{ color: 'var(--fp-text-muted)' }}>
-              {alvo.id}
-            </p>
+            <p className="mt-0.5 truncate font-mono text-[11px] text-jl-fg-3">{alvo.id}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="-mr-1 -mt-1 rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
-            style={{ color: 'var(--fp-text-muted)' }}
+            className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06]"
           >
             <X size={16} aria-hidden />
           </button>
@@ -112,36 +100,26 @@ export function VendaDetailSheet({
           {carregando ? (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-12 rounded-lg" style={{ background: 'var(--fp-bg-secondary)', opacity: 0.6 }} />
+                <div key={i} className="h-12 rounded-lg bg-[#111111] opacity-60" />
               ))}
             </div>
           ) : erro || !venda ? (
             <div className="flex flex-col items-center gap-2 py-16 text-center">
-              <span className="text-3xl" aria-hidden style={{ color: 'var(--fp-text-muted)' }}>
+              <span className="text-3xl text-jl-fg-3" aria-hidden>
                 ⚠️
               </span>
-              <p className="text-[13px] font-medium" style={{ color: 'var(--fp-text-secondary)' }}>
-                Não foi possível carregar esta venda
-              </p>
-              <p className="text-[11px]" style={{ color: 'var(--fp-text-muted)' }}>
+              <p className="text-[13px] font-medium text-jl-fg-2">Não foi possível carregar esta venda</p>
+              <p className="text-[11px] text-jl-fg-3">
                 Ela pode ter sido removida ou você não tem acesso.
               </p>
             </div>
           ) : (
             <>
-              {/* Badges */}
               <div className="flex flex-wrap items-center gap-2">
                 {status ? (
                   <StatusBadge status={status} />
                 ) : venda.status ? (
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none"
-                    style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid var(--fp-border)',
-                      color: 'var(--fp-text-secondary)',
-                    }}
-                  >
+                  <span className="admin-v2-badge-muted inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none">
                     {venda.status}
                   </span>
                 ) : null}
@@ -149,7 +127,6 @@ export function VendaDetailSheet({
                 <FiscalBadge fiscal={toFiscal(venda.numero_nf)} />
               </div>
 
-              {/* Resumo */}
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
                 <Info label="Data">{formatDateTimeOrDash(venda.data, 'pt-BR', 'medium')}</Info>
                 <Info label="Tipo">{venda.tipo_venda ?? '—'}</Info>
@@ -157,43 +134,33 @@ export function VendaDetailSheet({
                 <Info label="NF-e">{venda.numero_nf ?? '—'}</Info>
               </dl>
 
-              {/* Totais */}
-              <div
-                className="mt-4 rounded-[10px] p-3"
-                style={{ background: 'var(--fp-bg-secondary)', border: '1px solid var(--fp-border)' }}
-              >
+              <div className="admin-v2-panel mt-4 rounded-[10px] p-3">
                 <Linha label="Bruto" valor={formatBRL(venda.total_bruto)} />
                 <Linha label="Desconto" valor={`- ${formatBRL(venda.total_desconto)}`} muted />
-                <div className="my-1.5 h-px" style={{ background: 'var(--fp-border)' }} />
+                <div className="my-1.5 h-px bg-[#242424]" />
                 <Linha label="Líquido" valor={formatBRL(venda.total_liquido)} strong />
               </div>
 
-              {/* Itens */}
-              <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--fp-text-muted)' }}>
+              <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
                 Itens ({venda.itens.length})
               </h3>
               {venda.itens.length === 0 ? (
-                <p className="text-[12px]" style={{ color: 'var(--fp-text-muted)' }}>
-                  Nenhum item registrado nesta venda.
-                </p>
+                <p className="text-[12px] text-jl-fg-3">Nenhum item registrado nesta venda.</p>
               ) : (
                 <ul className="flex flex-col">
                   {venda.itens.map((it) => (
                     <li
                       key={it.id}
-                      className="flex items-start justify-between gap-3 py-2.5"
-                      style={{ borderTop: '1px solid var(--fp-border-subtle)' }}
+                      className="flex items-start justify-between gap-3 border-t border-[#242424] py-2.5"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-[12px] font-medium" style={{ color: 'var(--fp-text-primary)' }}>
-                          {it.nome}
-                        </p>
-                        <p className="font-mono text-[10px]" style={{ color: 'var(--fp-text-muted)' }}>
+                        <p className="truncate text-[12px] font-medium text-jl-fg-1">{it.nome}</p>
+                        <p className="font-mono text-[10px] text-jl-fg-3">
                           {it.codigo_barras ?? '—'} · {it.quantidade} × {formatBRL(it.preco_unitario)}
                           {it.desconto_unitario > 0 ? ` · desc. ${formatBRL(it.desconto_unitario)}` : ''}
                         </p>
                       </div>
-                      <span className="shrink-0 text-[12px] font-medium tabular-nums" style={{ color: 'var(--fp-text-primary)' }}>
+                      <span className="shrink-0 text-[12px] font-medium tabular-nums text-jl-fg-1">
                         {formatBRL(it.subtotal)}
                       </span>
                     </li>
@@ -211,12 +178,8 @@ export function VendaDetailSheet({
 function Info({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--fp-text-muted)' }}>
-        {label}
-      </dt>
-      <dd className="mt-0.5 truncate text-[12px]" style={{ color: 'var(--fp-text-secondary)' }}>
-        {children}
-      </dd>
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{label}</dt>
+      <dd className="mt-0.5 truncate text-[12px] text-jl-fg-2">{children}</dd>
     </div>
   )
 }
@@ -234,15 +197,13 @@ function Linha({
 }) {
   return (
     <div className="flex items-center justify-between py-0.5">
-      <span className="text-[12px]" style={{ color: 'var(--fp-text-muted)' }}>
-        {label}
-      </span>
+      <span className="text-[12px] text-jl-fg-3">{label}</span>
       <span
-        className="text-[12px] tabular-nums"
-        style={{
-          color: muted ? 'var(--fp-text-muted)' : 'var(--fp-text-primary)',
-          fontWeight: strong ? 600 : 400,
-        }}
+        className={cn(
+          'text-[12px] tabular-nums',
+          muted ? 'text-jl-fg-3' : 'text-jl-fg-1',
+          strong && 'font-semibold',
+        )}
       >
         {valor}
       </span>

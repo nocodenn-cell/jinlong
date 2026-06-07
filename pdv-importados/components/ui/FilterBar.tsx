@@ -1,23 +1,7 @@
 'use client'
 
 /**
- * FastProduct Admin — FilterBar (Fase 2)
- *
- * Barra de filtros do painel /admin. O estado vive INTEIRAMENTE na URL
- * (useSearchParams + useRouter) — nada de useState isolado para os valores.
- * Isso é deliberado: o gerente precisa copiar a URL com os filtros aplicados
- * e reabrir em outra aba / compartilhar.
- *
- * Tipos de controle suportados:
- *   - 'pills'  → grupo de opções mutuamente exclusivas (segmented control)
- *   - 'select' → dropdown nativo
- *   - 'search' → input de texto com debounce (usa replace p/ não poluir histórico)
- *
- * Convenção: quando um filtro volta ao `defaultValue` (ou vazio), a chave é
- * REMOVIDA da query — URLs ficam limpas e o "estado zero" é a URL sem params.
- *
- * IMPORTANTE: por usar useSearchParams, a página que monta este componente deve
- * envolvê-lo num <Suspense> (exigência do Next 15 App Router).
+ * FastProduct Admin — FilterBar (Admin V2)
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -47,13 +31,11 @@ export type FilterDef =
       key: string
       label?: string
       placeholder?: string
-      /** ms de debounce antes de escrever na URL. Default 350. */
       debounceMs?: number
     }
 
 type FilterBarProps = {
   filters: FilterDef[]
-  /** Mostra o botão "Limpar" quando há ao menos um filtro ativo. Default true. */
   clearable?: boolean
   clearLabel?: string
   className?: string
@@ -69,7 +51,6 @@ export function FilterBar({
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  /** Escreve um valor na URL; remove a chave se vazio ou igual ao default. */
   const setParam = useCallback(
     (key: string, value: string, defaultValue: string | undefined, replace: boolean) => {
       const params = new URLSearchParams(searchParams.toString())
@@ -83,7 +64,7 @@ export function FilterBar({
       if (replace) router.replace(url, { scroll: false })
       else router.push(url, { scroll: false })
     },
-    [router, pathname, searchParams]
+    [router, pathname, searchParams],
   )
 
   const hasActive = filters.some((f) => {
@@ -140,8 +121,7 @@ export function FilterBar({
         <button
           type="button"
           onClick={clearAll}
-          className="inline-flex items-center gap-1 rounded-[6px] px-2 py-1.5 text-[11px] font-medium transition-colors"
-          style={{ color: 'var(--fp-text-muted)' }}
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium text-jl-fg-3 transition-colors hover:text-jl-fg-1"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
           {clearLabel}
@@ -150,8 +130,6 @@ export function FilterBar({
     </div>
   )
 }
-
-// ─── Pills (segmented control) ──────────────────────────────────────────────
 
 function PillsControl({
   filter,
@@ -164,11 +142,7 @@ function PillsControl({
 }) {
   return (
     <div
-      className="inline-flex items-center gap-0.5 rounded-[6px] p-[3px]"
-      style={{
-        background: 'var(--fp-bg-secondary)',
-        border: '1px solid var(--fp-border)',
-      }}
+      className="inline-flex items-center gap-0.5 rounded-md border border-[#242424] bg-[#111111] p-[3px]"
       role="group"
       aria-label={filter.label}
     >
@@ -180,11 +154,12 @@ function PillsControl({
             type="button"
             onClick={() => onChange(opt.value)}
             aria-pressed={active}
-            className="rounded-[5px] px-2.5 py-1 text-[11px] font-medium leading-none transition-colors"
-            style={{
-              background: active ? 'var(--fp-bg-active)' : 'transparent',
-              color: active ? 'var(--fp-text-primary)' : 'var(--fp-text-muted)',
-            }}
+            className={cn(
+              'rounded-[5px] px-2.5 py-1 text-[11px] font-medium leading-none transition-colors',
+              active
+                ? 'bg-jl-card-l1-accent text-jl-accent'
+                : 'text-jl-fg-3 hover:text-jl-fg-1',
+            )}
           >
             {opt.label}
           </button>
@@ -193,8 +168,6 @@ function PillsControl({
     </div>
   )
 }
-
-// ─── Select (dropdown nativo) ───────────────────────────────────────────────
 
 function SelectControl({
   filter,
@@ -210,12 +183,7 @@ function SelectControl({
       aria-label={filter.label}
       value={current}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-[6px] px-2.5 py-[7px] text-[12px] outline-none transition-colors"
-      style={{
-        background: 'var(--fp-bg-secondary)',
-        border: '1px solid var(--fp-border)',
-        color: 'var(--fp-text-primary)',
-      }}
+      className="admin-v2-input rounded-md px-2.5 py-[7px] text-[12px] outline-none transition-colors"
     >
       {filter.options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -225,8 +193,6 @@ function SelectControl({
     </select>
   )
 }
-
-// ─── Search (input com debounce) ────────────────────────────────────────────
 
 function SearchControl({
   filter,
@@ -240,10 +206,8 @@ function SearchControl({
   const [value, setValue] = useState(current)
   const debounceMs = filter.debounceMs ?? 350
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Última string já enviada à URL — evita re-commit em sync externo (back/forward).
   const committed = useRef(current)
 
-  // Sincroniza quando a URL muda por fora (navegação, limpar tudo).
   useEffect(() => {
     if (current !== committed.current) {
       committed.current = current
@@ -273,14 +237,8 @@ function SearchControl({
   }
 
   return (
-    <div
-      className="inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-[7px]"
-      style={{
-        background: 'var(--fp-bg-secondary)',
-        border: '1px solid var(--fp-border)',
-      }}
-    >
-      <Search size={13} strokeWidth={2} aria-hidden style={{ color: 'var(--fp-text-muted)' }} />
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-[#242424] bg-[#111111] px-2.5 py-[7px]">
+      <Search size={13} strokeWidth={2} aria-hidden className="text-jl-fg-3" />
       <input
         type="text"
         value={value}
@@ -290,16 +248,14 @@ function SearchControl({
         onKeyDown={(e) => {
           if (e.key === 'Enter') flush(value)
         }}
-        className="w-44 bg-transparent text-[12px] outline-none placeholder:text-[var(--fp-text-muted)]"
-        style={{ color: 'var(--fp-text-primary)' }}
+        className="w-44 bg-transparent text-[12px] text-jl-fg-1 outline-none placeholder:text-jl-fg-3"
       />
       {value ? (
         <button
           type="button"
           onClick={() => flush('')}
           aria-label="Limpar busca"
-          className="shrink-0"
-          style={{ color: 'var(--fp-text-muted)' }}
+          className="shrink-0 text-jl-fg-3 hover:text-jl-fg-1"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
         </button>

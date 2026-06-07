@@ -21,6 +21,7 @@ import { Download, Plus, Upload } from 'lucide-react'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import {
   buscarProdutosComFiltros,
   listarOpcoesFiltrosProdutos,
@@ -244,33 +245,38 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   if (estoque !== 'todos') chips.push({ key: 'estoque', label: ESTOQUE_LABEL[estoque] })
   if (imagem !== 'todos') chips.push({ key: 'imagem', label: IMAGEM_LABEL[imagem] })
 
-  return (
-    <div className="flex flex-col">
-      {/* Cabeçalho + ações */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-3 pt-5">
-        <div>
-          <h1 className="text-[18px] font-semibold text-zinc-100">Catálogo</h1>
-          <p className="mt-0.5 text-[12px] text-zinc-500">Produtos cadastrados na loja</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Hrefs transitórios → /gerente/produtos enquanto rotas /admin/* não existem */}
-          <Link href="/gerente/produtos" className="fp-btn fp-btn--secondary">
-            <Upload size={14} aria-hidden />
-            Importar NF-e XML
-          </Link>
-          <Link href="/gerente/produtos" className="fp-btn fp-btn--secondary">
-            <Download size={14} aria-hidden />
-            Exportar CSV
-          </Link>
-          <Link href="/gerente/produtos" className="fp-btn fp-btn--primary">
-            <Plus size={14} aria-hidden />
-            Cadastro rápido
-          </Link>
-        </div>
-      </div>
+  const headerActions = (
+    <>
+      <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
+        <Upload size={14} aria-hidden />
+        Importar NF-e XML
+      </Link>
+      <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
+        <Download size={14} aria-hidden />
+        Exportar CSV
+      </Link>
+      <Link href="/gerente/produtos" className="admin-v2-btn-primary">
+        <Plus size={14} aria-hidden />
+        Cadastro rápido
+      </Link>
+    </>
+  )
 
-      {/* Filtros */}
-      <div className="border-b border-zinc-800 px-6 py-3">
+  const countBadge = (
+    <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+      {totalCount} {totalCount === 1 ? 'produto encontrado' : 'produtos encontrados'}
+    </span>
+  )
+
+  return (
+    <div className="admin-v2-page">
+      <PageHeader
+        title="Catálogo"
+        subtitle="Produtos cadastrados na loja"
+        filters={headerActions}
+      />
+
+      <div className="mb-4 border-b border-[#242424] pb-3">
         <Suspense fallback={<div className="h-9" />}>
           <FilterBar filters={filters} />
         </Suspense>
@@ -278,13 +284,9 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         {chips.length > 0 ? (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (
-              <Link
-                key={chip.key}
-                href={hrefWithout(chip.key)}
-                className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-0.5 text-[11px] text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-100"
-              >
+              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
                 {chip.label}
-                <span aria-hidden className="text-zinc-500">
+                <span aria-hidden className="text-jl-fg-3">
                   ✕
                 </span>
               </Link>
@@ -293,26 +295,19 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         ) : null}
       </div>
 
-      {/* Contador */}
-      <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-2.5">
-        <span className="text-[13px] font-medium text-zinc-300">Lista de produtos</span>
-        <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-[11px] text-zinc-500">
-          {totalCount} {totalCount === 1 ? 'produto encontrado' : 'produtos encontrados'}
-        </span>
-      </div>
-
       {loadError ? (
-        <div className="mx-6 mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-[12px] text-red-300">
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
           {loadError}
         </div>
       ) : null}
 
-      <CatalogoTable produtos={produtos} />
+      <SectionCard title="Lista de produtos" action={countBadge}>
+        <CatalogoTable produtos={produtos} />
+      </SectionCard>
 
-      {/* Paginação (server-side via URL) */}
       {totalPages > 1 ? (
-        <div className="flex items-center justify-between gap-3 px-6 py-4">
-          <span className="text-[11px] text-zinc-600">
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <span className="text-[11px] text-jl-fg-3">
             Página {page} de {totalPages}
           </span>
           <div className="flex items-center gap-1">
@@ -321,7 +316,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
             </PageLink>
             {pageWindow(page, totalPages).map((p, i) =>
               p === 'gap' ? (
-                <span key={`gap-${i}`} className="px-1 text-[11px] text-zinc-600">
+                <span key={`gap-${i}`} className="px-1 text-[11px] text-jl-fg-3">
                   …
                 </span>
               ) : (
@@ -367,7 +362,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="cursor-not-allowed rounded-lg border border-zinc-800 px-2.5 py-1 text-[11px] text-zinc-700">
+      <span className="cursor-not-allowed rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
         {children}
       </span>
     )
@@ -375,7 +370,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+      className="rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
     >
       {children}
     </Link>
@@ -398,8 +393,8 @@ function PageNumber({
       className={
         'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-[11px] font-medium transition-colors ' +
         (active
-          ? 'bg-zinc-900 text-zinc-950'
-          : 'border border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100')
+          ? 'border border-jl-accent/35 bg-jl-accent/10 text-jl-accent'
+          : 'border border-[#242424] text-jl-fg-3 hover:bg-[#161616] hover:text-jl-fg-1')
       }
     >
       {children}

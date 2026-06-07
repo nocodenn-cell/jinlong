@@ -117,8 +117,8 @@ vi.mock('@/lib/admin/auth/resolveAdminSession', () => ({
   resolveAdminSession: (...args: unknown[]) => mockResolveAdminSession(...args),
 }))
 
-vi.mock('@/app/admin/_components/AdminShell', () => ({
-  AdminShell: ({ children }: { children: unknown }) => children,
+vi.mock('@/components/ui/admin-v2', () => ({
+  AdminV2Shell: ({ children }: { children: unknown }) => children,
 }))
 
 async function runLayoutGate(): Promise<PipelineOutcome> {
@@ -383,10 +383,10 @@ describe('admin auth resilience', () => {
       expect(
         fs.readFileSync(path.join(ROOT, 'lib', 'admin', 'policy', 'adminPolicy.ts'), 'utf8')
       ).not.toContain('fetchRawSession')
-      expect(layoutSrc).toContain('AdminShell')
+      expect(layoutSrc).toContain('AdminV2Shell')
 
       const shellSrc = fs.readFileSync(
-        path.join(ROOT, 'app', 'admin', '_components', 'AdminShell.tsx'),
+        path.join(ROOT, 'components', 'ui', 'admin-v2', 'AdminV2Shell.tsx'),
         'utf8'
       )
       expect(shellSrc).not.toMatch(/\bredirect\s*\(/)

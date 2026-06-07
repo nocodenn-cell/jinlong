@@ -8,6 +8,7 @@
  */
 
 import { Suspense } from 'react'
+import { PageHeader } from '@/components/ui/admin-v2'
 import { carregarResumoComissoes } from '@/app/gerente/comissoes/actions'
 import { ComissoesContent } from './_components/ComissoesContent'
 
@@ -39,16 +40,13 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
   const dados = res.success ? res.data : []
 
   return (
-    <div className="flex flex-col">
-      {/* Cabeçalho */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-3 pt-5">
-        <div>
-          <h1 className="text-[18px] font-semibold text-zinc-100">Comissões</h1>
-          <p className="mt-0.5 text-[12px] text-zinc-500">Acompanhar comissões por operador</p>
-        </div>
-      </div>
+    <div className="admin-v2-page">
+      <PageHeader
+        title="Comissões"
+        subtitle="Acompanhar comissões por operador"
+      />
 
-      <Suspense fallback={<div className="h-12 bg-zinc-900" />}>
+      <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
         <ComissoesContent dados={dados} filtroInicial={{ de, ate, status }} />
       </Suspense>
     </div>

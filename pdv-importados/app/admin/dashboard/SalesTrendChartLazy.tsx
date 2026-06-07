@@ -7,7 +7,7 @@ const SalesTrendChartDynamic = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+      <div className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-jl-border-1 bg-jl-surface-soft text-sm text-jl-fg-3">
         Carregando gráfico…
       </div>
     ),

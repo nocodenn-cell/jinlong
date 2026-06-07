@@ -12,9 +12,10 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { DollarSign, FileText, ListFilter, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import {
   fetchContasReceberListagem,
   fetchFinanceiroTitulosKpis,
@@ -39,7 +40,6 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const parsed = parseTituloFiltersFromSearchParams(sp as Record<string, string | string[] | undefined>)
   const { limite, ...filters } = parsed
 
-  // ─── Dados (funções EXISTENTES — nenhuma query nova) ───────────────────
   const supabase = await createClient()
   const [listaRes, kpisRes] = await Promise.all([
     fetchContasReceberListagem(supabase, filters, limite),
@@ -57,7 +57,6 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     descricao: t.descricao,
   }))
 
-  // ─── FilterBar (Fase 2) ──────────────────────────────────────────────────
   const filterDefs: FilterDef[] = [
     {
       type: 'search',
@@ -76,7 +75,6 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     },
   ]
 
-  // ─── Chips de filtros ativos ─────────────────────────────────────────────
   const activeParams: Record<string, string> = {}
   if (filters.q) activeParams.q = filters.q
   if (filters.opcao !== 'mix') activeParams.opcao = filters.opcao
@@ -102,73 +100,53 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   if (filters.ate) chips.push({ key: 'ate', label: `Até: ${filters.ate}` })
   if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusLabel[filters.opcao] ?? filters.opcao })
 
+  const countBadge = (
+    <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+      {listaRes.capped ? `${contas.length}+ registros` : `${contas.length} ${contas.length === 1 ? 'registro' : 'registros'}`}
+    </span>
+  )
+
   return (
-    <div className="flex flex-col">
-      {/* Cabeçalho + ações */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-3 pt-5">
-        <div>
-          <h1 className="text-[18px] font-semibold text-zinc-100">Financeiro</h1>
-          <p className="mt-0.5 text-[12px] text-zinc-500">Contas a receber e histórico de liquidações</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/gerente/financeiro" className="fp-btn fp-btn--primary">
+    <div className="admin-v2-page">
+      <PageHeader
+        title="Financeiro"
+        subtitle="Contas a receber e histórico de liquidações"
+        filters={
+          <Link href="/gerente/financeiro" className="admin-v2-btn-primary">
             <Plus size={14} aria-hidden />
             Nova conta
           </Link>
-        </div>
+        }
+      />
+
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <MetricCard
+          label="Contas abertas"
+          value={String(kpisRes.titulosAbertosCount)}
+          icon={FileText}
+          tone="gold"
+        />
+        <MetricCard
+          label="Valor aberto"
+          value={formatBRL(kpisRes.valorAbertoTotal)}
+          icon={DollarSign}
+          tone="gold"
+          hint={
+            kpisRes.kpiValorTruncado
+              ? `(aprox.; capped em ${kpisRes.titulosAbertosCount} itens)`
+              : undefined
+          }
+        />
+        <MetricCard
+          label="Filtros aplicados"
+          value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
+          icon={ListFilter}
+          tone="gold"
+          hint={listaRes.capped ? '(resultado truncado)' : undefined}
+        />
       </div>
 
-      {/* KPIs */}
-      <div className="border-b border-zinc-800 px-6 py-4">
-        <div className="grid grid-cols-3 gap-4">
-          <div
-            className="rounded-[10px] p-3"
-            style={{ background: 'var(--fp-bg-secondary)', border: '1px solid var(--fp-border)' }}
-          >
-            <p className="text-[11px] font-medium uppercase tracking-[0.06em]" style={{ color: 'var(--fp-text-muted)' }}>
-              Contas abertas
-            </p>
-            <p className="mt-1.5 text-[20px] font-semibold" style={{ color: 'var(--fp-text-primary)' }}>
-              {kpisRes.titulosAbertosCount}
-            </p>
-          </div>
-          <div
-            className="rounded-[10px] p-3"
-            style={{ background: 'var(--fp-bg-secondary)', border: '1px solid var(--fp-border)' }}
-          >
-            <p className="text-[11px] font-medium uppercase tracking-[0.06em]" style={{ color: 'var(--fp-text-muted)' }}>
-              Valor aberto
-            </p>
-            <p className="mt-1.5 truncate text-[18px] font-semibold" style={{ color: 'var(--fp-text-primary)' }}>
-              {formatBRL(kpisRes.valorAbertoTotal)}
-            </p>
-            {kpisRes.kpiValorTruncado ? (
-              <p className="mt-0.5 text-[10px]" style={{ color: 'var(--fp-text-muted)' }}>
-                (aprox.; capped em {kpisRes.titulosAbertosCount} itens)
-              </p>
-            ) : null}
-          </div>
-          <div
-            className="rounded-[10px] p-3"
-            style={{ background: 'var(--fp-bg-secondary)', border: '1px solid var(--fp-border)' }}
-          >
-            <p className="text-[11px] font-medium uppercase tracking-[0.06em]" style={{ color: 'var(--fp-text-muted)' }}>
-              Filtros aplicados
-            </p>
-            <p className="mt-1.5 text-[18px] font-semibold" style={{ color: 'var(--fp-text-primary)' }}>
-              {listaRes.capped ? `${contas.length}+` : contas.length}
-            </p>
-            {listaRes.capped ? (
-              <p className="mt-0.5 text-[10px]" style={{ color: 'var(--fp-text-muted)' }}>
-                (resultado truncado)
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="border-b border-zinc-800 px-6 py-3">
+      <div className="mb-4 border-b border-[#242424] pb-3">
         <Suspense fallback={<div className="h-9" />}>
           <FilterBar filters={filterDefs} />
         </Suspense>
@@ -176,13 +154,9 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         {chips.length > 0 ? (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (
-              <Link
-                key={chip.key}
-                href={hrefWithout(chip.key)}
-                className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-0.5 text-[11px] text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-100"
-              >
+              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
                 {chip.label}
-                <span aria-hidden className="text-zinc-500">
+                <span aria-hidden className="text-jl-fg-3">
                   ✕
                 </span>
               </Link>
@@ -191,15 +165,9 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         ) : null}
       </div>
 
-      {/* Contador */}
-      <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-2.5">
-        <span className="text-[13px] font-medium text-zinc-300">Contas a receber</span>
-        <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-[11px] text-zinc-500">
-          {listaRes.capped ? `${contas.length}+ registros` : `${contas.length} ${contas.length === 1 ? 'registro' : 'registros'}`}
-        </span>
-      </div>
-
-      <ContasReceberTable contas={contas} />
+      <SectionCard title="Contas a receber" action={countBadge}>
+        <ContasReceberTable contas={contas} />
+      </SectionCard>
     </div>
   )
 }

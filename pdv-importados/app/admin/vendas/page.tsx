@@ -16,6 +16,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { Download } from 'lucide-react'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
 
@@ -36,7 +37,6 @@ function clampPage(raw: string | undefined): number {
 
 const DIA_MS = 86_400_000
 
-/** Início do período (ISO) ou null para "tudo". `fim` fica em aberto (sem vendas futuras). */
 function periodoInicio(periodo: Periodo): string | null {
   const now = new Date()
   if (periodo === 'hoje') {
@@ -94,7 +94,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     formaPagamento: pagamento === 'all' ? [] : [pagamento],
   }
 
-  // ─── Dados (action EXISTENTE — nenhuma query nova) ───────────────────────
   const res = await buscarVendasPaginadasAction(page, filtros)
   const vendas: VendaLinha[] = res.ok
     ? res.vendas.map((v) => ({
@@ -111,7 +110,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   const hasMore = res.ok ? res.hasMore : false
   const loadError = res.ok ? null : res.error
 
-  // ─── FilterBar (Fase 2) ──────────────────────────────────────────────────
   const filters: FilterDef[] = [
     {
       type: 'pills',
@@ -150,7 +148,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     },
   ]
 
-  // ─── Chips de filtros ativos (server-side, removíveis) ───────────────────
   const activeParams: Record<string, string> = {}
   if (periodo !== 'tudo') activeParams.periodo = periodo
   if (status !== 'all') activeParams.status = status
@@ -175,25 +172,26 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL[status] })
   if (pagamento !== 'all') chips.push({ key: 'pagamento', label: `Pagamento: ${PAGAMENTO_LABEL[pagamento]}` })
 
+  const countBadge = (
+    <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+      {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'} nesta página
+    </span>
+  )
+
   return (
-    <div className="flex flex-col">
-      {/* Cabeçalho + ações */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-3 pt-5">
-        <div>
-          <h1 className="text-[18px] font-semibold text-zinc-100">Vendas</h1>
-          <p className="mt-0.5 text-[12px] text-zinc-500">Histórico de vendas e detalhe por pedido</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Href transitório → /gerente enquanto a rota /admin não tem export próprio */}
-          <Link href="/gerente/vendas" className="fp-btn fp-btn--secondary">
+    <div className="admin-v2-page">
+      <PageHeader
+        title="Vendas"
+        subtitle="Histórico de vendas e detalhe por pedido"
+        filters={
+          <Link href="/gerente/vendas" className="admin-v2-btn-secondary">
             <Download size={14} aria-hidden />
             Exportar CSV
           </Link>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Filtros */}
-      <div className="border-b border-zinc-800 px-6 py-3">
+      <div className="mb-4 border-b border-[#242424] pb-3">
         <Suspense fallback={<div className="h-9" />}>
           <FilterBar filters={filters} />
         </Suspense>
@@ -201,13 +199,9 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
         {chips.length > 0 ? (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (
-              <Link
-                key={chip.key}
-                href={hrefWithout(chip.key)}
-                className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-0.5 text-[11px] text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-100"
-              >
+              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
                 {chip.label}
-                <span aria-hidden className="text-zinc-500">
+                <span aria-hidden className="text-jl-fg-3">
                   ✕
                 </span>
               </Link>
@@ -216,26 +210,19 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
         ) : null}
       </div>
 
-      {/* Contador */}
-      <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-2.5">
-        <span className="text-[13px] font-medium text-zinc-300">Lista de vendas</span>
-        <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-[11px] text-zinc-500">
-          {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'} nesta página
-        </span>
-      </div>
-
       {loadError ? (
-        <div className="mx-6 mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-[12px] text-red-300">
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
           {loadError}
         </div>
       ) : null}
 
-      <VendasTable vendas={vendas} />
+      <SectionCard title="Lista de vendas" action={countBadge}>
+        <VendasTable vendas={vendas} />
+      </SectionCard>
 
-      {/* Paginação por cursor (server-side via URL) */}
       {page > 1 || hasMore ? (
-        <div className="flex items-center justify-between gap-3 px-6 py-4">
-          <span className="text-[11px] text-zinc-600">Página {page}</span>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <span className="text-[11px] text-jl-fg-3">Página {page}</span>
           <div className="flex items-center gap-1">
             <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
               ‹ Anterior
@@ -250,8 +237,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   )
 }
 
-// ─── Paginação: link (espelha o Estoque/Catálogo) ───────────────────────────
-
 function PageLink({
   href,
   disabled,
@@ -263,7 +248,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="cursor-not-allowed rounded-lg border border-zinc-800 px-2.5 py-1 text-[11px] text-zinc-700">
+      <span className="cursor-not-allowed rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
         {children}
       </span>
     )
@@ -271,7 +256,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+      className="rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
     >
       {children}
     </Link>

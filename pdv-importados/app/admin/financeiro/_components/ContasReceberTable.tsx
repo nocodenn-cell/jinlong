@@ -6,14 +6,12 @@
  * Tabela de contas a receber. Usa o DataTable genérico (Fase 2). A LISTAGEM é
  * server-side (limitada em `limite`); esta tabela só renderiza os dados que
  * chegam, e o sort dos headers ordena localmente (client-side).
- *
- * Status ABERTO/PARCIAL em badges; valor aberto em cores (vermelho se aberto,
- * verde se pago).
  */
 
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
+import { cn } from '@/lib/utils'
 
 export type ContaLinha = {
   id: string
@@ -30,20 +28,10 @@ function StatusPill({ status }: { status: string }) {
   const isAberto = String(status).toUpperCase() === 'ABERTO'
   return (
     <span
-      className="inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none"
-      style={
-        isAberto
-          ? {
-              background: 'var(--fp-warning-bg)',
-              border: '1px solid var(--fp-warning-border)',
-              color: 'var(--fp-warning)',
-            }
-          : {
-              background: 'var(--fp-info-bg)',
-              border: '1px solid var(--fp-info-border)',
-              color: 'var(--fp-info)',
-            }
-      }
+      className={cn(
+        'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
+        isAberto ? 'admin-v2-badge-warning' : 'admin-v2-badge-gold',
+      )}
     >
       {isAberto ? 'Aberto' : 'Parcial'}
     </span>
@@ -53,11 +41,11 @@ function StatusPill({ status }: { status: string }) {
 function ContasEmpty() {
   return (
     <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <span className="text-4xl text-zinc-700" aria-hidden>
+      <span className="text-4xl text-jl-fg-3" aria-hidden>
         📋
       </span>
-      <p className="text-[14px] font-medium text-zinc-400">Nenhuma conta encontrada</p>
-      <p className="text-[12px] text-zinc-600">Ajuste o período, o status ou a busca.</p>
+      <p className="text-[14px] font-medium text-jl-fg-2">Nenhuma conta encontrada</p>
+      <p className="text-[12px] text-jl-fg-3">Ajuste o período, o status ou a busca.</p>
     </div>
   )
 }
@@ -70,8 +58,8 @@ export function ContasReceberTable({ contas }: { contas: ContaLinha[] }) {
       sortValue: (r) => r.cliente_nome,
       cell: (r) => (
         <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-[12px] font-medium text-zinc-200">{r.cliente_nome}</p>
-          {r.descricao ? <p className="max-w-[240px] truncate text-[10px] text-zinc-600">{r.descricao}</p> : null}
+          <p className="max-w-[240px] truncate text-[12px] font-medium text-jl-fg-1">{r.cliente_nome}</p>
+          {r.descricao ? <p className="max-w-[240px] truncate text-[10px] text-jl-fg-3">{r.descricao}</p> : null}
         </div>
       ),
     },
@@ -80,7 +68,7 @@ export function ContasReceberTable({ contas }: { contas: ContaLinha[] }) {
       header: 'Vencimento',
       sortValue: (r) => r.vencimento ?? '',
       cell: (r) => (
-        <span className="whitespace-nowrap text-[12px] text-zinc-300">
+        <span className="whitespace-nowrap text-[12px] text-jl-fg-2">
           {formatDateTimeOrDash(r.vencimento, 'pt-BR', 'short')}
         </span>
       ),
@@ -90,7 +78,7 @@ export function ContasReceberTable({ contas }: { contas: ContaLinha[] }) {
       header: 'Total',
       align: 'right',
       sortValue: (r) => r.valor_total,
-      cell: (r) => <span className="text-[12px] font-medium text-zinc-200">{formatBRL(r.valor_total)}</span>,
+      cell: (r) => <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.valor_total)}</span>,
     },
     {
       key: 'pago',
@@ -99,9 +87,9 @@ export function ContasReceberTable({ contas }: { contas: ContaLinha[] }) {
       sortValue: (r) => r.valor_pago,
       cell: (r) =>
         r.valor_pago > 0 ? (
-          <span className="text-[12px] font-medium text-green-400">{formatBRL(r.valor_pago)}</span>
+          <span className="text-[12px] font-medium text-emerald-400">{formatBRL(r.valor_pago)}</span>
         ) : (
-          <span className="text-[12px] text-zinc-700">—</span>
+          <span className="text-[12px] text-jl-fg-3">—</span>
         ),
     },
     {
@@ -113,7 +101,7 @@ export function ContasReceberTable({ contas }: { contas: ContaLinha[] }) {
         r.valor_aberto > 0 ? (
           <span className="text-[12px] font-medium text-red-400">{formatBRL(r.valor_aberto)}</span>
         ) : (
-          <span className="text-[12px] text-green-400">Quitado</span>
+          <span className="text-[12px] text-emerald-400">Quitado</span>
         ),
     },
     {
@@ -130,7 +118,7 @@ export function ContasReceberTable({ contas }: { contas: ContaLinha[] }) {
       columns={columns}
       rowKey={(r) => r.id}
       emptyState={<ContasEmpty />}
-      className="rounded-none border-x-0"
+      className="rounded-none border-x-0 border-b-0"
     />
   )
 }

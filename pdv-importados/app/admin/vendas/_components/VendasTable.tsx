@@ -7,12 +7,6 @@
  * por CURSOR (a action de origem só expõe `hasMore`, sem total) — resolvida no
  * page.tsx via ?page=; esta tabela só renderiza a página atual e o sort dos
  * headers ordena a página corrente (client-side).
- *
- * Status/pagamento pelos badges da Fase 2 (StatusBadge/PaymentBadge). O detalhe
- * (FiscalBadge + itens) vive no VendaDetailSheet, aberto por linha/ação.
- *
- * Sem query nova: a listagem vem de `buscarVendasPaginadasAction` (no server);
- * só o detalhe tem action própria (read-only).
  */
 
 import { useState } from 'react'
@@ -40,27 +34,20 @@ function StatusCell({ status }: { status: string | null }) {
   if (s) return <StatusBadge status={s} />
   if (status) {
     return (
-      <span
-        className="inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none"
-        style={{
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid var(--fp-border)',
-          color: 'var(--fp-text-secondary)',
-        }}
-      >
+      <span className="admin-v2-badge-muted inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none">
         {status}
       </span>
     )
   }
-  return <span className="text-zinc-700">—</span>
+  return <span className="text-jl-fg-3">—</span>
 }
 
 function ItensCell({ row }: { row: VendaLinha }) {
   const extras = row.qtd_itens_distintos - 1
   return (
     <div className="min-w-0">
-      <p className="max-w-[260px] truncate text-[12px] text-zinc-200">{row.primeiro_produto ?? '—'}</p>
-      <p className="text-[10px] text-zinc-600">
+      <p className="max-w-[260px] truncate text-[12px] text-jl-fg-1">{row.primeiro_produto ?? '—'}</p>
+      <p className="text-[10px] text-jl-fg-3">
         {row.qtd_itens_total} {row.qtd_itens_total === 1 ? 'unidade' : 'unidades'}
         {extras > 0 ? ` · +${extras} ${extras === 1 ? 'item' : 'itens'}` : ''}
       </p>
@@ -86,7 +73,7 @@ function ActionBtn({
         e.stopPropagation()
         onClick()
       }}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
     >
       {children}
     </button>
@@ -96,11 +83,11 @@ function ActionBtn({
 function VendasEmpty() {
   return (
     <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <span className="text-4xl text-zinc-700" aria-hidden>
+      <span className="text-4xl text-jl-fg-3" aria-hidden>
         🧾
       </span>
-      <p className="text-[14px] font-medium text-zinc-400">Nenhuma venda encontrada</p>
-      <p className="text-[12px] text-zinc-600">Ajuste o período, o status ou a forma de pagamento.</p>
+      <p className="text-[14px] font-medium text-jl-fg-2">Nenhuma venda encontrada</p>
+      <p className="text-[12px] text-jl-fg-3">Ajuste o período, o status ou a forma de pagamento.</p>
     </div>
   )
 }
@@ -114,7 +101,7 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
       header: 'Data',
       sortValue: (r) => r.data ?? '',
       cell: (r) => (
-        <span className="whitespace-nowrap text-[12px] text-zinc-300">
+        <span className="whitespace-nowrap text-[12px] text-jl-fg-2">
           {formatDateTimeOrDash(r.data, 'pt-BR', 'short')}
         </span>
       ),
@@ -142,9 +129,9 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
       sortValue: (r) => r.total_liquido ?? 0,
       cell: (r) =>
         r.total_liquido == null ? (
-          <span className="text-zinc-700">—</span>
+          <span className="text-jl-fg-3">—</span>
         ) : (
-          <span className="text-[12px] font-medium text-zinc-100">{formatBRL(r.total_liquido)}</span>
+          <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.total_liquido)}</span>
         ),
     },
   ]
@@ -156,7 +143,7 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
         columns={columns}
         rowKey={(r) => r.id}
         emptyState={<VendasEmpty />}
-        className="rounded-none border-x-0"
+        className="rounded-none border-x-0 border-b-0"
         onRowClick={(r) => setAlvo({ id: r.id })}
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">

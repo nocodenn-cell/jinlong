@@ -4,12 +4,12 @@
  * FastProduct Admin — KardexSheet (Fase 5)
  *
  * Painel lateral (sheet) com o histórico de movimentações do produto. Carrega
- * sob demanda ao abrir via a action read-only `obterKardexProduto`. Entradas em
- * verde (+), saídas em vermelho (−). Visual zinc-950 do painel /admin.
+ * sob demanda ao abrir via a action read-only `obterKardexProduto`.
  */
 
 import { useEffect, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { obterKardexProduto, type KardexMovimento } from '../actions'
 
 export type KardexAlvo = Readonly<{ produtoId: string; produtoNome: string }>
@@ -51,7 +51,6 @@ export function KardexSheet({
   const [movimentos, setMovimentos] = useState<KardexMovimento[]>([])
   const [carregando, setCarregando] = useState(false)
 
-  // Trava scroll + fecha no Escape enquanto aberto.
   useEffect(() => {
     if (!alvo) return
     const onKey = (e: KeyboardEvent) => {
@@ -66,7 +65,6 @@ export function KardexSheet({
     }
   }, [alvo, onClose])
 
-  // Carrega ao abrir; cancela escrita se fechar/trocar antes de resolver.
   useEffect(() => {
     if (!alvo) return
     let vivo = true
@@ -88,34 +86,20 @@ export function KardexSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="kardex-titulo">
-      <div
-        className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.6)' }}
-        onClick={onClose}
-        aria-hidden
-      />
-      <aside
-        className="relative z-10 flex h-full w-full max-w-md flex-col"
-        style={{ background: 'var(--fp-bg-card)', borderLeft: '1px solid var(--fp-border)' }}
-      >
-        <div
-          className="flex items-start justify-between gap-3 px-5 py-4"
-          style={{ borderBottom: '1px solid var(--fp-border)' }}
-        >
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
+      <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col">
+        <div className="flex items-start justify-between gap-3 border-b border-[#242424] px-5 py-4">
           <div className="min-w-0">
-            <h2 id="kardex-titulo" className="text-[15px] font-semibold" style={{ color: 'var(--fp-text-primary)' }}>
+            <h2 id="kardex-titulo" className="text-[15px] font-semibold text-jl-fg-1">
               Kardex
             </h2>
-            <p className="mt-0.5 truncate text-[12px]" style={{ color: 'var(--fp-text-secondary)' }}>
-              {alvo.produtoNome}
-            </p>
+            <p className="mt-0.5 truncate text-[12px] text-jl-fg-2">{alvo.produtoNome}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="-mr-1 -mt-1 rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]"
-            style={{ color: 'var(--fp-text-muted)' }}
+            className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06]"
           >
             <X size={16} aria-hidden />
           </button>
@@ -125,22 +109,16 @@ export function KardexSheet({
           {carregando ? (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-12 rounded-lg"
-                  style={{ background: 'var(--fp-bg-secondary)', opacity: 0.6 }}
-                />
+                <div key={i} className="h-12 rounded-lg bg-[#111111] opacity-60" />
               ))}
             </div>
           ) : movimentos.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-16 text-center">
-              <span className="text-3xl" aria-hidden style={{ color: 'var(--fp-text-muted)' }}>
+              <span className="text-3xl text-jl-fg-3" aria-hidden>
                 🗒️
               </span>
-              <p className="text-[13px] font-medium" style={{ color: 'var(--fp-text-secondary)' }}>
-                Sem movimentações registradas
-              </p>
-              <p className="text-[11px]" style={{ color: 'var(--fp-text-muted)' }}>
+              <p className="text-[13px] font-medium text-jl-fg-2">Sem movimentações registradas</p>
+              <p className="text-[11px] text-jl-fg-3">
                 As entradas e saídas deste produto aparecerão aqui.
               </p>
             </div>
@@ -151,40 +129,38 @@ export function KardexSheet({
                 return (
                   <li
                     key={m.id}
-                    className="flex items-start gap-3 py-2.5"
-                    style={{ borderTop: '1px solid var(--fp-border-subtle)' }}
+                    className="flex items-start gap-3 border-t border-[#242424] py-2.5"
                   >
                     <span
-                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                      style={{
-                        background: entrada ? 'var(--fp-success-bg)' : 'var(--fp-danger-bg)',
-                        color: entrada ? 'var(--fp-success)' : 'var(--fp-danger)',
-                      }}
+                      className={cn(
+                        'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                        entrada ? 'admin-v2-alert-success' : 'admin-v2-alert-danger',
+                      )}
                     >
                       {entrada ? <ArrowUpRight size={14} aria-hidden /> : <ArrowDownRight size={14} aria-hidden />}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-[12px] font-medium" style={{ color: 'var(--fp-text-primary)' }}>
+                        <span className="text-[12px] font-medium text-jl-fg-1">
                           {rotuloTipo(m.tipo_codigo)}
                         </span>
                         <span
-                          className="shrink-0 text-[12px] font-semibold tabular-nums"
-                          style={{ color: entrada ? 'var(--fp-success)' : 'var(--fp-danger)' }}
+                          className={cn(
+                            'shrink-0 text-[12px] font-semibold tabular-nums',
+                            entrada ? 'text-emerald-400' : 'text-red-400',
+                          )}
                         >
                           {entrada ? '+' : '−'}
                           {Math.abs(m.quantidade_delta)}
                         </span>
                       </div>
                       <div className="mt-0.5 flex items-center gap-2">
-                        <span className="text-[10px]" style={{ color: 'var(--fp-text-muted)' }}>
+                        <span className="text-[10px] text-jl-fg-3">
                           {dtFmt.format(new Date(m.created_at))}
                         </span>
                       </div>
                       {m.observacao ? (
-                        <p className="mt-0.5 text-[11px]" style={{ color: 'var(--fp-text-secondary)' }}>
-                          {m.observacao}
-                        </p>
+                        <p className="mt-0.5 text-[11px] text-jl-fg-2">{m.observacao}</p>
                       ) : null}
                     </div>
                   </li>

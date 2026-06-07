@@ -62,6 +62,44 @@
       }
     },
     {
+      "files": ["app/admin/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/app/admin/_components/AdminShell",
+                "message": "Use AdminV2Shell de @/components/ui/admin-v2."
+              },
+              {
+                "name": "@/app/admin/_components/AdminSidebar",
+                "message": "Use SidebarNav de @/components/ui/admin-v2."
+              },
+              {
+                "name": "@/components/ui/StatCard",
+                "message": "Use MetricCard de @/components/ui/admin-v2."
+              },
+              {
+                "name": "@/legacy/admin/AdminShell",
+                "message": "Shell legado — proibido em app/admin."
+              },
+              {
+                "name": "@/legacy/admin/AdminSidebar",
+                "message": "Sidebar legado — proibido em app/admin."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["**/legacy/admin/**", "@/legacy/admin/**"],
+                "message": "Legacy admin UI — use @/components/ui/admin-v2."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["**/logger.ts", "**/logger/*.ts", "shared/logger.ts", "shared/unified-logger.ts"],
       "rules": {
         "no-console": "off"

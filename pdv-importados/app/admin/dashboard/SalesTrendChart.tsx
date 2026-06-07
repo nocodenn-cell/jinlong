@@ -53,7 +53,7 @@ export default function SalesTrendChart({
     return (
       <div
         className={`h-full w-full animate-pulse rounded-md ${
-          variant === 'oriental' ? 'bg-[#fef9e8]/80' : 'bg-slate-50'
+          variant === 'oriental' ? 'bg-[#fef9e8]/80' : 'border border-jl-border-1 bg-jl-surface-soft'
         }`}
       />
     )

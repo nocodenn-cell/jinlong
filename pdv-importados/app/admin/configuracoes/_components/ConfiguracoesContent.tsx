@@ -12,6 +12,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
+import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { cn } from '@/lib/utils'
 import type { LojaConfig, PdvConfig } from '@/app/gerente/configuracoes/actions'
 import { atualizarDadosLojaAction, atualizarConfiguracoesPdvAction } from '@/app/gerente/configuracoes/actions'
 import { criarCliente } from '@/app/gerente/financeiro/actions'
@@ -27,6 +29,9 @@ const REGIMES = ['SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL', 'MEI'] as 
 const IDIOMAS = ['pt', 'zh'] as const
 const TEMAS = ['noturno', 'novem'] as const
 const FORMATOS = ['TERMICA', 'A4'] as const
+
+const inputClass =
+  'admin-v2-input w-full px-2.5 py-2 text-xs outline-none transition-colors focus:border-jl-accent/50'
 
 export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
   const router = useRouter()
@@ -121,55 +126,33 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
   }
 
   return (
-    <div className="flex flex-col">
-      {/* Cabeçalho */}
-      <div className="px-6 pb-3 pt-5">
-        <h1 className="text-[18px] font-semibold text-zinc-100">Configurações</h1>
-        <p className="mt-0.5 text-[12px] text-zinc-500">Loja, PDV e cadastros rápidos</p>
-      </div>
+    <div className="admin-v2-page">
+      <PageHeader title="Configurações" subtitle="Loja, PDV e cadastros rápidos" />
 
-      {/* Tabs */}
-      <div
-        className="border-b border-zinc-800 px-6"
-        style={{ display: 'flex', gap: '1.5rem', overflow: 'x auto' }}
-      >
+      <div className="mb-6 flex gap-6 overflow-x-auto border-b border-[#242424]">
         {(['loja', 'pdv', 'cadastros'] as const).map((aba) => (
           <button
             key={aba}
+            type="button"
             onClick={() => setAbaAtiva(aba)}
-            style={{
-              paddingBottom: '12px',
-              paddingTop: '12px',
-              fontSize: '13px',
-              fontWeight: abaAtiva === aba ? 500 : 400,
-              color: abaAtiva === aba ? 'var(--fp-text-primary)' : 'var(--fp-text-muted)',
-              borderBottom: abaAtiva === aba ? '2px solid #ffffff' : 'none',
-              cursor: 'pointer',
-              background: 'none',
-              border: 'none',
-              transition: 'color 120ms',
-            }}
+            className={cn(
+              'border-b-2 bg-transparent pb-3 pt-1 text-sm transition-colors',
+              abaAtiva === aba
+                ? 'border-jl-accent font-medium text-jl-fg-1'
+                : 'border-transparent text-jl-fg-3 hover:text-jl-fg-2',
+            )}
           >
             {aba === 'loja' ? 'Loja' : aba === 'pdv' ? 'PDV' : 'Cadastros'}
           </button>
         ))}
       </div>
 
-      {/* Conteúdo das abas */}
-      <div className="px-6 py-5">
-        {abaAtiva === 'loja' && (
+      {abaAtiva === 'loja' && (
+        <SectionCard title="Dados da loja">
           <form onSubmit={handleLojaSubmit} className="max-w-2xl space-y-4">
-            <h2 className="text-[14px] font-semibold text-zinc-100">Dados da loja</h2>
-
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Nome">
-                <input
-                  name="nome"
-                  type="text"
-                  defaultValue={dados.loja?.nome ?? ''}
-                  className="admin-input"
-                  required
-                />
+                <input name="nome" type="text" defaultValue={dados.loja?.nome ?? ''} className={inputClass} required />
               </FormField>
               <FormField label="CNPJ">
                 <input
@@ -177,7 +160,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   type="text"
                   defaultValue={dados.loja?.cnpj ?? ''}
                   placeholder="00.000.000/0000-00"
-                  className="admin-input"
+                  className={inputClass}
                   required
                 />
               </FormField>
@@ -185,20 +168,10 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
 
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Razão social">
-                <input
-                  name="razao_social"
-                  type="text"
-                  defaultValue={dados.loja?.razao_social ?? ''}
-                  className="admin-input"
-                />
+                <input name="razao_social" type="text" defaultValue={dados.loja?.razao_social ?? ''} className={inputClass} />
               </FormField>
               <FormField label="Nome fantasia">
-                <input
-                  name="nome_fantasia"
-                  type="text"
-                  defaultValue={dados.loja?.nome_fantasia ?? ''}
-                  className="admin-input"
-                />
+                <input name="nome_fantasia" type="text" defaultValue={dados.loja?.nome_fantasia ?? ''} className={inputClass} />
               </FormField>
             </div>
 
@@ -208,92 +181,45 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   name="inscricao_estadual"
                   type="text"
                   defaultValue={dados.loja?.inscricao_estadual ?? ''}
-                  className="admin-input"
+                  className={inputClass}
                 />
               </FormField>
               <FormField label="CNAE">
-                <input
-                  name="cnae"
-                  type="text"
-                  defaultValue={dados.loja?.cnae ?? ''}
-                  placeholder="1234567"
-                  className="admin-input"
-                />
+                <input name="cnae" type="text" defaultValue={dados.loja?.cnae ?? ''} placeholder="1234567" className={inputClass} />
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-zinc-400">Contato</h3>
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">Contato</h3>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Telefone">
-                <input
-                  name="telefone"
-                  type="tel"
-                  defaultValue={dados.loja?.telefone ?? ''}
-                  className="admin-input"
-                />
+                <input name="telefone" type="tel" defaultValue={dados.loja?.telefone ?? ''} className={inputClass} />
               </FormField>
               <FormField label="E-mail">
-                <input
-                  name="email"
-                  type="email"
-                  defaultValue={dados.loja?.email ?? ''}
-                  className="admin-input"
-                />
+                <input name="email" type="email" defaultValue={dados.loja?.email ?? ''} className={inputClass} />
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-zinc-400">Endereço</h3>
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">Endereço</h3>
             <FormField label="Logradouro">
-              <input
-                name="endereco_logradouro"
-                type="text"
-                defaultValue={dados.loja?.endereco_logradouro ?? ''}
-                className="admin-input"
-              />
+              <input name="endereco_logradouro" type="text" defaultValue={dados.loja?.endereco_logradouro ?? ''} className={inputClass} />
             </FormField>
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Número">
-                <input
-                  name="endereco_numero"
-                  type="text"
-                  defaultValue={dados.loja?.endereco_numero ?? ''}
-                  className="admin-input"
-                />
+                <input name="endereco_numero" type="text" defaultValue={dados.loja?.endereco_numero ?? ''} className={inputClass} />
               </FormField>
               <FormField label="Complemento">
-                <input
-                  name="endereco_complemento"
-                  type="text"
-                  defaultValue={dados.loja?.endereco_complemento ?? ''}
-                  className="admin-input"
-                />
+                <input name="endereco_complemento" type="text" defaultValue={dados.loja?.endereco_complemento ?? ''} className={inputClass} />
               </FormField>
               <FormField label="Bairro">
-                <input
-                  name="endereco_bairro"
-                  type="text"
-                  defaultValue={dados.loja?.endereco_bairro ?? ''}
-                  className="admin-input"
-                />
+                <input name="endereco_bairro" type="text" defaultValue={dados.loja?.endereco_bairro ?? ''} className={inputClass} />
               </FormField>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Cidade">
-                <input
-                  name="endereco_cidade"
-                  type="text"
-                  defaultValue={dados.loja?.endereco_cidade ?? ''}
-                  className="admin-input"
-                />
+                <input name="endereco_cidade" type="text" defaultValue={dados.loja?.endereco_cidade ?? ''} className={inputClass} />
               </FormField>
               <FormField label="UF">
-                <input
-                  name="endereco_uf"
-                  type="text"
-                  defaultValue={dados.loja?.endereco_uf ?? ''}
-                  maxLength={2}
-                  className="admin-input"
-                />
+                <input name="endereco_uf" type="text" defaultValue={dados.loja?.endereco_uf ?? ''} maxLength={2} className={inputClass} />
               </FormField>
               <FormField label="CEP">
                 <input
@@ -301,12 +227,12 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   type="text"
                   defaultValue={dados.loja?.endereco_cep ?? ''}
                   placeholder="12345-678"
-                  className="admin-input"
+                  className={inputClass}
                 />
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-zinc-400">Série fiscal</h3>
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">Série fiscal</h3>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="NFC-e">
                 <input
@@ -315,7 +241,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   min="1"
                   max="999"
                   defaultValue={dados.loja?.numero_serie_nfce ?? 1}
-                  className="admin-input"
+                  className={inputClass}
                 />
               </FormField>
               <FormField label="NF-e">
@@ -325,57 +251,30 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   min="1"
                   max="999"
                   defaultValue={dados.loja?.numero_serie_nfe ?? 1}
-                  className="admin-input"
+                  className={inputClass}
                 />
               </FormField>
             </div>
 
-            {lojaErro && (
-              <div
-                className="rounded-lg px-3 py-2 text-[12px]"
-                style={{
-                  background: 'var(--fp-danger-bg)',
-                  border: '1px solid var(--fp-danger-border)',
-                  color: 'var(--fp-danger)',
-                }}
-              >
-                {lojaErro}
-              </div>
-            )}
+            {lojaErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{lojaErro}</div>}
             {lojaSucesso && (
-              <div
-                className="rounded-lg px-3 py-2 text-[12px]"
-                style={{
-                  background: 'var(--fp-success-bg)',
-                  border: '1px solid var(--fp-success-border)',
-                  color: 'var(--fp-success)',
-                }}
-              >
-                ✓ Dados da loja salvos com sucesso
-              </div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Dados da loja salvos com sucesso</div>
             )}
 
             <div className="flex gap-2">
-              <button type="submit" className="fp-btn fp-btn--primary">
+              <button type="submit" className="admin-v2-btn-primary">
                 Salvar dados da loja
               </button>
             </div>
           </form>
-        )}
+        </SectionCard>
+      )}
 
-        {abaAtiva === 'pdv' && (
+      {abaAtiva === 'pdv' && (
+        <SectionCard title="Configurações do PDV">
           <form onSubmit={handlePdvSubmit} className="max-w-2xl space-y-4">
-            <h2 className="text-[14px] font-semibold text-zinc-100">Configurações do PDV</h2>
-
             {!dados.loja?.id && (
-              <div
-                className="rounded-lg px-3 py-2 text-[12px]"
-                style={{
-                  background: 'var(--fp-warning-bg)',
-                  border: '1px solid var(--fp-warning-border)',
-                  color: 'var(--fp-warning)',
-                }}
-              >
+              <div className="admin-v2-alert-warning rounded-lg px-3 py-2 text-[12px]">
                 Salve os dados da loja antes de configurar o PDV.
               </div>
             )}
@@ -384,7 +283,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
 
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Regime tributário">
-                <select name="regime_tributario" defaultValue={dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL'} className="admin-input">
+                <select name="regime_tributario" defaultValue={dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL'} className={inputClass}>
                   {REGIMES.map((r) => (
                     <option key={r} value={r}>
                       {r}
@@ -393,7 +292,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                 </select>
               </FormField>
               <FormField label="Idioma padrão">
-                <select name="idioma_padrao" defaultValue={dados.pdvConfig?.idioma_padrao ?? 'pt'} className="admin-input">
+                <select name="idioma_padrao" defaultValue={dados.pdvConfig?.idioma_padrao ?? 'pt'} className={inputClass}>
                   {IDIOMAS.map((i) => (
                     <option key={i} value={i}>
                       {i === 'pt' ? 'Português' : '中文'}
@@ -405,7 +304,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
 
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Tema padrão">
-                <select name="tema_padrao" defaultValue={dados.pdvConfig?.tema_padrao ?? 'noturno'} className="admin-input">
+                <select name="tema_padrao" defaultValue={dados.pdvConfig?.tema_padrao ?? 'noturno'} className={inputClass}>
                   {TEMAS.map((t) => (
                     <option key={t} value={t}>
                       {t === 'noturno' ? 'Noturno' : 'Novembro'}
@@ -414,7 +313,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                 </select>
               </FormField>
               <FormField label="Formato de impressão">
-                <select name="formato_impressao" defaultValue={dados.pdvConfig?.formato_impressao ?? 'TERMICA'} className="admin-input">
+                <select name="formato_impressao" defaultValue={dados.pdvConfig?.formato_impressao ?? 'TERMICA'} className={inputClass}>
                   {FORMATOS.map((f) => (
                     <option key={f} value={f}>
                       {f === 'TERMICA' ? 'Térmica' : 'A4'}
@@ -431,7 +330,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   type="text"
                   defaultValue={dados.pdvConfig?.cfop_padrao ?? '5102'}
                   placeholder="5102"
-                  className="admin-input"
+                  className={inputClass}
                   required
                 />
               </FormField>
@@ -442,175 +341,87 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   defaultValue={dados.pdvConfig?.cst_padrao ?? '00'}
                   placeholder="00"
                   maxLength={2}
-                  className="admin-input"
+                  className={inputClass}
                   required
                 />
               </FormField>
             </div>
 
             <div className="space-y-2">
-              <Label>
-                <input
-                  name="auto_enqueue_fiscal"
-                  type="checkbox"
-                  defaultChecked={dados.pdvConfig?.auto_enqueue_fiscal ?? false}
-                  style={{ marginRight: '8px' }}
-                />
+              <CheckboxLabel>
+                <input name="auto_enqueue_fiscal" type="checkbox" defaultChecked={dados.pdvConfig?.auto_enqueue_fiscal ?? false} />
                 Auto-enqueue documentos fiscais
-              </Label>
-              <Label>
-                <input
-                  name="imprimir_cupom_auto"
-                  type="checkbox"
-                  defaultChecked={dados.pdvConfig?.imprimir_cupom_auto ?? false}
-                  style={{ marginRight: '8px' }}
-                />
+              </CheckboxLabel>
+              <CheckboxLabel>
+                <input name="imprimir_cupom_auto" type="checkbox" defaultChecked={dados.pdvConfig?.imprimir_cupom_auto ?? false} />
                 Imprimir cupom automaticamente
-              </Label>
+              </CheckboxLabel>
             </div>
 
-            {pdvErro && (
-              <div
-                className="rounded-lg px-3 py-2 text-[12px]"
-                style={{
-                  background: 'var(--fp-danger-bg)',
-                  border: '1px solid var(--fp-danger-border)',
-                  color: 'var(--fp-danger)',
-                }}
-              >
-                {pdvErro}
-              </div>
-            )}
+            {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
             {pdvSucesso && (
-              <div
-                className="rounded-lg px-3 py-2 text-[12px]"
-                style={{
-                  background: 'var(--fp-success-bg)',
-                  border: '1px solid var(--fp-success-border)',
-                  color: 'var(--fp-success)',
-                }}
-              >
-                ✓ Configurações do PDV salvas com sucesso
-              </div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Configurações do PDV salvas com sucesso</div>
             )}
 
             <div className="flex gap-2">
-              <button type="submit" className="fp-btn fp-btn--primary" disabled={!dados.loja?.id}>
+              <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
                 Salvar configurações PDV
               </button>
             </div>
           </form>
-        )}
+        </SectionCard>
+      )}
 
-        {abaAtiva === 'cadastros' && (
-          <div className="max-w-2xl space-y-6">
-            <div>
-              <h2 className="text-[14px] font-semibold text-zinc-100">Cadastros rápidos</h2>
-              <p className="mt-1 text-[12px] text-zinc-500">Crie clientes, categorias, marcas e fornecedores</p>
-            </div>
-
-            {/* Novo cliente */}
-            <div
-              className="rounded-[10px] border p-4"
-              style={{ borderColor: 'var(--fp-border)', background: 'var(--fp-bg-secondary)' }}
-            >
-              <h3 className="text-[13px] font-semibold text-zinc-100">Novo cliente</h3>
+      {abaAtiva === 'cadastros' && (
+        <div className="max-w-2xl space-y-6">
+          <SectionCard title="Cadastros rápidos" subtitle="Crie clientes, categorias, marcas e fornecedores">
+            <div className="admin-v2-panel rounded-lg p-4">
+              <h3 className="text-[13px] font-semibold text-jl-fg-1">Novo cliente</h3>
               <form onSubmit={handleClienteSubmit} className="mt-3 space-y-3">
                 <FormField label="Nome">
-                  <input
-                    name="cliente_nome"
-                    type="text"
-                    className="admin-input"
-                    required
-                  />
+                  <input name="cliente_nome" type="text" className={inputClass} required />
                 </FormField>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="Documento">
-                    <input
-                      name="cliente_documento"
-                      type="text"
-                      className="admin-input"
-                    />
+                    <input name="cliente_documento" type="text" className={inputClass} />
                   </FormField>
                   <FormField label="Telefone">
-                    <input
-                      name="cliente_telefone"
-                      type="tel"
-                      className="admin-input"
-                    />
+                    <input name="cliente_telefone" type="tel" className={inputClass} />
                   </FormField>
                 </div>
 
-                {clienteErro && (
-                  <div
-                    className="rounded-lg px-3 py-2 text-[12px]"
-                    style={{
-                      background: 'var(--fp-danger-bg)',
-                      border: '1px solid var(--fp-danger-border)',
-                      color: 'var(--fp-danger)',
-                    }}
-                  >
-                    {clienteErro}
-                  </div>
-                )}
+                {clienteErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{clienteErro}</div>}
                 {clienteSucesso && (
-                  <div
-                    className="rounded-lg px-3 py-2 text-[12px]"
-                    style={{
-                      background: 'var(--fp-success-bg)',
-                      border: '1px solid var(--fp-success-border)',
-                      color: 'var(--fp-success)',
-                    }}
-                  >
-                    ✓ Cliente criado com sucesso
-                  </div>
+                  <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Cliente criado com sucesso</div>
                 )}
 
-                <button type="submit" className="fp-btn fp-btn--primary">
+                <button type="submit" className="admin-v2-btn-primary">
                   <Plus size={14} aria-hidden />
                   Criar cliente
                 </button>
               </form>
             </div>
+          </SectionCard>
 
-            {/* Links para outras entidades */}
-            <div className="space-y-2">
-              <p className="text-[12px] font-medium text-zinc-400">Outras entidades (abrir em /gerente)</p>
-              <div className="flex flex-wrap gap-2">
-                <Link href="/gerente/produtos" className="fp-btn fp-btn--secondary">
-                  <Plus size={14} aria-hidden />
-                  Categoria
-                </Link>
-                <Link href="/gerente/produtos" className="fp-btn fp-btn--secondary">
-                  <Plus size={14} aria-hidden />
-                  Marca
-                </Link>
-                <Link href="/gerente/produtos" className="fp-btn fp-btn--secondary">
-                  <Plus size={14} aria-hidden />
-                  Fornecedor
-                </Link>
-              </div>
+          <SectionCard title="Outras entidades">
+            <p className="mb-3 text-[12px] text-jl-fg-3">Abrir em /gerente</p>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
+                <Plus size={14} aria-hidden />
+                Categoria
+              </Link>
+              <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
+                <Plus size={14} aria-hidden />
+                Marca
+              </Link>
+              <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
+                <Plus size={14} aria-hidden />
+                Fornecedor
+              </Link>
             </div>
-          </div>
-        )}
-      </div>
-
-      <style jsx>{`
-        .admin-input {
-          width: 100%;
-          padding: 8px 10px;
-          border-radius: 8px;
-          font-size: 12px;
-          background: var(--fp-bg-primary);
-          border: 1px solid var(--fp-border);
-          color: var(--fp-text-primary);
-          outline: none;
-          transition: border-color 120ms;
-        }
-        .admin-input:focus {
-          border-color: #3f3f46;
-        }
-      `}</style>
+          </SectionCard>
+        </div>
+      )}
     </div>
   )
 }
@@ -618,20 +429,15 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] font-medium" style={{ color: 'var(--fp-text-muted)' }}>
-        {label}
-      </span>
+      <span className="text-[11px] font-medium text-jl-fg-3">{label}</span>
       {children}
     </label>
   )
 }
 
-function Label({ children }: { children: React.ReactNode }) {
+function CheckboxLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label
-      className="flex items-center text-[12px]"
-      style={{ color: 'var(--fp-text-secondary)', cursor: 'pointer' }}
-    >
+    <label className="flex cursor-pointer items-center gap-2 text-xs text-jl-fg-2 [&_input]:accent-jl-accent">
       {children}
     </label>
   )

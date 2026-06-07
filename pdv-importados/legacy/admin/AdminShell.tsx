@@ -1,3 +1,4 @@
+/** @deprecated Use AdminV2Shell from @/components/ui/admin-v2 instead. */
 import { type ReactNode } from 'react'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'

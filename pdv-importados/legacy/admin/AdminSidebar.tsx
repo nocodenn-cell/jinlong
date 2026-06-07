@@ -1,5 +1,6 @@
 'use client'
 
+/** @deprecated Use SidebarNav from @/components/ui/admin-v2 instead. */
 import Link from 'next/link'
 import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { ADMIN_SIDEBAR_NAV } from '@/lib/navigation/adminSidebarNav'

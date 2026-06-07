@@ -6,6 +6,7 @@
  */
 
 import { Suspense } from 'react'
+import { PageHeader } from '@/components/ui/admin-v2'
 import { listarCategoriasFinanceiras } from '@/app/gerente/categorias-financeiras/actions'
 import { CategoriasFinanceirasContent } from './_components/CategoriasFinanceirasContent'
 
@@ -30,16 +31,13 @@ export default async function AdminCategoriasFinanceirasPage({ searchParams }: P
   const dados = res.success ? res.data : { rows: [], total: 0 }
 
   return (
-    <div className="flex flex-col">
-      {/* Cabeçalho */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-3 pt-5">
-        <div>
-          <h1 className="text-[18px] font-semibold text-zinc-100">Categorias Financeiras</h1>
-          <p className="mt-0.5 text-[12px] text-zinc-500">Gerenciar categorias de receitas e despesas</p>
-        </div>
-      </div>
+    <div className="admin-v2-page">
+      <PageHeader
+        title="Categorias Financeiras"
+        subtitle="Gerenciar categorias de receitas e despesas"
+      />
 
-      <Suspense fallback={<div className="h-12 bg-zinc-900" />}>
+      <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
         <CategoriasFinanceirasContent dados={dados} />
       </Suspense>
     </div>

@@ -75,11 +75,11 @@ export function DashboardChart({ labels, data, peakHour, peakValue }: DashboardC
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#18181b',
-            borderColor: '#3f3f46',
+            backgroundColor: '#111111',
+            borderColor: '#242424',
             borderWidth: 1,
-            titleColor: '#a1a1aa',
-            bodyColor: '#f5f5f5',
+            titleColor: '#a3a3a3',
+            bodyColor: '#fafafa',
             padding: 10,
             cornerRadius: 8,
             callbacks: {
@@ -97,7 +97,7 @@ export function DashboardChart({ labels, data, peakHour, peakValue }: DashboardC
             grid: { display: false },
             border: { display: false },
             ticks: {
-              color: '#52525b',
+              color: '#737373',
               font: { size: 10 },
               maxRotation: 0,
               autoSkip: false,
@@ -106,11 +106,11 @@ export function DashboardChart({ labels, data, peakHour, peakValue }: DashboardC
             },
           },
           y: {
-            grid: { color: 'rgba(63,63,70,0.4)', drawTicks: false },
+            grid: { color: 'rgba(36,36,36,0.6)', drawTicks: false },
             border: { display: false },
             beginAtZero: true,
             ticks: {
-              color: '#52525b',
+              color: '#737373',
               font: { size: 10 },
               callback: (value) => {
                 const n = Number(value)
@@ -129,16 +129,16 @@ export function DashboardChart({ labels, data, peakHour, peakValue }: DashboardC
   }, [labels, data])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-800">
+    <div className="overflow-hidden rounded-xl border border-[#242424]">
       {/* Header */}
       <div className="flex items-start justify-between px-5 py-4">
         <div>
-          <p className="text-[13px] font-medium text-zinc-100">Faturamento por hora</p>
-          <p className="mt-0.5 text-[11px] text-zinc-600">Total líquido acumulado no período</p>
+          <p className="text-[13px] font-medium text-jl-fg-1">Faturamento por hora</p>
+          <p className="mt-0.5 text-[11px] text-jl-fg-3">Total líquido acumulado no período</p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] text-zinc-600">Pico na hora</p>
-          <p className="text-[13px] font-medium text-zinc-100">
+          <p className="text-[10px] text-jl-fg-3">Pico na hora</p>
+          <p className="text-[13px] font-medium text-jl-fg-1">
             {peakValue} às {peakHour}
           </p>
         </div>
