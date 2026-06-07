@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireAdminSessionApi } from '@/lib/admin/auth/requireAdminSessionApi'
+import { requireAdminContextApi } from '@/lib/admin/auth/requireAdminSessionApi'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -15,8 +15,8 @@ export type HealthPayload = {
 export async function GET() {
   const t0 = Date.now()
   try {
-    const auth = await requireAdminSessionApi()
-    if (auth instanceof NextResponse) return auth
+    const ctx = await requireAdminContextApi({ resource: 'api:gerente:health' })
+    if (ctx instanceof NextResponse) return ctx
 
     const supabase = await createClient()
 

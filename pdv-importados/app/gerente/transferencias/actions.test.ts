@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const assertGerenteOuDonoMock = vi.fn()
+const assertGerenteSessionMock = vi.fn()
 const revalidatePathMock = vi.fn()
 const rpcMock = vi.fn()
 const createClientMock = vi.fn(async () => ({ rpc: rpcMock }))
 
-vi.mock('@/lib/auth/gerenteOuDono', () => ({
-  assertGerenteOuDono: assertGerenteOuDonoMock,
+vi.mock('@/lib/gerente/auth/assertGerenteSession', () => ({
+  assertGerenteSession: assertGerenteSessionMock,
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -20,7 +20,10 @@ vi.mock('next/cache', () => ({
 describe('gerente/transferencias actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    assertGerenteOuDonoMock.mockResolvedValue({ ok: true })
+    assertGerenteSessionMock.mockResolvedValue({
+      ok: true,
+      session: { userId: 'mgr-1', lojaId: 'loja-1' },
+    })
   })
 
   it('bloqueia transferência com origem = destino', async () => {

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import {
   mensagemErroComSecao,
@@ -62,7 +62,7 @@ export async function alternarAtivoCadastro(
   ativo: boolean,
   revalidatePaths: string[],
 ): Promise<CadastroActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const idParsed = z.string().uuid().safeParse(id)
@@ -92,7 +92,7 @@ export async function excluirCadastro(
   secaoErro: string,
   revalidatePaths: string[],
 ): Promise<CadastroActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const idParsed = z.string().uuid().safeParse(id)
@@ -119,7 +119,7 @@ export async function criarCadastro(
   secaoErro: string,
   revalidatePaths: string[],
 ): Promise<CadastroActionResult<{ id: string }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
@@ -147,7 +147,7 @@ export async function atualizarCadastro(
   secaoErro: string,
   revalidatePaths: string[],
 ): Promise<CadastroActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
@@ -191,7 +191,7 @@ export async function listarCadastro<R, F extends ListarFiltros>(
   schema: z.ZodType<F, z.ZodTypeDef, unknown>,
   config: ListarConfig<R>,
 ): Promise<CadastroActionResult<{ rows: R[]; total: number }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = schema.safeParse(input)

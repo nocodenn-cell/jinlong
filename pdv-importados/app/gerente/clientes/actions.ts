@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 
 export type ClienteListRow = {
   id: string
@@ -41,7 +41,7 @@ export async function buscarClientesPaginadosAction(
   page: number,
   termo?: string,
 ): Promise<{ ok: true; clientes: ClienteListRow[]; hasMore: boolean } | { ok: false; error: string }> {
-  const authCheck = await assertGerenteOuDono()
+  const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return { ok: false, error: authCheck.error }
 
   try {
@@ -92,7 +92,7 @@ function validar(input: ClienteInput): string | null {
 export async function salvarClienteAction(
   input: ClienteInput,
 ): Promise<{ ok: true; cliente: ClienteListRow } | { ok: false; error: string }> {
-  const authCheck = await assertGerenteOuDono()
+  const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return { ok: false, error: authCheck.error }
 
   const err = validar(input)
@@ -157,7 +157,7 @@ export async function salvarClienteAction(
 export async function excluirClienteAction(
   id: string,
 ): Promise<{ ok: true; anonimizado?: boolean } | { ok: false; error: string }> {
-  const authCheck = await assertGerenteOuDono()
+  const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return { ok: false, error: authCheck.error }
 
   try {

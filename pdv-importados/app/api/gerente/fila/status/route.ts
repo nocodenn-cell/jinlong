@@ -12,7 +12,7 @@ export type FilaStatusPayload = {
 
 export async function GET() {
   try {
-    const auth = await requireAdminSessionApi()
+    const auth = await requireAdminSessionApi('api:gerente:fila:status')
     if (auth instanceof NextResponse) return auth
 
     const supabase = await createClient()

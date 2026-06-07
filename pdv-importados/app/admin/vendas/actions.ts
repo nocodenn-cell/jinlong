@@ -60,7 +60,10 @@ function nomeRelacao(rel: unknown, campo: string): string | null {
 export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe | null> {
   if (!UUID_RE.test(vendaId)) return null
 
-  const auth = await assertAdminSession()
+  const auth = await assertAdminSession('vendas:detalhe', {
+    pathname: '/admin/vendas',
+    resource: 'route:/admin/vendas',
+  })
   if (!auth.ok) return null
 
   const supabase = await createClient()

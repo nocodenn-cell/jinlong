@@ -1,8 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
   mensagemErroComSecao,
   mensagemErroValidacaoZod,
@@ -13,7 +12,7 @@ import {
   buscarEstoqueAtualSchema,
 } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import type { ProdutoComEstoqueDTO } from '@/lib/etiqueta/types'
 
 type ActionResult<T = null> =
@@ -56,9 +55,7 @@ function rowParaProdutoComEstoqueDTO(p: ProdutoComEstoqueSelectRow): ProdutoComE
 }
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
-  const { userId, lojaId } = await getUsuarioAtual()
-  if (!userId) return null
-  return lojaId ?? LOJA_MATRIZ_ID
+  return getGerenteLojaId()
 }
 
 /**
@@ -67,7 +64,7 @@ async function lojaIdDoUsuarioLogado(): Promise<string | null> {
 export async function buscarProdutoPorCodigo(
   codigoBarras: string
 ): Promise<ActionResult<ProdutoComEstoqueDTO>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaIdDoUsuarioLogado()
@@ -130,7 +127,7 @@ export async function buscarProdutoPorCodigo(
 export async function buscarEstoqueAtual(
   produtoIds: string[]
 ): Promise<ActionResult<ProdutoComEstoqueDTO[]>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaIdDoUsuarioLogado()
@@ -188,7 +185,7 @@ export async function buscarEstoqueAtual(
 export async function buscarProdutosPorCategoria(
   categoriaId?: string
 ): Promise<ActionResult<ProdutoComEstoqueDTO[]>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaIdDoUsuarioLogado()

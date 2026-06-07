@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
   type CadastroActionResult,
@@ -99,7 +99,7 @@ export async function alternarAtivoCategoriaProduto(
 export async function excluirCategoriaProduto(
   id: string,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const idParsed = z.string().uuid().safeParse(id)

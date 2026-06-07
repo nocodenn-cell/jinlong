@@ -11,7 +11,7 @@ export const maxDuration = 30
  */
 export async function GET() {
   try {
-    const auth = await requireAdminSessionApi()
+    const auth = await requireAdminSessionApi('api:gerente:notificacoes:count')
     if (auth instanceof NextResponse) return auth
 
     const supabase = await createClient()

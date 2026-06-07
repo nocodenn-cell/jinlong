@@ -7,6 +7,7 @@ import { resetCarrinhoPersistido } from '@/lib/caixa/resetCarrinhoPersistido'
 
 /**
  * Encerra a sessão Supabase após período sem eventos de uso (teclado/mouse/toque).
+ * UX only — não participa do pipeline adminPolicy; redirect só após logout confirmado.
  * Desativado quando `NEXT_PUBLIC_IDLE_LOGOUT_MINUTES` está vazio ou ≤ 0.
  */
 export function SessionIdleLogout() {

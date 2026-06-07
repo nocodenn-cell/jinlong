@@ -17,7 +17,7 @@ import {
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
-import { getAdminContext } from '@/lib/admin/auth/getAdminContext'
+import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
@@ -95,7 +95,11 @@ type PageProps = {
 }
 
 export default async function AdminDashboardPage({ searchParams }: PageProps) {
-  const { idioma } = await getAdminContext()
+  const { session } = await loadAdminContext({
+    pathname: '/admin/dashboard',
+    resource: 'route:/admin/dashboard',
+  })
+  const { idioma } = session
   const m = getMessages(idioma)
   const adminUi = m.admin
   const L = adminUi.dashboard

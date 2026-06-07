@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 export type ConfiguracaoGeralRow = {
@@ -15,7 +15,7 @@ export type ConfiguracaoGeralRow = {
 export async function atualizarConfiguracao(
   input: { chave: string; valor: string },
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
@@ -83,7 +83,7 @@ function validarLoja(d: LojaConfig): string | null {
 export async function atualizarDadosLojaAction(
   input: LojaConfig,
 ): Promise<{ ok: true; loja: LojaConfig } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const err = validarLoja(input)
@@ -128,7 +128,7 @@ export async function atualizarDadosLojaAction(
 export async function atualizarConfiguracoesPdvAction(
   input: PdvConfig,
 ): Promise<{ ok: true; config: PdvConfig } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
   if (!input.loja_id) return { ok: false, error: 'Loja obrigatória.' }
 
@@ -177,7 +177,7 @@ export async function atualizarConfiguracoesPdvAction(
 export async function uploadLogoLojaAction(
   formData: FormData,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const file = formData.get('file')

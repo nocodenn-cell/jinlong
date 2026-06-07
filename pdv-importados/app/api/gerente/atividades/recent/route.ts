@@ -41,7 +41,7 @@ function fiscalSeverity(statusDepois: string | null): AtividadeRailSeverity {
 
 export async function GET() {
   try {
-    const auth = await requireAdminSessionApi()
+    const auth = await requireAdminSessionApi('api:gerente:atividades:recent')
     if (auth instanceof NextResponse) return auth
 
     const supabase = await createClient()

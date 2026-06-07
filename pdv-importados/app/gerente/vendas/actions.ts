@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { cancelarVenda } from '@/app/caixa/actions'
 import { parseCancelarVendaGerenteForm } from '@/app/gerente/vendas/parseCancelarVendaGerenteForm'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 
 export type VendaListRow = {
   id: string
@@ -103,7 +103,7 @@ export async function buscarVendasPaginadasAction(
   page: number,
   filtros: VendasFiltro = FILTRO_VENDAS_VAZIO,
 ): Promise<{ ok: true; vendas: VendaListRow[]; hasMore: boolean } | { ok: false; error: string }> {
-  const authCheck = await assertGerenteOuDono()
+  const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return { ok: false, error: authCheck.error }
 
   try {
@@ -152,7 +152,7 @@ export async function obterKpisVendas(
     qtdCanceladas: 0,
     valorCanceladas: 0,
   }
-  const authCheck = await assertGerenteOuDono()
+  const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return vazio
   try {
     const supabase = await createVendasSupabaseClient()
@@ -206,7 +206,7 @@ const EXPORT_MAX_ROWS = 12_000
 export async function obterVendasCompletaParaExport(
   filtros: VendasFiltro = FILTRO_VENDAS_VAZIO,
 ): Promise<VendaListRow[]> {
-  const authCheck = await assertGerenteOuDono()
+  const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return []
 
   const acc: VendaListRow[] = []
@@ -241,7 +241,7 @@ export async function obterVendasCompletaParaExport(
 }
 
 export async function cancelarVendaGerenteAction(formData: FormData) {
-  const authCheck = await assertGerenteOuDono()
+  const authCheck = await assertGerenteSession()
   if (!authCheck.ok) return
   const parsed = parseCancelarVendaGerenteForm(formData)
   if (!parsed) return

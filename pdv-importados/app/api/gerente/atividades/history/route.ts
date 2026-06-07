@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   const page        = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
 
   try {
-    const auth = await requireAdminSessionApi()
+    const auth = await requireAdminSessionApi('api:gerente:atividades:history')
     if (auth instanceof NextResponse) return auth
 
     const supabase = await createClient()

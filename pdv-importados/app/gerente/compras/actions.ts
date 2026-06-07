@@ -2,9 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
@@ -79,9 +78,7 @@ export type CriarOcInput = {
 export type AtualizarOcInput = CriarOcInput & { id: string }
 
 async function lojaDoUsuario(): Promise<string | null> {
-  const { userId, lojaId } = await getUsuarioAtual()
-  if (!userId) return null
-  return lojaId ?? LOJA_MATRIZ_ID
+  return getGerenteLojaId()
 }
 
 type RawOcItem = { quantidade: number; preco_unitario: number }
@@ -133,7 +130,7 @@ const OC_DETALHE_SELECT = `
 `
 
 export async function obterKpisCompras(): Promise<OcKpisDTO> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { total_rascunho: 0, total_confirmadas: 0, total_em_transito: 0, valor_em_transito: 0 }
 
   const lojaId = await lojaDoUsuario()
@@ -173,7 +170,7 @@ export async function listarOrdensCompra(input: {
   limite: number
   offset: number
 }): Promise<OcListaResult> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { rows: [], total: 0 }
 
   const lojaId = await lojaDoUsuario()
@@ -206,7 +203,7 @@ export async function listarOrdensCompra(input: {
 }
 
 export async function obterOrdemCompraDetalhe(id: string): Promise<R<OcDetalheDTO>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaDoUsuario()
@@ -276,12 +273,13 @@ export async function obterOrdemCompraDetalhe(id: string): Promise<R<OcDetalheDT
 }
 
 export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   if (!input.itens.length) return { success: false, error: 'Adicione ao menos um item.' }
 
-  const { userId, lojaId: lojaIdOc } = await getUsuarioAtual()
+  const userId = await getGerenteUserId()
+  const lojaIdOc = auth.session.lojaId
   if (!lojaIdOc && !userId) return { success: false, error: 'Faça login novamente.' }
   const lojaId = lojaIdOc ?? (await lojaDoUsuario())
   if (!lojaId) return { success: false, error: 'Loja não identificada.' }
@@ -323,7 +321,7 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
 }
 
 export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   if (!input.itens.length) return { success: false, error: 'Adicione ao menos um item.' }
@@ -378,7 +376,7 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
 }
 
 export async function atualizarStatusOC(id: string, novoStatus: StatusOC): Promise<R<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaDoUsuario()
@@ -416,7 +414,7 @@ export async function registrarRecebimentoOC(
   ocId: string,
   itensRecebidos: Array<{ item_id: string; quantidade_recebida: number }>,
 ): Promise<R<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaDoUsuario()

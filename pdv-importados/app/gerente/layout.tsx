@@ -1,18 +1,35 @@
 import React, { type ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { GerenteLayoutShell } from '@/components/gerente/GerenteLayoutShell'
-import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
+import type { AdminSession } from '@/lib/admin/auth/types'
 import { getMessages } from '@/i18n/getMessages'
-import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 
+/**
+ * Layout /gerente — fallback de renderização (autorização no edge via adminPolicy).
+ */
 export default async function GerenteLayout({ children }: { children: ReactNode }) {
-  const { idioma, perfil } = await getUsuarioIdioma()
-  if (!isPerfilPainelGerencial(perfil)) redirect('/caixa')
-  const m = getMessages(idioma)
+  let session: AdminSession | null = null
+  try {
+    session = await resolveAdminSession()
+  } catch {
+    redirect('/login?reason=erro_carregamento')
+  }
+
+  if (!session) {
+    redirect('/caixa')
+  }
+
+  const m = getMessages(session.idioma)
   const logoSubtitle = m.brand?.logo_subtitle ?? '金龍'
 
   return (
-    <GerenteLayoutShell idioma={idioma} perfil={perfil} m={m} logoSubtitle={logoSubtitle}>
+    <GerenteLayoutShell
+      idioma={session.idioma}
+      perfil={session.perfil}
+      m={m}
+      logoSubtitle={logoSubtitle}
+    >
       {children}
     </GerenteLayoutShell>
   )

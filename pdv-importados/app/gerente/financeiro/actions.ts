@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao, mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
   runServerActionWithObservability,
@@ -17,7 +17,7 @@ import {
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
 export async function criarCliente(input: { nome: string; documento?: string; telefone?: string }): Promise<R<string>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
   const erro = validarCriarClienteInput({ nome: input.nome })
   if (erro) return { success: false, error: erro }
@@ -51,7 +51,7 @@ export async function criarTituloReceber(input: {
   descricao?: string
   vencimento?: string
 }): Promise<R<string>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
   const erro = validarCriarTituloInput({
     cliente_id: input.cliente_id,
@@ -92,7 +92,7 @@ export async function liquidarTitulo(input: {
   valor: number
   forma_pagamento: 'DINHEIRO' | 'PIX' | 'CARTAO_DEBITO' | 'CARTAO_CREDITO' | 'OUTROS'
 }): Promise<R> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
   const erro = validarLiquidarTituloInput({
     titulo_id: input.titulo_id,
@@ -113,7 +113,7 @@ export async function liquidarTitulo(input: {
 }
 
 export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
   if (!venda_id?.trim()) return { success: false, error: 'Venda obrigatória' }
   const supabase = await createClient()
@@ -130,7 +130,7 @@ export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
 }
 
 export async function reprocessarDocumentoFiscal(documento_id: string): Promise<R> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
   if (!documento_id?.trim()) return { success: false, error: 'Documento obrigatório' }
   const supabase = await createClient()
@@ -145,7 +145,7 @@ export async function reprocessarDocumentoFiscal(documento_id: string): Promise<
 }
 
 export async function processarFilaFiscalAgora(limit = 20): Promise<R<{ emitted: number; failed: number }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const endpoint = process.env.FISCAL_WORKER_ENDPOINT

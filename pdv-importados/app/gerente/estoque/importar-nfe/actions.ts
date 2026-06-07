@@ -2,15 +2,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
   mensagemErroComSecao,
   mensagemErroValidacaoZod,
 } from '@/lib/errors/mensagemErroUsuario'
 import { parseNfeXml, type NfeParsed } from '@/lib/nfe/nfeParser'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { ImportNfePayloadSchema } from './actions.validation'
 
 type ActionResult<T = null> =
@@ -18,9 +17,7 @@ type ActionResult<T = null> =
   | { success: false; error: string }
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
-  const { userId, lojaId } = await getUsuarioAtual()
-  if (!userId) return null
-  return lojaId ?? LOJA_MATRIZ_ID
+  return getGerenteLojaId()
 }
 
 function onlyDigits(s: string): string {
@@ -101,7 +98,7 @@ export type ProdutoVinculoOpcao = {
 export async function previewImportacaoNfe(xml: string): Promise<
   ActionResult<{ parsed: NfeParsed; linhas: LinhaPreviewNfe[] }>
 > {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaIdDoUsuarioLogado()
@@ -198,7 +195,7 @@ export async function previewImportacaoNfe(xml: string): Promise<
 export async function buscarProdutosParaVinculo(
   termo: string,
 ): Promise<ActionResult<ProdutoVinculoOpcao[]>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const lojaId = await lojaIdDoUsuarioLogado()
@@ -233,7 +230,7 @@ export async function buscarProdutosParaVinculo(
 }
 
 export async function executarImportacaoNfe(input: unknown): Promise<ActionResult<{ itens_processados: number }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsedPayload = ImportNfePayloadSchema.safeParse(input)

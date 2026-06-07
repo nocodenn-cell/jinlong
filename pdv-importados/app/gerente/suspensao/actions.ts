@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -14,7 +14,7 @@ export type SuspensaoStatus = {
 }
 
 export async function carregarSuspensaoVendas(): Promise<ActionResult<SuspensaoStatus>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
@@ -39,7 +39,7 @@ export async function atualizarSuspensaoVendas(
   suspensas: boolean,
   motivo: string,
 ): Promise<ActionResult> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()

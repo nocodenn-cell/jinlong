@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import {
   mensagemErroComSecao,
@@ -16,20 +16,18 @@ import {
 } from '@/lib/observability/runServerAction'
 import { AtualizarEstoqueSchema, EstoqueListagemInputSchema, ProdutoIdSchema } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 
 type LegacyEstoqueMutationResult<T = null> =
   | { success: true; data: T }
   | { success: false; error: string }
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
-  const { userId, lojaId } = await getUsuarioAtual()
-  if (!userId) return null
-  return lojaId ?? LOJA_MATRIZ_ID
+  return getGerenteLojaId()
 }
 
 export async function atualizarEstoqueProduto(input: unknown): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return actionFail(auth.error, { errorCode: 'UNAUTHORIZED' })
 
   const parsed = AtualizarEstoqueSchema.safeParse(input)
@@ -73,7 +71,7 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
  * Produtos legados sem linha em `estoque`: cria registro inicial (0 / 0).
  */
 export async function garantirLinhaEstoque(input: unknown): Promise<LegacyEstoqueMutationResult> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = ProdutoIdSchema.safeParse(input)
@@ -136,8 +134,7 @@ export type EstoqueGerenteListaResult = Readonly<{
 }>
 
 async function lojaIdResolvidaGestao(): Promise<string> {
-  const { lojaId } = await getUsuarioAtual()
-  return lojaId ?? LOJA_MATRIZ_ID
+  return (await getGerenteLojaId()) ?? LOJA_MATRIZ_ID
 }
 
 function mapRpcRow(raw: Record<string, unknown>): EstoqueGerenteLinhaDTO {

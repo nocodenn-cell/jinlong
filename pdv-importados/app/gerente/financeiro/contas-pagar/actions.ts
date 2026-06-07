@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
@@ -115,7 +115,7 @@ export type RegistrarPagamentoInput = {
 export async function registrarPagamentoAction(
   input: RegistrarPagamentoInput,
 ): Promise<{ ok: true; conta: ContaPagarRow } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
   if (!input.conta_id?.trim()) return { ok: false, error: 'Conta obrigatória.' }
@@ -172,7 +172,7 @@ export async function cancelarContaPagarAction(
   conta_id: string,
   motivo: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
   if (!conta_id?.trim()) return { ok: false, error: 'Conta obrigatória.' }
   if (!motivo?.trim() || motivo.trim().length < 2) {
@@ -202,7 +202,7 @@ export async function cancelarContaPagarAction(
 export async function exportarContasPagarParaCSVAction(
   filters: ContasPagarFilters,
 ): Promise<{ ok: true; rows: ContaPagarRow[] } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const CHUNK = 500

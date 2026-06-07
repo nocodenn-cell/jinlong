@@ -36,7 +36,10 @@ const KARDEX_LIMITE = 60
 export async function obterKardexProduto(produtoId: string): Promise<KardexMovimento[]> {
   if (!UUID_RE.test(produtoId)) return []
 
-  const auth = await assertAdminSession()
+  const auth = await assertAdminSession('estoque:kardex', {
+    pathname: '/admin/estoque',
+    resource: 'route:/admin/estoque',
+  })
   if (!auth.ok) return []
 
   const supabase = await createClient()

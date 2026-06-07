@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { revalidatePath, unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { createProdutoRepository } from '@/lib/adapters/supabase/produtoRepository'
 import {
   criarProdutoComEstoque,
@@ -81,7 +81,7 @@ type ActionResult<T> =
 export async function criarProduto(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = NovoProdutoSchema.safeParse(input)
@@ -110,7 +110,7 @@ const AtualizarPrecoSchema = z.object({
 export async function atualizarPrecoVarejoProduto(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = AtualizarPrecoSchema.safeParse(input)
@@ -154,7 +154,7 @@ export type ImportarProdutosCsvResult =
 export async function importarProdutosCsv(
   formData: FormData,
 ): Promise<ImportarProdutosCsvResult> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const { idioma } = await getUsuarioIdioma()
@@ -289,7 +289,7 @@ export async function importarProdutosCsv(
 export async function uploadImagemProduto(
   formData: FormData,
 ): Promise<ActionResult<{ imagem_url: string }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const { idioma } = await getUsuarioIdioma()
@@ -375,7 +375,7 @@ export async function uploadImagemProduto(
 }
 
 export async function removerImagemProduto(produtoId: string): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const { idioma } = await getUsuarioIdioma()
@@ -420,7 +420,7 @@ export async function alternarAtivoProduto(
   produtoId: string,
   ativo: boolean,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
@@ -539,7 +539,7 @@ async function excluirProdutoFisicamenteSeLimpo(
 export async function aplicarExclusaoOuInativacaoEmLote(
   rawIds: unknown,
 ): Promise<{ success: true; data: ResultadoExclusaoLote } | { success: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const { idioma } = await getUsuarioIdioma()
@@ -637,7 +637,7 @@ export async function aplicarExclusaoOuInativacaoEmLote(
 export async function atualizarDadosProdutoGerente(
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = EditarProdutoCatalogoSchema.safeParse(input)
@@ -711,9 +711,7 @@ export type OpcoesFiltrosProdutos = {
 }
 
 async function lojaIdParaListagemProdutos(): Promise<string> {
-  // Reusa o SELECT já cacheado (perfil/idioma/loja) em vez de novo getUser + query.
-  const { lojaId } = await getUsuarioAtual()
-  return lojaId ?? LOJA_MATRIZ_ID
+  return (await getGerenteLojaId()) ?? LOJA_MATRIZ_ID
 }
 
 /**
@@ -747,7 +745,7 @@ const buscarOpcoesFiltrosCached = unstable_cache(
 )
 
 export async function listarOpcoesFiltrosProdutos(): Promise<ActionResult<OpcoesFiltrosProdutos>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   try {
@@ -792,7 +790,7 @@ type RpcProdutoRow = {
 export async function buscarProdutosComFiltros(
   input: unknown,
 ): Promise<ActionResult<{ rows: ProdutoGerenteRow[]; total: number }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = BuscarProdutosComFiltrosInputSchema.safeParse(input)
@@ -903,7 +901,7 @@ export async function alterarAtivoLoteProdutos(
   rawIds: string[],
   ativo: boolean,
 ): Promise<ActionResult<{ atualizados: number }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = LoteAtivoSchema.safeParse({ produto_ids: rawIds, ativo })
@@ -939,7 +937,7 @@ export async function alterarCategoriaLoteProdutos(
   rawIds: string[],
   categoriaId: string | null,
 ): Promise<ActionResult<{ atualizados: number }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = LoteCategoriaSchema.safeParse({ produto_ids: rawIds, categoria_id: categoriaId })
@@ -971,7 +969,7 @@ export async function buscarProdutosParaExportacao(
   input: unknown,
   limite: number,
 ): Promise<ActionResult<ProdutoGerenteRow[]>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const parsed = BuscarProdutosComFiltrosInputSchema.safeParse(input)

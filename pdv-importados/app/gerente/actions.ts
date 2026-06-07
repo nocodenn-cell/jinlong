@@ -1,8 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 import {
@@ -31,12 +30,11 @@ export type {
  * da página (`export const revalidate`).
  */
 export async function obterDashboardResumo(): Promise<ActionResult<DashboardResumoDTO>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return actionFail(auth.error, { errorCode: 'UNAUTHORIZED' })
 
   // Reutiliza o resultado já cacheado (perfil + lojaId) em vez de novo getUser + query.
-  const { lojaId: lojaIdCached } = await getUsuarioAtual()
-  const lojaId = lojaIdCached ?? LOJA_MATRIZ_ID
+  const lojaId = auth.session.lojaId ?? LOJA_MATRIZ_ID
 
   const supabase = await createClient()
   const tz = await getRelatorioTimezone(supabase)

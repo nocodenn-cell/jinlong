@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 export type FornecedorListRow = {
@@ -109,7 +109,7 @@ function validar(input: FornecedorInput): string | null {
 export async function salvarFornecedorAction(
   input: FornecedorInput,
 ): Promise<{ ok: true; fornecedor: FornecedorListRow } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
   const err = validar(input)
@@ -168,7 +168,7 @@ export async function salvarFornecedorAction(
 export async function excluirFornecedorAction(
   id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
   try {
@@ -203,7 +203,7 @@ export async function bulkAtivarFornecedoresAction(
   ids: string[],
   ativo: boolean,
 ): Promise<{ ok: true; afetados: number } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
   if (ids.length === 0) return { ok: false, error: 'Nenhum fornecedor selecionado.' }
 
@@ -227,7 +227,7 @@ export async function bulkAtivarFornecedoresAction(
 export async function bulkExcluirFornecedoresAction(
   ids: string[],
 ): Promise<{ ok: true; excluidos: number; bloqueados: number } | { ok: false; error: string }> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
   if (ids.length === 0) return { ok: false, error: 'Nenhum fornecedor selecionado.' }
 

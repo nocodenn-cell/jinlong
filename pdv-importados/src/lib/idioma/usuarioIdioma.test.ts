@@ -58,11 +58,12 @@ describe('getUsuarioIdioma', () => {
     expect(r).toEqual({ idioma: 'pt', perfil: 'GERENTE' })
   })
 
-  it('faz redirect quando a sessão está stale', async () => {
+  it('retorna perfil anônimo quando a sessão está stale (sem redirect)', async () => {
     getUserMock.mockResolvedValue({ data: { user: null }, error: { message: 'stale' } })
     clearStaleMock.mockResolvedValue(true)
     const { getUsuarioIdioma } = await load()
-    await expect(getUsuarioIdioma()).rejects.toThrow('REDIRECT')
+    const r = await getUsuarioIdioma()
+    expect(r).toEqual({ idioma: 'pt', perfil: 'OPERADOR' })
   })
 
   it('lança erro de auth quando não é stale', async () => {

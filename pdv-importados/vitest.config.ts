@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    esbuild: {
+      jsx: 'automatic',
+      jsxImportSource: 'react',
+    },
     server: {
       fs: {
         allow: [path.join(__dirname, '..')],
@@ -30,6 +34,7 @@ export default defineConfig(({ mode }) => {
         'app/**/*.test.tsx',
         'components/**/*.test.ts',
         'components/**/*.test.tsx',
+        'tests/**/*.test.ts',
         '../shared-core/src/**/*.test.ts',
       ],
       // Testes de integração que exigem Next.js request scope (cookies()) e Supabase real.

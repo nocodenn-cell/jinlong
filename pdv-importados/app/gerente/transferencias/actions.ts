@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { assertGerenteOuDono } from '@/lib/auth/gerenteOuDono'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
   actionFail,
@@ -18,7 +18,7 @@ export async function executarTransferencia(input: {
   observacao?: string
   idempotency_key: string
 }): Promise<ActionResult<{ transferenciaId: string }>> {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return actionFail(auth.error, { errorCode: 'UNAUTHORIZED' })
 
   if (input.loja_origem_id === input.loja_destino_id) {
@@ -86,7 +86,7 @@ export async function obterEstoqueDisponivelTransferencia(
   | { success: true; quantidadeDisponivel: number; unidadeMedida: string; limiteObservacao: number }
   | { success: false; error: string }
 > {
-  const auth = await assertGerenteOuDono()
+  const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
