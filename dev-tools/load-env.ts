@@ -32,6 +32,7 @@ export type SupabaseEnv = {
   anonKey: string
   operadorEmail: string
   operadorPassword: string
+  gerenteEmail: string
 }
 
 export function requireSupabaseEnv(): SupabaseEnv {
@@ -44,6 +45,8 @@ export function requireSupabaseEnv(): SupabaseEnv {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || ''
   const operadorEmail =
     process.env.SEED_OPERADOR_EMAIL?.trim() || 'e2e-operador@localhost.test'
+  const gerenteEmail =
+    process.env.SEED_GERENTE_EMAIL?.trim() || 'e2e-gerente@localhost.test'
   const operadorPassword =
     process.env.SEED_DEV_PASSWORD?.trim() ||
     process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() ||
@@ -59,7 +62,7 @@ export function requireSupabaseEnv(): SupabaseEnv {
       'Defina SEED_DEV_PASSWORD ou PLAYWRIGHT_TEST_PASSWORD para autenticar o operador.',
     )
   }
-  return { url, serviceKey, anonKey, operadorEmail, operadorPassword }
+  return { url, serviceKey, anonKey, operadorEmail, operadorPassword, gerenteEmail }
 }
 
 export const LOJA_MATRIZ_ID = 'a0000001-0000-4000-8000-000000000001'

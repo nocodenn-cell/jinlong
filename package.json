@@ -25,7 +25,10 @@
     "dev:tauri": "npm run tauri -w pdv-local",
     "validate:production": "node scripts/validate-production.mjs",
     "stress:pdv": "tsx dev-tools/pdv-stress-test.ts",
-    "stress:pdv:check": "tsx dev-tools/pdv-consistency-check.ts"
+    "stress:pdv:check": "tsx dev-tools/pdv-consistency-check.ts",
+    "gate:pdv": "tsx dev-tools/pdv-production-gate-simulator.ts",
+    "gate:pdv:hybrid": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=hybrid",
+    "gate:pdv:full": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=full"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.99.3",
