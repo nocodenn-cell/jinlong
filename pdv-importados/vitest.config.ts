@@ -28,6 +28,8 @@ export default defineConfig(({ mode }) => {
       include: [
         'core/**/*.test.ts',
         'lib/**/*.test.ts',
+        'lib/**/*.spec.ts',
+        '../shared-core/src/pdv/invariants/**/*.spec.ts',
         'src/**/*.test.ts',
         'src/**/*.test.tsx',
         'app/**/*.test.ts',

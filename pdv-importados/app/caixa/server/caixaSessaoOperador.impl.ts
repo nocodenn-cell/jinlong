@@ -13,6 +13,8 @@ import {
   LIMITE_DIVERGENCIA_FECHAMENTO,
   parseMoneyInput,
 } from '@/app/caixa/server/caixaActionsInternals'
+import { PDVContext, runPdvEvaluation } from '@/lib/pdv'
+import { logJson } from '@/shared/unified-logger'
 
 export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperadorResult> {
   try {
@@ -178,12 +180,38 @@ export async function fecharCaixaOperadorImpl(input: {
     const row = rows[0]
     if (!row) return { ok: false, error: 'Resposta inesperada ao fechar o caixa. Tente novamente.' }
 
+    const caixaIdFechado = String(row.o_caixa_id)
+
+    const evaluationOutcome = await runPdvEvaluation(caixaIdFechado, PDVContext.CAIXA_CLOSE)
+    if (evaluationOutcome.kind === 'fetch_failed') {
+      logJson('pdv.evaluation.fetch_failed', {
+        caixaId: caixaIdFechado,
+        code: evaluationOutcome.code,
+        message: evaluationOutcome.message,
+      })
+      return { ok: false, error: evaluationOutcome.message }
+    }
+
+    const { validation } = evaluationOutcome
+    if (validation.violations.length > 0) {
+      logJson('pdv.invariant.violation', {
+        caixaId: caixaIdFechado,
+        severitySummary: validation.meta.severitySummary,
+        violations: validation.violations,
+        mode: validation.mode,
+        invariantAssert: validation.invariantAssert,
+      })
+    }
+    if (!validation.ok) {
+      return { ok: false, error: 'PDV inconsistente após fechamento.' }
+    }
+
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
     revalidatePath('/gerente/vendas')
     return {
       ok: true,
-      caixaId: String(row.o_caixa_id),
+      caixaId: caixaIdFechado,
       valorSistemaDinheiro: Number(row.o_valor_sistema),
       valorContado: Number(row.o_valor_contado),
       diferenca: Number(row.o_diferenca),

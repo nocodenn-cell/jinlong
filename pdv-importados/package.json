@@ -25,6 +25,9 @@
     "smoke:http": "node scripts/smoke-routes.mjs",
     "test:cors:validar-gerente": "node scripts/test-cors-validar-gerente.mjs",
     "seed:dev-users": "node scripts/seed-dev-users.mjs",
+    "seed:demo-fluxo": "node scripts/seed-demo-fluxo-staging.mjs",
+    "test:demo-fluxo": "vitest run lib/pdv ../shared-core/src/pdv/invariants",
+    "check:pdv-invariant-boundary": "node scripts/check-pdv-invariant-boundary.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook"

@@ -453,6 +453,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(null)
       try {
         const res = await fecharCaixaOperador({ valorContado, motivo })
+        await recarregarStatusCaixa()
         const blind = caixaStatus?.aberto === true && caixaStatus.blindClosureEnabled
         if (!res.ok && blind && erroExigeMotivoFechamento(res.error) && motivo == null) {
           setMotivoFecharModal({ tipo: "blind_retry", valorContado })
@@ -474,7 +475,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           { kind: "success" },
         )
         tocarFeedback("ok")
-        await recarregarStatusCaixa()
       } finally {
         setProcessandoCaixa(false)
       }
