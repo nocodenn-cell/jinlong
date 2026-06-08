@@ -11,11 +11,27 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { getAdminSession } from '@/lib/admin/auth/getAdminSession'
 import { ConfiguracoesContent, type ConfigDados } from './_components/ConfiguracoesContent'
 
 export default async function AdminConfiguracoes() {
+  const session = await getAdminSession()
   const supabase = await createClient()
+  const lojaId = session.lojaId
 
+  const dados: ConfigDados = lojaId
+    ? await carregarConfiguracoesDaLoja(supabase, lojaId)
+    : { loja: null, pdvConfig: null }
+
+  return <ConfiguracoesContent dados={dados} />
+}
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
+
+async function carregarConfiguracoesDaLoja(
+  supabase: SupabaseServerClient,
+  lojaId: string,
+): Promise<ConfigDados> {
   const [{ data: loja }, { data: pdvConfig }] = await Promise.all([
     supabase
       .from('lojas')
@@ -28,6 +44,7 @@ export default async function AdminConfiguracoes() {
         numero_serie_nfce, numero_serie_nfe
       `
       )
+      .eq('id', lojaId)
       .maybeSingle(),
     supabase
       .from('pdv_config')
@@ -38,13 +55,12 @@ export default async function AdminConfiguracoes() {
         imprimir_cupom_auto, formato_impressao
       `
       )
+      .eq('loja_id', lojaId)
       .maybeSingle(),
   ])
 
-  const dados: ConfigDados = {
+  return {
     loja: loja ?? null,
     pdvConfig: pdvConfig ?? null,
   }
-
-  return <ConfiguracoesContent dados={dados} />
 }

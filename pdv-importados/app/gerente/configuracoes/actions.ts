@@ -70,6 +70,20 @@ export type PdvConfig = {
   formato_impressao: 'TERMICA' | 'A4'
 }
 
+type SessionComLoja = {
+  lojaId: string | null
+}
+
+function validarLojaDaSessao(session: SessionComLoja, lojaId?: string | null): string | null {
+  if (!session.lojaId) {
+    return 'Loja da sessão não identificada. Faça login novamente.'
+  }
+  if (!lojaId || lojaId !== session.lojaId) {
+    return 'Atualização recusada: loja do formulário não pertence à sessão.'
+  }
+  return null
+}
+
 function validarLoja(d: LojaConfig): string | null {
   if (!d.nome || d.nome.trim().length < 2) return 'Nome da loja inválido.'
   const cnpjD = (d.cnpj ?? '').replace(/\D/g, '')
@@ -85,6 +99,10 @@ export async function atualizarDadosLojaAction(
 ): Promise<{ ok: true; loja: LojaConfig } | { ok: false; error: string }> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
+
+  const lojaId = input.id ?? null
+  const lojaSessaoErro = validarLojaDaSessao(auth.session, lojaId)
+  if (lojaSessaoErro) return { ok: false, error: lojaSessaoErro }
 
   const err = validarLoja(input)
   if (err) return { ok: false, error: err }
@@ -112,13 +130,16 @@ export async function atualizarDadosLojaAction(
       numero_serie_nfe: Number(input.numero_serie_nfe) || 1,
     }
 
-    const query = input.id
-      ? supabase.from('lojas').update(payload).eq('id', input.id).select('*').single()
-      : supabase.from('lojas').insert(payload).select('*').single()
-    const { data, error } = await query
+    const { data, error } = await supabase
+      .from('lojas')
+      .update(payload)
+      .eq('id', lojaId)
+      .select('*')
+      .single()
     if (error) return { ok: false, error: mensagemErroComSecao('Loja', error.message) }
 
     revalidatePath('/gerente/configuracoes')
+    revalidatePath('/admin/configuracoes')
     return { ok: true, loja: data as LojaConfig }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar dados da loja.' }
@@ -130,7 +151,9 @@ export async function atualizarConfiguracoesPdvAction(
 ): Promise<{ ok: true; config: PdvConfig } | { ok: false; error: string }> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
-  if (!input.loja_id) return { ok: false, error: 'Loja obrigatória.' }
+
+  const lojaSessaoErro = validarLojaDaSessao(auth.session, input.loja_id)
+  if (lojaSessaoErro) return { ok: false, error: lojaSessaoErro }
 
   // Validação de CST contra lista permitida (mais comuns no varejo)
   const cstsValidos = ['00','10','20','30','40','41','50','51','60','70','90']
@@ -164,6 +187,7 @@ export async function atualizarConfiguracoesPdvAction(
     if (error) return { ok: false, error: mensagemErroComSecao('Configurações', error.message) }
 
     revalidatePath('/gerente/configuracoes')
+    revalidatePath('/admin/configuracoes')
     return { ok: true, config: data as PdvConfig }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar configurações.' }
