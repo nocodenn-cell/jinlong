@@ -23,9 +23,13 @@
     "dev:web": "npm run dev -w pdv-importados",
     "dev:desktop": "npm run dev -w pdv-local",
     "dev:tauri": "npm run tauri -w pdv-local",
-    "validate:production": "node scripts/validate-production.mjs"
+    "validate:production": "node scripts/validate-production.mjs",
+    "stress:pdv": "tsx dev-tools/pdv-stress-test.ts",
+    "stress:pdv:check": "tsx dev-tools/pdv-consistency-check.ts"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.99.3",
+    "tsx": "^4.19.4",
     "turbo": "^2.5.4",
     "vitest": "^3.2.4"
   },
