@@ -42,15 +42,16 @@ export function SidebarNav({ admin, chineseLanguage }: SidebarNavProps) {
       const href = painelGerencialHref(item.key)
       const active = isRouteActive(pathname, href)
       const Icon = item.icon
-      const ptLabel = item.labelOverridePt ?? line.pt
-      const primary = chineseLanguage ? line.cn : ptLabel
-      const secondary = chineseLanguage ? ptLabel : ''
+      const ptLabel = item.labelOverridePt ?? line?.pt ?? item.key
+      const primary = chineseLanguage && line ? line.cn : ptLabel
+      const secondary = chineseLanguage && line ? ptLabel : ''
+      const hintText = hint ?? ''
 
       return (
         <li key={href}>
           <Link
             href={href}
-            title={`${primary}${secondary ? ` · ${secondary}` : ''} — ${hint}`}
+            title={`${primary}${secondary ? ` · ${secondary}` : ''}${hintText ? ` — ${hintText}` : ''}`}
             data-active={active}
             className={cn(
               'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5',

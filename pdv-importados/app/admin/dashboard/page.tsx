@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import React, { type ReactNode } from 'react'
-import { AlertCircle, DollarSign, Package, ShoppingBag, type LucideIcon } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ActivityFeed, type ActivityItem } from '@/components/ui/ActivityFeed'
 import {
@@ -9,6 +9,7 @@ import {
   PageHeader,
   SectionCard,
 } from '@/components/ui/admin-v2'
+import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
 import { createClient } from '@/lib/supabase/server'
 import { SalesTrendChartLazy } from './SalesTrendChartLazy'
@@ -41,7 +42,7 @@ type Metric = {
   label: string
   value: string
   delta?: { value: string; up: boolean }
-  icon: LucideIcon
+  icon: MetricCardIconKey
   sparkData?: number[]
   tone?: SparkTone
   deltaPositiveIsGood?: boolean
@@ -354,7 +355,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       label: L.metricTotalSales.pt,
       value: periodSalesFailed ? dash.emDash : formatBRL(totalAtual, locale),
       delta: periodSalesFailed ? undefined : { value: totalTrend.label, up: totalTrend.up },
-      icon: DollarSign,
+      icon: 'dollar-sign',
       sparkData: periodSalesFailed ? undefined : salesSpark,
       tone: 'gold',
     },
@@ -362,7 +363,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       label: L.metricOrders.pt,
       value: periodSalesFailed ? dash.emDash : formatNumberLocale(pedidosAtual, locale),
       delta: periodSalesFailed ? undefined : { value: pedidosTrend.label, up: pedidosTrend.up },
-      icon: Package,
+      icon: 'package',
       sparkData: periodSalesFailed ? undefined : ordersSpark,
       tone: 'success',
     },
@@ -370,7 +371,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       label: L.metricTicket.pt,
       value: periodSalesFailed ? dash.emDash : formatBRL(ticketAtual, locale),
       delta: periodSalesFailed ? undefined : { value: ticketTrend.label, up: ticketTrend.up },
-      icon: ShoppingBag,
+      icon: 'shopping-bag',
       sparkData: periodSalesFailed ? undefined : ticketSpark,
       tone: 'gold',
     },
@@ -378,7 +379,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       label: L.metricStock.pt,
       value: stockValue,
       delta: estoqueBaixoRes.error ? undefined : { value: stockTrendLabel, up: estoqueBaixoCount === 0 },
-      icon: AlertCircle,
+      icon: 'alert-circle',
       tone: estoqueBaixoCount > 0 ? 'warning' : 'success',
       deltaPositiveIsGood: true,
     },

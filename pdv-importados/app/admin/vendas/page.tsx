@@ -13,8 +13,8 @@
  */
 
 import Link from 'next/link'
-import { DollarSign, Package, ShoppingBag, XCircle } from 'lucide-react'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
@@ -188,30 +188,36 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     return qs ? `/admin/vendas?${qs}` : '/admin/vendas'
   }
 
-  const metricCards = [
+  const metricCards: Array<{
+    label: string
+    value: string
+    icon: MetricCardIconKey
+    tone: 'gold' | 'success' | 'warning'
+    hint?: string
+  }> = [
     {
       label: 'Faturado',
       value: formatBRL(kpis.faturado),
-      icon: DollarSign,
-      tone: 'gold' as const,
+      icon: 'dollar-sign',
+      tone: 'gold',
     },
     {
       label: 'Concluídas',
       value: formatNumberLocale(kpis.qtdConcluidas, 'pt-BR'),
-      icon: ShoppingBag,
-      tone: 'success' as const,
+      icon: 'shopping-bag',
+      tone: 'success',
     },
     {
       label: 'Ticket médio',
       value: formatBRL(ticketMedio),
-      icon: Package,
-      tone: 'gold' as const,
+      icon: 'package',
+      tone: 'gold',
     },
     {
       label: 'Canceladas',
       value: formatNumberLocale(kpis.qtdCanceladas, 'pt-BR'),
-      icon: XCircle,
-      tone: 'warning' as const,
+      icon: 'x-circle',
+      tone: 'warning',
       hint: formatBRL(kpis.valorCanceladas),
     },
   ]

@@ -1052,6 +1052,14 @@
       "configuracoes": {
         "cn": "设置",
         "pt": "Configurações"
+      },
+      "comissoes": {
+        "cn": "佣金",
+        "pt": "Comissões"
+      },
+      "suspensao": {
+        "cn": "暂停销售",
+        "pt": "Suspensão"
       }
     },
     "navHints": {
@@ -1065,7 +1073,9 @@
       "relatorios": "Relatórios e análises operacionais.",
       "caixas": "Caixas e operações de ponto de venda.",
       "financeiro": "Movimentações e visão financeira.",
-      "configuracoes": "全局参数（佣金、收银限制、交期、最低库存）。"
+      "configuracoes": "全局参数（佣金、收银限制、交期、最低库存）。",
+      "comissoes": "Regras e percentuais de comissão.",
+      "suspensao": "Suspender ou liberar vendas no PDV."
     },
     "dashboard": {
       "pageTitle": {

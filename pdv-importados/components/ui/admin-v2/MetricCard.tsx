@@ -1,9 +1,39 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import {
+  AlertCircle,
+  DollarSign,
+  FileCheck2,
+  ListFilter,
+  Package,
+  ShoppingBag,
+  WalletCards,
+  XCircle,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { drawSparkline, sparkColor, type SparkTone } from './sparkline'
+
+export type MetricCardIconKey =
+  | 'dollar-sign'
+  | 'package'
+  | 'shopping-bag'
+  | 'alert-circle'
+  | 'x-circle'
+  | 'wallet-cards'
+  | 'list-filter'
+  | 'file-check-2'
+
+const METRIC_ICONS = {
+  'dollar-sign': DollarSign,
+  package: Package,
+  'shopping-bag': ShoppingBag,
+  'alert-circle': AlertCircle,
+  'x-circle': XCircle,
+  'wallet-cards': WalletCards,
+  'list-filter': ListFilter,
+  'file-check-2': FileCheck2,
+} as const
 
 type MetricCardProps = {
   label: string
@@ -12,7 +42,7 @@ type MetricCardProps = {
   tone?: SparkTone
   delta?: { value: string; up: boolean }
   deltaPositiveIsGood?: boolean
-  icon?: LucideIcon
+  icon?: MetricCardIconKey
   hint?: string
   className?: string
 }
@@ -24,10 +54,11 @@ export function MetricCard({
   tone = 'gold',
   delta,
   deltaPositiveIsGood = true,
-  icon: Icon,
+  icon,
   hint,
   className,
 }: MetricCardProps) {
+  const Icon = icon ? METRIC_ICONS[icon] : null
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {

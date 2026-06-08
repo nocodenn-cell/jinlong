@@ -12,7 +12,6 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { DollarSign, FileCheck2, ListFilter, WalletCards } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { MetricCard, PageHeader } from '@/components/ui/admin-v2'
@@ -118,13 +117,13 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           <MetricCard
             label="Titulos em aberto"
             value={String(kpisRes.titulosAbertosCount)}
-            icon={WalletCards}
+            icon="wallet-cards"
             tone="gold"
           />
           <MetricCard
             label="Valor aberto"
             value={formatBRL(kpisRes.valorAbertoTotal)}
-            icon={DollarSign}
+            icon="dollar-sign"
             tone="gold"
             hint={
               kpisRes.kpiValorTruncado
@@ -135,14 +134,14 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           <MetricCard
             label="Registros filtrados"
             value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
-            icon={ListFilter}
+            icon="list-filter"
             tone="gold"
             hint={listaRes.capped ? '(resultado truncado)' : undefined}
           />
           <MetricCard
             label="Documentos fiscais"
             value="3 pendentes"
-            icon={FileCheck2}
+            icon="file-check-2"
             tone="warning"
             hint="placeholder visual"
           />

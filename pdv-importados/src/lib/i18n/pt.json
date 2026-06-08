@@ -1013,7 +1013,9 @@
       "relatorios": { "cn": "报告", "pt": "Relatórios" },
       "caixas": { "cn": "钱箱", "pt": "Caixas" },
       "financeiro": { "cn": "财务", "pt": "Financeiro" },
-      "configuracoes": { "cn": "设置", "pt": "Configurações" }
+      "configuracoes": { "cn": "设置", "pt": "Configurações" },
+      "comissoes": { "cn": "佣金", "pt": "Comissões" },
+      "suspensao": { "cn": "暂停销售", "pt": "Suspensão" }
     },
     "navHints": {
       "dashboard": "Métricas, gráfico de vendas e últimos pedidos do período.",
@@ -1026,7 +1028,9 @@
       "relatorios": "Relatórios e análises operacionais.",
       "caixas": "Caixas e operações de ponto de venda.",
       "financeiro": "Movimentações e visão financeira.",
-      "configuracoes": "Parâmetros globais (comissão, limites de caixa, lead time, estoque mínimo)."
+      "configuracoes": "Parâmetros globais (comissão, limites de caixa, lead time, estoque mínimo).",
+      "comissoes": "Regras e percentuais de comissão.",
+      "suspensao": "Suspender ou liberar vendas no PDV."
     },
     "dashboard": {
       "pageTitle": { "cn": "生意看板", "pt": "Dashboard comercial" },
