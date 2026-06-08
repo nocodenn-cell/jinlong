@@ -46,8 +46,10 @@ function mapStatusToUi(
   status: Awaited<ReturnType<typeof obterStatusCaixaOperador>>,
 ): CaixaStatusUi | null {
   if (!status.ok) {
-    if (status.status === "ERRO") return { status: "ERRO", error: status.error }
-    return { status: "ERRO", error: status.error }
+    return {
+      status: "ERRO",
+      error: status.error ?? "Erro desconhecido",
+    }
   }
   if (status.status === "FECHADO") return { status: "FECHADO" }
   return {
