@@ -58,7 +58,7 @@ export async function executarFluxoDemoServer(input: {
     return { ok: false, error: status.error, failedStep: 'caixa', steps }
   }
 
-  if (!status.aberto) {
+  if (status.ok && status.status === 'FECHADO') {
     const abrir = await abrirCaixaOperador(DEMO_FLUXO_TROCO_INICIAL)
     if (!abrir.ok) {
       pushStep({ id: 'caixa', ok: false, message: abrir.error })
@@ -130,7 +130,7 @@ export async function executarFluxoDemoServer(input: {
 
   pushStep({ id: 'fechamento', ok: false, message: 'Fechando caixa…' })
   status = await obterStatusCaixaOperador()
-  if (!status.ok || !status.aberto) {
+  if (!status.ok || status.status !== 'ABERTO') {
     const msg = 'Caixa não está aberto após a venda.'
     pushStep({ id: 'fechamento', ok: false, message: msg })
     return { ok: false, error: msg, failedStep: 'fechamento', steps, caixaId }

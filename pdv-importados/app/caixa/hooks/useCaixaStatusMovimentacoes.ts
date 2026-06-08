@@ -17,17 +17,17 @@ import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 import { useMovimentacoesRealtime } from "@/app/caixa/hooks/useMovimentacoesRealtime"
 
-type CaixaStatusState =
+export type CaixaStatusUi =
   | {
-      aberto: true
+      status: "ABERTO"
       caixaId: string
       dataAbertura: string
       valorInicial: number
       valorSistemaDinheiro: number
       blindClosureEnabled: boolean
     }
-  | { aberto: false }
-  | null
+  | { status: "FECHADO" }
+  | { status: "ERRO"; error: string }
 
 type AcaoState = {
   tipo: AcaoMovimentacaoTipo
@@ -42,6 +42,30 @@ type Params = {
   currentUserId: string | null
 }
 
+function mapStatusToUi(
+  status: Awaited<ReturnType<typeof obterStatusCaixaOperador>>,
+): CaixaStatusUi | null {
+  if (!status.ok) {
+    if (status.status === "ERRO") return { status: "ERRO", error: status.error }
+    return { status: "ERRO", error: status.error }
+  }
+  if (status.status === "FECHADO") return { status: "FECHADO" }
+  return {
+    status: "ABERTO",
+    caixaId: status.caixaId,
+    dataAbertura: status.dataAbertura,
+    valorInicial: status.valorInicial,
+    valorSistemaDinheiro: status.valorSistemaDinheiro,
+    blindClosureEnabled: status.blindClosureEnabled,
+  }
+}
+
+export function isCaixaAberto(
+  s: CaixaStatusUi | null,
+): s is Extract<CaixaStatusUi, { status: "ABERTO" }> {
+  return s?.status === "ABERTO"
+}
+
 export function useCaixaStatusMovimentacoes({
   m,
   setCaixaMensagem,
@@ -49,7 +73,8 @@ export function useCaixaStatusMovimentacoes({
   acaoMovimentacao,
   currentUserId,
 }: Params) {
-  const [caixaStatus, setCaixaStatus] = useState<CaixaStatusState>(null)
+  const [caixaStatus, setCaixaStatus] = useState<CaixaStatusUi | null>(null)
+  const [carregandoStatus, setCarregandoStatus] = useState(true)
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoCaixaDTO[]>([])
   const [carregandoMovimentacoes, setCarregandoMovimentacoes] = useState(false)
   const [movimentandoCaixa, setMovimentandoCaixa] = useState(false)
@@ -77,26 +102,23 @@ export function useCaixaStatusMovimentacoes({
   )
 
   const recarregarStatusCaixa = useCallback(async () => {
-    const status = await obterStatusCaixaOperador()
-    if (!status.ok) {
-      setCaixaStatus(null)
-      setMovimentacoes([])
-      setCaixaMensagem(status.error)
-      return
-    }
-    if (status.aberto) {
-      setCaixaStatus({
-        aberto: true,
-        caixaId: status.caixaId,
-        dataAbertura: status.dataAbertura,
-        valorInicial: status.valorInicial,
-        valorSistemaDinheiro: status.valorSistemaDinheiro,
-        blindClosureEnabled: status.blindClosureEnabled,
-      })
-      await recarregarMovimentacoes(status.caixaId)
-    } else {
-      setCaixaStatus({ aberto: false })
-      setMovimentacoes([])
+    setCarregandoStatus(true)
+    try {
+      const status = await obterStatusCaixaOperador()
+      const ui = mapStatusToUi(status)
+      setCaixaStatus(ui)
+      if (ui?.status === "ERRO") {
+        setMovimentacoes([])
+        setCaixaMensagem(ui.error)
+        return
+      }
+      if (ui?.status === "ABERTO") {
+        await recarregarMovimentacoes(ui.caixaId)
+      } else {
+        setMovimentacoes([])
+      }
+    } finally {
+      setCarregandoStatus(false)
     }
   }, [recarregarMovimentacoes, setCaixaMensagem])
 
@@ -106,11 +128,11 @@ export function useCaixaStatusMovimentacoes({
 
   const handleExternalMovimentacao = useCallback(() => {
     void recarregarStatusCaixa()
-    if (caixaStatus?.aberto) void recarregarMovimentacoes(caixaStatus.caixaId)
+    if (isCaixaAberto(caixaStatus)) void recarregarMovimentacoes(caixaStatus.caixaId)
   }, [recarregarStatusCaixa, recarregarMovimentacoes, caixaStatus])
 
   useMovimentacoesRealtime({
-    caixaId: caixaStatus?.aberto ? caixaStatus.caixaId : null,
+    caixaId: isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null,
     currentUserId,
     onExternalChange: handleExternalMovimentacao,
   })
@@ -122,7 +144,7 @@ export function useCaixaStatusMovimentacoes({
       motivo: string
       gerenteSenha?: string
     }): Promise<{ ok: true } | { ok: false; error: string }> => {
-      if (!caixaStatus?.aberto) {
+      if (!isCaixaAberto(caixaStatus)) {
         return { ok: false, error: m.caixa.msg_caixa_fechado_movimentacao }
       }
       if (!movimentacaoModalTipo) {
@@ -203,7 +225,7 @@ export function useCaixaStatusMovimentacoes({
           setCaixaMensagem(m.caixa.timeline_msg_estornada)
         }
         await recarregarStatusCaixa()
-        if (caixaStatus?.aberto) {
+        if (isCaixaAberto(caixaStatus)) {
           await recarregarMovimentacoes(caixaStatus.caixaId)
         }
         return { ok: true }
@@ -223,6 +245,7 @@ export function useCaixaStatusMovimentacoes({
 
   return {
     caixaStatus,
+    carregandoStatus,
     movimentacoes,
     carregandoMovimentacoes,
     movimentandoCaixa,

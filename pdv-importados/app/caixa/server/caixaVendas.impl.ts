@@ -8,11 +8,8 @@ import {
 } from '@/app/caixa/finalizarVendaValidation'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import {
-  mensagemErroComSecao,
-  mensagemErroDeExcecao,
-  mensagemErroValidacaoZod,
-} from '@/lib/errors/mensagemErroUsuario'
+import { mensagemErroDeExcecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
+import { caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
 import { resolveVendaIdForFinalize } from '@/lib/caixa/resolveVendaIdForFinalize'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import {
@@ -41,6 +38,7 @@ type RpcFinalizarVendaRow = {
   dados_fiscais?: unknown
   itens_atualizados?: unknown
   estoque_baixado?: unknown
+  event_id?: unknown
 }
 
 function firstRpcVendaRow<T>(data: unknown): T | undefined {
@@ -97,7 +95,7 @@ export async function cancelarVendaImpl(
       p_motivo: motivoTrim,
       p_operador_id: user.id,
     })
-    if (error) return { ok: false, error: mensagemErroComSecao('Cancelamento de venda', error.message) }
+    if (error) return { ok: false, error: caixaErroOperador(error.message) }
 
     const row = firstRpcVendaRow<RpcCancelarVendaRow>(data)
     if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
@@ -122,6 +120,7 @@ export async function finalizarVendaCaixaImpl(
   | {
       ok: true
       vendaId: string
+      eventId: string
       documentoFiscal?: unknown
       itensAtualizados?: unknown
       estoqueBaixado?: unknown
@@ -210,13 +209,9 @@ export async function finalizarVendaCaixaImpl(
       .order('data_abertura', { ascending: false })
       .limit(1)
       .maybeSingle()
-    if (caixaAbertoErr)
-      return { ok: false, error: mensagemErroComSecao('Caixa', caixaAbertoErr.message) }
+    if (caixaAbertoErr) return { ok: false, error: caixaErroOperador(caixaAbertoErr.message) }
     if (!caixaExistente) {
-      return {
-        ok: false,
-        error: 'Caixa fechado. Abra o caixa antes de finalizar a venda.',
-      }
+      return { ok: false, error: 'Caixa fechado. Abra o caixa antes de finalizar a venda.' }
     }
     const caixaId = caixaExistente.id
 
@@ -284,18 +279,21 @@ export async function finalizarVendaCaixaImpl(
         autoEnqueueFiscalOnSale: runtimeCfg.autoEnqueueFiscalOnSale,
       })
       // Transação inteira foi revertida automaticamente pelo PostgreSQL
-      return { ok: false, error: mensagemErroComSecao('Finalização da venda', txErr.message) }
+      return { ok: false, error: caixaErroOperador(txErr.message) }
     }
 
-    // Processar resultado da RPC unificada
     const row = firstRpcVendaRow<RpcFinalizarVendaRow>(data)
     if (!row?.venda_id) {
-      return { ok: false, error: 'Falha na finalização da venda. Tente novamente.' }
+      return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
 
-    // Verificar status retornado
     if (row.status !== 'CONCLUIDA') {
-      return { ok: false, error: String(row.mensagem ?? 'Erro na finalização da venda.') }
+      return { ok: false, error: caixaErroOperador(String(row.mensagem ?? '')) }
+    }
+
+    const eventId = row.event_id ? String(row.event_id) : ''
+    if (!eventId) {
+      return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
 
     // Invalidar cache
@@ -308,15 +306,15 @@ export async function finalizarVendaCaixaImpl(
     return {
       ok: true,
       vendaId: String(row.venda_id),
+      eventId,
       documentoFiscal: row.dados_fiscais,
       itensAtualizados: row.itens_atualizados,
       estoqueBaixado: row.estoque_baixado,
     }
   } catch (e) {
-    // Rollback automático do PostgreSQL em caso de exceção
     return {
       ok: false,
-      error: mensagemErroDeExcecao(e, 'Não foi possível finalizar a venda. Tente de novo.'),
+      error: caixaErroOperador(e instanceof Error ? e.message : null),
     }
   }
 }

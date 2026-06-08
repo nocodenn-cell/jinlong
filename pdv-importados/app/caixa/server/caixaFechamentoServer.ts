@@ -19,14 +19,7 @@ export async function calcularValorSistemaDinheiroCaixa(
   })
 
   if (error) {
-    throw new Error(
-      mensagemErroComSecao(
-        'Valor sistema (caixa)',
-        error.message.includes('function') && error.message.includes('does not exist')
-          ? 'Aplique as migrations 048–049 (devoluções + RPC calcular_valor_sistema_dinheiro_caixa).'
-          : error.message,
-      ),
-    )
+    throw new Error(mensagemErroComSecao('Valor sistema (caixa)', error.message))
   }
 
   const n = typeof data === 'string' ? Number.parseFloat(data) : Number(data)

@@ -17,7 +17,10 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { useCaixaMensagens } from "@/app/caixa/hooks/useCaixaMensagens"
 import { useCaixaPagamentos } from "@/app/caixa/hooks/useCaixaPagamentos"
-import { useCaixaStatusMovimentacoes } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
+import {
+  isCaixaAberto,
+  useCaixaStatusMovimentacoes,
+} from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
@@ -143,6 +146,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const {
     caixaStatus,
+    carregandoStatus,
     movimentacoes,
     carregandoMovimentacoes,
     movimentandoCaixa,
@@ -453,8 +457,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(null)
       try {
         const res = await fecharCaixaOperador({ valorContado, motivo })
-        await recarregarStatusCaixa()
-        const blind = caixaStatus?.aberto === true && caixaStatus.blindClosureEnabled
+        const blind = isCaixaAberto(caixaStatus) && caixaStatus.blindClosureEnabled
         if (!res.ok && blind && erroExigeMotivoFechamento(res.error) && motivo == null) {
           setMotivoFecharModal({ tipo: "blind_retry", valorContado })
           return
@@ -464,14 +467,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           tocarFeedback("erro")
           return
         }
+        await recarregarStatusCaixa()
         setCaixaMensagem(
-          caixaFmt(m.caixa.msg_caixa_fechado, {
-            moeda: m.caixa.moeda_prefixo,
-            sistema: res.valorSistemaDinheiro.toFixed(2),
-            contado: res.valorContado.toFixed(2),
-            sinal: res.diferenca > 0 ? "+" : "",
-            diferenca: res.diferenca.toFixed(2),
-          }),
+          res.alreadyClosed
+            ? m.caixa.msg_caixa_ja_fechado
+            : caixaFmt(m.caixa.msg_caixa_fechado, {
+                moeda: m.caixa.moeda_prefixo,
+                sistema: res.valorSistemaDinheiro.toFixed(2),
+                contado: res.valorContado.toFixed(2),
+                sinal: res.diferenca > 0 ? "+" : "",
+                diferenca: res.diferenca.toFixed(2),
+              }),
           { kind: "success" },
         )
         tocarFeedback("ok")
@@ -543,10 +549,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         })()
         return
       }
-      const aberto = caixaStatus?.aberto === true
-      const blind = aberto && caixaStatus.blindClosureEnabled
-      const valorSistemaDinheiro = aberto ? caixaStatus.valorSistemaDinheiro : 0
-      const diferencaEstimada = aberto ? roundMoney2(v - valorSistemaDinheiro) : null
+      const blind = isCaixaAberto(caixaStatus) && caixaStatus.blindClosureEnabled
+      const valorSistemaDinheiro = isCaixaAberto(caixaStatus) ? caixaStatus.valorSistemaDinheiro : 0
+      const diferencaEstimada = isCaixaAberto(caixaStatus)
+        ? roundMoney2(v - valorSistemaDinheiro)
+        : null
       if (!blind && diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
         setMotivoFecharModal({
           tipo: "diferenca",
@@ -770,7 +777,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   )
 
   useCaixaKeyboardShortcuts({
-    caixaAberto: caixaStatus?.aberto === true,
+    caixaAberto: isCaixaAberto(caixaStatus),
     movimentandoCaixa,
     onAbrirSuprimento: handleAbrirSuprimento,
     onAbrirSangria: handleAbrirSangria,
@@ -882,9 +889,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           layoutVariant={pdvLayoutVariant}
           operadorLabel={operadorLabel}
           caixaStatus={caixaStatus}
+          carregandoStatus={carregandoStatus}
           processandoCaixa={processandoCaixa}
           onAbrirCaixa={handleAbrirCaixaClick}
           onFecharCaixa={handleFecharCaixaClick}
+          onTentarStatusNovamente={() => void recarregarStatusCaixa()}
           printerStatus={thermal.status}
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
         />
@@ -983,7 +992,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   onFinalizar={handleFinalizarClick}
                   finalizando={finalizando}
                   movimentandoCaixa={movimentandoCaixa}
-                  caixaAberto={caixaStatus?.aberto === true}
+                  caixaAberto={isCaixaAberto(caixaStatus)}
                   itensLength={itens.length}
                   buscando={buscandoPipeline}
                   carregandoRegras={carregandoRegras}
@@ -1044,7 +1053,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
                 carregandoRegras={carregandoRegras}
                 caixaStatus={caixaStatus}
-                caixaAberto={caixaStatus?.aberto === true}
+                caixaAberto={isCaixaAberto(caixaStatus)}
                 movimentandoCaixa={movimentandoCaixa}
                 finalizando={finalizando}
                 validandoGerente={validandoGerente}
@@ -1064,7 +1073,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               <CaixaRailTurnoSummary
                 m={m}
                 idioma={idioma}
-                caixaAberto={caixaStatus?.aberto === true}
+                caixaAberto={isCaixaAberto(caixaStatus)}
                 layoutVariant={pdvLayoutVariant === "classic" ? "classic" : "default"}
                 refreshToken={turnoRefreshToken}
               />
@@ -1087,7 +1096,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   variant="classic"
                   carregandoRegras={carregandoRegras}
                   caixaStatus={caixaStatus}
-                  caixaAberto={caixaStatus?.aberto === true}
+                  caixaAberto={isCaixaAberto(caixaStatus)}
                   movimentandoCaixa={movimentandoCaixa}
                   finalizando={finalizando}
                   validandoGerente={validandoGerente}
@@ -1099,7 +1108,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               </div>
             </div>
           )}
-          {caixaStatus?.aberto && (
+          {isCaixaAberto(caixaStatus) && (
             <CaixaMovimentacoesTimeline
               m={m}
               idioma={idioma}
@@ -1142,6 +1151,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           venda={lastReciboRef.current}
           m={m}
           onClose={() => setReimprimirModalAberto(false)}
+          onNovaVenda={() => {
+            setReimprimirModalAberto(false)
+            focarCampoBusca()
+          }}
+          onFinalizarCaixa={() => {
+            setReimprimirModalAberto(false)
+            handleFecharCaixaClick()
+          }}
           thermal={thermal}
         />
       )}
@@ -1167,7 +1184,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           tipo={movimentacaoModalTipo}
           processando={movimentandoCaixa}
           limiteSangriaSemGerente={limiteSangriaSemGerente}
-          saldoEstimado={caixaStatus?.aberto ? caixaStatus.valorSistemaDinheiro : 0}
+          saldoEstimado={isCaixaAberto(caixaStatus) ? caixaStatus.valorSistemaDinheiro : 0}
           m={m}
           onOpenChange={(open) => {
             if (!open) setMovimentacaoModalTipo(null)

@@ -1,15 +1,17 @@
+export type CaixaOperadorStatus = 'ABERTO' | 'FECHADO' | 'ERRO'
+
 export type CaixaStatusOperadorResult =
   | {
       ok: true
-      aberto: true
+      status: 'ABERTO'
       caixaId: string
       dataAbertura: string
       valorInicial: number
       valorSistemaDinheiro: number
       blindClosureEnabled: boolean
     }
-  | { ok: true; aberto: false }
-  | { ok: false; error: string }
+  | { ok: true; status: 'FECHADO' }
+  | { ok: false; status: 'ERRO'; error: string }
 
 export type AbrirCaixaOperadorResult =
   | { ok: true; caixaId: string }
@@ -22,5 +24,6 @@ export type FecharCaixaOperadorResult =
       valorSistemaDinheiro: number
       valorContado: number
       diferenca: number
+      alreadyClosed?: boolean
     }
   | { ok: false; error: string }

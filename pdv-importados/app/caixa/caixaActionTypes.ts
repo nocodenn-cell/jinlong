@@ -62,7 +62,7 @@ export type ConfiguracoesCaixaWebResult =
   | { ok: false; error: string }
 
 export type FinalizarVendaCaixaResult =
-  | { ok: true; vendaId: string }
+  | { ok: true; vendaId: string; eventId: string }
   | { ok: false; error: string }
 
 export type CancelarVendaResult =

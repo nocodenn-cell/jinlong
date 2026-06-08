@@ -8,27 +8,20 @@ import type { ThermalStatus } from "@/hooks/useThermalPrinter"
 import LanguageToggle from "@/app/caixa/idioma/LanguageToggle"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
+import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
+import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { SquareTerminal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type CaixaPdvLayoutVariant = "default" | "classic"
-
-type CaixaStatusTop =
-  | {
-      aberto: true
-      caixaId: string
-      valorSistemaDinheiro: number
-      blindClosureEnabled: boolean
-    }
-  | { aberto: false }
-  | null
 
 type Props = {
   m: Mensagens
   idioma: Idioma
   layoutVariant: CaixaPdvLayoutVariant
   operadorLabel: string
-  caixaStatus: CaixaStatusTop
+  caixaStatus: CaixaStatusUi | null
+  carregandoStatus?: boolean
   processandoCaixa: boolean
   onAbrirCaixa: () => void
   onFecharCaixa: () => void
@@ -42,6 +35,7 @@ export function CaixaPdvTopBar({
   layoutVariant,
   operadorLabel,
   caixaStatus,
+  carregandoStatus = false,
   processandoCaixa,
   onAbrirCaixa,
   onFecharCaixa,
@@ -54,15 +48,15 @@ export function CaixaPdvTopBar({
       : undefined
 
   const localeString = idioma === "pt" ? "pt-BR" : "zh-CN"
-  const turnoText =
-    caixaStatus?.aberto === true
-      ? caixaFmt(m.caixa.topbar_turno_aberto, {
-          n: turnoNumeroDeCaixaId(caixaStatus.caixaId),
-        })
+  const aberto = isCaixaAberto(caixaStatus)
+  const turnoText = aberto
+    ? caixaFmt(m.caixa.topbar_turno_aberto, { n: turnoNumeroDeCaixaId(caixaStatus.caixaId) })
+    : caixaStatus?.status === "ERRO"
+      ? m.caixa.status_indisponivel
       : m.caixa.topbar_turno_fechado
   const operadorText = caixaFmt(m.caixa.topbar_operador, { nome: operadorLabel })
   const fundoText =
-    caixaStatus?.aberto !== true || caixaStatus.blindClosureEnabled
+    !aberto || (aberto && caixaStatus.blindClosureEnabled)
       ? m.caixa.topbar_fundo_indisponivel
       : caixaFmt(m.caixa.topbar_fundo, {
           valor: `${m.caixa.moeda_prefixo} ${caixaStatus.valorSistemaDinheiro.toLocaleString(localeString, {
@@ -156,7 +150,7 @@ export function CaixaPdvTopBar({
             classic ? "border-primary-foreground/25" : "border-white/[0.12]",
           )}
         >
-          {caixaStatus?.aberto ? (
+          {aberto ? (
             <Button
               type="button"
               size="sm"
@@ -172,6 +166,20 @@ export function CaixaPdvTopBar({
             >
               {processandoCaixa ? `${m.caixa.fechar}…` : m.caixa.fechar}
             </Button>
+          ) : caixaStatus?.status === "ERRO" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className={cn(
+                "text-xs font-semibold sm:text-sm",
+                classic && "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
+              )}
+              onClick={onAbrirCaixa}
+              disabled={carregandoStatus}
+            >
+              {m.caixa.btn_tentar_novamente}
+            </Button>
           ) : (
             <Button
               type="button"
@@ -182,7 +190,7 @@ export function CaixaPdvTopBar({
                 classic && "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
               )}
               onClick={onAbrirCaixa}
-              disabled={processandoCaixa}
+              disabled={processandoCaixa || carregandoStatus}
               aria-busy={processandoCaixa}
             >
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}

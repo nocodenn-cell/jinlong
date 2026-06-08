@@ -5,6 +5,8 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { ThermalStatus } from "@/hooks/useThermalPrinter"
 import { CaixaPdvTopBar, type CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
+import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
+import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -12,20 +14,12 @@ type Props = {
   idioma: Idioma
   layoutVariant: CaixaPdvLayoutVariant
   operadorLabel: string
-  caixaStatus:
-    | {
-        aberto: true
-        caixaId: string
-        dataAbertura: string
-        valorInicial: number
-        valorSistemaDinheiro: number
-        blindClosureEnabled: boolean
-      }
-    | { aberto: false }
-    | null
+  caixaStatus: CaixaStatusUi | null
+  carregandoStatus: boolean
   processandoCaixa: boolean
   onAbrirCaixa: () => void
   onFecharCaixa: () => void
+  onTentarStatusNovamente: () => void
   printerStatus?: ThermalStatus
   printerDeviceName?: string | null
 }
@@ -36,9 +30,11 @@ function CaixaHeaderImpl({
   layoutVariant,
   operadorLabel,
   caixaStatus,
+  carregandoStatus,
   processandoCaixa,
   onAbrirCaixa,
   onFecharCaixa,
+  onTentarStatusNovamente,
   printerStatus,
   printerDeviceName,
 }: Props) {
@@ -59,17 +55,13 @@ function CaixaHeaderImpl({
     return () => clearInterval(interval)
   }, [localeString])
 
-  const statusTop =
-    caixaStatus?.aberto === true
-      ? {
-          aberto: true as const,
-          caixaId: caixaStatus.caixaId,
-          valorSistemaDinheiro: caixaStatus.valorSistemaDinheiro,
-          blindClosureEnabled: caixaStatus.blindClosureEnabled,
-        }
-      : caixaStatus === null
-        ? null
-        : { aberto: false as const }
+  const badgeLabel = carregandoStatus
+    ? m.caixa.status_carregando
+    : caixaStatus?.status === "ERRO"
+      ? m.caixa.status_indisponivel
+      : isCaixaAberto(caixaStatus)
+        ? m.caixa.status_aberto
+        : m.caixa.status_fechado
 
   return (
     <div className="shrink-0 flex flex-col" style={fontStack ? { fontFamily: fontStack } : undefined}>
@@ -78,9 +70,10 @@ function CaixaHeaderImpl({
         idioma={idioma}
         layoutVariant={layoutVariant}
         operadorLabel={operadorLabel}
-        caixaStatus={statusTop}
+        caixaStatus={caixaStatus}
+        carregandoStatus={carregandoStatus}
         processandoCaixa={processandoCaixa}
-        onAbrirCaixa={onAbrirCaixa}
+        onAbrirCaixa={caixaStatus?.status === "ERRO" ? onTentarStatusNovamente : onAbrirCaixa}
         onFecharCaixa={onFecharCaixa}
         printerStatus={printerStatus}
         printerDeviceName={printerDeviceName}
@@ -93,12 +86,14 @@ function CaixaHeaderImpl({
           <span
             className={cn(
               "inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-medium",
-              caixaStatus?.aberto === true
+              isCaixaAberto(caixaStatus)
                 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-3",
+                : caixaStatus?.status === "ERRO"
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                  : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-3",
             )}
           >
-            {caixaStatus?.aberto === true ? m.caixa.status_aberto : m.caixa.status_fechado}
+            {badgeLabel}
           </span>
         </div>
       ) : null}

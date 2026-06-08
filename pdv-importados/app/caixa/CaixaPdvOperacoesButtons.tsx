@@ -6,25 +6,15 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
+import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { cn } from "@/lib/utils"
-
-export type CaixaPdvOperacoesCaixaStatus =
-  | {
-      aberto: true
-      caixaId: string
-      dataAbertura: string
-      valorInicial: number
-      valorSistemaDinheiro: number
-      blindClosureEnabled: boolean
-    }
-  | { aberto: false }
-  | null
 
 type Props = {
   m: Mensagens
   idioma: Idioma
   carregandoRegras: boolean
-  caixaStatus: CaixaPdvOperacoesCaixaStatus
+  caixaStatus: CaixaStatusUi | null
   caixaAberto: boolean
   movimentandoCaixa: boolean
   finalizando: boolean
@@ -101,13 +91,12 @@ function CaixaPdvOperacoesButtonsImpl({
     }
   }, [sistemaAberto])
 
-  const turnoResumo =
-    caixaStatus?.aberto === true
-      ? caixaFmt(m.caixa.pdv_sistema_turno_resumo, {
-          data: new Date(caixaStatus.dataAbertura).toLocaleString(localeString),
-          valor: `${m.caixa.moeda_prefixo} ${caixaStatus.valorInicial.toFixed(2)}`,
-        })
-      : null
+  const turnoResumo = isCaixaAberto(caixaStatus)
+    ? caixaFmt(m.caixa.pdv_sistema_turno_resumo, {
+        data: new Date(caixaStatus.dataAbertura).toLocaleString(localeString),
+        valor: `${m.caixa.moeda_prefixo} ${caixaStatus.valorInicial.toFixed(2)}`,
+      })
+    : null
 
   return (
     <div className="flex flex-col gap-2">

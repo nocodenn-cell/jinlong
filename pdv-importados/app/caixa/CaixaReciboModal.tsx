@@ -46,6 +46,8 @@ type Props = Readonly<{
   venda: ReciboVenda
   m: Mensagens
   onClose: () => void
+  onNovaVenda: () => void
+  onFinalizarCaixa: () => void
   thermal: UseThermalPrinterReturn
 }>
 
@@ -85,7 +87,14 @@ function fmtData(d: Date): string {
   })
 }
 
-export function CaixaReciboModal({ venda, m, onClose, thermal }: Props) {
+export function CaixaReciboModal({
+  venda,
+  m,
+  onClose,
+  onNovaVenda,
+  onFinalizarCaixa,
+  thermal,
+}: Props) {
   const printRef = useRef<HTMLDivElement>(null)
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
   const labels = buildReciboLabels(m)
@@ -295,6 +304,23 @@ export function CaixaReciboModal({ venda, m, onClose, thermal }: Props) {
               <p className="opacity-60">{labels.rodapeNaoFiscal}</p>
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border bg-muted/30 p-4">
+          <button
+            type="button"
+            onClick={onNovaVenda}
+            className="app-btn-accent w-full rounded-md px-4 py-2.5 text-sm font-semibold"
+          >
+            {m.caixa.btn_adicionar_nova_venda}
+          </button>
+          <button
+            type="button"
+            onClick={onFinalizarCaixa}
+            className="app-btn-neutral w-full rounded-md px-4 py-2.5 text-sm font-semibold"
+          >
+            {m.caixa.btn_finalizar_caixa}
+          </button>
         </div>
       </div>
     </div>
