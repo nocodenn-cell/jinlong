@@ -12,9 +12,7 @@
 import { useState } from 'react'
 import { Eye } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { StatusBadge, PaymentBadge } from '@/components/ui/badges'
 import { formatBRL } from '@/lib/format/money'
-import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
 
@@ -29,12 +27,51 @@ export type VendaLinha = {
   primeiro_produto: string | null
 }
 
+function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
+  const up = String(status ?? '').trim().toUpperCase()
+  if (up === 'CONCLUIDA') return 'success'
+  if (up === 'CANCELADA') return 'danger'
+  return 'muted'
+}
+
+function paymentLabel(formaPagamento: string | null): string {
+  const payment = toPayment(formaPagamento)
+  if (payment === 'DINHEIRO') return 'DINHEIRO'
+  if (payment === 'PIX') return 'PIX'
+  if (payment === 'CREDITO') return 'CRÉDITO'
+  if (payment === 'DEBITO') return 'DÉBITO'
+  if (payment === 'CARTAO') return 'CARTÃO'
+  return 'OUTRO'
+}
+
 function StatusCell({ status }: { status: string | null }) {
   const s = toVendaStatus(status)
-  if (s) return <StatusBadge status={s} />
+  const tone = statusDotTone(status)
+  const dotClass =
+    tone === 'success'
+      ? 'bg-emerald-400'
+      : tone === 'danger'
+        ? 'bg-red-400'
+        : 'bg-jl-fg-3'
+  if (s) {
+    const label = s === 'CONCLUIDA' ? 'Concluída' : s === 'CANCELADA' ? 'Cancelada' : s
+    const pillClass =
+      tone === 'success'
+        ? 'admin-v2-badge-success'
+        : tone === 'danger'
+          ? 'admin-v2-badge-danger'
+          : 'admin-v2-badge-muted'
+    return (
+      <span className={`${pillClass} inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-medium leading-none`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
+        {label}
+      </span>
+    )
+  }
   if (status) {
     return (
-      <span className="admin-v2-badge-muted inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none">
+      <span className="admin-v2-badge-muted inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-medium leading-none">
+        <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
         {status}
       </span>
     )
@@ -52,6 +89,17 @@ function ItensCell({ row }: { row: VendaLinha }) {
         {extras > 0 ? ` · +${extras} ${extras === 1 ? 'item' : 'itens'}` : ''}
       </p>
     </div>
+  )
+}
+
+function HoraCell({ data }: { data: string | null }) {
+  if (!data) return <span className="text-jl-fg-3">—</span>
+  const d = new Date(data)
+  if (Number.isNaN(d.getTime())) return <span className="text-jl-fg-3">—</span>
+  return (
+    <span className="whitespace-nowrap text-[12px] text-jl-fg-2">
+      {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+    </span>
   )
 }
 
@@ -97,14 +145,20 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
 
   const columns: Column<VendaLinha>[] = [
     {
-      key: 'data',
-      header: 'Data',
-      sortValue: (r) => r.data ?? '',
+      key: 'venda',
+      header: 'Venda',
+      sortValue: (r) => r.id,
       cell: (r) => (
-        <span className="whitespace-nowrap text-[12px] text-jl-fg-2">
-          {formatDateTimeOrDash(r.data, 'pt-BR', 'short')}
+        <span className="max-w-[120px] truncate font-medium text-jl-fg-1" title={r.id}>
+          {r.id}
         </span>
       ),
+    },
+    {
+      key: 'hora',
+      header: 'Hora',
+      sortValue: (r) => r.data ?? '',
+      cell: (r) => <HoraCell data={r.data} />,
     },
     {
       key: 'itens',
@@ -114,13 +168,7 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
     {
       key: 'pagamento',
       header: 'Pagamento',
-      cell: (r) => <PaymentBadge payment={toPayment(r.forma_pagamento)} />,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      align: 'center',
-      cell: (r) => <StatusCell status={r.status} />,
+      cell: (r) => <span className="text-[12px] text-jl-fg-2">{paymentLabel(r.forma_pagamento)}</span>,
     },
     {
       key: 'total',
@@ -133,6 +181,23 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
         ) : (
           <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.total_liquido)}</span>
         ),
+    },
+    {
+      key: 'caixa',
+      header: 'Caixa (01)',
+      align: 'center',
+      cell: () => <span className="text-[12px] text-jl-fg-2">01</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      cell: (r) => <StatusCell status={r.status} />,
+    },
+    {
+      key: 'vendedor',
+      header: 'Vendedor (—)',
+      cell: () => <span className="text-[12px] text-jl-fg-3">—</span>,
     },
   ]
 

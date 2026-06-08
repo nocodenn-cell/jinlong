@@ -1,5 +1,7 @@
 export { AdminV2Shell } from './AdminV2Shell'
 export { SidebarNav } from './SidebarNav'
+export { SidebarUserFooter } from './SidebarUserFooter'
+export { AdminV2UtilityBar } from './AdminV2UtilityBar'
 export { PageHeader } from './PageHeader'
 export { MetricCard } from './MetricCard'
 export { SectionCard } from './SectionCard'

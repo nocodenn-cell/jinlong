@@ -2,6 +2,7 @@ import Link from 'next/link'
 import React, { type ReactNode } from 'react'
 import { AlertCircle, DollarSign, Package, ShoppingBag, type LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { ActivityFeed, type ActivityItem } from '@/components/ui/ActivityFeed'
 import {
   ChartCard,
   MetricCard,
@@ -11,6 +12,9 @@ import {
 import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
 import { createClient } from '@/lib/supabase/server'
 import { SalesTrendChartLazy } from './SalesTrendChartLazy'
+import { PaymentDonutChartLazy } from './PaymentDonutChartLazy'
+import { DashboardChart } from './_components/DashboardChart'
+import { CaixaShortcut } from './_components/CaixaShortcut'
 import {
   dateKey,
   formatTrendPercent,
@@ -53,6 +57,11 @@ type OrderRow = {
   status: VendaStatus
   data: string
   formaPagamento: string
+}
+
+type HourlyPoint = {
+  label: string
+  total: number
 }
 
 function collectSupabaseErrors(
@@ -288,6 +297,35 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     cursor.setDate(cursor.getDate() + 1)
   }
 
+  const hourlyBucket = new Array<number>(24).fill(0)
+  for (const row of vendasRange) {
+    const hour = new Date(row.data).getHours()
+    hourlyBucket[hour] = (hourlyBucket[hour] ?? 0) + Number(row.total_liquido ?? 0)
+  }
+  const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}h`)
+  const hourlySeries: HourlyPoint[] = hourlyLabels.map((label, idx) => ({
+    label,
+    total: Math.round((hourlyBucket[idx] ?? 0) * 100) / 100,
+  }))
+  let peakHour = '00h'
+  let peakValueRaw = 0
+  for (const point of hourlySeries) {
+    if (point.total > peakValueRaw) {
+      peakValueRaw = point.total
+      peakHour = point.label
+    }
+  }
+
+  const paymentMap = new Map<string, number>()
+  for (const row of vendasRange) {
+    const key = (row.forma_pagamento?.trim() || 'OUTRO').toUpperCase()
+    paymentMap.set(key, (paymentMap.get(key) ?? 0) + Number(row.total_liquido ?? 0))
+  }
+  const paymentDonutData = Array.from(paymentMap.entries())
+    .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6)
+
   const totalAtual = vendasRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
   const totalPrev = vendasPrevRange.reduce((acc, row) => acc + Number(row.total_liquido ?? 0), 0)
   const pedidosAtual = vendasRange.length
@@ -354,6 +392,17 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     data: formatDateTimeLocaleDefault(o.data, locale),
     formaPagamento: o.forma_pagamento,
   }))
+  const amountByOrderId = new Map(
+    recentOrdersRaw.map((raw) => [raw.id, Number(raw.total_liquido ?? 0)])
+  )
+
+  const activityItems: ActivityItem[] = latestOrders.slice(0, 8).map((order) => ({
+    id: order.id,
+    type: order.status === 'CANCELADA' ? 'cancel' : 'sale',
+    description: `${order.formaPagamento || 'Pagamento'} • ${order.operador}`,
+    amount: amountByOrderId.get(order.id),
+    relativeTime: order.data,
+  }))
 
   const periodOptions: Array<{ id: DashboardPeriod; label: string }> = [
     { id: 'TODAY', label: L.periodToday.pt },
@@ -361,43 +410,26 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     { id: '30D', label: L.period30d.pt },
   ]
 
-  const statusOptions: Array<{ id: DashboardStatus; label: string }> = [
-    { id: 'ALL', label: L.statusAll.pt },
-    { id: 'CONCLUIDA', label: L.statusDone.pt },
-    { id: 'CANCELADA', label: L.statusCancelled.pt },
-  ]
-
-  const filterHref = (p: DashboardPeriod, s: DashboardStatus) =>
+  const filterHref = (p: DashboardPeriod, s: DashboardStatus = 'ALL') =>
     `/admin/dashboard?period=${p}&status=${s}`
 
   const dashboardFilters = (
-    <>
+    <div className="admin-v2-segmented">
       {periodOptions.map((option) => (
         <Link
           key={option.id}
-          href={filterHref(option.id, status)}
+          href={filterHref(option.id, 'ALL')}
           data-active={period === option.id}
           className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
         >
           {option.label}
         </Link>
       ))}
-      <span className="mx-1 hidden h-4 w-px bg-[#242424] sm:inline" aria-hidden />
-      {statusOptions.map((option) => (
-        <Link
-          key={option.id}
-          href={filterHref(period, option.id)}
-          data-active={status === option.id}
-          className="admin-v2-filter-pill admin-v2-filter-pill-status rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-        >
-          {option.label}
-        </Link>
-      ))}
-    </>
+    </div>
   )
 
   return (
-    <div className="admin-v2-page">
+    <div className="admin-v2-page admin-v2-stack">
       <PageHeader
         title={L.pageTitle.pt}
         subtitle={`${L.newUsers.pt}: ${formatNumberLocale(novosUsuariosAtual, locale)} (${novosTrend.label})`}
@@ -416,23 +448,64 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
       <ErrorBanner messages={dashboardErrors} />
 
-      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="admin-v2-grid-kpi">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}
       </div>
 
-      {periodSalesFailed ? (
-        <ChartCard title={L.chartTitle.pt} className="mb-8">
-          <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
-            {adminUi.errors.chartUnavailable.pt}
+      <div className="admin-v2-grid-3-main">
+        {periodSalesFailed ? (
+          <ChartCard title={L.chartTitle.pt}>
+            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
+              {adminUi.errors.chartUnavailable.pt}
+            </div>
+          </ChartCard>
+        ) : (
+          <ChartCard title={L.chartTitle.pt} className="admin-v2-chart-area">
+            <SalesTrendChartLazy data={chartData} variant="default" />
+          </ChartCard>
+        )}
+
+        <SectionCard title="Faturamento por hora" className="admin-v2-chart-area">
+          {periodSalesFailed ? (
+            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
+              {adminUi.errors.chartUnavailable.pt}
+            </div>
+          ) : (
+            <DashboardChart
+              labels={hourlyLabels}
+              data={hourlySeries.map((item) => item.total)}
+              peakHour={peakHour}
+              peakValue={formatBRL(peakValueRaw, locale)}
+            />
+          )}
+        </SectionCard>
+
+        <SectionCard title="Pagamentos" className="admin-v2-chart-area">
+          <PaymentDonutChartLazy data={paymentDonutData} total={totalAtual} />
+        </SectionCard>
+      </div>
+
+      <CaixaShortcut />
+
+      <div className="admin-v2-grid-2">
+        <SectionCard
+          title="Estoque baixo"
+          subtitle="Itens abaixo do mínimo recomendado"
+        >
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-bold tabular-nums text-[#c9a227]">
+              {formatNumberLocale(estoqueBaixoCount, locale)}
+            </span>
+            <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>
           </div>
-        </ChartCard>
-      ) : (
-        <ChartCard title={L.chartTitle.pt} className="mb-8">
-          <SalesTrendChartLazy data={chartData} variant="default" />
-        </ChartCard>
-      )}
+        </SectionCard>
+
+        <SectionCard title="Atividades recentes">
+          <ActivityFeed items={activityItems} variant="embedded" />
+        </SectionCard>
+      </div>
 
       <SectionCard title={L.tableTitle.pt}>
         <div className="overflow-x-auto">
@@ -484,7 +557,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         </div>
       </SectionCard>
 
-      <footer className="mt-12 text-center text-jl-fg-3">
+      <footer className="text-center text-jl-fg-3">
         <p className="text-sm">{L.footer.pt}</p>
       </footer>
     </div>

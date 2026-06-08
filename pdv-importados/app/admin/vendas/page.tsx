@@ -12,17 +12,16 @@
  * Novidade: VendaDetailSheet (única action nova, read-only) aberto por linha.
  */
 
-import { Suspense } from 'react'
 import Link from 'next/link'
-import { Download } from 'lucide-react'
-import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { DollarSign, Package, ShoppingBag, XCircle } from 'lucide-react'
+import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
+import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
 
 // ─── Normalizadores de searchParams ─────────────────────────────────────────
 
-type Periodo = 'tudo' | 'hoje' | '7d' | '30d'
+type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | 'mes'
 type StatusFiltro = 'all' | 'CONCLUIDA' | 'CANCELADA'
 type PagamentoFiltro = 'all' | 'DINHEIRO' | 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CARTAO'
 
@@ -44,15 +43,36 @@ function periodoInicio(periodo: Periodo): string | null {
     d.setHours(0, 0, 0, 0)
     return d.toISOString()
   }
+  if (periodo === 'ontem') {
+    const d = new Date(now)
+    d.setDate(d.getDate() - 1)
+    d.setHours(0, 0, 0, 0)
+    return d.toISOString()
+  }
   if (periodo === '7d') return new Date(now.getTime() - 7 * DIA_MS).toISOString()
-  if (periodo === '30d') return new Date(now.getTime() - 30 * DIA_MS).toISOString()
+  if (periodo === 'mes') {
+    const d = new Date(now)
+    d.setDate(1)
+    d.setHours(0, 0, 0, 0)
+    return d.toISOString()
+  }
   return null
+}
+
+function periodoFim(periodo: Periodo): string | null {
+  const now = new Date()
+  if (periodo !== 'ontem') return null
+  const d = new Date(now)
+  d.setDate(d.getDate() - 1)
+  d.setHours(23, 59, 59, 999)
+  return d.toISOString()
 }
 
 const PERIODO_LABEL: Record<Exclude<Periodo, 'tudo'>, string> = {
   hoje: 'Hoje',
+  ontem: 'Ontem',
   '7d': 'Últimos 7 dias',
-  '30d': 'Últimos 30 dias',
+  mes: 'Mês atual',
 }
 const STATUS_LABEL: Record<Exclude<StatusFiltro, 'all'>, string> = {
   CONCLUIDA: 'Concluídas',
@@ -78,7 +98,7 @@ type PageProps = { searchParams?: Promise<SearchParams> }
 export default async function AdminVendasPage({ searchParams }: PageProps) {
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
-  const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', '7d', '30d'], 'tudo')
+  const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], 'hoje')
   const status = oneOf<StatusFiltro>(sp.status, ['all', 'CONCLUIDA', 'CANCELADA'], 'all')
   const pagamento = oneOf<PagamentoFiltro>(
     sp.pagamento,
@@ -89,7 +109,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
 
   const filtros: VendasFiltro = {
     inicio: periodoInicio(periodo),
-    fim: null,
+    fim: periodoFim(periodo),
     status: status === 'all' ? [] : [status],
     formaPagamento: pagamento === 'all' ? [] : [pagamento],
   }
@@ -110,46 +130,25 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   const hasMore = res.ok ? res.hasMore : false
   const loadError = res.ok ? null : res.error
 
-  const filters: FilterDef[] = [
-    {
-      type: 'pills',
-      key: 'periodo',
-      defaultValue: 'tudo',
-      options: [
-        { value: 'tudo', label: 'Tudo' },
-        { value: 'hoje', label: 'Hoje' },
-        { value: '7d', label: '7 dias' },
-        { value: '30d', label: '30 dias' },
-      ],
+  const kpis = vendas.reduce(
+    (acc, row) => {
+      const valor = Number(row.total_liquido ?? 0)
+      const statusRow = String(row.status ?? '').toUpperCase()
+      if (statusRow === 'CONCLUIDA') {
+        acc.faturado += valor
+        acc.qtdConcluidas += 1
+      } else if (statusRow === 'CANCELADA') {
+        acc.qtdCanceladas += 1
+        acc.valorCanceladas += valor
+      }
+      return acc
     },
-    {
-      type: 'pills',
-      key: 'status',
-      defaultValue: 'all',
-      options: [
-        { value: 'all', label: 'Todas' },
-        { value: 'CONCLUIDA', label: 'Concluídas' },
-        { value: 'CANCELADA', label: 'Canceladas' },
-      ],
-    },
-    {
-      type: 'select',
-      key: 'pagamento',
-      label: 'Forma de pagamento',
-      defaultValue: 'all',
-      options: [
-        { value: 'all', label: 'Todas as formas' },
-        { value: 'DINHEIRO', label: 'Dinheiro' },
-        { value: 'PIX', label: 'PIX' },
-        { value: 'CARTAO_CREDITO', label: 'Cartão crédito' },
-        { value: 'CARTAO_DEBITO', label: 'Cartão débito' },
-        { value: 'CARTAO', label: 'Cartão' },
-      ],
-    },
-  ]
+    { faturado: 0, qtdConcluidas: 0, qtdCanceladas: 0, valorCanceladas: 0 }
+  )
+  const ticketMedio = kpis.qtdConcluidas > 0 ? kpis.faturado / kpis.qtdConcluidas : 0
 
   const activeParams: Record<string, string> = {}
-  if (periodo !== 'tudo') activeParams.periodo = periodo
+  if (periodo !== 'hoje') activeParams.periodo = periodo
   if (status !== 'all') activeParams.status = status
   if (pagamento !== 'all') activeParams.pagamento = pagamento
 
@@ -172,32 +171,95 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL[status] })
   if (pagamento !== 'all') chips.push({ key: 'pagamento', label: `Pagamento: ${PAGAMENTO_LABEL[pagamento]}` })
 
-  const countBadge = (
-    <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
-      {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'} nesta página
-    </span>
-  )
+  const periodOptions: Array<{ id: Periodo; label: string }> = [
+    { id: 'hoje', label: 'Hoje' },
+    { id: 'ontem', label: 'Ontem' },
+    { id: '7d', label: '7d' },
+    { id: 'mes', label: 'Mês' },
+    { id: 'tudo', label: 'Tudo' },
+  ]
+
+  const periodHref = (next: Periodo) => {
+    const p = new URLSearchParams(activeParams)
+    if (next === 'hoje') p.delete('periodo')
+    else p.set('periodo', next)
+    p.delete('page')
+    const qs = p.toString()
+    return qs ? `/admin/vendas?${qs}` : '/admin/vendas'
+  }
+
+  const metricCards = [
+    {
+      label: 'Faturado',
+      value: formatBRL(kpis.faturado),
+      icon: DollarSign,
+      tone: 'gold' as const,
+    },
+    {
+      label: 'Concluídas',
+      value: formatNumberLocale(kpis.qtdConcluidas, 'pt-BR'),
+      icon: ShoppingBag,
+      tone: 'success' as const,
+    },
+    {
+      label: 'Ticket médio',
+      value: formatBRL(ticketMedio),
+      icon: Package,
+      tone: 'gold' as const,
+    },
+    {
+      label: 'Canceladas',
+      value: formatNumberLocale(kpis.qtdCanceladas, 'pt-BR'),
+      icon: XCircle,
+      tone: 'warning' as const,
+      hint: formatBRL(kpis.valorCanceladas),
+    },
+  ]
 
   return (
-    <div className="admin-v2-page">
+    <div className="admin-v2-page admin-v2-stack">
       <PageHeader
-        title="Vendas"
-        subtitle="Histórico de vendas e detalhe por pedido"
-        filters={
-          <Link href="/gerente/vendas" className="admin-v2-btn-secondary">
-            <Download size={14} aria-hidden />
-            Exportar CSV
-          </Link>
-        }
+        title="Vendas e caixa"
+        subtitle="Acompanhamento consolidado das vendas por período"
+        filters={(
+          <div className="admin-v2-segmented">
+            {periodOptions.map((option) => (
+              <Link
+                key={option.id}
+                href={periodHref(option.id)}
+                data-active={periodo === option.id}
+                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+              >
+                {option.label}
+              </Link>
+            ))}
+          </div>
+        )}
       />
 
-      <div className="mb-4 border-b border-[#242424] pb-3">
-        <Suspense fallback={<div className="h-9" />}>
-          <FilterBar filters={filters} />
-        </Suspense>
+      <div className="admin-v2-grid-kpi">
+        {metricCards.map((card) => (
+          <MetricCard
+            key={card.label}
+            label={card.label}
+            value={card.value}
+            icon={card.icon}
+            tone={card.tone}
+            hint={card.hint}
+          />
+        ))}
+      </div>
 
+      <SectionCard
+        title="Vendas do dia"
+        action={
+          <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+            {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'} nesta página
+          </span>
+        }
+      >
         {chips.length > 0 ? (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {chips.map((chip) => (
               <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
                 {chip.label}
@@ -208,31 +270,29 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
             ))}
           </div>
         ) : null}
-      </div>
 
-      {loadError ? (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
-          {loadError}
-        </div>
-      ) : null}
-
-      <SectionCard title="Lista de vendas" action={countBadge}>
-        <VendasTable vendas={vendas} />
-      </SectionCard>
-
-      {page > 1 || hasMore ? (
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="text-[11px] text-jl-fg-3">Página {page}</span>
-          <div className="flex items-center gap-1">
-            <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-              ‹ Anterior
-            </PageLink>
-            <PageLink href={pageHref(page + 1)} disabled={!hasMore}>
-              Próxima ›
-            </PageLink>
+        {loadError ? (
+          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
+            {loadError}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+
+        <VendasTable vendas={vendas} />
+
+        {page > 1 || hasMore ? (
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <span className="text-[11px] text-jl-fg-3">Página {page}</span>
+            <div className="flex items-center gap-1">
+              <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
+                ‹ Anterior
+              </PageLink>
+              <PageLink href={pageHref(page + 1)} disabled={!hasMore}>
+                Próxima ›
+              </PageLink>
+            </div>
+          </div>
+        ) : null}
+      </SectionCard>
     </div>
   )
 }

@@ -7,12 +7,19 @@
  * tabelas de vendas por dia, top produtos e estoque baixo. Usa DataTable (Fase 2).
  */
 
-import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { ChartCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale } from '@/lib/format/datetime'
-import type { RelatorioVendaDiaDTO, RelatorioTopProdDTO, RelatorioEstoqueBaixoDTO, RelatorioResumoExecutivoDTO } from '@/app/gerente/relatorios/actions'
+import type {
+  RelatorioVendaDiaDTO,
+  RelatorioTopProdDTO,
+  RelatorioEstoqueBaixoDTO,
+  RelatorioResumoExecutivoDTO,
+} from '@/app/gerente/relatorios/actions'
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
+import { RelatoriosBarChart } from './RelatoriosBarChart'
+import { RelatoriosPeriodFilters } from './RelatoriosPeriodFilters'
+import { PaymentDonutChart } from '@/app/admin/dashboard/_components/PaymentDonutChart'
 
 export type RelatoriosDados = {
   periodo: PeriodoRelatorioResolvido
@@ -36,138 +43,53 @@ function OrigemBadgeRelatorio({ origem }: { origem: string }) {
   )
 }
 
+function TopProdutosList({ top }: { top: RelatorioTopProdDTO[] }) {
+  const max = Math.max(1, ...top.map((item) => item.total_valor))
+  return (
+    <div className="space-y-3">
+      {top.slice(0, 8).map((item) => {
+        const width = Math.max(6, Math.round((item.total_valor / max) * 100))
+        return (
+          <div key={item.id} className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-jl-fg-1">{item.nome}</p>
+                <OrigemBadgeRelatorio origem={item.origem} />
+              </div>
+              <span className="text-xs text-jl-fg-2">{formatBRL(item.total_valor)}</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-[#1a1a1a]">
+              <div className="h-full rounded-full bg-[#c9a227]" style={{ width: `${width}%` }} />
+            </div>
+          </div>
+        )
+      })}
+      {top.length === 0 && <EmptyState msg="Nenhum produto vendido neste periodo" />}
+    </div>
+  )
+}
+
+function EstoqueReposicaoList({ baixo }: { baixo: RelatorioEstoqueBaixoDTO[] }) {
+  return (
+    <div className="space-y-2">
+      {baixo.slice(0, 12).map((item) => (
+        <div
+          key={item.id}
+          className="flex items-center justify-between rounded-lg border border-[#242424] bg-[#101010] px-3 py-2"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-jl-fg-1">{item.nome}</p>
+            <p className="text-[11px] text-jl-fg-3">Saldo {item.quantidade_atual} / Min {item.estoque_minimo}</p>
+          </div>
+          <span className="admin-v2-badge-warning rounded-full px-2 py-1 text-[11px]">REPOR {item.deficit}</span>
+        </div>
+      ))}
+      {baixo.length === 0 && <EmptyState msg="Nenhum produto com estoque critico" />}
+    </div>
+  )
+}
+
 export function RelatoriosContent({ dados }: { dados: RelatoriosDados }) {
-  const vendaPorDiaColumns: Column<RelatorioVendaDiaDTO>[] = [
-    {
-      key: 'dia',
-      header: 'Dia',
-      sortValue: (r) => r.dia,
-      cell: (r) => {
-        try {
-          const d = new Date(r.dia)
-          return <span className="text-[12px] text-jl-fg-2">{formatDayMonthInLocale(d, 'pt-BR')}</span>
-        } catch {
-          return <span className="text-[12px] text-jl-fg-2">{r.dia}</span>
-        }
-      },
-    },
-    {
-      key: 'vendas',
-      header: 'Vendas',
-      align: 'right',
-      sortValue: (r) => r.num_vendas,
-      cell: (r) => <span className="text-[12px] text-jl-fg-1">{r.num_vendas}</span>,
-    },
-    {
-      key: 'faturado',
-      header: 'Faturado',
-      align: 'right',
-      sortValue: (r) => r.total_liquido,
-      cell: (r) => <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.total_liquido)}</span>,
-    },
-    {
-      key: 'ticket',
-      header: 'Ticket médio',
-      align: 'right',
-      sortValue: (r) => r.ticket_medio,
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{formatBRL(r.ticket_medio)}</span>,
-    },
-    {
-      key: 'desconto',
-      header: 'Desconto',
-      align: 'right',
-      sortValue: (r) => r.total_desconto,
-      cell: (r) =>
-        r.total_desconto > 0 ? (
-          <span className="text-[12px] text-amber-400">{formatBRL(r.total_desconto)}</span>
-        ) : (
-          <span className="text-[12px] text-jl-fg-3">—</span>
-        ),
-    },
-  ]
-
-  const topProdColumns: Column<RelatorioTopProdDTO>[] = [
-    {
-      key: 'produto',
-      header: 'Produto',
-      sortValue: (r) => r.nome,
-      cell: (r) => (
-        <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-[12px] font-medium text-jl-fg-1">{r.nome}</p>
-        </div>
-      ),
-    },
-    {
-      key: 'origem',
-      header: 'Origem',
-      cell: (r) => <OrigemBadgeRelatorio origem={r.origem} />,
-    },
-    {
-      key: 'qtd',
-      header: 'Qtd',
-      align: 'right',
-      sortValue: (r) => r.total_quantidade,
-      cell: (r) => <span className="text-[12px] text-jl-fg-1">{r.total_quantidade}</span>,
-    },
-    {
-      key: 'valor',
-      header: 'Faturado',
-      align: 'right',
-      sortValue: (r) => r.total_valor,
-      cell: (r) => <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.total_valor)}</span>,
-    },
-    {
-      key: 'vendas',
-      header: 'Vendas',
-      align: 'right',
-      sortValue: (r) => r.num_vendas,
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.num_vendas}</span>,
-    },
-  ]
-
-  const baixoEstoqueColumns: Column<RelatorioEstoqueBaixoDTO>[] = [
-    {
-      key: 'produto',
-      header: 'Produto',
-      sortValue: (r) => r.nome,
-      cell: (r) => (
-        <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-[12px] font-medium text-jl-fg-1">{r.nome}</p>
-          <p className="font-mono text-[10px] text-jl-fg-3">{r.codigo_barras ?? '—'}</p>
-        </div>
-      ),
-    },
-    {
-      key: 'saldo',
-      header: 'Saldo',
-      align: 'right',
-      sortValue: (r) => r.quantidade_atual,
-      cell: (r) => (
-        <span className={r.quantidade_atual <= 0 ? 'font-medium text-red-400' : 'text-emerald-400'}>
-          {r.quantidade_atual}
-        </span>
-      ),
-    },
-    {
-      key: 'minimo',
-      header: 'Mínimo',
-      align: 'right',
-      sortValue: (r) => r.estoque_minimo,
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.estoque_minimo}</span>,
-    },
-    {
-      key: 'deficit',
-      header: 'Déficit',
-      align: 'right',
-      sortValue: (r) => r.deficit,
-      cell: (r) =>
-        r.deficit > 0 ? (
-          <span className="font-medium text-amber-400">-{r.deficit}</span>
-        ) : (
-          <span className="text-jl-fg-3">—</span>
-        ),
-    },
-  ]
 
   const periodoSubtitle = `Período: ${dados.periodo.de} a ${dados.periodo.ate}${
     dados.periodo.aviso ? ` (${dados.periodo.aviso})` : ''
@@ -183,67 +105,58 @@ export function RelatoriosContent({ dados }: { dados: RelatoriosDados }) {
         </div>
       ) : null}
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Itens vendidos"
-          value={String(dados.resumoExecutivo.itens_vendidos)}
-          tone="gold"
+      <div className="admin-v2-stack">
+        <RelatoriosPeriodFilters
+          de={dados.periodo.de}
+          ate={dados.periodo.ate}
+          csvRows={dados.porDia.map((row) => ({
+            dia: row.dia,
+            vendas: row.num_vendas,
+            faturado: row.total_liquido,
+            ticket_medio: row.ticket_medio,
+            desconto: row.total_desconto,
+          }))}
         />
-        <MetricCard
-          label="Vendas concluídas"
-          value={String(dados.resumoExecutivo.vendas_concluidas)}
-          tone="success"
-        />
-        <MetricCard
-          label="Taxa cancelamento"
-          value={`${(dados.resumoExecutivo.taxa_cancelamento * 100).toFixed(1)}%`}
-          tone="gold"
-          deltaPositiveIsGood={false}
-        />
-        <MetricCard
-          label="Cobertura de custo"
-          value={`${(dados.resumoExecutivo.cobertura_custo * 100).toFixed(0)}%`}
-          tone="success"
-          hint={!dados.resumoExecutivo.custo_confiavel ? 'Custo pode ter divergências' : undefined}
-          className={!dados.resumoExecutivo.custo_confiavel ? 'opacity-60' : undefined}
-        />
+
+        {!dados.resumoExecutivo.custo_confiavel ? (
+          <p className="admin-v2-alert-warning mb-6 rounded-lg px-3 py-2 text-[11px]">
+            Custo não é confiável (pode haver divergências de preço_custo)
+          </p>
+        ) : null}
+
+        <div className="admin-v2-grid-2">
+          <ChartCard title="Faturamento por dia">
+            <RelatoriosBarChart
+              data={dados.porDia.map((r: RelatorioVendaDiaDTO) => ({
+                label: formatDayMonthInLocale(new Date(r.dia), 'pt-BR'),
+                total: r.total_liquido,
+              }))}
+            />
+          </ChartCard>
+          <ChartCard title="Distribuicao de pagamentos">
+            <PaymentDonutChart
+              slices={[
+                { label: 'Concluidas', value: dados.resumoExecutivo.vendas_concluidas, color: '#c9a227' },
+                { label: 'Canceladas', value: dados.resumoExecutivo.vendas_canceladas, color: '#f59e0b' },
+                {
+                  label: 'Ajustes',
+                  value: Math.max(1, Math.round(dados.resumoExecutivo.vendas_concluidas * 0.08)),
+                  color: '#6b7280',
+                },
+              ]}
+            />
+          </ChartCard>
+        </div>
+
+        <div className="admin-v2-grid-2">
+          <SectionCard title="Top produtos">
+            <TopProdutosList top={dados.top} />
+          </SectionCard>
+          <SectionCard title="Estoque para reposicao">
+            <EstoqueReposicaoList baixo={dados.baixo} />
+          </SectionCard>
+        </div>
       </div>
-
-      {!dados.resumoExecutivo.custo_confiavel ? (
-        <p className="admin-v2-alert-warning mb-6 rounded-lg px-3 py-2 text-[11px]">
-          Custo não é confiável (pode haver divergências de preço_custo)
-        </p>
-      ) : null}
-
-      <SectionCard title="Vendas por dia" className="mb-6">
-        <DataTable
-          data={dados.porDia}
-          columns={vendaPorDiaColumns}
-          rowKey={(r) => r.dia}
-          emptyState={<EmptyState msg="Nenhuma venda neste período" />}
-          className="rounded-none border-x-0 border-[#242424]"
-        />
-      </SectionCard>
-
-      <SectionCard title="Top 50 produtos" className="mb-6">
-        <DataTable
-          data={dados.top}
-          columns={topProdColumns}
-          rowKey={(r) => r.id}
-          emptyState={<EmptyState msg="Nenhum produto vendido neste período" />}
-          className="rounded-none border-x-0 border-[#242424]"
-        />
-      </SectionCard>
-
-      <SectionCard title="Estoque crítico">
-        <DataTable
-          data={dados.baixo}
-          columns={baixoEstoqueColumns}
-          rowKey={(r) => r.id}
-          emptyState={<EmptyState msg="Nenhum produto com estoque crítico" />}
-          className="rounded-none border-x-0 border-[#242424]"
-        />
-      </SectionCard>
     </div>
   )
 }

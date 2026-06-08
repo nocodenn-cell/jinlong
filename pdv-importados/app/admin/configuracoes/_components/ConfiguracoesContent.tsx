@@ -9,21 +9,18 @@
  */
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus } from 'lucide-react'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { cn } from '@/lib/utils'
 import type { LojaConfig, PdvConfig } from '@/app/gerente/configuracoes/actions'
 import { atualizarDadosLojaAction, atualizarConfiguracoesPdvAction } from '@/app/gerente/configuracoes/actions'
-import { criarCliente } from '@/app/gerente/financeiro/actions'
 
 export type ConfigDados = {
   loja: LojaConfig | null
   pdvConfig: PdvConfig | null
 }
 
-type Aba = 'loja' | 'pdv' | 'cadastros'
+type Aba = 'loja' | 'impostos' | 'preferencias'
 
 const REGIMES = ['SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL', 'MEI'] as const
 const IDIOMAS = ['pt', 'zh'] as const
@@ -40,8 +37,6 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
   const [lojaSucesso, setLojaSucesso] = useState(false)
   const [pdvErro, setPdvErro] = useState<string | null>(null)
   const [pdvSucesso, setPdvSucesso] = useState(false)
-  const [clienteErro, setClienteErro] = useState<string | null>(null)
-  const [clienteSucesso, setClienteSucesso] = useState(false)
 
   const handleLojaSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -85,15 +80,23 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
     setPdvSucesso(false)
     const fd = new FormData(e.currentTarget)
     const payload: PdvConfig = {
-      loja_id: String(fd.get('loja_id') ?? ''),
-      cfop_padrao: String(fd.get('cfop_padrao') ?? ''),
-      cst_padrao: String(fd.get('cst_padrao') ?? ''),
-      regime_tributario: String(fd.get('regime_tributario') ?? '') as PdvConfig['regime_tributario'],
-      auto_enqueue_fiscal: fd.get('auto_enqueue_fiscal') === 'on',
-      idioma_padrao: String(fd.get('idioma_padrao') ?? 'pt') as 'pt' | 'zh',
-      tema_padrao: String(fd.get('tema_padrao') ?? 'noturno') as 'noturno' | 'novem',
-      imprimir_cupom_auto: fd.get('imprimir_cupom_auto') === 'on',
-      formato_impressao: String(fd.get('formato_impressao') ?? 'TERMICA') as 'TERMICA' | 'A4',
+      loja_id: String(fd.get('loja_id') ?? dados.loja?.id ?? ''),
+      cfop_padrao: String(fd.get('cfop_padrao') ?? dados.pdvConfig?.cfop_padrao ?? '5102'),
+      cst_padrao: String(fd.get('cst_padrao') ?? dados.pdvConfig?.cst_padrao ?? '00'),
+      regime_tributario: String(
+        fd.get('regime_tributario') ?? dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL',
+      ) as PdvConfig['regime_tributario'],
+      auto_enqueue_fiscal: fd.get('auto_enqueue_fiscal')
+        ? fd.get('auto_enqueue_fiscal') === 'on'
+        : (dados.pdvConfig?.auto_enqueue_fiscal ?? false),
+      idioma_padrao: String(fd.get('idioma_padrao') ?? dados.pdvConfig?.idioma_padrao ?? 'pt') as 'pt' | 'zh',
+      tema_padrao: String(fd.get('tema_padrao') ?? dados.pdvConfig?.tema_padrao ?? 'noturno') as 'noturno' | 'novem',
+      imprimir_cupom_auto: fd.get('imprimir_cupom_auto')
+        ? fd.get('imprimir_cupom_auto') === 'on'
+        : (dados.pdvConfig?.imprimir_cupom_auto ?? false),
+      formato_impressao: String(
+        fd.get('formato_impressao') ?? dados.pdvConfig?.formato_impressao ?? 'TERMICA',
+      ) as 'TERMICA' | 'A4',
     }
     const res = await atualizarConfiguracoesPdvAction(payload)
     if (!res.ok) {
@@ -105,51 +108,32 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
     }
   }
 
-  const handleClienteSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setClienteErro(null)
-    setClienteSucesso(false)
-    const fd = new FormData(e.currentTarget)
-    const res = await criarCliente({
-      nome: String(fd.get('cliente_nome') ?? ''),
-      documento: fd.get('cliente_documento') ? String(fd.get('cliente_documento')) : undefined,
-      telefone: fd.get('cliente_telefone') ? String(fd.get('cliente_telefone')) : undefined,
-    })
-    if (!res.success) {
-      setClienteErro(res.error)
-    } else {
-      setClienteSucesso(true)
-      router.refresh()
-      setTimeout(() => setClienteSucesso(false), 3000)
-      ;(e.currentTarget as HTMLFormElement).reset()
-    }
-  }
-
   return (
     <div className="admin-v2-page">
-      <PageHeader title="Configurações" subtitle="Loja, PDV e cadastros rápidos" />
+      <PageHeader title="Configurações" subtitle="Loja, impostos e preferências" />
 
-      <div className="mb-6 flex gap-6 overflow-x-auto border-b border-[#242424]">
-        {(['loja', 'pdv', 'cadastros'] as const).map((aba) => (
+      <div className="mb-6 flex flex-wrap gap-2 border-b border-[#242424] pb-3">
+        {(['loja', 'impostos', 'preferencias'] as const).map((aba) => (
           <button
             key={aba}
             type="button"
             onClick={() => setAbaAtiva(aba)}
+            data-active={abaAtiva === aba}
             className={cn(
-              'border-b-2 bg-transparent pb-3 pt-1 text-sm transition-colors',
+              'admin-v2-tab-pill text-xs font-medium',
               abaAtiva === aba
-                ? 'border-jl-accent font-medium text-jl-fg-1'
-                : 'border-transparent text-jl-fg-3 hover:text-jl-fg-2',
+                ? 'border-jl-accent text-jl-fg-1'
+                : 'text-jl-fg-3 hover:text-jl-fg-2',
             )}
           >
-            {aba === 'loja' ? 'Loja' : aba === 'pdv' ? 'PDV' : 'Cadastros'}
+            {aba === 'loja' ? 'Loja' : aba === 'impostos' ? 'Impostos e fiscal' : 'Preferências'}
           </button>
         ))}
       </div>
 
       {abaAtiva === 'loja' && (
         <SectionCard title="Dados da loja">
-          <form onSubmit={handleLojaSubmit} className="max-w-2xl space-y-4">
+          <form onSubmit={handleLojaSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Nome">
                 <input name="nome" type="text" defaultValue={dados.loja?.nome ?? ''} className={inputClass} required />
@@ -270,9 +254,9 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
         </SectionCard>
       )}
 
-      {abaAtiva === 'pdv' && (
-        <SectionCard title="Configurações do PDV">
-          <form onSubmit={handlePdvSubmit} className="max-w-2xl space-y-4">
+      {abaAtiva === 'impostos' && (
+        <SectionCard title="Impostos e fiscal">
+          <form onSubmit={handlePdvSubmit} className="space-y-4">
             {!dados.loja?.id && (
               <div className="admin-v2-alert-warning rounded-lg px-3 py-2 text-[12px]">
                 Salve os dados da loja antes de configurar o PDV.
@@ -280,6 +264,19 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
             )}
 
             <input type="hidden" name="loja_id" value={dados.loja?.id ?? ''} />
+            <input type="hidden" name="idioma_padrao" value={dados.pdvConfig?.idioma_padrao ?? 'pt'} />
+            <input type="hidden" name="tema_padrao" value={dados.pdvConfig?.tema_padrao ?? 'noturno'} />
+            <input type="hidden" name="formato_impressao" value={dados.pdvConfig?.formato_impressao ?? 'TERMICA'} />
+            <input
+              type="hidden"
+              name="auto_enqueue_fiscal"
+              value={dados.pdvConfig?.auto_enqueue_fiscal ? 'on' : 'off'}
+            />
+            <input
+              type="hidden"
+              name="imprimir_cupom_auto"
+              value={dados.pdvConfig?.imprimir_cupom_auto ? 'on' : 'off'}
+            />
 
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Regime tributário">
@@ -287,36 +284,6 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   {REGIMES.map((r) => (
                     <option key={r} value={r}>
                       {r}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-              <FormField label="Idioma padrão">
-                <select name="idioma_padrao" defaultValue={dados.pdvConfig?.idioma_padrao ?? 'pt'} className={inputClass}>
-                  {IDIOMAS.map((i) => (
-                    <option key={i} value={i}>
-                      {i === 'pt' ? 'Português' : '中文'}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <FormField label="Tema padrão">
-                <select name="tema_padrao" defaultValue={dados.pdvConfig?.tema_padrao ?? 'noturno'} className={inputClass}>
-                  {TEMAS.map((t) => (
-                    <option key={t} value={t}>
-                      {t === 'noturno' ? 'Noturno' : 'Novembro'}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-              <FormField label="Formato de impressão">
-                <select name="formato_impressao" defaultValue={dados.pdvConfig?.formato_impressao ?? 'TERMICA'} className={inputClass}>
-                  {FORMATOS.map((f) => (
-                    <option key={f} value={f}>
-                      {f === 'TERMICA' ? 'Térmica' : 'A4'}
                     </option>
                   ))}
                 </select>
@@ -347,80 +314,89 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
               </FormField>
             </div>
 
-            <div className="space-y-2">
-              <CheckboxLabel>
-                <input name="auto_enqueue_fiscal" type="checkbox" defaultChecked={dados.pdvConfig?.auto_enqueue_fiscal ?? false} />
-                Auto-enqueue documentos fiscais
-              </CheckboxLabel>
-              <CheckboxLabel>
-                <input name="imprimir_cupom_auto" type="checkbox" defaultChecked={dados.pdvConfig?.imprimir_cupom_auto ?? false} />
-                Imprimir cupom automaticamente
-              </CheckboxLabel>
-            </div>
-
             {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
             {pdvSucesso && (
-              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Configurações do PDV salvas com sucesso</div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Impostos e fiscal salvos com sucesso</div>
             )}
 
             <div className="flex gap-2">
               <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
-                Salvar configurações PDV
+                Salvar
               </button>
             </div>
           </form>
         </SectionCard>
       )}
 
-      {abaAtiva === 'cadastros' && (
-        <div className="max-w-2xl space-y-6">
-          <SectionCard title="Cadastros rápidos" subtitle="Crie clientes, categorias, marcas e fornecedores">
-            <div className="admin-v2-panel rounded-lg p-4">
-              <h3 className="text-[13px] font-semibold text-jl-fg-1">Novo cliente</h3>
-              <form onSubmit={handleClienteSubmit} className="mt-3 space-y-3">
-                <FormField label="Nome">
-                  <input name="cliente_nome" type="text" className={inputClass} required />
-                </FormField>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Documento">
-                    <input name="cliente_documento" type="text" className={inputClass} />
-                  </FormField>
-                  <FormField label="Telefone">
-                    <input name="cliente_telefone" type="tel" className={inputClass} />
-                  </FormField>
-                </div>
+      {abaAtiva === 'preferencias' && (
+        <SectionCard title="Preferências">
+          <form onSubmit={handlePdvSubmit} className="space-y-4">
+            <input type="hidden" name="loja_id" value={dados.loja?.id ?? ''} />
+            <input type="hidden" name="regime_tributario" value={dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL'} />
+            <input type="hidden" name="cfop_padrao" value={dados.pdvConfig?.cfop_padrao ?? '5102'} />
+            <input type="hidden" name="cst_padrao" value={dados.pdvConfig?.cst_padrao ?? '00'} />
+            <input
+              type="hidden"
+              name="auto_enqueue_fiscal"
+              value={dados.pdvConfig?.auto_enqueue_fiscal ? 'on' : 'off'}
+            />
+            <input
+              type="hidden"
+              name="imprimir_cupom_auto"
+              value={dados.pdvConfig?.imprimir_cupom_auto ? 'on' : 'off'}
+            />
 
-                {clienteErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{clienteErro}</div>}
-                {clienteSucesso && (
-                  <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Cliente criado com sucesso</div>
-                )}
-
-                <button type="submit" className="admin-v2-btn-primary">
-                  <Plus size={14} aria-hidden />
-                  Criar cliente
-                </button>
-              </form>
+            <div className="grid grid-cols-3 gap-3">
+              <FormField label="Idioma padrão">
+                <select name="idioma_padrao" defaultValue={dados.pdvConfig?.idioma_padrao ?? 'pt'} className={inputClass}>
+                  {IDIOMAS.map((i) => (
+                    <option key={i} value={i}>
+                      {i === 'pt' ? 'Português' : '中文'}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Tema padrão">
+                <select name="tema_padrao" defaultValue={dados.pdvConfig?.tema_padrao ?? 'noturno'} className={inputClass}>
+                  {TEMAS.map((t) => (
+                    <option key={t} value={t}>
+                      {t === 'noturno' ? 'Noturno' : 'Novembro'}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Formato de impressão">
+                <select name="formato_impressao" defaultValue={dados.pdvConfig?.formato_impressao ?? 'TERMICA'} className={inputClass}>
+                  {FORMATOS.map((f) => (
+                    <option key={f} value={f}>
+                      {f === 'TERMICA' ? 'Térmica' : 'A4'}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
             </div>
-          </SectionCard>
 
-          <SectionCard title="Outras entidades">
-            <p className="mb-3 text-[12px] text-jl-fg-3">Abrir em /gerente</p>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
-                <Plus size={14} aria-hidden />
-                Categoria
-              </Link>
-              <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
-                <Plus size={14} aria-hidden />
-                Marca
-              </Link>
-              <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
-                <Plus size={14} aria-hidden />
-                Fornecedor
-              </Link>
+            <div className="space-y-2">
+              <CheckboxLabel>
+                <input type="checkbox" disabled />
+                Ativar lembrete de fechamento diário (placeholder)
+              </CheckboxLabel>
+              <CheckboxLabel>
+                <input type="checkbox" disabled />
+                Enviar resumo automático por e-mail (placeholder)
+              </CheckboxLabel>
             </div>
-          </SectionCard>
-        </div>
+
+            {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
+            {pdvSucesso && (
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Preferências salvas com sucesso</div>
+            )}
+
+            <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
+              Salvar
+            </button>
+          </form>
+        </SectionCard>
       )}
     </div>
   )
@@ -437,7 +413,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 
 function CheckboxLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-xs text-jl-fg-2 [&_input]:accent-jl-accent">
+    <label className="flex items-center gap-2 text-xs text-jl-fg-2 [&_input]:accent-jl-accent">
       {children}
     </label>
   )

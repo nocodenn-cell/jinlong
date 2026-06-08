@@ -11,7 +11,7 @@ type ChartCardProps = {
 export function ChartCard({ title, subtitle, children, className }: ChartCardProps) {
   return (
     <SectionCard title={title} subtitle={subtitle} className={className}>
-      <div className="h-[350px] w-full">{children}</div>
+      <div className="admin-v2-chart-area h-full w-full">{children}</div>
     </SectionCard>
   )
 }

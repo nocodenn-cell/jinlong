@@ -1,18 +1,17 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Banknote,
   ArrowRightLeft,
   Building2,
-  Coins,
+  FileBarChart2,
   Inbox,
   LayoutDashboard,
-  LayoutGrid,
-  LineChart,
+  Layers3,
   Monitor,
   Package,
   Percent,
   Settings,
   ShieldOff,
-  ShoppingBag,
   ShoppingCart,
 } from 'lucide-react'
 import type { PainelGerencialNavKey } from './painelGerencialNav'
@@ -22,6 +21,7 @@ export type AdminV2NavItem =
       type: 'route'
       key: PainelGerencialNavKey
       icon: LucideIcon
+      labelOverridePt?: string
     }
   | {
       type: 'link'
@@ -33,48 +33,33 @@ export type AdminV2NavItem =
       hint: string
     }
 
-export type AdminV2NavGroup = {
-  id: 'gestao' | 'sistema'
-  labelPt: string
-  labelCn: string
-  items: AdminV2NavItem[]
-}
+export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
+  { type: 'route', key: 'dashboard', icon: LayoutDashboard, labelOverridePt: 'Visão geral' },
+  { type: 'route', key: 'vendas', icon: ShoppingCart, labelOverridePt: 'Vendas e caixa' },
+  { type: 'route', key: 'estoque', icon: Package, labelOverridePt: 'Estoque e catálogo' },
+  { type: 'route', key: 'financeiro', icon: Banknote, labelOverridePt: 'Financeiro' },
+] as const
 
-export const ADMIN_V2_SIDEBAR_GROUPS: readonly AdminV2NavGroup[] = [
+export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
+  { type: 'route', key: 'relatorios', icon: FileBarChart2, labelOverridePt: 'Relatórios' },
+  { type: 'route', key: 'home', icon: Layers3, labelOverridePt: 'Painel gerencial' },
+  { type: 'route', key: 'produtos', icon: Package, labelOverridePt: 'Produtos' },
+  { type: 'route', key: 'recebimento', icon: Inbox, labelOverridePt: 'Recebimento' },
+  { type: 'route', key: 'transferencias', icon: ArrowRightLeft, labelOverridePt: 'Transferências' },
+  { type: 'route', key: 'caixas', icon: Building2, labelOverridePt: 'Caixas' },
+  { type: 'route', key: 'comissoes', icon: Percent, labelOverridePt: 'Comissões' },
+] as const
+
+export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
+  { type: 'route', key: 'configuracoes', icon: Settings, labelOverridePt: 'Configurações' },
+  { type: 'route', key: 'suspensao', icon: ShieldOff, labelOverridePt: 'Suspensão de licença' },
   {
-    id: 'gestao',
-    labelPt: 'Gestão',
-    labelCn: '管理',
-    items: [
-      { type: 'route', key: 'dashboard', icon: LayoutDashboard },
-      { type: 'route', key: 'vendas', icon: ShoppingCart },
-      { type: 'route', key: 'financeiro', icon: Coins },
-      { type: 'route', key: 'relatorios', icon: LineChart },
-      { type: 'route', key: 'estoque', icon: Package },
-      { type: 'route', key: 'home', icon: LayoutGrid },
-      { type: 'route', key: 'produtos', icon: ShoppingBag },
-      { type: 'route', key: 'recebimento', icon: Inbox },
-      { type: 'route', key: 'transferencias', icon: ArrowRightLeft },
-      { type: 'route', key: 'caixas', icon: Building2 },
-      { type: 'route', key: 'comissoes', icon: Percent },
-    ],
-  },
-  {
-    id: 'sistema',
-    labelPt: 'Sistema',
-    labelCn: '系统',
-    items: [
-      { type: 'route', key: 'configuracoes', icon: Settings },
-      { type: 'route', key: 'suspensao', icon: ShieldOff },
-      {
-        type: 'link',
-        id: 'pdv',
-        href: '/caixa',
-        icon: Monitor,
-        labelPt: 'Ir para PDV',
-        labelCn: '前往收银',
-        hint: 'Abrir o terminal de caixa.',
-      },
-    ],
+    type: 'link',
+    id: 'pdv',
+    href: '/caixa',
+    icon: Monitor,
+    labelPt: 'Ir para PDV',
+    labelCn: '前往收银',
+    hint: 'Abrir o terminal de caixa.',
   },
 ] as const

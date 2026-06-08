@@ -49,7 +49,12 @@ export function MetricCard({
     : false
 
   return (
-    <div className={cn('admin-v2-metric-card flex min-h-[148px] flex-col gap-4 rounded-lg p-5', className)}>
+    <div
+      className={cn(
+        'admin-v2-metric-card grid min-h-32 h-full grid-rows-[auto,1fr,auto] gap-3 rounded-lg p-4',
+        className,
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {Icon ? (
@@ -74,15 +79,22 @@ export function MetricCard({
       </div>
 
       <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-3xl font-semibold leading-none tabular-nums text-jl-fg-1 md:text-4xl">
             {value}
           </div>
-          {hint ? <p className="mt-2 text-[11px] text-jl-fg-3">{hint}</p> : null}
         </div>
-        {sparkData.length >= 2 ? (
-          <canvas ref={canvasRef} className="h-[44px] w-[100px] shrink-0" aria-hidden />
-        ) : null}
+        <div className="flex h-[44px] w-[100px] shrink-0 items-center justify-center">
+          {sparkData.length >= 2 ? (
+            <canvas ref={canvasRef} className="h-[44px] w-[100px] shrink-0" aria-hidden />
+          ) : (
+            <div className="h-[44px] w-[100px]" aria-hidden />
+          )}
+        </div>
+      </div>
+
+      <div className="min-h-6">
+        {hint ? <p className="text-[11px] text-jl-fg-3">{hint}</p> : null}
       </div>
     </div>
   )

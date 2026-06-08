@@ -1,26 +1,11 @@
 /**
- * FastProduct Admin — ActivityFeed (Fase 2)
+ * FastProduct Admin — ActivityFeed (Admin V2)
  *
- * Lista vertical de eventos operacionais recentes (vendas, cancelamentos,
- * abertura/fechamento de caixa, aprovações de desconto). Cada item tem um
- * ponto colorido por tipo + descrição + tempo relativo já formatado.
- *
- * Componente puro: recebe `items` por prop, não faz query. server-safe.
- *
- * Nota: o tipo `discount` (âmbar) representa "gerente aprovou desconto acima
- * do limite" — fluxo ainda inexistente no sistema, mas a tipagem já está
- * pronta para quando ele chegar.
+ * Lista vertical de eventos operacionais recentes com marcador por severidade.
+ * O layout suporta modo padrão (card) e `embedded` para uso dentro de
+ * SectionCard sem borda duplicada.
  */
 
-import {
-  ArrowDownLeft,
-  BadgePercent,
-  DoorClosed,
-  DoorOpen,
-  ShoppingCart,
-  XCircle,
-  type LucideIcon,
-} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SeverityDot, type Severity } from './badges'
 
@@ -33,15 +18,12 @@ export type ActivityItem = {
   relativeTime: string
 }
 
-const TYPE_CONFIG: Record<
-  ActivityItem['type'],
-  { severity: Severity; icon: LucideIcon }
-> = {
-  sale: { severity: 'ok', icon: ShoppingCart },
-  cancel: { severity: 'critical', icon: XCircle },
-  cashopen: { severity: 'info', icon: DoorOpen },
-  cashclose: { severity: 'neutral', icon: DoorClosed },
-  discount: { severity: 'warning', icon: BadgePercent },
+const TYPE_CONFIG: Record<ActivityItem['type'], { severity: Severity }> = {
+  sale: { severity: 'ok' },
+  cancel: { severity: 'critical' },
+  cashopen: { severity: 'info' },
+  cashclose: { severity: 'neutral' },
+  discount: { severity: 'warning' },
 }
 
 const brl = new Intl.NumberFormat('pt-BR', {
@@ -56,24 +38,33 @@ function formatAmount(value: number): string {
 export function ActivityFeed({
   items,
   emptyLabel = 'Sem atividade recente',
+  variant = 'default',
   className,
 }: {
   items: ActivityItem[]
   emptyLabel?: string
+  variant?: 'default' | 'embedded'
   className?: string
 }) {
+  const embedded = variant === 'embedded'
+
   if (items.length === 0) {
     return (
       <div
         className={cn(
           'flex items-center justify-center rounded-[10px] px-4 py-10 text-center text-[12px]',
+          embedded && 'admin-v2-activity-feed--embedded',
           className
         )}
-        style={{
-          background: 'var(--fp-bg-card)',
-          border: '1px solid var(--fp-border)',
-          color: 'var(--fp-text-muted)',
-        }}
+        style={
+          embedded
+            ? { color: 'var(--fp-text-muted)' }
+            : {
+                background: 'var(--fp-bg-card)',
+                border: '1px solid var(--fp-border)',
+                color: 'var(--fp-text-muted)',
+              }
+        }
       >
         {emptyLabel}
       </div>
@@ -82,16 +73,22 @@ export function ActivityFeed({
 
   return (
     <ul
-      className={cn('flex flex-col rounded-[10px] overflow-hidden', className)}
-      style={{
-        background: 'var(--fp-bg-card)',
-        border: '1px solid var(--fp-border)',
-      }}
+      className={cn(
+        'flex flex-col overflow-hidden rounded-[10px]',
+        embedded && 'admin-v2-activity-feed--embedded',
+        className
+      )}
+      style={
+        embedded
+          ? undefined
+          : {
+              background: 'var(--fp-bg-card)',
+              border: '1px solid var(--fp-border)',
+            }
+      }
     >
       {items.map((item, i) => {
         const cfg = TYPE_CONFIG[item.type]
-        const Icon = cfg.icon
-        const isCredit = item.type === 'sale'
         return (
           <li
             key={item.id}
@@ -100,14 +97,8 @@ export function ActivityFeed({
               i > 0 ? { borderTop: '1px solid var(--fp-border-subtle)' } : undefined
             }
           >
-            <span className="flex shrink-0 items-center gap-2">
+            <span className="flex shrink-0 items-center">
               <SeverityDot severity={cfg.severity} />
-              <Icon
-                size={14}
-                strokeWidth={2}
-                aria-hidden
-                style={{ color: 'var(--fp-text-muted)' }}
-              />
             </span>
 
             <span
@@ -120,12 +111,11 @@ export function ActivityFeed({
 
             {typeof item.amount === 'number' ? (
               <span
-                className="shrink-0 inline-flex items-center gap-0.5 text-[12px] font-medium tabular-nums"
+                className="shrink-0 inline-flex items-center text-[12px] font-medium tabular-nums"
                 style={{
-                  color: isCredit ? 'var(--fp-success)' : 'var(--fp-text-secondary)',
+                  color: item.type === 'sale' ? 'var(--fp-success)' : 'var(--fp-text-secondary)',
                 }}
               >
-                {isCredit ? <ArrowDownLeft size={11} strokeWidth={2.5} aria-hidden /> : null}
                 {formatAmount(item.amount)}
               </span>
             ) : null}
