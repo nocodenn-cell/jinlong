@@ -107,6 +107,7 @@ pub struct ProdutoCacheDto {
     pub preco_varejo: f64,
     pub categoria_id: Option<String>,
     pub ativo: bool,
+    pub status_publicacao: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imagem_url: Option<String>,
 }
@@ -281,6 +282,14 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
     let _ = conn.execute("ALTER TABLE outbox ADD COLUMN next_retry_at TEXT", []);
     let _ = conn.execute(
         "ALTER TABLE produtos_cache ADD COLUMN imagem_url TEXT",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE produtos_cache ADD COLUMN status_publicacao TEXT",
+        [],
+    );
+    let _ = conn.execute(
+        "UPDATE produtos_cache SET status_publicacao = CASE WHEN ativo = 1 THEN 'PUBLICADO' ELSE 'INATIVO' END WHERE status_publicacao IS NULL",
         [],
     );
 
@@ -656,7 +665,7 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
 
     let mut produtos_stmt = conn
         .prepare(
-            "SELECT id, nome, codigo_barras, preco_varejo, categoria_id, ativo, imagem_url
+            "SELECT id, nome, codigo_barras, preco_varejo, categoria_id, ativo, status_publicacao, imagem_url
              FROM produtos_cache",
         )
         .map_err(|e| e.to_string())?;
@@ -669,7 +678,8 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
             preco_varejo: row.get(3)?,
             categoria_id: row.get(4)?,
             ativo: row.get::<_, i64>(5)? != 0,
-            imagem_url: row.get::<_, Option<String>>(6)?,
+            status_publicacao: row.get(6)?,
+            imagem_url: row.get(7)?,
         })
     });
 
@@ -724,6 +734,8 @@ struct ProdutoSupabaseRow {
     preco_varejo: f64,
     categoria_id: Option<String>,
     ativo: bool,
+    #[serde(default)]
+    status_publicacao: Option<String>,
     origem: String,
     tem_nf: bool,
     #[serde(default)]
@@ -898,8 +910,8 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
     for p in produtos_rows {
         tx.execute(
             "INSERT OR REPLACE INTO produtos_cache
-             (id, nome, codigo_barras, preco_varejo, categoria_id, ativo, origem, tem_nf, imagem_url)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+             (id, nome, codigo_barras, preco_varejo, categoria_id, ativo, status_publicacao, origem, tem_nf, imagem_url)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 p.id,
                 p.nome,
@@ -907,6 +919,7 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
                 p.preco_varejo,
                 p.categoria_id,
                 if p.ativo { 1 } else { 0 },
+                p.status_publicacao,
                 p.origem,
                 if p.tem_nf { 1 } else { 0 },
                 p.imagem_url

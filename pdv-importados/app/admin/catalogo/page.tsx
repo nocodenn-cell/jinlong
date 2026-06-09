@@ -17,6 +17,7 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { APP_ROUTES } from '@/lib/navigation/appRoutes'
 import { Download, Plus, Upload } from 'lucide-react'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
@@ -131,6 +132,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         quantidade_atual: r.quantidade_atual,
         origem: r.origem,
         ativo: r.ativo,
+        status_publicacao: r.status_publicacao,
       }))
     : []
 
@@ -247,15 +249,15 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
 
   const headerActions = (
     <>
-      <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
+      <Link href={APP_ROUTES.admin.estoqueImportarNfe} className="admin-v2-btn-secondary">
         <Upload size={14} aria-hidden />
         Importar NF-e XML
       </Link>
-      <Link href="/gerente/produtos" className="admin-v2-btn-secondary">
+      <Link href={APP_ROUTES.admin.catalogo} className="admin-v2-btn-secondary">
         <Download size={14} aria-hidden />
         Exportar CSV
       </Link>
-      <Link href="/gerente/produtos" className="admin-v2-btn-primary">
+      <Link href={APP_ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary">
         <Plus size={14} aria-hidden />
         Cadastro rápido
       </Link>

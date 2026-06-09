@@ -4,7 +4,14 @@
  */
 
 import { variantesChaveLeitura } from '@core/caixa/variantesChaveLeitura'
+import {
+  filterProdutosVendaveis,
+  isProdutoVendavel,
+  type StatusPublicacao,
+} from '@core/catalog/isProdutoVendavel'
+
 export { variantesChaveLeitura }
+export { isProdutoVendavel, filterProdutosVendaveis }
 
 export type ProdutoCacheLite = {
   id: string
@@ -13,6 +20,7 @@ export type ProdutoCacheLite = {
   preco_varejo: number
   categoria_id: string | null | undefined
   ativo: boolean
+  status_publicacao?: StatusPublicacao | string | null
   /** URL pública da foto (sync); opcional. */
   imagem_url?: string | null
 }
@@ -31,7 +39,7 @@ export function buildMapaProdutoChaves(
   }
 
   for (const p of produtos) {
-    if (!p.ativo) continue
+    if (!isProdutoVendavel(p)) continue
     put(p.id, p)
     put(p.id.toLowerCase(), p)
     const cb = p.codigo_barras != null ? String(p.codigo_barras).trim() : ''
@@ -47,7 +55,7 @@ export function buildMapaProdutoChaves(
 export function produtosCatalogoAtivos(
   produtos: ProdutoCacheLite[]
 ): ProdutoCacheLite[] {
-  return produtos.filter((p) => p.ativo)
+  return filterProdutosVendaveis(produtos)
 }
 
 /** Resolve produto por variantes de código, UUID ou nome. */
@@ -67,21 +75,22 @@ export function resolverProdutoNoCatalogo(
   if (UUID_RE.test(trimmed)) {
     const idLower = trimmed.toLowerCase()
     const porId = catalogo.find((p) => p.id.toLowerCase() === idLower)
-    if (porId) return porId
+    if (porId && isProdutoVendavel(porId)) return porId
   }
 
+  const vendaveis = filterProdutosVendaveis(catalogo)
   const norm = trimmed.toLowerCase()
-  const porNomeExato = catalogo.find((p) => p.nome.toLowerCase() === norm)
+  const porNomeExato = vendaveis.find((p) => p.nome.toLowerCase() === norm)
   if (porNomeExato) return porNomeExato
 
-  const porIncludes = catalogo.find((p) =>
+  const porIncludes = vendaveis.find((p) =>
     p.nome.toLowerCase().includes(norm)
   )
   if (porIncludes) return porIncludes
 
   const tokens = norm.split(/\s+/).filter(Boolean)
   if (tokens.length >= 2) {
-    const multi = catalogo.find((p) => {
+    const multi = vendaveis.find((p) => {
       const n = p.nome.toLowerCase()
       return tokens.every((t) => n.includes(t))
     })

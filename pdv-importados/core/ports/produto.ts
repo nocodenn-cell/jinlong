@@ -2,6 +2,8 @@
  * Porta de persistência de produtos — implementação em lib/adapters/supabase.
  * O domínio não conhece Supabase.
  */
+export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
+
 export type OrigemProduto = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
 
 export type UnidadeMedida = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
@@ -26,8 +28,12 @@ export interface NovoProdutoInput {
   categoria_id?: string | null
   marca_id?: string | null
   fornecedor_id?: string | null
-  /** Se omitido, o repositório assume `true` (cadastro rápido). Importação CSV pode enviar `false`. */
+  /**
+   * Legado CSV: `true` → PUBLICADO. Omitido → DRAFT (R1).
+   * Preferir `status_publicacao` quando explícito.
+   */
   ativo?: boolean
+  status_publicacao?: StatusPublicacao
   /** NCM 8 dígitos — obrigatório pelo SEFAZ para NF-e/NFC-e (opcional no cadastro rápido). */
   ncm?: string | null
 }
@@ -39,5 +45,9 @@ export interface ProdutoRepositoryPort {
   updateAtivo(
     produtoId: string,
     ativo: boolean
+  ): Promise<{ ok: true } | { ok: false; message: string }>
+  updateStatusPublicacao(
+    produtoId: string,
+    status: StatusPublicacao
   ): Promise<{ ok: true } | { ok: false; message: string }>
 }

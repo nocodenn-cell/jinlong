@@ -2,7 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   NovoProdutoInput,
   ProdutoRepositoryPort,
+  StatusPublicacao,
 } from '@/core/ports/produto'
+import {
+  defaultStatusNovoProduto,
+  dualWriteFromStatus,
+  statusFromAtivoLegacy,
+} from '@/core/catalog/statusPublicacao'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
@@ -34,7 +40,7 @@ export function createProdutoRepository(
           ? Number(input.preco_custo)
           : null
 
-      const ativo = input.ativo !== false
+      const lifecycle = defaultStatusNovoProduto(input)
 
       const { data, error } = await supabase
         .from('produtos')
@@ -54,7 +60,8 @@ export function createProdutoRepository(
           marca_id: input.marca_id ?? null,
           fornecedor_id: input.fornecedor_id ?? null,
           ncm: input.ncm ?? null,
-          ativo,
+          ativo: lifecycle.ativo,
+          status_publicacao: lifecycle.status_publicacao,
           loja_id: lojaId,
         })
         .select('id')
@@ -90,9 +97,18 @@ export function createProdutoRepository(
     },
 
     async updateAtivo(produtoId, ativo) {
+      const status = statusFromAtivoLegacy(ativo)
+      return this.updateStatusPublicacao(produtoId, status)
+    },
+
+    async updateStatusPublicacao(produtoId, status: StatusPublicacao) {
+      const row = dualWriteFromStatus(status)
       const { error } = await supabase
         .from('produtos')
-        .update({ ativo })
+        .update({
+          status_publicacao: row.status_publicacao,
+          ativo: row.ativo,
+        })
         .eq('id', produtoId)
 
       if (error) return { ok: false, message: mensagemErroComSecao('Produto', error.message) }

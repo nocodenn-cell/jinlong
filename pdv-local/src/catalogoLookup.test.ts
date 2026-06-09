@@ -13,6 +13,7 @@ const produto: ProdutoCacheLite = {
   preco_varejo: 19.9,
   categoria_id: null,
   ativo: true,
+  status_publicacao: 'PUBLICADO',
 }
 
 describe('variantesChaveLeitura', () => {
@@ -77,5 +78,17 @@ describe('resolverProdutoNoCatalogo', () => {
     expect(
       resolverProdutoNoCatalogo('café 500', mapa, [produto])?.id
     ).toBe(produto.id)
+  })
+
+  it('ignora produto DRAFT mesmo com ativo=true (drift)', () => {
+    const draft: ProdutoCacheLite = {
+      ...produto,
+      id: 'draft-id',
+      ativo: true,
+      status_publicacao: 'DRAFT',
+    }
+    const mapa = buildMapaProdutoChaves([draft])
+    expect(mapa[produto.codigo_barras!]).toBeUndefined()
+    expect(resolverProdutoNoCatalogo('78901234567', mapa, [draft])).toBeUndefined()
   })
 })

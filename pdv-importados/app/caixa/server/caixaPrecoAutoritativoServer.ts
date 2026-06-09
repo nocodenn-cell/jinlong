@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import {
+  PRODUTO_VENDAVEL_FILTRO_ATIVO,
+  PRODUTO_VENDAVEL_FILTRO_STATUS,
+} from '@/lib/catalog/aplicarFiltroProdutoVendavel'
+import { isProdutoVendavel } from '@/lib/catalog/isProdutoVendavel'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -92,12 +97,22 @@ export async function recalcularItensNoServidor(
   const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
   const { data: produtosRows, error: prodErr } = await supabase
     .from('produtos')
-    .select('id, preco_varejo, ativo')
+    .select('id, preco_varejo, ativo, status_publicacao')
     .in('id', produtosIds)
-    .eq('ativo', true)
+    .eq('ativo', PRODUTO_VENDAVEL_FILTRO_ATIVO)
+    .eq('status_publicacao', PRODUTO_VENDAVEL_FILTRO_STATUS)
 
   if (prodErr) return { ok: false, error: mensagemErroComSecao('Produtos', prodErr.message) }
-  const produtos = new Map((produtosRows ?? []).map((p) => [p.id as string, p]))
+  const produtos = new Map(
+    (produtosRows ?? [])
+      .filter((p) =>
+        isProdutoVendavel({
+          ativo: p.ativo as boolean,
+          status_publicacao: p.status_publicacao as string | null,
+        }),
+      )
+      .map((p) => [p.id as string, p]),
+  )
   if (produtos.size !== produtosIds.length) {
     return { ok: false, error: 'Há itens inválidos/inativos no carrinho. Atualize e tente novamente.' }
   }

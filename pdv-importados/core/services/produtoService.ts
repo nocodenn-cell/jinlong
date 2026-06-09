@@ -1,4 +1,8 @@
-import type { NovoProdutoInput, ProdutoRepositoryPort } from '@/core/ports/produto'
+import type {
+  NovoProdutoInput,
+  ProdutoRepositoryPort,
+  StatusPublicacao,
+} from '@/core/ports/produto'
 
 export type CriarProdutoResult =
   | { success: true; data: { id: string } }
@@ -32,3 +36,23 @@ export async function alternarAtivoProduto(
   if (!result.ok) return { success: false, error: result.message }
   return { success: true }
 }
+
+export async function publicarProdutoCatalogo(
+  produtoId: string,
+  repo: ProdutoRepositoryPort
+): Promise<AlternarAtivoResult> {
+  const result = await repo.updateStatusPublicacao(produtoId, 'PUBLICADO')
+  if (!result.ok) return { success: false, error: result.message }
+  return { success: true }
+}
+
+export async function inativarProdutoCatalogo(
+  produtoId: string,
+  repo: ProdutoRepositoryPort
+): Promise<AlternarAtivoResult> {
+  const result = await repo.updateStatusPublicacao(produtoId, 'INATIVO')
+  if (!result.ok) return { success: false, error: result.message }
+  return { success: true }
+}
+
+export type { StatusPublicacao }

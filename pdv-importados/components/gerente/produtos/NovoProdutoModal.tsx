@@ -91,13 +91,13 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      emitGerenteToast({ kind: 'success', message: p.criado_rascunho })
       onCriado()
       fechar()
     } finally {
       setSaving(false)
     }
-  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, p, m.comum.sucesso, onCriado, fechar])
+  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, p, onCriado, fechar])
 
   if (!open) return null
 

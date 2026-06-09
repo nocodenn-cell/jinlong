@@ -12,8 +12,15 @@ import { createProdutoRepository } from '@/lib/adapters/supabase/produtoReposito
 import {
   criarProdutoComEstoque,
   alternarAtivoProduto as alternarAtivoNoDominio,
+  publicarProdutoCatalogo,
+  inativarProdutoCatalogo,
 } from '@/core/services/produtoService'
-import type { NovoProdutoInput } from '@/core/ports/produto'
+import {
+  dualWriteFromStatus,
+  resolveStatusPublicacaoLeitura,
+  statusFromAtivoLegacy,
+} from '@/core/catalog/statusPublicacao'
+import type { NovoProdutoInput, StatusPublicacao } from '@/core/ports/produto'
 import { PRODUTO_IMPORT_MAX_FILE_BYTES } from '@/lib/gerente/produtosCsvContract'
 import { validateProdutoImportCsvDocument } from '@/lib/gerente/parseProdutoImportCsv'
 import {
@@ -64,8 +71,9 @@ const NovoProdutoSchema = z.object({
   categoria_id: z.string().uuid().nullable().optional().transform((v) => v || null),
   marca_id: z.string().uuid().nullable().optional().transform((v) => v || null),
   fornecedor_id: z.string().uuid().nullable().optional().transform((v) => v || null),
-  /** Cadastro rápido não envia o campo; importação pode enviar explicitamente. */
-  ativo: z.boolean().optional().transform((v) => v ?? true),
+  /** CSV legado pode enviar `true` → PUBLICADO; omitido → DRAFT (R1). */
+  ativo: z.boolean().optional(),
+  status_publicacao: z.enum(['DRAFT', 'PUBLICADO', 'INATIVO']).optional(),
   ncm: z
     .string()
     .optional()
@@ -77,6 +85,12 @@ const NovoProdutoSchema = z.object({
 type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string }
+
+function revalidateCatalogoPaths() {
+  revalidatePath('/gerente/produtos')
+  revalidatePath('/gerente/estoque')
+  revalidatePath('/admin/catalogo')
+}
 
 export async function criarProduto(
   input: unknown,
@@ -96,8 +110,7 @@ export async function criarProduto(
   const result = await criarProdutoComEstoque(parsed.data, repo)
 
   if (result.success) {
-    revalidatePath('/gerente/produtos')
-    revalidatePath('/gerente/estoque')
+    revalidateCatalogoPaths()
   }
   return result
 }
@@ -232,6 +245,9 @@ export async function importarProdutosCsv(
         })
         continue
       }
+      const csvLifecycle = row.ativo
+        ? dualWriteFromStatus('PUBLICADO')
+        : dualWriteFromStatus('INATIVO')
       const { error: upErr } = await supabase
         .from('produtos')
         .update({
@@ -244,7 +260,8 @@ export async function importarProdutosCsv(
           observacao: row.observacao ?? null,
           origem: row.origem,
           tem_nf: row.tem_nf,
-          ativo: row.ativo,
+          ativo: csvLifecycle.ativo,
+          status_publicacao: csvLifecycle.status_publicacao,
         })
         .eq('id', row.id)
 
@@ -280,7 +297,7 @@ export async function importarProdutosCsv(
   }
 
   if (criados > 0 || atualizados > 0) {
-    revalidatePath('/gerente/produtos')
+    revalidateCatalogoPaths()
   }
 
   return { success: true, criados, atualizados, falhas }
@@ -430,8 +447,93 @@ export async function alternarAtivoProduto(
   if (!result.success) {
     return { success: false, error: result.error }
   }
-  revalidatePath('/gerente/produtos')
+  revalidateCatalogoPaths()
   return { success: true, data: null }
+}
+
+const ProdutoIdSchema = z.string().uuid('ID do produto inválido.')
+
+export async function publicarProduto(produtoId: string): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = ProdutoIdSchema.safeParse(produtoId)
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return {
+      success: false,
+      error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'ID inválido.', idioma),
+    }
+  }
+
+  const supabase = await createClient()
+  const repo = createProdutoRepository(supabase)
+  const result = await publicarProdutoCatalogo(parsed.data, repo)
+  if (!result.success) return { success: false, error: result.error }
+
+  revalidateCatalogoPaths()
+  return { success: true, data: null }
+}
+
+export async function inativarProduto(produtoId: string): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = ProdutoIdSchema.safeParse(produtoId)
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return {
+      success: false,
+      error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'ID inválido.', idioma),
+    }
+  }
+
+  const supabase = await createClient()
+  const repo = createProdutoRepository(supabase)
+  const result = await inativarProdutoCatalogo(parsed.data, repo)
+  if (!result.success) return { success: false, error: result.error }
+
+  revalidateCatalogoPaths()
+  return { success: true, data: null }
+}
+
+const LotePublicacaoSchema = z.object({
+  produto_ids: z.array(z.string().uuid()).min(1).max(200),
+})
+
+export async function publicarProdutosLote(
+  rawIds: string[],
+): Promise<ActionResult<{ publicados: number }>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = LotePublicacaoSchema.safeParse({ produto_ids: rawIds })
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return {
+      success: false,
+      error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'Erro', idioma),
+    }
+  }
+
+  const supabase = await createClient()
+  const lojaId = await lojaIdParaListagemProdutos()
+  const lifecycle = dualWriteFromStatus('PUBLICADO')
+  const { error, count } = await supabase
+    .from('produtos')
+    .update({
+      status_publicacao: lifecycle.status_publicacao,
+      ativo: lifecycle.ativo,
+    })
+    .in('id', parsed.data.produto_ids)
+    .eq('loja_id', lojaId)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Publicar produtos', error.message) }
+  }
+
+  revalidateCatalogoPaths()
+  return { success: true, data: { publicados: count ?? parsed.data.produto_ids.length } }
 }
 
 const LoteExclusaoSchema = z.object({
@@ -835,27 +937,63 @@ export async function buscarProdutosComFiltros(
   const [estoqueRes, extraRes] = productIds.length > 0
     ? await Promise.all([
         supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
-        supabase.from('produtos').select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo').in('id', productIds),
+        supabase
+          .from('produtos')
+          .select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo, status_publicacao')
+          .in('id', productIds),
       ])
-    : [{ data: [] as { produto_id: string; quantidade_atual: number }[] }, { data: [] as { id: string; codigo_interno: string | null; localizacao_prateleira?: string | null; preco_custo?: number | null; permitir_abaixo_custo?: boolean }[] }]
+    : [
+        { data: [] as { produto_id: string; quantidade_atual: number }[] },
+        {
+          data: [] as {
+            id: string
+            codigo_interno: string | null
+            localizacao_prateleira?: string | null
+            preco_custo?: number | null
+            permitir_abaixo_custo?: boolean
+            status_publicacao?: StatusPublicacao | null
+          }[],
+        },
+      ]
 
   const estoqueMap = new Map<string, number>()
   for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
     estoqueMap.set(e.produto_id, e.quantidade_atual)
   }
 
-  const extraMap = new Map<string, { codigo_interno: string | null; localizacao_prateleira: string | null; preco_custo: number | null; permitir_abaixo_custo: boolean }>()
-  for (const p of ((extraRes.data ?? []) as { id: string; codigo_interno?: string | null; localizacao_prateleira?: string | null; preco_custo?: number | null; permitir_abaixo_custo?: boolean }[])) {
+  const extraMap = new Map<
+    string,
+    {
+      codigo_interno: string | null
+      localizacao_prateleira: string | null
+      preco_custo: number | null
+      permitir_abaixo_custo: boolean
+      status_publicacao: StatusPublicacao | null
+    }
+  >()
+  for (const p of ((extraRes.data ?? []) as {
+    id: string
+    codigo_interno?: string | null
+    localizacao_prateleira?: string | null
+    preco_custo?: number | null
+    permitir_abaixo_custo?: boolean
+    status_publicacao?: StatusPublicacao | null
+  }[])) {
     extraMap.set(p.id, {
       codigo_interno: p.codigo_interno ?? null,
       localizacao_prateleira: p.localizacao_prateleira ?? null,
       preco_custo: p.preco_custo != null ? Number(p.preco_custo) : null,
       permitir_abaixo_custo: p.permitir_abaixo_custo ?? false,
+      status_publicacao: p.status_publicacao ?? null,
     })
   }
 
   const rows: ProdutoGerenteRow[] = list.map((r) => {
     const extra = extraMap.get(r.id)
+    const statusPublicacao = resolveStatusPublicacaoLeitura(
+      extra?.status_publicacao ?? statusFromAtivoLegacy(r.ativo),
+      r.ativo,
+    )
     return {
       id: r.id,
       nome: r.nome,
@@ -871,6 +1009,7 @@ export async function buscarProdutosComFiltros(
       origem: r.origem,
       tem_nf: r.tem_nf,
       ativo: r.ativo,
+      status_publicacao: statusPublicacao,
       imagem_url: r.imagem_url ?? null,
       categoria_id: r.categoria_id ?? null,
       marca_id: r.marca_id ?? null,
@@ -912,9 +1051,13 @@ export async function alterarAtivoLoteProdutos(
 
   const supabase = await createClient()
   const lojaId = await lojaIdParaListagemProdutos()
+  const lifecycle = dualWriteFromStatus(statusFromAtivoLegacy(parsed.data.ativo))
   const { error, count } = await supabase
     .from('produtos')
-    .update({ ativo: parsed.data.ativo })
+    .update({
+      ativo: lifecycle.ativo,
+      status_publicacao: lifecycle.status_publicacao,
+    })
     .in('id', parsed.data.produto_ids)
     .eq('loja_id', lojaId)
 
@@ -922,7 +1065,7 @@ export async function alterarAtivoLoteProdutos(
     return { success: false, error: mensagemErroComSecao('Bulk ativo', error.message) }
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidateCatalogoPaths()
   return { success: true, data: { atualizados: count ?? parsed.data.produto_ids.length } }
 }
 

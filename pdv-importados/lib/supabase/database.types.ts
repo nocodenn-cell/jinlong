@@ -1684,6 +1684,7 @@ export type Database = {
           preco_varejo: number
           quantidade_gatilho_atacado: number | null
           referencia_fornecedor: string | null
+          status_publicacao: string
           tags: string[] | null
           tem_nf: boolean
           unidade_medida: string
@@ -1718,6 +1719,7 @@ export type Database = {
           preco_varejo: number
           quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
+          status_publicacao?: string
           tags?: string[] | null
           tem_nf?: boolean
           unidade_medida?: string
@@ -1752,6 +1754,7 @@ export type Database = {
           preco_varejo?: number
           quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
+          status_publicacao?: string
           tags?: string[] | null
           tem_nf?: boolean
           unidade_medida?: string

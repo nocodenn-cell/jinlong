@@ -7,6 +7,7 @@ import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { formatBRL } from '@/lib/format/money'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
+import { emitGerenteToast } from '@/lib/gerente/toast'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
@@ -57,9 +58,24 @@ export function ImportarNfePageClient({ idioma }: Props) {
   const atualizarGlobalRef = useRef(true)
   atualizarGlobalRef.current = atualizarGlobal
   const [dragOver, setDragOver] = useState(false)
+  const [draftNovos, setDraftNovos] = useState<number | null>(null)
 
   const previewOpts = useMemo(() => ({}), [])
-  const importOpts = useMemo(() => ({ successMessage: mi.import_ok }), [mi.import_ok])
+  const importOpts = useMemo(
+    () => ({
+      successMessage: mi.import_ok,
+      onSuccess: (data: { produtos_novos: number }) => {
+        setDraftNovos(data.produtos_novos > 0 ? data.produtos_novos : null)
+        if (data.produtos_novos > 0) {
+          emitGerenteToast({
+            kind: 'info',
+            message: mi.import_draft_aviso.replace('{{n}}', String(data.produtos_novos)),
+          })
+        }
+      },
+    }),
+    [mi.import_ok, mi.import_draft_aviso],
+  )
 
   const { mutate: previewMut, loading: previewLoading } = useGerenteMutation(
     async (xml: string) => {
@@ -167,6 +183,7 @@ export function ImportarNfePageClient({ idioma }: Props) {
     setXmlText('')
     setParsed(null)
     setLinhas([])
+    setDraftNovos(null)
   }
 
   return (
@@ -419,6 +436,17 @@ export function ImportarNfePageClient({ idioma }: Props) {
         <div className="flex flex-col items-end gap-2">
           {!tudoResolvido ? (
             <p className="text-xs font-medium text-amber-600">{mi.resolver_pendentes}</p>
+          ) : null}
+          {draftNovos != null && draftNovos > 0 ? (
+            <div className="w-full rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+              <p>{mi.import_draft_aviso.replace('{{n}}', String(draftNovos))}</p>
+              <Link
+                href="/admin/catalogo?status=inativos"
+                className="mt-1 inline-block font-medium underline hover:no-underline"
+              >
+                Ir ao catálogo →
+              </Link>
+            </div>
           ) : null}
           <button
             type="button"

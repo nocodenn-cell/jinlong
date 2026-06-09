@@ -1,3 +1,5 @@
+import type { StatusPublicacao } from '@/core/ports/produto'
+
 /** Linha de produto na listagem gerente (filtros + tabela). */
 export type ProdutoGerenteRow = {
   id: string
@@ -19,6 +21,7 @@ export type ProdutoGerenteRow = {
   origem: string
   tem_nf: boolean
   ativo: boolean
+  status_publicacao: StatusPublicacao
   /** URL pública (Storage) ou null. */
   imagem_url: string | null
   categoria_id: string | null

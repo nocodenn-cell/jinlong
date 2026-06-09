@@ -229,7 +229,26 @@ export async function buscarProdutosParaVinculo(
   return { success: true, data: rows }
 }
 
-export async function executarImportacaoNfe(input: unknown): Promise<ActionResult<{ itens_processados: number }>> {
+function catalogR1DeployBlocked(): boolean {
+  return process.env.CATALOG_R1_DEPLOY === '1'
+}
+
+export async function executarImportacaoNfe(
+  input: unknown,
+): Promise<
+  ActionResult<{
+    itens_processados: number
+    produtos_novos: number
+    produtos_vinculados: number
+  }>
+> {
+  if (catalogR1DeployBlocked()) {
+    return {
+      success: false,
+      error:
+        'Importação NF-e temporariamente indisponível durante atualização do catálogo. Tente novamente em alguns minutos.',
+    }
+  }
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -275,10 +294,23 @@ export async function executarImportacaoNfe(input: unknown): Promise<ActionResul
     return { success: false, error: mapRpcImportNfe(error.message) }
   }
 
-  const row = data as { ok?: boolean; itens_processados?: number } | null
+  const row = data as {
+    ok?: boolean
+    itens_processados?: number
+    produtos_novos?: number
+    produtos_vinculados?: number
+  } | null
   const n = row?.itens_processados ?? 0
 
   revalidatePath('/gerente/estoque')
   revalidatePath('/gerente/produtos')
-  return { success: true, data: { itens_processados: n } }
+  revalidatePath('/admin/catalogo')
+  return {
+    success: true,
+    data: {
+      itens_processados: n,
+      produtos_novos: row?.produtos_novos ?? 0,
+      produtos_vinculados: row?.produtos_vinculados ?? 0,
+    },
+  }
 }
