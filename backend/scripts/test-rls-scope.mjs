@@ -25,8 +25,12 @@ const IDS = {
   produto: "b0000003-0000-4000-8000-000000000001",
   caixaOperador: "b0000004-0000-4000-8000-000000000001",
   caixaGerente: "b0000004-0000-4000-8000-000000000002",
+  caixaFilial: "c0000004-0000-4000-8000-000000000001",
   vendaOperador: "b0000005-0000-4000-8000-000000000001",
   vendaGerente: "b0000005-0000-4000-8000-000000000002",
+  vendaFilial: "c0000005-0000-4000-8000-000000000001",
+  vendaEventoGerente: "b0000008-0000-4000-8000-000000000001",
+  vendaEventoFilial: "c0000008-0000-4000-8000-000000000001",
   tituloReceber: "b0000006-0000-4000-8000-000000000001",
   clienteReceber: "b0000007-0000-4000-8000-000000000001",
   remessaConferencia: "c0000002-0000-4000-8000-000000000001",
@@ -175,14 +179,39 @@ async function ensureUsersAndSeed() {
   INSERT INTO public.caixas (id, operador_id, valor_inicial, status, loja_id)
   VALUES
     ('${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
-    ('${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid)
+    ('${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
+    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.ADMIN}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, loja_id = EXCLUDED.loja_id, status = 'ABERTO';
 
   INSERT INTO public.vendas (id, caixa_id, operador_id, total_bruto, total_desconto, total_liquido, forma_pagamento, status)
   VALUES
     ('${IDS.vendaOperador}'::uuid, '${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 50, 0, 50, 'PIX', 'CONCLUIDA'),
-    ('${IDS.vendaGerente}'::uuid, '${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 70, 0, 70, 'PIX', 'CONCLUIDA')
+    ('${IDS.vendaGerente}'::uuid, '${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 70, 0, 70, 'PIX', 'CONCLUIDA'),
+    ('${IDS.vendaFilial}'::uuid, '${IDS.caixaFilial}'::uuid, '${authByPerfil.ADMIN}'::uuid, 90, 0, 90, 'PIX', 'CONCLUIDA')
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, caixa_id = EXCLUDED.caixa_id;
+
+  INSERT INTO public.venda_eventos (
+    id, event_type, sale_id, caixa_id, operador_id, loja_id, items, total,
+    total_bruto, forma_pagamento, source, idempotency_key
+  )
+  VALUES
+    (
+      '${IDS.vendaEventoGerente}'::uuid, 'SALE_REGISTERED', '${IDS.vendaGerente}'::uuid,
+      '${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, '${IDS.loja}'::uuid,
+      '[{"nome":"Produto RLS","quantidade":1,"precoUnitario":70,"total":70}]'::jsonb,
+      70, 70, 'PIX', 'rls_scope_seed', 'rls_scope_seed:${IDS.vendaGerente}'
+    ),
+    (
+      '${IDS.vendaEventoFilial}'::uuid, 'SALE_REGISTERED', '${IDS.vendaFilial}'::uuid,
+      '${IDS.caixaFilial}'::uuid, '${authByPerfil.ADMIN}'::uuid, '${IDS.loja2}'::uuid,
+      '[{"nome":"Produto RLS Filial","quantidade":1,"precoUnitario":90,"total":90}]'::jsonb,
+      90, 90, 'PIX', 'rls_scope_seed', 'rls_scope_seed:${IDS.vendaFilial}'
+    )
+  ON CONFLICT (idempotency_key) DO UPDATE SET
+    loja_id = EXCLUDED.loja_id,
+    total = EXCLUDED.total,
+    total_bruto = EXCLUDED.total_bruto,
+    items = EXCLUDED.items;
 
   INSERT INTO public.clientes (id, nome, documento, loja_id)
   VALUES ('${IDS.clienteReceber}'::uuid, 'Cliente RLS Fiado', '00000000000', '${IDS.loja}'::uuid)
@@ -300,6 +329,50 @@ async function main() {
   await run("GERENTE acessa v_estoque_baixo", async () => {
     const { error } = await gerente.from("v_estoque_baixo").select("id,loja_id").limit(5);
     if (error) throw new Error(error.message);
+  });
+
+  await run("RPC listar_venda_eventos_gerente bloqueia OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "listar_venda_eventos_gerente", {
+      p_loja_id: IDS.loja,
+    }, "VENDA_EVENTOS_PERMISSAO_NEGADA");
+  });
+
+  await run("RPC kpis_venda_eventos_gerente bloqueia OPERADOR", async () => {
+    await assertRpcErrorContains(operador, "kpis_venda_eventos_gerente", {
+      p_loja_id: IDS.loja,
+    }, "VENDA_EVENTOS_PERMISSAO_NEGADA");
+  });
+
+  await run("RPC listar_venda_eventos_gerente bloqueia GERENTE em outra loja", async () => {
+    await assertRpcErrorContains(gerente, "listar_venda_eventos_gerente", {
+      p_loja_id: IDS.loja2,
+    }, "VENDA_EVENTOS_PERMISSAO_NEGADA");
+  });
+
+  await run("RPC kpis_venda_eventos_gerente bloqueia GERENTE em outra loja", async () => {
+    await assertRpcErrorContains(gerente, "kpis_venda_eventos_gerente", {
+      p_loja_id: IDS.loja2,
+    }, "VENDA_EVENTOS_PERMISSAO_NEGADA");
+  });
+
+  await run("RPC listar_venda_eventos_gerente permite GERENTE na propria loja", async () => {
+    const { data, error } = await gerente.rpc("listar_venda_eventos_gerente", {
+      p_loja_id: IDS.loja,
+    });
+    if (error) throw new Error(error.message);
+    const hasOwnSale = (data ?? []).some((row) => row.sale_id === IDS.vendaGerente);
+    if (!hasOwnSale) throw new Error("GERENTE nao recebeu evento esperado da propria loja");
+  });
+
+  await run("RPC kpis_venda_eventos_gerente permite GERENTE na propria loja", async () => {
+    const { data, error } = await gerente.rpc("kpis_venda_eventos_gerente", {
+      p_loja_id: IDS.loja,
+    });
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || Number(row.qtd_concluidas ?? 0) < 1) {
+      throw new Error("GERENTE nao recebeu KPI esperado da propria loja");
+    }
   });
 
   await run("OPERADOR bloqueado em contas_receber", async () => {
