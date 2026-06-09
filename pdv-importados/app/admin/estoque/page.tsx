@@ -16,6 +16,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { Upload } from 'lucide-react'
+import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
@@ -151,14 +152,12 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
     const p = new URLSearchParams(activeParams)
     p.delete(key)
     p.delete('page')
-    const qs = p.toString()
-    return qs ? `/admin/estoque?${qs}` : '/admin/estoque'
+    return pathWithQuery(ROUTES.admin.estoque, p)
   }
   const pageHref = (target: number) => {
     const p = new URLSearchParams(activeParams)
     if (target > 1) p.set('page', String(target))
-    const qs = p.toString()
-    return qs ? `/admin/estoque?${qs}` : '/admin/estoque'
+    return pathWithQuery(ROUTES.admin.estoque, p)
   }
 
   const nomeCategoria = (id: string) => opcoes.categorias.find((c) => c.id === id)?.nome ?? id
@@ -180,7 +179,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         title="Estoque"
         subtitle="Saldos por produto e ajustes manuais"
         filters={
-          <Link href="/gerente/estoque/importar-nfe" className="admin-v2-btn-secondary">
+          <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
             <Upload size={14} aria-hidden />
             Importar NF-e XML
           </Link>

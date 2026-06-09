@@ -16,6 +16,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { ROUTES } from '../../../../shared-core/navigation/routes'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -37,8 +38,8 @@ export async function obterKardexProduto(produtoId: string): Promise<KardexMovim
   if (!UUID_RE.test(produtoId)) return []
 
   const auth = await assertAdminSession('estoque:kardex', {
-    pathname: '/admin/estoque',
-    resource: 'route:/admin/estoque',
+    pathname: ROUTES.admin.estoque,
+    resource: `route:${ROUTES.admin.estoque}`,
   })
   if (!auth.ok) return []
 

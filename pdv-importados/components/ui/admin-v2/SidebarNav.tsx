@@ -5,15 +5,12 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import {
-  adminNavDictionaryKey,
-  painelGerencialHref,
-} from '@/lib/navigation/painelGerencialNav'
-import {
   ADMIN_V2_CORE_ITEMS,
   ADMIN_V2_EXPANDED_ITEMS,
   ADMIN_V2_SISTEMA_ITEMS,
   type AdminV2NavItem,
 } from '@/lib/navigation/adminV2SidebarNav'
+import { ROUTES } from '../../../../shared-core/navigation/routes'
 import type { Mensagens } from '@/i18n/getMessages'
 import { cn } from '@/lib/utils'
 
@@ -23,8 +20,10 @@ type SidebarNavProps = {
 }
 
 function isRouteActive(pathname: string, href: string): boolean {
-  if (href === '/gerente') return pathname === '/gerente' || pathname === '/gerente/'
-  if (href.startsWith('/admin/')) {
+  if (href === ROUTES.gerente.home) {
+    return pathname === ROUTES.gerente.home || pathname === `${ROUTES.gerente.home}/`
+  }
+  if (href.startsWith(`${ROUTES.admin.home}/`)) {
     return pathname === href || pathname.startsWith(`${href}/`)
   }
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -35,51 +34,22 @@ export function SidebarNav({ admin, chineseLanguage }: SidebarNavProps) {
   const [showMore, setShowMore] = useState(false)
 
   function renderItem(item: AdminV2NavItem) {
-    if (item.type === 'route') {
-      const dictKey = adminNavDictionaryKey(item.key)
-      const line = admin.nav[dictKey]
-      const hint = admin.navHints[dictKey]
-      const href = painelGerencialHref(item.key)
-      const active = isRouteActive(pathname, href)
-      const Icon = item.icon
-      const ptLabel = item.labelOverridePt ?? line?.pt ?? item.key
-      const primary = chineseLanguage && line ? line.cn : ptLabel
-      const secondary = chineseLanguage && line ? ptLabel : ''
-      const hintText = hint ?? ''
-
-      return (
-        <li key={href}>
-          <Link
-            href={href}
-            title={`${primary}${secondary ? ` · ${secondary}` : ''}${hintText ? ` — ${hintText}` : ''}`}
-            data-active={active}
-            className={cn(
-              'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5',
-              'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[#fbbf24]',
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0 opacity-80" strokeWidth={1.75} aria-hidden />
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium leading-tight">{primary}</div>
-              {secondary ? (
-                <div className="truncate text-[11px] leading-tight text-jl-fg-3">{secondary}</div>
-              ) : null}
-            </div>
-          </Link>
-        </li>
-      )
-    }
-
-    const active = isRouteActive(pathname, item.href)
+    const dictKey = item.dictKey
+    const line = dictKey ? admin.nav[dictKey as keyof typeof admin.nav] : undefined
+    const hint = dictKey ? admin.navHints[dictKey as keyof typeof admin.navHints] : item.hint
+    const href = item.href
+    const active = isRouteActive(pathname, href)
     const Icon = item.icon
-    const primary = chineseLanguage ? item.labelCn : item.labelPt
-    const secondary = chineseLanguage ? item.labelPt : ''
+    const ptLabel = item.labelOverridePt ?? item.labelPt ?? line?.pt ?? item.id
+    const primary = chineseLanguage && (line?.cn ?? item.labelCn) ? (line?.cn ?? item.labelCn) : ptLabel
+    const secondary = chineseLanguage && line ? ptLabel : item.labelCn && chineseLanguage ? item.labelPt ?? '' : ''
+    const hintText = hint ?? ''
 
     return (
       <li key={item.id}>
         <Link
-          href={item.href}
-          title={`${primary} — ${item.hint}`}
+          href={href}
+          title={`${primary}${secondary ? ` · ${secondary}` : ''}${hintText ? ` — ${hintText}` : ''}`}
           data-active={active}
           className={cn(
             'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5',

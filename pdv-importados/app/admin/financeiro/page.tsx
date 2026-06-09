@@ -12,6 +12,7 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
 import { createClient } from '@/lib/supabase/server'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { MetricCard, PageHeader } from '@/components/ui/admin-v2'
@@ -85,8 +86,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const hrefWithout = (key: string) => {
     const p = new URLSearchParams(activeParams)
     p.delete(key)
-    const qs = p.toString()
-    return qs ? `/admin/financeiro?${qs}` : '/admin/financeiro'
+    return pathWithQuery(ROUTES.admin.financeiro, p)
   }
 
   const statusLabel: Record<string, string> = {
@@ -106,7 +106,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         title="Financeiro e fiscal"
         subtitle="Contas a receber, fila fiscal e controle de emissao"
         filters={
-          <Link href="/gerente/financeiro" className="admin-v2-btn-primary">
+          <Link href={ROUTES.gerente.financeiro} className="admin-v2-btn-primary">
             Abrir modulo completo
           </Link>
         }

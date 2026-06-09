@@ -2,7 +2,6 @@
 
 /** @deprecated Use SidebarNav from @/components/ui/admin-v2 instead. */
 import Link from 'next/link'
-import { adminNavDictionaryKey, painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
 import { ADMIN_SIDEBAR_NAV } from '@/lib/navigation/adminSidebarNav'
 import type { Mensagens } from '@/i18n/getMessages'
 
@@ -32,13 +31,13 @@ export function AdminSidebar({ admin, chineseLanguage, chineseThemeOn }: AdminSi
     >
       <nav className="flex flex-wrap gap-1 p-3 lg:flex-col lg:gap-0.5">
         {ADMIN_SIDEBAR_NAV.map((item) => {
-          const dictKey = adminNavDictionaryKey(item.key)
+          const dictKey = item.dictKey as keyof typeof admin.nav
           const line = admin.nav[dictKey]
           const { primary, secondary } = navLabels(line, chineseLanguage)
-          const hint = admin.navHints[dictKey]
+          const hint = admin.navHints[dictKey as keyof typeof admin.navHints]
           const label = chineseLanguage ? lineBoth(line) : line.pt
           const linkTitle = `${label} — ${hint}`
-          const href = painelGerencialHref(item.key)
+          const href = item.href
           const Icon = item.icon
           return (
             <Link

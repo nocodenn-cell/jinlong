@@ -8,6 +8,7 @@
  */
 
 import { Monitor } from 'lucide-react'
+import { ROUTES } from '../../../../../shared-core/navigation/routes'
 
 export function CaixaShortcut() {
   return (
@@ -22,7 +23,7 @@ export function CaixaShortcut() {
         </div>
       </div>
       <a
-        href="/caixa"
+        href={ROUTES.caixa.home}
         target="_blank"
         rel="noopener noreferrer"
         className="rounded-lg border border-jl-accent/35 bg-jl-card-l1-accent px-4 py-2 text-[12px] font-medium text-jl-accent transition-colors hover:border-jl-accent/50 hover:bg-jl-card-l1-accent/80"

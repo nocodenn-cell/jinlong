@@ -14,6 +14,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
+import { ROUTES } from '../../../../shared-core/navigation/routes'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -61,8 +62,8 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
   if (!UUID_RE.test(vendaId)) return null
 
   const auth = await assertAdminSession('vendas:detalhe', {
-    pathname: '/admin/vendas',
-    resource: 'route:/admin/vendas',
+    pathname: ROUTES.admin.vendas,
+    resource: `route:${ROUTES.admin.vendas}`,
   })
   if (!auth.ok) return null
 

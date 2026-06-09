@@ -11,21 +11,22 @@ import {
   ShoppingBag,
   ShoppingCart,
 } from 'lucide-react'
-import type { PainelGerencialNavKey } from './painelGerencialNav'
+import { ROUTES } from '../../../shared-core/navigation/routes'
 
-/** Ordem + ícones da sidebar `/admin` (alinhado ao hub → módulos /gerente). */
+/** Ordem + ícones da sidebar `/admin`. */
 export const ADMIN_SIDEBAR_NAV: ReadonlyArray<{
-  key: PainelGerencialNavKey
+  href: string
   icon: LucideIcon
+  dictKey: string
 }> = [
-  { key: 'dashboard', icon: LayoutDashboard },
-  { key: 'home', icon: LayoutGrid },
-  { key: 'produtos', icon: ShoppingBag },
-  { key: 'vendas', icon: ShoppingCart },
-  { key: 'estoque', icon: Package },
-  { key: 'recebimento', icon: Inbox },
-  { key: 'transferencias', icon: ArrowRightLeft },
-  { key: 'financeiro', icon: Coins },
-  { key: 'caixas', icon: Building2 },
-  { key: 'relatorios', icon: LineChart },
+  { href: ROUTES.admin.dashboard, icon: LayoutDashboard, dictKey: 'dashboard' },
+  { href: ROUTES.gerente.home, icon: LayoutGrid, dictKey: 'gerente' },
+  { href: ROUTES.admin.catalogo, icon: ShoppingBag, dictKey: 'produtos' },
+  { href: ROUTES.admin.vendas, icon: ShoppingCart, dictKey: 'vendas' },
+  { href: ROUTES.admin.estoque, icon: Package, dictKey: 'estoque' },
+  { href: ROUTES.admin.estoqueRecebimento, icon: Inbox, dictKey: 'recebimento' },
+  { href: ROUTES.admin.estoqueTransferencias, icon: ArrowRightLeft, dictKey: 'transferencias' },
+  { href: ROUTES.admin.financeiro, icon: Coins, dictKey: 'financeiro' },
+  { href: ROUTES.admin.vendas, icon: Building2, dictKey: 'caixas' },
+  { href: ROUTES.admin.relatorios, icon: LineChart, dictKey: 'relatorios' },
 ] as const

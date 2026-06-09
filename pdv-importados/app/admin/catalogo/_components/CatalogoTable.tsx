@@ -8,7 +8,7 @@
  */
 
 import Link from 'next/link'
-import { APP_ROUTES } from '@/lib/navigation/appRoutes'
+import { ROUTES } from '../../../../../shared-core/navigation/routes'
 import { Eye, ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
@@ -178,7 +178,7 @@ function CatalogoEmpty() {
       <p className="text-[12px] text-jl-fg-3">
         Tente ajustar os filtros ou cadastre um novo produto
       </p>
-      <Link href={APP_ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary mt-2">
+      <Link href={ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary mt-2">
         Cadastro rápido
       </Link>
     </div>
@@ -196,10 +196,10 @@ export function CatalogoTable({ produtos }: { produtos: CatalogoProduto[] }) {
       rowActions={(row) => (
         <div className="flex items-center justify-end gap-1.5">
           <CatalogoPublicacaoActions produtoId={row.id} status={row.status_publicacao} />
-          <ActionBtn href={APP_ROUTES.admin.catalogo} label={`Editar ${row.nome}`}>
+          <ActionBtn href={ROUTES.admin.catalogo} label={`Editar ${row.nome}`}>
             <Pencil size={13} aria-hidden />
           </ActionBtn>
-          <ActionBtn href={APP_ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
+          <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
             <Eye size={13} aria-hidden />
           </ActionBtn>
         </div>

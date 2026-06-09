@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
+import { ROUTES } from '../../../shared-core/navigation/routes'
 
 export default function AdminIndexPage() {
-  redirect('/admin/dashboard')
+  redirect(ROUTES.admin.dashboard)
 }
-

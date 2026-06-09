@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import '@/styles/admin-v2.css'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
-import { painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
+import { ROUTES } from '../../../../shared-core/navigation/routes'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { Logo } from '@/components/branding/Logo'
@@ -27,7 +27,7 @@ export function AdminV2Shell({ session, children }: AdminV2ShellProps) {
           <div className="border-b border-[var(--admin-v2-border)] p-4">
             <Logo
               variant="symbol"
-              href={painelGerencialHref('dashboard')}
+              href={ROUTES.admin.dashboard}
               aria-label={m.login.nav_marca}
               className="text-jl-accent"
             />

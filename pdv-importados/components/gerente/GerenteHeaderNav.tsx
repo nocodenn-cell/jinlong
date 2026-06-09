@@ -18,13 +18,13 @@ import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
 import {
+  GERENTE_NAV_HREF,
   GERENTE_NAV_TOPICS,
   gerenteNavLabel,
   gerenteNavTopicLabel,
   gerenteNavTopicIdForPathname,
-  painelGerencialHref,
   type GerenteNavTopicId,
-} from '@/lib/navigation/painelGerencialNav'
+} from '@/lib/navigation/gerenteNavUi'
 import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import { cn } from '@/lib/utils'
 
@@ -282,7 +282,7 @@ export function GerenteHeaderNav({
       >
         {GERENTE_NAV_TOPICS.map((topic) => {
           const Icon        = TOPIC_ICONS[topic.id]
-          const href        = painelGerencialHref(topic.items[0])
+          const href        = GERENTE_NAV_HREF[topic.items[0]]
           const isActive    = topicAtivo === topic.id
           const hasChildren = topic.items.length > 1
           const isOpen      = openTopic === topic.id
@@ -334,7 +334,7 @@ export function GerenteHeaderNav({
                   onMouseLeave={scheduleClose}
                 >
                   {topic.items.map((key) => {
-                    const subHref   = painelGerencialHref(key)
+                    const subHref   = GERENTE_NAV_HREF[key]
                     const subActive = linkAtivo(subHref, pathname)
                     return (
                       <Link
@@ -367,7 +367,7 @@ export function GerenteHeaderNav({
       >
         {GERENTE_NAV_TOPICS.map((topic) => {
           const Icon     = TOPIC_ICONS[topic.id]
-          const href     = painelGerencialHref(topic.items[0])
+          const href     = GERENTE_NAV_HREF[topic.items[0]]
           const isActive = topicAtivo === topic.id
           return (
             <Link

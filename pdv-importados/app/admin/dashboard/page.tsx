@@ -29,6 +29,7 @@ import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
@@ -116,8 +117,8 @@ type PageProps = {
 
 export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const { session } = await loadAdminContext({
-    pathname: '/admin/dashboard',
-    resource: 'route:/admin/dashboard',
+    pathname: ROUTES.admin.dashboard,
+    resource: `route:${ROUTES.admin.dashboard}`,
   })
   const { idioma } = session
   const m = getMessages(idioma)
@@ -412,7 +413,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   ]
 
   const filterHref = (p: DashboardPeriod, s: DashboardStatus = 'ALL') =>
-    `/admin/dashboard?period=${p}&status=${s}`
+    pathWithQuery(ROUTES.admin.dashboard, new URLSearchParams({ period: p, status: s }))
 
   const dashboardFilters = (
     <div className="admin-v2-segmented">

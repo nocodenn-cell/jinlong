@@ -1,9 +1,7 @@
 import type { Mensagens } from '@/i18n/getMessages'
+import { ROUTES } from '../../../shared-core/navigation/routes'
 
-/**
- * Chaves canónicas dos módulos do painel gerencial + dashboard admin.
- * Uma única fonte de hrefs — layouts /gerente e /admin e atalhos devem derivar daqui.
- */
+/** Chaves de módulo para labels i18n (sem resolver href — usar GERENTE_NAV_HREF). */
 export type PainelGerencialNavKey =
   | 'home'
   | 'dashboard'
@@ -26,25 +24,30 @@ export type PainelGerencialNavKey =
   | 'relatorios_vendas'
   | 'compras'
 
-export function painelGerencialHref(key: PainelGerencialNavKey): string {
-  if (key === 'home') return '/gerente'
-  if (key === 'dashboard') return '/admin/dashboard'
-  if (key === 'configuracoes') return '/admin/configuracoes'
-  if (key === 'estoque') return '/admin/estoque'
-  if (key === 'vendas') return '/admin/vendas'
-  if (key === 'financeiro') return '/admin/financeiro'
-  if (key === 'relatorios') return '/admin/relatorios'
-  if (key === 'relatorios_vendas') return '/admin/relatorios'
-  if (key === 'comissoes') return '/admin/comissoes'
-  if (key === 'categorias_produtos') return '/admin/categorias-produtos'
-  if (key === 'suspensao') return '/admin/suspensao'
-  if (key === 'categorias_financeiras') return '/admin/categorias-financeiras'
-  if (key === 'contas_pagar') return '/gerente/financeiro/contas-pagar'
-  if (key === 'compras') return '/gerente/compras'
-  return `/gerente/${key}`
+/** Href canônico por chave de módulo — valores derivados exclusivamente de ROUTES. */
+export const GERENTE_NAV_HREF: Record<PainelGerencialNavKey, string> = {
+  home: ROUTES.gerente.home,
+  dashboard: ROUTES.admin.dashboard,
+  produtos: ROUTES.admin.catalogo,
+  categorias_produtos: ROUTES.admin.categoriasProdutos,
+  categorias_financeiras: ROUTES.admin.categoriasFinanceiras,
+  clientes: ROUTES.gerente.clientes,
+  vendas: ROUTES.admin.vendas,
+  estoque: ROUTES.admin.estoque,
+  recebimento: ROUTES.admin.estoqueRecebimento,
+  transferencias: ROUTES.admin.estoqueTransferencias,
+  fornecedores: ROUTES.gerente.fornecedores,
+  financeiro: ROUTES.admin.financeiro,
+  comissoes: ROUTES.admin.comissoes,
+  contas_pagar: ROUTES.gerente.financeiroContasPagar,
+  configuracoes: ROUTES.admin.configuracoes,
+  suspensao: ROUTES.admin.suspensao,
+  caixas: ROUTES.admin.vendas,
+  relatorios: ROUTES.admin.relatorios,
+  relatorios_vendas: ROUTES.admin.relatorios,
+  compras: ROUTES.gerente.compras,
 }
 
-/** Chave em `m.admin.nav` / `admin.navHints` (home = painel /gerente). */
 export type AdminNavDictionaryKey = keyof Mensagens['admin']['nav']
 
 export function adminNavDictionaryKey(key: PainelGerencialNavKey): AdminNavDictionaryKey {
@@ -101,7 +104,6 @@ export function gerenteNavLabel(m: Mensagens, key: PainelGerencialNavKey): strin
   }
 }
 
-/** Ordem do header horizontal em `/gerente`. */
 export const GERENTE_HEADER_NAV_ORDER: readonly PainelGerencialNavKey[] = [
   'home',
   'produtos',
@@ -116,7 +118,6 @@ export const GERENTE_HEADER_NAV_ORDER: readonly PainelGerencialNavKey[] = [
   'dashboard',
 ] as const
 
-/** Agrupamento do header em tópicos (primeira linha) + abas (segunda linha, se >1 item). */
 export type GerenteNavTopicId =
   | 'inicio'
   | 'catalogo'
@@ -141,17 +142,16 @@ export const GERENTE_NAV_TOPICS: readonly GerenteNavTopic[] = [
   { id: 'sistema', items: ['configuracoes', 'suspensao', 'dashboard'] },
 ] as const
 
-function pathMatchesGerenteHref(href: string, pathname: string): boolean {
-  if (href === '/gerente') return pathname === '/gerente'
+function pathMatchesHref(href: string, pathname: string): boolean {
+  if (href === ROUTES.gerente.home) return pathname === ROUTES.gerente.home
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-/** Tópico ativo conforme a rota atual (layout `/gerente`). */
 export function gerenteNavTopicIdForPathname(pathname: string | null): GerenteNavTopicId {
   if (!pathname) return 'inicio'
   for (const topic of GERENTE_NAV_TOPICS) {
     for (const key of topic.items) {
-      if (pathMatchesGerenteHref(painelGerencialHref(key), pathname)) return topic.id
+      if (pathMatchesHref(GERENTE_NAV_HREF[key], pathname)) return topic.id
     }
   }
   return 'inicio'
@@ -180,9 +180,8 @@ export function gerenteNavTopicLabel(m: Mensagens, id: GerenteNavTopicId): strin
   }
 }
 
-/** Ordem dos atalhos na página inicial `/gerente` (sem “início”; transferências opcional). */
 export function gerenteInicioAtalhoKeys(
-  incluirTransferencias: boolean
+  incluirTransferencias: boolean,
 ): readonly PainelGerencialNavKey[] {
   const base: PainelGerencialNavKey[] = [
     'produtos',

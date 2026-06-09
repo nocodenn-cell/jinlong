@@ -17,7 +17,7 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { APP_ROUTES } from '@/lib/navigation/appRoutes'
+import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
 import { Download, Plus, Upload } from 'lucide-react'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
@@ -77,8 +77,8 @@ type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   const { session } = await loadAdminContext({
-    pathname: '/admin/catalogo',
-    resource: 'route:/admin/catalogo',
+    pathname: ROUTES.admin.catalogo,
+    resource: `route:${ROUTES.admin.catalogo}`,
   })
   const { idioma } = session
   const sp = (searchParams ? await searchParams : {}) ?? {}
@@ -227,14 +227,12 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     const p = new URLSearchParams(activeParams)
     p.delete(key)
     p.delete('page')
-    const qs = p.toString()
-    return qs ? `/admin/catalogo?${qs}` : '/admin/catalogo'
+    return pathWithQuery(ROUTES.admin.catalogo, p)
   }
   const pageHref = (target: number) => {
     const p = new URLSearchParams(activeParams)
     if (target > 1) p.set('page', String(target))
-    const qs = p.toString()
-    return qs ? `/admin/catalogo?${qs}` : '/admin/catalogo'
+    return pathWithQuery(ROUTES.admin.catalogo, p)
   }
 
   const nomeDe = (arr: { id: string; nome: string }[], id: string) =>
@@ -249,15 +247,15 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
 
   const headerActions = (
     <>
-      <Link href={APP_ROUTES.admin.estoqueImportarNfe} className="admin-v2-btn-secondary">
+      <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
         <Upload size={14} aria-hidden />
         Importar NF-e XML
       </Link>
-      <Link href={APP_ROUTES.admin.catalogo} className="admin-v2-btn-secondary">
+      <Link href={ROUTES.admin.catalogo} className="admin-v2-btn-secondary">
         <Download size={14} aria-hidden />
         Exportar CSV
       </Link>
-      <Link href={APP_ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary">
+      <Link href={ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary">
         <Plus size={14} aria-hidden />
         Cadastro rápido
       </Link>

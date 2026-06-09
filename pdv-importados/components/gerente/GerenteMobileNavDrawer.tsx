@@ -8,13 +8,13 @@ import {
   Home, Package, Box, ShoppingCart, Coins, TrendingUp, Settings,
 } from 'lucide-react'
 import {
+  GERENTE_NAV_HREF,
   GERENTE_NAV_TOPICS,
   gerenteNavLabel,
   gerenteNavTopicLabel,
   gerenteNavTopicIdForPathname,
-  painelGerencialHref,
   type GerenteNavTopicId,
-} from '@/lib/navigation/painelGerencialNav'
+} from '@/lib/navigation/gerenteNavUi'
 import type { Mensagens } from '@/i18n/getMessages'
 import { cn } from '@/lib/utils'
 
@@ -114,7 +114,7 @@ export function GerenteMobileNavDrawer({ m, userLabel, onSignOut }: Props) {
                 const unico = topic.items.length === 1
 
                 if (unico) {
-                  const href = painelGerencialHref(topic.items[0])
+                  const href = GERENTE_NAV_HREF[topic.items[0]]
                   const ativo = topicAtivo === topic.id || hrefAtivo(href, pathname)
                   return (
                     <Link
@@ -141,7 +141,7 @@ export function GerenteMobileNavDrawer({ m, userLabel, onSignOut }: Props) {
                     </div>
                     <div className="mt-0.5">
                       {topic.items.map((key) => {
-                        const href = painelGerencialHref(key)
+                        const href = GERENTE_NAV_HREF[key]
                         const ativo = hrefAtivo(href, pathname)
                         return (
                           <Link

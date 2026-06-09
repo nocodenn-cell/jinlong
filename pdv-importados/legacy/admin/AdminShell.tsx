@@ -3,7 +3,7 @@ import { type ReactNode } from 'react'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { adminChineseUiEnabled } from '@/lib/i18n/adminChineseUiLabels'
-import { painelGerencialHref } from '@/lib/navigation/painelGerencialNav'
+import { ROUTES } from '../../../../shared-core/navigation/routes'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { Logo } from '@/components/branding/Logo'
@@ -50,7 +50,7 @@ export function AdminShell({ session, children }: AdminShellProps) {
               <h1 className="flex flex-wrap items-center gap-3 text-xl font-bold tracking-tight md:text-2xl">
                 <Logo
                   variant="symbol"
-                  href={painelGerencialHref('dashboard')}
+                  href={ROUTES.admin.dashboard}
                   aria-label={m.login.nav_marca}
                   className={chineseThemeOn ? 'text-amber-300' : 'text-amber-600'}
                 />

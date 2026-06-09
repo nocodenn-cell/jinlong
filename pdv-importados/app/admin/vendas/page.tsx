@@ -13,6 +13,7 @@
  */
 
 import Link from 'next/link'
+import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
@@ -156,14 +157,12 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     const p = new URLSearchParams(activeParams)
     p.delete(key)
     p.delete('page')
-    const qs = p.toString()
-    return qs ? `/admin/vendas?${qs}` : '/admin/vendas'
+    return pathWithQuery(ROUTES.admin.vendas, p)
   }
   const pageHref = (target: number) => {
     const p = new URLSearchParams(activeParams)
     if (target > 1) p.set('page', String(target))
-    const qs = p.toString()
-    return qs ? `/admin/vendas?${qs}` : '/admin/vendas'
+    return pathWithQuery(ROUTES.admin.vendas, p)
   }
 
   const chips: Array<{ key: string; label: string }> = []
@@ -184,8 +183,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     if (next === 'hoje') p.delete('periodo')
     else p.set('periodo', next)
     p.delete('page')
-    const qs = p.toString()
-    return qs ? `/admin/vendas?${qs}` : '/admin/vendas'
+    return pathWithQuery(ROUTES.admin.vendas, p)
   }
 
   const metricCards: Array<{
