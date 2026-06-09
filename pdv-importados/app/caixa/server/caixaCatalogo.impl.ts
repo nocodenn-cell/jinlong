@@ -7,14 +7,17 @@ import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
-  PRODUTO_VENDAVEL_FILTRO_ATIVO,
-  PRODUTO_VENDAVEL_FILTRO_STATUS,
+  aplicarFiltroProdutoVendavel,
+  filtrarSomenteProdutosVendaveis,
+  isProdutoVendavel,
+  primeiroProdutoVendavel,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
 import { calcularPrecoProdutoCaixaImpl } from '@/app/caixa/server/caixaPrecoProduto.impl'
 import type {
   BuscarProdutoResult,
   BuscarProdutoComPrecoResult,
   CarregarRegrasResult,
+  OrigemProdutoCaixa,
 } from '@/app/caixa/caixaActionTypes'
 import {
   estoqueResumoParaCaixa,
@@ -23,6 +26,27 @@ import {
   PRODUTO_COLS,
   sanitizeIlikeFragment,
 } from '@/app/caixa/server/caixaActionsInternals'
+
+type ProdutoRowCaixa = {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  preco_varejo: number | string
+  preco_atacado?: number | string | null
+  categoria_id: string | null
+  origem: OrigemProdutoCaixa
+  tem_nf: boolean
+  observacao: string | null
+  ativo: boolean
+  status_publicacao: string | null
+}
+
+function rowVendavel(row: ProdutoRowCaixa): boolean {
+  return isProdutoVendavel({
+    ativo: row.ativo,
+    status_publicacao: row.status_publicacao,
+  })
+}
 
 export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResult> {
   try {
@@ -37,7 +61,6 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
           'id, tipo_regra, produto_id, categoria_id, quantidade_minima, quantidade_maxima, tipo_desconto, valor_desconto, data_validade, ativo',
         )
         .eq('ativo', true)
-        // Regras vencidas não devem ser carregadas/aplicadas (data_validade no passado).
         .or(buildRegrasPrecoValidadeOrFilter()),
       fetchPdvConfigParaCaixaWeb(supabase),
     ])
@@ -80,16 +103,14 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
 
     const variantes = variantesChaveLeitura(t)
     if (variantes.length > 0) {
-      const { data: porCodigoLista, error: errCodigo } = await supabase
-        .from('produtos')
-        .select(PRODUTO_COLS)
-        .eq('ativo', PRODUTO_VENDAVEL_FILTRO_ATIVO)
-        .eq('status_publicacao', PRODUTO_VENDAVEL_FILTRO_STATUS)
+      const { data: porCodigoLista, error: errCodigo } = await aplicarFiltroProdutoVendavel(
+        supabase.from('produtos').select(PRODUTO_COLS),
+      )
         .in('codigo_barras', variantes)
         .limit(10)
 
       if (errCodigo) return { ok: false, error: mensagemErroParaUsuario(errCodigo.message) }
-      const listaCod = porCodigoLista ?? []
+      const listaCod = filtrarSomenteProdutosVendaveis((porCodigoLista ?? []) as ProdutoRowCaixa[])
       if (listaCod.length > 0) {
         const ids = new Set(listaCod.map((r) => r.id))
         if (ids.size > 1) {
@@ -101,6 +122,9 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
           }
         }
         const row = listaCod[0]
+        if (!rowVendavel(row)) {
+          return { ok: true, status: 'nao_encontrado' }
+        }
         const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
         return {
           ok: true,
@@ -115,16 +139,14 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return { ok: true, status: 'nao_encontrado' }
     }
 
-    const { data: porNome, error: errNome } = await supabase
-      .from('produtos')
-      .select(PRODUTO_COLS)
-      .eq('ativo', PRODUTO_VENDAVEL_FILTRO_ATIVO)
-      .eq('status_publicacao', PRODUTO_VENDAVEL_FILTRO_STATUS)
+    const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
+      supabase.from('produtos').select(PRODUTO_COLS),
+    )
       .ilike('nome', `%${frag}%`)
       .limit(3)
 
     if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message) }
-    let lista = porNome ?? []
+    let lista = filtrarSomenteProdutosVendaveis((porNome ?? []) as ProdutoRowCaixa[])
 
     if (lista.length === 0) {
       const { data: cats, error: errCat } = await supabase
@@ -135,15 +157,13 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message) }
       const catIds = (cats ?? []).map((c) => c.id)
       if (catIds.length > 0) {
-        const { data: porCat, error: errPorCat } = await supabase
-          .from('produtos')
-          .select(PRODUTO_COLS)
-          .eq('ativo', PRODUTO_VENDAVEL_FILTRO_ATIVO)
-          .eq('status_publicacao', PRODUTO_VENDAVEL_FILTRO_STATUS)
+        const { data: porCat, error: errPorCat } = await aplicarFiltroProdutoVendavel(
+          supabase.from('produtos').select(PRODUTO_COLS),
+        )
           .in('categoria_id', catIds)
           .limit(3)
         if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message) }
-        lista = porCat ?? []
+        lista = filtrarSomenteProdutosVendaveis((porCat ?? []) as ProdutoRowCaixa[])
       }
     }
 
@@ -156,7 +176,10 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       }
     }
 
-    const row = lista[0]
+    const row = primeiroProdutoVendavel(lista)
+    if (!row || !rowVendavel(row)) {
+      return { ok: true, status: 'nao_encontrado' }
+    }
     const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
     return {
       ok: true,
@@ -181,31 +204,26 @@ export async function buscarProdutoComPrecoCaixaImpl(
   quantidade: number = 1,
 ): Promise<BuscarProdutoComPrecoResult> {
   try {
-    // Valida quantidade
     const q = Math.max(1, Math.floor(Number(quantidade)))
     if (!Number.isFinite(q)) {
       return { ok: false, error: 'Quantidade inválida.' }
     }
 
-    // Busca produto
     const buscaRes = await buscarProdutoParaCaixaImpl(termo)
     if (!buscaRes.ok) {
       return { ok: false, error: buscaRes.error }
     }
     if (buscaRes.status !== 'encontrado') {
-      // Propaga not_found / ambiguous
       return buscaRes as BuscarProdutoComPrecoResult
     }
 
     const produto = buscaRes.produto
 
-    // Calcula preço autoritativo via RPC
     const precoRes = await calcularPrecoProdutoCaixaImpl({
       produtoId: produto.id,
       quantidade: q,
     })
 
-    // Fallback: se RPC falhar, usa preco_varejo (não bloqueia o item)
     const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo
     const tipoPrecoCalculado = precoRes.ok ? precoRes.tipo : 'VAREJO'
 

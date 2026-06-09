@@ -28,7 +28,8 @@
     "stress:pdv:check": "tsx dev-tools/pdv-consistency-check.ts",
     "gate:pdv": "tsx dev-tools/pdv-production-gate-simulator.ts",
     "gate:pdv:hybrid": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=hybrid",
-    "gate:pdv:full": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=full"
+    "gate:pdv:full": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=full",
+    "check:vendabilidade": "node scripts/check-vendabilidade-invariant.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.99.3",

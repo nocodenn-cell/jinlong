@@ -41,4 +41,4 @@ export function mapProdutoRow(
 }
 
 export const PRODUTO_COLS =
-  'id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id, origem, tem_nf, observacao' as const
+  'id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id, origem, tem_nf, observacao, ativo, status_publicacao' as const

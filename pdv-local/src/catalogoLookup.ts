@@ -52,8 +52,12 @@ export function buildMapaProdutoChaves(
   return m
 }
 
-export function produtosCatalogoAtivos(
-  produtos: ProdutoCacheLite[]
+/** @deprecated Use produtosCatalogoVendaveis — alias legado. */
+export const produtosCatalogoAtivos = produtosCatalogoVendaveis
+
+/** Catálogo PDV offline: apenas produtos que passam isProdutoVendavel. */
+export function produtosCatalogoVendaveis(
+  produtos: ProdutoCacheLite[],
 ): ProdutoCacheLite[] {
   return filterProdutosVendaveis(produtos)
 }

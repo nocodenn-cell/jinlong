@@ -4,7 +4,7 @@ import type { RegraPreco } from '@core/pricing/types'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@core/caixa/mapRegrasPreco'
 import {
   buildMapaProdutoChaves,
-  produtosCatalogoAtivos,
+  produtosCatalogoVendaveis,
   type ProdutoCacheLite,
 } from '../catalogoLookup'
 import { defaultPdvConfig } from '../config/pdvConfig'
@@ -61,8 +61,9 @@ export function usePdvLocalCatalogo({
       setRegras(regras)
 
       const produtosArr = cache.produtos ?? []
-      setProdutosCatalogo(produtosCatalogoAtivos(produtosArr))
-      setProdutosPorCodigoBarras(buildMapaProdutoChaves(produtosArr))
+      const produtosVendaveis = produtosCatalogoVendaveis(produtosArr)
+      setProdutosCatalogo(produtosVendaveis)
+      setProdutosPorCodigoBarras(buildMapaProdutoChaves(produtosVendaveis))
     },
     [setRegras],
   )
