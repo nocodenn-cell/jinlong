@@ -9,11 +9,16 @@ const scanStoreTest = vi.hoisted(() => {
     const ix = itens.findIndex((x) => x.id === id)
     if (ix >= 0) itens.splice(ix, 1)
   })
+  const atualizarQuantidade = vi.fn((id: string, quantidade: number) => {
+    const item = itens.find((x) => x.id === id)
+    if (item) item.quantidade = quantidade
+  })
   return {
     itens,
     removerItem,
+    atualizarQuantidade,
     getState() {
-      return { itens: [...itens], removerItem }
+      return { itens: [...itens], removerItem, atualizarQuantidade }
     },
   }
 })
@@ -81,6 +86,11 @@ function minimalDeps(overrides: Partial<WebCaixaScanDeps> = {}): WebCaixaScanDep
     tocarFeedback: vi.fn(),
     focarCampoBusca: vi.fn(),
     adicionarItem: vi.fn((item) => {
+      const existente = scanStoreTest.itens.find((x) => x.produtoId === item.produtoId)
+      if (existente) {
+        existente.quantidade += item.quantidade
+        return
+      }
       scanStoreTest.itens.push({
         id: item.id,
         produtoId: item.produtoId,
@@ -100,6 +110,7 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     vi.mocked(buscarProdutoComPrecoCaixa).mockReset()
     scanStoreTest.itens.length = 0
     scanStoreTest.removerItem.mockClear()
+    scanStoreTest.atualizarQuantidade.mockClear()
   })
 
   it('stale_cupom: retorna sem toast e sem chamar busca quando cupom ativo difere do meta', async () => {
@@ -214,5 +225,42 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     expect(deps.adicionarItem).toHaveBeenCalledTimes(1)
     expect(scanStoreTest.itens).toHaveLength(0)
     expect(scanStoreTest.removerItem).toHaveBeenCalled()
+  })
+
+  it('stale_cupom após merge: restaura quantidade anterior do item existente', async () => {
+    scanStoreTest.itens.push({ id: 'linha-existente', produtoId: 'p1', quantidade: 2 })
+    let cupomCalls = 0
+    vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
+      ok: true,
+      status: 'encontrado',
+      produto: {
+        id: 'p1',
+        nome: 'Produto teste',
+        codigo_barras: '789',
+        preco_varejo: 9.99,
+        preco_atacado: null,
+        categoria_id: null,
+        origem: 'brasil_sem_nf',
+        tem_nf: false,
+        observacao: null,
+        quantidade_estoque: 5,
+        estoque_minimo: null,
+      },
+      precoCalculado: 9.99,
+      tipoPrecoCalculado: 'VAREJO',
+    } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
+
+    const deps = minimalDeps({
+      getActiveCupomSessionId: () => {
+        cupomCalls += 1
+        return cupomCalls <= 4 ? 'cupom-a' : 'cupom-b'
+      },
+    })
+
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+    expect(r).toEqual({ ok: false, reason: 'stale_cupom' })
+    expect(scanStoreTest.itens).toEqual([{ id: 'linha-existente', produtoId: 'p1', quantidade: 2 }])
+    expect(scanStoreTest.atualizarQuantidade).toHaveBeenCalledWith('linha-existente', 2)
+    expect(scanStoreTest.removerItem).not.toHaveBeenCalled()
   })
 })
