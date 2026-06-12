@@ -15,6 +15,77 @@ import { cn } from '@/lib/utils'
 import type { LojaConfig, PdvConfig } from '@/app/gerente/configuracoes/actions'
 import { atualizarDadosLojaAction, atualizarConfiguracoesPdvAction } from '@/app/gerente/configuracoes/actions'
 
+export type ConfiguracoesLojaLabels = {
+  secDados: string
+  secContato: string
+  secEndereco: string
+  secSerieFiscal: string
+  nome: string
+  cnpj: string
+  razaoSocial: string
+  nomeFantasia: string
+  inscricaoEstadual: string
+  cnae: string
+  telefone: string
+  email: string
+  logradouro: string
+  numero: string
+  complemento: string
+  bairro: string
+  cidade: string
+  uf: string
+  cep: string
+  nfce: string
+  nfe: string
+  phCnpj: string
+  phCnae: string
+  phCep: string
+  sucesso: string
+  btnSalvar: string
+}
+
+export type ConfiguracoesFiscalLabels = {
+  sec: string
+  regime: string
+  cfop: string
+  cst: string
+  phCfop: string
+  phCst: string
+  warnSalveLoja: string
+  sucesso: string
+  btnSalvar: string
+}
+
+export type ConfiguracoesPrefsLabels = {
+  sec: string
+  idioma: string
+  tema: string
+  formato: string
+  checkLembrete: string
+  checkResumo: string
+  sucesso: string
+  btnSalvar: string
+}
+
+export type ConfiguracoesEnumsLabels = {
+  regimes: Record<string, string>
+  idiomas: Record<string, string>
+  temas: Record<string, string>
+  formatos: Record<string, string>
+}
+
+export type ConfiguracoesLabels = {
+  titulo: string
+  subtitulo: string
+  tabLoja: string
+  tabImpostos: string
+  tabPreferencias: string
+  loja: ConfiguracoesLojaLabels
+  fiscal: ConfiguracoesFiscalLabels
+  prefs: ConfiguracoesPrefsLabels
+  enums: ConfiguracoesEnumsLabels
+}
+
 export type ConfigDados = {
   loja: LojaConfig | null
   pdvConfig: PdvConfig | null
@@ -30,7 +101,7 @@ const FORMATOS = ['TERMICA', 'A4'] as const
 const inputClass =
   'admin-v2-input w-full px-2.5 py-2 text-xs outline-none transition-colors focus:border-jl-accent/50'
 
-export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
+export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; labels: ConfiguracoesLabels }) {
   const router = useRouter()
   const [abaAtiva, setAbaAtiva] = useState<Aba>('loja')
   const [lojaErro, setLojaErro] = useState<string | null>(null)
@@ -108,9 +179,15 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
     }
   }
 
+  const tabLabels: Record<Aba, string> = {
+    loja: labels.tabLoja,
+    impostos: labels.tabImpostos,
+    preferencias: labels.tabPreferencias,
+  }
+
   return (
     <div className="admin-v2-page">
-      <PageHeader title="Configurações" subtitle="Loja, impostos e preferências" />
+      <PageHeader title={labels.titulo} subtitle={labels.subtitulo} />
 
       <div className="mb-6 flex flex-wrap gap-2 border-b border-[#242424] pb-3">
         {(['loja', 'impostos', 'preferencias'] as const).map((aba) => (
@@ -126,24 +203,24 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                 : 'text-jl-fg-3 hover:text-jl-fg-2',
             )}
           >
-            {aba === 'loja' ? 'Loja' : aba === 'impostos' ? 'Impostos e fiscal' : 'Preferências'}
+            {tabLabels[aba]}
           </button>
         ))}
       </div>
 
       {abaAtiva === 'loja' && (
-        <SectionCard title="Dados da loja">
+        <SectionCard title={labels.loja.secDados}>
           <form onSubmit={handleLojaSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Nome">
+              <FormField label={labels.loja.nome}>
                 <input name="nome" type="text" defaultValue={dados.loja?.nome ?? ''} className={inputClass} required />
               </FormField>
-              <FormField label="CNPJ">
+              <FormField label={labels.loja.cnpj}>
                 <input
                   name="cnpj"
                   type="text"
                   defaultValue={dados.loja?.cnpj ?? ''}
-                  placeholder="00.000.000/0000-00"
+                  placeholder={labels.loja.phCnpj}
                   className={inputClass}
                   required
                 />
@@ -151,16 +228,16 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Razão social">
+              <FormField label={labels.loja.razaoSocial}>
                 <input name="razao_social" type="text" defaultValue={dados.loja?.razao_social ?? ''} className={inputClass} />
               </FormField>
-              <FormField label="Nome fantasia">
+              <FormField label={labels.loja.nomeFantasia}>
                 <input name="nome_fantasia" type="text" defaultValue={dados.loja?.nome_fantasia ?? ''} className={inputClass} />
               </FormField>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Inscrição estadual">
+              <FormField label={labels.loja.inscricaoEstadual}>
                 <input
                   name="inscricao_estadual"
                   type="text"
@@ -168,57 +245,57 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   className={inputClass}
                 />
               </FormField>
-              <FormField label="CNAE">
-                <input name="cnae" type="text" defaultValue={dados.loja?.cnae ?? ''} placeholder="1234567" className={inputClass} />
+              <FormField label={labels.loja.cnae}>
+                <input name="cnae" type="text" defaultValue={dados.loja?.cnae ?? ''} placeholder={labels.loja.phCnae} className={inputClass} />
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">Contato</h3>
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secContato}</h3>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Telefone">
+              <FormField label={labels.loja.telefone}>
                 <input name="telefone" type="tel" defaultValue={dados.loja?.telefone ?? ''} className={inputClass} />
               </FormField>
-              <FormField label="E-mail">
+              <FormField label={labels.loja.email}>
                 <input name="email" type="email" defaultValue={dados.loja?.email ?? ''} className={inputClass} />
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">Endereço</h3>
-            <FormField label="Logradouro">
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secEndereco}</h3>
+            <FormField label={labels.loja.logradouro}>
               <input name="endereco_logradouro" type="text" defaultValue={dados.loja?.endereco_logradouro ?? ''} className={inputClass} />
             </FormField>
             <div className="grid grid-cols-3 gap-3">
-              <FormField label="Número">
+              <FormField label={labels.loja.numero}>
                 <input name="endereco_numero" type="text" defaultValue={dados.loja?.endereco_numero ?? ''} className={inputClass} />
               </FormField>
-              <FormField label="Complemento">
+              <FormField label={labels.loja.complemento}>
                 <input name="endereco_complemento" type="text" defaultValue={dados.loja?.endereco_complemento ?? ''} className={inputClass} />
               </FormField>
-              <FormField label="Bairro">
+              <FormField label={labels.loja.bairro}>
                 <input name="endereco_bairro" type="text" defaultValue={dados.loja?.endereco_bairro ?? ''} className={inputClass} />
               </FormField>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <FormField label="Cidade">
+              <FormField label={labels.loja.cidade}>
                 <input name="endereco_cidade" type="text" defaultValue={dados.loja?.endereco_cidade ?? ''} className={inputClass} />
               </FormField>
-              <FormField label="UF">
+              <FormField label={labels.loja.uf}>
                 <input name="endereco_uf" type="text" defaultValue={dados.loja?.endereco_uf ?? ''} maxLength={2} className={inputClass} />
               </FormField>
-              <FormField label="CEP">
+              <FormField label={labels.loja.cep}>
                 <input
                   name="endereco_cep"
                   type="text"
                   defaultValue={dados.loja?.endereco_cep ?? ''}
-                  placeholder="12345-678"
+                  placeholder={labels.loja.phCep}
                   className={inputClass}
                 />
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">Série fiscal</h3>
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secSerieFiscal}</h3>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="NFC-e">
+              <FormField label={labels.loja.nfce}>
                 <input
                   name="numero_serie_nfce"
                   type="number"
@@ -228,7 +305,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
                   className={inputClass}
                 />
               </FormField>
-              <FormField label="NF-e">
+              <FormField label={labels.loja.nfe}>
                 <input
                   name="numero_serie_nfe"
                   type="number"
@@ -242,12 +319,12 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
 
             {lojaErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{lojaErro}</div>}
             {lojaSucesso && (
-              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Dados da loja salvos com sucesso</div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.loja.sucesso}</div>
             )}
 
             <div className="flex gap-2">
               <button type="submit" className="admin-v2-btn-primary">
-                Salvar dados da loja
+                {labels.loja.btnSalvar}
               </button>
             </div>
           </form>
@@ -255,11 +332,11 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
       )}
 
       {abaAtiva === 'impostos' && (
-        <SectionCard title="Impostos e fiscal">
+        <SectionCard title={labels.fiscal.sec}>
           <form onSubmit={handlePdvSubmit} className="space-y-4">
             {!dados.loja?.id && (
               <div className="admin-v2-alert-warning rounded-lg px-3 py-2 text-[12px]">
-                Salve os dados da loja antes de configurar o PDV.
+                {labels.fiscal.warnSalveLoja}
               </div>
             )}
 
@@ -279,11 +356,11 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
             />
 
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Regime tributário">
+              <FormField label={labels.fiscal.regime}>
                 <select name="regime_tributario" defaultValue={dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL'} className={inputClass}>
                   {REGIMES.map((r) => (
                     <option key={r} value={r}>
-                      {r}
+                      {labels.enums.regimes[r] ?? r}
                     </option>
                   ))}
                 </select>
@@ -291,22 +368,22 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="CFOP padrão">
+              <FormField label={labels.fiscal.cfop}>
                 <input
                   name="cfop_padrao"
                   type="text"
                   defaultValue={dados.pdvConfig?.cfop_padrao ?? '5102'}
-                  placeholder="5102"
+                  placeholder={labels.fiscal.phCfop}
                   className={inputClass}
                   required
                 />
               </FormField>
-              <FormField label="CST padrão">
+              <FormField label={labels.fiscal.cst}>
                 <input
                   name="cst_padrao"
                   type="text"
                   defaultValue={dados.pdvConfig?.cst_padrao ?? '00'}
-                  placeholder="00"
+                  placeholder={labels.fiscal.phCst}
                   maxLength={2}
                   className={inputClass}
                   required
@@ -316,12 +393,12 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
 
             {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
             {pdvSucesso && (
-              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Impostos e fiscal salvos com sucesso</div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.fiscal.sucesso}</div>
             )}
 
             <div className="flex gap-2">
               <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
-                Salvar
+                {labels.fiscal.btnSalvar}
               </button>
             </div>
           </form>
@@ -329,7 +406,7 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
       )}
 
       {abaAtiva === 'preferencias' && (
-        <SectionCard title="Preferências">
+        <SectionCard title={labels.prefs.sec}>
           <form onSubmit={handlePdvSubmit} className="space-y-4">
             <input type="hidden" name="loja_id" value={dados.loja?.id ?? ''} />
             <input type="hidden" name="regime_tributario" value={dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL'} />
@@ -347,29 +424,29 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
             />
 
             <div className="grid grid-cols-3 gap-3">
-              <FormField label="Idioma padrão">
+              <FormField label={labels.prefs.idioma}>
                 <select name="idioma_padrao" defaultValue={dados.pdvConfig?.idioma_padrao ?? 'pt'} className={inputClass}>
                   {IDIOMAS.map((i) => (
                     <option key={i} value={i}>
-                      {i === 'pt' ? 'Português' : '中文'}
+                      {labels.enums.idiomas[i] ?? i}
                     </option>
                   ))}
                 </select>
               </FormField>
-              <FormField label="Tema padrão">
+              <FormField label={labels.prefs.tema}>
                 <select name="tema_padrao" defaultValue={dados.pdvConfig?.tema_padrao ?? 'noturno'} className={inputClass}>
                   {TEMAS.map((t) => (
                     <option key={t} value={t}>
-                      {t === 'noturno' ? 'Noturno' : 'Novembro'}
+                      {labels.enums.temas[t] ?? t}
                     </option>
                   ))}
                 </select>
               </FormField>
-              <FormField label="Formato de impressão">
+              <FormField label={labels.prefs.formato}>
                 <select name="formato_impressao" defaultValue={dados.pdvConfig?.formato_impressao ?? 'TERMICA'} className={inputClass}>
                   {FORMATOS.map((f) => (
                     <option key={f} value={f}>
-                      {f === 'TERMICA' ? 'Térmica' : 'A4'}
+                      {labels.enums.formatos[f] ?? f}
                     </option>
                   ))}
                 </select>
@@ -379,21 +456,21 @@ export function ConfiguracoesContent({ dados }: { dados: ConfigDados }) {
             <div className="space-y-2">
               <CheckboxLabel>
                 <input type="checkbox" disabled />
-                Ativar lembrete de fechamento diário (placeholder)
+                {labels.prefs.checkLembrete}
               </CheckboxLabel>
               <CheckboxLabel>
                 <input type="checkbox" disabled />
-                Enviar resumo automático por e-mail (placeholder)
+                {labels.prefs.checkResumo}
               </CheckboxLabel>
             </div>
 
             {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
             {pdvSucesso && (
-              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">Preferências salvas com sucesso</div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.prefs.sucesso}</div>
             )}
 
             <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
-              Salvar
+              {labels.prefs.btnSalvar}
             </button>
           </form>
         </SectionCard>
