@@ -7,7 +7,6 @@ import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
-  aplicarFiltroProdutoVendavel,
   filtrarSomenteProdutosVendaveis,
   isProdutoVendavel,
   primeiroProdutoVendavel,
@@ -24,6 +23,7 @@ import {
   fetchPdvConfigParaCaixaWeb,
   mapProdutoRow,
   sanitizeIlikeFragment,
+  selectProdutosVendaveis,
 } from '@/app/caixa/server/caixaActionsInternals'
 
 type ProdutoRowCaixa = {
@@ -38,12 +38,6 @@ type ProdutoRowCaixa = {
   observacao: string | null
   ativo: boolean
   status_publicacao: string | null
-}
-
-type CaixaSupabaseClient = Awaited<ReturnType<typeof createClient>>
-
-function selecionarProdutosVendaveis(supabase: CaixaSupabaseClient) {
-  return aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
 }
 
 function rowVendavel(row: ProdutoRowCaixa): boolean {
@@ -108,7 +102,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
 
     const variantes = variantesChaveLeitura(t)
     if (variantes.length > 0) {
-      const { data: porCodigoLista, error: errCodigo } = await selecionarProdutosVendaveis(supabase)
+      const { data: porCodigoLista, error: errCodigo } = await selectProdutosVendaveis(supabase)
         .in('codigo_barras', variantes)
         .limit(10)
 
@@ -142,7 +136,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return { ok: true, status: 'nao_encontrado' }
     }
 
-    const { data: porNome, error: errNome } = await selecionarProdutosVendaveis(supabase)
+    const { data: porNome, error: errNome } = await selectProdutosVendaveis(supabase)
       .ilike('nome', `%${frag}%`)
       .limit(3)
 
@@ -158,7 +152,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message) }
       const catIds = (cats ?? []).map((c) => c.id)
       if (catIds.length > 0) {
-        const { data: porCat, error: errPorCat } = await selecionarProdutosVendaveis(supabase)
+        const { data: porCat, error: errPorCat } = await selectProdutosVendaveis(supabase)
           .in('categoria_id', catIds)
           .limit(3)
         if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message) }

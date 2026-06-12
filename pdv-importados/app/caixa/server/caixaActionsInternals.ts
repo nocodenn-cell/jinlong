@@ -3,6 +3,7 @@ export {
   sanitizeIlikeFragment,
   mapProdutoRow,
   PRODUTO_COLS,
+  selectProdutosVendaveis,
 } from '@/app/caixa/server/caixaProdutoSql'
 export { estoqueResumoParaCaixa } from '@/app/caixa/server/caixaEstoqueServer'
 export { fetchPdvConfigParaCaixaWeb } from '@/app/caixa/server/caixaPdvConfigRpc'

@@ -1,4 +1,11 @@
 import type { OrigemProdutoCaixa, ProdutoCaixaDTO } from '@/app/caixa/caixaActionTypes'
+import { aplicarFiltroProdutoVendavel } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
+
+type SupabaseProdutoSelect<Q> = {
+  from(table: 'produtos'): {
+    select(columns: string): Q
+  }
+}
 
 /** Remove caracteres perigosos para padrão ILIKE. */
 export function sanitizeIlikeFragment(s: string): string {
@@ -42,3 +49,9 @@ export function mapProdutoRow(
 
 export const PRODUTO_COLS =
   'id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id, origem, tem_nf, observacao, ativo, status_publicacao' as const
+
+export function selectProdutosVendaveis<Q extends { eq(column: string, value: unknown): Q }>(
+  supabase: SupabaseProdutoSelect<Q>,
+): Q {
+  return aplicarFiltroProdutoVendavel(supabase.from('produtos').select('*'))
+}
