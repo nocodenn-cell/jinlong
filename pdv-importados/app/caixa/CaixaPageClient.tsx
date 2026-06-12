@@ -78,6 +78,33 @@ function newCupomSessionId(): string {
   return crypto.randomUUID()
 }
 
+const FINALIZACAO_TIMEOUT_MS = 30_000
+
+function inferirHintCheckout(
+  errorMsg: string,
+  hints: { padrao: string; cupom: string; sessao: string; rede: string },
+): string {
+  const l = errorMsg.toLowerCase()
+  if (
+    l.includes('preç') ||
+    l.includes('preco') ||
+    l.includes('diverge') ||
+    l.includes('divergiu') ||
+    l.includes('cupom') ||
+    l.includes('inativ') ||
+    (l.includes('item') && (l.includes('inválid') || l.includes('invalido')))
+  ) return hints.cupom
+  if (l.includes('sess') || l.includes('login') || l.includes('expirou')) return hints.sessao
+  if (
+    l.includes('timeout') ||
+    l.includes('demorou') ||
+    l.includes('conexão') ||
+    l.includes('conexao') ||
+    l.includes('rede')
+  ) return hints.rede
+  return hints.padrao
+}
+
 function localeFromIdioma(idioma: Idioma): string {
   if (idioma === "pt") return "pt-BR"
   return "zh-CN"
@@ -105,6 +132,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   } = useCaixaMensagens()
 
   const [codigo, setCodigo] = useState("")
+  const [checkoutHint, setCheckoutHint] = useState<string | null>(null)
   const [carregandoRegras, setCarregandoRegras] = useState(true)
   const [limiteSangriaSemGerente, setLimiteSangriaSemGerente] = useState(200)
   const [finalizando, setFinalizando] = useState(false)
@@ -425,6 +453,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setMetodoPagamento("dinheiro")
     setCodigo("")
     setCaixaMensagem(null)
+    setCheckoutHint(null)
     limparEstadoDescontoGerente()
     setAbaPdvAtiva("produto")
     focarCampoBusca()
@@ -654,6 +683,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         : [{ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", valor: 0 }]
     setFinalizando(true)
     setCaixaMensagem(null)
+    setCheckoutHint(null)
     try {
       if (!vendaIdempotenciaRef.current) {
         vendaIdempotenciaRef.current = crypto.randomUUID()
@@ -680,7 +710,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
         })),
       }
-      const res = await finalizarVendaCaixa(payload)
+      const timeoutResult: { ok: false; error: string } = {
+        ok: false,
+        error: m.caixa.msg_checkout_timeout,
+      }
+      const res = await Promise.race([
+        finalizarVendaCaixa(payload),
+        new Promise<typeof timeoutResult>((resolve) =>
+          setTimeout(() => resolve(timeoutResult), FINALIZACAO_TIMEOUT_MS),
+        ),
+      ])
       if (res.ok) {
         lastReciboRef.current = {
           vendaId: res.vendaId,
@@ -700,6 +739,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           valorDescontoGerente,
           moeda: m.caixa.moeda_prefixo,
         }
+        setCheckoutHint(null)
         setReimprimirModalAberto(true)
         vendaIdempotenciaRef.current = null
         limparCarrinho()
@@ -713,7 +753,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         tocarFeedback("ok")
         await recarregarStatusCaixa()
       } else {
+        const hint = inferirHintCheckout(res.error, {
+          padrao: m.caixa.msg_checkout_hint_padrao,
+          cupom: m.caixa.msg_checkout_hint_cupom,
+          sessao: m.caixa.msg_checkout_hint_sessao,
+          rede: m.caixa.msg_checkout_hint_rede,
+        })
         setCaixaMensagem(res.error, { kind: "error" })
+        setCheckoutHint(hint)
         tocarFeedback("erro")
       }
     } catch (e) {
@@ -722,6 +769,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         error: e instanceof Error ? e.message : String(e),
       })
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+      setCheckoutHint(m.caixa.msg_checkout_hint_padrao)
       tocarFeedback("erro")
     } finally {
       setFinalizando(false)
@@ -946,7 +994,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         />
                       </div>
                       <div className="shrink-0">
-                        <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
+                        <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
                       </div>
                     </div>
                   ) : (
@@ -964,7 +1012,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         somAtivo={somFeedbackAtivo}
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
                       />
-                      <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} />
+                      <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
                     </>
                   )
                 }
