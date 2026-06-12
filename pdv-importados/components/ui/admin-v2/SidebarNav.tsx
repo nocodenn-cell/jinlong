@@ -10,7 +10,7 @@ import {
   ADMIN_V2_SISTEMA_ITEMS,
   type AdminV2NavItem,
 } from '@/lib/navigation/adminV2SidebarNav'
-import { ROUTES } from '../../../../shared-core/navigation/routes'
+import { ROUTES } from '@shared-core/navigation/routes'
 import type { Mensagens } from '@/i18n/getMessages'
 import { cn } from '@/lib/utils'
 

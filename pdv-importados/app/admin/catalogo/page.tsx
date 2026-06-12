@@ -17,7 +17,7 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { Download, Plus, Upload } from 'lucide-react'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'

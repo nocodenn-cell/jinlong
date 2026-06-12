@@ -4,6 +4,7 @@ const path = require('path');
 const sharedResolveAlias = {
   '@': './src',
   '@/shared': './shared',
+  '@shared-core': path.resolve(__dirname, '../shared-core'),
 }
 
 /** @type {import('next').NextConfig} */

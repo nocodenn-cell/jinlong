@@ -8,7 +8,7 @@
  */
 
 import Link from 'next/link'
-import { ROUTES } from '../../../../../shared-core/navigation/routes'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { Eye, ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'

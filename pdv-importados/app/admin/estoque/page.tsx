@@ -16,7 +16,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { Upload } from 'lucide-react'
-import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'

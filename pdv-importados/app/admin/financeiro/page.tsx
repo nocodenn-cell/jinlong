@@ -12,7 +12,7 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { createClient } from '@/lib/supabase/server'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { MetricCard, PageHeader } from '@/components/ui/admin-v2'

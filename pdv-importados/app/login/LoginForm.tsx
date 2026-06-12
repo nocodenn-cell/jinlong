@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import type { Mensagens } from '@/i18n/getMessages'
-import { ROUTES } from '../../../shared-core/navigation/routes'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 /** Evita open redirect: só `/gerente...` ou `/caixa...`. */
 function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string {

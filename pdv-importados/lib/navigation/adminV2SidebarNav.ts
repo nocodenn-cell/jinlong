@@ -14,7 +14,7 @@ import {
   ShieldOff,
   ShoppingCart,
 } from 'lucide-react'
-import { ROUTES } from '../../../shared-core/navigation/routes'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 export type AdminV2NavItem = {
   id: string

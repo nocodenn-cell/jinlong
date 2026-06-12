@@ -29,6 +29,9 @@
       "@shared/*": [
         "../shared/*"
       ],
+      "@shared-core/*": [
+        "../shared-core/*"
+      ],
       "@/shared/*": [
         "./shared/*"
       ],

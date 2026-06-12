@@ -13,7 +13,7 @@
  */
 
 import Link from 'next/link'
-import { ROUTES, pathWithQuery } from '../../../../shared-core/navigation/routes'
+import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'

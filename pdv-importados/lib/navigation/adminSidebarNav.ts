@@ -11,7 +11,7 @@ import {
   ShoppingBag,
   ShoppingCart,
 } from 'lucide-react'
-import { ROUTES } from '../../../shared-core/navigation/routes'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 /** Ordem + ícones da sidebar `/admin`. */
 export const ADMIN_SIDEBAR_NAV: ReadonlyArray<{

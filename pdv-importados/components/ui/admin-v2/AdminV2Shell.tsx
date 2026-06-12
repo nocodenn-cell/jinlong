@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import '@/styles/admin-v2.css'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
-import { ROUTES } from '../../../../shared-core/navigation/routes'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { Logo } from '@/components/branding/Logo'

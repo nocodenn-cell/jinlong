@@ -1,5 +1,5 @@
 import type { Mensagens } from '@/i18n/getMessages'
-import { ROUTES } from '../../../shared-core/navigation/routes'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 /** Chaves de módulo para labels i18n (sem resolver href — usar GERENTE_NAV_HREF). */
 export type PainelGerencialNavKey =
