@@ -1603,6 +1603,17 @@
     "filtro_inativos": "Inativos",
     "filtro_qualquer_saldo": "Qualquer saldo",
     "filtro_estoque_abaixo_min": "Abaixo/igual ao mínimo",
-    "filtro_nfe_busca_placeholder": "Nome, SKU ou código de barras…"
+    "filtro_nfe_busca_placeholder": "Nome, SKU ou código de barras…",
+    "catalogo_filtro_marca": "Marca",
+    "catalogo_filtro_fornecedor": "Fornecedor",
+    "catalogo_filtro_estoque": "Estoque",
+    "catalogo_filtro_imagem": "Imagem",
+    "paginacao_anterior": "‹ Anterior",
+    "paginacao_proxima": "Próxima ›",
+    "estoque_erro_carregar": "Falha ao carregar o estoque.",
+    "dashboard_pagamento_fallback": "Pagamento",
+    "dashboard_erro_banner_sg": "1 erro ao carregar",
+    "dashboard_erro_banner_pl": "{{n}} erros ao carregar",
+    "grafico_carregando": "Carregando gráfico…"
   }
 }
