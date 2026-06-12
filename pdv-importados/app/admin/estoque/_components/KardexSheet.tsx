@@ -1,12 +1,5 @@
 'use client'
 
-/**
- * FastProduct Admin — KardexSheet (Fase 5)
- *
- * Painel lateral (sheet) com o histórico de movimentações do produto. Carrega
- * sob demanda ao abrir via a action read-only `obterKardexProduto`.
- */
-
 import { useEffect, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -14,23 +7,11 @@ import { obterKardexProduto, type KardexMovimento } from '../actions'
 
 export type KardexAlvo = Readonly<{ produtoId: string; produtoNome: string }>
 
-const TIPO_LABEL: Record<string, string> = {
-  VENDA: 'Venda',
-  COMPRA: 'Compra',
-  ENTRADA_NF: 'Entrada NF-e',
-  ENTRADA: 'Entrada',
-  SAIDA: 'Saída',
-  AJUSTE: 'Ajuste manual',
-  ACERTO_INVENTARIO: 'Acerto de inventário',
-  PERDA: 'Perda',
-  QUEBRA: 'Quebra / avaria',
-  DEVOLUCAO: 'Devolução',
-  TRANSFERENCIA: 'Transferência',
-  OUTRO: 'Outro',
-}
-
-function rotuloTipo(codigo: string): string {
-  return TIPO_LABEL[codigo] ?? codigo.replace(/_/g, ' ').toLowerCase()
+type KardexLabels = {
+  titulo: string
+  semMovimentos: string
+  semMovimentosSub: string
+  tipoMap: Record<string, string>
 }
 
 const dtFmt = new Intl.DateTimeFormat('pt-BR', {
@@ -44,9 +25,11 @@ const dtFmt = new Intl.DateTimeFormat('pt-BR', {
 export function KardexSheet({
   alvo,
   onClose,
+  labels,
 }: {
   alvo: KardexAlvo | null
   onClose: () => void
+  labels: KardexLabels
 }) {
   const [movimentos, setMovimentos] = useState<KardexMovimento[]>([])
   const [carregando, setCarregando] = useState(false)
@@ -84,6 +67,9 @@ export function KardexSheet({
 
   if (!alvo) return null
 
+  const rotuloTipo = (codigo: string): string =>
+    labels.tipoMap[codigo] ?? codigo.replace(/_/g, ' ').toLowerCase()
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="kardex-titulo">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
@@ -91,7 +77,7 @@ export function KardexSheet({
         <div className="flex items-start justify-between gap-3 border-b border-[#242424] px-5 py-4">
           <div className="min-w-0">
             <h2 id="kardex-titulo" className="text-[15px] font-semibold text-jl-fg-1">
-              Kardex
+              {labels.titulo}
             </h2>
             <p className="mt-0.5 truncate text-[12px] text-jl-fg-2">{alvo.produtoNome}</p>
           </div>
@@ -117,10 +103,8 @@ export function KardexSheet({
               <span className="text-3xl text-jl-fg-3" aria-hidden>
                 🗒️
               </span>
-              <p className="text-[13px] font-medium text-jl-fg-2">Sem movimentações registradas</p>
-              <p className="text-[11px] text-jl-fg-3">
-                As entradas e saídas deste produto aparecerão aqui.
-              </p>
+              <p className="text-[13px] font-medium text-jl-fg-2">{labels.semMovimentos}</p>
+              <p className="text-[11px] text-jl-fg-3">{labels.semMovimentosSub}</p>
             </div>
           ) : (
             <ul className="flex flex-col">

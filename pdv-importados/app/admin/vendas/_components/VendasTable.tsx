@@ -1,14 +1,5 @@
 'use client'
 
-/**
- * FastProduct Admin — VendasTable (Fase 5)
- *
- * Tabela de vendas. Usa o DataTable genérico (Fase 2). A PAGINAÇÃO é server-side
- * por CURSOR (a action de origem só expõe `hasMore`, sem total) — resolvida no
- * page.tsx via ?page=; esta tabela só renderiza a página atual e o sort dos
- * headers ordena a página corrente (client-side).
- */
-
 import { useState } from 'react'
 import { Eye } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -27,6 +18,43 @@ export type VendaLinha = {
   primeiro_produto: string | null
 }
 
+export type VendasLabels = {
+  colVenda: string
+  colHora: string
+  colItens: string
+  colPagamento: string
+  colTotal: string
+  colCaixa: string
+  colStatus: string
+  colVendedor: string
+  concluida: string
+  cancelada: string
+  unidade: string
+  unidades: string
+  item: string
+  itensPl: string
+  pagDinheiro: string
+  pagPix: string
+  pagCredito: string
+  pagDebito: string
+  pagCartao: string
+  pagOutro: string
+  vazioTitulo: string
+  vazioSub: string
+  detalheTitulo: string
+  detalheErroTitulo: string
+  detalheErroSub: string
+  detalheData: string
+  detalheTipo: string
+  detalheOperador: string
+  detalheNfe: string
+  detalheBruto: string
+  detalheDesconto: string
+  detalheLiquido: string
+  detalheItens: string
+  detalheNenhumItem: string
+}
+
 function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
   const up = String(status ?? '').trim().toUpperCase()
   if (up === 'CONCLUIDA') return 'success'
@@ -34,17 +62,7 @@ function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
   return 'muted'
 }
 
-function paymentLabel(formaPagamento: string | null): string {
-  const payment = toPayment(formaPagamento)
-  if (payment === 'DINHEIRO') return 'DINHEIRO'
-  if (payment === 'PIX') return 'PIX'
-  if (payment === 'CREDITO') return 'CRÉDITO'
-  if (payment === 'DEBITO') return 'DÉBITO'
-  if (payment === 'CARTAO') return 'CARTÃO'
-  return 'OUTRO'
-}
-
-function StatusCell({ status }: { status: string | null }) {
+function StatusCell({ status, labels }: { status: string | null; labels: VendasLabels }) {
   const s = toVendaStatus(status)
   const tone = statusDotTone(status)
   const dotClass =
@@ -54,7 +72,7 @@ function StatusCell({ status }: { status: string | null }) {
         ? 'bg-red-400'
         : 'bg-jl-fg-3'
   if (s) {
-    const label = s === 'CONCLUIDA' ? 'Concluída' : s === 'CANCELADA' ? 'Cancelada' : s
+    const label = s === 'CONCLUIDA' ? labels.concluida : s === 'CANCELADA' ? labels.cancelada : s
     const pillClass =
       tone === 'success'
         ? 'admin-v2-badge-success'
@@ -79,14 +97,24 @@ function StatusCell({ status }: { status: string | null }) {
   return <span className="text-jl-fg-3">—</span>
 }
 
-function ItensCell({ row }: { row: VendaLinha }) {
+function paymentLabel(formaPagamento: string | null, labels: VendasLabels): string {
+  const payment = toPayment(formaPagamento)
+  if (payment === 'DINHEIRO') return labels.pagDinheiro
+  if (payment === 'PIX') return labels.pagPix
+  if (payment === 'CREDITO') return labels.pagCredito
+  if (payment === 'DEBITO') return labels.pagDebito
+  if (payment === 'CARTAO') return labels.pagCartao
+  return labels.pagOutro
+}
+
+function ItensCell({ row, labels }: { row: VendaLinha; labels: VendasLabels }) {
   const extras = row.qtd_itens_distintos - 1
   return (
     <div className="min-w-0">
       <p className="max-w-[260px] truncate text-[12px] text-jl-fg-1">{row.primeiro_produto ?? '—'}</p>
       <p className="text-[10px] text-jl-fg-3">
-        {row.qtd_itens_total} {row.qtd_itens_total === 1 ? 'unidade' : 'unidades'}
-        {extras > 0 ? ` · +${extras} ${extras === 1 ? 'item' : 'itens'}` : ''}
+        {row.qtd_itens_total} {row.qtd_itens_total === 1 ? labels.unidade : labels.unidades}
+        {extras > 0 ? ` · +${extras} ${extras === 1 ? labels.item : labels.itensPl}` : ''}
       </p>
     </div>
   )
@@ -128,25 +156,13 @@ function ActionBtn({
   )
 }
 
-function VendasEmpty() {
-  return (
-    <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <span className="text-4xl text-jl-fg-3" aria-hidden>
-        🧾
-      </span>
-      <p className="text-[14px] font-medium text-jl-fg-2">Nenhuma venda encontrada</p>
-      <p className="text-[12px] text-jl-fg-3">Ajuste o período, o status ou a forma de pagamento.</p>
-    </div>
-  )
-}
-
-export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
+export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: VendasLabels }) {
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
 
   const columns: Column<VendaLinha>[] = [
     {
       key: 'venda',
-      header: 'Venda',
+      header: labels.colVenda,
       sortValue: (r) => r.id,
       cell: (r) => (
         <span className="max-w-[120px] truncate font-medium text-jl-fg-1" title={r.id}>
@@ -156,23 +172,23 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
     },
     {
       key: 'hora',
-      header: 'Hora',
+      header: labels.colHora,
       sortValue: (r) => r.data ?? '',
       cell: (r) => <HoraCell data={r.data} />,
     },
     {
       key: 'itens',
-      header: 'Itens',
-      cell: (r) => <ItensCell row={r} />,
+      header: labels.colItens,
+      cell: (r) => <ItensCell row={r} labels={labels} />,
     },
     {
       key: 'pagamento',
-      header: 'Pagamento',
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{paymentLabel(r.forma_pagamento)}</span>,
+      header: labels.colPagamento,
+      cell: (r) => <span className="text-[12px] text-jl-fg-2">{paymentLabel(r.forma_pagamento, labels)}</span>,
     },
     {
       key: 'total',
-      header: 'Total',
+      header: labels.colTotal,
       align: 'right',
       sortValue: (r) => r.total_liquido ?? 0,
       cell: (r) =>
@@ -184,19 +200,19 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
     },
     {
       key: 'caixa',
-      header: 'Caixa (01)',
+      header: labels.colCaixa,
       align: 'center',
       cell: () => <span className="text-[12px] text-jl-fg-2">01</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: labels.colStatus,
       align: 'center',
-      cell: (r) => <StatusCell status={r.status} />,
+      cell: (r) => <StatusCell status={r.status} labels={labels} />,
     },
     {
       key: 'vendedor',
-      header: 'Vendedor (—)',
+      header: labels.colVendedor,
       cell: () => <span className="text-[12px] text-jl-fg-3">—</span>,
     },
   ]
@@ -207,19 +223,42 @@ export function VendasTable({ vendas }: { vendas: VendaLinha[] }) {
         data={vendas}
         columns={columns}
         rowKey={(r) => r.id}
-        emptyState={<VendasEmpty />}
+        emptyState={
+          <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <span className="text-4xl text-jl-fg-3" aria-hidden>🧾</span>
+            <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
+            <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
+          </div>
+        }
         className="rounded-none border-x-0 border-b-0"
         onRowClick={(r) => setAlvo({ id: r.id })}
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            <ActionBtn label={`Ver detalhe da venda ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
+            <ActionBtn label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
               <Eye size={13} aria-hidden />
             </ActionBtn>
           </div>
         )}
       />
 
-      <VendaDetailSheet alvo={alvo} onClose={() => setAlvo(null)} />
+      <VendaDetailSheet
+        alvo={alvo}
+        onClose={() => setAlvo(null)}
+        labels={{
+          titulo: labels.detalheTitulo,
+          erroTitulo: labels.detalheErroTitulo,
+          erroSub: labels.detalheErroSub,
+          data: labels.detalheData,
+          tipo: labels.detalheTipo,
+          operador: labels.detalheOperador,
+          nfe: labels.detalheNfe,
+          bruto: labels.detalheBruto,
+          desconto: labels.detalheDesconto,
+          liquido: labels.detalheLiquido,
+          itens: labels.detalheItens,
+          nenhumItem: labels.detalheNenhumItem,
+        }}
+      />
     </>
   )
 }

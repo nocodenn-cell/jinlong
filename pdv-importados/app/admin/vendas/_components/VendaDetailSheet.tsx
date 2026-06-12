@@ -1,12 +1,5 @@
 'use client'
 
-/**
- * FastProduct Admin — VendaDetailSheet (Fase 5)
- *
- * Painel lateral com o detalhe de uma venda (header + itens). Carrega sob demanda
- * ao abrir via a action read-only `obterDetalheVenda`.
- */
-
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { StatusBadge, PaymentBadge, FiscalBadge } from '@/components/ui/badges'
@@ -18,12 +11,29 @@ import { toPayment, toVendaStatus, toFiscal } from './vendaMaps'
 
 export type VendaAlvo = Readonly<{ id: string }>
 
+type DetalheLabels = {
+  titulo: string
+  erroTitulo: string
+  erroSub: string
+  data: string
+  tipo: string
+  operador: string
+  nfe: string
+  bruto: string
+  desconto: string
+  liquido: string
+  itens: string
+  nenhumItem: string
+}
+
 export function VendaDetailSheet({
   alvo,
   onClose,
+  labels,
 }: {
   alvo: VendaAlvo | null
   onClose: () => void
+  labels: DetalheLabels
 }) {
   const [venda, setVenda] = useState<VendaDetalhe | null>(null)
   const [carregando, setCarregando] = useState(false)
@@ -82,7 +92,7 @@ export function VendaDetailSheet({
         <div className="flex items-start justify-between gap-3 border-b border-[#242424] px-5 py-4">
           <div className="min-w-0">
             <h2 id="venda-detalhe-titulo" className="text-[15px] font-semibold text-jl-fg-1">
-              Detalhe da venda
+              {labels.titulo}
             </h2>
             <p className="mt-0.5 truncate font-mono text-[11px] text-jl-fg-3">{alvo.id}</p>
           </div>
@@ -105,13 +115,9 @@ export function VendaDetailSheet({
             </div>
           ) : erro || !venda ? (
             <div className="flex flex-col items-center gap-2 py-16 text-center">
-              <span className="text-3xl text-jl-fg-3" aria-hidden>
-                ⚠️
-              </span>
-              <p className="text-[13px] font-medium text-jl-fg-2">Não foi possível carregar esta venda</p>
-              <p className="text-[11px] text-jl-fg-3">
-                Ela pode ter sido removida ou você não tem acesso.
-              </p>
+              <span className="text-3xl text-jl-fg-3" aria-hidden>⚠️</span>
+              <p className="text-[13px] font-medium text-jl-fg-2">{labels.erroTitulo}</p>
+              <p className="text-[11px] text-jl-fg-3">{labels.erroSub}</p>
             </div>
           ) : (
             <>
@@ -128,24 +134,24 @@ export function VendaDetailSheet({
               </div>
 
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-                <Info label="Data">{formatDateTimeOrDash(venda.data, 'pt-BR', 'medium')}</Info>
-                <Info label="Tipo">{venda.tipo_venda ?? '—'}</Info>
-                <Info label="Operador">{venda.operador_nome ?? '—'}</Info>
-                <Info label="NF-e">{venda.numero_nf ?? '—'}</Info>
+                <Info label={labels.data}>{formatDateTimeOrDash(venda.data, 'pt-BR', 'medium')}</Info>
+                <Info label={labels.tipo}>{venda.tipo_venda ?? '—'}</Info>
+                <Info label={labels.operador}>{venda.operador_nome ?? '—'}</Info>
+                <Info label={labels.nfe}>{venda.numero_nf ?? '—'}</Info>
               </dl>
 
               <div className="admin-v2-panel mt-4 rounded-[10px] p-3">
-                <Linha label="Bruto" valor={formatBRL(venda.total_bruto)} />
-                <Linha label="Desconto" valor={`- ${formatBRL(venda.total_desconto)}`} muted />
+                <Linha label={labels.bruto} valor={formatBRL(venda.total_bruto)} />
+                <Linha label={labels.desconto} valor={`- ${formatBRL(venda.total_desconto)}`} muted />
                 <div className="my-1.5 h-px bg-[#242424]" />
-                <Linha label="Líquido" valor={formatBRL(venda.total_liquido)} strong />
+                <Linha label={labels.liquido} valor={formatBRL(venda.total_liquido)} strong />
               </div>
 
               <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
-                Itens ({venda.itens.length})
+                {labels.itens} ({venda.itens.length})
               </h3>
               {venda.itens.length === 0 ? (
-                <p className="text-[12px] text-jl-fg-3">Nenhum item registrado nesta venda.</p>
+                <p className="text-[12px] text-jl-fg-3">{labels.nenhumItem}</p>
               ) : (
                 <ul className="flex flex-col">
                   {venda.itens.map((it) => (

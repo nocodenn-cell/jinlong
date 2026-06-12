@@ -1,15 +1,5 @@
 'use client'
 
-/**
- * FastProduct Admin — DashboardChart (Fase 3)
- *
- * Gráfico de faturamento por hora — Chart.js client-only.
- *
- * ATENÇÃO: os valores chegam em REAIS (não centavos). A query do dashboard
- * agrega `vendas.total_liquido`, que já está em reais — por isso os
- * formatters NÃO dividem por 100 (diferente do mock original do design).
- */
-
 import { useEffect, useRef } from 'react'
 import Chart from 'chart.js/auto'
 
@@ -22,6 +12,9 @@ interface DashboardChartProps {
   peakHour: string
   /** Valor do pico já formatado, ex.: "R$ 890,00". */
   peakValue: string
+  titleLabel: string
+  subtitleLabel: string
+  peakLabel: string
 }
 
 function compactBRL(reais: number): string {
@@ -32,7 +25,7 @@ function compactBRL(reais: number): string {
   return `R$${reais.toFixed(0)}`
 }
 
-export function DashboardChart({ labels, data, peakHour, peakValue }: DashboardChartProps) {
+export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, subtitleLabel, peakLabel }: DashboardChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
@@ -40,7 +33,6 @@ export function DashboardChart({ labels, data, peakHour, peakValue }: DashboardC
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Destrói instância anterior (hot-reload safe).
     if (chartRef.current) chartRef.current.destroy()
 
     const ctx = canvas.getContext('2d')
@@ -130,22 +122,20 @@ export function DashboardChart({ labels, data, peakHour, peakValue }: DashboardC
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#242424]">
-      {/* Header */}
       <div className="flex items-start justify-between px-5 py-4">
         <div>
-          <p className="text-[13px] font-medium text-jl-fg-1">Faturamento por hora</p>
-          <p className="mt-0.5 text-[11px] text-jl-fg-3">Total líquido acumulado no período</p>
+          <p className="text-[13px] font-medium text-jl-fg-1">{titleLabel}</p>
+          <p className="mt-0.5 text-[11px] text-jl-fg-3">{subtitleLabel}</p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] text-jl-fg-3">Pico na hora</p>
+          <p className="text-[10px] text-jl-fg-3">{peakLabel}</p>
           <p className="text-[13px] font-medium text-jl-fg-1">
             {peakValue} às {peakHour}
           </p>
         </div>
       </div>
-      {/* Canvas */}
       <div className="px-4 pb-4" style={{ height: 160 }}>
-        <canvas ref={canvasRef} aria-label="Gráfico de faturamento por hora" />
+        <canvas ref={canvasRef} aria-label={titleLabel} />
       </div>
     </div>
   )

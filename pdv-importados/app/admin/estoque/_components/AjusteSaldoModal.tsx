@@ -1,25 +1,24 @@
 'use client'
 
-/**
- * FastProduct Admin — AjusteSaldoModal (Fase 5)
- *
- * Modal de ajuste de saldo/mínimo. Reusa a server action EXISTENTE
- * `atualizarEstoqueProduto` (RPC `ajustar_estoque_manual`) — nenhuma query nova.
- */
-
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { atualizarEstoqueProduto } from '@/app/gerente/estoque/actions'
 import { cn } from '@/lib/utils'
 
-const MOTIVOS = [
-  { value: 'ACERTO_INVENTARIO', label: 'Acerto de inventário' },
-  { value: 'COMPRA', label: 'Entrada por compra' },
-  { value: 'PERDA', label: 'Perda' },
-  { value: 'QUEBRA', label: 'Quebra / avaria' },
-  { value: 'OUTRO', label: 'Outro (descreva)' },
-] as const
+type Motivo = { value: string; label: string }
+
+type AjusteLabels = {
+  titulo: string
+  saldoAtual: string
+  estoqueMinimo: string
+  motivo: string
+  observacao: string
+  cancelar: string
+  salvar: string
+  salvando: string
+  motivos: Motivo[]
+}
 
 const inputClassName =
   'admin-v2-input w-full px-2.5 py-[7px] text-[12px] outline-none transition-colors'
@@ -34,9 +33,11 @@ export type AjusteAlvo = Readonly<{
 export function AjusteSaldoModal({
   alvo,
   onClose,
+  labels,
 }: {
   alvo: AjusteAlvo | null
   onClose: () => void
+  labels: AjusteLabels
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -100,7 +101,7 @@ export function AjusteSaldoModal({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id="ajuste-saldo-titulo" className="text-[15px] font-semibold text-jl-fg-1">
-              Ajustar saldo
+              {labels.titulo}
             </h2>
             <p className="mt-0.5 truncate text-[12px] text-jl-fg-2">{alvo.produtoNome}</p>
           </div>
@@ -117,7 +118,7 @@ export function AjusteSaldoModal({
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Saldo atual">
+            <Field label={labels.saldoAtual}>
               <input
                 name="quantidade_atual"
                 type="number"
@@ -128,7 +129,7 @@ export function AjusteSaldoModal({
                 className={inputClassName}
               />
             </Field>
-            <Field label="Estoque mínimo">
+            <Field label={labels.estoqueMinimo}>
               <input
                 name="estoque_minimo"
                 type="number"
@@ -141,9 +142,9 @@ export function AjusteSaldoModal({
             </Field>
           </div>
 
-          <Field label="Motivo">
+          <Field label={labels.motivo}>
             <select name="motivo" required defaultValue="ACERTO_INVENTARIO" className={inputClassName}>
-              {MOTIVOS.map((m) => (
+              {labels.motivos.map((m) => (
                 <option key={m.value} value={m.value}>
                   {m.label}
                 </option>
@@ -151,11 +152,11 @@ export function AjusteSaldoModal({
             </select>
           </Field>
 
-          <Field label="Observação">
+          <Field label={labels.observacao}>
             <input
               name="observacao"
               maxLength={500}
-              placeholder="Opcional (obrigatória se o motivo for “Outro”)"
+              placeholder='Opcional (obrigatória se o motivo for "Outro")'
               className={inputClassName}
             />
           </Field>
@@ -166,10 +167,10 @@ export function AjusteSaldoModal({
 
           <div className="mt-1 flex items-center justify-end gap-2">
             <button type="button" onClick={onClose} disabled={pending} className="admin-v2-btn-secondary">
-              Cancelar
+              {labels.cancelar}
             </button>
             <button type="submit" disabled={pending} className="admin-v2-btn-primary">
-              {pending ? 'Salvando…' : 'Salvar ajuste'}
+              {pending ? labels.salvando : labels.salvar}
             </button>
           </div>
         </form>
