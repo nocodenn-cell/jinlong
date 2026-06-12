@@ -1774,6 +1774,17 @@
     "filtro_inativos": "停售",
     "filtro_qualquer_saldo": "所有库存量",
     "filtro_estoque_abaixo_min": "低于/等于最低库存",
-    "filtro_nfe_busca_placeholder": "名称、SKU 或条形码…"
+    "filtro_nfe_busca_placeholder": "名称、SKU 或条形码…",
+    "catalogo_filtro_marca": "品牌",
+    "catalogo_filtro_fornecedor": "供应商",
+    "catalogo_filtro_estoque": "库存",
+    "catalogo_filtro_imagem": "图片",
+    "paginacao_anterior": "‹ 上一页",
+    "paginacao_proxima": "下一页 ›",
+    "estoque_erro_carregar": "加载库存失败。",
+    "dashboard_pagamento_fallback": "支付",
+    "dashboard_erro_banner_sg": "1条加载错误",
+    "dashboard_erro_banner_pl": "{{n}}条加载错误",
+    "grafico_carregando": "图表加载中…"
   }
 }

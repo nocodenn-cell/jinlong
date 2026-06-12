@@ -77,13 +77,13 @@ function collectSupabaseErrors(
   return out
 }
 
-function ErrorBanner({ messages }: { messages: string[] }) {
+function ErrorBanner({ messages, title }: { messages: string[]; title: string }) {
   if (messages.length === 0) return null
   return (
     <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
       <div className="mb-2 flex items-center gap-2 font-semibold">
         <AlertCircle className="shrink-0" size={18} />
-        {messages.length} erro{messages.length !== 1 ? 's' : ''} ao carregar
+        {title}
       </div>
       <ul className="list-inside list-disc space-y-0.5">
         {messages.map((msg, i) => (
@@ -125,6 +125,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const adminUi = m.admin
   const L = adminUi.dashboard
   const dash = adminUi.common
+  const ui = m.admin_ui
   const locale = localeFromIdioma(idioma)
   const lk = idioma === 'zh' ? 'cn' : 'pt'
 
@@ -402,7 +403,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const activityItems: ActivityItem[] = latestOrders.slice(0, 8).map((order) => ({
     id: order.id,
     type: order.status === 'CANCELADA' ? 'cancel' : 'sale',
-    description: `${order.formaPagamento || 'Pagamento'} • ${order.operador}`,
+    description: `${order.formaPagamento || ui.dashboard_pagamento_fallback} • ${order.operador}`,
     amount: amountByOrderId.get(order.id),
     relativeTime: order.data,
   }))
@@ -449,7 +450,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         </div>
       )}
 
-      <ErrorBanner messages={dashboardErrors} />
+      <ErrorBanner messages={dashboardErrors} title={
+        dashboardErrors.length === 1
+          ? ui.dashboard_erro_banner_sg
+          : ui.dashboard_erro_banner_pl.replace('{{n}}', String(dashboardErrors.length))
+      } />
 
       <div className="admin-v2-grid-kpi">
         {metrics.map((metric) => (

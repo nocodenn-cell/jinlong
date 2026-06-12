@@ -176,18 +176,18 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       ],
     },
     { type: 'select', key: 'categoria', label: m.produtos.categoria, defaultValue: '', options: catOptions },
-    { type: 'select', key: 'marca', label: 'Marca', defaultValue: '', options: marcaOptions },
+    { type: 'select', key: 'marca', label: ui.catalogo_filtro_marca, defaultValue: '', options: marcaOptions },
     {
       type: 'select',
       key: 'fornecedor',
-      label: 'Fornecedor',
+      label: ui.catalogo_filtro_fornecedor,
       defaultValue: '',
       options: fornOptions,
     },
     {
       type: 'select',
       key: 'estoque',
-      label: 'Estoque',
+      label: ui.catalogo_filtro_estoque,
       defaultValue: 'todos',
       options: [
         { value: 'todos', label: ui.filtro_qualquer_saldo },
@@ -198,7 +198,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     {
       type: 'select',
       key: 'imagem',
-      label: 'Imagem',
+      label: ui.catalogo_filtro_imagem,
       defaultValue: 'todos',
       options: [
         { value: 'todos', label: ui.filtro_todas },
@@ -308,7 +308,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
           </span>
           <div className="flex items-center gap-1">
             <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-              ‹ Anterior
+              {ui.paginacao_anterior}
             </PageLink>
             {pageWindow(page, totalPages).map((p, i) =>
               p === 'gap' ? (
@@ -322,7 +322,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
               )
             )}
             <PageLink href={pageHref(page + 1)} disabled={page >= totalPages}>
-              Próxima ›
+              {ui.paginacao_proxima}
             </PageLink>
           </div>
         </div>

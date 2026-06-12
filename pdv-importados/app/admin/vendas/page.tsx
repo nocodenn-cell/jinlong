@@ -20,6 +20,7 @@ import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
 
 // ─── Normalizadores de searchParams ─────────────────────────────────────────
@@ -92,6 +93,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   const m = getMessages(session.idioma)
   const ui = m.admin_ui
   const lk = session.idioma === 'zh' ? 'cn' : 'pt'
+  const locale = localeFromIdioma(session.idioma)
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
   const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], 'hoje')
@@ -213,7 +215,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     },
     {
       label: ui.vendas_concluidas,
-      value: formatNumberLocale(kpis.qtdConcluidas, 'pt-BR'),
+      value: formatNumberLocale(kpis.qtdConcluidas, locale),
       icon: 'shopping-bag',
       tone: 'success',
     },
@@ -225,7 +227,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     },
     {
       label: ui.vendas_canceladas,
-      value: formatNumberLocale(kpis.qtdCanceladas, 'pt-BR'),
+      value: formatNumberLocale(kpis.qtdCanceladas, locale),
       icon: 'x-circle',
       tone: 'warning',
       hint: formatBRL(kpis.valorCanceladas),
@@ -335,10 +337,10 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
             <span className="text-[11px] text-jl-fg-3">{m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', '…')}</span>
             <div className="flex items-center gap-1">
               <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-                ‹ Anterior
+                {ui.paginacao_anterior}
               </PageLink>
               <PageLink href={pageHref(page + 1)} disabled={!hasMore}>
-                Próxima ›
+                {ui.paginacao_proxima}
               </PageLink>
             </div>
           </div>

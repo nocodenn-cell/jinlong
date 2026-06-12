@@ -93,7 +93,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       (data) => ({ ok: true as const, data }),
       (err: unknown) => ({
         ok: false as const,
-        error: err instanceof Error ? err.message : 'Falha ao carregar o estoque.',
+        error: err instanceof Error ? err.message : ui.estoque_erro_carregar,
       })
     ),
   ])
@@ -266,7 +266,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           </span>
           <div className="flex items-center gap-1">
             <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-              ‹ Anterior
+              {ui.paginacao_anterior}
             </PageLink>
             {pageWindow(page, totalPages).map((p, i) =>
               p === 'gap' ? (
@@ -280,7 +280,7 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
               )
             )}
             <PageLink href={pageHref(page + 1)} disabled={page >= totalPages}>
-              Próxima ›
+              {ui.paginacao_proxima}
             </PageLink>
           </div>
         </div>
