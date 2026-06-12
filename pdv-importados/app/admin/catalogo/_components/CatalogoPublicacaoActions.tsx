@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils'
 type Props = Readonly<{
   produtoId: string
   status: StatusPublicacao
+  labels: { publicar: string; inativar: string }
 }>
 
-export function CatalogoPublicacaoActions({ produtoId, status }: Props) {
+export function CatalogoPublicacaoActions({ produtoId, status, labels }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
@@ -38,7 +39,7 @@ export function CatalogoPublicacaoActions({ produtoId, status }: Props) {
         onClick={() => run('inativar')}
         className={cn(btnClass, 'border border-[#3a2020] text-red-400 hover:bg-red-500/10')}
       >
-        Inativar
+        {labels.inativar}
       </button>
     )
   }
@@ -50,7 +51,7 @@ export function CatalogoPublicacaoActions({ produtoId, status }: Props) {
       onClick={() => run('publicar')}
       className={cn(btnClass, 'border border-jl-accent/35 text-jl-accent hover:bg-jl-accent/10')}
     >
-      Publicar
+      {labels.publicar}
     </button>
   )
 }

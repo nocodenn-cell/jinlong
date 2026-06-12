@@ -19,6 +19,8 @@ import { Upload } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages } from '@/i18n/getMessages'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { listarOpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { EstoqueTable, type EstoqueLinha } from './_components/EstoqueTable'
@@ -44,11 +46,7 @@ function clampPage(raw: string | undefined): number {
   return Number.isFinite(n) && n >= 1 ? n : 1
 }
 
-const ORIGEM_LABEL: Record<Exclude<OrigemFiltro, ''>, string> = {
-  china_manual: 'China',
-  brasil_nf: 'Brasil · NF',
-  brasil_sem_nf: 'Brasil',
-}
+
 
 type SearchParams = {
   q?: string
@@ -61,6 +59,12 @@ type SearchParams = {
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminEstoquePage({ searchParams }: PageProps) {
+  const { session } = await loadAdminContext({
+    pathname: ROUTES.admin.estoque,
+    resource: `route:${ROUTES.admin.estoque}`,
+  })
+  const m = getMessages(session.idioma)
+  const ui = m.admin_ui
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
   const q = (sp.q ?? '').slice(0, 200)
@@ -113,19 +117,19 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   const catOptions = [
-    { value: '', label: 'Todas as categorias' },
+    { value: '', label: m.estoque.filtro_todas_categorias },
     ...opcoes.categorias.map((c) => ({ value: c.id, label: c.nome })),
   ]
 
   const filters: FilterDef[] = [
-    { type: 'search', key: 'q', placeholder: 'Nome ou código de barras…' },
+    { type: 'search', key: 'q', placeholder: m.estoque.buscar_placeholder },
     {
       type: 'pills',
       key: 'visao',
       defaultValue: 'geral',
       options: [
-        { value: 'geral', label: 'Todos' },
-        { value: 'critico', label: 'Crítico' },
+        { value: 'geral', label: ui.filtro_todos },
+        { value: 'critico', label: m.estoque.badge_critico },
       ],
     },
     {
@@ -133,13 +137,13 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       key: 'origem',
       defaultValue: '',
       options: [
-        { value: '', label: 'Todas as origens' },
-        { value: 'china_manual', label: 'China' },
-        { value: 'brasil_nf', label: 'Brasil · NF' },
-        { value: 'brasil_sem_nf', label: 'Brasil' },
+        { value: '', label: m.produtos.filtro_todas_origens },
+        { value: 'china_manual', label: ui.estoque_origem_china },
+        { value: 'brasil_nf', label: ui.estoque_origem_brasil_nf },
+        { value: 'brasil_sem_nf', label: ui.estoque_origem_brasil },
       ],
     },
-    { type: 'select', key: 'categoria', label: 'Categoria', defaultValue: '', options: catOptions },
+    { type: 'select', key: 'categoria', label: m.produtos.categoria, defaultValue: '', options: catOptions },
   ]
 
   const activeParams: Record<string, string> = {}
@@ -163,25 +167,25 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   const nomeCategoria = (id: string) => opcoes.categorias.find((c) => c.id === id)?.nome ?? id
 
   const chips: Array<{ key: string; label: string }> = []
-  if (visao !== 'geral') chips.push({ key: 'visao', label: 'Só estoque crítico' })
-  if (origem !== '') chips.push({ key: 'origem', label: `Origem: ${ORIGEM_LABEL[origem]}` })
-  if (categoria) chips.push({ key: 'categoria', label: `Categoria: ${nomeCategoria(categoria)}` })
+  if (visao !== 'geral') chips.push({ key: 'visao', label: m.estoque.filtro_estoque_baixo })
+  if (origem !== '') chips.push({ key: 'origem', label: `${m.produtos.origem_label}: ${origem === 'china_manual' ? ui.estoque_origem_china : origem === 'brasil_nf' ? ui.estoque_origem_brasil_nf : ui.estoque_origem_brasil}` })
+  if (categoria) chips.push({ key: 'categoria', label: `${m.produtos.categoria}: ${nomeCategoria(categoria)}` })
 
   const countBadge = (
     <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
-      {totalCount} {totalCount === 1 ? 'produto' : 'produtos'}
+      {totalCount} {totalCount === 1 ? m.estoque.col_produto.toLowerCase() : m.estoque.titulo.toLowerCase()}
     </span>
   )
 
   return (
     <div className="admin-v2-page">
       <PageHeader
-        title="Estoque"
-        subtitle="Saldos por produto e ajustes manuais"
+        title={m.estoque.titulo}
+        subtitle={m.estoque.subtitulo}
         filters={
           <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
             <Upload size={14} aria-hidden />
-            Importar NF-e XML
+            {ui.catalogo_importar_nfe}
           </Link>
         }
       />
@@ -211,14 +215,54 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      <SectionCard title="Saldos de estoque" action={countBadge}>
-        <EstoqueTable linhas={linhas} />
+      <SectionCard title={ui.estoque_saldos_titulo} action={countBadge}>
+        <EstoqueTable linhas={linhas} labels={{
+          produto: m.estoque.col_produto,
+          saldo: ui.estoque_col_saldo,
+          minimo: ui.estoque_col_minimo,
+          deficit: m.estoque.col_deficit,
+          unidade: ui.estoque_col_unidade_abrev,
+          origem: m.produtos.origem_label,
+          origemChina: ui.estoque_origem_china,
+          origemBrasilNf: ui.estoque_origem_brasil_nf,
+          origemBrasil: ui.estoque_origem_brasil,
+          vazioTitulo: ui.estoque_vazio_titulo,
+          vazioSub: ui.estoque_vazio_sub,
+          ajusteTitulo: ui.estoque_ajuste_titulo,
+          saldoAtual: ui.estoque_saldo_atual,
+          estoqueMinimo: m.estoque.col_estoque_minimo,
+          motivo: m.estoque.ajuste_motivo_label,
+          observacao: m.produtos.observacao,
+          cancelar: m.cadastro_comum.cancelar,
+          salvarAjuste: ui.estoque_salvar_ajuste,
+          salvando: m.cadastro_comum.salvando,
+          motivoAcertoInventario: m.estoque.motivo_acerto_inventario,
+          motivoEntradaCompra: m.estoque.motivo_entrada_compra,
+          motivoPerda: m.estoque.motivo_perda,
+          motivoQuebra: m.estoque.motivo_quebra_avaria,
+          motivoOutro: m.estoque.motivo_outro,
+          kardexTitulo: ui.estoque_kardex_titulo,
+          semMovimentos: ui.estoque_sem_movimentos,
+          semMovimentosSub: ui.estoque_sem_movimentos_sub,
+          tipoVenda: ui.estoque_tipo_venda,
+          tipoCompra: ui.estoque_tipo_compra,
+          tipoEntradaNf: ui.estoque_tipo_entrada_nf,
+          tipoEntrada: ui.estoque_tipo_entrada,
+          tipoSaida: ui.estoque_tipo_saida,
+          tipoAjuste: ui.estoque_tipo_ajuste,
+          tipoDevolucao: ui.estoque_tipo_devolucao,
+          tipoTransferencia: ui.estoque_tipo_transferencia,
+          tipoAcertoInventario: m.estoque.motivo_acerto_inventario,
+          tipoPerda: m.estoque.motivo_perda,
+          tipoQuebra: m.estoque.motivo_quebra_avaria,
+          tipoOutro: m.estoque.motivo_outro,
+        }} />
       </SectionCard>
 
       {totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-between gap-3">
           <span className="text-[11px] text-jl-fg-3">
-            Página {page} de {totalPages}
+            {m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', String(totalPages))}
           </span>
           <div className="flex items-center gap-1">
             <PageLink href={pageHref(page - 1)} disabled={page <= 1}>

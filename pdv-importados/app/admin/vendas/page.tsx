@@ -14,6 +14,8 @@
 
 import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages } from '@/i18n/getMessages'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
@@ -69,23 +71,9 @@ function periodoFim(periodo: Periodo): string | null {
   return d.toISOString()
 }
 
-const PERIODO_LABEL: Record<Exclude<Periodo, 'tudo'>, string> = {
-  hoje: 'Hoje',
-  ontem: 'Ontem',
-  '7d': 'Últimos 7 dias',
-  mes: 'Mês atual',
-}
-const STATUS_LABEL: Record<Exclude<StatusFiltro, 'all'>, string> = {
-  CONCLUIDA: 'Concluídas',
-  CANCELADA: 'Canceladas',
-}
-const PAGAMENTO_LABEL: Record<Exclude<PagamentoFiltro, 'all'>, string> = {
-  DINHEIRO: 'Dinheiro',
-  PIX: 'PIX',
-  CARTAO_CREDITO: 'Cartão crédito',
-  CARTAO_DEBITO: 'Cartão débito',
-  CARTAO: 'Cartão',
-}
+
+
+
 
 type SearchParams = {
   periodo?: string
@@ -97,6 +85,13 @@ type SearchParams = {
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminVendasPage({ searchParams }: PageProps) {
+  const { session } = await loadAdminContext({
+    pathname: ROUTES.admin.vendas,
+    resource: `route:${ROUTES.admin.vendas}`,
+  })
+  const m = getMessages(session.idioma)
+  const ui = m.admin_ui
+  const lk = session.idioma === 'zh' ? 'cn' : 'pt'
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
   const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], 'hoje')
@@ -165,17 +160,34 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     return pathWithQuery(ROUTES.admin.vendas, p)
   }
 
+  const PERIODO_LABEL_I18N: Record<Exclude<Periodo, 'tudo'>, string> = {
+    hoje: ui.vendas_periodo_label_hoje,
+    ontem: ui.vendas_periodo_label_ontem,
+    '7d': ui.vendas_periodo_label_7d,
+    mes: ui.vendas_periodo_label_mes,
+  }
+  const STATUS_LABEL_I18N: Record<Exclude<StatusFiltro, 'all'>, string> = {
+    CONCLUIDA: ui.vendas_concluidas,
+    CANCELADA: ui.vendas_canceladas,
+  }
+  const PAGAMENTO_LABEL_I18N: Record<Exclude<PagamentoFiltro, 'all'>, string> = {
+    DINHEIRO: m.gerente.pagamento_dinheiro,
+    PIX: m.gerente.pagamento_pix,
+    CARTAO_CREDITO: m.gerente.forma_cartao_credito,
+    CARTAO_DEBITO: m.gerente.forma_cartao_debito,
+    CARTAO: m.gerente.pagamento_cartao,
+  }
   const chips: Array<{ key: string; label: string }> = []
-  if (periodo !== 'tudo') chips.push({ key: 'periodo', label: PERIODO_LABEL[periodo] })
-  if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL[status] })
-  if (pagamento !== 'all') chips.push({ key: 'pagamento', label: `Pagamento: ${PAGAMENTO_LABEL[pagamento]}` })
+  if (periodo !== 'tudo') chips.push({ key: 'periodo', label: PERIODO_LABEL_I18N[periodo] })
+  if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL_I18N[status] })
+  if (pagamento !== 'all') chips.push({ key: 'pagamento', label: `${m.gerente.col_forma}: ${PAGAMENTO_LABEL_I18N[pagamento]}` })
 
   const periodOptions: Array<{ id: Periodo; label: string }> = [
-    { id: 'hoje', label: 'Hoje' },
-    { id: 'ontem', label: 'Ontem' },
+    { id: 'hoje', label: ui.vendas_periodo_label_hoje },
+    { id: 'ontem', label: ui.vendas_periodo_label_ontem },
     { id: '7d', label: '7d' },
-    { id: 'mes', label: 'Mês' },
-    { id: 'tudo', label: 'Tudo' },
+    { id: 'mes', label: m.admin.dashboard.period30d[lk] },
+    { id: 'tudo', label: ui.filtro_todos },
   ]
 
   const periodHref = (next: Periodo) => {
@@ -194,25 +206,25 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     hint?: string
   }> = [
     {
-      label: 'Faturado',
+      label: ui.vendas_faturado,
       value: formatBRL(kpis.faturado),
       icon: 'dollar-sign',
       tone: 'gold',
     },
     {
-      label: 'Concluídas',
+      label: ui.vendas_concluidas,
       value: formatNumberLocale(kpis.qtdConcluidas, 'pt-BR'),
       icon: 'shopping-bag',
       tone: 'success',
     },
     {
-      label: 'Ticket médio',
+      label: m.gerente.ticket_medio,
       value: formatBRL(ticketMedio),
       icon: 'package',
       tone: 'gold',
     },
     {
-      label: 'Canceladas',
+      label: ui.vendas_canceladas,
       value: formatNumberLocale(kpis.qtdCanceladas, 'pt-BR'),
       icon: 'x-circle',
       tone: 'warning',
@@ -223,8 +235,8 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   return (
     <div className="admin-v2-page admin-v2-stack">
       <PageHeader
-        title="Vendas e caixa"
-        subtitle="Acompanhamento consolidado das vendas por período"
+        title={m.gerente.nav_topico_vendas_caixa}
+        subtitle={ui.vendas_subtitulo}
         filters={(
           <div className="admin-v2-segmented">
             {periodOptions.map((option) => (
@@ -255,10 +267,10 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       </div>
 
       <SectionCard
-        title="Vendas do dia"
+        title={m.dashboard.vendas_hoje}
         action={
           <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
-            {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'} nesta página
+            {vendas.length} {vendas.length === 1 ? ui.vendas_nesta_pag_sg : ui.vendas_nesta_pag_pl}
           </span>
         }
       >
@@ -281,11 +293,46 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} />
+        <VendasTable vendas={vendas} labels={{
+          colVenda: ui.vendas_col_venda,
+          colHora: ui.vendas_col_hora,
+          colItens: ui.vendas_col_itens,
+          colPagamento: m.gerente.col_forma,
+          colTotal: m.gerente.col_total,
+          colCaixa: ui.vendas_col_caixa,
+          colStatus: m.gerente.col_status,
+          colVendedor: ui.vendas_col_vendedor,
+          concluida: m.gerente.venda_status_concluida,
+          cancelada: m.gerente.venda_status_cancelada,
+          unidade: ui.vendas_unidade,
+          unidades: ui.vendas_unidades,
+          item: ui.vendas_item,
+          itensPl: ui.vendas_itens_pl,
+          pagDinheiro: m.gerente.pagamento_dinheiro,
+          pagPix: m.gerente.pagamento_pix,
+          pagCredito: ui.vendas_pag_label_credito,
+          pagDebito: ui.vendas_pag_label_debito,
+          pagCartao: ui.vendas_pag_label_cartao,
+          pagOutro: ui.vendas_pag_label_outro,
+          vazioTitulo: ui.vendas_vazio_titulo,
+          vazioSub: ui.vendas_vazio_sub,
+          detalheTitulo: m.gerente.venda_detalhe_titulo,
+          detalheErroTitulo: ui.vendas_detalhe_erro_titulo,
+          detalheErroSub: ui.vendas_detalhe_erro_sub,
+          detalheData: ui.vendas_detalhe_data,
+          detalheTipo: ui.vendas_detalhe_tipo,
+          detalheOperador: ui.vendas_detalhe_operador,
+          detalheNfe: ui.vendas_detalhe_nfe,
+          detalheBruto: m.gerente.venda_bruto,
+          detalheDesconto: m.gerente.venda_desconto,
+          detalheLiquido: ui.vendas_detalhe_liquido,
+          detalheItens: m.gerente.sec_itens_venda,
+          detalheNenhumItem: ui.vendas_detalhe_nenhum_item,
+        }} />
 
         {page > 1 || hasMore ? (
           <div className="mt-4 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-jl-fg-3">Página {page}</span>
+            <span className="text-[11px] text-jl-fg-3">{m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', '…')}</span>
             <div className="flex items-center gap-1">
               <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
                 ‹ Anterior

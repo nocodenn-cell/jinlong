@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { Download, Plus, Upload } from 'lucide-react'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages } from '@/i18n/getMessages'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
@@ -52,14 +53,7 @@ function clampPage(raw: string | undefined): number {
   return Number.isFinite(n) && n >= 1 ? n : 1
 }
 
-const ESTOQUE_LABEL: Record<Exclude<EstoqueFiltro, 'todos'>, string> = {
-  abaixo_minimo: 'Abaixo ou igual ao mínimo',
-  em_falta: 'Sem saldo (≤ 0)',
-}
-const IMAGEM_LABEL: Record<Exclude<ImagemFiltro, 'todos'>, string> = {
-  com_imagem: 'Com imagem',
-  sem_imagem: 'Sem imagem',
-}
+
 
 type SearchParams = {
   q?: string
@@ -81,6 +75,8 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     resource: `route:${ROUTES.admin.catalogo}`,
   })
   const { idioma } = session
+  const m = getMessages(idioma)
+  const ui = m.admin_ui
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
   const q = (sp.q ?? '').slice(0, 200)
@@ -144,28 +140,28 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
 
   // ─── FilterBar (Fase 2) ──────────────────────────────────────────────────
   const catOptions = [
-    { value: '', label: 'Todas as categorias' },
+    { value: '', label: m.estoque.filtro_todas_categorias },
     ...opcoes.categorias.map((c) => ({ value: c.id, label: c.nome })),
   ]
   const marcaOptions = [
-    { value: '', label: 'Todas as marcas' },
+    { value: '', label: ui.catalogo_todas_marcas },
     ...opcoes.marcas.map((m) => ({ value: m.id, label: m.nome })),
   ]
   const fornOptions = [
-    { value: '', label: 'Todos os fornecedores' },
+    { value: '', label: ui.catalogo_todos_fornecedores },
     ...opcoes.fornecedores.map((f) => ({ value: f.id, label: f.nome })),
   ]
 
   const filters: FilterDef[] = [
-    { type: 'search', key: 'q', placeholder: 'Nome, SKU ou código de barras…' },
+    { type: 'search', key: 'q', placeholder: ui.filtro_nfe_busca_placeholder },
     {
       type: 'pills',
       key: 'status',
       defaultValue: 'todos',
       options: [
-        { value: 'todos', label: 'Todos' },
-        { value: 'ativos', label: 'Ativos' },
-        { value: 'inativos', label: 'Inativos' },
+        { value: 'todos', label: ui.filtro_todos },
+        { value: 'ativos', label: ui.filtro_ativos },
+        { value: 'inativos', label: ui.filtro_inativos },
       ],
     },
     {
@@ -173,13 +169,13 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       key: 'origem',
       defaultValue: 'all',
       options: [
-        { value: 'all', label: 'Todas as origens' },
-        { value: 'china_manual', label: 'China' },
-        { value: 'brasil_nf', label: 'Brasil · NF' },
-        { value: 'brasil_sem_nf', label: 'Brasil' },
+        { value: 'all', label: m.produtos.filtro_todas_origens },
+        { value: 'china_manual', label: ui.estoque_origem_china },
+        { value: 'brasil_nf', label: ui.estoque_origem_brasil_nf },
+        { value: 'brasil_sem_nf', label: ui.estoque_origem_brasil },
       ],
     },
-    { type: 'select', key: 'categoria', label: 'Categoria', defaultValue: '', options: catOptions },
+    { type: 'select', key: 'categoria', label: m.produtos.categoria, defaultValue: '', options: catOptions },
     { type: 'select', key: 'marca', label: 'Marca', defaultValue: '', options: marcaOptions },
     {
       type: 'select',
@@ -194,9 +190,9 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       label: 'Estoque',
       defaultValue: 'todos',
       options: [
-        { value: 'todos', label: 'Qualquer saldo' },
-        { value: 'abaixo_minimo', label: 'Abaixo/igual ao mínimo' },
-        { value: 'em_falta', label: 'Sem saldo (≤ 0)' },
+        { value: 'todos', label: ui.filtro_qualquer_saldo },
+        { value: 'abaixo_minimo', label: ui.filtro_estoque_abaixo_min },
+        { value: 'em_falta', label: ui.catalogo_estoque_em_falta },
       ],
     },
     {
@@ -205,9 +201,9 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       label: 'Imagem',
       defaultValue: 'todos',
       options: [
-        { value: 'todos', label: 'Todas' },
-        { value: 'com_imagem', label: 'Com imagem' },
-        { value: 'sem_imagem', label: 'Sem imagem' },
+        { value: 'todos', label: ui.filtro_todas },
+        { value: 'com_imagem', label: ui.catalogo_imagem_com },
+        { value: 'sem_imagem', label: ui.catalogo_imagem_sem },
       ],
     },
   ]
@@ -239,40 +235,40 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     arr.find((x) => x.id === id)?.nome ?? id
 
   const chips: Array<{ key: string; label: string }> = []
-  if (categoria) chips.push({ key: 'categoria', label: `Categoria: ${nomeDe(opcoes.categorias, categoria)}` })
-  if (marca) chips.push({ key: 'marca', label: `Marca: ${nomeDe(opcoes.marcas, marca)}` })
-  if (fornecedor) chips.push({ key: 'fornecedor', label: `Fornecedor: ${nomeDe(opcoes.fornecedores, fornecedor)}` })
-  if (estoque !== 'todos') chips.push({ key: 'estoque', label: ESTOQUE_LABEL[estoque] })
-  if (imagem !== 'todos') chips.push({ key: 'imagem', label: IMAGEM_LABEL[imagem] })
+  if (categoria) chips.push({ key: 'categoria', label: ui.catalogo_chip_categoria.replace('{{nome}}', nomeDe(opcoes.categorias, categoria)) })
+  if (marca) chips.push({ key: 'marca', label: ui.catalogo_chip_marca.replace('{{nome}}', nomeDe(opcoes.marcas, marca)) })
+  if (fornecedor) chips.push({ key: 'fornecedor', label: ui.catalogo_chip_fornecedor.replace('{{nome}}', nomeDe(opcoes.fornecedores, fornecedor)) })
+  if (estoque !== 'todos') chips.push({ key: 'estoque', label: estoque === 'abaixo_minimo' ? ui.catalogo_estoque_abaixo_minimo : ui.catalogo_estoque_em_falta })
+  if (imagem !== 'todos') chips.push({ key: 'imagem', label: imagem === 'com_imagem' ? ui.catalogo_imagem_com : ui.catalogo_imagem_sem })
 
   const headerActions = (
     <>
       <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
         <Upload size={14} aria-hidden />
-        Importar NF-e XML
+        {ui.catalogo_importar_nfe}
       </Link>
       <Link href={ROUTES.admin.catalogo} className="admin-v2-btn-secondary">
         <Download size={14} aria-hidden />
-        Exportar CSV
+        {m.gerente.exportar_csv}
       </Link>
       <Link href={ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary">
         <Plus size={14} aria-hidden />
-        Cadastro rápido
+        {m.produtos.cadastro_rapido}
       </Link>
     </>
   )
 
   const countBadge = (
     <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
-      {totalCount} {totalCount === 1 ? 'produto encontrado' : 'produtos encontrados'}
+      {totalCount} {totalCount === 1 ? ui.catalogo_produto_sg : ui.catalogo_produtos_pl}
     </span>
   )
 
   return (
     <div className="admin-v2-page">
       <PageHeader
-        title="Catálogo"
-        subtitle="Produtos cadastrados na loja"
+        title={ui.catalogo_titulo}
+        subtitle={ui.catalogo_subtitulo}
         filters={headerActions}
       />
 
@@ -301,14 +297,14 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      <SectionCard title="Lista de produtos" action={countBadge}>
-        <CatalogoTable produtos={produtos} />
+      <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
+        <CatalogoTable produtos={produtos} labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_rapido, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil }} />
       </SectionCard>
 
       {totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-between gap-3">
           <span className="text-[11px] text-jl-fg-3">
-            Página {page} de {totalPages}
+            {m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', String(totalPages))}
           </span>
           <div className="flex items-center gap-1">
             <PageLink href={pageHref(page - 1)} disabled={page <= 1}>

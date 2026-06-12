@@ -18,6 +18,8 @@ const PaymentDonutChartDynamic = dynamic(
 export type PaymentDonutChartLazyProps = {
   data: PaymentDonutSlice[]
   total: number
+  noDataLabel: string
+  distributionLabel: string
 }
 
 export function PaymentDonutChartLazy(props: PaymentDonutChartLazyProps) {

@@ -126,6 +126,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const L = adminUi.dashboard
   const dash = adminUi.common
   const locale = localeFromIdioma(idioma)
+  const lk = idioma === 'zh' ? 'cn' : 'pt'
 
   const params = searchParams ? await searchParams : undefined
   const period = normalizePeriod(params?.period)
@@ -210,27 +211,27 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const dashboardErrors = collectSupabaseErrors([
     {
-      label: L.errorSourceSalesPeriod.pt,
+      label: L.errorSourceSalesPeriod[lk],
       error: vendasRangeRes.error,
     },
     {
-      label: L.errorSourceSalesPreviousPeriod.pt,
+      label: L.errorSourceSalesPreviousPeriod[lk],
       error: vendasPrevRes.error,
     },
     {
-      label: L.errorSourceRecentOrders.pt,
+      label: L.errorSourceRecentOrders[lk],
       error: recentOrdersRes.error,
     },
     {
-      label: L.errorSourceLowStock.pt,
+      label: L.errorSourceLowStock[lk],
       error: estoqueBaixoRes.error,
     },
     {
-      label: L.errorSourceNewUsersPeriod.pt,
+      label: L.errorSourceNewUsersPeriod[lk],
       error: novosUsuariosAtualRes.error,
     },
     {
-      label: L.errorSourceNewUsersPreviousPeriod.pt,
+      label: L.errorSourceNewUsersPreviousPeriod[lk],
       error: novosUsuariosPrevRes.error,
     },
   ], idioma)
@@ -261,7 +262,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       .in('id', operatorIds)
     if (usersRes.error) {
       dashboardErrors.push(
-        `${L.errorSourceOperators.pt}: ${mensagemErroParaUsuario(usersRes.error.message, idioma)}`,
+        `${L.errorSourceOperators[lk]}: ${mensagemErroParaUsuario(usersRes.error.message, idioma)}`,
       )
     } else {
       usuariosRows = usersRes.data ?? []
@@ -340,20 +341,20 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev)
   const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev)
 
-  const unavail = adminUi.common.unavailable.pt
+  const unavail = adminUi.common.unavailable[lk]
 
   let stockTrendLabel: string
   if (estoqueBaixoRes.error) {
     stockTrendLabel = unavail
   } else {
-    stockTrendLabel = estoqueBaixoCount > 0 ? L.trendStockWarn.pt : L.trendStockOk.pt
+    stockTrendLabel = estoqueBaixoCount > 0 ? L.trendStockWarn[lk] : L.trendStockOk[lk]
   }
 
   const stockValue = estoqueBaixoRes.error ? dash.emDash : formatNumberLocale(estoqueBaixoCount, locale)
 
   const metrics: Metric[] = [
     {
-      label: L.metricTotalSales.pt,
+      label: L.metricTotalSales[lk],
       value: periodSalesFailed ? dash.emDash : formatBRL(totalAtual, locale),
       delta: periodSalesFailed ? undefined : { value: totalTrend.label, up: totalTrend.up },
       icon: 'dollar-sign',
@@ -361,7 +362,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       tone: 'gold',
     },
     {
-      label: L.metricOrders.pt,
+      label: L.metricOrders[lk],
       value: periodSalesFailed ? dash.emDash : formatNumberLocale(pedidosAtual, locale),
       delta: periodSalesFailed ? undefined : { value: pedidosTrend.label, up: pedidosTrend.up },
       icon: 'package',
@@ -369,7 +370,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       tone: 'success',
     },
     {
-      label: L.metricTicket.pt,
+      label: L.metricTicket[lk],
       value: periodSalesFailed ? dash.emDash : formatBRL(ticketAtual, locale),
       delta: periodSalesFailed ? undefined : { value: ticketTrend.label, up: ticketTrend.up },
       icon: 'shopping-bag',
@@ -377,7 +378,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       tone: 'gold',
     },
     {
-      label: L.metricStock.pt,
+      label: L.metricStock[lk],
       value: stockValue,
       delta: estoqueBaixoRes.error ? undefined : { value: stockTrendLabel, up: estoqueBaixoCount === 0 },
       icon: 'alert-circle',
@@ -407,9 +408,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   }))
 
   const periodOptions: Array<{ id: DashboardPeriod; label: string }> = [
-    { id: 'TODAY', label: L.periodToday.pt },
-    { id: '7D', label: L.period7d.pt },
-    { id: '30D', label: L.period30d.pt },
+    { id: 'TODAY', label: L.periodToday[lk] },
+    { id: '7D', label: L.period7d[lk] },
+    { id: '30D', label: L.period30d[lk] },
   ]
 
   const filterHref = (p: DashboardPeriod, s: DashboardStatus = 'ALL') =>
@@ -433,8 +434,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   return (
     <div className="admin-v2-page admin-v2-stack">
       <PageHeader
-        title={L.pageTitle.pt}
-        subtitle={`${L.newUsers.pt}: ${formatNumberLocale(novosUsuariosAtual, locale)} (${novosTrend.label})`}
+        title={L.pageTitle[lk]}
+        subtitle={`${L.newUsers[lk]}: ${formatNumberLocale(novosUsuariosAtual, locale)} (${novosTrend.label})`}
         filters={dashboardFilters}
       />
 
@@ -442,9 +443,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         <div className="mb-6 rounded-lg border-2 border-destructive/35 bg-destructive/10 px-4 py-4 text-sm text-destructive" role="alert">
           <div className="flex gap-2 font-semibold">
             <AlertCircle className="mt-0.5 shrink-0" size={18} />
-            {adminUi.errors.criticalSalesTitle.pt}
+            {adminUi.errors.criticalSalesTitle[lk]}
           </div>
-          <p className="mt-2 leading-relaxed">{adminUi.errors.criticalSalesBody.pt}</p>
+          <p className="mt-2 leading-relaxed">{adminUi.errors.criticalSalesBody[lk]}</p>
         </div>
       )}
 
@@ -458,24 +459,24 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
       <div className="admin-v2-grid-3-main">
         {periodSalesFailed ? (
-          <ChartCard title={L.chartTitle.pt}>
+          <ChartCard title={L.chartTitle[lk]}>
             <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
-              {adminUi.errors.chartUnavailable.pt}
+              {adminUi.errors.chartUnavailable[lk]}
             </div>
           </ChartCard>
         ) : (
-          <ChartCard title={L.chartTitle.pt} className="admin-v2-chart-area">
+          <ChartCard title={L.chartTitle[lk]} className="admin-v2-chart-area">
             <SalesTrendChartLazy data={chartData} variant="default" />
           </ChartCard>
         )}
 
-        <SectionCard title="Faturamento por hora" className="admin-v2-chart-area">
+        <SectionCard title={L.hourlyChartTitle[lk]} className="admin-v2-chart-area">
           {periodSalesFailed ? (
             <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
-              {adminUi.errors.chartUnavailable.pt}
+              {adminUi.errors.chartUnavailable[lk]}
             </div>
           ) : (
-            <DashboardChart
+            <DashboardChart titleLabel={L.hourlyChartTitle[lk]} subtitleLabel={L.hourlyChartSubtitle[lk]} peakLabel={L.hourlyChartPeak[lk]}
               labels={hourlyLabels}
               data={hourlySeries.map((item) => item.total)}
               peakHour={peakHour}
@@ -484,17 +485,17 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           )}
         </SectionCard>
 
-        <SectionCard title="Pagamentos" className="admin-v2-chart-area">
-          <PaymentDonutChartLazy data={paymentDonutData} total={totalAtual} />
+        <SectionCard title={L.paymentsTitle[lk]} className="admin-v2-chart-area">
+          <PaymentDonutChartLazy data={paymentDonutData} total={totalAtual} noDataLabel={L.paymentNoData[lk]} distributionLabel={L.paymentDistribution[lk]} />
         </SectionCard>
       </div>
 
-      <CaixaShortcut />
+      <CaixaShortcut title={L.caixaShortcutTitle[lk]} status={L.caixaShortcutStatus[lk]} openBtn={L.caixaShortcutBtn[lk]} />
 
       <div className="admin-v2-grid-2">
         <SectionCard
-          title="Estoque baixo"
-          subtitle="Itens abaixo do mínimo recomendado"
+          title={L.lowStockTitle[lk]}
+          subtitle={L.lowStockSubtitle[lk]}
         >
           <div className="flex items-end gap-2">
             <span className="text-4xl font-bold tabular-nums text-[#c9a227]">
@@ -504,27 +505,27 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Atividades recentes">
+        <SectionCard title={L.recentActivitiesTitle[lk]}>
           <ActivityFeed items={activityItems} variant="embedded" />
         </SectionCard>
       </div>
 
-      <SectionCard title={L.tableTitle.pt}>
+      <SectionCard title={L.tableTitle[lk]}>
         <div className="overflow-x-auto">
           {tableLoadFailed ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-6 text-center text-sm text-destructive">
-              {adminUi.errors.tableLoadFailed.pt}
+              {adminUi.errors.tableLoadFailed[lk]}
             </div>
           ) : (
             <table className="w-full min-w-[800px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-[#242424] text-left text-sm text-jl-fg-3">
-                  <th className="px-3 py-2 font-medium">{L.tableColId.pt}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColOperador.pt}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColData.pt}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColValor.pt}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColPagamento.pt}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColStatus.pt}</th>
+                  <th className="px-3 py-2 font-medium">{L.tableColId[lk]}</th>
+                  <th className="px-3 py-2 font-medium">{L.tableColOperador[lk]}</th>
+                  <th className="px-3 py-2 font-medium">{L.tableColData[lk]}</th>
+                  <th className="px-3 py-2 font-medium">{L.tableColValor[lk]}</th>
+                  <th className="px-3 py-2 font-medium">{L.tableColPagamento[lk]}</th>
+                  <th className="px-3 py-2 font-medium">{L.tableColStatus[lk]}</th>
                 </tr>
               </thead>
               <tbody>
@@ -542,14 +543,14 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
                       {order.formaPagamento}
                     </td>
                     <td className="px-3 py-3">
-                      {statusBadge(order.status, { concluida: L.statusDone.pt, cancelada: L.statusCancelled.pt })}
+                      {statusBadge(order.status, { concluida: L.statusDone[lk], cancelada: L.statusCancelled[lk] })}
                     </td>
                   </tr>
                 ))}
                 {latestOrders.length === 0 && !tableLoadFailed && (
                   <tr>
                     <td colSpan={6} className="px-3 py-8 text-center text-jl-fg-3">
-                      <p className="font-medium">{L.tableEmpty.pt}</p>
+                      <p className="font-medium">{L.tableEmpty[lk]}</p>
                     </td>
                   </tr>
                 )}
@@ -560,7 +561,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       </SectionCard>
 
       <footer className="text-center text-jl-fg-3">
-        <p className="text-sm">{L.footer.pt}</p>
+        <p className="text-sm">{L.footer[lk]}</p>
       </footer>
     </div>
   )

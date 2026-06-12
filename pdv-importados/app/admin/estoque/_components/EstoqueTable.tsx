@@ -1,16 +1,5 @@
 'use client'
 
-/**
- * FastProduct Admin — EstoqueTable (Fase 5)
- *
- * Tabela de saldos do catálogo. Usa o DataTable genérico (Fase 2). A PAGINAÇÃO é
- * server-side (?page= na URL, resolvida no page.tsx) — esta tabela só renderiza
- * a página atual; o sort dos headers ordena a página corrente (client-side).
- *
- * Mantém o estado dos overlays (AjusteSaldoModal + KardexSheet) e os dispara
- * pelas ações de linha (visíveis no hover, via DataTable).
- */
-
 import { useState } from 'react'
 import { History, SlidersHorizontal } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -29,10 +18,52 @@ export type EstoqueLinha = {
   deficit: number | null
 }
 
-const ORIGEM_MAP: Record<string, { label: string; badgeClass: string }> = {
-  china_manual: { label: 'China', badgeClass: 'admin-v2-badge-gold' },
-  brasil_nf: { label: 'Brasil · NF', badgeClass: 'admin-v2-badge-warning' },
-  brasil_sem_nf: { label: 'Brasil', badgeClass: 'admin-v2-badge-muted' },
+export type EstoqueLabels = {
+  produto: string
+  saldo: string
+  minimo: string
+  deficit: string
+  unidade: string
+  origem: string
+  origemChina: string
+  origemBrasilNf: string
+  origemBrasil: string
+  vazioTitulo: string
+  vazioSub: string
+  ajusteTitulo: string
+  saldoAtual: string
+  estoqueMinimo: string
+  motivo: string
+  observacao: string
+  cancelar: string
+  salvarAjuste: string
+  salvando: string
+  motivoAcertoInventario: string
+  motivoEntradaCompra: string
+  motivoPerda: string
+  motivoQuebra: string
+  motivoOutro: string
+  kardexTitulo: string
+  semMovimentos: string
+  semMovimentosSub: string
+  tipoVenda: string
+  tipoCompra: string
+  tipoEntradaNf: string
+  tipoEntrada: string
+  tipoSaida: string
+  tipoAjuste: string
+  tipoDevolucao: string
+  tipoTransferencia: string
+  tipoAcertoInventario: string
+  tipoPerda: string
+  tipoQuebra: string
+  tipoOutro: string
+}
+
+const ORIGEM_BADGE: Record<string, string> = {
+  china_manual: 'admin-v2-badge-gold',
+  brasil_nf: 'admin-v2-badge-warning',
+  brasil_sem_nf: 'admin-v2-badge-muted',
 }
 
 type Severity = 'zero' | 'low' | 'ok'
@@ -48,21 +79,6 @@ const SEV_CLASS: Record<Severity, string> = {
   zero: 'font-semibold text-red-400',
   low: 'font-semibold text-amber-400',
   ok: 'text-emerald-400',
-}
-
-function OrigemBadge({ origem }: { origem: string }) {
-  const m = ORIGEM_MAP[origem]
-  if (!m) return <span className="text-jl-fg-3">—</span>
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
-        m.badgeClass,
-      )}
-    >
-      {m.label}
-    </span>
-  )
 }
 
 function ActionBtn({
@@ -90,26 +106,14 @@ function ActionBtn({
   )
 }
 
-function EstoqueEmpty() {
-  return (
-    <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <span className="text-4xl text-jl-fg-3" aria-hidden>
-        📦
-      </span>
-      <p className="text-[14px] font-medium text-jl-fg-2">Nenhum produto encontrado</p>
-      <p className="text-[12px] text-jl-fg-3">Tente ajustar os filtros de busca, origem ou visão.</p>
-    </div>
-  )
-}
-
-export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
+export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; labels: EstoqueLabels }) {
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
   const columns: Column<EstoqueLinha>[] = [
     {
       key: 'produto',
-      header: 'Produto',
+      header: labels.produto,
       sortValue: (r) => r.nome,
       cell: (r) => (
         <div className="min-w-0">
@@ -120,7 +124,7 @@ export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
     },
     {
       key: 'saldo',
-      header: 'Saldo',
+      header: labels.saldo,
       align: 'right',
       sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
       cell: (r) => {
@@ -131,7 +135,7 @@ export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
     },
     {
       key: 'minimo',
-      header: 'Mínimo',
+      header: labels.minimo,
       align: 'right',
       sortValue: (r) => r.estoque_minimo ?? Number.NEGATIVE_INFINITY,
       cell: (r) =>
@@ -143,7 +147,7 @@ export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
     },
     {
       key: 'deficit',
-      header: 'Déficit',
+      header: labels.deficit,
       align: 'right',
       sortValue: (r) => r.deficit ?? 0,
       cell: (r) =>
@@ -155,14 +159,30 @@ export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
     },
     {
       key: 'unidade',
-      header: 'Un.',
+      header: labels.unidade,
       align: 'center',
       cell: (r) => <span className="text-[11px] uppercase text-jl-fg-3">{r.unidade_medida}</span>,
     },
     {
       key: 'origem',
-      header: 'Origem',
-      cell: (r) => <OrigemBadge origem={r.origem} />,
+      header: labels.origem,
+      cell: (r) => {
+        const badgeClass = ORIGEM_BADGE[r.origem]
+        if (!badgeClass) return <span className="text-jl-fg-3">—</span>
+        const origemLabel = r.origem === 'china_manual' ? labels.origemChina
+          : r.origem === 'brasil_nf' ? labels.origemBrasilNf
+          : labels.origemBrasil
+        return (
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
+              badgeClass,
+            )}
+          >
+            {origemLabel}
+          </span>
+        )
+      },
     },
   ]
 
@@ -172,12 +192,18 @@ export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
         data={linhas}
         columns={columns}
         rowKey={(r) => r.id}
-        emptyState={<EstoqueEmpty />}
+        emptyState={
+          <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <span className="text-4xl text-jl-fg-3" aria-hidden>📦</span>
+            <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
+            <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
+          </div>
+        }
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">
             <ActionBtn
-              label={`Ajustar saldo de ${row.nome}`}
+              label={`${labels.ajusteTitulo} ${row.nome}`}
               onClick={() =>
                 setAjusteAlvo({
                   produtoId: row.id,
@@ -190,7 +216,7 @@ export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
               <SlidersHorizontal size={13} aria-hidden />
             </ActionBtn>
             <ActionBtn
-              label={`Ver kardex de ${row.nome}`}
+              label={`${labels.kardexTitulo} ${row.nome}`}
               onClick={() => setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })}
             >
               <History size={13} aria-hidden />
@@ -199,8 +225,50 @@ export function EstoqueTable({ linhas }: { linhas: EstoqueLinha[] }) {
         )}
       />
 
-      <AjusteSaldoModal alvo={ajusteAlvo} onClose={() => setAjusteAlvo(null)} />
-      <KardexSheet alvo={kardexAlvo} onClose={() => setKardexAlvo(null)} />
+      <AjusteSaldoModal
+        alvo={ajusteAlvo}
+        onClose={() => setAjusteAlvo(null)}
+        labels={{
+          titulo: labels.ajusteTitulo,
+          saldoAtual: labels.saldoAtual,
+          estoqueMinimo: labels.estoqueMinimo,
+          motivo: labels.motivo,
+          observacao: labels.observacao,
+          cancelar: labels.cancelar,
+          salvar: labels.salvarAjuste,
+          salvando: labels.salvando,
+          motivos: [
+            { value: 'ACERTO_INVENTARIO', label: labels.motivoAcertoInventario },
+            { value: 'COMPRA', label: labels.motivoEntradaCompra },
+            { value: 'PERDA', label: labels.motivoPerda },
+            { value: 'QUEBRA', label: labels.motivoQuebra },
+            { value: 'OUTRO', label: labels.motivoOutro },
+          ],
+        }}
+      />
+      <KardexSheet
+        alvo={kardexAlvo}
+        onClose={() => setKardexAlvo(null)}
+        labels={{
+          titulo: labels.kardexTitulo,
+          semMovimentos: labels.semMovimentos,
+          semMovimentosSub: labels.semMovimentosSub,
+          tipoMap: {
+            VENDA: labels.tipoVenda,
+            COMPRA: labels.tipoCompra,
+            ENTRADA_NF: labels.tipoEntradaNf,
+            ENTRADA: labels.tipoEntrada,
+            SAIDA: labels.tipoSaida,
+            AJUSTE: labels.tipoAjuste,
+            ACERTO_INVENTARIO: labels.tipoAcertoInventario,
+            PERDA: labels.tipoPerda,
+            QUEBRA: labels.tipoQuebra,
+            DEVOLUCAO: labels.tipoDevolucao,
+            TRANSFERENCIA: labels.tipoTransferencia,
+            OUTRO: labels.tipoOutro,
+          },
+        }}
+      />
     </>
   )
 }
