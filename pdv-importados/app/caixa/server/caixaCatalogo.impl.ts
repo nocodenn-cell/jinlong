@@ -7,11 +7,11 @@ import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
-  aplicarFiltroProdutoVendavel,
   filtrarSomenteProdutosVendaveis,
   isProdutoVendavel,
   primeiroProdutoVendavel,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
+import { FILTRO_PRODUTO_VENDAVEL } from '@/lib/catalog/isProdutoVendavel'
 import { calcularPrecoProdutoCaixaImpl } from '@/app/caixa/server/caixaPrecoProduto.impl'
 import type {
   BuscarProdutoResult,
@@ -23,7 +23,6 @@ import {
   estoqueResumoParaCaixa,
   fetchPdvConfigParaCaixaWeb,
   mapProdutoRow,
-  PRODUTO_COLS,
   sanitizeIlikeFragment,
 } from '@/app/caixa/server/caixaActionsInternals'
 
@@ -103,9 +102,11 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
 
     const variantes = variantesChaveLeitura(t)
     if (variantes.length > 0) {
-      const { data: porCodigoLista, error: errCodigo } = await aplicarFiltroProdutoVendavel(
-        supabase.from('produtos').select(PRODUTO_COLS),
-      )
+      const { data: porCodigoLista, error: errCodigo } = await supabase
+        .from('produtos')
+        .select('*')
+        .eq('ativo', FILTRO_PRODUTO_VENDAVEL.ativo)
+        .eq('status_publicacao', FILTRO_PRODUTO_VENDAVEL.status_publicacao)
         .in('codigo_barras', variantes)
         .limit(10)
 
@@ -139,9 +140,11 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       return { ok: true, status: 'nao_encontrado' }
     }
 
-    const { data: porNome, error: errNome } = await aplicarFiltroProdutoVendavel(
-      supabase.from('produtos').select(PRODUTO_COLS),
-    )
+    const { data: porNome, error: errNome } = await supabase
+      .from('produtos')
+      .select('*')
+      .eq('ativo', FILTRO_PRODUTO_VENDAVEL.ativo)
+      .eq('status_publicacao', FILTRO_PRODUTO_VENDAVEL.status_publicacao)
       .ilike('nome', `%${frag}%`)
       .limit(3)
 
@@ -157,9 +160,11 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (errCat) return { ok: false, error: mensagemErroParaUsuario(errCat.message) }
       const catIds = (cats ?? []).map((c) => c.id)
       if (catIds.length > 0) {
-        const { data: porCat, error: errPorCat } = await aplicarFiltroProdutoVendavel(
-          supabase.from('produtos').select(PRODUTO_COLS),
-        )
+        const { data: porCat, error: errPorCat } = await supabase
+          .from('produtos')
+          .select('*')
+          .eq('ativo', FILTRO_PRODUTO_VENDAVEL.ativo)
+          .eq('status_publicacao', FILTRO_PRODUTO_VENDAVEL.status_publicacao)
           .in('categoria_id', catIds)
           .limit(3)
         if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message) }
