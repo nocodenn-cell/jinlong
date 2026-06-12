@@ -3,10 +3,20 @@
 import { Download, FileSpreadsheet } from 'lucide-react'
 import { useMemo } from 'react'
 
+export type RelatoriosFiltrosLabels = {
+  de: string
+  ate: string
+  aplicar: string
+  exportarCsv: string
+  xlsx: string
+  csvFilename: string
+}
+
 type RelatoriosPeriodFiltersProps = {
   de?: string
   ate?: string
   csvRows: Array<Record<string, string | number>>
+  labels: RelatoriosFiltrosLabels
 }
 
 function escapeCsv(value: string | number): string {
@@ -33,35 +43,35 @@ function downloadCsv(filename: string, rows: Array<Record<string, string | numbe
   URL.revokeObjectURL(url)
 }
 
-export function RelatoriosPeriodFilters({ de, ate, csvRows }: RelatoriosPeriodFiltersProps) {
+export function RelatoriosPeriodFilters({ de, ate, csvRows, labels }: RelatoriosPeriodFiltersProps) {
   const deDefault = useMemo(() => de ?? '', [de])
   const ateDefault = useMemo(() => ate ?? '', [ate])
 
   return (
     <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-[#242424] bg-[#0f0f0f] p-3">
       <label className="flex flex-col gap-1 text-[11px] text-jl-fg-3">
-        De
+        {labels.de}
         <input name="de" type="date" defaultValue={deDefault} className="admin-v2-input px-2 py-1.5 text-xs" />
       </label>
       <label className="flex flex-col gap-1 text-[11px] text-jl-fg-3">
-        Ate
+        {labels.ate}
         <input name="ate" type="date" defaultValue={ateDefault} className="admin-v2-input px-2 py-1.5 text-xs" />
       </label>
       <button type="submit" className="admin-v2-btn-primary">
-        Aplicar
+        {labels.aplicar}
       </button>
       <button
         type="button"
         className="admin-v2-btn-secondary"
-        onClick={() => downloadCsv('relatorios.csv', csvRows)}
+        onClick={() => downloadCsv(labels.csvFilename, csvRows)}
         disabled={csvRows.length === 0}
       >
         <Download size={14} aria-hidden />
-        Exportar CSV
+        {labels.exportarCsv}
       </button>
       <button type="button" className="admin-v2-btn-secondary opacity-60" disabled>
         <FileSpreadsheet size={14} aria-hidden />
-        XLSX (em breve)
+        {labels.xlsx}
       </button>
     </form>
   )
