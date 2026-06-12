@@ -5,9 +5,10 @@ import { formatBRL } from '@/lib/format/money'
 
 type RelatoriosBarChartProps = {
   data: Array<{ label: string; total: number }>
+  tooltipLabel: string
 }
 
-export function RelatoriosBarChart({ data }: RelatoriosBarChartProps) {
+export function RelatoriosBarChart({ data, tooltipLabel }: RelatoriosBarChartProps) {
   return (
     <div className="h-full min-h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -24,7 +25,7 @@ export function RelatoriosBarChart({ data }: RelatoriosBarChartProps) {
               color: '#f5f5f5',
               fontSize: 12,
             }}
-            formatter={(value) => [formatBRL(Number(value ?? 0)), 'Faturado']}
+            formatter={(value) => [formatBRL(Number(value ?? 0)), tooltipLabel]}
           />
           <Bar dataKey="total" fill="#c9a227" radius={[4, 4, 0, 0]} />
         </BarChart>

@@ -19,6 +19,7 @@ import type {
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
 import { RelatoriosBarChart } from './RelatoriosBarChart'
 import { RelatoriosPeriodFilters } from './RelatoriosPeriodFilters'
+import type { RelatoriosFiltrosLabels } from './RelatoriosPeriodFilters'
 import { PaymentDonutChart } from '@/app/admin/dashboard/_components/PaymentDonutChart'
 
 export type RelatoriosDados = {
@@ -30,7 +31,31 @@ export type RelatoriosDados = {
   rpcErro: string | null
 }
 
-function OrigemBadgeRelatorio({ origem }: { origem: string }) {
+export type RelatoriosLabels = {
+  titulo: string
+  periodoLabel: string
+  aSeparator: string
+  custoNaoConfiavel: string
+  chartFaturamento: string
+  chartPagamentos: string
+  labelConcluidas: string
+  labelCanceladas: string
+  labelAjustes: string
+  secTopProdutos: string
+  secEstoqueReposicao: string
+  origemChina: string
+  origemBrasil: string
+  vazioProdutos: string
+  saldoMinTemplate: string
+  reporTemplate: string
+  vazioEstoque: string
+  tooltipFaturado: string
+  noDataLabel: string
+  filtros: RelatoriosFiltrosLabels
+  locale: string
+}
+
+function OrigemBadgeRelatorio({ origem, labelChina, labelBrasil }: { origem: string; labelChina: string; labelBrasil: string }) {
   const isChina = String(origem).toLowerCase().includes('china')
   return (
     <span
@@ -38,12 +63,12 @@ function OrigemBadgeRelatorio({ origem }: { origem: string }) {
         isChina ? 'admin-v2-badge-gold' : 'admin-v2-badge-muted'
       }`}
     >
-      {isChina ? 'China' : 'Brasil'}
+      {isChina ? labelChina : labelBrasil}
     </span>
   )
 }
 
-function TopProdutosList({ top }: { top: RelatorioTopProdDTO[] }) {
+function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: RelatoriosLabels }) {
   const max = Math.max(1, ...top.map((item) => item.total_valor))
   return (
     <div className="space-y-3">
@@ -54,7 +79,7 @@ function TopProdutosList({ top }: { top: RelatorioTopProdDTO[] }) {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-jl-fg-1">{item.nome}</p>
-                <OrigemBadgeRelatorio origem={item.origem} />
+                <OrigemBadgeRelatorio origem={item.origem} labelChina={labels.origemChina} labelBrasil={labels.origemBrasil} />
               </div>
               <span className="text-xs text-jl-fg-2">{formatBRL(item.total_valor)}</span>
             </div>
@@ -64,12 +89,12 @@ function TopProdutosList({ top }: { top: RelatorioTopProdDTO[] }) {
           </div>
         )
       })}
-      {top.length === 0 && <EmptyState msg="Nenhum produto vendido neste periodo" />}
+      {top.length === 0 && <EmptyState msg={labels.vazioProdutos} />}
     </div>
   )
 }
 
-function EstoqueReposicaoList({ baixo }: { baixo: RelatorioEstoqueBaixoDTO[] }) {
+function EstoqueReposicaoList({ baixo, labels }: { baixo: RelatorioEstoqueBaixoDTO[]; labels: RelatoriosLabels }) {
   return (
     <div className="space-y-2">
       {baixo.slice(0, 12).map((item) => (
@@ -79,25 +104,31 @@ function EstoqueReposicaoList({ baixo }: { baixo: RelatorioEstoqueBaixoDTO[] }) 
         >
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-jl-fg-1">{item.nome}</p>
-            <p className="text-[11px] text-jl-fg-3">Saldo {item.quantidade_atual} / Min {item.estoque_minimo}</p>
+            <p className="text-[11px] text-jl-fg-3">
+              {labels.saldoMinTemplate
+                .replace('{{atual}}', String(item.quantidade_atual))
+                .replace('{{min}}', String(item.estoque_minimo))}
+            </p>
           </div>
-          <span className="admin-v2-badge-warning rounded-full px-2 py-1 text-[11px]">REPOR {item.deficit}</span>
+          <span className="admin-v2-badge-warning rounded-full px-2 py-1 text-[11px]">
+            {labels.reporTemplate.replace('{{n}}', String(item.deficit))}
+          </span>
         </div>
       ))}
-      {baixo.length === 0 && <EmptyState msg="Nenhum produto com estoque critico" />}
+      {baixo.length === 0 && <EmptyState msg={labels.vazioEstoque} />}
     </div>
   )
 }
 
-export function RelatoriosContent({ dados }: { dados: RelatoriosDados }) {
+export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; labels: RelatoriosLabels }) {
 
-  const periodoSubtitle = `Período: ${dados.periodo.de} a ${dados.periodo.ate}${
+  const periodoSubtitle = `${labels.periodoLabel}: ${dados.periodo.de}${labels.aSeparator}${dados.periodo.ate}${
     dados.periodo.aviso ? ` (${dados.periodo.aviso})` : ''
   }`
 
   return (
     <div className="admin-v2-page">
-      <PageHeader title="Relatórios" subtitle={periodoSubtitle} />
+      <PageHeader title={labels.titulo} subtitle={periodoSubtitle} />
 
       {dados.rpcErro ? (
         <div className="admin-v2-alert-danger mb-6 rounded-lg px-4 py-3 text-[12px]">
@@ -116,30 +147,32 @@ export function RelatoriosContent({ dados }: { dados: RelatoriosDados }) {
             ticket_medio: row.ticket_medio,
             desconto: row.total_desconto,
           }))}
+          labels={labels.filtros}
         />
 
         {!dados.resumoExecutivo.custo_confiavel ? (
           <p className="admin-v2-alert-warning mb-6 rounded-lg px-3 py-2 text-[11px]">
-            Custo não é confiável (pode haver divergências de preço_custo)
+            {labels.custoNaoConfiavel}
           </p>
         ) : null}
 
         <div className="admin-v2-grid-2">
-          <ChartCard title="Faturamento por dia">
+          <ChartCard title={labels.chartFaturamento}>
             <RelatoriosBarChart
               data={dados.porDia.map((r: RelatorioVendaDiaDTO) => ({
-                label: formatDayMonthInLocale(new Date(r.dia), 'pt-BR'),
+                label: formatDayMonthInLocale(new Date(r.dia), labels.locale),
                 total: r.total_liquido,
               }))}
+              tooltipLabel={labels.tooltipFaturado}
             />
           </ChartCard>
-          <ChartCard title="Distribuicao de pagamentos">
+          <ChartCard title={labels.chartPagamentos}>
             <PaymentDonutChart
               slices={[
-                { label: 'Concluidas', value: dados.resumoExecutivo.vendas_concluidas, color: '#c9a227' },
-                { label: 'Canceladas', value: dados.resumoExecutivo.vendas_canceladas, color: '#f59e0b' },
+                { label: labels.labelConcluidas, value: dados.resumoExecutivo.vendas_concluidas, color: '#c9a227' },
+                { label: labels.labelCanceladas, value: dados.resumoExecutivo.vendas_canceladas, color: '#f59e0b' },
                 {
-                  label: 'Ajustes',
+                  label: labels.labelAjustes,
                   value: Math.max(1, Math.round(dados.resumoExecutivo.vendas_concluidas * 0.08)),
                   color: '#6b7280',
                 },
@@ -149,11 +182,11 @@ export function RelatoriosContent({ dados }: { dados: RelatoriosDados }) {
         </div>
 
         <div className="admin-v2-grid-2">
-          <SectionCard title="Top produtos">
-            <TopProdutosList top={dados.top} />
+          <SectionCard title={labels.secTopProdutos}>
+            <TopProdutosList top={dados.top} labels={labels} />
           </SectionCard>
-          <SectionCard title="Estoque para reposicao">
-            <EstoqueReposicaoList baixo={dados.baixo} />
+          <SectionCard title={labels.secEstoqueReposicao}>
+            <EstoqueReposicaoList baixo={dados.baixo} labels={labels} />
           </SectionCard>
         </div>
       </div>
