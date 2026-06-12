@@ -48,6 +48,7 @@ const NovoProdutoSchema = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
   codigo_barras: z
     .string()
+    .nullable()
     .optional()
     .transform((s) => {
       const t = (s ?? '').trim()
