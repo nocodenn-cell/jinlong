@@ -4,6 +4,7 @@ import { getAdminContext } from '@/lib/admin/context/adminContext'
 import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminV2Shell } from '@/components/ui/admin-v2'
+import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -27,5 +28,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   const adminContext = getAdminContext(session, { pathname: '/admin', resource: 'route:/admin' })
 
-  return <AdminV2Shell session={adminContext.session}>{children}</AdminV2Shell>
+  return (
+    <>
+      <AdminV2Shell session={adminContext.session}>{children}</AdminV2Shell>
+      <GerenteToastViewport />
+    </>
+  )
 }
