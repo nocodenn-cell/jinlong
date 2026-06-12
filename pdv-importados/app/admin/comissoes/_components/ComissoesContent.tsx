@@ -18,12 +18,42 @@ import {
   marcarComissoesPagas,
 } from '@/app/gerente/comissoes/actions'
 
+export type ComissoesLabels = {
+  colOperador: string
+  colVendas: string
+  colTotal: string
+  colPago: string
+  colPendente: string
+  operadoresTitulo: string
+  periodoLabel: string
+  aSeparator: string
+  statusLabel: string
+  statusTodos: string
+  statusPendente: string
+  statusPago: string
+  vazioComissoes: string
+  emPendenciaSuffix: string
+  fecharDetalhe: string
+  metricTotal: string
+  metricPago: string
+  metricPendente: string
+  carregando: string
+  desselecionarTodas: string
+  selecionarPendentes: string
+  marcarComoPagoBtn: string
+  vendaPrefix: string
+  semComissoes: string
+  erroPagarFallback: string
+  locale: string
+}
+
 type Props = {
   dados: ComissaoResumoRow[]
   filtroInicial: FiltroComissoes
+  labels: ComissoesLabels
 }
 
-export function ComissoesContent({ dados, filtroInicial }: Props) {
+export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
   const router = useRouter()
   const [rows] = useState(dados)
   const [detalheOperador, setDetalheOperador] = useState<ComissaoResumoRow | null>(null)
@@ -31,6 +61,12 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
   const [detalheLoading, setDetalheLoading] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
+
+  const statusDisplayMap: Record<string, string> = {
+    todos: labels.statusTodos,
+    pendente: labels.statusPendente,
+    pago: labels.statusPago,
+  }
 
   const abrirDetalhe = useCallback(async (row: ComissaoResumoRow) => {
     setDetalheOperador(row)
@@ -68,7 +104,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
       await abrirDetalhe(detalheOperador)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao marcar como pago')
+      setError(err instanceof Error ? err.message : labels.erroPagarFallback)
     }
   }
 
@@ -97,7 +133,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
   const columns: Column<ComissaoResumoRow>[] = [
     {
       key: 'operador',
-      header: 'Operador',
+      header: labels.colOperador,
       sortValue: (r) => r.operador_nome,
       cell: (r) => (
         <button
@@ -110,14 +146,14 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
     },
     {
       key: 'vendas',
-      header: 'Vendas',
+      header: labels.colVendas,
       align: 'right',
       sortValue: (r) => r.total_vendas,
       cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.total_vendas}</span>,
     },
     {
       key: 'comissao_total',
-      header: 'Comissão Total',
+      header: labels.colTotal,
       align: 'right',
       sortValue: (r) => r.total_comissao,
       cell: (r) => (
@@ -128,7 +164,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
     },
     {
       key: 'comissao_pago',
-      header: 'Pago',
+      header: labels.colPago,
       align: 'right',
       sortValue: (r) => r.total_pago,
       cell: (r) => (
@@ -137,7 +173,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
     },
     {
       key: 'comissao_pendente',
-      header: 'Pendente',
+      header: labels.colPendente,
       align: 'right',
       sortValue: (r) => r.total_pendente,
       cell: (r) => (
@@ -145,6 +181,8 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
       ),
     },
   ]
+
+  const statusDisplay = statusDisplayMap[filtroInicial.status] ?? filtroInicial.status
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,8 +193,8 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
       )}
 
       <SectionCard
-        title={`Operadores (${rows.length})`}
-        subtitle={`Período: ${filtroInicial.de} a ${filtroInicial.ate} · Status: ${filtroInicial.status}`}
+        title={labels.operadoresTitulo.replace('{{n}}', String(rows.length))}
+        subtitle={`${labels.periodoLabel}: ${filtroInicial.de}${labels.aSeparator}${filtroInicial.ate} · ${labels.statusLabel}: ${statusDisplay}`}
       >
         <DataTable
           data={rows}
@@ -168,7 +206,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
                 💼
               </span>
               <p className="text-[12px] text-jl-fg-3">
-                Nenhuma comissão encontrada neste período
+                {labels.vazioComissoes}
               </p>
             </div>
           }
@@ -179,12 +217,12 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
       {detalheOperador && (
         <SectionCard
           title={detalheOperador.operador_nome}
-          subtitle={`${formatBRL(detalheOperador.total_pendente)} em pendência`}
+          subtitle={`${formatBRL(detalheOperador.total_pendente)} ${labels.emPendenciaSuffix}`}
           action={
             <button
               onClick={() => setDetalheOperador(null)}
               className="admin-v2-btn-secondary px-2 py-1"
-              aria-label="Fechar detalhe"
+              aria-label={labels.fecharDetalhe}
             >
               ✕
             </button>
@@ -192,17 +230,17 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
         >
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <MetricCard
-              label="Total"
+              label={labels.metricTotal}
               value={formatBRL(detalheOperador.total_comissao)}
               tone="gold"
             />
             <MetricCard
-              label="Pago"
+              label={labels.metricPago}
               value={formatBRL(detalheOperador.total_pago)}
               tone="success"
             />
             <MetricCard
-              label="Pendente"
+              label={labels.metricPendente}
               value={formatBRL(detalheOperador.total_pendente)}
               tone="gold"
             />
@@ -210,7 +248,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
 
           {detalheLoading ? (
             <div className="border-t border-[#242424] py-3 text-center text-[12px] text-jl-fg-3">
-              Carregando detalhe...
+              {labels.carregando}
             </div>
           ) : detalheRows.length > 0 ? (
             <>
@@ -220,15 +258,17 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
                   className="text-[12px] text-jl-accent transition-colors hover:text-amber-300"
                 >
                   {selecionados.size === detalheRows.filter((r) => r.status === 'pendente').length
-                    ? 'Desselecionar todas'
-                    : 'Selecionar pendentes'}
+                    ? labels.desselecionarTodas
+                    : labels.selecionarPendentes}
                 </button>
                 {selecionados.size > 0 && (
                   <button
                     onClick={marcarPagas}
                     className="admin-v2-btn-primary ml-auto"
                   >
-                    Marcar {selecionados.size} como pago ({formatBRL(totalPendente)})
+                    {labels.marcarComoPagoBtn
+                      .replace('{{n}}', String(selecionados.size))
+                      .replace('{{valor}}', formatBRL(totalPendente))}
                   </button>
                 )}
               </div>
@@ -251,10 +291,10 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-[12px] text-jl-fg-1">
-                          Venda: {row.venda_id.slice(0, 8)}...
+                          {labels.vendaPrefix} {row.venda_id.slice(0, 8)}…
                         </p>
                         <p className="text-[11px] text-jl-fg-3">
-                          {new Date(row.created_at).toLocaleDateString('pt-BR')}
+                          {new Date(row.created_at).toLocaleDateString(labels.locale)}
                         </p>
                       </div>
                       <div className="text-right">
@@ -266,7 +306,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
                             isPendente ? 'text-amber-400' : 'text-emerald-400'
                           }`}
                         >
-                          {isPendente ? 'Pendente' : 'Pago'}
+                          {isPendente ? labels.statusPendente : labels.statusPago}
                         </p>
                       </div>
                     </div>
@@ -276,7 +316,7 @@ export function ComissoesContent({ dados, filtroInicial }: Props) {
             </>
           ) : (
             <div className="border-t border-[#242424] py-4 text-center text-[12px] text-jl-fg-3">
-              Sem comissões neste período
+              {labels.semComissoes}
             </div>
           )}
         </SectionCard>

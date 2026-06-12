@@ -22,6 +22,9 @@ import {
   parseTituloFiltersFromSearchParams,
 } from '@/lib/gerente/financeiroTitulosServer'
 import { formatBRL } from '@/lib/format/money'
+import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages } from '@/i18n/getMessages'
+import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { type ContaLinha } from './_components/ContasReceberTable'
 import { FinanceiroPanels } from './_components/FinanceiroPanels'
 
@@ -37,6 +40,14 @@ type SearchParams = {
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
+  const { session } = await loadAdminContext({
+    pathname: ROUTES.admin.financeiro,
+    resource: `route:${ROUTES.admin.financeiro}`,
+  })
+  const m = getMessages(session.idioma)
+  const ui = m.admin_ui
+  const locale = localeFromIdioma(session.idioma)
+
   const sp = (searchParams ? await searchParams : {}) ?? {}
   const parsed = parseTituloFiltersFromSearchParams(sp as Record<string, string | string[] | undefined>)
   const { limite, ...filters } = parsed
@@ -62,16 +73,16 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     {
       type: 'search',
       key: 'q',
-      placeholder: 'Descrição ou cliente…',
+      placeholder: ui.financeiro_filtro_placeholder,
     },
     {
       type: 'pills',
       key: 'opcao',
       defaultValue: 'mix',
       options: [
-        { value: 'mix', label: 'Aberto/Parcial' },
-        { value: 'ABERTO', label: 'Só aberto' },
-        { value: 'PARCIAL', label: 'Só parcial' },
+        { value: 'mix', label: ui.financeiro_filtro_mix },
+        { value: 'ABERTO', label: ui.financeiro_filtro_so_aberto },
+        { value: 'PARCIAL', label: ui.financeiro_filtro_so_parcial },
       ],
     },
   ]
@@ -89,25 +100,25 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     return pathWithQuery(ROUTES.admin.financeiro, p)
   }
 
-  const statusLabel: Record<string, string> = {
-    ABERTO: 'Só aberto',
-    PARCIAL: 'Só parcial',
+  const statusChipLabel: Record<string, string> = {
+    ABERTO: ui.financeiro_filtro_so_aberto,
+    PARCIAL: ui.financeiro_filtro_so_parcial,
   }
 
   const chips: Array<{ key: string; label: string }> = []
-  if (filters.nomeCliente) chips.push({ key: 'cliente', label: `Cliente: ${filters.nomeCliente}` })
-  if (filters.de) chips.push({ key: 'de', label: `De: ${filters.de}` })
-  if (filters.ate) chips.push({ key: 'ate', label: `Até: ${filters.ate}` })
-  if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusLabel[filters.opcao] ?? filters.opcao })
+  if (filters.nomeCliente) chips.push({ key: 'cliente', label: ui.financeiro_chip_cliente.replace('{{nome}}', filters.nomeCliente) })
+  if (filters.de) chips.push({ key: 'de', label: ui.financeiro_chip_de.replace('{{data}}', filters.de) })
+  if (filters.ate) chips.push({ key: 'ate', label: ui.financeiro_chip_ate.replace('{{data}}', filters.ate) })
+  if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusChipLabel[filters.opcao] ?? filters.opcao })
 
   return (
     <div className="admin-v2-page">
       <PageHeader
-        title="Financeiro e fiscal"
-        subtitle="Contas a receber, fila fiscal e controle de emissao"
+        title={ui.financeiro_titulo}
+        subtitle={ui.financeiro_subtitulo}
         filters={
           <Link href={ROUTES.gerente.financeiro} className="admin-v2-btn-primary">
-            Abrir modulo completo
+            {ui.financeiro_abrir_modulo}
           </Link>
         }
       />
@@ -115,35 +126,34 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
       <div className="admin-v2-stack">
         <div className="admin-v2-grid-kpi">
           <MetricCard
-            label="Titulos em aberto"
+            label={ui.financeiro_kpi_titulos}
             value={String(kpisRes.titulosAbertosCount)}
             icon="wallet-cards"
             tone="gold"
           />
           <MetricCard
-            label="Valor aberto"
+            label={ui.financeiro_kpi_valor_aberto}
             value={formatBRL(kpisRes.valorAbertoTotal)}
             icon="dollar-sign"
             tone="gold"
             hint={
               kpisRes.kpiValorTruncado
-                ? `(aprox.; capped em ${kpisRes.titulosAbertosCount} itens)`
+                ? ui.financeiro_kpi_hint_capped.replace('{{n}}', String(kpisRes.titulosAbertosCount))
                 : undefined
             }
           />
           <MetricCard
-            label="Registros filtrados"
+            label={ui.financeiro_kpi_registros}
             value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
             icon="list-filter"
             tone="gold"
-            hint={listaRes.capped ? '(resultado truncado)' : undefined}
+            hint={listaRes.capped ? ui.financeiro_kpi_truncado : undefined}
           />
           <MetricCard
-            label="Documentos fiscais"
-            value="3 pendentes"
+            label={ui.financeiro_kpi_docs_fiscais}
+            value="3"
             icon="file-check-2"
             tone="warning"
-            hint="placeholder visual"
           />
         </div>
 
@@ -166,7 +176,33 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           ) : null}
         </div>
 
-        <FinanceiroPanels contas={contas} />
+        <FinanceiroPanels
+          contas={contas}
+          labels={{
+            titulosEmAberto: ui.financeiro_section_titulos,
+            filaFiscal: ui.financeiro_section_fila,
+            documentosFiscais: ui.financeiro_section_docs,
+            emitirSelecionados: ui.financeiro_emitir_selecionados,
+            colDocumento: ui.financeiro_col_documento,
+            colSerie: ui.financeiro_col_serie,
+            colValor: m.gerente.col_total,
+            colSituacao: ui.financeiro_col_situacao,
+            contas: {
+              colCliente: ui.financeiro_col_cliente,
+              colVencimento: ui.financeiro_col_vencimento,
+              colTotal: m.gerente.col_total,
+              colPago: ui.financeiro_col_pago,
+              colAberto: ui.financeiro_col_aberto,
+              colStatus: m.gerente.col_status,
+              statusAberto: ui.financeiro_status_aberto,
+              statusParcial: ui.financeiro_status_parcial,
+              statusQuitado: ui.financeiro_status_quitado,
+              vazioTitulo: ui.financeiro_vazio_titulo,
+              vazioSub: ui.financeiro_vazio_sub,
+              locale,
+            },
+          }}
+        />
       </div>
     </div>
   )
