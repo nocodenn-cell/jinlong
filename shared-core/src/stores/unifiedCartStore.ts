@@ -6,6 +6,7 @@ import {
   aplicarDescontoGerenteSobreTotal,
   clampPercentualDesconto,
 } from '../managerDiscount/policy'
+import { roundMoney2 as roundMoney } from '../money/roundMoney'
 
 export interface ItemCarrinho {
   id: string
@@ -83,10 +84,6 @@ type ItensComTotais = Pick<
   | 'descontoGerentePercentual'
   | 'descontoGerenteValor'
 >
-
-function roundMoney(valor: number) {
-  return Math.round(valor * 100) / 100
-}
 
 function normalizarItemCarrinho(item: ItemCarrinho): ItemCarrinho {
   const precoBase = item.precoVariejo ?? item.precoOriginal ?? item.precoUnitario ?? 0
