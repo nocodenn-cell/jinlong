@@ -1,8 +1,21 @@
 import { SectionCard } from '@/components/ui/admin-v2'
-import { ContasReceberTable, type ContaLinha } from './ContasReceberTable'
+import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
+
+type FinanceiroPanelsLabels = {
+  titulosEmAberto: string
+  filaFiscal: string
+  documentosFiscais: string
+  emitirSelecionados: string
+  colDocumento: string
+  colSerie: string
+  colValor: string
+  colSituacao: string
+  contas: ContasLabels
+}
 
 type FinanceiroPanelsProps = {
   contas: ContaLinha[]
+  labels: FinanceiroPanelsLabels
 }
 
 const filaFiscalPlaceholder = [
@@ -17,15 +30,15 @@ const docsFiscaisPlaceholder = [
   { doc: 'NFC-e 10238', serie: '1', valor: 'R$ 86,90', situacao: 'A emitir' },
 ]
 
-export function FinanceiroPanels({ contas }: FinanceiroPanelsProps) {
+export function FinanceiroPanels({ contas, labels }: FinanceiroPanelsProps) {
   return (
     <div className="admin-v2-grid-2">
-      <SectionCard title="Titulos em aberto">
-        <ContasReceberTable contas={contas} />
+      <SectionCard title={labels.titulosEmAberto}>
+        <ContasReceberTable contas={contas} labels={labels.contas} />
       </SectionCard>
 
       <div className="admin-v2-stack">
-        <SectionCard title="Fila fiscal">
+        <SectionCard title={labels.filaFiscal}>
           <ul className="space-y-2">
             {filaFiscalPlaceholder.map((item) => (
               <li
@@ -43,10 +56,10 @@ export function FinanceiroPanels({ contas }: FinanceiroPanelsProps) {
         </SectionCard>
 
         <SectionCard
-          title="Documentos fiscais"
+          title={labels.documentosFiscais}
           action={
             <button type="button" className="admin-v2-btn-secondary" disabled>
-              Emitir selecionados (em breve)
+              {labels.emitirSelecionados}
             </button>
           }
         >
@@ -54,10 +67,10 @@ export function FinanceiroPanels({ contas }: FinanceiroPanelsProps) {
             <table className="w-full min-w-[360px] border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#242424] text-left text-jl-fg-3">
-                  <th className="px-2 py-2 font-medium">Documento</th>
-                  <th className="px-2 py-2 font-medium">Serie</th>
-                  <th className="px-2 py-2 font-medium">Valor</th>
-                  <th className="px-2 py-2 font-medium">Situacao</th>
+                  <th className="px-2 py-2 font-medium">{labels.colDocumento}</th>
+                  <th className="px-2 py-2 font-medium">{labels.colSerie}</th>
+                  <th className="px-2 py-2 font-medium">{labels.colValor}</th>
+                  <th className="px-2 py-2 font-medium">{labels.colSituacao}</th>
                 </tr>
               </thead>
               <tbody>
