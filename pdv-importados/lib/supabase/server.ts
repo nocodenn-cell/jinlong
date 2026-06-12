@@ -22,7 +22,11 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
-          } catch {}
+          } catch {
+            // Expected in Server Components where cookies are read-only.
+            // Supabase SSR calls setAll to refresh tokens — safe to ignore here
+            // as the middleware handles the actual cookie refresh.
+          }
         },
       },
     }

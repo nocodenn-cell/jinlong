@@ -44,7 +44,8 @@ export function useActivityFeed(intervalMs = 60_000) {
         if (incoming[0]) lastTopIdRef.current = incoming[0].id
       }
       return true
-    } catch {
+    } catch (e) {
+      console.warn('[useActivityFeed] fetch failed:', e instanceof Error ? e.message : e)
       return false // backoff via usePolling
     } finally {
       hasLoadedRef.current = true

@@ -19,7 +19,8 @@ function parseMetaConfig(raw: string | undefined): MetaConfig {
     const parsed = JSON.parse(raw) as MetaConfig
     if (!parsed || typeof parsed !== 'object') return {}
     return parsed
-  } catch {
+  } catch (e) {
+    console.warn('[dashboardMetaConfig] failed to parse META_DIA_JSON:', e instanceof Error ? e.message : e)
     return {}
   }
 }

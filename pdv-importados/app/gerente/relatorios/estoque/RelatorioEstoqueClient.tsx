@@ -72,7 +72,8 @@ export function RelatorioEstoqueClient({ idioma, kpisIniciais, inicial, categori
           offset: pag * LIMITE_PAG,
         })
         setDados(r)
-      } catch {
+      } catch (e) {
+        console.error('[RelatorioEstoque] carregar failed:', e instanceof Error ? e.message : e)
         emitGerenteToast({ kind: 'error', message: m.comum.erro })
       } finally {
         setLoading(false)
@@ -134,7 +135,8 @@ export function RelatorioEstoqueClient({ idioma, kpisIniciais, inicial, categori
           deficit: r.deficit ?? '',
         })),
       )
-    } catch {
+    } catch (e) {
+      console.error('[RelatorioEstoque] exportarCSV failed:', e instanceof Error ? e.message : e)
       emitGerenteToast({ kind: 'error', message: m.comum.erro })
     } finally {
       setExportando(false)

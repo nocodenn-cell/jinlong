@@ -12,6 +12,7 @@ import {
   mensagemErroComContexto,
   mensagemErroParaUsuario,
 } from '../lib/mensagemErroUsuario'
+import { logger } from '../lib/logger'
 
 type CatalogoLocalInvoke = {
   produtos?: ProdutoCacheLite[]
@@ -130,8 +131,8 @@ export function usePdvLocalCatalogo({
             Number(cfg.max_desconto_gerente_percentual ?? defaultPdvConfig.maxDescontoGerentePercentual),
           )
         }
-      } catch {
-        // fallback abaixo
+      } catch (e) {
+        logger.warn('pdv_config_local_get fallback', { error: String(e) })
       }
 
       try {
@@ -139,8 +140,8 @@ export function usePdvLocalCatalogo({
         if (!cancelled && caixa?.id) {
           setCaixaAtualId(String(caixa.id))
         }
-      } catch {
-        // ignora
+      } catch (e) {
+        logger.warn('load_caixa_atual_cmd failed', { error: String(e) })
       }
 
       try {
@@ -152,15 +153,15 @@ export function usePdvLocalCatalogo({
             Number(cfg2.max_desconto_gerente_percentual ?? defaultPdvConfig.maxDescontoGerentePercentual),
           )
         }
-      } catch {
-        // offline: mantém cache local/fallback
+      } catch (e) {
+        logger.warn('sync_pdv_config offline, using local fallback', { error: String(e) })
       }
 
       try {
         const cache1 = (await invoke('catalogo_local_get_cmd')) as CatalogoLocalInvoke
         if (!cancelled) aplicarCacheCatalogo(cache1)
-      } catch {
-        // sem cache local ainda
+      } catch (e) {
+        logger.warn('catalogo_local_get_cmd: no local cache yet', { error: String(e) })
       }
 
       try {

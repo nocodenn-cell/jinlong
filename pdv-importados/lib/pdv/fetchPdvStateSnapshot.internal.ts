@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { calcularValorSistemaDinheiroCaixa } from '@/app/caixa/server/caixaActionsInternals'
+import { logCaughtServerError } from '@/lib/logging/server-error'
 import type { PdvStateSnapshot } from '../../../shared-core/src/pdv/invariants'
 
 export async function fetchPdvStateSnapshot(
@@ -57,7 +58,8 @@ export async function fetchPdvStateSnapshot(
   let valorSistemaCalculado: number
   try {
     valorSistemaCalculado = await calcularValorSistemaDinheiroCaixa(supabase, caixaId)
-  } catch {
+  } catch (e) {
+    logCaughtServerError('fetchPdvStateSnapshot/calcularValorSistema', e)
     return null
   }
 

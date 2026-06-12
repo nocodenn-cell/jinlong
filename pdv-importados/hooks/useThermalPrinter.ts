@@ -50,7 +50,9 @@ export function useThermalPrinter(): UseThermalPrinterReturn {
         setDeviceInfo(info)
         setStatus("connected")
       })
-      .catch(() => {})
+      .catch((e) => {
+        if (!cancelled) console.warn('[useThermalPrinter] reconnect failed:', e instanceof Error ? e.message : e)
+      })
     return () => {
       cancelled = true
     }
