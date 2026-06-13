@@ -23,33 +23,45 @@ export default async function AdminConfiguracoes() {
   })
   const m = getMessages(session.idioma)
   const ui = m.admin_ui
+  const lojaId = session.lojaId
 
   const supabase = await createClient()
 
-  const [{ data: loja }, { data: pdvConfig }] = await Promise.all([
-    supabase
-      .from('lojas')
-      .select(
-        `
+  const lojaQuery = lojaId
+    ? supabase
+        .from('lojas')
+        .select(
+          `
         id, nome, cnpj, inscricao_estadual, telefone, email, logo_url,
         endereco_logradouro, endereco_numero, endereco_complemento,
         endereco_bairro, endereco_cidade, endereco_uf, endereco_cep,
         razao_social, nome_fantasia, cnae,
         numero_serie_nfce, numero_serie_nfe
       `
-      )
-      .maybeSingle(),
-    supabase
-      .from('pdv_config')
-      .select(
-        `
+        )
+        .eq('id', lojaId)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null })
+
+  const pdvConfigQuery = lojaId
+    ? supabase
+        .from('pdv_config')
+        .select(
+          `
         loja_id, cfop_padrao, cst_padrao, regime_tributario,
         auto_enqueue_fiscal, idioma_padrao, tema_padrao,
         imprimir_cupom_auto, formato_impressao
       `
-      )
-      .maybeSingle(),
-  ])
+        )
+        .eq('loja_id', lojaId)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null })
+
+  const [{ data: loja, error: lojaError }, { data: pdvConfig, error: pdvConfigError }] =
+    await Promise.all([lojaQuery, pdvConfigQuery])
+
+  if (lojaError) console.warn('[admin.configuracoes.loja_load_failed]', lojaError.message)
+  if (pdvConfigError) console.warn('[admin.configuracoes.pdv_config_load_failed]', pdvConfigError.message)
 
   const dados: ConfigDados = {
     loja: loja ?? null,

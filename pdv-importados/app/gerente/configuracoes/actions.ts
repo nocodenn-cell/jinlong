@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { validarLojaConfigScope } from './scope'
 
 export type ConfiguracaoGeralRow = {
   chave: string
@@ -86,6 +87,9 @@ export async function atualizarDadosLojaAction(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
+  const scopeError = validarLojaConfigScope(input.id, auth.session.lojaId, { requireInput: true })
+  if (scopeError) return { ok: false, error: scopeError }
+
   const err = validarLoja(input)
   if (err) return { ok: false, error: err }
 
@@ -112,13 +116,16 @@ export async function atualizarDadosLojaAction(
       numero_serie_nfe: Number(input.numero_serie_nfe) || 1,
     }
 
-    const query = input.id
-      ? supabase.from('lojas').update(payload).eq('id', input.id).select('*').single()
-      : supabase.from('lojas').insert(payload).select('*').single()
-    const { data, error } = await query
+    const { data, error } = await supabase
+      .from('lojas')
+      .update(payload)
+      .eq('id', input.id)
+      .select('*')
+      .single()
     if (error) return { ok: false, error: mensagemErroComSecao('Loja', error.message) }
 
     revalidatePath('/gerente/configuracoes')
+    revalidatePath('/admin/configuracoes')
     return { ok: true, loja: data as LojaConfig }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar dados da loja.' }
@@ -131,6 +138,8 @@ export async function atualizarConfiguracoesPdvAction(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
   if (!input.loja_id) return { ok: false, error: 'Loja obrigatória.' }
+  const scopeError = validarLojaConfigScope(input.loja_id, auth.session.lojaId, { requireInput: true })
+  if (scopeError) return { ok: false, error: scopeError }
 
   // Validação de CST contra lista permitida (mais comuns no varejo)
   const cstsValidos = ['00','10','20','30','40','41','50','51','60','70','90']
@@ -164,6 +173,7 @@ export async function atualizarConfiguracoesPdvAction(
     if (error) return { ok: false, error: mensagemErroComSecao('Configurações', error.message) }
 
     revalidatePath('/gerente/configuracoes')
+    revalidatePath('/admin/configuracoes')
     return { ok: true, config: data as PdvConfig }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar configurações.' }
