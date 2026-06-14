@@ -106,6 +106,13 @@ export function CaixaMovimentacaoModal({
 
   const motivoFinal = motivoCodigo === "OUTRO" ? motivoOutro.trim() : motivoLabel[motivoCodigo as keyof typeof motivoLabel]
 
+  function handleValorStr(e: React.ChangeEvent<HTMLInputElement>) {
+    let v = e.target.value.replace(/[^\d,]/g, '')
+    const parts = v.split(',')
+    if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
+    setValorStr(v)
+  }
+
   const handleSalvar = useCallback(async () => {
     setErroLocal(null)
     const valor = Number(valorStr.replace(",", "."))
@@ -181,7 +188,7 @@ export function CaixaMovimentacaoModal({
               ref={valorRef}
               inputMode="decimal"
               value={valorStr}
-              onChange={(e) => setValorStr(e.target.value)}
+              onChange={handleValorStr}
               placeholder="0,00"
               className="mt-1 app-input"
               onKeyDown={(e) => {
