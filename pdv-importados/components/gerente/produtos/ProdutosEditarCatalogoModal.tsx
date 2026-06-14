@@ -73,11 +73,15 @@ export function ProdutosEditarCatalogoModal({
 
   function handlePreco(set: (v: string) => void) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
-      let v = e.target.value.replace(/[^\d,]/g, '')
-      const parts = v.split(',')
-      if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
-      set(v)
+      const d = e.target.value.replace(/\D/g, '').replace(/^0+/, '') || '0'
+      const p = d.padStart(3, '0')
+      set(p.slice(0, -2) + ',' + p.slice(-2))
     }
+  }
+
+  function numToBRL(n: number): string {
+    const p = String(Math.round(n * 100)).padStart(3, '0')
+    return p.slice(0, -2) + ',' + p.slice(-2)
   }
 
   const fechar = useCallback(() => {
@@ -90,9 +94,9 @@ export function ProdutosEditarCatalogoModal({
     setCodigoBarras(produto.codigo_barras ?? '')
     // Map legacy brasil_sem_nf to brasil_nf so the dropdown selects "Brasil"
     setOrigem(produto.origem === 'brasil_sem_nf' ? 'brasil_nf' : produto.origem as OrigemCode)
-    setPrecoVarejo(String(produto.preco_varejo))
-    setPrecoAtacado(produto.preco_atacado != null ? String(produto.preco_atacado) : '')
-    setPrecoCusto(produto.preco_custo != null ? String(produto.preco_custo) : '')
+    setPrecoVarejo(numToBRL(produto.preco_varejo))
+    setPrecoAtacado(produto.preco_atacado != null ? numToBRL(produto.preco_atacado) : '')
+    setPrecoCusto(produto.preco_custo != null ? numToBRL(produto.preco_custo) : '')
     setPermitirAbaixoCusto(produto.permitir_abaixo_custo)
     setQtdGatilho(produto.quantidade_gatilho_atacado != null ? String(produto.quantidade_gatilho_atacado) : '')
     setUnidadeMedida((produto.unidade_medida as UnidadeCode) || 'UN')

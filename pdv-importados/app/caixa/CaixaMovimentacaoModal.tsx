@@ -107,10 +107,9 @@ export function CaixaMovimentacaoModal({
   const motivoFinal = motivoCodigo === "OUTRO" ? motivoOutro.trim() : motivoLabel[motivoCodigo as keyof typeof motivoLabel]
 
   function handleValorStr(e: React.ChangeEvent<HTMLInputElement>) {
-    let v = e.target.value.replace(/[^\d,]/g, '')
-    const parts = v.split(',')
-    if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
-    setValorStr(v)
+    const d = e.target.value.replace(/\D/g, '').replace(/^0+/, '') || '0'
+    const p = d.padStart(3, '0')
+    setValorStr(p.slice(0, -2) + ',' + p.slice(-2))
   }
 
   const handleSalvar = useCallback(async () => {
@@ -205,7 +204,7 @@ export function CaixaMovimentacaoModal({
                 size="sm"
                 variant="outline"
                 className="app-btn-neutral"
-                onClick={() => setValorStr(String(s))}
+                onClick={() => setValorStr(s.toFixed(2).replace('.', ','))}
               >
                 {m.caixa.moeda_prefixo} {s.toFixed(2)}
               </Button>

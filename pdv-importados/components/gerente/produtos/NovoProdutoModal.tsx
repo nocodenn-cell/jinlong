@@ -37,10 +37,9 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
 
   function handlePreco(set: (v: string) => void) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
-      let v = e.target.value.replace(/[^\d,]/g, '')
-      const parts = v.split(',')
-      if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
-      set(v)
+      const d = e.target.value.replace(/\D/g, '').replace(/^0+/, '') || '0'
+      const p = d.padStart(3, '0')
+      set(p.slice(0, -2) + ',' + p.slice(-2))
     }
   }
 
