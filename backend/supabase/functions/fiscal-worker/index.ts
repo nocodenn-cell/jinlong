@@ -5,16 +5,35 @@ import type { FiscalDoc } from "./fiscal_types.ts";
 import { isRecord, json } from "./fiscal_http.ts";
 import { callProvider, type ProviderConfig } from "./fiscal-provider-adapter.ts";
 
+const log = (event: string, data: Record<string, unknown>) =>
+  console.log(JSON.stringify({ scope: "fiscal-worker", event, ts: new Date().toISOString(), ...data }));
+
 Deno.serve(async (req) => {
+  const t0 = Date.now();
+
   if (req.method !== "POST") {
     return json(405, { ok: false, error: "METHOD_NOT_ALLOWED" });
   }
 
   const workerKey = Deno.env.get("FISCAL_WORKER_KEY");
   const gotKey = req.headers.get("X-FISCAL-WORKER-KEY")?.trim();
-  if (!workerKey?.trim() || !gotKey || !(await timingSafeEqualSecret(workerKey, gotKey))) {
+  const workerKeyPresent = !!workerKey?.trim();
+  const gotKeyPresent = !!gotKey;
+  const authOk = workerKeyPresent && gotKeyPresent && await timingSafeEqualSecret(workerKey!, gotKey!);
+
+  if (!authOk) {
+    log("auth_fail", {
+      worker_key_present: workerKeyPresent,
+      request_key_present: gotKeyPresent,
+      reason: !workerKeyPresent
+        ? "FISCAL_WORKER_KEY env ausente ou vazio"
+        : !gotKeyPresent
+        ? "header X-FISCAL-WORKER-KEY ausente na requisição"
+        : "chaves não coincidem",
+    });
     return json(401, { ok: false, error: "UNAUTHORIZED" });
   }
+  log("auth_success", {});
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -56,8 +75,12 @@ Deno.serve(async (req) => {
     p_limit: limit,
   });
   if (claimErr) {
+    log("claim_error", { message: claimErr.message });
     return json(500, { ok: false, error: `CLAIM_ERROR:${claimErr.message}` });
   }
+
+  const claimed = (docs ?? []).length;
+  log("claim_ok", { claimed, limit, provider_type: providerType });
 
   const processed: string[] = [];
   const emitted: string[] = [];
@@ -74,7 +97,9 @@ Deno.serve(async (req) => {
     };
     processed.push(doc.id);
 
+    const tDoc = Date.now();
     const result = await callProvider(doc, providerConfig);
+    const providerMs = Date.now() - tDoc;
 
     if (result.ok) {
       const { error } = await supabase.rpc("fiscal_marcar_emitido", {
@@ -86,6 +111,7 @@ Deno.serve(async (req) => {
       });
       if (error) {
         failed.push({ id: doc.id, erro: `MARCAR_EMITIDO_ERROR:${error.message}` });
+        log("doc_marcar_emitido_error", { documento_id: doc.id, correlation_id: doc.correlation_id ?? null, message: error.message });
         const { error: retryErr } = await supabase.rpc("fiscal_marcar_erro", {
           p_documento_id: doc.id,
           p_erro: `MARCAR_EMITIDO_ERROR:${error.message}`,
@@ -111,11 +137,14 @@ Deno.serve(async (req) => {
             id: doc.id,
             proxima_tentativa: row?.proxima_tentativa_em ?? null,
           });
+          log("doc_retry_scheduled", { documento_id: doc.id, correlation_id: doc.correlation_id ?? null, proxima_tentativa: row?.proxima_tentativa_em ?? null });
         }
       } else {
         emitted.push(doc.id);
+        log("doc_emitted", { documento_id: doc.id, correlation_id: doc.correlation_id ?? null, tipo_doc: doc.tipo_doc, provider_ms: providerMs });
       }
     } else if (result.transitorio) {
+      log("doc_retry", { documento_id: doc.id, correlation_id: doc.correlation_id ?? null, erro: result.erro, provider_ms: providerMs });
       const { error: retryErr } = await supabase.rpc("fiscal_marcar_erro", {
         p_documento_id: doc.id,
         p_erro: result.erro,
@@ -136,6 +165,7 @@ Deno.serve(async (req) => {
       }
     } else {
       failed.push({ id: doc.id, erro: result.erro });
+      log("doc_failed", { documento_id: doc.id, correlation_id: doc.correlation_id ?? null, erro: result.erro, provider_code: result.provider_code ?? null, http_status: result.http_status ?? null, provider_ms: providerMs });
       const normalized = classifyFiscalError({
         erro: result.erro,
         transitorio: result.transitorio,
@@ -169,10 +199,13 @@ Deno.serve(async (req) => {
     }
   }
 
+  const totalMs = Date.now() - t0;
+  log("run_complete", { claimed, emitted: emitted.length, failed: failed.length, retried: retried.length, provider_type: providerType, total_ms: totalMs });
+
   return json(200, {
     ok: true,
     provider_type: providerType,
-    claimed: (docs ?? []).length,
+    claimed,
     processed,
     emitted,
     failed,

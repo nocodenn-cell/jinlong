@@ -50,6 +50,24 @@ jobs:
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
+      - name: Diagnóstico de secrets (observabilidade)
+        if: always()
+        env:
+          _ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          _URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL }}
+        run: |
+          diagnose() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then
+              echo "::warning::$name: AUSENTE ou VAZIO — secret não configurado ou definido como string vazia no repositório"
+            else
+              local len=${#value}
+              echo "$name: PRESENTE (comprimento=$len; valor mascarado pelo runner)"
+            fi
+          }
+          diagnose "CI_NEXT_PUBLIC_SUPABASE_ANON_KEY" "$_ANON_KEY"
+          diagnose "CI_NEXT_PUBLIC_SUPABASE_URL" "$_URL"
+
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
