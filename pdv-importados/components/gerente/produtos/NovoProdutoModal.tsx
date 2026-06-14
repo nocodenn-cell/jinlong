@@ -35,6 +35,15 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const [ncm, setNcm] = useState('')
   const [saving, setSaving] = useState(false)
 
+  function handlePreco(set: (v: string) => void) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      let v = e.target.value.replace(/[^\d,]/g, '')
+      const parts = v.split(',')
+      if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
+      set(v)
+    }
+  }
+
   const fechar = useCallback(() => {
     if (saving) return
     onOpenChange(false)
@@ -196,7 +205,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
                 value={precoVarejo}
-                onChange={(e) => setPrecoVarejo(e.target.value)}
+                onChange={handlePreco(setPrecoVarejo)}
                 disabled={saving}
                 placeholder="0,00"
               />
@@ -208,7 +217,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
                 value={precoAtacado}
-                onChange={(e) => setPrecoAtacado(e.target.value)}
+                onChange={handlePreco(setPrecoAtacado)}
                 disabled={saving}
                 placeholder="—"
               />
@@ -234,7 +243,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
                 value={precoCusto}
-                onChange={(e) => setPrecoCusto(e.target.value)}
+                onChange={handlePreco(setPrecoCusto)}
                 disabled={saving}
                 placeholder="—"
               />
