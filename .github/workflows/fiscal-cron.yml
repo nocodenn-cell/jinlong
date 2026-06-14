@@ -15,6 +15,6 @@ jobs:
           KEY: ${{ secrets.FISCAL_WORKER_KEY }}
         run: |
           curl -X POST "$URL" \
-            -H "apikey: $KEY" \
+            -H "X-FISCAL-WORKER-KEY: $KEY" \
             -H "Content-Type: application/json" \
             -d '{"action": "processPending"}'
