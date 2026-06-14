@@ -71,6 +71,15 @@ export function ProdutosEditarCatalogoModal({
 
   const [saving, setSaving] = useState(false)
 
+  function handlePreco(set: (v: string) => void) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      let v = e.target.value.replace(/[^\d,]/g, '')
+      const parts = v.split(',')
+      if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
+      set(v)
+    }
+  }
+
   const fechar = useCallback(() => {
     onOpenChange(false)
   }, [onOpenChange])
@@ -246,7 +255,7 @@ export function ProdutosEditarCatalogoModal({
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
                 value={precoVarejo}
-                onChange={(e) => setPrecoVarejo(e.target.value)}
+                onChange={handlePreco(setPrecoVarejo)}
                 disabled={saving}
               />
             </label>
@@ -257,7 +266,7 @@ export function ProdutosEditarCatalogoModal({
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
                 value={precoAtacado}
-                onChange={(e) => setPrecoAtacado(e.target.value)}
+                onChange={handlePreco(setPrecoAtacado)}
                 disabled={saving}
                 placeholder="—"
               />
@@ -283,7 +292,7 @@ export function ProdutosEditarCatalogoModal({
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
                 value={precoCusto}
-                onChange={(e) => setPrecoCusto(e.target.value)}
+                onChange={handlePreco(setPrecoCusto)}
                 disabled={saving}
                 placeholder="—"
               />
