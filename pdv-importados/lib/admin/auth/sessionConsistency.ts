@@ -68,6 +68,8 @@ function buildAdminSession(raw: Extract<RawSession, { status: 'authenticated' }>
     userId: raw.user.id,
     user: raw.user,
     perfil,
+    // Admin UI depende exclusivamente de usuarios.idioma_preferido.
+    // Não compartilhar estado de idioma com PDV.
     idioma: normalizeIdioma(raw.usuario?.idioma_preferido),
     lojaId: (raw.usuario?.loja_id as string | null | undefined) ?? null,
   }

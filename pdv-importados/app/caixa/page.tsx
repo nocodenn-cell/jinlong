@@ -1,18 +1,21 @@
 import { redirect } from 'next/navigation'
 import { CaixaPageClient } from "@/app/caixa/CaixaPageClient"
-import { getUsuarioIdioma } from "@/idioma/usuarioIdioma"
+import { normalizeIdioma } from "@/idioma/normalizeIdioma"
 import { getMessages } from "@/i18n/getMessages"
 import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { createClient } from "@/lib/supabase/server"
 
 export default async function CaixaPage() {
-  const { idioma } = await getUsuarioIdioma()
-  const messages = getMessages(idioma)
   const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
+
+  // PDV é sempre baseado em configuração da loja (pdv_config).
+  // Nunca deve derivar de usuarios.idioma_preferido.
+  const [{ data: { user }, error: authError }, { data: pdvConfig }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('pdv_config').select('idioma_padrao').maybeSingle(),
+  ])
+  const idioma = normalizeIdioma(pdvConfig?.idioma_padrao ?? 'pt')
+  const messages = getMessages(idioma)
 
   if (authError) {
     if (await clearStaleSessionIfNeeded(supabase, authError)) {

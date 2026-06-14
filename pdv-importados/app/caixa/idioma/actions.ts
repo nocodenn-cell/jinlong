@@ -16,10 +16,11 @@ export async function setIdiomaAction(formData: FormData) {
 
   if (!user) return
 
+  const { data: usuarioRow } = await supabase
+    .from('usuarios').select('loja_id').eq('id', user.id).maybeSingle()
+  if (!usuarioRow?.loja_id) return
   await supabase
-    .from('usuarios')
-    .update({ idioma_preferido: idioma })
-    .eq('id', user.id)
+    .from('pdv_config').update({ idioma_padrao: idioma }).eq('loja_id', usuarioRow.loja_id)
 
   revalidatePath('/caixa')
 }
