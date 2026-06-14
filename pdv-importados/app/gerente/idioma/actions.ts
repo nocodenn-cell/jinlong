@@ -20,9 +20,6 @@ export async function setIdiomaAction(formData: FormData) {
     .update({ idioma_preferido: idioma })
     .eq('id', auth.session.userId)
 
-  revalidatePath('/gerente/produtos')
-  revalidatePath('/gerente/dashboard')
-  revalidatePath('/gerente')
-  revalidatePath('/admin')
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/admin', 'layout')
+  revalidatePath('/gerente', 'layout')
 }

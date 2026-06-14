@@ -1,4 +1,5 @@
 import type { AdminSession } from '@/lib/admin/auth/types'
+import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 
 type SidebarUserFooterProps = {
   session: AdminSession
@@ -45,6 +46,9 @@ export function SidebarUserFooter({ session }: SidebarUserFooterProps) {
           <p className="truncate text-sm font-semibold text-jl-fg-1">{name}</p>
           <p className="truncate text-xs text-jl-fg-3">{cargo}</p>
         </div>
+      </div>
+      <div className="mt-3 flex justify-center">
+        <LanguageToggle idiomaAtual={session.idioma} />
       </div>
     </footer>
   )
