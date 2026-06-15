@@ -5,7 +5,7 @@
 # Secrets: SUPABASE_URL, SUPABASE_ANON_KEY, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
 #   SENTRY_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
 # Variable opcional: EXPECTED_VERCEL_PROJECT_ID (fail-fast se secret divergir).
-# Path filters: pdv-importados/** → todos os jobs; shared-core/** → apenas lint+typecheck+test;
+# Path filters: pdv-importados/** → build + e2e-critical + deploy; shared-core/** → lint+typecheck+test;
 #   backend/** → ci-backend-supabase.yml; .github/workflows/** → nenhum job de aplicação.
 name: CI pdv-importados
 
@@ -33,17 +33,18 @@ on:
       - 'scripts/validate-production.mjs'
 
 jobs:
-  path-filter:
+  build-and-test:
     runs-on: ubuntu-latest
     outputs:
-      pdv: ${{ steps.filter.outputs.pdv }}
-      shared: ${{ steps.filter.outputs.shared }}
+      pdv: ${{ steps.paths.outputs.pdv }}
+
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+
       - name: Detect changed paths
-        id: filter
+        id: paths
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BEFORE_SHA: ${{ github.event.before }}
@@ -63,19 +64,6 @@ jobs:
           else
             echo "pdv=false" >> "$GITHUB_OUTPUT"
           fi
-          if echo "$CHANGED" | grep -qE '^shared-core/'; then
-            echo "shared=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "shared=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  build-and-test:
-    needs: path-filter
-    if: needs.path-filter.outputs.pdv == 'true' || needs.path-filter.outputs.shared == 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -90,7 +78,7 @@ jobs:
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
       - name: Diagnóstico de secrets (observabilidade)
-        if: always() && needs.path-filter.outputs.pdv == 'true'
+        if: always() && steps.paths.outputs.pdv == 'true'
         env:
           _ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           _URL: ${{ secrets.SUPABASE_URL }}
@@ -108,7 +96,7 @@ jobs:
           diagnose "SUPABASE_URL" "$_URL"
 
       - name: Build
-        if: needs.path-filter.outputs.pdv == 'true'
+        if: steps.paths.outputs.pdv == 'true'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://example.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -122,8 +110,8 @@ jobs:
   # Sistema de risco (não decisão): observa regressão funcional; não entra em needs: do deploy.
   e2e-critical:
     name: E2E crítico (sistema de risco)
-    needs: [path-filter, build-and-test]
-    if: needs.build-and-test.result == 'success' && needs.path-filter.outputs.pdv == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    needs: build-and-test
+    if: needs.build-and-test.result == 'success' && needs.build-and-test.outputs.pdv == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -205,8 +193,8 @@ jobs:
         run: npm run test:e2e:critical -w pdv-importados
 
   deploy:
-    needs: [path-filter, build-and-test]
-    if: github.ref == 'refs/heads/main' && needs.build-and-test.result == 'success' && needs.path-filter.outputs.pdv == 'true'
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && needs.build-and-test.result == 'success' && needs.build-and-test.outputs.pdv == 'true'
     runs-on: ubuntu-latest
 
     steps:
