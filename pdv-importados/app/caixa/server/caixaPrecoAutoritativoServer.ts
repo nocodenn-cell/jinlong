@@ -149,6 +149,12 @@ export async function recalcularItensNoServidor(
     if (i.tipoPreco === 'MANUAL' || i.tipoPreco === 'PROMOCAO') {
       const precoOriginal = roundMoney2(i.precoOriginal)
       const precoUnitario = roundMoney2(i.precoUnitario)
+      if (Math.abs(varejo - precoOriginal) > EPS_PRECO) {
+        return {
+          ok: false,
+          error: 'Preço de referência inconsistente com o cadastro. Atualize o cupom e tente novamente.',
+        }
+      }
       if (precoUnitario > precoOriginal + EPS_PRECO) {
         return {
           ok: false,
