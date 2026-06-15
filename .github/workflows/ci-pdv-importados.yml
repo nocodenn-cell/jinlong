@@ -2,7 +2,7 @@
 # E2E = sistema de risco, não sistema de decisão (e2e-critical não bloqueia deploy).
 # Pipeline E2E oficial: e2e-critical (assíncrono, não bloqueia deploy).
 # Produção canônica: https://pdv-importados.vercel.app (projeto Vercel pdv-importados).
-# Secrets: CI_NEXT_PUBLIC_*, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
+# Secrets: SUPABASE_URL, SUPABASE_ANON_KEY, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
 #   SENTRY_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
 # Variable opcional: EXPECTED_VERCEL_PROJECT_ID (fail-fast se secret divergir).
 # Path filters: pdv-importados/** → todos os jobs; shared-core/** → apenas lint+typecheck+test;
@@ -33,7 +33,7 @@ on:
       - 'scripts/validate-production.mjs'
 
 jobs:
-  changes:
+  path-filter:
     runs-on: ubuntu-latest
     outputs:
       pdv: ${{ steps.filter.outputs.pdv }}
@@ -70,8 +70,8 @@ jobs:
           fi
 
   build-and-test:
-    needs: changes
-    if: needs.changes.outputs.pdv == 'true' || needs.changes.outputs.shared == 'true'
+    needs: path-filter
+    if: needs.path-filter.outputs.pdv == 'true' || needs.path-filter.outputs.shared == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -90,10 +90,10 @@ jobs:
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
       - name: Diagnóstico de secrets (observabilidade)
-        if: always() && needs.changes.outputs.pdv == 'true'
+        if: always() && needs.path-filter.outputs.pdv == 'true'
         env:
-          _ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          _URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL }}
+          _ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          _URL: ${{ secrets.SUPABASE_URL }}
         run: |
           diagnose() {
             local name="$1" value="$2"
@@ -104,17 +104,17 @@ jobs:
               echo "$name: PRESENTE (comprimento=$len; valor mascarado pelo runner)"
             fi
           }
-          diagnose "CI_NEXT_PUBLIC_SUPABASE_ANON_KEY" "$_ANON_KEY"
-          diagnose "CI_NEXT_PUBLIC_SUPABASE_URL" "$_URL"
+          diagnose "SUPABASE_ANON_KEY" "$_ANON_KEY"
+          diagnose "SUPABASE_URL" "$_URL"
 
       - name: Build
-        if: needs.changes.outputs.pdv == 'true'
+        if: needs.path-filter.outputs.pdv == 'true'
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://example.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "::error::Defina o secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
+            echo "::error::Defina o secret SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
             exit 1
           fi
           npx turbo run build --filter=pdv-importados
@@ -122,11 +122,8 @@ jobs:
   # Sistema de risco (não decisão): observa regressão funcional; não entra em needs: do deploy.
   e2e-critical:
     name: E2E crítico (sistema de risco)
-    needs: [changes, build-and-test]
-    if: >
-      needs.build-and-test.result == 'success' &&
-      needs.changes.outputs.pdv == 'true' &&
-      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [path-filter, build-and-test]
+    if: needs.build-and-test.result == 'success' && needs.path-filter.outputs.pdv == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -145,8 +142,8 @@ jobs:
 
       - name: Verificar secrets e gravar .env (pipeline crítico)
         env:
-          PW_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          PW_ANON: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PW_URL: ${{ secrets.SUPABASE_URL }}
+          PW_ANON: ${{ secrets.SUPABASE_ANON_KEY }}
           PW_GER_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
           PW_GER_PASS: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
           PW_CX_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
@@ -158,8 +155,8 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          [ -z "${PW_URL:-}" ] && missing+=(PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL)
-          [ -z "${PW_ANON:-}" ] && missing+=(PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY)
+          [ -z "${PW_URL:-}" ] && missing+=(SUPABASE_URL)
+          [ -z "${PW_ANON:-}" ] && missing+=(SUPABASE_ANON_KEY)
           [ -z "${PW_GER_EMAIL:-}" ] && missing+=(PLAYWRIGHT_TEST_EMAIL)
           [ -z "${PW_GER_PASS:-}" ] && missing+=(PLAYWRIGHT_TEST_PASSWORD)
           [ -z "${PW_CX_EMAIL:-}" ] && missing+=(PLAYWRIGHT_CAIXA_TEST_EMAIL)
@@ -192,8 +189,8 @@ jobs:
           CI: true
           PLAYWRIGHT_E2E_WITH_DEV: ${{ secrets.PLAYWRIGHT_BASE_URL != '' && '0' || '1' }}
           PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
           PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
           PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
@@ -208,11 +205,8 @@ jobs:
         run: npm run test:e2e:critical -w pdv-importados
 
   deploy:
-    needs: [changes, build-and-test]
-    if: >
-      github.ref == 'refs/heads/main' &&
-      needs.build-and-test.result == 'success' &&
-      needs.changes.outputs.pdv == 'true'
+    needs: [path-filter, build-and-test]
+    if: github.ref == 'refs/heads/main' && needs.build-and-test.result == 'success' && needs.path-filter.outputs.pdv == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -239,15 +233,15 @@ jobs:
 
       - name: Build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_RELEASE: ${{ github.sha }}
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
-            echo "::error::Defina o secret CI_NEXT_PUBLIC_SUPABASE_URL em Settings → Secrets and variables → Actions."
+            echo "::error::Defina o secret SUPABASE_URL em Settings → Secrets and variables → Actions."
             exit 1
           fi
           npx turbo run build --filter=pdv-importados
