@@ -3,7 +3,6 @@ import {
   finalizarVendaInputSchema,
   roundMoney2,
   totaisFromItens,
-  totalsMatchDeclared,
 } from './finalizarVendaValidation'
 
 const itemBase = {
@@ -33,28 +32,18 @@ describe('finalizarVendaValidation', () => {
     expect(t.totalDesconto).toBe(2)
   })
 
-  it('totalsMatchDeclared aceita totais declarados coerentes', () => {
-    const itens = [itemPrecificadoBase]
-    const computed = totaisFromItens(itens)
-    expect(
-      totalsMatchDeclared(computed, {
-        totalBruto: 20,
-        totalDesconto: 2,
-        totalLiquido: 18,
-      }),
-    ).toBe(true)
-  })
-
-  it('totalsMatchDeclared rejeita divergência', () => {
-    const itens = [itemPrecificadoBase]
-    const computed = totaisFromItens(itens)
-    expect(
-      totalsMatchDeclared(computed, {
-        totalBruto: 999,
-        totalDesconto: 2,
-        totalLiquido: 18,
-      }),
-    ).toBe(false)
+  it('aceita estruturalmente soma de pagamentos != totalLiquido (decisão é do PostgreSQL)', () => {
+    // A reconciliação soma(pagamentos) == totalLiquido foi movida para a RPC v2.
+    // O schema estrutural não decide aceitação financeira: payload bem-formado passa.
+    const r = finalizarVendaInputSchema.safeParse({
+      formaPagamento: 'PIX',
+      totalBruto: 20,
+      totalDesconto: 2,
+      totalLiquido: 18,
+      pagamentos: [{ formaPagamento: 'PIX', valor: 5 }],
+      itens: [itemBase],
+    })
+    expect(r.success).toBe(true)
   })
 
   it('finalizarVendaInputSchema exige ao menos um item', () => {

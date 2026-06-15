@@ -19,6 +19,19 @@ function quantidadeAte3CasasDecimais(n: number): boolean {
 
 export const TIPO_PRECO_ITEM_FINALIZAR = ['VAREJO', 'ATACADO', 'MANUAL', 'PROMOCAO'] as const
 
+/**
+ * Validação ESTRUTURAL apenas (transporte + forma do payload).
+ *
+ * Este schema NÃO decide aceitação financeira. Toda regra de negócio monetária
+ * — preço, EPS, âncora de catálogo, vendabilidade, soma de pagamentos vs total,
+ * total líquido positivo, sinal de valores — vive exclusivamente no PostgreSQL
+ * (finalizar_venda_transacional_canonica_v3, migrations 235/236), dentro da
+ * transação e sem caminho de bypass. Os campos numéricos abaixo usam `.finite()`
+ * (rejeita NaN/Infinity/null/não-número) — corrupção de payload, não regra de
+ * negócio. As únicas exceções deliberadas são guardas estruturais ainda NÃO
+ * espelhadas no SQL (quantidade > 0 e ≤ 3 casas; percentual de gerente 0–100),
+ * mantidas para não abrir buraco enquanto não são portadas ao banco.
+ */
 export const itemFinalizarVendaSchema = z.object({
   produtoId: z.string().uuid('Identificador do produto inválido.'),
   quantidade: z
@@ -28,8 +41,8 @@ export const itemFinalizarVendaSchema = z.object({
       message: 'Use no máximo 3 casas decimais na quantidade (ex.: balança 0,125 kg).',
     }),
   /** Referência de varejo (ex.: bruto da linha); para ATACADO costuma ser o preço de tabela varejo. */
-  precoOriginal: z.number().nonnegative('preço original inválido.'),
-  precoUnitario: z.number().nonnegative('preço unitário inválido.'),
+  precoOriginal: z.number().finite('preço original inválido.'),
+  precoUnitario: z.number().finite('preço unitário inválido.'),
   tipoPreco: z.enum(TIPO_PRECO_ITEM_FINALIZAR, {
     errorMap: () => ({ message: 'Tipo de preço do item inválido.' }),
   }),
@@ -39,7 +52,7 @@ export const pagamentoParcelaSchema = z.object({
   formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
     errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
   }),
-  valor: z.number().positive('O valor da parcela deve ser maior que zero.'),
+  valor: z.number().finite('Valor da parcela inválido.'),
 })
 
 export const finalizarVendaInputSchema = z.object({
@@ -48,9 +61,9 @@ export const finalizarVendaInputSchema = z.object({
   formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
     errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
   }),
-  totalBruto: z.number().nonnegative('O total bruto não pode ser negativo.'),
-  totalDesconto: z.number().nonnegative('O total de desconto não pode ser negativo.'),
-  totalLiquido: z.number().positive('O total líquido deve ser maior que zero.'),
+  totalBruto: z.number().finite('Total bruto inválido.'),
+  totalDesconto: z.number().finite('Total de desconto inválido.'),
+  totalLiquido: z.number().finite('Total líquido inválido.'),
   descontoGerenteToken: z.string().min(1).optional(),
   descontoGerentePercentual: z
     .number()
@@ -60,6 +73,8 @@ export const finalizarVendaInputSchema = z.object({
   pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
 }).superRefine((value, ctx) => {
+  // Consistência ESTRUTURAL do payload (par token↔percentual). Não é decisão
+  // financeira: apenas garante que os dois campos viajem juntos ou ausentes.
   const hasToken = !!value.descontoGerenteToken
   const hasPercentual = value.descontoGerentePercentual !== undefined
   if (hasToken !== hasPercentual) {
@@ -67,15 +82,6 @@ export const finalizarVendaInputSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['descontoGerenteToken'],
       message: 'Token e percentual de desconto de gerente devem ser enviados juntos.',
-    })
-  }
-
-  const somaPagamentos = roundMoney2(value.pagamentos.reduce((acc, p) => acc + p.valor, 0))
-  if (Math.abs(somaPagamentos - value.totalLiquido) > 0.01) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['pagamentos'],
-      message: 'A soma das parcelas deve ser igual ao total líquido.',
     })
   }
 })
@@ -87,6 +93,11 @@ export type ItemTotalizacaoServidor = {
   quantidade: number
 }
 
+/**
+ * Aritmética pura de totais (sem decisão de aceitação): soma linhas para compor
+ * os parâmetros p_total_* da RPC e alimentar gates de autorização. O total
+ * persistido é recomputado e revalidado pelo PostgreSQL (v2), que é a autoridade.
+ */
 export function totaisFromItens(itens: ItemTotalizacaoServidor[]) {
   const bruto = itens.reduce((acc, i) => acc + i.precoOriginal * i.quantidade, 0)
   const liquido = itens.reduce((acc, i) => acc + i.precoUnitario * i.quantidade, 0)
@@ -96,16 +107,4 @@ export function totaisFromItens(itens: ItemTotalizacaoServidor[]) {
     totalLiquido: roundMoney2(liquido),
     totalDesconto: roundMoney2(desconto),
   }
-}
-
-export function totalsMatchDeclared(
-  computed: ReturnType<typeof totaisFromItens>,
-  declared: Pick<FinalizarVendaInput, 'totalBruto' | 'totalDesconto' | 'totalLiquido'>,
-  epsilon = 0.02,
-) {
-  return (
-    Math.abs(computed.totalBruto - declared.totalBruto) <= epsilon &&
-    Math.abs(computed.totalLiquido - declared.totalLiquido) <= epsilon &&
-    Math.abs(computed.totalDesconto - declared.totalDesconto) <= epsilon
-  )
 }

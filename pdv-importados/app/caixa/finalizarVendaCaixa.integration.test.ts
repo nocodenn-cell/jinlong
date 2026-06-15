@@ -149,7 +149,13 @@ function makeSupabase(opts?: { caixaAberto?: boolean }) {
       }
       if (name === 'finalizar_venda_transacional_canonica_v3') {
         return Promise.resolve({
-          data: [{ venda_id: '66666666-6666-6666-8666-666666666666', status: 'CONCLUIDA' }],
+          data: [
+            {
+              venda_id: '66666666-6666-6666-8666-666666666666',
+              status: 'CONCLUIDA',
+              event_id: '77777777-7777-7777-8777-777777777777',
+            },
+          ],
           error: null,
         })
       }
@@ -218,6 +224,10 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
     expect(result).toEqual({
       ok: true,
       vendaId: '66666666-6666-6666-8666-666666666666',
+      eventId: '77777777-7777-7777-8777-777777777777',
+      documentoFiscal: undefined,
+      itensAtualizados: undefined,
+      estoqueBaixado: undefined,
     })
 
     const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v3')
@@ -228,19 +238,22 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
     ])
   })
 
-  it('retorna mensagem de erro esperada para payload inválido (pagamentos != total)', async () => {
+  it('não barra mais soma de parcelas != total no TS — encaminha à RPC (autoridade no PostgreSQL)', async () => {
+    // A reconciliação soma(pagamentos) == totalLiquido saiu do schema Zod e passou
+    // a ser decidida pela RPC v2 (tolerância 0.01), dentro da transação. O schema
+    // estrutural não rejeita mais; a venda chega ao banco, que é a autoridade.
+    // No mock a RPC aceita; em produção a v2 rejeitaria a divergência.
     process.env.USE_UNIFIED_SALES_FLOW = 'true'
-    const { supabase } = makeSupabase()
+    const { supabase, rpcCalls } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
     const { finalizarVendaCaixa } = await import('./actions')
     const payloadInvalido = payloadBase()
     payloadInvalido.pagamentos = [{ formaPagamento: 'DINHEIRO', valor: 1 }]
 
     const result = await finalizarVendaCaixa(payloadInvalido)
-    expect(result.ok).toBe(false)
-    if (result.ok) return
-    expect(result.error).toContain('Dados inválidos:')
-    expect(result.error).toContain('A soma das parcelas deve ser igual ao total líquido')
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v3')
+    expect(txCall).toBeTruthy()
+    expect(result.ok).toBe(true)
   })
 })
 

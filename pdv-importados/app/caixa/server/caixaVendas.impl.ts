@@ -4,7 +4,6 @@ import {
   finalizarVendaInputSchema,
   roundMoney2,
   totaisFromItens,
-  totalsMatchDeclared,
 } from '@/app/caixa/finalizarVendaValidation'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
@@ -163,9 +162,10 @@ export async function finalizarVendaCaixaImpl(
       precoUnitario: i.precoUnitario,
       tipoPreco: i.tipoPreco,
     }))
-    const recalc = await recalcularItensNoServidor(supabase, itensCliente, lojaId)
-    if (!recalc.ok) return { ok: false, error: recalc.error }
-    const itensAut = recalc.itens
+    // Transporte puro: normaliza os itens (arredondamento). NENHUMA validação de
+    // preço/vendabilidade aqui — a autoridade é a RPC v3 (migrations 235/236),
+    // que revalida tudo dentro da transação e rejeita itens inválidos.
+    const itensAut = recalcularItensNoServidor(itensCliente)
 
     const computedBase = totaisFromItens(itensAut)
     const gerentePercentual = input.descontoGerentePercentual ?? null
@@ -190,14 +190,6 @@ export async function finalizarVendaCaixaImpl(
       totalBruto: computedBase.totalBruto,
       totalDesconto: roundMoney2(computedBase.totalDesconto + descontoGerenteValor),
       totalLiquido: roundMoney2(computedBase.totalLiquido - descontoGerenteValor),
-    }
-
-    if (!totalsMatchDeclared(computedFinal, input)) {
-      return {
-        ok: false,
-        error:
-          'Os preços/regras do carrinho mudaram. Reabra o caixa e tente novamente para recalcular.',
-      }
     }
 
     // Verificar caixa aberto
