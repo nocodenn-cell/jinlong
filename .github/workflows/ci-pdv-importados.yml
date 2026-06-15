@@ -1,5 +1,6 @@
 # CI pdv-importados — SSRA: release authority = Vercel Deployment ID (validate-production).
 # E2E = sistema de risco, não sistema de decisão (e2e-critical não bloqueia deploy).
+# Pipeline E2E oficial: e2e-critical (assíncrono, não bloqueia deploy).
 # Produção canônica: https://pdv-importados.vercel.app (projeto Vercel pdv-importados).
 # Secrets: CI_NEXT_PUBLIC_*, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
 #   SENTRY_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
@@ -253,37 +254,3 @@ jobs:
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
           PRODUCTION_HOST: ${{ env.PRODUCTION_HOST }}
         run: node scripts/validate-production.mjs
-
-  e2e-playwright:
-    needs: build-and-test
-    if: ${{ vars.ENABLE_PLAYWRIGHT_E2E == 'true' }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install (workspaces na raiz)
-        run: npm ci
-
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: E2E
-        env:
-          CI: true
-          PLAYWRIGHT_E2E_WITH_DEV: ${{ secrets.PLAYWRIGHT_BASE_URL != '' && '0' || '1' }}
-          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
-          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
-          PLAYWRIGHT_CAIXA_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
-          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
-          PLAYWRIGHT_E2E_PRODUTO_CODIGO: ${{ secrets.PLAYWRIGHT_E2E_PRODUTO_CODIGO }}
-        run: npm run test:e2e -w pdv-importados
