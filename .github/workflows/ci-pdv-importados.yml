@@ -35,26 +35,39 @@ on:
 jobs:
   changes:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
     outputs:
       pdv: ${{ steps.filter.outputs.pdv }}
       shared: ${{ steps.filter.outputs.shared }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
-        id: filter
         with:
-          filters: |
-            pdv:
-              - 'pdv-importados/**'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'turbo.json'
-              - 'scripts/validate-production.mjs'
-            shared:
-              - 'shared-core/**'
+          fetch-depth: 0
+      - name: Detect changed paths
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BASE_SHA:-}" ]; then
+            CHANGED=$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")
+          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            CHANGED=$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA")
+          else
+            CHANGED=$(git diff --name-only HEAD^ HEAD 2>/dev/null || git ls-files)
+          fi
+          echo "--- Changed files ---"
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -qE '^(pdv-importados/|package\.json$|package-lock\.json$|turbo\.json$|scripts/validate-production\.mjs$)'; then
+            echo "pdv=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pdv=false" >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$CHANGED" | grep -qE '^shared-core/'; then
+            echo "shared=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "shared=false" >> "$GITHUB_OUTPUT"
+          fi
 
   build-and-test:
     needs: changes
