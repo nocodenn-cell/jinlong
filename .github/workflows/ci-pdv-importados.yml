@@ -5,8 +5,8 @@
 # Secrets: SUPABASE_URL, SUPABASE_ANON_KEY, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
 #   SENTRY_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
 # Variable opcional: EXPECTED_VERCEL_PROJECT_ID (fail-fast se secret divergir).
-# Path filters: pdv-importados/** → build + e2e-critical + deploy; shared-core/** → lint+typecheck+test;
-#   backend/** → ci-backend-supabase.yml; .github/workflows/** → nenhum job de aplicação.
+# Path filters (on.paths): pdv-importados/**, shared-core/**, package.json, turbo.json.
+#   .github/workflows/** excluído — mudanças de workflow não disparam pipeline de app.
 name: CI pdv-importados
 
 env:
@@ -35,35 +35,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      pdv: ${{ steps.paths.outputs.pdv }}
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect changed paths
-        id: paths
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          BEFORE_SHA: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-          if [ -n "${BASE_SHA:-}" ]; then
-            CHANGED=$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")
-          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-            CHANGED=$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA")
-          else
-            CHANGED=$(git diff --name-only HEAD^ HEAD 2>/dev/null || git ls-files)
-          fi
-          echo "--- Changed files ---"
-          echo "$CHANGED"
-          if echo "$CHANGED" | grep -qE '^(pdv-importados/|package\.json$|package-lock\.json$|turbo\.json$|scripts/validate-production\.mjs$)'; then
-            echo "pdv=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "pdv=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -78,7 +52,7 @@ jobs:
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
       - name: Diagnóstico de secrets (observabilidade)
-        if: always() && steps.paths.outputs.pdv == 'true'
+        if: always()
         env:
           _ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           _URL: ${{ secrets.SUPABASE_URL }}
@@ -96,7 +70,6 @@ jobs:
           diagnose "SUPABASE_URL" "$_URL"
 
       - name: Build
-        if: steps.paths.outputs.pdv == 'true'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://example.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -111,7 +84,7 @@ jobs:
   e2e-critical:
     name: E2E crítico (sistema de risco)
     needs: build-and-test
-    if: needs.build-and-test.result == 'success' && needs.build-and-test.outputs.pdv == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -193,8 +166,8 @@ jobs:
         run: npm run test:e2e:critical -w pdv-importados
 
   deploy:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && needs.build-and-test.result == 'success' && needs.build-and-test.outputs.pdv == 'true'
+    needs: [build-and-test]
+    if: github.ref == 'refs/heads/main' && needs.build-and-test.result == 'success'
     runs-on: ubuntu-latest
 
     steps:
