@@ -208,22 +208,22 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         shell: bash
         env:
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
           RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
         run: |
           set -euo pipefail
-          [ -n "${SUPABASE_URL:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL" && exit 1)
-          [ -n "${SUPABASE_ANON_KEY:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY" && exit 1)
+          [ -n "${SUPABASE_URL:-}" ] || (echo "Secret ausente: SUPABASE_URL" && exit 1)
+          [ -n "${SUPABASE_ANON_KEY:-}" ] || (echo "Secret ausente: SUPABASE_ANON_KEY" && exit 1)
           [ -n "${RLS_SMOKE_JWT_PAINEL:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_PAINEL" && exit 1)
           [ -n "${RLS_SMOKE_JWT_CAIXA:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_CAIXA" && exit 1)
 
       - name: Run mandatory REST RLS smoke
         env:
           CI_RLS_SMOKE_REQUIRED: 'true'
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
           RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
         run: node backend/scripts/p0-rls-rest-smoke.mjs
