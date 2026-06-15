@@ -24,7 +24,7 @@ export type ItemEntradaFinalizacao = {
   tipoPreco: ItemAutoritativo['tipoPreco']
 }
 
-const EPS_PRECO = 0.02
+const EPS_PRECO = 0.005
 
 /**
  * Concorrência das RPCs de revalidação de preço na finalização.
