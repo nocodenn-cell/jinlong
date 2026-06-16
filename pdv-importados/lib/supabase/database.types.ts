@@ -2243,6 +2243,65 @@ export type Database = {
           },
         ]
       }
+      venda_finance_context: {
+        Row: {
+          atualizado_em: string
+          cliente_id: string | null
+          conta_referencia: string | null
+          loja_id: string | null
+          origem_pagamento: string
+          status_pagamento: string
+          venda_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          cliente_id?: string | null
+          conta_referencia?: string | null
+          loja_id?: string | null
+          origem_pagamento?: string
+          status_pagamento?: string
+          venda_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          cliente_id?: string | null
+          conta_referencia?: string | null
+          loja_id?: string | null
+          origem_pagamento?: string
+          status_pagamento?: string
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venda_finance_context_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_finance_context_conta_referencia_fkey"
+            columns: ["conta_referencia"]
+            isOneToOne: false
+            referencedRelation: "contas_receber"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_finance_context_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_finance_context_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: true
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendas: {
         Row: {
           caixa_id: string | null

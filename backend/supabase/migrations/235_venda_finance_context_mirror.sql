@@ -1,0 +1,222 @@
+-- ============================================================
+-- Migration 235: venda_finance_context — espelhamento controlado
+--
+-- OBJETIVO
+--   Criar sincronia mínima e passiva entre PEDIDO (vendas) e o
+--   registro financeiro (contas_receber), sem novo engine, sem
+--   duplicar lógica de caixa/contas e sem recalcular valores.
+--
+-- PRINCÍPIO
+--   * Pedido apenas ORIGINA o fluxo.
+--   * Caixa continua sendo a autoridade de liquidez (intocado).
+--   * Conta continua sendo o registro financeiro (intocado).
+--   * Este contexto é um ESPELHO de estado (mirror), unidirecional.
+--
+-- O QUE ESTA MIGRATION *NÃO* FAZ (regras inegociáveis):
+--   * Não cria FinanceEngine/Ledger/event sourcing.
+--   * Não recalcula totais, impostos, preço ou estoque.
+--   * Não altera o fluxo de venda nem o de caixa.
+--   * Não escreve de volta em vendas / vendas_pagamentos / caixa.
+--   * Classifica status apenas a partir de forma_pagamento já
+--     existente — nunca soma/recalcula valor monetário da venda.
+--
+-- Idempotente: IF NOT EXISTS / DROP IF EXISTS / ON CONFLICT.
+-- ============================================================
+
+-- ---------------------------------------------------------------------------
+-- 1) Tabela espelho (estado atual, 1 linha por venda)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.venda_finance_context (
+  venda_id uuid PRIMARY KEY REFERENCES public.vendas(id) ON DELETE CASCADE,
+  loja_id uuid REFERENCES public.lojas(id),
+  status_pagamento text NOT NULL DEFAULT 'PAGO'
+    CHECK (status_pagamento IN ('PAGO', 'PARCIAL', 'ABERTO')),
+  origem_pagamento text NOT NULL DEFAULT 'CAIXA'
+    CHECK (origem_pagamento IN ('CAIXA', 'FIADO', 'MISTO')),
+  cliente_id uuid REFERENCES public.clientes(id),
+  conta_referencia uuid REFERENCES public.contas_receber(id) ON DELETE SET NULL,
+  atualizado_em timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.venda_finance_context IS
+  'Espelho passivo do status financeiro originado pela venda. Mirror unidirecional: derivado de vendas/vendas_pagamentos/contas_receber. Não é fonte de verdade — caixa (liquidez) e contas_receber (financeiro) permanecem autoridades.';
+COMMENT ON COLUMN public.venda_finance_context.status_pagamento IS
+  'PAGO = sem parcela FIADO; ABERTO = totalmente FIADO; PARCIAL = misto. Classificado por forma_pagamento, sem recálculo monetário.';
+COMMENT ON COLUMN public.venda_finance_context.origem_pagamento IS
+  'CAIXA = liquidado no caixa; FIADO = a receber; MISTO = ambos.';
+COMMENT ON COLUMN public.venda_finance_context.conta_referencia IS
+  'Vínculo opcional para a conta_receber já existente desta venda (se houver).';
+
+CREATE INDEX IF NOT EXISTS idx_venda_finance_context_loja
+  ON public.venda_finance_context(loja_id);
+CREATE INDEX IF NOT EXISTS idx_venda_finance_context_status
+  ON public.venda_finance_context(status_pagamento);
+CREATE INDEX IF NOT EXISTS idx_venda_finance_context_conta
+  ON public.venda_finance_context(conta_referencia);
+
+-- ---------------------------------------------------------------------------
+-- 2) RLS — leitura por loja (mesmo padrão de vendas_pagamentos).
+--    Escrita exclusiva via função/trigger SECURITY DEFINER.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.venda_finance_context ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "venda_finance_context_select_loja" ON public.venda_finance_context;
+CREATE POLICY "venda_finance_context_select_loja"
+  ON public.venda_finance_context FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.usuarios u
+      WHERE u.id = (SELECT auth.uid())
+        AND u.loja_id = venda_finance_context.loja_id
+        AND u.perfil IN ('GERENTE', 'DONO', 'ADMIN')
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- 3) Função de espelhamento (derivação pura, sem recálculo de valor).
+--    Lê o estado já gravado por venda/caixa/conta e faz UPSERT.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sincronizar_finance_context_venda(p_venda_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_venda            record;
+  v_loja_id          uuid;
+  v_total_fiado      numeric := 0;
+  v_total_outros     numeric := 0;
+  v_tem_pagamentos   boolean := false;
+  v_status           text;
+  v_origem           text;
+  v_conta_id         uuid;
+  v_cliente_id       uuid;
+BEGIN
+  IF p_venda_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT v.id, v.forma_pagamento, v.caixa_id
+  INTO v_venda
+  FROM public.vendas v
+  WHERE v.id = p_venda_id;
+
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+
+  SELECT c.loja_id INTO v_loja_id
+  FROM public.caixas c WHERE c.id = v_venda.caixa_id;
+
+  -- Composição por forma de pagamento (NÃO recalcula total da venda;
+  -- apenas separa FIADO de não-FIADO para classificar o status).
+  SELECT
+    COALESCE(SUM(vp.valor) FILTER (WHERE vp.forma_pagamento = 'FIADO'), 0),
+    COALESCE(SUM(vp.valor) FILTER (WHERE vp.forma_pagamento <> 'FIADO'), 0),
+    COUNT(*) > 0
+  INTO v_total_fiado, v_total_outros, v_tem_pagamentos
+  FROM public.vendas_pagamentos vp
+  WHERE vp.venda_id = p_venda_id;
+
+  IF NOT v_tem_pagamentos THEN
+    -- Fallback para a forma legada da própria venda.
+    IF COALESCE(v_venda.forma_pagamento, '') = 'FIADO' THEN
+      v_status := 'ABERTO'; v_origem := 'FIADO';
+    ELSE
+      v_status := 'PAGO'; v_origem := 'CAIXA';
+    END IF;
+  ELSIF v_total_fiado = 0 THEN
+    v_status := 'PAGO'; v_origem := 'CAIXA';
+  ELSIF v_total_outros = 0 THEN
+    v_status := 'ABERTO'; v_origem := 'FIADO';
+  ELSE
+    v_status := 'PARCIAL'; v_origem := 'MISTO';
+  END IF;
+
+  -- Vínculo opcional: conta a receber já existente desta venda.
+  SELECT cr.id, cr.cliente_id
+  INTO v_conta_id, v_cliente_id
+  FROM public.contas_receber cr
+  WHERE cr.venda_id = p_venda_id
+  ORDER BY cr.created_at ASC
+  LIMIT 1;
+
+  INSERT INTO public.venda_finance_context AS fc (
+    venda_id, loja_id, status_pagamento, origem_pagamento,
+    cliente_id, conta_referencia, atualizado_em
+  ) VALUES (
+    p_venda_id, v_loja_id, v_status, v_origem,
+    v_cliente_id, v_conta_id, now()
+  )
+  ON CONFLICT (venda_id) DO UPDATE SET
+    loja_id          = EXCLUDED.loja_id,
+    status_pagamento = EXCLUDED.status_pagamento,
+    origem_pagamento = EXCLUDED.origem_pagamento,
+    cliente_id       = COALESCE(EXCLUDED.cliente_id, fc.cliente_id),
+    conta_referencia = EXCLUDED.conta_referencia,
+    atualizado_em    = now();
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.sincronizar_finance_context_venda(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sincronizar_finance_context_venda(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.sincronizar_finance_context_venda(uuid) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 4) Triggers de espelhamento UNIDIRECIONAL (nunca escrevem de volta).
+--    A) pagamento registrado  -> espelha o status do pedido.
+--    B) conta a receber criada/alterada -> espelha o vínculo conta.
+--    Não há trigger em venda_finance_context: sem cascata, sem loop.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.trg_finance_context_via_pagamento()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM public.sincronizar_finance_context_venda(NEW.venda_id);
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_finance_context_pagamento ON public.vendas_pagamentos;
+CREATE TRIGGER trg_finance_context_pagamento
+  AFTER INSERT ON public.vendas_pagamentos
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trg_finance_context_via_pagamento();
+
+CREATE OR REPLACE FUNCTION public.trg_finance_context_via_conta()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.venda_id IS NOT NULL THEN
+    PERFORM public.sincronizar_finance_context_venda(NEW.venda_id);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_finance_context_conta ON public.contas_receber;
+CREATE TRIGGER trg_finance_context_conta
+  AFTER INSERT OR UPDATE OF venda_id, cliente_id ON public.contas_receber
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trg_finance_context_via_conta();
+
+-- ---------------------------------------------------------------------------
+-- 5) Backfill idempotente das vendas já concluídas.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN SELECT id FROM public.vendas WHERE status = 'CONCLUIDA' LOOP
+    PERFORM public.sincronizar_finance_context_venda(r.id);
+  END LOOP;
+END;
+$$;
