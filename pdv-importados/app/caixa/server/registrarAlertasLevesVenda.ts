@@ -12,8 +12,10 @@ const LIMITE_DESCONTO_FORA_PADRAO = 0.5
 /**
  * Detecção de anomalias leves, explícita no backend (sem trigger/job): roda
  * dentro do fluxo de finalização de venda já existente, com `if` direto sobre
- * dados já calculados pela revalidação de preço. Best-effort — qualquer falha
- * aqui é engolida e nunca afeta a venda, já concluída antes desta chamada.
+ * dados já calculados pela revalidação de preço. Execução determinística
+ * (aguardada pelo chamador) — o try/catch é isolado aqui dentro: qualquer
+ * falha na escrita do alerta nunca propaga para a venda, já concluída antes
+ * desta chamada.
  */
 export async function registrarAlertasLevesVenda(
   supabase: SupabaseServerClient,

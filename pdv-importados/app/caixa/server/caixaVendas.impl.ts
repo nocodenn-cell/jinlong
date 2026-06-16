@@ -301,9 +301,10 @@ export async function finalizarVendaCaixaImpl(
       return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
 
-    // Observabilidade leve, best-effort, fora do caminho crítico: a venda já
-    // está concluída neste ponto. Ver registrarAlertasLevesVenda.ts.
-    void registrarAlertasLevesVenda(supabase, String(row.venda_id), lojaId, itensAut)
+    // Observabilidade leve, executada de forma determinística após a venda já
+    // concluída (try/catch isolado dentro da própria função, sem propagação
+    // para este fluxo). Ver registrarAlertasLevesVenda.ts.
+    await registrarAlertasLevesVenda(supabase, String(row.venda_id), lojaId, itensAut)
 
     // Invalidar cache
     revalidatePath('/caixa')
