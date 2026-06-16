@@ -23,10 +23,60 @@ seguir e aponta **quais componentes já existem** para reutilização pragmátic
 - ✔ Permitido: ajustes locais em telas **já tocadas**, padronização
   incremental, reutilização de componentes **já existentes**.
 
-> ⚠️ Maior risco: transformar consistência de UX em arquitetura rígida cedo
-> demais. ERP de verdade começa inconsistente, normaliza partes críticas e só
-> no fim cria padrão global. Aplique este kernel **apenas onde já está
-> mexendo** — nunca como varredura global.
+> ⚠️ Dois limites que andam juntos:
+> 1. **Escopo local:** aplique este kernel **apenas onde já está mexendo** —
+>    nunca como varredura global nem padronização retroativa em lote.
+> 2. **Aplicação imediata:** dentro desse escopo local, o padrão estrutural é
+>    **obrigatório já na primeira implementação** — não se espera "2+ usos" nem
+>    convergência tardia. Consistência não emerge por repetição: ela é aplicada
+>    no momento em que o contexto da tela permite.
+
+---
+
+## Regra de execução — aplicação imediata e obrigatória
+
+> O Layout Kernel **não é** design system. É um **contrato de consistência
+> estrutural obrigatória no momento da implementação local.**
+
+Sempre que uma tela for criada **ou** modificada, ela deve aplicar
+imediatamente os padrões estruturais do kernel **quando houver oportunidade
+local de uso** — sem esperar repetição. São obrigatórios, cada um quando seu
+gatilho existir na tela:
+
+| Padrão estrutural        | Gatilho (aplica-se quando…)            | É obrigatório já no 1º uso |
+|--------------------------|----------------------------------------|----------------------------|
+| Toolbar de ações         | a tela tem ação primária               | sim |
+| Barra de filtros         | a tela tem listagem ou busca           | sim (filtros sempre acima) |
+| Estrutura de tabela padrão | a tela tem listagem                  | sim (`DataTable`)          |
+| Paginação                | há paginação natural                   | sim |
+| Breadcrumb               | há navegação hierárquica               | sim |
+
+**Como isso muda o tratamento de componentes ainda inexistentes:** se o
+gatilho ocorre numa tela real e o componente compartilhado ainda não existe
+(ex.: `Breadcrumb`, `PaginationBar`), cria-se **a versão compartilhada mínima
+já nesse primeiro uso** — em `components/ui/` — em vez de uma cópia local que
+diverge. O gatilho é "esta tela precisa agora", **não** "duas telas já
+precisaram".
+
+### O que NÃO é aceito
+
+- ❌ Esperar "2+ usos" para consolidar um padrão **estrutural**.
+- ❌ Deixar padrões divergirem por módulo até refatoração futura.
+- ❌ Criar variação local de estrutura de tabela ou de filtros.
+- ❌ Adiar padronização de layout básico sob a justificativa de "evitar
+  design system".
+
+### Onde o limite continua valendo (mantido)
+
+A aplicação imediata **não** autoriza: framework de UI, abstrações globais
+(HOCs/wrappers/layout engines), redesign massivo de telas existentes, nem
+padronização retroativa em lote. Criar o componente estrutural no 1º uso real
+≠ construir um catálogo especulativo de componentes não usados.
+
+> **Distinção-chave:** a regra antiga "não criar componente sem 2+ usos" era
+> contra **componentes especulativos sem nenhum consumidor**. Ela **não** se
+> aplica a padrão estrutural com um consumidor real presente: aí a versão
+> compartilhada nasce já no primeiro uso.
 
 ---
 
@@ -101,26 +151,35 @@ código hoje — mantenha esta seção honesta ao mexer em componentes.
 | `SectionCard` / `ChartCard` / `MetricCard` / `StatCard` | blocos de conteúdo | `components/ui/`, `components/ui/admin-v2/` |
 | `MargemCell` / `PriceTooltip` / `StockAlertBadge` | células de observabilidade (flag-gated) | `components/ui/` |
 
-### 〜 Padrões locais (one-off) — NÃO promover ainda
+### 〜 Padrões locais (one-off) que já existem hoje
 
-Existem como cópia local em **uma** tela. Não são compartilhados de propósito.
-Promover a `components/ui/` **só** quando surgir uma 2ª necessidade real e
-concreta (critério: **2+ usos reais cross-module**, provados em código).
+Existem como cópia local em **uma** tela (dívida pré-kernel). Não há
+refatoração retroativa em lote: eles ficam onde estão até a própria tela ser
+tocada por outro motivo. Mas a regra de aplicação imediata vale daqui pra
+frente:
 
-| Padrão        | Onde vive hoje | Observação |
-|---------------|----------------|------------|
-| `StatusPill`  | `app/admin/financeiro/_components/ContasReceberTable.tsx` | 1 uso. `DataTable` também aceita badge na célula. |
+- **Tela nova / outra tela** que precise do padrão: usar/criar a versão
+  **compartilhada** (não copiar localmente de novo).
+- **Tocou a tela que contém o one-off** por outro motivo: promover
+  oportunisticamente o padrão para `components/ui/` (sem virar um refactor
+  dedicado).
+
+| Padrão        | Onde vive hoje | Nota |
+|---------------|----------------|------|
+| `StatusPill`  | `app/admin/financeiro/_components/ContasReceberTable.tsx` | `DataTable` aceita badge na célula. |
 | `EmptyState`  | `app/admin/relatorios/_components/RelatoriosContent.tsx` | `DataTable` já tem a prop `emptyState` para o caso tabela. |
 
-### ✘ Ainda NÃO existem — criar só sob necessidade real
+### ✘ Ainda NÃO existem — criar no 1º uso real (não especulativo)
 
-Não criar especulativamente (seria design system disfarçado):
+Não criar antes de haver uma tela real consumindo. Mas, havendo a tela e o
+gatilho, criar **a versão compartilhada já no primeiro uso** (não cópia local,
+não esperar 2º uso):
 
 | Componente      | Situação hoje | Quando criar |
 |-----------------|---------------|--------------|
-| `Breadcrumb`    | inexistente   | quando uma tela interna real precisar de trilha |
-| `PaginationBar` | paginação feita por-tela via `searchParams` | ao 2º uso real; aí extrair o padrão já existente |
-| `ActionToolbar` | coberto pelo slot `filters` do `PageHeader` + `AdminV2UtilityBar` | só se um caso real não couber no `PageHeader` |
+| `Breadcrumb`    | inexistente   | **1º** uso: tela interna real com navegação hierárquica |
+| `PaginationBar` | paginação por-tela via `searchParams` | **1º** uso: tela real com paginação natural → nasce já compartilhada |
+| `ActionToolbar` | coberto pelo slot `filters`/ações do `PageHeader` + `AdminV2UtilityBar` | reusar o `PageHeader` primeiro; componente próprio só se um caso real não couber nele |
 
 ---
 
@@ -147,8 +206,10 @@ Não criar especulativamente (seria design system disfarçado):
 
 ## Critério de sucesso
 
-- Tela nova segue o padrão **porque reusa os componentes existentes**, não
-  porque há um framework forçando.
+- Consistência **desde o primeiro ponto de contato**: a tela já nasce no
+  padrão estrutural, sem depender de convergência futura.
+- Tela nova segue o padrão **porque reusa (ou cria já compartilhado) os
+  componentes estruturais**, não porque há um framework forçando.
 - Telas existentes **não** são reescritas em massa.
 - Comportamento de tabela previsível em todos os módulos (via `DataTable`).
 - Navegação consistente sem reaprendizado (via `SidebarNav`).
