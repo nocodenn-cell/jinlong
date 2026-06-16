@@ -17,7 +17,7 @@ import type {
   RelatorioResumoExecutivoDTO,
   RelatorioMargemVendaDTO,
   RelatorioCurvaAbcDTO,
-  RelatorioPrevisaoEstoqueDTO,
+  RelatorioCoberturaEstoqueDTO,
 } from '@/app/gerente/relatorios/actions'
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
 import { RelatoriosBarChart } from './RelatoriosBarChart'
@@ -33,7 +33,7 @@ export type RelatoriosDados = {
   baixo: RelatorioEstoqueBaixoDTO[]
   margemPorVenda: RelatorioMargemVendaDTO[]
   curvaAbc: RelatorioCurvaAbcDTO[]
-  previsaoEstoque: RelatorioPrevisaoEstoqueDTO[]
+  coberturaEstoque: RelatorioCoberturaEstoqueDTO[]
   rpcErro: string | null
 }
 
@@ -62,11 +62,12 @@ export type RelatoriosLabels = {
   curvaAbcColAcumulado: string
   curvaAbcColClasse: string
   vazioCurvaAbc: string
-  secPrevisaoEstoque: string
-  previsaoEstoqueColAtual: string
-  previsaoEstoqueColMedia: string
-  previsaoEstoqueColDias: string
-  vazioPrevisaoEstoque: string
+  secCoberturaEstoque: string
+  coberturaEstoqueHint: string
+  coberturaEstoqueColAtual: string
+  coberturaEstoqueColMedia: string
+  coberturaEstoqueColDias: string
+  vazioCoberturaEstoque: string
   origemChina: string
   origemBrasil: string
   vazioProdutos: string
@@ -218,11 +219,12 @@ function CurvaAbcList({ produtos, labels }: { produtos: RelatorioCurvaAbcDTO[]; 
   )
 }
 
-function PrevisaoEstoqueList({ itens, labels }: { itens: RelatorioPrevisaoEstoqueDTO[]; labels: RelatoriosLabels }) {
-  const comPrevisao = itens.filter((i) => i.diasRestantes != null).slice(0, 15)
+function CoberturaEstoqueList({ itens, labels }: { itens: RelatorioCoberturaEstoqueDTO[]; labels: RelatoriosLabels }) {
+  const comCobertura = itens.filter((i) => i.diasCobertura != null).slice(0, 15)
   return (
     <div className="space-y-2">
-      {comPrevisao.map((i) => (
+      <p className="text-[11px] italic text-jl-fg-3">{labels.coberturaEstoqueHint}</p>
+      {comCobertura.map((i) => (
         <div
           key={`${i.produtoId}-${i.lojaId}`}
           className="flex items-center justify-between rounded-lg border border-[#242424] bg-[#101010] px-3 py-2"
@@ -230,19 +232,16 @@ function PrevisaoEstoqueList({ itens, labels }: { itens: RelatorioPrevisaoEstoqu
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-jl-fg-1">{i.nome}</p>
             <p className="text-[11px] text-jl-fg-3">
-              {labels.previsaoEstoqueColAtual}: {i.quantidadeAtual} · {labels.previsaoEstoqueColMedia}: {i.mediaDiariaVendida.toFixed(2)}/dia
+              {labels.coberturaEstoqueColAtual}: {i.quantidadeAtual} · {labels.coberturaEstoqueColMedia}: {i.mediaDiariaVendida.toFixed(2)}/dia
             </p>
           </div>
-          <span
-            className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${
-              (i.diasRestantes ?? 0) <= 7 ? 'admin-v2-badge-warning' : 'admin-v2-badge-muted'
-            }`}
-          >
-            {Math.round(i.diasRestantes ?? 0)} {labels.previsaoEstoqueColDias}
+          {/* Badge neutro/informativo: indicador histórico, não alerta decisório. */}
+          <span className="admin-v2-badge-muted shrink-0 rounded-full px-2 py-1 text-[11px]">
+            ~{Math.round(i.diasCobertura ?? 0)} {labels.coberturaEstoqueColDias}
           </span>
         </div>
       ))}
-      {comPrevisao.length === 0 && <EmptyState msg={labels.vazioPrevisaoEstoque} />}
+      {comCobertura.length === 0 && <EmptyState msg={labels.vazioCoberturaEstoque} />}
     </div>
   )
 }
@@ -326,8 +325,8 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
           </SectionCard>
         </div>
 
-        <SectionCard title={labels.secPrevisaoEstoque}>
-          <PrevisaoEstoqueList itens={dados.previsaoEstoque} labels={labels} />
+        <SectionCard title={labels.secCoberturaEstoque}>
+          <CoberturaEstoqueList itens={dados.coberturaEstoque} labels={labels} />
         </SectionCard>
       </div>
     </div>

@@ -3050,10 +3050,10 @@ export type Database = {
           venda_id: string
         }[]
       }
-      relatorio_previsao_estoque: {
+      relatorio_cobertura_estoque: {
         Args: { p_dias_janela?: number; p_limite?: number }
         Returns: {
-          dias_restantes: number | null
+          dias_cobertura: number | null
           loja_id: string
           media_diaria_vendida: number
           nome: string

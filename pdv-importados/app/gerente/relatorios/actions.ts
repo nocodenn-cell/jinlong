@@ -65,13 +65,18 @@ export type RelatorioCurvaAbcDTO = {
   classeAbc: 'A' | 'B' | 'C'
 }
 
-export type RelatorioPrevisaoEstoqueDTO = {
+/**
+ * Indicador histórico de cobertura de estoque (view analítica passiva).
+ * `diasCobertura` é determinístico e NÃO preditivo: estoque físico atual /
+ * média diária de vendas recentes. Proibido usar para decisão automática.
+ */
+export type RelatorioCoberturaEstoqueDTO = {
   produtoId: string
   nome: string
   lojaId: string
   quantidadeAtual: number
   mediaDiariaVendida: number
-  diasRestantes: number | null
+  diasCobertura: number | null
 }
 
 export type RelatoriosGerentePayload = {
@@ -83,7 +88,7 @@ export type RelatoriosGerentePayload = {
   resumoExecutivo: RelatorioResumoExecutivoDTO
   margemPorVenda: RelatorioMargemVendaDTO[]
   curvaAbc: RelatorioCurvaAbcDTO[]
-  previsaoEstoque: RelatorioPrevisaoEstoqueDTO[]
+  coberturaEstoque: RelatorioCoberturaEstoqueDTO[]
   rpcErro: string | null
   rpcErroAmigavel: string | null
 }
@@ -140,8 +145,8 @@ export async function carregarDadosRelatoriosGerente(input: {
     p_limite: 500,
   })
 
-  const { data: previsaoEstoqueRaw, error: errPrevisaoEstoque } = await supabase.rpc(
-    'relatorio_previsao_estoque',
+  const { data: coberturaEstoqueRaw, error: errCoberturaEstoque } = await supabase.rpc(
+    'relatorio_cobertura_estoque',
     { p_dias_janela: 30, p_limite: 200 },
   )
 
@@ -151,7 +156,7 @@ export async function carregarDadosRelatoriosGerente(input: {
     errResumo?.message ??
     errMargemVenda?.message ??
     errCurvaAbc?.message ??
-    errPrevisaoEstoque?.message ??
+    errCoberturaEstoque?.message ??
     null
   const rpcErroAmigavel = rpcErro ? mensagemErroParaUsuario(rpcErro) : null
   const resumo = Array.isArray(resumoRaw) ? resumoRaw[0] : resumoRaw
@@ -214,20 +219,20 @@ export async function carregarDadosRelatoriosGerente(input: {
       percentualAcumulado: Number(r.percentual_acumulado),
       classeAbc: (r.classe_abc === 'A' || r.classe_abc === 'B' ? r.classe_abc : 'C') as 'A' | 'B' | 'C',
     })),
-    previsaoEstoque: ((previsaoEstoqueRaw ?? []) as Array<{
+    coberturaEstoque: ((coberturaEstoqueRaw ?? []) as Array<{
       produto_id: string
       nome: string
       loja_id: string
       quantidade_atual: number | string
       media_diaria_vendida: number | string
-      dias_restantes: number | string | null
+      dias_cobertura: number | string | null
     }>).map((r) => ({
       produtoId: String(r.produto_id),
       nome: String(r.nome),
       lojaId: String(r.loja_id),
       quantidadeAtual: Number(r.quantidade_atual),
       mediaDiariaVendida: Number(r.media_diaria_vendida),
-      diasRestantes: r.dias_restantes == null ? null : Number(r.dias_restantes),
+      diasCobertura: r.dias_cobertura == null ? null : Number(r.dias_cobertura),
     })),
     rpcErro,
     rpcErroAmigavel,
