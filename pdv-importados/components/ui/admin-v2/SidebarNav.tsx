@@ -13,6 +13,7 @@ import {
 import { ROUTES } from '@shared-core/navigation/routes'
 import type { Mensagens } from '@/i18n/getMessages'
 import { cn } from '@/lib/utils'
+import { StockAlertBadge } from '@/components/ui/StockAlertBadge'
 
 type SidebarNavProps = {
   admin: Mensagens['admin']
@@ -66,14 +67,7 @@ export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarN
               <div className="truncate text-[11px] leading-tight text-jl-fg-3">{secondary}</div>
             ) : null}
           </div>
-          {badgeCount != null && badgeCount > 0 ? (
-            <span
-              className="ml-auto inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-amber-500/20 px-1.5 text-[10px] font-semibold text-amber-400"
-              title="Itens com estoque baixo"
-            >
-              {badgeCount}
-            </span>
-          ) : null}
+          {badgeCount != null ? <StockAlertBadge count={badgeCount} /> : null}
         </Link>
       </li>
     )

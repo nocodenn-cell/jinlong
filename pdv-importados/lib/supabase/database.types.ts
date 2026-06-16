@@ -1521,6 +1521,7 @@ export type Database = {
       }
       pdv_config: {
         Row: {
+          alertas_leves_ativos: boolean
           blind_closure: boolean
           gerente_id: string
           gerente_senha_bcrypt: string | null
@@ -1535,6 +1536,7 @@ export type Database = {
           show_stock_alerts: boolean
         }
         Insert: {
+          alertas_leves_ativos?: boolean
           blind_closure?: boolean
           gerente_id: string
           gerente_senha_bcrypt?: string | null
@@ -1549,6 +1551,7 @@ export type Database = {
           show_stock_alerts?: boolean
         }
         Update: {
+          alertas_leves_ativos?: boolean
           blind_closure?: boolean
           gerente_id?: string
           gerente_senha_bcrypt?: string | null
@@ -2052,6 +2055,58 @@ export type Database = {
           request_ts?: number
         }
         Relationships: []
+      }
+      system_alerts: {
+        Row: {
+          criado_em: string
+          detalhe: Json | null
+          id: string
+          loja_id: string | null
+          produto_id: string | null
+          tipo: string
+          venda_id: string | null
+        }
+        Insert: {
+          criado_em?: string
+          detalhe?: Json | null
+          id?: string
+          loja_id?: string | null
+          produto_id?: string | null
+          tipo: string
+          venda_id?: string | null
+        }
+        Update: {
+          criado_em?: string
+          detalhe?: Json | null
+          id?: string
+          loja_id?: string | null
+          produto_id?: string | null
+          tipo?: string
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_alerts_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tipos_movimento_estoque: {
         Row: {
