@@ -90,20 +90,19 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
 
   if (error || !venda) return null
 
-  const { data: itensRaw } = await supabase
+  const { data: itensRaw, error: itensError } = await supabase
     .from('itens_venda')
     .select(
       `
       id, quantidade, preco_unitario, preco_unitario_original, desconto_unitario,
-      tipo_preco, tipo_preco_fonte, custo_unitario_snap, regra_aplicada_id,
+      tipo_preco, custo_unitario_snap,
       produto:produtos!itens_venda_produto_id_fkey ( nome, codigo_barras )
     `
     )
     .eq('venda_id', vendaId)
     .order('id')
 
-  const { data: cfgRows } = await supabase.rpc('pdv_config_flags_visuais')
-  const cfg = Array.isArray(cfgRows) ? cfgRows[0] : cfgRows
+  if (itensError) return null
 
   const itens: VendaItemDetalhe[] = (itensRaw ?? []).map((r) => {
     const q = Number(r.quantidade ?? 0)
@@ -118,9 +117,9 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
       desconto_unitario: Number(r.desconto_unitario ?? 0),
       subtotal: q * pu,
       tipo_preco: r.tipo_preco == null ? null : String(r.tipo_preco),
-      tipo_preco_fonte: r.tipo_preco_fonte == null ? null : String(r.tipo_preco_fonte),
+      tipo_preco_fonte: null,
       custo_unitario_snap: r.custo_unitario_snap == null ? null : Number(r.custo_unitario_snap),
-      regra_aplicada_id: r.regra_aplicada_id == null ? null : String(r.regra_aplicada_id),
+      regra_aplicada_id: null,
     }
   })
 
@@ -136,7 +135,7 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     numero_nf: venda.numero_nf == null ? null : String(venda.numero_nf),
     operador_nome: nomeRelacao(venda.operador, 'nome'),
     itens,
-    showMargemVisual: cfg?.show_margin_visual ?? false,
-    showPrecoFonte: cfg?.show_preco_fonte ?? false,
+    showMargemVisual: false,
+    showPrecoFonte: false,
   }
 }
