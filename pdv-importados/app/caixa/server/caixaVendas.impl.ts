@@ -23,6 +23,7 @@ import {
   parseMoneyConfig,
   parsePercentConfig,
 } from '@/lib/caixa/configuracoesGeraisCaixa'
+import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
 
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
@@ -299,6 +300,10 @@ export async function finalizarVendaCaixaImpl(
     if (!eventId) {
       return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
+
+    // Observabilidade leve, best-effort, fora do caminho crítico: a venda já
+    // está concluída neste ponto. Ver registrarAlertasLevesVenda.ts.
+    void registrarAlertasLevesVenda(supabase, String(row.venda_id), lojaId, itensAut)
 
     // Invalidar cache
     revalidatePath('/caixa')

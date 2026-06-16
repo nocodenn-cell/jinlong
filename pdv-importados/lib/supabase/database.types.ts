@@ -2917,6 +2917,7 @@ export type Database = {
       pdv_config_flags_visuais: {
         Args: never
         Returns: {
+          alertas_leves_ativos: boolean
           show_margin_visual: boolean
           show_preco_fonte: boolean
           show_stock_alerts: boolean
@@ -2982,6 +2983,16 @@ export type Database = {
           p_forma: string
           p_observacao?: string
           p_valor: number
+        }
+        Returns: undefined
+      }
+      registrar_system_alert: {
+        Args: {
+          p_detalhe?: Json
+          p_loja_id?: string
+          p_produto_id?: string
+          p_tipo: string
+          p_venda_id?: string
         }
         Returns: undefined
       }
