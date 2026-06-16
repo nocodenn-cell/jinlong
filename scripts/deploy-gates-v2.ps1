@@ -301,6 +301,29 @@ if ($SkipWebDeploy) {
 } else {
     try {
         Set-Location pdv-importados
+
+        # Guarda fail-fast (espelha o step "Verificar VERCEL_PROJECT_ID" do CI):
+        # produção só pode deployar no projeto Vercel canônico pdv-importados.
+        # Evita que um link Vercel local errado (ex.: fastproduct-pdv-importados)
+        # promova um deploy para o projeto errado.
+        if ($Environment -eq "prod") {
+            $expectedProjectId = if ($env:EXPECTED_VERCEL_PROJECT_ID) {
+                $env:EXPECTED_VERCEL_PROJECT_ID
+            } else {
+                # Projeto Vercel canônico de produção: pdv-importados (pdv-importados.vercel.app)
+                "prj_UPGWQN4TmzDQRYm5IB80a8ZxOslO"
+            }
+            $vercelLinkPath = ".vercel/project.json"
+            if (-not (Test-Path $vercelLinkPath)) {
+                throw "Deploy de producao abortado: $vercelLinkPath nao encontrado. Rode 'vercel link' apontando para o projeto pdv-importados antes do deploy."
+            }
+            $linkedProjectId = (Get-Content $vercelLinkPath -Raw | ConvertFrom-Json).projectId
+            if ($linkedProjectId -ne $expectedProjectId) {
+                throw "Deploy de producao abortado: projeto Vercel vinculado ($linkedProjectId) difere do projeto canonico pdv-importados ($expectedProjectId). Risco de deploy em projeto errado."
+            }
+            Write-Status "OK: projeto Vercel vinculado confere com pdv-importados ($expectedProjectId)" "Success"
+        }
+
         Write-Host "Executando: $($config.VercelCommand)" -ForegroundColor $Colors.Info
         $deployResult = Invoke-Expression $config.VercelCommand 2>&1
         if ($LASTEXITCODE -ne 0) {
