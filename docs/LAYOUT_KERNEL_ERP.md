@@ -35,21 +35,31 @@ seguir e aponta **quais componentes já existem** para reutilização pragmátic
 
 ## Regra de execução — aplicação imediata e obrigatória
 
-> O Layout Kernel **não é** design system. É um **contrato de consistência
-> estrutural obrigatória no momento da implementação local.**
+> O Layout Kernel **não é** design system nem template fixo. É um **contrato
+> de consistência estrutural condicional no momento da implementação local.**
 
-Sempre que uma tela for criada **ou** modificada, ela deve aplicar
-imediatamente os padrões estruturais do kernel **quando houver oportunidade
-local de uso** — sem esperar repetição. São obrigatórios, cada um quando seu
-gatilho existir na tela:
+A consistência do ERP é **estrutural e condicional**, não exibição visual
+obrigatória de todas as camadas em todas as telas.
 
-| Padrão estrutural        | Gatilho (aplica-se quando…)            | É obrigatório já no 1º uso |
-|--------------------------|----------------------------------------|----------------------------|
-| Toolbar de ações         | a tela tem ação primária               | sim |
-| Barra de filtros         | a tela tem listagem ou busca           | sim (filtros sempre acima) |
-| Estrutura de tabela padrão | a tela tem listagem                  | sim (`DataTable`)          |
-| Paginação                | há paginação natural                   | sim |
-| Breadcrumb               | há navegação hierárquica               | sim |
+### Núcleo fixo vs. camadas condicionais
+
+| Tipo | Camadas | Regra |
+|------|---------|-------|
+| **Núcleo fixo** (sempre) | Sidebar (domínio) · Header da página | presente em **toda** tela do painel |
+| **Condicional** (por contexto real) | Toolbar · Filtros · Tabela · Paginação · Breadcrumb | só quando há necessidade **funcional** real |
+
+A obrigação não é "exibir a camada"; é: **quando o gatilho funcional existir,
+aplicar o padrão do kernel (não divergir, não inventar variação local) — já no
+primeiro uso.** Se não há gatilho, a camada **não deve** aparecer: ausência é o
+comportamento correto, não uma lacuna.
+
+| Camada condicional       | Gatilho — ativa SOMENTE quando…        | Ao ativar, usar |
+|--------------------------|----------------------------------------|-----------------|
+| Toolbar de ações         | há ação primária relevante             | slot do `PageHeader` |
+| Barra de filtros         | há busca/filtragem real                | `FilterBar` (sempre acima) |
+| Tabela principal         | há listagem/coleção de dados           | `DataTable` |
+| Paginação                | há paginação natural                   | padrão por-tela / `PaginationBar` no 1º uso |
+| Breadcrumb               | há navegação hierárquica profunda      | componente criado no 1º uso |
 
 **Como isso muda o tratamento de componentes ainda inexistentes:** se o
 gatilho ocorre numa tela real e o componente compartilhado ainda não existe
@@ -60,11 +70,18 @@ precisaram".
 
 ### O que NÃO é aceito
 
-- ❌ Esperar "2+ usos" para consolidar um padrão **estrutural**.
+- ❌ Esperar "2+ usos" para consolidar um padrão **estrutural** que já tem
+  consumidor real.
 - ❌ Deixar padrões divergirem por módulo até refatoração futura.
 - ❌ Criar variação local de estrutura de tabela ou de filtros.
 - ❌ Adiar padronização de layout básico sob a justificativa de "evitar
   design system".
+- ❌ **Forçar** toolbar/filtros/paginação/breadcrumb em telas que não têm o
+  gatilho funcional correspondente.
+- ❌ **Inflar UI** apenas para "obedecer" o padrão visual.
+- ❌ Tratar o Kernel como template obrigatório fixo (todas as camadas em todas
+  as telas).
+- ❌ Adicionar elemento estrutural sem função real na tela.
 
 ### Onde o limite continua valendo (mantido)
 
@@ -82,28 +99,34 @@ padronização retroativa em lote. Criar o componente estrutural no 1º uso real
 
 ## BLOCO 1 — Ordem estrutural (referência obrigatória)
 
-Toda tela nova ou modificada segue esta ordem. **A ordem é estrutural;
-variações visuais são permitidas, variações estruturais não.**
+A ordem (quando uma camada existe) é fixa; **quais** camadas existem depende
+do contexto. **A ordem é estrutural; variações visuais são permitidas,
+variações estruturais não.** Camadas marcadas `(condicional)` aparecem só
+quando o gatilho funcional existe — caso contrário, ficam ausentes.
 
 ```
-[Sidebar fixa — domínio do negócio]
-  └─> [Header da página]
-        └─> [Toolbar de ações]
-              └─> [Barra de filtros]
-                    └─> [Tabela principal]
-                          └─> [Paginação + ações em massa]
+[Sidebar fixa — domínio do negócio]        ← núcleo fixo (sempre)
+  └─> [Header da página]                    ← núcleo fixo (sempre)
+        └─> [Toolbar de ações]              ← condicional: há ação primária
+              └─> [Barra de filtros]        ← condicional: há busca/filtro
+                    └─> [Tabela principal]  ← condicional: há listagem
+                          └─> [Paginação + ações em massa] ← condicional
 ```
+
+> A seta indica **ordem relativa**, não obrigatoriedade de presença. Uma tela
+> de formulário/detalhe, por exemplo, tem núcleo fixo (sidebar + header) e
+> normalmente nenhuma das camadas condicionais — e isso está correto.
 
 ### Mapa ordem → componente real (já existente)
 
-| # | Camada do kernel            | Componente que JÁ existe                                   | Caminho |
-|---|-----------------------------|-----------------------------------------------------------|---------|
-| 0 | Sidebar fixa (domínio)      | `AdminV2Shell` + `SidebarNav`                             | `components/ui/admin-v2/` |
-| 1 | Header da página            | `PageHeader` (title/subtitle + slot `filters`)            | `components/ui/admin-v2/PageHeader.tsx` |
-| 2 | Toolbar de ações            | slot `filters` do `PageHeader` + `AdminV2UtilityBar`     | `components/ui/admin-v2/` |
-| 3 | Barra de filtros            | `FilterBar` (pills / select / search via URL params)     | `components/ui/FilterBar.tsx` |
-| 4 | Tabela principal            | `DataTable` (≡ "ERPTable": colunas, sort, `rowActions`)  | `components/ui/DataTable.tsx` |
-| 5 | Paginação + ações em massa  | **ainda por-tela** (ver Bloco 4) — sem componente compartilhado | — |
+| # | Camada do kernel            | Presença    | Componente que JÁ existe                                   | Caminho |
+|---|-----------------------------|-------------|-----------------------------------------------------------|---------|
+| 0 | Sidebar fixa (domínio)      | fixa        | `AdminV2Shell` + `SidebarNav`                             | `components/ui/admin-v2/` |
+| 1 | Header da página            | fixa        | `PageHeader` (title/subtitle + slot `filters`)            | `components/ui/admin-v2/PageHeader.tsx` |
+| 2 | Toolbar de ações            | condicional | slot `filters` do `PageHeader` + `AdminV2UtilityBar`     | `components/ui/admin-v2/` |
+| 3 | Barra de filtros            | condicional | `FilterBar` (pills / select / search via URL params)     | `components/ui/FilterBar.tsx` |
+| 4 | Tabela principal            | condicional | `DataTable` (≡ "ERPTable": colunas, sort, `rowActions`)  | `components/ui/DataTable.tsx` |
+| 5 | Paginação + ações em massa  | condicional | **ainda por-tela** (ver Bloco 4) — sem componente compartilhado | — |
 
 ---
 
@@ -112,25 +135,29 @@ variações visuais são permitidas, variações estruturais não.**
 - A **sidebar representa domínio de negócio** (Vendas, Estoque, Financeiro,
   Cadastros, Relatórios) — fonte única em `SidebarNav`.
 - Submenus hierárquicos e consistentes; sem menus técnicos ou duplicados.
-- **Breadcrumb** obrigatório em telas internas — *ver ressalva no Bloco 4: o
-  componente compartilhado ainda não existe; criar só quando uma tela interna
-  real precisar, nunca especulativamente.*
+- **Breadcrumb** — condicional: apenas em **navegação hierárquica profunda**
+  (não em telas de 1 nível). *Ver Bloco 4: o componente compartilhado ainda
+  não existe; criar no 1º uso real, nunca especulativamente.*
 
 ---
 
 ## BLOCO 3 — Padrão de tabelas
 
-Comportamento consistente esperado em toda tabela:
+Comportamento consistente esperado **quando a tela tem listagem** (se não tem,
+não há tabela — e está correto):
 
-1. **Busca** da entidade — `FilterBar` (`type: 'search'`).
-2. **Filtros acima da tabela** — `FilterBar`. *Filtros nunca abaixo da tabela.*
+1. **Busca** da entidade — `FilterBar` (`type: 'search'`), se houver busca.
+2. **Filtros acima da tabela** — `FilterBar`, se houver filtragem. *Filtros
+   nunca abaixo da tabela.*
 3. **Ordenação previsível** — `DataTable` (`Column.sortValue` + `onSort`).
 4. **Ações por linha ("⋮")** — `DataTable` (`rowActions`).
 5. **Ações em massa** — quando existir, abaixo/junto da tabela.
-6. **Paginação padrão** — hoje por-tela; padronizar quando houver 2ª necessidade.
+6. **Paginação padrão** — se houver paginação natural; nasce já compartilhada
+   no 1º uso real (não esperar 2ª necessidade).
 
 > Não mudar estrutura de tabelas existentes em massa. Aplicar **só quando a
-> tela já estiver sendo modificada** por outro motivo.
+> tela já estiver sendo modificada** por outro motivo — e só as partes cujo
+> gatilho funcional existe (sem inflar a tela).
 
 ---
 
@@ -186,10 +213,16 @@ não esperar 2º uso):
 ## BLOCO 5 — Consistência cognitiva
 
 > *"Se o usuário aprende uma tela, ele sabe usar as outras."*
+>
+> A consistência está na **previsibilidade estrutural** — quando uma camada
+> existe, ela está no lugar e se comporta igual — **não** na repetição literal
+> de todos os elementos em todas as telas.
 
-- Mesmas posições de ações (ações de linha sempre no "⋮" à direita).
-- Mesma estrutura de filtros (sempre acima, via `FilterBar`).
-- Mesmo comportamento de tabela (`DataTable`).
+- Mesmas posições de ações (ações de linha sempre no "⋮" à direita) — *quando
+  há ações*.
+- Mesma estrutura de filtros (sempre acima, via `FilterBar`) — *quando há
+  filtros*.
+- Mesmo comportamento de tabela (`DataTable`) — *quando há listagem*.
 - Mesma lógica de navegação (`SidebarNav` + breadcrumb quando aplicável).
 
 ---
@@ -213,3 +246,13 @@ não esperar 2º uso):
 - Telas existentes **não** são reescritas em massa.
 - Comportamento de tabela previsível em todos os módulos (via `DataTable`).
 - Navegação consistente sem reaprendizado (via `SidebarNav`).
+- **Sem UI inflada:** nenhuma tela exibe camada estrutural sem função real.
+
+---
+
+## Equilíbrio final
+
+- O **Kernel** define **ordem** e **padrão mental** (o "onde" e o "como").
+- O **contexto da tela** define **quais camadas são ativadas** (o "se").
+- Núcleo fixo (sidebar + header) sempre; camadas condicionais só por gatilho
+  funcional real.
