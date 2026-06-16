@@ -242,7 +242,9 @@ export async function finalizarVendaCaixaImpl(
       tipo_preco: i.tipoPreco,
       // Observabilidade visual (não usado em cálculo/estoque): ver migration 235.
       custo_unitario_snap: i.custoUnitarioSnap,
-      tipo_preco_fonte: i.tipoPreco,
+      // Auditoria de regra de preço (Bloco 5): origem real (faixa vs fallback de
+      // catálogo em ATACADO), não apenas cópia de tipo_preco. Ver fontePrecoDeRpc.
+      tipo_preco_fonte: i.fontePreco,
       regra_aplicada_id: i.regraAplicadaId,
     }))
 

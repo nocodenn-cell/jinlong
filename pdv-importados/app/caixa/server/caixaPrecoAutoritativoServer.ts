@@ -18,6 +18,14 @@ export type ItemAutoritativo = {
   custoUnitarioSnap: number | null
   /** Observabilidade visual (não usado em cálculo): id da faixa/regra usada como referência. */
   regraAplicadaId: string | null
+  /**
+   * Auditoria de regra de preço (Bloco 5): origem real do preço aplicado.
+   * Distingue, dentro de ATACADO, se veio de uma faixa específica
+   * (precos_atacado, com regraAplicadaId) ou do fallback de catálogo
+   * (pdv_config.quantidade_minima_atacado_padrao, sem faixa casada).
+   * Não usado em cálculo — apenas enriquece tipo_preco_fonte para exibição/auditoria.
+   */
+  fontePreco: 'VAREJO' | 'ATACADO_FAIXA' | 'ATACADO_CATALOGO' | 'MANUAL' | 'PROMOCAO'
 }
 
 export type ItemEntradaFinalizacao = {
@@ -85,6 +93,19 @@ function parseCalcularPrecoProdutoRpc(
   const tipo = row.tipo === 'ATACADO' ? 'ATACADO' : 'VAREJO'
   const regraId = typeof row.regra_id === 'string' ? row.regra_id : null
   return { preco: Math.round(precoNum * 100) / 100, tipo, regraId }
+}
+
+/**
+ * Origem auditável do preço (Bloco 5), derivada da resposta de `calcular_preco_produto`:
+ * — ATACADO com regra_id (faixa casada em precos_atacado) → ATACADO_FAIXA.
+ * — ATACADO sem regra_id (fallback de catálogo, fonte='catalogo') → ATACADO_CATALOGO.
+ * — VAREJO → VAREJO.
+ */
+function fontePrecoDeRpc(esperado: { tipo: 'VAREJO' | 'ATACADO'; regraId: string | null }): ItemAutoritativo['fontePreco'] {
+  if (esperado.tipo === 'ATACADO') {
+    return esperado.regraId ? 'ATACADO_FAIXA' : 'ATACADO_CATALOGO'
+  }
+  return 'VAREJO'
 }
 
 /**
@@ -175,6 +196,7 @@ export async function recalcularItensNoServidor(
         tipoPreco: i.tipoPreco,
         custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
         regraAplicadaId: null,
+        fontePreco: i.tipoPreco,
       })
       continue
     }
@@ -246,6 +268,7 @@ export async function recalcularItensNoServidor(
       tipoPreco: i.tipoPreco,
       custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
       regraAplicadaId: esperado.regraId,
+      fontePreco: fontePrecoDeRpc(esperado),
     })
   }
 

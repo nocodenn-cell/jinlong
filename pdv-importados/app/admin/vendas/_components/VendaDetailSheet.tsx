@@ -169,6 +169,7 @@ export function VendaDetailSheet({
                               precoFinal={it.preco_unitario}
                               precoBase={it.preco_unitario_original}
                               tipoPreco={it.tipo_preco}
+                              tipoPrecoFonte={it.tipo_preco_fonte}
                               regraAplicadaId={it.regra_aplicada_id}
                             />
                           ) : null}

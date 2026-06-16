@@ -3025,6 +3025,42 @@ export type Database = {
           valor_imobilizado: number
         }[]
       }
+      relatorio_curva_abc_periodo: {
+        Args: { p_ate: string; p_de: string; p_limite?: number; p_tz?: string }
+        Returns: {
+          classe_abc: string
+          nome: string
+          percentual_acumulado: number
+          percentual_valor: number
+          produto_id: string
+          total_quantidade: number
+          total_valor: number
+        }[]
+      }
+      relatorio_margem_por_venda_periodo: {
+        Args: { p_ate: string; p_de: string; p_limite?: number; p_tz?: string }
+        Returns: {
+          custo_confiavel: boolean
+          custo_total_estimado: number | null
+          data: string
+          margem_estimada: number | null
+          num_itens: number
+          total_desconto: number
+          total_liquido: number
+          venda_id: string
+        }[]
+      }
+      relatorio_previsao_estoque: {
+        Args: { p_dias_janela?: number; p_limite?: number }
+        Returns: {
+          dias_restantes: number | null
+          loja_id: string
+          media_diaria_vendida: number
+          nome: string
+          produto_id: string
+          quantidade_atual: number
+        }[]
+      }
       relatorio_resumo_executivo_periodo: {
         Args: { p_ate: string; p_de: string; p_tz?: string }
         Returns: {

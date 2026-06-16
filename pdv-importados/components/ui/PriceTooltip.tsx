@@ -20,20 +20,26 @@ const TIPO_PRECO_LABEL: Record<string, string> = {
   ATACADO: 'Atacado',
   MANUAL: 'Manual',
   PROMOCAO: 'Promoção',
+  ATACADO_FAIXA: 'Atacado (faixa)',
+  ATACADO_CATALOGO: 'Atacado (catálogo)',
 }
 
 export function PriceTooltip({
   precoFinal,
   precoBase,
   tipoPreco,
+  tipoPrecoFonte,
   regraAplicadaId,
 }: {
   precoFinal: number
   precoBase: number
   tipoPreco: string | null
+  /** Origem auditável do preço (Bloco 5): mais específica que `tipoPreco` quando presente (ex.: ATACADO_FAIXA vs ATACADO_CATALOGO). */
+  tipoPrecoFonte?: string | null
   regraAplicadaId?: string | null
 }) {
-  const tipoLabel = tipoPreco ? TIPO_PRECO_LABEL[tipoPreco] ?? tipoPreco : '—'
+  const tipoEfetivo = tipoPrecoFonte ?? tipoPreco
+  const tipoLabel = tipoEfetivo ? TIPO_PRECO_LABEL[tipoEfetivo] ?? tipoEfetivo : '—'
 
   return (
     <TooltipPrimitive.Provider delayDuration={150}>

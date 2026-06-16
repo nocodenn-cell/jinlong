@@ -44,6 +44,36 @@ export type RelatorioResumoExecutivoDTO = {
   margem_bruta_estimada: number | null
 }
 
+export type RelatorioMargemVendaDTO = {
+  venda_id: string
+  data: string
+  num_itens: number
+  total_liquido: number
+  total_desconto: number
+  custo_total_estimado: number | null
+  margem_estimada: number | null
+  custo_confiavel: boolean
+}
+
+export type RelatorioCurvaAbcDTO = {
+  produtoId: string
+  nome: string
+  totalQuantidade: number
+  totalValor: number
+  percentualValor: number
+  percentualAcumulado: number
+  classeAbc: 'A' | 'B' | 'C'
+}
+
+export type RelatorioPrevisaoEstoqueDTO = {
+  produtoId: string
+  nome: string
+  lojaId: string
+  quantidadeAtual: number
+  mediaDiariaVendida: number
+  diasRestantes: number | null
+}
+
 export type RelatoriosGerentePayload = {
   periodo: PeriodoRelatorioResolvido
   tzRelatorio: string
@@ -51,6 +81,9 @@ export type RelatoriosGerentePayload = {
   top: RelatorioTopProdDTO[]
   baixo: RelatorioEstoqueBaixoDTO[]
   resumoExecutivo: RelatorioResumoExecutivoDTO
+  margemPorVenda: RelatorioMargemVendaDTO[]
+  curvaAbc: RelatorioCurvaAbcDTO[]
+  previsaoEstoque: RelatorioPrevisaoEstoqueDTO[]
   rpcErro: string | null
   rpcErroAmigavel: string | null
 }
@@ -90,7 +123,36 @@ export async function carregarDadosRelatoriosGerente(input: {
     .select('id, nome, codigo_barras, quantidade_atual, estoque_minimo, deficit')
     .limit(40)
 
-  const rpcErro = errPorDia?.message ?? errTop?.message ?? errResumo?.message ?? null
+  const { data: margemPorVendaRaw, error: errMargemVenda } = await supabase.rpc(
+    'relatorio_margem_por_venda_periodo',
+    {
+      p_de: periodo.de,
+      p_ate: periodo.ate,
+      p_tz: tzRelatorio,
+      p_limite: 200,
+    },
+  )
+
+  const { data: curvaAbcRaw, error: errCurvaAbc } = await supabase.rpc('relatorio_curva_abc_periodo', {
+    p_de: periodo.de,
+    p_ate: periodo.ate,
+    p_tz: tzRelatorio,
+    p_limite: 500,
+  })
+
+  const { data: previsaoEstoqueRaw, error: errPrevisaoEstoque } = await supabase.rpc(
+    'relatorio_previsao_estoque',
+    { p_dias_janela: 30, p_limite: 200 },
+  )
+
+  const rpcErro =
+    errPorDia?.message ??
+    errTop?.message ??
+    errResumo?.message ??
+    errMargemVenda?.message ??
+    errCurvaAbc?.message ??
+    errPrevisaoEstoque?.message ??
+    null
   const rpcErroAmigavel = rpcErro ? mensagemErroParaUsuario(rpcErro) : null
   const resumo = Array.isArray(resumoRaw) ? resumoRaw[0] : resumoRaw
 
@@ -116,6 +178,57 @@ export async function carregarDadosRelatoriosGerente(input: {
           ? null
           : Number(resumo.margem_bruta_estimada),
     },
+    margemPorVenda: ((margemPorVendaRaw ?? []) as Array<{
+      venda_id: string
+      data: string
+      num_itens: number | string
+      total_liquido: number | string
+      total_desconto: number | string
+      custo_total_estimado: number | string | null
+      margem_estimada: number | string | null
+      custo_confiavel: boolean
+    }>).map((r) => ({
+      venda_id: String(r.venda_id),
+      data: String(r.data),
+      num_itens: Number(r.num_itens),
+      total_liquido: Number(r.total_liquido),
+      total_desconto: Number(r.total_desconto),
+      custo_total_estimado: r.custo_total_estimado == null ? null : Number(r.custo_total_estimado),
+      margem_estimada: r.margem_estimada == null ? null : Number(r.margem_estimada),
+      custo_confiavel: Boolean(r.custo_confiavel),
+    })),
+    curvaAbc: ((curvaAbcRaw ?? []) as Array<{
+      produto_id: string
+      nome: string
+      total_quantidade: number | string
+      total_valor: number | string
+      percentual_valor: number | string
+      percentual_acumulado: number | string
+      classe_abc: string
+    }>).map((r) => ({
+      produtoId: String(r.produto_id),
+      nome: String(r.nome),
+      totalQuantidade: Number(r.total_quantidade),
+      totalValor: Number(r.total_valor),
+      percentualValor: Number(r.percentual_valor),
+      percentualAcumulado: Number(r.percentual_acumulado),
+      classeAbc: (r.classe_abc === 'A' || r.classe_abc === 'B' ? r.classe_abc : 'C') as 'A' | 'B' | 'C',
+    })),
+    previsaoEstoque: ((previsaoEstoqueRaw ?? []) as Array<{
+      produto_id: string
+      nome: string
+      loja_id: string
+      quantidade_atual: number | string
+      media_diaria_vendida: number | string
+      dias_restantes: number | string | null
+    }>).map((r) => ({
+      produtoId: String(r.produto_id),
+      nome: String(r.nome),
+      lojaId: String(r.loja_id),
+      quantidadeAtual: Number(r.quantidade_atual),
+      mediaDiariaVendida: Number(r.media_diaria_vendida),
+      diasRestantes: r.dias_restantes == null ? null : Number(r.dias_restantes),
+    })),
     rpcErro,
     rpcErroAmigavel,
   }

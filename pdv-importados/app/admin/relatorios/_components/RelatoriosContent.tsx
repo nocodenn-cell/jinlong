@@ -9,12 +9,15 @@
 
 import { ChartCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { formatBRL } from '@/lib/format/money'
-import { formatDayMonthInLocale } from '@/lib/format/datetime'
+import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import type {
   RelatorioVendaDiaDTO,
   RelatorioTopProdDTO,
   RelatorioEstoqueBaixoDTO,
   RelatorioResumoExecutivoDTO,
+  RelatorioMargemVendaDTO,
+  RelatorioCurvaAbcDTO,
+  RelatorioPrevisaoEstoqueDTO,
 } from '@/app/gerente/relatorios/actions'
 import type { PeriodoRelatorioResolvido } from '@/lib/relatorios/periodoRelatorio'
 import { RelatoriosBarChart } from './RelatoriosBarChart'
@@ -28,6 +31,9 @@ export type RelatoriosDados = {
   porDia: RelatorioVendaDiaDTO[]
   top: RelatorioTopProdDTO[]
   baixo: RelatorioEstoqueBaixoDTO[]
+  margemPorVenda: RelatorioMargemVendaDTO[]
+  curvaAbc: RelatorioCurvaAbcDTO[]
+  previsaoEstoque: RelatorioPrevisaoEstoqueDTO[]
   rpcErro: string | null
 }
 
@@ -43,6 +49,24 @@ export type RelatoriosLabels = {
   labelAjustes: string
   secTopProdutos: string
   secEstoqueReposicao: string
+  secMargemPorVenda: string
+  margemVendaColData: string
+  margemVendaColLiquido: string
+  margemVendaColCusto: string
+  margemVendaColMargem: string
+  margemVendaCustoIndisponivel: string
+  vazioMargemVenda: string
+  secCurvaAbc: string
+  curvaAbcColNome: string
+  curvaAbcColValor: string
+  curvaAbcColAcumulado: string
+  curvaAbcColClasse: string
+  vazioCurvaAbc: string
+  secPrevisaoEstoque: string
+  previsaoEstoqueColAtual: string
+  previsaoEstoqueColMedia: string
+  previsaoEstoqueColDias: string
+  vazioPrevisaoEstoque: string
   origemChina: string
   origemBrasil: string
   vazioProdutos: string
@@ -120,6 +144,109 @@ function EstoqueReposicaoList({ baixo, labels }: { baixo: RelatorioEstoqueBaixoD
   )
 }
 
+function MargemPorVendaList({ vendas, labels }: { vendas: RelatorioMargemVendaDTO[]; labels: RelatoriosLabels }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="border-b border-[#242424] text-left text-[11px] text-jl-fg-3">
+            <th className="py-1.5 pr-3 font-medium">{labels.margemVendaColData}</th>
+            <th className="py-1.5 pr-3 font-medium text-right">{labels.margemVendaColLiquido}</th>
+            <th className="py-1.5 pr-3 font-medium text-right">{labels.margemVendaColCusto}</th>
+            <th className="py-1.5 pr-3 font-medium text-right">{labels.margemVendaColMargem}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {vendas.slice(0, 20).map((v) => (
+            <tr key={v.venda_id} className="border-b border-[#1a1a1a]">
+              <td className="py-1.5 pr-3 text-jl-fg-2">{formatDateTimeOrDash(v.data, labels.locale, 'short')}</td>
+              <td className="py-1.5 pr-3 text-right text-jl-fg-1">{formatBRL(v.total_liquido)}</td>
+              <td className="py-1.5 pr-3 text-right text-jl-fg-2">
+                {v.custo_confiavel && v.custo_total_estimado != null
+                  ? formatBRL(v.custo_total_estimado)
+                  : labels.margemVendaCustoIndisponivel}
+              </td>
+              <td className="py-1.5 pr-3 text-right font-medium text-jl-fg-1">
+                {v.custo_confiavel && v.margem_estimada != null
+                  ? formatBRL(v.margem_estimada)
+                  : labels.margemVendaCustoIndisponivel}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {vendas.length === 0 && <EmptyState msg={labels.vazioMargemVenda} />}
+    </div>
+  )
+}
+
+const CLASSE_ABC_BADGE: Record<'A' | 'B' | 'C', string> = {
+  A: 'admin-v2-badge-gold',
+  B: 'admin-v2-badge-muted',
+  C: 'admin-v2-badge-muted',
+}
+
+function CurvaAbcList({ produtos, labels }: { produtos: RelatorioCurvaAbcDTO[]; labels: RelatoriosLabels }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="border-b border-[#242424] text-left text-[11px] text-jl-fg-3">
+            <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
+            <th className="py-1.5 pr-3 font-medium text-right">{labels.curvaAbcColValor}</th>
+            <th className="py-1.5 pr-3 font-medium text-right">{labels.curvaAbcColAcumulado}</th>
+            <th className="py-1.5 pr-3 font-medium text-right">{labels.curvaAbcColClasse}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {produtos.slice(0, 30).map((p) => (
+            <tr key={p.produtoId} className="border-b border-[#1a1a1a]">
+              <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">{p.nome}</td>
+              <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
+              <td className="py-1.5 pr-3 text-right text-jl-fg-3">{p.percentualAcumulado.toFixed(1)}%</td>
+              <td className="py-1.5 pr-3 text-right">
+                <span className={`inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none ${CLASSE_ABC_BADGE[p.classeAbc]}`}>
+                  {p.classeAbc}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {produtos.length === 0 && <EmptyState msg={labels.vazioCurvaAbc} />}
+    </div>
+  )
+}
+
+function PrevisaoEstoqueList({ itens, labels }: { itens: RelatorioPrevisaoEstoqueDTO[]; labels: RelatoriosLabels }) {
+  const comPrevisao = itens.filter((i) => i.diasRestantes != null).slice(0, 15)
+  return (
+    <div className="space-y-2">
+      {comPrevisao.map((i) => (
+        <div
+          key={`${i.produtoId}-${i.lojaId}`}
+          className="flex items-center justify-between rounded-lg border border-[#242424] bg-[#101010] px-3 py-2"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-jl-fg-1">{i.nome}</p>
+            <p className="text-[11px] text-jl-fg-3">
+              {labels.previsaoEstoqueColAtual}: {i.quantidadeAtual} · {labels.previsaoEstoqueColMedia}: {i.mediaDiariaVendida.toFixed(2)}/dia
+            </p>
+          </div>
+          <span
+            className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${
+              (i.diasRestantes ?? 0) <= 7 ? 'admin-v2-badge-warning' : 'admin-v2-badge-muted'
+            }`}
+          >
+            {Math.round(i.diasRestantes ?? 0)} {labels.previsaoEstoqueColDias}
+          </span>
+        </div>
+      ))}
+      {comPrevisao.length === 0 && <EmptyState msg={labels.vazioPrevisaoEstoque} />}
+    </div>
+  )
+}
+
 export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; labels: RelatoriosLabels }) {
 
   const periodoSubtitle = `${labels.periodoLabel}: ${dados.periodo.de}${labels.aSeparator}${dados.periodo.ate}${
@@ -189,6 +316,19 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
             <EstoqueReposicaoList baixo={dados.baixo} labels={labels} />
           </SectionCard>
         </div>
+
+        <div className="admin-v2-grid-2">
+          <SectionCard title={labels.secMargemPorVenda}>
+            <MargemPorVendaList vendas={dados.margemPorVenda} labels={labels} />
+          </SectionCard>
+          <SectionCard title={labels.secCurvaAbc}>
+            <CurvaAbcList produtos={dados.curvaAbc} labels={labels} />
+          </SectionCard>
+        </div>
+
+        <SectionCard title={labels.secPrevisaoEstoque}>
+          <PrevisaoEstoqueList itens={dados.previsaoEstoque} labels={labels} />
+        </SectionCard>
       </div>
     </div>
   )
