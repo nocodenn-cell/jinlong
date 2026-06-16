@@ -970,33 +970,42 @@ export type Database = {
       }
       itens_venda: {
         Row: {
+          custo_unitario_snap: number | null
           desconto_unitario: number
           id: string
           preco_unitario: number
           preco_unitario_original: number
           produto_id: string
           quantidade: number
+          regra_aplicada_id: string | null
           tipo_preco: string
+          tipo_preco_fonte: string | null
           venda_id: string
         }
         Insert: {
+          custo_unitario_snap?: number | null
           desconto_unitario?: number
           id?: string
           preco_unitario: number
           preco_unitario_original: number
           produto_id: string
           quantidade: number
+          regra_aplicada_id?: string | null
           tipo_preco: string
+          tipo_preco_fonte?: string | null
           venda_id: string
         }
         Update: {
+          custo_unitario_snap?: number | null
           desconto_unitario?: number
           id?: string
           preco_unitario?: number
           preco_unitario_original?: number
           produto_id?: string
           quantidade?: number
+          regra_aplicada_id?: string | null
           tipo_preco?: string
+          tipo_preco_fonte?: string | null
           venda_id?: string
         }
         Relationships: [
@@ -1521,6 +1530,9 @@ export type Database = {
           max_desconto_gerente_percentual: number
           max_desconto_manual_item_percentual: number
           quantidade_minima_atacado_padrao: number
+          show_margin_visual: boolean
+          show_preco_fonte: boolean
+          show_stock_alerts: boolean
         }
         Insert: {
           blind_closure?: boolean
@@ -1532,6 +1544,9 @@ export type Database = {
           max_desconto_gerente_percentual?: number
           max_desconto_manual_item_percentual?: number
           quantidade_minima_atacado_padrao?: number
+          show_margin_visual?: boolean
+          show_preco_fonte?: boolean
+          show_stock_alerts?: boolean
         }
         Update: {
           blind_closure?: boolean
@@ -1543,6 +1558,9 @@ export type Database = {
           max_desconto_gerente_percentual?: number
           max_desconto_manual_item_percentual?: number
           quantidade_minima_atacado_padrao?: number
+          show_margin_visual?: boolean
+          show_preco_fonte?: boolean
+          show_stock_alerts?: boolean
         }
         Relationships: []
       }
@@ -2841,6 +2859,14 @@ export type Database = {
         }[]
       }
       obter_limite_sangria_sem_gerente: { Args: never; Returns: number }
+      pdv_config_flags_visuais: {
+        Args: never
+        Returns: {
+          show_margin_visual: boolean
+          show_preco_fonte: boolean
+          show_stock_alerts: boolean
+        }[]
+      }
       pdv_config_para_caixa_web: {
         Args: never
         Returns: {

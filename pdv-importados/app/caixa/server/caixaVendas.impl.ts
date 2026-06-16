@@ -239,6 +239,10 @@ export async function finalizarVendaCaixaImpl(
       preco_unitario: roundMoney2(i.precoUnitario),
       desconto_unitario: roundMoney2(i.descontoUnitario),
       tipo_preco: i.tipoPreco,
+      // Observabilidade visual (não usado em cálculo/estoque): ver migration 235.
+      custo_unitario_snap: i.custoUnitarioSnap,
+      tipo_preco_fonte: i.tipoPreco,
+      regra_aplicada_id: i.regraAplicadaId,
     }))
 
     // Coletar dados de auditoria

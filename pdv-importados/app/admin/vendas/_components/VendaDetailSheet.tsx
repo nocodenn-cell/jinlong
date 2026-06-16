@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { StatusBadge, PaymentBadge, FiscalBadge } from '@/components/ui/badges'
+import { MargemCell } from '@/components/ui/MargemCell'
+import { PriceTooltip } from '@/components/ui/PriceTooltip'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { cn } from '@/lib/utils'
@@ -160,11 +162,29 @@ export function VendaDetailSheet({
                       className="flex items-start justify-between gap-3 border-t border-[#242424] py-2.5"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-[12px] font-medium text-jl-fg-1">{it.nome}</p>
+                        <p className="flex items-center gap-1.5 truncate text-[12px] font-medium text-jl-fg-1">
+                          {it.nome}
+                          {venda.showPrecoFonte ? (
+                            <PriceTooltip
+                              precoFinal={it.preco_unitario}
+                              precoBase={it.preco_unitario_original}
+                              tipoPreco={it.tipo_preco}
+                              regraAplicadaId={it.regra_aplicada_id}
+                            />
+                          ) : null}
+                        </p>
                         <p className="font-mono text-[10px] text-jl-fg-3">
                           {it.codigo_barras ?? '—'} · {it.quantidade} × {formatBRL(it.preco_unitario)}
                           {it.desconto_unitario > 0 ? ` · desc. ${formatBRL(it.desconto_unitario)}` : ''}
                         </p>
+                        {venda.showMargemVisual ? (
+                          <p className="mt-0.5 text-[10px]">
+                            <MargemCell
+                              precoUnitario={it.preco_unitario}
+                              custoUnitarioSnap={it.custo_unitario_snap}
+                            />
+                          </p>
+                        ) : null}
                       </div>
                       <span className="shrink-0 text-[12px] font-medium tabular-nums text-jl-fg-1">
                         {formatBRL(it.subtotal)}

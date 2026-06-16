@@ -11,9 +11,11 @@ import { SidebarUserFooter } from './SidebarUserFooter'
 type AdminV2ShellProps = {
   session: AdminSession
   children: ReactNode
+  /** Observabilidade visual (flag `pdv_config.show_stock_alerts`): contagem de itens em estoque baixo. */
+  stockAlertCount?: number
 }
 
-export function AdminV2Shell({ session, children }: AdminV2ShellProps) {
+export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2ShellProps) {
   const { idioma } = session
   const chineseLanguage = idioma !== 'pt'
   const m: Mensagens = getMessages(idioma)
@@ -32,7 +34,7 @@ export function AdminV2Shell({ session, children }: AdminV2ShellProps) {
               className="text-jl-accent"
             />
           </div>
-          <SidebarNav admin={admin} chineseLanguage={chineseLanguage} />
+          <SidebarNav admin={admin} chineseLanguage={chineseLanguage} stockAlertCount={stockAlertCount} />
           <SidebarUserFooter session={session} />
         </aside>
 

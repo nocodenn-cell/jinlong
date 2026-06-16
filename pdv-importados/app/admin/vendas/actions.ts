@@ -24,8 +24,12 @@ export type VendaItemDetalhe = Readonly<{
   codigo_barras: string | null
   quantidade: number
   preco_unitario: number
+  preco_unitario_original: number
   desconto_unitario: number
   subtotal: number
+  tipo_preco: string | null
+  custo_unitario_snap: number | null
+  regra_aplicada_id: string | null
 }>
 
 export type VendaDetalhe = Readonly<{
@@ -40,6 +44,8 @@ export type VendaDetalhe = Readonly<{
   numero_nf: string | null
   operador_nome: string | null
   itens: VendaItemDetalhe[]
+  showMargemVisual: boolean
+  showPrecoFonte: boolean
 }>
 
 function nomeRelacao(rel: unknown, campo: string): string | null {
@@ -87,12 +93,16 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     .from('itens_venda')
     .select(
       `
-      id, quantidade, preco_unitario, desconto_unitario,
+      id, quantidade, preco_unitario, preco_unitario_original, desconto_unitario,
+      tipo_preco, custo_unitario_snap, regra_aplicada_id,
       produto:produtos!itens_venda_produto_id_fkey ( nome, codigo_barras )
     `
     )
     .eq('venda_id', vendaId)
     .order('id')
+
+  const { data: cfgRows } = await supabase.rpc('pdv_config_flags_visuais')
+  const cfg = Array.isArray(cfgRows) ? cfgRows[0] : cfgRows
 
   const itens: VendaItemDetalhe[] = (itensRaw ?? []).map((r) => {
     const q = Number(r.quantidade ?? 0)
@@ -103,8 +113,12 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
       codigo_barras: nomeRelacao(r.produto, 'codigo_barras'),
       quantidade: q,
       preco_unitario: pu,
+      preco_unitario_original: Number(r.preco_unitario_original ?? pu),
       desconto_unitario: Number(r.desconto_unitario ?? 0),
       subtotal: q * pu,
+      tipo_preco: r.tipo_preco == null ? null : String(r.tipo_preco),
+      custo_unitario_snap: r.custo_unitario_snap == null ? null : Number(r.custo_unitario_snap),
+      regra_aplicada_id: r.regra_aplicada_id == null ? null : String(r.regra_aplicada_id),
     }
   })
 
@@ -120,5 +134,7 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     numero_nf: venda.numero_nf == null ? null : String(venda.numero_nf),
     operador_nome: nomeRelacao(venda.operador, 'nome'),
     itens,
+    showMargemVisual: cfg?.show_margin_visual ?? false,
+    showPrecoFonte: cfg?.show_preco_fonte ?? false,
   }
 }

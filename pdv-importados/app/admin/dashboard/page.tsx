@@ -182,6 +182,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .from('v_estoque_baixo')
     .select('id', { count: 'exact', head: true })
 
+  const flagsVisuaisQuery = supabase.rpc('pdv_config_flags_visuais')
+
   const novosUsuariosAtualQuery = supabase
     .from('usuarios')
     .select('id', { count: 'exact', head: true })
@@ -201,6 +203,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     estoqueBaixoRes,
     novosUsuariosAtualRes,
     novosUsuariosPrevRes,
+    flagsVisuaisRes,
   ] = await Promise.all([
     statusDb ? vendasRangeQuery.eq('status', statusDb) : vendasRangeQuery,
     statusDb ? vendasPrevQuery.eq('status', statusDb) : vendasPrevQuery,
@@ -208,7 +211,23 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     estoqueBaixoQuery,
     novosUsuariosAtualQuery,
     novosUsuariosPrevQuery,
+    flagsVisuaisQuery,
   ])
+
+  const flagsVisuaisRow = Array.isArray(flagsVisuaisRes.data)
+    ? flagsVisuaisRes.data[0]
+    : flagsVisuaisRes.data
+  const showStockAlerts = !flagsVisuaisRes.error && !!flagsVisuaisRow?.show_stock_alerts
+
+  let estoqueBaixoLista: Array<{ nome: string; quantidade_atual: number; estoque_minimo: number }> = []
+  if (showStockAlerts) {
+    const { data: listaRows } = await supabase
+      .from('v_estoque_baixo')
+      .select('nome, quantidade_atual, estoque_minimo')
+      .order('deficit', { ascending: false })
+      .limit(5)
+    estoqueBaixoLista = (listaRows ?? []) as typeof estoqueBaixoLista
+  }
 
   const dashboardErrors = collectSupabaseErrors([
     {
@@ -508,6 +527,18 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             </span>
             <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>
           </div>
+          {showStockAlerts && estoqueBaixoLista.length > 0 ? (
+            <ul className="mt-3 flex flex-col gap-1.5 border-t border-[#242424] pt-3">
+              {estoqueBaixoLista.map((item) => (
+                <li key={item.nome} className="flex items-center justify-between text-[12px]">
+                  <span className="truncate text-jl-fg-2">{item.nome}</span>
+                  <span className="shrink-0 tabular-nums text-amber-400">
+                    {item.quantidade_atual} / {item.estoque_minimo}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </SectionCard>
 
         <SectionCard title={L.recentActivitiesTitle[lk]}>

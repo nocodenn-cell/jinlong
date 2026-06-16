@@ -5,6 +5,7 @@ import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminV2Shell } from '@/components/ui/admin-v2'
 import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -28,9 +29,28 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   const adminContext = getAdminContext(session, { pathname: '/admin', resource: 'route:/admin' })
 
+  // Observabilidade visual (flag `pdv_config.show_stock_alerts`): badge na sidebar.
+  // Best-effort — qualquer falha mantém o shell idêntico ao comportamento atual (sem badge).
+  let stockAlertCount: number | undefined
+  try {
+    const supabase = await createClient()
+    const { data: cfgRows } = await supabase.rpc('pdv_config_flags_visuais')
+    const cfg = Array.isArray(cfgRows) ? cfgRows[0] : cfgRows
+    if (cfg?.show_stock_alerts) {
+      const { count } = await supabase
+        .from('v_estoque_baixo')
+        .select('id', { count: 'exact', head: true })
+      stockAlertCount = count ?? 0
+    }
+  } catch {
+    stockAlertCount = undefined
+  }
+
   return (
     <>
-      <AdminV2Shell session={adminContext.session}>{children}</AdminV2Shell>
+      <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount}>
+        {children}
+      </AdminV2Shell>
       <GerenteToastViewport />
     </>
   )

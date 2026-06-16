@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils'
 type SidebarNavProps = {
   admin: Mensagens['admin']
   chineseLanguage: boolean
+  /** Observabilidade visual (flag `pdv_config.show_stock_alerts`): contagem de itens em estoque baixo. */
+  stockAlertCount?: number
 }
 
 function isRouteActive(pathname: string, href: string): boolean {
@@ -29,11 +31,12 @@ function isRouteActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function SidebarNav({ admin, chineseLanguage }: SidebarNavProps) {
+export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarNavProps) {
   const pathname = usePathname()
   const [showMore, setShowMore] = useState(false)
 
   function renderItem(item: AdminV2NavItem) {
+    const badgeCount = item.id === 'estoque' ? stockAlertCount : undefined
     const dictKey = item.dictKey
     const line = dictKey ? admin.nav[dictKey as keyof typeof admin.nav] : undefined
     const hint = dictKey ? admin.navHints[dictKey as keyof typeof admin.navHints] : item.hint
@@ -57,12 +60,20 @@ export function SidebarNav({ admin, chineseLanguage }: SidebarNavProps) {
           )}
         >
           <Icon className="h-4 w-4 shrink-0 opacity-80" strokeWidth={1.75} aria-hidden />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium leading-tight">{primary}</div>
             {secondary ? (
               <div className="truncate text-[11px] leading-tight text-jl-fg-3">{secondary}</div>
             ) : null}
           </div>
+          {badgeCount != null && badgeCount > 0 ? (
+            <span
+              className="ml-auto inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-amber-500/20 px-1.5 text-[10px] font-semibold text-amber-400"
+              title="Itens com estoque baixo"
+            >
+              {badgeCount}
+            </span>
+          ) : null}
         </Link>
       </li>
     )

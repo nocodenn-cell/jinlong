@@ -14,6 +14,10 @@ export type ItemAutoritativo = {
   precoUnitario: number
   descontoUnitario: number
   tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
+  /** Observabilidade visual (não usado em cálculo): snapshot de produtos.preco_custo. */
+  custoUnitarioSnap: number | null
+  /** Observabilidade visual (não usado em cálculo): id da faixa/regra usada como referência. */
+  regraAplicadaId: string | null
 }
 
 export type ItemEntradaFinalizacao = {
@@ -62,7 +66,7 @@ async function mapComConcorrencia<T, R>(
 
 function parseCalcularPrecoProdutoRpc(
   data: unknown,
-): { preco: number; tipo: 'VAREJO' | 'ATACADO' } | null {
+): { preco: number; tipo: 'VAREJO' | 'ATACADO'; regraId: string | null } | null {
   if (data == null) return null
   let row: Record<string, unknown>
   if (typeof data === 'string') {
@@ -79,7 +83,8 @@ function parseCalcularPrecoProdutoRpc(
   const precoNum = typeof precoRaw === 'string' ? Number(precoRaw) : Number(precoRaw)
   if (!Number.isFinite(precoNum) || precoNum < 0) return null
   const tipo = row.tipo === 'ATACADO' ? 'ATACADO' : 'VAREJO'
-  return { preco: Math.round(precoNum * 100) / 100, tipo }
+  const regraId = typeof row.regra_id === 'string' ? row.regra_id : null
+  return { preco: Math.round(precoNum * 100) / 100, tipo, regraId }
 }
 
 /**
@@ -95,12 +100,18 @@ export async function recalcularItensNoServidor(
   const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
   const { data: produtosRows, error: prodErr } = await supabase
     .from('produtos')
-    .select('id, preco_varejo, ativo, status_publicacao')
+    .select('id, preco_varejo, preco_custo, ativo, status_publicacao')
     .in('id', produtosIds)
 
   if (prodErr) return { ok: false, error: mensagemErroComSecao('Produtos', prodErr.message) }
   const vendaveis = filtrarSomenteProdutosVendaveis(
-    (produtosRows ?? []) as { id: string; preco_varejo: number; ativo: boolean; status_publicacao: string | null }[],
+    (produtosRows ?? []) as {
+      id: string
+      preco_varejo: number
+      preco_custo: number | null
+      ativo: boolean
+      status_publicacao: string | null
+    }[],
   )
   const produtos = new Map(vendaveis.map((p) => [p.id as string, p]))
   if (produtos.size !== produtosIds.length) {
@@ -162,6 +173,8 @@ export async function recalcularItensNoServidor(
         precoUnitario,
         descontoUnitario: roundMoney2(precoOriginal - precoUnitario),
         tipoPreco: i.tipoPreco,
+        custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
+        regraAplicadaId: null,
       })
       continue
     }
@@ -231,6 +244,8 @@ export async function recalcularItensNoServidor(
       precoUnitario,
       descontoUnitario: roundMoney2(precoOriginal - precoUnitario),
       tipoPreco: i.tipoPreco,
+      custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
+      regraAplicadaId: esperado.regraId,
     })
   }
 
