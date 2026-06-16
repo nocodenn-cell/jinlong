@@ -196,11 +196,3 @@ function SortIcon({ active, direction }: { active: boolean; direction?: SortDire
   const Icon = direction === 'asc' ? ChevronUp : ChevronDown
   return <Icon size={12} strokeWidth={2.5} aria-hidden className="text-jl-fg-1" />
 }
-
-/**
- * `ERPTable` é o mesmo componente, exportado com o nome do padrão ERP
- * (tabela como centro da UI, ações de linha sempre "⋮" via `rowActions`).
- * Não duplica `DataTable` — é o padrão equivalente pedido para novas telas.
- */
-export { DataTable as ERPTable }
-export type { Column as ERPTableColumn }
