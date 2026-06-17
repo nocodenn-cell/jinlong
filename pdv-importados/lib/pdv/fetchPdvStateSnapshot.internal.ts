@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { calcularValorSistemaDinheiroCaixa } from '@/app/caixa/server/caixaActionsInternals'
+import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
 import type { PdvStateSnapshot } from '../../../shared-core/src/pdv/invariants'
 
 export async function fetchPdvStateSnapshot(
@@ -54,12 +54,18 @@ export async function fetchPdvStateSnapshot(
     }
   }
 
-  let valorSistemaCalculado: number
-  try {
-    valorSistemaCalculado = await calcularValorSistemaDinheiroCaixa(supabase, caixaId)
-  } catch {
+  // Mesma fonte de verdade do fechamento de caixa: a RPC do banco. Evita
+  // acoplar lib/pdv aos internals server do Caixa (boundary). Comportamento
+  // idêntico ao wrapper original: parse, validação finita e arredondamento.
+  const { data: vsData, error: vsErr } = await supabase.rpc(
+    'calcular_valor_sistema_dinheiro_caixa',
+    { p_caixa_id: caixaId },
+  )
+  const vsNum = typeof vsData === 'string' ? Number.parseFloat(vsData) : Number(vsData)
+  if (vsErr || !Number.isFinite(vsNum)) {
     return null
   }
+  const valorSistemaCalculado = roundMoney2(vsNum)
 
   return {
     generatedAt: new Date().toISOString(),
