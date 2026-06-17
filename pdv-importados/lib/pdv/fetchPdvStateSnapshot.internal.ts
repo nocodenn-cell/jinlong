@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
+import { roundMoney2 } from '@/shared/cart/totals'
 import type { PdvStateSnapshot } from '../../../shared-core/src/pdv/invariants'
 
 export async function fetchPdvStateSnapshot(
