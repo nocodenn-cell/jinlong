@@ -69,5 +69,102 @@
   /* L3 — Contextual: dados de suporte. Quase invisível — não compete. */
   --jl-card-l3-bg:        rgba(15, 23, 42, 0.28);
   --jl-card-l3-border:    rgba(71, 85, 105, 0.22);
+
+  /* ── Status badge tokens (dark) ──────────────────────────────────────── */
+  --jl-status-success-bg:     rgba(22, 101, 52, 0.20);
+  --jl-status-success-text:   #4ade80;
+  --jl-status-success-border: rgba(74, 222, 128, 0.25);
+
+  --jl-status-warning-bg:     rgba(146, 64, 14, 0.20);
+  --jl-status-warning-text:   #fbbf24;
+  --jl-status-warning-border: rgba(251, 191, 36, 0.25);
+
+  --jl-status-danger-bg:      rgba(153, 27, 27, 0.20);
+  --jl-status-danger-text:    #f87171;
+  --jl-status-danger-border:  rgba(248, 113, 113, 0.25);
+
+  --jl-status-info-bg:        rgba(30, 64, 175, 0.20);
+  --jl-status-info-text:      #60a5fa;
+  --jl-status-info-border:    rgba(96, 165, 250, 0.25);
+
+  --jl-status-neutral-bg:     rgba(71, 85, 105, 0.20);
+  --jl-status-neutral-text:   rgb(168, 179, 196);
+  --jl-status-neutral-border: rgba(148, 163, 184, 0.25);
+
+  --jl-status-orange-bg:      rgba(194, 65, 12, 0.20);
+  --jl-status-orange-text:    #fb923c;
+  --jl-status-orange-border:  rgba(251, 146, 60, 0.25);
+}
+
+/* ── Light Theme (dragon-light) ─────────────────────────────────────────── */
+/* Referência: telas claras JinLong (Visão geral + Financeiro e fiscal).    */
+[data-gerente-ui-theme='dragon-light'] {
+  /* Surfaces */
+  --jl-surface-base: #ffffff;
+  --jl-surface-elev: #f8f7f5;
+  --jl-surface-soft: rgba(248, 247, 245, 0.93);
+
+  /* Borders */
+  --jl-border-1: rgba(226, 232, 240, 0.95);
+  --jl-border-2: #e2e8f0;
+
+  /* Foreground */
+  --jl-fg-1: rgb(15, 23, 42);       /* slate-900 — texto primário */
+  --jl-fg-2: rgb(100, 116, 139);    /* slate-500 — secundário */
+  --jl-fg-3: rgb(148, 163, 184);    /* slate-400 — muted/labels */
+
+  /* Accent */
+  --jl-accent: #d97706;             /* amber-600 — brand light */
+
+  /* Shimmer */
+  --jl-shimmer-base:      rgba(226, 232, 240, 0.60);
+  --jl-shimmer-highlight: rgba(217, 119, 6, 0.08);
+
+  /* Elevation shadows — adaptadas para fundo claro */
+  --jl-elev-1:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+
+  --jl-elev-2:
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 8px 28px rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+
+  /* Card hierarchy */
+  --jl-card-l1-bg:        #ffffff;
+  --jl-card-l1-border:    #e2e8f0;
+  --jl-card-l1-accent:    rgba(217, 119, 6, 0.08);
+  --jl-card-l1-strip:     #d97706;
+
+  --jl-card-l2-bg:        #ffffff;
+  --jl-card-l2-border:    #f1f5f9;
+
+  --jl-card-l3-bg:        #f8fafc;
+  --jl-card-l3-border:    #e2e8f0;
+
+  /* ── Status badge tokens (light) ─────────────────────────────────────── */
+  --jl-status-success-bg:     #ecfdf5;
+  --jl-status-success-text:   #166534;
+  --jl-status-success-border: #bbf7d0;
+
+  --jl-status-warning-bg:     #fef3c7;
+  --jl-status-warning-text:   #92400e;
+  --jl-status-warning-border: #fde68a;
+
+  --jl-status-danger-bg:      #fef2f2;
+  --jl-status-danger-text:    #991b1b;
+  --jl-status-danger-border:  #fecaca;
+
+  --jl-status-info-bg:        #eff6ff;
+  --jl-status-info-text:      #1d4ed8;
+  --jl-status-info-border:    #bfdbfe;
+
+  --jl-status-neutral-bg:     #f9fafb;
+  --jl-status-neutral-text:   #374151;
+  --jl-status-neutral-border: #e5e7eb;
+
+  --jl-status-orange-bg:      #ffedd5;
+  --jl-status-orange-text:    #c2410c;
+  --jl-status-orange-border:  #fdba74;
 }
 

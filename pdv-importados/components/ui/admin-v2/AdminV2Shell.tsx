@@ -1,10 +1,10 @@
 import { type ReactNode } from 'react'
+import Link from 'next/link'
 import '@/styles/admin-v2.css'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { AdminSession } from '@/lib/admin/auth/types'
-import { Logo } from '@/components/branding/Logo'
 import { SidebarNav } from './SidebarNav'
 import { SidebarUserFooter } from './SidebarUserFooter'
 
@@ -26,13 +26,19 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
       <SessionIdleLogout />
       <div className="mx-auto flex min-h-dvh max-w-[1600px] flex-col lg:flex-row">
         <aside className="admin-v2-sidebar flex w-full shrink-0 flex-col border-b border-[var(--admin-v2-border)] lg:w-72 lg:border-b-0 lg:border-r">
-          <div className="border-b border-[var(--admin-v2-border)] p-4">
-            <Logo
-              variant="symbol"
+          <div className="flex items-center justify-center border-b border-[var(--admin-v2-border)] py-6 px-4">
+            <Link
               href={ROUTES.admin.dashboard}
               aria-label={m.login.nav_marca}
-              className="text-jl-accent"
-            />
+              className="rounded-lg outline-none ring-offset-2 ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-amber-400/70"
+            >
+              <img
+                src="/branding/brand-double-dragon.png"
+                alt="Jīn Lóng"
+                className="h-28 w-auto drop-shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+                draggable={false}
+              />
+            </Link>
           </div>
           <SidebarNav admin={admin} chineseLanguage={chineseLanguage} stockAlertCount={stockAlertCount} />
           <SidebarUserFooter session={session} />

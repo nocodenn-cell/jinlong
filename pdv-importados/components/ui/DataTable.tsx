@@ -95,10 +95,10 @@ export function DataTable<T>({
   const colSpan = columns.length + (rowActions ? 1 : 0)
 
   return (
-    <div className={cn('overflow-x-auto rounded-lg border border-[#242424]', className)}>
+    <div className={cn('overflow-x-auto rounded-lg border border-jl-border-1', className)}>
       <table className="w-full border-collapse text-left">
         <thead>
-          <tr className="border-b border-[#242424]">
+          <tr className="border-b border-jl-border-1">
             {columns.map((col) => {
               const sortable = !!col.sortValue
               const isActive = activeSort?.key === col.key
@@ -155,7 +155,7 @@ export function DataTable<T>({
               <tr
                 key={rowKey(row)}
                 className={cn(
-                  'group border-t border-[#242424] transition-colors hover:bg-white/[0.03]',
+                  'group border-t border-jl-border-1 transition-colors hover:bg-white/[0.03]',
                   onRowClick && 'cursor-pointer',
                 )}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
