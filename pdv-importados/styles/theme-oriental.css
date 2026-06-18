@@ -949,6 +949,18 @@ html:has(.login-premium-root) body {
   }
 }
 
+/* —— Painel gerente: tema claro — variáveis base —— */
+/* Sobrepõe os tokens --surface/--border/--accent do :root (dark) */
+[data-gerente-ui-theme='dragon-light'] {
+  --surface:         #ffffff;
+  --surface-soft:    rgba(248, 247, 245, 0.93);
+  --surface-text:    rgb(15, 23, 42);
+  --border:          rgba(226, 232, 240, 0.95);
+  --accent:          #d97706;
+  --accent-strong:   #b45309;
+  --accent-contrast: #ffffff;
+}
+
 /* —— Painel gerente: tema claro (dragon-light) —— */
 [data-gerente-ui-theme='dragon-light'] .bg-oriental-clouds {
   background-color: rgb(255 255 255);

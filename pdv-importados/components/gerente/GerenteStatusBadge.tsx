@@ -7,31 +7,32 @@ type GerenteStatusBadgeProps = Readonly<{
   label?: string
 }>
 
-const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  CONCLUIDA: { bg: '#ecfdf5', color: '#166534', border: '#bbf7d0' },
-  ABERTO: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-  FECHADO: { bg: '#f3f4f6', color: '#111827', border: '#d1d5db' },
-  CANCELADA: { bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
-  PARCIAL: { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
-  ATIVO: { bg: '#ecfdf5', color: '#166534', border: '#bbf7d0' },
-  INATIVO: { bg: '#f3f4f6', color: '#6b7280', border: '#e5e7eb' },
-  ALERTA: { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
-  CRITICO: { bg: '#ffedd5', color: '#c2410c', border: '#fdba74' },
-  ERRO: { bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
-  PENDENTE: { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
-  EMITIDO: { bg: '#ecfdf5', color: '#166534', border: '#bbf7d0' },
-  PROCESSANDO: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-  TEM_NF: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-  SEM_NF: { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+/** Mapeamento de status → tokens CSS (adaptam a dark e light theme). */
+const STATUS_TOKEN: Record<string, string> = {
+  CONCLUIDA:    'success',
+  ATIVO:        'success',
+  EMITIDO:      'success',
+  ABERTO:       'info',
+  PROCESSANDO:  'info',
+  TEM_NF:       'info',
+  FECHADO:      'neutral',
+  INATIVO:      'neutral',
+  CANCELADA:    'danger',
+  ERRO:         'danger',
+  PARCIAL:      'warning',
+  PENDENTE:     'warning',
+  SEM_NF:       'warning',
+  ALERTA:       'warning',
+  CRITICO:      'orange',
 }
 
-/** Badge compacto para status operacionais na área gerente. */
+/** Badge compacto para status operacionais. Adapta a dark e light theme via CSS vars. */
 export const GerenteStatusBadge = memo(function GerenteStatusBadge({
   status,
   label,
 }: GerenteStatusBadgeProps) {
   const text = label ?? status
-  const style = STATUS_STYLE[status] ?? { bg: '#f9fafb', color: '#374151', border: '#e5e7eb' }
+  const tone = STATUS_TOKEN[status] ?? 'neutral'
   return (
     <span
       style={{
@@ -40,10 +41,10 @@ export const GerenteStatusBadge = memo(function GerenteStatusBadge({
         borderRadius: 999,
         fontSize: 11,
         padding: '2px 8px',
-        background: style.bg,
-        color: style.color,
-        border: `1px solid ${style.border}`,
         fontWeight: 600,
+        background: `var(--jl-status-${tone}-bg)`,
+        color: `var(--jl-status-${tone}-text)`,
+        border: `1px solid var(--jl-status-${tone}-border)`,
       }}
     >
       {text}

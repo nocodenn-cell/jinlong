@@ -14,6 +14,7 @@ import type { PerfilUsuario } from '@/idioma/usuarioIdioma'
 import { normalizePerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { cn } from '@/lib/utils'
+import { GerenteUiThemeProvider, useGerenteUiTheme } from './GerenteThemeContext'
 
 type Props = Readonly<{
   children: ReactNode
@@ -30,6 +31,7 @@ const FONT_FAMILY: Record<string, string> = {
 
 function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props) {
   const router = useRouter()
+  const { theme } = useGerenteUiTheme()
   const podeTrocarIdioma = isPerfilPainelGerencial(normalizePerfilUsuario(perfil))
 
   async function handleSignOut() {
@@ -43,7 +45,8 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
   return (
     <div
       data-app-theme="noturno"
-      data-gerente-ui-theme="dragon-dark"
+      data-gerente-ui-theme={theme}
+      suppressHydrationWarning
       className={cn(
         'gerente-shell relative min-h-screen overflow-x-visible overflow-y-visible antialiased transition-[background-color,color] duration-200',
         'app-surface app-surface-text',
@@ -86,5 +89,9 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 }
 
 export function GerenteLayoutShell(props: Props) {
-  return <GerenteLayoutInner {...props} />
+  return (
+    <GerenteUiThemeProvider>
+      <GerenteLayoutInner {...props} />
+    </GerenteUiThemeProvider>
+  )
 }

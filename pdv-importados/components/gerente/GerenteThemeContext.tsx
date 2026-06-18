@@ -1,22 +1,32 @@
 'use client'
 
-import type { ReactNode } from 'react'
-import type { GerenteUiTheme } from './gerenteUiTheme'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { GERENTE_UI_THEME_STORAGE_KEY, parseGerenteUiTheme, type GerenteUiTheme } from './gerenteUiTheme'
 
 type Ctx = Readonly<{
   theme: GerenteUiTheme
   setTheme: (t: GerenteUiTheme) => void
 }>
 
-const _noop = () => {}
-const _fixed: Ctx = { theme: 'noturno', setTheme: _noop }
+const ThemeCtx = createContext<Ctx>({ theme: 'dragon-dark', setTheme: () => {} })
 
-/** @deprecated Theme is locked to 'noturno'. This provider is a no-op stub. */
 export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  return <>{children}</>
+  const [theme, setThemeState] = useState<GerenteUiTheme>('dragon-dark')
+
+  useEffect(() => {
+    const stored = localStorage.getItem(GERENTE_UI_THEME_STORAGE_KEY)
+    const resolved = parseGerenteUiTheme(stored)
+    if (resolved !== 'dragon-dark') setThemeState(resolved)
+  }, [])
+
+  function setTheme(t: GerenteUiTheme) {
+    setThemeState(t)
+    localStorage.setItem(GERENTE_UI_THEME_STORAGE_KEY, t)
+  }
+
+  return <ThemeCtx.Provider value={{ theme, setTheme }}>{children}</ThemeCtx.Provider>
 }
 
-/** @deprecated Theme is always 'noturno'. Use the fixed value directly. */
 export function useGerenteUiTheme(): Ctx {
-  return _fixed
+  return useContext(ThemeCtx)
 }

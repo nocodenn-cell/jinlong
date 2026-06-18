@@ -2,48 +2,43 @@
 
 import { setIdiomaAction } from './actions'
 import { cn } from '@/lib/utils'
-
-type Idioma3 = 'pt' | 'zh'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = {
-  idiomaAtual: Idioma3
+  idiomaAtual: Idioma
   /** `dragon`: cabeçalho escuro · `dragon-light`: cabeçalho claro Jīn Lóng */
   variant?: 'default' | 'dragon' | 'dragon-light'
 }
 
-export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Props) {
-  const dragon = variant === 'dragon'
-  const dragonLight = variant === 'dragon-light'
+const LANGS: { value: Idioma; label: string; title: string; font?: string }[] = [
+  { value: 'pt', label: 'PT', title: 'Português (Brasil)' },
+  { value: 'zh', label: '普通话', title: 'Mandarim (简体)', font: '"Noto Sans SC","PingFang SC",sans-serif' },
+  { value: 'en', label: 'EN', title: 'English (em breve)' },
+  { value: 'es', label: 'ES', title: 'Español (em breve)' },
+]
 
+export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Props) {
   const baseBtn = cn(
     'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
-    dragon &&
-      'app-btn-neutral disabled:cursor-default disabled:opacity-55',
-    dragonLight &&
-      'app-btn-neutral disabled:cursor-default disabled:opacity-55',
-    !dragon &&
-      !dragonLight &&
-      'app-btn-neutral disabled:cursor-default disabled:opacity-55',
+    'app-btn-neutral disabled:cursor-default disabled:opacity-55',
   )
 
   return (
-    <form className="flex gap-2" action={setIdiomaAction}>
-      <button type="submit" name="idioma" value="pt" disabled={idiomaAtual === 'pt'} className={baseBtn}>
-        PT
-      </button>
-
-      <button
-        type="submit"
-        name="idioma"
-        value="zh"
-        title="Mandarim (简体)"
-        disabled={idiomaAtual === 'zh'}
-        className={baseBtn}
-        style={{ fontFamily: '"Noto Sans SC","PingFang SC",sans-serif' }}
-      >
-        普通话
-      </button>
-
-          </form>
+    <form className="flex gap-1" action={setIdiomaAction}>
+      {LANGS.map(({ value, label, title, font }) => (
+        <button
+          key={value}
+          type="submit"
+          name="idioma"
+          value={value}
+          title={title}
+          disabled={idiomaAtual === value}
+          className={baseBtn}
+          style={font ? { fontFamily: font } : undefined}
+        >
+          {label}
+        </button>
+      ))}
+    </form>
   )
 }

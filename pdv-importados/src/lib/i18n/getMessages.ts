@@ -19,6 +19,7 @@ export type Mensagens = typeof pt
 
 export function getMessages(idioma: Idioma): Mensagens {
   if (idioma === 'zh') return zh as unknown as Mensagens
+  // 'en' e 'es' usam PT como fallback até as traduções estarem prontas
   return pt as Mensagens
 }
 
