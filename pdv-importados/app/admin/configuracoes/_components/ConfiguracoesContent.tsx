@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { cn } from '@/lib/utils'
-import type { LojaConfig, PdvConfig } from '@/app/gerente/configuracoes/actions'
+import type { IdiomaPadrao, LojaConfig, PdvConfig } from '@/app/gerente/configuracoes/actions'
 import { atualizarDadosLojaAction, atualizarConfiguracoesPdvAction } from '@/app/gerente/configuracoes/actions'
 
 export type ConfiguracoesLojaLabels = {
@@ -160,7 +160,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
       auto_enqueue_fiscal: fd.get('auto_enqueue_fiscal')
         ? fd.get('auto_enqueue_fiscal') === 'on'
         : (dados.pdvConfig?.auto_enqueue_fiscal ?? false),
-      idioma_padrao: String(fd.get('idioma_padrao') ?? dados.pdvConfig?.idioma_padrao ?? 'pt') as 'pt' | 'zh',
+      idioma_padrao: String(fd.get('idioma_padrao') ?? dados.pdvConfig?.idioma_padrao ?? 'pt') as IdiomaPadrao,
       tema_padrao: String(fd.get('tema_padrao') ?? dados.pdvConfig?.tema_padrao ?? 'noturno') as 'noturno' | 'novem',
       imprimir_cupom_auto: fd.get('imprimir_cupom_auto')
         ? fd.get('imprimir_cupom_auto') === 'on'

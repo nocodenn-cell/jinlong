@@ -3,6 +3,8 @@
  * Sem dependências de framework (Next/Tauri).
  */
 
+/** Idiomas com mensagens de erro traduzidas. Intencionalmente mais estreito que `Idioma` —
+ *  este arquivo não tem deps de framework e é compartilhado com `pdv-local`. */
 export type IdiomaErro = 'pt' | 'zh'
 
 const MSG_PADRAO: Record<IdiomaErro, string> = {

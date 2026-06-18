@@ -58,13 +58,16 @@ export type LojaConfig = {
 
 export type RegimeTributario = 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL' | 'MEI'
 
+/** Idioma de operação padrão do PDV — intencionalmente pt/zh (sem en/es operacional). */
+export type IdiomaPadrao = 'pt' | 'zh'
+
 export type PdvConfig = {
   loja_id: string
   cfop_padrao: string
   cst_padrao: string
   regime_tributario: RegimeTributario
   auto_enqueue_fiscal: boolean
-  idioma_padrao: 'pt' | 'zh'
+  idioma_padrao: IdiomaPadrao
   tema_padrao: 'noturno' | 'novem'
   imprimir_cupom_auto: boolean
   formato_impressao: 'TERMICA' | 'A4'

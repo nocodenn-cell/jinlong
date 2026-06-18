@@ -65,7 +65,7 @@ Vendas do dia, produtos mais vendidos, estoque baixo.
 | UI | shadcn/ui + Tailwind | Componentes que o dev owna, não depende de lib externa |
 | Deploy | Vercel | Deploy em 30s, preview automático, SSL incluso |
 | Offline | PWA + IndexedDB | Sem instalação, funciona sem internet |
-| i18n | getMessages + `src/lib/i18n/*.json` | PT + ZH + zh-HK por usuário (DB/cookie), URLs sem prefixo de locale |
+| i18n | getMessages + `src/lib/i18n/*.json` | PT + ZH (en/es em fallback PT); zh-HK normalizado para zh. URLs sem prefixo de locale |
 | Estado | Zustand (carrinho) | Simples, sem boilerplate, persistência fácil |
 
 ---
