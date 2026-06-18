@@ -19,7 +19,7 @@ PDV para lojas de importados no Brasil: **atacado por faixa**, **PT no caixa** /
 
 - Next.js 16 **App Router** em `app/` (sem `src/app` paralelo), **React 19** (alinhado ao `pdv-local`), TypeScript strict, Tailwind, shadcn/ui, Lucide
 - Supabase: `@supabase/ssr`, Auth, Postgres com RLS (ver migrations no `backend`)
-- i18n: **`getMessages` + `src/lib/i18n/*.json`** (pt, zh, zh-HK) — **sem** `next-intl`; URLs **sem** prefixo `/pt/` (`/login`, `/caixa`, `/gerente/...`). Nos imports TypeScript, preferir **`@/i18n/...`** e **`@/idioma/...`** (aliases em `tsconfig.json`; arquivos continuam em `src/lib/...`).
+- i18n: **`getMessages` + `src/lib/i18n/*.json`** (pt, zh) — **sem** `next-intl`; URLs **sem** prefixo `/pt/` (`/login`, `/caixa`, `/gerente/...`). Nos imports TypeScript, preferir **`@/i18n/...`** e **`@/idioma/...`** (aliases em `tsconfig.json`; arquivos continuam em `src/lib/...`). O tipo canônico é `Idioma = 'pt' | 'zh' | 'en' | 'es'`; `zh-HK` é normalizado para `zh` por `normalizeIdioma`, não é um idioma exposto.
 - Estado: Zustand (`stores/carrinhoStore.ts`) + `core/` (pricing, tipos)
 - **Não misturar Tauri/desktop aqui** — isso é `../pdv-local`
 
@@ -55,7 +55,7 @@ Se a quantidade **total** de um mesmo produto no carrinho **cruza** um limiar de
 
 - OPERADOR: PT fixo no caixa.
 - GERENTE/DONO: `idioma_preferido`; toggle de idioma nas rotas `/gerente/*`.
-- Novas chaves: em **paridade** em pt / zh / zh-HK.
+- Novas chaves: em **paridade** em pt / zh. `zh-HK` é normalizado para `zh` por `normalizeIdioma` — não é um idioma exposto, não exige chave própria.
 
 ### Supabase / segurança
 

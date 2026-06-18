@@ -12,6 +12,7 @@ import {
   atualizarConfiguracoesPdvAction,
   atualizarDadosLojaAction,
   uploadLogoLojaAction,
+  type IdiomaPadrao,
   type LojaConfig,
   type PdvConfig,
   type RegimeTributario,
@@ -417,7 +418,7 @@ export function ConfiguracoesClient({ idioma, lojaInicial, pdvConfigInicial }: P
               <label className="text-xs font-medium text-jl-fg-3">
                 {m.configuracoes.field_idioma}
                 <select className={`${finSelect} mt-1`} value={pdv.idioma_padrao}
-                  onChange={(e) => setPdv({ ...pdv, idioma_padrao: e.target.value as 'pt' | 'zh' })}>
+                  onChange={(e) => setPdv({ ...pdv, idioma_padrao: e.target.value as IdiomaPadrao })}>
                   <option value="pt">Português (BR)</option>
                   <option value="zh">简体中文</option>
                 </select>
