@@ -274,7 +274,19 @@
     "field_cst_cofins": "CST COFINS",
     "ncm_invalido": "NCM deve ter exatamente 8 dígitos.",
     "cfop_invalido": "CFOP deve ter 4 dígitos.",
-    "cest_invalido": "CEST deve ter 7 dígitos."
+    "cest_invalido": "CEST deve ter 7 dígitos.",
+    "secao_estoque": "Estoque",
+    "secao_dados_produto": "Dados do produto",
+    "sku_label": "SKU / Código interno",
+    "gerar_sku": "Gerar",
+    "estoque_minimo_label": "Estoque mínimo",
+    "ativo_label": "Produto ativo",
+    "descricao_curta_label": "Descrição curta",
+    "faixas_qtd_col": "Qtd. mínima",
+    "faixas_preco_col": "Preço unit. (R$)",
+    "faixas_total_col": "Total (ex.)",
+    "adicionar_faixa_atacado": "+ Faixa atacado",
+    "remover_faixa": "×"
   },
   "precos": {
     "titulo": "Regras de preço",

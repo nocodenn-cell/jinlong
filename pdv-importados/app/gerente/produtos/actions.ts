@@ -81,6 +81,8 @@ const NovoProdutoSchema = z.object({
     .transform((s) => s?.trim().replace(/\D/g, '') || null)
     .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
     .nullable(),
+  codigo_interno: z.string().nullable().optional().transform((s) => (s ?? '').trim() || null),
+  estoque_minimo: z.coerce.number().nonnegative().optional().default(0),
 })
 
 type ActionResult<T> =
@@ -591,6 +593,9 @@ const EditarProdutoCatalogoSchema = z.object({
     .nullable(),
   cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
   cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  codigo_interno: z.string().nullable().optional().transform((s) => (s ?? '').trim() || null),
+  estoque_minimo: z.coerce.number().nonnegative().optional().default(0),
+  ativo: z.boolean().optional(),
 })
 
 export type ResultadoExclusaoLote = Readonly<{
@@ -775,6 +780,11 @@ export async function atualizarDadosProdutoGerente(
       cest: parsed.data.cest,
       cst_pis: parsed.data.cst_pis,
       cst_cofins: parsed.data.cst_cofins,
+      codigo_interno: parsed.data.codigo_interno ?? null,
+      estoque_minimo: parsed.data.estoque_minimo ?? 0,
+      ...(parsed.data.ativo !== undefined
+        ? dualWriteFromStatus(statusFromAtivoLegacy(parsed.data.ativo))
+        : {}),
     })
     .eq('id', parsed.data.produto_id)
 
@@ -785,6 +795,11 @@ export async function atualizarDadosProdutoGerente(
       error: mensagemErroComSecao('Produto', error.message, idioma),
     }
   }
+
+  await supabase
+    .from('estoque')
+    .update({ estoque_minimo: parsed.data.estoque_minimo ?? 0 })
+    .eq('produto_id', parsed.data.produto_id)
 
   revalidatePath('/gerente/produtos')
   return { success: true, data: null }
@@ -937,14 +952,14 @@ export async function buscarProdutosComFiltros(
   const productIds = list.map((r) => r.id)
   const [estoqueRes, extraRes] = productIds.length > 0
     ? await Promise.all([
-        supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
+        supabase.from('estoque').select('produto_id, quantidade_atual, estoque_minimo').in('produto_id', productIds),
         supabase
           .from('produtos')
           .select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo, status_publicacao')
           .in('id', productIds),
       ])
     : [
-        { data: [] as { produto_id: string; quantidade_atual: number }[] },
+        { data: [] as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[] },
         {
           data: [] as {
             id: string
@@ -957,9 +972,9 @@ export async function buscarProdutosComFiltros(
         },
       ]
 
-  const estoqueMap = new Map<string, number>()
-  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
-    estoqueMap.set(e.produto_id, e.quantidade_atual)
+  const estoqueMap = new Map<string, { quantidade_atual: number; estoque_minimo: number }>()
+  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[])) {
+    estoqueMap.set(e.produto_id, { quantidade_atual: e.quantidade_atual, estoque_minimo: e.estoque_minimo ?? 0 })
   }
 
   const extraMap = new Map<
@@ -1006,7 +1021,8 @@ export async function buscarProdutosComFiltros(
       preco_custo: extra?.preco_custo ?? null,
       permitir_abaixo_custo: extra?.permitir_abaixo_custo ?? false,
       quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
-      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id) ?? null) : null,
+      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id)?.quantidade_atual ?? null) : null,
+      estoque_minimo: estoqueMap.get(r.id)?.estoque_minimo ?? 0,
       origem: r.origem,
       tem_nf: r.tem_nf,
       ativo: r.ativo,

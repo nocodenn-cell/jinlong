@@ -274,7 +274,19 @@
     "field_cst_cofins": "CST COFINS",
     "ncm_invalido": "NCM 必须为8位数字。",
     "cfop_invalido": "CFOP 必须为4位数字。",
-    "cest_invalido": "CEST 必须为7位数字。"
+    "cest_invalido": "CEST 必须为7位数字。",
+    "secao_estoque": "库存",
+    "secao_dados_produto": "商品信息",
+    "sku_label": "SKU / 内部编码",
+    "gerar_sku": "生成",
+    "estoque_minimo_label": "最低库存",
+    "ativo_label": "商品启用",
+    "descricao_curta_label": "简短描述",
+    "faixas_qtd_col": "最低数量",
+    "faixas_preco_col": "单价 (R$)",
+    "faixas_total_col": "示例总计",
+    "adicionar_faixa_atacado": "+ 添加批发档",
+    "remover_faixa": "×"
   },
   "precos": {
     "titulo": "价格规则",

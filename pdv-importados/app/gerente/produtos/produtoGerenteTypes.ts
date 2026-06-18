@@ -18,6 +18,8 @@ export type ProdutoGerenteRow = {
   quantidade_gatilho_atacado: number | null
   /** Estoque atual (da tabela estoque). Negativo = ruptura. */
   quantidade_atual: number | null
+  /** Quantidade mínima configurada para este produto. */
+  estoque_minimo: number
   origem: string
   tem_nf: boolean
   ativo: boolean
