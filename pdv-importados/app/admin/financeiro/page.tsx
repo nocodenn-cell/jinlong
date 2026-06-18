@@ -149,12 +149,6 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             tone="gold"
             hint={listaRes.capped ? ui.financeiro_kpi_truncado : undefined}
           />
-          <MetricCard
-            label={ui.financeiro_kpi_docs_fiscais}
-            value="3"
-            icon="file-check-2"
-            tone="warning"
-          />
         </div>
 
         <div className="border-b border-[#242424] pb-3">
@@ -180,13 +174,6 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           contas={contas}
           labels={{
             titulosEmAberto: ui.financeiro_section_titulos,
-            filaFiscal: ui.financeiro_section_fila,
-            documentosFiscais: ui.financeiro_section_docs,
-            emitirSelecionados: ui.financeiro_emitir_selecionados,
-            colDocumento: ui.financeiro_col_documento,
-            colSerie: ui.financeiro_col_serie,
-            colValor: m.gerente.col_total,
-            colSituacao: ui.financeiro_col_situacao,
             contas: {
               colCliente: ui.financeiro_col_cliente,
               colVencimento: ui.financeiro_col_vencimento,

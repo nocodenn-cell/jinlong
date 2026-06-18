@@ -1,6 +1,6 @@
 'use client'
 
-import { Download, FileSpreadsheet } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { useMemo } from 'react'
 
 export type RelatoriosFiltrosLabels = {
@@ -8,7 +8,6 @@ export type RelatoriosFiltrosLabels = {
   ate: string
   aplicar: string
   exportarCsv: string
-  xlsx: string
   csvFilename: string
 }
 
@@ -68,10 +67,6 @@ export function RelatoriosPeriodFilters({ de, ate, csvRows, labels }: Relatorios
       >
         <Download size={14} aria-hidden />
         {labels.exportarCsv}
-      </button>
-      <button type="button" className="admin-v2-btn-secondary opacity-60" disabled>
-        <FileSpreadsheet size={14} aria-hidden />
-        {labels.xlsx}
       </button>
     </form>
   )

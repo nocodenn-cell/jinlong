@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type MouseEvent, useState } from 'react'
-import { Bell, LogOut, MoonStar } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { performClientLogout } from '@/lib/auth/clientLogout'
 import { resetCarrinhoPersistido } from '@/lib/caixa/resetCarrinhoPersistido'
 import { cn } from '@/lib/utils'
@@ -33,24 +33,6 @@ export function AdminV2UtilityBar({ className }: AdminV2UtilityBarProps) {
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <button
-        type="button"
-        disabled
-        aria-disabled
-        title="Alternância de tema em breve"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-v2-border)] bg-[#111111] text-jl-fg-3 opacity-60"
-      >
-        <MoonStar size={16} aria-hidden />
-      </button>
-      <button
-        type="button"
-        disabled
-        aria-disabled
-        title="Notificações em breve"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-v2-border)] bg-[#111111] text-jl-fg-3 opacity-60"
-      >
-        <Bell size={16} aria-hidden />
-      </button>
       <Link
         href="/login"
         onClick={(event) => void onSignOut(event)}

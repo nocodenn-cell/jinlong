@@ -109,8 +109,6 @@ export default async function AdminConfiguracoes() {
           idioma: ui.configuracoes_prefs_idioma,
           tema: ui.configuracoes_prefs_tema,
           formato: ui.configuracoes_prefs_formato,
-          checkLembrete: ui.configuracoes_prefs_check_lembrete,
-          checkResumo: ui.configuracoes_prefs_check_resumo,
           sucesso: ui.configuracoes_prefs_sucesso,
           btnSalvar: ui.configuracoes_prefs_btn_salvar,
         },

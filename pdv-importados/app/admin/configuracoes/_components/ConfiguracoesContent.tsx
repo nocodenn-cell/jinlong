@@ -61,8 +61,6 @@ export type ConfiguracoesPrefsLabels = {
   idioma: string
   tema: string
   formato: string
-  checkLembrete: string
-  checkResumo: string
   sucesso: string
   btnSalvar: string
 }
@@ -453,18 +451,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            <div className="space-y-2">
-              <CheckboxLabel>
-                <input type="checkbox" disabled />
-                {labels.prefs.checkLembrete}
-              </CheckboxLabel>
-              <CheckboxLabel>
-                <input type="checkbox" disabled />
-                {labels.prefs.checkResumo}
-              </CheckboxLabel>
-            </div>
-
-            {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
+            {pdvErro &&<div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
             {pdvSucesso && (
               <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.prefs.sucesso}</div>
             )}
@@ -483,14 +470,6 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[11px] font-medium text-jl-fg-3">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-function CheckboxLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="flex items-center gap-2 text-xs text-jl-fg-2 [&_input]:accent-jl-accent">
       {children}
     </label>
   )
