@@ -65,6 +65,8 @@ export default defineConfig(({ mode }) => {
       alias: [
         { find: '@/i18n', replacement: path.resolve(__dirname, 'src/lib/i18n') },
         { find: '@/idioma', replacement: path.resolve(__dirname, 'src/lib/idioma') },
+        // `@shared-core` antes de `@shared`/`@` (alias mais específico primeiro).
+        { find: '@shared-core', replacement: path.resolve(__dirname, '../shared-core') },
         { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
         { find: '@', replacement: path.resolve(__dirname, './') },
         { find: '@/shared', replacement: path.resolve(__dirname, './shared') },
