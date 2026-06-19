@@ -9,6 +9,13 @@ type RelatoriosBarChartProps = {
 }
 
 export function RelatoriosBarChart({ data, tooltipLabel }: RelatoriosBarChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-full min-h-[260px] w-full items-center justify-center text-xs text-jl-fg-3">
+        Sem dados
+      </div>
+    )
+  }
   return (
     <div className="h-full min-h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">

@@ -59,6 +59,14 @@ export default function SalesTrendChart({
     )
   }
 
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-xs text-jl-fg-3">
+        Sem dados
+      </div>
+    )
+  }
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} className={idioma === 'zh' ? 'font-noto-sc' : ''}>

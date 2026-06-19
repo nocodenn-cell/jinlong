@@ -10,6 +10,13 @@ export type RelatorioVendasChartProps = {
 }
 
 export default function RelatorioVendasChart({ data, locale, faturamentoLabel }: RelatorioVendasChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[260px] w-full items-center justify-center text-xs text-jl-fg-3">
+        Sem dados
+      </div>
+    )
+  }
   return (
     <div className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
