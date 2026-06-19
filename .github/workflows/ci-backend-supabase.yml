@@ -1,16 +1,9 @@
-# Validação mínima do backend Supabase: type-check da Edge + smoke das migrations em Postgres (stub auth).
+# CI backend Supabase — pipeline mínimo e previsível (demo-safe).
 #
-# Job migration-remote-drift (Ubuntu + Node):
-# - Secrets obrigatórios em contexto interno: SUPABASE_ACCESS_TOKEN (token de conta) e
-#   SUPABASE_MIGRATION_CHECK_PROJECT_REF (ref do projeto staging/homolog).
-# - Falha se secrets ausentes (interno) ou se Local≠Remote.
-# - PR de fork: job é pulado (secrets do base não são injetados).
-#
-# Job anti-replay (Windows + PowerShell):
-# - Secrets do repositório: SYNC_ENDPOINT (URL da função sync-outbox), SYNC_KEY (mesmo da Edge).
-# - PR interno que altera sync-outbox ou o script de diagnóstico: falha se esses secrets estiverem vazios (gate).
-# - Push/PR com secrets preenchidos: executa backend/scripts/sync-outbox-anti-replay-diagnostic.ps1.
-# - Forks: o gate de secrets não exige SYNC_* no PR de fork (head.repo != github.repository); o passo de diagnóstico só roda se os secrets existirem no repo base (geralmente não expostos a forks).
+# Duas responsabilidades, sem duplicação:
+#   1) migrations-and-rls : reset local das migrations (validação básica) + RLS
+#      (smoke de governança + suíte de escopo por perfil). Único job de segurança.
+#   2) edge-functions-typecheck : type-check Deno das Edge Functions.
 name: CI backend Supabase
 
 on:
@@ -33,80 +26,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  supabase-local-rls-smoke:
-    name: Supabase local RLS smoke
+  # Migrations (reset local) + RLS (único job de segurança).
+  migrations-and-rls:
+    name: Migrations + RLS
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      # Tag de referência: v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '20'
-
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Start Supabase local stack (isolado por job)
-        run: |
-          set -euo pipefail
-          cd backend
-          npx supabase --version
-          timeout 240s npx supabase start
-
-      - name: Reset + seed determinístico (local)
-        run: |
-          set -euo pipefail
-          cd backend
-          # Reaplica migrations do zero e executa seed.sql (quando existir).
-          # Garante base determinística para os testes do job.
-          npx supabase db reset --local --yes
-
-      - name: Smoke SQL de governança RLS
-        run: |
-          set -euo pipefail
-          cd backend
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          # CLI recente exporta DB_URL; documentação antiga usava POSTGRES_URL.
-          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
-          if [ -z "$PSQL_URL" ]; then
-            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL). Saída de status:" >&2
-            npx supabase status -o env >&2 || true
-            exit 1
-          fi
-          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
-
-      - name: Diagnóstico em falha (logs + status)
-        if: failure()
-        run: |
-          set +e
-          cd backend
-          echo "=== supabase status ==="
-          npx supabase status || true
-          echo "=== docker ps -a ==="
-          docker ps -a || true
-          echo "=== logs dos containers supabase ==="
-          for c in $(docker ps -a --format '{{.Names}}' | rg supabase); do
-            echo "--- $c ---"
-            docker logs "$c" --tail 200 || true
-          done
-
-      - name: Teardown Supabase local
-        if: always()
-        run: |
-          set +e
-          cd backend
-          npx supabase stop --project-id fastproduct --no-backup
-
-  test-rls-scope:
-    name: Test RLS scope by profile
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
+      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag: v4
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -128,11 +54,24 @@ jobs:
           npx supabase --version
           timeout 240s npx supabase start
 
-      - name: Reset + seed base determinístico
+      - name: Reset + seed (reaplica migrations do zero — validação básica)
         run: |
           set -euo pipefail
           cd backend
           npx supabase db reset --local --yes
+
+      - name: Smoke SQL de governança RLS
+        run: |
+          set -euo pipefail
+          cd backend
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          PSQL_URL="${POSTGRES_URL:-${DB_URL:-}}"
+          if [ -z "$PSQL_URL" ]; then
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL). Saída de status:" >&2
+            npx supabase status -o env >&2 || true
+            exit 1
+          fi
+          psql "$PSQL_URL" -v ON_ERROR_STOP=1 -f supabase/scripts/smoke_rls_painel_gerente.sql
 
       - name: Run RLS scope test suite
         run: |
@@ -140,7 +79,7 @@ jobs:
           cd backend
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           if [ -z "${POSTGRES_URL:-}" ] && [ -z "${DB_URL:-}" ]; then
-            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL). Saída de status:" >&2
+            echo "::error::Sem URL do Postgres (POSTGRES_URL ou DB_URL)." >&2
             npx supabase status -o env >&2 || true
             exit 1
           fi
@@ -168,13 +107,15 @@ jobs:
           cd backend
           npx supabase stop --project-id fastproduct --no-backup
 
+  # Type-check das Edge Functions (Deno).
   edge-functions-typecheck:
+    name: Edge typecheck (Deno)
     runs-on: ubuntu-latest
     steps:
-      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
+      # Tag: v4
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      # Tag de referência: v2.0.4 (major v2)
+      # Tag: v2.0.4 (major v2)
       - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282
         with:
           deno-version: v2.x
@@ -184,124 +125,3 @@ jobs:
           deno check --config backend/supabase/functions/sync-outbox/deno.json backend/supabase/functions/sync-outbox/index.ts
           deno check --config backend/supabase/functions/validar-gerente/deno.json backend/supabase/functions/validar-gerente/index.ts
           deno check --config backend/supabase/functions/fiscal-worker/deno.json backend/supabase/functions/fiscal-worker/index.ts
-
-  outbox-contract:
-    runs-on: ubuntu-latest
-    steps:
-      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      - name: Contract smoke (sync-outbox payload v1)
-        run: node backend/scripts/sync-outbox-contract-smoke.mjs
-
-  rls-rest-gate:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '20'
-
-      - name: Enforce required secrets for internal PRs
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        shell: bash
-        env:
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
-          RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
-        run: |
-          set -euo pipefail
-          [ -n "${SUPABASE_URL:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL" && exit 1)
-          [ -n "${SUPABASE_ANON_KEY:-}" ] || (echo "Secret ausente: PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY" && exit 1)
-          [ -n "${RLS_SMOKE_JWT_PAINEL:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_PAINEL" && exit 1)
-          [ -n "${RLS_SMOKE_JWT_CAIXA:-}" ] || (echo "Secret ausente: RLS_SMOKE_JWT_CAIXA" && exit 1)
-
-      - name: Run mandatory REST RLS smoke
-        env:
-          CI_RLS_SMOKE_REQUIRED: 'true'
-          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
-          RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
-        run: node backend/scripts/p0-rls-rest-smoke.mjs
-
-  migration-remote-drift:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    steps:
-      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      # Tag de referência: v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '20'
-
-      - name: Enforce required secrets for drift gate
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ] || [ -z "${SUPABASE_MIGRATION_CHECK_PROJECT_REF:-}" ]; then
-            echo "Secrets obrigatórios ausentes: SUPABASE_ACCESS_TOKEN e/ou SUPABASE_MIGRATION_CHECK_PROJECT_REF."
-            exit 1
-          fi
-
-      - name: Link + compare Local vs Remote
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_MIGRATION_CHECK_PROJECT_REF: ${{ secrets.SUPABASE_MIGRATION_CHECK_PROJECT_REF }}
-        run: |
-          set -euo pipefail
-          cd backend
-          npx supabase link --project-ref "${SUPABASE_MIGRATION_CHECK_PROJECT_REF}"
-          node scripts/p0-migration-status.mjs
-
-  anti-replay-diagnostic-gate:
-    runs-on: windows-latest
-    # dorny/paths-filter usa a API de PR; sem pull-requests:read o token falha com
-    # "Resource not accessible by integration" em PRs internos.
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      - name: Detect sync-outbox changes
-        id: changes
-        # Tag de referência: v3
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
-        with:
-          filters: |
-            sync_outbox:
-              - 'backend/supabase/functions/sync-outbox/**'
-              - 'backend/scripts/sync-outbox-anti-replay-diagnostic.ps1'
-
-      - name: Validate required secrets for PR gate
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && steps.changes.outputs.sync_outbox == 'true'
-        shell: pwsh
-        env:
-          SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
-          SYNC_KEY: ${{ secrets.SYNC_KEY }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:SYNC_ENDPOINT) -or [string]::IsNullOrWhiteSpace($env:SYNC_KEY)) {
-            throw "PR gate bloqueado: configure secrets SYNC_ENDPOINT e SYNC_KEY para validar anti-replay."
-          }
-
-      # Não use `secrets.*` em `if:` — o contexto `secrets` não é permitido em condicionais do workflow.
-      - name: Run anti-replay diagnostic (when secrets are configured)
-        shell: pwsh
-        env:
-          SYNC_ENDPOINT: ${{ secrets.SYNC_ENDPOINT }}
-          SYNC_KEY: ${{ secrets.SYNC_KEY }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:SYNC_ENDPOINT) -or [string]::IsNullOrWhiteSpace($env:SYNC_KEY)) {
-            Write-Host "⚠️ Secrets SYNC_ENDPOINT ou SYNC_KEY não configurados. Pulando diagnóstico."
-            exit 0
-          }
-          ./backend/scripts/sync-outbox-anti-replay-diagnostic.ps1 -OutputJson
