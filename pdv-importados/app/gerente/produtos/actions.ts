@@ -82,6 +82,8 @@ const NovoProdutoSchema = z.object({
     .transform((s) => s?.trim().replace(/\D/g, '') || null)
     .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
     .nullable(),
+  codigo_interno: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  estoque_minimo: z.coerce.number().nonnegative('Estoque mínimo não pode ser negativo.').nullable().optional().transform((v) => v ?? 0),
 })
 
 type ActionResult<T> =
@@ -107,13 +109,20 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
-  // CORE decide o status; o server apenas executa. Cadastro manual → PUBLICADO.
-  // (CSV continua DRAFT no seu próprio caminho `importarProdutosCsv`.)
-  const { status_publicacao } = statusInicialProduto('human')
+  // Cadastro manual nasce PUBLICADO por padrão; se ativo=false explícito, nasce INATIVO.
+  const ativoExplicito = parsed.data.ativo
+  const { status_publicacao: statusPadrao } = statusInicialProduto('human')
+  const status_publicacao =
+    ativoExplicito === false ? 'INATIVO' : statusPadrao
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
   const result = await criarProdutoComEstoque(
-    { ...parsed.data, status_publicacao },
+    {
+      ...parsed.data,
+      status_publicacao,
+      codigo_interno: parsed.data.codigo_interno ?? null,
+      estoque_minimo: parsed.data.estoque_minimo ?? 0,
+    },
     repo,
   )
 
@@ -598,6 +607,9 @@ const EditarProdutoCatalogoSchema = z.object({
     .nullable(),
   cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
   cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  codigo_interno: z.string().nullable().optional().transform((v) => v?.trim() || null),
+  estoque_minimo: z.coerce.number().nonnegative('Estoque mínimo não pode ser negativo.').nullable().optional().transform((v) => v ?? 0),
+  ativo: z.boolean().optional(),
 })
 
 export type ResultadoExclusaoLote = Readonly<{
@@ -758,31 +770,40 @@ export async function atualizarDadosProdutoGerente(
   }
 
   const supabase = await createClient()
+
+  const produtoUpdate: Record<string, unknown> = {
+    nome: parsed.data.nome,
+    codigo_barras: parsed.data.codigo_barras,
+    codigo_interno: parsed.data.codigo_interno,
+    origem: parsed.data.origem,
+    tem_nf: parsed.data.tem_nf,
+    preco_varejo: parsed.data.preco_varejo,
+    preco_atacado: parsed.data.preco_atacado,
+    preco_custo: parsed.data.preco_custo,
+    permitir_abaixo_custo: parsed.data.permitir_abaixo_custo,
+    quantidade_gatilho_atacado: parsed.data.quantidade_gatilho_atacado,
+    categoria_id: parsed.data.categoria_id,
+    marca_id: parsed.data.marca_id,
+    fornecedor_id: parsed.data.fornecedor_id,
+    unidade_medida: parsed.data.unidade_medida,
+    observacao: parsed.data.observacao,
+    ncm: parsed.data.ncm,
+    cfop_produto: parsed.data.cfop_produto,
+    csosn: parsed.data.csosn,
+    cest: parsed.data.cest,
+    cst_pis: parsed.data.cst_pis,
+    cst_cofins: parsed.data.cst_cofins,
+  }
+
+  if (parsed.data.ativo !== undefined) {
+    const lifecycle = dualWriteFromStatus(statusFromAtivoLegacy(parsed.data.ativo))
+    produtoUpdate.ativo = lifecycle.ativo
+    produtoUpdate.status_publicacao = lifecycle.status_publicacao
+  }
+
   const { error } = await supabase
     .from('produtos')
-    .update({
-      nome: parsed.data.nome,
-      codigo_barras: parsed.data.codigo_barras,
-      origem: parsed.data.origem,
-      tem_nf: parsed.data.tem_nf,
-      preco_varejo: parsed.data.preco_varejo,
-      preco_atacado: parsed.data.preco_atacado,
-      preco_custo: parsed.data.preco_custo,
-      permitir_abaixo_custo: parsed.data.permitir_abaixo_custo,
-      quantidade_gatilho_atacado: parsed.data.quantidade_gatilho_atacado,
-      categoria_id: parsed.data.categoria_id,
-      marca_id: parsed.data.marca_id,
-      fornecedor_id: parsed.data.fornecedor_id,
-      unidade_medida: parsed.data.unidade_medida,
-      observacao: parsed.data.observacao,
-      // Campos fiscais
-      ncm: parsed.data.ncm,
-      cfop_produto: parsed.data.cfop_produto,
-      csosn: parsed.data.csosn,
-      cest: parsed.data.cest,
-      cst_pis: parsed.data.cst_pis,
-      cst_cofins: parsed.data.cst_cofins,
-    })
+    .update(produtoUpdate)
     .eq('id', parsed.data.produto_id)
 
   if (error) {
@@ -793,7 +814,14 @@ export async function atualizarDadosProdutoGerente(
     }
   }
 
-  revalidatePath('/gerente/produtos')
+  if (parsed.data.estoque_minimo !== undefined && parsed.data.estoque_minimo !== null) {
+    await supabase
+      .from('estoque')
+      .update({ estoque_minimo: parsed.data.estoque_minimo })
+      .eq('produto_id', parsed.data.produto_id)
+  }
+
+  revalidateCatalogoPaths()
   return { success: true, data: null }
 }
 

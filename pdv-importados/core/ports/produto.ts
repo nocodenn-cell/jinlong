@@ -36,6 +36,10 @@ export interface NovoProdutoInput {
   status_publicacao?: StatusPublicacao
   /** NCM 8 dígitos — obrigatório pelo SEFAZ para NF-e/NFC-e (opcional no cadastro rápido). */
   ncm?: string | null
+  /** Código interno / SKU do produto. */
+  codigo_interno?: string | null
+  /** Estoque mínimo inicial (padrão 0). */
+  estoque_minimo?: number | null
 }
 
 export interface ProdutoRepositoryPort {

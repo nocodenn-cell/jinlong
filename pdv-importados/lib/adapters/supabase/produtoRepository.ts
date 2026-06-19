@@ -47,6 +47,7 @@ export function createProdutoRepository(
         .insert({
           nome: input.nome,
           codigo_barras: input.codigo_barras?.trim() || null,
+          codigo_interno: input.codigo_interno?.trim() || null,
           preco_varejo: input.preco_varejo,
           preco_atacado: pa,
           preco_custo: pc,
@@ -76,11 +77,16 @@ export function createProdutoRepository(
         }
       }
 
+      const estoqueMinimo =
+        input.estoque_minimo !== undefined && input.estoque_minimo !== null
+          ? Number(input.estoque_minimo)
+          : 0
+
       const { error: estoqueError } = await supabase.from('estoque').insert({
         produto_id: data.id,
         loja_id: lojaId,
         quantidade_atual: 0,
-        estoque_minimo: 0,
+        estoque_minimo: estoqueMinimo,
       })
 
       if (estoqueError) {

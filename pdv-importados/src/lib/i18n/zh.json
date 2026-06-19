@@ -228,7 +228,6 @@
     "filtro_situacao_somente_ativos": "仅启用",
     "filtro_situacao_somente_inativos": "仅停用",
     "preco_atacado": "批发价",
-    "preco_custo": "成本价",
     "permitir_abaixo_custo": "允许低于成本价",
     "qtd_gatilho_atacado": "批发最低数量",
     "unidade_medida": "计量单位",
@@ -275,7 +274,18 @@
     "field_cst_cofins": "CST COFINS",
     "ncm_invalido": "NCM 必须为8位数字。",
     "cfop_invalido": "CFOP 必须为4位数字。",
-    "cest_invalido": "CEST 必须为7位数字。"
+    "cest_invalido": "CEST 必须为7位数字。",
+    "codigo_interno_label": "参考号 / SKU",
+    "estoque_minimo_label": "最低库存",
+    "ativo_label": "商品启用",
+    "secao_geral": "基本信息",
+    "secao_precos": "价格",
+    "secao_estoque": "库存",
+    "secao_observacoes": "备注",
+    "sku_obrigatorio": "参考号 / SKU 为必填项",
+    "produto_salvo": "商品保存成功。",
+    "imagem_hint": "保存商品后再上传图片。",
+    "toggle_ativo_hint": "启用后商品将在收银台上架销售。"
   },
   "precos": {
     "titulo": "价格规则",
@@ -1220,18 +1230,54 @@
         "cn": "操作员（姓名）",
         "pt": "Operadores (nomes)"
       },
-      "hourlyChartTitle": { "pt": "Faturamento por hora", "cn": "每小时营业额" },
-      "hourlyChartSubtitle": { "pt": "Total líquido acumulado no período", "cn": "期间净额累计" },
-      "hourlyChartPeak": { "pt": "Pico na hora", "cn": "高峰时段" },
-      "paymentsTitle": { "pt": "Pagamentos", "cn": "支付方式" },
-      "caixaShortcutTitle": { "pt": "Frente de caixa (PDV)", "cn": "收银台（PDV）" },
-      "caixaShortcutStatus": { "pt": "Caixa 01 aberto", "cn": "收银台 01 已开启" },
-      "caixaShortcutBtn": { "pt": "Abrir PDV", "cn": "打开 PDV" },
-      "lowStockTitle": { "pt": "Estoque baixo", "cn": "低库存预警" },
-      "lowStockSubtitle": { "pt": "Itens abaixo do mínimo recomendado", "cn": "低于最低库存的商品数" },
-      "recentActivitiesTitle": { "pt": "Atividades recentes", "cn": "最近动态" },
-      "paymentNoData": { "pt": "Sem dados de pagamento no período.", "cn": "本期暂无支付数据。" },
-      "paymentDistribution": { "pt": "Distribuição por forma de pagamento", "cn": "按支付方式分布" }
+      "hourlyChartTitle": {
+        "pt": "Faturamento por hora",
+        "cn": "每小时营业额"
+      },
+      "hourlyChartSubtitle": {
+        "pt": "Total líquido acumulado no período",
+        "cn": "期间净额累计"
+      },
+      "hourlyChartPeak": {
+        "pt": "Pico na hora",
+        "cn": "高峰时段"
+      },
+      "paymentsTitle": {
+        "pt": "Pagamentos",
+        "cn": "支付方式"
+      },
+      "caixaShortcutTitle": {
+        "pt": "Frente de caixa (PDV)",
+        "cn": "收银台（PDV）"
+      },
+      "caixaShortcutStatus": {
+        "pt": "Caixa 01 aberto",
+        "cn": "收银台 01 已开启"
+      },
+      "caixaShortcutBtn": {
+        "pt": "Abrir PDV",
+        "cn": "打开 PDV"
+      },
+      "lowStockTitle": {
+        "pt": "Estoque baixo",
+        "cn": "低库存预警"
+      },
+      "lowStockSubtitle": {
+        "pt": "Itens abaixo do mínimo recomendado",
+        "cn": "低于最低库存的商品数"
+      },
+      "recentActivitiesTitle": {
+        "pt": "Atividades recentes",
+        "cn": "最近动态"
+      },
+      "paymentNoData": {
+        "pt": "Sem dados de pagamento no período.",
+        "cn": "本期暂无支付数据。"
+      },
+      "paymentDistribution": {
+        "pt": "Distribuição por forma de pagamento",
+        "cn": "按支付方式分布"
+      }
     },
     "common": {
       "signOut": {
