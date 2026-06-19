@@ -2774,6 +2774,38 @@ export type Database = {
         Returns: {
           dados_fiscais: Json
           estoque_baixado: Json
+          event_id: string
+          itens_atualizados: Json
+          mensagem: string
+          status: string
+          venda_id: string
+        }[]
+      }
+      finalizar_venda_transacional_canonica_v4: {
+        Args: {
+          p_caixa_id: string
+          p_desconto_gerente_percentual?: number
+          p_desconto_gerente_token?: string
+          p_device_id?: string
+          p_fiscal_auto_enqueue?: boolean
+          p_forma_pagamento?: string
+          p_ip_address?: string
+          p_itens?: Json
+          p_loja_id: string
+          p_operador_id: string
+          p_pagamentos?: Json
+          p_strict_manager_discount_auth?: boolean
+          p_terminal_id?: string
+          p_total_bruto?: number
+          p_total_desconto?: number
+          p_total_liquido?: number
+          p_user_agent?: string
+          p_venda_id: string
+        }
+        Returns: {
+          dados_fiscais: Json
+          estoque_baixado: Json
+          event_id: string
           itens_atualizados: Json
           mensagem: string
           status: string
