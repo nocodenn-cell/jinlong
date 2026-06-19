@@ -147,9 +147,9 @@ function makeSupabase(opts?: { caixaAberto?: boolean }) {
           error: null,
         })
       }
-      if (name === 'finalizar_venda_transacional_canonica_v3') {
+      if (name === 'finalizar_venda_transacional_canonica_v4') {
         return Promise.resolve({
-          data: [{ venda_id: '66666666-6666-6666-8666-666666666666', status: 'CONCLUIDA' }],
+          data: [{ venda_id: '66666666-6666-6666-8666-666666666666', status: 'CONCLUIDA', event_id: '77777777-7777-7777-8777-777777777777' }],
           error: null,
         })
       }
@@ -220,7 +220,7 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
       vendaId: '66666666-6666-6666-8666-666666666666',
     })
 
-    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v3')
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
     expect(txCall).toBeTruthy()
     expect(txCall?.params.p_pagamentos).toEqual([
       { forma_pagamento: 'DINHEIRO', valor: 20 },
