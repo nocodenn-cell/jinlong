@@ -27,20 +27,6 @@ const LABELS: Record<Idioma, { quantidade: string; remover: string; limpar: stri
     total: '总计',
     preco: '价格',
   },
-  en: {
-    quantidade: 'Qty',
-    remover: 'Remove',
-    limpar: 'Clear Cart',
-    total: 'Total',
-    preco: 'Price',
-  },
-  es: {
-    quantidade: 'Cant.',
-    remover: 'Eliminar',
-    limpar: 'Vaciar Carrito',
-    total: 'Total',
-    preco: 'Precio',
-  },
 }
 
 export function EtiquetaCarrinho({
