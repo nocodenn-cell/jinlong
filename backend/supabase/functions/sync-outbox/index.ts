@@ -377,13 +377,6 @@ function parseDeviceKeyMap(raw: string | null | undefined): Map<string, string> 
   return map;
 }
 
-function shouldUseUnifiedSalesFlow(deviceFingerprint: string | null | undefined): boolean {
-  if (Deno.env.get("USE_UNIFIED_SALES_FLOW") === "true") return true;
-  const canarySet = parseCsvLowerSet(Deno.env.get("CANARY_DEVICE_FINGERPRINTS"));
-  const device = (deviceFingerprint ?? "").trim().toLowerCase();
-  return !!device && canarySet.has(device);
-}
-
 // A Edge usa schema dinâmico do Supabase e o Deno check sem tipos gerados
 // produz falsos positivos em `from()/rpc()`. Mantemos o client frouxo aqui.
 type SupabaseAdmin = any;
@@ -598,47 +591,28 @@ async function processMovimentoCaixa(supabase: SupabaseAdmin, ev: OutboxEvent) {
   }
 }
 
-async function aplicarBaixaEstoquePorItem(
+async function resolveLojaIdFromCaixa(
   supabase: SupabaseAdmin,
-  vendaId: string,
-  itens: Array<{ produto_id: string; quantidade: number }>,
-) {
-  const errosEstoque: string[] = [];
-
-  for (const i of itens ?? []) {
-    if (!isUuid(i.produto_id)) continue;
-    const qty = Number(i.quantidade);
-    if (!Number.isFinite(qty) || qty <= 0) continue;
-
-    const { data: estoqueResult, error: rpcErr } = await supabase.rpc(
-      "decrementar_estoque_seguro",
-      {
-        p_produto_id: i.produto_id.trim(),
-        p_quantidade: qty,
-        p_venda_id: vendaId,
-      },
-    );
-
-    if (rpcErr) {
-      errosEstoque.push(`Produto ${i.produto_id}: ${rpcErr.message}`);
-      continue;
-    }
-
-    if (estoqueResult?.[0] && !estoqueResult[0].sucesso) {
-      errosEstoque.push(`Produto ${i.produto_id}: ${estoqueResult[0].mensagem}`);
-    }
+  caixaId: string | null | undefined,
+): Promise<string> {
+  if (!isUuid(caixaId)) {
+    throw new Error("PAYLOAD_CAIXA_ID_INVALIDO");
   }
-
-  const errosCriticos = errosEstoque.filter((e) => !e.includes("BAIXA_JA_EXISTE"));
-  if (errosCriticos.length > 0) {
-    throw new Error(`ERRO_ESTOQUE: ${errosCriticos.join("; ")}`);
+  const { data, error } = await supabase
+    .from("caixas")
+    .select("loja_id")
+    .eq("id", caixaId.trim())
+    .maybeSingle();
+  if (error) throw new Error(`ERRO_CAIXA_LOOKUP: ${error.message}`);
+  if (!data?.loja_id || !isUuid(String(data.loja_id))) {
+    throw new Error("PAYLOAD_CAIXA_LOJA_INVALIDA");
   }
+  return String(data.loja_id);
 }
 
 async function processVenda(
   supabase: SupabaseAdmin,
   ev: OutboxEvent,
-  useUnifiedSalesFlow: boolean,
 ) {
   const parsedJson = JSON.parse(ev.payload_json);
   const payload = parseVendaPayload(parsedJson);
@@ -657,57 +631,34 @@ async function processVenda(
     throw new Error("GERENTE_TOKEN_OBRIGATORIO");
   }
 
-  if (useUnifiedSalesFlow) {
-    const itensCanonicos = (payload.itens ?? []).map((i) => ({
-      item_id: i.item_id,
-      produto_id: i.produto_id,
-      quantidade: i.quantidade,
-      preco_original: i.preco_original,
-      preco_unitario: i.preco_unitario,
-      tipo_preco: i.preco_unitario < i.preco_original ? "ATACADO" : "VAREJO",
-    }));
+  const lojaId = await resolveLojaIdFromCaixa(supabase, payload.caixa_id);
+  const itensCanonicos = (payload.itens ?? []).map((i) => ({
+    item_id: i.item_id,
+    produto_id: i.produto_id,
+    quantidade: i.quantidade,
+    preco_original: i.preco_original,
+    preco_unitario: i.preco_unitario,
+    tipo_preco: i.preco_unitario < i.preco_original ? "ATACADO" : "VAREJO",
+  }));
 
-    const { error: rpcUnifiedErr } = await supabase.rpc("finalizar_venda_transacional_canonica_v2", {
-      p_venda_id: payload.venda_id,
-      p_caixa_id: payload.caixa_id,
-      p_operador_id: payload.operador_id,
-      p_forma_pagamento: payload.forma_pagamento,
-      p_total_bruto: payload.total_bruto,
-      p_total_desconto: payload.total_desconto,
-      p_total_liquido: payload.total_liquido,
-      p_itens: itensCanonicos,
-      p_desconto_gerente_token: payload.desconto_gerente_token ?? null,
-      p_desconto_gerente_percentual: payload.desconto_gerente_percentual ?? null,
-      p_strict_manager_discount_auth: strictManagerDiscountAuth,
-    });
-
-    if (rpcUnifiedErr) throw new Error(`ERRO_RPC_FINALIZAR_VENDA: ${rpcUnifiedErr.message}`);
-    await maybeEnqueueFiscalDocumentAfterSyncedVenda(supabase, payload, log);
-    return;
-  }
-
-  const { error: rpcVendaErr } = await supabase.rpc("registrar_venda_com_itens", {
+  const { error: rpcErr } = await supabase.rpc("finalizar_venda_transacional_canonica_v3", {
     p_venda_id: payload.venda_id,
     p_caixa_id: payload.caixa_id,
     p_operador_id: payload.operador_id,
+    p_loja_id: lojaId,
     p_forma_pagamento: payload.forma_pagamento,
     p_total_bruto: payload.total_bruto,
     p_total_desconto: payload.total_desconto,
     p_total_liquido: payload.total_liquido,
-    p_itens: payload.itens ?? [],
+    p_itens: itensCanonicos,
+    p_desconto_gerente_token: payload.desconto_gerente_token ?? null,
     p_desconto_gerente_percentual: payload.desconto_gerente_percentual ?? null,
-    p_desconto_gerente_valor: payload.desconto_gerente_valor ?? null,
-    p_gerente_id: payload.gerente_id ?? null,
+    p_strict_manager_discount_auth: strictManagerDiscountAuth,
+    p_fiscal_auto_enqueue: false,
+    p_terminal_id: "sync-outbox",
   });
 
-  if (rpcVendaErr) throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
-
-  await aplicarBaixaEstoquePorItem(
-    supabase,
-    payload.venda_id,
-    (payload.itens ?? []).map((i) => ({ produto_id: i.produto_id, quantidade: i.quantidade })),
-  );
-
+  if (rpcErr) throw new Error(`ERRO_RPC_FINALIZAR_VENDA: ${rpcErr.message}`);
   await maybeEnqueueFiscalDocumentAfterSyncedVenda(supabase, payload, log);
 }
 
@@ -769,9 +720,8 @@ function publicBatchError(err: string, exposeInternalErrors: boolean): string {
 async function dispatchOutboxEvent(
   supabase: SupabaseAdmin,
   ev: OutboxEvent,
-  useUnified: boolean,
 ): Promise<void> {
-  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev, useUnified);
+  if (ev.tipo === "VENDA_REGISTRADA") await processVenda(supabase, ev);
   else if (ev.tipo === "CAIXA_ABERTO") await processCaixaAberto(supabase, ev);
   else if (ev.tipo === "CAIXA_FECHADO") await processCaixaFechado(supabase, ev);
   else if (ev.tipo === "MOVIMENTO_CAIXA") await processMovimentoCaixa(supabase, ev);
@@ -796,18 +746,16 @@ async function handlePostOutboxBatch(
 
   const processed: string[] = [];
   const failed: { id: string; error: string }[] = [];
-  const useUnified = shouldUseUnifiedSalesFlow(req.headers.get("x-device-fingerprint"));
   log({
     level: "info",
     stage: "sync_start",
     request_id: requestId,
-    use_unified_sales_flow: useUnified,
     event_count: body.events.length,
   });
 
   for (const ev of body.events) {
     try {
-      await dispatchOutboxEvent(supabase, ev, useUnified);
+      await dispatchOutboxEvent(supabase, ev);
       processed.push(ev.id);
       log({
         level: "info",

@@ -46,19 +46,19 @@ export class PdvGateClient extends PdvStressClient {
     itemId: string,
   ): Promise<SalePostResult & { source: 'web_caixa' }> {
     const r = await this.invokeRpc('postSaleWeb', () =>
-      this.postSaleWithIds(saleId, itemId, 'v3'),
+      this.postSaleWithIds(saleId, itemId, 'web-caixa'),
       () => this.verifySaleLedger(saleId),
     )
     return { ...r, source: 'web_caixa' }
   }
 
-  /** Venda sync_outbox (v2) com IDs determinísticos. */
+  /** Venda sync_outbox (v3) com IDs determinísticos. */
   async postSaleSyncOutbox(
     saleId: string,
     itemId: string,
   ): Promise<SalePostResult & { source: 'sync_outbox' }> {
     const r = await this.invokeRpc('postSaleSyncOutbox', () =>
-      this.postSaleWithIds(saleId, itemId, 'v2'),
+      this.postSaleWithIds(saleId, itemId, 'sync-outbox'),
       () => this.verifySaleLedger(saleId),
     )
     return { ...r, source: 'sync_outbox' }
@@ -124,7 +124,7 @@ export class PdvGateClient extends PdvStressClient {
   protected async postSaleWithIds(
     saleId: string,
     itemId: string,
-    rpc: 'v2' | 'v3',
+    terminalId: 'web-caixa' | 'sync-outbox',
   ): Promise<SalePostResult> {
     if (!this.operadorId || !this.caixaId || !this.produtoId) {
       return { ok: false, error: 'Cliente não inicializado' }
@@ -143,48 +143,11 @@ export class PdvGateClient extends PdvStressClient {
       },
     ]
 
-    if (rpc === 'v3') {
-      const { data, error } = await this.admin.rpc('finalizar_venda_transacional_canonica_v3', {
-        p_venda_id: saleId,
-        p_caixa_id: this.caixaId,
-        p_operador_id: this.operadorId,
-        p_loja_id: LOJA_MATRIZ_ID,
-        p_forma_pagamento: 'DINHEIRO',
-        p_total_bruto: total,
-        p_total_desconto: 0,
-        p_total_liquido: total,
-        p_pagamentos: [{ forma_pagamento: 'DINHEIRO', valor: total }],
-        p_itens: itens,
-        p_desconto_gerente_token: null,
-        p_desconto_gerente_percentual: null,
-        p_strict_manager_discount_auth: false,
-        p_fiscal_auto_enqueue: false,
-        p_ip_address: 'pdv-gate-simulator',
-        p_user_agent: 'pdv-gate-simulator',
-        p_device_id: 'pdv-gate-simulator',
-        p_terminal_id: 'pdv-gate-simulator',
-      })
-      if (error) return { ok: false, error: error.message }
-      const row = (Array.isArray(data) ? data[0] : data) as {
-        venda_id?: string
-        status?: string
-        event_id?: string
-        mensagem?: string
-      }
-      if (!row?.venda_id || row.status !== 'CONCLUIDA') {
-        return { ok: false, error: String(row?.mensagem ?? 'Venda não concluída') }
-      }
-      return {
-        ok: true,
-        vendaId: String(row.venda_id),
-        eventId: row.event_id ? String(row.event_id) : null,
-      }
-    }
-
-    const { error } = await this.admin.rpc('finalizar_venda_transacional_canonica_v2', {
+    const { data, error } = await this.admin.rpc('finalizar_venda_transacional_canonica_v3', {
       p_venda_id: saleId,
       p_caixa_id: this.caixaId,
       p_operador_id: this.operadorId,
+      p_loja_id: LOJA_MATRIZ_ID,
       p_forma_pagamento: 'DINHEIRO',
       p_total_bruto: total,
       p_total_desconto: 0,
@@ -194,10 +157,27 @@ export class PdvGateClient extends PdvStressClient {
       p_desconto_gerente_token: null,
       p_desconto_gerente_percentual: null,
       p_strict_manager_discount_auth: false,
-      p_event_source: 'sync_outbox',
+      p_fiscal_auto_enqueue: false,
+      p_ip_address: 'pdv-gate-simulator',
+      p_user_agent: 'pdv-gate-simulator',
+      p_device_id: 'pdv-gate-simulator',
+      p_terminal_id: terminalId,
     })
     if (error) return { ok: false, error: error.message }
-    return { ok: true, vendaId: saleId, eventId: null }
+    const row = (Array.isArray(data) ? data[0] : data) as {
+      venda_id?: string
+      status?: string
+      event_id?: string
+      mensagem?: string
+    }
+    if (!row?.venda_id || row.status !== 'CONCLUIDA') {
+      return { ok: false, error: String(row?.mensagem ?? 'Venda não concluída') }
+    }
+    return {
+      ok: true,
+      vendaId: String(row.venda_id),
+      eventId: row.event_id ? String(row.event_id) : null,
+    }
   }
 }
 

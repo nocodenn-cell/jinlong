@@ -339,7 +339,7 @@ async function main() {
     });
   });
 
-  await run("RPC finalizar_venda_transacional (itens inválidos)", async () => {
+  await run("RPC finalizar_venda_transacional legada desabilitada (use v3)", async () => {
     await assertRpcErrorContains(operador, "finalizar_venda_transacional", {
       p_venda_id: IDS.vendaOperador,
       p_caixa_id: IDS.caixaOperador,
@@ -348,7 +348,7 @@ async function main() {
       p_total_desconto: 0,
       p_total_liquido: 1,
       p_itens: [],
-    }, "FINALIZAR_VENDA_ITENS_INVALIDOS");
+    }, "LEGACY_DISABLED_USE_V3");
   });
 
   await run("RPC fiscal_enfileirar_documento_venda", async () => {
