@@ -10,24 +10,24 @@ env:
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, staging, 'staging/**']
     paths:
       - 'pdv-importados/**'
       - 'shared-core/**'
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
-      - 'scripts/validate-production.mjs'
+      - 'scripts/**'
       - '.github/workflows/ci-pdv-importados.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, staging, 'staging/**']
     paths:
       - 'pdv-importados/**'
       - 'shared-core/**'
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
-      - 'scripts/validate-production.mjs'
+      - 'scripts/**'
       - '.github/workflows/ci-pdv-importados.yml'
 
 jobs:
@@ -46,8 +46,14 @@ jobs:
       - name: Install (workspaces na raiz)
         run: npm ci
 
-      - name: Architecture Lock (core rules, PDV flow, routes)
+      # GATE OBRIGATÓRIO — bloqueia o merge/promoção se falhar (PDV flow, rotas,
+      # regra de negócio no core e vendabilidade centralizada). Ative branch
+      # protection em main/staging exigindo este job (build-and-test).
+      - name: Validação PDV (guards) — gate obrigatório
         run: npm run guard:all
+
+      - name: Vendabilidade centralizada — gate obrigatório
+        run: npm run check:vendabilidade
 
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
