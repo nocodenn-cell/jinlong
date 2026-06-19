@@ -88,6 +88,12 @@ function roundMoney(valor: number) {
   return Math.round(valor * 100) / 100
 }
 
+/** Coerção defensiva: total/preço/quantidade não-finitos (NaN/Infinity/null) viram 0
+ * para que os totais do carrinho nunca propaguem NaN à UI ou ao payload da venda. */
+function finite(valor: number | undefined | null): number {
+  return typeof valor === 'number' && Number.isFinite(valor) ? valor : 0
+}
+
 function normalizarItemCarrinho(item: ItemCarrinho): ItemCarrinho {
   const precoBase = item.precoVariejo ?? item.precoOriginal ?? item.precoUnitario ?? 0
   const resultadoPrecoUnitario = item.resultado?.precoUnitario ?? item.precoUnitario ?? precoBase
@@ -110,11 +116,11 @@ function normalizarItemCarrinho(item: ItemCarrinho): ItemCarrinho {
 }
 
 function recalcularTotais(itens: ItemCarrinho[]) {
-  const totalBruto = itens.reduce((acc, item) => acc + (item.precoOriginal ?? 0) * item.quantidade, 0)
-  const totalLiquido = itens.reduce((acc, item) => acc + (item.precoUnitario ?? 0) * item.quantidade, 0)
+  const totalBruto = itens.reduce((acc, item) => acc + finite(item.precoOriginal) * finite(item.quantidade), 0)
+  const totalLiquido = itens.reduce((acc, item) => acc + finite(item.precoUnitario) * finite(item.quantidade), 0)
   const totalDesconto = totalBruto - totalLiquido
   const totalItens = itens.length
-  const totalUnidades = itens.reduce((acc, item) => acc + item.quantidade, 0)
+  const totalUnidades = itens.reduce((acc, item) => acc + finite(item.quantidade), 0)
 
   return {
     totalBruto: roundMoney(totalBruto),

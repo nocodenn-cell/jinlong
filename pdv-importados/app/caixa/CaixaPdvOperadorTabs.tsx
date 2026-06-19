@@ -70,7 +70,12 @@ export function CaixaPdvOperadorTabs({
 }: Props) {
   const classicChrome = layoutVariant === "classic"
   const loc = moneyLocale(idioma)
-  const fmt = (n: number) => n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  // Defensivo: total/parcela/diferença nunca podem renderizar "NaN" no fechamento
+  // de venda. Valor não-finito (null/undefined/NaN/Infinity) cai para 0.
+  const fmt = (n: number) => {
+    const safe = Number.isFinite(n) ? n : 0
+    return safe.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
 
   const tabs: { id: CaixaPdvOperadorTabId; label: string; aria: string; atalho?: string }[] = [
     { id: "produto", label: m.caixa.pdv_tab_produto, aria: m.caixa.pdv_tab_aria_produto, atalho: "Alt+Z" },
