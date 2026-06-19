@@ -24,7 +24,6 @@ import {
   parsePercentConfig,
 } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
-import { vendaDiag, classificarErroBackend } from '@/app/caixa/diag/vendaDiag'
 
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
@@ -129,26 +128,13 @@ export async function finalizarVendaCaixaImpl(
     }
   | { ok: false; error: string }
 > {
-  const t0 = Date.now() // venda-diag (temporário)
   const parsed = finalizarVendaInputSchema.safeParse(raw)
   if (!parsed.success) {
     const msg = parsed.error.issues.map((e) => e.message).join('; ')
-    vendaDiag('warn', 'srv:parse_fail', { camada: 'FRONTEND', msg })
     const { idioma } = await getUsuarioIdioma()
     return { ok: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
   const input = parsed.data
-  const corr = input.idempotencyKey ?? 'no-corr' // venda-diag
-  vendaDiag('info', 'srv:recebido', {
-    corr,
-    itens: input.itens.length,
-    totalBruto: input.totalBruto,
-    totalDesconto: input.totalDesconto,
-    totalLiquido: input.totalLiquido,
-    formaPagamento: input.formaPagamento,
-    parcelas: input.pagamentos.length,
-    temDescontoGerente: !!input.descontoGerenteToken,
-  })
   try {
     const runtimeCfg = getCaixaSalesRuntimeConfig()
     if (runtimeCfg.hasInvalidFlags) {
@@ -180,9 +166,6 @@ export async function finalizarVendaCaixaImpl(
     }))
     const recalc = await recalcularItensNoServidor(supabase, itensCliente, lojaId)
     if (!recalc.ok) {
-      vendaDiag('warn', 'srv:recalc_fail', {
-        corr, camada: 'BACKEND', motivo: recalc.error, userId: user.id, lojaId, ms: Date.now() - t0,
-      })
       return { ok: false, error: recalc.error }
     }
     const itensAut = recalc.itens
@@ -213,12 +196,6 @@ export async function finalizarVendaCaixaImpl(
     }
 
     if (!totalsMatchDeclared(computedFinal, input)) {
-      vendaDiag('warn', 'srv:totais_divergentes', {
-        corr, camada: 'BACKEND',
-        computado: computedFinal,
-        declarado: { totalBruto: input.totalBruto, totalDesconto: input.totalDesconto, totalLiquido: input.totalLiquido },
-        userId: user.id, lojaId, ms: Date.now() - t0,
-      })
       return {
         ok: false,
         error:
@@ -236,18 +213,9 @@ export async function finalizarVendaCaixaImpl(
       .limit(1)
       .maybeSingle()
     if (caixaAbertoErr) {
-      vendaDiag('error', 'srv:caixa_query_err', {
-        corr, camada: classificarErroBackend(caixaAbertoErr),
-        code: caixaAbertoErr.code, message: caixaAbertoErr.message, userId: user.id, lojaId,
-      })
       return { ok: false, error: caixaErroOperador(caixaAbertoErr.message) }
     }
     if (!caixaExistente) {
-      // SELECT direto exposto a RLS: null = caixa realmente fechado OU linha
-      // filtrada por RLS. Diferencia o silent-fail apontado na auditoria.
-      vendaDiag('warn', 'srv:caixa_fechado_ou_rls', {
-        corr, camada: 'DATA_RLS', userId: user.id, lojaId, ms: Date.now() - t0,
-      })
       return { ok: false, error: 'Caixa fechado. Abra o caixa antes de finalizar a venda.' }
     }
     const caixaId = caixaExistente.id
@@ -320,37 +288,25 @@ export async function finalizarVendaCaixaImpl(
         useUnifiedSalesFlow: runtimeCfg.useUnifiedSalesFlow,
         strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
         autoEnqueueFiscalOnSale: runtimeCfg.autoEnqueueFiscalOnSale,
+        code: txErr.code,
+        message: txErr.message,
       })
-      // venda-diag: expõe o MOTIVO real da RPC (hoje engolido por caixaErroOperador
-      // e não logado). É o RAISE EXCEPTION (FINALIZAR_VENDA_CANONICA_*).
-      vendaDiag('error', 'srv:rpc_error', {
-        corr, camada: classificarErroBackend(txErr),
-        code: txErr.code, message: txErr.message, details: txErr.details, hint: txErr.hint,
-        userId: user.id, lojaId, vendaId, caixaId, ms: Date.now() - t0,
-      })
-      // Transação inteira foi revertida automaticamente pelo PostgreSQL
       return { ok: false, error: caixaErroOperador(txErr.message) }
     }
 
     const row = firstRpcVendaRow<RpcFinalizarVendaRow>(data)
     if (!row?.venda_id) {
-      vendaDiag('error', 'srv:rpc_sem_venda_id', { corr, camada: 'BACKEND', vendaId, ms: Date.now() - t0 })
       return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
 
     if (row.status !== 'CONCLUIDA') {
-      vendaDiag('warn', 'srv:rpc_status_nao_concluida', {
-        corr, camada: 'BACKEND', status: String(row.status), mensagem: String(row.mensagem ?? ''), vendaId, ms: Date.now() - t0,
-      })
       return { ok: false, error: caixaErroOperador(String(row.mensagem ?? '')) }
     }
 
     const eventId = row.event_id ? String(row.event_id) : ''
     if (!eventId) {
-      vendaDiag('error', 'srv:sem_event_id', { corr, camada: 'BACKEND', vendaId, ms: Date.now() - t0 })
       return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
-    vendaDiag('info', 'srv:concluida', { corr, vendaId: String(row.venda_id), eventId, ms: Date.now() - t0 })
 
     // Observabilidade leve, executada de forma determinística após a venda já
     // concluída (try/catch isolado dentro da própria função, sem propagação
@@ -373,11 +329,6 @@ export async function finalizarVendaCaixaImpl(
       estoqueBaixado: row.estoque_baixado,
     }
   } catch (e) {
-    const err = e as { code?: string; message?: string } | null
-    vendaDiag('error', 'srv:exception', {
-      corr, camada: classificarErroBackend(err),
-      code: err?.code, message: e instanceof Error ? e.message : String(e), ms: Date.now() - t0,
-    })
     return {
       ok: false,
       error: caixaErroOperador(e instanceof Error ? e.message : null),

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useShallow } from "zustand/react/shallow"
 import { useCarrinhoStore, type ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import { useHasMounted } from "@/hooks/useHasMounted"
-import { vendaDiag } from "@/app/caixa/diag/vendaDiag"
 import {
   finalizarVendaCaixa,
   abrirCaixaOperador,
@@ -640,8 +639,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleFinalizar = useCallback(async () => {
     if (itens.length === 0 || finalizando) return
-    const tInicio = Date.now() // venda-diag (temporário)
-    vendaDiag("info", "cli:inicio", { itens: itens.length, totalLiquido: totalLiquidoComGerente })
     if (
       configCaixaWeb.vendas_suspensas === 'true' &&
       perfil !== null &&
@@ -720,11 +717,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     })
     const snapshotCheck = validateCheckoutSnapshot(checkoutSnapshot)
     if (!snapshotCheck.ok) {
-      vendaDiag("warn", "cli:snapshot_block", {
-        camada: "FRONTEND",
-        violacoes: snapshotCheck.violations.map((v) => v.code),
-        ms: Date.now() - tInicio,
-      })
       console.error("[caixa/checkout-snapshot]", snapshotCheck.violations)
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
       // Diagnóstico concreto: nunca bloquear sem dizer o motivo (a 1ª violação do
@@ -768,24 +760,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         ok: false,
         error: m.caixa.msg_checkout_timeout,
       }
-      vendaDiag("info", "cli:persistencia_call", {
-        corr: vendaIdempotenciaRef.current,
-        itens: payload.itens.length,
-        totalLiquido: payload.totalLiquido,
-      })
       const res = await Promise.race([
         finalizarVendaCaixa(payload),
         new Promise<typeof timeoutResult>((resolve) =>
           setTimeout(() => resolve(timeoutResult), FINALIZACAO_TIMEOUT_MS),
         ),
       ])
-      vendaDiag(res.ok ? "info" : "warn", "cli:resposta", {
-        corr: vendaIdempotenciaRef.current,
-        ok: res.ok,
-        detalhe: res.ok ? res.vendaId : res.error,
-        timeout: !res.ok && res.error === m.caixa.msg_checkout_timeout,
-        ms: Date.now() - tInicio,
-      })
       if (res.ok) {
         lastReciboRef.current = {
           vendaId: res.vendaId,
@@ -831,12 +811,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e)
-      vendaDiag("error", "cli:exception", {
-        corr: vendaIdempotenciaRef.current,
-        camada: "FRONTEND",
-        message: errMsg,
-        ms: Date.now() - tInicio,
-      })
       console.error('[caixa/finalizar-venda]', {
         idempotencyKey: vendaIdempotenciaRef.current,
         error: errMsg,
