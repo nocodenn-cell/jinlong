@@ -20,6 +20,7 @@ import {
   resolveStatusPublicacaoLeitura,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
+import { statusInicialProduto } from '@/core/systemRules'
 import type { NovoProdutoInput, StatusPublicacao } from '@/core/ports/produto'
 import { PRODUTO_IMPORT_MAX_FILE_BYTES } from '@/lib/gerente/produtosCsvContract'
 import { validateProdutoImportCsvDocument } from '@/lib/gerente/parseProdutoImportCsv'
@@ -106,13 +107,13 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
-  // Regra global: todo produto criado via sistema administrativo nasce PUBLICADO
-  // + ativo=true (dual-write) — imediatamente vendável no PDV, sem exceção.
+  // CORE decide o status; o server apenas executa. Cadastro manual → PUBLICADO.
   // (CSV continua DRAFT no seu próprio caminho `importarProdutosCsv`.)
+  const { status_publicacao } = statusInicialProduto('human')
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
   const result = await criarProdutoComEstoque(
-    { ...parsed.data, status_publicacao: 'PUBLICADO' },
+    { ...parsed.data, status_publicacao },
     repo,
   )
 
