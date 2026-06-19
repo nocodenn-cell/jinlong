@@ -2,6 +2,7 @@
 
 import { formatNumberLocale } from '@/lib/format/money'
 import { useIdioma } from '@/hooks/useIdioma'
+import { ChartLayoutGate } from '@/components/charts/ChartLayoutGate'
 import { useEffect, useId, useState } from 'react'
 import {
   Area,
@@ -60,7 +61,8 @@ export default function SalesTrendChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartLayoutGate>
+      <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} className={idioma === 'zh' ? 'font-noto-sc' : ''}>
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -86,7 +88,8 @@ export default function SalesTrendChart({
           fill={`url(#${gradId})`}
         />
       </AreaChart>
-    </ResponsiveContainer>
+      </ResponsiveContainer>
+    </ChartLayoutGate>
   )
 }
 

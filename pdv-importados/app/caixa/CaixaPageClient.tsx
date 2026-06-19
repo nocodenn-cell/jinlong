@@ -11,6 +11,10 @@ import {
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import {
+  buildCheckoutSnapshot,
+  validateCheckoutSnapshot,
+} from "@shared-core/src/caixa/checkoutSnapshot"
 import { aplicarDescontoGerenteSobreTotal } from "@/stores/managerDiscount"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -681,6 +685,23 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       parcelasFiltradas.length > 0
         ? parcelasFiltradas
         : [{ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", valor: 0 }]
+
+    // GUARD RAIL — snapshot imutável da venda + validação fail-fast contra a
+    // função canônica de totais. Bloqueia a finalização (sem fallback silencioso)
+    // se houver qualquer inconsistência entre o carrinho exibido e os itens reais.
+    const checkoutSnapshot = buildCheckoutSnapshot(itens, {
+      totalBruto,
+      totalLiquido,
+      totalDesconto,
+    })
+    const snapshotCheck = validateCheckoutSnapshot(checkoutSnapshot)
+    if (!snapshotCheck.ok) {
+      console.error("[caixa/checkout-snapshot]", snapshotCheck.violations)
+      setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+      tocarFeedback("erro")
+      return
+    }
+
     setFinalizando(true)
     setCaixaMensagem(null)
     setCheckoutHint(null)
@@ -702,12 +723,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         descontoGerentePercentual:
           descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
         pagamentos: parcelasParaEnviar,
-        itens: itens.map((i) => ({
+        // Itens derivados do snapshot imutável já validado — não do store mutável.
+        itens: checkoutSnapshot.itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
-          precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
-          precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
-          tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
+          precoOriginal: i.precoOriginal,
+          precoUnitario: i.precoUnitario,
+          tipoPreco: i.tipoPreco,
         })),
       }
       const timeoutResult: { ok: false; error: string } = {
@@ -788,6 +810,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     resetPagamentos,
     totalBruto,
     totalDesconto,
+    totalLiquido,
     totalLiquidoComGerente,
     m,
     recarregarStatusCaixa,
