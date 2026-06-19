@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => {
         'app/**/*.test.tsx',
         'components/**/*.test.ts',
         'components/**/*.test.tsx',
+        'hooks/**/*.test.ts',
+        'hooks/**/*.test.tsx',
         'tests/**/*.test.ts',
         '../shared-core/src/**/*.test.ts',
       ],

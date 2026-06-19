@@ -52,10 +52,6 @@ function isPainelWeb(pathname: string): boolean {
   return pathname.startsWith('/admin') || pathname.startsWith('/gerente')
 }
 
-function isCaixaWeb(pathname: string): boolean {
-  return pathname === '/caixa' || pathname.startsWith('/caixa/')
-}
-
 const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO', 'ADMIN']
 
 /** Actions registradas no painel /admin (server actions). */
@@ -165,9 +161,8 @@ export function middlewareAdminDecision(
     if (isPainelWeb(pathname) && !painelAllowed) {
       return redirect('/caixa', 'perfil_nao_gerencial', 'edge')
     }
-    if (isCaixaWeb(pathname) && painelAllowed) {
-      return redirect('/gerente', 'gerente_em_caixa', 'edge')
-    }
+    // GERENTE/DONO/ADMIN podem abrir o PDV (/caixa) — "Ir para PDV" sempre funciona.
+    // Antes havia um redirect `gerente_em_caixa` para /gerente que bloqueava o acesso.
     return allow('authorized', 'edge')
   }
 

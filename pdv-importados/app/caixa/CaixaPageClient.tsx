@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { useShallow } from "zustand/react/shallow"
-import { useCarrinhoStore } from "@/stores/carrinhoStore"
+import { useCarrinhoStore, type ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
+import { useHasMounted } from "@/hooks/useHasMounted"
 import {
   finalizarVendaCaixa,
   abrirCaixaOperador,
@@ -83,6 +84,9 @@ function newCupomSessionId(): string {
 }
 
 const FINALIZACAO_TIMEOUT_MS = 30_000
+
+/** Referência estável de carrinho vazio para o STATE READY GATE (pré-mount). */
+const EMPTY_ITENS: ItemCarrinhoComPreco[] = []
 
 function inferirHintCheckout(
   errorMsg: string,
@@ -190,17 +194,34 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   // Selectors atômicos: a página só re-renderiza quando itens/totais mudam — não a
   // cada `set` do store (ex.: setCartOwnerForSession/setRegras, disparados em todo bip).
-  const { itens, totalBruto, totalDesconto, totalLiquido, totalItens, totalUnidades } =
-    useCarrinhoStore(
-      useShallow((s) => ({
-        itens: s.itens,
-        totalBruto: s.totalBruto,
-        totalDesconto: s.totalDesconto,
-        totalLiquido: s.totalLiquido,
-        totalItens: s.totalItens,
-        totalUnidades: s.totalUnidades,
-      })),
-    )
+  const {
+    itens: itensStore,
+    totalBruto: totalBrutoStore,
+    totalDesconto: totalDescontoStore,
+    totalLiquido: totalLiquidoStore,
+    totalItens: totalItensStore,
+    totalUnidades: totalUnidadesStore,
+  } = useCarrinhoStore(
+    useShallow((s) => ({
+      itens: s.itens,
+      totalBruto: s.totalBruto,
+      totalDesconto: s.totalDesconto,
+      totalLiquido: s.totalLiquido,
+      totalItens: s.totalItens,
+      totalUnidades: s.totalUnidades,
+    })),
+  )
+  // STATE READY GATE (React #418): o store persistido (zustand/persist + localStorage
+  // síncrono) já vem hidratado no primeiro render do cliente, divergindo do HTML do
+  // SSR (carrinho vazio). Enquanto não montar, expomos o estado neutro idêntico ao
+  // SSR; pós-mount revelamos os valores reais num update normal (sem mismatch).
+  const cartMounted = useHasMounted()
+  const itens = cartMounted ? itensStore : EMPTY_ITENS
+  const totalBruto = cartMounted ? totalBrutoStore : 0
+  const totalDesconto = cartMounted ? totalDescontoStore : 0
+  const totalLiquido = cartMounted ? totalLiquidoStore : 0
+  const totalItens = cartMounted ? totalItensStore : 0
+  const totalUnidades = cartMounted ? totalUnidadesStore : 0
   // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
   const setRegras = useCarrinhoStore((s) => s.setRegras)
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
@@ -698,6 +719,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     if (!snapshotCheck.ok) {
       console.error("[caixa/checkout-snapshot]", snapshotCheck.violations)
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+      // Diagnóstico concreto: nunca bloquear sem dizer o motivo (a 1ª violação do
+      // snapshot já é uma mensagem legível, ex.: "Carrinho vazio — nada a finalizar.").
+      setCheckoutHint(snapshotCheck.violations[0]?.message ?? m.caixa.msg_checkout_hint_cupom)
       tocarFeedback("erro")
       return
     }
@@ -786,12 +810,22 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         tocarFeedback("erro")
       }
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e)
       console.error('[caixa/finalizar-venda]', {
         idempotencyKey: vendaIdempotenciaRef.current,
-        error: e instanceof Error ? e.message : String(e),
+        error: errMsg,
       })
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
-      setCheckoutHint(m.caixa.msg_checkout_hint_padrao)
+      // Diagnóstico concreto também na exceção: deriva causa provável (rede /
+      // sessão / cupom / preço) do erro real em vez do hint genérico "tente de novo".
+      setCheckoutHint(
+        inferirHintCheckout(errMsg, {
+          padrao: m.caixa.msg_checkout_hint_padrao,
+          cupom: m.caixa.msg_checkout_hint_cupom,
+          sessao: m.caixa.msg_checkout_hint_sessao,
+          rede: m.caixa.msg_checkout_hint_rede,
+        }),
+      )
       tocarFeedback("erro")
     } finally {
       setFinalizando(false)
