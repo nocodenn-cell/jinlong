@@ -33,6 +33,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const [qtdGatilho, setQtdGatilho] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
   const [ncm, setNcm] = useState('')
+  const [estoqueInicial, setEstoqueInicial] = useState('')
   const [saving, setSaving] = useState(false)
 
   const fechar = useCallback(() => {
@@ -52,6 +53,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     setQtdGatilho('')
     setCategoriaId('')
     setNcm('')
+    setEstoqueInicial('')
     setSaving(false)
     // Auto-focus no nome ao abrir
     requestAnimationFrame(() => nomeRef.current?.focus())
@@ -71,6 +73,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     const precoAtacadoNum = precoAtacado.trim() ? parseFloat(precoAtacado.replace(',', '.')) : null
     const precoCustoNum = precoCusto.trim() ? parseFloat(precoCusto.replace(',', '.')) : null
     const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
+    const estoqueInicialNum = estoqueInicial.trim() ? parseFloat(estoqueInicial.replace(',', '.')) : 0
 
     setSaving(true)
     try {
@@ -86,6 +89,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         tem_nf: false,
         categoria_id: categoriaId || null,
         ncm: ncm.trim() || undefined,
+        estoque_inicial: estoqueInicialNum,
       })
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -98,7 +102,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     } finally {
       setSaving(false)
     }
-  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, p, onCriado, fechar])
+  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, estoqueInicial, p, onCriado, fechar])
 
   if (!open) return null
 
@@ -276,6 +280,24 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
               )}
             </div>
             <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_ncm}</span>
+          </label>
+
+          {/* Estoque inicial */}
+          <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+            Estoque
+          </p>
+          <label className="block text-xs font-medium text-jl-fg-3">
+            Estoque inicial
+            <input
+              type="text"
+              inputMode="numeric"
+              className={`${finInMono} mt-1`}
+              value={estoqueInicial}
+              onChange={(e) => setEstoqueInicial(e.target.value.replace(/[^\d,.]/, ''))}
+              disabled={saving}
+              placeholder="0"
+            />
+            <span className="mt-0.5 block text-[10px] text-jl-fg-3">Quantidade disponível ao criar (padrão: 0)</span>
           </label>
 
           {/* Categoria (opcional) */}

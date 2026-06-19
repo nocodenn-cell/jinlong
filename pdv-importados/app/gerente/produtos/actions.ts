@@ -82,6 +82,7 @@ const NovoProdutoSchema = z.object({
     .transform((s) => s?.trim().replace(/\D/g, '') || null)
     .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
     .nullable(),
+  estoque_inicial: z.coerce.number().nonnegative('O estoque inicial não pode ser negativo.').optional().default(0),
 })
 
 type ActionResult<T> =

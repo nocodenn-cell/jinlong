@@ -79,7 +79,7 @@ export function createProdutoRepository(
       const { error: estoqueError } = await supabase.from('estoque').insert({
         produto_id: data.id,
         loja_id: lojaId,
-        quantidade_atual: 0,
+        quantidade_atual: input.estoque_inicial ?? 0,
         estoque_minimo: 0,
       })
 
