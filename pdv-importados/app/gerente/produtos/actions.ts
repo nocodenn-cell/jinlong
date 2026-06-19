@@ -106,9 +106,15 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
+  // Regra global: todo produto criado via sistema administrativo nasce PUBLICADO
+  // + ativo=true (dual-write) — imediatamente vendável no PDV, sem exceção.
+  // (CSV continua DRAFT no seu próprio caminho `importarProdutosCsv`.)
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
-  const result = await criarProdutoComEstoque(parsed.data, repo)
+  const result = await criarProdutoComEstoque(
+    { ...parsed.data, status_publicacao: 'PUBLICADO' },
+    repo,
+  )
 
   if (result.success) {
     revalidateCatalogoPaths()
