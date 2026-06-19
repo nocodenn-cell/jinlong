@@ -78,6 +78,15 @@ describe('admin policy authority convergence', () => {
     expect(action.type).toBe('deny')
   })
 
+  it('gerente autenticado: pode abrir o PDV /caixa (sem redirect para /gerente)', () => {
+    const normalized = normalizeAdminSession(rawAuthenticated(), 'edge')
+
+    const edge = middlewareAdminDecision(normalized, '/caixa')
+
+    expect(edge.type).toBe('allow')
+    expect(middlewareAllowsAccess(normalized, '/caixa')).toBe(true)
+  })
+
   it('Decision edge inclui type, target, reason, scope', () => {
     const decision = middlewareAdminDecision(
       normalizeAdminSession({ status: 'anonymous' }, 'edge'),

@@ -30,7 +30,11 @@
     "gate:pdv:hybrid": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=hybrid",
     "gate:pdv:full": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=full",
     "check:vendabilidade": "node scripts/check-vendabilidade-invariant.mjs",
-    "check:routes": "node scripts/check-routes-invariant.mjs"
+    "check:routes": "node scripts/check-routes-invariant.mjs",
+    "guard:core": "node scripts/core-rule-guard.mjs",
+    "guard:pdv": "node scripts/pdv-flow-guard.mjs",
+    "guard:routes": "node scripts/route-guard.mjs",
+    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.99.3",

@@ -20,6 +20,7 @@ import {
   resolveStatusPublicacaoLeitura,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
+import { statusInicialProduto } from '@/core/systemRules'
 import type { NovoProdutoInput, StatusPublicacao } from '@/core/ports/produto'
 import { PRODUTO_IMPORT_MAX_FILE_BYTES } from '@/lib/gerente/produtosCsvContract'
 import { validateProdutoImportCsvDocument } from '@/lib/gerente/parseProdutoImportCsv'
@@ -59,7 +60,7 @@ const NovoProdutoSchema = z.object({
       'Código de barras: mínimo 3 caracteres ou deixe em branco',
     ),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
-  preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  preco_atacado: z.coerce.number().positive('O preço de atacado deve ser maior que zero (ou deixe em branco).').nullable().optional().transform((v) => v ?? null),
   preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
   permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
   quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
@@ -106,9 +107,15 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
+  // CORE decide o status; o server apenas executa. Cadastro manual → PUBLICADO.
+  // (CSV continua DRAFT no seu próprio caminho `importarProdutosCsv`.)
+  const { status_publicacao } = statusInicialProduto('human')
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
-  const result = await criarProdutoComEstoque(parsed.data, repo)
+  const result = await criarProdutoComEstoque(
+    { ...parsed.data, status_publicacao },
+    repo,
+  )
 
   if (result.success) {
     revalidateCatalogoPaths()
@@ -560,7 +567,7 @@ const EditarProdutoCatalogoSchema = z.object({
   }),
   tem_nf: z.coerce.boolean(),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
-  preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  preco_atacado: z.coerce.number().positive('O preço de atacado deve ser maior que zero (ou deixe em branco).').nullable().optional().transform((v) => v ?? null),
   preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
   permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
   quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),

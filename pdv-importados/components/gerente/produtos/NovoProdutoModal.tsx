@@ -91,7 +91,8 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: p.criado_rascunho })
+      // Regra global: produto criado no sistema nasce publicado e vendável no PDV.
+      emitGerenteToast({ kind: 'success', message: p.criado_publicado })
       onCriado()
       fechar()
     } finally {
