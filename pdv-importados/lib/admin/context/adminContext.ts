@@ -26,12 +26,13 @@ export type AdminContext = {
   isReadOnlyMode: boolean
 }
 
-const KNOWN_ACTIONS = ['estoque:kardex', 'vendas:detalhe'] as const
+const KNOWN_ACTIONS = ['estoque:kardex', 'vendas:detalhe', 'auditoria:listar'] as const
 const KNOWN_RESOURCES = [
   'route:/admin',
   'route:/admin/dashboard',
   'route:/admin/catalogo',
   'route:/admin/vendas',
+  'route:/admin/auditoria',
   'route:/admin/estoque',
   'api:gerente:health',
   'api:gerente:atividades:recent',

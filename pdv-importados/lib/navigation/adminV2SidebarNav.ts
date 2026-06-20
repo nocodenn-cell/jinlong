@@ -10,6 +10,7 @@ import {
   Monitor,
   Package,
   Percent,
+  ScrollText,
   Settings,
   ShieldOff,
   ShoppingCart,
@@ -32,6 +33,14 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'dashboard', href: ROUTES.admin.dashboard, icon: LayoutDashboard, labelOverridePt: 'Visão geral', dictKey: 'dashboard' },
   { id: 'vendas', href: ROUTES.admin.vendas, icon: ShoppingCart, labelOverridePt: 'Vendas e caixa', dictKey: 'vendas' },
   { id: 'estoque', href: ROUTES.admin.estoque, icon: Package, labelOverridePt: 'Estoque e catálogo', dictKey: 'estoque' },
+  {
+    id: 'auditoria',
+    href: ROUTES.admin.auditoria,
+    icon: ScrollText,
+    labelOverridePt: 'Auditoria',
+    labelCn: '审计',
+    hint: 'Linha do tempo de eventos operacionais.',
+  },
   { id: 'financeiro', href: ROUTES.admin.financeiro, icon: Banknote, labelOverridePt: 'Financeiro', dictKey: 'financeiro' },
 ] as const
 
