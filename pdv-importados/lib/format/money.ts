@@ -36,43 +36,46 @@ export function formatDecimalPlaces(value: number, fractionDigits: number): stri
 /**
  * Converte uma string monetária digitada pelo usuário em `number`.
  *
- * Fonte única de verdade para parsing de moeda — não duplicar
- * `parseFloat(x.replace(',', '.'))` em telas, pois isso quebra com separador
- * de milhar: `"1.234,56".replace(',', '.')` vira `"1.234.56"` e
- * `parseFloat` para no segundo ponto, devolvendo `1.234` em vez de `1234.56`.
+ * Fonte única de verdade — não duplicar lógica de parsing em componentes.
  *
- * Heurística determinística: o separador (`,` ou `.`) que aparece **por
- * último** é o decimal; o outro é separador de milhar e é removido. Cobre
- * tanto o padrão pt-BR (`1.234,56`) quanto o americano (`1,234.56` / `1234.56`).
+ * Regra pt-BR (compatível com Bling, Tiny, Omie, Conta Azul, TOTVS, etc.):
  *
- * Retorna `NaN` para entrada vazia/inválida — o chamador decide o fallback
- * (geralmente validar com `Number.isFinite`).
+ *   1. Vírgula presente → é o separador decimal; pontos são milhar (removidos).
+ *      "1.234,56" → 1234.56   "1.000,00" → 1000   "9,99" → 9.99
  *
+ *   2. Sem vírgula, ponto(s) agrupam exatamente 3 dígitos → ponto é milhar.
+ *      "1.000" → 1000   "100.000" → 100000
+ *      (todos os ERPs BR tratam ponto-de-três-dígitos como separador de milhar)
+ *
+ *   3. Sem vírgula, ponto não agrupando 3 dígitos → ponto é decimal.
+ *      "1234.56" → 1234.56   "9.99" → 9.99   (interoperabilidade americana)
+ *
+ * Retorna `NaN` para entrada vazia/inválida — o chamador valida com
+ * `Number.isFinite` e decide o fallback.
+ *
+ *   parseMoney('1.000')    // 1000
  *   parseMoney('1.234,56') // 1234.56
  *   parseMoney('9,99')     // 9.99
- *   parseMoney('9.99')     // 9.99
+ *   parseMoney('1234.56')  // 1234.56
  *   parseMoney('')         // NaN
  */
 export function parseMoney(raw: string): number {
   if (typeof raw !== 'string') return NaN
-  // Mantém apenas dígitos, separadores e sinal; descarta "R$", espaços, etc.
+  // Remove símbolo de moeda, espaços e demais caracteres; mantém dígitos, . , e sinal.
   const cleaned = raw.trim().replace(/[^\d.,-]/g, '')
   if (cleaned === '' || cleaned === '-') return NaN
 
-  const lastComma = cleaned.lastIndexOf(',')
-  const lastDot = cleaned.lastIndexOf('.')
-  const decimalPos = Math.max(lastComma, lastDot)
-
   let normalized: string
-  if (decimalPos === -1) {
-    // Sem separador decimal: só dígitos (e possível sinal).
-    normalized = cleaned
+
+  if (cleaned.includes(',')) {
+    // Regra 1: vírgula presente → decimal pt-BR; pontos são milhar.
+    normalized = cleaned.replace(/\./g, '').replace(',', '.')
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(cleaned)) {
+    // Regra 2: sem vírgula, mas ponto(s) com grupos fixos de 3 dígitos → milhar.
+    normalized = cleaned.replace(/\./g, '')
   } else {
-    // Tudo antes da última ocorrência é parte inteira (milhares removidos);
-    // tudo depois é a parte decimal.
-    const intPart = cleaned.slice(0, decimalPos).replace(/[.,]/g, '')
-    const fracPart = cleaned.slice(decimalPos + 1).replace(/[.,]/g, '')
-    normalized = `${intPart}.${fracPart}`
+    // Regra 3: ponto como separador decimal (formato americano / sem milhar).
+    normalized = cleaned
   }
 
   const n = Number(normalized)

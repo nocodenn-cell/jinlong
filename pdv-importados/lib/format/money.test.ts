@@ -33,42 +33,37 @@ describe('money formatters — defensivo contra valores não-finitos', () => {
   })
 })
 
-describe('parseMoney — separador de milhar não pode corromper o valor', () => {
-  it('converte os valores monetários da matriz de regressão', () => {
+describe('parseMoney — padrão pt-BR (compatível com Bling, Tiny, Omie, Conta Azul, TOTVS)', () => {
+  it('matriz completa de regressão — Entrada → Saída', () => {
+    // Padrão pt-BR: vírgula = decimal, ponto = milhar
     expect(parseMoney('1,00')).toBe(1)
     expect(parseMoney('9,99')).toBe(9.99)
     expect(parseMoney('99,99')).toBe(99.99)
     expect(parseMoney('999,99')).toBe(999.99)
-    // Regressão do bug: dot de milhar antes virava "1.234.56" → 1.234.
     expect(parseMoney('1.234,56')).toBe(1234.56)
     expect(parseMoney('12.345,67')).toBe(12345.67)
-    // Formato americano (ponto decimal) também é aceito.
+    // Ponto com grupo de 3 dígitos → milhar (regra 2)
+    expect(parseMoney('1.000')).toBe(1000)
+    expect(parseMoney('10.000')).toBe(10000)
+    expect(parseMoney('100.000')).toBe(100000)
+    expect(parseMoney('1.000,00')).toBe(1000)
+    expect(parseMoney('10.000,00')).toBe(10000)
+    expect(parseMoney('100.000,00')).toBe(100000)
+    // Formato americano sem milhar ainda é aceito (regra 3)
     expect(parseMoney('1234.56')).toBe(1234.56)
     expect(parseMoney('9.99')).toBe(9.99)
   })
 
   it('round-trip: parseMoney(formatDecimal2(n)) === n', () => {
-    for (const n of [1, 9.99, 999.99, 1234.56, 12345.67]) {
+    // formatDecimal2 emite pt-BR (1.234,56), que parseMoney deve reverter.
+    for (const n of [1, 9.99, 999.99, 1000, 1234.56, 10000, 12345.67, 100000]) {
       expect(parseMoney(formatDecimal2(n))).toBeCloseTo(n, 2)
     }
   })
 
-  it('aceita milhar com agrupamento americano (1,234.56)', () => {
-    expect(parseMoney('1,234.56')).toBe(1234.56)
-  })
-
-  it('separador isolado é tratado como decimal (regra determinística)', () => {
-    // Um único separador é ambíguo ("1.000" = mil ou 1,0?). A regra
-    // "último separador = decimal" resolve ambos para 1,0 de forma consistente.
-    // Para mil, o usuário digita "1000" ou usa os dois separadores ("1.000,00").
-    expect(parseMoney('1,000')).toBe(1)
-    expect(parseMoney('1.000')).toBe(1)
-    expect(parseMoney('1000')).toBe(1000)
-    expect(parseMoney('1.000,00')).toBe(1000)
-  })
-
   it('ignora símbolo de moeda e espaços', () => {
     expect(parseMoney('R$ 1.234,56')).toBe(1234.56)
+    expect(parseMoney('R$ 100.000,00')).toBe(100000)
     expect(parseMoney('  9,99 ')).toBe(9.99)
   })
 
