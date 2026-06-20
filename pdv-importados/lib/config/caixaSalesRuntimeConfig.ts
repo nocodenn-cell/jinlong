@@ -1,5 +1,4 @@
 type CriticalSalesFlagName =
-  | 'USE_UNIFIED_SALES_FLOW'
   | 'STRICT_MANAGER_DISCOUNT_AUTH'
   | 'AUTO_ENQUEUE_FISCAL_ON_SALE'
 
@@ -10,7 +9,6 @@ type ParsedFlag = {
 }
 
 export type CaixaSalesRuntimeConfig = {
-  useUnifiedSalesFlow: boolean
   strictManagerDiscountAuth: boolean
   autoEnqueueFiscalOnSale: boolean
   hasInvalidFlags: boolean
@@ -19,7 +17,6 @@ export type CaixaSalesRuntimeConfig = {
 }
 
 const DEFAULT_FLAGS: Record<CriticalSalesFlagName, boolean> = {
-  USE_UNIFIED_SALES_FLOW: true,
   STRICT_MANAGER_DISCOUNT_AUTH: true,
   AUTO_ENQUEUE_FISCAL_ON_SALE: false,
 }
@@ -50,23 +47,19 @@ function resolveFlag(flagName: CriticalSalesFlagName): ParsedFlag {
 }
 
 export function getCaixaSalesRuntimeConfig(): CaixaSalesRuntimeConfig {
-  const unified = resolveFlag('USE_UNIFIED_SALES_FLOW')
   const strict = resolveFlag('STRICT_MANAGER_DISCOUNT_AUTH')
   const fiscal = resolveFlag('AUTO_ENQUEUE_FISCAL_ON_SALE')
 
   const invalidFlags: CriticalSalesFlagName[] = []
-  if (unified.usedDefault && unified.rawValue !== undefined) invalidFlags.push('USE_UNIFIED_SALES_FLOW')
   if (strict.usedDefault && strict.rawValue !== undefined) invalidFlags.push('STRICT_MANAGER_DISCOUNT_AUTH')
   if (fiscal.usedDefault && fiscal.rawValue !== undefined) invalidFlags.push('AUTO_ENQUEUE_FISCAL_ON_SALE')
 
   return {
-    useUnifiedSalesFlow: unified.value,
     strictManagerDiscountAuth: strict.value,
     autoEnqueueFiscalOnSale: fiscal.value,
     hasInvalidFlags: invalidFlags.length > 0,
     invalidFlags,
     source: {
-      USE_UNIFIED_SALES_FLOW: unified.usedDefault ? 'default' : 'env',
       STRICT_MANAGER_DISCOUNT_AUTH: strict.usedDefault ? 'default' : 'env',
       AUTO_ENQUEUE_FISCAL_ON_SALE: fiscal.usedDefault ? 'default' : 'env',
     },

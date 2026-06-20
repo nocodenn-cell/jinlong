@@ -219,17 +219,7 @@ export async function finalizarVendaCaixaImpl(
     }
     const caixaId = caixaExistente.id
 
-    const useUnifiedSalesFlow = runtimeCfg.useUnifiedSalesFlow
-    if (!useUnifiedSalesFlow && input.pagamentos.length > 1) {
-      return {
-        ok: false,
-        error:
-          'Split de pagamento requer fluxo unificado habilitado no servidor. Ajuste para 1 forma de pagamento.',
-      }
-    }
-
     const vendaId = resolveVendaIdForFinalize({
-      useUnifiedSalesFlow,
       idempotencyKey: input.idempotencyKey,
       randomUuid: () => crypto.randomUUID(),
     })
@@ -285,7 +275,6 @@ export async function finalizarVendaCaixaImpl(
 
     if (txErr) {
       console.warn('[caixa.finalizar_venda.rpc_error]', {
-        useUnifiedSalesFlow: runtimeCfg.useUnifiedSalesFlow,
         strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
         autoEnqueueFiscalOnSale: runtimeCfg.autoEnqueueFiscalOnSale,
         elapsed_ms: Date.now() - _rpcStart,

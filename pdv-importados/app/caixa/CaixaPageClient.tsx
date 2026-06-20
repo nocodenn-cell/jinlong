@@ -270,7 +270,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
-  /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». Só usado com `USE_UNIFIED_SALES_FLOW` no servidor. */
+  /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». */
   const vendaIdempotenciaRef = useRef<string | null>(null)
 
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
