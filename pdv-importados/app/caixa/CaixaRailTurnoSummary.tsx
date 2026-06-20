@@ -5,6 +5,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { obterResumoVendasTurno } from "@/app/caixa/actions"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
   m: Mensagens
@@ -22,11 +23,6 @@ function CaixaRailTurnoSummaryImpl({ m, idioma, caixaAberto, layoutVariant, refr
   const [totalLiquido, setTotalLiquido] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const classic = layoutVariant === "classic"
-  const loc = idioma === "pt" ? "pt-BR" : "zh-CN"
-
-  const fmt = (n: number) =>
-    `${m.caixa.moeda_prefixo} ${n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
   useEffect(() => {
     if (!caixaAberto) return
 
@@ -65,7 +61,7 @@ function CaixaRailTurnoSummaryImpl({ m, idioma, caixaAberto, layoutVariant, refr
       </div>
       <div className="flex justify-between gap-2">
         <dt className={labelCls}>{m.caixa.rail_turno_total}</dt>
-        <dd className={valueCls}>{fmt(totalLiquido)}</dd>
+        <dd className={valueCls}>{m.caixa.moeda_prefixo} {formatDecimalBRL(totalLiquido)}</dd>
       </div>
     </dl>
   )

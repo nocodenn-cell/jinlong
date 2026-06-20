@@ -6,6 +6,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
   m: Mensagens
@@ -32,7 +33,7 @@ function CaixaMovimentacoesTimelineImpl({
   onEstornar,
 }: Props) {
   const loc = localeFromIdioma(idioma)
-  const money = (n: number) => `${m.caixa.moeda_prefixo} ${n.toLocaleString(loc, { minimumFractionDigits: 2 })}`
+  const money = (n: number) => `${m.caixa.moeda_prefixo} ${formatDecimalBRL(n)}`
 
   const statusLabel = (status: MovimentacaoCaixaDTO["status"]) => {
     if (status === "aprovado") return m.caixa.timeline_status_aprovado

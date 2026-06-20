@@ -5,6 +5,7 @@ import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
 import { cn } from "@/lib/utils"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 export type ReciboItem = {
   nome: string
@@ -74,7 +75,7 @@ export function buildReciboLabels(m: Mensagens): ReciboLabels {
 }
 
 function fmtBRL(valor: number, moeda: string): string {
-  return `${moeda} ${valor.toFixed(2)}`
+  return `${moeda} ${formatDecimalBRL(valor)}`
 }
 
 function fmtData(d: Date): string {
