@@ -23,6 +23,12 @@ export async function criarCliente(input: { nome: string; documento?: string; te
   if (erro) return { success: false, error: erro }
   const nome = input.nome.trim()
 
+  // clientes.loja_id é NOT NULL (migration 112): preenche com a loja do gerente.
+  const lojaId = auth.session.lojaId
+  if (!lojaId) {
+    return { success: false, error: 'Sua conta não está associada a uma loja. Contate o administrador.' }
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('clientes')
@@ -30,6 +36,7 @@ export async function criarCliente(input: { nome: string; documento?: string; te
       nome,
       documento: input.documento?.trim() || null,
       telefone: input.telefone?.trim() || null,
+      loja_id: lojaId,
     })
     .select('id')
     .single()
