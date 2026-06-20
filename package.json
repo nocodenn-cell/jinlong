@@ -34,7 +34,8 @@
     "guard:core": "node scripts/core-rule-guard.mjs",
     "guard:pdv": "node scripts/pdv-flow-guard.mjs",
     "guard:routes": "node scripts/route-guard.mjs",
-    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes"
+    "guard:rpc": "node scripts/rpc-gate-guard.mjs",
+    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.99.3",

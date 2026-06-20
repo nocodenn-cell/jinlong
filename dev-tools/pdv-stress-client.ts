@@ -107,7 +107,7 @@ export class PdvStressClient {
     this.precoUnitario = roundMoney2(preco)
   }
 
-  /** Finaliza venda via RPC canônica v3 (autoridade backend + ledger). */
+  /** Finaliza venda via RPC canônica v4 (autoridade backend + ledger). */
   async postSale(idempotencyKey?: string): Promise<SalePostResult> {
     if (!this.operadorId || !this.caixaId || !this.produtoId) {
       return { ok: false, error: 'Cliente não inicializado. Chame init() primeiro.' }
@@ -124,10 +124,11 @@ export class PdvStressClient {
         preco_unitario: total,
         desconto_unitario: 0,
         tipo_preco: 'VAREJO',
+        tipo_preco_fonte: 'VAREJO',
       },
     ]
 
-    const { data, error } = await this.admin.rpc('finalizar_venda_transacional_canonica_v3', {
+    const { data, error } = await this.admin.rpc('finalizar_venda_transacional_canonica_v4', {
       p_venda_id: vendaId,
       p_caixa_id: this.caixaId,
       p_operador_id: this.operadorId,
