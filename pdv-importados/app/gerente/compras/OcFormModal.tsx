@@ -30,6 +30,14 @@ type Props = Readonly<{
   onSaved: () => void
 }>
 
+function filterMoney(raw: string): string {
+  let v = raw.replace(/[^\d,]/g, '')
+  const parts = v.split(',')
+  if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
+  if (parts.length === 2 && parts[1].length > 2) v = parts[0] + ',' + parts[1].slice(0, 2)
+  return v
+}
+
 function itemVazio(): ItemLocal {
   return { produto_id: '', useLivre: false, descricao: '', quantidade: '1', preco_unitario: '0', unidade_medida: 'UN' }
 }
@@ -37,7 +45,7 @@ function itemVazio(): ItemLocal {
 function fmtTotal(itens: ItemLocal[]): string {
   const total = itens.reduce((s, i) => {
     const q = parseFloat(i.quantidade) || 0
-    const p = parseFloat(i.preco_unitario) || 0
+    const p = parseFloat(i.preco_unitario.replace(/\./g, '').replace(',', '.')) || 0
     return s + q * p
   }, 0)
   return total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -67,7 +75,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
         useLivre: !i.produto_id,
         descricao: i.descricao ?? '',
         quantidade: String(i.quantidade),
-        preco_unitario: String(i.preco_unitario),
+        preco_unitario: (Number(i.preco_unitario) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         unidade_medida: i.unidade_medida,
       }))
     }
@@ -130,7 +138,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
         produto_id: i.produto_id || null,
         descricao: i.descricao.trim() || null,
         quantidade: parseFloat(i.quantidade),
-        preco_unitario: parseFloat(i.preco_unitario) || 0,
+        preco_unitario: parseFloat(i.preco_unitario.replace(/\./g, '').replace(',', '.')) || 0,
         unidade_medida: i.unidade_medida,
       })),
     }
@@ -327,13 +335,13 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
                     <div>
                       <label className="mb-0.5 block text-[10px] text-jl-fg-3">{c.field_preco_unitario}</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={item.preco_unitario}
-                        onChange={(e) => setItemField(idx, 'preco_unitario', e.target.value)}
+                        onChange={(e) => setItemField(idx, 'preco_unitario', filterMoney(e.target.value))}
                         required
                         disabled={isPending}
+                        placeholder="0,00"
                         className="app-input w-full rounded-md px-2 py-1.5 text-right text-sm tabular-nums disabled:opacity-60"
                       />
                     </div>
@@ -353,7 +361,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
 
                   {/* Subtotal */}
                   <div className="mt-1.5 text-right text-[11px] tabular-nums text-jl-fg-3">
-                    {((parseFloat(item.quantidade) || 0) * (parseFloat(item.preco_unitario) || 0))
+                    {((parseFloat(item.quantidade) || 0) * (parseFloat(item.preco_unitario.replace(/\./g, '').replace(',', '.')) || 0))
                       .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </div>
                 </div>

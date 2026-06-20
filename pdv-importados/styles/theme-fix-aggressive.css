@@ -168,3 +168,100 @@
   --jl-status-orange-border:  #fdba74;
 }
 
+/* ── Field utilities — inputs dentro de painéis dark ─────────────────── */
+.jl-modal-field {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--jl-fg-1);
+  outline: none;
+  transition: border-color 150ms ease;
+}
+.jl-modal-field:focus {
+  border-color: var(--jl-accent);
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+}
+.jl-modal-field:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.jl-modal-field::placeholder {
+  color: var(--jl-fg-3);
+}
+.jl-modal-field-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.jl-modal-select {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--jl-fg-1);
+  outline: none;
+  transition: border-color 150ms ease;
+  cursor: pointer;
+}
+.jl-modal-select:focus {
+  border-color: var(--jl-accent);
+}
+.jl-modal-select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── app-input / app-select — disabled states ─────────────────────────── */
+.app-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.app-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Status badges — consume --jl-status-* tokens ────────────────────── */
+.jl-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+.jl-status-badge-success {
+  background: var(--jl-status-success-bg);
+  color: var(--jl-status-success-text);
+  border-color: var(--jl-status-success-border);
+}
+.jl-status-badge-warning {
+  background: var(--jl-status-warning-bg);
+  color: var(--jl-status-warning-text);
+  border-color: var(--jl-status-warning-border);
+}
+.jl-status-badge-danger {
+  background: var(--jl-status-danger-bg);
+  color: var(--jl-status-danger-text);
+  border-color: var(--jl-status-danger-border);
+}
+.jl-status-badge-info {
+  background: var(--jl-status-info-bg);
+  color: var(--jl-status-info-text);
+  border-color: var(--jl-status-info-border);
+}
+.jl-status-badge-neutral {
+  background: var(--jl-status-neutral-bg);
+  color: var(--jl-status-neutral-text);
+  border-color: var(--jl-status-neutral-border);
+}
+

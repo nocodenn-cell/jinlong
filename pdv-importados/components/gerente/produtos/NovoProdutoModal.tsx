@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { useMoneyInput } from '@/hooks/useMoneyInput'
 
 type OrigemCode = 'china_manual' | 'brasil_nf'
 
@@ -26,9 +27,9 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const [nome, setNome] = useState('')
   const [codigoBarras, setCodigoBarras] = useState('')
   const [origem, setOrigem] = useState<OrigemCode>('china_manual')
-  const [precoVarejo, setPrecoVarejo] = useState('')
-  const [precoAtacado, setPrecoAtacado] = useState('')
-  const [precoCusto, setPrecoCusto] = useState('')
+  const precoVarejoInput = useMoneyInput()
+  const precoAtacadoInput = useMoneyInput()
+  const precoCustoInput = useMoneyInput()
   const [permitirAbaixoCusto, setPermitirAbaixoCusto] = useState(false)
   const [qtdGatilho, setQtdGatilho] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
@@ -45,9 +46,9 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     setNome('')
     setCodigoBarras('')
     setOrigem('china_manual')
-    setPrecoVarejo('')
-    setPrecoAtacado('')
-    setPrecoCusto('')
+    precoVarejoInput.reset()
+    precoAtacadoInput.reset()
+    precoCustoInput.reset()
     setPermitirAbaixoCusto(false)
     setQtdGatilho('')
     setCategoriaId('')
@@ -55,6 +56,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     setSaving(false)
     // Auto-focus no nome ao abrir
     requestAnimationFrame(() => nomeRef.current?.focus())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const salvar = useCallback(async () => {
@@ -63,13 +65,13 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
       emitGerenteToast({ kind: 'error', message: p.nome_obrigatorio })
       return
     }
-    const precoVarejoNum = parseFloat(precoVarejo.replace(',', '.'))
-    if (!precoVarejo.trim() || !Number.isFinite(precoVarejoNum) || precoVarejoNum <= 0) {
+    const precoVarejoNum = precoVarejoInput.parse()
+    if (!precoVarejoNum || precoVarejoNum <= 0) {
       emitGerenteToast({ kind: 'error', message: p.preco_invalido })
       return
     }
-    const precoAtacadoNum = precoAtacado.trim() ? parseFloat(precoAtacado.replace(',', '.')) : null
-    const precoCustoNum = precoCusto.trim() ? parseFloat(precoCusto.replace(',', '.')) : null
+    const precoAtacadoNum = precoAtacadoInput.parse()
+    const precoCustoNum = precoCustoInput.parse()
     const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
     setSaving(true)
@@ -91,14 +93,13 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      // Regra global: produto criado no sistema nasce publicado e vendável no PDV.
-      emitGerenteToast({ kind: 'success', message: p.criado_publicado })
+      emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
       onCriado()
       fechar()
     } finally {
       setSaving(false)
     }
-  }, [nome, codigoBarras, origem, precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, p, onCriado, fechar])
+  }, [nome, codigoBarras, origem, precoVarejoInput, precoAtacadoInput, precoCustoInput, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, p, m.comum.sucesso, onCriado, fechar])
 
   if (!open) return null
 
@@ -196,8 +197,8 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 type="text"
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
-                value={precoVarejo}
-                onChange={(e) => setPrecoVarejo(e.target.value)}
+                value={precoVarejoInput.display}
+                onChange={precoVarejoInput.onChange}
                 disabled={saving}
                 placeholder="0,00"
               />
@@ -208,8 +209,8 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 type="text"
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
-                value={precoAtacado}
-                onChange={(e) => setPrecoAtacado(e.target.value)}
+                value={precoAtacadoInput.display}
+                onChange={precoAtacadoInput.onChange}
                 disabled={saving}
                 placeholder="—"
               />
@@ -234,8 +235,8 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 type="text"
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
-                value={precoCusto}
-                onChange={(e) => setPrecoCusto(e.target.value)}
+                value={precoCustoInput.display}
+                onChange={precoCustoInput.onChange}
                 disabled={saving}
                 placeholder="—"
               />

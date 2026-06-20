@@ -116,7 +116,7 @@ export function CaixaValorNumericoModal({
                 setErro(null)
               }}
               placeholder={placeholder}
-              className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+              className="mt-1 jl-modal-field"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault()

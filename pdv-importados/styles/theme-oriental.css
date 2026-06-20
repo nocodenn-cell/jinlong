@@ -90,6 +90,10 @@
   color: var(--surface-text);
 }
 
+.app-surface-text {
+  color: var(--surface-text);
+}
+
 .app-border {
   border-color: var(--border) !important;
 }
