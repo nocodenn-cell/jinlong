@@ -13,8 +13,6 @@ type Props = {
 const LANGS: { value: Idioma; label: string; title: string; font?: string }[] = [
   { value: 'pt', label: 'PT', title: 'Português (Brasil)' },
   { value: 'zh', label: '普通话', title: 'Mandarim (简体)', font: '"Noto Sans SC","PingFang SC",sans-serif' },
-  { value: 'en', label: 'EN', title: 'English (em breve)' },
-  { value: 'es', label: 'ES', title: 'Español (em breve)' },
 ]
 
 export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Props) {
