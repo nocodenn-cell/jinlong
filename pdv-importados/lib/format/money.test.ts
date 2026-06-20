@@ -58,3 +58,21 @@ describe('parseBRL', () => {
     expect(parseBRL('abc')).toBeNull()
   })
 })
+
+describe('parseBRL — valores ≥ 1.000', () => {
+  it('parseia "1.234,56" com ponto milhar', () => expect(parseBRL('1.234,56')).toBe(1234.56))
+  it('parseia "1.000,50"', () => expect(parseBRL('1.000,50')).toBe(1000.5))
+  it('parseia "10.000,00"', () => expect(parseBRL('10.000,00')).toBe(10000))
+})
+
+describe('formatDecimalBRL — snapshot de consistência', () => {
+  it('25.9 → "25,90"', () => expect(formatDecimalBRL(25.9)).toBe('25,90'))
+  it('1234.56 → "1.234,56"', () => expect(formatDecimalBRL(1234.56)).toBe('1.234,56'))
+  it('0 → "0,00"', () => expect(formatDecimalBRL(0)).toBe('0,00'))
+  it('NaN → "0,00"', () => expect(formatDecimalBRL(NaN)).toBe('0,00'))
+  it('round-trip: formatDecimalBRL + parseBRL', () => {
+    expect(parseBRL(formatDecimalBRL(1234.56))).toBe(1234.56)
+    expect(parseBRL(formatDecimalBRL(9.99))).toBe(9.99)
+    expect(parseBRL(formatDecimalBRL(0))).toBe(0)
+  })
+})

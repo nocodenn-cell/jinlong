@@ -8,6 +8,7 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { cn } from '@/lib/utils'
+import { formatBRL } from '@/lib/format/money'
 import {
   listarOrdensCompra,
   type OcDetalheDTO,
@@ -40,10 +41,6 @@ const STATUS_CORES: Record<StatusOC, string> = {
 function fmtData(d: string | null): string {
   if (!d) return '—'
   return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
-}
-
-function fmtValor(v: number): string {
-  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 function idCurto(id: string): string {
@@ -164,7 +161,7 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
         <div className="dragon-glass-card rounded-xl p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{c.kpi_valor_transito}</div>
           <div className={cn('mt-1 text-xl font-bold leading-tight tabular-nums', kpisIniciais.valor_em_transito > 0 ? 'text-amber-300' : 'text-jl-fg-1')}>
-            {fmtValor(kpisIniciais.valor_em_transito)}
+            {formatBRL(kpisIniciais.valor_em_transito)}
           </div>
         </div>
       </div>
@@ -247,7 +244,7 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
             <td className="gerente-fin-cell px-3 py-2 text-xs tabular-nums">{fmtData(row.data_emissao)}</td>
             <td className="gerente-fin-cell px-3 py-2 text-xs tabular-nums text-jl-fg-3">{fmtData(row.data_prevista_chegada)}</td>
             <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">{row.total_itens}</td>
-            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">{fmtValor(row.valor_total)}</td>
+            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">{formatBRL(row.valor_total)}</td>
           </tr>
         ))}
         {dados.rows.length === 0 && !loading && (

@@ -8,6 +8,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
+import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { salvarClienteAction, type ClienteListRow, type ClienteInput } from './actions'
 
 type Props = Readonly<{
@@ -54,7 +55,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
   const [telefone, setTelefone] = useState(cliente?.telefone ? maskTel(cliente.telefone) : '')
   const [endereco, setEndereco] = useState(cliente?.endereco ?? '')
   const [limite, setLimite] = useState(
-    cliente ? String(Number(cliente.limite_crediario).toFixed(2)).replace('.', ',') : '0,00',
+    cliente ? formatDecimalBRL(Number(cliente.limite_crediario)) : '0,00',
   )
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
@@ -77,7 +78,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
       (email || '') !== (cliente!.email ?? '') ||
       telefone.replace(/\D/g, '') !== (cliente!.telefone ?? '') ||
       (endereco || '') !== (cliente!.endereco ?? '') ||
-      Number(limite.replace(',', '.')) !== Number(cliente!.limite_crediario)
+      (parseBRL(limite) ?? 0) !== Number(cliente!.limite_crediario)
     )
   }
 
@@ -117,7 +118,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = m.clientes.err_email
     const tDigits = telefone.replace(/\D/g, '')
     if (tDigits && tDigits.length < 10) e.telefone = m.clientes.err_telefone
-    const lim = parseFloat(limite.replace(',', '.')) || 0
+    const lim = parseBRL(limite) ?? 0
     if (lim < 0) e.limite_crediario = m.clientes.err_limite_negativo
     if (!editando && !consentimentoLgpd) {
       e.consentimento_lgpd = 'Confirme o consentimento do titular antes de cadastrar.'
@@ -138,7 +139,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
       email: email.trim() || null,
       telefone: telefone.replace(/\D/g, '') || null,
       endereco: endereco.trim() || null,
-      limite_crediario: parseFloat(limite.replace(',', '.')) || 0,
+      limite_crediario: parseBRL(limite) ?? 0,
       // Registra o momento do consentimento LGPD apenas para novos clientes
       ...(!editando && consentimentoLgpd
         ? { termos_aceitos_em: now, consentimento_privacidade_em: now }

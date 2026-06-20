@@ -6,6 +6,7 @@ import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { formatBRL, formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import {
   criarOrdemCompra,
   atualizarOrdemCompra,
@@ -45,10 +46,10 @@ function itemVazio(): ItemLocal {
 function fmtTotal(itens: ItemLocal[]): string {
   const total = itens.reduce((s, i) => {
     const q = parseFloat(i.quantidade) || 0
-    const p = parseFloat(i.preco_unitario.replace(/\./g, '').replace(',', '.')) || 0
+    const p = parseBRL(i.preco_unitario) ?? 0
     return s + q * p
   }, 0)
-  return total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return formatBRL(total)
 }
 
 export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose, onSaved }: Props) {
@@ -75,7 +76,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
         useLivre: !i.produto_id,
         descricao: i.descricao ?? '',
         quantidade: String(i.quantidade),
-        preco_unitario: (Number(i.preco_unitario) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        preco_unitario: formatDecimalBRL(Number(i.preco_unitario) || 0),
         unidade_medida: i.unidade_medida,
       }))
     }
@@ -138,7 +139,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
         produto_id: i.produto_id || null,
         descricao: i.descricao.trim() || null,
         quantidade: parseFloat(i.quantidade),
-        preco_unitario: parseFloat(i.preco_unitario.replace(/\./g, '').replace(',', '.')) || 0,
+        preco_unitario: parseBRL(i.preco_unitario) ?? 0,
         unidade_medida: i.unidade_medida,
       })),
     }
@@ -361,8 +362,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
 
                   {/* Subtotal */}
                   <div className="mt-1.5 text-right text-[11px] tabular-nums text-jl-fg-3">
-                    {((parseFloat(item.quantidade) || 0) * (parseFloat(item.preco_unitario.replace(/\./g, '').replace(',', '.')) || 0))
-                      .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {formatBRL((parseFloat(item.quantidade) || 0) * (parseBRL(item.preco_unitario) ?? 0))}
                   </div>
                 </div>
               ))}
