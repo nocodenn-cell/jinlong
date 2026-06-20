@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatBRL, formatDecimal2, formatNumberLocale, formatDecimalPlaces, formatDecimalBRL, parseBRL } from './money'
+import { filterBRLChars, formatBRL, formatDecimal2, formatNumberLocale, formatDecimalPlaces, formatDecimalBRL, parseBRL } from './money'
 
 describe('money formatters — defensivo contra valores não-finitos', () => {
   it('formata valores válidos normalmente', () => {
@@ -63,6 +63,35 @@ describe('parseBRL — valores ≥ 1.000', () => {
   it('parseia "1.234,56" com ponto milhar', () => expect(parseBRL('1.234,56')).toBe(1234.56))
   it('parseia "1.000,50"', () => expect(parseBRL('1.000,50')).toBe(1000.5))
   it('parseia "10.000,00"', () => expect(parseBRL('10.000,00')).toBe(10000))
+})
+
+describe('filterBRLChars — pipeline de input', () => {
+  it('bloqueia ponto (separador de milhar não deve ser digitado)', () => {
+    expect(filterBRLChars('25.9')).toBe('259')
+  })
+
+  it('permite dígitos e vírgula', () => {
+    expect(filterBRLChars('25,90')).toBe('25,90')
+    expect(filterBRLChars('1234,56')).toBe('1234,56')
+  })
+
+  it('limita a 1 vírgula', () => {
+    expect(filterBRLChars('1,2,3')).toBe('1,23')
+  })
+
+  it('limita a 2 casas decimais', () => {
+    expect(filterBRLChars('25,999')).toBe('25,99')
+  })
+
+  it('round-trip com parseBRL: "25,90" → 25.9', () => {
+    expect(parseBRL(filterBRLChars('25,90'))).toBe(25.9)
+  })
+
+  it('round-trip com formatDecimalBRL: 25.9 → "25,90" → parseBRL → 25.9', () => {
+    const display = formatDecimalBRL(25.9)
+    expect(display).toBe('25,90')
+    expect(parseBRL(display)).toBe(25.9)
+  })
 })
 
 describe('formatDecimalBRL — snapshot de consistência', () => {

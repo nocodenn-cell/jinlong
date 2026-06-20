@@ -45,6 +45,23 @@ export function formatDecimalBRL(value: number): string {
 }
 
 /**
+ * Filtra input do usuário para aceitar apenas dígitos e vírgula decimal BRL.
+ * Bloqueia pontos (separador de milhar não digitado), limita a 1 vírgula e 2 casas decimais.
+ * Usado em inputs de preço para impedir "25.9" aparecer no estado de digitação.
+ */
+export function filterBRLChars(raw: string): string {
+  let v = raw.replace(/[^\d,]/g, '')
+  const parts = v.split(',')
+  if (parts.length > 2) {
+    v = parts[0] + ',' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    v = parts[0] + ',' + parts[1].slice(0, 2)
+  }
+  return v
+}
+
+/**
  * Converte string BRL (ex.: "25,90" ou "1.234,56") em número.
  * Retorna null se a string for inválida ou vazia.
  */

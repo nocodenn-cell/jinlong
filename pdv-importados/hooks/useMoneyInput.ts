@@ -1,20 +1,7 @@
 import { useCallback, useState } from 'react'
-import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
+import { filterBRLChars, formatDecimalBRL, parseBRL } from '@/lib/format/money'
 
-export function filterBRLChars(raw: string): string {
-  // Only digits and comma
-  let v = raw.replace(/[^\d,]/g, '')
-  // At most one comma
-  const parts = v.split(',')
-  if (parts.length > 2) {
-    v = parts[0] + ',' + parts.slice(1).join('')
-  }
-  // At most 2 decimal places
-  if (parts.length === 2 && parts[1].length > 2) {
-    v = parts[0] + ',' + parts[1].slice(0, 2)
-  }
-  return v
-}
+export { filterBRLChars } from '@/lib/format/money'
 
 export type MoneyInputBag = {
   display: string
