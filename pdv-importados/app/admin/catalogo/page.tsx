@@ -118,17 +118,8 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
 
   const produtos: CatalogoProduto[] = produtosRes.success
     ? produtosRes.data.rows.map((r) => ({
-        id: r.id,
-        nome: r.nome,
+        ...r,
         sku: r.codigo_interno ?? r.codigo_barras ?? '—',
-        imagem_url: r.imagem_url,
-        preco_varejo: r.preco_varejo,
-        preco_atacado: r.preco_atacado,
-        quantidade_gatilho_atacado: r.quantidade_gatilho_atacado,
-        quantidade_atual: r.quantidade_atual,
-        origem: r.origem,
-        ativo: r.ativo,
-        status_publicacao: r.status_publicacao,
       }))
     : []
 
@@ -298,7 +289,12 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       ) : null}
 
       <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
-        <CatalogoTable produtos={produtos} labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_rapido, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil }} />
+        <CatalogoTable
+          produtos={produtos}
+          labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_rapido, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil }}
+          m={m}
+          opcoes={opcoes}
+        />
       </SectionCard>
 
       {totalPages > 1 ? (
