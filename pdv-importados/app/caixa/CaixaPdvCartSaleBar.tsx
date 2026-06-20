@@ -107,6 +107,7 @@ export function CaixaPdvCartSaleBar({
                 finalizando || itensLength === 0 || buscando || carregandoRegras
               }
               aria-busy={finalizando}
+              title={itensLength === 0 ? m.caixa.finalizar_venda_sem_itens_title : undefined}
             >
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
             </Button>

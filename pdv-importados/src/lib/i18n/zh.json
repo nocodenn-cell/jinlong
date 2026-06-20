@@ -868,6 +868,7 @@
     "validando_gerente": "验证中…",
     "finalizar_venda": "完成销售",
     "finalizando": "处理中…",
+    "finalizar_venda_sem_itens_title": "请先将商品加入购物车，再完成销售。",
     "total_pagar": "应付合计",
     "bruto": "原价",
     "descontos_regras": "折扣（批发/手工）",
