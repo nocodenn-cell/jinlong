@@ -29,10 +29,14 @@ import { ROUTES } from '@shared-core/navigation/routes'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/** Limite por fonte antes da mesclagem (proteção contra varredura larga). */
-const LIMITE_POR_FONTE = 120
 /** Teto final exibido após mesclar e ordenar por data desc. */
 const LIMITE_FINAL = 150
+/**
+ * Limite por fonte antes da mesclagem (proteção contra varredura larga).
+ * Igual ao teto final para que uma única fonte dominante ainda consiga
+ * preencher a janela dos "mais recentes" sem perder eventos.
+ */
+const LIMITE_POR_FONTE = LIMITE_FINAL
 
 export type AuditoriaTipo =
   | 'VENDA'
@@ -135,8 +139,10 @@ export async function listarEventosAuditoria(
     if (operadorFiltro) q = q.eq('operador_id', operadorFiltro)
 
     const { data, error } = await q
-    if (error) return { ok: false, error: 'Falha ao ler vendas registradas.' }
-    for (const r of data ?? []) {
+    // Resiliência: uma fonte indisponível (ex.: ledger ainda não migrado neste
+    // ambiente) é ignorada — a timeline segue com as demais fontes.
+    const rows = error ? [] : (data ?? [])
+    for (const r of rows) {
       const itensCount = Array.isArray(r.items) ? r.items.length : 0
       const opId = str(r.operador_id)
       if (opId) operadorIds.add(opId)
@@ -158,36 +164,61 @@ export async function listarEventosAuditoria(
     }
   }
 
-  // ── 2. Cancelamentos (vendas_canceladas_auditoria · com motivo) ───────────
+  // ── 2. Cancelamentos ──────────────────────────────────────────────────────
+  // Fonte canônica: venda_eventos (event_type='SALE_CANCELLED'), sempre gravada
+  // pelo RPC de cancelamento do núcleo. O `motivo` é ENRIQUECIDO a partir de
+  // `vendas_canceladas_auditoria` (quando existir) via lookup batched por sale_id.
   if (wantsTipo(filtro, 'CANCELAMENTO')) {
     let q = supabase
-      .from('vendas_canceladas_auditoria')
-      .select('id, venda_id, operador_id, motivo, forma_pagamento, valor_estornado, created_at')
-      .order('created_at', { ascending: false })
+      .from('venda_eventos')
+      .select('id, sale_id, operador_id, total, forma_pagamento, occurred_at')
+      .eq('event_type', 'SALE_CANCELLED')
+      .eq('loja_id', loja)
+      .order('occurred_at', { ascending: false })
       .limit(LIMITE_POR_FONTE)
-    if (filtro.inicio) q = q.gte('created_at', filtro.inicio)
-    if (filtro.fim) q = q.lte('created_at', filtro.fim)
+    if (filtro.inicio) q = q.gte('occurred_at', filtro.inicio)
+    if (filtro.fim) q = q.lte('occurred_at', filtro.fim)
     if (operadorFiltro) q = q.eq('operador_id', operadorFiltro)
 
     const { data, error } = await q
-    if (error) return { ok: false, error: 'Falha ao ler cancelamentos.' }
-    for (const r of data ?? []) {
+    const rows = error ? [] : (data ?? [])
+
+    // Enriquecimento opcional de motivo/valor estornado (batched, 1 query).
+    const saleIds = rows.map((r) => str(r.sale_id)).filter((v): v is string => v != null)
+    const motivoPorVenda = new Map<string, { motivo: string | null; valor: number | null }>()
+    if (saleIds.length > 0) {
+      const { data: aud } = await supabase
+        .from('vendas_canceladas_auditoria')
+        .select('venda_id, motivo, valor_estornado')
+        .in('venda_id', saleIds)
+      for (const a of aud ?? []) {
+        motivoPorVenda.set(String(a.venda_id), {
+          motivo: str(a.motivo),
+          valor: a.valor_estornado == null ? null : num(a.valor_estornado),
+        })
+      }
+    }
+
+    for (const r of rows) {
       const opId = str(r.operador_id)
       if (opId) operadorIds.add(opId)
-      const motivo = str(r.motivo)
+      const saleId = str(r.sale_id)
+      const enriquecimento = saleId ? motivoPorVenda.get(saleId) : undefined
+      const motivo = enriquecimento?.motivo ?? null
+      const valorEstornado = enriquecimento?.valor ?? num(r.total)
       eventos.push({
         id: `cancel:${r.id}`,
         tipo: 'CANCELAMENTO',
-        ocorridoEm: String(r.created_at),
+        ocorridoEm: String(r.occurred_at),
         operadorId: opId,
         operadorNome: null,
         resumo: motivo ? `Venda cancelada • ${motivo}` : 'Venda cancelada',
-        valor: num(r.valor_estornado),
+        valor: valorEstornado,
         detalhe: {
-          venda_id: str(r.venda_id),
+          venda_id: saleId,
           motivo,
           forma_pagamento: str(r.forma_pagamento),
-          valor_estornado: num(r.valor_estornado),
+          valor_estornado: valorEstornado,
         },
       })
     }
@@ -197,19 +228,19 @@ export async function listarEventosAuditoria(
   if (wantsTipo(filtro, 'AJUSTE_ESTOQUE')) {
     let q = supabase
       .from('movimentos_estoque_log')
-      .select('id, produto_id, tipo_codigo, quantidade_delta, observacao, gerente_id, created_at')
+      .select('id, produto_id, tipo_codigo, quantidade_delta, observacao, usuario_id, created_at')
       .eq('loja_id', loja)
       .order('created_at', { ascending: false })
       .limit(LIMITE_POR_FONTE)
     if (filtro.inicio) q = q.gte('created_at', filtro.inicio)
     if (filtro.fim) q = q.lte('created_at', filtro.fim)
-    // `movimentos_estoque_log` registra apenas `gerente_id` (quem autorizou).
-    if (operadorFiltro) q = q.eq('gerente_id', operadorFiltro)
+    // `movimentos_estoque_log` registra `usuario_id` (quem executou o movimento).
+    if (operadorFiltro) q = q.eq('usuario_id', operadorFiltro)
 
     const { data, error } = await q
-    if (error) return { ok: false, error: 'Falha ao ler movimentos de estoque.' }
-    for (const r of data ?? []) {
-      const opId = str(r.gerente_id)
+    const rows = error ? [] : (data ?? [])
+    for (const r of rows) {
+      const opId = str(r.usuario_id)
       if (opId && UUID_RE.test(opId)) operadorIds.add(opId)
       const prodId = str(r.produto_id)
       if (prodId) produtoIds.add(prodId)
@@ -245,8 +276,8 @@ export async function listarEventosAuditoria(
     if (filtro.fim) q = q.lte('criado_em', filtro.fim)
 
     const { data, error } = await q
-    if (error) return { ok: false, error: 'Falha ao ler alertas do sistema.' }
-    for (const r of data ?? []) {
+    const rows = error ? [] : (data ?? [])
+    for (const r of rows) {
       const prodId = str(r.produto_id)
       if (prodId) produtoIds.add(prodId)
       const tipo = String(r.tipo ?? '')
@@ -279,8 +310,8 @@ export async function listarEventosAuditoria(
     if (operadorFiltro) q = q.eq('operador_id', operadorFiltro)
 
     const { data, error } = await q
-    if (error) return { ok: false, error: 'Falha ao ler descontos.' }
-    for (const r of data ?? []) {
+    const rows = error ? [] : (data ?? [])
+    for (const r of rows) {
       const opId = str(r.operador_id)
       if (opId) operadorIds.add(opId)
       const pct = num(r.desconto_percentual)
