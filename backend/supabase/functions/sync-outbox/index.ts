@@ -1,3 +1,7 @@
+// FREEZE: CORE TRANSACIONAL — caller único para registrar_venda_com_itens.
+// Não reintroduzir USE_UNIFIED_SALES_FLOW, canary flags ou branches de RPC de venda.
+// Ver docs/venda-golden-flow.md para o contrato oficial.
+//
 // Supabase Edge Function: sync-outbox
 // Recebe eventos do PDV local (outbox) e persiste no Postgres.
 // Segurança: HMAC (X-SYNC-TS, X-SYNC-NONCE, X-SYNC-SIGNATURE) + X-SYNC-KEY; anti-replay (nonce);
@@ -635,6 +639,7 @@ async function processVenda(
   const parsedJson = JSON.parse(ev.payload_json);
   const payload = parseVendaPayload(parsedJson);
   const strictManagerDiscountAuth = Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true";
+  const _t0 = Date.now();
 
   await ensureCaixaPdv(
     supabase,
@@ -664,14 +669,29 @@ async function processVenda(
   });
 
   if (rpcVendaErr) throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
+  const _t1 = Date.now();
 
   await aplicarBaixaEstoquePorItem(
     supabase,
     payload.venda_id,
     (payload.itens ?? []).map((i) => ({ produto_id: i.produto_id, quantidade: i.quantidade })),
   );
+  const _t2 = Date.now();
 
   await maybeEnqueueFiscalDocumentAfterSyncedVenda(supabase, payload, log);
+
+  log({
+    level: "info",
+    stage: "venda_registrada",
+    path: "sync_outbox",
+    rpc: "registrar_venda_com_itens",
+    venda_id: payload.venda_id,
+    steps: {
+      rpc_ms: _t1 - _t0,
+      estoque_ms: _t2 - _t1,
+      total_ms: Date.now() - _t0,
+    },
+  });
 }
 
 async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
