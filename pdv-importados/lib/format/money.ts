@@ -35,10 +35,10 @@ export function formatDecimalPlaces(value: number, fractionDigits: number): stri
 
 /**
  * Formata número como decimal BRL sem símbolo de moeda (ex.: 25.9 → "25,90").
- * Ideal para inputs e células de tabela editáveis.
+ * Sempre pt-BR. Ideal para inputs e células de tabela editáveis.
  */
-export function formatDecimalBRL(value: number, locale = 'pt-BR'): string {
-  return toFiniteNumber(value).toLocaleString(locale, {
+export function formatDecimalBRL(value: number): string {
+  return toFiniteNumber(value).toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
