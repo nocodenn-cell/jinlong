@@ -110,6 +110,18 @@ function OrigemBadgeUi({
   )
 }
 
+function fmtBRLInput(value: number): string {
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function parseBRLInline(raw: string): number | null {
+  // Remove pontos de milhar (pt-BR), troca vírgula decimal por ponto
+  const t = raw.trim().replace(/\./g, '').replace(',', '.')
+  if (t === '') return null
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
+
 function PrecoVarejoCell({
   produtoId,
   precoVarejo,
@@ -127,19 +139,12 @@ function PrecoVarejoCell({
   atualizadoMessage: string
   ariaLabel: string
 }>) {
-  const [draft, setDraft] = useState(() => String(precoVarejo))
+  const [draft, setDraft] = useState(() => fmtBRLInput(precoVarejo))
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    setDraft(String(precoVarejo))
+    setDraft(fmtBRLInput(precoVarejo))
   }, [precoVarejo, produtoId])
-
-  const parseValor = (raw: string): number | null => {
-    const t = raw.trim().replace(/\s/g, '').replace(',', '.')
-    if (t === '') return null
-    const n = Number(t)
-    return Number.isFinite(n) ? n : null
-  }
 
   return (
     <input
@@ -149,19 +154,19 @@ function PrecoVarejoCell({
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={async () => {
-        const n = parseValor(draft)
+        const n = parseBRLInline(draft)
         if (n === null) {
           emitGerenteToast({ kind: 'error', message: msgInvalido })
-          setDraft(String(precoVarejo))
+          setDraft(fmtBRLInput(precoVarejo))
           return
         }
         if (n <= 0) {
           emitGerenteToast({ kind: 'error', message: msgMaiorZero })
-          setDraft(String(precoVarejo))
+          setDraft(fmtBRLInput(precoVarejo))
           return
         }
         if (Math.abs(n - precoVarejo) < 0.005) {
-          setDraft(String(precoVarejo))
+          setDraft(fmtBRLInput(precoVarejo))
           return
         }
         setSaving(true)
@@ -169,7 +174,7 @@ function PrecoVarejoCell({
           const r = await atualizarPrecoVarejoProduto({ produto_id: produtoId, preco_varejo: n })
           if (!r.success) {
             emitGerenteToast({ kind: 'error', message: r.error })
-            setDraft(String(precoVarejo))
+            setDraft(fmtBRLInput(precoVarejo))
             return
           }
           emitGerenteToast({ kind: 'success', message: atualizadoMessage })
@@ -1013,7 +1018,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                   {p.preco_atacado != null ? (
                     <div className="flex flex-col items-end gap-0">
                       <span className="text-xs tabular-nums text-emerald-400">
-                        {p.preco_atacado.toFixed(2)}
+                        {fmtBRLInput(p.preco_atacado)}
                       </span>
                       {p.quantidade_gatilho_atacado != null && (
                         <span className="text-[10px] text-slate-500">≥{p.quantidade_gatilho_atacado}</span>
