@@ -34,6 +34,7 @@ import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCa
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
@@ -110,17 +111,6 @@ function OrigemBadgeUi({
   )
 }
 
-function fmtBRLInput(value: number): string {
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function parseBRLInline(raw: string): number | null {
-  // Remove pontos de milhar (pt-BR), troca vírgula decimal por ponto
-  const t = raw.trim().replace(/\./g, '').replace(',', '.')
-  if (t === '') return null
-  const n = Number(t)
-  return Number.isFinite(n) ? n : null
-}
 
 function PrecoVarejoCell({
   produtoId,
@@ -139,11 +129,11 @@ function PrecoVarejoCell({
   atualizadoMessage: string
   ariaLabel: string
 }>) {
-  const [draft, setDraft] = useState(() => fmtBRLInput(precoVarejo))
+  const [draft, setDraft] = useState(() => formatDecimalBRL(precoVarejo))
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    setDraft(fmtBRLInput(precoVarejo))
+    setDraft(formatDecimalBRL(precoVarejo))
   }, [precoVarejo, produtoId])
 
   return (
@@ -154,19 +144,19 @@ function PrecoVarejoCell({
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={async () => {
-        const n = parseBRLInline(draft)
+        const n = parseBRL(draft)
         if (n === null) {
           emitGerenteToast({ kind: 'error', message: msgInvalido })
-          setDraft(fmtBRLInput(precoVarejo))
+          setDraft(formatDecimalBRL(precoVarejo))
           return
         }
         if (n <= 0) {
           emitGerenteToast({ kind: 'error', message: msgMaiorZero })
-          setDraft(fmtBRLInput(precoVarejo))
+          setDraft(formatDecimalBRL(precoVarejo))
           return
         }
         if (Math.abs(n - precoVarejo) < 0.005) {
-          setDraft(fmtBRLInput(precoVarejo))
+          setDraft(formatDecimalBRL(precoVarejo))
           return
         }
         setSaving(true)
@@ -174,7 +164,7 @@ function PrecoVarejoCell({
           const r = await atualizarPrecoVarejoProduto({ produto_id: produtoId, preco_varejo: n })
           if (!r.success) {
             emitGerenteToast({ kind: 'error', message: r.error })
-            setDraft(fmtBRLInput(precoVarejo))
+            setDraft(formatDecimalBRL(precoVarejo))
             return
           }
           emitGerenteToast({ kind: 'success', message: atualizadoMessage })
@@ -1018,7 +1008,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                   {p.preco_atacado != null ? (
                     <div className="flex flex-col items-end gap-0">
                       <span className="text-xs tabular-nums text-emerald-400">
-                        {fmtBRLInput(p.preco_atacado)}
+                        {formatDecimalBRL(p.preco_atacado)}
                       </span>
                       {p.quantidade_gatilho_atacado != null && (
                         <span className="text-[10px] text-slate-500">≥{p.quantidade_gatilho_atacado}</span>

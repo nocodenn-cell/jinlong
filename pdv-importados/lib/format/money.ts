@@ -32,3 +32,25 @@ export function formatNumberLocale(value: number, locale = 'pt-BR'): string {
 export function formatDecimalPlaces(value: number, fractionDigits: number): string {
   return toFiniteNumber(value).toFixed(fractionDigits)
 }
+
+/**
+ * Formata número como decimal BRL sem símbolo de moeda (ex.: 25.9 → "25,90").
+ * Ideal para inputs e células de tabela editáveis.
+ */
+export function formatDecimalBRL(value: number, locale = 'pt-BR'): string {
+  return toFiniteNumber(value).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+/**
+ * Converte string BRL (ex.: "25,90" ou "1.234,56") em número.
+ * Retorna null se a string for inválida ou vazia.
+ */
+export function parseBRL(raw: string): number | null {
+  const t = raw.trim().replace(/\./g, '').replace(',', '.')
+  if (t === '') return null
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
