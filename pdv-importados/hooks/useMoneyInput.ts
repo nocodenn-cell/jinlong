@@ -1,19 +1,7 @@
 import { useCallback, useState } from 'react'
+import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 
-function formatBRLInput(value: number): string {
-  if (!Number.isFinite(value) || value === 0) return ''
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function parseBRLInput(display: string): number | null {
-  if (!display.trim()) return null
-  // Remove thousands dots, replace decimal comma with dot
-  const normalized = display.replace(/\./g, '').replace(',', '.')
-  const n = parseFloat(normalized)
-  return Number.isFinite(n) && n >= 0 ? n : null
-}
-
-function filterBRLChars(raw: string): string {
+export function filterBRLChars(raw: string): string {
   // Only digits and comma
   let v = raw.replace(/[^\d,]/g, '')
   // At most one comma
@@ -38,7 +26,7 @@ export type MoneyInputBag = {
 export function useMoneyInput(initial?: number | null): MoneyInputBag {
   const [display, setDisplay] = useState<string>(() =>
     initial != null && Number.isFinite(initial) && initial !== 0
-      ? formatBRLInput(initial)
+      ? formatDecimalBRL(initial)
       : ''
   )
 
@@ -47,13 +35,13 @@ export function useMoneyInput(initial?: number | null): MoneyInputBag {
   }, [])
 
   const parse = useCallback((): number | null => {
-    return parseBRLInput(display)
+    return parseBRL(display)
   }, [display])
 
   const reset = useCallback((value?: number | null) => {
     setDisplay(
       value != null && Number.isFinite(value) && value !== 0
-        ? formatBRLInput(value)
+        ? formatDecimalBRL(value)
         : ''
     )
   }, [])

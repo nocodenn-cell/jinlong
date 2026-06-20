@@ -34,7 +34,8 @@ import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCa
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
-import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
+import { formatDecimalBRL } from '@/lib/format/money'
+import { useMoneyInput } from '@/hooks/useMoneyInput'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
@@ -129,11 +130,12 @@ function PrecoVarejoCell({
   atualizadoMessage: string
   ariaLabel: string
 }>) {
-  const [draft, setDraft] = useState(() => formatDecimalBRL(precoVarejo))
+  const moneyInput = useMoneyInput(precoVarejo)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    setDraft(formatDecimalBRL(precoVarejo))
+    moneyInput.reset(precoVarejo)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [precoVarejo, produtoId])
 
   return (
@@ -141,22 +143,22 @@ function PrecoVarejoCell({
       type="text"
       inputMode="decimal"
       disabled={saving}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
+      value={moneyInput.display}
+      onChange={moneyInput.onChange}
       onBlur={async () => {
-        const n = parseBRL(draft)
+        const n = moneyInput.parse()
         if (n === null) {
           emitGerenteToast({ kind: 'error', message: msgInvalido })
-          setDraft(formatDecimalBRL(precoVarejo))
+          moneyInput.reset(precoVarejo)
           return
         }
         if (n <= 0) {
           emitGerenteToast({ kind: 'error', message: msgMaiorZero })
-          setDraft(formatDecimalBRL(precoVarejo))
+          moneyInput.reset(precoVarejo)
           return
         }
         if (Math.abs(n - precoVarejo) < 0.005) {
-          setDraft(formatDecimalBRL(precoVarejo))
+          moneyInput.reset(precoVarejo)
           return
         }
         setSaving(true)
@@ -164,7 +166,7 @@ function PrecoVarejoCell({
           const r = await atualizarPrecoVarejoProduto({ produto_id: produtoId, preco_varejo: n })
           if (!r.success) {
             emitGerenteToast({ kind: 'error', message: r.error })
-            setDraft(formatDecimalBRL(precoVarejo))
+            moneyInput.reset(precoVarejo)
             return
           }
           emitGerenteToast({ kind: 'success', message: atualizadoMessage })
