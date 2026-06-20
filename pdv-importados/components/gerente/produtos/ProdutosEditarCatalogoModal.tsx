@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { formatDecimal2, parseMoney } from '@/lib/format/money'
 
 type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'  // brasil_sem_nf is legacy DB value
 type UnidadeCode = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
@@ -81,9 +82,12 @@ export function ProdutosEditarCatalogoModal({
     setCodigoBarras(produto.codigo_barras ?? '')
     // Map legacy brasil_sem_nf to brasil_nf so the dropdown selects "Brasil"
     setOrigem(produto.origem === 'brasil_sem_nf' ? 'brasil_nf' : produto.origem as OrigemCode)
-    setPrecoVarejo(String(produto.preco_varejo))
-    setPrecoAtacado(produto.preco_atacado != null ? String(produto.preco_atacado) : '')
-    setPrecoCusto(produto.preco_custo != null ? String(produto.preco_custo) : '')
+    // Reabre os campos no padrão pt-BR (1.234,56) — consistente com o resto do
+    // ERP e com o que parseMoney reconverte ao salvar. Usar String() deixaria o
+    // campo em formato americano (1234.56), misturando padrões na mesma tela.
+    setPrecoVarejo(formatDecimal2(produto.preco_varejo))
+    setPrecoAtacado(produto.preco_atacado != null ? formatDecimal2(produto.preco_atacado) : '')
+    setPrecoCusto(produto.preco_custo != null ? formatDecimal2(produto.preco_custo) : '')
     setPermitirAbaixoCusto(produto.permitir_abaixo_custo)
     setQtdGatilho(produto.quantidade_gatilho_atacado != null ? String(produto.quantidade_gatilho_atacado) : '')
     setUnidadeMedida((produto.unidade_medida as UnidadeCode) || 'UN')
@@ -104,11 +108,9 @@ export function ProdutosEditarCatalogoModal({
     if (!produto) return
     setSaving(true)
     try {
-      const precoVarejoNum = parseFloat(precoVarejo.replace(',', '.'))
-      const precoAtacadoNum = precoAtacado.trim()
-        ? parseFloat(precoAtacado.replace(',', '.'))
-        : null
-      const precoCustoNum = precoCusto.trim() ? parseFloat(precoCusto.replace(',', '.')) : null
+      const precoVarejoNum = parseMoney(precoVarejo)
+      const precoAtacadoNum = precoAtacado.trim() ? parseMoney(precoAtacado) : null
+      const precoCustoNum = precoCusto.trim() ? parseMoney(precoCusto) : null
       const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
       const r = await atualizarDadosProdutoGerente({

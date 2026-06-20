@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatBRL, formatDecimal2, formatNumberLocale, formatDecimalPlaces } from './money'
+import {
+  formatBRL,
+  formatDecimal2,
+  formatNumberLocale,
+  formatDecimalPlaces,
+  parseMoney,
+} from './money'
 
 describe('money formatters — defensivo contra valores não-finitos', () => {
   it('formata valores válidos normalmente', () => {
@@ -24,5 +30,56 @@ describe('money formatters — defensivo contra valores não-finitos', () => {
     expect(() => formatBRL(null as unknown as number)).not.toThrow()
     expect(formatDecimal2(undefined as unknown as number)).toBe('0,00')
     expect(formatNumberLocale(null as unknown as number)).toBe('0')
+  })
+})
+
+describe('parseMoney — separador de milhar não pode corromper o valor', () => {
+  it('converte os valores monetários da matriz de regressão', () => {
+    expect(parseMoney('1,00')).toBe(1)
+    expect(parseMoney('9,99')).toBe(9.99)
+    expect(parseMoney('99,99')).toBe(99.99)
+    expect(parseMoney('999,99')).toBe(999.99)
+    // Regressão do bug: dot de milhar antes virava "1.234.56" → 1.234.
+    expect(parseMoney('1.234,56')).toBe(1234.56)
+    expect(parseMoney('12.345,67')).toBe(12345.67)
+    // Formato americano (ponto decimal) também é aceito.
+    expect(parseMoney('1234.56')).toBe(1234.56)
+    expect(parseMoney('9.99')).toBe(9.99)
+  })
+
+  it('round-trip: parseMoney(formatDecimal2(n)) === n', () => {
+    for (const n of [1, 9.99, 999.99, 1234.56, 12345.67]) {
+      expect(parseMoney(formatDecimal2(n))).toBeCloseTo(n, 2)
+    }
+  })
+
+  it('aceita milhar com agrupamento americano (1,234.56)', () => {
+    expect(parseMoney('1,234.56')).toBe(1234.56)
+  })
+
+  it('separador isolado é tratado como decimal (regra determinística)', () => {
+    // Um único separador é ambíguo ("1.000" = mil ou 1,0?). A regra
+    // "último separador = decimal" resolve ambos para 1,0 de forma consistente.
+    // Para mil, o usuário digita "1000" ou usa os dois separadores ("1.000,00").
+    expect(parseMoney('1,000')).toBe(1)
+    expect(parseMoney('1.000')).toBe(1)
+    expect(parseMoney('1000')).toBe(1000)
+    expect(parseMoney('1.000,00')).toBe(1000)
+  })
+
+  it('ignora símbolo de moeda e espaços', () => {
+    expect(parseMoney('R$ 1.234,56')).toBe(1234.56)
+    expect(parseMoney('  9,99 ')).toBe(9.99)
+  })
+
+  it('suporta valores negativos', () => {
+    expect(parseMoney('-5,50')).toBe(-5.5)
+  })
+
+  it('retorna NaN para entrada vazia/inválida', () => {
+    expect(parseMoney('')).toBeNaN()
+    expect(parseMoney('   ')).toBeNaN()
+    expect(parseMoney('abc')).toBeNaN()
+    expect(parseMoney('-')).toBeNaN()
   })
 })

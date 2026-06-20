@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { parseMoney } from '@/lib/format/money'
 
 type OrigemCode = 'china_manual' | 'brasil_nf'
 
@@ -63,13 +64,13 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
       emitGerenteToast({ kind: 'error', message: p.nome_obrigatorio })
       return
     }
-    const precoVarejoNum = parseFloat(precoVarejo.replace(',', '.'))
+    const precoVarejoNum = parseMoney(precoVarejo)
     if (!precoVarejo.trim() || !Number.isFinite(precoVarejoNum) || precoVarejoNum <= 0) {
       emitGerenteToast({ kind: 'error', message: p.preco_invalido })
       return
     }
-    const precoAtacadoNum = precoAtacado.trim() ? parseFloat(precoAtacado.replace(',', '.')) : null
-    const precoCustoNum = precoCusto.trim() ? parseFloat(precoCusto.replace(',', '.')) : null
+    const precoAtacadoNum = precoAtacado.trim() ? parseMoney(precoAtacado) : null
+    const precoCustoNum = precoCusto.trim() ? parseMoney(precoCusto) : null
     const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
     setSaving(true)

@@ -33,6 +33,7 @@ import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { formatDecimal2, parseMoney } from '@/lib/format/money'
 import { cn } from '@/lib/utils'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
@@ -127,17 +128,16 @@ function PrecoVarejoCell({
   atualizadoMessage: string
   ariaLabel: string
 }>) {
-  const [draft, setDraft] = useState(() => String(precoVarejo))
+  const [draft, setDraft] = useState(() => formatDecimal2(precoVarejo))
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    setDraft(String(precoVarejo))
+    setDraft(formatDecimal2(precoVarejo))
   }, [precoVarejo, produtoId])
 
   const parseValor = (raw: string): number | null => {
-    const t = raw.trim().replace(/\s/g, '').replace(',', '.')
-    if (t === '') return null
-    const n = Number(t)
+    if (raw.trim() === '') return null
+    const n = parseMoney(raw)
     return Number.isFinite(n) ? n : null
   }
 
@@ -152,16 +152,16 @@ function PrecoVarejoCell({
         const n = parseValor(draft)
         if (n === null) {
           emitGerenteToast({ kind: 'error', message: msgInvalido })
-          setDraft(String(precoVarejo))
+          setDraft(formatDecimal2(precoVarejo))
           return
         }
         if (n <= 0) {
           emitGerenteToast({ kind: 'error', message: msgMaiorZero })
-          setDraft(String(precoVarejo))
+          setDraft(formatDecimal2(precoVarejo))
           return
         }
         if (Math.abs(n - precoVarejo) < 0.005) {
-          setDraft(String(precoVarejo))
+          setDraft(formatDecimal2(precoVarejo))
           return
         }
         setSaving(true)
@@ -169,7 +169,7 @@ function PrecoVarejoCell({
           const r = await atualizarPrecoVarejoProduto({ produto_id: produtoId, preco_varejo: n })
           if (!r.success) {
             emitGerenteToast({ kind: 'error', message: r.error })
-            setDraft(String(precoVarejo))
+            setDraft(formatDecimal2(precoVarejo))
             return
           }
           emitGerenteToast({ kind: 'success', message: atualizadoMessage })
