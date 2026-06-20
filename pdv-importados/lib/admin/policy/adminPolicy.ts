@@ -58,6 +58,7 @@ const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO', 'ADMIN'
 const ACTION_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'estoque:kardex': ALL_ADMIN_PROFILES,
   'vendas:detalhe': ALL_ADMIN_PROFILES,
+  'auditoria:listar': ALL_ADMIN_PROFILES,
 }
 
 /** Recursos: rotas UI, APIs e dados sensíveis. */
@@ -67,6 +68,7 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin/dashboard': ALL_ADMIN_PROFILES,
   'route:/admin/catalogo': ALL_ADMIN_PROFILES,
   'route:/admin/vendas': ALL_ADMIN_PROFILES,
+  'route:/admin/auditoria': ALL_ADMIN_PROFILES,
   'route:/admin/estoque': ALL_ADMIN_PROFILES,
   'api:gerente:health': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:recent': ALL_ADMIN_PROFILES,
