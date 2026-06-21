@@ -19,6 +19,29 @@
   "overrides": [
     {
       "files": ["**/*.{ts,tsx}"],
+      "excludedFiles": [
+        "shared/pricing/PricingService.ts",
+        "shared/pricing/pricingEngine.ts",
+        "core/pricing/**/*",
+        "**/*.test.ts",
+        "**/*.spec.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@shared/pricing/PricingService"],
+                "message": "Importe de '@shared/pricing/pricingEngine' (facade pública). PricingService é internal — instanciação direta viola a fronteira do Pricing Engine."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/*.{ts,tsx}"],
       "excludedFiles": ["app/caixa/server/**/*", "app/caixa/actions.ts"],
       "rules": {
         "no-restricted-imports": [

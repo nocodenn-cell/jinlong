@@ -5,7 +5,7 @@
 export interface RegraPreco {
   id: string
   nome: string
-  tipo: 'ATAcado' | 'VAREJO' | 'PROMOCAO'
+  tipo: 'ATACADO' | 'VAREJO' | 'PROMOCAO'
   minQuantidade?: number
   maxQuantidade?: number
   descontoPercentual?: number

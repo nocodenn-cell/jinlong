@@ -26,7 +26,9 @@ export function mapRegraPrecoRow(row: RegraPrecoRow): RegraPreco {
   return {
     id: row.id,
     nome: row.tipo_regra,
-    tipo: row.tipo_regra === 'PRODUTO' ? 'VAREJO' : 'ATAcado',
+    tipo: row.tipo_regra === 'PRODUTO' ? 'VAREJO'
+        : row.tipo_regra === 'PROMOCAO' ? 'PROMOCAO'
+        : 'ATACADO',
     minQuantidade: qMin,
     maxQuantidade: qMax,
     quantidadeMinima: qMin,
