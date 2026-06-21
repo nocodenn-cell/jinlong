@@ -1,0 +1,9 @@
+/**
+ * Design System — entrada única.
+ * Ordem importa: core (primitives + density) → themes (skins) → components.
+ * Importado de forma ADITIVA em app/globals.css; não substitui os sistemas
+ * legados (theme-oriental / admin-v2) durante a migração.
+ */
+@import "./core.css";
+@import "./themes.css";
+@import "./components.css";

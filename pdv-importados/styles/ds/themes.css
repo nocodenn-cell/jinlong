@@ -1,0 +1,117 @@
+/**
+ * ============================================================================
+ * DESIGN SYSTEM — THEME LAYER  (skins intercambiáveis)
+ * ----------------------------------------------------------------------------
+ * Regra de integridade: theme NUNCA altera estrutura ou comportamento — só
+ * preenche os tokens semânticos --ds-*. Trocar de tema = trocar de skin.
+ *
+ * Temas:
+ *   commercial-gold  → DEFAULT de produção (dashboard comercial: escuro + ouro)
+ *   default          → shadcn neutro (claro), estrutura de referência
+ *   dragon           → premium skin (gold + glass), opcional de branding
+ *
+ * O default do produto é commercial-gold: aplicado em :root SEM atributo, para
+ * que a UI nasça no visual comercial. Override por escopo com [data-theme].
+ * ============================================================================
+ */
+
+/* ----- COMMERCIAL-GOLD (default de produção) ----- */
+:root,
+[data-theme="commercial-gold"] {
+  color-scheme: dark;
+
+  --ds-bg:            var(--ds-neutral-950);
+  --ds-surface:       #0b1220;
+  --ds-surface-2:     #111a2e;
+  --ds-surface-raised:#16223b;
+
+  --ds-border:        rgba(148, 163, 184, 0.16);
+  --ds-border-strong: rgba(148, 163, 184, 0.30);
+
+  --ds-text:          var(--ds-neutral-100);
+  --ds-text-muted:    var(--ds-neutral-400);
+  --ds-text-subtle:   var(--ds-neutral-500);
+
+  /* ouro de marca — ÚNICA fonte da verdade do accent neste tema */
+  --ds-accent:          #f5b81e;
+  --ds-accent-hover:    #ffc83a;
+  --ds-accent-contrast: #1a1304;
+
+  --ds-success:  #10b981;
+  --ds-danger:   #f87171;
+  --ds-warning:  #f5b81e;
+  --ds-info:     #60a5fa;
+  --ds-on-status:#0b1220;
+
+  --ds-ring:     var(--ds-accent);
+  --ds-overlay:  rgba(2, 6, 23, 0.62);
+
+  --ds-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ds-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* ----- DEFAULT (shadcn neutro, claro) ----- */
+[data-theme="default"] {
+  color-scheme: light;
+
+  --ds-bg:            var(--ds-neutral-50);
+  --ds-surface:       var(--ds-neutral-0);
+  --ds-surface-2:     var(--ds-neutral-50);
+  --ds-surface-raised:var(--ds-neutral-0);
+
+  --ds-border:        var(--ds-neutral-200);
+  --ds-border-strong: var(--ds-neutral-300);
+
+  --ds-text:          var(--ds-neutral-900);
+  --ds-text-muted:    var(--ds-neutral-500);
+  --ds-text-subtle:   var(--ds-neutral-400);
+
+  --ds-accent:          #0f172a;
+  --ds-accent-hover:    #1e293b;
+  --ds-accent-contrast: var(--ds-neutral-0);
+
+  --ds-success:  #059669;
+  --ds-danger:   #dc2626;
+  --ds-warning:  #d97706;
+  --ds-info:     #2563eb;
+  --ds-on-status:#ffffff;
+
+  --ds-ring:     #2563eb;
+  --ds-overlay:  rgba(15, 23, 42, 0.45);
+
+  --ds-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --ds-shadow-2: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+/* ----- DRAGON (premium skin — gold + glass) ----- */
+[data-theme="dragon"] {
+  color-scheme: dark;
+
+  --ds-bg:            #020617;
+  --ds-surface:       rgba(15, 23, 42, 0.82);
+  --ds-surface-2:     rgba(15, 23, 42, 0.92);
+  --ds-surface-raised:rgba(22, 32, 56, 0.92);
+
+  --ds-border:        rgba(245, 158, 11, 0.18);
+  --ds-border-strong: rgba(245, 158, 11, 0.34);
+
+  --ds-text:          #f1f5f9;
+  --ds-text-muted:    #94a3b8;
+  --ds-text-subtle:   #64748b;
+
+  --ds-accent:          #fbbf24;
+  --ds-accent-hover:    #fcd34d;
+  --ds-accent-contrast: #111827;
+
+  --ds-success:  #34d399;
+  --ds-danger:   #fca5a5;
+  --ds-warning:  #fbbf24;
+  --ds-info:     #93c5fd;
+  --ds-on-status:#0b1220;
+
+  --ds-ring:     var(--ds-accent);
+  --ds-overlay:  rgba(2, 6, 23, 0.58);
+
+  --ds-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --ds-shadow-2: 0 12px 32px rgba(0, 0, 0, 0.55);
+}

@@ -1,5 +1,6 @@
 @import "../styles/theme-fix-aggressive.css";
 @import "../styles/unstick-gerente.css";
+@import "../styles/ds/index.css";
 
 @tailwind base;
 @tailwind components;

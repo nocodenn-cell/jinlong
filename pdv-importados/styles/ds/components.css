@@ -1,0 +1,154 @@
+/**
+ * ============================================================================
+ * DESIGN SYSTEM — COMPONENT LAYER (estilo dos componentes via TOKENS apenas)
+ * ----------------------------------------------------------------------------
+ * Regras de integridade:
+ *   - Zero hex hardcoded — só var(--ds-*).
+ *   - Zero dependência de tema específico — qualquer tema preenche os tokens.
+ *   - Variação por data-attribute (variant/size/elevation), nunca por tema.
+ *   - Sem semântica de produto.
+ * Os componentes React (components/ds/*) apenas aplicam estas classes + attrs.
+ * ============================================================================
+ */
+
+/* ---------------------------------------------------------------- BUTTON --- */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  height: var(--ds-control-h);
+  padding-inline: var(--ds-control-px);
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-md);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-field-text);
+  font-weight: var(--ds-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--ds-dur-fast) var(--ds-ease),
+    border-color var(--ds-dur-fast) var(--ds-ease),
+    color var(--ds-dur-fast) var(--ds-ease),
+    filter var(--ds-dur-fast) var(--ds-ease);
+}
+.ds-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--ds-focus-offset) var(--ds-surface),
+    0 0 0 calc(var(--ds-focus-offset) + var(--ds-focus-width)) var(--ds-ring);
+}
+.ds-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ds-btn[data-variant="primary"] {
+  background: var(--ds-accent);
+  color: var(--ds-accent-contrast);
+}
+.ds-btn[data-variant="primary"]:hover {
+  background: var(--ds-accent-hover);
+}
+.ds-btn[data-variant="secondary"] {
+  background: var(--ds-surface-2);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+.ds-btn[data-variant="secondary"]:hover {
+  border-color: var(--ds-accent);
+}
+.ds-btn[data-variant="ghost"] {
+  background: transparent;
+  color: var(--ds-text);
+}
+.ds-btn[data-variant="ghost"]:hover {
+  background: var(--ds-surface-2);
+}
+.ds-btn[data-variant="danger"] {
+  background: color-mix(in srgb, var(--ds-danger) 22%, transparent);
+  color: var(--ds-danger);
+  border-color: color-mix(in srgb, var(--ds-danger) 45%, transparent);
+}
+.ds-btn[data-variant="danger"]:hover {
+  background: color-mix(in srgb, var(--ds-danger) 32%, transparent);
+}
+
+.ds-btn[data-size="sm"] { height: calc(var(--ds-control-h) - 0.5rem); padding-inline: var(--ds-space-3); font-size: var(--ds-text-xs); }
+.ds-btn[data-size="lg"] { height: calc(var(--ds-control-h) + 0.5rem); padding-inline: var(--ds-space-6); }
+.ds-btn[data-block="true"] { width: 100%; }
+
+/* ----------------------------------------------------------------- CARD --- */
+.ds-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-card-pad);
+  color: var(--ds-text);
+}
+.ds-card[data-elevation="1"] { box-shadow: var(--ds-shadow-1); }
+.ds-card[data-elevation="2"] { background: var(--ds-surface-raised); box-shadow: var(--ds-shadow-2); }
+.ds-card[data-recessive="true"] { background: var(--ds-surface-2); border-color: transparent; box-shadow: none; }
+.ds-card-title { font-size: var(--ds-text-lg); font-weight: var(--ds-weight-semibold); color: var(--ds-text); }
+.ds-card-subtitle { margin-top: var(--ds-space-1); font-size: var(--ds-text-sm); color: var(--ds-text-muted); }
+
+/* ---------------------------------------------------------------- INPUT --- */
+.ds-field { display: flex; flex-direction: column; gap: var(--ds-space-1); }
+.ds-field-label { font-size: var(--ds-text-sm); font-weight: var(--ds-weight-medium); color: var(--ds-text); }
+.ds-input,
+.ds-select {
+  height: var(--ds-control-h);
+  padding-inline: var(--ds-space-3);
+  width: 100%;
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-field-text);
+  transition: border-color var(--ds-dur-fast) var(--ds-ease), box-shadow var(--ds-dur-fast) var(--ds-ease);
+}
+.ds-input::placeholder { color: var(--ds-text-subtle); }
+.ds-input:focus-visible,
+.ds-select:focus-visible {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 var(--ds-focus-width) color-mix(in srgb, var(--ds-ring) 35%, transparent);
+}
+
+/* ----------------------------------------------------------- PRIMITIVES --- */
+.ds-text { color: var(--ds-text); font-family: var(--ds-font-sans); }
+.ds-text[data-tone="muted"] { color: var(--ds-text-muted); }
+.ds-text[data-tone="subtle"] { color: var(--ds-text-subtle); }
+.ds-text[data-tone="accent"] { color: var(--ds-accent); }
+.ds-stack { display: flex; flex-direction: column; gap: var(--ds-stack-gap); }
+.ds-grid { display: grid; gap: var(--ds-stack-gap); }
+
+/* -------------------------------------------------------------- OVERLAY --- */
+.ds-overlay-backdrop {
+  position: fixed; inset: 0; z-index: var(--ds-z-overlay);
+  background: var(--ds-overlay);
+  backdrop-filter: blur(4px);
+}
+.ds-overlay-panel {
+  background: var(--ds-surface-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-xl);
+  box-shadow: var(--ds-shadow-2);
+  color: var(--ds-text);
+  padding: var(--ds-card-pad);
+}
+
+/* ---------------------------------------------------------------- BADGE --- */
+.ds-badge {
+  display: inline-flex; align-items: center; gap: var(--ds-space-1);
+  padding: 0.125rem var(--ds-space-2);
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semibold);
+  border: 1px solid transparent;
+}
+.ds-badge[data-tone="success"] { background: color-mix(in srgb, var(--ds-success) 18%, transparent); color: var(--ds-success); border-color: color-mix(in srgb, var(--ds-success) 40%, transparent); }
+.ds-badge[data-tone="danger"]  { background: color-mix(in srgb, var(--ds-danger) 18%, transparent);  color: var(--ds-danger);  border-color: color-mix(in srgb, var(--ds-danger) 40%, transparent); }
+.ds-badge[data-tone="warning"] { background: color-mix(in srgb, var(--ds-warning) 18%, transparent); color: var(--ds-warning); border-color: color-mix(in srgb, var(--ds-warning) 40%, transparent); }
+.ds-badge[data-tone="info"]    { background: color-mix(in srgb, var(--ds-info) 18%, transparent);    color: var(--ds-info);    border-color: color-mix(in srgb, var(--ds-info) 40%, transparent); }
+.ds-badge[data-tone="neutral"] { background: var(--ds-surface-2); color: var(--ds-text-muted); border-color: var(--ds-border); }
