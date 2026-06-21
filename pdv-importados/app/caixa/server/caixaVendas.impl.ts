@@ -178,6 +178,7 @@ export async function finalizarVendaCaixaImpl(
     const recalc = await recalcularItensNoServidor(supabase, itensCliente, lojaId)
     if (!recalc.ok) return { ok: false, error: recalc.error }
     const itensAut = recalc.itens
+    const pricingVersionId = recalc.pricingVersionId
 
     const computedBase = totaisFromItens(itensAut)
     const gerentePercentual = input.descontoGerentePercentual ?? null
@@ -333,6 +334,26 @@ export async function finalizarVendaCaixaImpl(
       temDescontoGerente: !!input.descontoGerenteToken,
       elapsed_ms: Date.now() - _rpcStart,
     })
+
+    // Registrar versão de pricing na venda (migration 249).
+    // Fire-and-forget: falha aqui não desfaz a venda já persistida.
+    // Apenas registra quando versioning está ativo (pricingVersionId não-nulo).
+    if (pricingVersionId) {
+      supabase
+        .rpc('registrar_pricing_version_venda', {
+          p_venda_id: String(row.venda_id),
+          p_version_id: pricingVersionId,
+        })
+        .then(({ error: vErr }) => {
+          if (vErr) {
+            console.warn('[caixa.finalizar_venda.pricing_version_nao_registrada]', {
+              vendaId: row.venda_id,
+              pricingVersionId,
+              error: vErr.message,
+            })
+          }
+        })
+    }
 
     // Observabilidade leve, executada de forma determinística após a venda já
     // concluída (try/catch isolado dentro da própria função, sem propagação
