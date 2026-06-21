@@ -1,3 +1,6 @@
+// FREEZE: CORE TRANSACIONAL — caller único para finalizar_venda_transacional_canonica_v4.
+// Não adicionar branches de execução, flags de feature ou caminhos alternativos aqui.
+// Ver docs/venda-golden-flow.md para o contrato oficial.
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -253,6 +256,7 @@ export async function finalizarVendaCaixaImpl(
 
     // Usar nova RPC unificada com transação atômica
     const strictManagerDiscountAuth = runtimeCfg.strictManagerDiscountAuth
+    const _rpcStart = Date.now()
     const { data, error: txErr } = await supabase.rpc('finalizar_venda_transacional_canonica_v4', {
       p_venda_id: vendaId,
       p_caixa_id: caixaId,
@@ -284,6 +288,8 @@ export async function finalizarVendaCaixaImpl(
         useUnifiedSalesFlow: runtimeCfg.useUnifiedSalesFlow,
         strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
         autoEnqueueFiscalOnSale: runtimeCfg.autoEnqueueFiscalOnSale,
+        elapsed_ms: Date.now() - _rpcStart,
+        error: txErr.message,
       })
       // Transação inteira foi revertida automaticamente pelo PostgreSQL
       return { ok: false, error: caixaErroOperador(txErr.message) }
@@ -302,6 +308,18 @@ export async function finalizarVendaCaixaImpl(
     if (!eventId) {
       return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
+
+    console.log(
+      JSON.stringify({
+        event: 'venda.finalizada',
+        path: 'web_caixa',
+        rpc: 'finalizar_venda_transacional_canonica_v4',
+        venda_id: String(row.venda_id),
+        event_id: eventId,
+        elapsed_ms: Date.now() - _rpcStart,
+        status: 'CONCLUIDA',
+      }),
+    )
 
     // Observabilidade leve, executada de forma determinística após a venda já
     // concluída (try/catch isolado dentro da própria função, sem propagação

@@ -2638,6 +2638,10 @@ export type Database = {
         Args: { p_remessa_id: string }
         Returns: undefined
       }
+      configuracoes_para_caixa_web: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       dashboard_gerente_resumo: {
         Args: { p_loja_id: string; p_tz?: string }
         Returns: Json
@@ -2989,6 +2993,27 @@ export type Database = {
           unidade_medida: string
         }[]
       }
+      kpis_venda_eventos_gerente: {
+        Args: {
+          p_fim: string
+          p_formas_pagamento?: string[]
+          p_inicio: string
+          p_loja_id: string
+        }
+        Returns: Json
+      }
+      listar_venda_eventos_gerente: {
+        Args: {
+          p_event_types?: string[]
+          p_fim: string
+          p_formas_pagamento?: string[]
+          p_inicio: string
+          p_limit?: number
+          p_loja_id: string
+          p_offset?: number
+        }
+        Returns: Json
+      }
       listar_valores_sistema_dinheiro_caixas: {
         Args: { p_caixa_ids: string[] }
         Returns: {
@@ -3005,6 +3030,10 @@ export type Database = {
         }[]
       }
       obter_limite_sangria_sem_gerente: { Args: never; Returns: number }
+      obter_status_caixa_operador: {
+        Args: { p_operador_id: string }
+        Returns: Json
+      }
       pdv_config_flags_visuais: {
         Args: never
         Returns: {

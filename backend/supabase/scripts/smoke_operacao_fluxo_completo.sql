@@ -1,7 +1,8 @@
 -- SMOKE OPERACIONAL COMPLETO (SUPABASE / SQL EDITOR)
 -- Simula: COMPRA (ENTRADA DE ESTOQUE), VENDA (DINHEIRO/PIX/CRÉDITO/DÉBITO),
--- DESCONTO DE GERENTE (SEM TOKEN COM STRICT=FALSE), CANCELAMENTO,
--- MOVIMENTOS DE CAIXA (SUPRIMENTO/SANGRIA) E FECHAMENTO DE CAIXA.
+-- DESCONTO DE GERENTE, CANCELAMENTO, MOVIMENTOS DE CAIXA E FECHAMENTO DE CAIXA.
+-- Usa registrar_venda_com_itens (caminho PDV local / service_role).
+-- Para smoke do fluxo web-caixa, use finalizar_venda_transacional_canonica_v4.
 --
 -- PRÉ-REQUISITOS:
 -- - Banco alinhado ao repositório (sem lacunas em migration list), incluindo loja/estoque por loja (ex.: pacote 032+).
@@ -135,15 +136,15 @@ BEGIN
     (v_caixa_id, 'SANGRIA', 45.00, 'SMOKE: SANGRIA OPERACIONAL');
 
   -- VENDA DINHEIRO
-  PERFORM public.finalizar_venda_transacional_canonica_v2(
-    v_venda_dinheiro,
-    v_caixa_id,
-    v_operador_id,
-    'DINHEIRO',
-    round(v_preco_1 * 2, 2),
-    0,
-    round(v_preco_1 * 2, 2),
-    jsonb_build_array(
+  PERFORM public.registrar_venda_com_itens(
+    p_venda_id        => v_venda_dinheiro,
+    p_caixa_id        => v_caixa_id,
+    p_operador_id     => v_operador_id,
+    p_forma_pagamento => 'DINHEIRO',
+    p_total_bruto     => round(v_preco_1 * 2, 2),
+    p_total_desconto  => 0,
+    p_total_liquido   => round(v_preco_1 * 2, 2),
+    p_itens           => jsonb_build_array(
       jsonb_build_object(
         'item_id', gen_random_uuid(),
         'produto_id', v_prod_1,
@@ -152,22 +153,19 @@ BEGIN
         'preco_unitario', v_preco_1,
         'tipo_preco', 'VAREJO'
       )
-    ),
-    NULL,
-    NULL,
-    false
+    )
   );
 
   -- VENDA PIX
-  PERFORM public.finalizar_venda_transacional_canonica_v2(
-    v_venda_pix,
-    v_caixa_id,
-    v_operador_id,
-    'PIX',
-    v_preco_2,
-    0,
-    v_preco_2,
-    jsonb_build_array(
+  PERFORM public.registrar_venda_com_itens(
+    p_venda_id        => v_venda_pix,
+    p_caixa_id        => v_caixa_id,
+    p_operador_id     => v_operador_id,
+    p_forma_pagamento => 'PIX',
+    p_total_bruto     => v_preco_2,
+    p_total_desconto  => 0,
+    p_total_liquido   => v_preco_2,
+    p_itens           => jsonb_build_array(
       jsonb_build_object(
         'item_id', gen_random_uuid(),
         'produto_id', v_prod_2,
@@ -176,22 +174,19 @@ BEGIN
         'preco_unitario', v_preco_2,
         'tipo_preco', 'VAREJO'
       )
-    ),
-    NULL,
-    NULL,
-    false
+    )
   );
 
   -- VENDA CARTÃO CRÉDITO
-  PERFORM public.finalizar_venda_transacional_canonica_v2(
-    v_venda_credito,
-    v_caixa_id,
-    v_operador_id,
-    'CARTAO_CREDITO',
-    v_preco_3,
-    0,
-    v_preco_3,
-    jsonb_build_array(
+  PERFORM public.registrar_venda_com_itens(
+    p_venda_id        => v_venda_credito,
+    p_caixa_id        => v_caixa_id,
+    p_operador_id     => v_operador_id,
+    p_forma_pagamento => 'CARTAO_CREDITO',
+    p_total_bruto     => v_preco_3,
+    p_total_desconto  => 0,
+    p_total_liquido   => v_preco_3,
+    p_itens           => jsonb_build_array(
       jsonb_build_object(
         'item_id', gen_random_uuid(),
         'produto_id', v_prod_3,
@@ -200,22 +195,19 @@ BEGIN
         'preco_unitario', v_preco_3,
         'tipo_preco', 'VAREJO'
       )
-    ),
-    NULL,
-    NULL,
-    false
+    )
   );
 
   -- VENDA CARTÃO DÉBITO
-  PERFORM public.finalizar_venda_transacional_canonica_v2(
-    v_venda_debito,
-    v_caixa_id,
-    v_operador_id,
-    'CARTAO_DEBITO',
-    v_preco_4,
-    0,
-    v_preco_4,
-    jsonb_build_array(
+  PERFORM public.registrar_venda_com_itens(
+    p_venda_id        => v_venda_debito,
+    p_caixa_id        => v_caixa_id,
+    p_operador_id     => v_operador_id,
+    p_forma_pagamento => 'CARTAO_DEBITO',
+    p_total_bruto     => v_preco_4,
+    p_total_desconto  => 0,
+    p_total_liquido   => v_preco_4,
+    p_itens           => jsonb_build_array(
       jsonb_build_object(
         'item_id', gen_random_uuid(),
         'produto_id', v_prod_4,
@@ -224,22 +216,19 @@ BEGIN
         'preco_unitario', v_preco_4,
         'tipo_preco', 'VAREJO'
       )
-    ),
-    NULL,
-    NULL,
-    false
+    )
   );
 
-  -- VENDA COM DESCONTO DE GERENTE (STRICT=FALSE, SEM TOKEN)
-  PERFORM public.finalizar_venda_transacional_canonica_v2(
-    v_venda_desconto,
-    v_caixa_id,
-    v_operador_id,
-    'DINHEIRO',
-    v_preco_1,
-    round(v_preco_1 * 0.10, 2),
-    round(v_preco_1 * 0.90, 2),
-    jsonb_build_array(
+  -- VENDA COM DESCONTO DE GERENTE
+  PERFORM public.registrar_venda_com_itens(
+    p_venda_id        => v_venda_desconto,
+    p_caixa_id        => v_caixa_id,
+    p_operador_id     => v_operador_id,
+    p_forma_pagamento => 'DINHEIRO',
+    p_total_bruto     => v_preco_1,
+    p_total_desconto  => round(v_preco_1 * 0.10, 2),
+    p_total_liquido   => round(v_preco_1 * 0.90, 2),
+    p_itens           => jsonb_build_array(
       jsonb_build_object(
         'item_id', gen_random_uuid(),
         'produto_id', v_prod_1,
@@ -249,9 +238,8 @@ BEGIN
         'tipo_preco', 'VAREJO'
       )
     ),
-    NULL,
-    10,
-    false
+    p_desconto_gerente_percentual => 10,
+    p_desconto_gerente_valor      => round(v_preco_1 * 0.10, 2)
   );
 
   -- CANCELAMENTO (MARCA 1 VENDA COMO CANCELADA)
