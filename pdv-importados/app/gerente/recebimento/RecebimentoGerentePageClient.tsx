@@ -103,14 +103,16 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
   return (
     <>
       <GerenteStickyToolbar>
-        <div className="flex flex-wrap items-center gap-3 px-4 sm:px-6">
-          <h1 className="gerente-fin-page-title text-xl font-semibold tracking-tight">{r.titulo}</h1>
+        <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-3 px-4 sm:px-6">
+          <h1 className="gerente-fin-page-title text-2xl font-semibold tracking-tight">{r.titulo}</h1>
           <span className="gerente-fin-badge rounded-full border px-2.5 py-0.5 text-xs font-semibold ring-1">
             {r.badge}
           </span>
         </div>
       </GerenteStickyToolbar>
-      <div className={`mx-auto max-w-3xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+      <div
+        className={`mx-auto max-w-3xl px-4 pb-6 pt-8 sm:px-6 [scroll-margin-top:var(--gerente-sticky-top,6.75rem)] ${idioma === 'pt' ? '' : 'font-chinese'}`}
+      >
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
@@ -249,7 +251,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                  className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${
                     divergenciaDetalhe.grave ? 'app-badge-danger' : 'app-badge-warn'
                   }`}
                 >
