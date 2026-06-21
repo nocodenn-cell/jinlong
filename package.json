@@ -35,13 +35,20 @@
     "guard:pdv": "node scripts/pdv-flow-guard.mjs",
     "guard:routes": "node scripts/route-guard.mjs",
     "guard:rpc": "node scripts/rpc-gate-guard.mjs",
-    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc"
+    "guard:pricing": "node scripts/pricing-rpc-guard.mjs",
+    "guard:deps": "node scripts/dep-version-guard.mjs",
+    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps"
+  },
+  "overrides": {
+    "vitest": "^3.2.6",
+    "@vitest/ui": "^3.2.6",
+    "@vitest/coverage-v8": "^3.2.6"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.99.3",
     "tsx": "^4.19.4",
     "turbo": "^2.5.4",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.6"
   },
   "packageManager": "npm@10.9.2"
 }
