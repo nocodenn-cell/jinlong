@@ -1,18 +1,25 @@
 #!/usr/bin/env node
 /**
- * PRICING RPC GUARD — RPC PostgreSQL é a única fonte de verdade de preços.
+ * PRICING RPC GUARD — autoridade de pricing por ZONA, baseada em imports.
  *
  * Arquitetura consolidada (NÃO alterar sem decisão arquitetural explícita):
- *   - calcular_preco_produto(p_produto_id, p_quantidade, p_loja_id) SECURITY DEFINER
- *     é o ÚNICO mecanismo de cálculo de preço autorizado em produção.
- *   - PricingService (TypeScript) existe APENAS em testes de invariantes.
- *     Nunca pode ser importado em código de produção.
+ *
+ *   ONLINE (pdv-importados, shared-core, edge functions):
+ *     - calcular_preco_produto(...) SECURITY DEFINER é a ÚNICA fonte de verdade.
+ *     - PricingService (TypeScript) é PROIBIDO em runtime — só em testes.
+ *
+ *   OFFLINE (pdv-local/src) — EXCEÇÃO EXPLÍCITA:
+ *     - O PDV local é offline-first e não alcança o RPC sem rede.
+ *     - PricingService é PERMITIDO aqui como motor de cálculo offline.
+ *     - A equivalência Offline×RPC é garantida por golden test (não por este guard).
+ *
+ * Detecção: este guard analisa IMPORTS (grafo de dependência), não busca textual.
+ * Menções em comentários/JSDoc/strings não disparam violação — apenas imports reais
+ * do motor de pricing e chamadas .rpc() reais.
  *
  * Callers autorizados do RPC calcular_preco_produto:
- *   - pdv-importados/app/caixa/server/caixaPrecoProduto.impl.ts  (server action caixa)
- *   - pdv-importados/app/caixa/server/caixaPrecoAutoritativoServer.ts  (recálculo autoritativo)
- *
- * Toda mudança que viole estas regras DEVE quebrar o CI antes de chegar ao main.
+ *   - pdv-importados/app/caixa/server/caixaPrecoProduto.impl.ts
+ *   - pdv-importados/app/caixa/server/caixaPrecoAutoritativoServer.ts
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -26,18 +33,9 @@ const AUTHORIZED_RPC_CALLERS = new Set([
   path.join(root, 'pdv-importados/app/caixa/server/caixaPrecoAutoritativoServer.ts'),
 ])
 
-// ─── Padrões proibidos em produção ───────────────────────────────────────────
-// PricingService em produção: só é permitido em .test.ts / .spec.ts
-const BLOCKED_IMPORT_PATTERNS = [
-  { re: /import.*PricingService.*from/, msg: 'importa PricingService (deve ser usado APENAS em testes)' },
-  { re: /new PricingService\s*\(/, msg: 'instancia PricingService (deve ser usado APENAS em testes)' },
-  // Funções TS de cálculo de preço que não devem existir em produção
-  { re: /calcularPrecoItem\s*\(/, msg: 'chama calcularPrecoItem() — use RPC calcular_preco_produto' },
-  { re: /aplicarRegrasPreco\s*\(/, msg: 'chama aplicarRegrasPreco() — use RPC calcular_preco_produto' },
-]
-
-// ─── Diretórios de produção escaneados ───────────────────────────────────────
-const PROD_DIRS = [
+// ─── Zonas ────────────────────────────────────────────────────────────────────
+// BLOCKED: runtime online — PricingService proibido (RPC é autoridade).
+const BLOCKED_ZONES = [
   path.join(root, 'pdv-importados/app'),
   path.join(root, 'pdv-importados/components'),
   path.join(root, 'pdv-importados/hooks'),
@@ -47,10 +45,15 @@ const PROD_DIRS = [
   path.join(root, 'shared-core/src'),
   path.join(root, 'backend/supabase/functions'),
 ]
+// ALLOWED: runtime offline (exceção declarada) — PricingService permitido.
+const ALLOWED_ZONE = path.join(root, 'pdv-local/src')
+
+// Todas as zonas escaneadas (blocked + allowed); a regra aplica-se por zona.
+const SCAN_DIRS = [...BLOCKED_ZONES, ALLOWED_ZONE]
 
 const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', 'coverage', 'reports', '__tests__'])
 
-// Arquivos excluídos: gerados automaticamente, tipos apenas, sem lógica de runtime
+// Arquivos gerados / só-tipos — sem lógica de runtime.
 const EXCLUDED_FILES = new Set([
   path.join(root, 'pdv-importados/lib/supabase/database.types.ts'),
 ])
@@ -74,64 +77,92 @@ function walk(dir) {
   return out
 }
 
-const violations = []
-const allProdFiles = PROD_DIRS.flatMap(walk)
+const isAllowedZone = (file) => file.startsWith(ALLOWED_ZONE + path.sep)
 
-const allProdFilesFiltered = allProdFiles.filter((f) => !EXCLUDED_FILES.has(f))
+/**
+ * Análise baseada em imports: extrai (bindings, especificador de módulo) de cada
+ * `import ... from '...'`, mesmo multilinha. Retorna os motivos de pricing-engine
+ * encontrados via grafo de dependência — não via texto solto.
+ */
+const IMPORT_RE = /import\s+(?:type\s+)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g
+const PRICING_FN_NAMES = ['calcularPrecoItem', 'aplicarRegrasPreco', 'calcularPrecoTotal']
 
-// ─── Regra 1: PricingService proibido em produção ────────────────────────────
-for (const file of allProdFilesFiltered) {
-  const rel = path.relative(root, file)
-  const text = fs.readFileSync(file, 'utf8')
-  for (const { re, msg } of BLOCKED_IMPORT_PATTERNS) {
-    if (re.test(text)) {
-      violations.push(`[PRICING-BLOCKED] ${rel}\n  → ${msg}`)
+function pricingEngineImports(text) {
+  const reasons = []
+  let m
+  IMPORT_RE.lastIndex = 0
+  while ((m = IMPORT_RE.exec(text)) !== null) {
+    const bindings = m[1]
+    const spec = m[2]
+    // (a) importa o módulo do motor (classe/singleton PricingService)
+    if (/(^|\/)PricingService$/.test(spec) || /pricing\/PricingService/.test(spec)) {
+      reasons.push(`importa o módulo PricingService de '${spec}'`)
+      continue
+    }
+    // (b) importa uma função-motor de pricing de qualquer módulo de pricing
+    if (/pricing/i.test(spec)) {
+      for (const fn of PRICING_FN_NAMES) {
+        if (new RegExp(`\\b${fn}\\b`).test(bindings)) {
+          reasons.push(`importa '${fn}' de '${spec}'`)
+        }
+      }
     }
   }
+  return reasons
 }
 
-// ─── Regra 2: .rpc('calcular_preco_produto') só pode aparecer em callers autorizados
-// Usa regex para distinguir chamadas reais de menções em comentários/JSDoc/tipos
 const RPC_CALL_RE = /\.rpc\s*\(\s*['"]calcular_preco_produto['"]/
-for (const file of allProdFilesFiltered) {
-  if (AUTHORIZED_RPC_CALLERS.has(file)) continue
+
+// ─── Execução ─────────────────────────────────────────────────────────────────
+const violations = []
+const files = SCAN_DIRS.flatMap(walk).filter((f) => !EXCLUDED_FILES.has(f))
+
+for (const file of files) {
   const rel = path.relative(root, file)
   const text = fs.readFileSync(file, 'utf8')
-  if (RPC_CALL_RE.test(text)) {
+
+  // Regra 1 (zonal): import do motor de pricing proibido fora de pdv-local/src
+  if (!isAllowedZone(file)) {
+    const reasons = pricingEngineImports(text)
+    for (const r of reasons) {
+      violations.push(
+        `[PRICING-BLOCKED] ${rel}\n  → ${r}\n  → Runtime online é RPC-only: use calcular_preco_produto. PricingService só é permitido em pdv-local/src (offline).`,
+      )
+    }
+  }
+
+  // Regra 2: .rpc('calcular_preco_produto') só em callers autorizados
+  if (!AUTHORIZED_RPC_CALLERS.has(file) && RPC_CALL_RE.test(text)) {
     violations.push(
-      `[PRICING-CALLER] ${rel}\n  → Chama .rpc('calcular_preco_produto') diretamente.\n  → Callers autorizados: caixaPrecoProduto.impl.ts | caixaPrecoAutoritativoServer.ts\n  → Use a server action calcularPrecoProdutoCaixa() ou recalcularItensNoServidor().`,
+      `[PRICING-CALLER] ${rel}\n  → Chama .rpc('calcular_preco_produto') diretamente.\n  → Callers autorizados: caixaPrecoProduto.impl.ts | caixaPrecoAutoritativoServer.ts`,
     )
   }
 }
 
-// ─── Regra 3: calcular_preco_produto deve estar presente nos callers autorizados
-//    (garante que ninguém silenciosamente removeu o RPC e substituiu por lógica TS)
+// Regra 3: os callers autorizados ainda chamam o RPC (anti-drift silencioso)
 for (const authFile of AUTHORIZED_RPC_CALLERS) {
   if (!fs.existsSync(authFile)) {
     violations.push(
-      `[PRICING-MISSING] ${path.relative(root, authFile)}\n  → Arquivo de caller autorizado do RPC ausente — a remoção exige decisão arquitetural explícita.`,
+      `[PRICING-MISSING] ${path.relative(root, authFile)}\n  → Caller autorizado do RPC ausente — remoção exige decisão arquitetural explícita.`,
     )
     continue
   }
-  const text = fs.readFileSync(authFile, 'utf8')
-  if (!RPC_CALL_RE.test(text)) {
+  if (!RPC_CALL_RE.test(fs.readFileSync(authFile, 'utf8'))) {
     violations.push(
-      `[PRICING-DRIFT] ${path.relative(root, authFile)}\n  → Não contém mais 'calcular_preco_produto' — o cálculo de preço foi silenciosamente removido do RPC?`,
+      `[PRICING-DRIFT] ${path.relative(root, authFile)}\n  → Não chama mais calcular_preco_produto — pricing foi silenciosamente movido para fora do RPC?`,
     )
   }
 }
 
-// ─── Resultado ────────────────────────────────────────────────────────────────
 if (violations.length > 0) {
   console.error('[pricing-rpc-guard] FAIL — violação de arquitetura de pricing:\n')
   for (const v of violations) console.error(`  - ${v}\n`)
   console.error(
-    '  → REGRA: calcular_preco_produto (PostgreSQL SECURITY DEFINER) é a única fonte de verdade.' +
-    '\n  → PricingService TypeScript existe APENAS em testes de invariantes (core/pricing/*.test.ts).' +
-    '\n  → Qualquer mudança nessa arquitetura é uma decisão de engenharia — não um ajuste pontual.' +
-    '\n  → Ver scripts/pricing-rpc-guard.mjs',
+    '  → ONLINE (pdv-importados/shared-core/edge): RPC calcular_preco_produto é a única autoridade.' +
+    '\n  → OFFLINE (pdv-local/src): PricingService permitido como exceção declarada; equivalência via golden test.' +
+    '\n  → Detecção por imports (grafo de dependência). Ver scripts/pricing-rpc-guard.mjs',
   )
   process.exit(1)
 }
 
-console.log('[pricing-rpc-guard] OK — RPC calcular_preco_produto é a única fonte de verdade de pricing')
+console.log('[pricing-rpc-guard] OK — online RPC-only; offline pdv-local/src isolado (exceção declarada)')
