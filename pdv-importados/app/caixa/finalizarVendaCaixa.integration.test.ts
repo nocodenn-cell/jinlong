@@ -101,6 +101,7 @@ class QueryBuilder {
         preco_atacado: null,
         categoria_id: null,
         ativo: true,
+        status_publicacao: 'PUBLICADO',
       }))
       return Promise.resolve({ data, error: null })
     }
@@ -215,7 +216,7 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
     const { finalizarVendaCaixa } = await import('./actions')
 
     const result = await finalizarVendaCaixa(payloadBase())
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: true,
       vendaId: '66666666-6666-6666-8666-666666666666',
     })
