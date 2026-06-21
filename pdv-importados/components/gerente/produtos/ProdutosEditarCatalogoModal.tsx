@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { useMoneyInput } from '@/hooks/useMoneyInput'
 
 type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'  // brasil_sem_nf is legacy DB value
 type UnidadeCode = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
@@ -46,9 +47,9 @@ export function ProdutosEditarCatalogoModal({
   const [origem, setOrigem] = useState<OrigemCode>('china_manual')
 
   // --- precificação ---
-  const [precoVarejo, setPrecoVarejo] = useState('')
-  const [precoAtacado, setPrecoAtacado] = useState('')
-  const [precoCusto, setPrecoCusto] = useState('')
+  const precoVarejoInput = useMoneyInput()
+  const precoAtacadoInput = useMoneyInput()
+  const precoCustoInput = useMoneyInput()
   const [permitirAbaixoCusto, setPermitirAbaixoCusto] = useState(false)
   const [qtdGatilho, setQtdGatilho] = useState('')
 
@@ -81,9 +82,9 @@ export function ProdutosEditarCatalogoModal({
     setCodigoBarras(produto.codigo_barras ?? '')
     // Map legacy brasil_sem_nf to brasil_nf so the dropdown selects "Brasil"
     setOrigem(produto.origem === 'brasil_sem_nf' ? 'brasil_nf' : produto.origem as OrigemCode)
-    setPrecoVarejo(String(produto.preco_varejo))
-    setPrecoAtacado(produto.preco_atacado != null ? String(produto.preco_atacado) : '')
-    setPrecoCusto(produto.preco_custo != null ? String(produto.preco_custo) : '')
+    precoVarejoInput.reset(produto.preco_varejo)
+    precoAtacadoInput.reset(produto.preco_atacado ?? undefined)
+    precoCustoInput.reset(produto.preco_custo ?? undefined)
     setPermitirAbaixoCusto(produto.permitir_abaixo_custo)
     setQtdGatilho(produto.quantidade_gatilho_atacado != null ? String(produto.quantidade_gatilho_atacado) : '')
     setUnidadeMedida((produto.unidade_medida as UnidadeCode) || 'UN')
@@ -98,17 +99,20 @@ export function ProdutosEditarCatalogoModal({
     setCest(produto.cest ?? '')
     setCstPis(produto.cst_pis ?? '07')
     setCstCofins(produto.cst_cofins ?? '07')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, produto])
 
   const salvar = useCallback(async () => {
     if (!produto) return
     setSaving(true)
     try {
-      const precoVarejoNum = parseFloat(precoVarejo.replace(',', '.'))
-      const precoAtacadoNum = precoAtacado.trim()
-        ? parseFloat(precoAtacado.replace(',', '.'))
-        : null
-      const precoCustoNum = precoCusto.trim() ? parseFloat(precoCusto.replace(',', '.')) : null
+      const precoVarejoNum = precoVarejoInput.parse()
+      if (precoVarejoNum === null || !Number.isFinite(precoVarejoNum)) {
+        emitGerenteToast({ kind: 'error', message: p.preco_invalido })
+        return
+      }
+      const precoAtacadoNum = precoAtacadoInput.parse()
+      const precoCustoNum = precoCustoInput.parse()
       const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
       const r = await atualizarDadosProdutoGerente({
@@ -147,11 +151,11 @@ export function ProdutosEditarCatalogoModal({
     }
   }, [
     produto, nome, codigoBarras, origem,
-    precoVarejo, precoAtacado, precoCusto, permitirAbaixoCusto, qtdGatilho,
+    precoVarejoInput, precoAtacadoInput, precoCustoInput, permitirAbaixoCusto, qtdGatilho,
     unidadeMedida, observacao,
     categoriaId, marcaId, fornecedorId,
     ncm, cfopProduto, csosn, cest, cstPis, cstCofins,
-    m.comum.sucesso, onSalvo, fechar,
+    p, m.comum.sucesso, onSalvo, fechar,
   ])
 
   if (!open || !produto) return null
@@ -245,9 +249,10 @@ export function ProdutosEditarCatalogoModal({
                 type="text"
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
-                value={precoVarejo}
-                onChange={(e) => setPrecoVarejo(e.target.value)}
+                value={precoVarejoInput.display}
+                onChange={precoVarejoInput.onChange}
                 disabled={saving}
+                placeholder="0,00"
               />
             </label>
             <label className="block text-xs font-medium text-jl-fg-3">
@@ -256,8 +261,8 @@ export function ProdutosEditarCatalogoModal({
                 type="text"
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
-                value={precoAtacado}
-                onChange={(e) => setPrecoAtacado(e.target.value)}
+                value={precoAtacadoInput.display}
+                onChange={precoAtacadoInput.onChange}
                 disabled={saving}
                 placeholder="—"
               />
@@ -282,8 +287,8 @@ export function ProdutosEditarCatalogoModal({
                 type="text"
                 inputMode="decimal"
                 className={`${finInMono} mt-1`}
-                value={precoCusto}
-                onChange={(e) => setPrecoCusto(e.target.value)}
+                value={precoCustoInput.display}
+                onChange={precoCustoInput.onChange}
                 disabled={saving}
                 placeholder="—"
               />

@@ -868,6 +868,7 @@
     "validando_gerente": "Validando…",
     "finalizar_venda": "Finalizar venda",
     "finalizando": "Finalizando…",
+    "finalizar_venda_sem_itens_title": "Adicione pelo menos um produto ao carrinho para finalizar a venda.",
     "total_pagar": "Total a pagar",
     "bruto": "Bruto",
     "descontos_regras": "Descontos (atacado/manual)",

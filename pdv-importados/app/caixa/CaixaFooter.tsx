@@ -7,6 +7,7 @@ import type { Idioma } from "@/idioma/normalizeIdioma"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import { cn } from "@/lib/utils"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 export type CaixaFooterLayout = "full" | "classic_summary"
 
@@ -67,10 +68,6 @@ function CaixaFooterImpl({
   moedaPrefixo,
   metodoPagamentoPanel,
 }: Props) {
-  const loc = moneyLocale(idioma)
-  const fmt = (n: number) =>
-    n.toLocaleString(loc, { minimumFractionDigits: 2 })
-
   const resumoItens = caixaFmt(m.caixa.resumo_itens, {
     itens: totalItens,
     unidades: totalUnidades,
@@ -112,18 +109,18 @@ function CaixaFooterImpl({
             <div className="text-right text-sm text-primary-foreground/90">
               <div>{m.caixa.bruto}</div>
               <div className="text-lg font-semibold tabular-nums text-white">
-                {moedaPrefixo} {fmt(totalBruto)}
+                {moedaPrefixo} {formatDecimalBRL(totalBruto)}
               </div>
             </div>
             <div className="text-right text-sm text-primary-foreground/90">
               <div>{m.caixa.descontos_regras}</div>
               <div className="text-lg font-bold tabular-nums text-white">
-                - {moedaPrefixo} {fmt(totalDesconto)}
+                - {moedaPrefixo} {formatDecimalBRL(totalDesconto)}
               </div>
               {economiaPrecoAtacadoAuto > 0.005 && (
                 <div className="text-xs font-normal text-primary-foreground/75 mt-0.5 max-w-[14rem] ml-auto">
                   {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
-                    valor: fmt(economiaPrecoAtacadoAuto),
+                    valor: formatDecimalBRL(economiaPrecoAtacadoAuto),
                   })}
                 </div>
               )}
@@ -136,7 +133,7 @@ function CaixaFooterImpl({
                   })}
                 </div>
                 <div className="text-lg font-bold tabular-nums text-white">
-                  - {moedaPrefixo} {fmt(valorDescontoGerente)}
+                  - {moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
                 </div>
               </div>
             )}
@@ -169,18 +166,18 @@ function CaixaFooterImpl({
           <div className="text-right text-sm text-jl-fg-2">
             <div>{m.caixa.bruto}</div>
             <div className="text-lg font-semibold tabular-nums text-jl-fg-1">
-              {moedaPrefixo} {fmt(totalBruto)}
+              {moedaPrefixo} {formatDecimalBRL(totalBruto)}
             </div>
           </div>
           <div className="text-right text-sm text-amber-400">
             <div>{m.caixa.descontos_regras}</div>
             <div className="text-lg font-bold tabular-nums">
-              - {moedaPrefixo} {fmt(totalDesconto)}
+              - {moedaPrefixo} {formatDecimalBRL(totalDesconto)}
             </div>
             {economiaPrecoAtacadoAuto > 0.005 && (
               <div className="text-xs font-normal text-jl-fg-3 mt-0.5 max-w-[14rem] ml-auto">
                 {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
-                  valor: fmt(economiaPrecoAtacadoAuto),
+                  valor: formatDecimalBRL(economiaPrecoAtacadoAuto),
                 })}
               </div>
             )}
@@ -193,7 +190,7 @@ function CaixaFooterImpl({
                 })}
               </div>
               <div className="text-lg font-bold tabular-nums">
-                - {moedaPrefixo} {fmt(valorDescontoGerente)}
+                - {moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
               </div>
             </div>
           )}
@@ -211,7 +208,7 @@ function CaixaFooterImpl({
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
               className="text-3xl sm:text-4xl font-extrabold leading-none tabular-nums text-amber-400"
             >
-              {moedaPrefixo} {fmt(totalLiquidoComGerente)}
+              {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
             </div>
           </div>
           <div className="pl-1">
@@ -224,6 +221,7 @@ function CaixaFooterImpl({
               }
               aria-busy={finalizando}
               aria-keyshortcuts="F9 F4"
+              title={itensLength === 0 ? m.caixa.finalizar_venda_sem_itens_title : undefined}
             >
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
             </Button>

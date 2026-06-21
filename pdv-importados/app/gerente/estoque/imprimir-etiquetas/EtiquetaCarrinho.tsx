@@ -3,6 +3,7 @@
 import { Trash2, Plus, Minus } from 'lucide-react'
 import type { ItemCarrinho } from '@/lib/etiqueta/types'
 import type { Idioma } from '@/idioma/normalizeIdioma'
+import { formatDecimalBRL } from '@/lib/format/money'
 
 type Props = {
   itens: ItemCarrinho[]
@@ -74,7 +75,7 @@ export function EtiquetaCarrinho({
               <p className="truncate text-sm font-medium">{item.nome}</p>
               <p className="text-xs text-gray-500">{item.codigoBarras}</p>
               <p className="text-xs font-semibold text-gray-700">
-                {labels.preco}: R$ {item.precoVarejo.toFixed(2)}
+                {labels.preco}: R$ {formatDecimalBRL(item.precoVarejo)}
               </p>
             </div>
 

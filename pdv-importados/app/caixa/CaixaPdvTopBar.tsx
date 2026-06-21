@@ -12,6 +12,7 @@ import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoe
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { SquareTerminal } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 export type CaixaPdvLayoutVariant = "default" | "classic"
 
@@ -59,10 +60,7 @@ export function CaixaPdvTopBar({
     !aberto || (aberto && caixaStatus.blindClosureEnabled)
       ? m.caixa.topbar_fundo_indisponivel
       : caixaFmt(m.caixa.topbar_fundo, {
-          valor: `${m.caixa.moeda_prefixo} ${caixaStatus.valorSistemaDinheiro.toLocaleString(localeString, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`,
+          valor: `${m.caixa.moeda_prefixo} ${formatDecimalBRL(caixaStatus.valorSistemaDinheiro)}`,
         })
 
   const classic = layoutVariant === "classic"

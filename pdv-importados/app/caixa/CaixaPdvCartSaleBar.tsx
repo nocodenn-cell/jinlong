@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
   m: Mensagens
@@ -23,11 +24,6 @@ type Props = {
   metodoPagamentoPanel?: ReactNode
 }
 
-function moneyLocale(idioma: Idioma) {
-  if (idioma === "pt") return "pt-BR"
-  return "zh-CN"
-}
-
 export function CaixaPdvCartSaleBar({
   m,
   idioma,
@@ -45,10 +41,6 @@ export function CaixaPdvCartSaleBar({
   moedaPrefixo,
   metodoPagamentoPanel,
 }: Props) {
-  const loc = moneyLocale(idioma)
-  const fmt = (n: number) =>
-    n.toLocaleString(loc, { minimumFractionDigits: 2 })
-
   const excluirDisabled =
     !caixaAberto || movimentandoCaixa || finalizando || carregandoRegras
 
@@ -85,16 +77,16 @@ export function CaixaPdvCartSaleBar({
                 data-total-liquido={totalLiquidoComGerente.toFixed(2)}
                 className="text-3xl font-black tabular-nums leading-tight text-jl-fg-1"
               >
-                {moedaPrefixo} {fmt(totalLiquidoComGerente)}
+                {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </div>
               {hasDesconto && (
                 <div className="mt-0.5 flex justify-end gap-3 text-xs text-jl-fg-3">
                   <span>
                     {m.caixa.cart_bar_total_label === "Total" ? "Bruto" : "毛额"}{" "}
-                    {moedaPrefixo} {fmt(totalBruto)}
+                    {moedaPrefixo} {formatDecimalBRL(totalBruto)}
                   </span>
                   <span className="text-amber-400/80">
-                    -{moedaPrefixo} {fmt(totalDesconto)}
+                    -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
                   </span>
                 </div>
               )}
@@ -107,6 +99,7 @@ export function CaixaPdvCartSaleBar({
                 finalizando || itensLength === 0 || buscando || carregandoRegras
               }
               aria-busy={finalizando}
+              title={itensLength === 0 ? m.caixa.finalizar_venda_sem_itens_title : undefined}
             >
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
             </Button>

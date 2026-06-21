@@ -30,6 +30,7 @@ import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { formatDecimalBRL } from "@/lib/format/money"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
@@ -527,10 +528,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             ? m.caixa.msg_caixa_ja_fechado
             : caixaFmt(m.caixa.msg_caixa_fechado, {
                 moeda: m.caixa.moeda_prefixo,
-                sistema: res.valorSistemaDinheiro.toFixed(2),
-                contado: res.valorContado.toFixed(2),
+                sistema: formatDecimalBRL(res.valorSistemaDinheiro),
+                contado: formatDecimalBRL(res.valorContado),
                 sinal: res.diferenca > 0 ? "+" : "",
-                diferenca: res.diferenca.toFixed(2),
+                diferenca: formatDecimalBRL(res.diferenca),
               }),
           { kind: "success" },
         )
@@ -612,7 +613,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setMotivoFecharModal({
           tipo: "diferenca",
           valorContado: v,
-          diferencaFmt: diferencaEstimada.toFixed(2),
+          diferencaFmt: formatDecimalBRL(diferencaEstimada),
         })
         return
       }
@@ -664,8 +665,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     if (totalPagamentos < totalLiquidoComGerente - 0.01) {
       setCaixaMensagem(
         caixaFmt(m.caixa.msg_pagamento_split_invalido, {
-          esperado: totalLiquidoComGerente.toFixed(2),
-          informado: totalPagamentos.toFixed(2),
+          esperado: formatDecimalBRL(totalLiquidoComGerente),
+          informado: formatDecimalBRL(totalPagamentos),
         }),
         { kind: "warning" },
       )

@@ -14,6 +14,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
+import { formatDecimalBRL, parseBRL } from "@/lib/format/money"
 
 type Props = {
   open: boolean
@@ -108,15 +109,15 @@ export function CaixaMovimentacaoModal({
 
   const handleSalvar = useCallback(async () => {
     setErroLocal(null)
-    const valor = Number(valorStr.replace(",", "."))
-    if (!Number.isFinite(valor) || valor <= 0) {
+    const valor = parseBRL(valorStr)
+    if (valor === null || valor <= 0) {
       setErroLocal(m.caixa.movimentacao_valor_invalido)
       return
     }
     if (tipo === "sangria" && valor > saldoEstimado) {
       setErroLocal(
         caixaFmt(m.caixa.movimentacao_saldo_insuficiente, {
-          saldo: saldoEstimado.toFixed(2),
+          saldo: formatDecimalBRL(saldoEstimado),
         }),
       )
       return
@@ -200,14 +201,14 @@ export function CaixaMovimentacaoModal({
                 className="app-btn-neutral"
                 onClick={() => setValorStr(String(s))}
               >
-                {m.caixa.moeda_prefixo} {s.toFixed(2)}
+                {m.caixa.moeda_prefixo} {formatDecimalBRL(s)}
               </Button>
             ))}
           </div>
 
           <p className="text-xs app-subtle">
             {caixaFmt(m.caixa.modal_movimentacao_saldo_estimado, {
-              saldo: saldoEstimado.toFixed(2),
+              saldo: formatDecimalBRL(saldoEstimado),
             })}
           </p>
 
@@ -247,7 +248,7 @@ export function CaixaMovimentacaoModal({
                   pulse
                 />
                 {caixaFmt(m.caixa.modal_movimentacao_senha_gerente, {
-                  limite: limiteSangriaSemGerente.toFixed(2),
+                  limite: formatDecimalBRL(limiteSangriaSemGerente),
                 })}
               </span>
               <Input

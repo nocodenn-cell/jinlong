@@ -13,6 +13,7 @@ import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { formatDecimalBRL } from "@/lib/format/money"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 import { useMovimentacoesRealtime } from "@/app/caixa/hooks/useMovimentacoesRealtime"
@@ -192,7 +193,7 @@ export function useCaixaStatusMovimentacoes({
         setCaixaMensagem(
           caixaFmt(m.caixa.msg_movimentacao_registrada_ok, {
             tipo: label,
-            valor: payload.valor.toFixed(2),
+            valor: formatDecimalBRL(payload.valor),
           }),
         )
         await recarregarStatusCaixa()
