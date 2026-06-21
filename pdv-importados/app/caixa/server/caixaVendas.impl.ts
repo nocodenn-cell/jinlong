@@ -219,17 +219,7 @@ export async function finalizarVendaCaixaImpl(
     }
     const caixaId = caixaExistente.id
 
-    const useUnifiedSalesFlow = runtimeCfg.useUnifiedSalesFlow
-    if (!useUnifiedSalesFlow && input.pagamentos.length > 1) {
-      return {
-        ok: false,
-        error:
-          'Split de pagamento requer fluxo unificado habilitado no servidor. Ajuste para 1 forma de pagamento.',
-      }
-    }
-
     const vendaId = resolveVendaIdForFinalize({
-      useUnifiedSalesFlow,
       idempotencyKey: input.idempotencyKey,
       randomUuid: () => crypto.randomUUID(),
     })
@@ -284,12 +274,15 @@ export async function finalizarVendaCaixaImpl(
     })
 
     if (txErr) {
-      console.warn('[caixa.finalizar_venda.rpc_error]', {
-        useUnifiedSalesFlow: runtimeCfg.useUnifiedSalesFlow,
+      console.error('[caixa.finalizar_venda.rpc_error]', {
+        vendaId,
+        usuarioId: user.id,
+        lojaId,
+        totalLiquido: computedFinal.totalLiquido,
+        itensCount: itensAut.length,
+        erro: txErr.message,
         strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
-        autoEnqueueFiscalOnSale: runtimeCfg.autoEnqueueFiscalOnSale,
         elapsed_ms: Date.now() - _rpcStart,
-        error: txErr.message,
       })
       // Transação inteira foi revertida automaticamente pelo PostgreSQL
       return { ok: false, error: caixaErroOperador(txErr.message) }
@@ -309,17 +302,16 @@ export async function finalizarVendaCaixaImpl(
       return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
 
-    console.log(
-      JSON.stringify({
-        event: 'venda.finalizada',
-        path: 'web_caixa',
-        rpc: 'finalizar_venda_transacional_canonica_v4',
-        venda_id: String(row.venda_id),
-        event_id: eventId,
-        elapsed_ms: Date.now() - _rpcStart,
-        status: 'CONCLUIDA',
-      }),
-    )
+    console.info('[caixa.finalizar_venda.sucesso]', {
+      vendaId: String(row.venda_id),
+      eventId,
+      usuarioId: user.id,
+      lojaId,
+      totalLiquido: computedFinal.totalLiquido,
+      itensCount: itensAut.length,
+      temDescontoGerente: !!input.descontoGerenteToken,
+      elapsed_ms: Date.now() - _rpcStart,
+    })
 
     // Observabilidade leve, executada de forma determinística após a venda já
     // concluída (try/catch isolado dentro da própria função, sem propagação
@@ -342,6 +334,9 @@ export async function finalizarVendaCaixaImpl(
       estoqueBaixado: row.estoque_baixado,
     }
   } catch (e) {
+    console.error('[caixa.finalizar_venda.excecao_nao_tratada]', {
+      erro: e instanceof Error ? e.message : String(e),
+    })
     return {
       ok: false,
       error: caixaErroOperador(e instanceof Error ? e.message : null),

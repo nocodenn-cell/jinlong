@@ -183,34 +183,15 @@ function payloadBase(): FinalizarVendaInput {
   }
 }
 
-describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
+describe('finalizarVendaCaixa — split e validações', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
-    process.env.USE_UNIFIED_SALES_FLOW = 'false'
     getLojaIdUsuarioMock.mockResolvedValue('55555555-5555-5555-8555-555555555555')
     resolveVendaIdForFinalizeMock.mockReturnValue('66666666-6666-6666-8666-666666666666')
   })
 
-  it(
-    'legado bloqueia split >1 com mensagem esperada',
-    async () => {
-    const { supabase } = makeSupabase()
-    createClientMock.mockResolvedValue(supabase)
-    const { finalizarVendaCaixa } = await import('./actions')
-
-    const result = await finalizarVendaCaixa(payloadBase())
-    expect(result).toEqual({
-      ok: false,
-      error:
-        'Split de pagamento requer fluxo unificado habilitado no servidor. Ajuste para 1 forma de pagamento.',
-    })
-    },
-    15000,
-  )
-
-  it('unificado aceita split e envia p_pagamentos para RPC canônica', async () => {
-    process.env.USE_UNIFIED_SALES_FLOW = 'true'
+  it('aceita split e envia p_pagamentos para RPC canônica', async () => {
     const { supabase, rpcCalls } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
     const { finalizarVendaCaixa } = await import('./actions')
@@ -230,7 +211,6 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
   })
 
   it('retorna mensagem de erro esperada para payload inválido (pagamentos != total)', async () => {
-    process.env.USE_UNIFIED_SALES_FLOW = 'true'
     const { supabase } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
     const { finalizarVendaCaixa } = await import('./actions')

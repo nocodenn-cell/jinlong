@@ -793,7 +793,7 @@ export async function atualizarDadosProdutoGerente(
     }
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidateCatalogoPaths()
   return { success: true, data: null }
 }
 
