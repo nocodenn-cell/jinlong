@@ -37,7 +37,8 @@
     "guard:rpc": "node scripts/rpc-gate-guard.mjs",
     "guard:pricing": "node scripts/pricing-rpc-guard.mjs",
     "guard:deps": "node scripts/dep-version-guard.mjs",
-    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps"
+    "guard:migrations": "node scripts/migration-sequence-guard.mjs",
+    "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations"
   },
   "overrides": {
     "vitest": "^3.2.6",
