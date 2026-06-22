@@ -2,6 +2,7 @@ import { logCaughtServerError } from '@/lib/logging/server-error'
 import { logJson } from '@/shared/unified-logger'
 import { runActionWithObservability } from '../../../shared-core/src/observability/runAction'
 import type { LogFailureSink } from '../../../shared-core/src/observability/types'
+import { addVendaBreadcrumb, reportVendaError } from './vendaSentryRouter'
 
 function createServerLogSink(): LogFailureSink {
   return (level, payload) => {
@@ -9,8 +10,16 @@ function createServerLogSink(): LogFailureSink {
     synthetic.name = `${payload.stage}:${payload.event}`
     if (level === 'error') {
       logCaughtServerError(`${payload.stage}/${payload.event}`, synthetic)
+      reportVendaError(payload.stage, payload.event, synthetic, {
+        layer: 'web',
+        error_code: payload.error_code,
+        trace_id: payload.ctx?.trace_id as string | undefined,
+        venda_id: payload.ctx?.venda_id as string | null | undefined,
+        caixa_id: payload.ctx?.caixa_id as string | undefined,
+      })
     } else {
       logJson('server-action-warn', { ...payload } as Record<string, unknown>)
+      addVendaBreadcrumb(payload.stage, payload.event, payload.ctx as Record<string, unknown>)
     }
   }
 }
