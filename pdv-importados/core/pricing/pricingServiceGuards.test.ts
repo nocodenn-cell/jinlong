@@ -20,7 +20,7 @@ describe('PricingService — guard de piso (Q1)', () => {
     const regra: RegraPreco = {
       id: 'r1',
       nome: 'ATACADO',
-      tipo: 'ATAcado',
+      tipo: 'ATACADO',
       minQuantidade: 1,
       descontoPercentual: 150,
       ativo: true,
