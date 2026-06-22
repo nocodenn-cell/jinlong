@@ -36,16 +36,7 @@
                   "CarregarRegrasResult",
                   "CaixaStatusOperadorResult",
                   "FecharCaixaOperadorResult",
-                  "export type FinalizarVendaCaixaResult =
-  | {
-      ok: true
-      vendaId: string
-      eventId: string
-      documentoFiscal?: unknown
-      itensAtualizados?: unknown
-      estoqueBaixado?: unknown
-    }
-  | { ok: false; error: string }",
+                  "FinalizarVendaCaixaResult",
                   "FormaMovimentacaoCaixa",
                   "LimiteSangriaResult",
                   "MovimentacaoCaixaDTO",
