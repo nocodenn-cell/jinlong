@@ -18,7 +18,7 @@ type Props = {
 
 const POLL_MS = 30_000
 
-function CaixaRailTurnoSummaryImpl({ m, idioma, caixaAberto, layoutVariant, refreshToken }: Props) {
+function CaixaRailTurnoSummaryImpl({ m, caixaAberto, layoutVariant, refreshToken }: Props) {
   const [quantidadeVendas, setQuantidadeVendas] = useState(0)
   const [totalLiquido, setTotalLiquido] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

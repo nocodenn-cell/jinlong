@@ -48,7 +48,6 @@ export function CaixaPdvTopBar({
       ? 'var(--font-noto-sc),"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif'
       : undefined
 
-  const localeString = idioma === "pt" ? "pt-BR" : "zh-CN"
   const aberto = isCaixaAberto(caixaStatus)
   const turnoText = aberto
     ? caixaFmt(m.caixa.topbar_turno_aberto, { n: turnoNumeroDeCaixaId(caixaStatus.caixaId) })

@@ -44,7 +44,6 @@ type Props = {
 
 export function CaixaPdvOperadorTabs({
   m,
-  idioma,
   tab,
   onTabChange,
   layoutVariant = "default",
