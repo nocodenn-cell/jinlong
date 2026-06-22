@@ -6,7 +6,7 @@ const sharedResolveAlias = {
   '@': './src',
   '@/shared': './shared',
   '@shared-core': path.resolve(__dirname, '../shared-core'),
-}
+};
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -28,7 +28,7 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       ...sharedResolveAlias,
-    }
+    };
 
     // Fix for client-side builds
     if (!isServer) {
@@ -46,12 +46,12 @@ const nextConfig = {
         assert: false,
         os: false,
         path: false,
-      }
+      };
     }
 
-    return config
+    return config;
   },
-}
+};
 
 module.exports = withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
@@ -64,4 +64,4 @@ module.exports = withSentryConfig(nextConfig, {
   disableLogger: true,
   // Não adiciona monitors automáticos do Vercel Cron
   automaticVercelMonitors: false,
-})
+});
