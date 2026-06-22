@@ -10,8 +10,8 @@
  * Garantia: nenhuma função lança exceção. Observabilidade nunca bloqueia o fluxo.
  */
 import * as Sentry from '@sentry/nextjs'
-import type { VendaTraceContext, VendaBreadcrumb } from '@shared-core/observability/vendaTrace'
-import { VENDA_EVENTS } from '@shared-core/observability/vendaTrace'
+import type { VendaTraceContext, VendaBreadcrumb } from '@shared-core/src/observability/vendaTrace'
+import { VENDA_EVENTS } from '@shared-core/src/observability/vendaTrace'
 
 export { VENDA_EVENTS }
 export type { VendaTraceContext, VendaBreadcrumb }
