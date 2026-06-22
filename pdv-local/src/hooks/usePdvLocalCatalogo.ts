@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { RegraPreco } from '@core/pricing/types'
 import { mapRegraPrecoRow, type RegraPrecoRow } from '@core/caixa/mapRegrasPreco'
@@ -50,6 +50,8 @@ export function usePdvLocalCatalogo({
   const [carregandoCatalogo, setCarregandoCatalogo] = useState(true)
   const [ultimoErroSincCatalogo, setUltimoErroSincCatalogo] = useState<string | null>(null)
   const [sincronizandoCatalogo, setSincronizandoCatalogo] = useState(false)
+  /** Espelho tipado de regras para consumo local pelo Pricing Engine, sem passar por unknown[]. */
+  const regrasRef = useRef<RegraPreco[]>([])
 
   const aplicarCacheCatalogo = useCallback(
     (cache: CatalogoLocalInvoke | null | undefined) => {
@@ -58,6 +60,7 @@ export function usePdvLocalCatalogo({
         .filter((r) => r.ativo)
         .map(mapRegraPrecoRow)
 
+      regrasRef.current = regras
       setRegras(regras)
 
       const produtosArr = cache.produtos ?? []
@@ -192,5 +195,7 @@ export function usePdvLocalCatalogo({
     sincronizandoCatalogo,
     sincronizarCatalogoManual,
     aplicarCacheCatalogo,
+    /** Regras de preço carregadas — fonte para o Pricing Engine no add-item. */
+    regrasRef,
   }
 }

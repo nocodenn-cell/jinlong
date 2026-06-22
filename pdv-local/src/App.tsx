@@ -9,6 +9,7 @@ import { logger } from './lib/logger'
 import { usePdvLocalCatalogo } from './hooks/usePdvLocalCatalogo'
 import { usePdvLocalOutboxSync } from './hooks/usePdvLocalOutboxSync'
 import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
+import { pricingService } from '@shared/pricing/PricingService'
 
 function mensagemEhErro(msg: string): boolean {
   return /^(falha|não foi possível|sessão|acesso negado|problema|muitas tentativas|dados inválidos|configuração inválida|limite de envio|este registro|você não tem permissão)/i.test(
@@ -82,6 +83,7 @@ export function App() {
     ultimoErroSincCatalogo,
     sincronizandoCatalogo,
     sincronizarCatalogoManual,
+    regrasRef,
   } = usePdvLocalCatalogo({
     setRegras,
     setGerenteId,
@@ -182,7 +184,7 @@ export function App() {
       return
     }
 
-    const item: ItemCarrinho = {
+    const itemBase: ItemCarrinho = {
       id: `${produto.id}-${Date.now()}`,
       produtoId: produto.id,
       nome: produto.nome,
@@ -190,13 +192,24 @@ export function App() {
       precoVariejo: produto.preco_varejo,
       precoUnitario: produto.preco_varejo,
       precoOriginal: produto.preco_varejo,
+      categoriaId: produto.categoria_id ?? undefined,
       resultado: {
         precoUnitario: produto.preco_varejo,
         precoOriginal: produto.preco_varejo,
         descontoUnitario: 0,
         tipoPreco: 'VAREJO',
       },
-      categoriaId: produto.categoria_id ?? undefined,
+    }
+    const resultado = pricingService.calcularPrecoItem(
+      itemBase,
+      regrasRef.current,
+      useDesktopCartStore.getState().pricingCtx,
+    )
+    const item: ItemCarrinho = {
+      ...itemBase,
+      precoUnitario: resultado.precoUnitario,
+      precoOriginal: resultado.precoOriginal,
+      resultado,
     }
 
     adicionarItem(item)
