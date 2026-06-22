@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminSessionApi } from '@/lib/admin/auth/requireAdminSessionApi'
+import { formatBRL } from '@/lib/format/money'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -73,7 +74,7 @@ export async function GET() {
 
     for (const v of vendasRes.data ?? []) {
       const val = Number(v.total_liquido ?? 0)
-      const formatted = val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      const formatted = formatBRL(val)
       items.push({
         id: `venda-${v.id}`,
         tipo: 'VENDA',
@@ -96,7 +97,7 @@ export async function GET() {
 
     for (const mc of caixaRes.data ?? []) {
       const val = Number(mc.valor ?? 0)
-      const formatted = val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      const formatted = formatBRL(val)
       const tipo = String(mc.tipo ?? '')
       const label = tipo === 'sangria' ? 'Sangria' : tipo === 'suprimento' ? 'Suprimento' : 'Movimentação'
       items.push({
