@@ -58,6 +58,9 @@
   --color-brand-strong: var(--color-dragon-gold-600);
   --color-brand-contrast: var(--color-night-950);
 
+  /* Chart-specific accent (warm gold for donut/bar charts) */
+  --color-chart-gold: var(--color-dragon-gold-warm);
+
   /* === ESPAÇAMENTO SEMÂNTICO === */
   --space-component-xs: var(--space-1);
   --space-component-sm: var(--space-2);

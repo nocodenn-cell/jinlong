@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatBRL } from '@/lib/format/money'
+import { CHART_UI_COLORS, RECHARTS_CURSOR_STYLE } from '@/lib/tokens/chartColors'
 
 type RelatoriosBarChartProps = {
   data: Array<{ label: string; total: number }>
@@ -14,20 +15,20 @@ export function RelatoriosBarChart({ data, tooltipLabel }: RelatoriosBarChartPro
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" vertical={false} />
-          <XAxis dataKey="label" stroke="#7a7a7a" style={{ fontSize: 11 }} />
-          <YAxis stroke="#7a7a7a" style={{ fontSize: 11 }} tickFormatter={(v) => formatBRL(Number(v))} />
+          <XAxis dataKey="label" stroke={CHART_UI_COLORS.tickStroke} style={{ fontSize: 11 }} />
+          <YAxis stroke={CHART_UI_COLORS.tickStroke} style={{ fontSize: 11 }} tickFormatter={(v) => formatBRL(Number(v))} />
           <Tooltip
-            cursor={{ fill: 'rgba(201,162,39,0.12)' }}
+            cursor={RECHARTS_CURSOR_STYLE}
             contentStyle={{
-              background: '#101010',
-              border: '1px solid #242424',
+              background: CHART_UI_COLORS.tooltipBg,
+              border: `1px solid ${CHART_UI_COLORS.tooltipBorder}`,
               borderRadius: 8,
-              color: '#f5f5f5',
+              color: CHART_UI_COLORS.tooltipText,
               fontSize: 12,
             }}
             formatter={(value) => [formatBRL(Number(value ?? 0)), tooltipLabel]}
           />
-          <Bar dataKey="total" fill="#c9a227" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="total" fill="var(--color-chart-gold)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

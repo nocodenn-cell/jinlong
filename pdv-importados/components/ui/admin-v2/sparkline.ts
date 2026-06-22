@@ -1,10 +1,38 @@
 export type SparkTone = 'success' | 'danger' | 'warning' | 'gold'
 
-const SPARK_COLORS: Record<SparkTone, string> = {
+/**
+ * Token references for sparkline colors.
+ * Resolved at runtime from CSS variables.
+ */
+const SPARK_COLOR_TOKENS: Record<SparkTone, string> = {
+  success: '--color-success-500',      // #10b981 (Dragon Jade)
+  danger: '--color-danger-500',        // #ef4444 (Dragon Imperial Red)
+  warning: '--color-warning-500',      // #f59e0b (Dragon Gold)
+  gold: '--color-brand-primary',       // #fbbf24 (Dragon Gold Primary)
+}
+
+/**
+ * Fallback colors if CSS variables are not available (e.g., SSR, test environments)
+ */
+const SPARK_COLORS_FALLBACK: Record<SparkTone, string> = {
   success: '#10b981',
   danger: '#ef4444',
   warning: '#f59e0b',
   gold: '#fbbf24',
+}
+
+/**
+ * Resolves a CSS variable to its computed hex value.
+ * Falls back to predefined value if variable not found.
+ */
+function resolveColorToken(tokenName: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim()
+    return value || fallback
+  } catch {
+    return fallback
+  }
 }
 
 function withAlpha(color: string, alpha: number): string {
@@ -27,7 +55,9 @@ function withAlpha(color: string, alpha: number): string {
 }
 
 export function sparkColor(tone: SparkTone): string {
-  return SPARK_COLORS[tone]
+  const tokenName = SPARK_COLOR_TOKENS[tone]
+  const fallback = SPARK_COLORS_FALLBACK[tone]
+  return resolveColorToken(tokenName, fallback)
 }
 
 export function drawSparkline(canvas: HTMLCanvasElement, data: number[], color: string): void {
