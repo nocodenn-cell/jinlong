@@ -1059,18 +1059,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             <aside
               className={cn(
                 "hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex",
-                false
-                  ? "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]"
-                  : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
+                "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
               )}
             >
               <button
                 type="button"
                 className={cn(
                   "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
-                  false
-                    ? "border-border bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "app-btn-accent",
+                  "app-btn-accent",
                 )}
                 onClick={handleNovoCupom}
                 disabled={carregandoRegras || finalizando}
@@ -1082,9 +1078,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   type="button"
                   className={cn(
                     "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
-                    false
-                      ? "border-border bg-card text-foreground hover:bg-muted"
-                      : "app-btn-neutral",
+                    "app-btn-neutral",
                   )}
                   onClick={() => setReimprimirModalAberto(true)}
                 >
@@ -1126,7 +1120,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 m={m}
                 idioma={idioma}
                 caixaAberto={isCaixaAberto(caixaStatus)}
-                layoutVariant={false ? "classic" : "default"}
+                layoutVariant="default"
                 refreshToken={turnoRefreshToken}
               />
             </aside>
