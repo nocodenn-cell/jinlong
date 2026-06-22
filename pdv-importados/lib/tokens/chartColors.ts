@@ -69,3 +69,18 @@ export const CHART_THEME_PRESETS = {
     tickColor: '#8c8c8c',
   },
 } as const
+
+/**
+ * Estilo de label para tooltip (compatível com Recharts labelStyle prop)
+ */
+export const RECHARTS_LABEL_STYLE = {
+  color: CHART_UI_COLORS.tooltipText,
+  fontSize: 12,
+} as const
+
+/**
+ * Estilo de cursor para tooltip (compatível com Recharts cursor prop)
+ */
+export const RECHARTS_CURSOR_STYLE = {
+  fill: 'rgba(201, 162, 39, 0.12)', // Brand gold with low opacity
+}
