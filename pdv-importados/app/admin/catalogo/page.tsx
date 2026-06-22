@@ -18,7 +18,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
-import { Download, Plus, Upload } from 'lucide-react'
+import { Download, Upload } from 'lucide-react'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
@@ -29,6 +29,7 @@ import {
   listarOpcoesFiltrosProdutos,
 } from '@/app/gerente/produtos/actions'
 import { CatalogoTable, type CatalogoProduto } from './_components/CatalogoTable'
+import { CatalogoNovoButton } from './_components/CatalogoNovoButton'
 
 const PAGE_SIZE = 20
 
@@ -242,10 +243,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         <Download size={14} aria-hidden />
         {m.gerente.exportar_csv}
       </Link>
-      <Link href={ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary">
-        <Plus size={14} aria-hidden />
-        {m.produtos.cadastro_rapido}
-      </Link>
+      <CatalogoNovoButton label={m.produtos.cadastro_rapido} m={m} opcoes={opcoes} />
     </>
   )
 
