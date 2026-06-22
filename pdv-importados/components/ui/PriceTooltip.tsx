@@ -57,18 +57,18 @@ export function PriceTooltip({
           <TooltipPrimitive.Content
             side="top"
             sideOffset={6}
-            className="z-50 max-w-[220px] rounded-lg border border-[#242424] bg-[#161616] px-3 py-2 text-[11px] text-jl-fg-2 shadow-lg"
+            className="z-50 max-w-[220px] rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-tertiary)] px-3 py-2 text-[11px] text-jl-fg-2 shadow-lg"
           >
             <div className="flex flex-col gap-1">
               <Row label="Preço final" value={formatBRL(precoFinal)} />
               <Row label="Base" value={formatBRL(precoBase)} />
               <Row label="Tipo" value={tipoLabel} />
               {regraAplicadaId ? <Row label="Regra" value={regraAplicadaId.slice(0, 8)} /> : null}
-              <p className="mt-1 border-t border-[#242424] pt-1 text-[10px] italic text-jl-fg-3">
+              <p className="mt-1 border-t border-[var(--color-border-secondary)] pt-1 text-[10px] italic text-jl-fg-3">
                 informação visual, não contábil
               </p>
             </div>
-            <TooltipPrimitive.Arrow className="fill-[#161616]" />
+            <TooltipPrimitive.Arrow className="fill-[var(--color-background-tertiary)]" />
           </TooltipPrimitive.Content>
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>

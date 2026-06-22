@@ -28,6 +28,9 @@
   --color-dragon-gold-luxury: #d4af37; /* ouro do botão/realces do login */
   --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 
+  /* Ouro warm para gráficos (PaymentDonutChart, etc) — tonalidade quente/escura */
+  --color-dragon-gold-warm: #c9a227;
+
   --color-dragon-imperial-red-50: #fef2f2;
   --color-dragon-imperial-red-100: #fee2e2;
   --color-dragon-imperial-red-500: #ef4444;

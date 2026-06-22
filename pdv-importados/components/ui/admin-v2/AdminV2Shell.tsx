@@ -22,7 +22,7 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
   const admin = m.admin
 
   return (
-    <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[#0a0a0a] text-jl-fg-1">
+    <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[var(--color-background-primary)] text-jl-fg-1">
       <SessionIdleLogout />
       <div className="mx-auto flex min-h-dvh max-w-[1600px] flex-col lg:flex-row">
         <aside className="admin-v2-sidebar flex w-full shrink-0 flex-col border-b border-[var(--admin-v2-border)] lg:w-72 lg:border-b-0 lg:border-r">

@@ -38,7 +38,7 @@ export function AdminV2UtilityBar({ className }: AdminV2UtilityBarProps) {
         disabled
         aria-disabled
         title="Alternância de tema em breve"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-v2-border)] bg-[#111111] text-jl-fg-3 opacity-60"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-v2-border)] bg-[var(--color-background-secondary)] text-jl-fg-3 opacity-60"
       >
         <MoonStar size={16} aria-hidden />
       </button>
@@ -47,7 +47,7 @@ export function AdminV2UtilityBar({ className }: AdminV2UtilityBarProps) {
         disabled
         aria-disabled
         title="Notificações em breve"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-v2-border)] bg-[#111111] text-jl-fg-3 opacity-60"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-v2-border)] bg-[var(--color-background-secondary)] text-jl-fg-3 opacity-60"
       >
         <Bell size={16} aria-hidden />
       </button>
@@ -55,7 +55,7 @@ export function AdminV2UtilityBar({ className }: AdminV2UtilityBarProps) {
         href="/login"
         onClick={(event) => void onSignOut(event)}
         aria-disabled={loggingOut}
-        className="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--admin-v2-border)] bg-[#111111] px-3 text-xs font-medium text-jl-fg-2 transition-colors hover:bg-[#171717] hover:text-jl-fg-1"
+        className="inline-flex h-9 items-center gap-2 rounded-full border border-[var(--admin-v2-border)] bg-[var(--color-background-secondary)] px-3 text-xs font-medium text-jl-fg-2 transition-colors hover:bg-[var(--color-background-tertiary)] hover:text-jl-fg-1"
       >
         <LogOut size={14} aria-hidden />
         <span>{loggingOut ? '...' : 'Sair'}</span>

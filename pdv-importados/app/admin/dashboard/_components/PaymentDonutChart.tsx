@@ -3,6 +3,7 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatBRL } from '@/lib/format/money'
 import { ChartLayoutGate } from '@/components/charts/ChartLayoutGate'
+import { CHART_COLORS, CHART_UI_COLORS, RECHARTS_LABEL_STYLE } from '@/lib/tokens/chartColors'
 
 export type PaymentSlice = {
   label: string
@@ -52,7 +53,8 @@ export type PaymentDonutSlice = {
   value: number
 }
 
-const COLORS = ['#c9a227', '#34d399', '#60a5fa', '#f59e0b', '#a78bfa', '#f87171']
+/** Chart color palette from design tokens */
+const COLORS = CHART_COLORS
 
 type PaymentDonutChartRechartsProps = {
   data: PaymentDonutSlice[]
@@ -77,7 +79,7 @@ export default function PaymentDonutChartRecharts({ data, total, noDataLabel, di
     <div className="flex h-full flex-col">
       <div className="mb-3 flex items-end justify-between">
         <p className="text-xs text-jl-fg-3">{distributionLabel}</p>
-        <p className="text-xs font-medium text-[#c9a227]">{formatBRL(total)}</p>
+        <p className="text-xs font-medium text-[var(--color-chart-gold)]">{formatBRL(total)}</p>
       </div>
       <div className="min-h-0 flex-1">
         <ChartLayoutGate>
@@ -90,7 +92,7 @@ export default function PaymentDonutChartRecharts({ data, total, noDataLabel, di
               innerRadius={58}
               outerRadius={86}
               paddingAngle={2}
-              stroke="#0f0f0f"
+              stroke="var(--color-background-secondary)"
               strokeWidth={2}
             >
               {data.map((entry, idx) => (
@@ -100,11 +102,11 @@ export default function PaymentDonutChartRecharts({ data, total, noDataLabel, di
             <Tooltip
               formatter={(v) => formatBRL(Number(v ?? 0))}
               contentStyle={{
-                background: '#111111',
-                border: '1px solid #242424',
+                background: CHART_UI_COLORS.tooltipBg,
+                border: `1px solid ${CHART_UI_COLORS.tooltipBorder}`,
                 borderRadius: 10,
               }}
-              labelStyle={{ color: '#a3a3a3' }}
+              labelStyle={{ color: CHART_UI_COLORS.tooltipText }}
             />
           </PieChart>
         </ResponsiveContainer>

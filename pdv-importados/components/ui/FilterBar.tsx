@@ -142,7 +142,7 @@ function PillsControl({
 }) {
   return (
     <div
-      className="inline-flex items-center gap-0.5 rounded-md border border-[#242424] bg-[#111111] p-[3px]"
+      className="inline-flex items-center gap-0.5 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] p-[3px]"
       role="group"
       aria-label={filter.label}
     >
@@ -237,7 +237,7 @@ function SearchControl({
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-md border border-[#242424] bg-[#111111] px-2.5 py-[7px]">
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-2.5 py-[7px]">
       <Search size={13} strokeWidth={2} aria-hidden className="text-jl-fg-3" />
       <input
         type="text"
