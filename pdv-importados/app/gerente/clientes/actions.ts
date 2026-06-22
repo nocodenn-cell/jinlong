@@ -34,6 +34,43 @@ export type ClienteInput = {
 
 const PAGE_SIZE = 20
 
+// Colunas REAIS expostas pela view v_clientes_gerente (migration 244).
+// `saldo_crediario` é computado de contas_receber em aberto; `ultima_compra`
+// é NULL até a Fase 7 (vendas ainda não possui cliente_id).
+const VIEW_COLS =
+  'id, nome, tipo, documento, email, telefone, endereco, limite_credito, saldo_crediario, ultima_compra, created_at'
+
+type ClienteViewRow = {
+  id: string
+  nome: string
+  tipo: 'PF' | 'PJ'
+  documento: string
+  email: string | null
+  telefone: string | null
+  endereco: string | null
+  limite_credito: number | string | null
+  saldo_crediario: number | string | null
+  ultima_compra: string | null
+  created_at: string | null
+}
+
+/** Converte a linha da view (colunas reais do banco) para o contrato de UI. */
+function mapClienteRow(r: ClienteViewRow): ClienteListRow {
+  return {
+    id: r.id,
+    nome: r.nome,
+    tipo: r.tipo,
+    documento: r.documento,
+    email: r.email,
+    telefone: r.telefone,
+    endereco: r.endereco,
+    limite_crediario: Number(r.limite_credito ?? 0),
+    saldo_crediario: Number(r.saldo_crediario ?? 0),
+    ultima_compra: r.ultima_compra ?? null,
+    criado_em: r.created_at ?? null,
+  }
+}
+
 // ————————————————————————————————————————————————————————————
 // Listagem paginada
 // ————————————————————————————————————————————————————————————
@@ -50,10 +87,8 @@ export async function buscarClientesPaginadosAction(
     const to = from + PAGE_SIZE
 
     let query = supabase
-      .from('clientes')
-      .select(
-        'id, nome, tipo, documento, email, telefone, endereco, limite_crediario, saldo_crediario, ultima_compra, criado_em',
-      )
+      .from('v_clientes_gerente')
+      .select(VIEW_COLS)
       .order('nome', { ascending: true })
       .range(from, to)
 
@@ -68,7 +103,7 @@ export async function buscarClientesPaginadosAction(
     const { data, error } = await query
     if (error) return { ok: false, error: error.message }
 
-    const rows = (data ?? []) as ClienteListRow[]
+    const rows = ((data ?? []) as ClienteViewRow[]).map(mapClienteRow)
     const hasMore = rows.length > PAGE_SIZE
     return { ok: true, clientes: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore }
   } catch (e) {
@@ -100,6 +135,8 @@ export async function salvarClienteAction(
 
   try {
     const supabase = await createClient()
+    // Mapeia o contrato de UI (`limite_crediario`) para a coluna real do banco
+    // (`limite_credito`). `tipo`/`endereco` são colunas adicionadas na migration 244.
     const basePayload = {
       nome: input.nome.trim(),
       tipo: input.tipo,
@@ -107,37 +144,49 @@ export async function salvarClienteAction(
       email: input.email?.trim() || null,
       telefone: input.telefone?.replace(/\D/g, '') || null,
       endereco: input.endereco?.trim() || null,
-      limite_crediario: input.limite_crediario,
+      limite_credito: input.limite_crediario,
     }
-    // Timestamps de consentimento LGPD — apenas para inserção de novo cliente
-    const payload = (!input.id && input.termos_aceitos_em)
-      ? {
-          ...basePayload,
-          termos_aceitos_em: input.termos_aceitos_em,
-          consentimento_privacidade_em: input.consentimento_privacidade_em ?? null,
-        }
-      : basePayload
 
-    let query
-    if (input.id) {
-      query = supabase
-        .from('clientes')
-        .update(payload)
-        .eq('id', input.id)
-        .select('id, nome, tipo, documento, email, telefone, endereco, limite_crediario, saldo_crediario, ultima_compra, criado_em')
-        .single()
+    let id = input.id
+    if (id) {
+      const { error } = await supabase.from('clientes').update(basePayload).eq('id', id)
+      if (error) return { ok: false, error: error.message }
     } else {
-      query = supabase
+      // `clientes.loja_id` é NOT NULL (migration 112): preenche com a loja do gerente.
+      const lojaId = authCheck.session.lojaId
+      if (!lojaId) {
+        return { ok: false, error: 'Sua conta não está associada a uma loja. Contate o administrador.' }
+      }
+      const insertPayload = {
+        ...basePayload,
+        loja_id: lojaId,
+        // Consentimento LGPD — registrado apenas na criação de novo cliente
+        ...(input.termos_aceitos_em
+          ? {
+              termos_aceitos_em: input.termos_aceitos_em,
+              consentimento_privacidade_em: input.consentimento_privacidade_em ?? null,
+            }
+          : {}),
+      }
+      const { data, error } = await supabase
         .from('clientes')
-        .insert(payload)
-        .select('id, nome, tipo, documento, email, telefone, endereco, limite_crediario, saldo_crediario, ultima_compra, criado_em')
+        .insert(insertPayload)
+        .select('id')
         .single()
+      if (error) return { ok: false, error: error.message }
+      id = data.id
     }
-    const { data, error } = await query
-    if (error) return { ok: false, error: error.message }
+
+    // Relê pela view para devolver os campos computados (saldo_crediario) coerentes.
+    const { data: row, error: readErr } = await supabase
+      .from('v_clientes_gerente')
+      .select(VIEW_COLS)
+      .eq('id', id)
+      .single()
+    if (readErr) return { ok: false, error: readErr.message }
 
     revalidatePath('/gerente/clientes')
-    return { ok: true, cliente: data as ClienteListRow }
+    return { ok: true, cliente: mapClienteRow(row as ClienteViewRow) }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar cliente.' }
   }
@@ -163,8 +212,9 @@ export async function excluirClienteAction(
   try {
     const supabase = await createClient()
 
+    // saldo_crediario é computado na view v_clientes_gerente (não é coluna de clientes).
     const { data: existente, error: getErr } = await supabase
-      .from('clientes')
+      .from('v_clientes_gerente')
       .select('saldo_crediario, nome')
       .eq('id', id)
       .maybeSingle()

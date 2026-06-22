@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminSessionApi } from '@/lib/admin/auth/requireAdminSessionApi'
+import { formatBRL } from '@/lib/format/money'
 import type { AtividadeRailItem, AtividadeRailTipo, AtividadeRailSeverity } from '../recent/route'
 
 export type { AtividadeRailItem, AtividadeRailTipo }
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
         .limit(200)
       for (const v of data ?? []) {
         const val = Number(v.total_liquido ?? 0)
-        const fmt = val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        const fmt = formatBRL(val)
         items.push({ id: `venda-${v.id}`, tipo: 'VENDA', titulo: `Venda finalizada · ${fmt}`, ts: v.created_at, severity: 'info' })
       }
     }
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
         .limit(200)
       for (const mc of data ?? []) {
         const val = Number(mc.valor ?? 0)
-        const fmt = val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        const fmt = formatBRL(val)
         const t   = String(mc.tipo ?? '')
         const label = t === 'sangria' ? 'Sangria' : t === 'suprimento' ? 'Suprimento' : 'Movimentação'
         items.push({ id: `caixa-${mc.id}`, tipo: 'CAIXA', titulo: `${label} · ${fmt}`, ts: mc.created_at, severity: 'info' })

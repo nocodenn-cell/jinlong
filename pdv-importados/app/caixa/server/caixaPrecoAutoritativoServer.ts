@@ -26,6 +26,13 @@ export type ItemAutoritativo = {
    * Não usado em cálculo — apenas enriquece tipo_preco_fonte para exibição/auditoria.
    */
   fontePreco: 'VAREJO' | 'ATACADO_FAIXA' | 'ATACADO_CATALOGO' | 'MANUAL' | 'PROMOCAO'
+  /**
+   * Versão de configuração de pricing ativa no momento da revalidação (migration 243).
+   * NULL = sistema de versionamento não ativado (modo legado, válido).
+   * Todos os itens de uma mesma venda devem compartilhar o mesmo valor — invariant
+   * verificado em recalcularItensNoServidor antes de retornar os itens.
+   */
+  pricingVersionId: string | null
 }
 
 export type ItemEntradaFinalizacao = {
@@ -112,12 +119,36 @@ function fontePrecoDeRpc(esperado: { tipo: 'VAREJO' | 'ATACADO'; regraId: string
  * Monta os itens persistidos na venda com o mesmo preço visto no carrinho:
  * — VAREJO / ATACADO: confere com a RPC `calcular_preco_produto` (anti-fraude + faixas `precos_atacado`).
  * — MANUAL / PROMOCAO: usa o snapshot enviado pelo cliente (sem RPC).
+ *
+ * Consistência de versão (migration 243):
+ * A versão de pricing ativa é resolvida UMA vez no início. Todos os itens da
+ * chamada usam a mesma versão — invariant verificado antes de retornar.
+ * Erro na resolução da versão aborta a revalidação (sem fallback silencioso).
  */
 export async function recalcularItensNoServidor(
   supabase: SupabaseServerClient,
   itensInput: ItemEntradaFinalizacao[],
   lojaId: string,
-): Promise<{ ok: true; itens: ItemAutoritativo[] } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; itens: ItemAutoritativo[]; pricingVersionId: string | null }
+  | { ok: false; error: string }
+> {
+  // ── Resolução de versão de pricing (snapshot único por chamada) ──────────
+  // Se o sistema de versionamento não estiver ativo (tabela vazia), retorna
+  // NULL — modo legado, sem impacto em comportamento.
+  // Qualquer erro de banco aqui aborta a revalidação: sem fallback silencioso.
+  const { data: resolvedVersion, error: versionErr } = await supabase.rpc(
+    'obter_pricing_version_ativa',
+  )
+  if (versionErr) {
+    return {
+      ok: false,
+      error: 'Não foi possível verificar a versão de configuração de preços. Tente novamente.',
+    }
+  }
+  const pricingVersionId: string | null =
+    resolvedVersion != null ? String(resolvedVersion) : null
+
   const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
   const { data: produtosRows, error: prodErr } = await supabase
     .from('produtos')
@@ -197,6 +228,7 @@ export async function recalcularItensNoServidor(
         custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
         regraAplicadaId: null,
         fontePreco: i.tipoPreco,
+        pricingVersionId,
       })
       continue
     }
@@ -269,8 +301,22 @@ export async function recalcularItensNoServidor(
       custoUnitarioSnap: p.preco_custo == null ? null : roundMoney2(Number(p.preco_custo)),
       regraAplicadaId: esperado.regraId,
       fontePreco: fontePrecoDeRpc(esperado),
+      pricingVersionId,
     })
   }
 
-  return { ok: true, itens }
+  // ── Invariant: consistência de versão de pricing entre todos os itens ─────
+  // Todos os itens devem compartilhar o mesmo pricingVersionId (resolvido uma
+  // vez no início). Se houver divergência, a venda é bloqueada.
+  // Em modo legado (pricingVersionId = null) a verificação é trivialmente satisfeita.
+  const versionesUnicas = new Set(itens.map((i) => i.pricingVersionId))
+  if (versionesUnicas.size > 1) {
+    return {
+      ok: false,
+      error:
+        'Versão de configuração de preços inconsistente entre itens da venda. Recalcule o carrinho e tente novamente.',
+    }
+  }
+
+  return { ok: true, itens, pricingVersionId }
 }

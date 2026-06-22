@@ -12,6 +12,11 @@ function toFiniteNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0
 }
 
+/** Mapeia o idioma do sistema para o locale BCP-47 usado na formatação monetária. */
+export function moneyLocale(idioma: string): string {
+  return idioma === 'pt' ? 'pt-BR' : 'zh-CN'
+}
+
 export function formatBRL(value: number, locale = 'pt-BR'): string {
   return toFiniteNumber(value).toLocaleString(locale, {
     style: 'currency',
@@ -20,7 +25,10 @@ export function formatBRL(value: number, locale = 'pt-BR'): string {
 }
 
 export function formatDecimal2(value: number, locale = 'pt-BR'): string {
-  return toFiniteNumber(value).toLocaleString(locale, { minimumFractionDigits: 2 })
+  return toFiniteNumber(value).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 /** Número com separador de milhar conforme locale (contadores, métricas). */
@@ -70,4 +78,31 @@ export function parseBRL(raw: string): number | null {
   if (t === '') return null
   const n = Number(t)
   return Number.isFinite(n) ? n : null
+}
+
+/**
+ * Parseia entrada monetária do usuário no formato pt-BR ou EN.
+ *
+ * Casos suportados:
+ *  "9,99"      → 9.99   (pt-BR decimal)
+ *  "1.234,56"  → 1234.56 (pt-BR com separador de milhar)
+ *  "9.99"      → 9.99   (EN decimal / input type=number)
+ *  "1234"      → 1234
+ *
+ * Retorna null para entrada vazia ou inválida.
+ */
+export function parseMoney(str: string): number | null {
+  let s = str.trim()
+  if (!s) return null
+  if (s.includes(',') && s.includes('.')) {
+    s = s.replace(/\./g, '')
+  }
+  s = s.replace(',', '.')
+  const n = parseFloat(s)
+  return Number.isFinite(n) ? n : null
+}
+
+/** Parseia entrada monetária; retorna 0 para vazio/inválido. */
+export function parseMoneyOrZero(str: string): number {
+  return parseMoney(str) ?? 0
 }

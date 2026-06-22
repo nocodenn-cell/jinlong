@@ -3,12 +3,10 @@
 import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
-import type { Idioma } from "@/idioma/normalizeIdioma"
 import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
   m: Mensagens
-  idioma: Idioma
   onExcluirVenda: () => void
   onFinalizar: () => void
   finalizando: boolean
@@ -26,7 +24,6 @@ type Props = {
 
 export function CaixaPdvCartSaleBar({
   m,
-  idioma,
   onExcluirVenda,
   onFinalizar,
   finalizando,
@@ -53,6 +50,7 @@ export function CaixaPdvCartSaleBar({
     >
       <div className="flex flex-col gap-3">
         {metodoPagamentoPanel ? <div className="w-full">{metodoPagamentoPanel}</div> : null}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -61,28 +59,26 @@ export function CaixaPdvCartSaleBar({
               className="min-h-11 border-jl-border-1 bg-jl-surface-soft text-jl-fg-2 hover:bg-jl-surface-soft/80 hover:text-jl-fg-1"
               onClick={onExcluirVenda}
               disabled={excluirDisabled}
-              title={m.caixa.cart_bar_excluir_title}
-              aria-label={m.caixa.cart_bar_excluir_aria}
             >
               {m.caixa.cart_bar_excluir_venda}
             </Button>
           </div>
+
           <div className="flex flex-1 flex-col gap-2 min-w-0 sm:flex-row sm:items-end sm:justify-end sm:gap-6">
             <div className="text-right sm:min-w-[9rem]">
               <div className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
                 {m.caixa.cart_bar_total_label}
               </div>
+
               <div
-                data-testid="caixa-total-liquido"
-                data-total-liquido={totalLiquidoComGerente.toFixed(2)}
                 className="text-3xl font-black tabular-nums leading-tight text-jl-fg-1"
               >
                 {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </div>
+
               {hasDesconto && (
                 <div className="mt-0.5 flex justify-end gap-3 text-xs text-jl-fg-3">
                   <span>
-                    {m.caixa.cart_bar_total_label === "Total" ? "Bruto" : "毛额"}{" "}
                     {moedaPrefixo} {formatDecimalBRL(totalBruto)}
                   </span>
                   <span className="text-amber-400/80">
@@ -91,6 +87,7 @@ export function CaixaPdvCartSaleBar({
                 </div>
               )}
             </div>
+
             <Button
               type="button"
               className="h-14 min-w-[11rem] shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
@@ -99,9 +96,8 @@ export function CaixaPdvCartSaleBar({
                 finalizando || itensLength === 0 || buscando || carregandoRegras
               }
               aria-busy={finalizando}
-              title={itensLength === 0 ? m.caixa.finalizar_venda_sem_itens_title : undefined}
             >
-              {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
+              {m.caixa.finalizar_venda}
             </Button>
           </div>
         </div>

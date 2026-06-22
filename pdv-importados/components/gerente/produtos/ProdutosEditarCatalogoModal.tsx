@@ -51,7 +51,6 @@ export function ProdutosEditarCatalogoModal({
   const precoAtacadoInput = useMoneyInput()
   const precoCustoInput = useMoneyInput()
   const [permitirAbaixoCusto, setPermitirAbaixoCusto] = useState(false)
-  const [qtdGatilho, setQtdGatilho] = useState('')
 
   // --- medida + complementar ---
   const [unidadeMedida, setUnidadeMedida] = useState<UnidadeCode>('UN')
@@ -86,7 +85,6 @@ export function ProdutosEditarCatalogoModal({
     precoAtacadoInput.reset(produto.preco_atacado ?? undefined)
     precoCustoInput.reset(produto.preco_custo ?? undefined)
     setPermitirAbaixoCusto(produto.permitir_abaixo_custo)
-    setQtdGatilho(produto.quantidade_gatilho_atacado != null ? String(produto.quantidade_gatilho_atacado) : '')
     setUnidadeMedida((produto.unidade_medida as UnidadeCode) || 'UN')
     setObservacao(produto.observacao ?? '')
     setCategoriaId(produto.categoria_id ?? '')
@@ -113,7 +111,6 @@ export function ProdutosEditarCatalogoModal({
       }
       const precoAtacadoNum = precoAtacadoInput.parse()
       const precoCustoNum = precoCustoInput.parse()
-      const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
       const r = await atualizarDadosProdutoGerente({
         produto_id: produto.id,
@@ -125,7 +122,6 @@ export function ProdutosEditarCatalogoModal({
         preco_atacado: precoAtacadoNum,
         preco_custo: precoCustoNum,
         permitir_abaixo_custo: permitirAbaixoCusto,
-        quantidade_gatilho_atacado: qtdGatilhoNum,
         unidade_medida: unidadeMedida,
         observacao: observacao.trim() || null,
         categoria_id: categoriaId || null,
@@ -151,7 +147,7 @@ export function ProdutosEditarCatalogoModal({
     }
   }, [
     produto, nome, codigoBarras, origem,
-    precoVarejoInput, precoAtacadoInput, precoCustoInput, permitirAbaixoCusto, qtdGatilho,
+    precoVarejoInput, precoAtacadoInput, precoCustoInput, permitirAbaixoCusto,
     unidadeMedida, observacao,
     categoriaId, marcaId, fornecedorId,
     ncm, cfopProduto, csosn, cest, cstPis, cstCofins,
@@ -242,7 +238,8 @@ export function ProdutosEditarCatalogoModal({
 
           {/* ── Precificação ── */}
           <SectionTitle>{p.secao_precificacao}</SectionTitle>
-          <div className="grid grid-cols-3 gap-3">
+          {/* Varejo + Custo com margem em tempo real */}
+          <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_varejo}
               <input
@@ -256,32 +253,6 @@ export function ProdutosEditarCatalogoModal({
               />
             </label>
             <label className="block text-xs font-medium text-jl-fg-3">
-              {p.preco_atacado}
-              <input
-                type="text"
-                inputMode="decimal"
-                className={`${finInMono} mt-1`}
-                value={precoAtacadoInput.display}
-                onChange={precoAtacadoInput.onChange}
-                disabled={saving}
-                placeholder="—"
-              />
-            </label>
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {p.qtd_gatilho_atacado}
-              <input
-                type="text"
-                inputMode="numeric"
-                className={`${finInMono} mt-1`}
-                value={qtdGatilho}
-                onChange={(e) => setQtdGatilho(e.target.value)}
-                disabled={saving}
-                placeholder="—"
-              />
-            </label>
-          </div>
-          <div className="mt-3 grid grid-cols-2 items-end gap-3">
-            <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_custo}
               <input
                 type="text"
@@ -293,6 +264,39 @@ export function ProdutosEditarCatalogoModal({
                 placeholder="—"
               />
             </label>
+          </div>
+          {/* Margem calculada em tempo real */}
+          {(() => {
+            const v = precoVarejoInput.parse()
+            const c = precoCustoInput.parse()
+            if (!v || v <= 0 || c === null) return null
+            const pct = ((v - c) / v) * 100
+            const cor = pct < 0 ? 'text-red-400' : pct < 20 ? 'text-amber-400' : 'text-emerald-400'
+            return (
+              <p className={`mt-1.5 text-[11px] font-mono ${cor}`}>
+                Margem: {pct.toFixed(1)}%
+              </p>
+            )
+          })()}
+          {/* Preço atacado */}
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.preco_atacado}
+              <input
+                type="text"
+                inputMode="decimal"
+                className={`${finInMono} mt-1`}
+                value={precoAtacadoInput.display}
+                onChange={precoAtacadoInput.onChange}
+                disabled={saving}
+                placeholder="—"
+              />
+            </label>
+            <p className="mt-1 text-[10px] text-jl-fg-3">
+              Ativa no PDV quando a quantidade no carrinho atinge o mínimo configurado no sistema.
+            </p>
+          </div>
+          <div className="mt-3">
             <label className="flex h-9 cursor-pointer items-center gap-2 text-xs font-medium text-jl-fg-3">
               <input
                 type="checkbox"

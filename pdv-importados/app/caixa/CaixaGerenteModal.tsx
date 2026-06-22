@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
+import { validarPercentualPermitido } from "@/stores/managerDiscount"
 
 export type ValidarSenhaGerenteResult =
   | {
@@ -114,11 +115,8 @@ export function CaixaGerenteModal({
     setErroLocal(null)
     if (!ctx) return
     const percentual = Number(percentStr.replace(",", "."))
-    if (
-      !Number.isFinite(percentual) ||
-      percentual <= 0 ||
-      percentual > ctx.maxDescontoPercentual
-    ) {
+    const validacao = validarPercentualPermitido(percentual, ctx.maxDescontoPercentual)
+    if (!validacao.ok || !Number.isFinite(percentual) || percentual <= 0) {
       setErroLocal(m.caixa.msg_percentual_invalido)
       return
     }

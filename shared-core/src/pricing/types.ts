@@ -4,7 +4,7 @@
 export interface RegraPreco {
   id: string
   nome: string
-  tipo: 'ATAcado' | 'VAREJO' | 'PROMOCAO'
+  tipo: 'ATACADO' | 'VAREJO' | 'PROMOCAO'
   minQuantidade?: number
   maxQuantidade?: number
   quantidadeMinima?: number
@@ -32,7 +32,11 @@ export interface PricingContext {
   quantidadeMinimaAtacadoPadrao?: number
 }
 
+/**
+ * Deve espelhar pdv_config.quantidade_minima_atacado_padrao (default: 6).
+ * Fonte canônica: banco de dados. Este valor é fallback para testes/offline.
+ */
 export const DEFAULT_PRICING_CONTEXT: PricingContext = {
   perfilUsuario: 'OPERADOR',
-  quantidadeMinimaAtacadoPadrao: 10,
+  quantidadeMinimaAtacadoPadrao: 6,
 }

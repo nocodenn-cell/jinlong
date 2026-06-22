@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -13,6 +13,7 @@ import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTyp
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import type { Mensagens } from '@/i18n/getMessages'
 import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
+import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
 
 // CatalogoProduto é ProdutoGerenteRow com o campo sku computado adicionado.
@@ -87,6 +88,20 @@ export function CatalogoTable({
 }) {
   const router = useRouter()
   const [editando, setEditando] = useState<CatalogoProduto | null>(null)
+  const [novoOpen, setNovoOpen] = useState(false)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+        e.preventDefault()
+        setNovoOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const statusLabel: Record<StatusPublicacao, string> = {
     DRAFT: labels.rascunho,
@@ -131,12 +146,7 @@ export function CatalogoTable({
       align: 'right',
       cell: (r) =>
         r.preco_atacado != null ? (
-          <div className="text-right">
-            <p className="text-[11px] text-jl-fg-2">{formatBRL(r.preco_atacado)}</p>
-            {r.quantidade_gatilho_atacado != null ? (
-              <p className="text-[9px] text-jl-fg-3">≥ {r.quantidade_gatilho_atacado} un.</p>
-            ) : null}
-          </div>
+          <span className="text-[11px] text-jl-fg-2">{formatBRL(r.preco_atacado)}</span>
         ) : (
           <span className="text-jl-fg-3">—</span>
         ),
@@ -194,6 +204,17 @@ export function CatalogoTable({
 
   return (
     <>
+      <NovoProdutoModal
+        open={novoOpen}
+        onOpenChange={setNovoOpen}
+        m={m}
+        opcoes={opcoes}
+        onCriado={() => {
+          setNovoOpen(false)
+          router.refresh()
+        }}
+      />
+
       <DataTable
         data={produtos}
         columns={columns}
@@ -203,9 +224,13 @@ export function CatalogoTable({
             <span className="text-4xl text-jl-fg-3" aria-hidden>📦</span>
             <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
             <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
-            <Link href={ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary mt-2">
+            <button
+              type="button"
+              onClick={() => setNovoOpen(true)}
+              className="admin-v2-btn-primary mt-2"
+            >
               {labels.cadastroRapido}
-            </Link>
+            </button>
           </div>
         }
         className="rounded-none border-x-0 border-b-0"

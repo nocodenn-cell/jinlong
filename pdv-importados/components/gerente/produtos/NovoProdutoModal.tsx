@@ -30,10 +30,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const precoVarejoInput = useMoneyInput()
   const precoAtacadoInput = useMoneyInput()
   const precoCustoInput = useMoneyInput()
-  const [permitirAbaixoCusto, setPermitirAbaixoCusto] = useState(false)
-  const [qtdGatilho, setQtdGatilho] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
-  const [ncm, setNcm] = useState('')
   const [saving, setSaving] = useState(false)
 
   const fechar = useCallback(() => {
@@ -49,10 +46,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     precoVarejoInput.reset()
     precoAtacadoInput.reset()
     precoCustoInput.reset()
-    setPermitirAbaixoCusto(false)
-    setQtdGatilho('')
     setCategoriaId('')
-    setNcm('')
     setSaving(false)
     // Auto-focus no nome ao abrir
     requestAnimationFrame(() => nomeRef.current?.focus())
@@ -72,7 +66,6 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     }
     const precoAtacadoNum = precoAtacadoInput.parse()
     const precoCustoNum = precoCustoInput.parse()
-    const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
     setSaving(true)
     try {
@@ -82,12 +75,10 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         preco_varejo: precoVarejoNum,
         preco_atacado: precoAtacadoNum,
         preco_custo: precoCustoNum,
-        permitir_abaixo_custo: permitirAbaixoCusto,
-        quantidade_gatilho_atacado: qtdGatilhoNum,
+        quantidade_gatilho_atacado: null,
         origem,
         tem_nf: false,
         categoria_id: categoriaId || null,
-        ncm: ncm.trim() || undefined,
       })
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error })
@@ -99,7 +90,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     } finally {
       setSaving(false)
     }
-  }, [nome, codigoBarras, origem, precoVarejoInput, precoAtacadoInput, precoCustoInput, permitirAbaixoCusto, qtdGatilho, categoriaId, ncm, p, m.comum.sucesso, onCriado, fechar])
+  }, [nome, codigoBarras, origem, precoVarejoInput, precoAtacadoInput, precoCustoInput, categoriaId, p, m.comum.sucesso, onCriado, fechar])
 
   if (!open) return null
 
@@ -186,11 +177,11 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
             </div>
           </div>
 
-          {/* Precificação — linha única compacta */}
+          {/* Precificação */}
           <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
             {p.secao_precificacao}
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_varejo} *
               <input
@@ -204,32 +195,6 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
               />
             </label>
             <label className="block text-xs font-medium text-jl-fg-3">
-              {p.preco_atacado}
-              <input
-                type="text"
-                inputMode="decimal"
-                className={`${finInMono} mt-1`}
-                value={precoAtacadoInput.display}
-                onChange={precoAtacadoInput.onChange}
-                disabled={saving}
-                placeholder="—"
-              />
-            </label>
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {p.qtd_gatilho_atacado}
-              <input
-                type="text"
-                inputMode="numeric"
-                className={`${finInMono} mt-1`}
-                value={qtdGatilho}
-                onChange={(e) => setQtdGatilho(e.target.value)}
-                disabled={saving}
-                placeholder="—"
-              />
-            </label>
-          </div>
-          <div className="mt-3 grid grid-cols-2 items-end gap-3">
-            <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_custo}
               <input
                 type="text"
@@ -241,43 +206,38 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 placeholder="—"
               />
             </label>
-            <label className="flex h-9 cursor-pointer items-center gap-2 text-xs font-medium text-jl-fg-3">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-amber-400"
-                checked={permitirAbaixoCusto}
-                onChange={(e) => setPermitirAbaixoCusto(e.target.checked)}
-                disabled={saving}
-              />
-              {p.permitir_abaixo_custo}
-            </label>
           </div>
-
-          {/* NCM (fiscal) */}
-          <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
-            {p.secao_fiscal}
-          </p>
-          <label className="block text-xs font-medium text-jl-fg-3">
-            {p.field_ncm}
-            <div className="mt-1 flex items-center gap-2">
+          {/* Margem em tempo real */}
+          {(() => {
+            const v = precoVarejoInput.parse()
+            const c = precoCustoInput.parse()
+            if (!v || v <= 0 || c === null) return null
+            const pct = ((v - c) / v) * 100
+            const cor = pct < 0 ? 'text-red-400' : pct < 20 ? 'text-amber-400' : 'text-emerald-400'
+            return (
+              <p className={`mt-1.5 text-[11px] font-mono ${cor}`}>
+                Margem: {pct.toFixed(1)}%
+              </p>
+            )
+          })()}
+          {/* Preço atacado */}
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.preco_atacado}
               <input
-                className={`${finInMono} flex-1`}
-                value={ncm}
-                maxLength={8}
-                inputMode="numeric"
-                placeholder="00000000"
-                onChange={(e) => setNcm(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                type="text"
+                inputMode="decimal"
+                className={`${finInMono} mt-1`}
+                value={precoAtacadoInput.display}
+                onChange={precoAtacadoInput.onChange}
                 disabled={saving}
+                placeholder="—"
               />
-              {ncm.length > 0 && ncm.length < 8 && (
-                <span className="shrink-0 text-[10px] text-amber-400">{8 - ncm.length} dígito(s)</span>
-              )}
-              {ncm.length === 8 && (
-                <span className="shrink-0 text-[10px] text-emerald-400">✓</span>
-              )}
-            </div>
-            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_ncm}</span>
-          </label>
+            </label>
+            <p className="mt-1 text-[10px] text-jl-fg-3">
+              Ativa no PDV quando a quantidade no carrinho atinge o mínimo configurado no sistema.
+            </p>
+          </div>
 
           {/* Categoria (opcional) */}
           {opcoes.categorias.length > 0 && (
