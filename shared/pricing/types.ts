@@ -1,35 +1,13 @@
 /**
- * Tipos compartilhados para precificação
+ * Tipos compartilhados para precificação.
+ *
+ * FONTE ÚNICA: `shared-core/src/pricing/types`. Este módulo apenas reexporta
+ * para os consumidores que importam via `@shared/pricing/types`, evitando duas
+ * definições divergentes de RegraPreco/ResultadoPreco/PricingContext.
  */
-
-export interface RegraPreco {
-  id: string
-  nome: string
-  tipo: 'ATAcado' | 'VAREJO' | 'PROMOCAO'
-  minQuantidade?: number
-  maxQuantidade?: number
-  descontoPercentual?: number
-  precoFixo?: number
-  /** ISO date/timestamp. `null`/`undefined` = sem validade (vale indefinidamente). */
-  dataValidade?: string | null
-  ativo: boolean
-}
-
-export interface ResultadoPreco {
-  precoUnitario: number
-  precoOriginal: number
-  descontoUnitario: number
-  tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
-}
-
-export interface PricingContext {
-  lojaId?: string
-  perfilUsuario?: 'OPERADOR' | 'GERENTE' | 'DONO' | 'ADMIN'
-  dataReferencia?: Date
-  quantidadeMinimaAtacadoPadrao?: number
-}
-
-export const DEFAULT_PRICING_CONTEXT: PricingContext = {
-  perfilUsuario: 'OPERADOR',
-  quantidadeMinimaAtacadoPadrao: 10,
-}
+export type {
+  RegraPreco,
+  ResultadoPreco,
+  PricingContext,
+} from '../../shared-core/src/pricing/types'
+export { DEFAULT_PRICING_CONTEXT } from '../../shared-core/src/pricing/types'
