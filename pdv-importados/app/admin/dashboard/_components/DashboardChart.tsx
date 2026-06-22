@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import Chart from 'chart.js/auto'
 import { formatBRL } from '@/lib/format/money'
+import { getChartJsTheme, createSuccessGradient } from '@/lib/tokens/chartJsThemes'
 
 interface DashboardChartProps {
   /** ["00h", "01h", …, "23h"] */
@@ -39,9 +40,8 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const gradient = ctx.createLinearGradient(0, 0, 0, 140)
-    gradient.addColorStop(0, 'rgba(34,197,94,0.18)')
-    gradient.addColorStop(1, 'rgba(34,197,94,0)')
+    const theme = getChartJsTheme()
+    const gradient = createSuccessGradient(ctx)
 
     chartRef.current = new Chart(ctx, {
       type: 'line',
@@ -52,11 +52,11 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
             data,
             fill: true,
             backgroundColor: gradient,
-            borderColor: '#22c55e',
+            borderColor: theme.lineSuccess,
             borderWidth: 1.5,
             pointRadius: 0,
             pointHoverRadius: 4,
-            pointHoverBackgroundColor: '#22c55e',
+            pointHoverBackgroundColor: theme.pointSuccess,
             tension: 0.4,
           },
         ],
@@ -68,11 +68,11 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#111111',
-            borderColor: '#242424',
+            backgroundColor: theme.tooltipBg,
+            borderColor: theme.tooltipBorder,
             borderWidth: 1,
-            titleColor: '#a3a3a3',
-            bodyColor: '#fafafa',
+            titleColor: theme.tooltipTitleColor,
+            bodyColor: theme.tooltipBodyColor,
             padding: 10,
             cornerRadius: 8,
             callbacks: {
@@ -88,7 +88,7 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
             grid: { display: false },
             border: { display: false },
             ticks: {
-              color: '#737373',
+              color: theme.tickColor,
               font: { size: 10 },
               maxRotation: 0,
               autoSkip: false,
@@ -97,11 +97,11 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
             },
           },
           y: {
-            grid: { color: 'rgba(36,36,36,0.6)', drawTicks: false },
+            grid: { color: theme.gridColor, drawTicks: false },
             border: { display: false },
             beginAtZero: true,
             ticks: {
-              color: '#737373',
+              color: theme.tickColor,
               font: { size: 10 },
               callback: (value) => {
                 const n = Number(value)
@@ -120,7 +120,7 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
   }, [labels, data])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#242424]">
+    <div className="overflow-hidden rounded-xl border border-[var(--color-border-secondary)]">
       <div className="flex items-start justify-between px-5 py-4">
         <div>
           <p className="text-[13px] font-medium text-jl-fg-1">{titleLabel}</p>
