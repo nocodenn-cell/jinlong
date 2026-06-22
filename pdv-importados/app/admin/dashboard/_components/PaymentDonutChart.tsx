@@ -2,6 +2,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatBRL } from '@/lib/format/money'
+import { ChartLayoutGate } from '@/components/charts/ChartLayoutGate'
 
 export type PaymentSlice = {
   label: string
@@ -79,6 +80,7 @@ export default function PaymentDonutChartRecharts({ data, total, noDataLabel, di
         <p className="text-xs font-medium text-[#c9a227]">{formatBRL(total)}</p>
       </div>
       <div className="min-h-0 flex-1">
+        <ChartLayoutGate>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -106,6 +108,7 @@ export default function PaymentDonutChartRecharts({ data, total, noDataLabel, di
             />
           </PieChart>
         </ResponsiveContainer>
+        </ChartLayoutGate>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-jl-fg-3">
         {data.map((entry, idx) => (

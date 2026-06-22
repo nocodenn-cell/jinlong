@@ -34,6 +34,8 @@ import { downloadCsvBrowser, interpolateTemplate } from '@/lib/gerente/gerenteCa
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { formatDecimalBRL } from '@/lib/format/money'
+import { useMoneyInput } from '@/hooks/useMoneyInput'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
@@ -110,6 +112,7 @@ function OrigemBadgeUi({
   )
 }
 
+
 function PrecoVarejoCell({
   produtoId,
   precoVarejo,
@@ -127,41 +130,35 @@ function PrecoVarejoCell({
   atualizadoMessage: string
   ariaLabel: string
 }>) {
-  const [draft, setDraft] = useState(() => String(precoVarejo))
+  const moneyInput = useMoneyInput(precoVarejo)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    setDraft(String(precoVarejo))
+    moneyInput.reset(precoVarejo)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [precoVarejo, produtoId])
-
-  const parseValor = (raw: string): number | null => {
-    const t = raw.trim().replace(/\s/g, '').replace(',', '.')
-    if (t === '') return null
-    const n = Number(t)
-    return Number.isFinite(n) ? n : null
-  }
 
   return (
     <input
       type="text"
       inputMode="decimal"
       disabled={saving}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
+      value={moneyInput.display}
+      onChange={moneyInput.onChange}
       onBlur={async () => {
-        const n = parseValor(draft)
+        const n = moneyInput.parse()
         if (n === null) {
           emitGerenteToast({ kind: 'error', message: msgInvalido })
-          setDraft(String(precoVarejo))
+          moneyInput.reset(precoVarejo)
           return
         }
         if (n <= 0) {
           emitGerenteToast({ kind: 'error', message: msgMaiorZero })
-          setDraft(String(precoVarejo))
+          moneyInput.reset(precoVarejo)
           return
         }
         if (Math.abs(n - precoVarejo) < 0.005) {
-          setDraft(String(precoVarejo))
+          moneyInput.reset(precoVarejo)
           return
         }
         setSaving(true)
@@ -169,7 +166,7 @@ function PrecoVarejoCell({
           const r = await atualizarPrecoVarejoProduto({ produto_id: produtoId, preco_varejo: n })
           if (!r.success) {
             emitGerenteToast({ kind: 'error', message: r.error })
-            setDraft(String(precoVarejo))
+            moneyInput.reset(precoVarejo)
             return
           }
           emitGerenteToast({ kind: 'success', message: atualizadoMessage })
@@ -1013,7 +1010,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                   {p.preco_atacado != null ? (
                     <div className="flex flex-col items-end gap-0">
                       <span className="text-xs tabular-nums text-emerald-400">
-                        {p.preco_atacado.toFixed(2)}
+                        {formatDecimalBRL(p.preco_atacado)}
                       </span>
                       {p.quantidade_gatilho_atacado != null && (
                         <span className="text-[10px] text-slate-500">≥{p.quantidade_gatilho_atacado}</span>

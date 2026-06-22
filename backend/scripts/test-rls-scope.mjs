@@ -330,7 +330,7 @@ async function main() {
   });
 
   // Migration 123 revogou a v2 de `authenticated` para fechar o bypass de
-  // revalidacao de preco (clientes JWT devem passar pela v3). Validamos que a
+  // revalidacao de preco (clientes JWT devem passar pela v4). Validamos que a
   // chamada direta a v2 e negada — a defesa em camadas que a auditoria pediu.
   await run("RPC finalizar_venda_transacional_canonica_v2 negada a authenticated (bypass fechado)", async () => {
     await assertRpcDenied(operador, "finalizar_venda_transacional_canonica_v2", {

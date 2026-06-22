@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Chart from 'chart.js/auto'
+import { formatBRL } from '@/lib/format/money'
 
 interface DashboardChartProps {
   /** ["00h", "01h", …, "23h"] */
@@ -77,9 +78,7 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
             callbacks: {
               label: (item) => {
                 const val = item.parsed.y ?? 0
-                return val > 0
-                  ? 'R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-                  : ''
+                return val > 0 ? formatBRL(val) : ''
               },
             },
           },

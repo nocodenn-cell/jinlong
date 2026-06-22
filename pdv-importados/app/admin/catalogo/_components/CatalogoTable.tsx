@@ -1,26 +1,25 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { Eye, ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { StatusPublicacao } from '@/core/ports/produto'
 import { cn } from '@/lib/utils'
+import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
+import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
+import type { Mensagens } from '@/i18n/getMessages'
+import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
+import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
 
-export type CatalogoProduto = {
-  id: string
-  nome: string
+// CatalogoProduto é ProdutoGerenteRow com o campo sku computado adicionado.
+// Sendo superconjunto de ProdutoGerenteRow, pode ser passado diretamente ao modal de edição.
+export type CatalogoProduto = ProdutoGerenteRow & {
   sku: string
-  imagem_url: string | null
-  preco_varejo: number
-  preco_atacado: number | null
-  quantidade_gatilho_atacado: number | null
-  quantidade_atual: number | null
-  origem: string
-  ativo: boolean
-  status_publicacao: StatusPublicacao
 }
 
 export type CatalogoLabels = {
@@ -76,7 +75,34 @@ function ActionBtn({
   )
 }
 
-export function CatalogoTable({ produtos, labels }: { produtos: CatalogoProduto[]; labels: CatalogoLabels }) {
+export function CatalogoTable({
+  produtos,
+  labels,
+  m,
+  opcoes,
+}: {
+  produtos: CatalogoProduto[]
+  labels: CatalogoLabels
+  m: Mensagens
+  opcoes: OpcoesFiltrosProdutos
+}) {
+  const router = useRouter()
+  const [editando, setEditando] = useState<CatalogoProduto | null>(null)
+  const [novoOpen, setNovoOpen] = useState(false)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+        e.preventDefault()
+        setNovoOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const statusLabel: Record<StatusPublicacao, string> = {
     DRAFT: labels.rascunho,
     PUBLICADO: labels.publicado,
@@ -120,12 +146,7 @@ export function CatalogoTable({ produtos, labels }: { produtos: CatalogoProduto[
       align: 'right',
       cell: (r) =>
         r.preco_atacado != null ? (
-          <div className="text-right">
-            <p className="text-[11px] text-jl-fg-2">{formatBRL(r.preco_atacado)}</p>
-            {r.quantidade_gatilho_atacado != null ? (
-              <p className="text-[9px] text-jl-fg-3">≥ {r.quantidade_gatilho_atacado} un.</p>
-            ) : null}
-          </div>
+          <span className="text-[11px] text-jl-fg-2">{formatBRL(r.preco_atacado)}</span>
         ) : (
           <span className="text-jl-fg-3">—</span>
         ),
@@ -182,36 +203,71 @@ export function CatalogoTable({ produtos, labels }: { produtos: CatalogoProduto[
   ]
 
   return (
-    <DataTable
-      data={produtos}
-      columns={columns}
-      rowKey={(r) => r.id}
-      emptyState={
-        <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <span className="text-4xl text-jl-fg-3" aria-hidden>📦</span>
-          <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
-          <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
-          <Link href={ROUTES.admin.catalogoNovo} className="admin-v2-btn-primary mt-2">
-            {labels.cadastroRapido}
-          </Link>
-        </div>
-      }
-      className="rounded-none border-x-0 border-b-0"
-      rowActions={(row) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <CatalogoPublicacaoActions
-            produtoId={row.id}
-            status={row.status_publicacao}
-            labels={{ publicar: labels.publicar, inativar: labels.inativar }}
-          />
-          <ActionBtn href={ROUTES.admin.catalogo} label={`Editar ${row.nome}`}>
-            <Pencil size={13} aria-hidden />
-          </ActionBtn>
-          <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
-            <Eye size={13} aria-hidden />
-          </ActionBtn>
-        </div>
-      )}
-    />
+    <>
+      <NovoProdutoModal
+        open={novoOpen}
+        onOpenChange={setNovoOpen}
+        m={m}
+        opcoes={opcoes}
+        onCriado={() => {
+          setNovoOpen(false)
+          router.refresh()
+        }}
+      />
+
+      <DataTable
+        data={produtos}
+        columns={columns}
+        rowKey={(r) => r.id}
+        emptyState={
+          <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <span className="text-4xl text-jl-fg-3" aria-hidden>📦</span>
+            <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
+            <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
+            <button
+              type="button"
+              onClick={() => setNovoOpen(true)}
+              className="admin-v2-btn-primary mt-2"
+            >
+              {labels.cadastroRapido}
+            </button>
+          </div>
+        }
+        className="rounded-none border-x-0 border-b-0"
+        rowActions={(row) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <CatalogoPublicacaoActions
+              produtoId={row.id}
+              status={row.status_publicacao}
+              labels={{ publicar: labels.publicar, inativar: labels.inativar }}
+            />
+            <button
+              type="button"
+              aria-label={`Editar ${row.nome}`}
+              title={`Editar ${row.nome}`}
+              onClick={() => setEditando(row)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
+            >
+              <Pencil size={13} aria-hidden />
+            </button>
+            <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
+              <Eye size={13} aria-hidden />
+            </ActionBtn>
+          </div>
+        )}
+      />
+
+      <ProdutosEditarCatalogoModal
+        open={editando !== null}
+        onOpenChange={(open) => { if (!open) setEditando(null) }}
+        produto={editando}
+        m={m}
+        opcoes={opcoes}
+        onSalvo={() => {
+          setEditando(null)
+          router.refresh()
+        }}
+      />
+    </>
   )
 }

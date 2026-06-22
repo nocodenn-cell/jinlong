@@ -9,6 +9,7 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { cn } from "@/lib/utils"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
   m: Mensagens
@@ -94,7 +95,7 @@ function CaixaPdvOperacoesButtonsImpl({
   const turnoResumo = isCaixaAberto(caixaStatus)
     ? caixaFmt(m.caixa.pdv_sistema_turno_resumo, {
         data: new Date(caixaStatus.dataAbertura).toLocaleString(localeString),
-        valor: `${m.caixa.moeda_prefixo} ${caixaStatus.valorInicial.toFixed(2)}`,
+        valor: `${m.caixa.moeda_prefixo} ${formatDecimalBRL(caixaStatus.valorInicial)}`,
       })
     : null
 

@@ -7,6 +7,8 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
+import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
+import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
@@ -33,9 +35,9 @@ const FORMAS: Array<{ id: FormaPagamento; glyph: string }> = [
 
 export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegistrado }: Props) {
   const m = getMessages(idioma)
-  const aberto = Number((conta.valor_total - conta.valor_pago).toFixed(2))
+  const aberto = roundMoney2(conta.valor_total - conta.valor_pago)
 
-  const [valor, setValor] = useState(aberto.toFixed(2).replace('.', ','))
+  const [valor, setValor] = useState(formatDecimalBRL(aberto))
   const [forma, setForma] = useState<FormaPagamento>('PIX')
   const [dataPag, setDataPag] = useState(new Date().toISOString().slice(0, 10))
   const [observacao, setObservacao] = useState('')
@@ -50,12 +52,12 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     return () => clearTimeout(t)
   }, [])
 
-  const valorNum = Number(String(valor).replace(/\./g, '').replace(',', '.')) || 0
+  const valorNum = parseBRL(valor) ?? 0
   const novoAberto = Math.max(0, aberto - valorNum)
   const quita = valorNum >= aberto - 0.001
 
   function sujo(): boolean {
-    return valor !== '0,00' && valor !== '' && Number(valor.replace(',', '.')) !== 0
+    return (parseBRL(valor) ?? 0) > 0
   }
 
   const fechar = useCallback(() => {
@@ -185,14 +187,14 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={m.contas_pagar.valores_sugeridos}>
                 <button
                   type="button"
-                  onClick={() => setValor(aberto.toFixed(2).replace('.', ','))}
+                  onClick={() => setValor(formatDecimalBRL(aberto))}
                   className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
                 >
                   {m.contas_pagar.quitar} · {fmtGerenteBRL(aberto, locale)}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setValor((aberto / 2).toFixed(2).replace('.', ','))}
+                  onClick={() => setValor(formatDecimalBRL(aberto / 2))}
                   className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
                 >
                   {m.contas_pagar.metade}
@@ -203,7 +205,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                       <button
                         key={v}
                         type="button"
-                        onClick={() => setValor(v.toFixed(2).replace('.', ','))}
+                        onClick={() => setValor(formatDecimalBRL(v))}
                         className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
                       >
                         {fmtGerenteBRL(v, locale)}

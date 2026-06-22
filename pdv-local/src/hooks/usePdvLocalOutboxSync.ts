@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { logger } from '../lib/logger'
+import { captureOutboxSyncError } from '../lib/sentry'
 
 export type OutboxResumo = {
   pendentes_total: number
@@ -49,6 +50,7 @@ export function usePdvLocalOutboxSync({
           error: String(e),
           mensagem: msg,
         })
+        captureOutboxSyncError(e, { stage: 'sync', caixa_id: caixaAtualId, limite })
         if (!opts?.suppressThrow) throw e
       } finally {
         onSyncElapsedMs(performance.now() - t0)
@@ -86,13 +88,15 @@ export function usePdvLocalOutboxSync({
       setUltimoErroOutbox(null)
       onMensagem('Eventos repostos na fila. Sync executada em seguida.')
     } catch (e) {
+      const dlqCount = outboxResumo?.dlq ?? 0
+      captureOutboxSyncError(e, { stage: 'dlq', caixa_id: caixaAtualId, dlq_count: dlqCount })
       onMensagem(
         formatarErro(e, 'Não foi possível reprocessar a fila de sincronização.'),
       )
     } finally {
       setReprocessandoDlq(false)
     }
-  }, [executarSyncOutboxComMetrica, refreshOutboxResumo, onMensagem, formatarErro])
+  }, [executarSyncOutboxComMetrica, refreshOutboxResumo, onMensagem, formatarErro, outboxResumo, caixaAtualId])
 
   useEffect(() => {
     if (!tauriDisponivel) return

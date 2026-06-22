@@ -20,6 +20,7 @@ import {
   resolveStatusPublicacaoLeitura,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
+import { statusInicialProduto } from '@/core/systemRules'
 import type { NovoProdutoInput, StatusPublicacao } from '@/core/ports/produto'
 import { PRODUTO_IMPORT_MAX_FILE_BYTES } from '@/lib/gerente/produtosCsvContract'
 import { validateProdutoImportCsvDocument } from '@/lib/gerente/parseProdutoImportCsv'
@@ -59,7 +60,7 @@ const NovoProdutoSchema = z.object({
       'Código de barras: mínimo 3 caracteres ou deixe em branco',
     ),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
-  preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  preco_atacado: z.coerce.number().positive('O preço de atacado deve ser maior que zero (ou deixe em branco).').nullable().optional().transform((v) => v ?? null),
   preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
   permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
   quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
@@ -81,8 +82,6 @@ const NovoProdutoSchema = z.object({
     .transform((s) => s?.trim().replace(/\D/g, '') || null)
     .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
     .nullable(),
-  codigo_interno: z.string().nullable().optional().transform((s) => (s ?? '').trim() || null),
-  estoque_minimo: z.coerce.number().nonnegative().optional().default(0),
 })
 
 type ActionResult<T> =
@@ -108,9 +107,15 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
+  // CORE decide o status; o server apenas executa. Cadastro manual → PUBLICADO.
+  // (CSV continua DRAFT no seu próprio caminho `importarProdutosCsv`.)
+  const { status_publicacao } = statusInicialProduto('human')
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
-  const result = await criarProdutoComEstoque(parsed.data, repo)
+  const result = await criarProdutoComEstoque(
+    { ...parsed.data, status_publicacao },
+    repo,
+  )
 
   if (result.success) {
     revalidateCatalogoPaths()
@@ -562,7 +567,7 @@ const EditarProdutoCatalogoSchema = z.object({
   }),
   tem_nf: z.coerce.boolean(),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
-  preco_atacado: z.coerce.number().positive().nullable().optional().transform((v) => v ?? null),
+  preco_atacado: z.coerce.number().positive('O preço de atacado deve ser maior que zero (ou deixe em branco).').nullable().optional().transform((v) => v ?? null),
   preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
   permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
   quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
@@ -593,9 +598,6 @@ const EditarProdutoCatalogoSchema = z.object({
     .nullable(),
   cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
   cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
-  codigo_interno: z.string().nullable().optional().transform((s) => (s ?? '').trim() || null),
-  estoque_minimo: z.coerce.number().nonnegative().optional().default(0),
-  ativo: z.boolean().optional(),
 })
 
 export type ResultadoExclusaoLote = Readonly<{
@@ -780,11 +782,6 @@ export async function atualizarDadosProdutoGerente(
       cest: parsed.data.cest,
       cst_pis: parsed.data.cst_pis,
       cst_cofins: parsed.data.cst_cofins,
-      codigo_interno: parsed.data.codigo_interno ?? null,
-      estoque_minimo: parsed.data.estoque_minimo ?? 0,
-      ...(parsed.data.ativo !== undefined
-        ? dualWriteFromStatus(statusFromAtivoLegacy(parsed.data.ativo))
-        : {}),
     })
     .eq('id', parsed.data.produto_id)
 
@@ -796,12 +793,7 @@ export async function atualizarDadosProdutoGerente(
     }
   }
 
-  await supabase
-    .from('estoque')
-    .update({ estoque_minimo: parsed.data.estoque_minimo ?? 0 })
-    .eq('produto_id', parsed.data.produto_id)
-
-  revalidatePath('/gerente/produtos')
+  revalidateCatalogoPaths()
   return { success: true, data: null }
 }
 
@@ -952,14 +944,14 @@ export async function buscarProdutosComFiltros(
   const productIds = list.map((r) => r.id)
   const [estoqueRes, extraRes] = productIds.length > 0
     ? await Promise.all([
-        supabase.from('estoque').select('produto_id, quantidade_atual, estoque_minimo').in('produto_id', productIds),
+        supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
         supabase
           .from('produtos')
           .select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo, status_publicacao')
           .in('id', productIds),
       ])
     : [
-        { data: [] as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[] },
+        { data: [] as { produto_id: string; quantidade_atual: number }[] },
         {
           data: [] as {
             id: string
@@ -972,9 +964,9 @@ export async function buscarProdutosComFiltros(
         },
       ]
 
-  const estoqueMap = new Map<string, { quantidade_atual: number; estoque_minimo: number }>()
-  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[])) {
-    estoqueMap.set(e.produto_id, { quantidade_atual: e.quantidade_atual, estoque_minimo: e.estoque_minimo ?? 0 })
+  const estoqueMap = new Map<string, number>()
+  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
+    estoqueMap.set(e.produto_id, e.quantidade_atual)
   }
 
   const extraMap = new Map<
@@ -1021,8 +1013,7 @@ export async function buscarProdutosComFiltros(
       preco_custo: extra?.preco_custo ?? null,
       permitir_abaixo_custo: extra?.permitir_abaixo_custo ?? false,
       quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
-      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id)?.quantidade_atual ?? null) : null,
-      estoque_minimo: estoqueMap.get(r.id)?.estoque_minimo ?? 0,
+      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id) ?? null) : null,
       origem: r.origem,
       tem_nf: r.tem_nf,
       ativo: r.ativo,

@@ -3,8 +3,6 @@ import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
 import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
 import { loginCaixaOperador } from './helpers/login'
 import { gotoApp } from './helpers/url'
-const unifiedSalesFlowEnabled = process.env.USE_UNIFIED_SALES_FLOW === 'true'
-
 test.describe.configure({ mode: 'serial' })
 
 test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida do footer)', () => {
@@ -20,7 +18,6 @@ test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas rem
   })
 
   test('duas parcelas somam ao total e finaliza com sucesso', async ({ page }) => {
-    test.skip(!unifiedSalesFlowEnabled, 'Requer USE_UNIFIED_SALES_FLOW=true para persistir split.')
     await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
@@ -78,7 +75,6 @@ test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas rem
   })
 
   test('nao vaza parcelas para proximo cupom apos finalizar e novo cupom', async ({ page }) => {
-    test.skip(!unifiedSalesFlowEnabled, 'Requer USE_UNIFIED_SALES_FLOW=true para persistir split.')
     await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 
@@ -148,7 +144,6 @@ test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas rem
   })
 
   test('tres parcelas (DINHEIRO + PIX + CARTAO_DEBITO) somam ao total e finaliza', async ({ page }) => {
-    test.skip(!unifiedSalesFlowEnabled, 'Requer USE_UNIFIED_SALES_FLOW=true para persistir split.')
     await gotoApp(page, '/caixa')
     await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
 

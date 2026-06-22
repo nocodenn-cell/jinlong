@@ -1,29 +1,32 @@
 /**
- * Regra única de vendabilidade PDV (R1 transição):
- * `ativo === true` AND `status_publicacao === 'PUBLICADO'`.
+ * Vendabilidade PDV — WRAPPER fino do motor único `productEngine`.
  *
- * Usada por caixa web, pdv-local e validação pós-sync.
- * Não substitui dual-write no cadastro — apenas leitura defensiva.
+ * Não contém regra própria: delega a decisão a `evaluateProduct`. Mantido como
+ * API estável de catálogo (caixa web, pdv-local, validação pós-sync) para não
+ * quebrar imports existentes.
  */
-export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
+import { evaluateProduct, PRODUCT_RULES, type StatusPublicacao } from '../engine/productEngine'
 
-export const STATUS_PUBLICACAO_PUBLICADO = 'PUBLICADO' as const satisfies StatusPublicacao
+export type { StatusPublicacao }
+
+export const STATUS_PUBLICACAO_PUBLICADO = PRODUCT_RULES.vendavel.status_publicacao
 
 export type ProdutoVendavelFields = {
   ativo: boolean | null | undefined
   status_publicacao?: StatusPublicacao | string | null
 }
 
+/** Delegação ao motor único — não reimplementar a regra aqui. */
 export function isProdutoVendavel(produto: ProdutoVendavelFields): boolean {
-  return produto.ativo === true && produto.status_publicacao === STATUS_PUBLICACAO_PUBLICADO
+  return evaluateProduct(produto).vendavel
 }
 
 export function filterProdutosVendaveis<T extends ProdutoVendavelFields>(produtos: T[]): T[] {
   return produtos.filter(isProdutoVendavel)
 }
 
-/** Colunas Supabase PostgREST — aplicar em sequência no query builder. */
+/** Colunas Supabase PostgREST — derivadas da config declarativa do engine. */
 export const FILTRO_PRODUTO_VENDAVEL = {
-  ativo: true,
-  status_publicacao: STATUS_PUBLICACAO_PUBLICADO,
+  ativo: PRODUCT_RULES.vendavel.ativo,
+  status_publicacao: PRODUCT_RULES.vendavel.status_publicacao,
 } as const

@@ -2638,6 +2638,10 @@ export type Database = {
         Args: { p_remessa_id: string }
         Returns: undefined
       }
+      configuracoes_para_caixa_web: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       dashboard_gerente_resumo: {
         Args: { p_loja_id: string; p_tz?: string }
         Returns: Json
@@ -2774,6 +2778,38 @@ export type Database = {
         Returns: {
           dados_fiscais: Json
           estoque_baixado: Json
+          event_id: string
+          itens_atualizados: Json
+          mensagem: string
+          status: string
+          venda_id: string
+        }[]
+      }
+      finalizar_venda_transacional_canonica_v4: {
+        Args: {
+          p_caixa_id: string
+          p_desconto_gerente_percentual?: number
+          p_desconto_gerente_token?: string
+          p_device_id?: string
+          p_fiscal_auto_enqueue?: boolean
+          p_forma_pagamento?: string
+          p_ip_address?: string
+          p_itens?: Json
+          p_loja_id: string
+          p_operador_id: string
+          p_pagamentos?: Json
+          p_strict_manager_discount_auth?: boolean
+          p_terminal_id?: string
+          p_total_bruto?: number
+          p_total_desconto?: number
+          p_total_liquido?: number
+          p_user_agent?: string
+          p_venda_id: string
+        }
+        Returns: {
+          dados_fiscais: Json
+          estoque_baixado: Json
+          event_id: string
           itens_atualizados: Json
           mensagem: string
           status: string
@@ -2957,6 +2993,27 @@ export type Database = {
           unidade_medida: string
         }[]
       }
+      kpis_venda_eventos_gerente: {
+        Args: {
+          p_fim: string
+          p_formas_pagamento?: string[]
+          p_inicio: string
+          p_loja_id: string
+        }
+        Returns: Json
+      }
+      listar_venda_eventos_gerente: {
+        Args: {
+          p_event_types?: string[]
+          p_fim: string
+          p_formas_pagamento?: string[]
+          p_inicio: string
+          p_limit?: number
+          p_loja_id: string
+          p_offset?: number
+        }
+        Returns: Json
+      }
       listar_valores_sistema_dinheiro_caixas: {
         Args: { p_caixa_ids: string[] }
         Returns: {
@@ -2973,6 +3030,10 @@ export type Database = {
         }[]
       }
       obter_limite_sangria_sem_gerente: { Args: never; Returns: number }
+      obter_status_caixa_operador: {
+        Args: { p_operador_id: string }
+        Returns: Json
+      }
       pdv_config_flags_visuais: {
         Args: never
         Returns: {

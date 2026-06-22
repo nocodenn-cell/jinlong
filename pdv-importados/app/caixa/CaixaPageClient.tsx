@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { useShallow } from "zustand/react/shallow"
-import { useCarrinhoStore } from "@/stores/carrinhoStore"
+import { useCarrinhoStore, type ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
+import { useHasMounted } from "@/hooks/useHasMounted"
 import {
   finalizarVendaCaixa,
   abrirCaixaOperador,
@@ -11,6 +12,10 @@ import {
 } from "@/app/caixa/actions"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import {
+  buildCheckoutSnapshot,
+  validateCheckoutSnapshot,
+} from "@shared-core/src/caixa/checkoutSnapshot"
 import { aplicarDescontoGerenteSobreTotal } from "@/stores/managerDiscount"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -25,6 +30,7 @@ import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { formatDecimalBRL } from "@/lib/format/money"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
@@ -79,6 +85,9 @@ function newCupomSessionId(): string {
 }
 
 const FINALIZACAO_TIMEOUT_MS = 30_000
+
+/** Referência estável de carrinho vazio para o STATE READY GATE (pré-mount). */
+const EMPTY_ITENS: ItemCarrinhoComPreco[] = []
 
 function inferirHintCheckout(
   errorMsg: string,
@@ -186,17 +195,34 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   // Selectors atômicos: a página só re-renderiza quando itens/totais mudam — não a
   // cada `set` do store (ex.: setCartOwnerForSession/setRegras, disparados em todo bip).
-  const { itens, totalBruto, totalDesconto, totalLiquido, totalItens, totalUnidades } =
-    useCarrinhoStore(
-      useShallow((s) => ({
-        itens: s.itens,
-        totalBruto: s.totalBruto,
-        totalDesconto: s.totalDesconto,
-        totalLiquido: s.totalLiquido,
-        totalItens: s.totalItens,
-        totalUnidades: s.totalUnidades,
-      })),
-    )
+  const {
+    itens: itensStore,
+    totalBruto: totalBrutoStore,
+    totalDesconto: totalDescontoStore,
+    totalLiquido: totalLiquidoStore,
+    totalItens: totalItensStore,
+    totalUnidades: totalUnidadesStore,
+  } = useCarrinhoStore(
+    useShallow((s) => ({
+      itens: s.itens,
+      totalBruto: s.totalBruto,
+      totalDesconto: s.totalDesconto,
+      totalLiquido: s.totalLiquido,
+      totalItens: s.totalItens,
+      totalUnidades: s.totalUnidades,
+    })),
+  )
+  // STATE READY GATE (React #418): o store persistido (zustand/persist + localStorage
+  // síncrono) já vem hidratado no primeiro render do cliente, divergindo do HTML do
+  // SSR (carrinho vazio). Enquanto não montar, expomos o estado neutro idêntico ao
+  // SSR; pós-mount revelamos os valores reais num update normal (sem mismatch).
+  const cartMounted = useHasMounted()
+  const itens = cartMounted ? itensStore : EMPTY_ITENS
+  const totalBruto = cartMounted ? totalBrutoStore : 0
+  const totalDesconto = cartMounted ? totalDescontoStore : 0
+  const totalLiquido = cartMounted ? totalLiquidoStore : 0
+  const totalItens = cartMounted ? totalItensStore : 0
+  const totalUnidades = cartMounted ? totalUnidadesStore : 0
   // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
   const setRegras = useCarrinhoStore((s) => s.setRegras)
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
@@ -245,7 +271,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
-  /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». Só usado com `USE_UNIFIED_SALES_FLOW` no servidor. */
+  /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». */
   const vendaIdempotenciaRef = useRef<string | null>(null)
 
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
@@ -502,10 +528,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             ? m.caixa.msg_caixa_ja_fechado
             : caixaFmt(m.caixa.msg_caixa_fechado, {
                 moeda: m.caixa.moeda_prefixo,
-                sistema: res.valorSistemaDinheiro.toFixed(2),
-                contado: res.valorContado.toFixed(2),
+                sistema: formatDecimalBRL(res.valorSistemaDinheiro),
+                contado: formatDecimalBRL(res.valorContado),
                 sinal: res.diferenca > 0 ? "+" : "",
-                diferenca: res.diferenca.toFixed(2),
+                diferenca: formatDecimalBRL(res.diferenca),
               }),
           { kind: "success" },
         )
@@ -587,7 +613,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setMotivoFecharModal({
           tipo: "diferenca",
           valorContado: v,
-          diferencaFmt: diferencaEstimada.toFixed(2),
+          diferencaFmt: formatDecimalBRL(diferencaEstimada),
         })
         return
       }
@@ -639,8 +665,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     if (totalPagamentos < totalLiquidoComGerente - 0.01) {
       setCaixaMensagem(
         caixaFmt(m.caixa.msg_pagamento_split_invalido, {
-          esperado: totalLiquidoComGerente.toFixed(2),
-          informado: totalPagamentos.toFixed(2),
+          esperado: formatDecimalBRL(totalLiquidoComGerente),
+          informado: formatDecimalBRL(totalPagamentos),
         }),
         { kind: "warning" },
       )
@@ -681,6 +707,26 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       parcelasFiltradas.length > 0
         ? parcelasFiltradas
         : [{ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", valor: 0 }]
+
+    // GUARD RAIL — snapshot imutável da venda + validação fail-fast contra a
+    // função canônica de totais. Bloqueia a finalização (sem fallback silencioso)
+    // se houver qualquer inconsistência entre o carrinho exibido e os itens reais.
+    const checkoutSnapshot = buildCheckoutSnapshot(itens, {
+      totalBruto,
+      totalLiquido,
+      totalDesconto,
+    })
+    const snapshotCheck = validateCheckoutSnapshot(checkoutSnapshot)
+    if (!snapshotCheck.ok) {
+      console.error("[caixa/checkout-snapshot]", snapshotCheck.violations)
+      setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+      // Diagnóstico concreto: nunca bloquear sem dizer o motivo (a 1ª violação do
+      // snapshot já é uma mensagem legível, ex.: "Carrinho vazio — nada a finalizar.").
+      setCheckoutHint(snapshotCheck.violations[0]?.message ?? m.caixa.msg_checkout_hint_cupom)
+      tocarFeedback("erro")
+      return
+    }
+
     setFinalizando(true)
     setCaixaMensagem(null)
     setCheckoutHint(null)
@@ -702,12 +748,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         descontoGerentePercentual:
           descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
         pagamentos: parcelasParaEnviar,
-        itens: itens.map((i) => ({
+        // Itens derivados do snapshot imutável já validado — não do store mutável.
+        itens: checkoutSnapshot.itens.map((i) => ({
           produtoId: i.produtoId,
           quantidade: i.quantidade,
-          precoOriginal: i.resultado?.precoOriginal ?? i.precoOriginal ?? 0,
-          precoUnitario: i.resultado?.precoUnitario ?? i.precoUnitario ?? 0,
-          tipoPreco: i.resultado?.tipoPreco ?? "VAREJO",
+          precoOriginal: i.precoOriginal,
+          precoUnitario: i.precoUnitario,
+          tipoPreco: i.tipoPreco,
         })),
       }
       const timeoutResult: { ok: false; error: string } = {
@@ -764,12 +811,22 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         tocarFeedback("erro")
       }
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e)
       console.error('[caixa/finalizar-venda]', {
         idempotencyKey: vendaIdempotenciaRef.current,
-        error: e instanceof Error ? e.message : String(e),
+        error: errMsg,
       })
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
-      setCheckoutHint(m.caixa.msg_checkout_hint_padrao)
+      // Diagnóstico concreto também na exceção: deriva causa provável (rede /
+      // sessão / cupom / preço) do erro real em vez do hint genérico "tente de novo".
+      setCheckoutHint(
+        inferirHintCheckout(errMsg, {
+          padrao: m.caixa.msg_checkout_hint_padrao,
+          cupom: m.caixa.msg_checkout_hint_cupom,
+          sessao: m.caixa.msg_checkout_hint_sessao,
+          rede: m.caixa.msg_checkout_hint_rede,
+        }),
+      )
       tocarFeedback("erro")
     } finally {
       setFinalizando(false)
@@ -788,6 +845,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     resetPagamentos,
     totalBruto,
     totalDesconto,
+    totalLiquido,
     totalLiquidoComGerente,
     m,
     recarregarStatusCaixa,
@@ -1035,8 +1093,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               {pdvLayoutVariant === "classic" && (
                 <CaixaPdvCartSaleBar
                   m={m}
-                  idioma={idioma}
-                  onExcluirVenda={handleNovoCupom}
+                 onExcluirVenda={handleNovoCupom}
                   onFinalizar={handleFinalizarClick}
                   finalizando={finalizando}
                   movimentandoCaixa={movimentandoCaixa}

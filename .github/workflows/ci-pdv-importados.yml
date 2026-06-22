@@ -47,6 +47,9 @@ jobs:
       - name: Install (workspaces na raiz)
         run: npm ci
 
+      - name: Architecture Lock (core rules, PDV flow, routes)
+        run: npm run guard:all
+
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
 

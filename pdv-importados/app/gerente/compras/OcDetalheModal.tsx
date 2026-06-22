@@ -6,6 +6,7 @@ import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { formatBRL } from '@/lib/format/money'
 import {
   obterOrdemCompraDetalhe,
   atualizarStatusOC,
@@ -33,10 +34,6 @@ const STATUS_CORES: Record<StatusOC, string> = {
 function fmtData(d: string | null): string {
   if (!d) return '—'
   return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
-}
-
-function fmtValor(v: number): string {
-  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 function idCurto(id: string): string {
@@ -199,7 +196,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                   <dt className="text-xs text-jl-fg-3">{c.col_previsto}</dt>
                   <dd className="text-right text-sm tabular-nums text-jl-fg-1">{fmtData(oc.data_prevista_chegada)}</dd>
                   <dt className="text-xs text-jl-fg-3">{c.col_total}</dt>
-                  <dd className="text-right text-sm font-semibold tabular-nums text-jl-fg-1">{fmtValor(oc.valor_total)}</dd>
+                  <dd className="text-right text-sm font-semibold tabular-nums text-jl-fg-1">{formatBRL(oc.valor_total)}</dd>
                   {oc.observacao && (
                     <>
                       <dt className="text-xs text-jl-fg-3">{c.field_observacao}</dt>
@@ -224,7 +221,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                             {item.produto_nome ?? item.descricao ?? '—'}
                           </div>
                           <div className="mt-0.5 text-xs text-jl-fg-3">
-                            {item.unidade_medida} · {fmtValor(item.preco_unitario)}/un
+                            {item.unidade_medida} · {formatBRL(item.preco_unitario)}/un
                           </div>
                         </div>
                         <div className="text-right">
@@ -232,7 +229,7 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
                             {item.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
                           </div>
                           <div className="text-xs tabular-nums text-jl-fg-3">
-                            {fmtValor(item.quantidade * item.preco_unitario)}
+                            {formatBRL(item.quantidade * item.preco_unitario)}
                           </div>
                         </div>
                       </div>

@@ -12,6 +12,7 @@ import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoe
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { SquareTerminal } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 export type CaixaPdvLayoutVariant = "default" | "classic"
 
@@ -47,7 +48,6 @@ export function CaixaPdvTopBar({
       ? 'var(--font-noto-sc),"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif'
       : undefined
 
-  const localeString = idioma === "pt" ? "pt-BR" : "zh-CN"
   const aberto = isCaixaAberto(caixaStatus)
   const turnoText = aberto
     ? caixaFmt(m.caixa.topbar_turno_aberto, { n: turnoNumeroDeCaixaId(caixaStatus.caixaId) })
@@ -59,10 +59,7 @@ export function CaixaPdvTopBar({
     !aberto || (aberto && caixaStatus.blindClosureEnabled)
       ? m.caixa.topbar_fundo_indisponivel
       : caixaFmt(m.caixa.topbar_fundo, {
-          valor: `${m.caixa.moeda_prefixo} ${caixaStatus.valorSistemaDinheiro.toLocaleString(localeString, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`,
+          valor: `${m.caixa.moeda_prefixo} ${formatDecimalBRL(caixaStatus.valorSistemaDinheiro)}`,
         })
 
   const classic = layoutVariant === "classic"
@@ -196,7 +193,7 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
-          <LanguageToggle idiomaAtual={idioma} variant="dragon" />
+          <LanguageToggle idiomaAtual={idioma} />
           <SignOutButton
             label={m.comum.sair}
             className={cn(

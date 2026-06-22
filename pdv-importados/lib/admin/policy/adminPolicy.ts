@@ -52,16 +52,13 @@ function isPainelWeb(pathname: string): boolean {
   return pathname.startsWith('/admin') || pathname.startsWith('/gerente')
 }
 
-function isCaixaWeb(pathname: string): boolean {
-  return pathname === '/caixa' || pathname.startsWith('/caixa/')
-}
-
 const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO', 'ADMIN']
 
 /** Actions registradas no painel /admin (server actions). */
 const ACTION_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'estoque:kardex': ALL_ADMIN_PROFILES,
   'vendas:detalhe': ALL_ADMIN_PROFILES,
+  'auditoria:listar': ALL_ADMIN_PROFILES,
 }
 
 /** Recursos: rotas UI, APIs e dados sensíveis. */
@@ -71,6 +68,7 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin/dashboard': ALL_ADMIN_PROFILES,
   'route:/admin/catalogo': ALL_ADMIN_PROFILES,
   'route:/admin/vendas': ALL_ADMIN_PROFILES,
+  'route:/admin/auditoria': ALL_ADMIN_PROFILES,
   'route:/admin/estoque': ALL_ADMIN_PROFILES,
   'api:gerente:health': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:recent': ALL_ADMIN_PROFILES,
@@ -165,9 +163,8 @@ export function middlewareAdminDecision(
     if (isPainelWeb(pathname) && !painelAllowed) {
       return redirect('/caixa', 'perfil_nao_gerencial', 'edge')
     }
-    if (isCaixaWeb(pathname) && painelAllowed) {
-      return redirect('/gerente', 'gerente_em_caixa', 'edge')
-    }
+    // GERENTE/DONO/ADMIN podem abrir o PDV (/caixa) — "Ir para PDV" sempre funciona.
+    // Antes havia um redirect `gerente_em_caixa` para /gerente que bloqueava o acesso.
     return allow('authorized', 'edge')
   }
 

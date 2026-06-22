@@ -101,6 +101,7 @@ class QueryBuilder {
         preco_atacado: null,
         categoria_id: null,
         ativo: true,
+        status_publicacao: 'PUBLICADO',
       }))
       return Promise.resolve({ data, error: null })
     }
@@ -147,9 +148,9 @@ function makeSupabase(opts?: { caixaAberto?: boolean }) {
           error: null,
         })
       }
-      if (name === 'finalizar_venda_transacional_canonica_v3') {
+      if (name === 'finalizar_venda_transacional_canonica_v4') {
         return Promise.resolve({
-          data: [{ venda_id: '66666666-6666-6666-8666-666666666666', status: 'CONCLUIDA' }],
+          data: [{ venda_id: '66666666-6666-6666-8666-666666666666', status: 'CONCLUIDA', event_id: '77777777-7777-7777-8777-777777777777' }],
           error: null,
         })
       }
@@ -182,45 +183,26 @@ function payloadBase(): FinalizarVendaInput {
   }
 }
 
-describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
+describe('finalizarVendaCaixa — split e validações', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
-    process.env.USE_UNIFIED_SALES_FLOW = 'false'
     getLojaIdUsuarioMock.mockResolvedValue('55555555-5555-5555-8555-555555555555')
     resolveVendaIdForFinalizeMock.mockReturnValue('66666666-6666-6666-8666-666666666666')
   })
 
-  it(
-    'legado bloqueia split >1 com mensagem esperada',
-    async () => {
-    const { supabase } = makeSupabase()
-    createClientMock.mockResolvedValue(supabase)
-    const { finalizarVendaCaixa } = await import('./actions')
-
-    const result = await finalizarVendaCaixa(payloadBase())
-    expect(result).toEqual({
-      ok: false,
-      error:
-        'Split de pagamento requer fluxo unificado habilitado no servidor. Ajuste para 1 forma de pagamento.',
-    })
-    },
-    15000,
-  )
-
-  it('unificado aceita split e envia p_pagamentos para RPC canônica', async () => {
-    process.env.USE_UNIFIED_SALES_FLOW = 'true'
+  it('aceita split e envia p_pagamentos para RPC canônica', async () => {
     const { supabase, rpcCalls } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
     const { finalizarVendaCaixa } = await import('./actions')
 
     const result = await finalizarVendaCaixa(payloadBase())
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: true,
       vendaId: '66666666-6666-6666-8666-666666666666',
     })
 
-    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v3')
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
     expect(txCall).toBeTruthy()
     expect(txCall?.params.p_pagamentos).toEqual([
       { forma_pagamento: 'DINHEIRO', valor: 20 },
@@ -229,7 +211,6 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
   })
 
   it('retorna mensagem de erro esperada para payload inválido (pagamentos != total)', async () => {
-    process.env.USE_UNIFIED_SALES_FLOW = 'true'
     const { supabase } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
     const { finalizarVendaCaixa } = await import('./actions')

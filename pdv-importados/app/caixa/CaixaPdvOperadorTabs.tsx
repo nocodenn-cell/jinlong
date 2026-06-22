@@ -8,6 +8,7 @@ import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 export type CaixaPdvOperadorTabId = "produto" | "cliente" | "pgto"
 
@@ -41,13 +42,8 @@ type Props = {
   metodoPagamentoPanel?: ReactNode
 }
 
-function moneyLocale(idioma: Idioma) {
-  return idioma === "pt" ? "pt-BR" : "zh-CN"
-}
-
 export function CaixaPdvOperadorTabs({
   m,
-  idioma,
   tab,
   onTabChange,
   layoutVariant = "default",
@@ -69,8 +65,6 @@ export function CaixaPdvOperadorTabs({
   metodoPagamentoPanel,
 }: Props) {
   const classicChrome = layoutVariant === "classic"
-  const loc = moneyLocale(idioma)
-  const fmt = (n: number) => n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   const tabs: { id: CaixaPdvOperadorTabId; label: string; aria: string; atalho?: string }[] = [
     { id: "produto", label: m.caixa.pdv_tab_produto, aria: m.caixa.pdv_tab_aria_produto, atalho: "Alt+Z" },
@@ -277,20 +271,20 @@ export function CaixaPdvOperadorTabs({
             <div className="flex justify-between gap-3">
               <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.total_pagar}</dt>
               <dd className={`font-semibold tabular-nums ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>
-                {moedaPrefixo} {fmt(totalLiquidoComGerente)}
+                {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </dd>
             </div>
             <div className="flex justify-between gap-3 text-xs">
               <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.pdv_pgto_soma_parcelas}</dt>
               <dd className={`tabular-nums font-semibold ${somaOk ? "text-emerald-500" : "text-destructive"}`}>
-                {moedaPrefixo} {fmt(somaParcelas)}
+                {moedaPrefixo} {formatDecimalBRL(somaParcelas)}
               </dd>
             </div>
             {temTroco && (
               <div className="flex justify-between gap-3 text-xs">
                 <dt className="font-medium text-emerald-600">{m.caixa.pdv_pgto_troco_cliente}</dt>
                 <dd className="tabular-nums font-bold text-emerald-500">
-                  {moedaPrefixo} {fmt(diferenca)}
+                  {moedaPrefixo} {formatDecimalBRL(diferenca)}
                 </dd>
               </div>
             )}
@@ -298,7 +292,7 @@ export function CaixaPdvOperadorTabs({
               <div className="flex justify-between gap-3 text-xs">
                 <dt className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</dt>
                 <dd className="tabular-nums font-bold text-destructive">
-                  {moedaPrefixo} {fmt(Math.abs(diferenca))}
+                  {moedaPrefixo} {formatDecimalBRL(Math.abs(diferenca))}
                 </dd>
               </div>
             )}

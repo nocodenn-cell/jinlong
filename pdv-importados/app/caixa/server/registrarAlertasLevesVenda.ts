@@ -77,8 +77,11 @@ export async function registrarAlertasLevesVenda(
         })
       }
     }
-  } catch {
-    // Best-effort: a venda já foi concluída antes desta chamada — uma falha
-    // na detecção de anomalias nunca pode voltar a afetar o fluxo de venda.
+  } catch (e) {
+    // Best-effort: a venda já foi concluída — falha aqui não afeta o fluxo.
+    console.warn('[caixa.alertas_leves.erro]', {
+      vendaId,
+      erro: e instanceof Error ? e.message : String(e),
+    })
   }
 }
