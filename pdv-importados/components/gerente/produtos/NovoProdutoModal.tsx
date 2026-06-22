@@ -30,7 +30,6 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const precoVarejoInput = useMoneyInput()
   const precoAtacadoInput = useMoneyInput()
   const precoCustoInput = useMoneyInput()
-  const [qtdGatilho, setQtdGatilho] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -47,7 +46,6 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     precoVarejoInput.reset()
     precoAtacadoInput.reset()
     precoCustoInput.reset()
-    setQtdGatilho('')
     setCategoriaId('')
     setSaving(false)
     // Auto-focus no nome ao abrir
@@ -68,7 +66,6 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     }
     const precoAtacadoNum = precoAtacadoInput.parse()
     const precoCustoNum = precoCustoInput.parse()
-    const qtdGatilhoNum = qtdGatilho.trim() ? parseInt(qtdGatilho, 10) : null
 
     setSaving(true)
     try {
@@ -78,7 +75,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         preco_varejo: precoVarejoNum,
         preco_atacado: precoAtacadoNum,
         preco_custo: precoCustoNum,
-        quantidade_gatilho_atacado: qtdGatilhoNum,
+        quantidade_gatilho_atacado: null,
         origem,
         tem_nf: false,
         categoria_id: categoriaId || null,
@@ -93,7 +90,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     } finally {
       setSaving(false)
     }
-  }, [nome, codigoBarras, origem, precoVarejoInput, precoAtacadoInput, precoCustoInput, qtdGatilho, categoriaId, p, m.comum.sucesso, onCriado, fechar])
+  }, [nome, codigoBarras, origem, precoVarejoInput, precoAtacadoInput, precoCustoInput, categoriaId, p, m.comum.sucesso, onCriado, fechar])
 
   if (!open) return null
 
@@ -180,11 +177,11 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
             </div>
           </div>
 
-          {/* Precificação — linha única compacta */}
+          {/* Precificação */}
           <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
             {p.secao_precificacao}
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_varejo} *
               <input
@@ -198,32 +195,6 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
               />
             </label>
             <label className="block text-xs font-medium text-jl-fg-3">
-              {p.preco_atacado}
-              <input
-                type="text"
-                inputMode="decimal"
-                className={`${finInMono} mt-1`}
-                value={precoAtacadoInput.display}
-                onChange={precoAtacadoInput.onChange}
-                disabled={saving}
-                placeholder="—"
-              />
-            </label>
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {p.qtd_gatilho_atacado}
-              <input
-                type="text"
-                inputMode="numeric"
-                className={`${finInMono} mt-1`}
-                value={qtdGatilho}
-                onChange={(e) => setQtdGatilho(e.target.value)}
-                disabled={saving}
-                placeholder="—"
-              />
-            </label>
-          </div>
-          <div className="mt-3">
-            <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_custo}
               <input
                 type="text"
@@ -235,6 +206,37 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 placeholder="—"
               />
             </label>
+          </div>
+          {/* Margem em tempo real */}
+          {(() => {
+            const v = precoVarejoInput.parse()
+            const c = precoCustoInput.parse()
+            if (!v || v <= 0 || c === null) return null
+            const pct = ((v - c) / v) * 100
+            const cor = pct < 0 ? 'text-red-400' : pct < 20 ? 'text-amber-400' : 'text-emerald-400'
+            return (
+              <p className={`mt-1.5 text-[11px] font-mono ${cor}`}>
+                Margem: {pct.toFixed(1)}%
+              </p>
+            )
+          })()}
+          {/* Preço atacado */}
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.preco_atacado}
+              <input
+                type="text"
+                inputMode="decimal"
+                className={`${finInMono} mt-1`}
+                value={precoAtacadoInput.display}
+                onChange={precoAtacadoInput.onChange}
+                disabled={saving}
+                placeholder="—"
+              />
+            </label>
+            <p className="mt-1 text-[10px] text-jl-fg-3">
+              Ativa no PDV quando a quantidade no carrinho atinge o mínimo configurado no sistema.
+            </p>
           </div>
 
           {/* Categoria (opcional) */}

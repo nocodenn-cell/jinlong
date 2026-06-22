@@ -1,11 +1,25 @@
 'use client'
 
+import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
+
 export default function CaixaError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    Sentry.captureException(error, {
+      tags: {
+        modulo: 'pdv-sale',
+        plataforma: 'web',
+        layer: 'error-boundary-caixa',
+      },
+    })
+  }, [error])
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
       <h1 className="text-xl font-semibold">Erro no ponto de venda</h1>
