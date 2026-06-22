@@ -193,7 +193,7 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
-          <LanguageToggle idiomaAtual={idioma} variant="dragon" />
+          <LanguageToggle idiomaAtual={idioma} />
           <SignOutButton
             label={m.comum.sair}
             className={cn(
