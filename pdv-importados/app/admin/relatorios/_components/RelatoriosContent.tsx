@@ -108,8 +108,8 @@ function TopProdutosList({ top, labels }: { top: RelatorioTopProdDTO[]; labels: 
               </div>
               <span className="text-xs text-jl-fg-2">{formatBRL(item.total_valor)}</span>
             </div>
-            <div className="h-2 w-full rounded-full bg-[#1a1a1a]">
-              <div className="h-full rounded-full bg-[#c9a227]" style={{ width: `${width}%` }} />
+            <div className="h-2 w-full rounded-full bg-[var(--color-background-tertiary)]">
+              <div className="h-full rounded-full bg-[var(--color-chart-gold)]" style={{ width: `${width}%` }} />
             </div>
           </div>
         )
@@ -125,7 +125,7 @@ function EstoqueReposicaoList({ baixo, labels }: { baixo: RelatorioEstoqueBaixoD
       {baixo.slice(0, 12).map((item) => (
         <div
           key={item.id}
-          className="flex items-center justify-between rounded-lg border border-[#242424] bg-[#101010] px-3 py-2"
+          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
         >
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-jl-fg-1">{item.nome}</p>
@@ -150,7 +150,7 @@ function MargemPorVendaList({ vendas, labels }: { vendas: RelatorioMargemVendaDT
     <div className="overflow-x-auto">
       <table className="w-full text-[12px]">
         <thead>
-          <tr className="border-b border-[#242424] text-left text-[11px] text-jl-fg-3">
+          <tr className="border-b border-[var(--color-border-secondary)] text-left text-[11px] text-jl-fg-3">
             <th className="py-1.5 pr-3 font-medium">{labels.margemVendaColData}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.margemVendaColLiquido}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.margemVendaColCusto}</th>
@@ -159,7 +159,7 @@ function MargemPorVendaList({ vendas, labels }: { vendas: RelatorioMargemVendaDT
         </thead>
         <tbody>
           {vendas.slice(0, 20).map((v) => (
-            <tr key={v.venda_id} className="border-b border-[#1a1a1a]">
+            <tr key={v.venda_id} className="border-b border-[var(--color-background-tertiary)]">
               <td className="py-1.5 pr-3 text-jl-fg-2">{formatDateTimeOrDash(v.data, labels.locale, 'short')}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-1">{formatBRL(v.total_liquido)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">
@@ -192,7 +192,7 @@ function CurvaAbcList({ produtos, labels }: { produtos: RelatorioCurvaAbcDTO[]; 
     <div className="overflow-x-auto">
       <table className="w-full text-[12px]">
         <thead>
-          <tr className="border-b border-[#242424] text-left text-[11px] text-jl-fg-3">
+          <tr className="border-b border-[var(--color-border-secondary)] text-left text-[11px] text-jl-fg-3">
             <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.curvaAbcColValor}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.curvaAbcColAcumulado}</th>
@@ -201,7 +201,7 @@ function CurvaAbcList({ produtos, labels }: { produtos: RelatorioCurvaAbcDTO[]; 
         </thead>
         <tbody>
           {produtos.slice(0, 30).map((p) => (
-            <tr key={p.produtoId} className="border-b border-[#1a1a1a]">
+            <tr key={p.produtoId} className="border-b border-[var(--color-background-tertiary)]">
               <td className="max-w-[220px] truncate py-1.5 pr-3 text-jl-fg-1">{p.nome}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-3">{p.percentualAcumulado.toFixed(1)}%</td>
@@ -227,7 +227,7 @@ function CoberturaEstoqueList({ itens, labels }: { itens: RelatorioCoberturaEsto
       {comCobertura.map((i) => (
         <div
           key={`${i.produtoId}-${i.lojaId}`}
-          className="flex items-center justify-between rounded-lg border border-[#242424] bg-[#101010] px-3 py-2"
+          className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-2"
         >
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-jl-fg-1">{i.nome}</p>
