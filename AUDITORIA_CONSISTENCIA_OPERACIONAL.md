@@ -150,3 +150,17 @@ G4 é decisão de produto, não bug.
 > **Conclusão.** O sistema **não precisa** de um "novo sistema de consistência" — ele
 > já é um. Precisa de **4 fechamentos cirúrgicos** (G1–G3 + portão único) e de
 > **disciplina de verificação** para que as garantias atuais não regridam por drift.
+
+---
+
+## Apêndice · Metodologia
+
+- **Fonte de verdade da auditoria:** código versionado (243 migrations em
+  `backend/supabase/migrations/`, guards em `scripts/`, motores em `shared-core/`).
+- **Critério de veredito:** cada invariante só recebe ✅ com **evidência de
+  `arquivo:linha`**; ❌/⚠️ exigem ausência comprovada (ex.: `grep` vazio para
+  `reservar_estoque`/`quantidade_reservada`).
+- **Reproduzir os guards existentes:** `npm run guard:all` (inclui `guard:pricing`,
+  `guard:pdv`, `guard:core`, `guard:rpc`, `guard:migrations`).
+- **Escopo deliberadamente read-only:** este documento não altera schema nem
+  comportamento; serve de base para decidir a sequência das seções 6–7.
