@@ -75,13 +75,17 @@ export function AjusteSaldoModal({
     }
     setErro(null)
     startTransition(async () => {
-      const res = await atualizarEstoqueProduto(payload)
-      if (!res.ok) {
-        setErro(res.error)
-        return
+      try {
+        const res = await atualizarEstoqueProduto(payload)
+        if (!res.ok) {
+          setErro(res.error)
+          return
+        }
+        router.refresh()
+        onClose()
+      } catch {
+        setErro('Erro inesperado ao salvar. Tente novamente.')
       }
-      router.refresh()
-      onClose()
     })
   }
 

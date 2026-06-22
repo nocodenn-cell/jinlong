@@ -45,10 +45,10 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
   }
 
   const observacao = parsed.data.observacao?.trim() || null
-  const admin = createAdminClient()
   return runServerActionWithObservability(
     'gerente/estoque/atualizar',
     async () => {
+      const admin = createAdminClient()
       const { error } = await admin.rpc('ajustar_estoque_manual', {
         p_produto_id: parsed.data.produto_id,
         p_loja_id: lojaId,
@@ -61,6 +61,7 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         throw new Error(mensagemErroComSecao('Estoque', error.message))
       }
       revalidatePath('/gerente/estoque')
+      revalidatePath('/admin/estoque')
       return null
     },
     'ajustar_estoque_manual',
