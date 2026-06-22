@@ -50,7 +50,7 @@ export const finalizarVendaInputSchema = z.object({
   }),
   totalBruto: z.number().nonnegative('O total bruto não pode ser negativo.'),
   totalDesconto: z.number().nonnegative('O total de desconto não pode ser negativo.'),
-  totalLiquido: z.number().nonnegative('O total líquido não pode ser negativo.'),
+  totalLiquido: z.number().positive('O total líquido deve ser maior que zero.'),
   descontoGerenteToken: z.string().min(1).optional(),
   descontoGerentePercentual: z
     .number()
