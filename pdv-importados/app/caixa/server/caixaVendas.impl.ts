@@ -27,6 +27,7 @@ import {
   parsePercentConfig,
 } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
+import { captureVendaError, captureRpcVendaError, VENDA_EVENTS } from '@/lib/sentry/vendaSentry'
 
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
@@ -111,6 +112,13 @@ export async function cancelarVendaImpl(
     revalidatePath('/gerente/financeiro')
     return { ok: true, vendaId: String(row.venda_id), status: 'CANCELADA' }
   } catch (e) {
+    captureVendaError(e, {
+      trace_id: vendaIdTrim,
+      venda_id: vendaIdTrim,
+      plataforma: 'web',
+      evento: VENDA_EVENTS.VENDA_CANCELADA,
+      extra: { motivo_len: motivoTrim.length },
+    })
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a venda.'),
@@ -274,6 +282,7 @@ export async function finalizarVendaCaixaImpl(
     })
 
     if (txErr) {
+      const _elapsed = Date.now() - _rpcStart
       console.error('[caixa.finalizar_venda.rpc_error]', {
         vendaId,
         usuarioId: user.id,
@@ -282,7 +291,19 @@ export async function finalizarVendaCaixaImpl(
         itensCount: itensAut.length,
         erro: txErr.message,
         strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
-        elapsed_ms: Date.now() - _rpcStart,
+        elapsed_ms: _elapsed,
+      })
+      captureRpcVendaError(txErr.message, {
+        trace_id: input.idempotencyKey ?? vendaId,
+        venda_id: vendaId,
+        caixa_id: caixaId,
+        operador_id: user.id,
+        loja_id: lojaId,
+        total_liquido: computedFinal.totalLiquido,
+        itens_count: itensAut.length,
+        plataforma: 'web',
+        rpc: 'finalizar_venda_transacional_canonica_v4',
+        elapsed_ms: _elapsed,
       })
       // Transação inteira foi revertida automaticamente pelo PostgreSQL
       return { ok: false, error: caixaErroOperador(txErr.message) }
@@ -336,6 +357,14 @@ export async function finalizarVendaCaixaImpl(
   } catch (e) {
     console.error('[caixa.finalizar_venda.excecao_nao_tratada]', {
       erro: e instanceof Error ? e.message : String(e),
+    })
+    captureVendaError(e, {
+      trace_id: (typeof input === 'object' && input !== null && 'idempotencyKey' in input)
+        ? String((input as { idempotencyKey?: string }).idempotencyKey ?? 'unknown')
+        : 'unknown',
+      plataforma: 'web',
+      evento: VENDA_EVENTS.ERRO_RPC_VENDA,
+      extra: { layer: 'finalizarVendaCaixaImpl', excecao_nao_tratada: true },
     })
     return {
       ok: false,

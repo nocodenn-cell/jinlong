@@ -24,6 +24,7 @@ import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts"
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
 import { logJson } from "../../../../shared/logger.ts";
 import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
+import { captureEdgeException } from "../_shared/sentryEdge.ts";
 
 type OutboxEvent = {
   id: string;
@@ -668,7 +669,17 @@ async function processVenda(
     p_gerente_id: payload.gerente_id ?? null,
   });
 
-  if (rpcVendaErr) throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
+  if (rpcVendaErr) {
+    await captureEdgeException(new Error(rpcVendaErr.message), {
+      trace_id: payload.venda_id,
+      venda_id: payload.venda_id,
+      caixa_id: payload.caixa_id ?? undefined,
+      evento: "erro_rpc_venda",
+      rpc: "registrar_venda_com_itens",
+      event_type: "VENDA_REGISTRADA",
+    });
+    throw new Error(`ERRO_RPC_REGISTRAR_VENDA: ${rpcVendaErr.message}`);
+  }
   const _t1 = Date.now();
 
   await aplicarBaixaEstoquePorItem(
@@ -808,6 +819,12 @@ async function handlePostOutboxBatch(
         event_type: ev.tipo,
         correlation_id: eventCorrelationId(ev),
         error: rawErr,
+      });
+      await captureEdgeException(e, {
+        trace_id: eventCorrelationId(ev),
+        evento: "erro_sync_outbox",
+        event_type: ev.tipo,
+        request_id: requestId,
       });
     }
   }

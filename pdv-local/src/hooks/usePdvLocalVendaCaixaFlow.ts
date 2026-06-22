@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { validarPercentualPermitido } from '@core/managerDiscount/policy'
 import type { CaixaSessaoInvoke } from './usePdvLocalCatalogo'
+import { captureDesktopException, VENDA_EVENTS } from '../lib/sentry'
 
 type ItemVenda = {
   produtoId: string
@@ -216,6 +217,15 @@ export function usePdvLocalVendaCaixaFlow({
       }
     } catch (e) {
       logError('Erro ao registrar venda no caixa local', { error: e })
+      captureDesktopException(e, {
+        trace_id: caixaId ?? 'unknown-caixa',
+        caixa_id: caixaId ?? undefined,
+        total_liquido: totalLiquido,
+        itens_count: itens.length,
+        plataforma: 'desktop',
+        evento: VENDA_EVENTS.ERRO_RPC_VENDA,
+        extra: { layer: 'registrar_venda_tauri' },
+      })
       onSetMensagem(formatarErro(e, 'Não foi possível registrar a venda no caixa local.'))
     } finally {
       onFinalizarElapsedMs(performance.now() - t0Finalizar)
