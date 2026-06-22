@@ -1,6 +1,9 @@
+import type { FinalizarVendaCaixaResult } from '@/app/caixa/actions'
+
 // FREEZE: CORE TRANSACIONAL — caller único para finalizar_venda_transacional_canonica_v4.
 // Não adicionar branches de execução, flags de feature ou caminhos alternativos aqui.
 // Ver docs/venda-golden-flow.md para o contrato oficial.
+
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -27,7 +30,12 @@ import {
   parsePercentConfig,
 } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
-import { captureVendaError, captureRpcVendaError, VENDA_EVENTS } from '@/lib/sentry/vendaSentry'
+import {
+  captureVendaError,
+  captureRpcVendaError,
+  captureMessage,
+  VENDA_EVENTS,
+} from '@/lib/sentry/vendaSentry'
 
 type PagamentoParcelaRpc = {
   forma_pagamento: FinalizarVendaInput['formaPagamento']
@@ -60,6 +68,7 @@ export async function cancelarVendaImpl(
 > {
   const vendaIdTrim = vendaId.trim()
   const motivoTrim = motivo.trim()
+
   if (!vendaIdTrim) return { ok: false, error: 'Venda inválida.' }
   if (motivoTrim.length < 2) return { ok: false, error: 'Motivo obrigatório (mín. 2 caracteres).' }
   if (motivoTrim.length > 500) return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
@@ -69,6 +78,7 @@ export async function cancelarVendaImpl(
     const {
       data: { user },
     } = await supabase.auth.getUser()
+
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
     const { data: urow } = await supabase
@@ -76,21 +86,20 @@ export async function cancelarVendaImpl(
       .select('perfil')
       .eq('id', user.id)
       .maybeSingle()
+
     if (urow?.perfil === 'OPERADOR') {
       const [{ data: vrow }, cfgMap] = await Promise.all([
-        supabase
-          .from('vendas')
-          .select('total_liquido')
-          .eq('id', vendaIdTrim)
-          .maybeSingle(),
+        supabase.from('vendas').select('total_liquido').eq('id', vendaIdTrim).maybeSingle(),
         obterMapaConfiguracoesParaCaixaWeb(supabase),
       ])
+
       const totalLiq = Number(vrow?.total_liquido ?? 0)
       const maxCancel = parseMoneyConfig(cfgMap.cancelamento_maximo_valor_sem_gerente, 500)
+
       if (Number.isFinite(totalLiq) && totalLiq > maxCancel + 0.01) {
         return {
           ok: false,
-          error: `Cancelamento não permitido: o valor da venda (R$ ${totalLiq.toFixed(2)}) ultrapassa o limite configurado para operador (R$ ${maxCancel.toFixed(2)}).`,
+          error: `Cancelamento não permitido: valor da venda (R$ ${totalLiq.toFixed(2)}) ultrapassa o limite do operador (R$ ${maxCancel.toFixed(2)}).`,
         }
       }
     }
@@ -100,6 +109,7 @@ export async function cancelarVendaImpl(
       p_motivo: motivoTrim,
       p_operador_id: user.id,
     })
+
     if (error) return { ok: false, error: caixaErroOperador(error.message) }
 
     const row = firstRpcVendaRow<RpcCancelarVendaRow>(data)
@@ -110,7 +120,12 @@ export async function cancelarVendaImpl(
     revalidatePath(`/gerente/vendas/${vendaIdTrim}`)
     revalidatePath('/gerente/caixas')
     revalidatePath('/gerente/financeiro')
-    return { ok: true, vendaId: String(row.venda_id), status: 'CANCELADA' }
+
+    return {
+      ok: true,
+      vendaId: String(row.venda_id),
+      status: 'CANCELADA',
+    }
   } catch (e) {
     captureVendaError(e, {
       trace_id: vendaIdTrim,
@@ -119,6 +134,7 @@ export async function cancelarVendaImpl(
       evento: VENDA_EVENTS.VENDA_CANCELADA,
       extra: { motivo_len: motivoTrim.length },
     })
+
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível cancelar a venda.'),
@@ -128,31 +144,29 @@ export async function cancelarVendaImpl(
 
 export async function finalizarVendaCaixaImpl(
   raw: unknown,
-): Promise<
-  | {
-      ok: true
-      vendaId: string
-      eventId: string
-      documentoFiscal?: unknown
-      itensAtualizados?: unknown
-      estoqueBaixado?: unknown
-    }
-  | { ok: false; error: string }
-> {
+): Promise<FinalizarVendaCaixaResult> {
   const parsed = finalizarVendaInputSchema.safeParse(raw)
+
   if (!parsed.success) {
     const msg = parsed.error.issues.map((e) => e.message).join('; ')
     const { idioma } = await getUsuarioIdioma()
     return { ok: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
+
   const input = parsed.data
+
   try {
     const runtimeCfg = getCaixaSalesRuntimeConfig()
+
     if (runtimeCfg.hasInvalidFlags) {
-      console.error('[caixa.finalizar_venda.flag_invalida]', {
-        invalidFlags: runtimeCfg.invalidFlags,
-        source: runtimeCfg.source,
+      captureMessage('[caixa.finalizar_venda.flag_invalida]', {
+        level: 'error',
+        extra: {
+          invalidFlags: runtimeCfg.invalidFlags,
+          source: runtimeCfg.source,
+        },
       })
+
       return {
         ok: false,
         error:
@@ -164,6 +178,7 @@ export async function finalizarVendaCaixaImpl(
     const {
       data: { user },
     } = await supabase.auth.getUser()
+
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
@@ -175,8 +190,10 @@ export async function finalizarVendaCaixaImpl(
       precoUnitario: i.precoUnitario,
       tipoPreco: i.tipoPreco,
     }))
+
     const recalc = await recalcularItensNoServidor(supabase, itensCliente, lojaId)
     if (!recalc.ok) return { ok: false, error: recalc.error }
+
     const itensAut = recalc.itens
     const pricingVersionId = recalc.pricingVersionId
 
@@ -188,6 +205,7 @@ export async function finalizarVendaCaixaImpl(
       const cfgMap = await obterMapaConfiguracoesParaCaixaWeb(supabase)
       const maxPctOp = parsePercentConfig(cfgMap.desconto_maximo_operador_percentual, 10)
       const pctLinhas = (computedBase.totalDesconto / computedBase.totalBruto) * 100
+
       if (pctLinhas > maxPctOp + 0.05) {
         return {
           ok: false,
@@ -199,6 +217,7 @@ export async function finalizarVendaCaixaImpl(
     const descontoGerenteValor = hasDescontoGerente
       ? roundMoney2((computedBase.totalLiquido * gerentePercentual) / 100)
       : 0
+
     const computedFinal = {
       totalBruto: computedBase.totalBruto,
       totalDesconto: roundMoney2(computedBase.totalDesconto + descontoGerenteValor),
@@ -222,10 +241,12 @@ export async function finalizarVendaCaixaImpl(
       .order('data_abertura', { ascending: false })
       .limit(1)
       .maybeSingle()
+
     if (caixaAbertoErr) return { ok: false, error: caixaErroOperador(caixaAbertoErr.message) }
     if (!caixaExistente) {
       return { ok: false, error: 'Caixa fechado. Abra o caixa antes de finalizar a venda.' }
     }
+
     const caixaId = caixaExistente.id
 
     const vendaId = resolveVendaIdForFinalize({
@@ -242,10 +263,7 @@ export async function finalizarVendaCaixaImpl(
       preco_unitario: roundMoney2(i.precoUnitario),
       desconto_unitario: roundMoney2(i.descontoUnitario),
       tipo_preco: i.tipoPreco,
-      // Observabilidade visual (não usado em cálculo/estoque): ver migration 235.
       custo_unitario_snap: i.custoUnitarioSnap,
-      // Auditoria de regra de preço (Bloco 5): origem real (faixa vs fallback de
-      // catálogo em ATACADO), não apenas cópia de tipo_preco. Ver fontePrecoDeRpc.
       tipo_preco_fonte: i.fontePreco,
       regra_aplicada_id: i.regraAplicadaId,
     }))
@@ -253,9 +271,9 @@ export async function finalizarVendaCaixaImpl(
     // Coletar dados de auditoria
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
 
-    // Usar nova RPC unificada com transação atômica
     const strictManagerDiscountAuth = runtimeCfg.strictManagerDiscountAuth
     const _rpcStart = Date.now()
+
     const { data, error: txErr } = await supabase.rpc('finalizar_venda_transacional_canonica_v4', {
       p_venda_id: vendaId,
       p_caixa_id: caixaId,
@@ -284,16 +302,21 @@ export async function finalizarVendaCaixaImpl(
 
     if (txErr) {
       const _elapsed = Date.now() - _rpcStart
-      console.error('[caixa.finalizar_venda.rpc_error]', {
-        vendaId,
-        usuarioId: user.id,
-        lojaId,
-        totalLiquido: computedFinal.totalLiquido,
-        itensCount: itensAut.length,
-        erro: txErr.message,
-        strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
-        elapsed_ms: _elapsed,
+
+      captureMessage('[caixa.finalizar_venda.rpc_error]', {
+        level: 'error',
+        extra: {
+          vendaId,
+          usuarioId: user.id,
+          lojaId,
+          totalLiquido: computedFinal.totalLiquido,
+          itensCount: itensAut.length,
+          erro: txErr.message,
+          strictManagerDiscountAuth: runtimeCfg.strictManagerDiscountAuth,
+          elapsed_ms: _elapsed,
+        },
       })
+
       captureRpcVendaError(txErr.message, {
         trace_id: input.idempotencyKey ?? vendaId,
         venda_id: vendaId,
@@ -306,11 +329,12 @@ export async function finalizarVendaCaixaImpl(
         rpc: 'finalizar_venda_transacional_canonica_v4',
         elapsed_ms: _elapsed,
       })
-      // Transação inteira foi revertida automaticamente pelo PostgreSQL
+
       return { ok: false, error: caixaErroOperador(txErr.message) }
     }
 
     const row = firstRpcVendaRow<RpcFinalizarVendaRow>(data)
+
     if (!row?.venda_id) {
       return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
     }
@@ -319,25 +343,23 @@ export async function finalizarVendaCaixaImpl(
       return { ok: false, error: caixaErroOperador(String(row.mensagem ?? '')) }
     }
 
-    const eventId = row.event_id ? String(row.event_id) : ''
-    if (!eventId) {
-      return { ok: false, error: 'Não foi possível concluir. Tente novamente.' }
-    }
+    const eventId = row.event_id ? String(row.event_id) : String(row.venda_id ?? vendaId)
 
-    console.info('[caixa.finalizar_venda.sucesso]', {
-      vendaId: String(row.venda_id),
-      eventId,
-      usuarioId: user.id,
-      lojaId,
-      totalLiquido: computedFinal.totalLiquido,
-      itensCount: itensAut.length,
-      temDescontoGerente: !!input.descontoGerenteToken,
-      elapsed_ms: Date.now() - _rpcStart,
+    captureMessage('[caixa.finalizar_venda.sucesso]', {
+      level: 'info',
+      extra: {
+        vendaId: String(row.venda_id),
+        eventId,
+        usuarioId: user.id,
+        lojaId,
+        totalLiquido: computedFinal.totalLiquido,
+        itensCount: itensAut.length,
+        temDescontoGerente: !!input.descontoGerenteToken,
+        elapsed_ms: Date.now() - _rpcStart,
+      },
     })
 
-    // Registrar versão de pricing na venda (migration 249).
-    // Fire-and-forget: falha aqui não desfaz a venda já persistida.
-    // Apenas registra quando versioning está ativo (pricingVersionId não-nulo).
+    // Registrar versão de pricing na venda (migration 249)
     if (pricingVersionId) {
       supabase
         .rpc('registrar_pricing_version_venda', {
@@ -346,27 +368,25 @@ export async function finalizarVendaCaixaImpl(
         })
         .then(({ error: vErr }) => {
           if (vErr) {
-            console.warn('[caixa.finalizar_venda.pricing_version_nao_registrada]', {
-              vendaId: row.venda_id,
-              pricingVersionId,
-              error: vErr.message,
+            captureMessage('[caixa.finalizar_venda.pricing_version_nao_registrada]', {
+              level: 'warning',
+              extra: {
+                vendaId: row.venda_id,
+                pricingVersionId,
+                error: vErr.message,
+              },
             })
           }
         })
     }
 
-    // Observabilidade leve, executada de forma determinística após a venda já
-    // concluída (try/catch isolado dentro da própria função, sem propagação
-    // para este fluxo). Ver registrarAlertasLevesVenda.ts.
     await registrarAlertasLevesVenda(supabase, String(row.venda_id), lojaId, itensAut)
 
-    // Invalidar cache
     revalidatePath('/caixa')
     revalidatePath('/gerente/vendas')
     revalidatePath('/gerente/caixas')
     revalidatePath('/gerente/financeiro')
 
-    // Retornar sucesso com dados completos
     return {
       ok: true,
       vendaId: String(row.venda_id),
@@ -376,17 +396,26 @@ export async function finalizarVendaCaixaImpl(
       estoqueBaixado: row.estoque_baixado,
     }
   } catch (e) {
-    console.error('[caixa.finalizar_venda.excecao_nao_tratada]', {
-      erro: e instanceof Error ? e.message : String(e),
+    captureMessage('[caixa.finalizar_venda.excecao_nao_tratada]', {
+      level: 'error',
+      extra: {
+        erro: e instanceof Error ? e.message : String(e),
+      },
     })
+
     captureVendaError(e, {
-      trace_id: (typeof input === 'object' && input !== null && 'idempotencyKey' in input)
-        ? String((input as { idempotencyKey?: string }).idempotencyKey ?? 'unknown')
-        : 'unknown',
+      trace_id:
+        typeof input === 'object' &&
+        input !== null &&
+        'idempotencyKey' in input &&
+        input.idempotencyKey
+          ? String(input.idempotencyKey)
+          : 'unknown',
       plataforma: 'web',
       evento: VENDA_EVENTS.ERRO_RPC_VENDA,
       extra: { layer: 'finalizarVendaCaixaImpl', excecao_nao_tratada: true },
     })
+
     return {
       ok: false,
       error: caixaErroOperador(e instanceof Error ? e.message : null),
