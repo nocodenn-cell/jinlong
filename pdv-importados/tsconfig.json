@@ -30,7 +30,7 @@
         "../shared/*"
       ],
       "@shared-core/*": [
-        "../shared-core/*"
+        "../shared-core/src/*"
       ],
       "@/shared/*": [
         "./shared/*"
