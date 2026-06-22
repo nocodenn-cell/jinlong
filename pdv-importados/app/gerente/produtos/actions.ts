@@ -940,18 +940,19 @@ export async function buscarProdutosComFiltros(
   const list = (data ?? []) as RpcProdutoRow[]
   const total = list.length > 0 ? Number(list[0].total_count) : 0
 
-  // Queries suplementares: SKU/localização (produtos) + estoque atual
+  // Queries suplementares: SKU/localização (produtos) + estoque atual (com estoque_minimo)
   const productIds = list.map((r) => r.id)
   const [estoqueRes, extraRes] = productIds.length > 0
     ? await Promise.all([
-        supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
+        // ✅ CORREÇÃO: adicionado estoque_minimo
+        supabase.from('estoque').select('produto_id, quantidade_atual, estoque_minimo').in('produto_id', productIds),
         supabase
           .from('produtos')
           .select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo, status_publicacao')
           .in('id', productIds),
       ])
     : [
-        { data: [] as { produto_id: string; quantidade_atual: number }[] },
+        { data: [] as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[] },
         {
           data: [] as {
             id: string
@@ -964,9 +965,10 @@ export async function buscarProdutosComFiltros(
         },
       ]
 
-  const estoqueMap = new Map<string, number>()
-  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
-    estoqueMap.set(e.produto_id, e.quantidade_atual)
+  // ✅ CORREÇÃO: estoqueMap agora guarda objeto com quantidade_atual e estoque_minimo
+  const estoqueMap = new Map<string, { quantidade_atual: number; estoque_minimo: number }>()
+  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[])) {
+    estoqueMap.set(e.produto_id, { quantidade_atual: e.quantidade_atual, estoque_minimo: e.estoque_minimo ?? 0 })
   }
 
   const extraMap = new Map<
@@ -996,8 +998,10 @@ export async function buscarProdutosComFiltros(
     })
   }
 
+  // ✅ CORREÇÃO: adicionado estoque_minimo no retorno
   const rows: ProdutoGerenteRow[] = list.map((r) => {
     const extra = extraMap.get(r.id)
+    const estoque = estoqueMap.get(r.id)
     const statusPublicacao = resolveStatusPublicacaoLeitura(
       extra?.status_publicacao ?? statusFromAtivoLegacy(r.ativo),
       r.ativo,
@@ -1013,7 +1017,8 @@ export async function buscarProdutosComFiltros(
       preco_custo: extra?.preco_custo ?? null,
       permitir_abaixo_custo: extra?.permitir_abaixo_custo ?? false,
       quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
-      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id) ?? null) : null,
+      quantidade_atual: estoque ? estoque.quantidade_atual : null,
+      estoque_minimo: estoque?.estoque_minimo ?? 0, // ← LINHA ADICIONADA
       origem: r.origem,
       tem_nf: r.tem_nf,
       ativo: r.ativo,
