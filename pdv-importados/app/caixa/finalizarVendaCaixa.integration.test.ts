@@ -147,7 +147,7 @@ function makeSupabase(opts?: { caixaAberto?: boolean }) {
           error: null,
         })
       }
-      if (name === 'finalizar_venda_transacional_canonica_v3') {
+      if (name === 'finalizar_venda_transacional_canonica_v4') {
         return Promise.resolve({
           data: [
             {
@@ -230,7 +230,7 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
       estoqueBaixado: undefined,
     })
 
-    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v3')
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
     expect(txCall).toBeTruthy()
     expect(txCall?.params.p_pagamentos).toEqual([
       { forma_pagamento: 'DINHEIRO', valor: 20 },
@@ -251,7 +251,7 @@ describe('finalizarVendaCaixa — auditoria legado/unificado', () => {
     payloadInvalido.pagamentos = [{ formaPagamento: 'DINHEIRO', valor: 1 }]
 
     const result = await finalizarVendaCaixa(payloadInvalido)
-    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v3')
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
     expect(txCall).toBeTruthy()
     expect(result.ok).toBe(true)
   })

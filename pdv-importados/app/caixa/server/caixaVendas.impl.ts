@@ -238,7 +238,7 @@ export async function finalizarVendaCaixaImpl(
 
     // Usar nova RPC unificada com transação atômica
     const strictManagerDiscountAuth = runtimeCfg.strictManagerDiscountAuth
-    const { data, error: txErr } = await supabase.rpc('finalizar_venda_transacional_canonica_v3', {
+    const { data, error: txErr } = await supabase.rpc('finalizar_venda_transacional_canonica_v4', {
       p_venda_id: vendaId,
       p_caixa_id: caixaId,
       p_operador_id: user.id,

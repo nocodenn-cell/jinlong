@@ -47,8 +47,11 @@ export function caixaErroOperador(detalheTecnico: string | undefined | null): st
   if (l.includes('migration') || l.includes('function') && l.includes('does not exist')) {
     return MSG_CAIXA_INDISPONIVEL
   }
-  if (l.includes('fetch_failed') || l.includes('rpcerr') || l.includes('ok: false')) {
-    return MSG_PADRAO
+  if (l.includes('totais_divergentes') || l.includes('pagamentos_divergentes')) {
+    return MSG_PRECO_MUDOU
+  }
+  if (l.includes('legacy_disabled') || l.includes('fetch_failed') || l.includes('rpcerr') || l.includes('ok: false')) {
+    return MSG_CAIXA_INDISPONIVEL
   }
 
   return MSG_PADRAO
