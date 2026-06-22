@@ -1093,8 +1093,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               {pdvLayoutVariant === "classic" && (
                 <CaixaPdvCartSaleBar
                   m={m}
-                  idioma={idioma}
-                  onExcluirVenda={handleNovoCupom}
+                 onExcluirVenda={handleNovoCupom}
                   onFinalizar={handleFinalizarClick}
                   finalizando={finalizando}
                   movimentandoCaixa={movimentandoCaixa}

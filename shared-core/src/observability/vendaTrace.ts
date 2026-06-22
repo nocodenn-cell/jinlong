@@ -49,7 +49,8 @@ export const VENDA_EVENTS = {
   DLQ_ATINGIDO: 'dlq_atingido',
 } as const
 
-export type VendaEvent = (typeof VENDA_EVENTS)[keyof typeof VENDA_EVENTS]
+export type VendaEvent =
+  (typeof VENDA_EVENTS)[keyof typeof VENDA_EVENTS]
 
 /** Payload de um breadcrumb de negócio. */
 export type VendaBreadcrumb = {

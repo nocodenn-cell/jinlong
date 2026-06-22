@@ -10,12 +10,12 @@
  * Garantia: nenhuma função lança exceção. Observabilidade nunca bloqueia o fluxo.
  */
 import * as Sentry from '@sentry/nextjs'
-import type { VendaTraceContext, VendaBreadcrumb } from '@shared-core/observability/vendaTrace'
-import { VENDA_EVENTS } from '@shared-core/observability/vendaTrace'
+import type { VendaTraceContext, VendaBreadcrumb } from '@shared-core/src/observability/vendaTrace'
+import { VENDA_EVENTS } from '@shared-core/src/observability/vendaTrace'
 
 export { VENDA_EVENTS }
 export type { VendaTraceContext, VendaBreadcrumb }
-
+export { captureMessage } from '@sentry/nextjs';
 /**
  * Define o contexto da venda ativa no scope do Sentry.
  * Chamar no início do fluxo de venda, antes de qualquer RPC.
