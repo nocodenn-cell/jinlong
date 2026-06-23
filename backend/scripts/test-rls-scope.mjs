@@ -25,12 +25,15 @@ const IDS = {
   produto: "b0000003-0000-4000-8000-000000000001",
   caixaOperador: "b0000004-0000-4000-8000-000000000001",
   caixaGerente: "b0000004-0000-4000-8000-000000000002",
+  caixaFilial: "b0000004-0000-4000-8000-000000000003",
   vendaOperador: "b0000005-0000-4000-8000-000000000001",
   vendaGerente: "b0000005-0000-4000-8000-000000000002",
+  vendaFilial: "b0000005-0000-4000-8000-000000000003",
   tituloReceber: "b0000006-0000-4000-8000-000000000001",
   clienteReceber: "b0000007-0000-4000-8000-000000000001",
   remessaConferencia: "c0000002-0000-4000-8000-000000000001",
   remessaItem: "c0000002-0000-4000-8000-000000000002",
+  pricingVersion: "d0000001-0000-4000-8000-000000000001",
 };
 
 function requireEnv(name, value) {
@@ -147,7 +150,7 @@ async function ensureUsersAndSeed() {
   ON CONFLICT (loja_id, produto_id) DO UPDATE SET quantidade_atual = 20, estoque_minimo = EXCLUDED.estoque_minimo;
 
   DELETE FROM public.estoque_baixas
-  WHERE venda_id IN ('${IDS.vendaOperador}'::uuid, '${IDS.vendaGerente}'::uuid)
+  WHERE venda_id IN ('${IDS.vendaOperador}'::uuid, '${IDS.vendaGerente}'::uuid, '${IDS.vendaFilial}'::uuid)
     AND produto_id = '${IDS.produto}'::uuid;
 
   DELETE FROM public.movimentos_estoque_log WHERE remessa_id = '${IDS.remessaConferencia}'::uuid;
@@ -175,14 +178,40 @@ async function ensureUsersAndSeed() {
   INSERT INTO public.caixas (id, operador_id, valor_inicial, status, loja_id)
   VALUES
     ('${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
-    ('${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid)
+    ('${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
+    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, loja_id = EXCLUDED.loja_id, status = 'ABERTO';
+
+  UPDATE public.pricing_config_versions
+     SET is_active = false
+   WHERE id <> '${IDS.pricingVersion}'::uuid;
+
+  INSERT INTO public.pricing_config_versions (id, label, description, created_by, is_active, activated_at, activated_by)
+  VALUES (
+    '${IDS.pricingVersion}'::uuid,
+    'Smoke RLS pricing version',
+    'Versao ativa para validar escopo de registrar_pricing_version_venda',
+    '${authByPerfil.GERENTE}'::uuid,
+    true,
+    now(),
+    '${authByPerfil.GERENTE}'::uuid
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    label = EXCLUDED.label,
+    description = EXCLUDED.description,
+    is_active = true,
+    activated_at = EXCLUDED.activated_at,
+    activated_by = EXCLUDED.activated_by;
 
   INSERT INTO public.vendas (id, caixa_id, operador_id, total_bruto, total_desconto, total_liquido, forma_pagamento, status)
   VALUES
     ('${IDS.vendaOperador}'::uuid, '${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 50, 0, 50, 'PIX', 'CONCLUIDA'),
-    ('${IDS.vendaGerente}'::uuid, '${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 70, 0, 70, 'PIX', 'CONCLUIDA')
-  ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, caixa_id = EXCLUDED.caixa_id;
+    ('${IDS.vendaGerente}'::uuid, '${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 70, 0, 70, 'PIX', 'CONCLUIDA'),
+    ('${IDS.vendaFilial}'::uuid, '${IDS.caixaFilial}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 30, 0, 30, 'PIX', 'CONCLUIDA')
+  ON CONFLICT (id) DO UPDATE SET
+    operador_id = EXCLUDED.operador_id,
+    caixa_id = EXCLUDED.caixa_id,
+    pricing_version_id = NULL;
 
   INSERT INTO public.clientes (id, nome, documento, loja_id)
   VALUES ('${IDS.clienteReceber}'::uuid, 'Cliente RLS Fiado', '00000000000', '${IDS.loja}'::uuid)
@@ -337,6 +366,30 @@ async function main() {
       p_venda_id: IDS.vendaOperador,
       p_caixa_id: IDS.caixaOperador,
     });
+  });
+
+  await run("RPC registrar_pricing_version_venda permite venda propria", async () => {
+    await assertRpcOk(operador, "registrar_pricing_version_venda", {
+      p_venda_id: IDS.vendaOperador,
+      p_version_id: IDS.pricingVersion,
+    });
+
+    const { data, error } = await operador
+      .from("vendas")
+      .select("pricing_version_id")
+      .eq("id", IDS.vendaOperador)
+      .single();
+    if (error) throw new Error(error.message);
+    if (data?.pricing_version_id !== IDS.pricingVersion) {
+      throw new Error(`pricing_version_id nao registrado: ${data?.pricing_version_id ?? "NULL"}`);
+    }
+  });
+
+  await run("RPC registrar_pricing_version_venda bloqueia venda de outra loja", async () => {
+    await assertRpcErrorContains(operador, "registrar_pricing_version_venda", {
+      p_venda_id: IDS.vendaFilial,
+      p_version_id: IDS.pricingVersion,
+    }, "PRICING_VERSION_VENDA_SEM_PERMISSAO");
   });
 
   await run("RPC finalizar_venda_transacional (itens inválidos)", async () => {
