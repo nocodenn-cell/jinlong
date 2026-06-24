@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '@shared-core/navigation/routes'
-import { Eye, ImageIcon, Pencil } from 'lucide-react'
+import { ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { StatusPublicacao } from '@/core/ports/produto'
@@ -16,8 +16,6 @@ import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/Produ
 import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
 
-// CatalogoProduto é ProdutoGerenteRow com o campo sku computado adicionado.
-// Sendo superconjunto de ProdutoGerenteRow, pode ser passado diretamente ao modal de edição.
 export type CatalogoProduto = ProdutoGerenteRow & {
   sku: string
 }
@@ -42,37 +40,21 @@ export type CatalogoLabels = {
   origemBrasil: string
 }
 
-const ORIGEM_MAP: Record<string, { badgeClass: string }> = {
-  china_manual: { badgeClass: 'admin-v2-badge-gold' },
-  brasil_nf: { badgeClass: 'admin-v2-badge-warning' },
-  brasil_sem_nf: { badgeClass: 'admin-v2-badge-muted' },
+/**
+ * Badge de status inline — indica situação do produto dentro da célula Descrição.
+ * Padrão Bling: status não ocupa coluna separada, fica como chip discreto na linha.
+ */
+const STATUS_DOT_CLASS: Record<StatusPublicacao, string> = {
+  DRAFT:     'bg-amber-400',
+  PUBLICADO: 'bg-emerald-500',
+  INATIVO:   'bg-slate-500',
 }
 
-const STATUS_BADGE_CLASS: Record<StatusPublicacao, string> = {
-  DRAFT: 'admin-v2-badge-warning',
-  PUBLICADO: 'admin-v2-badge-success',
-  INATIVO: 'admin-v2-badge-muted',
-}
-
-function ActionBtn({
-  href,
-  label,
-  children,
-}: {
-  href: string
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
-    >
-      {children}
-    </Link>
-  )
+function OrigemBadge({ origem, labels }: { origem: string; labels: CatalogoLabels }) {
+  if (origem === 'china_manual')  return <span className="admin-v2-badge-gold   inline-flex items-center rounded px-1.5 py-0.5 text-[10px] leading-none">{labels.origemChina}</span>
+  if (origem === 'brasil_nf')     return <span className="admin-v2-badge-warning inline-flex items-center rounded px-1.5 py-0.5 text-[10px] leading-none">{labels.origemBrasilNf}</span>
+  if (origem === 'brasil_sem_nf') return <span className="admin-v2-badge-muted   inline-flex items-center rounded px-1.5 py-0.5 text-[10px] leading-none">{labels.origemBrasil}</span>
+  return null
 }
 
 export function CatalogoTable({
@@ -104,101 +86,107 @@ export function CatalogoTable({
   }, [])
 
   const statusLabel: Record<StatusPublicacao, string> = {
-    DRAFT: labels.rascunho,
+    DRAFT:     labels.rascunho,
     PUBLICADO: labels.publicado,
-    INATIVO: labels.inativo,
+    INATIVO:   labels.inativo,
   }
 
+  /**
+   * Colunas na ordem do Bling:
+   * Imagem | Descrição | Código | Unidade | Preço | Estoque | [Ações]
+   */
   const columns: Column<CatalogoProduto>[] = [
+    // 1. IMAGEM — coluna estreita, apenas thumbnail (padrão Bling)
     {
-      key: 'produto',
-      header: labels.produto,
+      key: 'img',
+      header: 'Imagem',
+      width: '60px',
+      className: 'py-2',
+      cell: (row) => (
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded border border-[var(--admin-v2-border)] bg-[rgba(255,255,255,0.03)]">
+          {row.imagem_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={row.imagem_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <ImageIcon size={14} className="text-jl-fg-3" aria-hidden />
+          )}
+        </div>
+      ),
+    },
+
+    // 2. DESCRIÇÃO — nome + status dot + origem badge (padrão Bling: tudo na mesma célula)
+    {
+      key: 'descricao',
+      header: 'Descrição',
       sortValue: (r) => r.nome,
       cell: (row) => (
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#242424] bg-[#111111]">
-            {row.imagem_url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- dynamic catalog URLs; dimensions unknown at build
-              <img src={row.imagem_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <ImageIcon size={12} className="text-jl-fg-3" aria-hidden />
-            )}
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT_CLASS[row.status_publicacao])}
+              title={statusLabel[row.status_publicacao]}
+              aria-label={statusLabel[row.status_publicacao]}
+            />
+            <p className="max-w-[280px] truncate text-[12px] font-medium text-jl-fg-1">{row.nome}</p>
           </div>
-          <div className="min-w-0">
-            <p className="max-w-[200px] truncate text-[12px] font-medium text-jl-fg-1">{row.nome}</p>
-            <p className="font-mono text-[10px] text-jl-fg-3">{row.sku}</p>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <OrigemBadge origem={row.origem} labels={labels} />
           </div>
         </div>
       ),
     },
+
+    // 3. CÓDIGO — SKU separado (padrão Bling: coluna própria para código)
     {
-      key: 'varejo',
-      header: labels.varejo,
+      key: 'codigo',
+      header: 'Código',
+      sortValue: (r) => r.sku,
+      cell: (r) => (
+        <span className="font-mono text-[11px] text-jl-fg-2">{r.sku}</span>
+      ),
+    },
+
+    // 4. UNIDADE — padrão Bling (UN, KG, CX, etc.)
+    {
+      key: 'unidade',
+      header: 'Unidade',
+      align: 'center',
+      cell: (r) => (
+        <span className="text-[11px] uppercase text-jl-fg-3">{r.unidade_medida}</span>
+      ),
+    },
+
+    // 5. PREÇO — preço de varejo (padrão Bling: coluna "Preço" singular)
+    {
+      key: 'preco',
+      header: 'Preço',
       align: 'right',
       sortValue: (r) => r.preco_varejo,
       cell: (r) => (
-        <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.preco_varejo)}</span>
+        <div className="text-right">
+          <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.preco_varejo)}</span>
+          {r.preco_atacado != null ? (
+            <p className="text-[10px] text-jl-fg-3">Atac. {formatBRL(r.preco_atacado)}</p>
+          ) : null}
+        </div>
       ),
     },
-    {
-      key: 'atacado',
-      header: labels.atacado,
-      align: 'right',
-      cell: (r) =>
-        r.preco_atacado != null ? (
-          <span className="text-[11px] text-jl-fg-2">{formatBRL(r.preco_atacado)}</span>
-        ) : (
-          <span className="text-jl-fg-3">—</span>
-        ),
-    },
+
+    // 6. ESTOQUE — saldo atual com indicador de cor (padrão Bling)
     {
       key: 'estoque',
-      header: labels.estoque,
+      header: 'Estoque',
       align: 'right',
       sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
       cell: (r) => {
         if (r.quantidade_atual === null) return <span className="text-jl-fg-3">—</span>
         const v = r.quantidade_atual
         return (
-          <span className={v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400'}>{v}</span>
-        )
-      },
-    },
-    {
-      key: 'origem',
-      header: labels.origem,
-      cell: (r) => {
-        const meta = ORIGEM_MAP[r.origem]
-        if (!meta) return <span className="text-jl-fg-3">—</span>
-        const origemLabel = r.origem === 'china_manual' ? labels.origemChina
-          : r.origem === 'brasil_nf' ? labels.origemBrasilNf
-          : labels.origemBrasil
-        return (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
-              meta.badgeClass,
-            )}
-          >
-            {origemLabel}
+          <span className={cn('text-[12px] font-medium', v <= 0 ? 'text-red-400' : 'text-emerald-400')}>
+            {v}
           </span>
         )
       },
-    },
-    {
-      key: 'status',
-      header: labels.status,
-      align: 'center',
-      cell: (r) => (
-        <span
-          className={cn(
-            'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
-            STATUS_BADGE_CLASS[r.status_publicacao],
-          )}
-        >
-          {statusLabel[r.status_publicacao]}
-        </span>
-      ),
     },
   ]
 
@@ -235,7 +223,7 @@ export function CatalogoTable({
         }
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-end gap-1">
             <CatalogoPublicacaoActions
               produtoId={row.id}
               status={row.status_publicacao}
@@ -246,13 +234,10 @@ export function CatalogoTable({
               aria-label={`Editar ${row.nome}`}
               title={`Editar ${row.nome}`}
               onClick={() => setEditando(row)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
+              className="flex h-7 w-7 items-center justify-center rounded text-jl-fg-3 transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-jl-fg-1"
             >
               <Pencil size={13} aria-hidden />
             </button>
-            <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
-              <Eye size={13} aria-hidden />
-            </ActionBtn>
           </div>
         )}
       />

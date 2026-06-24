@@ -110,21 +110,36 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
   const [kardexAlvo, setKardexAlvo] = useState<KardexAlvo | null>(null)
 
+  /**
+   * Colunas na ordem do Bling Estoque:
+   * Produto (nome + código) | Unidade | Estoque | Mín. | Déficit | Origem
+   */
   const columns: Column<EstoqueLinha>[] = [
+    // 1. PRODUTO — nome + código barras abaixo (padrão Bling)
     {
       key: 'produto',
       header: labels.produto,
       sortValue: (r) => r.nome,
       cell: (r) => (
         <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-[12px] font-medium text-jl-fg-1">{r.nome}</p>
+          <p className="max-w-[260px] truncate text-[12px] font-medium text-jl-fg-1">{r.nome}</p>
           <p className="font-mono text-[10px] text-jl-fg-3">{r.codigo_barras ?? '—'}</p>
         </div>
       ),
     },
+
+    // 2. UNIDADE — padrão Bling exibe antes do estoque
     {
-      key: 'saldo',
-      header: labels.saldo,
+      key: 'unidade',
+      header: labels.unidade,
+      align: 'center',
+      cell: (r) => <span className="text-[11px] uppercase text-jl-fg-3">{r.unidade_medida}</span>,
+    },
+
+    // 3. ESTOQUE — saldo atual ("Estoque" como no Bling, não "Saldo")
+    {
+      key: 'estoque',
+      header: 'Estoque',
       align: 'right',
       sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
       cell: (r) => {
@@ -133,6 +148,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
         return <span className={SEV_CLASS[sev]}>{r.quantidade_atual}</span>
       },
     },
+
+    // 4. MÍNIMO — estoque mínimo configurado
     {
       key: 'minimo',
       header: labels.minimo,
@@ -145,6 +162,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           <span className="text-jl-fg-2">{r.estoque_minimo}</span>
         ),
     },
+
+    // 5. DÉFICIT — quantidade abaixo do mínimo
     {
       key: 'deficit',
       header: labels.deficit,
@@ -157,12 +176,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           <span className="text-jl-fg-3">—</span>
         ),
     },
-    {
-      key: 'unidade',
-      header: labels.unidade,
-      align: 'center',
-      cell: (r) => <span className="text-[11px] uppercase text-jl-fg-3">{r.unidade_medida}</span>,
-    },
+
+    // 6. ORIGEM — badge de proveniência
     {
       key: 'origem',
       header: labels.origem,
@@ -175,7 +190,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
         return (
           <span
             className={cn(
-              'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
+              'inline-flex items-center rounded px-2 py-[2px] text-[11px] font-medium leading-none',
               badgeClass,
             )}
           >

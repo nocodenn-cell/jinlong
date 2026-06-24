@@ -175,7 +175,7 @@ export function DataTable<T>({
                 ))}
                 {rowActions ? (
                   <td className="px-3 py-2.5 text-right align-middle">
-                    <span className="inline-flex opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="inline-flex">
                       {rowActions(row)}
                     </span>
                   </td>

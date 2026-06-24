@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowDownRight, ArrowUpRight, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { obterKardexProduto, type KardexMovimento } from '../actions'
 
@@ -14,12 +14,16 @@ type KardexLabels = {
   tipoMap: Record<string, string>
 }
 
+/**
+ * Formata data no padrão Bling: dd/mm/aaaa hh:mm:ss
+ */
 const dtFmt = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
   month: '2-digit',
-  year: '2-digit',
+  year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  second: '2-digit',
 })
 
 export function KardexSheet({
@@ -73,8 +77,10 @@ export function KardexSheet({
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="kardex-titulo">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col">
-        <div className="flex items-start justify-between gap-3 border-b border-[#242424] px-5 py-4">
+      <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-lg flex-col">
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 border-b border-[var(--admin-v2-border)] px-5 py-4">
           <div className="min-w-0">
             <h2 id="kardex-titulo" className="text-[15px] font-semibold text-jl-fg-1">
               {labels.titulo}
@@ -91,66 +97,98 @@ export function KardexSheet({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
+        {/* Tab "Lançamentos" estilo Bling — aba com underline verde */}
+        <div className="border-b border-[var(--admin-v2-border)] px-5">
+          <div className="flex items-center">
+            <span className="border-b-2 border-emerald-500 pb-2 pt-3 text-[13px] font-semibold text-emerald-400">
+              Lançamentos
+            </span>
+          </div>
+        </div>
+
+        {/* Conteúdo — tabela estilo Bling: Data | Tipo | Entrada | Saída */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {carregando ? (
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-12 rounded-lg bg-[#111111] opacity-60" />
+            <div className="flex flex-col gap-px">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-10 bg-[rgba(255,255,255,0.02)] animate-pulse" />
               ))}
             </div>
           ) : movimentos.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-16 text-center">
-              <span className="text-3xl text-jl-fg-3" aria-hidden>
-                🗒️
-              </span>
+              <span className="text-3xl text-jl-fg-3" aria-hidden>🗒️</span>
               <p className="text-[13px] font-medium text-jl-fg-2">{labels.semMovimentos}</p>
               <p className="text-[11px] text-jl-fg-3">{labels.semMovimentosSub}</p>
             </div>
           ) : (
-            <ul className="flex flex-col">
-              {movimentos.map((m) => {
-                const entrada = m.quantidade_delta >= 0
-                return (
-                  <li
-                    key={m.id}
-                    className="flex items-start gap-3 border-t border-[#242424] py-2.5"
-                  >
-                    <span
-                      className={cn(
-                        'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
-                        entrada ? 'admin-v2-alert-success' : 'admin-v2-alert-danger',
-                      )}
+            <table className="w-full border-collapse">
+              {/* Cabeçalho idêntico ao Bling: Data | Tipo | Entrada | Saída */}
+              <thead className="sticky top-0 z-10 bg-[var(--color-background-secondary)]">
+                <tr className="border-b border-[var(--admin-v2-border)]">
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
+                    Data
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
+                    Tipo
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-400">
+                    Entrada
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-red-400">
+                    Saída
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {movimentos.map((mov) => {
+                  const isEntrada = mov.quantidade_delta >= 0
+                  const qtd = Math.abs(mov.quantidade_delta)
+                  return (
+                    <tr
+                      key={mov.id}
+                      className="border-t border-[var(--admin-v2-border)] transition-colors hover:bg-white/[0.02]"
                     >
-                      {entrada ? <ArrowUpRight size={14} aria-hidden /> : <ArrowDownRight size={14} aria-hidden />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-[12px] font-medium text-jl-fg-1">
-                          {rotuloTipo(m.tipo_codigo)}
+                      {/* Data — formato Bling dd/mm/aaaa hh:mm:ss */}
+                      <td className="px-4 py-2.5 text-left">
+                        <span className="font-mono text-[11px] text-jl-fg-3">
+                          {dtFmt.format(new Date(mov.created_at))}
                         </span>
-                        <span
-                          className={cn(
-                            'shrink-0 text-[12px] font-semibold tabular-nums',
-                            entrada ? 'text-emerald-400' : 'text-red-400',
-                          )}
-                        >
-                          {entrada ? '+' : '−'}
-                          {Math.abs(m.quantidade_delta)}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-2">
-                        <span className="text-[10px] text-jl-fg-3">
-                          {dtFmt.format(new Date(m.created_at))}
-                        </span>
-                      </div>
-                      {m.observacao ? (
-                        <p className="mt-0.5 text-[11px] text-jl-fg-2">{m.observacao}</p>
-                      ) : null}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
+                      </td>
+
+                      {/* Tipo de movimento */}
+                      <td className="px-4 py-2.5 text-left">
+                        <span className="text-[12px] text-jl-fg-2">{rotuloTipo(mov.tipo_codigo)}</span>
+                        {mov.observacao ? (
+                          <p className="max-w-[140px] truncate text-[10px] text-jl-fg-3">{mov.observacao}</p>
+                        ) : null}
+                      </td>
+
+                      {/* Entrada — quantidade positiva em verde */}
+                      <td className="px-4 py-2.5 text-right">
+                        {isEntrada ? (
+                          <span className={cn('text-[12px] font-semibold tabular-nums text-emerald-400')}>
+                            {qtd}
+                          </span>
+                        ) : (
+                          <span className="text-[12px] text-jl-fg-3">—</span>
+                        )}
+                      </td>
+
+                      {/* Saída — quantidade negativa em vermelho */}
+                      <td className="px-4 py-2.5 text-right">
+                        {!isEntrada ? (
+                          <span className={cn('text-[12px] font-semibold tabular-nums text-red-400')}>
+                            {qtd}
+                          </span>
+                        ) : (
+                          <span className="text-[12px] text-jl-fg-3">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           )}
         </div>
       </aside>
