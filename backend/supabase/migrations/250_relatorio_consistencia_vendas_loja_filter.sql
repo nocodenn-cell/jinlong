@@ -5,9 +5,17 @@
 -- Um GERENTE da Loja A via métricas que incluíam Lojas B, C, etc.
 --
 -- Correção: adiciona p_loja_id uuid DEFAULT NULL.
--- JOIN em public.caixas garante o filtro via loja_id sem expor a coluna em vendas.
--- Compatibilidade mantida: callers que não passam p_loja_id continuam funcionando
--- (veem apenas o que seu JWT permite via chamada autenticada + p_caixa_id).
+-- JOIN em public.caixas garante o filtro via loja_id sem expor coluna em vendas.
+-- Compatibilidade: p_loja_id = NULL continua sem filtro (uso administrativo).
+--
+-- Nota de deploy: a versão anterior tinha 3 parâmetros posicionais (sem p_loja_id).
+-- O DROP abaixo remove a versão antiga para evitar sobrecarga ambígua no REVOKE.
+
+DROP FUNCTION IF EXISTS public.relatorio_consistencia_vendas(
+  uuid,
+  timestamp with time zone,
+  timestamp with time zone
+);
 
 CREATE OR REPLACE FUNCTION public.relatorio_consistencia_vendas(
   p_caixa_id  uuid        DEFAULT NULL,
@@ -88,5 +96,6 @@ COMMENT ON FUNCTION public.relatorio_consistencia_vendas IS
   'Ambos NULL = sem filtro (uso administrativo apenas). '
   'taxa_consistencia_pct = 100 é o objetivo.';
 
-REVOKE ALL ON FUNCTION public.relatorio_consistencia_vendas FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.relatorio_consistencia_vendas TO authenticated, service_role;
+-- Assinatura explícita evita ambiguidade se houver múltiplos overloads
+REVOKE ALL ON FUNCTION public.relatorio_consistencia_vendas(uuid, uuid, timestamptz, timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.relatorio_consistencia_vendas(uuid, uuid, timestamptz, timestamptz) TO authenticated, service_role;

@@ -94,3 +94,57 @@ describe('F4 — relatorio_consistencia_vendas: parâmetros de chamada', () => {
     expect(params.p_to).toBe(fim)
   })
 })
+
+// ─────────────────────────────────────────────────────────────
+// F4 — Isolamento multi-loja: cenários expandidos (item 1.4)
+// Validação de que cada perfil recebe o p_loja_id correto.
+// ─────────────────────────────────────────────────────────────
+describe('F4 — isolamento multi-loja: cenários Loja A / Loja B / Admin', () => {
+  const LOJA_A = 'a0000001-0000-4000-8000-000000000001'
+  const LOJA_B = 'a0000002-0000-4000-8000-000000000002'
+
+  it('GERENTE da Loja A recebe p_loja_id da Loja A — nunca vê Loja B', () => {
+    const params = buildConsistenciaParams({ lojaId: LOJA_A, filtroInicio: null, filtroFim: null })
+    expect(params.p_loja_id).toBe(LOJA_A)
+    expect(params.p_loja_id).not.toBe(LOJA_B)
+  })
+
+  it('GERENTE da Loja B recebe p_loja_id da Loja B — nunca vê Loja A', () => {
+    const params = buildConsistenciaParams({ lojaId: LOJA_B, filtroInicio: null, filtroFim: null })
+    expect(params.p_loja_id).toBe(LOJA_B)
+    expect(params.p_loja_id).not.toBe(LOJA_A)
+  })
+
+  it('ADMIN (lojaId = null) recebe p_loja_id = null — visão global de todas as lojas', () => {
+    const params = buildConsistenciaParams({ lojaId: null, filtroInicio: null, filtroFim: null })
+    expect(params.p_loja_id).toBeNull()
+  })
+
+  it('p_loja_id está sempre presente nos parâmetros enviados (não pode ser omitido)', () => {
+    const cenarios = [
+      { lojaId: LOJA_A },
+      { lojaId: LOJA_B },
+      { lojaId: null },
+    ]
+    for (const { lojaId } of cenarios) {
+      const params = buildConsistenciaParams({ lojaId, filtroInicio: null, filtroFim: null })
+      // A chave deve existir — mesmo quando null, o parâmetro precisa ser passado
+      // para que a RPC aplique (ou omita) o filtro corretamente
+      expect('p_loja_id' in params).toBe(true)
+    }
+  })
+
+  it('troca de loja produz consultas diferentes — sem vazamento cross-loja', () => {
+    const before = buildConsistenciaParams({ lojaId: LOJA_A, filtroInicio: null, filtroFim: null })
+    const after  = buildConsistenciaParams({ lojaId: LOJA_B, filtroInicio: null, filtroFim: null })
+
+    // Parâmetros de tempo idênticos; único diferencial é p_loja_id
+    expect(before.p_loja_id).not.toBe(after.p_loja_id)
+    // p_from e p_to devem ser iguais (mesma janela de tempo)
+    // — qualquer diferença seria clock drift durante o teste, aceitável < 1ms
+    const diff = Math.abs(
+      new Date(before.p_from).getTime() - new Date(after.p_from).getTime()
+    )
+    expect(diff).toBeLessThan(1000) // < 1 segundo
+  })
+})
