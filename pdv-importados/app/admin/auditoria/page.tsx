@@ -16,6 +16,7 @@ import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatNumberLocale } from '@/lib/format/money'
+import { createClient } from '@/lib/supabase/server'
 import {
   listarEventosAuditoria,
   type AuditoriaFiltro,
@@ -106,10 +107,39 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     operadorId: null,
   }
 
-  const res = await listarEventosAuditoria(filtro)
+  const supabase = await createClient()
+  const consistenciaFrom = filtro.inicio ?? new Date(Date.now() - 7 * 86_400_000).toISOString()
+  const consistenciaTo = filtro.fim ?? new Date().toISOString()
+
+  const [resEventos, resConsistencia] = await Promise.all([
+    listarEventosAuditoria(filtro),
+    supabase.rpc('relatorio_consistencia_vendas', {
+      p_from: consistenciaFrom,
+      p_to: consistenciaTo,
+    }),
+  ])
+
+  const res = resEventos
   const eventos = res.ok ? res.eventos : []
   const truncado = res.ok ? res.truncado : false
   const loadError = res.ok ? null : res.error
+
+  type ConsistenciaRow = {
+    total_vendas: number
+    vendas_consistentes: number
+    vendas_com_anomalia: number
+    taxa_consistencia_pct: number | null
+    sem_itens: number
+    sem_evento_ledger: number
+    evento_duplicado: number
+    sem_pagamento: number
+    pagamentos_divergentes: number
+  }
+  const consistenciaRows = Array.isArray(resConsistencia.data) ? resConsistencia.data : []
+  const consistencia: ConsistenciaRow | null =
+    !resConsistencia.error && consistenciaRows.length > 0
+      ? (consistenciaRows[0] as ConsistenciaRow)
+      : null
 
   const contagem = eventos.reduce<Record<AuditoriaTipo, number>>(
     (acc, e) => {
@@ -208,6 +238,54 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
           />
         ))}
       </div>
+
+      {consistencia ? (
+        <SectionCard
+          title="Saúde do sistema"
+          subtitle="Consistência das vendas concluídas no período — detecta lacunas de itens, pagamentos ou eventos."
+        >
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex-1 min-w-[120px] rounded-lg border border-[#242424] bg-[#0d0d0d] px-4 py-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3 mb-1">Vendas analisadas</p>
+              <p className="text-2xl font-bold tabular-nums text-jl-fg-1">{formatNumberLocale(Number(consistencia.total_vendas), locale)}</p>
+            </div>
+            <div className={`flex-1 min-w-[120px] rounded-lg border px-4 py-3 text-center ${consistencia.vendas_com_anomalia > 0 ? 'border-red-500/30 bg-red-500/10' : 'border-emerald-500/30 bg-emerald-500/10'}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3 mb-1">Taxa de consistência</p>
+              <p className={`text-2xl font-bold tabular-nums ${consistencia.vendas_com_anomalia > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                {consistencia.taxa_consistencia_pct !== null ? `${Number(consistencia.taxa_consistencia_pct).toFixed(1)}%` : '—'}
+              </p>
+            </div>
+            <div className={`flex-1 min-w-[120px] rounded-lg border px-4 py-3 text-center ${consistencia.vendas_com_anomalia > 0 ? 'border-red-500/30 bg-red-500/10' : 'border-[#242424] bg-[#0d0d0d]'}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3 mb-1">Com anomalia</p>
+              <p className={`text-2xl font-bold tabular-nums ${consistencia.vendas_com_anomalia > 0 ? 'text-red-400' : 'text-jl-fg-2'}`}>
+                {formatNumberLocale(Number(consistencia.vendas_com_anomalia), locale)}
+              </p>
+            </div>
+          </div>
+          {consistencia.vendas_com_anomalia > 0 ? (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {[
+                { label: 'Sem itens', value: consistencia.sem_itens },
+                { label: 'Sem evento', value: consistencia.sem_evento_ledger },
+                { label: 'Evento duplicado', value: consistencia.evento_duplicado },
+                { label: 'Sem pagamento', value: consistencia.sem_pagamento },
+                { label: 'Pag. divergentes', value: consistencia.pagamentos_divergentes },
+              ].map(({ label, value }) => (
+                <div key={label} className={`rounded-lg border px-3 py-2 text-center ${Number(value) > 0 ? 'border-amber-500/30 bg-amber-500/10' : 'border-[#1e1e1e] bg-[#0a0a0a]'}`}>
+                  <p className="text-[10px] text-jl-fg-3 mb-0.5">{label}</p>
+                  <p className={`text-base font-bold tabular-nums ${Number(value) > 0 ? 'text-amber-400' : 'text-jl-fg-3'}`}>
+                    {formatNumberLocale(Number(value), locale)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[12px] text-emerald-400 flex items-center gap-1.5">
+              <span>✓</span> Todas as vendas do período estão consistentes.
+            </p>
+          )}
+        </SectionCard>
+      ) : null}
 
       <SectionCard
         title="Trilha de eventos"

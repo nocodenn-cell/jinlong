@@ -29,6 +29,7 @@ import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -134,6 +135,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const status = normalizeStatus(params?.status)
   const statusDb = status === 'ALL' ? null : status
   const supabase = await createClient()
+  const lojaId = session.lojaId ?? LOJA_MATRIZ_ID
   const now = new Date()
   const { start, end, previousStart, previousEnd } = getPeriodRange(period, now)
 
@@ -196,6 +198,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     .gte('created_at', previousStart.toISOString())
     .lt('created_at', previousEnd.toISOString())
 
+  const gerenteResumoQuery = supabase.rpc('dashboard_gerente_resumo', {
+    p_loja_id: lojaId,
+    p_tz: 'America/Sao_Paulo',
+  })
+
   const [
     vendasRangeRes,
     vendasPrevRes,
@@ -204,6 +211,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     novosUsuariosAtualRes,
     novosUsuariosPrevRes,
     flagsVisuaisRes,
+    gerenteResumoRes,
   ] = await Promise.all([
     statusDb ? vendasRangeQuery.eq('status', statusDb) : vendasRangeQuery,
     statusDb ? vendasPrevQuery.eq('status', statusDb) : vendasPrevQuery,
@@ -212,7 +220,19 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     novosUsuariosAtualQuery,
     novosUsuariosPrevQuery,
     flagsVisuaisQuery,
+    gerenteResumoQuery,
   ])
+
+  type GerenteResumoRaw = {
+    margem_estimada: number | null
+    custo_confiavel: boolean
+    cobertura_custo: number
+  }
+  const gerenteResumoRaw = !gerenteResumoRes.error && gerenteResumoRes.data
+    ? (gerenteResumoRes.data as GerenteResumoRaw)
+    : null
+  const margemHoje = gerenteResumoRaw?.margem_estimada ?? null
+  const margemCustoConfiavel = gerenteResumoRaw?.custo_confiavel ?? false
 
   const flagsVisuaisRow = Array.isArray(flagsVisuaisRes.data)
     ? flagsVisuaisRes.data[0]
@@ -480,6 +500,19 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           <MetricCard key={metric.label} {...metric} />
         ))}
       </div>
+
+      {!gerenteResumoRes.error ? (
+        <div className="admin-v2-panel flex flex-wrap items-center gap-4 rounded-lg px-4 py-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-jl-fg-3">Margem bruta estimada (hoje)</span>
+          {margemCustoConfiavel && margemHoje !== null ? (
+            <span className="text-[22px] font-bold tabular-nums text-emerald-400">{formatBRL(margemHoje, locale)}</span>
+          ) : (
+            <span className="text-[13px] text-jl-fg-3">
+              Indisponível — cobertura de custo {gerenteResumoRaw ? `${(Number(gerenteResumoRaw.cobertura_custo) * 100).toFixed(0)}%` : ''} {'('}mín. 95% necessário{')'}
+            </span>
+          )}
+        </div>
+      ) : null}
 
       <div className="admin-v2-grid-3-main">
         {periodSalesFailed ? (

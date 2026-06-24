@@ -14,6 +14,9 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { ROUTES } from '@shared-core/navigation/routes'
+import { createClient } from '@/lib/supabase/server'
+import { formatBRL } from '@/lib/format/money'
+import { SectionCard } from '@/components/ui/admin-v2'
 import { RelatoriosContent, type RelatoriosDados } from './_components/RelatoriosContent'
 
 type SearchParams = {
@@ -33,10 +36,36 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   const locale = localeFromIdioma(session.idioma)
 
   const sp = (searchParams ? await searchParams : {}) ?? {}
-  const dados = await carregarDadosRelatoriosGerente({
-    de: sp.de,
-    ate: sp.ate,
-  })
+  const supabase = await createClient()
+
+  const despesasDe = sp.de
+    ? (() => { const d = new Date(sp.de); d.setHours(0, 0, 0, 0); return d.toISOString() })()
+    : new Date(Date.now() - 30 * 86_400_000).toISOString()
+  const despesasAte = sp.ate
+    ? (() => { const d = new Date(sp.ate); d.setHours(23, 59, 59, 999); return d.toISOString() })()
+    : new Date().toISOString()
+
+  const [dados, despesasRes] = await Promise.all([
+    carregarDadosRelatoriosGerente({ de: sp.de, ate: sp.ate }),
+    supabase
+      .from('contas_pagar_pagamentos')
+      .select('valor')
+      .gte('data_pagamento', despesasDe)
+      .lte('data_pagamento', despesasAte),
+  ])
+
+  const receitaLiquida = dados.porDia.reduce((s, r) => s + Number(r.total_liquido ?? 0), 0)
+  const totalDescontos = dados.porDia.reduce((s, r) => s + Number(r.total_desconto ?? 0), 0)
+  const receitaBruta = receitaLiquida + totalDescontos
+  const margemBruta = dados.resumoExecutivo.custo_confiavel
+    ? (dados.resumoExecutivo.margem_bruta_estimada ?? null)
+    : null
+  const custoEstimado = margemBruta !== null ? receitaLiquida - margemBruta : null
+  const despesasPagas = despesasRes.error
+    ? null
+    : (despesasRes.data ?? []).reduce((s, r) => s + Number(r.valor ?? 0), 0)
+  const resultadoEstimado =
+    margemBruta !== null && despesasPagas !== null ? margemBruta - despesasPagas : null
 
   const relDados: RelatoriosDados = {
     periodo: dados.periodo,
@@ -50,7 +79,65 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
     rpcErro: dados.rpcErroAmigavel,
   }
 
+  const fmtBrl = (n: number) => formatBRL(n, locale)
+
   return (
+    <>
+    <SectionCard
+      title="DRE Simplificado"
+      subtitle={`Período: ${dados.periodo.de} a ${dados.periodo.ate}`}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[360px] text-sm">
+          <tbody>
+            <tr className="border-b border-[#1e1e1e]">
+              <td className="py-2 pr-4 text-jl-fg-3">Receita bruta</td>
+              <td className="py-2 tabular-nums text-right text-jl-fg-1 font-medium">{fmtBrl(receitaBruta)}</td>
+            </tr>
+            <tr className="border-b border-[#1e1e1e]">
+              <td className="py-2 pr-4 text-jl-fg-3">(-) Descontos concedidos</td>
+              <td className="py-2 tabular-nums text-right text-red-400">({fmtBrl(totalDescontos)})</td>
+            </tr>
+            <tr className="border-b border-[#242424] bg-[#0d0d0d]">
+              <td className="py-2.5 pr-4 font-semibold text-jl-fg-1">= Receita líquida</td>
+              <td className="py-2.5 tabular-nums text-right font-semibold text-jl-fg-1">{fmtBrl(receitaLiquida)}</td>
+            </tr>
+            <tr className="border-b border-[#1e1e1e]">
+              <td className="py-2 pr-4 text-jl-fg-3">(-) Custo estimado dos produtos</td>
+              <td className="py-2 tabular-nums text-right text-red-400">
+                {custoEstimado !== null ? `(${fmtBrl(custoEstimado)})` : '—'}
+              </td>
+            </tr>
+            <tr className="border-b border-[#242424] bg-[#0d0d0d]">
+              <td className="py-2.5 pr-4 font-semibold text-jl-fg-1">= Margem bruta estimada</td>
+              <td className={`py-2.5 tabular-nums text-right font-semibold ${margemBruta !== null ? 'text-emerald-400' : 'text-jl-fg-3'}`}>
+                {margemBruta !== null ? fmtBrl(margemBruta) : '—'}
+              </td>
+            </tr>
+            <tr className="border-b border-[#1e1e1e]">
+              <td className="py-2 pr-4 text-jl-fg-3">(-) Despesas pagas (contas a pagar)</td>
+              <td className="py-2 tabular-nums text-right text-red-400">
+                {despesasPagas !== null ? `(${fmtBrl(despesasPagas)})` : '—'}
+              </td>
+            </tr>
+            <tr className="bg-[#0d0d0d]">
+              <td className="py-3 pr-4 font-bold text-jl-fg-1 text-base">= Resultado estimado do período</td>
+              <td className={`py-3 tabular-nums text-right font-bold text-base ${resultadoEstimado === null ? 'text-jl-fg-3' : resultadoEstimado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {resultadoEstimado !== null ? fmtBrl(resultadoEstimado) : '—'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {(!dados.resumoExecutivo.custo_confiavel || despesasRes.error) ? (
+        <p className="mt-3 text-[11px] text-amber-400/80">
+          {!dados.resumoExecutivo.custo_confiavel
+            ? 'Custo dos produtos indisponível (cobertura < 95%) — cadastre o preço de custo nos produtos para ativar o cálculo de margem.'
+            : 'Não foi possível carregar as despesas pagas no período.'}
+        </p>
+      ) : null}
+    </SectionCard>
+
     <RelatoriosContent
       dados={relDados}
       labels={{
@@ -103,5 +190,6 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         locale,
       }}
     />
+    </>
   )
 }
