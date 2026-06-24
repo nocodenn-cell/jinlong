@@ -175,6 +175,11 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       <PageHeader
         title="Auditoria"
         subtitle="Linha do tempo de eventos operacionais — vendas, cancelamentos, estoque, alertas e descontos."
+        breadcrumbs={[
+          { label: 'Início', href: '/admin/dashboard' },
+          { label: 'Sistema' },
+          { label: 'Auditoria' },
+        ]}
         filters={(
           <div className="admin-v2-segmented">
             {(['hoje', 'ontem', '7d', 'mes', 'tudo'] as Periodo[]).map((option) => (

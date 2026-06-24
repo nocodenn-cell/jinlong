@@ -187,7 +187,15 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
 
   return (
     <div className="admin-v2-page">
-      <PageHeader title={labels.titulo} subtitle={labels.subtitulo} />
+      <PageHeader
+        title={labels.titulo}
+        subtitle={labels.subtitulo}
+        breadcrumbs={[
+          { label: 'Início', href: '/admin/dashboard' },
+          { label: 'Sistema' },
+          { label: 'Configurações' },
+        ]}
+      />
 
       <div className="mb-6 flex flex-wrap gap-2 border-b border-[#242424] pb-3">
         {(['loja', 'impostos', 'preferencias'] as const).map((aba) => (

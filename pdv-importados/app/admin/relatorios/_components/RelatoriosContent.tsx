@@ -254,7 +254,14 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
 
   return (
     <div className="admin-v2-page">
-      <PageHeader title={labels.titulo} subtitle={periodoSubtitle} />
+      <PageHeader
+        title={labels.titulo}
+        subtitle={periodoSubtitle}
+        breadcrumbs={[
+          { label: 'Início', href: '/admin/dashboard' },
+          { label: 'Relatórios' },
+        ]}
+      />
 
       {dados.rpcErro ? (
         <div className="admin-v2-alert-danger mb-6 rounded-lg px-4 py-3 text-[12px]">

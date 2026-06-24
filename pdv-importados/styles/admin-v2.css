@@ -24,9 +24,13 @@
   --admin-v2-shadow-card: 0 12px 28px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
   --admin-v2-chart-h: 260px;
 
-  --admin-v2-active-bg: color-mix(in srgb, var(--color-chart-gold) 14%, transparent);
-  --admin-v2-active-border: color-mix(in srgb, var(--color-chart-gold) 62%, transparent);
-  --admin-v2-active-text: color-mix(in srgb, var(--color-chart-gold) 85%, white);
+  --admin-v2-active-bg: color-mix(in srgb, var(--color-chart-gold) 10%, transparent);
+  --admin-v2-active-border: color-mix(in srgb, var(--color-chart-gold) 55%, transparent);
+  --admin-v2-active-text: color-mix(in srgb, var(--color-chart-gold) 90%, white);
+
+  /* Navegação estilo Bling: indicador lateral + hover sutil */
+  --admin-v2-nav-active-indicator: var(--color-chart-gold);
+  --admin-v2-nav-hover-bg: rgba(255, 255, 255, 0.04);
 
   color-scheme: dark;
   background-color: var(--admin-v2-bg);
@@ -67,20 +71,21 @@
   align-items: center;
   gap: var(--admin-v2-space-2);
   width: 100%;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  /* Estilo Bling: retângulo com borda lateral, não pílula */
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
   color: var(--admin-v2-text-secondary);
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 [data-admin-v2] .admin-v2-nav-link:hover {
-  background-color: color-mix(in srgb, var(--color-chart-gold) 8%, transparent);
+  background-color: var(--admin-v2-nav-hover-bg);
   color: var(--admin-v2-text-primary);
 }
 
 [data-admin-v2] .admin-v2-nav-link[data-active='true'] {
   background-color: var(--admin-v2-active-bg);
-  border-color: var(--admin-v2-active-border);
+  border-left-color: var(--admin-v2-nav-active-indicator);
   color: var(--admin-v2-active-text);
 }
 

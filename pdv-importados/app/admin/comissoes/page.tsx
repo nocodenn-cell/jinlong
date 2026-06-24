@@ -51,6 +51,11 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
       <PageHeader
         title={ui.comissoes_titulo}
         subtitle={ui.comissoes_subtitulo}
+        breadcrumbs={[
+          { label: 'Início', href: '/admin/dashboard' },
+          { label: 'Sistema' },
+          { label: 'Comissões' },
+        ]}
       />
 
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>

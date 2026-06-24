@@ -182,6 +182,10 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       <PageHeader
         title={m.estoque.titulo}
         subtitle={m.estoque.subtitulo}
+        breadcrumbs={[
+          { label: 'Início', href: ROUTES.admin.dashboard },
+          { label: 'Estoque' },
+        ]}
         filters={
           <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
             <Upload size={14} aria-hidden />

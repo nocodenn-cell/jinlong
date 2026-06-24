@@ -259,6 +259,10 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         title={ui.catalogo_titulo}
         subtitle={ui.catalogo_subtitulo}
         filters={headerActions}
+        breadcrumbs={[
+          { label: 'Início', href: ROUTES.admin.dashboard },
+          { label: 'Produtos' },
+        ]}
       />
 
       <div className="mb-4 border-b border-[#242424] pb-3">

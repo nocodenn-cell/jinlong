@@ -239,6 +239,10 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       <PageHeader
         title={m.gerente.nav_topico_vendas_caixa}
         subtitle={ui.vendas_subtitulo}
+        breadcrumbs={[
+          { label: 'Início', href: ROUTES.admin.dashboard },
+          { label: 'Vendas' },
+        ]}
         filters={(
           <div className="admin-v2-segmented">
             {periodOptions.map((option) => (

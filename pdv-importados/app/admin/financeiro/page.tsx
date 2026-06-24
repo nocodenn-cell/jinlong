@@ -116,6 +116,10 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
       <PageHeader
         title={ui.financeiro_titulo}
         subtitle={ui.financeiro_subtitulo}
+        breadcrumbs={[
+          { label: 'Início', href: ROUTES.admin.dashboard },
+          { label: 'Financeiro' },
+        ]}
         filters={
           <Link href={ROUTES.gerente.financeiro} className="admin-v2-btn-primary">
             {ui.financeiro_abrir_modulo}

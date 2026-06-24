@@ -2,7 +2,6 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Banknote,
   ArrowRightLeft,
-  Building2,
   FileBarChart2,
   Inbox,
   LayoutDashboard,
@@ -30,11 +29,83 @@ export type AdminV2NavItem = {
   hint?: string
 }
 
-export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
-  { id: 'dashboard', href: ROUTES.admin.dashboard, icon: LayoutDashboard, labelOverridePt: 'Visão geral', dictKey: 'dashboard' },
-  { id: 'vendas', href: ROUTES.admin.vendas, icon: ShoppingCart, labelOverridePt: 'Vendas e caixa', dictKey: 'vendas' },
-  { id: 'produtos', href: ROUTES.admin.catalogo, icon: Tag, labelOverridePt: 'Produtos', dictKey: 'produtos' },
-  { id: 'estoque', href: ROUTES.admin.estoque, icon: Package, labelOverridePt: 'Estoque e catálogo', dictKey: 'estoque' },
+/**
+ * Módulos operacionais — sempre visíveis, ordenados como no Bling:
+ * Início → Produtos → Estoque → Recebimento → Transferências → Vendas → Financeiro → Relatórios
+ */
+export const ADMIN_V2_MAIN_ITEMS: readonly AdminV2NavItem[] = [
+  {
+    id: 'dashboard',
+    href: ROUTES.admin.dashboard,
+    icon: LayoutDashboard,
+    labelOverridePt: 'Início',
+    dictKey: 'dashboard',
+  },
+  {
+    id: 'produtos',
+    href: ROUTES.admin.catalogo,
+    icon: Tag,
+    labelOverridePt: 'Produtos',
+    dictKey: 'produtos',
+  },
+  {
+    id: 'estoque',
+    href: ROUTES.admin.estoque,
+    icon: Package,
+    labelOverridePt: 'Estoque',
+    dictKey: 'estoque',
+  },
+  {
+    id: 'recebimento',
+    href: ROUTES.admin.estoqueRecebimento,
+    icon: Inbox,
+    labelOverridePt: 'Recebimento',
+    dictKey: 'recebimento',
+  },
+  {
+    id: 'transferencias',
+    href: ROUTES.admin.estoqueTransferencias,
+    icon: ArrowRightLeft,
+    labelOverridePt: 'Transferências',
+    dictKey: 'transferencias',
+  },
+  {
+    id: 'vendas',
+    href: ROUTES.admin.vendas,
+    icon: ShoppingCart,
+    labelOverridePt: 'Vendas',
+    dictKey: 'vendas',
+  },
+  {
+    id: 'financeiro',
+    href: ROUTES.admin.financeiro,
+    icon: Banknote,
+    labelOverridePt: 'Financeiro',
+    dictKey: 'financeiro',
+  },
+  {
+    id: 'relatorios',
+    href: ROUTES.admin.relatorios,
+    icon: FileBarChart2,
+    labelOverridePt: 'Relatórios',
+    dictKey: 'relatorios',
+  },
+] as const
+
+/**
+ * @deprecated Use ADMIN_V2_MAIN_ITEMS. Mantido para não quebrar imports existentes.
+ */
+export const ADMIN_V2_CORE_ITEMS = ADMIN_V2_MAIN_ITEMS
+
+/**
+ * @deprecated Seção removida — todos os itens migrados para MAIN ou SISTEMA.
+ */
+export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [] as const
+
+/**
+ * Administração do sistema — sempre visíveis, no final do menu.
+ */
+export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
   {
     id: 'auditoria',
     href: ROUTES.admin.auditoria,
@@ -43,21 +114,34 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
     labelCn: '审计',
     hint: 'Linha do tempo de eventos operacionais.',
   },
-  { id: 'financeiro', href: ROUTES.admin.financeiro, icon: Banknote, labelOverridePt: 'Financeiro', dictKey: 'financeiro' },
-] as const
-
-export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
-  { id: 'relatorios', href: ROUTES.admin.relatorios, icon: FileBarChart2, labelOverridePt: 'Relatórios', dictKey: 'relatorios' },
-  { id: 'gerente', href: ROUTES.gerente.home, icon: Layers3, labelOverridePt: 'Painel gerencial', dictKey: 'gerente' },
-  { id: 'recebimento', href: ROUTES.admin.estoqueRecebimento, icon: Inbox, labelOverridePt: 'Recebimento', dictKey: 'recebimento' },
-  { id: 'transferencias', href: ROUTES.admin.estoqueTransferencias, icon: ArrowRightLeft, labelOverridePt: 'Transferências', dictKey: 'transferencias' },
-  { id: 'caixas', href: ROUTES.admin.vendas, icon: Building2, labelOverridePt: 'Caixas', dictKey: 'caixas' },
-  { id: 'comissoes', href: ROUTES.admin.comissoes, icon: Percent, labelOverridePt: 'Comissões', dictKey: 'comissoes' },
-] as const
-
-export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
-  { id: 'configuracoes', href: ROUTES.admin.configuracoes, icon: Settings, labelOverridePt: 'Configurações', dictKey: 'configuracoes' },
-  { id: 'suspensao', href: ROUTES.admin.suspensao, icon: ShieldOff, labelOverridePt: 'Suspensão de licença', dictKey: 'suspensao' },
+  {
+    id: 'comissoes',
+    href: ROUTES.admin.comissoes,
+    icon: Percent,
+    labelOverridePt: 'Comissões',
+    dictKey: 'comissoes',
+  },
+  {
+    id: 'gerente',
+    href: ROUTES.gerente.home,
+    icon: Layers3,
+    labelOverridePt: 'Painel Gerencial',
+    dictKey: 'gerente',
+  },
+  {
+    id: 'configuracoes',
+    href: ROUTES.admin.configuracoes,
+    icon: Settings,
+    labelOverridePt: 'Configurações',
+    dictKey: 'configuracoes',
+  },
+  {
+    id: 'suspensao',
+    href: ROUTES.admin.suspensao,
+    icon: ShieldOff,
+    labelOverridePt: 'Suspensão de licença',
+    dictKey: 'suspensao',
+  },
   {
     id: 'pdv',
     href: ROUTES.caixa.home,
