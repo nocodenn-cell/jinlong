@@ -26,6 +26,7 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { type ContaLinha } from './_components/ContasReceberTable'
+import { type ContaPagarLinha } from './_components/ContasPagarTable'
 import { FinanceiroPanels } from './_components/FinanceiroPanels'
 
 type SearchParams = {
@@ -53,10 +54,45 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const { limite, ...filters } = parsed
 
   const supabase = await createClient()
-  const [listaRes, kpisRes] = await Promise.all([
+  const [listaRes, kpisRes, cpRaw] = await Promise.all([
     fetchContasReceberListagem(supabase, filters, limite),
     fetchFinanceiroTitulosKpis(supabase),
+    supabase
+      .from('contas_pagar')
+      .select('id, fornecedor_id, descricao, nfe_numero, vencimento, valor_total, valor_pago, status')
+      .in('status', ['PENDENTE', 'PARCIAL'])
+      .order('vencimento', { ascending: true })
+      .limit(200),
   ])
+
+  // Busca nomes dos fornecedores para as contas a pagar
+  const fornecedorIds = [
+    ...new Set(
+      (cpRaw.data ?? []).map((c) => c.fornecedor_id).filter(Boolean) as string[],
+    ),
+  ]
+  let fornecedorNomes: Record<string, string> = {}
+  if (fornecedorIds.length > 0) {
+    const { data: fornecedores } = await supabase
+      .from('fornecedores')
+      .select('id, nome')
+      .in('id', fornecedorIds)
+    if (fornecedores) {
+      fornecedorNomes = Object.fromEntries(fornecedores.map((f) => [f.id, f.nome as string]))
+    }
+  }
+
+  const contasPagar: ContaPagarLinha[] = (cpRaw.data ?? []).map((c) => ({
+    id: String(c.id),
+    fornecedor_id: String(c.fornecedor_id),
+    fornecedor_nome: c.fornecedor_id ? (fornecedorNomes[String(c.fornecedor_id)] ?? null) : null,
+    descricao: c.descricao != null ? String(c.descricao) : null,
+    nfe_numero: c.nfe_numero != null ? String(c.nfe_numero) : null,
+    vencimento: String(c.vencimento ?? ''),
+    valor_total: Number(c.valor_total ?? 0),
+    valor_pago: Number(c.valor_pago ?? 0),
+    status: String(c.status ?? ''),
+  }))
 
   const contas: ContaLinha[] = listaRes.titulos.map((t) => ({
     id: t.id,
@@ -182,8 +218,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
 
         <FinanceiroPanels
           contas={contas}
+          contasPagar={contasPagar}
+          locale={locale}
           labels={{
             titulosEmAberto: ui.financeiro_section_titulos,
+            contasPagar: 'Contas a Pagar',
             filaFiscal: ui.financeiro_section_fila,
             documentosFiscais: ui.financeiro_section_docs,
             emitirSelecionados: ui.financeiro_emitir_selecionados,

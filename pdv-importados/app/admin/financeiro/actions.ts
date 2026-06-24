@@ -36,3 +36,34 @@ export async function baixarContaReceber(input: {
   revalidatePath(ROUTES.admin.financeiro)
   return { success: true }
 }
+
+export type FormaPagamentoCP = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
+
+export async function pagarContaPagar(input: {
+  conta_id: string
+  valor: number
+  forma: FormaPagamentoCP
+  observacao?: string
+}): Promise<R> {
+  const auth = await assertAdminSession('financeiro:pagar-cp', {
+    pathname: ROUTES.admin.financeiro,
+    resource: `route:${ROUTES.admin.financeiro}`,
+  })
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  if (!input.conta_id?.trim()) return { success: false, error: 'Conta obrigatória' }
+  if (!input.valor || input.valor <= 0) return { success: false, error: 'Valor deve ser maior que zero' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('registrar_pagamento_contas_pagar', {
+    p_conta_id: input.conta_id,
+    p_valor: input.valor,
+    p_forma: input.forma,
+    p_data: new Date().toISOString(),
+    p_observacao: input.observacao?.trim() || null,
+  })
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath(ROUTES.admin.financeiro)
+  return { success: true }
+}

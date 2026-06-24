@@ -1,8 +1,10 @@
 import { SectionCard } from '@/components/ui/admin-v2'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
+import { ContasPagarTable, type ContaPagarLinha } from './ContasPagarTable'
 
 type FinanceiroPanelsLabels = {
   titulosEmAberto: string
+  contasPagar: string
   filaFiscal: string
   documentosFiscais: string
   emitirSelecionados: string
@@ -15,6 +17,8 @@ type FinanceiroPanelsLabels = {
 
 type FinanceiroPanelsProps = {
   contas: ContaLinha[]
+  contasPagar: ContaPagarLinha[]
+  locale: string
   labels: FinanceiroPanelsLabels
 }
 
@@ -30,12 +34,18 @@ const docsFiscaisPlaceholder = [
   { doc: 'NFC-e 10238', serie: '1', valor: 'R$ 86,90', situacao: 'A emitir' },
 ]
 
-export function FinanceiroPanels({ contas, labels }: FinanceiroPanelsProps) {
+export function FinanceiroPanels({ contas, contasPagar, locale, labels }: FinanceiroPanelsProps) {
   return (
-    <div className="admin-v2-grid-2">
-      <SectionCard title={labels.titulosEmAberto}>
-        <ContasReceberTable contas={contas} labels={labels.contas} />
-      </SectionCard>
+    <div className="admin-v2-stack">
+      <div className="admin-v2-grid-2">
+        <SectionCard title={labels.titulosEmAberto}>
+          <ContasReceberTable contas={contas} labels={labels.contas} />
+        </SectionCard>
+
+        <SectionCard title={labels.contasPagar}>
+          <ContasPagarTable contas={contasPagar} locale={locale} />
+        </SectionCard>
+      </div>
 
       <div className="admin-v2-stack">
         <SectionCard title={labels.filaFiscal}>
