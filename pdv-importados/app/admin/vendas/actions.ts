@@ -1,17 +1,6 @@
 'use server'
 
-/**
- * FastProduct Admin — Vendas (Fase 5) · actions
- *
- * A LISTAGEM reusa a action EXISTENTE `buscarVendasPaginadasAction`
- * (`@/app/gerente/vendas/actions`) — nenhuma query nova para a lista.
- *
- * A ÚNICA action nova é o DETALHE de uma venda, porque o detalhe do gerente vive
- * inline em `vendas/[id]/page.tsx` (não há action reutilizável). É READ-ONLY e
- * não altera schema — só lê `vendas` + `itens_venda`. Versão "lean": header +
- * itens (sem movimentos de caixa / baixas de estoque, que ficam em /gerente).
- */
-
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -138,4 +127,48 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     showMargemVisual: false,
     showPrecoFonte: false,
   }
+}
+
+type R = { success: true } | { success: false; error: string }
+
+export type FormaDevolvucao =
+  | 'DINHEIRO'
+  | 'PIX'
+  | 'CARTAO_DEBITO'
+  | 'CARTAO_CREDITO'
+  | 'OUTROS'
+
+export async function registrarDevolucao(input: {
+  venda_id: string
+  valor: number
+  forma_pagamento: FormaDevolvucao
+  motivo: string
+}): Promise<R> {
+  if (!UUID_RE.test(input.venda_id)) return { success: false, error: 'Venda inválida' }
+  if (!input.valor || input.valor <= 0) return { success: false, error: 'Valor deve ser maior que zero' }
+  if (!input.motivo.trim()) return { success: false, error: 'Motivo obrigatório' }
+
+  const auth = await assertAdminSession('vendas:devolucao', {
+    pathname: ROUTES.admin.vendas,
+    resource: `route:${ROUTES.admin.vendas}`,
+  })
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Sessão inválida' }
+
+  const { error } = await supabase.from('devolucoes').insert({
+    venda_id: input.venda_id,
+    valor: input.valor,
+    forma_pagamento: input.forma_pagamento,
+    motivo: input.motivo.trim(),
+    operador_id: user.id,
+  })
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath(ROUTES.admin.vendas)
+  return { success: true }
 }

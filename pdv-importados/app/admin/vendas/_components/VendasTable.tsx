@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye } from 'lucide-react'
+import { Eye, RotateCcw } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
+import { DevolucaoModal } from './DevolucaoModal'
 import { toPayment, toVendaStatus } from './vendaMaps'
+
+type DevolucaoAlvo = { id: string; total_liquido: number | null }
 
 export type VendaLinha = {
   id: string
@@ -158,6 +161,7 @@ function ActionBtn({
 
 export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: VendasLabels }) {
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
+  const [devolucaoAlvo, setDevolucaoAlvo] = useState<DevolucaoAlvo | null>(null)
 
   const columns: Column<VendaLinha>[] = [
     {
@@ -234,12 +238,22 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
         onRowClick={(r) => setAlvo({ id: r.id })}
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">
+            {String(row.status ?? '').toUpperCase() === 'CONCLUIDA' ? (
+              <ActionBtn
+                label="Registrar devolução"
+                onClick={() => setDevolucaoAlvo({ id: row.id, total_liquido: row.total_liquido })}
+              >
+                <RotateCcw size={13} aria-hidden />
+              </ActionBtn>
+            ) : null}
             <ActionBtn label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
               <Eye size={13} aria-hidden />
             </ActionBtn>
           </div>
         )}
       />
+
+      <DevolucaoModal alvo={devolucaoAlvo} onClose={() => setDevolucaoAlvo(null)} />
 
       <VendaDetailSheet
         alvo={alvo}
