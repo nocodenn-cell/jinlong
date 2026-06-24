@@ -1,17 +1,12 @@
 'use client'
 
-/**
- * FastProduct Admin — ContasReceberTable (Fase 6)
- *
- * Tabela de contas a receber. Usa o DataTable genérico (Fase 2). A LISTAGEM é
- * server-side (limitada em `limite`); esta tabela só renderiza os dados que
- * chegam, e o sort dos headers ordena localmente (client-side).
- */
-
+import { useState } from 'react'
+import { ArrowDownToLine } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { cn } from '@/lib/utils'
+import { BaixaTituloModal } from './BaixaTituloModal'
 
 export type ContaLinha = {
   id: string
@@ -54,6 +49,8 @@ function StatusPill({ status, labels }: { status: string; labels: ContasLabels }
 }
 
 export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; labels: ContasLabels }) {
+  const [alvo, setAlvo] = useState<ContaLinha | null>(null)
+
   const columns: Column<ContaLinha>[] = [
     {
       key: 'cliente',
@@ -116,18 +113,39 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
   ]
 
   return (
-    <DataTable
-      data={contas}
-      columns={columns}
-      rowKey={(r) => r.id}
-      emptyState={
-        <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <span className="text-4xl text-jl-fg-3" aria-hidden>📋</span>
-          <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
-          <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
-        </div>
-      }
-      className="rounded-none border-x-0 border-b-0"
-    />
+    <>
+      <DataTable
+        data={contas}
+        columns={columns}
+        rowKey={(r) => r.id}
+        emptyState={
+          <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <span className="text-4xl text-jl-fg-3" aria-hidden>📋</span>
+            <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
+            <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
+          </div>
+        }
+        className="rounded-none border-x-0 border-b-0"
+        rowActions={(row) =>
+          row.valor_aberto > 0 ? (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                aria-label="Receber título"
+                title="Receber título"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setAlvo(row)
+                }}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-emerald-400 transition-colors hover:bg-emerald-400/10"
+              >
+                <ArrowDownToLine size={13} aria-hidden />
+              </button>
+            </div>
+          ) : null
+        }
+      />
+      <BaixaTituloModal alvo={alvo} onClose={() => setAlvo(null)} />
+    </>
   )
 }
