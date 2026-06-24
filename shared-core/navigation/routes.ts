@@ -43,6 +43,7 @@ export const ROUTES = {
     importNfe: '/admin/estoque/importar-nfe',
     vendas: '/admin/vendas',
     caixa: '/admin/caixa',
+    usuarios: '/admin/usuarios',
     auditoria: '/admin/auditoria',
     financeiro: '/admin/financeiro',
     relatorios: '/admin/relatorios',

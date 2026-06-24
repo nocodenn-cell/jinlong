@@ -14,6 +14,7 @@ import {
   ShieldOff,
   ShoppingCart,
   Tag,
+  Users,
   Wallet,
 } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -113,6 +114,12 @@ export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [] as const
  * Administração do sistema — sempre visíveis, no final do menu.
  */
 export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
+  {
+    id: 'usuarios',
+    href: ROUTES.admin.usuarios,
+    icon: Users,
+    labelOverridePt: 'Usuários',
+  },
   {
     id: 'auditoria',
     href: ROUTES.admin.auditoria,
