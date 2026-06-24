@@ -55,6 +55,22 @@ export async function pagarContaPagar(input: {
   if (!input.valor || input.valor <= 0) return { success: false, error: 'Valor deve ser maior que zero' }
 
   const supabase = await createClient()
+
+  const { data: conta } = await supabase
+    .from('contas_pagar')
+    .select('valor_total, valor_pago, status')
+    .eq('id', input.conta_id)
+    .maybeSingle()
+
+  if (!conta) return { success: false, error: 'Conta a pagar não encontrada.' }
+  if (['PAGO', 'CANCELADO'].includes(String(conta.status ?? ''))) {
+    return { success: false, error: 'Esta conta já foi encerrada e não pode receber pagamentos.' }
+  }
+  const valorAberto = Number(conta.valor_total ?? 0) - Number(conta.valor_pago ?? 0)
+  if (input.valor > valorAberto + 0.005) {
+    return { success: false, error: 'Valor informado excede o saldo em aberto desta conta.' }
+  }
+
   const { error } = await supabase.rpc('registrar_pagamento_contas_pagar', {
     p_conta_id: input.conta_id,
     p_valor: input.valor,

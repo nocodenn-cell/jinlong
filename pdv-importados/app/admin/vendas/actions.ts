@@ -131,17 +131,63 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
 
 type R = { success: true } | { success: false; error: string }
 
-export type FormaDevolvucao =
+export type FormaDevolucao =
   | 'DINHEIRO'
   | 'PIX'
   | 'CARTAO_DEBITO'
   | 'CARTAO_CREDITO'
-  | 'OUTROS'
+
+export type SaldoDevolvivel = {
+  status: string
+  total_liquido: number
+  total_devolvido: number
+  saldo_devolvivel: number
+}
+
+export async function obterSaldoDevolvivel(
+  venda_id: string,
+): Promise<{ success: true; data: SaldoDevolvivel } | { success: false; error: string }> {
+  if (!UUID_RE.test(venda_id)) return { success: false, error: 'Venda inválida.' }
+
+  const auth = await assertAdminSession('vendas:devolucao-saldo', {
+    pathname: ROUTES.admin.vendas,
+    resource: `route:${ROUTES.admin.vendas}`,
+  })
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+
+  const { data: venda } = await supabase
+    .from('vendas')
+    .select('total_liquido, status')
+    .eq('id', venda_id)
+    .maybeSingle()
+
+  if (!venda) return { success: false, error: 'Venda não encontrada.' }
+
+  const { data: devolvidos } = await supabase
+    .from('devolucoes')
+    .select('valor')
+    .eq('venda_id', venda_id)
+
+  const total_devolvido = (devolvidos ?? []).reduce((sum, d) => sum + Number(d.valor), 0)
+  const total_liquido = Number(venda.total_liquido ?? 0)
+
+  return {
+    success: true,
+    data: {
+      status: String(venda.status ?? ''),
+      total_liquido,
+      total_devolvido,
+      saldo_devolvivel: Math.max(0, total_liquido - total_devolvido),
+    },
+  }
+}
 
 export async function registrarDevolucao(input: {
   venda_id: string
   valor: number
-  forma_pagamento: FormaDevolvucao
+  forma_pagamento: FormaDevolucao
   motivo: string
 }): Promise<R> {
   if (!UUID_RE.test(input.venda_id)) return { success: false, error: 'Venda inválida' }
@@ -155,6 +201,29 @@ export async function registrarDevolucao(input: {
   if (!auth.ok) return { success: false, error: auth.error }
 
   const supabase = await createClient()
+
+  const { data: venda } = await supabase
+    .from('vendas')
+    .select('total_liquido, status')
+    .eq('id', input.venda_id)
+    .maybeSingle()
+
+  if (!venda) return { success: false, error: 'Venda não encontrada.' }
+  if (String(venda.status ?? '').toUpperCase() !== 'CONCLUIDA') {
+    return { success: false, error: 'Devolução permitida apenas para vendas concluídas.' }
+  }
+
+  const { data: devolvidos } = await supabase
+    .from('devolucoes')
+    .select('valor')
+    .eq('venda_id', input.venda_id)
+
+  const total_devolvido = (devolvidos ?? []).reduce((sum, d) => sum + Number(d.valor), 0)
+  const saldo_devolvivel = Number(venda.total_liquido ?? 0) - total_devolvido
+
+  if (input.valor > saldo_devolvivel + 0.005) {
+    return { success: false, error: 'Valor solicitado excede o saldo disponível para devolução.' }
+  }
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Sessão inválida' }
