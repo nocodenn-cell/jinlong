@@ -44,7 +44,7 @@ function StatusPill({ status, labels }: { status: string; labels: ContasLabels }
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
+        'inline-flex items-center rounded px-2 py-[2px] text-[11px] font-medium leading-none',
         isAberto ? 'admin-v2-badge-warning' : 'admin-v2-badge-gold',
       )}
     >

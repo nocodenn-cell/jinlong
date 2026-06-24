@@ -80,7 +80,7 @@ function StatusCell({ status, labels }: { status: string | null; labels: VendasL
           ? 'admin-v2-badge-danger'
           : 'admin-v2-badge-muted'
     return (
-      <span className={`${pillClass} inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-medium leading-none`}>
+      <span className={`${pillClass} inline-flex items-center gap-1.5 rounded px-2 py-[2px] text-[11px] font-medium leading-none`}>
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
         {label}
       </span>
@@ -88,7 +88,7 @@ function StatusCell({ status, labels }: { status: string | null; labels: VendasL
   }
   if (status) {
     return (
-      <span className="admin-v2-badge-muted inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-medium leading-none">
+      <span className="admin-v2-badge-muted inline-flex items-center gap-1.5 rounded px-2 py-[2px] text-[11px] font-medium leading-none">
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
         {status}
       </span>
@@ -165,8 +165,8 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
       header: labels.colVenda,
       sortValue: (r) => r.id,
       cell: (r) => (
-        <span className="max-w-[120px] truncate font-medium text-jl-fg-1" title={r.id}>
-          {r.id}
+        <span className="font-mono text-[11px] font-medium text-jl-fg-2" title={r.id}>
+          #{r.id.slice(0, 8).toUpperCase()}
         </span>
       ),
     },

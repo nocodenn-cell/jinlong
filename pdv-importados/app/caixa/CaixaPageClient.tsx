@@ -129,7 +129,7 @@ type Props = {
 
 export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
   const pdvLayoutVariant: CaixaPdvLayoutVariant =
-    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "classic" ? "classic" : "default"
+    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "default" ? "default" : "classic"
 
   const {
     mensagem,

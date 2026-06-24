@@ -80,7 +80,7 @@ function Pill({ tone, icon: Icon, children, className, title }: PillProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-[2px]',
+        'inline-flex items-center gap-1 whitespace-nowrap rounded px-2 py-[2px]',
         'text-[11px] font-medium leading-none',
         className
       )}
