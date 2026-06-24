@@ -3,34 +3,65 @@
  * Não contém chamadas a Supabase nem a Server Actions.
  */
 
+/**
+ * Returns the UTC offset in milliseconds for an IANA timezone at a given civil date.
+ * Positive = timezone east of UTC (UTC+N); negative = west (UTC-N).
+ * Uses 'shortOffset' format (e.g. 'GMT-3', 'GMT+5:30').
+ */
+function getOffsetMs(ymd: string, tz: string): number {
+  const [y, mo, d] = ymd.split('-').map(Number)
+  // Noon UTC avoids most DST transition edge cases
+  const ref = new Date(Date.UTC(y, mo - 1, d, 12, 0, 0))
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: tz,
+    timeZoneName: 'shortOffset',
+  }).formatToParts(ref)
+  const offsetStr = parts.find(p => p.type === 'timeZoneName')?.value ?? 'GMT'
+  const m = offsetStr.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/)
+  if (!m) return 0
+  const sign = m[1] === '+' ? 1 : -1
+  return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] ?? '0', 10)) * 60_000
+}
+
+/** ISO timestamp for the start of a civil day (00:00:00.000) in the given IANA timezone. */
+function civilDayStartISO(ymd: string, tz: string): string {
+  const [y, mo, d] = ymd.split('-').map(Number)
+  return new Date(Date.UTC(y, mo - 1, d) - getOffsetMs(ymd, tz)).toISOString()
+}
+
+/** ISO timestamp for the end of a civil day (23:59:59.999) in the given IANA timezone. */
+function civilDayEndISO(ymd: string, tz: string): string {
+  const [y, mo, d] = ymd.split('-').map(Number)
+  return new Date(Date.UTC(y, mo - 1, d) + 86_400_000 - 1 - getOffsetMs(ymd, tz)).toISOString()
+}
+
 export type DrePeriodoParams = {
   spDe: string | undefined
   spAte: string | undefined
   periodoDe: string   // dados.periodo.de (YYYY-MM-DD)
   periodoAte: string  // dados.periodo.ate (YYYY-MM-DD)
+  /** IANA timezone for UTC boundary computation (e.g. 'America/Sao_Paulo'). */
+  tz: string
 }
 
 /**
- * F10: deriva o intervalo de despesas a partir do mesmo período resolvido
+ * F10-A: deriva o intervalo de despesas a partir do mesmo período resolvido
  * pelas receitas, eliminando o drift UTC de Date.now() - 30 * 86_400_000.
  *
- * Quando o usuário fornece filtros na URL, usa esses valores.
- * Quando não fornece, ancora em dados.periodo.de / dados.periodo.ate
- * (já tz-aware, resolução feita por carregarDadosRelatoriosGerente).
+ * F10-B: converte datas civis (YYYY-MM-DD) para timestamps UTC corretos usando
+ * o fuso da loja — evita divergência de ±3h nos limites do período quando o DB
+ * armazena data_pagamento em UTC e a loja opera em BRT (UTC-3).
  */
 export function derivarPeriodoDespesas(p: DrePeriodoParams): {
   despesasDe: string
   despesasAte: string
 } {
-  const despesasDe = p.spDe
-    ? (() => { const d = new Date(p.spDe); d.setHours(0, 0, 0, 0); return d.toISOString() })()
-    : p.periodoDe + 'T00:00:00.000Z'
-
-  const despesasAte = p.spAte
-    ? (() => { const d = new Date(p.spAte); d.setHours(23, 59, 59, 999); return d.toISOString() })()
-    : p.periodoAte + 'T23:59:59.999Z'
-
-  return { despesasDe, despesasAte }
+  const de = p.spDe ?? p.periodoDe
+  const ate = p.spAte ?? p.periodoAte
+  return {
+    despesasDe: civilDayStartISO(de, p.tz),
+    despesasAte: civilDayEndISO(ate, p.tz),
+  }
 }
 
 export type DreInputs = {

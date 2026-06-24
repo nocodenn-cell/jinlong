@@ -2,15 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { derivarPeriodoDespesas, calcularDre } from './dreLogic'
 
 // ─────────────────────────────────────────────────────────────
-// F10 — Período de despesas alinhado ao período das receitas
+// F10-A — Período de despesas alinhado ao período das receitas
 // ─────────────────────────────────────────────────────────────
-describe('derivarPeriodoDespesas', () => {
-  it('F10: sem filtros na URL usa dados.periodo (não Date.now())', () => {
+describe('derivarPeriodoDespesas — F10-A: alinhamento de período', () => {
+  it('F10-A: sem filtros na URL usa dados.periodo (não Date.now())', () => {
     const { despesasDe, despesasAte } = derivarPeriodoDespesas({
       spDe: undefined,
       spAte: undefined,
       periodoDe: '2026-05-26',
       periodoAte: '2026-06-24',
+      tz: 'UTC',
     })
 
     // Deve ancorar em datas civis, não em timestamp flutuante
@@ -18,81 +19,82 @@ describe('derivarPeriodoDespesas', () => {
     expect(despesasAte).toBe('2026-06-24T23:59:59.999Z')
   })
 
-  it('F10: com filtros na URL usa as datas fornecidas, não dados.periodo', () => {
+  it('F10-A: com filtros na URL usa as datas fornecidas, não dados.periodo', () => {
     const { despesasDe, despesasAte } = derivarPeriodoDespesas({
       spDe: '2026-06-01',
       spAte: '2026-06-15',
       periodoDe: '2026-05-26', // seria ignorado
       periodoAte: '2026-06-24', // seria ignorado
+      tz: 'UTC',
     })
 
     expect(despesasDe.startsWith('2026-06-01')).toBe(true)
     expect(despesasAte.startsWith('2026-06-15')).toBe(true)
   })
 
-  it('F10: com spDe sem spAte usa spDe + periodoAte como fim', () => {
+  it('F10-A: com spDe sem spAte usa spDe + periodoAte como fim', () => {
     const { despesasDe, despesasAte } = derivarPeriodoDespesas({
       spDe: '2026-06-10',
       spAte: undefined,
       periodoDe: '2026-05-26',
       periodoAte: '2026-06-24',
+      tz: 'UTC',
     })
 
     expect(despesasDe.startsWith('2026-06-10')).toBe(true)
     expect(despesasAte).toBe('2026-06-24T23:59:59.999Z')
   })
 
-  it('F10: período derivado cobre o mesmo mês que as receitas', () => {
-    // Replica o bug original: antes, despesasDe poderia ser 2026-05-25
-    // (Date.now() - 30d quando renderizado às 14:30 UTC) enquanto
-    // o período das receitas começava em 2026-05-26.
+  it('F10-A: período derivado cobre o mesmo mês que as receitas (dia civil coincide)', () => {
     const periodoDe = '2026-05-26'
     const { despesasDe } = derivarPeriodoDespesas({
       spDe: undefined,
       spAte: undefined,
       periodoDe,
       periodoAte: '2026-06-24',
+      tz: 'UTC',
     })
     const date = new Date(despesasDe)
-    // O dia UTC do início das despesas deve ser idêntico ao dia das receitas
     expect(date.toISOString().slice(0, 10)).toBe(periodoDe)
   })
 
-  // ── Cenários de período sem filtro (item 1.4) ─────────────────
-  it('período "hoje": 1 dia — despesasDe == despesasAte (mesmo dia)', () => {
+  it('período "hoje": 1 dia — despesasDe == despesasAte (mesmo dia, UTC)', () => {
     const { despesasDe, despesasAte } = derivarPeriodoDespesas({
       spDe: undefined,
       spAte: undefined,
       periodoDe: '2026-06-24',
       periodoAte: '2026-06-24',
+      tz: 'UTC',
     })
     expect(despesasDe).toBe('2026-06-24T00:00:00.000Z')
     expect(despesasAte).toBe('2026-06-24T23:59:59.999Z')
   })
 
-  it('período "7 dias": início 7 dias antes, fim hoje', () => {
+  it('período "7 dias": início 7 dias antes, fim hoje (UTC)', () => {
     const { despesasDe, despesasAte } = derivarPeriodoDespesas({
       spDe: undefined,
       spAte: undefined,
       periodoDe: '2026-06-17',
       periodoAte: '2026-06-24',
+      tz: 'UTC',
     })
     expect(despesasDe).toBe('2026-06-17T00:00:00.000Z')
     expect(despesasAte).toBe('2026-06-24T23:59:59.999Z')
   })
 
-  it('período "mês atual": início no dia 1, fim no último dia', () => {
+  it('período "mês atual": início no dia 1, fim no último dia (UTC)', () => {
     const { despesasDe, despesasAte } = derivarPeriodoDespesas({
       spDe: undefined,
       spAte: undefined,
       periodoDe: '2026-06-01',
       periodoAte: '2026-06-30',
+      tz: 'UTC',
     })
     expect(despesasDe).toBe('2026-06-01T00:00:00.000Z')
     expect(despesasAte).toBe('2026-06-30T23:59:59.999Z')
   })
 
-  it('período "30 dias": ancoras não sofrem drift de Date.now()', () => {
+  it('período "30 dias": ancoras não sofrem drift de Date.now() (UTC)', () => {
     const periodoDe = '2026-05-25'
     const periodoAte = '2026-06-23'
     const { despesasDe, despesasAte } = derivarPeriodoDespesas({
@@ -100,13 +102,103 @@ describe('derivarPeriodoDespesas', () => {
       spAte: undefined,
       periodoDe,
       periodoAte,
+      tz: 'UTC',
     })
-    // Deve ser exatamente a data civil, sem nenhum drift UTC
     expect(despesasDe).toBe('2026-05-25T00:00:00.000Z')
     expect(despesasAte).toBe('2026-06-23T23:59:59.999Z')
-    // Período inclusivo de 30 dias: diff do timestamp = ~29.9999 dias → arredonda para 30
     const diff = new Date(despesasAte).getTime() - new Date(despesasDe).getTime()
     expect(Math.round(diff / 86_400_000)).toBe(30)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// F10-B — Limites UTC corretos por fuso (BRT e outros)
+// ─────────────────────────────────────────────────────────────
+describe('derivarPeriodoDespesas — F10-B: limites UTC por fuso', () => {
+  // BRT = UTC-3: civil midnight = 03:00 UTC; civil 23:59:59 = next day 02:59:59 UTC
+  it('BRT (UTC-3): despesasDe = dia civil T03:00:00Z (não T00:00:00Z)', () => {
+    const { despesasDe } = derivarPeriodoDespesas({
+      spDe: undefined,
+      spAte: undefined,
+      periodoDe: '2026-01-01',
+      periodoAte: '2026-01-31',
+      tz: 'America/Sao_Paulo',
+    })
+    expect(despesasDe).toBe('2026-01-01T03:00:00.000Z')
+  })
+
+  it('BRT (UTC-3): despesasAte = próximo dia T02:59:59.999Z (não mesmo dia T23:59:59Z)', () => {
+    const { despesasAte } = derivarPeriodoDespesas({
+      spDe: undefined,
+      spAte: undefined,
+      periodoDe: '2026-01-01',
+      periodoAte: '2026-01-31',
+      tz: 'America/Sao_Paulo',
+    })
+    // Fim de 2026-01-31 em BRT = 2026-02-01T02:59:59.999Z
+    expect(despesasAte).toBe('2026-02-01T02:59:59.999Z')
+  })
+
+  it('BRT: período de 1 dia cobre exatamente 24h (T03:00Z até próximo T02:59:59.999Z)', () => {
+    const { despesasDe, despesasAte } = derivarPeriodoDespesas({
+      spDe: undefined,
+      spAte: undefined,
+      periodoDe: '2026-06-24',
+      periodoAte: '2026-06-24',
+      tz: 'America/Sao_Paulo',
+    })
+    expect(despesasDe).toBe('2026-06-24T03:00:00.000Z')
+    expect(despesasAte).toBe('2026-06-25T02:59:59.999Z')
+    const ms = new Date(despesasAte).getTime() - new Date(despesasDe).getTime() + 1
+    expect(ms).toBe(86_400_000) // exatamente 24h
+  })
+
+  it('BRT: período 30 dias cobre exatamente 30 dias × 86400000ms', () => {
+    const { despesasDe, despesasAte } = derivarPeriodoDespesas({
+      spDe: undefined,
+      spAte: undefined,
+      periodoDe: '2026-05-25',
+      periodoAte: '2026-06-23',
+      tz: 'America/Sao_Paulo',
+    })
+    const ms = new Date(despesasAte).getTime() - new Date(despesasDe).getTime() + 1
+    expect(ms).toBe(30 * 86_400_000)
+  })
+
+  it('BRT: com filtros na URL também aplica offset correto', () => {
+    const { despesasDe, despesasAte } = derivarPeriodoDespesas({
+      spDe: '2026-06-01',
+      spAte: '2026-06-15',
+      periodoDe: '2026-05-01',
+      periodoAte: '2026-05-31',
+      tz: 'America/Sao_Paulo',
+    })
+    expect(despesasDe).toBe('2026-06-01T03:00:00.000Z')
+    expect(despesasAte).toBe('2026-06-16T02:59:59.999Z')
+  })
+
+  it('UTC: limites idênticos a YYYY-MM-DDT00:00:00Z e T23:59:59.999Z', () => {
+    const { despesasDe, despesasAte } = derivarPeriodoDespesas({
+      spDe: undefined,
+      spAte: undefined,
+      periodoDe: '2026-06-01',
+      periodoAte: '2026-06-30',
+      tz: 'UTC',
+    })
+    expect(despesasDe).toBe('2026-06-01T00:00:00.000Z')
+    expect(despesasAte).toBe('2026-06-30T23:59:59.999Z')
+  })
+
+  it('UTC+9 (Asia/Tokyo): despesasDe = dia anterior T15:00:00Z', () => {
+    // Midnight JST = 15:00 UTC previous day
+    const { despesasDe } = derivarPeriodoDespesas({
+      spDe: undefined,
+      spAte: undefined,
+      periodoDe: '2026-01-01',
+      periodoAte: '2026-01-31',
+      tz: 'Asia/Tokyo',
+    })
+    expect(despesasDe).toBe('2025-12-31T15:00:00.000Z')
   })
 })
 

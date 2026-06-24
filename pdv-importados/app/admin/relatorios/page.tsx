@@ -19,6 +19,7 @@ import { formatBRL } from '@/lib/format/money'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { RelatoriosContent, type RelatoriosDados } from './_components/RelatoriosContent'
 import { derivarPeriodoDespesas, calcularDre } from './dreLogic'
+import { getRelatorioTimezone } from '@/lib/relatorios/getRelatorioTimezone'
 
 type SearchParams = {
   de?: string
@@ -40,13 +41,17 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   const supabase = await createClient()
 
   // F10: carregar receitas primeiro — dados.periodo contém o intervalo tz-aware resolvido
-  const dados = await carregarDadosRelatoriosGerente({ de: sp.de, ate: sp.ate })
+  const [dados, tz] = await Promise.all([
+    carregarDadosRelatoriosGerente({ de: sp.de, ate: sp.ate }),
+    getRelatorioTimezone(supabase),
+  ])
 
   const { despesasDe, despesasAte } = derivarPeriodoDespesas({
     spDe: sp.de,
     spAte: sp.ate,
     periodoDe: dados.periodo.de,
     periodoAte: dados.periodo.ate,
+    tz,
   })
 
   const despesasRes = await supabase
