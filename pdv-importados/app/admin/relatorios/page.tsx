@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatBRL } from '@/lib/format/money'
 import { SectionCard } from '@/components/ui/admin-v2'
 import { RelatoriosContent, type RelatoriosDados } from './_components/RelatoriosContent'
+import { derivarPeriodoDespesas, calcularDre } from './dreLogic'
 
 type SearchParams = {
   de?: string
@@ -38,34 +39,33 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
   const sp = (searchParams ? await searchParams : {}) ?? {}
   const supabase = await createClient()
 
-  const despesasDe = sp.de
-    ? (() => { const d = new Date(sp.de); d.setHours(0, 0, 0, 0); return d.toISOString() })()
-    : new Date(Date.now() - 30 * 86_400_000).toISOString()
-  const despesasAte = sp.ate
-    ? (() => { const d = new Date(sp.ate); d.setHours(23, 59, 59, 999); return d.toISOString() })()
-    : new Date().toISOString()
+  // F10: carregar receitas primeiro — dados.periodo contém o intervalo tz-aware resolvido
+  const dados = await carregarDadosRelatoriosGerente({ de: sp.de, ate: sp.ate })
 
-  const [dados, despesasRes] = await Promise.all([
-    carregarDadosRelatoriosGerente({ de: sp.de, ate: sp.ate }),
-    supabase
-      .from('contas_pagar_pagamentos')
-      .select('valor')
-      .gte('data_pagamento', despesasDe)
-      .lte('data_pagamento', despesasAte),
-  ])
+  const { despesasDe, despesasAte } = derivarPeriodoDespesas({
+    spDe: sp.de,
+    spAte: sp.ate,
+    periodoDe: dados.periodo.de,
+    periodoAte: dados.periodo.ate,
+  })
+
+  const despesasRes = await supabase
+    .from('contas_pagar_pagamentos')
+    .select('valor')
+    .gte('data_pagamento', despesasDe)
+    .lte('data_pagamento', despesasAte)
 
   const receitaLiquida = dados.porDia.reduce((s, r) => s + Number(r.total_liquido ?? 0), 0)
   const totalDescontos = dados.porDia.reduce((s, r) => s + Number(r.total_desconto ?? 0), 0)
-  const receitaBruta = receitaLiquida + totalDescontos
   const margemBruta = dados.resumoExecutivo.custo_confiavel
     ? (dados.resumoExecutivo.margem_bruta_estimada ?? null)
     : null
-  const custoEstimado = margemBruta !== null ? receitaLiquida - margemBruta : null
   const despesasPagas = despesasRes.error
     ? null
     : (despesasRes.data ?? []).reduce((s, r) => s + Number(r.valor ?? 0), 0)
-  const resultadoEstimado =
-    margemBruta !== null && despesasPagas !== null ? margemBruta - despesasPagas : null
+
+  const dre = calcularDre({ receitaLiquida, totalDescontos, margemBruta, despesasPagas })
+  const { receitaBruta, resultadoEstimado } = dre
 
   const relDados: RelatoriosDados = {
     periodo: dados.periodo,
@@ -101,12 +101,6 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
             <tr className="border-b border-[#242424] bg-[#0d0d0d]">
               <td className="py-2.5 pr-4 font-semibold text-jl-fg-1">= Receita líquida</td>
               <td className="py-2.5 tabular-nums text-right font-semibold text-jl-fg-1">{fmtBrl(receitaLiquida)}</td>
-            </tr>
-            <tr className="border-b border-[#1e1e1e]">
-              <td className="py-2 pr-4 text-jl-fg-3">(-) Custo estimado dos produtos</td>
-              <td className="py-2 tabular-nums text-right text-red-400">
-                {custoEstimado !== null ? `(${fmtBrl(custoEstimado)})` : '—'}
-              </td>
             </tr>
             <tr className="border-b border-[#242424] bg-[#0d0d0d]">
               <td className="py-2.5 pr-4 font-semibold text-jl-fg-1">= Margem bruta estimada</td>

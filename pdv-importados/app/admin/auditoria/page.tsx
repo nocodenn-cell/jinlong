@@ -116,6 +116,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     supabase.rpc('relatorio_consistencia_vendas', {
       p_from: consistenciaFrom,
       p_to: consistenciaTo,
+      p_loja_id: session.lojaId ?? null,
     }),
   ])
 
