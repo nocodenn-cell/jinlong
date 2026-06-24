@@ -14,6 +14,7 @@ import {
   ShieldOff,
   ShoppingCart,
   Tag,
+  Wallet,
 } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 
@@ -75,6 +76,12 @@ export const ADMIN_V2_MAIN_ITEMS: readonly AdminV2NavItem[] = [
     icon: ShoppingCart,
     labelOverridePt: 'Vendas',
     dictKey: 'vendas',
+  },
+  {
+    id: 'caixa',
+    href: ROUTES.admin.caixa,
+    icon: Wallet,
+    labelOverridePt: 'Caixa',
   },
   {
     id: 'financeiro',
