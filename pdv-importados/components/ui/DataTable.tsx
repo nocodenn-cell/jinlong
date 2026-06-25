@@ -155,7 +155,7 @@ export function DataTable<T>({
               <tr
                 key={rowKey(row)}
                 className={cn(
-                  'group border-t border-jl-border-1 transition-colors hover:bg-white/[0.03]',
+                  'group border-t border-jl-border-1 transition-colors hover:bg-slate-50',
                   onRowClick && 'cursor-pointer',
                 )}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}

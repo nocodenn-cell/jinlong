@@ -1,5 +1,6 @@
 @import "../styles/theme-fix-aggressive.css";
 @import "../styles/unstick-gerente.css";
+@import "../styles/bling-theme.css";
 
 @tailwind base;
 @tailwind components;
@@ -35,13 +36,10 @@
     /* canvas/overscroll default do browser segue o tema → mata flash branco */
     color-scheme: light;
 
-    /* Fontes para diferentes idiomas */
-    --font-noto-sc: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   body {
-    font-family: var(--font-noto-sc), 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui,
-      sans-serif;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 0.9375rem; /* 15px — base operacional entre 14–16px */
   }
 

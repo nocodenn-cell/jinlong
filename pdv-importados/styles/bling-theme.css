@@ -1,0 +1,453 @@
+/**
+ * FastProduct — Bling-inspired Light Theme
+ * Substitui o visual Dragon POS (dark/gold) por ERP profissional claro.
+ * Importado como ÚLTIMO import em globals.css para garantir precedência.
+ */
+
+/* ── Cores primitivas de marca — Azul ERP ──────────────────────────────── */
+:root {
+  /* Background — light */
+  --color-background-primary: #f1f5f9;
+  --color-background-secondary: #ffffff;
+  --color-background-tertiary: #f8fafc;
+  --color-background-surface: rgba(255, 255, 255, 0.96);
+  --color-background-surface-soft: rgba(248, 250, 252, 0.96);
+  --color-background-overlay: rgba(15, 23, 42, 0.45);
+
+  /* Text — dark on light */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #64748b;
+  --color-text-inverse: #ffffff;
+  --color-text-disabled: #94a3b8;
+
+  /* Border */
+  --color-border-primary: rgba(226, 232, 240, 0.95);
+  --color-border-secondary: #e2e8f0;
+  --color-border-focus: #1a56db;
+  --color-border-disabled: rgba(203, 213, 225, 0.6);
+
+  /* Brand — Azul ERP */
+  --color-brand-primary: #1a56db;
+  --color-brand-secondary: #1d4ed8;
+  --color-brand-strong: #1e40af;
+  --color-brand-contrast: #ffffff;
+  --color-chart-gold: #1a56db;
+
+  /* ── Badge tokens — pastéis claros ─────────────────────────────────────── */
+  --fp-success: #15803d;
+  --fp-success-bg: #f0fdf4;
+  --fp-success-border: #bbf7d0;
+
+  --fp-warning: #854d0e;
+  --fp-warning-bg: #fef9c3;
+  --fp-warning-border: #fde047;
+
+  --fp-danger: #b91c1c;
+  --fp-danger-bg: #fef2f2;
+  --fp-danger-border: #fecaca;
+
+  --fp-info: #1d4ed8;
+  --fp-info-bg: #eff6ff;
+  --fp-info-border: #bfdbfe;
+
+  --fp-purple: #7e22ce;
+  --fp-purple-bg: #faf5ff;
+  --fp-purple-border: #e9d5ff;
+
+  --fp-border: #e2e8f0;
+  --fp-text-secondary: #64748b;
+  --fp-text-muted: #94a3b8;
+
+  /* ── Component tokens — light mode ─────────────────────────────────────── */
+  --modal-bg: #ffffff;
+  --modal-border: rgba(226, 232, 240, 0.95);
+  --card-bg: #ffffff;
+  --card-border: rgba(226, 232, 240, 0.95);
+  --input-bg: #ffffff;
+  --input-border: rgba(203, 213, 225, 0.8);
+  --input-border-focus: #1a56db;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
+  --input-shadow-focus: 0 0 0 3px rgba(26, 86, 219, 0.15);
+  --table-bg: #ffffff;
+  --table-header-bg: #f8fafc;
+  --table-header-text: #475569;
+  --table-border: rgba(226, 232, 240, 0.95);
+  --table-row-hover-bg: #f8fafc;
+}
+
+/* ── Surface tokens para tema claro ─────────────────────────────────────── */
+[data-app-theme='claro'] {
+  --surface: rgba(255, 255, 255, 0.96);
+  --surface-soft: rgba(248, 250, 252, 0.96);
+  --surface-text: #0f172a;
+  --border: rgba(226, 232, 240, 0.95);
+  --accent: #1a56db;
+  --accent-strong: #1d4ed8;
+  --accent-contrast: #ffffff;
+}
+
+/* ── JL tokens — admin light mode ────────────────────────────────────────── */
+[data-admin-v2] {
+  --jl-fg-1: #0f172a;
+  --jl-fg-2: #475569;
+  --jl-fg-3: #64748b;
+  --jl-border-1: rgba(226, 232, 240, 0.95);
+  --jl-border-2: #e2e8f0;
+  --jl-accent: #1a56db;
+  --jl-card-l1-bg: #ffffff;
+  --jl-card-l1-border: rgba(226, 232, 240, 0.95);
+  --jl-card-l1-accent: rgba(26, 86, 219, 0.08);
+  --jl-card-l1-strip: #1a56db;
+  --jl-card-l2-bg: #ffffff;
+  --jl-card-l2-border: #f1f5f9;
+  --jl-card-l3-bg: #f8fafc;
+  --jl-card-l3-border: #e2e8f0;
+  --jl-shimmer-base: rgba(226, 232, 240, 0.60);
+  --jl-shimmer-highlight: rgba(26, 86, 219, 0.06);
+  --jl-elev-1: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --jl-elev-2: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 8px 28px rgba(0, 0, 0, 0.12);
+
+  --jl-status-success-bg: #f0fdf4;
+  --jl-status-success-text: #15803d;
+  --jl-status-success-border: #bbf7d0;
+  --jl-status-warning-bg: #fef9c3;
+  --jl-status-warning-text: #854d0e;
+  --jl-status-warning-border: #fde047;
+  --jl-status-danger-bg: #fef2f2;
+  --jl-status-danger-text: #b91c1c;
+  --jl-status-danger-border: #fecaca;
+  --jl-status-info-bg: #eff6ff;
+  --jl-status-info-text: #1d4ed8;
+  --jl-status-info-border: #bfdbfe;
+  --jl-status-neutral-bg: #f9fafb;
+  --jl-status-neutral-text: #374151;
+  --jl-status-neutral-border: #e5e7eb;
+}
+
+/* ── Admin V2 — layout e cores ───────────────────────────────────────────── */
+[data-admin-v2] {
+  color-scheme: light;
+  background-color: #f1f5f9;
+  color: #0f172a;
+
+  /* Sidebar dark navy, conteúdo light */
+  --admin-v2-bg: #f1f5f9;
+  --admin-v2-sidebar: #1e293b;
+  --admin-v2-border: rgba(255, 255, 255, 0.08);
+  --admin-v2-surface-card: #ffffff;
+  --admin-v2-accent-gold: #1a56db;
+  --admin-v2-accent-jade: #16a34a;
+
+  /* Texto da sidebar (claro sobre fundo escuro) */
+  --admin-v2-text-primary: rgb(241 245 249);
+  --admin-v2-text-secondary: rgb(203 213 225);
+  --admin-v2-text-muted: rgb(148 163 184);
+
+  /* Estado ativo — azul */
+  --admin-v2-active-bg: rgba(59, 130, 246, 0.15);
+  --admin-v2-active-border: rgba(59, 130, 246, 0.45);
+  --admin-v2-active-text: rgb(147 197 253);
+
+  /* Sombra de card — suave para light mode */
+  --admin-v2-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-admin-v2] .admin-v2-sidebar {
+  background-color: #1e293b;
+  color: rgb(241 245 249);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-admin-v2] .admin-v2-main {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Cards — brancos com sombra suave */
+[data-admin-v2] .admin-v2-metric-card,
+[data-admin-v2] .admin-v2-section-card,
+[data-admin-v2] .admin-v2-activity-card,
+[data-admin-v2] .admin-v2-panel {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Nav link hover */
+[data-admin-v2] .admin-v2-nav-link:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: rgb(191 219 254);
+}
+
+/* Botão primário — azul */
+[data-admin-v2] .admin-v2-btn-primary {
+  border-color: #1e40af;
+  background: #1a56db;
+  color: #ffffff;
+}
+
+[data-admin-v2] .admin-v2-btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+/* Botão secundário — branco */
+[data-admin-v2] .admin-v2-btn-secondary {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #374151;
+}
+
+[data-admin-v2] .admin-v2-btn-secondary:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+/* Filter pills — claras */
+[data-admin-v2] .admin-v2-filter-pill {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #475569;
+}
+
+[data-admin-v2] .admin-v2-filter-pill:hover,
+[data-admin-v2] .admin-v2-tab-pill:hover {
+  background: rgba(26, 86, 219, 0.06);
+  color: #1a56db;
+}
+
+[data-admin-v2] .admin-v2-filter-pill[data-active='true'],
+[data-admin-v2] .admin-v2-tab-pill[data-active='true'],
+[data-admin-v2] .admin-v2-segmented > button[data-active='true'],
+[data-admin-v2] .admin-v2-segmented > [role='button'][data-active='true'] {
+  background-color: rgba(26, 86, 219, 0.1);
+  border-color: rgba(26, 86, 219, 0.4);
+  color: #1a56db;
+}
+
+/* Input — claro */
+[data-admin-v2] .admin-v2-input {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+[data-admin-v2] .admin-v2-input:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+/* Segmented control */
+[data-admin-v2] .admin-v2-segmented {
+  background: #f1f5f9;
+  border-color: rgba(226, 232, 240, 0.95);
+}
+
+/* Badges — pastéis */
+[data-admin-v2] .admin-v2-badge-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+[data-admin-v2] .admin-v2-badge-warning {
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  color: #854d0e;
+}
+
+[data-admin-v2] .admin-v2-badge-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+[data-admin-v2] .admin-v2-badge-gold {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+[data-admin-v2] .admin-v2-badge-muted {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+/* Alerts */
+[data-admin-v2] .admin-v2-alert-warning {
+  background: #fef9c3;
+  border-color: #fde047;
+  color: #854d0e;
+}
+
+[data-admin-v2] .admin-v2-alert-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+[data-admin-v2] .admin-v2-alert-success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+/* Sheet */
+[data-admin-v2] .admin-v2-sheet {
+  background: #ffffff;
+  border-left: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+/* Chip */
+[data-admin-v2] .admin-v2-chip {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #374151;
+}
+
+[data-admin-v2] .admin-v2-chip:hover {
+  border-color: rgba(26, 86, 219, 0.45);
+  color: #1a56db;
+}
+
+/* ── app-* utilities — light mode ────────────────────────────────────────── */
+[data-app-theme='claro'] .app-btn-accent {
+  border-color: #1e40af;
+  background: #1a56db;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(26, 86, 219, 0.25);
+}
+
+[data-app-theme='claro'] .app-btn-accent:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+}
+
+[data-app-theme='claro'] .app-btn-neutral {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #374151;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+[data-app-theme='claro'] .app-btn-neutral:hover:not(:disabled) {
+  border-color: #1a56db;
+  background: rgba(26, 86, 219, 0.04);
+  color: #1a56db;
+  transform: translateY(-1px);
+}
+
+[data-app-theme='claro'] .app-input {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+[data-app-theme='claro'] .app-input::placeholder {
+  color: #94a3b8;
+}
+
+[data-app-theme='claro'] .app-input:focus-visible {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+[data-app-theme='claro'] .app-select {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+[data-app-theme='claro'] .app-select:focus-visible {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+[data-app-theme='claro'] .app-chip {
+  border-color: rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  color: #374151;
+}
+
+[data-app-theme='claro'] .app-chip:hover:not(:disabled) {
+  border-color: #1a56db;
+  color: #1a56db;
+  background: rgba(26, 86, 219, 0.04);
+}
+
+[data-app-theme='claro'] .app-surface {
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+}
+
+[data-app-theme='claro'] .app-surface-soft {
+  background: rgba(248, 250, 252, 0.96);
+  color: #0f172a;
+}
+
+[data-app-theme='claro'] .app-muted { color: #64748b; }
+[data-app-theme='claro'] .app-subtle { color: #94a3b8; }
+
+[data-app-theme='claro'] .app-badge-positive {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+[data-app-theme='claro'] .app-badge-warn {
+  border: 1px solid #fde047;
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+[data-app-theme='claro'] .app-badge-danger {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* ── Foco — anel azul para tema claro ───────────────────────────────────── */
+[data-app-theme='claro'] .jl-focus-ring:focus-visible,
+[data-app-theme='claro'] input:focus-visible:not(.app-input):not(.login-premium-input),
+[data-app-theme='claro'] select:focus-visible:not(.app-select),
+[data-app-theme='claro'] textarea:focus-visible,
+[data-app-theme='claro'] button:focus-visible:not(.app-btn-accent):not(.app-btn-neutral):not(.app-btn-danger):not(.app-chip) {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(26, 86, 219, 0.45);
+}
+
+/* ── jl-modal fields — light mode ───────────────────────────────────────── */
+[data-app-theme='claro'] .jl-modal-field,
+[data-admin-v2] .jl-modal-field {
+  background-color: #ffffff;
+  border-color: rgba(203, 213, 225, 0.8);
+  color: #0f172a;
+}
+
+[data-app-theme='claro'] .jl-modal-field:focus,
+[data-admin-v2] .jl-modal-field:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+[data-app-theme='claro'] .jl-modal-select,
+[data-admin-v2] .jl-modal-select {
+  background-color: #ffffff;
+  border-color: rgba(203, 213, 225, 0.8);
+  color: #0f172a;
+}
+
+/* ── Gerente tables — claro via dragon-light já cobre, mas reforço ──────── */
+[data-gerente-ui-theme='dragon-light'] .gerente-fin-input:focus,
+[data-app-theme='claro'] .gerente-fin-input:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.2);
+}
+
+/* ── Globals — body/html light ───────────────────────────────────────────── */
+html[data-app-theme='claro'] {
+  background-color: #f1f5f9;
+}

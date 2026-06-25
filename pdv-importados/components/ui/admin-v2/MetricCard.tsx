@@ -1,6 +1,3 @@
-'use client'
-
-import { useEffect, useRef } from 'react'
 import {
   AlertCircle,
   DollarSign,
@@ -12,7 +9,6 @@ import {
   XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { drawSparkline, sparkColor, type SparkTone } from './sparkline'
 
 export type MetricCardIconKey =
   | 'dollar-sign'
@@ -39,7 +35,7 @@ type MetricCardProps = {
   label: string
   value: string
   sparkData?: number[]
-  tone?: SparkTone
+  tone?: string
   delta?: { value: string; up: boolean }
   deltaPositiveIsGood?: boolean
   icon?: MetricCardIconKey
@@ -50,8 +46,6 @@ type MetricCardProps = {
 export function MetricCard({
   label,
   value,
-  sparkData = [],
-  tone = 'gold',
   delta,
   deltaPositiveIsGood = true,
   icon,
@@ -59,19 +53,6 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   const Icon = icon ? METRIC_ICONS[icon] : null
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas || sparkData.length < 2) return
-
-    const render = () => drawSparkline(canvas, sparkData, sparkColor(tone))
-    render()
-
-    const ro = new ResizeObserver(render)
-    ro.observe(canvas)
-    return () => ro.disconnect()
-  }, [sparkData, tone])
 
   const deltaGood = delta
     ? deltaPositiveIsGood
@@ -101,7 +82,7 @@ export function MetricCard({
           <span
             className={cn(
               'shrink-0 text-xs font-semibold tabular-nums',
-              deltaGood ? 'text-emerald-400' : 'text-red-400',
+              deltaGood ? 'text-emerald-600' : 'text-red-600',
             )}
           >
             {delta.up ? '↑' : '↓'} {delta.value}
@@ -109,18 +90,11 @@ export function MetricCard({
         ) : null}
       </div>
 
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex items-end">
         <div className="min-w-0 flex-1">
           <div className="truncate text-3xl font-semibold leading-none tabular-nums text-jl-fg-1 md:text-4xl">
             {value}
           </div>
-        </div>
-        <div className="flex h-[44px] w-[100px] shrink-0 items-center justify-center">
-          {sparkData.length >= 2 ? (
-            <canvas ref={canvasRef} className="h-[44px] w-[100px] shrink-0" aria-hidden />
-          ) : (
-            <div className="h-[44px] w-[100px]" aria-hidden />
-          )}
         </div>
       </div>
 

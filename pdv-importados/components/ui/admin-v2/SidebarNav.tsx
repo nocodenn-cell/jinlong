@@ -17,7 +17,6 @@ import { StockAlertBadge } from '@/components/ui/StockAlertBadge'
 
 type SidebarNavProps = {
   admin: Mensagens['admin']
-  chineseLanguage: boolean
   /** Observabilidade visual (flag `pdv_config.show_stock_alerts`): contagem de itens em estoque baixo. */
   stockAlertCount?: number
 }
@@ -32,7 +31,7 @@ function isRouteActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarNavProps) {
+export function SidebarNav({ admin, stockAlertCount }: SidebarNavProps) {
   const pathname = usePathname()
   const [showMore, setShowMore] = useState(false)
 
@@ -45,27 +44,22 @@ export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarN
     const active = isRouteActive(pathname, href)
     const Icon = item.icon
     const ptLabel = item.labelOverridePt ?? item.labelPt ?? line?.pt ?? item.id
-    const primary = chineseLanguage && (line?.cn ?? item.labelCn) ? (line?.cn ?? item.labelCn) : ptLabel
-    const secondary = chineseLanguage && line ? ptLabel : item.labelCn && chineseLanguage ? item.labelPt ?? '' : ''
     const hintText = hint ?? ''
 
     return (
       <li key={item.id}>
         <Link
           href={href}
-          title={`${primary}${secondary ? ` · ${secondary}` : ''}${hintText ? ` — ${hintText}` : ''}`}
+          title={`${ptLabel}${hintText ? ` — ${hintText}` : ''}`}
           data-active={active}
           className={cn(
-            'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5',
-            'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[var(--color-brand-primary)]',
+            'admin-v2-nav-link flex items-center gap-3 rounded-md border border-transparent px-3 py-2.5',
+            'data-[active=true]:border-[var(--admin-v2-active-border)] data-[active=true]:bg-[var(--admin-v2-active-bg)] data-[active=true]:text-[var(--admin-v2-active-text)]',
           )}
         >
           <Icon className="h-4 w-4 shrink-0 opacity-80" strokeWidth={1.75} aria-hidden />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium leading-tight">{primary}</div>
-            {secondary ? (
-              <div className="truncate text-[11px] leading-tight text-jl-fg-3">{secondary}</div>
-            ) : null}
+            <div className="truncate text-sm font-medium leading-tight">{ptLabel}</div>
           </div>
           {badgeCount != null ? <StockAlertBadge count={badgeCount} /> : null}
         </Link>

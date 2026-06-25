@@ -17,7 +17,6 @@ type AdminV2ShellProps = {
 
 export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2ShellProps) {
   const { idioma } = session
-  const chineseLanguage = idioma !== 'pt'
   const m: Mensagens = getMessages(idioma)
   const admin = m.admin
 
@@ -30,17 +29,17 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
             <Link
               href={ROUTES.admin.dashboard}
               aria-label={m.login.nav_marca}
-              className="rounded-lg outline-none ring-offset-2 ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-amber-400/70"
+              className="rounded-lg outline-none ring-offset-2 ring-offset-slate-800 focus-visible:ring-2 focus-visible:ring-blue-400/70"
             >
               <img
                 src="/branding/brand-double-dragon.png"
-                alt="Jīn Lóng"
-                className="h-28 w-auto drop-shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+                alt="FastProduct"
+                className="h-10 w-auto"
                 draggable={false}
               />
             </Link>
           </div>
-          <SidebarNav admin={admin} chineseLanguage={chineseLanguage} stockAlertCount={stockAlertCount} />
+          <SidebarNav admin={admin} stockAlertCount={stockAlertCount} />
           <SidebarUserFooter session={session} />
         </aside>
 
