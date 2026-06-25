@@ -101,7 +101,7 @@ export function MetricCard({
           <span
             className={cn(
               'shrink-0 text-xs font-semibold tabular-nums',
-              deltaGood ? 'text-emerald-400' : 'text-red-400',
+              deltaGood ? 'text-success' : 'text-destructive',
             )}
           >
             {delta.up ? '↑' : '↓'} {delta.value}

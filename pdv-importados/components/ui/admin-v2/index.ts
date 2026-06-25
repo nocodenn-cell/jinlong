@@ -1,4 +1,5 @@
 export { AdminV2Shell } from './AdminV2Shell'
+export { AdminThemeScope } from './AdminThemeScope'
 export { SidebarNav } from './SidebarNav'
 export { SidebarUserFooter } from './SidebarUserFooter'
 export { AdminV2UtilityBar } from './AdminV2UtilityBar'

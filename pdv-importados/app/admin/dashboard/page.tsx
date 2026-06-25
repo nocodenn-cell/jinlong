@@ -522,17 +522,17 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           subtitle={L.lowStockSubtitle[lk]}
         >
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-bold tabular-nums text-[#c9a227]">
+            <span className="text-4xl font-bold tabular-nums text-jl-accent">
               {formatNumberLocale(estoqueBaixoCount, locale)}
             </span>
             <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>
           </div>
           {showStockAlerts && estoqueBaixoLista.length > 0 ? (
-            <ul className="mt-3 flex flex-col gap-1.5 border-t border-[#242424] pt-3">
+            <ul className="mt-3 flex flex-col gap-1.5 border-t border-jl-border-2 pt-3">
               {estoqueBaixoLista.map((item) => (
                 <li key={item.nome} className="flex items-center justify-between text-[12px]">
                   <span className="truncate text-jl-fg-2">{item.nome}</span>
-                  <span className="shrink-0 tabular-nums text-amber-400">
+                  <span className="shrink-0 tabular-nums text-jl-accent">
                     {item.quantidade_atual} / {item.estoque_minimo}
                   </span>
                 </li>
@@ -555,7 +555,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           ) : (
             <table className="w-full min-w-[800px] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-[#242424] text-left text-sm text-jl-fg-3">
+                <tr className="border-b border-jl-border-2 text-left text-sm text-jl-fg-3">
                   <th className="px-3 py-2 font-medium">{L.tableColId[lk]}</th>
                   <th className="px-3 py-2 font-medium">{L.tableColOperador[lk]}</th>
                   <th className="px-3 py-2 font-medium">{L.tableColData[lk]}</th>
@@ -566,7 +566,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               </thead>
               <tbody>
                 {latestOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-[#242424] transition-colors hover:bg-white/[0.03]">
+                  <tr key={order.id} className="border-b border-jl-border-2 transition-colors hover:bg-jl-card-l3-bg">
                     <td className="max-w-[120px] truncate px-3 py-3 font-medium text-jl-fg-1" title={order.id}>
                       {order.id}
                     </td>
