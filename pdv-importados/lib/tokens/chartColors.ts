@@ -56,8 +56,8 @@ export function resolveColorVar(varName: string): string {
 export const CHART_THEME_PRESETS = {
   default: {
     colors: CHART_COLORS,
-    gridStroke: 'rgba(36, 36, 36, 0.6)',  // #242424 with 60% opacity
-    tickColor: '#737373',
+    gridStroke: 'rgba(226, 232, 240, 0.8)',
+    tickColor: '#64748b',
   },
   oriental: {
     colors: [
@@ -82,5 +82,5 @@ export const RECHARTS_LABEL_STYLE = {
  * Estilo de cursor para tooltip (compatível com Recharts cursor prop)
  */
 export const RECHARTS_CURSOR_STYLE = {
-  fill: 'rgba(201, 162, 39, 0.12)', // Brand gold with low opacity
+  fill: 'rgba(26, 86, 219, 0.08)',
 }

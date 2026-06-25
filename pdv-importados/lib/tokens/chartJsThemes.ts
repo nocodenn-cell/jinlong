@@ -23,19 +23,16 @@ function resolveCSSVariable(varName: string, fallback: string): string {
  */
 export function getChartJsTheme() {
   return {
-    // Success (green) line for hourly sales
-    lineSuccess: resolveCSSVariable('--color-success-500', '#10b981'),
-    pointSuccess: resolveCSSVariable('--color-success-500', '#10b981'),
+    lineSuccess: resolveCSSVariable('--color-brand-primary', '#1a56db'),
+    pointSuccess: resolveCSSVariable('--color-brand-primary', '#1a56db'),
 
-    // Tooltip styling
-    tooltipBg: resolveCSSVariable('--color-background-secondary', '#111111'),
-    tooltipBorder: resolveCSSVariable('--color-border-secondary', '#242424'),
-    tooltipTitleColor: resolveCSSVariable('--color-text-secondary', '#a3a3a3'),
-    tooltipBodyColor: resolveCSSVariable('--color-text-primary', '#fafafa'),
+    tooltipBg: resolveCSSVariable('--color-background-secondary', '#ffffff'),
+    tooltipBorder: resolveCSSVariable('--color-border-secondary', '#e2e8f0'),
+    tooltipTitleColor: resolveCSSVariable('--color-text-secondary', '#334155'),
+    tooltipBodyColor: resolveCSSVariable('--color-text-primary', '#0f172a'),
 
-    // Grid and axes
-    gridColor: 'rgba(34,197,94,0.15)', // Success color with 15% opacity
-    tickColor: resolveCSSVariable('--color-text-tertiary', '#737373'),
+    gridColor: 'rgba(226, 232, 240, 0.8)',
+    tickColor: resolveCSSVariable('--color-text-tertiary', '#64748b'),
   }
 }
 
@@ -45,7 +42,7 @@ export function getChartJsTheme() {
  */
 export function createSuccessGradient(ctx: CanvasRenderingContext2D): CanvasGradient {
   const gradient = ctx.createLinearGradient(0, 0, 0, 140)
-  const successColor = resolveCSSVariable('--color-success-500', '#22c55e')
+  const successColor = resolveCSSVariable('--color-brand-primary', '#1a56db')
 
   // Parse hex to rgba
   const hex = successColor.replace('#', '')

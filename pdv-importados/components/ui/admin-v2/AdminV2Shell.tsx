@@ -7,6 +7,7 @@ import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { SidebarNav } from './SidebarNav'
 import { SidebarUserFooter } from './SidebarUserFooter'
+import { AdminTopbar } from './AdminTopbar'
 
 type AdminV2ShellProps = {
   session: AdminSession
@@ -15,10 +16,28 @@ type AdminV2ShellProps = {
   stockAlertCount?: number
 }
 
+function resolveUserName(session: AdminSession): string {
+  const metadata = session.user.user_metadata as Record<string, unknown> | null
+  const fullName = typeof metadata?.full_name === 'string' ? metadata.full_name.trim() : ''
+  if (fullName) return fullName
+  const name = typeof metadata?.name === 'string' ? metadata.name.trim() : ''
+  if (name) return name
+  return session.user.email?.split('@')[0]?.trim() ?? 'Usuário'
+}
+
+function resolveUserCargo(session: AdminSession): string {
+  if (session.perfil === 'DONO') return 'Dono'
+  if (session.perfil === 'ADMIN') return 'Administrador'
+  if (session.perfil === 'GERENTE') return 'Gerente'
+  return 'Operador'
+}
+
 export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2ShellProps) {
   const { idioma } = session
   const m: Mensagens = getMessages(idioma)
   const admin = m.admin
+  const userName = resolveUserName(session)
+  const userCargo = resolveUserCargo(session)
 
   return (
     <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[var(--color-background-primary)] text-jl-fg-1">
@@ -44,6 +63,7 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
         </aside>
 
         <main className="admin-v2-main relative min-w-0 flex-1">
+          <AdminTopbar userName={userName} userCargo={userCargo} />
           <div className="relative z-[1] min-h-full">{children}</div>
         </main>
       </div>

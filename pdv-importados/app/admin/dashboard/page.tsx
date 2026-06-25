@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import React, { type ReactNode } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Plus, ShoppingCart } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ActivityFeed, type ActivityItem } from '@/components/ui/ActivityFeed'
 import {
@@ -459,6 +459,26 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         filters={dashboardFilters}
       />
 
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap items-center gap-3">
+        <a
+          href={ROUTES.caixa.home}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-md bg-[#1a56db] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a56db]/50"
+        >
+          <ShoppingCart size={15} aria-hidden />
+          Novo Pedido
+        </a>
+        <Link
+          href={ROUTES.admin.catalogoNovo}
+          className="inline-flex items-center gap-2 rounded-md bg-[#1a56db] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a56db]/50"
+        >
+          <Plus size={15} aria-hidden />
+          Novo Produto
+        </Link>
+      </div>
+
       {periodSalesFailed && (
         <div className="mb-6 rounded-lg border-2 border-destructive/35 bg-destructive/10 px-4 py-4 text-sm text-destructive" role="alert">
           <div className="flex gap-2 font-semibold">
@@ -522,17 +542,17 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           subtitle={L.lowStockSubtitle[lk]}
         >
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-bold tabular-nums text-[#c9a227]">
+            <span className="text-4xl font-bold tabular-nums text-[#1a56db]">
               {formatNumberLocale(estoqueBaixoCount, locale)}
             </span>
             <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>
           </div>
           {showStockAlerts && estoqueBaixoLista.length > 0 ? (
-            <ul className="mt-3 flex flex-col gap-1.5 border-t border-[#242424] pt-3">
+            <ul className="mt-3 flex flex-col gap-1.5 border-t border-slate-100 pt-3">
               {estoqueBaixoLista.map((item) => (
                 <li key={item.nome} className="flex items-center justify-between text-[12px]">
                   <span className="truncate text-jl-fg-2">{item.nome}</span>
-                  <span className="shrink-0 tabular-nums text-amber-400">
+                  <span className="shrink-0 tabular-nums text-orange-600">
                     {item.quantidade_atual} / {item.estoque_minimo}
                   </span>
                 </li>
@@ -555,7 +575,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           ) : (
             <table className="w-full min-w-[800px] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-[#242424] text-left text-sm text-jl-fg-3">
+                <tr className="border-b border-slate-100 text-left text-sm text-jl-fg-3">
                   <th className="px-3 py-2 font-medium">{L.tableColId[lk]}</th>
                   <th className="px-3 py-2 font-medium">{L.tableColOperador[lk]}</th>
                   <th className="px-3 py-2 font-medium">{L.tableColData[lk]}</th>
@@ -566,7 +586,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               </thead>
               <tbody>
                 {latestOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-[#242424] transition-colors hover:bg-white/[0.03]">
+                  <tr key={order.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
                     <td className="max-w-[120px] truncate px-3 py-3 font-medium text-jl-fg-1" title={order.id}>
                       {order.id}
                     </td>
