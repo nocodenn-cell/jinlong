@@ -1,7 +1,5 @@
 import Link from 'next/link'
-import React, { type ReactNode } from 'react'
 import { AlertCircle } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { ActivityFeed, type ActivityItem } from '@/components/ui/ActivityFeed'
 import {
   ChartCard,
@@ -16,6 +14,7 @@ import { SalesTrendChartLazy } from './SalesTrendChartLazy'
 import { PaymentDonutChartLazy } from './PaymentDonutChartLazy'
 import { DashboardChart } from './_components/DashboardChart'
 import { CaixaShortcut } from './_components/CaixaShortcut'
+import { RecentOrdersTable, type RecentOrderRow } from './_components/RecentOrdersTable'
 import {
   dateKey,
   formatTrendPercent,
@@ -52,15 +51,6 @@ type Metric = {
 
 type VendaStatus = 'CONCLUIDA' | 'CANCELADA'
 
-type OrderRow = {
-  id: string
-  operador: string
-  valor: string
-  status: VendaStatus
-  data: string
-  formaPagamento: string
-}
-
 type HourlyPoint = {
   label: string
   total: number
@@ -92,20 +82,6 @@ function ErrorBanner({ messages, title }: { messages: string[]; title: string })
       </ul>
     </div>
   )
-}
-
-function statusBadge(status: VendaStatus, labels: { concluida: string; cancelada: string }): ReactNode {
-  const label = status === 'CONCLUIDA' ? labels.concluida : labels.cancelada
-  const config: Record<VendaStatus, { className: string }> = {
-    CONCLUIDA: {
-      className: 'border border-success/30 bg-success/20 text-success',
-    },
-    CANCELADA: {
-      className: 'border border-destructive/30 bg-destructive/20 text-destructive',
-    },
-  }
-  const meta = config[status]
-  return <Badge className={meta.className}>{label}</Badge>
 }
 
 type PageProps = {
@@ -407,12 +383,14 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     },
   ]
 
-  const latestOrders: OrderRow[] = recentOrdersRaw.map((o) => ({
+  const latestOrders: RecentOrderRow[] = recentOrdersRaw.map((o) => ({
     id: o.id,
     operador: o.operador_id ? (userById.get(o.operador_id) ?? '—') : '—',
     valor: formatBRL(Number(o.total_liquido ?? 0), locale),
+    valorRaw: Number(o.total_liquido ?? 0),
     status: o.status,
     data: formatDateTimeLocaleDefault(o.data, locale),
+    dataRaw: o.data,
     formaPagamento: o.forma_pagamento,
   }))
   const amountByOrderId = new Map(
@@ -547,53 +525,26 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       </div>
 
       <SectionCard title={L.tableTitle[lk]}>
-        <div className="overflow-x-auto">
-          {tableLoadFailed ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-6 text-center text-sm text-destructive">
-              {adminUi.errors.tableLoadFailed[lk]}
-            </div>
-          ) : (
-            <table className="w-full min-w-[800px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[#242424] text-left text-sm text-jl-fg-3">
-                  <th className="px-3 py-2 font-medium">{L.tableColId[lk]}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColOperador[lk]}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColData[lk]}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColValor[lk]}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColPagamento[lk]}</th>
-                  <th className="px-3 py-2 font-medium">{L.tableColStatus[lk]}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {latestOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-[#242424] transition-colors hover:bg-white/[0.03]">
-                    <td className="max-w-[120px] truncate px-3 py-3 font-medium text-jl-fg-1" title={order.id}>
-                      {order.id}
-                    </td>
-                    <td className="max-w-[160px] truncate px-3 py-3 text-jl-fg-2" title={order.operador}>
-                      {order.operador}
-                    </td>
-                    <td className="px-3 py-3 text-jl-fg-2">{order.data}</td>
-                    <td className="px-3 py-3 tabular-nums text-jl-fg-1">{order.valor}</td>
-                    <td className="max-w-[140px] truncate px-3 py-3 text-jl-fg-2" title={order.formaPagamento}>
-                      {order.formaPagamento}
-                    </td>
-                    <td className="px-3 py-3">
-                      {statusBadge(order.status, { concluida: L.statusDone[lk], cancelada: L.statusCancelled[lk] })}
-                    </td>
-                  </tr>
-                ))}
-                {latestOrders.length === 0 && !tableLoadFailed && (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-jl-fg-3">
-                      <p className="font-medium">{L.tableEmpty[lk]}</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+        {tableLoadFailed ? (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-6 text-center text-sm text-destructive">
+            {adminUi.errors.tableLoadFailed[lk]}
+          </div>
+        ) : (
+          <RecentOrdersTable
+            orders={latestOrders}
+            labels={{
+              colId: L.tableColId[lk],
+              colOperador: L.tableColOperador[lk],
+              colData: L.tableColData[lk],
+              colValor: L.tableColValor[lk],
+              colPagamento: L.tableColPagamento[lk],
+              colStatus: L.tableColStatus[lk],
+              statusDone: L.statusDone[lk],
+              statusCancelled: L.statusCancelled[lk],
+              empty: L.tableEmpty[lk],
+            }}
+          />
+        )}
       </SectionCard>
 
       <footer className="text-center text-jl-fg-3">
