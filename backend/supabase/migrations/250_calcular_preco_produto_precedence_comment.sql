@@ -1,4 +1,4 @@
--- Migration 245: documenta formalmente a regra de precedência de preço na RPC.
+-- Migration 250: documenta formalmente a regra de precedência de preço na RPC.
 --
 -- Problema anterior:
 --   Três fontes de preço coexistiam (precos_atacado, produtos.preco_atacado,
