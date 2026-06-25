@@ -114,7 +114,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
               </td>
             </tr>
             <tr className="border-b border-[#1e1e1e]">
-              <td className="py-2 pr-4 text-jl-fg-3">(-) Despesas pagas (contas a pagar)</td>
+              <td className="py-2 pr-4 text-jl-fg-3">(-) Despesas pagas (contas a pagar, regime de caixa)</td>
               <td className="py-2 tabular-nums text-right text-red-400">
                 {despesasPagas !== null ? `(${fmtBrl(despesasPagas)})` : '—'}
               </td>
@@ -135,6 +135,9 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
             : 'Não foi possível carregar as despesas pagas no período.'}
         </p>
       ) : null}
+      <p className="mt-2 text-[11px] text-jl-fg-3">
+        Receitas: regime de competência (data da venda). Despesas: regime de caixa (data do pagamento).
+      </p>
     </SectionCard>
 
     <RelatoriosContent

@@ -108,7 +108,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
   }
 
   const supabase = await createClient()
-  const consistenciaFrom = filtro.inicio ?? new Date(Date.now() - 7 * 86_400_000).toISOString()
+  const consistenciaFrom = filtro.inicio ?? (periodo === 'tudo' ? '2000-01-01T00:00:00.000Z' : new Date(Date.now() - 7 * 86_400_000).toISOString())
   const consistenciaTo = filtro.fim ?? new Date().toISOString()
 
   const [resEventos, resConsistencia] = await Promise.all([

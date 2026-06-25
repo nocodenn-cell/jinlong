@@ -227,12 +227,14 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
     margem_estimada: number | null
     custo_confiavel: boolean
     cobertura_custo: number
+    quantidade_vendas_hoje: number
   }
   const gerenteResumoRaw = !gerenteResumoRes.error && gerenteResumoRes.data
     ? (gerenteResumoRes.data as GerenteResumoRaw)
     : null
   const margemHoje = gerenteResumoRaw?.margem_estimada ?? null
   const margemCustoConfiavel = gerenteResumoRaw?.custo_confiavel ?? false
+  const qtdVendasHoje = gerenteResumoRaw?.quantidade_vendas_hoje ?? 0
 
   const flagsVisuaisRow = Array.isArray(flagsVisuaisRes.data)
     ? flagsVisuaisRes.data[0]
@@ -506,6 +508,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           <span className="text-[11px] font-semibold uppercase tracking-wider text-jl-fg-3">Margem bruta estimada (hoje)</span>
           {margemCustoConfiavel && margemHoje !== null ? (
             <span className="text-[22px] font-bold tabular-nums text-emerald-400">{formatBRL(margemHoje, locale)}</span>
+          ) : qtdVendasHoje === 0 ? (
+            <span className="text-[13px] text-jl-fg-3">Sem vendas hoje</span>
           ) : (
             <span className="text-[13px] text-jl-fg-3">
               Indisponível — cobertura de custo {gerenteResumoRaw ? `${(Number(gerenteResumoRaw.cobertura_custo) * 100).toFixed(0)}%` : ''} {'('}mín. 95% necessário{')'}
