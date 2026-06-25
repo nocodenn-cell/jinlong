@@ -1,0 +1,31 @@
+{
+  "total": 79,
+  "byFile": {
+    "app/admin/auditoria/_components/AuditoriaTimeline.tsx": 3,
+    "app/admin/auditoria/page.tsx": 2,
+    "app/admin/catalogo/_components/CatalogoPublicacaoActions.tsx": 1,
+    "app/admin/catalogo/_components/CatalogoTable.tsx": 4,
+    "app/admin/catalogo/page.tsx": 8,
+    "app/admin/categorias-financeiras/_components/CategoriasFinanceirasContent.tsx": 4,
+    "app/admin/categorias-produtos/_components/CategoriasProdutosContent.tsx": 4,
+    "app/admin/comissoes/_components/ComissoesContent.tsx": 7,
+    "app/admin/configuracoes/_components/ConfiguracoesContent.tsx": 1,
+    "app/admin/dashboard/page.tsx": 4,
+    "app/admin/estoque/_components/EstoqueTable.tsx": 1,
+    "app/admin/estoque/_components/KardexSheet.tsx": 3,
+    "app/admin/estoque/page.tsx": 8,
+    "app/admin/financeiro/_components/FinanceiroPanels.tsx": 4,
+    "app/admin/financeiro/page.tsx": 1,
+    "app/admin/loading.tsx": 1,
+    "app/admin/relatorios/_components/RelatoriosPeriodFilters.tsx": 2,
+    "app/admin/suspensao/_components/SuspensaoContent.tsx": 1,
+    "app/admin/vendas/_components/VendaDetailSheet.tsx": 4,
+    "app/admin/vendas/_components/VendasTable.tsx": 1,
+    "app/admin/vendas/page.tsx": 5,
+    "app/gerente/comissoes/ComissoesPageClient.tsx": 1,
+    "app/gerente/suspensao/SuspensaoPageClient.tsx": 1,
+    "app/login/LoginForm.tsx": 1,
+    "app/login/page.tsx": 1,
+    "components/legal/DocumentoLegal.tsx": 6
+  }
+}

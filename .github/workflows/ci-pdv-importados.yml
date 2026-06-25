@@ -50,6 +50,9 @@ jobs:
       - name: Architecture Lock (core rules, PDV flow, routes)
         run: npm run guard:all
 
+      - name: Design System Lock (sem cor Tailwind hardcoded fora de src/ui)
+        run: npm run guard:ui -w pdv-importados
+
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
 

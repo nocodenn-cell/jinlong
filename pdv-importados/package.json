@@ -21,6 +21,8 @@
     "test:e2e:post-deploy-smoke": "node scripts/e2e-post-deploy-smoke.mjs",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
+    "guard:ui": "node scripts/ui-tailwind-guard.mjs",
+    "guard:ui:update": "node scripts/ui-tailwind-guard.mjs --update",
     "env:check": "node scripts/check-env.mjs",
     "smoke:http": "node scripts/smoke-routes.mjs",
     "test:cors:validar-gerente": "node scripts/test-cors-validar-gerente.mjs",
