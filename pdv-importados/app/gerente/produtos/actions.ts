@@ -44,7 +44,6 @@ import {
 } from '@/lib/gerente/produtoImagemStorage'
 import { motivoBloqueioExclusaoFisica } from '@/lib/gerente/produtoExclusaoLote'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
-import { refinePrecoAtacadoMenorQueVarejo } from './produtoPrecoValidacao'
 
 const NovoProdutoSchema = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
@@ -83,7 +82,15 @@ const NovoProdutoSchema = z.object({
     .transform((s) => s?.trim().replace(/\D/g, '') || null)
     .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
     .nullable(),
-}).superRefine(refinePrecoAtacadoMenorQueVarejo)
+}).superRefine((data, ctx) => {
+  if (data.preco_atacado !== null && data.preco_atacado >= data.preco_varejo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['preco_atacado'],
+      message: 'O preço de atacado deve ser menor que o preço de varejo.',
+    })
+  }
+})
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -599,7 +606,15 @@ const EditarProdutoCatalogoSchema = z.object({
     .nullable(),
   cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
   cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
-}).superRefine(refinePrecoAtacadoMenorQueVarejo)
+}).superRefine((data, ctx) => {
+  if (data.preco_atacado !== null && data.preco_atacado >= data.preco_varejo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['preco_atacado'],
+      message: 'O preço de atacado deve ser menor que o preço de varejo.',
+    })
+  }
+})
 
 export type ResultadoExclusaoLote = Readonly<{
   removidos: number
