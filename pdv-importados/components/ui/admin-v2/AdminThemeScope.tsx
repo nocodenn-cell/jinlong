@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { resolveTheme } from '@/lib/theme/themeRegistry'
+import { isClassicoPath } from '@/lib/theme/themeRegistry'
 
 /**
  * Aplica o tema visual da rota atual à subárvore (shell, sidebar, topbar e
@@ -18,10 +18,10 @@ import { resolveTheme } from '@/lib/theme/themeRegistry'
  */
 export function AdminThemeScope({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname()
-  const theme = resolveTheme(pathname ?? '')
+  const classico = isClassicoPath(pathname ?? '')
 
   return (
-    <div className="contents" data-theme={theme === 'classico' ? 'classico' : undefined}>
+    <div className="contents" data-theme={classico ? 'classico' : undefined}>
       {children}
     </div>
   )

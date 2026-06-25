@@ -37,4 +37,10 @@
   --cl-danger:     #dc2626;
   --cl-danger-bg:  #fef2f2;
   --cl-info:       var(--cl-blue-600);
+
+  /* Raio e sombras — discretos, sem glow (espaçamento/tipografia ficam a cargo
+   * do Tailwind, como no resto do app; só tokenizamos o que muda entre temas). */
+  --cl-radius-lg: 8px;
+  --cl-shadow:    0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --cl-shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
