@@ -1,34 +1,50 @@
 -- 226_rls_movimentos_caixa_insert_amarra_loja.sql
 --
--- SEGURANÇA (escopo de loja no INSERT direto de movimentos_caixa).
+-- OBSOLETA — não aplicar.
 --
--- Problema: a policy `movimentos_insert` só exigia `auth.role() = 'authenticated'`.
--- Qualquer usuário autenticado podia, via REST direto, inserir um movimento
--- referenciando QUALQUER caixa_id — inclusive de outra loja — sem ser dono do
--- caixa nem gerente. Não amarrava à loja nem ao operador.
+-- Contexto original: visava corrigir a policy `movimentos_insert` em `movimentos_caixa`
+-- que permitia INSERT de qualquer usuário autenticado em qualquer caixa.
 --
--- Fix: o INSERT direto passa a exigir que o caixa referenciado seja da MESMA loja
--- do usuário E que o usuário seja o operador dono do caixa OU GERENTE/DONO/ADMIN.
--- Espelha o padrão de `vendas_insert_loja` e das policies de `caixas`.
+-- Por que está obsoleta:
+--   1. A policy `movimentos_insert` NÃO existe em produção em `movimentos_caixa`.
+--      Aplicar este ALTER falharia com erro 42704 (undefined_object).
+--   2. `movimentos_caixa` é uma tabela legada. A tabela ativa é `movimentacoes_caixa`.
+--   3. Toda escrita em `movimentos_caixa` passa por RPCs SECURITY DEFINER
+--      (registrar_movimentacao, aprovar_movimentacao, etc.) — RLS default-deny
+--      já bloqueia INSERT direto. O estado atual é mais seguro que o que a
+--      migration pretendia corrigir.
 --
--- IMPACTO NULO no fluxo do caixa: registrar/aprovar/cancelar/estornar movimentação
--- passam por RPCs SECURITY DEFINER (registrar_movimentacao etc.), que rodam fora da
--- RLS. Nenhum caminho da aplicação faz INSERT direto nesta tabela.
+-- Evidência (consultada em 2026-06-25):
+--   SELECT policyname FROM pg_policies
+--   WHERE tablename = 'movimentos_caixa';
+--   → movimentos_gerente (SELECT only) — sem INSERT policy
 --
--- ALTER POLICY (não DROP/CREATE): sem janela de deny. Preserva o initplan
--- `( SELECT auth.uid() )` introduzido na migration 224.
+-- Esta migration é mantida como documentação histórica. O arquivo de rollback
+-- (226_rollback_*) também está obsoleto pelo mesmo motivo.
 
-ALTER POLICY movimentos_insert ON public.movimentos_caixa
-  WITH CHECK (
-    EXISTS (
-      SELECT 1
-      FROM public.caixas c
-      JOIN public.usuarios u ON u.id = ( SELECT auth.uid() )
-      WHERE c.id = movimentos_caixa.caixa_id
-        AND c.loja_id = u.loja_id
-        AND (
-          c.operador_id = ( SELECT auth.uid() )
-          OR u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'movimentos_caixa'
+      AND policyname = 'movimentos_insert'
+  ) THEN
+    ALTER POLICY movimentos_insert ON public.movimentos_caixa
+      WITH CHECK (
+        EXISTS (
+          SELECT 1
+          FROM public.caixas c
+          JOIN public.usuarios u ON u.id = ( SELECT auth.uid() )
+          WHERE c.id = movimentos_caixa.caixa_id
+            AND c.loja_id = u.loja_id
+            AND (
+              c.operador_id = ( SELECT auth.uid() )
+              OR u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])
+            )
         )
-    )
-  );
+      );
+    RAISE NOTICE '226: policy movimentos_insert atualizada.';
+  ELSE
+    RAISE NOTICE '226: policy movimentos_insert não existe — nenhuma ação (esperado).';
+  END IF;
+END $$;
