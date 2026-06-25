@@ -15,6 +15,7 @@ import type { Mensagens } from '@/i18n/getMessages'
 import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
 import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
+import { TableRowActionBtn, TableRowActionLink } from '@/components/ui/admin-v2/TableRowAction'
 
 // CatalogoProduto é ProdutoGerenteRow com o campo sku computado adicionado.
 // Sendo superconjunto de ProdutoGerenteRow, pode ser passado diretamente ao modal de edição.
@@ -54,26 +55,6 @@ const STATUS_BADGE_CLASS: Record<StatusPublicacao, string> = {
   INATIVO: 'admin-v2-badge-muted',
 }
 
-function ActionBtn({
-  href,
-  label,
-  children,
-}: {
-  href: string
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
-    >
-      {children}
-    </Link>
-  )
-}
 
 export function CatalogoTable({
   produtos,
@@ -116,7 +97,7 @@ export function CatalogoTable({
       sortValue: (r) => r.nome,
       cell: (row) => (
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#242424] bg-[#111111]">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-50">
             {row.imagem_url ? (
               // eslint-disable-next-line @next/next/no-img-element -- dynamic catalog URLs; dimensions unknown at build
               <img src={row.imagem_url} alt="" className="h-full w-full object-cover" />
@@ -160,7 +141,7 @@ export function CatalogoTable({
         if (r.quantidade_atual === null) return <span className="text-jl-fg-3">—</span>
         const v = r.quantidade_atual
         return (
-          <span className={v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400'}>{v}</span>
+          <span className={v <= 0 ? 'font-medium text-red-500' : 'text-emerald-600'}>{v}</span>
         )
       },
     },
@@ -241,18 +222,16 @@ export function CatalogoTable({
               status={row.status_publicacao}
               labels={{ publicar: labels.publicar, inativar: labels.inativar }}
             />
-            <button
-              type="button"
-              aria-label={`Editar ${row.nome}`}
-              title={`Editar ${row.nome}`}
+            <TableRowActionBtn
+              variant="edit"
+              label={`Editar ${row.nome}`}
               onClick={() => setEditando(row)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
             >
               <Pencil size={13} aria-hidden />
-            </button>
-            <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
+            </TableRowActionBtn>
+            <TableRowActionLink href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
               <Eye size={13} aria-hidden />
-            </ActionBtn>
+            </TableRowActionLink>
           </div>
         )}
       />

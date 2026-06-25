@@ -6,6 +6,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
+import { TableRowActionBtn } from '@/components/ui/admin-v2/TableRowAction'
 
 export type VendaLinha = {
   id: string
@@ -131,30 +132,6 @@ function HoraCell({ data }: { data: string | null }) {
   )
 }
 
-function ActionBtn({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick()
-      }}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
-    >
-      {children}
-    </button>
-  )
-}
 
 export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: VendasLabels }) {
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
@@ -234,9 +211,12 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
         onRowClick={(r) => setAlvo({ id: r.id })}
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            <ActionBtn label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
+            <TableRowActionBtn
+              label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`}
+              onClick={(e) => { e.stopPropagation(); setAlvo({ id: row.id }) }}
+            >
               <Eye size={13} aria-hidden />
-            </ActionBtn>
+            </TableRowActionBtn>
           </div>
         )}
       />

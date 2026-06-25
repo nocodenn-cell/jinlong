@@ -248,7 +248,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   )
 
   const countBadge = (
-    <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+    <span className="rounded-full border border-slate-100 bg-slate-50 px-2.5 py-0.5 text-[11px] text-jl-fg-3">
       {totalCount} {totalCount === 1 ? ui.catalogo_produto_sg : ui.catalogo_produtos_pl}
     </span>
   )
@@ -261,7 +261,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         filters={headerActions}
       />
 
-      <div className="mb-4 border-b border-[#242424] pb-3">
+      <div className="mb-4 border-b border-slate-100 pb-3">
         <Suspense fallback={<div className="h-9" />}>
           <FilterBar filters={filters} />
         </Suspense>
@@ -352,7 +352,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="cursor-not-allowed rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
+      <span className="cursor-not-allowed rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] text-slate-400 opacity-50">
         {children}
       </span>
     )
@@ -360,7 +360,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
+      className="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
     >
       {children}
     </Link>
@@ -384,7 +384,7 @@ function PageNumber({
         'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-[11px] font-medium transition-colors ' +
         (active
           ? 'border border-jl-accent/35 bg-jl-accent/10 text-jl-accent'
-          : 'border border-[#242424] text-jl-fg-3 hover:bg-[#161616] hover:text-jl-fg-1')
+          : 'border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-700')
       }
     >
       {children}

@@ -90,7 +90,7 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
       sortValue: (r) => r.valor_pago,
       cell: (r) =>
         r.valor_pago > 0 ? (
-          <span className="text-[12px] font-medium text-emerald-400">{formatBRL(r.valor_pago)}</span>
+          <span className="text-[12px] font-medium text-emerald-600">{formatBRL(r.valor_pago)}</span>
         ) : (
           <span className="text-[12px] text-jl-fg-3">—</span>
         ),
@@ -102,9 +102,9 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
       sortValue: (r) => r.valor_aberto,
       cell: (r) =>
         r.valor_aberto > 0 ? (
-          <span className="text-[12px] font-medium text-red-400">{formatBRL(r.valor_aberto)}</span>
+          <span className="text-[12px] font-medium text-red-500">{formatBRL(r.valor_aberto)}</span>
         ) : (
-          <span className="text-[12px] text-emerald-400">{labels.statusQuitado}</span>
+          <span className="text-[12px] text-emerald-600">{labels.statusQuitado}</span>
         ),
     },
     {

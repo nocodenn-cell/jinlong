@@ -207,7 +207,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       <SectionCard
         title="Trilha de eventos"
         action={
-          <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+          <span className="rounded-full border border-slate-100 bg-slate-50 px-2.5 py-0.5 text-[11px] text-jl-fg-3">
             {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
           </span>
         }

@@ -6,6 +6,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { cn } from '@/lib/utils'
 import { AjusteSaldoModal, type AjusteAlvo } from './AjusteSaldoModal'
 import { KardexSheet, type KardexAlvo } from './KardexSheet'
+import { TableRowActionBtn } from '@/components/ui/admin-v2/TableRowAction'
 
 export type EstoqueLinha = {
   id: string
@@ -76,35 +77,11 @@ function severidadeSaldo(atual: number | null, minimo: number | null): Severity 
 }
 
 const SEV_CLASS: Record<Severity, string> = {
-  zero: 'font-semibold text-red-400',
-  low: 'font-semibold text-amber-400',
-  ok: 'text-emerald-400',
+  zero: 'font-semibold text-red-500',
+  low: 'font-semibold text-amber-600',
+  ok: 'text-emerald-600',
 }
 
-function ActionBtn({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick()
-      }}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
-    >
-      {children}
-    </button>
-  )
-}
 
 export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; labels: EstoqueLabels }) {
   const [ajusteAlvo, setAjusteAlvo] = useState<AjusteAlvo | null>(null)
@@ -152,7 +129,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
       sortValue: (r) => r.deficit ?? 0,
       cell: (r) =>
         r.deficit != null && r.deficit > 0 ? (
-          <span className="font-medium text-amber-400">-{r.deficit}</span>
+          <span className="font-medium text-amber-600">-{r.deficit}</span>
         ) : (
           <span className="text-jl-fg-3">—</span>
         ),
@@ -202,7 +179,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            <ActionBtn
+            <TableRowActionBtn
+              variant="edit"
               label={`${labels.ajusteTitulo} ${row.nome}`}
               onClick={() =>
                 setAjusteAlvo({
@@ -214,13 +192,13 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
               }
             >
               <SlidersHorizontal size={13} aria-hidden />
-            </ActionBtn>
-            <ActionBtn
+            </TableRowActionBtn>
+            <TableRowActionBtn
               label={`${labels.kardexTitulo} ${row.nome}`}
               onClick={() => setKardexAlvo({ produtoId: row.id, produtoNome: row.nome })}
             >
               <History size={13} aria-hidden />
-            </ActionBtn>
+            </TableRowActionBtn>
           </div>
         )}
       />

@@ -157,7 +157,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           />
         </div>
 
-        <div className="border-b border-[#242424] pb-3">
+        <div className="border-b border-slate-100 pb-3">
           <Suspense fallback={<div className="h-9" />}>
             <FilterBar filters={filterDefs} />
           </Suspense>
