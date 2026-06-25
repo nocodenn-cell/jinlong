@@ -44,6 +44,7 @@ import {
 } from '@/lib/gerente/produtoImagemStorage'
 import { motivoBloqueioExclusaoFisica } from '@/lib/gerente/produtoExclusaoLote'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
+import { refinePrecoAtacadoMenorQueVarejo } from './produtoPrecoValidacao'
 
 const NovoProdutoSchema = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
@@ -82,7 +83,7 @@ const NovoProdutoSchema = z.object({
     .transform((s) => s?.trim().replace(/\D/g, '') || null)
     .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
     .nullable(),
-})
+}).superRefine(refinePrecoAtacadoMenorQueVarejo)
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -598,7 +599,7 @@ const EditarProdutoCatalogoSchema = z.object({
     .nullable(),
   cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
   cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
-})
+}).superRefine(refinePrecoAtacadoMenorQueVarejo)
 
 export type ResultadoExclusaoLote = Readonly<{
   removidos: number
