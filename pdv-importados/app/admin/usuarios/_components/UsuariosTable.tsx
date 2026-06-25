@@ -29,11 +29,13 @@ const PERFIL_LABEL: Record<string, string> = {
 
 function PerfilPill({ perfil }: { perfil: string }) {
   const cls =
-    perfil === 'ADMIN' || perfil === 'DONO'
-      ? 'admin-v2-badge-warning'
+    perfil === 'DONO'
+      ? 'admin-v2-badge-success'
       : perfil === 'GERENTE'
-        ? 'admin-v2-badge-gold'
-        : 'admin-v2-badge-muted'
+        ? 'admin-v2-badge-warning'
+        : perfil === 'OPERADOR'
+          ? 'admin-v2-badge-info'
+          : 'admin-v2-badge-muted'
   return (
     <span
       className={cn(

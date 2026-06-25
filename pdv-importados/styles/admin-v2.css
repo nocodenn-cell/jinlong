@@ -24,12 +24,12 @@
   --admin-v2-shadow-card: 0 12px 28px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
   --admin-v2-chart-h: 260px;
 
-  --admin-v2-active-bg: color-mix(in srgb, var(--color-chart-gold) 10%, transparent);
-  --admin-v2-active-border: color-mix(in srgb, var(--color-chart-gold) 55%, transparent);
-  --admin-v2-active-text: color-mix(in srgb, var(--color-chart-gold) 90%, white);
+  --admin-v2-active-bg: color-mix(in srgb, var(--color-success-500) 10%, transparent);
+  --admin-v2-active-border: color-mix(in srgb, var(--color-success-500) 55%, transparent);
+  --admin-v2-active-text: color-mix(in srgb, var(--color-success-500) 90%, white);
 
-  /* Navegação estilo Bling: indicador lateral + hover sutil */
-  --admin-v2-nav-active-indicator: var(--color-chart-gold);
+  /* Navegação estilo Bling: indicador lateral verde + hover sutil */
+  --admin-v2-nav-active-indicator: var(--color-success-500);
   --admin-v2-nav-hover-bg: rgba(255, 255, 255, 0.04);
 
   color-scheme: dark;
@@ -323,6 +323,12 @@
   border: 1px solid color-mix(in srgb, var(--color-chart-gold) 42%, transparent);
   background: color-mix(in srgb, var(--color-chart-gold) 15%, transparent);
   color: var(--admin-v2-accent-gold);
+}
+
+[data-admin-v2] .admin-v2-badge-info {
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
 }
 
 [data-admin-v2] .admin-v2-input {
