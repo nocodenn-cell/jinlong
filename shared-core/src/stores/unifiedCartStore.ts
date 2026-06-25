@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '../pricing/types'
-import type { PricingDecisionEnvelope } from '../pricing/decision'
 import {
   DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL,
   aplicarDescontoGerenteSobreTotal,
@@ -29,13 +28,6 @@ export interface ItemCarrinho {
     descontoUnitario: number
     tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
   }
-  /**
-   * Slot de transporte (Etapa 2): envelope estrutural de decisão de pricing.
-   * Opcional e INERTE por desenho — nada o popula nem o lê ainda. A população
-   * deve nascer junto com o primeiro consumidor de UI, para não virar
-   * acoplamento morto. Não participa de cálculo, store ou persistência.
-   */
-  decisao?: PricingDecisionEnvelope
 }
 
 export interface CarrinhoState {
