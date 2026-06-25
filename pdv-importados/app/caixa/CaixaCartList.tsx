@@ -209,8 +209,16 @@ const CartRowDesktop = memo(function CartRowDesktop({
         )}
       </div>
       <div className="text-right tabular-nums text-sm">
-        {moeda}{" "}
-        {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
+        <div>
+          {moeda}{" "}
+          {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
+        </div>
+        {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
+          <div className="text-success text-[10px]">
+            ↓ {moeda}{" "}
+            {formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)}
+          </div>
+        ) : null}
       </div>
       <TipoPrecoBadge m={m} tipo={res.tipoPreco} />
     </li>
@@ -296,6 +304,12 @@ const CartCardMobile = memo(function CartCardMobile({
               {moeda}{" "}
               {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
             </span>
+            {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
+              <span className="text-success text-[10px] block">
+                ↓ {moeda}{" "}
+                {formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
