@@ -80,11 +80,16 @@ BEGIN
   v_ticket_sem_atual := CASE WHEN v_qtd_sem_atual > 0 THEN ROUND(v_fat_sem_atual/v_qtd_sem_atual,2) ELSE 0 END;
   v_ticket_sem_ant   := CASE WHEN v_qtd_sem_ant   > 0 THEN ROUND(v_fat_sem_ant  /v_qtd_sem_ant,  2) ELSE 0 END;
 
+  -- F9-B (migration 253): receita = total_liquido (já inclui descontos de gerente)
+  SELECT COALESCE(SUM(v.total_liquido), 0)::numeric(14,2)
+  INTO v_receita
+  FROM public.vendas v JOIN public.caixas c ON c.id = v.caixa_id AND c.loja_id = p_loja_id
+  WHERE v.status = 'CONCLUIDA' AND (v.data AT TIME ZONE v_tz)::date = v_hoje;
+
   SELECT COALESCE(SUM(iv.quantidade),0)::numeric(14,3),
          COALESCE(SUM(CASE WHEN p.preco_custo IS NOT NULL THEN iv.quantidade ELSE 0 END),0)::numeric(14,3),
-         COALESCE(SUM(iv.quantidade * iv.preco_unitario),0)::numeric(14,2),
          COALESCE(SUM(CASE WHEN p.preco_custo IS NOT NULL THEN iv.quantidade * p.preco_custo ELSE 0 END),0)::numeric(14,2)
-  INTO v_itens_total, v_itens_com_custo, v_receita, v_custo
+  INTO v_itens_total, v_itens_com_custo, v_custo
   FROM public.vendas v JOIN public.caixas c ON c.id = v.caixa_id AND c.loja_id = p_loja_id
   JOIN public.itens_venda iv ON iv.venda_id = v.id JOIN public.produtos p ON p.id = iv.produto_id
   WHERE v.status = 'CONCLUIDA' AND (v.data AT TIME ZONE v_tz)::date = v_hoje;
