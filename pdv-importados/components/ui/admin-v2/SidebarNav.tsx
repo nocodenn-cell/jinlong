@@ -57,7 +57,7 @@ export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarN
           data-active={active}
           className={cn(
             'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5',
-            'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[var(--color-brand-primary)]',
+            'data-[active=true]:border-[var(--jl-accent-soft-border)] data-[active=true]:bg-[var(--jl-accent-soft-bg)] data-[active=true]:text-[var(--color-brand-primary)]',
           )}
         >
           <Icon className="h-4 w-4 shrink-0 opacity-80" strokeWidth={1.75} aria-hidden />

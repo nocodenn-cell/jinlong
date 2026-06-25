@@ -38,7 +38,7 @@ export function SidebarUserFooter({ session }: SidebarUserFooterProps) {
   return (
     <footer className="mt-auto border-t border-[var(--admin-v2-border)] p-4">
       <div className="flex items-center gap-3 rounded-lg border border-[var(--admin-v2-border)] bg-[var(--color-background-secondary)] p-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(251,191,36,0.35)] bg-[rgba(251,191,36,0.12)] text-xs font-semibold text-[var(--color-brand-primary)]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--jl-accent-soft-border)] bg-[var(--jl-accent-soft-bg)] text-xs font-semibold text-[var(--color-brand-primary)]">
           {initials}
         </div>
         <div className="min-w-0">

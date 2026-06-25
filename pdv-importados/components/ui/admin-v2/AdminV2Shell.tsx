@@ -30,12 +30,12 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
             <Link
               href={ROUTES.admin.dashboard}
               aria-label={m.login.nav_marca}
-              className="rounded-lg outline-none ring-offset-2 ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-amber-400/70"
+              className="rounded-lg outline-none ring-offset-2 ring-offset-[var(--jl-ring-offset)] focus-visible:ring-2 focus-visible:ring-[var(--jl-focus-ring)]"
             >
               <img
                 src="/branding/brand-double-dragon.png"
                 alt="Jīn Lóng"
-                className="h-28 w-auto drop-shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+                className="h-28 w-auto drop-shadow-[0_0_12px_var(--jl-logo-glow)]"
                 draggable={false}
               />
             </Link>

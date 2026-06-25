@@ -28,6 +28,11 @@
   --admin-v2-active-border: color-mix(in srgb, var(--color-chart-gold) 62%, transparent);
   --admin-v2-active-text: color-mix(in srgb, var(--color-chart-gold) 85%, white);
 
+  /* Overlays sutis — defaults Dragon (branco translúcido sobre superfície escura).
+   * O tema Clássico reatribui para escuro translúcido sobre fundo claro. */
+  --admin-v2-overlay-faint: rgba(255, 255, 255, 0.04);
+  --admin-v2-dot-ring: rgba(255, 255, 255, 0.03);
+
   color-scheme: dark;
   background-color: var(--admin-v2-bg);
   color: var(--admin-v2-text-primary);
@@ -199,7 +204,7 @@
   height: 0.5rem;
   border-radius: 999px;
   background: var(--admin-v2-text-muted);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 2px var(--admin-v2-dot-ring);
 }
 
 [data-admin-v2] .admin-v2-status-dot[data-status='success'] {
@@ -298,7 +303,7 @@
 
 [data-admin-v2] .admin-v2-badge-muted {
   border: 1px solid var(--admin-v2-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--admin-v2-overlay-faint);
   color: var(--admin-v2-text-muted);
 }
 

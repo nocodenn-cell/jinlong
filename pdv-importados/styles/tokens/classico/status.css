@@ -1,0 +1,31 @@
+/**
+ * Design System Clássico — STATUS (badges / estados semânticos)
+ *
+ * Tons claros corporativos para success / warning / danger / info / neutral.
+ */
+
+[data-theme='classico'] {
+  --jl-status-success-bg:     var(--cl-success-bg);
+  --jl-status-success-text:   #166534;
+  --jl-status-success-border: #bbf7d0;
+
+  --jl-status-warning-bg:     var(--cl-warning-bg);
+  --jl-status-warning-text:   #92400e;
+  --jl-status-warning-border: #fde68a;
+
+  --jl-status-danger-bg:      var(--cl-danger-bg);
+  --jl-status-danger-text:    #991b1b;
+  --jl-status-danger-border:  #fecaca;
+
+  --jl-status-info-bg:        var(--cl-blue-50);
+  --jl-status-info-text:      var(--cl-blue-700);
+  --jl-status-info-border:    var(--cl-blue-200);
+
+  --jl-status-neutral-bg:     var(--cl-gray-50);
+  --jl-status-neutral-text:   var(--cl-gray-700);
+  --jl-status-neutral-border: var(--cl-gray-200);
+
+  --jl-status-orange-bg:      var(--cl-warning-bg);
+  --jl-status-orange-text:    #c2410c;
+  --jl-status-orange-border:  #fdba74;
+}

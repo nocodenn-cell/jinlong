@@ -59,7 +59,7 @@ export function DataTablePage({
           aria-label={bulkBarLabel}
           className={cn(
             'mb-3 flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2',
-            'border-amber-400/40 bg-amber-400/10',
+            'border-[var(--jl-accent-soft-border)] bg-[var(--jl-accent-soft-bg)]',
           )}
         >
           {bulkBar}

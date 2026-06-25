@@ -23,12 +23,18 @@ const SPARK_COLORS_FALLBACK: Record<SparkTone, string> = {
 
 /**
  * Resolves a CSS variable to its computed hex value.
- * Falls back to predefined value if variable not found.
+ *
+ * Resolves from `el` (when provided) so that THEME-SCOPED tokens are honored:
+ * the Clássico tokens live on `[data-theme='classico']`, not on `:root`, so
+ * resolving from the canvas inside that subtree yields the blue brand color.
+ * Without an element it reads `document.documentElement` (legacy behavior).
+ * Falls back to the predefined value if the variable is not found.
  */
-function resolveColorToken(tokenName: string, fallback: string): string {
+function resolveColorToken(tokenName: string, fallback: string, el?: Element | null): string {
   if (typeof window === 'undefined') return fallback
   try {
-    const value = getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim()
+    const target = el ?? document.documentElement
+    const value = getComputedStyle(target).getPropertyValue(tokenName).trim()
     return value || fallback
   } catch {
     return fallback
@@ -54,10 +60,10 @@ function withAlpha(color: string, alpha: number): string {
   return c
 }
 
-export function sparkColor(tone: SparkTone): string {
+export function sparkColor(tone: SparkTone, el?: Element | null): string {
   const tokenName = SPARK_COLOR_TOKENS[tone]
   const fallback = SPARK_COLORS_FALLBACK[tone]
-  return resolveColorToken(tokenName, fallback)
+  return resolveColorToken(tokenName, fallback, el)
 }
 
 export function drawSparkline(canvas: HTMLCanvasElement, data: number[], color: string): void {

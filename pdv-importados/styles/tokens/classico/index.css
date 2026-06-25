@@ -1,0 +1,30 @@
+/**
+ * ============================================================================
+ * Design System CLÁSSICO — Fundação visual (import central)
+ * ============================================================================
+ *
+ * Identidade inspirada no Bling: branco predominante, cinzas claros, azul como
+ * cor principal, bordas discretas, sombras suaves, alta densidade de informação
+ * e aparência corporativa/previsível.
+ *
+ * ESCOPO: todo o tema é aplicado APENAS dentro de um ancestral com
+ * `[data-theme='classico']` (marcado por rota via AdminThemeScope +
+ * themeRegistry). Nada vaza para o tema Dragon/noturno.
+ *
+ * COMO FUNCIONA: a app consome variáveis (--jl-*, --color-*, tokens shadcn e
+ * derivados --admin-v2-*). As camadas abaixo reatribuem os VALORES dessas
+ * variáveis para a paleta Clássica — mudando a aparência sem tocar na lógica.
+ *
+ * Ordem de import (a resolução de var() é tardia, então a ordem só documenta a
+ * dependência conceitual):
+ *   primitives → typography → spacing → semantic → shadcn → status → admin-v2
+ * ============================================================================
+ */
+
+@import './primitives.css';
+@import './typography.css';
+@import './spacing.css';
+@import './semantic.css';
+@import './shadcn.css';
+@import './status.css';
+@import './admin-v2.css';

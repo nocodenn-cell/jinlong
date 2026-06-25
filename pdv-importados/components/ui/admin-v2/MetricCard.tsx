@@ -65,7 +65,7 @@ export function MetricCard({
     const canvas = canvasRef.current
     if (!canvas || sparkData.length < 2) return
 
-    const render = () => drawSparkline(canvas, sparkData, sparkColor(tone))
+    const render = () => drawSparkline(canvas, sparkData, sparkColor(tone, canvas))
     render()
 
     const ro = new ResizeObserver(render)

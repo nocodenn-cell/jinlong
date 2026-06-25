@@ -1,0 +1,12 @@
+/**
+ * Design System Clássico — TIPOGRAFIA
+ *
+ * Fonte de sistema (corporativa/neutra), tamanho-base compacto para alta
+ * densidade de informação no estilo Bling.
+ */
+
+[data-theme='classico'] {
+  --cl-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --cl-font-size-base: 0.875rem;   /* 14px — densidade operacional */
+  --cl-line-height: 1.45;
+}

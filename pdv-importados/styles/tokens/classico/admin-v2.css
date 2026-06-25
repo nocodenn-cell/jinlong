@@ -1,0 +1,31 @@
+/**
+ * Design System Clássico — AJUSTES DO SHELL ADMIN V2
+ *
+ * Onde a app fixa comportamento "dark" diretamente no escopo [data-admin-v2],
+ * aqui sobrepomos para a superfície clara Clássica. Tudo via tokens.
+ */
+
+/* O shell AdminV2 declara `color-scheme: dark` fixo; no Clássico é claro. */
+[data-theme='classico'] [data-admin-v2],
+[data-theme='classico'][data-admin-v2] {
+  color-scheme: light;
+
+  /* Card: sombra suave + raio Clássico (substitui a sombra escura com glow). */
+  --admin-v2-shadow-card: var(--cl-shadow);
+  --admin-v2-radius-card: var(--cl-radius-lg);
+
+  /* Estado ativo de navegação/filtros — tinta azul sólida (Bling). */
+  --admin-v2-active-bg: var(--cl-blue-50);
+  --admin-v2-active-border: var(--cl-blue-200);
+  --admin-v2-active-text: var(--cl-blue-700);
+
+  /* Overlays sutis (no Dragon eram branco sobre escuro; aqui escuro sobre claro). */
+  --admin-v2-overlay-faint: rgba(15, 23, 42, 0.04);
+  --admin-v2-dot-ring: rgba(15, 23, 42, 0.06);
+}
+
+/* Selection azul discreta, coerente com a identidade. */
+[data-theme='classico'] ::selection {
+  background: var(--cl-blue-100);
+  color: var(--cl-blue-700);
+}

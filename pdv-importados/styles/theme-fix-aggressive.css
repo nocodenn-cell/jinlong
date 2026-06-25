@@ -36,6 +36,18 @@
   /* Accent (dragon gold / amber-400) */
   --jl-accent: var(--accent, #fbbf24);
 
+  /*
+   * Helpers de acento/foco/marca — defaults do tema Dragon (âmbar).
+   * Existem para que componentes-base (shell, sidebar, tabelas) não fixem cor:
+   * o tema Clássico apenas reatribui estes tokens para azul. NÃO altera o
+   * visual atual do Dragon (os valores espelham o que já estava hardcoded).
+   */
+  --jl-accent-soft-bg:     rgba(251, 191, 36, 0.10); /* tint de seleção/realce */
+  --jl-accent-soft-border: rgba(251, 191, 36, 0.35);
+  --jl-focus-ring:         rgba(251, 191, 36, 0.70); /* anel de foco */
+  --jl-ring-offset:        #020617;                  /* slate-950 — fundo do ring-offset */
+  --jl-logo-glow:          rgba(251, 191, 36, 0.25); /* glow do logo */
+
   /* Shimmer de skeleton (#28) — base slate tênue + realce amber-soft que varre. */
   --jl-shimmer-base: rgba(148, 163, 184, 0.08);
   --jl-shimmer-highlight: rgba(251, 191, 36, 0.10);

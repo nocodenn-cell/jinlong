@@ -1,0 +1,33 @@
+/**
+ * Design System Clássico — TOKENS shadcn/ui (HSL triplets)
+ *
+ * Reposiciona a paleta shadcn para claro, anulando o `.dark` do <html> dentro
+ * do escopo Clássico (componentes shadcn passam a renderizar claro/azul).
+ */
+
+[data-theme='classico'] {
+  color-scheme: light;
+
+  --background: 210 20% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 221 83% 53%;            /* azul-600 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 20% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 214 95% 93%;
+  --accent-foreground: 221 83% 40%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 36%;
+  --success-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 221 83% 53%;
+  --radius: 0.375rem;
+}

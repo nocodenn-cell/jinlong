@@ -1,0 +1,72 @@
+/**
+ * Design System Clássico — SEMÂNTICO (ponte)
+ *
+ * Mapeia os primitivos (--cl-*) para as variáveis que a aplicação JÁ consome
+ * (--jl-*, --color-*). É aqui que "trocar o valor do token" muda a aparência
+ * sem tocar em nenhum componente.
+ */
+
+[data-theme='classico'] {
+  /* ── Tokens Jin Long (--jl-*) — superfícies, bordas, texto, acento ────── */
+  --jl-surface-base: var(--cl-gray-25);
+  --jl-surface-elev: var(--cl-white);
+  --jl-surface-soft: var(--cl-gray-50);
+
+  --jl-border-1: var(--cl-gray-200);
+  --jl-border-2: var(--cl-gray-200);
+
+  --jl-fg-1: var(--cl-gray-900);   /* texto primário */
+  --jl-fg-2: var(--cl-gray-500);   /* texto secundário */
+  --jl-fg-3: var(--cl-gray-400);   /* texto terciário / metadados */
+
+  --jl-accent: var(--cl-blue-600);
+
+  --jl-shimmer-base: var(--cl-gray-100);
+  --jl-shimmer-highlight: rgba(37, 99, 235, 0.08);
+
+  --jl-elev-1: var(--cl-shadow);
+  --jl-elev-2: var(--cl-shadow-lg);
+
+  /* Hierarquia de cards — no Clássico todos brancos, diferenciados por borda */
+  --jl-card-l1-bg:     var(--cl-white);
+  --jl-card-l1-border: var(--cl-gray-200);
+  --jl-card-l1-accent: var(--cl-blue-50);   /* fundo do ícone de KPI */
+  --jl-card-l1-strip:  var(--cl-blue-600);
+
+  --jl-card-l2-bg:     var(--cl-white);
+  --jl-card-l2-border: var(--cl-gray-200);
+
+  --jl-card-l3-bg:     var(--cl-gray-50);
+  --jl-card-l3-border: var(--cl-gray-200);
+
+  /* ── Helpers de acento/foco/marca (espelham os defaults Dragon em
+   *    theme-fix-aggressive.css; aqui assumem o azul Clássico) ──────────── */
+  --jl-accent-soft-bg:     rgba(37, 99, 235, 0.08);  /* tint de seleção/realce */
+  --jl-accent-soft-border: var(--cl-blue-200);
+  --jl-focus-ring:         var(--cl-blue-500);        /* anel de foco */
+  --jl-ring-offset:        var(--cl-white);           /* fundo do ring-offset */
+  --jl-logo-glow:          transparent;               /* sem glow no logo */
+
+  /* ── Tokens semânticos (--color-*) consumidos por admin-v2.css ──────────
+   * Em produção ficam indefinidos no tema Dragon (só carregam no Storybook);
+   * defini-los aqui é aditivo e dá superfícies/acentos reais ao Clássico. */
+  --color-background-primary:   var(--cl-gray-25);   /* canvas da página */
+  --color-background-secondary: var(--cl-white);     /* sidebar / pills */
+  --color-background-tertiary:  var(--cl-gray-100);
+  --color-background-surface:   var(--cl-white);     /* cards */
+  --color-border-secondary:     var(--cl-gray-200);
+
+  /* "gold"/"brand" do Dragon → azul Clássico (mantém o nome, troca o valor) */
+  --color-chart-gold:     var(--cl-blue-600);
+  --color-brand-primary:  var(--cl-blue-600);
+  --color-brand-contrast: var(--cl-white);
+
+  --color-success-500: var(--cl-success);
+  --color-danger-500:  var(--cl-danger);
+  --color-warning-500: var(--cl-warning);
+
+  /* Texto (usado por eixos/ticks de gráficos via var() no escopo) */
+  --color-text-primary:   var(--cl-gray-900);
+  --color-text-secondary: var(--cl-gray-500);
+  --color-text-tertiary:  var(--cl-gray-400);
+}

@@ -1,0 +1,40 @@
+/**
+ * Design System Clássico — PRIMITIVOS (--cl-*)
+ *
+ * A "fonte da verdade" da paleta. Tudo nas demais camadas deriva daqui.
+ * Ajuste estes valores para recalibrar o tema inteiro.
+ *
+ * Escopo: [data-theme='classico'] (não vaza para o tema Dragon).
+ */
+
+[data-theme='classico'] {
+  /* Azul — cor principal (ações, seleção, links, foco) */
+  --cl-blue-50:  #eff6ff;
+  --cl-blue-100: #dbeafe;
+  --cl-blue-200: #bfdbfe;
+  --cl-blue-500: #3b82f6;
+  --cl-blue-600: #2563eb;   /* primária */
+  --cl-blue-700: #1d4ed8;   /* hover */
+
+  /* Neutros — superfícies, bordas e texto */
+  --cl-white:    #ffffff;
+  --cl-gray-25:  #fafbfc;   /* fundo de página (canvas) */
+  --cl-gray-50:  #f5f6f8;   /* superfície sutil / hover */
+  --cl-gray-100: #eef0f3;
+  --cl-gray-200: #e2e8f0;   /* borda padrão */
+  --cl-gray-300: #cbd5e1;   /* borda forte */
+  --cl-gray-400: #94a3b8;   /* texto terciário / placeholders */
+  --cl-gray-500: #64748b;   /* texto secundário */
+  --cl-gray-600: #475569;
+  --cl-gray-700: #334155;
+  --cl-gray-900: #0f172a;   /* texto primário */
+
+  /* Status — tons corporativos, fundo claro */
+  --cl-success:    #16a34a;
+  --cl-success-bg: #ecfdf5;
+  --cl-warning:    #d97706;
+  --cl-warning-bg: #fffbeb;
+  --cl-danger:     #dc2626;
+  --cl-danger-bg:  #fef2f2;
+  --cl-info:       var(--cl-blue-600);
+}
