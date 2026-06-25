@@ -8,6 +8,16 @@
 - [ ] **Supabase:** migrations e Edge revisadas se o PR tocar `backend/supabase/`.
 - [ ] **Testes:** `npm test` / `npm run lint` nos pacotes alterados quando fizer sentido.
 
+### Gate de validação (Fase 1 — não dependa do CI GitHub)
+
+> O CI do GitHub Actions está instável por infra (runner não atribuído). Até
+> ser restaurado, valide **localmente + Vercel preview**. PR de `pdv-importados`
+> só entra com estes 3 itens marcados:
+
+- [ ] **`npm run verify -w pdv-importados`** verde (= `guard:ui` + `typecheck`).
+- [ ] **Build:** Vercel preview deste PR está **Ready** (verde). Vercel compila o `next build` de forma independente dos runners do Actions.
+- [ ] **Design System:** UI nova entra só via `@/ui`; sem cor Tailwind hardcoded (`bg-[#...]`, `text-[#...]`) fora de `src/ui/**` — caso contrário `guard:ui` falha.
+
 ### Pipeline operacional / caixa
 
 Marque e cumpra **se** o PR alterar retry, replay, ACK visual, `flush`/`shutdown`, timeout, `stale_cupom`, telemetria de scan ou ownership de cupom:

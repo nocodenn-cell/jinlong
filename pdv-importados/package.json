@@ -11,6 +11,8 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "verify": "npm run guard:ui && npm run typecheck",
+    "verify:full": "npm run guard:ui && npm run typecheck && npm run test",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --exclude \"app/caixa/**/*.test.ts\" --exclude \"app/caixa/**/*.integration.test.ts\"",
     "test:watch": "vitest",

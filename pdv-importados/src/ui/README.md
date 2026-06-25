@@ -40,3 +40,15 @@ hardcoded fora de `src/ui` e falha se o total subir acima da baseline
   nova baseline (mais baixa), impedindo retrocesso.
 - Não é "limpeza global": as 79 violações atuais migram incrementalmente,
   sprint a sprint, sem quebrar o build.
+
+## Gate de validação (Fase 1)
+
+O CI do GitHub Actions está instável por infra (runner não atribuído). Até ser
+restaurado, o gate confiável é **local + Vercel**:
+
+```bash
+npm run verify -w pdv-importados   # guard:ui + typecheck (determinístico, sem env)
+```
+
+Mais o **Vercel preview Ready** (ele roda `next build` independente dos runners
+do Actions). Checklist obrigatório no `.github/pull_request_template.md`.
