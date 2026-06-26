@@ -1,0 +1,41 @@
+name: CI agents (observação)
+# Roda após guard:theme — nunca bloqueia pipeline.
+# Cada agente é observacional: detecta, sugere, comenta. Não decide.
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'pdv-importados/**'
+      - 'shared-core/**'
+      - 'agents/**'
+      - 'design-system/baseline/**'
+      - '.github/workflows/ci-agents.yml'
+
+jobs:
+  agent-analysis:
+    name: Agent Analysis (observação)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run agent analysis
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: npm run agents:run
