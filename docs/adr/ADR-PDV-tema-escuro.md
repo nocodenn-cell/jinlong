@@ -3,10 +3,10 @@
 | Campo | Valor |
 |--------|--------|
 | **ID** | ADR-PDV-002 |
-| **Título** | Tema escuro do PDV como evolução planejada (contrato vigente: tema único claro) |
-| **Status** | Proposto — evolução de roadmap, **sem** implementação. Aguarda sign-off de produto + design. |
+| **Título** | Tema escuro do PDV — **rejeitado**; PDV permanece em tema único claro |
+| **Status** | **Rejeitado** — decisão final: o PDV permanece em tema único claro, sem roadmap para escuro. |
 | **Data** | 2026-06-26 |
-| **Contexto** | A Fase 0 (Layout Compiler) travou o sistema em **tema único claro** ("cara de Bling"). O Plano Mestre v2 previa tema escuro para o ambiente operacional do PDV. Este ADR registra essa intenção como decisão **futura**, sem alterar o código. |
+| **Contexto** | A Fase 0 (Layout Compiler) travou o sistema em **tema único claro** ("cara de Bling"). O Plano Mestre v2 chegou a citar um tema escuro para o PDV; esta decisão **encerra** essa hipótese para alinhar documentação e código. |
 
 ---
 
@@ -18,12 +18,10 @@
   - `pdv-importados/tailwind.config.js` → `darkMode` aponta para um seletor
     (`.theme-dark-disabled`) que **nunca** existe no DOM, neutralizando utilitárias `dark:`;
   - tokens de superfície/texto ativos vêm de `styles/theme-oriental.css` (claro).
-- **Intenção do Plano Mestre v2:** o PDV é ambiente operacional e se beneficiaria
-  de um tema escuro (baixa luminosidade, conforto em turnos longos), enquanto o
-  uso administrativo permanece claro (maior contraste).
-- **Tensão:** a documentação não pode afirmar "claro + escuro" como contrato sem
-  contradizer o código. Por isso o tema escuro é registrado como **roadmap**, não
-  como estado atual.
+- **Hipótese descartada:** o Plano Mestre v2 cogitou um tema escuro para o
+  ambiente operacional do PDV. A decisão de produto/design é **não** seguir esse
+  caminho: o PDV deve permanecer **clean e claro**, e a documentação não deve
+  carregar um roadmap que contradiz o código.
 
 Documentos relacionados:
 
@@ -34,40 +32,24 @@ Documentos relacionados:
 
 ## Decisão
 
-1. **Manter o tema único claro como contrato vigente.** Nenhuma alteração de
-   implementação é feita por este ADR.
-2. **Registrar o tema escuro do PDV como evolução planejada** (roadmap), restrita
-   ao ambiente operacional do PDV — não ao administrativo.
-3. **Manter os componentes *theme-ready* via tokens** (já é a prática): nenhuma
-   cor fixa; tudo via tokens de tema. Isso garante que reativar o escuro **não**
-   exija reescrever componentes — apenas fornecer o conjunto de tokens escuros e
-   reabilitar o seletor de tema.
-4. **Não reabilitar utilitárias `dark:`** enquanto o contrato for tema único; a
-   futura ativação deve passar por este ADR ser **Aceito** + sign-off.
-
-## Pré-condições para aceitação (futuras)
-
-- [ ] Sign-off de Produto e Design sobre escopo (apenas PDV) e paleta escura.
-- [ ] Conjunto de tokens escuros definido no Design System (espelho dos claros).
-- [ ] Estratégia de alternância de tema (seletor no Header) e persistência por
-      perfil/estação.
-- [ ] Verificação de contraste/acessibilidade no tema escuro.
+1. **Manter o tema único claro como contrato vigente.** Nenhuma evolução para
+   tema escuro será feita.
+2. **Encerrar este ADR como Rejeitado** para eliminar a ambiguidade entre
+   documentação e código. O PDV permanece **clean e claro**.
+3. O tema único claro continua sendo aplicado via **tokens** (sem cor fixa). Isso
+   não é um preparo para escuro — é apenas a higiene de design já vigente.
 
 ## Consequências
 
-- **Positivas:** elimina a ambiguidade "claro vs. claro+escuro" na documentação;
-  preserva o contrato atual; deixa o caminho de ativação explícito e barato
-  (graças aos tokens).
-- **Negativas:** mantém, por ora, uma divergência conhecida entre o Plano Mestre
-  v2 (que citava escuro) e o código (claro) — divergência rastreada no
-  [README do Plano Mestre](../plano-mestre/README.md).
+- **Positivas:** documentação e código passam a dizer a **mesma coisa** — tema
+  único claro, sem exceção. Some a divergência "claro vs. claro+escuro".
+- **Negativas:** caso, no futuro, se queira um tema escuro, será necessário um
+  **novo ADR** (não a reabertura deste), com sign-off e tokens próprios.
 
-## Próximos passos após aceitação
+## Próximos passos
 
-1. Definir tokens escuros em `styles/tokens/*` (sem remover os claros).
-2. Reabilitar o seletor de tema no Header (Pilar 1, §3) e a estratégia `darkMode`.
-3. Habilitar o tema escuro **apenas** nas rotas do PDV (`app/caixa`).
-4. Atualizar o Pilar 2 (§Temas) e mover o item do Roadmap do PDV para o contrato.
+Nenhum. O PDV permanece claro. Plano Mestre, Pilar 2 (§Temas), Roadmap do PDV e a
+tabela de divergências do README foram ajustados para refletir esta decisão final.
 
 ---
 
@@ -75,4 +57,5 @@ Documentos relacionados:
 
 | Data | Alteração |
 |------|-----------|
-| 2026-06-26 | Rascunho inicial — registra tema escuro do PDV como roadmap; contrato vigente permanece tema único claro. |
+| 2026-06-26 | Rascunho inicial — registrava tema escuro do PDV como roadmap. |
+| 2026-06-26 | **Rejeitado** — decisão final: PDV permanece em tema único claro, sem roadmap para escuro. Documentação alinhada ao código. |

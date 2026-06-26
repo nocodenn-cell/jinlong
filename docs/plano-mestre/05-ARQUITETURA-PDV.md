@@ -165,10 +165,14 @@ ambiente gerencial é responsabilidade do Dashboard/Admin, não do PDV.
 
 | Item | Descrição | Estado | Decisão |
 |------|-----------|--------|---------|
-| **Tema escuro** | Tema escuro otimizado para operação do PDV (baixa luminosidade). Hoje o sistema é **tema único claro** (Fase 0). | Planejado | [ADR-PDV-002 — Tema escuro do PDV](../adr/ADR-PDV-tema-escuro.md) (proposto) |
 | **Operação omnichannel** | Unificar venda entre canais (loja física, online, pedidos externos) sobre o mesmo modelo de eventos do PDV. | Planejado | A definir (ADR futuro) |
 | **Offline-first com sincronização posterior** | Evoluir o web rumo a offline-first com fila/outbox e reconciliação, hoje garantido só no `pdv-local`. | Planejado | Relacionado a [ADR-PDV-001](../adr/ADR-PDV-centro-de-gravidade.md) e [ROADMAP_PDV_INVARIANTES_OPERACIONAIS.md](../ROADMAP_PDV_INVARIANTES_OPERACIONAIS.md) |
 | **Melhorias de performance** | Reduzir latência do caminho do bip (ACK perceptivo), cache de catálogo no browser, telemetria p50/p95. | Planejado | A definir conforme política de bip/preço (ADR-PDV-001, §3–4) |
+
+> **Tema escuro — fora do roadmap (decisão final).** O PDV permanece **clean e
+> em tema único claro**. A hipótese de tema escuro foi **rejeitada** em
+> [ADR-PDV-002](../adr/ADR-PDV-tema-escuro.md); não há previsão de escuro. Um
+> eventual tema escuro futuro exigiria um **novo** ADR.
 
 > Quando um item do Roadmap for implementado, mover a descrição para a seção
 > correspondente do contrato vigente (§1–6) e atualizar o ADR para *Aceito*.
@@ -183,4 +187,4 @@ ambiente gerencial é responsabilidade do Dashboard/Admin, não do PDV.
 - [`docs/CONTRATO_PIPELINE_BIP.md`](../CONTRATO_PIPELINE_BIP.md) — contrato do pipeline de bip.
 - [`docs/GUIA_IMPLANTACAO_WEB_VS_DESKTOP.md`](../GUIA_IMPLANTACAO_WEB_VS_DESKTOP.md) — web vs. desktop.
 - [`docs/adr/ADR-PDV-centro-de-gravidade.md`](../adr/ADR-PDV-centro-de-gravidade.md) — ADR-PDV-001.
-- [`docs/adr/ADR-PDV-tema-escuro.md`](../adr/ADR-PDV-tema-escuro.md) — ADR-PDV-002 (tema escuro, proposto).
+- [`docs/adr/ADR-PDV-tema-escuro.md`](../adr/ADR-PDV-tema-escuro.md) — ADR-PDV-002 (tema escuro, **rejeitado**).

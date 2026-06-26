@@ -39,7 +39,7 @@ valores literais.
 | Erro | Vermelho suave | `destructive` / `--color-dragon-imperial-red-*` |
 | Fundo claro | Branco | `--surface` (`#ffffff`) |
 | Fundo suave | Cinza claro | `--surface-soft` (`#f8fafc`) |
-| Fundo escuro | Grafite | reservado ao tema escuro (não ativo) |
+| Fundo escuro | Grafite | não utilizado — sistema é tema único claro (sem tema escuro) |
 
 **Tokens de superfície JinLong** (hierarquia de cards), expostos no Tailwind como
 `jl-*`: `surface-base`, `surface-elev`, `surface-soft`, `border-1/2`,
@@ -128,20 +128,21 @@ Todo componente deve possuir, com o **mesmo padrão visual**:
 
 ## 5. Temas
 
-| Tema | Uso (alvo) | Contraste |
-|------|-----------|-----------|
-| Claro | Administrativo | Maior contraste |
-| Escuro | Operacional / PDV | Ideal para baixa luz |
+| Tema | Uso | Contraste |
+|------|-----|-----------|
+| Claro | **Único tema do sistema** (administrativo e PDV) | Maior contraste |
 
-**Contrato vigente:** o sistema está travado em **tema único claro** ("cara de
-Bling"). O modo escuro foi **aposentado na Fase 0 — Layout Compiler**
-(`theme.config.ts`: `ACTIVE_THEME = 'classico'`; `tailwind.config.js` usa um
-seletor `darkMode` que nunca casa no DOM).
+**Contrato vigente e definitivo:** o sistema usa **tema único claro** ("cara de
+Bling") — tanto no administrativo quanto no PDV. O modo escuro foi **aposentado
+na Fase 0 — Layout Compiler** (`theme.config.ts`: `ACTIVE_THEME = 'classico'`;
+`tailwind.config.js` usa um seletor `darkMode` que nunca casa no DOM).
 
-> O tema escuro para o PDV permanece como **decisão futura** do Plano, ainda não
-> implementada. Todos os componentes devem ser escritos de forma *theme-ready*
-> (via tokens), para que a reativação do escuro não exija reescrita. Não usar
-> utilitárias `dark:` enquanto o contrato for tema único.
+> **Roadmap de tema escuro: removido.** O PDV permanece em tema único claro, sem
+> previsão de escuro — decisão final registrada em
+> [ADR-PDV-002](../adr/ADR-PDV-tema-escuro.md) (Rejeitado). As cores continuam
+> vindo de **tokens** (sem cor fixa) por higiene de design — não como preparo
+> para escuro. **Não** usar utilitárias `dark:`. Um eventual tema escuro futuro
+> exigiria um **novo** ADR.
 
 ## 6. Internacionalização (i18n)
 

@@ -63,11 +63,12 @@ Sempre fixo. Três regiões:
 
 - **Esquerda:** Logo JinLong + nome da empresa.
 - **Centro:** Busca Global.
-- **Direita:** Idioma · Tema¹ · Notificações · Perfil · Menu do usuário.
+- **Direita:** Idioma · Notificações · Perfil · Menu do usuário.
 
-> ¹ O seletor de **Tema** é parte do contrato de arquitetura, mas está
-> **desativado** enquanto o tema único claro for o contrato vigente (ver Pilar 2,
-> §Temas, e a tabela de divergências no README).
+> **Sem seletor de Tema.** O sistema usa **tema único claro** (decisão final — o
+> tema escuro do PDV foi rejeitado em
+> [ADR-PDV-002](../adr/ADR-PDV-tema-escuro.md)). Não há alternância de tema no
+> Header. Ver Pilar 2, §Temas.
 
 ## 4. Sidebar
 

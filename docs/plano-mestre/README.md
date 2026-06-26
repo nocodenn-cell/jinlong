@@ -74,7 +74,7 @@ Documentar a divergência é obrigatório — escondê-la não.
 
 | Tema | Alvo (Plano) | Realidade no código | Decisão vigente |
 |------|--------------|---------------------|-----------------|
-| **Temas** | Claro (admin) + Escuro (PDV) | Tema **único claro** — dark mode aposentado na *Fase 0 — Layout Compiler* (`pdv-importados/theme.config.ts`, `tailwind.config.js` com `darkMode` neutralizado) | **Tema único claro** é o contrato vigente. O tema escuro do PDV é evolução **planejada**, registrada em [ADR-PDV-002](../adr/ADR-PDV-tema-escuro.md) e no [Roadmap do PDV](./05-ARQUITETURA-PDV.md#7-roadmap-do-pdv) — sem implementação. Ver pilar 2. |
+| **Temas** | Tema **único claro** (decisão final) | Tema **único claro** — dark mode aposentado na *Fase 0 — Layout Compiler* (`pdv-importados/theme.config.ts`, `tailwind.config.js` com `darkMode` neutralizado) | ✅ Conforme — documentação e código alinhados. O tema escuro do PDV foi **rejeitado** em [ADR-PDV-002](../adr/ADR-PDV-tema-escuro.md); não há roadmap para escuro. Ver pilar 2. |
 | **Tokens semânticos** | Tokens claros/escuros simétricos | `styles/tokens/semantic.css` ainda referencia paleta escura legada (`--color-night-950`, etc.) herdada da era *dragon-dark* | Token semântico de superfície/texto ativo vem de `theme-oriental.css` (claro). `semantic.css` é legado em retirada. |
 | **i18n** | Português + Chinês, pronto para novos idiomas | Implementado em `src/lib/i18n` (`pt.json`, `zh.json`) | ✅ Conforme. |
 | **AppShell único** | Estrutura única para toda tela | Existem shells distintos (`gerente`, `admin`, `caixa/PDV`) com primitivas compartilhadas | Convergência em andamento; PDV mantém shell independente por contrato (ver pilar 1). |
