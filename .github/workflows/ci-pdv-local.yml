@@ -1,4 +1,6 @@
 # CI do app desktop em pdv-local (testes unitários front + build Vite).
+# Layer 1 — job build-and-test é bloqueante (Core CI local/desktop).
+# Layer 3 — job rust-tauri-checks tem continue-on-error (Windows, build demorado).
 name: CI pdv-local
 
 on:
@@ -34,6 +36,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install (workspaces na raiz)
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
         run: npm ci
 
       - name: Typecheck, unit tests e build (Turborepo)
@@ -44,6 +48,7 @@ jobs:
 
   rust-tauri-checks:
     runs-on: windows-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 

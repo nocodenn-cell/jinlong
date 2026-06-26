@@ -1,0 +1,82 @@
+name: CI core (bloqueante)
+# Layer 1 — único workflow que decide "pode mergear?".
+#
+# Regras rígidas:
+#   - sem serviços externos (Supabase, RLS, edge-functions, migrations remotas)
+#   - sem uploads de artefatos (Sentry sourcemaps, etc.)
+#   - qualquer falha aqui bloqueia merge — sem continue-on-error neste arquivo
+#
+# Para ativar proteção de branch: Settings → Branches → require status checks
+# e selecionar os jobs "Architecture Guard" e "Web — lint · typecheck · test · build".
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'pdv-importados/**'
+      - 'shared-core/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
+      - '.github/workflows/ci-core.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'pdv-importados/**'
+      - 'shared-core/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'turbo.json'
+      - '.github/workflows/ci-core.yml'
+
+jobs:
+  guard:
+    name: Architecture Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
+        run: npm ci
+
+      - name: Architecture Lock (guard:all)
+        run: npm run guard:all
+
+  web:
+    name: Web — lint · typecheck · test · build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
+        run: npm ci
+
+      - name: Lint, typecheck e testes
+        run: npx turbo run lint typecheck test --filter=pdv-importados
+
+      - name: Build
+        env:
+          # Sem chamada real ao Supabase durante build — variáveis embutidas no bundle.
+          # Se o projeto usar SSG com fetch real, adicione o secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-core-ci' }}
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
+        run: npx turbo run build --filter=pdv-importados

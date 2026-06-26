@@ -1,4 +1,6 @@
-# CI pdv-importados — SSRA: release authority = Vercel Deployment ID (validate-production).
+# Pipeline de deployment pdv-importados (Layer 1 derivado + deploy).
+# Gate de merge → ci-core.yml. Este workflow assume que core já passou.
+# SSRA: release authority = Vercel Deployment ID (validate-production).
 # E2E = sistema de risco, não sistema de decisão (e2e-critical não bloqueia deploy).
 # Produção canônica: https://pdv-importados.vercel.app (projeto Vercel pdv-importados).
 # Secrets: CI_NEXT_PUBLIC_*, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
@@ -45,6 +47,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install (workspaces na raiz)
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
         run: npm ci
 
       - name: Architecture Lock (core rules, PDV flow, routes)
@@ -80,6 +84,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install (workspaces na raiz)
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
         run: npm ci
 
       - name: Install Playwright Chromium
@@ -164,6 +170,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install (workspaces na raiz)
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
         run: npm ci
 
       - name: Verificar VERCEL_PROJECT_ID (fail-fast)
@@ -254,6 +262,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install (workspaces na raiz)
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
         run: npm ci
 
       - name: Install Playwright Chromium

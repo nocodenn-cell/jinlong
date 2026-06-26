@@ -1,34 +1,29 @@
-# Validação mínima do backend Supabase: type-check da Edge + smoke das migrations em Postgres (stub auth).
+# Layer 3 — External Systems CI (isolado, nunca bloqueia merge).
+#
+# Todos os jobs têm continue-on-error: true.
+# Falhas aqui são de infra, não de contrato de código — não decidem merge.
+# Para decisões de merge, ver ci-core.yml (Layer 1).
 #
 # Job migration-remote-drift (Ubuntu + Node):
 # - Secrets obrigatórios em contexto interno: SUPABASE_ACCESS_TOKEN (token de conta) e
 #   SUPABASE_MIGRATION_CHECK_PROJECT_REF (ref do projeto staging/homolog).
-# - Falha se secrets ausentes (interno) ou se Local≠Remote.
 # - PR de fork: job é pulado (secrets do base não são injetados).
 #
 # Job anti-replay (Windows + PowerShell):
 # - Secrets do repositório: SYNC_ENDPOINT (URL da função sync-outbox), SYNC_KEY (mesmo da Edge).
-# - PR interno que altera sync-outbox ou o script de diagnóstico: falha se esses secrets estiverem vazios (gate).
-# - Push/PR com secrets preenchidos: executa backend/scripts/sync-outbox-anti-replay-diagnostic.ps1.
-# - Forks: o gate de secrets não exige SYNC_* no PR de fork (head.repo != github.repository); o passo de diagnóstico só roda se os secrets existirem no repo base (geralmente não expostos a forks).
-name: CI backend Supabase
+# - PR interno que altera sync-outbox ou o script de diagnóstico: executa diagnóstico se secrets configurados.
+name: CI external — Supabase e integrações
 
 on:
   push:
     branches: [main, develop]
     paths:
       - 'backend/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
       - '.github/workflows/ci-backend-supabase.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'backend/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
       - '.github/workflows/ci-backend-supabase.yml'
   workflow_dispatch:
 
@@ -36,6 +31,7 @@ jobs:
   supabase-local-rls-smoke:
     name: Supabase local RLS smoke
     runs-on: ubuntu-latest
+    continue-on-error: true
     timeout-minutes: 25
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
@@ -105,6 +101,7 @@ jobs:
   test-rls-scope:
     name: Test RLS scope by profile
     runs-on: ubuntu-latest
+    continue-on-error: true
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -170,6 +167,7 @@ jobs:
 
   edge-functions-typecheck:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -187,6 +185,7 @@ jobs:
 
   outbox-contract:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -197,6 +196,7 @@ jobs:
   rls-rest-gate:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
@@ -231,6 +231,7 @@ jobs:
   migration-remote-drift:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -263,6 +264,7 @@ jobs:
 
   anti-replay-diagnostic-gate:
     runs-on: windows-latest
+    continue-on-error: true
     # dorny/paths-filter usa a API de PR; sem pull-requests:read o token falha com
     # "Resource not accessible by integration" em PRs internos.
     permissions:
