@@ -37,6 +37,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Histórico completo p/ o Migration Checklist Gate diffar contra a base da PR.
+          fetch-depth: 0
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -46,6 +49,13 @@ jobs:
 
       - name: Install (workspaces na raiz)
         run: npm ci
+
+      # Gate de PROCESSO de migração — roda ANTES de lint/typecheck/test.
+      # Exige migration-checklist.json válido/atualizado quando a UI muda.
+      - name: Migration Checklist Gate
+        env:
+          CHECKLIST_BASE: ${{ github.event.pull_request.base.sha }}
+        run: npm run guard:migration-checklist
 
       - name: Architecture Lock (core rules, PDV flow, routes)
         run: npm run guard:all

@@ -1,0 +1,10 @@
+{
+  "migration": "dashboard",
+  "routeAdded": true,
+  "themeScopeApplied": true,
+  "tokensOnly": true,
+  "noHardcodedColors": true,
+  "visualValidated": true,
+  "baseline": "/admin/dashboard",
+  "notes": "Piloto da fundação Clássica. Próxima migração (Produtos) deve atualizar este artefato."
+}
