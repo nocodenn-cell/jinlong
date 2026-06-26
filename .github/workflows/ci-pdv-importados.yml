@@ -65,6 +65,13 @@ jobs:
       - name: Theme contract guard
         run: npm run guard:theme
 
+      # Observabilidade visual (NÃO bloqueante): validação de conformidade do
+      # Dashboard Clássico contra baseline visual oficial. Completa o ciclo:
+      # código (guard) → estado (checklist) → percepção (baseline).
+      - name: Visual baseline — Dashboard Clássico (observabilidade)
+        continue-on-error: true
+        run: npm run check:visual-baseline
+
       # Observabilidade (NÃO bloqueante): auditoria mecânica de prontidão do
       # módulo Produtos para migração. Imprime o checklist derivado no log.
       - name: Module readiness — produtos (observabilidade)

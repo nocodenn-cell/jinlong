@@ -1,0 +1,80 @@
+{
+  "contract": "visual-baseline",
+  "version": "1.0",
+  "route": "/admin/dashboard",
+  "theme": "classico",
+  "description": "Baseline visual oficial do Dashboard Clássico. Referência para validação de regressão visual e contrato de tema entre temas.",
+  "baseline": {
+    "snapshotDate": "2026-06-26T00:00:00Z",
+    "lastValidated": "2026-06-26T00:00:00Z",
+    "tokenSignatures": {
+      "primary": "--cl-blue-600",
+      "background": "--color-background",
+      "foreground": "--color-foreground",
+      "border": "--color-border",
+      "success": "--color-success",
+      "destructive": "--color-destructive",
+      "warning": "--color-warning"
+    },
+    "keyColors": {
+      "blue": "#2563eb",
+      "white": "#ffffff",
+      "gray": "#f3f4f6",
+      "border": "#e5e7eb"
+    },
+    "typography": {
+      "fontFamily": "system-ui, -apple-system, sans-serif",
+      "baseSize": "16px",
+      "headingScale": "1.2"
+    },
+    "spacing": {
+      "unit": "4px",
+      "baseGap": "16px"
+    },
+    "shadows": {
+      "subtle": "0 1px 2px rgba(0, 0, 0, 0.05)",
+      "card": "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)"
+    },
+    "radius": {
+      "sm": "4px",
+      "md": "8px",
+      "lg": "12px"
+    },
+    "keyElements": {
+      "pageHeader": {
+        "backgroundColor": "white",
+        "borderBottom": "1px solid #e5e7eb",
+        "padding": "24px"
+      },
+      "metricCard": {
+        "backgroundColor": "white",
+        "border": "1px solid #e5e7eb",
+        "borderRadius": "8px",
+        "padding": "16px"
+      },
+      "sectionCard": {
+        "backgroundColor": "white",
+        "border": "1px solid #e5e7eb",
+        "borderRadius": "8px"
+      },
+      "pageBackground": {
+        "backgroundColor": "#f9fafb"
+      }
+    }
+  },
+  "validationRules": [
+    "Paleta de cores: azul primário = #2563eb (--cl-blue-600), branco = #ffffff",
+    "Superfícies: branco com bordas discretas 1px #e5e7eb",
+    "Fundo de página: cinza claro #f9fafb",
+    "Sombras: suaves, máximo 2-3 camadas, nunca droppings pesados",
+    "Componentes: MetricCard, SectionCard, PageHeader seguem vocabulário visual consistente",
+    "Typography: scale baseado em 1.2x, family padrão do sistema",
+    "Espaçamento: grid de 4px, gaps mínimos 16px"
+  ],
+  "metadata": {
+    "scope": "Admin v2 theme system",
+    "enforcedBy": "check:visual-baseline",
+    "author": "Design System Guard",
+    "purpose": "Referência visual fixa para detecção de regressão e contrato visual entre temas"
+  }
+}
