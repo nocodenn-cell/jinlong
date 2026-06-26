@@ -438,7 +438,7 @@ export function ImportarNfePageClient({ idioma }: Props) {
             <p className="text-xs font-medium text-amber-600">{mi.resolver_pendentes}</p>
           ) : null}
           {draftNovos != null && draftNovos > 0 ? (
-            <div className="w-full rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+            <div className="w-full rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
               <p>{mi.import_draft_aviso.replace('{{n}}', String(draftNovos))}</p>
               <Link
                 href="/admin/catalogo?status=inativos"

@@ -138,7 +138,7 @@ export function ProdutosExcluirLoteModal({
               </ul>
               {resumo.falhas.length > 0 ? (
                 <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-jl-fg-1">
-                  <p className="font-semibold text-amber-900 dark:text-amber-100">{p.exclusao_falhas_titulo}</p>
+                  <p className="font-semibold text-amber-900">{p.exclusao_falhas_titulo}</p>
                   <ul className="mt-2 max-h-36 list-inside list-disc space-y-1 overflow-y-auto font-mono text-[11px]">
                     {resumo.falhas.slice(0, 30).map((f) => (
                       <li key={`${f.produto_id}-${f.motivo.slice(0, 20)}`}>

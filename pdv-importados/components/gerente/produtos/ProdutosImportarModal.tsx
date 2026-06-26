@@ -198,7 +198,7 @@ export function ProdutosImportarModal({
 
           {ultimoResumo && ultimoResumo.falhas.length > 0 ? (
             <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-jl-fg-1">
-              <p className="font-semibold text-amber-900 dark:text-amber-100">{p.import_falhas_titulo}</p>
+              <p className="font-semibold text-amber-900">{p.import_falhas_titulo}</p>
               <ul className="mt-2 max-h-36 list-inside list-disc space-y-1 overflow-y-auto text-[11px]">
                 {ultimoResumo.falhas.slice(0, 40).map((f) => (
                   <li key={`${f.linha}-${f.motivo.slice(0, 24)}`}>

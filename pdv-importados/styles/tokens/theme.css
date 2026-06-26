@@ -1,32 +1,34 @@
 /**
  * Design Tokens Theme - Variações por tema
- * Sistema travado em modo escuro (noturno). Tema claro (novem) removido.
+ * Fase 0 — Layout Compiler: sistema travado em tema CLARO ("clássico").
+ * O modo escuro (noturno/dragon-dark) foi aposentado.
  */
 
-/* === TEMA NOTURNO (ÚNICO) === */
+/* === TEMA CLÁSSICO (ÚNICO, claro) === */
 :root,
+[data-app-theme='classico'],
 [data-app-theme='noturno'] {
   /* Surface colors */
-  --color-background-surface: rgba(15, 23, 42, 0.68);
-  --color-background-surface-soft: rgba(15, 23, 42, 0.42);
-  --color-background-overlay: rgba(2, 6, 23, 0.58);
+  --color-background-surface: #ffffff;
+  --color-background-surface-soft: #f8fafc;
+  --color-background-overlay: rgba(15, 23, 42, 0.45);
 
   /* Text colors */
-  --color-text-primary: rgb(241 245 249);
-  --color-text-secondary: rgb(203 213 225);
-  --color-text-tertiary: rgb(148 163 184);
-  --color-text-disabled: rgb(100 116 139);
+  --color-text-primary: rgb(15 23 42);
+  --color-text-secondary: rgb(71 85 105);
+  --color-text-tertiary: rgb(100 116 139);
+  --color-text-disabled: rgb(148 163 184);
 
   /* Border colors */
-  --color-border-primary: rgba(148, 163, 184, 0.38);
-  --color-border-secondary: rgba(71, 85, 105, 0.5);
-  --color-border-disabled: rgba(51, 65, 85, 0.6);
+  --color-border-primary: #e2e8f0;
+  --color-border-secondary: #e2e8f0;
+  --color-border-disabled: #f1f5f9;
 
-  /* Brand colors */
-  --color-brand-primary: var(--color-dragon-gold-400);
-  --color-brand-secondary: var(--color-dragon-gold-500);
-  --color-brand-strong: var(--color-dragon-gold-600);
-  --color-brand-contrast: rgb(17 24 39);
+  /* Brand colors (Bling blue) */
+  --color-brand-primary: #2563eb;
+  --color-brand-secondary: #3b82f6;
+  --color-brand-strong: #1d4ed8;
+  --color-brand-contrast: #ffffff;
 }
 
 /* === TEMA DRAGON-DARK (GERENTE) === */
