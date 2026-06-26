@@ -21,4 +21,6 @@ paths = [
 commits = [
   "3f623524886a0d454d535e4f07a5243fe7f9e1a0",
   "c101d045cda89a5239a5df7315759797031aedc1",
+  # CSS shadow values / class name strings in dashboard-classico.json + check-visual-baseline.mjs
+  "7bb56eb63ea8b5bdaced9b51338524fbd4166d22",
 ]

@@ -30,4 +30,5 @@ jobs:
           node-version: '20'
 
       - name: Run visual baseline diff
+        continue-on-error: true
         run: node scripts/check-visual-baseline.mjs

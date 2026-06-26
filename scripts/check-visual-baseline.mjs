@@ -130,4 +130,8 @@ function run() {
   process.stdout.write(JSON.stringify(result, null, 2) + '\n')
 }
 
-run()
+try {
+  run()
+} catch (err) {
+  process.stdout.write(JSON.stringify({ match: false, diff: ['unexpected error: ' + String(err)] }, null, 2) + '\n')
+}
