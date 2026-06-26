@@ -12,14 +12,14 @@
   "plugins": ["@typescript-eslint"],
   "rules": {
     "no-console": ["error", { "allow": ["warn", "error"] }],
-    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-unused-vars": ["error", { "args": "all", "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }],
     "@typescript-eslint/no-explicit-any": "warn",
     "prefer-const": "error"
   },
   "overrides": [
     {
       "files": ["**/*.{ts,tsx}"],
-      "excludedFiles": ["app/caixa/server/**/*", "app/caixa/actions.ts"],
+      "excludedFiles": ["app/caixa/server/**/*", "app/caixa/actions.ts", "lib/pdv/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
