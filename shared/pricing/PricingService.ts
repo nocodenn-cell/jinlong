@@ -53,10 +53,11 @@ export class PricingService {
     let precoUnitario = precoOriginal
     let tipoPreco: ResultadoPreco['tipoPreco'] = 'VAREJO'
 
-    if (regraAplicavel.tipo === 'ATACADO' && item.quantidade >= (regraAplicavel.minQuantidade || 1)) {      const desconto = (precoOriginal * (regraAplicavel.descontoPercentual || 0)) / 100
+    if (regraAplicavel.tipo.toUpperCase() === 'ATACADO' && item.quantidade >= (regraAplicavel.minQuantidade || 1)) {
+      const desconto = (precoOriginal * (regraAplicavel.descontoPercentual || 0)) / 100
       precoUnitario = precoOriginal - desconto
       tipoPreco = 'ATACADO'
-    } else if (regraAplicavel.tipo === 'PROMOCAO') {
+    } else if (regraAplicavel.tipo.toUpperCase() === 'PROMOCAO') {
       if (regraAplicavel.precoFixo != null) {
         precoUnitario = regraAplicavel.precoFixo
       } else if (regraAplicavel.descontoPercentual) {
@@ -90,15 +91,15 @@ export class PricingService {
     const regrasAtivas = regras.filter(r => r.ativo)
 
     // Prioridade: PROMOCAO > ATACADO > VAREJO
-    const regraPromocao = regrasAtivas.find(r => 
-      r.tipo === 'PROMOCAO' && 
+    const regraPromocao = regrasAtivas.find(r =>
+      r.tipo.toUpperCase() === 'PROMOCAO' &&
       this.verificarCondicoesRegra(item, r, ctx)
     )
 
     if (regraPromocao) return regraPromocao
 
-    const regraAtacado = regrasAtivas.find(r => 
-      r.tipo === 'ATACADO' && 
+    const regraAtacado = regrasAtivas.find(r =>
+      r.tipo.toUpperCase() === 'ATACADO' &&
       item.quantidade >= (r.minQuantidade || 1) &&
       this.verificarCondicoesRegra(item, r, ctx)
     )

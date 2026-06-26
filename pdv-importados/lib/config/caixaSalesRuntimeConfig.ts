@@ -23,9 +23,8 @@ const DEFAULT_FLAGS: Record<CriticalSalesFlagName, boolean> = {
 
 function parseBoolean(rawValue: string | undefined): boolean | undefined {
   if (rawValue === undefined) return undefined
-  const normalized = rawValue.trim().toLowerCase()
-  if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true
-  if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') return false
+  if (rawValue === 'true') return true
+  if (rawValue === 'false') return false
   return undefined
 }
 
