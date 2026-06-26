@@ -44,8 +44,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
   return (
     <div
-      data-app-theme="noturno"
-      data-gerente-ui-theme={theme}
+      data-app-theme={theme}
       suppressHydrationWarning
       className={cn(
         'gerente-shell relative min-h-screen overflow-x-visible overflow-y-visible antialiased transition-[background-color,color] duration-200',

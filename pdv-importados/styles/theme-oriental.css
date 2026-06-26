@@ -19,14 +19,31 @@
   --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 }
 
+/**
+ * theme-system: v1.0-classico
+ * tokens: --surface, --surface-text, --accent, --border (contratos únicos)
+ * changelog: tokens unificados; eliminação de overrides dragon-*/jl-* locais;
+ *            admin + gerente + sidebar normalizados.
+ */
+
 [data-app-theme='noturno'] {
-  --surface: rgba(15, 23, 42, 0.68);
-  --surface-soft: rgba(15, 23, 42, 0.42);
-  --surface-text: rgb(241 245 249);
-  --border: rgba(148, 163, 184, 0.38);
-  --accent: #fbbf24;
-  --accent-strong: #f59e0b;
+  --surface: #0f172a;
+  --surface-soft: rgba(15, 23, 42, 0.68);
+  --surface-text: #f8fafc;
+  --border: rgba(255, 255, 255, 0.08);
+  --accent: #f59e0b;
+  --accent-strong: #d97706;
   --accent-contrast: #111827;
+}
+
+[data-app-theme='classico'] {
+  --surface: #ffffff;
+  --surface-soft: rgba(248, 247, 245, 0.93);
+  --surface-text: #0f172a;
+  --border: #e2e8f0;
+  --accent: #1e40af;
+  --accent-strong: #1e3a8a;
+  --accent-contrast: #ffffff;
 }
 
 
@@ -953,24 +970,14 @@ html:has(.login-premium-root) body {
   }
 }
 
-/* —— Painel gerente: tema claro — variáveis base —— */
-/* Sobrepõe os tokens --surface/--border/--accent do :root (dark) */
-[data-gerente-ui-theme='dragon-light'] {
-  --surface:         #ffffff;
-  --surface-soft:    rgba(248, 247, 245, 0.93);
-  --surface-text:    rgb(15, 23, 42);
-  --border:          rgba(226, 232, 240, 0.95);
-  --accent:          #d97706;
-  --accent-strong:   #b45309;
-  --accent-contrast: #ffffff;
-}
+/* —— classico token overrides handled by [data-app-theme='classico'] above —— */
 
-/* —— Painel gerente: tema claro (dragon-light) —— */
-[data-gerente-ui-theme='dragon-light'] .bg-oriental-clouds {
+/* —— Painel gerente: tema clássico (classico) —— */
+[data-app-theme='classico'] .bg-oriental-clouds {
   background-color: rgb(255 255 255);
 }
 
-[data-gerente-ui-theme='dragon-light'] .bg-oriental-clouds::before {
+[data-app-theme='classico'] .bg-oriental-clouds::before {
   opacity: 0;
   background-image: none;
   background-size: auto;
@@ -979,7 +986,7 @@ html:has(.login-premium-root) body {
   filter: none;
 }
 
-[data-gerente-ui-theme='dragon-light'] .dragon-glass-card {
+[data-app-theme='classico'] .dragon-glass-card {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 252, 245, 0.93) 100%) !important;
   box-shadow:
@@ -988,7 +995,7 @@ html:has(.login-premium-root) body {
     inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
 }
 
-[data-gerente-ui-theme='dragon-light'] .dragon-elev-2 {
+[data-app-theme='classico'] .dragon-elev-2 {
   background-color: #ffffff !important;
   box-shadow:
     0 0 0 1px rgba(15, 23, 42, 0.10),
@@ -996,101 +1003,101 @@ html:has(.login-premium-root) body {
     0 2px 6px rgba(15, 23, 42, 0.08) !important;
 }
 
-[data-gerente-ui-theme='dragon-light'] .dragon-glass-backdrop {
+[data-app-theme='classico'] .dragon-glass-backdrop {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 248, 234, 0.6) 100%) !important;
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-page-title {
+[data-app-theme='noturno'] .gerente-page-title {
   color: rgb(248 250 252);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-page-title {
+[data-app-theme='classico'] .gerente-page-title {
   color: rgb(15 23 42);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-table-dragon {
+[data-app-theme='noturno'] .gerente-table-dragon {
   border-color: rgba(71, 85, 105, 0.5);
   background-color: rgba(2 6 23, 0.35);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-table-dragon {
+[data-app-theme='classico'] .gerente-table-dragon {
   border-color: rgba(226, 232, 240, 0.95);
   background-color: rgba(255, 255, 255, 0.8);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-table-dragon table {
+[data-app-theme='classico'] .gerente-table-dragon table {
   color: rgb(15 23 42);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-table-dragon thead tr {
+[data-app-theme='classico'] .gerente-table-dragon thead tr {
   border-color: rgb(226 232 240) !important;
   background-color: rgb(248 250 252) !important;
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-table-dragon thead th {
+[data-app-theme='classico'] .gerente-table-dragon thead th {
   color: rgb(71 85 105) !important;
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-table-dragon tbody {
+[data-app-theme='classico'] .gerente-table-dragon tbody {
   border-color: transparent;
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-table-dragon tbody tr {
+[data-app-theme='classico'] .gerente-table-dragon tbody tr {
   border-color: rgb(241 245 249);
 }
 
-[data-gerente-ui-theme='dragon-dark'] button.gerente-btn-csv:not(:disabled) {
+[data-app-theme='noturno'] button.gerente-btn-csv:not(:disabled) {
   border-color: rgba(71, 85, 105, 0.75) !important;
   background: rgba(30, 41, 59, 0.55) !important;
   color: rgb(241 245 249) !important;
 }
 
-[data-gerente-ui-theme='dragon-dark'] button.gerente-btn-csv:not(:disabled):hover {
+[data-app-theme='noturno'] button.gerente-btn-csv:not(:disabled):hover {
   border-color: rgba(245, 158, 11, 0.45) !important;
   background: rgba(51, 65, 85, 0.65) !important;
 }
 
-[data-gerente-ui-theme='dragon-dark'] button.gerente-btn-csv:disabled {
+[data-app-theme='noturno'] button.gerente-btn-csv:disabled {
   border-color: rgba(51, 65, 85, 0.6) !important;
   background: rgba(15, 23, 42, 0.45) !important;
   color: rgb(100 116 139) !important;
 }
 
 /* Financeiro / formulários gerente */
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-label {
+[data-app-theme='noturno'] .gerente-fin-label {
   color: rgb(203 213 225);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-label {
+[data-app-theme='classico'] .gerente-fin-label {
   color: rgb(51 65 85);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-muted {
+[data-app-theme='noturno'] .gerente-fin-muted {
   color: rgb(148 163 184);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-muted {
+[data-app-theme='classico'] .gerente-fin-muted {
   color: rgb(100 116 139);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-input {
+[data-app-theme='noturno'] .gerente-fin-input {
   border-color: rgb(30 41 55);
   background-color: rgba(15 23 42, 0.5);
   color: rgb(248 250 252);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-input {
+[data-app-theme='classico'] .gerente-fin-input {
   border-color: rgb(226 232 240);
   background-color: rgb(255 255 255);
   color: rgb(15 23 42);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-input::placeholder {
+[data-app-theme='noturno'] .gerente-fin-input::placeholder {
   color: rgb(100 116 139);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-input::placeholder {
+[data-app-theme='classico'] .gerente-fin-input::placeholder {
   color: rgb(148 163 184);
 }
 
@@ -1100,232 +1107,232 @@ html:has(.login-premium-root) body {
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.28);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-divider {
+[data-app-theme='noturno'] .gerente-fin-divider {
   border-color: rgba(51, 65, 85, 0.65);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-divider {
+[data-app-theme='classico'] .gerente-fin-divider {
   border-color: rgba(226 232 240, 0.95);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-page-title {
+[data-app-theme='noturno'] .gerente-fin-page-title {
   color: rgb(248 250 252);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-page-title {
+[data-app-theme='classico'] .gerente-fin-page-title {
   color: rgb(15 23 42);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-header-border {
+[data-app-theme='noturno'] .gerente-fin-header-border {
   border-color: rgba(51, 65, 85, 0.55);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-header-border {
+[data-app-theme='classico'] .gerente-fin-header-border {
   border-color: rgba(226 232 240, 0.95);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-row-hover:hover {
+[data-app-theme='noturno'] .gerente-fin-row-hover:hover {
   background-color: rgba(255, 255, 255, 0.038) !important;
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-row-hover:hover {
+[data-app-theme='classico'] .gerente-fin-row-hover:hover {
   background-color: rgba(254 243 199, 0.35);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-cell {
+[data-app-theme='noturno'] .gerente-fin-cell {
   color: rgb(241 245 249);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-cell {
+[data-app-theme='classico'] .gerente-fin-cell {
   color: rgb(15 23 42);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-empty {
+[data-app-theme='classico'] .gerente-fin-empty {
   color: rgb(100 116 139);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-empty {
+[data-app-theme='noturno'] .gerente-fin-empty {
   color: rgb(148 163 184);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-period-form {
+[data-app-theme='classico'] .gerente-period-form {
   border: 1px solid rgb(226 232 240);
   background: rgba(255, 255, 255, 0.85);
   border-radius: 0.75rem;
   padding: 1rem;
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-period-form {
+[data-app-theme='noturno'] .gerente-period-form {
   border: 1px solid rgba(71, 85, 105, 0.55);
   background: rgba(15, 23, 42, 0.55);
   border-radius: 0.75rem;
   padding: 1rem;
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-nav-back {
+[data-app-theme='noturno'] .gerente-nav-back {
   color: rgb(251 191 36);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-nav-back:hover {
+[data-app-theme='noturno'] .gerente-nav-back:hover {
   color: rgb(252 211 77);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-nav-back {
+[data-app-theme='classico'] .gerente-nav-back {
   color: rgb(180 83 9);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-nav-back:hover {
+[data-app-theme='classico'] .gerente-nav-back:hover {
   color: rgb(146 64 14);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-fin-badge {
+[data-app-theme='noturno'] .gerente-fin-badge {
   border-color: rgba(245, 158, 11, 0.4);
   background: rgba(245, 158, 11, 0.12);
   color: rgb(253 230 138);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-fin-badge {
+[data-app-theme='classico'] .gerente-fin-badge {
   border-color: rgba(245, 158, 11, 0.45);
   background: rgba(254 243 199, 0.65);
   color: rgb(120 53 15);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-section-accent {
+[data-app-theme='noturno'] .gerente-section-accent {
   color: rgb(251 191 36);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-section-accent {
+[data-app-theme='classico'] .gerente-section-accent {
   color: rgb(180 83 9);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-kpi-value {
+[data-app-theme='noturno'] .gerente-kpi-value {
   color: rgb(254 243 199);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-kpi-value {
+[data-app-theme='classico'] .gerente-kpi-value {
   color: rgb(146 64 14);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-inicio-chip {
+[data-app-theme='noturno'] .gerente-inicio-chip {
   border-color: rgba(71, 85, 105, 0.55);
   color: rgb(226 232 240);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-inicio-chip:hover {
+[data-app-theme='noturno'] .gerente-inicio-chip:hover {
   border-color: rgba(245, 158, 11, 0.45);
   color: rgb(253 230 138);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-inicio-chip {
+[data-app-theme='classico'] .gerente-inicio-chip {
   border-color: rgba(226 232 240, 0.95);
   color: rgb(30 41 59);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-inicio-chip:hover {
+[data-app-theme='classico'] .gerente-inicio-chip:hover {
   border-color: rgba(245, 158, 11, 0.45);
   color: rgb(146 64 14);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-inicio-table thead tr {
+[data-app-theme='noturno'] .gerente-inicio-table thead tr {
   border-color: rgba(71, 85, 105, 0.6);
   background: rgba(15, 23, 42, 0.5);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-inicio-table thead tr {
+[data-app-theme='classico'] .gerente-inicio-table thead tr {
   border-color: rgb(226 232 240);
   background: rgb(248 250 252);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-inicio-table tbody > :not([hidden]) ~ :not([hidden]) {
+[data-app-theme='classico'] .gerente-inicio-table tbody > :not([hidden]) ~ :not([hidden]) {
   border-color: rgb(241 245 249);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-table-wrap tbody > :not([hidden]) ~ :not([hidden]) {
+[data-app-theme='classico'] .gerente-table-wrap tbody > :not([hidden]) ~ :not([hidden]) {
   border-color: rgb(241 245 249);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-inicio-table tbody tr:hover {
+[data-app-theme='noturno'] .gerente-inicio-table tbody tr:hover {
   background: rgba(30, 41, 59, 0.35);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-inicio-table tbody tr:hover {
+[data-app-theme='classico'] .gerente-inicio-table tbody tr:hover {
   background: rgba(254 243 199, 0.25);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-caixa-row-alert {
+[data-app-theme='noturno'] .gerente-caixa-row-alert {
   background: rgba(180 83 9, 0.14);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-caixa-row-alert {
+[data-app-theme='classico'] .gerente-caixa-row-alert {
   background: rgb(255 247 237);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-caixa-diff-warn {
+[data-app-theme='noturno'] .gerente-caixa-diff-warn {
   color: rgb(252 211 77);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-caixa-diff-warn {
+[data-app-theme='classico'] .gerente-caixa-diff-warn {
   color: rgb(180 83 9);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-chip-action {
+[data-app-theme='noturno'] .gerente-chip-action {
   border-color: rgba(100, 116, 139, 0.45) !important;
   background: rgba(15, 23, 42, 0.35) !important;
   color: rgb(241 245 249) !important;
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-chip-action:hover {
+[data-app-theme='noturno'] .gerente-chip-action:hover {
   border-color: rgba(245, 158, 11, 0.4) !important;
   background: rgba(30, 41, 59, 0.55) !important;
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-chip-action {
+[data-app-theme='classico'] .gerente-chip-action {
   border-color: rgb(203 213 225);
   background: rgb(255 255 255);
   color: rgb(30 41 59);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-chip-action:hover {
+[data-app-theme='classico'] .gerente-chip-action:hover {
   border-color: rgba(245, 158, 11, 0.45);
   background: rgb(255 251 235);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-venda-mov-destaque {
+[data-app-theme='noturno'] .gerente-venda-mov-destaque {
   background: rgba(59, 130, 246, 0.14);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-venda-mov-destaque {
+[data-app-theme='classico'] .gerente-venda-mov-destaque {
   background: rgb(239 246 255);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-venda-mov-badge {
+[data-app-theme='noturno'] .gerente-venda-mov-badge {
   color: rgb(147 197 253);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-venda-mov-badge {
+[data-app-theme='classico'] .gerente-venda-mov-badge {
   color: rgb(29 78 216);
 }
 
 /* Relatórios gerente — alertas e KPI */
-[data-gerente-ui-theme='dragon-dark'] .gerente-alert-warn {
+[data-app-theme='noturno'] .gerente-alert-warn {
   border: 1px solid rgba(252, 211, 77, 0.35);
   background: rgba(180, 83, 9, 0.14);
   color: rgb(254 243 199);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-alert-warn {
+[data-app-theme='classico'] .gerente-alert-warn {
   border: 1px solid rgb(253 224 71);
   background: rgb(254 252 232);
   color: rgb(113 63 18);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-alert-error {
+[data-app-theme='noturno'] .gerente-alert-error {
   border: 1px solid rgba(248, 113, 113, 0.35);
   background: rgba(127, 29, 29, 0.2);
   color: rgb(254 202 202);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-alert-error {
+[data-app-theme='classico'] .gerente-alert-error {
   border: 1px solid rgb(254 202 202);
   background: rgb(254 242 242);
   color: rgb(127 29 29);
@@ -1337,18 +1344,18 @@ html:has(.login-premium-root) body {
   opacity: 0.95;
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-relatorio-kpi-margem-ok {
+[data-app-theme='noturno'] .gerente-relatorio-kpi-margem-ok {
   color: rgb(52 211 153);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-relatorio-kpi-margem-ok {
+[data-app-theme='classico'] .gerente-relatorio-kpi-margem-ok {
   color: rgb(5 150 105);
 }
 
-[data-gerente-ui-theme='dragon-dark'] .gerente-relatorio-kpi-margem-warn {
+[data-app-theme='noturno'] .gerente-relatorio-kpi-margem-warn {
   color: rgb(252 211 77);
 }
 
-[data-gerente-ui-theme='dragon-light'] .gerente-relatorio-kpi-margem-warn {
+[data-app-theme='classico'] .gerente-relatorio-kpi-margem-warn {
   color: rgb(180 83 9);
 }

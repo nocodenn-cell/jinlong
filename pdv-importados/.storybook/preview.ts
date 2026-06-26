@@ -28,12 +28,8 @@ const preview: Preview = {
           value: '#ffffff',
         },
         {
-          name: 'dragon-light',
-          value: '#f8fafc',
-        },
-        {
-          name: 'dragon-dark',
-          value: '#020617',
+          name: 'classico',
+          value: '#ffffff',
         },
       ],
     },
@@ -80,8 +76,7 @@ const preview: Preview = {
         items: [
           { value: 'noturno', title: 'Noturno 🌙' },
           { value: 'novem', title: 'Novem ☀️' },
-          { value: 'dragon-light', title: 'Dragon Light 🐉' },
-          { value: 'dragon-dark', title: 'Dragon Dark 🌑' },
+          { value: 'classico', title: 'Clássico' },
         ],
         dynamicTitle: true,
       },
@@ -106,16 +101,8 @@ const preview: Preview = {
       
       // Aplicar tema ao documento
       if (typeof document !== 'undefined') {
-        if (theme === 'dragon-light') {
-          document.documentElement.setAttribute('data-gerente-ui-theme', 'dragon-light')
-          document.documentElement.removeAttribute('data-app-theme')
-        } else if (theme === 'dragon-dark') {
-          document.documentElement.setAttribute('data-gerente-ui-theme', 'dragon-dark')
-          document.documentElement.removeAttribute('data-app-theme')
-        } else {
-          document.documentElement.setAttribute('data-app-theme', theme)
-          document.documentElement.removeAttribute('data-gerente-ui-theme')
-        }
+        document.documentElement.setAttribute('data-app-theme', theme)
+        document.documentElement.removeAttribute('data-gerente-ui-theme')
         
         // Aplicar preferência de movimento
         if (reducedMotion === 'reduce') {

@@ -6,8 +6,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = {
   idiomaAtual: Idioma
-  /** `dragon`: cabeçalho escuro · `dragon-light`: cabeçalho claro Jīn Lóng */
-  variant?: 'default' | 'dragon' | 'dragon-light'
+  variant?: 'default' | 'noturno' | 'classico'
 }
 
 const LANGS: { value: Idioma; label: string; title: string; font?: string }[] = [

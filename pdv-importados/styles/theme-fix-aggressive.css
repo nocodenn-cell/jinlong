@@ -96,9 +96,9 @@
   --jl-status-orange-border:  rgba(251, 146, 60, 0.25);
 }
 
-/* ── Light Theme (dragon-light) ─────────────────────────────────────────── */
-/* Referência: telas claras JinLong (Visão geral + Financeiro e fiscal).    */
-[data-gerente-ui-theme='dragon-light'] {
+/* ── Tema Clássico (classico) ───────────────────────────────────────────── */
+/* Ativado via [data-app-theme='classico']. Tokens derivam de --surface/*.  */
+[data-app-theme='classico'] {
   /* Surfaces */
   --jl-surface-base: #ffffff;
   --jl-surface-elev: #f8f7f5;

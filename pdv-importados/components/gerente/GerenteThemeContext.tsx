@@ -8,15 +8,15 @@ type Ctx = Readonly<{
   setTheme: (t: GerenteUiTheme) => void
 }>
 
-const ThemeCtx = createContext<Ctx>({ theme: 'dragon-dark', setTheme: () => {} })
+const ThemeCtx = createContext<Ctx>({ theme: 'noturno', setTheme: () => {} })
 
 export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [theme, setThemeState] = useState<GerenteUiTheme>('dragon-dark')
+  const [theme, setThemeState] = useState<GerenteUiTheme>('noturno')
 
   useEffect(() => {
     const stored = localStorage.getItem(GERENTE_UI_THEME_STORAGE_KEY)
     const resolved = parseGerenteUiTheme(stored)
-    if (resolved !== 'dragon-dark') setThemeState(resolved)
+    if (resolved !== 'noturno') setThemeState(resolved)
   }, [])
 
   function setTheme(t: GerenteUiTheme) {

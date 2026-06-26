@@ -6,12 +6,12 @@ import { cn } from '@/lib/utils'
 
 export function GerenteThemeToggle() {
   const { theme, setTheme } = useGerenteUiTheme()
-  const isLight = theme === 'dragon-light'
+  const isLight = theme === 'classico'
 
   return (
     <button
       type="button"
-      onClick={() => setTheme(isLight ? 'dragon-dark' : 'dragon-light')}
+      onClick={() => setTheme(isLight ? 'noturno' : 'classico')}
       aria-label={isLight ? 'Mudar para tema escuro' : 'Mudar para tema claro'}
       className={cn(
         'w-[30px] h-[30px] rounded-md flex items-center justify-center transition-colors duration-150',

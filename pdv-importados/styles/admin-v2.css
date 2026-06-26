@@ -3,15 +3,15 @@
  */
 
 [data-admin-v2] {
-  --admin-v2-bg: var(--color-background-primary);
-  --admin-v2-sidebar: var(--color-background-secondary);
-  --admin-v2-border: var(--color-border-secondary);
-  --admin-v2-accent-gold: var(--color-chart-gold);
-  --admin-v2-accent-jade: var(--color-success-500);
-  --admin-v2-text-primary: var(--jl-fg-1, rgb(241 245 249));
-  --admin-v2-text-secondary: var(--jl-fg-2, rgb(203 213 225));
-  --admin-v2-text-muted: var(--jl-fg-3, rgb(168 179 196));
-  --admin-v2-surface-card: var(--color-background-surface);
+  --admin-v2-bg: var(--surface);
+  --admin-v2-sidebar: var(--surface-soft);
+  --admin-v2-border: var(--border);
+  --admin-v2-accent-gold: var(--accent);
+  --admin-v2-accent-jade: var(--accent);
+  --admin-v2-text-primary: var(--surface-text);
+  --admin-v2-text-secondary: color-mix(in srgb, var(--surface-text) 75%, transparent);
+  --admin-v2-text-muted: color-mix(in srgb, var(--surface-text) 55%, transparent);
+  --admin-v2-surface-card: var(--surface);
 
   --admin-v2-space-1: 0.25rem;
   --admin-v2-space-2: 0.5rem;
@@ -24,11 +24,10 @@
   --admin-v2-shadow-card: 0 12px 28px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
   --admin-v2-chart-h: 260px;
 
-  --admin-v2-active-bg: color-mix(in srgb, var(--color-chart-gold) 14%, transparent);
-  --admin-v2-active-border: color-mix(in srgb, var(--color-chart-gold) 62%, transparent);
-  --admin-v2-active-text: color-mix(in srgb, var(--color-chart-gold) 85%, white);
+  --admin-v2-active-bg: color-mix(in srgb, var(--accent) 14%, transparent);
+  --admin-v2-active-border: color-mix(in srgb, var(--accent) 62%, transparent);
+  --admin-v2-active-text: color-mix(in srgb, var(--accent) 85%, white);
 
-  color-scheme: dark;
   background-color: var(--admin-v2-bg);
   color: var(--admin-v2-text-primary);
 }

@@ -1,11 +1,11 @@
-export const GERENTE_UI_THEME_STORAGE_KEY = 'dragonpos-gerente-ui-theme'
+export const GERENTE_UI_THEME_STORAGE_KEY = 'fastproduct-app-theme'
 
-export type GerenteUiTheme = 'dragon-dark' | 'dragon-light'
+export type GerenteUiTheme = 'noturno' | 'classico'
 
 export function parseGerenteUiTheme(raw: string | null): GerenteUiTheme {
-  return raw === 'dragon-light' ? 'dragon-light' : 'dragon-dark'
+  return raw === 'classico' ? 'classico' : 'noturno'
 }
 
 export function isGerenteLightChrome(theme: GerenteUiTheme): boolean {
-  return theme === 'dragon-light'
+  return theme === 'classico'
 }

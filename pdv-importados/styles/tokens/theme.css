@@ -29,8 +29,8 @@
   --color-brand-contrast: rgb(17 24 39);
 }
 
-/* === TEMA DRAGON-DARK (GERENTE) === */
-[data-gerente-ui-theme='dragon-dark'] {
+/* === TEMA NOTURNO (GERENTE — extensão de surface tokens) === */
+[data-app-theme='noturno'] {
   /* Surface colors */
   --color-background-surface: rgba(2, 6, 23, 0.35);
   --color-background-surface-soft: rgba(15, 23, 42, 0.5);
