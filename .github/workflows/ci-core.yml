@@ -6,8 +6,15 @@ name: CI core (bloqueante)
 #   - sem uploads de artefatos (Sentry sourcemaps, etc.)
 #   - qualquer falha aqui bloqueia merge — sem continue-on-error neste arquivo
 #
-# Para ativar proteção de branch: Settings → Branches → require status checks
-# e selecionar os jobs "Architecture Guard" e "Web — lint · typecheck · test · build".
+# Para ativar proteção de branch:
+#   Settings → Branches → require status checks →
+#   selecionar "Architecture Guard" e "Web — lint · typecheck · test · build"
+#
+# Diagnóstico remoto:
+#   Actions → CI core → Run workflow → ci_debug=true
+#   Executa health-check leve (install + lint config + typecheck dry-run)
+#   sem rodar testes completos nem build Next.js.
+#   Objetivo: distinguir FAIL DE CÓDIGO vs FAIL DE INFRA.
 
 on:
   pull_request:
@@ -28,6 +35,12 @@ on:
       - 'package-lock.json'
       - 'turbo.json'
       - '.github/workflows/ci-core.yml'
+  workflow_dispatch:
+    inputs:
+      ci_debug:
+        description: 'Health Check mode — valida setup sem testes/build (isola FAIL DE INFRA)'
+        type: boolean
+        default: false
 
 jobs:
   guard:
@@ -43,13 +56,69 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Diagnóstico de ambiente
+        run: |
+          echo "::group::Runtime info"
+          echo "Node:    $(node --version)"
+          echo "npm:     $(npm --version)"
+          echo "OS:      ${RUNNER_OS:-local}"
+          echo "Arch:    $(uname -m 2>/dev/null || echo 'desconhecido')"
+          echo "ci_debug: ${{ inputs.ci_debug || false }}"
+          echo "SENTRYCLI_SKIP_DOWNLOAD: ${SENTRYCLI_SKIP_DOWNLOAD:-(não definida — será definida no próximo step)}"
+          echo "HTTPS_PROXY: ${HTTPS_PROXY:-(não definida)}"
+          echo "::endgroup::"
+
+      - name: Instalar dependências
         env:
           SENTRYCLI_SKIP_DOWNLOAD: '1'
-        run: npm ci
+          NPM_CONFIG_FUND: 'false'
+        shell: bash
+        run: |
+          echo "::group::npm ci --no-audit"
+          npm ci --no-audit 2>&1 | tee /tmp/npm-ci-guard.log
+          NPM_EXIT=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          if [ "$NPM_EXIT" -ne 0 ]; then
+            echo "::error title=FAIL DE PIPELINE — npm ci falhou::Código de saída $NPM_EXIT"
+            echo ""
+            echo "=== Últimas 60 linhas do log de install ==="
+            tail -60 /tmp/npm-ci-guard.log
+            echo ""
+            echo "=== Pacotes com hasInstallScript=true no lockfile (candidatos à falha) ==="
+            node -e "
+              const l = require('./package-lock.json')
+              Object.entries(l.packages)
+                .filter(([, v]) => v.hasInstallScript)
+                .forEach(([n, v]) => console.log(' -', n, '@', v.version))
+            "
+            exit "$NPM_EXIT"
+          fi
+          echo "npm ci OK"
+
+      - name: Verificar binários nativos instalados
+        run: |
+          echo "::group::Binários nativos"
+          echo "--- @swc disponível:"
+          ls node_modules/@swc/ 2>/dev/null | grep -v '^node_modules' || echo "  (nenhum)"
+          echo "--- @sentry/cli (pdv-importados):"
+          ls pdv-importados/node_modules/@sentry/ 2>/dev/null | head -5 || echo "  (nenhum)"
+          echo "--- SENTRYCLI_SKIP_DOWNLOAD em efeito:"
+          ls pdv-importados/node_modules/@sentry/cli/bin/sentry-cli 2>/dev/null && echo "  binário presente" || echo "  binário ausente (esperado quando SENTRYCLI_SKIP_DOWNLOAD=1)"
+          echo "--- sharp prebuilt (@img):"
+          ls node_modules/@img/ 2>/dev/null || echo "  (nenhum)"
+          echo "--- unrs-resolver nativo:"
+          ls pdv-importados/node_modules/unrs-resolver/*.node 2>/dev/null | head -3 || echo "  .node não encontrado"
+          echo "::endgroup::"
 
       - name: Architecture Lock (guard:all)
+        if: ${{ inputs.ci_debug != true }}
         run: npm run guard:all
+
+      - name: Health Check (ci_debug=true — modo diagnóstico)
+        if: ${{ inputs.ci_debug == true }}
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
+        run: node scripts/ci-health-check.mjs
 
   web:
     name: Web — lint · typecheck · test · build
@@ -64,19 +133,74 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install
+      - name: Diagnóstico de ambiente
+        run: |
+          echo "::group::Runtime info"
+          echo "Node:    $(node --version)"
+          echo "npm:     $(npm --version)"
+          echo "OS:      ${RUNNER_OS:-local}"
+          echo "Arch:    $(uname -m 2>/dev/null || echo 'desconhecido')"
+          echo "ci_debug: ${{ inputs.ci_debug || false }}"
+          echo "SENTRYCLI_SKIP_DOWNLOAD: ${SENTRYCLI_SKIP_DOWNLOAD:-(não definida — será definida no próximo step)}"
+          echo "HTTPS_PROXY: ${HTTPS_PROXY:-(não definida)}"
+          echo "::endgroup::"
+
+      - name: Instalar dependências
         env:
           SENTRYCLI_SKIP_DOWNLOAD: '1'
-        run: npm ci
+          NPM_CONFIG_FUND: 'false'
+        shell: bash
+        run: |
+          echo "::group::npm ci --no-audit"
+          npm ci --no-audit 2>&1 | tee /tmp/npm-ci-web.log
+          NPM_EXIT=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          if [ "$NPM_EXIT" -ne 0 ]; then
+            echo "::error title=FAIL DE PIPELINE — npm ci falhou::Código de saída $NPM_EXIT"
+            echo ""
+            echo "=== Últimas 60 linhas do log de install ==="
+            tail -60 /tmp/npm-ci-web.log
+            echo ""
+            echo "=== Pacotes com hasInstallScript=true no lockfile (candidatos à falha) ==="
+            node -e "
+              const l = require('./package-lock.json')
+              Object.entries(l.packages)
+                .filter(([, v]) => v.hasInstallScript)
+                .forEach(([n, v]) => console.log(' -', n, '@', v.version))
+            "
+            exit "$NPM_EXIT"
+          fi
+          echo "npm ci OK"
+
+      - name: Verificar binários nativos instalados
+        run: |
+          echo "::group::Binários nativos"
+          echo "--- @swc disponível:"
+          ls node_modules/@swc/ 2>/dev/null | grep -v '^node_modules' || echo "  (nenhum)"
+          echo "--- @sentry/cli (pdv-importados):"
+          ls pdv-importados/node_modules/@sentry/ 2>/dev/null | head -5 || echo "  (nenhum)"
+          echo "--- SENTRYCLI_SKIP_DOWNLOAD em efeito:"
+          ls pdv-importados/node_modules/@sentry/cli/bin/sentry-cli 2>/dev/null && echo "  binário presente" || echo "  binário ausente (esperado quando SENTRYCLI_SKIP_DOWNLOAD=1)"
+          echo "--- sharp prebuilt (@img):"
+          ls node_modules/@img/ 2>/dev/null || echo "  (nenhum)"
+          echo "--- unrs-resolver nativo:"
+          ls pdv-importados/node_modules/unrs-resolver/*.node 2>/dev/null | head -3 || echo "  .node não encontrado"
+          echo "::endgroup::"
 
       - name: Lint, typecheck e testes
+        if: ${{ inputs.ci_debug != true }}
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
       - name: Build
+        if: ${{ inputs.ci_debug != true }}
         env:
-          # Sem chamada real ao Supabase durante build — variáveis embutidas no bundle.
-          # Se o projeto usar SSG com fetch real, adicione o secret CI_NEXT_PUBLIC_SUPABASE_ANON_KEY.
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-core-ci' }}
           SENTRYCLI_SKIP_DOWNLOAD: '1'
         run: npx turbo run build --filter=pdv-importados
+
+      - name: Health Check (ci_debug=true — modo diagnóstico)
+        if: ${{ inputs.ci_debug == true }}
+        env:
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
+        run: node scripts/ci-health-check.mjs

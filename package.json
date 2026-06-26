@@ -39,7 +39,8 @@
     "guard:deps": "node scripts/dep-version-guard.mjs",
     "guard:migrations": "node scripts/migration-sequence-guard.mjs",
     "guard:all": "npm run guard:core && npm run guard:pdv && npm run guard:routes && npm run guard:rpc && npm run guard:pricing && npm run guard:deps && npm run guard:migrations",
-    "agents:run": "tsx agents/runner.ts"
+    "agents:run": "tsx agents/runner.ts",
+    "ci:health": "node scripts/ci-health-check.mjs"
   },
   "overrides": {
     "vitest": "^3.2.6",
