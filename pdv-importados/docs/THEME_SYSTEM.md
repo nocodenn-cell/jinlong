@@ -207,3 +207,29 @@ Campos obrigatórios: `migration` (string não-vazia) + `routeAdded`,
 > **Migrar um módulo agora é mecânico:** atualize `migration-checklist.json` com
 > o módulo, garanta `guard:theme` verde (sem hardcode) e valide contra o baseline
 > (§3). O Checklist Gate + o guard de tema cobrem, juntos, processo **e** código.
+
+---
+
+## 8. Checklist derivado (auditoria mecânica) — `check:products`
+
+O checklist está migrando de **atestação manual** para **estado derivado do
+repositório**. `scripts/checklist-produtos.mjs` (`npm run check:products`)
+inspeciona o código e responde, sem intervenção humana, se o módulo está pronto:
+
+| Campo | Como é derivado |
+|-------|-----------------|
+| `routeAdded` | rota presente (não-comentada) no `themeRegistry` |
+| `themeScopeApplied` | algum layout da cadeia da rota aplica `data-theme` (scope) |
+| `tokensOnly` | ausência de classes Tailwind de paleta numerada nos arquivos do módulo |
+| `noHardcodedColors` | ausência de hex / `rgba()`/`hsl()` arbitrários e de resolução via `:root` |
+| `visualValidated` | **não** derivável de código → default `false` (override consciente `VISUAL_VALIDATED=true`) |
+
+Saída JSON com `ready` (todos os campos `true`) e `details` (contagem/sample de
+violações). Roda como step **não-bloqueante** no CI (observabilidade).
+
+> **Regra de ouro:** a fonte de verdade da prontidão passa a ser a auditoria
+> derivada. O `migration-checklist.json` manual vira **cache/atestação** (sobretudo
+> de `visualValidated`, que não é derivável) e é **removível no futuro** quando o
+> gate consumir diretamente o resultado derivado. As regras de cor aqui
+> **espelham** `theme-tokens-guard.mjs` (mantidas em sincronia); este script não
+> altera nem depende do `guard:theme`.

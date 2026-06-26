@@ -65,6 +65,12 @@ jobs:
       - name: Theme contract guard
         run: npm run guard:theme
 
+      # Observabilidade (NÃO bloqueante): auditoria mecânica de prontidão do
+      # módulo Produtos para migração. Imprime o checklist derivado no log.
+      - name: Module readiness — produtos (observabilidade)
+        continue-on-error: true
+        run: npm run check:products
+
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
 
