@@ -30,7 +30,7 @@ import { ROUTES } from '@shared-core/navigation/routes'
 export type ThemeId = string
 
 /** Tema base (não-escopado). Telas não listadas em `MODULES` usam este. */
-export const DEFAULT_THEME: ThemeId = 'dragon'
+export const DEFAULT_THEME: ThemeId = 'classico'
 
 /** Tema assumido por uma entrada migrada que não declara `theme` explicitamente. */
 const MIGRATED_DEFAULT_THEME: ThemeId = 'classico'
