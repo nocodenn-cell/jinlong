@@ -10,6 +10,16 @@ Sistema de ponto de venda para lojas de importados no Brasil, desenvolvido com *
 - **Bilíngue**: Português para operadores, Mandarim / cantonês para gestão (mensagens em JSON)
 - **PWA**: Instalável como app nativo
 
+## Sistema de Temas (Design System Clássico)
+
+A camada visual usa um sistema de temas por rota (`rota → tema` via
+`[data-theme]`), extensível para multi-tema/multi-tenant. As regras são um
+**contrato obrigatório**, com enforcement automatizado (`npm run guard:theme`,
+incluído em `guard:all`/CI) e checklist de migração como critério de aceite.
+
+➡️ **Leia antes de migrar qualquer tela:** [`docs/THEME_SYSTEM.md`](./docs/THEME_SYSTEM.md).
+Baseline visual oficial: `/admin/dashboard`.
+
 ## Tecnologias
 
 - Next.js 16 (App Router)

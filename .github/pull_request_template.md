@@ -8,6 +8,19 @@
 - [ ] **Supabase:** migrations e Edge revisadas se o PR tocar `backend/supabase/`.
 - [ ] **Testes:** `npm test` / `npm run lint` nos pacotes alterados quando fizer sentido.
 
+### Migração de UI para o tema Clássico
+
+Marque e cumpra **se** o PR migrar/criar uma tela no tema Clássico (contrato em
+[`pdv-importados/docs/THEME_SYSTEM.md`](../../pdv-importados/docs/THEME_SYSTEM.md)).
+Este checklist é **critério de aceite** — PR de migração não é aceito incompleto.
+
+- [ ] Rota adicionada ao registry (`CLASSICO_ROUTES`/`MODULES` em `lib/theme/themeRegistry.ts`) e diretório incluído no `POLICED` de `scripts/theme-tokens-guard.mjs`.
+- [ ] `data-theme` aplicado corretamente (via `AdminThemeScope`; verificado no DOM da rota).
+- [ ] Uso exclusivo de tokens — sem hardcode de cor (`npm run guard:theme` verde).
+- [ ] Charts/canvas resolvem tokens via elemento escopado `[data-theme]` (nunca `:root`).
+- [ ] Validação visual contra o baseline oficial (`/admin/dashboard`).
+- [ ] Nenhum acoplamento direto a valores fixos de cor.
+
 ### Pipeline operacional / caixa
 
 Marque e cumpra **se** o PR alterar retry, replay, ACK visual, `flush`/`shutdown`, timeout, `stale_cupom`, telemetria de scan ou ownership de cupom:
