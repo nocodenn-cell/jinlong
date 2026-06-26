@@ -66,10 +66,62 @@ export interface DesignBaselineResult {
   divergences: BaselineDivergence[]
 }
 
+// ── CI Execution Tracer ───────────────────────────────────────────────────────
+
+export interface CIStepTrace {
+  name: string
+  hasTimestamp: boolean
+  hasExitCapture: boolean
+  hasOutputSample: boolean
+  instrumented: boolean
+}
+
+export interface CIExecutionTracerResult {
+  agent: 'ci-execution-tracer'
+  timestamp: string
+  workflowFile: string
+  jobs: string[]
+  hasCompletionMarker: boolean
+  criticalSteps: CIStepTrace[]
+  instrumentedCount: number
+  totalCritical: number
+  score: number
+}
+
+// ── CI Failure Classifier ─────────────────────────────────────────────────────
+
+export type CIFailureCategory =
+  | 'PASS'
+  | 'REAL_CODE_BUG'
+  | 'DEPENDENCY_FAILURE'
+  | 'ENVIRONMENT_FAILURE'
+  | 'PIPELINE_ABORT'
+
+export interface CICheckReport {
+  command: string
+  category: CIFailureCategory
+  exitCode: number
+  durationMs: number
+  evidence: string
+}
+
+export interface CIFailureClassifierResult {
+  agent: 'ci-failure-classifier'
+  timestamp: string
+  sha: string
+  checks: CICheckReport[]
+  categorySummary: Record<CIFailureCategory, number>
+  canMerge: boolean
+}
+
+// ── Aggregate Report ──────────────────────────────────────────────────────────
+
 export interface AgentReport {
   generated: string
   themeAudit: ThemeAuditResult
   tokenMigration: TokenMigrationResult
   migrationCheck: MigrationCheckResult
   designBaseline: DesignBaselineResult
+  ciTracer: CIExecutionTracerResult
+  ciClassifier: CIFailureClassifierResult
 }

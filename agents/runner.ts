@@ -17,6 +17,8 @@ import * as themeAudit from './theme-audit-agent.js'
 import * as tokenMigration from './token-migration-agent.js'
 import * as migrationCheck from './migration-check-agent.js'
 import * as designBaseline from './design-baseline-agent.js'
+import * as ciTracer from './ci-execution-tracer.js'
+import * as ciClassifier from './ci-failure-classifier.js'
 import type { AgentReport, RiskLevel } from './types.js'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -58,13 +60,45 @@ const CHECK = '✅'
 const FAIL = '❌'
 
 function formatComment(report: AgentReport): string {
-  const { themeAudit: ta, tokenMigration: tm, migrationCheck: mc, designBaseline: db } = report
+  const { themeAudit: ta, tokenMigration: tm, migrationCheck: mc, designBaseline: db, ciTracer: ct, ciClassifier: cc } = report
 
   const lines: string[] = [
     '## 🤖 Agent Analysis Report',
     `> Gerado em: ${report.generated} | Observacional — não bloqueia merge`,
     '',
   ]
+
+  // CI Failure Classifier
+  const classifier_emoji = cc.canMerge ? '🟢' : '🔴'
+  lines.push(`### ${classifier_emoji} \`ci-failure-classifier\``)
+  lines.push(`**Diagnóstico**: ${cc.canMerge ? 'Pode mergear (código OK)' : 'Bloqueado (bug ou pipeline abort)'}`)
+  lines.push(`SHA: \`${cc.sha.slice(0, 12)}\` | Checks: ${cc.checks.length}`)
+  lines.push('')
+  lines.push('| Check | Categoria | Exit | Duração | Evidência |')
+  lines.push('|-------|-----------|------|---------|-----------|')
+  for (const chk of cc.checks) {
+    const icon = chk.category === 'PASS' ? '✅' : chk.category === 'REAL_CODE_BUG' ? '🔴' : chk.category === 'ENVIRONMENT_FAILURE' ? '⚠️' : '❌'
+    const dur = chk.durationMs > 0 ? `${(chk.durationMs / 1000).toFixed(1)}s` : '—'
+    lines.push(`| ${chk.command.slice(0, 30)} | ${icon} ${chk.category} | ${chk.exitCode} | ${dur} | ${chk.evidence.slice(0, 50)} |`)
+  }
+  lines.push('')
+
+  // CI Execution Tracer
+  const tracer_emoji = ct.score === 100 ? '🟢' : ct.score >= 50 ? '🟡' : '🔴'
+  lines.push(`### ${tracer_emoji} \`ci-execution-tracer\``)
+  lines.push(`Instrumentação: **${ct.instrumentedCount}/${ct.totalCritical}** steps (${ct.score}%)`)
+  lines.push(`Marker completo: ${ct.hasCompletionMarker ? '✅' : '❌'} CI_EXECUTION_COMPLETE`)
+  lines.push('')
+  if (ct.criticalSteps.filter(s => !s.instrumented).length > 0) {
+    lines.push('<details><summary>Steps faltando instrumentação</summary>')
+    lines.push('')
+    for (const step of ct.criticalSteps.filter(s => !s.instrumented)) {
+      lines.push(`- \`${step.name}\`: ${step.hasTimestamp ? '✅ timestamp' : '❌ timestamp'} ${step.hasExitCapture ? '✅ exit' : '❌ exit'} ${step.hasOutputSample ? '✅ output' : '❌ output'}`)
+    }
+    lines.push('')
+    lines.push('</details>')
+  }
+  lines.push('')
 
   // Theme Audit
   lines.push(`### ${RISK_EMOJI[ta.risk]} \`theme-audit-agent\``)
@@ -171,10 +205,12 @@ async function main(): Promise<void> {
   const files = resolveFilesToScan()
   console.log(`[runner] Arquivos para análise: ${files.length}`)
 
-  const [ta, mc, db] = await Promise.all([
+  const [ta, mc, db, ct, cc] = await Promise.all([
     Promise.resolve(themeAudit.run(files)),
     Promise.resolve(migrationCheck.run(root)),
     Promise.resolve(designBaseline.run(root)),
+    Promise.resolve(ciTracer.run(root)),
+    Promise.resolve(ciClassifier.run(root)),
   ])
 
   const tm = tokenMigration.run(ta.findings)
@@ -185,6 +221,8 @@ async function main(): Promise<void> {
     tokenMigration: tm,
     migrationCheck: mc,
     designBaseline: db,
+    ciTracer: ct,
+    ciClassifier: cc,
   }
 
   console.log('\n=== AGENT REPORT (JSON) ===')

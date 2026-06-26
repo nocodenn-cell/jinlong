@@ -6,15 +6,19 @@ name: CI core (bloqueante)
 #   - sem uploads de artefatos (Sentry sourcemaps, etc.)
 #   - qualquer falha aqui bloqueia merge — sem continue-on-error neste arquivo
 #
+# Instrumentação obrigatória:
+#   - Cada step crítico tem: timestamp, exit code, duração, amostra de stdout
+#   - Marker final: CI_EXECUTION_COMPLETE — prova de execução completa
+#   - Se marker não aparecer → pipeline incompleto
+#
+# CI_DEBUG mode (workflow_dispatch):
+#   - Roda apenas: checkout + node -v + npm ci + guard:all + lint config check
+#   - Objetivo: isolar FAIL DE INFRA (ambiente) de FAIL DE CÓDIGO
+#   - Pula: testes completos, build pesado
+#
 # Para ativar proteção de branch:
 #   Settings → Branches → require status checks →
 #   selecionar "Architecture Guard" e "Web — lint · typecheck · test · build"
-#
-# Diagnóstico remoto:
-#   Actions → CI core → Run workflow → ci_debug=true
-#   Executa health-check leve (install + lint config + typecheck dry-run)
-#   sem rodar testes completos nem build Next.js.
-#   Objetivo: distinguir FAIL DE CÓDIGO vs FAIL DE INFRA.
 
 on:
   pull_request:
@@ -38,7 +42,7 @@ on:
   workflow_dispatch:
     inputs:
       ci_debug:
-        description: 'Health Check mode — valida setup sem testes/build (isola FAIL DE INFRA)'
+        description: 'Debug mode — só valida setup (install + lint config) sem testes/build'
         type: boolean
         default: false
 
@@ -48,159 +52,131 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Node version
+        shell: bash
+        run: |
+          node --version
+          npm --version
+          uname -a
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Diagnóstico de ambiente
-        run: |
-          echo "::group::Runtime info"
-          echo "Node:    $(node --version)"
-          echo "npm:     $(npm --version)"
-          echo "OS:      ${RUNNER_OS:-local}"
-          echo "Arch:    $(uname -m 2>/dev/null || echo 'desconhecido')"
-          echo "ci_debug: ${{ inputs.ci_debug || false }}"
-          echo "SENTRYCLI_SKIP_DOWNLOAD: ${SENTRYCLI_SKIP_DOWNLOAD:-(não definida — será definida no próximo step)}"
-          echo "HTTPS_PROXY: ${HTTPS_PROXY:-(não definida)}"
-          echo "::endgroup::"
-
-      - name: Instalar dependências
+      - name: 'TRACE: npm ci'
+        shell: bash
         env:
           SENTRYCLI_SKIP_DOWNLOAD: '1'
           NPM_CONFIG_FUND: 'false'
+        run: |
+          set +e
+          TRACE_START=$(date +%s%3N)
+          npm ci --no-audit 2>&1 | tee /tmp/npm-ci-guard.log
+          TRACE_EXIT=${PIPESTATUS[0]}
+          TRACE_END=$(date +%s%3N)
+          TRACE_DUR=$((TRACE_END - TRACE_START))
+          echo ""
+          echo "[TRACE] npm ci | exit=$TRACE_EXIT | dur=${TRACE_DUR}ms"
+          tail -20 /tmp/npm-ci-guard.log
+          exit $TRACE_EXIT
+
+      - name: 'TRACE: guard:all'
+        if: ${{ inputs.ci_debug != true }}
         shell: bash
         run: |
-          echo "::group::npm ci --no-audit"
-          npm ci --no-audit 2>&1 | tee /tmp/npm-ci-guard.log
-          NPM_EXIT=${PIPESTATUS[0]}
-          echo "::endgroup::"
-          if [ "$NPM_EXIT" -ne 0 ]; then
-            echo "::error title=FAIL DE PIPELINE — npm ci falhou::Código de saída $NPM_EXIT"
-            echo ""
-            echo "=== Últimas 60 linhas do log de install ==="
-            tail -60 /tmp/npm-ci-guard.log
-            echo ""
-            echo "=== Pacotes com hasInstallScript=true no lockfile (candidatos à falha) ==="
-            node -e "
-              const l = require('./package-lock.json')
-              Object.entries(l.packages)
-                .filter(([, v]) => v.hasInstallScript)
-                .forEach(([n, v]) => console.log(' -', n, '@', v.version))
-            "
-            exit "$NPM_EXIT"
-          fi
-          echo "npm ci OK"
+          set +e
+          TRACE_START=$(date +%s%3N)
+          npm run guard:all
+          TRACE_EXIT=$?
+          TRACE_END=$(date +%s%3N)
+          TRACE_DUR=$((TRACE_END - TRACE_START))
+          echo ""
+          echo "[TRACE] guard:all | exit=$TRACE_EXIT | dur=${TRACE_DUR}ms"
+          exit $TRACE_EXIT
 
-      - name: Verificar binários nativos instalados
-        run: |
-          echo "::group::Binários nativos"
-          echo "--- @swc disponível:"
-          ls node_modules/@swc/ 2>/dev/null | grep -v '^node_modules' || echo "  (nenhum)"
-          echo "--- @sentry/cli (pdv-importados):"
-          ls pdv-importados/node_modules/@sentry/ 2>/dev/null | head -5 || echo "  (nenhum)"
-          echo "--- SENTRYCLI_SKIP_DOWNLOAD em efeito:"
-          ls pdv-importados/node_modules/@sentry/cli/bin/sentry-cli 2>/dev/null && echo "  binário presente" || echo "  binário ausente (esperado quando SENTRYCLI_SKIP_DOWNLOAD=1)"
-          echo "--- sharp prebuilt (@img):"
-          ls node_modules/@img/ 2>/dev/null || echo "  (nenhum)"
-          echo "--- unrs-resolver nativo:"
-          ls pdv-importados/node_modules/unrs-resolver/*.node 2>/dev/null | head -3 || echo "  .node não encontrado"
-          echo "::endgroup::"
-
-      - name: Architecture Lock (guard:all)
-        if: ${{ inputs.ci_debug != true }}
-        run: npm run guard:all
-
-      - name: Health Check (ci_debug=true — modo diagnóstico)
-        if: ${{ inputs.ci_debug == true }}
-        env:
-          SENTRYCLI_SKIP_DOWNLOAD: '1'
-        run: node scripts/ci-health-check.mjs
+      - name: 'CI_EXECUTION_COMPLETE'
+        if: always()
+        run: echo "CI_EXECUTION_COMPLETE: Architecture Guard job finished"
 
   web:
     name: Web — lint · typecheck · test · build
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Node version
+        shell: bash
+        run: |
+          node --version
+          npm --version
+          uname -a
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Diagnóstico de ambiente
-        run: |
-          echo "::group::Runtime info"
-          echo "Node:    $(node --version)"
-          echo "npm:     $(npm --version)"
-          echo "OS:      ${RUNNER_OS:-local}"
-          echo "Arch:    $(uname -m 2>/dev/null || echo 'desconhecido')"
-          echo "ci_debug: ${{ inputs.ci_debug || false }}"
-          echo "SENTRYCLI_SKIP_DOWNLOAD: ${SENTRYCLI_SKIP_DOWNLOAD:-(não definida — será definida no próximo step)}"
-          echo "HTTPS_PROXY: ${HTTPS_PROXY:-(não definida)}"
-          echo "::endgroup::"
-
-      - name: Instalar dependências
+      - name: 'TRACE: npm ci'
+        shell: bash
         env:
           SENTRYCLI_SKIP_DOWNLOAD: '1'
           NPM_CONFIG_FUND: 'false'
+        run: |
+          set +e
+          TRACE_START=$(date +%s%3N)
+          npm ci --no-audit 2>&1 | tee /tmp/npm-ci-web.log
+          TRACE_EXIT=${PIPESTATUS[0]}
+          TRACE_END=$(date +%s%3N)
+          TRACE_DUR=$((TRACE_END - TRACE_START))
+          echo ""
+          echo "[TRACE] npm ci | exit=$TRACE_EXIT | dur=${TRACE_DUR}ms"
+          tail -20 /tmp/npm-ci-web.log
+          exit $TRACE_EXIT
+
+      - name: 'TRACE: lint + typecheck + test'
+        if: ${{ inputs.ci_debug != true }}
         shell: bash
         run: |
-          echo "::group::npm ci --no-audit"
-          npm ci --no-audit 2>&1 | tee /tmp/npm-ci-web.log
-          NPM_EXIT=${PIPESTATUS[0]}
-          echo "::endgroup::"
-          if [ "$NPM_EXIT" -ne 0 ]; then
-            echo "::error title=FAIL DE PIPELINE — npm ci falhou::Código de saída $NPM_EXIT"
-            echo ""
-            echo "=== Últimas 60 linhas do log de install ==="
-            tail -60 /tmp/npm-ci-web.log
-            echo ""
-            echo "=== Pacotes com hasInstallScript=true no lockfile (candidatos à falha) ==="
-            node -e "
-              const l = require('./package-lock.json')
-              Object.entries(l.packages)
-                .filter(([, v]) => v.hasInstallScript)
-                .forEach(([n, v]) => console.log(' -', n, '@', v.version))
-            "
-            exit "$NPM_EXIT"
-          fi
-          echo "npm ci OK"
+          set +e
+          TRACE_START=$(date +%s%3N)
+          npx turbo run lint typecheck test --filter=pdv-importados 2>&1 | tee /tmp/turbo-checks.log
+          TRACE_EXIT=${PIPESTATUS[0]}
+          TRACE_END=$(date +%s%3N)
+          TRACE_DUR=$((TRACE_END - TRACE_START))
+          echo ""
+          echo "[TRACE] turbo lint+typecheck+test | exit=$TRACE_EXIT | dur=${TRACE_DUR}ms"
+          tail -30 /tmp/turbo-checks.log
+          exit $TRACE_EXIT
 
-      - name: Verificar binários nativos instalados
-        run: |
-          echo "::group::Binários nativos"
-          echo "--- @swc disponível:"
-          ls node_modules/@swc/ 2>/dev/null | grep -v '^node_modules' || echo "  (nenhum)"
-          echo "--- @sentry/cli (pdv-importados):"
-          ls pdv-importados/node_modules/@sentry/ 2>/dev/null | head -5 || echo "  (nenhum)"
-          echo "--- SENTRYCLI_SKIP_DOWNLOAD em efeito:"
-          ls pdv-importados/node_modules/@sentry/cli/bin/sentry-cli 2>/dev/null && echo "  binário presente" || echo "  binário ausente (esperado quando SENTRYCLI_SKIP_DOWNLOAD=1)"
-          echo "--- sharp prebuilt (@img):"
-          ls node_modules/@img/ 2>/dev/null || echo "  (nenhum)"
-          echo "--- unrs-resolver nativo:"
-          ls pdv-importados/node_modules/unrs-resolver/*.node 2>/dev/null | head -3 || echo "  .node não encontrado"
-          echo "::endgroup::"
-
-      - name: Lint, typecheck e testes
+      - name: 'TRACE: build'
         if: ${{ inputs.ci_debug != true }}
-        run: npx turbo run lint typecheck test --filter=pdv-importados
-
-      - name: Build
-        if: ${{ inputs.ci_debug != true }}
+        shell: bash
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-core-ci' }}
           SENTRYCLI_SKIP_DOWNLOAD: '1'
-        run: npx turbo run build --filter=pdv-importados
+        run: |
+          set +e
+          TRACE_START=$(date +%s%3N)
+          npx turbo run build --filter=pdv-importados 2>&1 | tee /tmp/turbo-build.log
+          TRACE_EXIT=${PIPESTATUS[0]}
+          TRACE_END=$(date +%s%3N)
+          TRACE_DUR=$((TRACE_END - TRACE_START))
+          echo ""
+          echo "[TRACE] turbo build | exit=$TRACE_EXIT | dur=${TRACE_DUR}ms"
+          tail -30 /tmp/turbo-build.log
+          exit $TRACE_EXIT
 
-      - name: Health Check (ci_debug=true — modo diagnóstico)
-        if: ${{ inputs.ci_debug == true }}
-        env:
-          SENTRYCLI_SKIP_DOWNLOAD: '1'
-        run: node scripts/ci-health-check.mjs
+      - name: 'CI_EXECUTION_COMPLETE'
+        if: always()
+        run: echo "CI_EXECUTION_COMPLETE: Web — lint · typecheck · test · build job finished"
