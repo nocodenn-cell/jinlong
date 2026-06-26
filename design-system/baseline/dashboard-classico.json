@@ -1,0 +1,85 @@
+{
+  "_meta": {
+    "snapshot": "dashboard-classico",
+    "captured": "2026-06-26",
+    "source": "pdv-importados/app/admin/dashboard/page.tsx + styles/admin-v2.css"
+  },
+  "layout": {
+    "rootClass": "admin-v2-page admin-v2-stack",
+    "scope": "[data-admin-v2]",
+    "sections": [
+      "admin-v2-grid-kpi",
+      "admin-v2-grid-3-main",
+      "admin-v2-grid-2"
+    ]
+  },
+  "components": [
+    "PageHeader",
+    "MetricCard",
+    "ChartCard",
+    "SectionCard",
+    "ActivityFeed",
+    "CaixaShortcut",
+    "SalesTrendChartLazy",
+    "PaymentDonutChartLazy",
+    "DashboardChart"
+  ],
+  "cssTokens": {
+    "admin-v2-bg": "var(--color-background-primary)",
+    "admin-v2-sidebar": "var(--color-background-secondary)",
+    "admin-v2-border": "var(--color-border-secondary)",
+    "admin-v2-accent-gold": "var(--color-chart-gold)",
+    "admin-v2-accent-jade": "var(--color-success-500)",
+    "admin-v2-text-primary": "var(--jl-fg-1, rgb(241 245 249))",
+    "admin-v2-text-secondary": "var(--jl-fg-2, rgb(203 213 225))",
+    "admin-v2-text-muted": "var(--jl-fg-3, rgb(168 179 196))",
+    "admin-v2-surface-card": "var(--color-background-surface)",
+    "admin-v2-radius-card": "10px",
+    "admin-v2-chart-h": "260px"
+  },
+  "theme": {
+    "mode": "noturno",
+    "dataAttribute": "data-app-theme",
+    "colorScheme": "dark"
+  },
+  "gridKpi": {
+    "mobile": "repeat(1, minmax(0, 1fr))",
+    "tablet": "repeat(2, minmax(0, 1fr))",
+    "desktop": "repeat(4, minmax(0, 1fr))",
+    "breakpoints": { "tablet": "768px", "desktop": "1280px" }
+  },
+  "gridMainChart": {
+    "mobile": "repeat(1, minmax(0, 1fr))",
+    "desktop": "minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(260px, 0.7fr)",
+    "breakpoints": { "desktop": "1200px" }
+  },
+  "gridTwo": {
+    "mobile": "repeat(1, minmax(0, 1fr))",
+    "desktop": "repeat(2, minmax(0, 1fr))",
+    "breakpoints": { "desktop": "1024px" }
+  },
+  "metrics": [
+    { "key": "total-sales", "icon": "dollar-sign", "tone": "gold" },
+    { "key": "orders", "icon": "package", "tone": "success" },
+    { "key": "ticket", "icon": "shopping-bag", "tone": "gold" },
+    { "key": "stock-alerts", "icon": "alert-circle", "tone": "warning|success" }
+  ],
+  "accentColors": {
+    "gold": "#c9a227",
+    "border-table": "#242424",
+    "stock-amber": "amber-400",
+    "badge-success": "border-success/30 bg-success/20 text-success",
+    "badge-cancelled": "border-destructive/30 bg-destructive/20 text-destructive"
+  },
+  "tableColumns": ["id", "operador", "data", "valor", "formaPagamento", "status"],
+  "periodFilters": ["TODAY", "7D", "30D"],
+  "statusFilters": ["ALL", "CONCLUIDA", "CANCELADA"],
+  "filterUi": {
+    "wrapper": "admin-v2-segmented",
+    "pill": "admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium"
+  },
+  "cardStyle": {
+    "classes": "admin-v2-metric-card admin-v2-section-card admin-v2-activity-card admin-v2-panel",
+    "shadow": "0 12px 28px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.02) inset"
+  }
+}

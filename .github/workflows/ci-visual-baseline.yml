@@ -1,0 +1,33 @@
+name: CI visual-baseline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'design-system/baseline/**'
+      - 'pdv-importados/styles/admin-v2.css'
+      - 'pdv-importados/app/admin/dashboard/page.tsx'
+      - 'scripts/check-visual-baseline.mjs'
+      - '.github/workflows/ci-visual-baseline.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'design-system/baseline/**'
+      - 'pdv-importados/styles/admin-v2.css'
+      - 'pdv-importados/app/admin/dashboard/page.tsx'
+      - 'scripts/check-visual-baseline.mjs'
+      - '.github/workflows/ci-visual-baseline.yml'
+
+jobs:
+  visual-baseline-diff:
+    name: Visual Baseline Diff (observação)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Run visual baseline diff
+        run: node scripts/check-visual-baseline.mjs
