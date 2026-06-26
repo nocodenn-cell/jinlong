@@ -224,8 +224,12 @@ inspeciona o código e responde, sem intervenção humana, se o módulo está pr
 | `noHardcodedColors` | ausência de hex / `rgba()`/`hsl()` arbitrários e de resolução via `:root` |
 | `visualValidated` | **não** derivável de código → default `false` (override consciente `VISUAL_VALIDATED=true`) |
 
-Saída JSON com `ready` (todos os campos `true`) e `details` (contagem/sample de
-violações). Roda como step **não-bloqueante** no CI (observabilidade).
+Saída JSON **apenas factual** (os campos acima + `details` com contagem/sample de
+violações). O script **não** julga prontidão (`ready`) nem agrega decisão de
+migração — isso é separação de responsabilidades: "estado do código" ≠ "decisão
+de migração". A composição (guard:theme + checklist + baseline) fica para um
+escopo separado (ex.: futuro `check:products:readiness`). Roda como step
+**não-bloqueante** no CI (observabilidade).
 
 > **Regra de ouro:** a fonte de verdade da prontidão passa a ser a auditoria
 > derivada. O `migration-checklist.json` manual vira **cache/atestação** (sobretudo

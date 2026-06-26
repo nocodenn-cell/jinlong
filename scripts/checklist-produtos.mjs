@@ -3,8 +3,10 @@
  * CHECKLIST DERIVADO — auditoria mecânica de prontidão de migração (módulo Produtos).
  *
  * Objetivo: o checklist deixa de ser atestação manual e passa a ser DERIVADO do
- * repositório. Este script inspeciona o código e responde, sem intervenção
- * humana, se o módulo está pronto para o tema Clássico. Saída: JSON.
+ * repositório. Este script é EXCLUSIVAMENTE auditoria factual — inspeciona o
+ * código e emite o estado de cada campo. Ele NÃO julga prontidão ("ready") nem
+ * agrega decisão de migração (isso é escopo de outro script, ex. futuro
+ * check:products:readiness). Saída: JSON com os campos factuais.
  *
  * Campos derivados:
  *   • routeAdded ......... rota do módulo presente (não-comentada) no themeRegistry
@@ -136,6 +138,9 @@ const noHardcodedColors =
   scan.hits.colorFnArbitrary.length === 0 &&
   scan.hits.rootResolution.length === 0
 
+// Apenas ESTADO FACTUAL do repositório — sem agregação de "pronto/não pronto".
+// A decisão de prontidão (compor guard:theme + checklist + baseline) é
+// responsabilidade de outro escopo (ex.: futuro check:products:readiness).
 const checklist = {
   migration: MODULE,
   routeAdded: routeAdded.value,
@@ -144,11 +149,9 @@ const checklist = {
   noHardcodedColors,
   visualValidated,
 }
-const ready = Object.entries(checklist).every(([k, v]) => (k === 'migration' ? true : v === true))
 
 const report = {
   ...checklist,
-  ready,
   derivedAt: new Date().toISOString(),
   source: 'derived',
   route: ROUTE,
