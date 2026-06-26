@@ -486,7 +486,7 @@ export function GerenteHeaderNav({
         <GerenteThemeToggle />
 
         {/* Idioma */}
-        {podeTrocarIdioma && <LanguageToggle idiomaAtual={idioma} variant="dragon" />}
+        {podeTrocarIdioma && <LanguageToggle idiomaAtual={idioma} variant="noturno" />}
 
         {/* Notificações */}
         <button
