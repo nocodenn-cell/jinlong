@@ -15,6 +15,7 @@ import { normalizePerfilUsuario } from '@/idioma/normalizePerfilUsuario'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { cn } from '@/lib/utils'
 import { GerenteUiThemeProvider, useGerenteUiTheme } from './GerenteThemeContext'
+import { AdminThemeScope } from '@/components/theme/AdminThemeScope'
 
 type Props = Readonly<{
   children: ReactNode
@@ -44,7 +45,6 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
   return (
     <div
-      data-app-theme="noturno"
       data-gerente-ui-theme={theme}
       suppressHydrationWarning
       className={cn(
@@ -90,8 +90,10 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
 export function GerenteLayoutShell(props: Props) {
   return (
-    <GerenteUiThemeProvider>
-      <GerenteLayoutInner {...props} />
-    </GerenteUiThemeProvider>
+    <AdminThemeScope>
+      <GerenteUiThemeProvider>
+        <GerenteLayoutInner {...props} />
+      </GerenteUiThemeProvider>
+    </AdminThemeScope>
   )
 }

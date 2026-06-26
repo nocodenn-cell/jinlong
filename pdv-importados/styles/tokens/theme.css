@@ -3,8 +3,9 @@
  * Sistema travado em modo escuro (noturno). Tema claro (novem) removido.
  */
 
-/* === TEMA NOTURNO (ÚNICO) === */
+/* === TEMA CLÁSSICO (alias: noturno) === */
 :root,
+[data-app-theme='classico'],
 [data-app-theme='noturno'] {
   /* Surface colors */
   --color-background-surface: rgba(15, 23, 42, 0.68);
@@ -64,6 +65,7 @@
 /* === RESPONSIVE THEME ADJUSTMENTS === */
 @media (max-width: 640px) {
   :root,
+  [data-app-theme='classico'],
   [data-app-theme='noturno'] {
     --btn-accent-shadow-hover: none;
     --btn-neutral-shadow-hover: none;

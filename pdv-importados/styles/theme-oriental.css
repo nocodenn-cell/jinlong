@@ -19,6 +19,7 @@
   --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 }
 
+[data-app-theme='classico'],
 [data-app-theme='noturno'] {
   --surface: rgba(15, 23, 42, 0.68);
   --surface-soft: rgba(15, 23, 42, 0.42);
