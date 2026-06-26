@@ -28,7 +28,8 @@
   --admin-v2-active-border: color-mix(in srgb, var(--color-chart-gold) 62%, transparent);
   --admin-v2-active-text: color-mix(in srgb, var(--color-chart-gold) 85%, white);
 
-  color-scheme: dark;
+  /* Fase 0/1 — Layout Compiler: tema único claro. Admin segue o contrato claro. */
+  color-scheme: light;
   background-color: var(--admin-v2-bg);
   color: var(--admin-v2-text-primary);
 }

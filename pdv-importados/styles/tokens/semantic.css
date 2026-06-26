@@ -31,32 +31,37 @@
   --color-danger-900: var(--color-dragon-imperial-red-900);
 
   /* === CORES DE INTERFACE === */
+  /*
+   * Fase 0/1 — Layout Compiler: re-ancorado de escuro → CLARO ("cara de Bling").
+   * Este arquivo havia ficado de fora da virada do PR #119 e era a última fonte
+   * de tokens escuros (alimentava o admin via --color-background-primary).
+   */
   /* Background */
-  --color-background-primary: var(--color-night-950);
-  --color-background-secondary: var(--color-night-900);
-  --color-background-tertiary: var(--color-night-800);
-  --color-background-surface: rgba(15, 23, 42, 0.68);
-  --color-background-surface-soft: rgba(15, 23, 42, 0.42);
-  --color-background-overlay: rgba(2, 6, 23, 0.58);
+  --color-background-primary: #f8fafc; /* page canvas — slate-50 */
+  --color-background-secondary: #ffffff; /* sidebar / elevado */
+  --color-background-tertiary: #f1f5f9; /* slate-100 */
+  --color-background-surface: #ffffff;
+  --color-background-surface-soft: #f8fafc;
+  --color-background-overlay: rgba(15, 23, 42, 0.45); /* scrim escuro sobre conteúdo */
 
   /* Text */
-  --color-text-primary: rgb(241 245 249);
-  --color-text-secondary: rgb(203 213 225);
-  --color-text-tertiary: rgb(148 163 184);
-  --color-text-inverse: rgb(15 23 42);
-  --color-text-disabled: rgb(100 116 139);
+  --color-text-primary: rgb(15 23 42); /* slate-900 */
+  --color-text-secondary: rgb(71 85 105); /* slate-600 */
+  --color-text-tertiary: rgb(100 116 139); /* slate-500 */
+  --color-text-inverse: rgb(241 245 249); /* texto sobre superfície escura */
+  --color-text-disabled: rgb(148 163 184); /* slate-400 */
 
   /* Border */
-  --color-border-primary: rgba(148, 163, 184, 0.38);
-  --color-border-secondary: rgba(71, 85, 105, 0.5);
-  --color-border-focus: var(--color-dragon-gold-400);
-  --color-border-disabled: rgba(51, 65, 85, 0.6);
+  --color-border-primary: #e2e8f0; /* slate-200 */
+  --color-border-secondary: #e2e8f0;
+  --color-border-focus: #2563eb; /* azul Bling */
+  --color-border-disabled: #f1f5f9;
 
-  /* Accent/Brand */
-  --color-brand-primary: var(--color-dragon-gold-400);
-  --color-brand-secondary: var(--color-dragon-gold-500);
-  --color-brand-strong: var(--color-dragon-gold-600);
-  --color-brand-contrast: var(--color-night-950);
+  /* Accent/Brand (azul Bling) */
+  --color-brand-primary: #2563eb; /* blue-600 */
+  --color-brand-secondary: #3b82f6; /* blue-500 */
+  --color-brand-strong: #1d4ed8; /* blue-700 */
+  --color-brand-contrast: #ffffff;
 
   /* Chart-specific accent (warm gold for donut/bar charts) */
   --color-chart-gold: var(--color-dragon-gold-warm);

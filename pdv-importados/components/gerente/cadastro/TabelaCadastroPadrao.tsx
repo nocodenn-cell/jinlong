@@ -3,13 +3,14 @@
 import type { ReactNode } from 'react'
 import { GerenteTable, type GerenteTableColumn } from '@/components/gerente/GerenteTable'
 import { cn } from '@/lib/utils'
+import type { GerenteSurfaceTone } from '@/lib/theme/contract'
 
 export type TabelaCadastroPadraoProps = Readonly<{
   sectionTitle: string
   sectionMeta?: ReactNode
   columns: GerenteTableColumn[]
   children: ReactNode
-  tone?: 'paper' | 'dragon'
+  tone?: GerenteSurfaceTone
   compact?: boolean
   footer?: ReactNode
   className?: string

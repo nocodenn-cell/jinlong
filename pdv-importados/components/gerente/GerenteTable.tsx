@@ -3,6 +3,7 @@
 import React, { type ReactNode, memo } from 'react'
 import { cn } from '@/lib/utils'
 import { DataTableSkeletonRows } from '@/components/gerente/DataTableSkeleton'
+import type { GerenteSurfaceTone } from '@/lib/theme/contract'
 
 /**
  * Prioridade semântica da coluna — controla peso visual do cabeçalho.
@@ -40,8 +41,8 @@ export function tableCellPriorityCn(
 type GerenteTableProps = Readonly<{
   columns: GerenteTableColumn[]
   children: ReactNode
-  /** `dragon`: tabela para fundos escuros / dragon-glass-card */
-  tone?: 'paper' | 'dragon'
+  /** Tom de superfície (ver contrato de variantes). `paper` padrão; `dragon` = variante de marca. */
+  tone?: GerenteSurfaceTone
   /** Reduz padding das linhas — ideal para grids de alta densidade. */
   compact?: boolean
   /** Quando true, substitui o corpo por linhas-fantasma com shimmer (#28). */
