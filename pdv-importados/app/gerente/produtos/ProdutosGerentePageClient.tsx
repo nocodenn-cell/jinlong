@@ -1008,14 +1008,9 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 {/* Preço Atacado */}
                 <td className="gerente-fin-cell px-2 py-1 text-right align-middle">
                   {p.preco_atacado != null ? (
-                    <div className="flex flex-col items-end gap-0">
-                      <span className="text-xs tabular-nums text-emerald-400">
-                        {formatDecimalBRL(p.preco_atacado)}
-                      </span>
-                      {p.quantidade_gatilho_atacado != null && (
-                        <span className="text-[10px] text-slate-500">≥{p.quantidade_gatilho_atacado}</span>
-                      )}
-                    </div>
+                    <span className="text-xs tabular-nums text-emerald-400">
+                      {formatDecimalBRL(p.preco_atacado)}
+                    </span>
                   ) : (
                     <span className="text-[10px] opacity-25">—</span>
                   )}

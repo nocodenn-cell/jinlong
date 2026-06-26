@@ -221,7 +221,6 @@ function CaixaFooterImpl({
               }
               aria-busy={finalizando}
               aria-keyshortcuts="F9 F4"
-              title={itensLength === 0 ? m.caixa.finalizar_venda_sem_itens_title : undefined}
             >
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}
             </Button>
