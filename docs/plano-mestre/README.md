@@ -37,6 +37,8 @@ usuários do Bling, preservando identidade visual própria.
 | Documento | Define | Nunca descreve |
 |-----------|--------|----------------|
 | [`05-ARQUITETURA-PDV.md`](./05-ARQUITETURA-PDV.md) | PDV como subsistema independente: objetivo, limites de responsabilidade, fluxos, relação com módulos, integração com o Bling, roadmap | Layout, componentes |
+| [`06-CONTRATO-DE-EVENTOS.md`](./06-CONTRATO-DE-EVENTOS.md) | Eventos do domínio (Venda, Estoque, Financeiro, Fiscal): payload, produtores, consumidores, garantias transacionais, versionamento | Layout, componentes |
+| [`07-MAQUINA-DE-ESTADOS-PDV.md`](./07-MAQUINA-DE-ESTADOS-PDV.md) | Ciclo de vida da venda: estados, transições permitidas, regras de negócio, diagrama e tabela de transições | Layout, componentes |
 
 > O PDV tem arquitetura própria por contrato (Pilar 1, §6). O documento
 > complementar consolida o **contrato vigente** do PDV e isola o que é **roadmap**
