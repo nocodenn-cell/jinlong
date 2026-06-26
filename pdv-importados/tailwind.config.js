@@ -1,6 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ["class"],
+  /*
+   * Fase 0 — Layout Compiler: modo escuro desativado. O tema é único (claro).
+   * Usamos a estratégia "class" com um seletor que nunca existe no DOM, então
+   * nenhuma utilitária `dark:` jamais é ativada (e o ESLint bloqueia novas).
+   */
+  darkMode: ["class", ".theme-dark-disabled"],
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

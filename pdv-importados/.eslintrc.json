@@ -14,7 +14,18 @@
     "no-console": ["error", { "allow": ["warn", "error"] }],
     "@typescript-eslint/no-unused-vars": "error",
     "@typescript-eslint/no-explicit-any": "warn",
-    "prefer-const": "error"
+    "prefer-const": "error",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "Literal[value=/bg-(slate-900|gray-900|black)(?![\\/0-9])/]",
+        "message": "Layout Compiler · Fase 0: fundo escuro proibido. O tema é único (claro, 'cara de Bling'). Use tokens: bg-[var(--surface)] / bg-jl-surface-base / bg-card. (Overlays translúcidos como bg-black/60 são permitidos.)"
+      },
+      {
+        "selector": "Literal[value=/dark:/]",
+        "message": "Layout Compiler · Fase 0: variante 'dark:' do Tailwind proibida. Não existe mais modo escuro — o tema é único (claro)."
+      }
+    ]
   },
   "overrides": [
     {
@@ -97,6 +108,13 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "comment": "Login/legal são páginas cerimoniais pré-auth (preto+ouro) — exceção deliberada e auditada ao tema claro. Fora do escopo dos PageTypes operacionais do Layout Compiler.",
+      "files": ["app/login/**/*.{ts,tsx}", "components/legal/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-syntax": "off"
       }
     },
     {

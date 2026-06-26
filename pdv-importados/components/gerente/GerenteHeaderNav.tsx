@@ -26,7 +26,6 @@ import {
   type GerenteNavTopicId,
 } from '@/lib/navigation/gerenteNavUi'
 import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
-import { GerenteThemeToggle } from '@/components/gerente/GerenteThemeToggle'
 import { cn } from '@/lib/utils'
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -481,9 +480,6 @@ export function GerenteHeaderNav({
             />
           )}
         </button>
-
-        {/* Tema claro/escuro */}
-        <GerenteThemeToggle />
 
         {/* Idioma */}
         {podeTrocarIdioma && <LanguageToggle idiomaAtual={idioma} variant="dragon" />}

@@ -12,11 +12,9 @@ type ToastItem = {
 }
 
 const TOAST_KIND_CLASS: Record<GerenteToastKind, string> = {
-  info: 'border-blue-200/90 bg-blue-50 text-blue-950 dark:border-blue-500/40 dark:bg-blue-950/90 dark:text-blue-50',
-  success:
-    'border-emerald-300/90 bg-emerald-50 text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-950/90 dark:text-emerald-50',
-  error:
-    'border-red-200/90 bg-red-50 text-red-950 dark:border-red-500/45 dark:bg-red-950/90 dark:text-red-50',
+  info: 'border-blue-200/90 bg-blue-50 text-blue-950',
+  success: 'border-emerald-300/90 bg-emerald-50 text-emerald-950',
+  error: 'border-red-200/90 bg-red-50 text-red-950',
 }
 
 function createToastItem(kind: GerenteToastKind, message: string): ToastItem {

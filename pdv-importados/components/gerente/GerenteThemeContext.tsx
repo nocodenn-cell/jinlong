@@ -1,30 +1,22 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { GERENTE_UI_THEME_STORAGE_KEY, parseGerenteUiTheme, type GerenteUiTheme } from './gerenteUiTheme'
+import { createContext, useContext, type ReactNode } from 'react'
+import { type GerenteUiTheme } from './gerenteUiTheme'
 
 type Ctx = Readonly<{
   theme: GerenteUiTheme
   setTheme: (t: GerenteUiTheme) => void
 }>
 
-const ThemeCtx = createContext<Ctx>({ theme: 'dragon-dark', setTheme: () => {} })
+/**
+ * Fase 0 — Layout Compiler: tema travado em claro ('dragon-light').
+ * O provider deixou de ler/escrever localStorage e `setTheme` é inerte —
+ * não existe mais alternância para 'dragon-dark'.
+ */
+const ThemeCtx = createContext<Ctx>({ theme: 'dragon-light', setTheme: () => {} })
 
 export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [theme, setThemeState] = useState<GerenteUiTheme>('dragon-dark')
-
-  useEffect(() => {
-    const stored = localStorage.getItem(GERENTE_UI_THEME_STORAGE_KEY)
-    const resolved = parseGerenteUiTheme(stored)
-    if (resolved !== 'dragon-dark') setThemeState(resolved)
-  }, [])
-
-  function setTheme(t: GerenteUiTheme) {
-    setThemeState(t)
-    localStorage.setItem(GERENTE_UI_THEME_STORAGE_KEY, t)
-  }
-
-  return <ThemeCtx.Provider value={{ theme, setTheme }}>{children}</ThemeCtx.Provider>
+  return <ThemeCtx.Provider value={{ theme: 'dragon-light', setTheme: () => {} }}>{children}</ThemeCtx.Provider>
 }
 
 export function useGerenteUiTheme(): Ctx {

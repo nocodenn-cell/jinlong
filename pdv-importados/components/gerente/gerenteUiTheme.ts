@@ -1,11 +1,5 @@
-export const GERENTE_UI_THEME_STORAGE_KEY = 'dragonpos-gerente-ui-theme'
-
-export type GerenteUiTheme = 'dragon-dark' | 'dragon-light'
-
-export function parseGerenteUiTheme(raw: string | null): GerenteUiTheme {
-  return raw === 'dragon-light' ? 'dragon-light' : 'dragon-dark'
-}
-
-export function isGerenteLightChrome(theme: GerenteUiTheme): boolean {
-  return theme === 'dragon-light'
-}
+/**
+ * Fase 0 — Layout Compiler: tema único claro ("cara de Bling").
+ * O antigo 'dragon-dark' foi aposentado; resta apenas a variante clara.
+ */
+export type GerenteUiTheme = 'dragon-light'

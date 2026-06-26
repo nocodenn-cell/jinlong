@@ -4,10 +4,15 @@
  */
 
 :root {
-  --surface: rgba(15, 23, 42, 0.68);
-  --surface-soft: rgba(15, 23, 42, 0.42);
-  --surface-text: rgb(241 245 249);
-  --border: rgba(148, 163, 184, 0.38);
+  /* Fase 0 — Layout Compiler: tema CLARO ("cara de Bling") é o contrato único.
+     Superfície branca, texto escuro, borda slate, acento azul Bling. */
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-text: rgb(15, 23, 42);
+  --border: #e2e8f0;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-contrast: #ffffff;
 
   /*
    * Paleta cerimonial do LOGIN. Espelha tokens/base.css, que só é carregado no
@@ -19,14 +24,16 @@
   --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 }
 
+/* Tema único "clássico" (claro). O nome 'noturno' foi aposentado na Fase 0. */
+[data-app-theme='classico'],
 [data-app-theme='noturno'] {
-  --surface: rgba(15, 23, 42, 0.68);
-  --surface-soft: rgba(15, 23, 42, 0.42);
-  --surface-text: rgb(241 245 249);
-  --border: rgba(148, 163, 184, 0.38);
-  --accent: #fbbf24;
-  --accent-strong: #f59e0b;
-  --accent-contrast: #111827;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-text: rgb(15, 23, 42);
+  --border: #e2e8f0;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-contrast: #ffffff;
 }
 
 
@@ -957,11 +964,11 @@ html:has(.login-premium-root) body {
 /* Sobrepõe os tokens --surface/--border/--accent do :root (dark) */
 [data-gerente-ui-theme='dragon-light'] {
   --surface:         #ffffff;
-  --surface-soft:    rgba(248, 247, 245, 0.93);
+  --surface-soft:    #f8fafc;
   --surface-text:    rgb(15, 23, 42);
-  --border:          rgba(226, 232, 240, 0.95);
-  --accent:          #d97706;
-  --accent-strong:   #b45309;
+  --border:          #e2e8f0;
+  --accent:          #2563eb;
+  --accent-strong:   #1d4ed8;
   --accent-contrast: #ffffff;
 }
 

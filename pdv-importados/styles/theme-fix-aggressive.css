@@ -2,98 +2,93 @@
  * Jin Long Design System — surface/fg/border token aliases (jl-*)
  *
  * Anchors to --surface* / --border from theme-oriental.css (already loaded
- * globally) and raw night-scale values for base/elev layers that have no
- * matching variable yet.  System is locked to dark mode (noturno).
+ * globally).  Fase 0 (Layout Compiler): sistema travado em tema CLARO
+ * ("cara de Bling") — superfície branca, texto slate, acento azul.
  */
 
 :root {
+  /* Fase 0 — Layout Compiler: jl-* default agora é CLARO ("cara de Bling").
+     Superfície branca, texto slate escuro, borda slate-200, acento azul Bling. */
+
   /* Surfaces */
-  --jl-surface-base: #020617;                          /* night-950 — darkest bg */
-  --jl-surface-elev: #0f172a;                          /* night-900 — topbar / elevated panels */
-  --jl-surface-soft: var(--surface-soft, rgba(15, 23, 42, 0.42)); /* frosted glass */
+  --jl-surface-base: #f8fafc;                          /* page canvas — slate-50 */
+  --jl-surface-elev: #ffffff;                          /* topbar / elevated panels */
+  --jl-surface-soft: var(--surface-soft, #f8fafc);     /* soft panel */
 
   /* Borders */
   /*
-   * Cor direta (NÃO var(--border)): --border é um triplet HSL cru
-   * ("217.2 32.6% 17.5%", p/ uso em hsl()). Usado direto como cor (Tailwind
-   * border-jl-border-1 = border-color: var(--jl-border-1)) o triplet é INVÁLIDO
-   * → o utilitário vence o `* { border-color }` mas cai em currentColor (texto
-   * claro) → divisores brancos no skeleton e nas listas. rgba direto corrige.
+   * Cor direta (NÃO var(--border)): mantido como cor concreta para o utilitário
+   * Tailwind border-jl-border-1 funcionar e o `* { border-color }` global ter
+   * uma cor válida (evita cair em currentColor → divisores espúrios).
    */
-  --jl-border-1: rgba(148, 163, 184, 0.38); /* primary divider */
-  --jl-border-2: rgba(71, 85, 105, 0.50);                  /* secondary divider */
+  --jl-border-1: #e2e8f0;                               /* primary divider — slate-200 */
+  --jl-border-2: #e2e8f0;                               /* secondary divider — slate-200 */
 
   /* Foreground */
-  --jl-fg-1: var(--surface-text, rgb(241 245 249));    /* primary text  ~slate-100 */
-  --jl-fg-2: rgb(203 213 225);                          /* secondary text  slate-300 */
-  /*
-   * Terciário: slate-400 (#94a3b8) sobre --surface-soft dava ~3.1:1 — reprova
-   * WCAG AA (mín. 4.5:1 p/ texto pequeno). Elevado p/ #a8b3c4 (~4.6:1) sem
-   * perder a hierarquia de "metadado". Ver achado 07 da auditoria de front-end.
-   */
-  --jl-fg-3: rgb(168 179 196);                          /* tertiary text — AA-safe */
+  --jl-fg-1: var(--surface-text, rgb(15 23 42));       /* primary text — slate-900 */
+  --jl-fg-2: rgb(100 116 139);                          /* secondary text — slate-500 */
+  --jl-fg-3: rgb(148 163 184);                          /* tertiary text — slate-400 */
 
-  /* Accent (dragon gold / amber-400) */
-  --jl-accent: var(--accent, #fbbf24);
+  /* Accent (Bling blue) */
+  --jl-accent: var(--accent, #2563eb);
 
-  /* Shimmer de skeleton (#28) — base slate tênue + realce amber-soft que varre. */
-  --jl-shimmer-base: rgba(148, 163, 184, 0.08);
-  --jl-shimmer-highlight: rgba(251, 191, 36, 0.10);
+  /* Shimmer de skeleton — base slate tênue + realce azul-soft que varre. */
+  --jl-shimmer-base: rgba(226, 232, 240, 0.60);
+  --jl-shimmer-highlight: rgba(37, 99, 235, 0.10);
 
-  /* ── Elevation shadows — UMA ferramenta por nível ───────────────────── */
+  /* ── Elevation shadows — adaptadas para fundo claro ──────────────────── */
 
-  /* Elev-1: cards, panels, toolbars, filtros. Glow de 1px + drop sutil. */
+  /* Elev-1: cards, panels, toolbars, filtros. */
   --jl-elev-1:
-    0 0 0 1px rgba(255, 255, 255, 0.055),
-    0 2px 8px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.08);
 
-  /* Elev-2: modals, dropdowns, popovers. Flutua visivelmente acima do conteúdo. */
+  /* Elev-2: modals, dropdowns, popovers. */
   --jl-elev-2:
-    0 0 0 1px rgba(255, 255, 255, 0.09),
-    0 8px 28px rgba(0, 0, 0, 0.52),
-    0 2px 6px rgba(0, 0, 0, 0.24);
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 8px 28px rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.06);
 
   /* ── Card hierarchy — 3 níveis de superfície ─────────────────────────── */
 
-  /* L1 — Crítico: KPIs primários do dia. Mais presença, accent amber. */
-  --jl-card-l1-bg:        rgba(15, 23, 42, 0.92);
-  --jl-card-l1-border:    rgba(251, 191, 36, 0.16);   /* amber/400 tênue */
-  --jl-card-l1-accent:    rgba(251, 191, 36, 0.10);   /* icon bg */
-  --jl-card-l1-strip:     rgba(251, 191, 36, 0.45);   /* left accent strip */
+  /* L1 — Crítico: KPIs primários do dia. Mais presença, accent azul. */
+  --jl-card-l1-bg:        #ffffff;
+  --jl-card-l1-border:    #e2e8f0;
+  --jl-card-l1-accent:    rgba(37, 99, 235, 0.08);   /* icon bg */
+  --jl-card-l1-strip:     #2563eb;                    /* left accent strip */
 
   /* L2 — Operacional: métricas de semana, painéis secundários. Neutro. */
-  --jl-card-l2-bg:        rgba(15, 23, 42, 0.55);
-  --jl-card-l2-border:    rgba(148, 163, 184, 0.16);
+  --jl-card-l2-bg:        #ffffff;
+  --jl-card-l2-border:    #f1f5f9;
 
   /* L3 — Contextual: dados de suporte. Quase invisível — não compete. */
-  --jl-card-l3-bg:        rgba(15, 23, 42, 0.28);
-  --jl-card-l3-border:    rgba(71, 85, 105, 0.22);
+  --jl-card-l3-bg:        #f8fafc;
+  --jl-card-l3-border:    #e2e8f0;
 
-  /* ── Status badge tokens (dark) ──────────────────────────────────────── */
-  --jl-status-success-bg:     rgba(22, 101, 52, 0.20);
-  --jl-status-success-text:   #4ade80;
-  --jl-status-success-border: rgba(74, 222, 128, 0.25);
+  /* ── Status badge tokens (light) ─────────────────────────────────────── */
+  --jl-status-success-bg:     #ecfdf5;
+  --jl-status-success-text:   #166534;
+  --jl-status-success-border: #bbf7d0;
 
-  --jl-status-warning-bg:     rgba(146, 64, 14, 0.20);
-  --jl-status-warning-text:   #fbbf24;
-  --jl-status-warning-border: rgba(251, 191, 36, 0.25);
+  --jl-status-warning-bg:     #fef3c7;
+  --jl-status-warning-text:   #92400e;
+  --jl-status-warning-border: #fde68a;
 
-  --jl-status-danger-bg:      rgba(153, 27, 27, 0.20);
-  --jl-status-danger-text:    #f87171;
-  --jl-status-danger-border:  rgba(248, 113, 113, 0.25);
+  --jl-status-danger-bg:      #fef2f2;
+  --jl-status-danger-text:    #991b1b;
+  --jl-status-danger-border:  #fecaca;
 
-  --jl-status-info-bg:        rgba(30, 64, 175, 0.20);
-  --jl-status-info-text:      #60a5fa;
-  --jl-status-info-border:    rgba(96, 165, 250, 0.25);
+  --jl-status-info-bg:        #eff6ff;
+  --jl-status-info-text:      #1d4ed8;
+  --jl-status-info-border:    #bfdbfe;
 
-  --jl-status-neutral-bg:     rgba(71, 85, 105, 0.20);
-  --jl-status-neutral-text:   rgb(168, 179, 196);
-  --jl-status-neutral-border: rgba(148, 163, 184, 0.25);
+  --jl-status-neutral-bg:     #f9fafb;
+  --jl-status-neutral-text:   #374151;
+  --jl-status-neutral-border: #e5e7eb;
 
-  --jl-status-orange-bg:      rgba(194, 65, 12, 0.20);
-  --jl-status-orange-text:    #fb923c;
-  --jl-status-orange-border:  rgba(251, 146, 60, 0.25);
+  --jl-status-orange-bg:      #ffedd5;
+  --jl-status-orange-text:    #c2410c;
+  --jl-status-orange-border:  #fdba74;
 }
 
 /* ── Light Theme (dragon-light) ─────────────────────────────────────────── */
@@ -113,12 +108,12 @@
   --jl-fg-2: rgb(100, 116, 139);    /* slate-500 — secundário */
   --jl-fg-3: rgb(148, 163, 184);    /* slate-400 — muted/labels */
 
-  /* Accent */
-  --jl-accent: #d97706;             /* amber-600 — brand light */
+  /* Accent (Bling blue) */
+  --jl-accent: #2563eb;             /* blue-600 — brand light */
 
   /* Shimmer */
   --jl-shimmer-base:      rgba(226, 232, 240, 0.60);
-  --jl-shimmer-highlight: rgba(217, 119, 6, 0.08);
+  --jl-shimmer-highlight: rgba(37, 99, 235, 0.08);
 
   /* Elevation shadows — adaptadas para fundo claro */
   --jl-elev-1:
@@ -133,8 +128,8 @@
   /* Card hierarchy */
   --jl-card-l1-bg:        #ffffff;
   --jl-card-l1-border:    #e2e8f0;
-  --jl-card-l1-accent:    rgba(217, 119, 6, 0.08);
-  --jl-card-l1-strip:     #d97706;
+  --jl-card-l1-accent:    rgba(37, 99, 235, 0.08);
+  --jl-card-l1-strip:     #2563eb;
 
   --jl-card-l2-bg:        #ffffff;
   --jl-card-l2-border:    #f1f5f9;
@@ -176,15 +171,15 @@
   padding-left: 0.75rem;
   padding-right: 0.75rem;
   font-size: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background-color: #ffffff;
+  border: 1px solid var(--jl-border-1);
   color: var(--jl-fg-1);
   outline: none;
   transition: border-color 150ms ease;
 }
 .jl-modal-field:focus {
   border-color: var(--jl-accent);
-  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 .jl-modal-field:disabled {
   opacity: 0.45;
@@ -203,8 +198,8 @@
   padding-left: 0.75rem;
   padding-right: 0.75rem;
   font-size: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background-color: #ffffff;
+  border: 1px solid var(--jl-border-1);
   color: var(--jl-fg-1);
   outline: none;
   transition: border-color 150ms ease;
