@@ -1,6 +1,7 @@
 import React, { type ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { GerenteLayoutShell } from '@/components/gerente/GerenteLayoutShell'
+import { AdminThemeScope } from '@/components/ui/admin-v2/AdminThemeScope'
 import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { getMessages } from '@/i18n/getMessages'
@@ -24,13 +25,15 @@ export default async function GerenteLayout({ children }: { children: ReactNode 
   const logoSubtitle = m.brand?.logo_subtitle ?? '金龍'
 
   return (
-    <GerenteLayoutShell
-      idioma={session.idioma}
-      perfil={session.perfil}
-      m={m}
-      logoSubtitle={logoSubtitle}
-    >
-      {children}
-    </GerenteLayoutShell>
+    <AdminThemeScope>
+      <GerenteLayoutShell
+        idioma={session.idioma}
+        perfil={session.perfil}
+        m={m}
+        logoSubtitle={logoSubtitle}
+      >
+        {children}
+      </GerenteLayoutShell>
+    </AdminThemeScope>
   )
 }

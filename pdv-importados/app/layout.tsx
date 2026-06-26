@@ -43,8 +43,6 @@ export default function RootLayout({
     <html
       lang="pt-BR"
       className={`${notoSansSC.variable} dark`}
-      data-app-theme="noturno"
-      data-gerente-ui-theme="noturno"
       suppressHydrationWarning
     >
       <body
