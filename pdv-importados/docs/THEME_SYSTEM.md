@@ -34,8 +34,8 @@ previsíveis.
 | I1 | **Proibido hardcode de cor** na superfície do Design System (utilitário Tailwind de paleta numerada, hex ou `rgba()/hsl()` em valor arbitrário). Use tokens (`jl-*`, `--jl-*`, `--color-*`, `--admin-v2-*`, `--cl-*`) ou as classes semânticas shadcn (`success`, `destructive`, `primary`, `muted`, `border`, `background`, `foreground`, `ring`, `accent`, `card`, `popover`, `secondary`). | Cor fixa quebra o tema: não acompanha `[data-theme]`. | `guard:theme` |
 | I2 | **Proibido resolver tokens via `:root`** em contexto de tema. Gráficos/canvas **devem** resolver a partir do elemento escopado `[data-theme]` (ex.: o próprio `<canvas>`), nunca `getComputedStyle(document.documentElement)`. | Tokens do tema vivem em um descendente, não no `:root`; resolver no `:root` retorna o valor errado (ex.: sparkline dourado no tema Clássico). | `guard:theme` |
 
-Exceção pontual e auditável: marque a linha com `theme-guard-allow <motivo>`
-(ex.: fallback de SSR/teste). Use com parcimônia — é revisável no PR.
+Exceções só são permitidas pelo **modelo de override auditável** (§5). Nenhuma
+regra pode ser ignorada sem registro explícito, justificado e rastreável.
 
 ---
 
@@ -99,3 +99,67 @@ rota `/admin/dashboard`.
 2. Importe o `index.css` do tema no `app/layout.tsx`.
 3. Aponte as rotas para o tema no registry (`theme: '<tema>'`), opcionalmente com `meta`.
    Nenhuma mudança em `AdminThemeScope` ou na lógica do registry é necessária.
+
+---
+
+## 5. Modelo de exceção auditável (override formal)
+
+O guard **não tem bypass silencioso**. Quando uma exceção é realmente necessária
+(ex.: cor de marca legada em remoção, valor exigido por biblioteca de terceiro,
+fallback de SSR/teste), registre-a de forma explícita e rastreável, **por regra**,
+na mesma linha da violação **ou na linha imediatamente acima** (ergonomia p/ JSX):
+
+```txt
+// theme-guard-allow:<ruleId> <justificativa obrigatória> [until=AAAA-MM-DD]
+```
+
+Exemplos:
+
+```tsx
+// theme-guard-allow:palette-utility cor de marca legada, remoção rastreada em #123
+<span className="text-amber-400" />
+
+<div className="bg-[#101010]" /> {/* theme-guard-allow:hex-arbitrary fundo exigido pelo embed X until=2026-09-01 */}
+```
+
+Regras do override (qualquer desvio **falha o CI**):
+
+| Requisito | Detalhe |
+|-----------|---------|
+| **Por regra** | `ruleId` deve ser um id conhecido (`palette-utility`, `hex-arbitrary`, `color-fn-arbitrary`, `root-token-resolution`) ou `*` (todas — desencorajado). Suprime **apenas** a regra nomeada. |
+| **Justificativa obrigatória** | mínimo de 8 caracteres com motivo real. |
+| **TTL opcional** | `until=AAAA-MM-DD`. Vencido ⇒ guard falha (força revisão/renovação). |
+| **Auditável** | o guard imprime um **inventário de auditoria** de todas as exceções ativas (arquivo:linha, regra, validade, em uso / não usada). Rastreável no log de CI e no `git blame`. |
+
+Override malformado (id desconhecido, sem justificativa, data inválida ou
+expirada) é tratado como **falha**, não como permissão. Exceções `NÃO USADA`
+aparecem no inventário como candidatas a remoção.
+
+> Critério de aceite (2.0): nenhuma regra é bypassável sem registro explícito;
+> toda exceção é rastreável e auditável.
+
+---
+
+## 6. Limites do guard (o que ele NÃO cobre)
+
+O guard é a **primeira linha** de defesa (estática, por regex sobre a superfície
+policiada). Ele é deliberadamente conservador para alta precisão e baixo ruído —
+por isso **não** substitui review nem as fases seguintes do roadmap. Ele NÃO cobre:
+
+- **Arquivos fora do `POLICED`.** Só policia `components/ui/admin-v2/**` e as
+  páginas dos módulos migrados. Ao migrar um módulo, **adicione seu diretório ao
+  `POLICED`** (item do checklist) — caso contrário ele não é verificado.
+- **Tokens CSS.** `styles/tokens/**` define cores (hex/rgba legítimos) e não é
+  policiado por design.
+- **Cor fora de `className`.** `style={{ color: '#fff' }}`, objetos de tema em JS,
+  classes montadas por concatenação/variáveis (`cn(var)`, template strings) e
+  paletas de série de gráficos (dados categóricos) **não** são detectados por
+  regex. → alvo de lint semântico na Fase 2.3.
+- **Correção visual.** Contraste, hierarquia, coerência real com o baseline e
+  regressão entre temas não são verificados aqui. → visual regression na Fase 2.3.
+- **Resolução dinâmica de token** além do padrão literal
+  `getComputedStyle(document.documentElement)` (ex.: variável intermediária
+  apontando para o root). → reforço semântico na Fase 2.3.
+
+Enquanto esses limites não forem cobertos por mecanismo automatizado, eles
+**permanecem responsabilidade explícita do code review** (§4).
