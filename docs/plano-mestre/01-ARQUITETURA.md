@@ -122,6 +122,11 @@ O PDV é o único ambiente autorizado a **não** seguir o AppShell administrativ
 Ele segue seu próprio shell, descrito junto às invariantes operacionais em
 `docs/CIRCUITO_OPERACIONAL.md` e `docs/SCAN_PIPELINE_STATE_MACHINE.md`.
 
+> **Subsistema independente:** a especificação consolidada do PDV (objetivo,
+> limites de responsabilidade, fluxos, relação com os demais módulos, integração
+> com o Bling e roadmap) está no documento complementar
+> [`05-ARQUITETURA-PDV.md`](./05-ARQUITETURA-PDV.md).
+
 ## 7. Contrato de Página
 
 Toda página administrativa possui, obrigatoriamente, nesta ordem:

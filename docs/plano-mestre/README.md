@@ -32,6 +32,16 @@ usuários do Bling, preservando identidade visual própria.
 | 3 | [`03-PADROES-UX.md`](./03-PADROES-UX.md) | CRUD, filtros, pesquisa, paginação, feedback, modais, confirmações, fluxos | Implementação de módulo |
 | 4 | [`04-MODULOS.md`](./04-MODULOS.md) | Regras de negócio, fluxos, permissões, integrações, casos de uso | Layout, componentes |
 
+### Documento complementar
+
+| Documento | Define | Nunca descreve |
+|-----------|--------|----------------|
+| [`05-ARQUITETURA-PDV.md`](./05-ARQUITETURA-PDV.md) | PDV como subsistema independente: objetivo, limites de responsabilidade, fluxos, relação com módulos, integração com o Bling, roadmap | Layout, componentes |
+
+> O PDV tem arquitetura própria por contrato (Pilar 1, §6). O documento
+> complementar consolida o **contrato vigente** do PDV e isola o que é **roadmap**
+> futuro. Decisões futuras do PDV viram ADRs em [`docs/adr/`](../adr/).
+
 ## Regras arquiteturais (proibições)
 
 É **proibido**:
@@ -64,7 +74,7 @@ Documentar a divergência é obrigatório — escondê-la não.
 
 | Tema | Alvo (Plano) | Realidade no código | Decisão vigente |
 |------|--------------|---------------------|-----------------|
-| **Temas** | Claro (admin) + Escuro (PDV) | Tema **único claro** — dark mode aposentado na *Fase 0 — Layout Compiler* (`pdv-importados/theme.config.ts`, `tailwind.config.js` com `darkMode` neutralizado) | **Tema único claro** é o contrato vigente. O tema escuro do PDV é uma decisão **futura**, não implementada. Ver pilar 2. |
+| **Temas** | Claro (admin) + Escuro (PDV) | Tema **único claro** — dark mode aposentado na *Fase 0 — Layout Compiler* (`pdv-importados/theme.config.ts`, `tailwind.config.js` com `darkMode` neutralizado) | **Tema único claro** é o contrato vigente. O tema escuro do PDV é evolução **planejada**, registrada em [ADR-PDV-002](../adr/ADR-PDV-tema-escuro.md) e no [Roadmap do PDV](./05-ARQUITETURA-PDV.md#7-roadmap-do-pdv) — sem implementação. Ver pilar 2. |
 | **Tokens semânticos** | Tokens claros/escuros simétricos | `styles/tokens/semantic.css` ainda referencia paleta escura legada (`--color-night-950`, etc.) herdada da era *dragon-dark* | Token semântico de superfície/texto ativo vem de `theme-oriental.css` (claro). `semantic.css` é legado em retirada. |
 | **i18n** | Português + Chinês, pronto para novos idiomas | Implementado em `src/lib/i18n` (`pt.json`, `zh.json`) | ✅ Conforme. |
 | **AppShell único** | Estrutura única para toda tela | Existem shells distintos (`gerente`, `admin`, `caixa/PDV`) com primitivas compartilhadas | Convergência em andamento; PDV mantém shell independente por contrato (ver pilar 1). |
