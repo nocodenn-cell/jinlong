@@ -1,28 +1,21 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { GERENTE_UI_THEME_STORAGE_KEY, parseGerenteUiTheme, type GerenteUiTheme } from './gerenteUiTheme'
+import { createContext, useContext, type ReactNode } from 'react'
+import { type GerenteUiTheme } from './gerenteUiTheme'
 
 type Ctx = Readonly<{
   theme: GerenteUiTheme
   setTheme: (t: GerenteUiTheme) => void
 }>
 
-const ThemeCtx = createContext<Ctx>({ theme: 'dragon-dark', setTheme: () => {} })
+const ThemeCtx = createContext<Ctx>({ theme: 'dragon-light', setTheme: () => {} })
 
 export function GerenteUiThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [theme, setThemeState] = useState<GerenteUiTheme>('dragon-dark')
-
-  useEffect(() => {
-    const stored = localStorage.getItem(GERENTE_UI_THEME_STORAGE_KEY)
-    const resolved = parseGerenteUiTheme(stored)
-    if (resolved !== 'dragon-dark') setThemeState(resolved)
-  }, [])
-
-  function setTheme(t: GerenteUiTheme) {
-    setThemeState(t)
-    localStorage.setItem(GERENTE_UI_THEME_STORAGE_KEY, t)
-  }
+  // Tema escuro (dragon-dark) DESATIVADO temporariamente (comando Bling claro
+  // global): a área gerente fica travada em claro. setTheme é no-op até o dark
+  // ser reabilitado. Para reativar, restaure o estado/localStorage anterior.
+  const theme: GerenteUiTheme = 'dragon-light'
+  const setTheme: Ctx['setTheme'] = () => {}
 
   return <ThemeCtx.Provider value={{ theme, setTheme }}>{children}</ThemeCtx.Provider>
 }

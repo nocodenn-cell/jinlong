@@ -44,7 +44,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
 
   return (
     <div
-      data-app-theme="noturno"
+      data-app-theme="classico"
       data-gerente-ui-theme={theme}
       suppressHydrationWarning
       className={cn(

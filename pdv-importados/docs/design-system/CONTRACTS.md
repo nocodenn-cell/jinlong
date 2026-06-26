@@ -14,17 +14,21 @@ Enforcement automatizado: [`scripts/design-system-guard.mjs`](../../../scripts/d
 
 Os nomes de tema válidos vivem **apenas** no contrato. Eixos:
 
-| Eixo | Atributo DOM | Valores válidos | Alternável |
+| Eixo | Atributo DOM | Valores válidos | Aplicado hoje |
 | --- | --- | --- | --- |
-| App (global) | `data-app-theme` | `noturno` | Não (travado) |
-| Gerente | `data-gerente-ui-theme` | `dragon-dark`, `dragon-light` | Sim |
+| App (global) | `data-app-theme` | `classico` (claro), `noturno` (escuro) | **`classico`** |
+| Gerente | `data-gerente-ui-theme` | `dragon-dark`, `dragon-light` | **`dragon-light`** |
 
 ```ts
-import { type Theme, type GerenteUiTheme, isTheme } from '@/lib/theme/contract'
-// Theme = 'noturno' | 'dragon-dark' | 'dragon-light'
+import { type Theme, type AppTheme, isTheme } from '@/lib/theme/contract'
+// AppTheme = 'classico' | 'noturno'
+// Theme    = 'classico' | 'noturno' | 'dragon-dark' | 'dragon-light'
 ```
 
-- `classico` e `bling` **não existem** no código — não são temas.
+- **Tema claro Bling global (atual):** o app inicia SEMPRE claro via
+  `styles/theme-bling-light.css` (importado por último), com **azul** como
+  destaque. O tema escuro (`noturno` / `dragon-dark`) continua no código mas
+  está **desativado** — não é aplicado nem é default.
 - A marca **`dragon`** é legítima (DragonPOS): cores `--color-dragon-*` e os temas
   `dragon-dark`/`dragon-light` permanecem. O guard **não** bloqueia `dragon`.
 
@@ -71,7 +75,7 @@ switch (theme) {
 
 `scripts/design-system-guard.mjs`, em dois tiers sobre `components/` e `app/`:
 
-1. **Hard block (falha sempre):** uso de aliases legados `*-oriental-*` e `bling`
+1. **Hard block (falha sempre):** uso de aliases legados `*-oriental-*`
    no código de UI (hoje: zero ocorrências). As definições legadas em
    `styles/*.css` aguardam remoção na Fase 2.
 2. **Ratchet (falha só se aumentar):** cores hardcoded em className arbitrário

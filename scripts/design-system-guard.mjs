@@ -5,8 +5,8 @@
  * Impede regressão do contrato de design. Dois tiers:
  *
  *  1. HARD BLOCK (falha sempre): uso de aliases legados no CÓDIGO DE UI
- *     (`components/`, `app/`) — classes utilitárias `*-oriental-*` e o token
- *     morto `bling`. Hoje há ZERO ocorrências em UI; o guard mantém assim.
+ *     (`components/`, `app/`) — classes utilitárias `*-oriental-*`.
+ *     Hoje há ZERO ocorrências em UI; o guard mantém assim.
  *     As DEFINIÇÕES legadas em `styles/*.css` ainda existem e serão removidas
  *     na Fase 2 — por isso o escaneamento é restrito ao código consumidor.
  *     NOTA: a marca "dragon" (cores `--color-dragon-*`, temas `dragon-dark`/
@@ -41,9 +41,11 @@ const SCAN_EXT = /\.(ts|tsx)$/
 const isTest = (name) => /\.(test|spec)\.(ts|tsx)$/.test(name)
 
 // --- Tier 1: HARD BLOCK ---------------------------------------------------
+// NOTA: a regra que bloqueava `bling` foi removida — "Bling" passou a ser o
+// estilo-alvo do tema claro global (ver styles/theme-bling-light.css), não um
+// alias legado.
 const HARD_RULES = [
   { re: /\b(?:bg|text|border|ring|fill|stroke|from|via|to)-oriental-/, msg: 'classe utilitária legada `*-oriental-*`' },
-  { re: /\bbling\b/, msg: 'token legado `bling`' },
 ]
 
 // --- Tier 2: RATCHET (cores hardcoded em className) -----------------------

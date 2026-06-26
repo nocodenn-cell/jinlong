@@ -16,9 +16,16 @@
 
 // --- 1.1 Contrato de tema -------------------------------------------------
 
-/** Tema global da aplicação (atributo `data-app-theme`). Hoje travado em noturno. */
-export const APP_THEMES = ['noturno'] as const
+/**
+ * Tema global da aplicação (atributo `data-app-theme`).
+ * - `classico`: tema CLARO (Bling) — padrão atual, aplicado no <html>.
+ * - `noturno`: tema escuro — existe no código mas DESATIVADO (não é aplicado).
+ */
+export const APP_THEMES = ['classico', 'noturno'] as const
 export type AppTheme = (typeof APP_THEMES)[number]
+
+/** Tema global aplicado por padrão hoje (claro). */
+export const DEFAULT_APP_THEME: AppTheme = 'classico'
 
 /** Tema da área gerente (atributo `data-gerente-ui-theme`), alternável. */
 export const GERENTE_UI_THEMES = ['dragon-dark', 'dragon-light'] as const

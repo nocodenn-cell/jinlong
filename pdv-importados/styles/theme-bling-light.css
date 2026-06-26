@@ -1,0 +1,100 @@
+/**
+ * BLING LIGHT — tema claro global forçado.
+ *
+ * O app inicia SEMPRE claro (estilo Bling), com AZUL como cor de destaque.
+ * Importado por ÚLTIMO em app/layout.tsx para sobrescrever os tokens dark
+ * herdados de theme-oriental.css e theme-fix-aggressive.css (ambos definem
+ * valores no `:root`).
+ *
+ * O tema escuro (noturno / dragon-dark) continua existindo no código, mas NÃO
+ * é mais aplicado: o <html> usa data-app-theme="classico" +
+ * data-gerente-ui-theme="dragon-light", e o runtime gerente está travado em
+ * claro. Para reverter: remover este @import e restaurar os atributos do <html>.
+ */
+
+:root,
+[data-app-theme='classico'] {
+  color-scheme: light;
+
+  /* ── Contrato de tokens da UI base ─────────────────────────────────── */
+  --surface: #ffffff;
+  --surface-soft: #f8fafc; /* slate-50 */
+  --surface-text: #0f172a; /* slate-900 */
+  --border: #e2e8f0; /* slate-200 */
+
+  /* Azul Bling como destaque primário (antes: ouro dragon) */
+  --accent: #2563eb; /* blue-600 */
+  --accent-strong: #1d4ed8; /* blue-700 */
+  --accent-contrast: #ffffff;
+
+  /* shadcn — primário/ring azul, superfícies claras */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 221 83% 53%; /* blue-600 */
+  --primary-foreground: 0 0% 100%;
+  --ring: 221 83% 53%;
+
+  /* ── jl-* (espelha o set claro dragon-light; accent → azul) ────────── */
+  --jl-surface-base: #ffffff;
+  --jl-surface-elev: #f8fafc;
+  --jl-surface-soft: #ffffff;
+  --jl-border-1: #e2e8f0;
+  --jl-border-2: #e2e8f0;
+  --jl-fg-1: #0f172a; /* slate-900 */
+  --jl-fg-2: #475569; /* slate-600 */
+  --jl-fg-3: #64748b; /* slate-500 */
+  --jl-accent: #2563eb; /* blue-600 */
+  --jl-shimmer-base: rgba(226, 232, 240, 0.6);
+  --jl-shimmer-highlight: rgba(37, 99, 235, 0.1);
+  --jl-elev-1: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --jl-elev-2: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 8px 28px rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+  --jl-card-l1-bg: #ffffff;
+  --jl-card-l1-border: #e2e8f0;
+  --jl-card-l1-accent: rgba(37, 99, 235, 0.08);
+  --jl-card-l1-strip: #2563eb;
+  --jl-card-l2-bg: #ffffff;
+  --jl-card-l2-border: #f1f5f9;
+  --jl-card-l3-bg: #f8fafc;
+  --jl-card-l3-border: #e2e8f0;
+
+  /* status badges (claro) */
+  --jl-status-success-bg: #ecfdf5;
+  --jl-status-success-text: #166534;
+  --jl-status-success-border: #bbf7d0;
+  --jl-status-warning-bg: #fef3c7;
+  --jl-status-warning-text: #92400e;
+  --jl-status-warning-border: #fde68a;
+  --jl-status-danger-bg: #fef2f2;
+  --jl-status-danger-text: #991b1b;
+  --jl-status-danger-border: #fecaca;
+  --jl-status-info-bg: #eff6ff;
+  --jl-status-info-text: #1d4ed8;
+  --jl-status-info-border: #bfdbfe;
+  --jl-status-neutral-bg: #f9fafb;
+  --jl-status-neutral-text: #374151;
+  --jl-status-neutral-border: #e5e7eb;
+  --jl-status-orange-bg: #ffedd5;
+  --jl-status-orange-text: #c2410c;
+  --jl-status-orange-border: #fdba74;
+}
+
+/* Admin V2 — escopo [data-admin-v2] forçado claro (azul). */
+[data-admin-v2] {
+  color-scheme: light;
+  --admin-v2-bg: #ffffff;
+  --admin-v2-sidebar: #f8fafc;
+  --admin-v2-border: #e2e8f0;
+  --admin-v2-text-primary: #0f172a;
+  --admin-v2-text-secondary: #475569;
+  --admin-v2-text-muted: #64748b;
+  --admin-v2-surface-card: #ffffff;
+  --admin-v2-accent-gold: #2563eb;
+  --admin-v2-accent-jade: #16a34a;
+  --admin-v2-active-bg: rgba(37, 99, 235, 0.1);
+  --admin-v2-active-border: rgba(37, 99, 235, 0.55);
+  --admin-v2-active-text: #1d4ed8;
+  --admin-v2-shadow-card: 0 12px 28px rgba(0, 0, 0, 0.08);
+  background-color: #ffffff;
+  color: #0f172a;
+}

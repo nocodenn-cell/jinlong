@@ -3,6 +3,8 @@ import { Noto_Sans_SC } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import '@/styles/theme-oriental.css'
+// Importado por ÚLTIMO: força o tema claro Bling global sobre os tokens dark.
+import '@/styles/theme-bling-light.css'
 import { AppThemeProvider } from '@/components/theme/AppThemeProvider'
 import { HydrationFix } from '@/components/ui/HydrationFix'
 import React from 'react'
@@ -23,14 +25,14 @@ export const metadata: Metadata = {
 }
 
 /**
- * App é forçado dark (`<html class="dark">`). Sem `color-scheme: dark`, o browser
- * trata a página como light-scheme e pinta o canvas/overscroll default BRANCO nos
- * gaps de paint da navegação soft → "flash de fundo branco" na troca de tela.
- * O meta `color-scheme` é aplicado no paint mais cedo (antes do CSS).
+ * App é forçado CLARO (estilo Bling): `<html data-app-theme="classico">` sem a
+ * classe `dark`. `color-scheme: light` é aplicado cedo (antes do CSS) para o
+ * browser pintar canvas/overscroll branco e evitar flash escuro na navegação.
+ * O tema escuro (noturno/dragon-dark) existe no código mas não é aplicado.
  */
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#020617',
+  colorScheme: 'light',
+  themeColor: '#ffffff',
 }
 
 export default function RootLayout({
@@ -41,9 +43,9 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${notoSansSC.variable} dark`}
-      data-app-theme="noturno"
-      data-gerente-ui-theme="noturno"
+      className={`${notoSansSC.variable}`}
+      data-app-theme="classico"
+      data-gerente-ui-theme="dragon-light"
       suppressHydrationWarning
     >
       <body
