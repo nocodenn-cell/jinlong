@@ -79,11 +79,13 @@ rota `/admin/dashboard`.
 
 ## 4. Enforcement (mecanismos reais)
 
-1. **Guard automatizado — `npm run guard:theme`** (`scripts/theme-tokens-guard.mjs`),
-   incluído em `guard:all` e executado no CI (`build-and-test`). Bloqueia I1 e I2.
-2. **Checklist no PR template** como critério de aceite de PRs de migração.
-3. **Code review** valida aderência ao sistema de temas (convenção + invariantes
-   + coerência com o baseline).
+1. **Guard de tema — `npm run guard:theme`** (`scripts/theme-tokens-guard.mjs`),
+   step dedicado no CI (`Theme contract guard`). Bloqueia I1 e I2 (código).
+2. **Migration Checklist Gate — `npm run guard:migration-checklist`** (§7), step
+   dedicado no CI antes de lint/typecheck/test. Bloqueia migração sem artefato
+   válido/atualizado (processo) — determinístico, sem review humano.
+3. **Checklist no PR template** como apoio/visibilidade ao autor e revisor.
+4. **Code review** cobre o que está fora do alcance automatizado (§6).
 
 ### Como migrar um módulo (resumo mecânico)
 
@@ -163,3 +165,45 @@ por isso **não** substitui review nem as fases seguintes do roadmap. Ele NÃO c
 
 Enquanto esses limites não forem cobertos por mecanismo automatizado, eles
 **permanecem responsabilidade explícita do code review** (§4).
+
+---
+
+## 7. Migration Checklist Gate (artefato obrigatório de CI)
+
+Enforcement de **processo** (não só de código): toda PR que altera a UI
+(`pdv-importados/app/**` ou `pdv-importados/components/**`) precisa de um artefato
+de migração **válido e atualizado nesta PR**. A validação é 100% determinística
+(`scripts/migration-checklist-guard.mjs`), roda como step dedicado **antes** de
+lint/typecheck/test no CI — **não depende de review humano**.
+
+Artefato: **`migration-checklist.json`** na raiz do repositório. Schema mínimo:
+
+```json
+{
+  "migration": "produtos",
+  "routeAdded": true,
+  "themeScopeApplied": true,
+  "tokensOnly": true,
+  "noHardcodedColors": true,
+  "visualValidated": true
+}
+```
+
+Regras (qualquer falha ⇒ **CI vermelho**):
+
+| Condição | Resultado |
+|----------|-----------|
+| PR **não** toca `app/**`/`components/**` | gate passa (checklist não exigido) |
+| UI alterada e `migration-checklist.json` **ausente** | **FALHA** |
+| JSON inválido / não-objeto | **FALHA** |
+| `migration` ausente/vazio | **FALHA** |
+| Qualquer campo booleano obrigatório `!== true` | **FALHA** |
+| Arquivo **não atualizado nesta PR** (ausente no diff base→head) | **FALHA** (evita gate satisfeito por commit antigo) |
+
+Campos obrigatórios: `migration` (string não-vazia) + `routeAdded`,
+`themeScopeApplied`, `tokensOnly`, `noHardcodedColors`, `visualValidated` (todos
+`true`). Campos extras (ex.: `baseline`, `notes`) são permitidos.
+
+> **Migrar um módulo agora é mecânico:** atualize `migration-checklist.json` com
+> o módulo, garanta `guard:theme` verde (sem hardcode) e valide contra o baseline
+> (§3). O Checklist Gate + o guard de tema cobrem, juntos, processo **e** código.

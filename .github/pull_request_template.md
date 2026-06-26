@@ -14,6 +14,7 @@ Marque e cumpra **se** o PR migrar/criar uma tela no tema Clássico (contrato em
 [`pdv-importados/docs/THEME_SYSTEM.md`](../../pdv-importados/docs/THEME_SYSTEM.md)).
 Este checklist é **critério de aceite** — PR de migração não é aceito incompleto.
 
+- [ ] **`migration-checklist.json` atualizado** (raiz do repo) — exigido pelo CI (`Migration Checklist Gate`) sempre que `app/**`/`components/**` mudam.
 - [ ] Rota adicionada ao registry (`CLASSICO_ROUTES`/`MODULES` em `lib/theme/themeRegistry.ts`) e diretório incluído no `POLICED` de `scripts/theme-tokens-guard.mjs`.
 - [ ] `data-theme` aplicado corretamente (via `AdminThemeScope`; verificado no DOM da rota).
 - [ ] Uso exclusivo de tokens — sem hardcode de cor (`npm run guard:theme` verde).
