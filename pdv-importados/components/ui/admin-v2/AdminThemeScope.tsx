@@ -2,26 +2,24 @@
 
 import type { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { isClassicoPath } from '@/lib/theme/themeRegistry'
+import { DEFAULT_THEME, resolveTheme } from '@/lib/theme/themeRegistry'
 
 /**
- * Aplica o tema visual da rota atual à subárvore (shell, sidebar, topbar e
- * conteúdo) sem tocar na lógica dos componentes.
+ * Projeta o tema da rota atual na subárvore (shell, sidebar, topbar, conteúdo)
+ * via `data-theme`, sem tocar na lógica dos componentes.
  *
- * A decisão de QUAL rota usa QUAL tema vive no registro central
- * (`lib/theme/themeRegistry`) — este componente apenas projeta o resultado no
- * DOM via `data-theme`. Para o tema padrão ("dragon") nada é marcado, pois ele
- * é o comportamento base não-escopado.
+ * É deliberadamente agnóstico de tema: pergunta ao registro qual tema vale e o
+ * aplica. Adicionar novos temas não muda este componente. O tema base
+ * (`DEFAULT_THEME`) é o comportamento não-escopado, então não marca atributo.
  *
  * Usa um wrapper `display:contents` (não interfere no layout); as custom
  * properties do tema cascateiam para toda a subárvore.
  */
 export function AdminThemeScope({ children }: Readonly<{ children: ReactNode }>) {
-  const pathname = usePathname()
-  const classico = isClassicoPath(pathname ?? '')
+  const theme = resolveTheme(usePathname() ?? '')
 
   return (
-    <div className="contents" data-theme={classico ? 'classico' : undefined}>
+    <div className="contents" data-theme={theme === DEFAULT_THEME ? undefined : theme}>
       {children}
     </div>
   )
