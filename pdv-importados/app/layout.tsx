@@ -29,8 +29,8 @@ export const metadata: Metadata = {
  * O meta `color-scheme` é aplicado no paint mais cedo (antes do CSS).
  */
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#020617',
+  colorScheme: 'light',
+  themeColor: '#f8fafc',
 }
 
 export default function RootLayout({
@@ -41,9 +41,9 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${notoSansSC.variable} dark`}
-      data-app-theme="noturno"
-      data-gerente-ui-theme="noturno"
+      className={`${notoSansSC.variable}`}
+      data-app-theme="classico"
+      data-gerente-ui-theme="dragon-light"
       suppressHydrationWarning
     >
       <body

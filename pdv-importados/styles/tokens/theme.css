@@ -1,9 +1,36 @@
 /**
  * Design Tokens Theme - Variações por tema
- * Sistema travado em modo escuro (noturno). Tema claro (novem) removido.
  */
 
-/* === TEMA NOTURNO (ÚNICO) === */
+/* === TEMA CLÁSSICO (BLING) === */
+[data-app-theme='classico'] {
+  /* Surface colors */
+  --color-background-surface: #ffffff;
+  --color-background-surface-soft: #f8fafc;
+  --color-background-overlay: rgba(248, 250, 252, 0.92);
+
+  /* Text colors */
+  --color-text-primary: rgb(15 23 42);
+  --color-text-secondary: rgb(51 65 85);
+  --color-text-tertiary: rgb(100 116 139);
+  --color-text-disabled: rgb(148 163 184);
+
+  /* Border colors */
+  --color-border-primary: rgba(203, 213, 225, 0.9);
+  --color-border-secondary: rgba(226, 232, 240, 0.95);
+  --color-border-disabled: rgba(241, 245, 249, 0.8);
+
+  /* Brand colors */
+  --color-brand-primary: var(--color-dragon-gold-400);
+  --color-brand-secondary: var(--color-dragon-gold-500);
+  --color-brand-strong: var(--color-dragon-gold-600);
+  --color-brand-contrast: rgb(255 255 255);
+
+  /* Button primary (Bling azul) */
+  --btn-primary-bg: #1e40af;
+}
+
+/* === TEMA NOTURNO === */
 :root,
 [data-app-theme='noturno'] {
   /* Surface colors */

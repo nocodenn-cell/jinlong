@@ -19,6 +19,18 @@
   --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
 }
 
+/* === TEMA CLÁSSICO (BLING) — fundo claro, azul corporativo === */
+[data-app-theme='classico'] {
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-text: rgb(15 23 42);
+  --border: rgba(203, 213, 225, 0.9);
+  --accent: #1e40af;
+  --accent-strong: #1d3a9f;
+  --accent-contrast: #ffffff;
+}
+
+/* === TEMA NOTURNO === */
 [data-app-theme='noturno'] {
   --surface: rgba(15, 23, 42, 0.68);
   --surface-soft: rgba(15, 23, 42, 0.42);
@@ -555,6 +567,36 @@ html:has(.login-premium-root) body {
     radial-gradient(ellipse 70% 40% at 85% 8%, rgba(59, 130, 246, 0.1) 0%, transparent 52%);
 }
 
+
+/* === TEMA CLÁSSICO: sobrescreve backgrounds escuros === */
+[data-app-theme='classico'] .bg-oriental-clouds {
+  background: #f8fafc !important;
+}
+[data-app-theme='classico'] .bg-oriental-clouds::before {
+  opacity: 0 !important;
+  background-image: none !important;
+}
+[data-app-theme='classico'] .dragon-glass-card {
+  background-color: #ffffff !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.07),
+    0 2px 8px rgba(15, 23, 42, 0.08) !important;
+}
+[data-app-theme='classico'] .dragon-elev-2 {
+  background-color: #ffffff !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.10),
+    0 8px 28px rgba(15, 23, 42, 0.14) !important;
+}
+[data-app-theme='classico'] .dragon-glass-backdrop {
+  background-color: rgba(248, 250, 252, 0.88) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+[data-app-theme='classico'] .caixa-oriental-root {
+  background: #f8fafc !important;
+  color: rgb(15 23 42) !important;
+}
 
 /* Fase 2: padronização semântica para gerente/caixa */
 [data-app-theme] .gerente-table-dragon {
