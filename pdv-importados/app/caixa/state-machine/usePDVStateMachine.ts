@@ -204,6 +204,129 @@ export function usePDVStateMachine(
       updateContext({ ultimaAcao: `Venda ${vendaId} finalizada` })
       return transition(PDVState.VENDA_FINALIZADA, "Venda finalizada com sucesso")
     },
+
+    // Modal actions
+    abrirGerenteModal: () => {
+      stateConfig.openModals.add("gerente")
+      return true
+    },
+
+    fecharGerenteModal: () => {
+      stateConfig.openModals.delete("gerente")
+      return true
+    },
+
+    abrirMovimentacaoModal: (tipo: "suprimento" | "sangria") => {
+      stateConfig.openModals.add("movimentacao")
+      if (stateConfig.movimentacaoModalTipo !== undefined) {
+        stateConfig.movimentacaoModalTipo = tipo
+      }
+      return true
+    },
+
+    fecharMovimentacaoModal: () => {
+      stateConfig.openModals.delete("movimentacao")
+      if (stateConfig.movimentacaoModalTipo !== undefined) {
+        stateConfig.movimentacaoModalTipo = null
+      }
+      return true
+    },
+
+    abrirAcaoMovimentacao: (tipo: "cancelar" | "estornar", item: any) => {
+      stateConfig.openModals.add("acaoMovimentacao")
+      if (stateConfig.acaoMovimentacao !== undefined) {
+        stateConfig.acaoMovimentacao = { tipo, item }
+      }
+      return true
+    },
+
+    fecharAcaoMovimentacao: () => {
+      stateConfig.openModals.delete("acaoMovimentacao")
+      if (stateConfig.acaoMovimentacao !== undefined) {
+        stateConfig.acaoMovimentacao = null
+      }
+      return true
+    },
+
+    abrirValorNumericoModal: (fluxo: "abrir_caixa" | "fechar_contado", initial: string) => {
+      stateConfig.openModals.add("valorNumerico")
+      if (stateConfig.valorNumericoModal !== undefined) {
+        stateConfig.valorNumericoModal = { fluxo, initial }
+      }
+      return true
+    },
+
+    fecharValorNumericoModal: () => {
+      stateConfig.openModals.delete("valorNumerico")
+      if (stateConfig.valorNumericoModal !== undefined) {
+        stateConfig.valorNumericoModal = null
+      }
+      return true
+    },
+
+    abrirMotivoFecharModal: (tipo: "diferenca" | "blind_retry", valorContado: number, diferencaFmt?: string) => {
+      stateConfig.openModals.add("motivo")
+      if (stateConfig.motivoFecharModal !== undefined) {
+        stateConfig.motivoFecharModal = { tipo, valorContado, diferencaFmt }
+      }
+      return true
+    },
+
+    fecharMotivoFecharModal: () => {
+      stateConfig.openModals.delete("motivo")
+      if (stateConfig.motivoFecharModal !== undefined) {
+        stateConfig.motivoFecharModal = null
+      }
+      return true
+    },
+
+    abrirConfirmacao: (tipo: "sangria" | "cancelar" | "estornar", item?: any) => {
+      stateConfig.openModals.add("confirmacao")
+      if (stateConfig.confirmacaoPendente !== undefined) {
+        stateConfig.confirmacaoPendente = { tipo, item }
+      }
+      return true
+    },
+
+    fecharConfirmacao: () => {
+      stateConfig.openModals.delete("confirmacao")
+      if (stateConfig.confirmacaoPendente !== undefined) {
+        stateConfig.confirmacaoPendente = null
+      }
+      return true
+    },
+
+    abrirReciboModal: () => {
+      stateConfig.openModals.add("recibo")
+      return true
+    },
+
+    fecharReciboModal: () => {
+      stateConfig.openModals.delete("recibo")
+      return true
+    },
+
+    // UI state actions
+    mudarAbaPdv: (aba: "produto" | "cliente" | "pgto") => {
+      if (stateConfig.activeTab !== undefined) {
+        stateConfig.activeTab = aba
+      }
+      return true
+    },
+
+    mudarMetodoPagamento: (metodo: "dinheiro" | "cartao" | "cheque" | "pix" | "crediario") => {
+      if (stateConfig.metodoPagamento !== undefined) {
+        stateConfig.metodoPagamento = metodo
+      }
+      return true
+    },
+
+    toggleSummaryCollapsed: () => {
+      if (stateConfig.summaryCollapsed !== undefined) {
+        stateConfig.summaryCollapsed = !stateConfig.summaryCollapsed
+      }
+      return true
+    },
   }
 
   const stateMachine: PDVStateMachine = {

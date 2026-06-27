@@ -57,6 +57,8 @@ export type PDVStateConfig = {
   autoFocus?: "busca" | "cliente" | "valorRecebido" | "none"
   /** Qual aba está visível por padrão */
   defaultTab?: "produto" | "cliente" | "pgto"
+  /** Qual aba está ativa neste estado */
+  activeTab?: "produto" | "cliente" | "pgto"
   /** Ações permitidas */
   allowedActions: {
     adicionarProduto: boolean
@@ -67,6 +69,22 @@ export type PDVStateConfig = {
     abrirCaixa: boolean
     fecharCaixa: boolean
   }
+  /** Quais modais estão abertos neste estado */
+  openModals: Set<"gerente" | "movimentacao" | "acaoMovimentacao" | "valorNumerico" | "motivo" | "confirmacao" | "recibo">
+  /** Qual tipo de movimentação modal está aberto (se algum) */
+  movimentacaoModalTipo?: "suprimento" | "sangria" | null
+  /** Qual ação de movimentação está pendente (se alguma) */
+  acaoMovimentacao?: { tipo: "cancelar" | "estornar"; item: any } | null
+  /** Estado do modal de valor numérico */
+  valorNumericoModal?: { fluxo: "abrir_caixa" | "fechar_contado"; initial: string } | null
+  /** Estado do modal de motivo de fechamento */
+  motivoFecharModal?: { tipo: "diferenca" | "blind_retry"; valorContado: number; diferencaFmt?: string } | null
+  /** Confirmação pendente */
+  confirmacaoPendente?: { tipo: "sangria" | "cancelar" | "estornar"; item?: any } | null
+  /** Se o resumo financeiro está colapsado */
+  summaryCollapsed?: boolean
+  /** Método de pagamento selecionado */
+  metodoPagamento?: "dinheiro" | "cartao" | "cheque" | "pix" | "crediario"
   /** Descrição para debug */
   description: string
 }

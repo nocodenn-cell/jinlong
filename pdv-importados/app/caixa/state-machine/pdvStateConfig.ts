@@ -16,6 +16,9 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     },
     enabledShortcuts: new Set(["F1"]), // Apenas ajuda
     autoFocus: "none",
+    openModals: new Set(),
+    summaryCollapsed: true,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: false,
       removerProduto: false,
@@ -40,6 +43,9 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     },
     enabledShortcuts: new Set(["F1"]),
     autoFocus: "none",
+    openModals: new Set(),
+    summaryCollapsed: true,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: false,
       removerProduto: false,
@@ -65,6 +71,10 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     enabledShortcuts: new Set(["F1", "F2", "F3", "F5", "ESC"]),
     autoFocus: "busca",
     defaultTab: "produto",
+    activeTab: "produto",
+    openModals: new Set(),
+    summaryCollapsed: true,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: true,
       removerProduto: false, // Nada para remover ainda
@@ -102,6 +112,10 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     ]),
     autoFocus: "busca",
     defaultTab: "produto",
+    activeTab: "produto",
+    openModals: new Set(),
+    summaryCollapsed: false,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: true,
       removerProduto: true,
@@ -139,6 +153,10 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     ]),
     autoFocus: "busca",
     defaultTab: "cliente",
+    activeTab: "cliente",
+    openModals: new Set(),
+    summaryCollapsed: false,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: true,
       removerProduto: true,
@@ -170,6 +188,10 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     ]),
     autoFocus: "none",
     defaultTab: "produto",
+    activeTab: "produto",
+    openModals: new Set(),
+    summaryCollapsed: false,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: false,
       removerProduto: false,
@@ -204,6 +226,10 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     ]),
     autoFocus: "valorRecebido",
     defaultTab: "pgto",
+    activeTab: "pgto",
+    openModals: new Set(),
+    summaryCollapsed: false,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: false,
       removerProduto: false,
@@ -228,6 +254,10 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
     },
     enabledShortcuts: new Set(["F1"]), // Apenas ajuda
     autoFocus: "none",
+    activeTab: "pgto",
+    openModals: new Set(),
+    summaryCollapsed: false,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: false,
       removerProduto: false,
@@ -257,6 +287,10 @@ export const pdvStateConfigs: Record<PDVState, PDVStateConfig> = {
       "ESC", // Novo cupom
     ]),
     autoFocus: "none",
+    activeTab: "pgto",
+    openModals: new Set(),
+    summaryCollapsed: false,
+    metodoPagamento: "dinheiro",
     allowedActions: {
       adicionarProduto: false,
       removerProduto: false,

@@ -169,22 +169,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [turnoRefreshToken, setTurnoRefreshToken] = useState(0)
   const [processandoCaixa, setProcessandoCaixa] = useState(false)
   const [validandoGerente, setValidandoGerente] = useState(false)
-  const [gerenteModalAberto, setGerenteModalAberto] = useState(false)
-  const [movimentacaoModalTipo, setMovimentacaoModalTipo] =
-    useState<TipoMovimentacaoUi | null>(null)
-  const [acaoMovimentacao, setAcaoMovimentacao] = useState<{
-    tipo: AcaoMovimentacaoTipo
-    item: MovimentacaoCaixaDTO
-  } | null>(null)
-  type ValorModalFluxo = "abrir_caixa" | "fechar_contado"
-  const [valorNumericoModal, setValorNumericoModal] = useState<
-    null | { fluxo: ValorModalFluxo; initial: string }
-  >(null)
-  const [motivoFecharModal, setMotivoFecharModal] = useState<
-    | null
-    | { tipo: "diferenca"; valorContado: number; diferencaFmt: string }
-    | { tipo: "blind_retry"; valorContado: number }
-  >(null)
   const [gerenteValidadoAte, setGerenteValidadoAte] = useState<string | null>(null)
   const [gerenteToken, setGerenteToken] = useState<string | null>(null)
   const [maxDescontoGerentePercentual, setMaxDescontoGerentePercentual] =
@@ -193,15 +177,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     useState<number>(0)
   const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
-  const [summaryCollapsed, setSummaryCollapsed] = useState(true)
-  const [confirmacaoPendente, setConfirmacaoPendente] = useState<
-    | null
-    | { tipo: "sangria" }
-    | { tipo: "cancelar"; item: MovimentacaoCaixaDTO }
-    | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
-  >(null)
-  const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
-  const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
 
   const {
     caixaStatus,
@@ -273,8 +248,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const totalLiquidoComGerente = descontoGerenteAplicado.totalLiquidoComDesconto
   const descontoGerentePercentualEfetivo = descontoGerenteAplicado.percentualClamped
   const formaPagamento = useMemo(
-    () => metodoPagamentoToForma(metodoPagamento),
-    [metodoPagamento],
+    () => metodoPagamentoToForma((pdvStateMachine.stateConfig.metodoPagamento || "dinheiro") as MetodoPagamentoUi),
+    [pdvStateMachine.stateConfig.metodoPagamento],
   )
 
   const {
@@ -299,7 +274,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
   const lastReciboRef = useRef<ReciboVenda | null>(null)
-  const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
 
   const thermal = useThermalPrinter()
 
@@ -331,16 +305,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }
   }, [focarCampoBusca])
 
-  /* Auto-expand/collapse financial summary based on cart state */
+  // Auto-expand/collapse financial summary based on cart state
   useEffect(() => {
     if (itens.length === 0) {
-      /* Cart is empty → collapse summary */
-      setSummaryCollapsed(true)
-    } else if (summaryCollapsed && itens.length > 0) {
-      /* First item added → auto-expand summary */
-      setSummaryCollapsed(false)
+      pdvStateMachine.stateConfig.summaryCollapsed = true
+    } else if (pdvStateMachine.stateConfig.summaryCollapsed && itens.length > 0) {
+      pdvStateMachine.stateConfig.summaryCollapsed = false
     }
-  }, [itens.length, summaryCollapsed])
+  }, [itens.length, pdvStateMachine.stateConfig])
 
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
@@ -392,13 +364,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     () => (
       <CaixaPdvMetodoPagamentoSelector
         m={m}
-        value={metodoPagamento}
-        onChange={setMetodoPagamento}
+        value={(pdvStateMachine.stateConfig.metodoPagamento || "dinheiro") as MetodoPagamentoUi}
+        onChange={(metodo) => pdvStateMachine.mudarMetodoPagamento(metodo as any)}
         disabled={pagamentoControlesDesabilitados}
         variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
       />
     ),
-    [m, metodoPagamento, setMetodoPagamento, pagamentoControlesDesabilitados, pdvLayoutVariant],
+    [m, pdvStateMachine, pdvStateMachine.stateConfig.metodoPagamento, pagamentoControlesDesabilitados, pdvLayoutVariant],
   )
 
   const limparEstadoDescontoGerente = useCallback(() => {
@@ -513,12 +485,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
     resetPagamentos()
-    setMetodoPagamento("dinheiro")
+    pdvStateMachine.mudarMetodoPagamento("dinheiro")
     setCodigo("")
     setCaixaMensagem(null)
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
-    setAbaPdvAtiva("produto")
+    pdvStateMachine.mudarAbaPdv("produto")
     pdvStateMachine.novoCupom()
     focarCampoBusca()
   }, [
@@ -553,7 +525,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         const res = await fecharCaixaOperador({ valorContado, motivo })
         const blind = isCaixaAberto(caixaStatus) && caixaStatus.blindClosureEnabled
         if (!res.ok && blind && erroExigeMotivoFechamento(res.error) && motivo == null) {
-          setMotivoFecharModal({ tipo: "blind_retry", valorContado })
+          pdvStateMachine.abrirMotivoFecharModal("blind_retry", valorContado)
           return
         }
         if (!res.ok) {
@@ -584,8 +556,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleAbrirCaixa = useCallback(() => {
     if (processandoCaixa) return
-    setValorNumericoModal({ fluxo: "abrir_caixa", initial: "0" })
-  }, [processandoCaixa])
+    pdvStateMachine.abrirValorNumericoModal("abrir_caixa", "0")
+  }, [processandoCaixa, pdvStateMachine])
 
   const handleFecharCaixa = useCallback(() => {
     if (processandoCaixa) return
@@ -593,33 +565,35 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.msg_fechar_cupom_nao_vazio, { kind: "warning" })
       return
     }
-    setValorNumericoModal({ fluxo: "fechar_contado", initial: "" })
-  }, [processandoCaixa, itens.length, m.caixa.msg_fechar_cupom_nao_vazio, setCaixaMensagem])
+    pdvStateMachine.abrirValorNumericoModal("fechar_contado", "")
+  }, [processandoCaixa, itens.length, m.caixa.msg_fechar_cupom_nao_vazio, setCaixaMensagem, pdvStateMachine])
 
   const handleAbrirSuprimento = useCallback(() => {
-    setMovimentacaoModalTipo("suprimento")
-  }, [])
+    pdvStateMachine.abrirMovimentacaoModal("suprimento")
+  }, [pdvStateMachine])
 
   const handleAbrirSangria = useCallback(() => {
-    setConfirmacaoPendente({ tipo: "sangria" })
-  }, [])
+    pdvStateMachine.abrirConfirmacao("sangria")
+  }, [pdvStateMachine])
 
   const handleConfirmarAcaoSensivel = useCallback(() => {
-    if (!confirmacaoPendente) return
-    if (confirmacaoPendente.tipo === "sangria") {
-      setMovimentacaoModalTipo("sangria")
-    } else if (confirmacaoPendente.tipo === "cancelar") {
-      setAcaoMovimentacao({ tipo: "cancelar", item: confirmacaoPendente.item })
+    const confirmacao = pdvStateMachine.stateConfig.confirmacaoPendente
+    if (!confirmacao) return
+    if (confirmacao.tipo === "sangria") {
+      pdvStateMachine.abrirMovimentacaoModal("sangria")
+    } else if (confirmacao.tipo === "cancelar") {
+      pdvStateMachine.abrirAcaoMovimentacao("cancelar", confirmacao.item)
     } else {
-      setAcaoMovimentacao({ tipo: "estornar", item: confirmacaoPendente.item })
+      pdvStateMachine.abrirAcaoMovimentacao("estornar", confirmacao.item)
     }
-    setConfirmacaoPendente(null)
-  }, [confirmacaoPendente])
+    pdvStateMachine.fecharConfirmacao()
+  }, [pdvStateMachine])
 
   const onConfirmValorNumerico = useCallback(
     (v: number) => {
-      if (!valorNumericoModal) return
-      const { fluxo } = valorNumericoModal
+      const modalState = pdvStateMachine.stateConfig.valorNumericoModal
+      if (!modalState) return
+      const { fluxo } = modalState
       if (fluxo === "abrir_caixa") {
         void (async () => {
           setProcessandoCaixa(true)
@@ -649,17 +623,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         ? roundMoney2(v - valorSistemaDinheiro)
         : null
       if (!blind && diferencaEstimada !== null && Math.abs(diferencaEstimada) > 5) {
-        setMotivoFecharModal({
-          tipo: "diferenca",
-          valorContado: v,
-          diferencaFmt: formatDecimalBRL(diferencaEstimada),
-        })
+        pdvStateMachine.abrirMotivoFecharModal("diferenca", v, formatDecimalBRL(diferencaEstimada))
         return
       }
       void executarFecharCaixa(v, undefined)
     },
     [
-      valorNumericoModal,
+      pdvStateMachine,
       caixaStatus,
       executarFecharCaixa,
       recarregarStatusCaixa,
@@ -671,10 +641,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const onConfirmMotivoFechar = useCallback(
     (motivo: string) => {
-      if (!motivoFecharModal) return
-      void executarFecharCaixa(motivoFecharModal.valorContado, motivo)
+      const modalState = pdvStateMachine.stateConfig.motivoFecharModal
+      if (!modalState) return
+      void executarFecharCaixa(modalState.valorContado, motivo)
     },
-    [motivoFecharModal, executarFecharCaixa],
+    [pdvStateMachine, executarFecharCaixa],
   )
 
   const handleFinalizar = useCallback(async () => {
@@ -826,7 +797,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           moeda: m.caixa.moeda_prefixo,
         }
         setCheckoutHint(null)
-        setReimprimirModalAberto(true)
+        pdvStateMachine.abrirReciboModal()
         vendaIdempotenciaRef.current = null
         limparCarrinho()
         limparEstadoDescontoGerente()
@@ -902,10 +873,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }, [limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem]),
   })
 
-  // TODO(PDV-ARCH): handleChangeAbaPdv será removido — transições governadas pelo state machine
   const handleChangeAbaPdv = useCallback((novaAba: CaixaPdvOperadorTabId) => {
-    setAbaPdvAtiva(novaAba)
-    // State machine governa as abas visíveis via stateConfig
+    pdvStateMachine.mudarAbaPdv(novaAba as "produto" | "cliente" | "pgto")
     if (novaAba === "cliente" && itensStore.length > 0) {
       pdvStateMachine.selecionarCliente(null)
     } else if (novaAba === "pgto") {
@@ -943,8 +912,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onFocarBusca: focarCampoBusca,
     onNovoCupom: handleNovoCupom,
     onReimprimir: useCallback(() => {
-      if (lastReciboRef.current) setReimprimirModalAberto(true)
-    }, []),
+      if (lastReciboRef.current) pdvStateMachine.abrirReciboModal()
+    }, [pdvStateMachine]),
     onDesfazerRemocao: handleDesfazerRemocao,
     pdvClassicAtalhos,
   })
@@ -1014,20 +983,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
   const handleFinalizarClick = useCallback(() => {
     if (itens.length > 0) {
-      setAbaPdvAtiva("pgto")
+      pdvStateMachine.mudarAbaPdv("pgto")
       pdvStateMachine.pronto()
       pdvStateMachine.irParaPagamento()
     }
     return void handleFinalizar()
   }, [handleFinalizar, itens.length, pdvStateMachine])
-  const abrirGerenteModal = useCallback(() => setGerenteModalAberto(true), [])
+  const abrirGerenteModal = useCallback(() => pdvStateMachine.abrirGerenteModal(), [pdvStateMachine])
   const handleCancelarMovimentacao = useCallback(
-    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "cancelar", item }),
-    [],
+    (item: MovimentacaoCaixaDTO) => pdvStateMachine.abrirConfirmacao("cancelar", item),
+    [pdvStateMachine],
   )
   const handleEstornarMovimentacao = useCallback(
-    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "estornar", item }),
-    [],
+    (item: MovimentacaoCaixaDTO) => pdvStateMachine.abrirConfirmacao("estornar", item),
+    [pdvStateMachine],
   )
 
   return (
@@ -1070,7 +1039,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               <CaixaPdvOperadorTabs
                 m={m}
                 idioma={idioma}
-                tab={abaPdvAtiva}
+                tab={(pdvStateMachine.stateConfig.activeTab || "produto") as CaixaPdvOperadorTabId}
                 onTabChange={handleChangeAbaPdv}
                 layoutVariant={pdvLayoutVariant}
                 mostrarAtalhos={pdvLayoutVariant === "classic"}
@@ -1198,7 +1167,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                       ? "border-border bg-card text-foreground hover:bg-muted"
                       : "app-btn-neutral",
                   )}
-                  onClick={() => setReimprimirModalAberto(true)}
+                  onClick={() => pdvStateMachine.abrirReciboModal()}
                 >
                   {m.caixa.reimprimir_cupom}
                 </button>
@@ -1306,23 +1275,23 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             metodoPagamentoPanel={
               pdvLayoutVariant === "default" ? metodoPagamentoSelector : undefined
             }
-            summaryCollapsed={summaryCollapsed && pdvLayoutVariant !== "classic"}
-            onToggleSummaryCollapse={() => setSummaryCollapsed(!summaryCollapsed)}
+            summaryCollapsed={(pdvStateMachine.stateConfig.summaryCollapsed ?? true) && pdvLayoutVariant !== "classic"}
+            onToggleSummaryCollapse={() => pdvStateMachine.toggleSummaryCollapsed()}
           />
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
-      {reimprimirModalAberto && lastReciboRef.current && (
+      {pdvStateMachine.stateConfig.openModals.has("recibo") && lastReciboRef.current && (
         <CaixaReciboModal
           venda={lastReciboRef.current}
           m={m}
-          onClose={() => setReimprimirModalAberto(false)}
+          onClose={() => pdvStateMachine.fecharReciboModal()}
           onNovaVenda={() => {
-            setReimprimirModalAberto(false)
+            pdvStateMachine.fecharReciboModal()
             focarCampoBusca()
           }}
           onFinalizarCaixa={() => {
-            setReimprimirModalAberto(false)
+            pdvStateMachine.fecharReciboModal()
             handleFecharCaixaClick()
           }}
           thermal={thermal}
@@ -1337,83 +1306,89 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         />
       )}
       <CaixaGerenteModal
-        open={gerenteModalAberto}
-        onOpenChange={setGerenteModalAberto}
+        open={pdvStateMachine.stateConfig.openModals.has("gerente")}
+        onOpenChange={(open) => {
+          if (open) {
+            pdvStateMachine.abrirGerenteModal()
+          } else {
+            pdvStateMachine.fecharGerenteModal()
+          }
+        }}
         m={m}
         validando={validandoGerente}
         onValidateSenha={handleValidateSenhaGerente}
         onApply={handleAplicarDescontoGerente}
       />
-      {movimentacaoModalTipo && (
+      {pdvStateMachine.stateConfig.openModals.has("movimentacao") && pdvStateMachine.stateConfig.movimentacaoModalTipo && (
         <CaixaMovimentacaoModal
-          open={!!movimentacaoModalTipo}
-          tipo={movimentacaoModalTipo}
+          open={true}
+          tipo={pdvStateMachine.stateConfig.movimentacaoModalTipo}
           processando={movimentandoCaixa}
           limiteSangriaSemGerente={limiteSangriaSemGerente}
           saldoEstimado={isCaixaAberto(caixaStatus) ? caixaStatus.valorSistemaDinheiro : 0}
           m={m}
           onOpenChange={(open) => {
-            if (!open) setMovimentacaoModalTipo(null)
+            if (!open) pdvStateMachine.fecharMovimentacaoModal()
           }}
           onSubmit={handleSalvarMovimentacao}
         />
       )}
-      {acaoMovimentacao && (
+      {pdvStateMachine.stateConfig.openModals.has("acaoMovimentacao") && pdvStateMachine.stateConfig.acaoMovimentacao && (
         <CaixaMovimentacaoAcaoModal
-          open={!!acaoMovimentacao}
-          tipo={acaoMovimentacao.tipo}
+          open={true}
+          tipo={pdvStateMachine.stateConfig.acaoMovimentacao.tipo}
           processando={processandoAcaoMovimentacao}
           m={m}
           onOpenChange={(open) => {
-            if (!open) setAcaoMovimentacao(null)
+            if (!open) pdvStateMachine.fecharAcaoMovimentacao()
           }}
           onConfirm={handleConfirmarAcaoMovimentacao}
         />
       )}
-      {valorNumericoModal && (
+      {pdvStateMachine.stateConfig.openModals.has("valorNumerico") && pdvStateMachine.stateConfig.valorNumericoModal && (
         <CaixaValorNumericoModal
           open
           onOpenChange={(open) => {
-            if (!open) setValorNumericoModal(null)
+            if (!open) pdvStateMachine.fecharValorNumericoModal()
           }}
           title={
-            valorNumericoModal.fluxo === "abrir_caixa"
+            pdvStateMachine.stateConfig.valorNumericoModal.fluxo === "abrir_caixa"
               ? m.caixa.modal_valor_titulo_abrir
               : m.caixa.modal_valor_titulo_fechar
           }
           description={
-            valorNumericoModal.fluxo === "abrir_caixa"
+            pdvStateMachine.stateConfig.valorNumericoModal.fluxo === "abrir_caixa"
               ? m.caixa.valor_inicial
               : m.caixa.valor_final
           }
           campoLabel={m.caixa.modal_valor_label}
           placeholder={m.caixa.modal_valor_placeholder}
-          initial={valorNumericoModal.initial}
+          initial={pdvStateMachine.stateConfig.valorNumericoModal.initial}
           m={m}
           parseValor={(raw) => parseValorMonetario(raw)}
           mensagemInvalido={
-            valorNumericoModal.fluxo === "abrir_caixa"
+            pdvStateMachine.stateConfig.valorNumericoModal.fluxo === "abrir_caixa"
               ? m.caixa.msg_valor_inicial_invalido
               : m.caixa.msg_valor_contado_invalido
           }
           onConfirm={onConfirmValorNumerico}
         />
       )}
-      {motivoFecharModal && (
+      {pdvStateMachine.stateConfig.openModals.has("motivo") && pdvStateMachine.stateConfig.motivoFecharModal && (
         <CaixaMotivoMinModal
           open
           onOpenChange={(open) => {
-            if (!open) setMotivoFecharModal(null)
+            if (!open) pdvStateMachine.fecharMotivoFecharModal()
           }}
           title={
-            motivoFecharModal.tipo === "diferenca"
+            pdvStateMachine.stateConfig.motivoFecharModal.tipo === "diferenca"
               ? m.caixa.modal_motivo_diferenca_titulo
               : m.caixa.modal_motivo_blind_titulo
           }
           description={
-            motivoFecharModal.tipo === "diferenca"
+            pdvStateMachine.stateConfig.motivoFecharModal.tipo === "diferenca"
               ? caixaFmt(m.caixa.modal_motivo_diferenca_desc, {
-                  diferenca: motivoFecharModal.diferencaFmt,
+                  diferenca: pdvStateMachine.stateConfig.motivoFecharModal.diferencaFmt,
                 })
               : m.caixa.modal_motivo_blind_desc
           }
@@ -1422,25 +1397,25 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         />
       )}
       <CaixaConfirmModal
-        open={confirmacaoPendente !== null}
+        open={pdvStateMachine.stateConfig.openModals.has("confirmacao")}
         title={
-          confirmacaoPendente?.tipo === "sangria"
+          pdvStateMachine.stateConfig.confirmacaoPendente?.tipo === "sangria"
             ? m.caixa.modal_confirmacao_sangria_titulo
-            : confirmacaoPendente?.tipo === "cancelar"
+            : pdvStateMachine.stateConfig.confirmacaoPendente?.tipo === "cancelar"
               ? m.caixa.modal_confirmacao_cancelar_titulo
               : m.caixa.modal_confirmacao_estorno_titulo
         }
         description={
-          confirmacaoPendente?.tipo === "sangria"
+          pdvStateMachine.stateConfig.confirmacaoPendente?.tipo === "sangria"
             ? m.caixa.confirmar_sangria_curta
-            : confirmacaoPendente?.tipo === "cancelar"
+            : pdvStateMachine.stateConfig.confirmacaoPendente?.tipo === "cancelar"
               ? m.caixa.confirmar_cancelamento_curto
               : m.caixa.confirmar_estorno_curto
         }
         m={m}
         initialFocus="cancel"
         onOpenChange={(open) => {
-          if (!open) setConfirmacaoPendente(null)
+          if (!open) pdvStateMachine.fecharConfirmacao()
         }}
         onConfirm={handleConfirmarAcaoSensivel}
       />
