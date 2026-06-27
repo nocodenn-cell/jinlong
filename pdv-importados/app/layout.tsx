@@ -5,6 +5,7 @@ import './globals.css'
 import '@/styles/theme-oriental.css'
 import { AppThemeProvider } from '@/components/theme/AppThemeProvider'
 import { HydrationFix } from '@/components/ui/HydrationFix'
+import { Providers } from './providers'
 import React from 'react'
 
 const notoSansSC = Noto_Sans_SC({
@@ -48,11 +49,13 @@ export default function RootLayout({
       <body
         className={`${notoSansSC.variable} antialiased selection:bg-success/35 selection:text-success-foreground`}
       >
-        <HydrationFix />
-        <AppThemeProvider>
-          {children}
-          <Analytics />
-        </AppThemeProvider>
+        <Providers>
+          <HydrationFix />
+          <AppThemeProvider>
+            {children}
+            <Analytics />
+          </AppThemeProvider>
+        </Providers>
       </body>
     </html>
   )
