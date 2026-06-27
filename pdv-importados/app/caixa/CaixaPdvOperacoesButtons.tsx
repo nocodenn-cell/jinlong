@@ -177,7 +177,6 @@ function CaixaPdvOperacoesButtonsImpl({
           onClick={onAbrirSuprimento}
           disabled={!caixaAberto || movimentandoCaixa || finalizando}
           aria-busy={movimentandoCaixa}
-          title="Ctrl+Shift+S"
         >
           {m.caixa.suprimento} (+)
         </Button>
@@ -193,7 +192,6 @@ function CaixaPdvOperacoesButtonsImpl({
           onClick={onAbrirSangria}
           disabled={!caixaAberto || movimentandoCaixa || finalizando}
           aria-busy={movimentandoCaixa}
-          title="Ctrl+Shift+R"
         >
           {m.caixa.sangria} (-)
         </Button>

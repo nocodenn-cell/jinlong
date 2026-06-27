@@ -146,7 +146,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
       )}
 
       {creatingNew && (
-        <div className="mb-4 border-b border-[#242424] pb-4">
+        <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-4">
           <div className="flex gap-2">
             <input
               type="text"
@@ -177,7 +177,7 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
       )}
 
       {editingId && (
-        <div className="mb-4 border-b border-[#242424] pb-4">
+        <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-4">
           <div className="flex gap-2">
             <input
               type="text"
@@ -219,11 +219,11 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
             <p className="text-[12px] text-jl-fg-3">Nenhuma categoria encontrada</p>
           </div>
         }
-        className="rounded-none border-x-0 border-[#242424]"
+        className="rounded-none border-x-0 border-[var(--color-border-secondary)]"
       />
 
       {dados.total > 50 && (
-        <div className="mt-4 border-t border-[#242424] pt-3 text-center text-[11px] text-jl-fg-3">
+        <div className="mt-4 border-t border-[var(--color-border-secondary)] pt-3 text-center text-[11px] text-jl-fg-3">
           Página 1 de {Math.ceil(dados.total / 50)} · {dados.total} categorias
         </div>
       )}

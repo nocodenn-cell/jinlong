@@ -43,7 +43,7 @@ export function FinanceiroPanels({ contas, labels }: FinanceiroPanelsProps) {
             {filaFiscalPlaceholder.map((item) => (
               <li
                 key={item.id}
-                className="flex items-center justify-between rounded-lg border border-[#242424] bg-[#111111] px-3 py-2"
+                className="flex items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft px-3 py-2"
               >
                 <div>
                   <p className="text-xs font-medium text-jl-fg-1">{item.id}</p>
@@ -66,7 +66,7 @@ export function FinanceiroPanels({ contas, labels }: FinanceiroPanelsProps) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[360px] border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#242424] text-left text-jl-fg-3">
+                <tr className="border-b border-[var(--color-border-secondary)] text-left text-jl-fg-3">
                   <th className="px-2 py-2 font-medium">{labels.colDocumento}</th>
                   <th className="px-2 py-2 font-medium">{labels.colSerie}</th>
                   <th className="px-2 py-2 font-medium">{labels.colValor}</th>
@@ -75,7 +75,7 @@ export function FinanceiroPanels({ contas, labels }: FinanceiroPanelsProps) {
               </thead>
               <tbody>
                 {docsFiscaisPlaceholder.map((row) => (
-                  <tr key={row.doc} className="border-b border-[#242424]">
+                  <tr key={row.doc} className="border-b border-[var(--color-border-secondary)]">
                     <td className="px-2 py-2 text-jl-fg-1">{row.doc}</td>
                     <td className="px-2 py-2 text-jl-fg-2">{row.serie}</td>
                     <td className="px-2 py-2 text-jl-fg-1">{row.valor}</td>

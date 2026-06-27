@@ -19,12 +19,13 @@ import { DeltaChip } from './badges'
 
 export type SparkTone = 'success' | 'danger' | 'info' | 'purple' | 'warning'
 
-const SPARK_TOKEN: Record<SparkTone, { varName: string; fallback: string }> = {
-  success: { varName: '--fp-success', fallback: '#22c55e' },
-  danger: { varName: '--fp-danger', fallback: '#ef4444' },
-  info: { varName: '--fp-info', fallback: '#3b82f6' },
-  purple: { varName: '--fp-purple', fallback: '#8b5cf6' },
-  warning: { varName: '--fp-warning', fallback: '#f59e0b' },
+/** Tokens CSS para cores de sparkline — definidos em styles/tokens/theme.css */
+const SPARK_TOKEN: Record<SparkTone, string> = {
+  success: '--fp-success',
+  danger: '--fp-danger',
+  info: '--fp-info',
+  purple: '--fp-purple',
+  warning: '--fp-warning',
 }
 
 type MetricCardProps = {
@@ -51,9 +52,9 @@ type MetricCardProps = {
 
 /** Resolve um token CSS (--fp-*) para a cor concreta — Canvas não aceita var(). */
 function resolveColor(el: HTMLElement, tone: SparkTone): string {
-  const { varName, fallback } = SPARK_TOKEN[tone]
+  const varName = SPARK_TOKEN[tone]
   const v = getComputedStyle(el).getPropertyValue(varName).trim()
-  return v || fallback
+  return v || '#64748b' // fallback neutro se token não existir
 }
 
 /** Aplica alpha a uma cor `#rrggbb`, `#rgb` ou `rgb(...)`. */

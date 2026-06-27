@@ -29,6 +29,45 @@
   --color-brand-secondary: #3b82f6;
   --color-brand-strong: #1d4ed8;
   --color-brand-contrast: #ffffff;
+
+  /* Semantic colors for status indicators */
+  --color-success-50: #ecfdf5;
+  --color-success-500: #10b981;
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #ef4444;
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+
+  /* === TOKENS FASTPRODUCT (--fp-*) === */
+  /* Substituem fallbacks hardcoded em components/ui/MetricCard.tsx, badges.tsx, etc */
+  --fp-text-muted: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
+  --fp-text-secondary: var(--color-text-secondary);
+  --fp-text-primary: var(--color-text-primary);
+  --fp-bg-card: var(--color-background-surface);
+  --fp-bg-card-soft: var(--color-background-surface-soft);
+  --fp-border: var(--color-border-primary);
+  --fp-border-subtle: color-mix(in srgb, var(--color-border-primary) 50%, transparent);
+
+  /* Status colors (remapeia fallbacks de MetricCard.tsx) */
+  --fp-success: var(--color-success-500);        /* #10b981 */
+  --fp-success-bg: color-mix(in srgb, var(--color-success-500) 12%, transparent);
+  --fp-success-border: color-mix(in srgb, var(--color-success-500) 35%, transparent);
+
+  --fp-danger: var(--color-danger-500);          /* #ef4444 */
+  --fp-danger-bg: color-mix(in srgb, var(--color-danger-500) 12%, transparent);
+  --fp-danger-border: color-mix(in srgb, var(--color-danger-500) 35%, transparent);
+
+  --fp-warning: var(--color-warning-500);        /* #f59e0b */
+  --fp-warning-bg: color-mix(in srgb, var(--color-warning-500) 12%, transparent);
+  --fp-warning-border: color-mix(in srgb, var(--color-warning-500) 35%, transparent);
+
+  --fp-info: #3b82f6;                            /* Bling blue */
+  --fp-info-bg: color-mix(in srgb, #3b82f6 12%, transparent);
+  --fp-info-border: color-mix(in srgb, #3b82f6 35%, transparent);
+
+  --fp-purple: #8b5cf6;                          /* Purple accent */
+  --fp-purple-bg: color-mix(in srgb, #8b5cf6 12%, transparent);
+  --fp-purple-border: color-mix(in srgb, #8b5cf6 35%, transparent);
 }
 
 /* === TEMA DRAGON-DARK (GERENTE) === */

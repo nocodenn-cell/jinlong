@@ -68,7 +68,7 @@ function ActionBtn({
       href={href}
       aria-label={label}
       title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
+      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
     >
       {children}
     </Link>
@@ -116,7 +116,7 @@ export function CatalogoTable({
       sortValue: (r) => r.nome,
       cell: (row) => (
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#242424] bg-[#111111]">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-soft">
             {row.imagem_url ? (
               // eslint-disable-next-line @next/next/no-img-element -- dynamic catalog URLs; dimensions unknown at build
               <img src={row.imagem_url} alt="" className="h-full w-full object-cover" />
@@ -246,7 +246,7 @@ export function CatalogoTable({
               aria-label={`Editar ${row.nome}`}
               title={`Editar ${row.nome}`}
               onClick={() => setEditando(row)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
             >
               <Pencil size={13} aria-hidden />
             </button>

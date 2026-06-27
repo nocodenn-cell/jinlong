@@ -37,7 +37,7 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels }: Props) 
         type="button"
         disabled={pending}
         onClick={() => run('inativar')}
-        className={cn(btnClass, 'border border-[#3a2020] text-red-400 hover:bg-red-500/10')}
+        className={cn(btnClass, 'border border-destructive/35 text-destructive hover:bg-destructive/10')}
       >
         {labels.inativar}
       </button>

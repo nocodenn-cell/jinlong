@@ -74,7 +74,7 @@ export function KardexSheet({
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="kardex-titulo">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
       <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col">
-        <div className="flex items-start justify-between gap-3 border-b border-[#242424] px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border-secondary)] px-5 py-4">
           <div className="min-w-0">
             <h2 id="kardex-titulo" className="text-[15px] font-semibold text-jl-fg-1">
               {labels.titulo}
@@ -95,7 +95,7 @@ export function KardexSheet({
           {carregando ? (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-12 rounded-lg bg-[#111111] opacity-60" />
+                <div key={i} className="h-12 rounded-lg bg-jl-surface-soft opacity-60" />
               ))}
             </div>
           ) : movimentos.length === 0 ? (
@@ -113,7 +113,7 @@ export function KardexSheet({
                 return (
                   <li
                     key={m.id}
-                    className="flex items-start gap-3 border-t border-[#242424] py-2.5"
+                    className="flex items-start gap-3 border-t border-[var(--color-border-secondary)] py-2.5"
                   >
                     <span
                       className={cn(

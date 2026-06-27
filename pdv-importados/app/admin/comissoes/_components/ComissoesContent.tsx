@@ -210,7 +210,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
               </p>
             </div>
           }
-          className="rounded-none border-x-0 border-[#242424]"
+          className="rounded-none border-x-0 border-[var(--color-border-secondary)]"
         />
       </SectionCard>
 
@@ -247,12 +247,12 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
           </div>
 
           {detalheLoading ? (
-            <div className="border-t border-[#242424] py-3 text-center text-[12px] text-jl-fg-3">
+            <div className="border-t border-[var(--color-border-secondary)] py-3 text-center text-[12px] text-jl-fg-3">
               {labels.carregando}
             </div>
           ) : detalheRows.length > 0 ? (
             <>
-              <div className="mb-4 flex flex-wrap items-center gap-3 border-t border-[#242424] pt-4">
+              <div className="mb-4 flex flex-wrap items-center gap-3 border-t border-[var(--color-border-secondary)] pt-4">
                 <button
                   onClick={toggleTodos}
                   className="text-[12px] text-jl-accent transition-colors hover:text-amber-300"
@@ -273,20 +273,20 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
                 )}
               </div>
 
-              <div className="max-h-[300px] overflow-y-auto rounded-lg border border-[#242424]">
+              <div className="max-h-[300px] overflow-y-auto rounded-lg border border-[var(--color-border-secondary)]">
                 {detalheRows.map((row) => {
                   const isPendente = row.status === 'pendente'
                   return (
                     <div
                       key={row.comissao_id}
-                      className="flex items-center gap-3 border-b border-[#242424] px-4 py-3 last:border-b-0 hover:bg-white/[0.03]"
+                      className="flex items-center gap-3 border-b border-[var(--color-border-secondary)] px-4 py-3 last:border-b-0 hover:bg-white/[0.03]"
                     >
                       {isPendente && (
                         <input
                           type="checkbox"
                           checked={selecionados.has(row.comissao_id)}
                           onChange={() => toggleSelecionado(row.comissao_id)}
-                          className="h-4 w-4 rounded border-[#242424] bg-transparent accent-jl-accent"
+                          className="h-4 w-4 rounded border-[var(--color-border-secondary)] bg-transparent accent-jl-accent"
                         />
                       )}
                       <div className="min-w-0 flex-1">
@@ -315,7 +315,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
               </div>
             </>
           ) : (
-            <div className="border-t border-[#242424] py-4 text-center text-[12px] text-jl-fg-3">
+            <div className="border-t border-[var(--color-border-secondary)] py-4 text-center text-[12px] text-jl-fg-3">
               {labels.semComissoes}
             </div>
           )}

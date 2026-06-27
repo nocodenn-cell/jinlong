@@ -62,7 +62,7 @@ export function SuspensaoContent({ statusInicial }: Props) {
               type="checkbox"
               checked={suspensas}
               onChange={(e) => setSuspensas(e.target.checked)}
-              className="h-5 w-5 rounded border-[#242424] bg-transparent accent-jl-accent"
+              className="h-5 w-5 rounded border-[var(--color-border-secondary)] bg-transparent accent-jl-accent"
             />
             <span className="text-[13px] font-medium text-jl-fg-1">
               {suspensas ? 'Vendas estão SUSPENSAS' : 'Vendas estão ATIVAS'}
