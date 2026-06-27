@@ -1,3 +1,3 @@
 export default function AdminLoading() {
-  return <div className="min-h-[40vh] bg-[#0a0a0a]" aria-hidden />
+  return <div className="min-h-[40vh] bg-jl-surface-soft" aria-hidden />
 }

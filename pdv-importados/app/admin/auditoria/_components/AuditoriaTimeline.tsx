@@ -114,7 +114,7 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
           const visual = TIPO_VISUAL[e.tipo]
           const Icon = visual.icon
           return (
-            <li key={e.id} className="border-t border-[#242424] first:border-t-0">
+            <li key={e.id} className="border-t border-[var(--color-border-secondary)] first:border-t-0">
               <button
                 type="button"
                 onClick={() => setAberto(e)}
@@ -190,7 +190,7 @@ function AuditoriaDetailSheet({
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="auditoria-detalhe-titulo">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
       <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col">
-        <div className="flex items-start justify-between gap-3 border-b border-[#242424] px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border-secondary)] px-5 py-4">
           <div className="min-w-0">
             <h2 id="auditoria-detalhe-titulo" className="text-[15px] font-semibold text-jl-fg-1">
               {evento.resumo}
@@ -235,7 +235,7 @@ function AuditoriaDetailSheet({
               entradas.map(([chave, valor]) => (
                 <div
                   key={chave}
-                  className="flex items-start justify-between gap-3 border-t border-[#242424] py-2 first:border-t-0"
+                  className="flex items-start justify-between gap-3 border-t border-[var(--color-border-secondary)] py-2 first:border-t-0"
                 >
                   <dt className="text-[11px] text-jl-fg-3">{DETALHE_LABELS[chave] ?? chave}</dt>
                   <dd className="max-w-[60%] break-words text-right text-[12px] text-jl-fg-1">

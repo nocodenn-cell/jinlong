@@ -48,7 +48,7 @@ export function RelatoriosPeriodFilters({ de, ate, csvRows, labels }: Relatorios
   const ateDefault = useMemo(() => ate ?? '', [ate])
 
   return (
-    <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-[#242424] bg-[#0f0f0f] p-3">
+    <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
       <label className="flex flex-col gap-1 text-[11px] text-jl-fg-3">
         {labels.de}
         <input name="de" type="date" defaultValue={deDefault} className="admin-v2-input px-2 py-1.5 text-xs" />
