@@ -984,6 +984,10 @@
     "msg_caixa_ja_fechado": "Caixa fechado com sucesso.",
     "msg_vendas_suspensas_motivo": "Vendas suspensas: {{motivo}}",
     "msg_vendas_suspensas": "Vendas suspensas pelo gerente.",
+    "hotkey_adicionar": "Adicionar",
+    "hotkey_limpar": "Limpar",
+    "hotkey_cliente": "Cliente",
+    "hotkey_pagamento": "Pagamento",
     "recibo": {
       "titulo": "CUPOM NÃO FISCAL",
       "subtotal": "Subtotal",

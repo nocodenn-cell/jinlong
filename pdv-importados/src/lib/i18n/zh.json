@@ -984,6 +984,10 @@
     "msg_caixa_ja_fechado": "收银台已成功关闭。",
     "msg_vendas_suspensas_motivo": "已暂停销售：{{motivo}}",
     "msg_vendas_suspensas": "经理已暂停销售。",
+    "hotkey_adicionar": "添加",
+    "hotkey_limpar": "清空",
+    "hotkey_cliente": "客户",
+    "hotkey_pagamento": "支付",
     "recibo": {
       "titulo": "非正式收据",
       "subtotal": "小计",
