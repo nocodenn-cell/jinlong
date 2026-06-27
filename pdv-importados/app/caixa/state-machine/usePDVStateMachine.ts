@@ -89,54 +89,24 @@ export function usePDVStateMachine(
     },
 
     novoCupom: () => {
-      updateContext({
-        cupomSessionId: generateUUID(),
-        itens: [],
-        totalBruto: 0,
-        totalDesconto: 0,
-        totalLiquido: 0,
-        clienteSelecionado: null,
-        descontoGerentePercentual: 0,
-        pagamentos: [],
-        erro: null,
-      })
-
+      // Apenas orquestra transição — limpeza feita em CaixaPageClient (limparCarrinho, resetPagamentos, etc)
       if (currentState === PDVState.CAIXA_ABERTO || currentState === PDVState.VENDA_FINALIZADA) {
         return transition(PDVState.CUPOM_VAZIO, "Novo cupom")
       }
       return true
     },
 
-    adicionarProduto: (produto: any) => {
-      const novoItem = {
-        id: `item-${Date.now()}-${Math.random()}`,
-        ...produto,
-      }
-      updateContext((prev) => ({
-        ...prev,
-        itens: [...prev.itens, novoItem],
-        totalBruto: prev.totalBruto + (produto.preco || 0) * (produto.quantidade || 1),
-        totalLiquido: prev.totalLiquido + (produto.preco || 0) * (produto.quantidade || 1),
-      }))
-
+    adicionarProduto: () => {
+      // Apenas orquestra transição — carrinho e totais geridos pelo useCarrinhoStore
       if (currentState === PDVState.CUPOM_VAZIO) {
         return transition(PDVState.ADICIONANDO_ITENS, "Primeiro produto adicionado")
       }
       return true
     },
 
-    removerProduto: (itemId: string) => {
-      const item = context.itens.find((i) => i.id === itemId)
-      if (!item) return false
-
-      updateContext((prev) => ({
-        ...prev,
-        itens: prev.itens.filter((i) => i.id !== itemId),
-        totalBruto: prev.totalBruto - (item.preco || 0) * (item.quantidade || 1),
-        totalLiquido: prev.totalLiquido - (item.preco || 0) * (item.quantidade || 1),
-      }))
-
-      if (context.itens.length === 1) {
+    removerProduto: (itensAtual: Array<any>) => {
+      // Apenas orquestra transição — carrinho gerido pelo useCarrinhoStore
+      if (itensAtual.length === 0) {
         return transition(PDVState.CUPOM_VAZIO, "Último item removido")
       }
       return true
@@ -156,10 +126,7 @@ export function usePDVStateMachine(
     },
 
     pronto: () => {
-      if (context.itens.length === 0) {
-        updateContext({ erro: "Carrinho vazio — não é possível finalizar" })
-        return false
-      }
+      // Apenas orquestra transição — validação de carrinho feita em CaixaPageClient
       return transition(PDVState.PRONTO_PARA_PAGAMENTO, "Venda pronta para pagamento")
     },
 
@@ -183,15 +150,7 @@ export function usePDVStateMachine(
     },
 
     cancelarCupom: () => {
-      updateContext({
-        itens: [],
-        totalBruto: 0,
-        totalDesconto: 0,
-        totalLiquido: 0,
-        clienteSelecionado: null,
-        pagamentos: [],
-        erro: null,
-      })
+      // Apenas orquestra transição — limpeza do carrinho feita em CaixaPageClient via limparCarrinho()
       return transition(PDVState.CUPOM_VAZIO, "Cupom cancelado")
     },
 

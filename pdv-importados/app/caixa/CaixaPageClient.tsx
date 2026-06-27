@@ -348,9 +348,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onItemAdded: useCallback(
       (info: { codigo: string; itemId: string; produtoId: string }) => {
         lastScanItemRef.current = { ...info, ts: Date.now() }
-        // TODO(PDV-ARCH): Sinalizar ao state machine que item foi adicionado
+        // Orquestar transição quando primeiro produto adicionado (ao store)
         if (itensStore.length === 1) {
-          pdvStateMachine.adicionarProduto({ produtoId: info.produtoId })
+          pdvStateMachine.adicionarProduto()
         }
       },
       [itensStore.length, pdvStateMachine],
