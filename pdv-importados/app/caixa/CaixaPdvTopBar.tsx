@@ -5,12 +5,12 @@ import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { ThermalStatus } from "@/hooks/useThermalPrinter"
-import LanguageToggle from "@/app/caixa/idioma/LanguageToggle"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
-import { SquareTerminal } from "lucide-react"
+import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
+import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortcutsReference"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 
@@ -67,7 +67,7 @@ export function CaixaPdvTopBar({
   return (
     <header
       className={cn(
-        "shrink-0 px-3 sm:px-5 py-2.5 border-b flex flex-wrap items-center gap-x-3 gap-y-2",
+        "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5",
         classic
           ? "border-border bg-primary text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]"
           : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
@@ -80,9 +80,8 @@ export function CaixaPdvTopBar({
             "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
             classic ? "border-primary-foreground/25 bg-white/10 text-primary-foreground" : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1",
           )}
-          aria-hidden
         >
-          <SquareTerminal className="h-5 w-5" aria-hidden />
+          <DragonEmblemIcon className="h-5 w-5" />
         </span>
         <h1 className={cn("min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg", classic && "text-primary-foreground")}>
           {m.caixa.topbar_titulo}
@@ -193,7 +192,7 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
-          <LanguageToggle idiomaAtual={idioma} />
+          <CaixaKeyboardShortcutsReference m={m} variant={classic ? "classic" : "default"} />
           <SignOutButton
             label={m.comum.sair}
             className={cn(

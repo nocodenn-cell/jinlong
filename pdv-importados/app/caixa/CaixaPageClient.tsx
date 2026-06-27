@@ -172,6 +172,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     useState<number>(0)
   const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
+  const [summaryCollapsed, setSummaryCollapsed] = useState(true)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
     | null
     | { tipo: "sangria" }
@@ -1247,6 +1248,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             metodoPagamentoPanel={
               pdvLayoutVariant === "default" ? metodoPagamentoSelector : undefined
             }
+            summaryCollapsed={summaryCollapsed && pdvLayoutVariant !== "classic"}
+            onToggleSummaryCollapse={() => setSummaryCollapsed(!summaryCollapsed)}
           />
         </div>
       </div>

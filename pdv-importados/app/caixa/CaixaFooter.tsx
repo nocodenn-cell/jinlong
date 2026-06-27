@@ -6,6 +6,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
+import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 
@@ -35,6 +36,9 @@ type Props = {
   moedaPrefixo: string
   /** Layout padrão: seletor de forma de pagamento acima do botão finalizar. */
   metodoPagamentoPanel?: ReactNode
+  /** Collapse state for financial summary (only in default layout) */
+  summaryCollapsed?: boolean
+  onToggleSummaryCollapse?: () => void
 }
 
 function moneyLocale(idioma: Idioma) {
@@ -67,6 +71,8 @@ function CaixaFooterImpl({
   totalLiquidoComGerente,
   moedaPrefixo,
   metodoPagamentoPanel,
+  summaryCollapsed = false,
+  onToggleSummaryCollapse,
 }: Props) {
   const resumoItens = caixaFmt(m.caixa.resumo_itens, {
     itens: totalItens,
@@ -143,9 +149,32 @@ function CaixaFooterImpl({
     )
   }
 
+  const shouldShowSummary = itensLength > 0
+  const showCollapsed = summaryCollapsed && shouldShowSummary
+
   return (
     <footer className="shrink-0 border-t border-jl-border-1 backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10 bg-jl-surface-elev">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm">
+      {showCollapsed && (
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <button
+            type="button"
+            onClick={onToggleSummaryCollapse}
+            className="flex items-center gap-2 text-xs text-jl-fg-3 hover:text-jl-fg-2 transition-colors"
+            aria-expanded={!summaryCollapsed}
+            aria-label={m.caixa.atalho_expandir_resumo || "Expandir resumo financeiro"}
+          >
+            <ChevronDown className="h-4 w-4 transform transition-transform" style={{ transform: "rotate(-90deg)" }} />
+            <span className="font-medium">
+              {m.caixa.total_pagar}: {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
+            </span>
+          </button>
+        </div>
+      )}
+
+      <div className={cn(
+        "flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm transition-all duration-200",
+        showCollapsed && "hidden"
+      )}>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <span className="text-sm text-jl-fg-2">{resumoItens}</span>
           {gerenteLinha && (
@@ -160,9 +189,16 @@ function CaixaFooterImpl({
         </div>
 
         <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-6 md:gap-8">
-          <div className="w-full text-right text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
+          <button
+            type="button"
+            onClick={onToggleSummaryCollapse}
+            className="group inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-jl-fg-3 hover:text-jl-fg-2 transition-colors"
+            aria-expanded={!summaryCollapsed}
+            aria-label={m.caixa.atalho_recolher_resumo || "Recolher resumo financeiro"}
+          >
             {m.caixa.bloco_resumo_financeiro}
-          </div>
+            <ChevronDown className="h-3 w-3 transform transition-transform group-hover:translate-y-0.5" />
+          </button>
           <div className="text-right text-sm text-jl-fg-2">
             <div>{m.caixa.bruto}</div>
             <div className="text-lg font-semibold tabular-nums text-jl-fg-1">
