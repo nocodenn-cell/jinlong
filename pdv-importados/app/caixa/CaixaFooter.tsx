@@ -173,7 +173,7 @@ function CaixaFooterImpl({
 
       <div className={cn(
         "flex flex-col gap-4 md:flex-row md:items-end md:justify-between text-sm transition-all duration-200",
-        showCollapsed && "hidden"
+        showCollapsed ? "hidden" : ""
       )}>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <span className="text-sm text-jl-fg-2">{resumoItens}</span>
