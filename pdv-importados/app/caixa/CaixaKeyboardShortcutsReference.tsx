@@ -25,92 +25,92 @@ interface ShortcutGroup {
 function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
   return [
     {
-      category: m.caixa.atalho_categoria_venda || "Venda",
+      category: "Venda",
       shortcuts: [
         {
           keys: "F4 / F9",
-          label: m.caixa.finalizar_venda || "Finalizar Venda",
-          context: m.caixa.atalho_context_sempre || "Sempre disponível",
+          label: m.caixa.finalizar_venda,
+          context: "Sempre disponível",
         },
         {
           keys: "F8",
-          label: m.caixa.atalho_novo_cupom || "Novo Cupom",
-          context: m.caixa.atalho_context_caixa_aberto || "Caixa aberto",
+          label: m.caixa.novo_cupom || "Novo Cupom",
+          context: "Caixa aberto",
         },
       ],
     },
     {
-      category: m.caixa.atalho_categoria_navegacao || "Navegação",
+      category: "Navegação",
       shortcuts: [
         {
           keys: "F2 / Ctrl+B",
-          label: m.caixa.atalho_busca || "Buscar Produto",
-          context: m.caixa.atalho_context_sempre || "Sempre disponível",
+          label: "Buscar Produto",
+          context: "Sempre disponível",
         },
         {
           keys: "F6",
-          label: m.caixa.fechar || "Fechar Caixa",
-          context: m.caixa.atalho_context_caixa_aberto || "Caixa aberto",
+          label: m.caixa.fechar,
+          context: "Caixa aberto",
         },
       ],
     },
     {
-      category: m.caixa.atalho_categoria_operacoes || "Operações",
+      category: "Operações",
       shortcuts: [
         {
           keys: "Ctrl+Shift+S",
-          label: m.caixa.suprimento || "Suprimento",
-          context: m.caixa.atalho_context_caixa_aberto || "Caixa aberto",
+          label: m.caixa.suprimento,
+          context: "Caixa aberto",
         },
         {
           keys: "Ctrl+Shift+R",
-          label: m.caixa.sangria || "Sangria",
-          context: m.caixa.atalho_context_caixa_aberto || "Caixa aberto",
+          label: m.caixa.sangria,
+          context: "Caixa aberto",
         },
       ],
     },
     {
-      category: m.caixa.atalho_categoria_edicao || "Edição",
+      category: "Edição",
       shortcuts: [
         {
           keys: "Ctrl+Z",
-          label: m.caixa.atalho_desfazer_remocao || "Desfazer Remoção",
-          context: m.caixa.atalho_context_carrinho || "Item removido",
+          label: "Desfazer Remoção",
+          context: "Item removido",
         },
         {
           keys: "F12",
-          label: m.caixa.atalho_reimprimir || "Reimprimir Recibo",
-          context: m.caixa.atalho_context_apos_venda || "Após finalizar venda",
+          label: m.caixa.reimprimir_cupom || "Reimprimir Recibo",
+          context: "Após finalizar venda",
         },
       ],
     },
     {
-      category: m.caixa.atalho_categoria_gerente || "Gerente (PDV Clássico)",
+      category: "Gerente (PDV Clássico)",
       shortcuts: [
         {
           keys: "Alt+Q",
-          label: m.caixa.atalho_excluir_venda || "Excluir Venda",
-          context: m.caixa.atalho_context_pdv_classico || "Apenas PDV clássico",
+          label: m.caixa.cart_bar_excluir_venda || "Excluir Venda",
+          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+S",
-          label: m.caixa.finalizar_venda || "Finalizar Venda",
-          context: m.caixa.atalho_context_pdv_classico || "Apenas PDV clássico",
+          label: m.caixa.finalizar_venda,
+          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+Z",
-          label: m.caixa.atalho_aba_produto || "Aba Produto",
-          context: m.caixa.atalho_context_pdv_classico || "Apenas PDV clássico",
+          label: m.caixa.pdv_tab_produto || "Aba Produto",
+          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+C",
-          label: m.caixa.atalho_aba_cliente || "Aba Cliente",
-          context: m.caixa.atalho_context_pdv_classico || "Apenas PDV clássico",
+          label: m.caixa.pdv_tab_cliente || "Aba Cliente",
+          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+B",
-          label: m.caixa.atalho_aba_pagamento || "Aba Pagamento",
-          context: m.caixa.atalho_context_pdv_classico || "Apenas PDV clássico",
+          label: m.caixa.pdv_tab_pgto || "Aba Pagamento",
+          context: "Apenas PDV clássico",
         },
       ],
     },
@@ -145,8 +145,8 @@ export function CaixaKeyboardShortcutsReference({ m, variant = "default", classN
       <DragonModal
         open={open}
         onClose={() => setOpen(false)}
-        title={m.caixa.atalho_titulo || "Atalhos de Teclado"}
-        subtitle={m.caixa.atalho_descricao || "Lista completa de atalhos disponíveis no PDV"}
+        title="Atalhos de Teclado"
+        subtitle="Lista completa de atalhos disponíveis no PDV"
         size="lg"
       >
         <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
@@ -181,7 +181,7 @@ export function CaixaKeyboardShortcutsReference({ m, variant = "default", classN
           ))}
         </div>
         <div className="text-xs text-muted-foreground pt-4 border-t mt-6">
-          {m.caixa.atalho_nota || "Dica: Pressione 'F2' ou 'Ctrl+B' para buscar um produto rapidamente"}
+          Dica: Pressione 'F2' ou 'Ctrl+B' para buscar um produto rapidamente
         </div>
       </DragonModal>
     </>
