@@ -67,6 +67,7 @@ import {
 import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
+  type CaixaPdvVisibleTabs,
 } from "@/app/caixa/CaixaPdvOperadorTabs"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { cn } from "@/lib/utils"
@@ -180,6 +181,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
+  const [visibleTabsPdv, setVisibleTabsPdv] = useState<CaixaPdvVisibleTabs>(new Set(["produto"]))
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
 
   const {
@@ -494,6 +496,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
     setAbaPdvAtiva("produto")
+    setVisibleTabsPdv(new Set(["produto"]))
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
@@ -875,6 +878,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }, [limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem]),
   })
 
+  const handleChangeAbaPdv = useCallback((novaAba: CaixaPdvOperadorTabId) => {
+    setAbaPdvAtiva(novaAba)
+    const novasAbas = new Set(visibleTabsPdv)
+    novasAbas.add("produto")
+    if (novaAba === "cliente") {
+      novasAbas.add("cliente")
+    } else if (novaAba === "pgto") {
+      novasAbas.add("cliente")
+      novasAbas.add("pgto")
+    }
+    setVisibleTabsPdv(novasAbas)
+  }, [visibleTabsPdv])
+
   const pdvClassicAtalhos = useMemo(
     () =>
       pdvLayoutVariant === "classic"
@@ -883,15 +899,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             onFinalizarVenda: () => void handleFinalizar(),
             abas: {
               produto: () => {
-                setAbaPdvAtiva("produto")
+                handleChangeAbaPdv("produto")
                 focarCampoBusca()
               },
-              cliente: () => setAbaPdvAtiva("cliente"),
-              pgto: () => setAbaPdvAtiva("pgto"),
+              cliente: () => handleChangeAbaPdv("cliente"),
+              pgto: () => handleChangeAbaPdv("pgto"),
             },
           }
         : null,
-    [pdvLayoutVariant, handleNovoCupom, handleFinalizar, focarCampoBusca],
+    [pdvLayoutVariant, handleNovoCupom, handleFinalizar, focarCampoBusca, handleChangeAbaPdv],
   )
 
   useCaixaKeyboardShortcuts({
@@ -973,7 +989,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleAbrirCaixaClick = useCallback(() => void handleAbrirCaixa(), [handleAbrirCaixa])
   const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
-  const handleFinalizarClick = useCallback(() => void handleFinalizar(), [handleFinalizar])
+  const handleFinalizarClick = useCallback(() => {
+    if (itens.length > 0) {
+      const novasAbas = new Set<CaixaPdvVisibleTabs>(visibleTabsPdv)
+      novasAbas.add("produto")
+      novasAbas.add("cliente")
+      novasAbas.add("pgto")
+      setVisibleTabsPdv(novasAbas)
+      setAbaPdvAtiva("pgto")
+    }
+    return void handleFinalizar()
+  }, [handleFinalizar, itens.length, visibleTabsPdv])
   const abrirGerenteModal = useCallback(() => setGerenteModalAberto(true), [])
   const handleCancelarMovimentacao = useCallback(
     (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "cancelar", item }),
@@ -1025,10 +1051,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 m={m}
                 idioma={idioma}
                 tab={abaPdvAtiva}
-                onTabChange={setAbaPdvAtiva}
+                onTabChange={handleChangeAbaPdv}
                 layoutVariant={pdvLayoutVariant}
                 mostrarAtalhos={pdvLayoutVariant === "classic"}
                 operadorLabel={operadorLabel}
+                visibleTabs={visibleTabsPdv}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}

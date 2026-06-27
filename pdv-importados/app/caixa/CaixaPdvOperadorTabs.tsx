@@ -11,6 +11,7 @@ import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
 
 export type CaixaPdvOperadorTabId = "produto" | "cliente" | "pgto"
+export type CaixaPdvVisibleTabs = Set<CaixaPdvOperadorTabId>
 
 type PagamentoLinha = {
   formaPagamento: FinalizarVendaInput["formaPagamento"]
@@ -40,6 +41,8 @@ type Props = {
   produtoPanel: ReactNode
   /** Seletor de forma de pagamento (aba Pgto). */
   metodoPagamentoPanel?: ReactNode
+  /** Abas visíveis no fluxo progressivo. Default: apenas "produto" */
+  visibleTabs?: CaixaPdvVisibleTabs
 }
 
 export function CaixaPdvOperadorTabs({
@@ -63,14 +66,17 @@ export function CaixaPdvOperadorTabs({
   moedaPrefixo,
   produtoPanel,
   metodoPagamentoPanel,
+  visibleTabs = new Set(["produto"]),
 }: Props) {
   const classicChrome = layoutVariant === "classic"
 
-  const tabs: { id: CaixaPdvOperadorTabId; label: string; aria: string; atalho?: string }[] = [
+  const allTabs: { id: CaixaPdvOperadorTabId; label: string; aria: string; atalho?: string }[] = [
     { id: "produto", label: m.caixa.pdv_tab_produto, aria: m.caixa.pdv_tab_aria_produto, atalho: "Alt+Z" },
     { id: "cliente", label: m.caixa.pdv_tab_cliente, aria: m.caixa.pdv_tab_aria_cliente, atalho: "Alt+C" },
     { id: "pgto", label: m.caixa.pdv_tab_pgto, aria: m.caixa.pdv_tab_aria_pgto, atalho: "Alt+B" },
   ]
+
+  const tabs = allTabs.filter((t) => visibleTabs.has(t.id))
 
   const somaOk = Math.abs(diferenca) <= 0.01
   const temTroco = diferenca > 0.01
