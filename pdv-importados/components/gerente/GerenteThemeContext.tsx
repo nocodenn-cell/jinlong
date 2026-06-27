@@ -9,9 +9,10 @@ type Ctx = Readonly<{
 }>
 
 /**
- * Fase 0 — Layout Compiler: tema travado em claro ('dragon-light').
- * O provider deixou de ler/escrever localStorage e `setTheme` é inerte —
- * não existe mais alternância para 'dragon-dark'.
+ * Tema claro ('dragon-light') é contrato vigente (ADR-PDV-TEMA-002).
+ * localStorage não é lido — estado local desativado por enquanto.
+ * setTheme() é inerte mas preservado: facilita ativação futura se requisito surgir.
+ * Tema escuro é roadmap condicional (requer novo requisito de negócio).
  */
 const ThemeCtx = createContext<Ctx>({ theme: 'dragon-light', setTheme: () => {} })
 
