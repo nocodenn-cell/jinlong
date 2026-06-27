@@ -310,6 +310,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }
   }, [focarCampoBusca])
 
+  /* Auto-expand/collapse financial summary based on cart state */
+  useEffect(() => {
+    if (itens.length === 0) {
+      /* Cart is empty → collapse summary */
+      setSummaryCollapsed(true)
+    } else if (summaryCollapsed && itens.length > 0) {
+      /* First item added → auto-expand summary */
+      setSummaryCollapsed(false)
+    }
+  }, [itens.length, summaryCollapsed])
+
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
       if (!somFeedbackAtivo) return
