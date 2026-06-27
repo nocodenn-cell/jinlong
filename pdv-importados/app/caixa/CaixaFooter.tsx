@@ -158,7 +158,7 @@ function CaixaFooterImpl({
         <div className="flex items-center justify-between gap-2 mb-2">
           <button
             type="button"
-            onClick={onToggleSummaryCollapse}
+            onClick={() => onToggleSummaryCollapse?.()}
             className="flex items-center gap-2 text-xs text-jl-fg-3 hover:text-jl-fg-2 transition-colors"
             aria-expanded={!summaryCollapsed}
             aria-label={m.caixa.atalho_expandir_resumo || "Expandir resumo financeiro"}
@@ -191,7 +191,7 @@ function CaixaFooterImpl({
         <div className="flex flex-wrap items-end justify-end gap-4 sm:gap-6 md:gap-8">
           <button
             type="button"
-            onClick={onToggleSummaryCollapse}
+            onClick={() => onToggleSummaryCollapse?.()}
             className="group inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-jl-fg-3 hover:text-jl-fg-2 transition-colors"
             aria-expanded={!summaryCollapsed}
             aria-label={m.caixa.atalho_recolher_resumo || "Recolher resumo financeiro"}
