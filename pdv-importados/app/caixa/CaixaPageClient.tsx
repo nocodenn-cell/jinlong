@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import { useShallow } from "zustand/react/shallow"
-import { usePDVStateMachine, type CaixaPdvVisibleTabs, PDVState } from "@/app/caixa/state-machine"
+import { usePDVStateMachine, PDVState } from "@/app/caixa/state-machine"
 import { useCarrinhoStore, type ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import { useHasMounted } from "@/hooks/useHasMounted"
 import {
@@ -140,6 +140,18 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     caixaId: null,
   })
 
+  // Helper: converter stateConfig para visibleTabs (Set) compatível com CaixaPdvOperadorTabs
+  const visibleTabsFromState = useMemo(() => {
+    const tabs = new Set<CaixaPdvOperadorTabId>(["produto"])
+    if (pdvStateMachine.stateConfig.visibleComponents.abaCliente) {
+      tabs.add("cliente")
+    }
+    if (pdvStateMachine.stateConfig.visibleComponents.abaPagamento) {
+      tabs.add("pgto")
+    }
+    return tabs
+  }, [pdvStateMachine.stateConfig.visibleComponents])
+
   const {
     mensagem,
     msgVendaOk,
@@ -188,8 +200,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     | { tipo: "cancelar"; item: MovimentacaoCaixaDTO }
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
-  // TODO(PDV-ARCH): visibleTabsPdv será removido — substituir por pdvStateMachine.stateConfig.visibleComponents
-  const [visibleTabsPdv, setVisibleTabsPdv] = useState<CaixaPdvVisibleTabs>(new Set(["produto"]))
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
 
@@ -509,8 +519,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
     setAbaPdvAtiva("produto")
-    setVisibleTabsPdv(new Set(["produto"]))
-    // State machine reset
     pdvStateMachine.novoCupom()
     focarCampoBusca()
   }, [
@@ -894,25 +902,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }, [limparEstadoDescontoGerente, m.caixa.msg_token_expirado, setCaixaMensagem]),
   })
 
-  // TODO(PDV-ARCH): handleChangeAbaPdv será governado pelo estado (cliente_selecionado, pagamento)
+  // TODO(PDV-ARCH): handleChangeAbaPdv será removido — transições governadas pelo state machine
   const handleChangeAbaPdv = useCallback((novaAba: CaixaPdvOperadorTabId) => {
     setAbaPdvAtiva(novaAba)
-    const novasAbas = new Set<CaixaPdvOperadorTabId>(["produto"])
-    if (novaAba === "cliente") {
-      novasAbas.add("cliente")
-      if (itensStore.length === 0) {
-        // Permanecer em CUPOM_VAZIO, apenas mostrar aba cliente
-      } else if (itensStore.length > 0) {
-        // Em ADICIONANDO_ITENS ou CLIENTE_SELECIONADO
-        pdvStateMachine.selecionarCliente(null) // Sinaliza que entrou na aba
-      }
+    // State machine governa as abas visíveis via stateConfig
+    if (novaAba === "cliente" && itensStore.length > 0) {
+      pdvStateMachine.selecionarCliente(null)
     } else if (novaAba === "pgto") {
-      novasAbas.add("cliente")
-      novasAbas.add("pgto")
-      // Sinaliza que quer ir para pagamento
+      pdvStateMachine.pronto()
+      pdvStateMachine.irParaPagamento()
     }
-    setVisibleTabsPdv(novasAbas)
-  }, [visibleTabsPdv, itensStore, pdvStateMachine])
+  }, [itensStore.length, pdvStateMachine])
 
   const pdvClassicAtalhos = useMemo(
     () =>
@@ -1014,9 +1014,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
   const handleFinalizarClick = useCallback(() => {
     if (itens.length > 0) {
-      // State machine governa as abas
-      const novasAbas = new Set<CaixaPdvVisibleTabs>(["produto", "cliente", "pgto"])
-      setVisibleTabsPdv(novasAbas)
       setAbaPdvAtiva("pgto")
       pdvStateMachine.pronto()
       pdvStateMachine.irParaPagamento()
@@ -1078,7 +1075,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 layoutVariant={pdvLayoutVariant}
                 mostrarAtalhos={pdvLayoutVariant === "classic"}
                 operadorLabel={operadorLabel}
-                visibleTabs={visibleTabsPdv}
+                visibleTabs={visibleTabsFromState}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}
