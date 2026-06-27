@@ -76,11 +76,13 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
           type="button"
           onClick={onToggleSom}
           className={cn(
-            "rounded-md border border-jl-border-1 bg-jl-surface-soft font-semibold text-jl-fg-1 hover:bg-jl-surface-elev",
+            "rounded-md border border-jl-border-1 bg-jl-surface-soft font-semibold text-jl-fg-1 hover:bg-jl-surface-elev transition-colors",
             compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-xs",
           )}
+          title={somAtivo ? "Som ativo" : "Som inativo"}
+          aria-label={somAtivo ? "Desativar som" : "Ativar som"}
         >
-          {somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
+          {somAtivo ? "🔊" : "🔇"}
         </button>
       </div>
       <form

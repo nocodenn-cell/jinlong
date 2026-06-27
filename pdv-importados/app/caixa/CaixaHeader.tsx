@@ -79,18 +79,18 @@ function CaixaHeaderImpl({
         printerDeviceName={printerDeviceName}
       />
       {layoutVariant !== "classic" && currentDateTime ? (
-        <div className="flex items-center gap-2 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 sm:px-6">
-          <span className="inline-flex items-center rounded border border-jl-border-1 bg-jl-surface-soft px-2 py-0.5 text-[11px] tabular-nums text-jl-fg-3">
+        <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-1.5 sm:px-6">
+          <span className="inline-flex items-center rounded border border-gray-300 bg-white px-2 py-0.5 text-[11px] tabular-nums text-gray-600">
             {currentDateTime}
           </span>
           <span
             className={cn(
               "inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-medium",
               isCaixaAberto(caixaStatus)
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                ? "border-emerald-500/60 bg-emerald-50 text-emerald-700"
                 : caixaStatus?.status === "ERRO"
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                  : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-3",
+                  ? "border-amber-500/60 bg-amber-50 text-amber-700"
+                  : "border-gray-300 bg-white text-gray-600",
             )}
           >
             {badgeLabel}
