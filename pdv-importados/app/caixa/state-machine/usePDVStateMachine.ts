@@ -1,0 +1,258 @@
+"use client"
+
+import { useCallback, useState, useRef } from "react"
+import { PDVState, type PDVSaleContext, type PDVStateMachine, type PDVStateConfig } from "./pdvStateTypes"
+import { getStateConfig } from "./pdvStateConfig"
+import { canTransition, getAvailableTransitions } from "./pdvTransitions"
+
+/**
+ * Hook central da máquina de estados do PDV
+ * Centraliza toda a lógica de fluxo, tornando os componentes simples renderizadores
+ */
+export function usePDVStateMachine(
+  initialState: PDVState = PDVState.CAIXA_FECHADO,
+  initialContext?: Partial<PDVSaleContext>,
+): PDVStateMachine {
+  const [currentState, setCurrentState] = useState<PDVState>(initialState)
+  const [context, setContext] = useState<PDVSaleContext>({
+    caixaId: null,
+    caixaAberto: false,
+    operadorId: initialContext?.operadorId ?? null,
+    operadorLabel: initialContext?.operadorLabel ?? "Operador",
+    cupomSessionId: initialContext?.cupomSessionId ?? generateUUID(),
+    itens: [],
+    totalBruto: 0,
+    totalDesconto: 0,
+    totalLiquido: 0,
+    clienteSelecionado: null,
+    descontoGerentePercentual: 0,
+    gerenteToken: null,
+    pagamentos: [],
+    processando: false,
+    erro: null,
+    ...initialContext,
+  })
+
+  const stateConfig = getStateConfig(currentState)
+  const transitionLogRef = useRef<Array<{ from: PDVState; to: PDVState; reason?: string; ts: number }>>([])
+
+  const updateContext = useCallback((updates: Partial<PDVSaleContext>) => {
+    setContext((prev) => ({ ...prev, ...updates }))
+  }, [])
+
+  const transition = useCallback(
+    (toState: PDVState, reason?: string): boolean => {
+      if (!canTransition(currentState, toState, context)) {
+        console.warn(
+          `[PDV StateMachine] Transição inválida: ${currentState} → ${toState}`,
+          { context, reason },
+        )
+        return false
+      }
+
+      transitionLogRef.current.push({
+        from: currentState,
+        to: toState,
+        reason,
+        ts: Date.now(),
+      })
+
+      console.log(`[PDV StateMachine] ${currentState} → ${toState}${reason ? ` (${reason})` : ""}`)
+      setCurrentState(toState)
+      return true
+    },
+    [currentState, context],
+  )
+
+  const canTransitionTo = useCallback(
+    (toState: PDVState): boolean => {
+      return canTransition(currentState, toState, context)
+    },
+    [currentState, context],
+  )
+
+  const getStateDescription = useCallback((): string => {
+    return stateConfig.description
+  }, [stateConfig])
+
+  /**
+   * Ações de alto nível que disparam transições
+   */
+  const actions = {
+    abrirCaixa: (caixaId: string) => {
+      updateContext({ caixaId, caixaAberto: true })
+      return transition(PDVState.CAIXA_ABERTO, "Caixa aberto")
+    },
+
+    fecharCaixa: () => {
+      return transition(PDVState.CAIXA_FECHADO, "Caixa fechado")
+    },
+
+    novoCupom: () => {
+      updateContext({
+        cupomSessionId: generateUUID(),
+        itens: [],
+        totalBruto: 0,
+        totalDesconto: 0,
+        totalLiquido: 0,
+        clienteSelecionado: null,
+        descontoGerentePercentual: 0,
+        pagamentos: [],
+        erro: null,
+      })
+
+      if (currentState === PDVState.CAIXA_ABERTO || currentState === PDVState.VENDA_FINALIZADA) {
+        return transition(PDVState.CUPOM_VAZIO, "Novo cupom")
+      }
+      return true
+    },
+
+    adicionarProduto: (produto: any) => {
+      const novoItem = {
+        id: `item-${Date.now()}-${Math.random()}`,
+        ...produto,
+      }
+      updateContext((prev) => ({
+        ...prev,
+        itens: [...prev.itens, novoItem],
+        totalBruto: prev.totalBruto + (produto.preco || 0) * (produto.quantidade || 1),
+        totalLiquido: prev.totalLiquido + (produto.preco || 0) * (produto.quantidade || 1),
+      }))
+
+      if (currentState === PDVState.CUPOM_VAZIO) {
+        return transition(PDVState.ADICIONANDO_ITENS, "Primeiro produto adicionado")
+      }
+      return true
+    },
+
+    removerProduto: (itemId: string) => {
+      const item = context.itens.find((i) => i.id === itemId)
+      if (!item) return false
+
+      updateContext((prev) => ({
+        ...prev,
+        itens: prev.itens.filter((i) => i.id !== itemId),
+        totalBruto: prev.totalBruto - (item.preco || 0) * (item.quantidade || 1),
+        totalLiquido: prev.totalLiquido - (item.preco || 0) * (item.quantidade || 1),
+      }))
+
+      if (context.itens.length === 1) {
+        return transition(PDVState.CUPOM_VAZIO, "Último item removido")
+      }
+      return true
+    },
+
+    selecionarCliente: (cliente: any) => {
+      updateContext({ clienteSelecionado: cliente })
+      if (currentState === PDVState.ADICIONANDO_ITENS) {
+        return transition(PDVState.CLIENTE_SELECIONADO, "Cliente selecionado")
+      }
+      return true
+    },
+
+    trocarCliente: (novoCliente: any) => {
+      updateContext({ clienteSelecionado: novoCliente })
+      return true
+    },
+
+    pronto: () => {
+      if (context.itens.length === 0) {
+        updateContext({ erro: "Carrinho vazio — não é possível finalizar" })
+        return false
+      }
+      return transition(PDVState.PRONTO_PARA_PAGAMENTO, "Venda pronta para pagamento")
+    },
+
+    irParaPagamento: () => {
+      return transition(PDVState.PAGAMENTO, "Iniciando pagamento")
+    },
+
+    voltarParaAdicionarItens: () => {
+      return transition(PDVState.ADICIONANDO_ITENS, "Voltando para adicionar itens")
+    },
+
+    voltarParaCliente: () => {
+      if (context.clienteSelecionado) {
+        return transition(PDVState.CLIENTE_SELECIONADO, "Voltando para cliente")
+      }
+      return transition(PDVState.ADICIONANDO_ITENS, "Voltando para adicionar itens")
+    },
+
+    voltarDoPagamento: () => {
+      return transition(PDVState.PRONTO_PARA_PAGAMENTO, "Voltando do pagamento")
+    },
+
+    cancelarCupom: () => {
+      updateContext({
+        itens: [],
+        totalBruto: 0,
+        totalDesconto: 0,
+        totalLiquido: 0,
+        clienteSelecionado: null,
+        pagamentos: [],
+        erro: null,
+      })
+      return transition(PDVState.CUPOM_VAZIO, "Cupom cancelado")
+    },
+
+    receberPagamento: (pagamentos: any[]) => {
+      updateContext({ pagamentos })
+      return transition(PDVState.EMITINDO_DOCUMENTO, "Emitindo documento")
+    },
+
+    vendaFinalizada: (vendaId: string) => {
+      updateContext({ ultimaAcao: `Venda ${vendaId} finalizada` })
+      return transition(PDVState.VENDA_FINALIZADA, "Venda finalizada com sucesso")
+    },
+  }
+
+  const stateMachine: PDVStateMachine = {
+    currentState,
+    context,
+    stateConfig,
+    canTransitionTo,
+    transition,
+    updateContext,
+    getStateDescription,
+  }
+
+  return {
+    ...stateMachine,
+    ...actions,
+  } as any
+}
+
+/**
+ * Gera um UUID simples (não criptográfico)
+ */
+function generateUUID(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+/**
+ * Hook auxiliar para obter ações disponíveis no estado atual
+ */
+export function usePDVAvailableActions(stateMachine: PDVStateMachine) {
+  const config = stateMachine.stateConfig
+  return {
+    canAddProduct: config.allowedActions.adicionarProduto,
+    canRemoveProduct: config.allowedActions.removerProduto,
+    canSelectClient: config.allowedActions.selecionarCliente,
+    canFinalize: config.allowedActions.finalizarVenda,
+    canReceivePayment: config.allowedActions.receberPagamento,
+    canOpenCash: config.allowedActions.abrirCaixa,
+    canCloseCash: config.allowedActions.fecharCaixa,
+  }
+}
+
+/**
+ * Hook auxiliar para obter shortcuts disponíveis
+ */
+export function usePDVActiveShortcuts(stateMachine: PDVStateMachine) {
+  const config = stateMachine.stateConfig
+  return {
+    shortcuts: Array.from(config.enabledShortcuts),
+    autoFocus: config.autoFocus,
+    defaultTab: config.defaultTab,
+  }
+}
