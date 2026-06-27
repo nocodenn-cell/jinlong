@@ -2,13 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { DragonModal } from "@/components/ui/DragonModal"
 import type { Mensagens } from "@/i18n/getMessages"
 import { HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -148,52 +142,48 @@ export function CaixaKeyboardShortcutsReference({ m, variant = "default", classN
         <HelpCircle className="h-4 w-4" />
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{m.caixa.atalho_titulo || "Atalhos de Teclado"}</DialogTitle>
-            <DialogDescription>
-              {m.caixa.atalho_descricao || "Lista completa de atalhos disponíveis no PDV"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {shortcutsData.map((group) => (
-              <div key={group.category}>
-                <h3 className="text-sm font-semibold text-foreground mb-3">
-                  {group.category}
-                </h3>
-                <div className="space-y-2">
-                  {group.shortcuts.map((shortcut) => (
-                    <div
-                      key={shortcut.keys}
-                      className="grid grid-cols-[auto_1fr_auto] gap-4 text-xs items-start"
-                    >
-                      <kbd className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-border bg-muted text-muted-foreground font-mono text-xs whitespace-nowrap">
-                        {shortcut.keys}
-                      </kbd>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {shortcut.label}
+      <DragonModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={m.caixa.atalho_titulo || "Atalhos de Teclado"}
+        subtitle={m.caixa.atalho_descricao || "Lista completa de atalhos disponíveis no PDV"}
+        size="lg"
+      >
+        <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+          {shortcutsData.map((group) => (
+            <div key={group.category}>
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                {group.category}
+              </h3>
+              <div className="space-y-2">
+                {group.shortcuts.map((shortcut) => (
+                  <div
+                    key={shortcut.keys}
+                    className="grid grid-cols-[auto_1fr_auto] gap-4 text-xs items-start"
+                  >
+                    <kbd className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-border bg-muted text-muted-foreground font-mono text-xs whitespace-nowrap">
+                      {shortcut.keys}
+                    </kbd>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground">
+                        {shortcut.label}
+                      </span>
+                      {shortcut.context && (
+                        <span className="text-xs text-muted-foreground">
+                          {shortcut.context}
                         </span>
-                        {shortcut.context && (
-                          <span className="text-xs text-muted-foreground">
-                            {shortcut.context}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-
-          <div className="text-xs text-muted-foreground pt-4 border-t">
-            {m.caixa.atalho_nota || "Dica: Pressione 'F2' ou 'Ctrl+B' para buscar um produto rapidamente"}
-          </div>
-        </DialogContent>
-      </Dialog>
+            </div>
+          ))}
+        </div>
+        <div className="text-xs text-muted-foreground pt-4 border-t mt-6">
+          {m.caixa.atalho_nota || "Dica: Pressione 'F2' ou 'Ctrl+B' para buscar um produto rapidamente"}
+        </div>
+      </DragonModal>
     </>
   )
 }
