@@ -6,11 +6,12 @@
 /* 1. Base tokens (primitivos) */
 @import './base.css';
 
-/* 2. Semantic tokens (com significado) */
-@import './semantic.css';
-
-/* 3. Component tokens (específicos) */
+/* 2. Component tokens (específicos) */
 @import './component.css';
 
-/* 4. Theme tokens (variações) */
+/* 3. Theme tokens (variações) */
 @import './theme.css';
+
+/* DEPRECATED: semantic.css removido em Fase 1 (consolidação de paleta clara única).
+   Todos os tokens semânticos foram movidos para theme.css com prefixo --fp-*.
+   Referência: styles/tokens/theme.css linhas 34-74 */

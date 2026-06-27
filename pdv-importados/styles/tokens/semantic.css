@@ -1,6 +1,22 @@
 /**
- * Design Tokens Semantic - Significado contextual
- * Baseado nos tokens primitivos, mas com propósito semântico
+ * Design Tokens Semantic - DEPRECATED (Fase 1, 2026-06-27)
+ *
+ * ⚠️  ARQUIVO LEGADO — NÃO USAR
+ *
+ * Este arquivo continha mapeamentos de tema escuro que foram aposentados.
+ * O projeto está travado em tema CLARO único (theme-oriental.css).
+ *
+ * Todos os tokens semânticos foram consolidados em:
+ * - styles/tokens/theme.css (tokens padrão --color-*)
+ * - styles/tokens/theme.css (tokens FastProduct --fp-*)
+ *
+ * Para migrar de semantic.css para os novos tokens:
+ * - --color-success-* → use var(--color-dragon-jade-*)
+ * - --color-danger-* → use var(--color-dragon-imperial-red-*)
+ * - --color-warning-* → use var(--color-dragon-gold-*)
+ * - --fp-success, --fp-danger, etc. → já definidos em theme.css
+ *
+ * Scheduler: Remover arquivo completamente na Sprint 3 (2026-07-XX)
  */
 
 :root {
