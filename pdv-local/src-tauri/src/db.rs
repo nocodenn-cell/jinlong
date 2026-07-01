@@ -43,6 +43,8 @@ pub struct OutboxEvent {
     pub tipo: String,
     pub payload_json: String,
     pub created_at: String,
+    /// Sequência monotônica por dispositivo — ordem canônica cross-batch no sync.
+    pub event_version: i64,
 }
 
 #[derive(Serialize)]
@@ -280,6 +282,15 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
         [],
     );
     let _ = conn.execute("ALTER TABLE outbox ADD COLUMN next_retry_at TEXT", []);
+    // event_version: sequência monotônica por dispositivo (ordem canônica cross-batch
+    // do sync, independente de relógio). Linhas do outbox nunca são deletadas, então
+    // MAX(event_version)+1 é estritamente crescente. Backfill por rowid (ordem de
+    // inserção) para linhas anteriores à coluna.
+    let _ = conn.execute("ALTER TABLE outbox ADD COLUMN event_version INTEGER", []);
+    let _ = conn.execute(
+        "UPDATE outbox SET event_version = rowid WHERE event_version IS NULL",
+        [],
+    );
     let _ = conn.execute(
         "ALTER TABLE produtos_cache ADD COLUMN imagem_url TEXT",
         [],
@@ -416,7 +427,8 @@ pub fn registrar_venda_local(
     .to_string();
 
     tx.execute(
-        "INSERT INTO outbox (id, tipo, payload_json) VALUES (?1, ?2, ?3)",
+        "INSERT INTO outbox (id, tipo, payload_json, event_version)
+         VALUES (?1, ?2, ?3, (SELECT COALESCE(MAX(event_version), 0) + 1 FROM outbox))",
         params![outbox_id, "VENDA_REGISTRADA", payload],
     )
     .map_err(|e| e.to_string())?;
@@ -474,7 +486,8 @@ fn enqueue_outbox_tx(
     let id = Uuid::new_v4().to_string();
     let payload_str = payload.to_string();
     tx.execute(
-        "INSERT INTO outbox (id, tipo, payload_json) VALUES (?1, ?2, ?3)",
+        "INSERT INTO outbox (id, tipo, payload_json, event_version)
+         VALUES (?1, ?2, ?3, (SELECT COALESCE(MAX(event_version), 0) + 1 FROM outbox))",
         params![id, tipo, payload_str],
     )
     .map_err(|e| e.to_string())?;
@@ -1167,11 +1180,11 @@ pub fn outbox_listar_pendentes(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, tipo, payload_json, created_at
+            "SELECT id, tipo, payload_json, created_at, COALESCE(event_version, rowid) AS ev
              FROM outbox
              WHERE status = 'PENDENTE'
                AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
-             ORDER BY created_at ASC, id ASC
+             ORDER BY ev ASC, id ASC
              LIMIT ?1",
         )
         .map_err(|e| e.to_string())?;
@@ -1183,6 +1196,7 @@ pub fn outbox_listar_pendentes(
                 tipo: row.get(1)?,
                 payload_json: row.get(2)?,
                 created_at: row.get(3)?,
+                event_version: row.get(4)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -1282,7 +1296,7 @@ pub fn sync_outbox_simulado(app: &tauri::AppHandle, limite: i64) -> Result<i64, 
     let ids: Vec<String> = {
         let mut stmt = tx
             .prepare(
-                "SELECT id FROM outbox WHERE status = 'PENDENTE' ORDER BY created_at ASC, id ASC LIMIT ?1",
+                "SELECT id FROM outbox WHERE status = 'PENDENTE' ORDER BY COALESCE(event_version, rowid) ASC, id ASC LIMIT ?1",
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt

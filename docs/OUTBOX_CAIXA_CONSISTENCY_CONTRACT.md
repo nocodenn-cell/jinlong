@@ -55,38 +55,43 @@ Risco: se `CAIXA_FECHADO` for aplicado **antes** de uma `VENDA_REGISTRADA` ou
 (`VENDA_CAIXA_FECHADO`, poison) e o `valor_sistema` do fechamento fica incompleto.
 Writers únicos não resolvem isso — é ordenação.
 
-### 3.1 Fonte de ordenação: `created_at` NÃO é monotônico (contrato explícito)
+### 3.1 Ordem canônica: `event_version` monotônico (não `created_at`)
 
 O outbox é **single-origin**: eventos web **não** entram nele (o web escreve
-síncrono via RPC). O único produtor é o dispositivo PDV local. Ainda assim,
-`created_at` **não** é fonte monotônica confiável:
+síncrono via RPC). O único produtor é o dispositivo PDV local.
 
-- É `datetime('now')` do SQLite → **resolução de SEGUNDOS** (colisões frequentes).
-- O `id` do outbox é **UUID TEXT**, não sequência → o desempate `id ASC` do
-  cliente é lexical, não ordem de inserção.
+`created_at` **não** é fonte de ordem — é `datetime('now')` do SQLite (resolução
+de SEGUNDOS) e o `id` do outbox é UUID; sob retry/rede/split de batch, ordenar
+por timestamp seria heurística dependente de relógio.
 
-Portanto ordenar só por timestamp seria heurística. A ordem passa a ser
-determinística por **PRIORIDADE DE TIPO**, não por relógio.
+A ordem canônica é **`event_version`**: uma **sequência inteira estritamente
+monotônica por dispositivo**, atribuída na inserção do outbox local
+(`event_version = MAX(event_version)+1`; linhas do outbox nunca são deletadas, e
+os eventos de um caixa são inseridos em ordem causal ⇒ `event_version` é causal
+por caixa). O cliente **drena por `event_version ASC`** (`db.rs
+outbox_listar_pendentes`) e o envia no payload; o servidor **ordena por
+`event_version ASC`** como chave primária. Isso torna a ordem **independente de
+relógio, rede e split de batch** — inclusive **cross-batch** (batch N só contém
+versões menores que batch N+1).
 
 ### 3.2 Travas determinísticas no `handlePostOutboxBatch`
 
-1. **Ordenação por prioridade de tipo (`typePriority`).** Chave primária de sort:
-   `CAIXA_ABERTO(0) < VENDA_REGISTRADA/MOVIMENTO_CAIXA(1) < CAIXA_FECHADO(2)`;
-   `created_at` e `id` só desempatam dentro da mesma classe. Isso garante, **por
-   caixa e independentemente do relógio**, que nenhum `CAIXA_FECHADO` é aplicado
-   antes de qualquer `VENDA/MOVIMENTO`, e nenhum destes antes do `CAIXA_ABERTO`,
-   dentro do batch. Entre vendas/movimentos, a ordem relativa não afeta correção
-   (o `valor_sistema` soma todos; baixas de estoque são idempotentes por venda).
+1. **Ordenação canônica por `event_version ASC`.** Chave primária de sort. Sem
+   `event_version` (cliente pré-migração) ou empate, cai no fallback
+   determinístico: prioridade de tipo `CAIXA_ABERTO(0) < VENDA/MOVIMENTO(1) <
+   CAIXA_FECHADO(2)`, depois `created_at`/`id` só de desempate. Entre
+   vendas/movimentos a ordem relativa não afeta correção (o `valor_sistema` soma
+   todos; baixas de estoque são idempotentes por venda).
 2. **Serialização por caixa — stop-on-first-failure.** `caixaKeyOf(ev)` deriva a
    chave de caixa. Se um evento de um caixa falha, os **posteriores do mesmo
    caixa** no batch são **adiados** (`CAIXA_EVENTO_ANTERIOR_PENDENTE` → `failed`,
    sem chamar a RPC). Caixas distintos permanecem independentes.
 
 Consequência: **`CAIXA_FECHADO` nunca é aplicado enquanto houver VENDA/MOVIMENTO
-anterior do mesmo caixa pendente.** Escolha conservadora: nunca fechar dinheiro
-com lançamento faltante.
+anterior (menor `event_version`) do mesmo caixa pendente.** Escolha conservadora:
+nunca fechar dinheiro com lançamento faltante.
 
-### 3.3 Cross-batch e ausência de deadlock
+### 3.3 Ausência de deadlock
 
 `failedCaixaIds` é um `Set` **local ao batch** (recriado a cada requisição): a
 trava #2 bloqueia apenas o **restante do batch atual** daquele caixa — **nunca
@@ -96,20 +101,13 @@ batches futuros**. Um evento adiado/falho é reenviado com **backoff exponencial
 Logo não há deadlock lógico: falha transitória de um evento isolado só adia o
 próximo ciclo; falha permanente é quarentenada na DLQ, liberando a fila.
 
-**Limite cross-batch conhecido:** o drain do cliente é
-`ORDER BY created_at ASC, id ASC LIMIT N` — portanto a ordem *entre* batches
-ainda depende de `created_at` não retroceder além do intervalo venda→fechamento
-(relógio de um único dispositivo). Para independência total de relógio também
-entre batches, o passo durável é um **sequence monotônico por dispositivo**
-(`event_version`, ex.: coluna `INTEGER AUTOINCREMENT` no outbox enviada ao
-servidor) — fora do escopo desta trava intra-batch.
-
 ---
 
 ## Resumo executável
 
 - ACK = handler retornou; retry = handler lançou. `o_ja_fechado=true`/`o_ja_aberto=true` retornam ⇒ ACK terminal.
 - Idempotência mora na RPC (não no caller); FECHADO é terminal, não erro.
-- Ordem causal por caixa: sort por **`typePriority`** (ABERTO<VENDA/MOVIMENTO<FECHADO, independente do relógio) + stop-on-first-failure por `caixaKeyOf`. `created_at` não é monotônico confiável (segundos + id UUID).
+- Ordem canônica cross-batch: **`event_version` ASC** (sequência monotônica por dispositivo; cliente drena e servidor ordena por ela). `created_at` não participa da ordem. Fallback determinístico: `typePriority` (ABERTO<VENDA/MOVIMENTO<FECHADO).
+- Serialização por caixa: stop-on-first-failure por `caixaKeyOf`.
 - Sem deadlock: `failedCaixaIds` é local ao batch; falha transitória → backoff; falha permanente → DLQ.
 - Segurança sobre completude: caixa com lançamento pendente **não fecha**.

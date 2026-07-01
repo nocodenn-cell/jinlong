@@ -31,6 +31,10 @@ type OutboxEvent = {
   tipo: string;
   payload_json: string;
   created_at: string;
+  // Sequência monotônica por dispositivo — ordem canônica cross-batch do sync.
+  // Opcional: clientes antigos (pré-migração) podem não enviar; nesse caso a
+  // ordenação cai no fallback determinístico (typePriority).
+  event_version?: number;
 };
 
 type SyncRequest = {
@@ -91,7 +95,7 @@ function parseSyncRequest(raw: unknown): SyncRequest {
   const events: OutboxEvent[] = [];
   for (const item of raw.events) {
     if (!isRecord(item)) throw new Error("INVALID_EVENT");
-    const { id, tipo, payload_json, created_at } = item;
+    const { id, tipo, payload_json, created_at, event_version } = item;
     if (typeof id !== "string" || typeof tipo !== "string" ||
       typeof payload_json !== "string") {
       throw new Error("INVALID_EVENT_FIELDS");
@@ -101,6 +105,10 @@ function parseSyncRequest(raw: unknown): SyncRequest {
       tipo,
       payload_json,
       created_at: typeof created_at === "string" ? created_at : "",
+      event_version:
+        typeof event_version === "number" && Number.isFinite(event_version)
+          ? event_version
+          : undefined,
     });
   }
   return { events };
@@ -808,15 +816,18 @@ async function handlePostOutboxBatch(
     event_count: body.events.length,
   });
 
-  // Ordenação causal intra-batch DETERMINÍSTICA.
+  // Ordenação causal DETERMINÍSTICA.
   //
-  // `created_at` NÃO é fonte monotônica confiável (SQLite datetime('now') tem
-  // resolução de SEGUNDOS e o id do outbox é UUID, não sequência), então a
-  // ordem NÃO pode depender só do timestamp. A chave primária é a PRIORIDADE DE
-  // TIPO, que garante o invariante que importa por caixa — ABERTO < VENDA/
-  // MOVIMENTO < FECHADO — independentemente do relógio. created_at + id servem
-  // apenas de desempate estável dentro da mesma classe.
+  // Ordem canônica cross-batch = `event_version` ASC (sequência monotônica por
+  // dispositivo, independente de relógio/rede/retry). `created_at` NÃO é
+  // monotônico confiável (SQLite datetime('now') em segundos + id UUID), então
+  // não participa da ordem quando há event_version. Fallback determinístico
+  // (clientes pré-migração sem event_version, ou empate): prioridade de tipo —
+  // ABERTO < VENDA/MOVIMENTO < FECHADO — depois created_at + id só de desempate.
   const ordered = [...body.events].sort((a, b) => {
+    const va = a.event_version;
+    const vb = b.event_version;
+    if (va != null && vb != null && va !== vb) return va - vb;
     const pa = typePriority(a.tipo);
     const pb = typePriority(b.tipo);
     if (pa !== pb) return pa - pb;
