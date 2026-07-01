@@ -2675,6 +2675,19 @@ export type Database = {
           status_movimentacao: string
         }[]
       }
+      abrir_caixa_atomico: {
+        Args: {
+          p_caixa_id?: string
+          p_loja_id?: string
+          p_operador_id?: string
+          p_valor_inicial: number
+        }
+        Returns: {
+          o_caixa_id: string
+          o_ja_aberto: boolean
+          o_status: string
+        }[]
+      }
       fechar_caixa_atomico: {
         Args: {
           p_motivo?: string

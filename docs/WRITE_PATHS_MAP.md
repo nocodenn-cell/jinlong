@@ -18,9 +18,6 @@ quebra o CI. Nada além disso — sem análise de alias, indireção ou classifi
 
 | arquivo:linha | tabela · operação | domínio | fase de remoção |
 |---|---|---|---|
-| `pdv-importados/app/caixa/server/caixaSessaoOperador.impl.ts:103` | `caixas.insert` | Caixa | Fase 1 |
-| `backend/supabase/functions/sync-outbox/index.ts:459` | `caixas.insert` | Caixa | Fase 1 |
-| `backend/supabase/functions/sync-outbox/index.ts:525` | `caixas.update` | Caixa | Fase 1 |
 | `pdv-importados/app/gerente/estoque/actions.ts:87` | `estoque.insert` | Estoque | Fase 2 |
 | `pdv-importados/lib/adapters/supabase/produtoRepository.ts:79` | `estoque.insert` | Estoque | Fase 2 |
 | `pdv-importados/app/gerente/produtos/actions.ts:640` | `estoque.delete` | Estoque | Fase 2 |
@@ -35,6 +32,14 @@ quebra o CI. Nada além disso — sem análise de alias, indireção ou classifi
 | `pdv-importados/app/gerente/fornecedores/actions.ts:213` | `fornecedores.update` | Cadastros | Fase 4 |
 | `pdv-importados/app/gerente/fornecedores/actions.ts:247` | `fornecedores.delete` | Cadastros | Fase 4 |
 
+**Caixa (Fase 1 concluída):** `caixas` é **RPC-only**. Abertura via
+`abrir_caixa_atomico` (web `authenticated` + sync `service_role`, id explícito
+idempotente); fechamento via `fechar_caixa_atomico` (web) e `fechar_caixa_pdv_atomico`
+(sync, idempotente com `o_ja_fechado`). Invariante de banco: índice único parcial
+`caixas_operador_unico_aberto` (máx. 1 caixa ABERTO por operador). Não há write
+direto em `caixas`, e a tabela **não está na allowlist** → qualquer write direto
+reintroduzido quebra o CI.
+
 `movimentos_caixa`: nenhum write direto conhecido. Não está na allowlist — qualquer
 write direto futuro quebra o CI.
 
@@ -45,6 +50,7 @@ write direto futuro quebra o CI.
 - Writes escondidos atrás de camadas de indireção (helpers/repositórios) **não**
   são detectados nesta fase — o guard é intencionalmente literal e simples.
 - Triggers/functions SQL com side effects de escrita não são varridos (só código TS).
-- Autorização (RLS TS vs SQL) e as correções por domínio (RPC única de caixa,
-  constraint `quantidade >= 0`, dedupe de `criarCliente`, etc.) são fases futuras,
-  fora do escopo desta iteração.
+- Autorização (RLS TS vs SQL) e as correções por domínio ainda pendentes
+  (constraint `quantidade >= 0` + writes de estoque na Fase 2, dedupe de
+  `criarCliente` na Fase 4, etc.) são fases futuras. A Fase 1 (writer único de
+  caixa) já está concluída.

@@ -32,8 +32,9 @@ const WRITE_METHODS = ['insert', 'update', 'upsert', 'delete']
 // Apenas uma lista: relPath → tabelas permitidas naquele arquivo. Sem semântica.
 // Comentário de fase é só para navegação humana; não afeta o comportamento.
 const ALLOWLIST = {
-  'pdv-importados/app/caixa/server/caixaSessaoOperador.impl.ts': ['caixas'], // Fase 1
-  'backend/supabase/functions/sync-outbox/index.ts': ['caixas'], // Fase 1
+  // Fase 1 (caixas) concluída: abertura/fechamento agora via RPC canônica
+  // (abrir_caixa_atomico / fechar_caixa_pdv_atomico). `caixas` sem exceção →
+  // qualquer write direto reintroduzido quebra o CI.
   'pdv-importados/app/gerente/estoque/actions.ts': ['estoque'], // Fase 2
   'pdv-importados/lib/adapters/supabase/produtoRepository.ts': ['estoque'], // Fase 2
   'pdv-importados/app/gerente/produtos/actions.ts': ['estoque'], // Fase 2

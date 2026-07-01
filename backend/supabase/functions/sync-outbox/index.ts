@@ -447,24 +447,16 @@ async function ensureCaixaPdv(
     trocoInicial != null && Number.isFinite(trocoInicial) ? trocoInicial : 0;
   const op = isUuid(operadorId) ? operadorId.trim() : null;
 
-  const { data: row, error: selErr } = await supabase
-    .from("caixas")
-    .select("id")
-    .eq("id", caixaId.trim())
-    .maybeSingle();
-
-  if (selErr) throw new Error(`ERRO_CAIXA_LOOKUP: ${selErr.message}`);
-  if (row) return;
-
-  const { error: insErr } = await supabase.from("caixas").insert({
-    id: caixaId.trim(),
-    operador_id: op,
-    valor_inicial: valorInicial,
-    status: "ABERTO",
+  // Writer único de abertura (Fase 1). Via service_role, com id explícito.
+  // A RPC é idempotente no replay (mesmo id → o_ja_aberto=true, sem erro).
+  const { error } = await supabase.rpc("abrir_caixa_atomico", {
+    p_valor_inicial: valorInicial,
+    p_operador_id: op,
+    p_caixa_id: caixaId.trim(),
   });
 
-  if (insErr && !String(insErr.message).includes("duplicate key")) {
-    throw new Error(`ERRO_CAIXA_INSERT: ${insErr.message}`);
+  if (error) {
+    throw new Error(`ERRO_CAIXA_ABERTURA: ${error.message}`);
   }
 }
 
@@ -478,10 +470,6 @@ async function processCaixaAberto(supabase: SupabaseAdmin, ev: OutboxEvent) {
     ? p.valor_inicial
     : 0;
   await ensureCaixaPdv(supabase, p.id, p.operador_id ?? null, inicial);
-}
-
-function roundMoney2Caixa(n: number): number {
-  return Math.round(n * 100) / 100;
 }
 
 async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
@@ -508,30 +496,16 @@ async function processCaixaFechado(supabase: SupabaseAdmin, ev: OutboxEvent) {
     fechamentoObs = t.length > 0 ? t : null;
   }
 
-  const { data: vsData, error: vsErr } = await supabase.rpc(
-    "calcular_valor_sistema_dinheiro_caixa",
-    { p_caixa_id: p.id.trim() },
-  );
-  if (vsErr) {
-    throw new Error(`ERRO_CAIXA_FECHADO_VALOR_SISTEMA: ${vsErr.message}`);
-  }
-  const vsNum = typeof vsData === "string" ? Number.parseFloat(vsData) : Number(vsData);
-  if (!Number.isFinite(vsNum)) {
-    throw new Error("ERRO_CAIXA_FECHADO_VALOR_SISTEMA_INVALIDO");
-  }
-  const fechamentoDiferenca = roundMoney2Caixa(valorFechamento - vsNum);
-
-  const { error } = await supabase
-    .from("caixas")
-    .update({
-      status: "FECHADO",
-      data_fechamento: p.data_fechamento,
-      valor_fechamento: valorFechamento,
-      fechamento_diferenca: fechamentoDiferenca,
-      fechamento_observacao: fechamentoObs,
-    })
-    .eq("id", p.id)
-    .eq("status", "ABERTO");
+  // Writer único de fechamento (Fase 1). A RPC é idempotente: caixa já FECHADO
+  // retorna o_ja_fechado=true SEM exception → sucesso silencioso, sem retry storm
+  // no outbox (at-least-once). Erros reais (id ausente, movimentações pendentes)
+  // continuam a re-tentar.
+  const { error } = await supabase.rpc("fechar_caixa_pdv_atomico", {
+    p_caixa_id: p.id.trim(),
+    p_valor_contado: valorFechamento,
+    p_observacao: fechamentoObs,
+    p_data_fechamento: p.data_fechamento,
+  });
 
   if (error) throw new Error(`ERRO_CAIXA_FECHADO: ${error.message}`);
 }

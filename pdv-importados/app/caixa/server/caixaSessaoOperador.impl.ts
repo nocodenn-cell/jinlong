@@ -1,6 +1,5 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import type {
   AbrirCaixaOperadorResult,
   CaixaStatusOperadorResult,
@@ -93,27 +92,26 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
-    const status = await obterStatusCaixaOperadorImpl()
-    if (status.ok && status.status === 'ABERTO') {
-      return { ok: false, error: 'Já existe um caixa aberto para este operador.' }
+    // Writer único de abertura (Fase 1). A RPC usa auth.uid(), aplica o invariante
+    // (índice caixas_operador_unico_aberto) e elimina o race check-then-insert.
+    const { data, error: rpcErr } = await supabase.rpc('abrir_caixa_atomico', {
+      p_valor_inicial: valorInicialSanitizado,
+    })
+
+    if (rpcErr) {
+      const msg = rpcErr.message ?? ''
+      if (msg.includes('ABRIR_CAIXA_JA_ABERTO')) {
+        return { ok: false, error: 'Já existe um caixa aberto para este operador.' }
+      }
+      return { ok: false, error: caixaErroOperador(msg) }
     }
 
-    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
-    const { data: novo, error: insertErr } = await supabase
-      .from('caixas')
-      .insert({
-        operador_id: user.id,
-        loja_id: lojaId,
-        valor_inicial: valorInicialSanitizado,
-        status: 'ABERTO',
-      })
-      .select('id')
-      .single()
+    const row = (Array.isArray(data) ? data[0] : data) as { o_caixa_id: string } | undefined
+    if (!row?.o_caixa_id) return { ok: false, error: caixaErroOperador(null) }
 
-    if (insertErr) return { ok: false, error: caixaErroOperador(insertErr.message) }
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
-    return { ok: true, caixaId: novo.id }
+    return { ok: true, caixaId: String(row.o_caixa_id) }
   } catch (e) {
     return {
       ok: false,
