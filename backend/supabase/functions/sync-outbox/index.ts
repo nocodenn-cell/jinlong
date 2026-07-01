@@ -735,6 +735,25 @@ function publicBatchError(err: string, exposeInternalErrors: boolean): string {
 }
 
 /**
+ * Prioridade causal por tipo (chave de ordenação determinística por caixa):
+ * ABERTO < VENDA/MOVIMENTO < FECHADO. Garante o invariante independentemente do
+ * relógio (created_at é resolução de segundos e não é monotônico confiável).
+ */
+function typePriority(tipo: string): number {
+  switch (tipo) {
+    case "CAIXA_ABERTO":
+      return 0;
+    case "VENDA_REGISTRADA":
+    case "MOVIMENTO_CAIXA":
+      return 1;
+    case "CAIXA_FECHADO":
+      return 2;
+    default:
+      return 1;
+  }
+}
+
+/**
  * Chave de caixa de um evento (para ordenação/serialização causal por caixa).
  * VENDA/MOVIMENTO → payload.caixa_id; CAIXA_ABERTO/FECHADO → payload.id.
  */
@@ -789,13 +808,22 @@ async function handlePostOutboxBatch(
     event_count: body.events.length,
   });
 
-  // Ordenação causal intra-batch: por created_at (estável). Os eventos offline
-  // são criados em ordem causal (ABERTO → VENDAS/MOVIMENTOS → FECHADO); ordenar
-  // por created_at torna a aplicação causal independente da ordem do array.
+  // Ordenação causal intra-batch DETERMINÍSTICA.
+  //
+  // `created_at` NÃO é fonte monotônica confiável (SQLite datetime('now') tem
+  // resolução de SEGUNDOS e o id do outbox é UUID, não sequência), então a
+  // ordem NÃO pode depender só do timestamp. A chave primária é a PRIORIDADE DE
+  // TIPO, que garante o invariante que importa por caixa — ABERTO < VENDA/
+  // MOVIMENTO < FECHADO — independentemente do relógio. created_at + id servem
+  // apenas de desempate estável dentro da mesma classe.
   const ordered = [...body.events].sort((a, b) => {
+    const pa = typePriority(a.tipo);
+    const pb = typePriority(b.tipo);
+    if (pa !== pb) return pa - pb;
     const ca = a.created_at || "";
     const cb = b.created_at || "";
-    return ca < cb ? -1 : ca > cb ? 1 : 0;
+    if (ca !== cb) return ca < cb ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
 
   // Serialização por caixa (stop-on-first-failure): se um evento de um caixa
