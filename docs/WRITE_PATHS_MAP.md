@@ -18,9 +18,6 @@ quebra o CI. Nada além disso — sem análise de alias, indireção ou classifi
 
 | arquivo:linha | tabela · operação | domínio | fase de remoção |
 |---|---|---|---|
-| `pdv-importados/app/gerente/estoque/actions.ts:87` | `estoque.insert` | Estoque | Fase 2 |
-| `pdv-importados/lib/adapters/supabase/produtoRepository.ts:79` | `estoque.insert` | Estoque | Fase 2 |
-| `pdv-importados/app/gerente/produtos/actions.ts:640` | `estoque.delete` | Estoque | Fase 2 |
 | `pdv-importados/app/gerente/clientes/actions.ts:152` | `clientes.update` | Cadastros | Fase 4 |
 | `pdv-importados/app/gerente/clientes/actions.ts:172` | `clientes.insert` | Cadastros | Fase 4 |
 | `pdv-importados/app/gerente/clientes/actions.ts:242` | `clientes.update` | Cadastros | Fase 4 |
@@ -39,6 +36,14 @@ idempotente); fechamento via `fechar_caixa_atomico` (web) e `fechar_caixa_pdv_at
 `caixas_operador_unico_aberto` (máx. 1 caixa ABERTO por operador). Não há write
 direto em `caixas`, e a tabela **não está na allowlist** → qualquer write direto
 reintroduzido quebra o CI.
+
+**Estoque (Fase 2 concluída):** `estoque` é **RPC-only**. Saldo via
+`decrementar_estoque_seguro` / `ajustar_estoque_manual` / `transferencia_segura`
+(todas escopadas em `(loja_id, produto_id)`); criação de linha via
+`garantir_linha_estoque` (idempotente); remoção via cascade da FK
+`estoque_produto_id_fkey ON DELETE CASCADE` ao excluir o produto. Invariante de
+banco: CHECK `estoque_quantidade_nao_negativa (quantidade_atual >= 0)`. `estoque`
+**não está na allowlist** → qualquer write direto reintroduzido quebra o CI.
 
 `movimentos_caixa`: nenhum write direto conhecido. Não está na allowlist — qualquer
 write direto futuro quebra o CI.

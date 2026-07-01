@@ -637,13 +637,8 @@ async function excluirProdutoFisicamenteSeLimpo(
     }
   }
 
-  const { error: eEst } = await supabase.from('estoque').delete().eq('produto_id', produtoId)
-  if (eEst) {
-    return {
-      ok: false,
-      message: mensagemErroComSecao(p.exclusao_secao_estoque, eEst.message, idioma),
-    }
-  }
+  // Fase 2: a linha de estoque é removida por cascade (FK estoque_produto_id_fkey
+  // ON DELETE CASCADE) ao deletar o produto — sem write direto em estoque aqui.
 
   const { data: row } = await supabase.from('produtos').select('imagem_url').eq('id', produtoId).maybeSingle()
   const url = (row as { imagem_url?: string | null } | null)?.imagem_url

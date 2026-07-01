@@ -2688,6 +2688,13 @@ export type Database = {
           o_status: string
         }[]
       }
+      garantir_linha_estoque: {
+        Args: {
+          p_loja_id: string
+          p_produto_id: string
+        }
+        Returns: undefined
+      }
       fechar_caixa_atomico: {
         Args: {
           p_motivo?: string

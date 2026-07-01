@@ -33,11 +33,10 @@ const WRITE_METHODS = ['insert', 'update', 'upsert', 'delete']
 // Comentário de fase é só para navegação humana; não afeta o comportamento.
 const ALLOWLIST = {
   // Fase 1 (caixas) concluída: abertura/fechamento agora via RPC canônica
-  // (abrir_caixa_atomico / fechar_caixa_pdv_atomico). `caixas` sem exceção →
-  // qualquer write direto reintroduzido quebra o CI.
-  'pdv-importados/app/gerente/estoque/actions.ts': ['estoque'], // Fase 2
-  'pdv-importados/lib/adapters/supabase/produtoRepository.ts': ['estoque'], // Fase 2
-  'pdv-importados/app/gerente/produtos/actions.ts': ['estoque'], // Fase 2
+  // (abrir_caixa_atomico / fechar_caixa_pdv_atomico). `caixas` sem exceção.
+  // Fase 2 (estoque) concluída: criação de linha via garantir_linha_estoque,
+  // remoção via cascade (FK), saldo via decrementar/ajustar/transferir. `estoque`
+  // sem exceção → qualquer write direto reintroduzido quebra o CI.
   'pdv-importados/app/gerente/clientes/actions.ts': ['clientes'], // Fase 4
   'pdv-importados/app/gerente/financeiro/actions.ts': ['clientes'], // Fase 4
   'pdv-importados/app/gerente/fornecedores/actions.ts': ['fornecedores'], // Fase 4

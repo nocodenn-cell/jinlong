@@ -84,17 +84,13 @@ export async function garantirLinhaEstoque(input: unknown): Promise<LegacyEstoqu
   const lojaId = await lojaIdDoUsuarioLogado()
   if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
 
-  const { error } = await supabase.from('estoque').insert({
-    produto_id: parsed.data.produto_id,
-    loja_id: lojaId,
-    quantidade_atual: 0,
-    estoque_minimo: 0,
+  // Writer único de criação de linha (Fase 2): RPC idempotente por (loja_id, produto_id).
+  const { error } = await supabase.rpc('garantir_linha_estoque', {
+    p_produto_id: parsed.data.produto_id,
+    p_loja_id: lojaId,
   })
 
   if (error) {
-    if (error.code === '23505') {
-      return { success: false, error: 'Estoque já existe para este produto.' }
-    }
     return { success: false, error: mensagemErroComSecao('Estoque', error.message) }
   }
 

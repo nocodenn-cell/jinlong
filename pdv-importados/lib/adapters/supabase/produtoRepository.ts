@@ -76,11 +76,10 @@ export function createProdutoRepository(
         }
       }
 
-      const { error: estoqueError } = await supabase.from('estoque').insert({
-        produto_id: data.id,
-        loja_id: lojaId,
-        quantidade_atual: 0,
-        estoque_minimo: 0,
+      // Writer único de criação de linha (Fase 2): RPC idempotente por (loja_id, produto_id).
+      const { error: estoqueError } = await supabase.rpc('garantir_linha_estoque', {
+        p_produto_id: data.id,
+        p_loja_id: lojaId,
       })
 
       if (estoqueError) {
