@@ -734,6 +734,25 @@ function publicBatchError(err: string, exposeInternalErrors: boolean): string {
   return "EVENT_PROCESSING_FAILED";
 }
 
+/**
+ * Chave de caixa de um evento (para ordenação/serialização causal por caixa).
+ * VENDA/MOVIMENTO → payload.caixa_id; CAIXA_ABERTO/FECHADO → payload.id.
+ */
+function caixaKeyOf(ev: OutboxEvent): string | null {
+  try {
+    const p = JSON.parse(ev.payload_json);
+    if (ev.tipo === "CAIXA_ABERTO" || ev.tipo === "CAIXA_FECHADO") {
+      return isUuid(p?.id) ? String(p.id).trim() : null;
+    }
+    if (ev.tipo === "MOVIMENTO_CAIXA" || ev.tipo === "VENDA_REGISTRADA") {
+      return isUuid(p?.caixa_id) ? String(p.caixa_id).trim() : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function dispatchOutboxEvent(
   supabase: SupabaseAdmin,
   ev: OutboxEvent,
@@ -770,7 +789,41 @@ async function handlePostOutboxBatch(
     event_count: body.events.length,
   });
 
-  for (const ev of body.events) {
+  // Ordenação causal intra-batch: por created_at (estável). Os eventos offline
+  // são criados em ordem causal (ABERTO → VENDAS/MOVIMENTOS → FECHADO); ordenar
+  // por created_at torna a aplicação causal independente da ordem do array.
+  const ordered = [...body.events].sort((a, b) => {
+    const ca = a.created_at || "";
+    const cb = b.created_at || "";
+    return ca < cb ? -1 : ca > cb ? 1 : 0;
+  });
+
+  // Serialização por caixa (stop-on-first-failure): se um evento de um caixa
+  // falha, os posteriores DO MESMO caixa são adiados (não aplicados) para o
+  // próximo batch. Garante que CAIXA_FECHADO nunca seja aplicado antes de uma
+  // VENDA/MOVIMENTO anterior que ainda não sincronizou — evita fechar com
+  // valor_sistema incompleto e o poison VENDA_CAIXA_FECHADO.
+  const failedCaixaIds = new Set<string>();
+
+  for (const ev of ordered) {
+    const caixaKey = caixaKeyOf(ev);
+
+    if (caixaKey && failedCaixaIds.has(caixaKey)) {
+      failed.push({
+        id: ev.id,
+        error: publicBatchError("CAIXA_EVENTO_ANTERIOR_PENDENTE", exposeInternalErrors),
+      });
+      log({
+        level: "warn",
+        stage: "event_deferred",
+        request_id: requestId,
+        event_id: ev.id,
+        event_type: ev.tipo,
+        correlation_id: eventCorrelationId(ev),
+      });
+      continue;
+    }
+
     try {
       await dispatchOutboxEvent(supabase, ev);
       processed.push(ev.id);
@@ -783,6 +836,7 @@ async function handlePostOutboxBatch(
         correlation_id: eventCorrelationId(ev),
       });
     } catch (e) {
+      if (caixaKey) failedCaixaIds.add(caixaKey);
       const rawErr = e instanceof Error ? e.message : String(e);
       failed.push({ id: ev.id, error: publicBatchError(rawErr, exposeInternalErrors) });
       log({

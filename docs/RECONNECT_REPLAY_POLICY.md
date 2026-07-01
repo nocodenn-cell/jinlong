@@ -237,3 +237,4 @@ ScanFailureCategory (futuro, conceitual)
 | (atual) | Seção 0 (documento vivo, checklist, golden tests, limite operacional, fronteira shared-core, dashboards); §5.7 `shutdown` + ordem `destroyed`; renumerado §6–11; referência a `VISUAL_TRANSACTION_STATES.md`. |
 | 2026-05 | `SCAN_PIPELINE_STATE_MACHINE.md`; testes dourados com espera semântica (`waitUntil` / `waitForCurrentScanState`); `scan-pipeline-invariants.spec.ts`; guarda `double_finalize_attempt` no runtime; link cruzado neste doc. |
 | 2026-05 | Enforcement central em `scan-pipeline-transitions.ts`; `buildScanTimeline`; `SCAN_HANDLER_ASYNC_CONTRACT.md`; `pending_resolution` congelado na doc de estado. |
+| 2026-07 | Fase 1 caixa: contrato de consistência do `sync-outbox` (ACK vs retry, idempotência de fechamento `o_ja_fechado`, ordenação causal por caixa) formalizado em [`OUTBOX_CAIXA_CONSISTENCY_CONTRACT.md`](./OUTBOX_CAIXA_CONSISTENCY_CONTRACT.md). |
