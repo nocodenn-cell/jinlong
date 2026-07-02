@@ -1,5 +1,6 @@
 -- Fase 2 — ESTOQUE: invariante de não-negatividade + writer único de criação de
--- linha + cascade na exclusão de produto (elimina writes diretos em estoque).
+-- linha + RPC de exclusão física de produto (elimina writes diretos em estoque,
+-- sem cascade implícito no banco).
 --
 -- Contrato de concorrência (migration 032): a unidade de lock/mutação é a linha
 -- (loja_id, produto_id). As RPCs de saldo (decrementar_estoque_seguro 127,
@@ -78,30 +79,51 @@ COMMENT ON FUNCTION public.garantir_linha_estoque(uuid, uuid) IS
   'Writer único de criação de linha de estoque (0/0), idempotente por (loja_id, produto_id). Substitui INSERT direto em estoque.';
 
 -- =============================================================================
--- 1c. FK estoque.produto_id → produtos(id) ON DELETE CASCADE.
---     Remove a necessidade do delete direto de estoque na exclusão de produto:
---     deletar o produto passa a remover a linha de estoque por cascade.
---     Já existe uma FK (001) sem CASCADE → DROP + recriar. A FK garante que não
---     há órfãos, mas a pré-checagem abaixo é defensiva.
+-- 1c. remover_produto_fisico — exclusão física via RPC de AUTORIDADE ÚNICA.
+--     Sem ON DELETE CASCADE: cascade seria um write invisível fora do sistema de
+--     autoridade (guard/RPC). Aqui a remoção da linha de estoque é uma mutação
+--     EXPLÍCITA, numa transação única (regras_preco + estoque + produtos). A FK
+--     estoque_produto_id_fkey (001) permanece sem cascade (RESTRICT).
 -- =============================================================================
-DO $$
+CREATE OR REPLACE FUNCTION public.remover_produto_fisico(p_produto_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
-  v_orf bigint;
+  v_uid        uuid := auth.uid();
+  v_loja_prod  uuid;
+  v_loja_user  uuid;
 BEGIN
-  SELECT count(*) INTO v_orf
-  FROM public.estoque e
-  WHERE NOT EXISTS (SELECT 1 FROM public.produtos p WHERE p.id = e.produto_id);
-
-  IF v_orf > 0 THEN
-    RAISE EXCEPTION 'ESTOQUE_ORFAO: % linha(s) de estoque sem produto. Limpe antes de recriar a FK.', v_orf;
+  IF p_produto_id IS NULL THEN
+    RAISE EXCEPTION 'REMOVER_PRODUTO_ID_OBRIGATORIO';
   END IF;
-END $$;
 
-ALTER TABLE public.estoque
-  DROP CONSTRAINT IF EXISTS estoque_produto_id_fkey;
-ALTER TABLE public.estoque
-  ADD CONSTRAINT estoque_produto_id_fkey
-  FOREIGN KEY (produto_id) REFERENCES public.produtos(id) ON DELETE CASCADE;
+  -- Autorização: usuário autenticado só remove produto da própria loja
+  -- (SECURITY DEFINER ignora RLS, então a checagem é explícita aqui). service_role
+  -- (auth.uid() IS NULL) passa direto. Produto inexistente = no-op idempotente.
+  SELECT loja_id INTO v_loja_prod FROM public.produtos WHERE id = p_produto_id;
+  IF v_loja_prod IS NULL THEN
+    RETURN;
+  END IF;
+  IF v_uid IS NOT NULL THEN
+    SELECT loja_id INTO v_loja_user FROM public.usuarios WHERE id = v_uid;
+    IF v_loja_user IS DISTINCT FROM v_loja_prod THEN
+      RAISE EXCEPTION 'REMOVER_PRODUTO_LOJA_INVALIDA';
+    END IF;
+  END IF;
 
-COMMENT ON CONSTRAINT estoque_produto_id_fkey ON public.estoque IS
-  'Fase 2: exclusão de produto remove a linha de estoque por cascade (sem delete direto no app).';
+  -- Deletes explícitos, transacionais, na ordem das FKs.
+  DELETE FROM public.regras_preco WHERE produto_id = p_produto_id;
+  DELETE FROM public.estoque      WHERE produto_id = p_produto_id;
+  DELETE FROM public.produtos     WHERE id = p_produto_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.remover_produto_fisico(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.remover_produto_fisico(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.remover_produto_fisico(uuid) TO service_role;
+
+COMMENT ON FUNCTION public.remover_produto_fisico(uuid) IS
+  'Exclusão física de produto via autoridade única: regras_preco + estoque + produtos numa transação. Sem cascade implícito; a remoção de estoque é mutação explícita rastreável.';

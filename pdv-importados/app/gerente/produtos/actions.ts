@@ -629,30 +629,26 @@ async function excluirProdutoFisicamenteSeLimpo(
   idioma: string,
   p: ReturnType<typeof getMessages>['produtos'],
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const { error: eRegras } = await supabase.from('regras_preco').delete().eq('produto_id', produtoId)
-  if (eRegras) {
-    return {
-      ok: false,
-      message: mensagemErroComSecao(p.exclusao_secao_regras_preco, eRegras.message, idioma),
-    }
-  }
-
-  // Fase 2: a linha de estoque é removida por cascade (FK estoque_produto_id_fkey
-  // ON DELETE CASCADE) ao deletar o produto — sem write direto em estoque aqui.
-
+  // imagem_url precisa ser lida antes de deletar o produto (removida do Storage depois).
   const { data: row } = await supabase.from('produtos').select('imagem_url').eq('id', produtoId).maybeSingle()
   const url = (row as { imagem_url?: string | null } | null)?.imagem_url
   const path = url ? storagePathFromProdutoImagemPublicUrl(url) : null
-  if (path) {
-    await supabase.storage.from(PRODUTO_IMAGEM_BUCKET).remove([path])
-  }
 
-  const { error: eDel } = await supabase.from('produtos').delete().eq('id', produtoId)
+  // Fase 2: exclusão física via RPC de autoridade única (regras_preco + estoque +
+  // produtos numa transação). Sem write direto em estoque e sem cascade implícito.
+  const { error: eDel } = await supabase.rpc('remover_produto_fisico', {
+    p_produto_id: produtoId,
+  })
   if (eDel) {
     return {
       ok: false,
       message: mensagemErroComSecao(p.exclusao_secao_produto, eDel.message, idioma),
     }
+  }
+
+  // Storage não é transacional; remove após o commit do delete.
+  if (path) {
+    await supabase.storage.from(PRODUTO_IMAGEM_BUCKET).remove([path])
   }
   return { ok: true }
 }

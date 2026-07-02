@@ -40,10 +40,11 @@ reintroduzido quebra o CI.
 **Estoque (Fase 2 concluída):** `estoque` é **RPC-only**. Saldo via
 `decrementar_estoque_seguro` / `ajustar_estoque_manual` / `transferencia_segura`
 (todas escopadas em `(loja_id, produto_id)`); criação de linha via
-`garantir_linha_estoque` (idempotente); remoção via cascade da FK
-`estoque_produto_id_fkey ON DELETE CASCADE` ao excluir o produto. Invariante de
-banco: CHECK `estoque_quantidade_nao_negativa (quantidade_atual >= 0)`. `estoque`
-**não está na allowlist** → qualquer write direto reintroduzido quebra o CI.
+`garantir_linha_estoque` (idempotente); remoção via `remover_produto_fisico`
+(mutação **explícita** de estoque numa transação, sem cascade implícito — a FK
+`estoque_produto_id_fkey` permanece sem cascade). Invariante de banco: CHECK
+`estoque_quantidade_nao_negativa (quantidade_atual >= 0)`. `estoque` **não está na
+allowlist** → qualquer write direto reintroduzido quebra o CI.
 
 `movimentos_caixa`: nenhum write direto conhecido. Não está na allowlist — qualquer
 write direto futuro quebra o CI.
