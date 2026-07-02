@@ -1,5 +1,7 @@
 # Roadmap — invariantes operacionais PDV
 
+> **Absorvido (2026-07-02):** a sequência F0–F6 deste documento foi absorvida pelo roadmap canônico [ROADMAP.md](./ROADMAP.md) (R0–R8). F0/F1 concluídas via [ADR-PDV-001 aceito](./adr/ADR-PDV-centro-de-gravidade.md) + [MATRIZ_OFFLINE_PDV.md](./MATRIZ_OFFLINE_PDV.md); F2/F3 implementadas (pipeline em `shared-core` + caixa web); F4 decidida (ADR §4, modelo A); F5-agregação e F6 viraram a fase **R4**. Mantido como referência histórica — **não usar como sequência de execução.**
+
 Documento de **decisão + documentação + sequência de execução** para reduzir ambiguidade entre caixa **web** (`pdv-importados`) e **desktop** (`pdv-local`), e endurecer o **fluxo humano** (bip, foco, burst) sem confundir com lista de features soltas.
 
 **Público:** produto, engenharia, suporte, operação de loja.
