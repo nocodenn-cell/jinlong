@@ -190,6 +190,15 @@ type PDVAction = {
 
 `items` e `total` substituem o antigo par `activeTicket`/`suspendedTickets`: como só existe um carrinho no domínio real (§0.1), não há necessidade de um wrapper `activeTicket | null` nem de uma lista de tickets em espera. `allowedActions` já vem filtrada pelo backend/seletor — `primaryAction` é sempre o primeiro elemento com `enabled: true` e maior prioridade, nunca uma decisão de UI.
 
+### 5.1 "Atacado" é regra de domínio do backend — nunca um modo de UI
+
+`ItemCarrinho.resultado.tipoPreco` (`'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'`, já existente em `unifiedCartStore.ts`) chega em `items` **totalmente resolvido** — o preço unitário, o tipo aplicado e qualquer desconto correspondente já são decididos por `calcular_preco_produto` no backend antes de `PDVViewState` existir. Isso não é uma decisão nova desta fase; é uma restrição que passa a ser **explícita e vinculante**:
+
+- `tipoPreco` é um **campo informativo**, do mesmo tipo que `nome` ou `sku` — pode ser exibido como rótulo (ex.: badge "atacado" ao lado do item), mas **nunca** lido por um componente para decidir *o que* renderizar, habilitar ou ocultar. Não existe (e não pode passar a existir) um `saleState` do tipo `SALE_ACTIVE_ATACADO`, nem uma flag `modoAtacado` em `PDVViewState`, nem um branch de layout condicionado a `tipoPreco`.
+- O contrato COMMAND→STATE (§4) não tem, e não pode ganhar, nenhuma linha cujo destino dependa de "modo atacado" — `CMD_ITEM_SCAN`/`CMD_ITEM_ADD_MANUAL` sempre transicionam para `SALE_ACTIVE`, ponto, independentemente de o produto ser vendido no varejo ou por atacado. A regra de quando um item vira "atacado" (ex.: quantidade mínima, tabela de preço por volume) é validação de domínio dentro de `calcular_preco_produto`/`finalizar_venda_transacional_canonica_v4` (Fase 1, §2.5, §2.7) — nunca uma condição em código de UI.
+- Se atacado implica alguma restrição de ação (ex.: um desconto de gerente adicional não se aplica a itens de atacado, ou um teto de cancelamento diferente), essa restrição se manifesta em `allowedActions`/`primaryAction.enabled` **já calculados pelo backend** — a UI não pergunta "este item é atacado? então desabilito X" em lugar nenhum; ela só lê `enabled`.
+- Consequência para a Fase 1 (contrato-alvo, `PDV_FASE1_BACKEND_ALIGNMENT_SPEC.md` §4): qualquer regra de elegibilidade/restrição ligada a atacado entra no cálculo de `allowedActions` do lado do backend, com `error_code` estruturado (§4.4) se uma tentativa de comando violar a regra — nunca como uma checagem duplicada no frontend "para dar feedback mais rápido". Se isso um dia parecer necessário por UX, é sinal de que o contrato de erro do backend está lento ou incompleto — a correção é no backend, não uma exceção de fluxo no cliente.
+
 Regra dura: se um componente precisa de um dado que não está em `PDVViewState`, o dado é adicionado ao contrato — nunca lido de uma store paralela dentro do componente de tela. Hooks de baixo nível (`useCartStore`, `useCaixaStatus`) só podem ser consumidos pelo **seletor** que produz `PDVViewState`, nunca diretamente por componentes de apresentação.
 
 ---

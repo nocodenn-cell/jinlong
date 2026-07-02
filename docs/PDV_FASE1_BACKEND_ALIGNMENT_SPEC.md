@@ -66,6 +66,8 @@ Confirma o que a Fase 0 já registrou: **não existe RPC** — é 100% `unifiedC
 | Códigos de erro em `snake_case` minúsculo, diferente do padrão `MODULO_CODIGO` (SCREAMING_SNAKE) usado no restante do domínio de venda | `250_...sql:49, 62` | §4.4 — dois vocabulários de erro no mesmo domínio |
 | Preço é validado **duas vezes** por item não-MANUAL/PROMOÇÃO: uma vez em `recalcularItensNoServidor` (client → RPC, pré-checkout) e de novo dentro de `finalizar_venda_transacional_canonica_v4` (server-side, autoritativo) | `caixaPrecoAutoritativoServer.ts:196-201`; `243_...v4_captura.sql` comentário linha 9 e loop linhas 111-145 | Não é uma violação de contrato por si — é redundância intencional (defesa em profundidade), mas **deve ser preservada** no contrato-alvo: a segunda validação (dentro do RPC de finalização) é a que importa para determinismo; a primeira é só UX antecipada |
 
+`tipo` (`'VAREJO' | 'ATACADO'`, campo de decisão devolvido por esta RPC) é exatamente o tipo de dado que o contrato-alvo protege: **é resolvido inteiramente aqui**, nunca recalculado ou reinterpretado no frontend. Ver §4.5 — regra formalizada para não deixar essa garantia implícita.
+
 ### 2.6 Autorização de desconto de gerente (`validar-gerente`, Edge Function — não é RPC SQL)
 
 Contrato HTTP em `backend/supabase/functions/validar-gerente/index.ts`; lógica em `_shared/gerente-auth.ts:359-475`.
@@ -175,6 +177,12 @@ Toda resposta de erro de qualquer RPC/wrapper do domínio de venda deve conter, 
 Consequências diretas dos achados da §2:
 
 - `calcular_preco_produto` migra do campo sentinela lowercase (`erro: "quantidade_invalida"`) para o mesmo formato `error_code` do resto do domínio.
+
+### 4.5 Regras de domínio (ex.: atacado) são resolvidas inteiramente aqui — nunca reinterpretadas no frontend
+
+"Atacado" não é um caso especial deste contrato — é o exemplo canônico do que "estado canônico obrigatório" (§4.1) já exige: `calcular_preco_produto` resolve `tipo` (`VAREJO`/`ATACADO`), preço e qualquer regra de elegibilidade (ex.: quantidade mínima) **antes** do dado chegar a qualquer resposta consumida pelo frontend. Nenhuma RPC deste domínio pode devolver um preço "provisório" que dependa de o cliente aplicar uma regra de atacado por conta própria depois.
+
+Consequência direta para qualquer restrição de ação ligada a atacado (ex.: um teto de desconto de gerente diferente para itens de atacado, se essa regra existir ou vier a existir): o cálculo de elegibilidade entra na RPC que produz `allowedActions`/`primaryAction.enabled` (Fase 0, §5), com `error_code` estruturado (formato desta seção) se um comando for tentado fora da regra. Isso não é uma exceção ao contrato de erro — é a aplicação normal dele. Não há, e não deve haver, uma segunda cópia dessa regra em TypeScript client-side "para validar mais rápido" — se a latência de round-trip for um problema real de UX, a correção é otimizar a RPC (cache, índice, etc.), não duplicar a regra de negócio no cliente.
 - Sufixos dinâmicos hoje interpolados no código (`FINALIZAR_VENDA_CANONICA_ESTOQUE:<mensagem>`, `..._PRECO_DIVERGENTE:<uuid>`) migram para `detail`, mantendo o `error_code` como string fixa e comparável por igualdade exata.
 - `obter_status_caixa_operador` migra a frase livre de `mensagem_operador` (caso `ERRO`) para um `error_code` fixo (ex.: `CAIXA_STATUS_SESSAO_EXPIRADA`, `CAIXA_STATUS_INDISPONIVEL`), preservando a mensagem amigável no campo `message`.
 - As três convenções concorrentes fora do domínio de venda (`permissao_negada` lowercase, `funcao: frase livre`) ficam fora do escopo imediato desta fase (não fazem parte do `PDVSaleState`), mas ficam registradas como o mesmo problema estrutural, para não serem tratadas como precedente ao implementar o contrato-alvo no domínio de venda.

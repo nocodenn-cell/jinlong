@@ -98,6 +98,7 @@ Cada proibição é ancorada em um exemplo real de `CaixaPageClient.tsx` que a v
 | Não decidir habilitação de botão com múltiplas flags booleanas locais | `finalizando`, `processandoCaixa`, `validandoGerente` controlando `disabled` em vários lugares | Um único campo `primaryAction.enabled`, já resolvido no backend/seletor |
 | Não buscar configuração e cachear localmente sem refletir no estado formal | `configCaixaWeb`, `limiteSangriaSemGerente` (`CaixaPageClient.tsx:146, 173`) | `PDVViewState.suspensaoGlobal` já cobre o caso de uso real (motivo de suspensão); limites de desconto/sangria entram em `PDVViewState` como campos de configuração resolvida, não como cache solto no componente |
 | Não coordenar abertura de modal com lógica ad-hoc espalhada | `gerenteModalAberto`, `movimentacaoModalTipo`, `acaoMovimentacao`, `confirmacaoPendente` (`CaixaPageClient.tsx:151-176`) | Fora do escopo dos 5 componentes centrais desta fase — fluxos de gerente/movimentação de caixa não fazem parte do `PDVSaleState` (Fase 0, §0) e ficam para uma extensão de shell futura, não esta spec |
+| Não criar um "modo" de UI para uma regra de domínio (ex.: atacado) | Nenhum componente atual faz isso hoje — registrado preventivamente (Fase 0, §5.1) | `item.resultado.tipoPreco` é exibível como rótulo em `SaleList` (ex.: badge), nunca lido para decidir layout, habilitar ação ou ramificar `OperatorView`; não existe `saleState` nem prop `modoAtacado` em nenhum componente desta árvore |
 
 ### 4.1 O que continua sendo estado local legítimo
 
