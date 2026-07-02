@@ -1,0 +1,31 @@
+# Enforcement do ADR-PDV-001 §1: pdv-local (desktop) está CONGELADO.
+# Mudança funcional em src/ ou src-tauri/ exige decisão consciente
+# (label `unfreeze-pdv-local` no PR) — normalmente via fase R7 do roadmap.
+# Testes, README e manutenção de devDependencies não disparam este gate.
+name: Desktop freeze (ADR-PDV-001)
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'pdv-local/src/**'
+      - 'pdv-local/src-tauri/**'
+      - '!pdv-local/src/**/*.test.*'
+      - '!pdv-local/src/**/*.spec.*'
+
+jobs:
+  freeze-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bloquear mudança funcional sem label unfreeze-pdv-local
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          if [[ ",${LABELS}," == *",unfreeze-pdv-local,"* ]]; then
+            echo "Label unfreeze-pdv-local presente — mudança funcional autorizada conscientemente."
+            exit 0
+          fi
+          echo "::error::pdv-local está CONGELADO (ADR-PDV-001 §1, 2026-07-02)."
+          echo "::error::Web é o PDV canónico; o desktop não recebe mudança funcional fora da fase R7 do roadmap (docs/ROADMAP.md)."
+          echo "::error::Se esta mudança é uma decisão consciente, adicione o label 'unfreeze-pdv-local' ao PR e re-execute."
+          exit 1

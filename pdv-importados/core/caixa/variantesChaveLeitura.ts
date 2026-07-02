@@ -1,6 +1,8 @@
 /**
- * Paridade com pdv-local/src/catalogoLookup.ts — variantes da leitura (scanner/teclado)
- * para bater com o que está cadastrado em codigo_barras.
+ * Variantes da leitura (scanner/teclado) para bater com o que está cadastrado
+ * em codigo_barras. Nota: pdv-local/src/catalogoLookup.ts tem lógica análoga,
+ * mas o desktop está congelado (ADR-PDV-001 §1) — NÃO há obrigação de manter
+ * paridade; esta implementação é a canónica.
  */
 
 export function variantesChaveLeitura(input: string): string[] {

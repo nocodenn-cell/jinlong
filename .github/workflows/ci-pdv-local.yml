@@ -1,4 +1,7 @@
 # CI do app desktop em pdv-local (testes unitários front + build Vite).
+# pdv-local está CONGELADO (ADR-PDV-001 §1): este CI roda apenas quando o
+# próprio módulo muda — mudanças em deps/turbo da raiz não são mais gate
+# do módulo congelado (sem obrigação de paridade enquanto congelado).
 name: CI pdv-local
 
 on:
@@ -6,17 +9,11 @@ on:
     branches: [main, develop]
     paths:
       - 'pdv-local/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
       - '.github/workflows/ci-pdv-local.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'pdv-local/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
       - '.github/workflows/ci-pdv-local.yml'
 
 jobs:

@@ -133,6 +133,23 @@ Esta tabela define **expectativa operacional**, não só técnica. Células deve
 - **Positivas:** prioridades de implementação (fila bip, telemetria, preço) deixam de contradizer o posicionamento do produto.
 - **Negativas:** exige manter **matriz offline** e contratos atualizados quando novas capacidades entrarem.
 
+## Anexo — dependências do desktop congelado e enforcement (2026-07-02)
+
+Análise de acoplamento fechada por evidência, com o tratamento de cada ponto:
+
+| Acoplamento | Evidência | Tratamento sob o freeze |
+|---|---|---|
+| `pdv-local` → `shared-core` (7 módulos via `@core`: `caixa/mapRegrasPreco`, `caixa/variantesChaveLeitura`, `cart/types`, `catalog/isProdutoVendavel`, `managerDiscount/policy`, `pricing/types`, `stores/unifiedCartStore`) | imports em `pdv-local/src` | Consumidor congelado: evolução de `shared-core` **não tem obrigação** de manter o desktop compilando; o CI do desktop só roda quando `pdv-local/**` mudar |
+| `pdv-local` → Edge `sync-outbox` (runtime: outbox + `?op=catalogo` / `?op=pdv_config`) | `backend/supabase/functions/sync-outbox` | Endpoint **permanece** (lado servidor do contrato); protegido por `e2e/sync-fluxo-gerente.spec.ts`. Simplificação só na fase R7 se a decisão virar "aposentar" |
+| Código ativo → `pdv-local` (reverso) | zero imports; havia 1 comentário de "paridade" em `pdv-importados/core/caixa/variantesChaveLeitura.ts` (corrigido) | **Proibido** — enforced por `scripts/desktop-freeze-guard.mjs` (`guard:freeze`, no `guard:all`) |
+| Pipeline raiz (workspace, `dev:desktop`/`dev:tauri`, `npm run test`/`build:all`) | `package.json`, `turbo.json` | Permanecem (dev local e testes do congelado continuam permitidos); CI isolado por paths |
+
+**Enforcement em três camadas:**
+
+1. `scripts/desktop-freeze-guard.mjs` — falha o `guard:all` se surgir import reverso de `pdv-local` em pacote ativo, ou se o marcador `Status: CONGELADO` sumir do `pdv-local/README.md` sem passar pela fase R7.
+2. `.github/workflows/desktop-freeze.yml` — bloqueia PR com mudança funcional em `pdv-local/src(-tauri)/**` (testes/README/deps de manutenção isentos); exceção consciente via label `unfreeze-pdv-local`.
+3. `.github/workflows/ci-pdv-local.yml` — dispara **apenas** com mudanças no próprio módulo; o módulo congelado deixa de ser gate de PRs que tocam dependências compartilhadas da raiz.
+
 ---
 
 ## Próximos passos após aceitação
