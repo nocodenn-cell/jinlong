@@ -25,7 +25,9 @@ const MIGRATIONS_DIR = path.join(root, 'backend/supabase/migrations')
 
 // Colisões herdadas — já aplicadas em produção, não renumeráveis. Dívida explícita.
 // Qualquer colisão NOVA (fora desta lista) falha o guard.
-const INHERITED_COLLISIONS = new Set(['225', '235'])
+// 245 e 250: colisões já mergeadas no main (PRs #81 e #106), em produção — mesma
+// classe de 225/235. Registradas aqui para o guard refletir a realidade.
+const INHERITED_COLLISIONS = new Set(['225', '235', '245', '250'])
 
 if (!fs.existsSync(MIGRATIONS_DIR)) {
   console.error(`[migration-sequence-guard] FAIL — diretório não encontrado: ${MIGRATIONS_DIR}`)
@@ -106,4 +108,4 @@ if (newCollisions.length > 0) {
   process.exit(1)
 }
 
-console.log('\n[migration-sequence-guard] OK — nenhuma colisão nova (herdadas 225/235 em allowlist)')
+console.log('\n[migration-sequence-guard] OK — nenhuma colisão nova (herdadas 225/235/245/250 em allowlist)')
