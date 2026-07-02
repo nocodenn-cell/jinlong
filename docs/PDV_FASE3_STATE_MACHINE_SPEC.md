@@ -258,7 +258,7 @@ Este documento entrega integralmente a **Fase 0 — Modelagem do estado real** d
 As fases seguintes do roadmap (não cobertas aqui, na ordem obrigatória do roadmap):
 
 1. Fase 1 — Consistência do backend (RPC sempre retorna estado final explícito; eliminar fire-and-forget). Auditoria + contrato-alvo em [`PDV_FASE1_BACKEND_ALIGNMENT_SPEC.md`](./PDV_FASE1_BACKEND_ALIGNMENT_SPEC.md) — ainda sem migrations aplicadas.
-2. Fase 2 — Frontend shell (UI burra: `OperatorView`, `InputScanner`, `SaleList`, `TotalPanel`, `PaymentButton`).
+2. Fase 2 — Frontend shell (UI burra: `OperatorView`, `InputScanner`, `SaleList`, `TotalPanel`, `PaymentButton`). Arquitetura em [`PDV_FASE2_FRONTEND_SHELL_SPEC.md`](./PDV_FASE2_FRONTEND_SHELL_SPEC.md) — ainda sem componentes implementados.
 3. Fase 3 — Engine de estado no frontend (`SaleStateMachine.ts`, `useSaleState()`).
 4. Fase 4 — Admin mode isolado (fora do fluxo operacional, acesso por hotkey/senha).
 5. Fase 5 — Simplificação UX final (consolidação das regras já formalizadas em §6).
