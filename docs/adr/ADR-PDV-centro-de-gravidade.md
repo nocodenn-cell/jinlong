@@ -4,8 +4,8 @@
 |--------|--------|
 | **ID** | ADR-PDV-001 |
 | **Título** | Centro de gravidade, autoridade no bip e tolerância a falhas |
-| **Status** | Proposto — aguardando sign-off explícito de produto + eng lead |
-| **Data** | 2026-05-12 |
+| **Status** | **Aceito** — decisões ratificadas pelo dono do produto em 2026-07-02 (sessão de execução do roadmap R0–R8) |
+| **Data** | 2026-05-12 (proposta) · 2026-07-02 (aceitação) |
 | **Contexto** | Monorepo com `pdv-importados` (web) e `pdv-local` (desktop); backend fiscal/RLS maduro; fluxo perceptivo do bip no web ainda acoplado a roundtrip. |
 
 ---
@@ -27,7 +27,7 @@ Documentos relacionados:
 
 ---
 
-## Decisões (propostas — preencher na aceitação)
+## Decisões (ratificadas em 2026-07-02)
 
 ### 1. PDV canónico
 
@@ -42,9 +42,9 @@ Documentos relacionados:
 **Regra formal híbrida (mensagem única):**  
 *“Gerir no navegador; vender com continuidade no desktop quando o caixa for crítico ou a rede for instável.”*
 
-**Sign-off:** [ ] Produto  [ ] Eng
+**Sign-off:** [x] Produto (2026-07-02)
 
-**Decisão final (após sign-off):** _[web | desktop | híbrido conforme tabela + exceções escritas]_
+**Decisão final:** **Web-first.** O caixa web (`pdv-importados`) é o **PDV canónico** para todos os cenários do piloto. O `pdv-local` (desktop) fica **congelado**: código e CI preservados, **fora do caminho comercial e de piloto**, sem obrigação de paridade de contrato enquanto congelado. A tabela híbrida acima fica **suspensa** até reavaliação pós-piloto (fase R7 do roadmap). Evidência que fundamenta a decisão: todo o investimento operacional (pipeline de bip, gate financeiro, telemetria, painel) foi feito no web; o desktop está sem evolução funcional desde 2026-03.
 
 ---
 
@@ -61,7 +61,9 @@ Esta tabela define **expectativa operacional**, não só técnica. Células deve
 | Pricing RPC | **Proposta (pendente Fase preço):** ver secção 4 | Cache local + regras no desktop |
 | Impressão | **Proposta:** não definido como bloqueante no web neste ADR — preencher | Pre preencher por produto |
 
-**Sign-off:** [ ] Produto  [ ] Suporte
+**Sign-off:** [x] Produto (2026-07-02)
+
+**Decisão:** as células "Proposta" da coluna **Web** acima ficam **ratificadas como comportamento oficial** (internet indisponível ⇒ venda não garantida; fiscal assíncrono não bloqueia venda; sync/outbox N/A no web). A coluna **Desktop** fica suspensa enquanto o `pdv-local` estiver congelado (ver §1). Detalhe linha a linha com evidência de código: [MATRIZ_OFFLINE_PDV.md](../MATRIZ_OFFLINE_PDV.md).
 
 ---
 
@@ -81,9 +83,9 @@ Esta tabela define **expectativa operacional**, não só técnica. Células deve
 
 **ACK perceptivo ≠ commit fiscal / documento emitido.**
 
-**Sign-off:** [ ] Produto  [ ] Fiscal (se aplicável)
+**Sign-off:** [x] Produto (2026-07-02)
 
-**Decisão final:** _[ A | B | C | D ]_ com texto único: _
+**Decisão final:** **A + D.** O feedback imediato ao operador significa **A** (código entrou na fila serial — pipeline `shared-core/src/pdv/scan-pipeline-runtime.ts`); a **linha só é exibida com preço autoritativo** confirmado (**D**), conforme §4. Texto único: *"O bip confirma que a leitura entrou na fila; a linha aparece quando o servidor confirma o preço."* `pending_resolution` permanece **vocabulário reservado** (sem comportamento), conforme `docs/SCAN_PIPELINE_STATE_MACHINE.md §1.1`.
 
 ---
 
@@ -97,21 +99,21 @@ Esta tabela define **expectativa operacional**, não só técnica. Células deve
 
 **Proposta inicial (web):** evoluir para **C** ou manter **A** explicitamente até haver cache — **não deixar implícito.**
 
-**Sign-off:** [ ] Produto  [ ] Eng
+**Sign-off:** [x] Produto (2026-07-02)
 
-**Decisão final:** _[ A | B | C ]_ + notas: _
+**Decisão final:** **A (explícito).** Preço remoto autoritativo antes da conclusão perceptiva da linha, com fila serial + feedback visual (comportamento já implementado e testado: `caixaPrecoAutoritativoServer.ts` + pipeline serial). O risco de latência/double-scan do modelo A é mitigado pela fila (dupla leitura não corrompe estado) e monitorado pela telemetria (`buscando_duration`, R4). Evolução para **C** só com cache de catálogo no browser + regras de conflito — reavaliar em R8; até lá, **não** implementar preço provisório.
 
 ---
 
 ### 5. Política de conflito e resiliência
 
-| Domínio | Pergunta | Proposta (preencher na aceitação) |
-|---------|----------|-----------------------------------|
-| Preço divergente | Local ≠ servidor após reconciliação? | Alertar operador / bloquear linha / corrigir automaticamente até teto — _definir_ |
-| Estoque divergente | Baixa já feita vs disponível real? | Já parcialmente no RPC de finalização — alinhar com UX de bip |
-| Replay | Reenvio de mesma leitura? | Pipeline serial + idempotência de **venda** já existe; **leitura** — definir dedupe temporal |
-| Retry humano | Double Enter / double scan? | Fila + ACK explícito reduzem; política de dedupe **X ms** |
-| Reconnect | Supabase oscilante? | Não travar fila sem política; classificar erro recuperável |
+| Domínio | Pergunta | Decisão (2026-07-02) |
+|---------|----------|----------------------|
+| Preço divergente | Local ≠ servidor após reconciliação? | **N/A no modelo A**: não há preço local nem reconciliação — a linha só entra com preço do servidor. Se a RPC falhar, a linha **não entra** e o operador vê erro (estado `failed` do pipeline). Revisitar apenas se §4 evoluir para C. |
+| Estoque divergente | Baixa já feita vs disponível real? | Autoridade é o **anti-oversell na finalização** (RPC `finalizar_venda_transacional_canonica_v4`) — comportamento atual ratificado; o bip **não** valida estoque. |
+| Replay | Reenvio de mesma leitura? | Pipeline serial + idempotência de **venda** (advisory lock + ON CONFLICT) ratificados. Dedupe temporal de **leitura**: **não implementar agora** — decidir com dados da telemetria (R4), conforme [RECONNECT_REPLAY_POLICY.md](../RECONNECT_REPLAY_POLICY.md). |
+| Retry humano | Double Enter / double scan? | Fila serial garante que leitura dupla não corrompe estado; item duplicado é **agregação legítima de quantidade** (comportamento do `unifiedCartStore`). Sem dedupe por janela de tempo até evidência da telemetria. |
+| Reconnect | Supabase oscilante? | Semântica fixada em [RECONNECT_REPLAY_POLICY.md](../RECONNECT_REPLAY_POLICY.md): **sem retry implícito**; falha classificada e visível, fila não trava. |
 
 ---
 
@@ -119,10 +121,10 @@ Esta tabela define **expectativa operacional**, não só técnica. Células deve
 
 | Runtime | Política |
 |---------|----------|
-| Web | **Proposta:** **degradado** — não comercializar “offline completo” no caixa web sem matriz [MATRIZ_OFFLINE futura](../ROADMAP_PDV_INVARIANTES_OPERACIONAIS.md). |
-| Desktop | **Proposta:** **permitido** com limites documentados (sync, fiscal, DLQ). |
+| Web | **Decidido:** **degradado** — o caixa web é online-first; **não comercializar** “offline” no web. Detalhe por capacidade: [MATRIZ_OFFLINE_PDV.md](../MATRIZ_OFFLINE_PDV.md). |
+| Desktop | **Decidido:** **congelado** (§1) — a capacidade offline existe no código, mas **não é oferecida comercialmente** enquanto o `pdv-local` estiver fora do caminho de piloto. |
 
-**Sign-off:** [ ] Produto  [ ] Comercial
+**Sign-off:** [x] Produto (2026-07-02)
 
 ---
 
@@ -135,9 +137,9 @@ Esta tabela define **expectativa operacional**, não só técnica. Células deve
 
 ## Próximos passos após aceitação
 
-1. Implementar pipeline serial em `shared-core` + adapter no web conforme [CONTRATO_PIPELINE_BIP.md](../CONTRATO_PIPELINE_BIP.md).
-2. Instrumentação humana (p50/p95) alinhada à semântica de ACK escolhida.
-3. Atualizar [GUIA_IMPLANTACAO_WEB_VS_DESKTOP.md](../GUIA_IMPLANTACAO_WEB_VS_DESKTOP.md) apenas se a decisão final divergir do texto atual.
+1. ~~Implementar pipeline serial em `shared-core` + adapter no web~~ — **feito** antes da aceitação (`shared-core/src/pdv/` + `app/caixa/scan-pipeline/`).
+2. ~~Instrumentação humana (coleta)~~ — **feito** (sink + `/api/caixa/scan-telemetry`); **agregação/leitura** pendente → fase **R4** do [roadmap](../ROADMAP.md).
+3. Refletir "desktop congelado" no [GUIA_IMPLANTACAO_WEB_VS_DESKTOP.md](../GUIA_IMPLANTACAO_WEB_VS_DESKTOP.md) e em `pdv-local/README.md` (nota de status — parte da fase R0).
 
 ---
 
@@ -147,3 +149,4 @@ Esta tabela define **expectativa operacional**, não só técnica. Células deve
 |------|-----------|
 | 2026-05-12 | Rascunho inicial (PR1 — ADR + interfaces pipeline). |
 | 2026-05-12 | PR 2A — `createScanPipelineController` + testes Vitest em `shared-core`. |
+| 2026-07-02 | **Aceitação** (roadmap R0): web-first com desktop congelado (§1, §6); ACK **A+D** (§3); preço modelo **A** explícito (§4); políticas de conflito preenchidas (§5). |
