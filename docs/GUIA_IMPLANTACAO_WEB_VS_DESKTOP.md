@@ -1,5 +1,7 @@
 # Guia de Implantação — Web vs Desktop
 
+> **Atualização (2026-07-02) — precedência do ADR:** o [ADR-PDV-001](./adr/ADR-PDV-centro-de-gravidade.md) foi **aceito** com decisão **web-first**: o caixa web é o PDV canónico do piloto e o `pdv-local` (desktop) está **congelado** — não oferecer nem implantar desktop em loja enquanto a fase R7 do [roadmap](./ROADMAP.md) não o descongelar com paridade. Onde este guia recomendar desktop (ex.: "venda sem parar no desktop", cenários de rede instável), vale o ADR: cliente com requisito offline crítico **não é atendível hoje** — ver [MATRIZ_OFFLINE_PDV.md](./MATRIZ_OFFLINE_PDV.md).
+
 Guia prático para alinhar **produto**, **implantação** e **onboarding técnico** no monorepo `fastproduct`.
 
 Objetivo: definir claramente **quando usar `pdv-importados` (web)** e **quando usar `pdv-local` (desktop)**, evitando expectativa errada com cliente e reduzindo risco operacional.

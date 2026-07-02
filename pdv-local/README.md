@@ -1,5 +1,7 @@
 # PDV Local — Tauri + React (desktop)
 
+> **Status: CONGELADO (2026-07-02)** — decisão do [ADR-PDV-001](../docs/adr/ADR-PDV-centro-de-gravidade.md) §1: o caixa **web** é o PDV canónico do piloto. Este módulo permanece no repositório com CI ativo, mas **fora do caminho comercial/piloto** e **sem obrigação de paridade de contrato** enquanto congelado. Não implantar em loja. Descongelamento só via fase **R7** do [roadmap](../docs/ROADMAP.md), com paridade completa (login de operador, contrato único de venda, auto-update, gate financeiro do outbox).
+
 Cliente de **caixa local-first** (Windows via Tauri 2) com **SQLite**, **catálogo em cache** e **fila outbox** sincronizada pela Edge `sync-outbox` — o cenário “loja com catálogo + outbox” descrito no `../pdv-importados/README.md` **é este app**, não o browser.
 
 ## Papel no monorepo (vs `pdv-importados`)

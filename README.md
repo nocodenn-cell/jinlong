@@ -9,7 +9,7 @@ PDV para lojas de importados no Brasil, com interface em **português** e **普�
 | Pasta | Descrição |
 |-------|-----------|
 | `pdv-importados/` | Next.js (App Router), React 19, Supabase Auth, painel web gerente + login |
-| `pdv-local/` | Tauri 2 + **React 19** + Vite + SQLite (PDV desktop, outbox de sync) — mesma geração do web |
+| `pdv-local/` | Tauri 2 + **React 19** + Vite + SQLite (PDV desktop, outbox de sync) — **congelado** por decisão do [ADR-PDV-001](docs/adr/ADR-PDV-centro-de-gravidade.md) (web-first); ver `pdv-local/README.md` |
 | `backend/` | **Backend Supabase** — migrations PostgreSQL, Edge Functions (ex.: `sync-outbox`) |
 | `shared/` | Trechos mínimos compartilhados entre pacotes (ex.: polyfill Vitest, `env-check-lib`) |
 | `docs/` | Documentação do monorepo (deploy, E2E, release, prompts) |
