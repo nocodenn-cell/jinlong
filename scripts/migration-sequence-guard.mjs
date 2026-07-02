@@ -23,9 +23,9 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS_DIR = path.join(root, 'backend/supabase/migrations')
 
-// Colisões herdadas — já aplicadas em produção, não renumeráveis. Dívida explícita.
-// Qualquer colisão NOVA (fora desta lista) falha o guard.
-const INHERITED_COLLISIONS = new Set(['225', '235'])
+// Colisões herdadas: resolvidas na fase R1 (2026-07-02) — arquivos movidos para
+// _archive/. Qualquer colisão (nova ou reincidente) falha o guard.
+const INHERITED_COLLISIONS = new Set([])
 
 if (!fs.existsSync(MIGRATIONS_DIR)) {
   console.error(`[migration-sequence-guard] FAIL — diretório não encontrado: ${MIGRATIONS_DIR}`)
