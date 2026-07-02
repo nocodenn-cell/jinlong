@@ -1,30 +1,23 @@
 "use client"
 
 import { useCallback, useSyncExternalStore } from "react"
-import type { PDVBackendSnapshot, SaleStateMachine } from "./SaleStateMachine"
+import type { CommandRuntime } from "./CommandRuntime"
 
 /**
- * Adapter fornecido pelo chamador (fora do escopo desta fase — a ligação
- * real com RPCs de Fase 1 ainda não existe). O hook não sabe nada sobre
- * Supabase/HTTP; só sabe que um COMMAND vira um novo PDVBackendSnapshot.
- */
-export type SendCommand = (command: string, payload?: Record<string, unknown>) => Promise<PDVBackendSnapshot>
-
-/**
- * Único hook de leitura/escrita do estado de venda (roadmap Fase 4).
+ * Único hook de leitura/escrita do estado de venda (roadmap Fase 4/5).
  * Não usa useState para estado de venda, não infere saleState a partir de
- * múltiplos campos, não recalcula total: só assina o SaleStateMachine via
- * useSyncExternalStore e repassa comandos ao adapter do chamador.
+ * múltiplos campos, não recalcula total, não decide retry: só assina o
+ * SaleStateMachine (via o CommandRuntime) através de useSyncExternalStore
+ * e repassa comandos ao runtime — nunca fala com o backend diretamente.
  */
-export function useSaleState(machine: SaleStateMachine, sendCommand: SendCommand) {
+export function useSaleState(runtime: CommandRuntime) {
+  const machine = runtime.getMachine()
   const viewState = useSyncExternalStore(machine.subscribe, machine.getState, machine.getState)
 
   const dispatch = useCallback(
-    async (command: string, payload?: Record<string, unknown>) => {
-      const snapshot = await sendCommand(command, payload)
-      machine.applySnapshot(snapshot)
-    },
-    [machine, sendCommand],
+    (command: string, payload?: Record<string, unknown>, contextId?: string) =>
+      runtime.execute(command, payload, contextId),
+    [runtime],
   )
 
   return { viewState, dispatch }

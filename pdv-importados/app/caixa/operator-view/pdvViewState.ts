@@ -52,4 +52,16 @@ export type PDVViewState = {
   /** Já filtrada/priorizada pelo backend/seletor — a UI não decide isso. */
   allowedActions: PDVAction[]
   primaryAction: PDVAction | null
+
+  /**
+   * Bookkeeping do CommandRuntime (docs/PDV_FASE3_STATE_MACHINE_SPEC.md —
+   * roadmap Fase 5) — permite a UI debugar sem inferência local. Não é
+   * estado de negócio: é metadado do último comando processado pelo
+   * runtime, sobreposto por cima do que o backend devolveu.
+   */
+  lastCommand?: {
+    id: string
+    command: string
+    status: "pending" | "success" | "error"
+  }
 }

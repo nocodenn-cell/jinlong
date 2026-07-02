@@ -3,7 +3,8 @@ import React, { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createSaleStateMachine, type PDVBackendSnapshot } from "@/app/caixa/operator-view/SaleStateMachine"
-import { useSaleState, type SendCommand } from "@/app/caixa/operator-view/useSaleState"
+import { createCommandRuntime, type CommandRuntime, type SendCommand } from "@/app/caixa/operator-view/CommandRuntime"
+import { useSaleState } from "@/app/caixa/operator-view/useSaleState"
 import { OperatorView } from "@/app/caixa/operator-view/OperatorView"
 import type { PDVViewState } from "@/app/caixa/operator-view/pdvViewState"
 
@@ -21,14 +22,8 @@ function buildSnapshot(overrides: Partial<PDVViewState> = {}): PDVViewState {
   }
 }
 
-function Host({
-  machine,
-  sendCommand,
-}: {
-  machine: ReturnType<typeof createSaleStateMachine>
-  sendCommand: SendCommand
-}) {
-  const { viewState, dispatch } = useSaleState(machine, sendCommand)
+function Host({ runtime }: { runtime: CommandRuntime }) {
+  const { viewState, dispatch } = useSaleState(runtime)
   return <OperatorView viewState={viewState} onCommand={(command, payload) => void dispatch(command, payload)} />
 }
 
@@ -56,14 +51,15 @@ describe("useSaleState — UI é projeção pura do SaleStateMachine", () => {
 
   it("renderiza o estado inicial do machine sem nenhum useState próprio", () => {
     const machine = createSaleStateMachine(buildSnapshot({ saleState: "IDLE", caixaStatus: "FECHADO" }))
+    const runtime = createCommandRuntime(machine, vi.fn())
     act(() => {
-      root.render(<Host machine={machine} sendCommand={vi.fn()} />)
+      root.render(<Host runtime={runtime} />)
     })
 
     expect(container.querySelector('[data-sale-state="IDLE"]')).not.toBeNull()
   })
 
-  it("dispatch chama o sendCommand injetado e a UI reflete o snapshot devolvido, sem lógica de transição local", async () => {
+  it("dispatch chama o sendCommand injetado (via runtime) e a UI reflete o snapshot devolvido, sem lógica de transição local", async () => {
     const machine = createSaleStateMachine(buildSnapshot({ saleState: "IDLE", caixaStatus: "ABERTO" }))
     const sendCommand: SendCommand = vi.fn(async () =>
       buildSnapshot({
@@ -72,9 +68,10 @@ describe("useSaleState — UI é projeção pura do SaleStateMachine", () => {
         total: { bruto: 20, desconto: 0, liquido: 20, descontoGerente: null },
       }),
     )
+    const runtime = createCommandRuntime(machine, sendCommand)
 
     act(() => {
-      root.render(<Host machine={machine} sendCommand={sendCommand} />)
+      root.render(<Host runtime={runtime} />)
     })
 
     const input = container.querySelector('[data-testid="input-scanner"] input') as HTMLInputElement
@@ -105,9 +102,10 @@ describe("useSaleState — UI é projeção pura do SaleStateMachine", () => {
       buildSnapshot({ saleState: "PAYMENT_PENDING", total: { bruto: 15, desconto: 0, liquido: 15, descontoGerente: null } }),
     ]
     const sendCommand: SendCommand = vi.fn(async () => responses[call++])
+    const runtime = createCommandRuntime(machine, sendCommand)
 
     act(() => {
-      root.render(<Host machine={machine} sendCommand={sendCommand} />)
+      root.render(<Host runtime={runtime} />)
     })
 
     const button = container.querySelector('[data-testid="payment-button"]') as HTMLButtonElement | null

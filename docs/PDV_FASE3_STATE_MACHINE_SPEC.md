@@ -178,6 +178,9 @@ type PDVViewState = {
   // --- ações permitidas no estado atual (ver §6) — a view NUNCA decide isso sozinha ---
   allowedActions: PDVAction[]
   primaryAction: PDVAction | null
+
+  // --- bookkeeping do CommandRuntime (roadmap Fase 5) — não é estado de negócio ---
+  lastCommand?: { id: string; command: string; status: 'pending' | 'success' | 'error' }
 }
 
 type PDVAction = {
@@ -187,6 +190,8 @@ type PDVAction = {
   requiresConfirmation: boolean
 }
 ```
+
+`lastCommand` é opcional e sobreposto pelo `CommandRuntime` (Fase 5), não pelo backend — permite a UI/debug inspecionar o comando mais recente sem inferir status a partir de outros campos. Não altera a regra "sem lógica de fluxo local": nenhum componente lê `lastCommand` para decidir o que renderizar, só para exibição de diagnóstico.
 
 `items` e `total` substituem o antigo par `activeTicket`/`suspendedTickets`: como só existe um carrinho no domínio real (§0.1), não há necessidade de um wrapper `activeTicket | null` nem de uma lista de tickets em espera. `allowedActions` já vem filtrada pelo backend/seletor — `primaryAction` é sempre o primeiro elemento com `enabled: true` e maior prioridade, nunca uma decisão de UI.
 
