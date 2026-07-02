@@ -6,6 +6,9 @@ name: Desktop freeze (ADR-PDV-001)
 
 on:
   pull_request:
+    # labeled/unlabeled: adicionar ou remover o label unfreeze-pdv-local
+    # re-avalia o gate sem exigir novo push ou re-run manual.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main, develop]
     paths:
       - 'pdv-local/src/**'

@@ -29,7 +29,9 @@ const CODE_EXT = new Set(['.ts', '.tsx', '.mts', '.mjs', '.js', '.jsx'])
 const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', 'coverage', 'test-results', 'playwright-report'])
 
 // Import/require real de pdv-local (não comentário/menção em texto).
-const REVERSE_IMPORT = /(?:from\s+|require\(\s*|import\(\s*)['"][^'"]*pdv-local\//
+// Cobre: `from '...'`, `require('...')`, `import('...')` dinâmico,
+// `import '...'` de efeito colateral e o especificador bare `'pdv-local'`.
+const REVERSE_IMPORT = /(?:from\s+|require\(\s*|import\s*\(\s*|import\s+)['"][^'"]*pdv-local(?:\/|['"])/
 
 const failures = []
 
