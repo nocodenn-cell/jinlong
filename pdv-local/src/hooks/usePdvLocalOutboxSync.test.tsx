@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
-import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePdvLocalOutboxSync } from './usePdvLocalOutboxSync'
+
+// React 19: sem este flag o act assíncrono não faz flush síncrono e o scheduler
+// vaza trabalho para depois do teardown do jsdom (mesmo padrão de
+// pdv-importados/lib/hooks/usePolling.test.ts).
+;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 const invokeMock = vi.fn()
 
@@ -13,6 +18,13 @@ describe('usePdvLocalOutboxSync', () => {
   beforeEach(() => {
     invokeMock.mockReset()
     vi.useRealTimers()
+  })
+
+  afterEach(async () => {
+    // Desmonta ainda com o jsdom vivo e drena o scheduler do React (setImmediate)
+    // para nenhum render concorrente disparar após o teardown do ambiente.
+    cleanup()
+    await new Promise((r) => setImmediate(() => setImmediate(r)))
   })
 
   it('carrega resumo no mount e expõe status pendente', async () => {
@@ -72,15 +84,15 @@ describe('usePdvLocalOutboxSync', () => {
       }),
     )
 
-    await act(async () => {
-      await result.current.reprocessarDlq()
-    })
+    await result.current.reprocessarDlq()
 
     expect(invokeMock).toHaveBeenCalledWith('outbox_reprocessar_dlq_cmd')
     expect(invokeMock).toHaveBeenCalledWith('sync_outbox_real_cmd', { limite: 50 })
     expect(onSyncElapsedMs).toHaveBeenCalledTimes(1)
     expect(onMensagem).toHaveBeenCalledWith('Eventos repostos na fila. Sync executada em seguida.')
-    expect(result.current.reprocessandoDlq).toBe(false)
+    await waitFor(() => {
+      expect(result.current.reprocessandoDlq).toBe(false)
+    })
   })
 
   it('retorna mensagem formatada quando reprocessar DLQ falha', async () => {
@@ -109,11 +121,11 @@ describe('usePdvLocalOutboxSync', () => {
       }),
     )
 
-    await act(async () => {
-      await result.current.reprocessarDlq()
-    })
+    await result.current.reprocessarDlq()
 
     expect(onMensagem).toHaveBeenCalledWith('erro-formatado')
-    expect(result.current.reprocessandoDlq).toBe(false)
+    await waitFor(() => {
+      expect(result.current.reprocessandoDlq).toBe(false)
+    })
   })
 })

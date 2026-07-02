@@ -3,6 +3,11 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePdvLocalVendaCaixaFlow } from './usePdvLocalVendaCaixaFlow'
 
+// React 19: sem este flag o act assíncrono não faz flush síncrono e o scheduler
+// vaza trabalho para depois do teardown do jsdom (mesmo padrão de
+// pdv-importados/lib/hooks/usePolling.test.ts).
+;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+
 const invokeMock = vi.fn()
 
 vi.mock('@tauri-apps/api/core', () => ({
