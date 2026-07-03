@@ -1,4 +1,14 @@
 -- ============================================================
+-- Migration 253 (renumerado de 245 em 2026-07-03): Reparo do módulo Clientes
+-- (desbloqueio Fase 1).
+--
+-- RENUMERADO: colidia com 245_calcular_preco_produto_precedence_comment.sql
+-- (mesmo prefixo numérico) — quebrava `db reset`/replay sequencial com
+-- duplicate key em schema_migrations_pkey. Confirmado com o usuário via
+-- `npx supabase migration list` contra produção: nem esta migration nem sua
+-- colidente tinham entrada em Remote antes desta mudança. Conteúdo abaixo
+-- inalterado (sem dependência cruzada verificada antes de renumerar).
+-- ============================================================
 -- Migration 245: Reparo do módulo Clientes (desbloqueio Fase 1)
 --
 -- Contexto (auditoria 2026-06-20):

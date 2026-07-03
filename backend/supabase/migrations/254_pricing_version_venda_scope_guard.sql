@@ -1,4 +1,13 @@
--- 250 - Hardening: escopo da RPC de auditoria de pricing por venda.
+-- 254 (renumerado de 250 em 2026-07-03) - Hardening: escopo da RPC de
+-- auditoria de pricing por venda.
+--
+-- RENUMERADO: colidia com 250_calcular_preco_produto_decision_fields.sql
+-- (mesmo prefixo numérico) — quebrava `db reset`/replay sequencial com
+-- duplicate key em schema_migrations_pkey. Confirmado com o usuário via
+-- `npx supabase migration list` contra produção: nem esta migration nem sua
+-- colidente tinham entrada em Remote antes desta mudança. Conteúdo abaixo
+-- inalterado (sem dependência cruzada verificada antes de renumerar; a
+-- referência à "migration 249" abaixo é histórica e permanece correta).
 --
 -- Causa raiz:
 --   A migration 249 criou registrar_pricing_version_venda como SECURITY DEFINER

@@ -1,4 +1,14 @@
 -- ============================================================
+-- Migration 252 (renumerado de 235 em 2026-07-03): venda_finance_context —
+-- espelhamento controlado.
+--
+-- RENUMERADO: colidia com 235_observabilidade_pdv_visual.sql (mesmo prefixo
+-- numérico) — quebrava `db reset`/replay sequencial com duplicate key em
+-- schema_migrations_pkey. Confirmado com o usuário via `npx supabase
+-- migration list` contra produção: nem esta migration nem sua colidente
+-- tinham entrada em Remote antes desta mudança. Conteúdo abaixo inalterado
+-- (sem dependência cruzada verificada antes de renumerar).
+-- ============================================================
 -- Migration 235: venda_finance_context — espelhamento controlado
 --
 -- OBJETIVO
