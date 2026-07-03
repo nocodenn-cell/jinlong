@@ -25,7 +25,12 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
     <div data-admin-v2 className="isolate min-h-dvh min-h-screen bg-[var(--color-background-primary)] text-jl-fg-1">
       <SessionIdleLogout />
       <div className="mx-auto flex min-h-dvh max-w-[1600px] flex-col lg:flex-row">
-        <aside className="admin-v2-sidebar flex w-full shrink-0 flex-col border-b border-[var(--admin-v2-border)] lg:w-72 lg:border-b-0 lg:border-r">
+        {/* ARIA landmark: complementary (sidebar navigation) */}
+        <aside
+          role="complementary"
+          aria-label="Navegação"
+          className="admin-v2-sidebar flex w-full shrink-0 flex-col border-b border-[var(--admin-v2-border)] lg:w-72 lg:border-b-0 lg:border-r"
+        >
           <div className="flex items-center justify-center border-b border-[var(--admin-v2-border)] py-6 px-4">
             <Link
               href={ROUTES.admin.dashboard}
@@ -44,7 +49,8 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
           <SidebarUserFooter session={session} />
         </aside>
 
-        <main className="admin-v2-main relative min-w-0 flex-1">
+        {/* ARIA landmark: main content area */}
+        <main id="main-content" className="admin-v2-main relative min-w-0 flex-1">
           <div className="relative z-[1] min-h-full">{children}</div>
         </main>
       </div>
