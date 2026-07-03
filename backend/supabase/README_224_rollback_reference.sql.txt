@@ -1,4 +1,22 @@
--- 224_rollback_rls_initplan_wrap_auth_select.sql
+-- MOVIDO PARA FORA DE supabase/migrations/ EM 2026-07-03.
+--
+-- Motivo: o nome original "224_rollback_rls_initplan_wrap_auth_select.sql" começa
+-- com o mesmo prefixo numérico "224_" da migration principal (224_rls_initplan_
+-- wrap_auth_select.sql). O Supabase CLI extrai a versão da migration do prefixo
+-- numérico do nome do arquivo — as duas eram lidas como "version 224", e um
+-- `db reset`/replay sequencial completo falhava com:
+--   ERROR: duplicate key value violates unique constraint "schema_migrations_pkey"
+--   Key (version)=(224) already exists.
+-- (reproduzido no CI do PR #132, job "Supabase local RLS smoke"/"Test RLS scope").
+--
+-- Este arquivo nunca foi pensado para rodar sozinho no fluxo normal (ver nota
+-- original abaixo) — é referência manual de como reverter a 224 caso necessário.
+-- Ao mover para fora de supabase/migrations/, ele deixa de ser executado por
+-- `db reset`/`db push`/replay algum. Para reverter a 224 de verdade: copie o
+-- conteúdo abaixo e rode manualmente contra o ambiente alvo.
+--
+-- ============================================================================
+-- 224_rollback_rls_initplan_wrap_auth_select.sql (conteúdo original)
 --
 -- ROLLBACK da migration 224. Restaura as expressões USING/WITH CHECK das policies
 -- ao estado capturado de pg_policies (schema public) em 2026-06-02, ANTES de 224.

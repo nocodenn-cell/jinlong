@@ -9,9 +9,18 @@
  * Regras:
  *   1. FALHA se dois arquivos NÃO-rollback compartilham o mesmo número de prefixo,
  *      exceto colisões herdadas e já aplicadas em produção (INHERITED_COLLISIONS).
- *   2. Arquivos `*_rollback_*` são pares legítimos do mesmo número — ignorados.
- *   3. Migrations com prefixo timestamp (>= 8 dígitos) são fora da sequência
+ *   2. Migrations com prefixo timestamp (>= 8 dígitos) são fora da sequência
  *      numérica curta — relatadas à parte, nunca colidem por design.
+ *
+ * `*_rollback_*` DENTRO de supabase/migrations/ NÃO é mais tolerado por design
+ * (2026-07-03): o Supabase CLI extrai a versão do prefixo numérico do nome do
+ * arquivo — um rollback com o MESMO prefixo da migration que reverte reivindica
+ * a mesma versão e quebra `db reset`/replay com duplicate key em
+ * schema_migrations_pkey (reproduzido no CI do PR #132 para 224/225/226). Um
+ * arquivo de referência de rollback deve viver fora de supabase/migrations/
+ * (ver backend/supabase/README_<N>_rollback_reference.sql.txt) — por isso este
+ * guard agora trata qualquer `*_rollback_*.sql` remanescente na pasta como uma
+ * colisão de verdade, não como par legítimo.
  *
  * Saída: além de PASS/FAIL, sempre imprime um RELATÓRIO de ordem e gaps da
  * sequência (informativo — gaps NÃO falham; só colisões falham).
@@ -39,22 +48,17 @@ if (!fs.existsSync(MIGRATIONS_DIR)) {
 
 const files = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql'))
 
-// number → lista de arquivos não-rollback com aquele número
+// number → lista de arquivos com aquele número (rollback conta como qualquer outro —
+// ver nota acima: um rollback dentro da pasta reivindica versão real no CLI)
 const byNumber = new Map()
 const timestampMigrations = []
-const rollbacks = []
 
 for (const f of files) {
-  const isRollback = /_rollback_/.test(f)
   const m = f.match(/^(\d+)_/)
   if (!m) continue
   const num = m[1]
   if (num.length >= 8) {
     timestampMigrations.push(f)
-    continue
-  }
-  if (isRollback) {
-    rollbacks.push(f)
     continue
   }
   if (!byNumber.has(num)) byNumber.set(num, [])
@@ -83,7 +87,6 @@ if (nums.length > 1) {
 console.log('[migration-sequence-guard] RELATÓRIO de sequência:')
 console.log(`  • migrations numeradas: ${nums.length}  (de ${String(nums[0]).padStart(3, '0')} a ${nums[nums.length - 1]})`)
 console.log(`  • migrations timestamp: ${timestampMigrations.length}`)
-console.log(`  • rollbacks (pares):    ${rollbacks.length}`)
 console.log(`  • gaps de numeração:    ${gaps.length ? gaps.join(', ') : 'nenhum'}  (informativo, não bloqueia)`)
 console.log(`  • próximo número livre: ${nums[nums.length - 1] + 1}`)
 
