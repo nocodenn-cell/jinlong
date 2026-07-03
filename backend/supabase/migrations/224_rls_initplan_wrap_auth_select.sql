@@ -64,13 +64,32 @@ ALTER POLICY "dono_gerente_all_cat_fin" ON public.categorias_financeiras
    FROM usuarios u
   WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['DONO'::text, 'GERENTE'::text]))))));
 
-ALTER POLICY "clientes_loja_isolado" ON public.clientes
-  USING ((EXISTS ( SELECT 1
-   FROM usuarios u
-  WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = clientes.loja_id))))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM usuarios u
-  WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = clientes.loja_id))))));
+-- GUARD (2026-07-03): "clientes_loja_isolado" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'clientes' AND policyname = 'clientes_loja_isolado'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "clientes_loja_isolado" ON public.clientes
+      USING ((EXISTS ( SELECT 1
+       FROM usuarios u
+      WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = clientes.loja_id))))))
+      WITH CHECK ((EXISTS ( SELECT 1
+       FROM usuarios u
+      WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = clientes.loja_id))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "clientes_loja_isolado" não existe em public.clientes — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
 ALTER POLICY "clientes_select_loja" ON public.clientes
   USING ((EXISTS ( SELECT 1
@@ -126,13 +145,32 @@ ALTER POLICY "cpp_gerente" ON public.contas_pagar_pagamentos
      JOIN usuarios u ON ((u.id = (select auth.uid()))))
   WHERE ((cp.id = contas_pagar_pagamentos.conta_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = cp.loja_id))))));
 
-ALTER POLICY "contas_receber_loja_isolado" ON public.contas_receber
-  USING ((EXISTS ( SELECT 1
-   FROM usuarios u
-  WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = contas_receber.loja_id))))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM usuarios u
-  WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = contas_receber.loja_id))))));
+-- GUARD (2026-07-03): "contas_receber_loja_isolado" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'contas_receber' AND policyname = 'contas_receber_loja_isolado'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "contas_receber_loja_isolado" ON public.contas_receber
+      USING ((EXISTS ( SELECT 1
+       FROM usuarios u
+      WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = contas_receber.loja_id))))))
+      WITH CHECK ((EXISTS ( SELECT 1
+       FROM usuarios u
+      WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = contas_receber.loja_id))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "contas_receber_loja_isolado" não existe em public.contas_receber — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
 ALTER POLICY "contas_receber_select_loja" ON public.contas_receber
   USING ((EXISTS ( SELECT 1
@@ -208,17 +246,36 @@ ALTER POLICY "doc_fiscal_eventos_select_loja" ON public.documentos_fiscais_event
      JOIN caixas c ON ((c.id = v.caixa_id)))
   WHERE ((d.id = documentos_fiscais_eventos.documento_id) AND ((u.perfil = 'ADMIN'::text) OR ((u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text])) AND (c.loja_id = u.loja_id)))))));
 
-ALTER POLICY "doc_fiscal_loja_isolado" ON public.documentos_fiscais_pendentes
-  USING ((EXISTS ( SELECT 1
-   FROM ((vendas v
-     JOIN caixas c ON ((c.id = v.caixa_id)))
-     JOIN usuarios u ON ((u.id = (select auth.uid()))))
-  WHERE ((v.id = documentos_fiscais_pendentes.venda_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = c.loja_id))))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM ((vendas v
-     JOIN caixas c ON ((c.id = v.caixa_id)))
-     JOIN usuarios u ON ((u.id = (select auth.uid()))))
-  WHERE ((v.id = documentos_fiscais_pendentes.venda_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = c.loja_id))))));
+-- GUARD (2026-07-03): "doc_fiscal_loja_isolado" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'documentos_fiscais_pendentes' AND policyname = 'doc_fiscal_loja_isolado'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "doc_fiscal_loja_isolado" ON public.documentos_fiscais_pendentes
+      USING ((EXISTS ( SELECT 1
+       FROM ((vendas v
+         JOIN caixas c ON ((c.id = v.caixa_id)))
+         JOIN usuarios u ON ((u.id = (select auth.uid()))))
+      WHERE ((v.id = documentos_fiscais_pendentes.venda_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = c.loja_id))))))
+      WITH CHECK ((EXISTS ( SELECT 1
+       FROM ((vendas v
+         JOIN caixas c ON ((c.id = v.caixa_id)))
+         JOIN usuarios u ON ((u.id = (select auth.uid()))))
+      WHERE ((v.id = documentos_fiscais_pendentes.venda_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = c.loja_id))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "doc_fiscal_loja_isolado" não existe em public.documentos_fiscais_pendentes — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
 ALTER POLICY "doc_fiscal_pendentes_delete_loja" ON public.documentos_fiscais_pendentes
   USING ((EXISTS ( SELECT 1
@@ -346,15 +403,34 @@ ALTER POLICY "itens_insert" ON public.itens_venda
    FROM usuarios u
   WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])))))));
 
-ALTER POLICY "liquidacoes_loja_isolado" ON public.liquidacoes_receber
-  USING ((EXISTS ( SELECT 1
-   FROM (contas_receber cr
-     JOIN usuarios u ON ((u.id = (select auth.uid()))))
-  WHERE ((cr.id = liquidacoes_receber.titulo_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = cr.loja_id))))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM (contas_receber cr
-     JOIN usuarios u ON ((u.id = (select auth.uid()))))
-  WHERE ((cr.id = liquidacoes_receber.titulo_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = cr.loja_id))))));
+-- GUARD (2026-07-03): "liquidacoes_loja_isolado" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'liquidacoes_receber' AND policyname = 'liquidacoes_loja_isolado'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "liquidacoes_loja_isolado" ON public.liquidacoes_receber
+      USING ((EXISTS ( SELECT 1
+       FROM (contas_receber cr
+         JOIN usuarios u ON ((u.id = (select auth.uid()))))
+      WHERE ((cr.id = liquidacoes_receber.titulo_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = cr.loja_id))))))
+      WITH CHECK ((EXISTS ( SELECT 1
+       FROM (contas_receber cr
+         JOIN usuarios u ON ((u.id = (select auth.uid()))))
+      WHERE ((cr.id = liquidacoes_receber.titulo_id) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = ANY (ARRAY['DONO'::text, 'ADMIN'::text])) OR (u.loja_id = cr.loja_id))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "liquidacoes_loja_isolado" não existe em public.liquidacoes_receber — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
 ALTER POLICY "liquidacoes_select_loja" ON public.liquidacoes_receber
   USING ((EXISTS ( SELECT 1
@@ -425,22 +501,98 @@ ALTER POLICY "oci_auth" ON public.ordens_compra_itens
      JOIN usuarios u ON ((u.id = (select auth.uid()))))
   WHERE ((oc.id = ordens_compra_itens.ordem_id) AND (oc.loja_id = u.loja_id)))));
 
-ALTER POLICY "perfis_delete_policy" ON public.perfis
-  USING ((EXISTS ( SELECT 1
-   FROM perfis p
-  WHERE ((p.user_id = (select auth.uid())) AND (p.loja_id = perfis.loja_id) AND (p.perfil = ANY (ARRAY['GERENTE'::text, 'ADMIN'::text]))))));
+-- GUARD (2026-07-03): "perfis_delete_policy" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'perfis' AND policyname = 'perfis_delete_policy'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "perfis_delete_policy" ON public.perfis
+      USING ((EXISTS ( SELECT 1
+       FROM perfis p
+      WHERE ((p.user_id = (select auth.uid())) AND (p.loja_id = perfis.loja_id) AND (p.perfil = ANY (ARRAY['GERENTE'::text, 'ADMIN'::text]))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "perfis_delete_policy" não existe em public.perfis — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
-ALTER POLICY "perfis_insert_policy" ON public.perfis
-  WITH CHECK (((select auth.uid()) = user_id));
+-- GUARD (2026-07-03): "perfis_insert_policy" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'perfis' AND policyname = 'perfis_insert_policy'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "perfis_insert_policy" ON public.perfis
+      WITH CHECK (((select auth.uid()) = user_id));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "perfis_insert_policy" não existe em public.perfis — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
-ALTER POLICY "perfis_select_policy" ON public.perfis
-  USING ((((select auth.uid()) = user_id) OR (EXISTS ( SELECT 1
-   FROM perfis p
-  WHERE ((p.user_id = (select auth.uid())) AND (p.loja_id = perfis.loja_id) AND (p.perfil = ANY (ARRAY['GERENTE'::text, 'ADMIN'::text])))))));
+-- GUARD (2026-07-03): "perfis_select_policy" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'perfis' AND policyname = 'perfis_select_policy'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "perfis_select_policy" ON public.perfis
+      USING ((((select auth.uid()) = user_id) OR (EXISTS ( SELECT 1
+       FROM perfis p
+      WHERE ((p.user_id = (select auth.uid())) AND (p.loja_id = perfis.loja_id) AND (p.perfil = ANY (ARRAY['GERENTE'::text, 'ADMIN'::text])))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "perfis_select_policy" não existe em public.perfis — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
-ALTER POLICY "perfis_update_policy" ON public.perfis
-  USING (((select auth.uid()) = user_id))
-  WITH CHECK (((select auth.uid()) = user_id));
+-- GUARD (2026-07-03): "perfis_update_policy" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'perfis' AND policyname = 'perfis_update_policy'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "perfis_update_policy" ON public.perfis
+      USING (((select auth.uid()) = user_id))
+      WITH CHECK (((select auth.uid()) = user_id));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "perfis_update_policy" não existe em public.perfis — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
 ALTER POLICY "precos_atacado_escrita" ON public.precos_atacado
   USING ((EXISTS ( SELECT 1
@@ -489,20 +641,77 @@ ALTER POLICY "remessas_gerente_all" ON public.remessas
 ALTER POLICY "tipos_mov_select" ON public.tipos_movimento_estoque
   USING (((select auth.role()) = 'authenticated'::text));
 
-ALTER POLICY "transferencias_idempotencia_delete_gerente" ON public.transferencias_idempotencia
-  USING ((EXISTS ( SELECT 1
-   FROM usuarios
-  WHERE ((usuarios.id = (select auth.uid())) AND (usuarios.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text]))))));
+-- GUARD (2026-07-03): "transferencias_idempotencia_delete_gerente" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'transferencias_idempotencia' AND policyname = 'transferencias_idempotencia_delete_gerente'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "transferencias_idempotencia_delete_gerente" ON public.transferencias_idempotencia
+      USING ((EXISTS ( SELECT 1
+       FROM usuarios
+      WHERE ((usuarios.id = (select auth.uid())) AND (usuarios.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text]))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "transferencias_idempotencia_delete_gerente" não existe em public.transferencias_idempotencia — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
-ALTER POLICY "transferencias_idempotencia_insert_gerente" ON public.transferencias_idempotencia
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM usuarios
-  WHERE ((usuarios.id = (select auth.uid())) AND (usuarios.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text]))))));
+-- GUARD (2026-07-03): "transferencias_idempotencia_insert_gerente" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'transferencias_idempotencia' AND policyname = 'transferencias_idempotencia_insert_gerente'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "transferencias_idempotencia_insert_gerente" ON public.transferencias_idempotencia
+      WITH CHECK ((EXISTS ( SELECT 1
+       FROM usuarios
+      WHERE ((usuarios.id = (select auth.uid())) AND (usuarios.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text]))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "transferencias_idempotencia_insert_gerente" não existe em public.transferencias_idempotencia — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
-ALTER POLICY "transferencias_idempotencia_select_gerente" ON public.transferencias_idempotencia
-  USING ((EXISTS ( SELECT 1
-   FROM usuarios
-  WHERE ((usuarios.id = (select auth.uid())) AND (usuarios.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text]))))));
+-- GUARD (2026-07-03): "transferencias_idempotencia_select_gerente" não é criada por nenhuma CREATE POLICY
+-- em nenhuma migration deste repositório (drift real: existia em pg_policies
+-- no remoto quando este snapshot foi gerado, 2026-06-02, mas nunca foi
+-- capturada como migration). Guard por pg_policies evita quebrar `db reset`
+-- do zero sem inventar a definição da policy (decisão de segurança que exige
+-- confirmação explícita, não suposição). Se a policy existir (remoto), o ALTER roda normalmente — sem mudança de comportamento.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'transferencias_idempotencia' AND policyname = 'transferencias_idempotencia_select_gerente'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "transferencias_idempotencia_select_gerente" ON public.transferencias_idempotencia
+      USING ((EXISTS ( SELECT 1
+       FROM usuarios
+      WHERE ((usuarios.id = (select auth.uid())) AND (usuarios.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text]))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy "transferencias_idempotencia_select_gerente" não existe em public.transferencias_idempotencia — ALTER pulado (nunca foi criada por migration).';
+  END IF;
+END;
+$$;
 
 ALTER POLICY "transferencias_idempotencia_self_select" ON public.transferencias_idempotencia
   USING ((usuario_id = (select auth.uid())));
