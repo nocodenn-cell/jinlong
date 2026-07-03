@@ -181,7 +181,7 @@ export function CaixaKeyboardShortcutsReference({ m, variant = "default", classN
           ))}
         </div>
         <div className="text-xs text-muted-foreground pt-4 border-t mt-6">
-          Dica: Pressione 'F2' ou 'Ctrl+B' para buscar um produto rapidamente
+          Dica: Pressione <kbd>F2</kbd> ou <kbd>Ctrl+B</kbd> para buscar um produto rapidamente
         </div>
       </DragonModal>
     </>

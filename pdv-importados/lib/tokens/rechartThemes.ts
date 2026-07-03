@@ -3,7 +3,7 @@
  * Centraliza configuração de cores, strokes, tooltips para gráficos
  */
 
-import { CHART_UI_COLORS, CHART_THEME_PRESETS, RECHARTS_LABEL_STYLE, RECHARTS_CURSOR_STYLE } from './chartColors'
+import { CHART_UI_COLORS, CHART_THEME_PRESETS } from './chartColors'
 
 export type RechartsThemeVariant = 'default' | 'oriental'
 
@@ -11,8 +11,7 @@ export type RechartsThemeVariant = 'default' | 'oriental'
  * Retorna configuração de tooltip com cores tokenizadas
  * Usa var() que será resolvido pelo browser
  */
-export function getRechartsTooltipStyle(variant: RechartsThemeVariant = 'default') {
-  const preset = CHART_THEME_PRESETS[variant]
+export function getRechartsTooltipStyle(_variant: RechartsThemeVariant = 'default') {
   return {
     background: CHART_UI_COLORS.tooltipBg,
     border: `1px solid ${CHART_UI_COLORS.tooltipBorder}`,
