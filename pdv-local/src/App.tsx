@@ -9,6 +9,7 @@ import { logger } from './lib/logger'
 import { usePdvLocalCatalogo } from './hooks/usePdvLocalCatalogo'
 import { usePdvLocalOutboxSync } from './hooks/usePdvLocalOutboxSync'
 import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
+import { usePdvLocalKeyboardShortcuts } from './hooks/usePdvLocalKeyboardShortcuts'
 import { pricingService } from '@shared/pricing/PricingService'
 import { colors } from './styles/colors'
 
@@ -95,6 +96,7 @@ export function App() {
 
   const [confirmarLimparAte, setConfirmarLimparAte] = useState(0)
   const inputLeituraRef = useRef<HTMLInputElement | null>(null)
+  const [inputLeituraFocado, setInputLeituraFocado] = useState(false)
   const [metricaAddItemMs, setMetricaAddItemMs] = useState<number | null>(null)
   const [metricaFinalizarMs, setMetricaFinalizarMs] = useState<number | null>(null)
   const [metricaSyncMs, setMetricaSyncMs] = useState<number | null>(null)
@@ -161,6 +163,31 @@ export function App() {
     // Mantém fluxo "zero mouse": ao mudar carrinho, volta foco na leitura.
     focarInputLeitura()
   }, [itens.length, focarInputLeitura])
+
+  const handleNovoCupom = useCallback(() => {
+    if (itens.length === 0) return
+    const agora = Date.now()
+    if (confirmarLimparAte < agora) {
+      setConfirmarLimparAte(agora + 2200)
+      setMensagem('Toque novamente em "Novo Cupom (F8)" em até 2s para confirmar limpeza.')
+      return
+    }
+    limparCarrinho()
+    setConfirmarLimparAte(0)
+    setMensagem('Cupom limpo.')
+    focarInputLeitura()
+  }, [itens.length, confirmarLimparAte, limparCarrinho, focarInputLeitura])
+
+  usePdvLocalKeyboardShortcuts({
+    caixaAberto: caixaAtualId !== null,
+    itensNoCarrinho: itens.length > 0,
+    isFinalizandoVenda,
+    onFinalizar: finalizarVenda,
+    onFecharCaixa: () => void fecharCaixa(),
+    onFocarLeitura: focarInputLeitura,
+    onNovoCupom: handleNovoCupom,
+    onRegistrarMovimento: () => void registrarMovimentoCaixa(),
+  })
 
   function adicionarDoCatalogo() {
     const t0 = performance.now()
@@ -488,18 +515,22 @@ export function App() {
               onChange={(e) => setCodigo(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') adicionarDoCatalogo()
+                if (e.key === 'Escape') setCodigo('')
               }}
+              onFocus={() => setInputLeituraFocado(true)}
+              onBlur={() => setInputLeituraFocado(false)}
               placeholder="Código de barras ou nome do produto..."
               style={{
                 flex: 1,
                 minHeight: 44,
                 padding: '0.7rem 0.9rem',
                 borderRadius: 999,
-                border: `1px solid ${colors.inputBorder}`,
+                border: `1px solid ${inputLeituraFocado ? colors.inputBorderFocus : colors.inputBorder}`,
                 backgroundColor: colors.inputBg,
                 color: colors.foreground,
                 fontSize: 14,
                 outline: 'none',
+                boxShadow: inputLeituraFocado ? `0 0 0 2px ${colors.inputBorderFocus}33` : 'none',
               }}
             />
             <button
@@ -520,19 +551,7 @@ export function App() {
               Adicionar
             </button>
             <button
-              onClick={() => {
-                if (itens.length === 0) return
-                const agora = Date.now()
-                if (confirmarLimparAte < agora) {
-                  setConfirmarLimparAte(agora + 2200)
-                  setMensagem('Toque novamente em "Novo Cupom (Esc)" em até 2s para confirmar limpeza.')
-                  return
-                }
-                limparCarrinho()
-                setConfirmarLimparAte(0)
-                setMensagem('Cupom limpo.')
-                focarInputLeitura()
-              }}
+              onClick={handleNovoCupom}
               disabled={itens.length === 0}
               style={{
                 minHeight: 44,
@@ -547,7 +566,7 @@ export function App() {
                 cursor: itens.length === 0 ? 'default' : 'pointer',
               }}
             >
-              Novo Cupom (Esc)
+              Novo Cupom (F8)
             </button>
           </div>
           {mensagem && (
@@ -985,7 +1004,7 @@ export function App() {
                   void abrirCaixa()
                 }}
               >
-                F2 · Abrir caixa
+                Abrir caixa
               </button>
             ) : (
               <button
@@ -1005,7 +1024,7 @@ export function App() {
                   void fecharCaixa()
                 }}
               >
-                F3 · Fechar caixa
+                Fechar caixa (F6)
               </button>
             )}
 
@@ -1027,7 +1046,7 @@ export function App() {
                   void registrarMovimentoCaixa()
                 }}
               >
-                F4 · Sangria/Suprimento
+                Sangria/Suprimento (Ctrl+Shift+S/R)
               </button>
             )}
             <button
@@ -1057,7 +1076,7 @@ export function App() {
                 finalizarVenda()
               }}
             >
-              {isFinalizandoVenda ? 'Finalizando…' : 'Finalizar (F10)'}
+              {isFinalizandoVenda ? 'Finalizando…' : 'Finalizar (F4)'}
             </button>
             <div
               style={{
@@ -1065,7 +1084,7 @@ export function App() {
                 color: colors.textMuted,
               }}
             >
-              Atalhos: Esc Novo Cupom · F10 Finalizar.
+              Atalhos: F4/F9 Finalizar · F8 Novo Cupom · F2/Ctrl+B Focar leitura · F6 Fechar caixa · Ctrl+Shift+S/R Sangria/Suprimento · Esc limpa o campo.
             </div>
           </div>
         </section>

@@ -14,6 +14,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import { validarPercentualPermitido } from "@/stores/managerDiscount"
+import { useModalFocusManagement } from "@/hooks/useModalFocusManagement"
 
 export type ValidarSenhaGerenteResult =
   | {
@@ -58,6 +59,7 @@ export function CaixaGerenteModal({
 
   const senhaRef = useRef<HTMLInputElement>(null)
   const pctRef = useRef<HTMLInputElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const fechar = useCallback(() => {
     onOpenChange(false)
@@ -78,17 +80,10 @@ export function CaixaGerenteModal({
     queueMicrotask(() => pctRef.current?.focus())
   }, [open, passo])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, fechar])
+  // Escape + focus trap (Tab) + retorno de foco ao fechar (Fase 2 — auditoria
+  // de acessibilidade). Os focos customizados por passo (senhaRef/pctRef)
+  // rodam via microtask, antes do rAF do hook, então não conflitam.
+  useModalFocusManagement({ open, onClose: fechar, containerRef: cardRef })
 
   const handleContinuarSenha = useCallback(async () => {
     if (validando) return
@@ -145,10 +140,12 @@ export function CaixaGerenteModal({
       }}
     >
       <Card
+        ref={cardRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-gerente-modal-title"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
+        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col outline-none"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">

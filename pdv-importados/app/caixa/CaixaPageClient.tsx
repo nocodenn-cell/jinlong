@@ -292,12 +292,21 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     })
   }, [])
 
-  // Idle focus magnet: after 3s of no keyboard/pointer activity, refocus the search field
+  // Idle focus magnet: after 3s of no keyboard/pointer activity, refocus the
+  // search field — mas só quando o foco está "perdido" (body/null/a própria
+  // busca). Se o operador tabulou para outro elemento interativo (botão,
+  // item do carrinho) e ficou parado pensando, o ímã não deve arrancá-lo de
+  // lá (Fase 2 — auditoria de acessibilidade, WCAG 2.4.3).
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
+    const refocarSeFocoPerdido = () => {
+      const ativo = typeof document !== "undefined" ? document.activeElement : null
+      const focoPerdido = !ativo || ativo === document.body || ativo === buscaInputRef.current
+      if (focoPerdido) focarCampoBusca()
+    }
     const reset = () => {
       if (timer !== null) clearTimeout(timer)
-      timer = setTimeout(focarCampoBusca, 3000)
+      timer = setTimeout(refocarSeFocoPerdido, 3000)
     }
     const clear = () => { if (timer !== null) { clearTimeout(timer); timer = null } }
     window.addEventListener('keydown', reset)

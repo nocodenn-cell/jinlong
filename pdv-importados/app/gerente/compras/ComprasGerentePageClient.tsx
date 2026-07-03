@@ -231,8 +231,16 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
         {dados.rows.map((row: OcListaDTO) => (
           <tr
             key={row.id}
-            className="gerente-fin-row-hover cursor-pointer"
+            className="gerente-fin-row-hover cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset outline-none"
             onClick={() => setDetalheId(row.id)}
+            tabIndex={0}
+            aria-label={`${c.aria_ver_detalhes_oc} — ${row.fornecedor_nome ?? idCurto(row.id)}`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                setDetalheId(row.id)
+              }
+            }}
           >
             <td className="gerente-fin-cell px-3 py-2 font-mono text-xs text-jl-fg-3">{idCurto(row.id)}</td>
             <td className="gerente-fin-cell px-3 py-2 font-medium">{row.fornecedor_nome ?? '—'}</td>

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
+import { useModalFocusManagement } from "@/hooks/useModalFocusManagement"
 
 type Props = {
   open: boolean
@@ -32,6 +33,7 @@ export function CaixaMovimentacaoAcaoModal({
   const [motivo, setMotivo] = useState("")
   const [erroLocal, setErroLocal] = useState<string | null>(null)
   const motivoRef = useRef<HTMLTextAreaElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const title = tipo === "estornar" ? m.caixa.timeline_modal_estornar_titulo : m.caixa.timeline_modal_cancelar_titulo
   const submitLabel =
@@ -48,17 +50,9 @@ export function CaixaMovimentacaoAcaoModal({
     queueMicrotask(() => motivoRef.current?.focus())
   }, [open, reset])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        onOpenChange(false)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, onOpenChange])
+  // Escape + focus trap (Tab) + retorno de foco ao fechar (Fase 2 — auditoria
+  // de acessibilidade).
+  useModalFocusManagement({ open, onClose: () => onOpenChange(false), containerRef: cardRef })
 
   const confirmar = useCallback(async () => {
     setErroLocal(null)
@@ -86,9 +80,11 @@ export function CaixaMovimentacaoAcaoModal({
       }}
     >
       <Card
+        ref={cardRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
+        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col outline-none"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">

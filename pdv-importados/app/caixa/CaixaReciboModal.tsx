@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useRef } from "react"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { useModalFocusManagement } from "@/hooks/useModalFocusManagement"
 
 export type ReciboItem = {
   nome: string
@@ -97,6 +98,7 @@ export function CaixaReciboModal({
   thermal,
 }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
   const supportsWebUSB = typeof navigator !== "undefined" && "usb" in navigator
   const labels = buildReciboLabels(m)
 
@@ -151,14 +153,11 @@ export function CaixaReciboModal({
     win.print()
   }
 
-  // Fecha com Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [onClose])
+  // Escape + focus trap (Tab) + foco move ao abrir e retorna ao fechar (Fase 2
+  // — auditoria de acessibilidade). Este componente é montado/desmontado
+  // inteiro pelo pai (sem prop `open`), então `open: true` é sempre correto:
+  // o efeito roda no mount e o cleanup no unmount.
+  useModalFocusManagement({ open: true, onClose, containerRef: cardRef })
 
   const temDesconto = venda.totalBruto > venda.totalLiquidoComGerente
 
@@ -170,7 +169,11 @@ export function CaixaReciboModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+      <div
+        ref={cardRef}
+        tabIndex={-1}
+        className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl outline-none"
+      >
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-semibold text-foreground">Recibo da venda</span>

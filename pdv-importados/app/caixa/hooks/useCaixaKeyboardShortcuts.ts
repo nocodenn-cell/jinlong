@@ -81,11 +81,15 @@ export function useCaixaKeyboardShortcuts({
         return
       }
       if (e.code === "F6") {
+        // Modal de ajuda documenta "Caixa aberto" como pré-condição.
+        if (!caixaAberto) return
         e.preventDefault()
         onFecharCaixa()
         return
       }
       if (e.code === "F8") {
+        // Modal de ajuda documenta "Caixa aberto" como pré-condição.
+        if (!caixaAberto) return
         e.preventDefault()
         onNovoCupom()
         return
@@ -145,6 +149,7 @@ export function useCaixaKeyboardShortcuts({
     globalThis.addEventListener("keydown", onKey)
     return () => globalThis.removeEventListener("keydown", onKey)
   }, [
+    caixaAberto,
     onFecharCaixa,
     onFinalizar,
     onFocarBusca,

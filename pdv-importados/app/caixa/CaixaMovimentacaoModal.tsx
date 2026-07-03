@@ -15,6 +15,7 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import { formatDecimalBRL, parseBRL } from "@/lib/format/money"
+import { useModalFocusManagement } from "@/hooks/useModalFocusManagement"
 
 type Props = {
   open: boolean
@@ -59,6 +60,7 @@ export function CaixaMovimentacaoModal({
 
   const valorRef = useRef<HTMLInputElement>(null)
   const senhaRef = useRef<HTMLInputElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const title = tipo === "sangria" ? m.caixa.modal_sangria_titulo : m.caixa.modal_suprimento_titulo
   const precisaSenhaGerente =
@@ -88,17 +90,9 @@ export function CaixaMovimentacaoModal({
     queueMicrotask(() => valorRef.current?.focus())
   }, [open, limparEstado])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        onOpenChange(false)
-      }
-    }
-    globalThis.addEventListener("keydown", onKey)
-    return () => globalThis.removeEventListener("keydown", onKey)
-  }, [open, onOpenChange])
+  // Escape + focus trap (Tab) + retorno de foco ao fechar (Fase 2 — auditoria
+  // de acessibilidade). Foco customizado no campo valor/senha continua acima.
+  useModalFocusManagement({ open, onClose: () => onOpenChange(false), containerRef: cardRef })
 
   useEffect(() => {
     if (!open || !precisaSenhaGerente) return
@@ -167,9 +161,11 @@ export function CaixaMovimentacaoModal({
       }}
     >
       <Card
+        ref={cardRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
+        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col outline-none"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">

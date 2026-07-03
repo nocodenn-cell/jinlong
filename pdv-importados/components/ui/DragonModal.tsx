@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useEffect, useId, useRef, type ReactNode } from 'react'
+import React, { useId, useRef, type ReactNode } from 'react'
 import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useModalFocusManagement } from '@/hooks/useModalFocusManagement'
 
 export type DragonModalVariant = 'default' | 'danger'
 export type DragonModalSize = 'sm' | 'md' | 'lg'
@@ -44,10 +45,6 @@ const sheetSizeClass: Record<DragonModalSize, string> = {
   lg: 'sm:max-w-2xl',
 }
 
-function isFocusable(el: Element): el is HTMLElement {
-  return el instanceof HTMLElement && !el.hasAttribute('disabled') && el.tabIndex !== -1
-}
-
 /**
  * DragonModal — primitivo único de diálogo (achados #06/#14/#31 da auditoria).
  * Backdrop glass + cartão `dragon-elev-2`, header com ícone âmbar (imperial-red
@@ -72,62 +69,10 @@ export function DragonModal({
   const titleId = useId()
   const subtitleId = useId()
   const cardRef = useRef<HTMLDivElement>(null)
-  // Ref estável p/ onClose: evita re-rodar o effect (scroll/foco) a cada render
-  // quando o pai passa um onClose com identidade nova.
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
 
-  // Escape + trava de scroll + foco (abre → move p/ o cartão; fecha → restaura).
-  useEffect(() => {
-    if (!open) return
-    const previouslyFocused = document.activeElement as HTMLElement | null
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && dismissable) {
-        e.preventDefault()
-        onCloseRef.current()
-        return
-      }
-      if (e.key === 'Tab') {
-        const card = cardRef.current
-        if (!card) return
-        const focusables = Array.from(card.querySelectorAll<HTMLElement>(
-          'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])',
-        )).filter(isFocusable)
-        if (focusables.length === 0) {
-          e.preventDefault()
-          card.focus()
-          return
-        }
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
-      }
-    }
-
-    document.addEventListener('keydown', onKeyDown)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    // foco inicial no cartão — mas só se o conteúdo não definiu o próprio foco
-    // (ex.: modal que dá autofocus num textarea); evita roubar o foco de volta.
-    const raf = requestAnimationFrame(() => {
-      const card = cardRef.current
-      if (card && !card.contains(document.activeElement)) card.focus()
-    })
-
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = prevOverflow
-      cancelAnimationFrame(raf)
-      previouslyFocused?.focus?.()
-    }
-  }, [open, dismissable])
+  // Escape + trava de scroll + foco (abre → move p/ o cartão; fecha → restaura;
+  // Tab cicla dentro do cartão). Ver hooks/useModalFocusManagement.ts.
+  useModalFocusManagement({ open, onClose, containerRef: cardRef, dismissable })
 
   if (!open) return null
 

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Mensagens } from "@/i18n/getMessages"
+import { useModalFocusManagement } from "@/hooks/useModalFocusManagement"
 
 type Props = {
   open: boolean
@@ -28,6 +29,7 @@ export function CaixaConfirmModal({
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -40,17 +42,11 @@ export function CaixaConfirmModal({
     })
   }, [open, initialFocus])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        onOpenChange(false)
-      }
-    }
-    globalThis.addEventListener("keydown", onKey)
-    return () => globalThis.removeEventListener("keydown", onKey)
-  }, [open, onOpenChange])
+  // Escape + focus trap (Tab) + retorno de foco ao fechar (Fase 2 — auditoria
+  // de acessibilidade). O foco inicial acima (confirm/cancel) roda antes via
+  // microtask; o hook só move o foco para o container se nada dentro já
+  // estiver focado, então não conflita.
+  useModalFocusManagement({ open, onClose: () => onOpenChange(false), containerRef: cardRef })
 
   if (!open) return null
 
@@ -63,9 +59,11 @@ export function CaixaConfirmModal({
       }}
     >
       <Card
+        ref={cardRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
+        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col outline-none"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">

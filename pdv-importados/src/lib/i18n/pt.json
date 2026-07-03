@@ -703,6 +703,7 @@
     "titulo": "Ordens de compra",
     "subtitulo": "Registre pedidos a fornecedores antes do recebimento.",
     "nova_oc": "Nova ordem",
+    "aria_ver_detalhes_oc": "Ver detalhes da ordem de compra",
     "kpi_rascunho": "Rascunhos",
     "kpi_confirmadas": "Confirmadas",
     "kpi_em_transito": "Em trânsito",

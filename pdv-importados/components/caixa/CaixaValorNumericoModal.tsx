@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
+import { useModalFocusManagement } from "@/hooks/useModalFocusManagement"
 
 export type CaixaValorNumericoModalProps = {
   open: boolean
@@ -43,6 +44,7 @@ export function CaixaValorNumericoModal({
   const [valorStr, setValorStr] = useState(initial)
   const [erro, setErro] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const fechar = useCallback(() => {
     onOpenChange(false)
@@ -55,17 +57,9 @@ export function CaixaValorNumericoModal({
     queueMicrotask(() => inputRef.current?.focus())
   }, [open, initial])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    globalThis.addEventListener("keydown", onKey)
-    return () => globalThis.removeEventListener("keydown", onKey)
-  }, [open, fechar])
+  // Escape + focus trap (Tab) + retorno de foco ao fechar (Fase 2 — auditoria
+  // de acessibilidade).
+  useModalFocusManagement({ open, onClose: fechar, containerRef: cardRef })
 
   const handleConfirmar = useCallback(() => {
     const v = parseValor(valorStr)
@@ -88,10 +82,12 @@ export function CaixaValorNumericoModal({
       }}
     >
       <Card
+        ref={cardRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-valor-modal-title"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
+        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col outline-none"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">

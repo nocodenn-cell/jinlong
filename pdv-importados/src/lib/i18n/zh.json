@@ -703,6 +703,7 @@
     "titulo": "采购单",
     "subtitulo": "在收货前登记向供应商的采购订单。",
     "nova_oc": "新建采购单",
+    "aria_ver_detalhes_oc": "查看采购单详情",
     "kpi_rascunho": "草稿",
     "kpi_confirmadas": "已确认",
     "kpi_em_transito": "在途",
