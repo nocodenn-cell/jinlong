@@ -10,6 +10,7 @@ import { usePdvLocalCatalogo } from './hooks/usePdvLocalCatalogo'
 import { usePdvLocalOutboxSync } from './hooks/usePdvLocalOutboxSync'
 import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
 import { pricingService } from '@shared/pricing/PricingService'
+import { colors } from './styles/colors'
 
 function mensagemEhErro(msg: string): boolean {
   return /^(falha|não foi possível|sessão|acesso negado|problema|muitas tentativas|dados inválidos|configuração inválida|limite de envio|este registro|você não tem permissão)/i.test(
@@ -23,25 +24,25 @@ function mensagemEhAviso(msg: string): boolean {
 }
 
 function corIndicadorSync(statusSync: string): string {
-  if (statusSync === 'ok') return '#16a34a'
-  if (statusSync === 'pendente') return '#eab308'
-  return '#dc2626'
+  if (statusSync === 'ok') return colors.syncOk
+  if (statusSync === 'pendente') return colors.syncPending
+  return colors.syncError
 }
 
 function bgOutboxBanner(resumo: { dlq: number; em_backoff: number }): string {
-  if (resumo.dlq > 0) return '#fef2f2'
-  if (resumo.em_backoff > 0) return '#fffbeb'
-  return '#eff6ff'
+  if (resumo.dlq > 0) return colors.errorBg
+  if (resumo.em_backoff > 0) return colors.warningBg
+  return '#eff6ff' // Light blue info
 }
 
 function estiloBannerMensagem(mensagem: string): Pick<CSSProperties, 'color' | 'backgroundColor'> {
   if (mensagemEhErro(mensagem)) {
-    return { color: '#b91c1c', backgroundColor: '#fee2e2' }
+    return { color: colors.errorText, backgroundColor: colors.errorBg }
   }
   if (mensagemEhAviso(mensagem)) {
-    return { color: '#92400e', backgroundColor: '#fffbeb' }
+    return { color: colors.warningText, backgroundColor: colors.warningBg }
   }
-  return { color: '#166534', backgroundColor: '#dcfce7' }
+  return { color: colors.successText, backgroundColor: colors.successBg }
 }
 
 export function App() {
@@ -226,8 +227,8 @@ export function App() {
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: '#f3f4f6',
-        color: '#111827',
+        backgroundColor: colors.background,
+        color: colors.foreground,
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         display: 'flex',
         flexDirection: 'column',
@@ -236,21 +237,21 @@ export function App() {
       <header
         style={{
           padding: '0.75rem 1.5rem',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: `1px solid ${colors.headerBorder}`,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.headerBg,
         }}
       >
         <div>
-          <div style={{ fontSize: '1rem', fontWeight: 600, color: '#111827' }}>
+          <div style={{ fontSize: '1rem', fontWeight: 600, color: colors.headerTextPrimary }}>
             PDV Local · Caixa 01 · Operador
           </div>
-          <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+          <div style={{ fontSize: '0.8rem', color: colors.headerTextSecondary }}>
             Tela clara, otimizada para frente de caixa
             {tauriDisponivel && !carregandoCatalogo && (
-              <span style={{ marginLeft: 8, color: '#9ca3af' }}>
+              <span style={{ marginLeft: 8, color: colors.headerTextMuted }}>
                 · {produtosCatalogo.length} produto(s) no cache local
               </span>
             )}
@@ -274,10 +275,10 @@ export function App() {
               fontWeight: 500,
               padding: '0.35rem 0.75rem',
               borderRadius: 999,
-              border: '1px solid #d1d5db',
+              border: `1px solid ${colors.buttonBorder}`,
               background:
-                !tauriDisponivel || sincronizandoCatalogo ? '#f3f4f6' : '#ffffff',
-              color: !tauriDisponivel || sincronizandoCatalogo ? '#9ca3af' : '#374151',
+                !tauriDisponivel || sincronizandoCatalogo ? colors.background : colors.buttonBg,
+              color: !tauriDisponivel || sincronizandoCatalogo ? colors.textDisabled : colors.buttonText,
               cursor:
                 !tauriDisponivel || sincronizandoCatalogo ? 'default' : 'pointer',
             }}
@@ -290,8 +291,8 @@ export function App() {
               fontWeight: 500,
               padding: '0.25rem 0.75rem',
               borderRadius: 999,
-              backgroundColor: status === 'online' ? '#dcfce7' : '#ffedd5',
-              color: status === 'online' ? '#166534' : '#9a3412',
+              backgroundColor: status === 'online' ? colors.onlineBg : colors.offlineBg,
+              color: status === 'online' ? colors.onlineText : colors.offlineText,
             }}
           >
             {status === 'online' ? 'Online' : 'Offline (seguro)'}
@@ -299,7 +300,7 @@ export function App() {
           <div
             style={{
               fontSize: '0.72rem',
-              color: '#6b7280',
+              color: colors.textSecondary,
               padding: '0.2rem 0.6rem',
               borderRadius: 999,
               background: '#f8fafc',
@@ -342,9 +343,9 @@ export function App() {
           style={{
             padding: '0.45rem 1.5rem',
             fontSize: 12,
-            borderBottom: '1px solid #fcd34d',
-            backgroundColor: '#fffbeb',
-            color: '#92400e',
+            borderBottom: `1px solid ${colors.warningBg}`,
+            backgroundColor: colors.warningBg,
+            color: colors.warningText,
           }}
         >
           <strong>Última falha de sync (fila):</strong> {ultimoErroOutbox}
@@ -461,9 +462,9 @@ export function App() {
         <section
           style={{
             borderRadius: '0.75rem',
-            border: '1px solid #e5e7eb',
+            border: `1px solid ${colors.headerBorder}`,
             padding: '1rem',
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.headerBg,
             display: 'flex',
             flexDirection: 'column',
             gap: '0.75rem',
@@ -474,7 +475,7 @@ export function App() {
               fontSize: '1rem',
               marginBottom: '0.25rem',
               fontWeight: 600,
-              color: '#111827',
+              color: colors.foreground,
             }}
           >
             Leitura de código / produto
@@ -494,9 +495,9 @@ export function App() {
                 minHeight: 44,
                 padding: '0.7rem 0.9rem',
                 borderRadius: 999,
-                border: '1px solid #d1d5db',
-                backgroundColor: '#f9fafb',
-                color: '#111827',
+                border: `1px solid ${colors.inputBorder}`,
+                backgroundColor: colors.inputBg,
+                color: colors.foreground,
                 fontSize: 14,
                 outline: 'none',
               }}
@@ -509,8 +510,8 @@ export function App() {
                 padding: '0.7rem 1rem',
                 borderRadius: 999,
                 border: 'none',
-                background: '#16a34a',
-                color: '#ecfdf3',
+                background: colors.addButton,
+                color: colors.addButtonText,
                 fontSize: 14,
                 fontWeight: 500,
                 cursor: 'pointer',
@@ -538,9 +539,9 @@ export function App() {
                 minWidth: 44,
                 padding: '0.7rem 1rem',
                 borderRadius: 999,
-                border: '1px solid #fca5a5',
-                background: itens.length === 0 ? '#f9fafb' : '#ffffff',
-                color: itens.length === 0 ? '#9ca3af' : '#b91c1c',
+                border: `1px solid ${colors.clearButtonBorder}`,
+                background: itens.length === 0 ? colors.clearButtonDisabledBg : colors.clearButtonBg,
+                color: itens.length === 0 ? colors.clearButtonDisabledText : colors.clearButtonText,
                 fontSize: 13,
                 fontWeight: 500,
                 cursor: itens.length === 0 ? 'default' : 'pointer',
@@ -591,7 +592,7 @@ export function App() {
             style={{
               marginTop: '0.5rem',
               borderRadius: 12,
-              border: '1px solid #e5e7eb',
+              border: `1px solid ${colors.headerBorder}`,
               overflow: 'hidden',
               flex: 1,
               display: 'flex',
@@ -605,7 +606,7 @@ export function App() {
                 padding: '0.5rem 0.75rem',
                 fontSize: 12,
                 background: '#f9fafb',
-                color: '#4b5563',
+                color: colors.tableHeaderText,
                 borderBottom: '1px solid #e5e7eb',
               }}
             >
@@ -629,7 +630,7 @@ export function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: 13,
-                    color: '#9ca3af',
+                    color: colors.textMuted,
                   }}
                 >
                   Nenhum item no carrinho.
@@ -652,7 +653,7 @@ export function App() {
                       <div
                         style={{
                           fontSize: 11,
-                          color: '#9ca3af',
+                          color: colors.textMuted,
                         }}
                       >
                         Cód: {item.produtoId}
@@ -675,9 +676,9 @@ export function App() {
                           minWidth: 44,
                           minHeight: 44,
                           borderRadius: 10,
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${colors.inputBorder}`,
                           background: '#ffffff',
-                          color: '#111827',
+                          color: colors.foreground,
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
@@ -699,9 +700,9 @@ export function App() {
                           fontSize: 13,
                           padding: '4px 6px',
                           borderRadius: 6,
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${colors.inputBorder}`,
                           background: '#ffffff',
-                          color: '#111827',
+                          color: colors.foreground,
                         }}
                       />
                       <button
@@ -711,9 +712,9 @@ export function App() {
                           minWidth: 44,
                           minHeight: 44,
                           borderRadius: 10,
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${colors.inputBorder}`,
                           background: '#ffffff',
-                          color: '#111827',
+                          color: colors.foreground,
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
@@ -728,9 +729,9 @@ export function App() {
                           minWidth: 44,
                           minHeight: 44,
                           borderRadius: 10,
-                          border: '1px solid #fecaca',
-                          background: '#fff1f2',
-                          color: '#b91c1c',
+                          border: `1px solid ${colors.removeButtonBorder}`,
+                          background: colors.removeButtonBg,
+                          color: colors.removeButtonText,
                           fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
@@ -756,7 +757,7 @@ export function App() {
                             borderRadius: 999,
                             border: '1px solid rgba(22,163,74,0.4)',
                             color: '#166534',
-                            backgroundColor: '#dcfce7',
+                            backgroundColor: colors.atacadoBg,
                           }}
                         >
                           ATACADO
@@ -767,9 +768,9 @@ export function App() {
                             fontSize: 10,
                             padding: '2px 6px',
                             borderRadius: 999,
-                            border: '1px solid #d1d5db',
-                            color: '#374151',
-                            backgroundColor: '#f9fafb',
+                            border: `1px solid ${colors.inputBorder}`,
+                            color: colors.buttonText,
+                            backgroundColor: colors.inputBg,
                           }}
                         >
                           VAREJO
@@ -785,7 +786,7 @@ export function App() {
             style={{
               marginTop: '0.5rem',
               fontSize: 12,
-              color: '#6b7280',
+              color: colors.textSecondary,
             }}
           >
             Itens: {totalItens} · Unidades: {totalUnidades}
@@ -795,9 +796,9 @@ export function App() {
         <section
           style={{
             borderRadius: '0.75rem',
-            border: '1px solid #e5e7eb',
+            border: `1px solid ${colors.headerBorder}`,
             padding: '1rem',
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.headerBg,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -810,7 +811,7 @@ export function App() {
                 fontSize: '1rem',
                 fontWeight: 600,
                 marginBottom: 4,
-                color: '#111827',
+                color: colors.foreground,
               }}
             >
               Totais
@@ -828,7 +829,7 @@ export function App() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 fontSize: 13,
-                color: '#16a34a',
+                color: colors.atacadoText,
               }}
             >
               <span>
@@ -862,11 +863,11 @@ export function App() {
                   marginTop: 8,
                   padding: '0.6rem 0.75rem',
                   borderRadius: 10,
-                  background: '#eff6ff',
-                  border: '1px solid #bfdbfe',
+                  background: colors.lastItemBg,
+                  border: `1px solid ${colors.lastItemBorder}`,
                 }}
               >
-                <div style={{ fontSize: 12, color: '#1e3a8a', fontWeight: 700 }}>
+                <div style={{ fontSize: 12, color: colors.lastItemText, fontWeight: 700 }}>
                   Último item adicionado
                 </div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: '#111827' }}>
@@ -883,8 +884,8 @@ export function App() {
                 marginTop: 8,
                 padding: '0.65rem 0.75rem',
                 borderRadius: 12,
-                background: '#0f172a',
-                color: '#f8fafc',
+                background: colors.totalBg,
+                color: colors.totalText,
               }}
             >
               <span>Total a pagar</span>
@@ -902,7 +903,7 @@ export function App() {
                 minWidth: 44,
                 padding: '0.6rem 0.9rem',
                 borderRadius: 999,
-                border: '1px solid #d1d5db',
+                border: `1px solid ${colors.inputBorder}`,
                 background: '#f9fafb',
                 color: itens.length === 0 ? '#9ca3af' : '#374151',
                 fontSize: 12,
@@ -973,9 +974,9 @@ export function App() {
                   minWidth: 44,
                   padding: '0.65rem 0.9rem',
                   borderRadius: 999,
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${colors.inputBorder}`,
                   background: '#ffffff',
-                  color: '#111827',
+                  color: colors.foreground,
                   fontSize: 12,
                   fontWeight: 500,
                   cursor: 'pointer',
@@ -993,9 +994,9 @@ export function App() {
                   minWidth: 44,
                   padding: '0.65rem 0.9rem',
                   borderRadius: 999,
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${colors.inputBorder}`,
                   background: '#ffffff',
-                  color: '#111827',
+                  color: colors.foreground,
                   fontSize: 12,
                   fontWeight: 500,
                   cursor: 'pointer',
@@ -1015,9 +1016,9 @@ export function App() {
                   minWidth: 44,
                   padding: '0.55rem 0.9rem',
                   borderRadius: 999,
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${colors.inputBorder}`,
                   background: '#ffffff',
-                  color: '#111827',
+                  color: colors.foreground,
                   fontSize: 12,
                   fontWeight: 500,
                   cursor: itens.length === 0 ? 'default' : 'pointer',
@@ -1055,7 +1056,7 @@ export function App() {
             <div
               style={{
                 fontSize: 11,
-                color: '#9ca3af',
+                color: colors.textMuted,
               }}
             >
               Atalhos: Esc Novo Cupom · F10 Finalizar.

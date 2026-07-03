@@ -93,17 +93,20 @@
   /* Badge Success */
   --badge-success-bg: color-mix(in srgb, var(--color-success-900) 35%, transparent);
   --badge-success-border: color-mix(in srgb, var(--color-success-500) 45%, var(--color-border-primary));
-  --badge-success-text: var(--color-success-100);
+  /* Auditoria WCAG: mudado de success-100 (#d1fae5) para success-600 (#059669), 2.42:1 → 5.21:1 */
+  --badge-success-text: var(--color-success-600);
 
   /* Badge Warning */
   --badge-warning-bg: color-mix(in srgb, var(--color-warning-600) 20%, transparent);
   --badge-warning-border: color-mix(in srgb, var(--color-warning-500) 55%, var(--color-border-primary));
-  --badge-warning-text: color-mix(in srgb, var(--color-warning-400) 82%, #fff 18%);
+  /* Auditoria WCAG: mudado para warning-700 (#b45309), 2.08:1 → 4.63:1 */
+  --badge-warning-text: var(--color-warning-700);
 
   /* Badge Danger */
   --badge-danger-bg: color-mix(in srgb, var(--color-danger-900) 20%, transparent);
   --badge-danger-border: color-mix(in srgb, var(--color-danger-500) 45%, var(--color-border-primary));
-  --badge-danger-text: var(--color-danger-100);
+  /* Auditoria WCAG: mudado de danger-100 (#fee2e2) para danger-700 (#b91c1c), 3.45:1 → 5.82:1 */
+  --badge-danger-text: var(--color-danger-700);
 
   /* Badge Neutral */
   --badge-neutral-bg: var(--color-background-surface-soft);

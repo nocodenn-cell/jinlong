@@ -17,7 +17,8 @@
   --color-text-primary: rgb(15 23 42);
   --color-text-secondary: rgb(71 85 105);
   --color-text-tertiary: rgb(100 116 139);
-  --color-text-disabled: rgb(148 163 184);
+  /* Auditoria WCAG: aumentado para 7.33:1 (era 2.58:1) */
+  --color-text-disabled: rgb(71 85 105);
 
   /* Border colors */
   --color-border-primary: #e2e8f0;
