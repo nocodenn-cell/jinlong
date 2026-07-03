@@ -12,7 +12,9 @@ export function StockAlertBadge({ count }: { count: number }) {
   return (
     <span
       className="ml-auto inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-amber-500/20 px-1.5 text-[10px] font-semibold text-amber-400"
-      title="Itens com estoque baixo"
+      role="status"
+      aria-label={`${count} ${count === 1 ? 'item com' : 'itens com'} estoque baixo`}
+      title={`${count} ${count === 1 ? 'item com' : 'itens com'} estoque baixo`}
     >
       {count}
     </span>
