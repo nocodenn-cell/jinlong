@@ -48,7 +48,11 @@ GRANT EXECUTE ON FUNCTION public.registrar_system_alert(text, uuid, uuid, uuid, 
 -- ---------------------------------------------------------------------------
 -- 3. Estende a RPC de flags visuais (235) para incluir o kill switch de
 --    alertas leves — o backend lê este valor antes de decidir se registra.
+--    DROP necessário: adiciona alertas_leves_ativos ao RETURNS TABLE da 235 —
+--    CREATE OR REPLACE não permite mudar o tipo de retorno de uma função existente.
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.pdv_config_flags_visuais();
+
 CREATE OR REPLACE FUNCTION public.pdv_config_flags_visuais()
 RETURNS TABLE (
   show_margin_visual boolean,
