@@ -26,7 +26,27 @@ CREATE INDEX IF NOT EXISTS idx_movimentos_estoque_log_remessa_id ON public.movim
 CREATE INDEX IF NOT EXISTS idx_movimentos_estoque_log_tipo_codigo ON public.movimentos_estoque_log (tipo_codigo);
 CREATE INDEX IF NOT EXISTS idx_movimentos_estoque_log_usuario_id ON public.movimentos_estoque_log (usuario_id);
 CREATE INDEX IF NOT EXISTS idx_ordens_compra_created_by ON public.ordens_compra (created_by);
-CREATE INDEX IF NOT EXISTS idx_perfis_loja_id ON public.perfis (loja_id);
+
+-- GUARD (2026-07-03): `public.perfis` nunca existiu como tabela no schema — nenhuma
+-- migration cria essa relação (grep confirma: toda outra menção a "perfis" no
+-- repositório é o plural de "perfil" em comentário, não nome de tabela). A
+-- autorização foi unificada em `usuarios` (ver 216_fix_marcas_drift_ativo_rls_
+-- usuarios.sql, que remove justamente variantes baseadas em "perfis"). Esta linha
+-- provavelmente veio de um advisor do Postgres referenciando um catálogo já
+-- dessincronizado (schema drift nunca capturado em migration). Guard por
+-- to_regclass evita quebrar `db reset` do zero sem inventar substituto — se a
+-- intenção real era indexar outra tabela (ex. usuarios.loja_id), isso precisa de
+-- decisão explícita, não uma suposição nesta correção.
+DO $$
+BEGIN
+  IF to_regclass('public.perfis') IS NOT NULL THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_perfis_loja_id ON public.perfis (loja_id)';
+  ELSE
+    RAISE NOTICE 'public.perfis não existe — índice idx_perfis_loja_id pulado (tabela nunca existiu no schema).';
+  END IF;
+END;
+$$;
+
 CREATE INDEX IF NOT EXISTS idx_precos_atacado_loja_id ON public.precos_atacado (loja_id);
 CREATE INDEX IF NOT EXISTS idx_regras_preco_created_by ON public.regras_preco (created_by);
 CREATE INDEX IF NOT EXISTS idx_remessa_itens_produto_id ON public.remessa_itens (produto_id);
