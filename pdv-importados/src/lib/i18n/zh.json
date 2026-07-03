@@ -991,6 +991,8 @@
     "atalho_ajuda": "键盘快捷键",
     "atalho_titulo": "键盘快捷键",
     "atalho_descricao": "销售点 (PDV) 中所有可用的快捷键列表",
+    "tema_alternar_para_escuro": "切换到深色主题",
+    "tema_alternar_para_claro": "切换到浅色主题",
     "atalho_categoria_venda": "销售",
     "atalho_categoria_navegacao": "导航",
     "atalho_categoria_operacoes": "操作",

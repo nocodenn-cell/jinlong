@@ -13,6 +13,7 @@ type Props = {
   m: Mensagens
   idioma: Idioma
   layoutVariant: CaixaPdvLayoutVariant
+  onToggleLayoutVariant: () => void
   operadorLabel: string
   caixaStatus: CaixaStatusUi | null
   carregandoStatus: boolean
@@ -28,6 +29,7 @@ function CaixaHeaderImpl({
   m,
   idioma,
   layoutVariant,
+  onToggleLayoutVariant,
   operadorLabel,
   caixaStatus,
   carregandoStatus,
@@ -69,6 +71,7 @@ function CaixaHeaderImpl({
         m={m}
         idioma={idioma}
         layoutVariant={layoutVariant}
+        onToggleLayoutVariant={onToggleLayoutVariant}
         operadorLabel={operadorLabel}
         caixaStatus={caixaStatus}
         carregandoStatus={carregandoStatus}

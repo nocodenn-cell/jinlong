@@ -29,6 +29,7 @@ import {
 import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
+import { useCaixaLayoutPreference } from "@/app/caixa/hooks/useCaixaLayoutPreference"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
@@ -68,7 +69,6 @@ import {
   CaixaPdvOperadorTabs,
   type CaixaPdvOperadorTabId,
 } from "@/app/caixa/CaixaPdvOperadorTabs"
-import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { cn } from "@/lib/utils"
 import "@/styles/theme-oriental.css"
 
@@ -128,8 +128,8 @@ type Props = {
 }
 
 export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
-  const pdvLayoutVariant: CaixaPdvLayoutVariant =
-    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "classic" ? "classic" : "default"
+  const { layoutVariant: pdvLayoutVariant, toggleLayoutVariant: onToggleLayoutVariant } =
+    useCaixaLayoutPreference()
 
   const {
     mensagem,
@@ -988,6 +988,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     <>
       <div
         data-caixa-layout={pdvLayoutVariant === "classic" ? "classic" : undefined}
+        suppressHydrationWarning
         className={cn(
           "h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5",
           pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "caixa-oriental-root",
@@ -1005,6 +1006,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           m={m}
           idioma={idioma}
           layoutVariant={pdvLayoutVariant}
+          onToggleLayoutVariant={onToggleLayoutVariant}
           operadorLabel={operadorLabel}
           caixaStatus={caixaStatus}
           carregandoStatus={carregandoStatus}

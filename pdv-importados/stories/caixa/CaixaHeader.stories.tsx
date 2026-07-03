@@ -17,6 +17,9 @@ const meta: Meta<typeof CaixaHeader> = {
       },
     },
   },
+  args: {
+    onToggleLayoutVariant: noop,
+  },
   argTypes: {
     caixaStatus: {
       control: 'object',

@@ -11,6 +11,7 @@ import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoe
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortcutsReference"
+import { CaixaThemeToggle } from "@/app/caixa/CaixaThemeToggle"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 
@@ -20,6 +21,7 @@ type Props = {
   m: Mensagens
   idioma: Idioma
   layoutVariant: CaixaPdvLayoutVariant
+  onToggleLayoutVariant: () => void
   operadorLabel: string
   caixaStatus: CaixaStatusUi | null
   carregandoStatus?: boolean
@@ -34,6 +36,7 @@ export function CaixaPdvTopBar({
   m,
   idioma,
   layoutVariant,
+  onToggleLayoutVariant,
   operadorLabel,
   caixaStatus,
   carregandoStatus = false,
@@ -192,6 +195,7 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
+          <CaixaThemeToggle m={m} layoutVariant={layoutVariant} onToggle={onToggleLayoutVariant} />
           <CaixaKeyboardShortcutsReference m={m} variant={classic ? "classic" : "default"} />
           <SignOutButton
             label={m.comum.sair}
