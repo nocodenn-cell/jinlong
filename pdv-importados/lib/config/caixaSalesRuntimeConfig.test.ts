@@ -56,4 +56,21 @@ describe('getCaixaSalesRuntimeConfig', () => {
     expect(cfg.autoEnqueueFiscalOnSale).toBe(false)
     expect(cfg.source.STRICT_MANAGER_DISCOUNT_AUTH).toBe('env')
   })
+
+  it('flag vazia ou só espaços equivale a não definida (default, sem inválido)', () => {
+    // `FLAG=` em .env não pode bloquear a finalização de venda: vazio não é
+    // typo — é ausência. Default seguro aplicado, hasInvalidFlags=false.
+    setEnv({
+      STRICT_MANAGER_DISCOUNT_AUTH: '',
+      AUTO_ENQUEUE_FISCAL_ON_SALE: '   ',
+    })
+
+    const cfg = getCaixaSalesRuntimeConfig()
+    expect(cfg.hasInvalidFlags).toBe(false)
+    expect(cfg.invalidFlags).toEqual([])
+    expect(cfg.strictManagerDiscountAuth).toBe(true)
+    expect(cfg.autoEnqueueFiscalOnSale).toBe(false)
+    expect(cfg.source.STRICT_MANAGER_DISCOUNT_AUTH).toBe('default')
+    expect(cfg.source.AUTO_ENQUEUE_FISCAL_ON_SALE).toBe('default')
+  })
 })

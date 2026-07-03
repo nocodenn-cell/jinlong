@@ -52,6 +52,7 @@ import {
 } from './actions'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 import { STATUS_PUBLICACAO_BADGE } from './statusPublicacaoBadge'
+import { podePublicarProduto } from '@/core/catalog/statusPublicacao'
 import { parseTagsFiltroTexto } from './produtoGerenteFiltrosUtils'
 
 export type { ProdutoGerenteRow } from './produtoGerenteTypes'
@@ -1104,10 +1105,11 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                     label={m.produtos[STATUS_PUBLICACAO_BADGE[p.status_publicacao].labelKey]}
                   />
                 </td>
-                {/* Ações compactas — ícones em linha (Publicar só para rascunho) */}
+                {/* Ações compactas — ícones em linha (Publicar só para rascunho;
+                     decisão vem do core via podePublicarProduto — guard:core). */}
                 <td className="px-1 py-1 text-center">
                   <div className="flex items-center justify-center gap-0.5">
-                    {p.status_publicacao === 'DRAFT' && (
+                    {podePublicarProduto(p.status_publicacao) && (
                       <button
                         type="button"
                         disabled={publicarLoading}

@@ -25,7 +25,12 @@ const MIGRATIONS_DIR = path.join(root, 'backend/supabase/migrations')
 
 // Colisões herdadas — já aplicadas em produção, não renumeráveis. Dívida explícita.
 // Qualquer colisão NOVA (fora desta lista) falha o guard.
-const INHERITED_COLLISIONS = new Set(['225', '235'])
+// 245 (PRs #93/#81) e 250 (PRs #110/#106): pares mergeados na main em momentos
+// distintos; renumerar agora dessincronizaria `supabase migration list` dos
+// ambientes onde já foram aplicadas. Adicionadas ao allowlist em 2026-07-03.
+// Para renumerar (e remover daqui): verificar antes, no remoto, quais das 4
+// estão aplicadas (`npx supabase migration list`).
+const INHERITED_COLLISIONS = new Set(['225', '235', '245', '250'])
 
 if (!fs.existsSync(MIGRATIONS_DIR)) {
   console.error(`[migration-sequence-guard] FAIL — diretório não encontrado: ${MIGRATIONS_DIR}`)
@@ -106,4 +111,6 @@ if (newCollisions.length > 0) {
   process.exit(1)
 }
 
-console.log('\n[migration-sequence-guard] OK — nenhuma colisão nova (herdadas 225/235 em allowlist)')
+console.log(
+  `\n[migration-sequence-guard] OK — nenhuma colisão nova (herdadas ${[...INHERITED_COLLISIONS].join('/')} em allowlist)`,
+)
