@@ -38,12 +38,20 @@ function listMigrationVersionsFromDisk() {
   return versions;
 }
 
+// CLIs Go recentes (incl. supabase-cli) costumam renderizar tabelas com
+// box-drawing Unicode (│ ─ ┼) em vez de ASCII puro (| -), inclusive em modo
+// não-interativo/CI. Normalizamos para ASCII antes de aplicar as regras de
+// parsing, para não depender de qual variante o CLI instalado usa.
+function normalizeTableChars(line) {
+  return line.replace(/[│┃┆┊╎╏]/g, "|").replace(/[─━┄┈╌]/g, "-");
+}
+
 function parseMigrationListTable(stdout) {
   const rows = [];
-  for (const line of stdout.split(/\r?\n/)) {
-    const trimmed = line.trim();
+  for (const rawLine of stdout.split(/\r?\n/)) {
+    const trimmed = normalizeTableChars(rawLine.trim());
     if (!trimmed.includes("|")) continue;
-    if (/^[-\s|]+$/.test(trimmed)) continue;
+    if (/^[-\s|┼┿╂╁╀+]+$/.test(trimmed)) continue;
     if (/^\s*local\s*\|/i.test(trimmed)) continue;
 
     const m = trimmed.match(/^(\d+)\s*\|\s*(\d*)\s*(?:\|.*)?$/i);
