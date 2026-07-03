@@ -265,9 +265,15 @@ BEGIN
 END;
 $$;
 
+-- Fecha bypass: a migration 221 (loop automático de "PUBLIC execute em
+-- SECURITY DEFINER") concedeu EXECUTE direto a `authenticated` nesta
+-- assinatura por engano — a Capture 20260619234314 criou este overload
+-- (stub bloqueado) sem revogar o PUBLIC execute padrão de função nova, e o
+-- loop da 221 tratou isso como "acesso legítimo a preservar". `authenticated`
+-- nunca deveria poder chamar v2 diretamente (só v4, ver migration 123).
 REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(
   uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, text
-) FROM PUBLIC;
+) FROM PUBLIC, authenticated;
 GRANT EXECUTE ON FUNCTION public.finalizar_venda_transacional_canonica_v2(
   uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, text
 ) TO service_role;
