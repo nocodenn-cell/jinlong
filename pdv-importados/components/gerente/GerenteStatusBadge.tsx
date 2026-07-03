@@ -17,6 +17,7 @@ const STATUS_TOKEN: Record<string, string> = {
   TEM_NF:       'info',
   FECHADO:      'neutral',
   INATIVO:      'neutral',
+  RASCUNHO:     'warning',
   CANCELADA:    'danger',
   ERRO:         'danger',
   PARCIAL:      'warning',
