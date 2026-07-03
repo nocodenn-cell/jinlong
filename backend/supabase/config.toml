@@ -269,9 +269,9 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# RLS v2 (migration 254): carimba app_metadata.loja_id e app_metadata.perfil no JWT
-# a partir de public.usuarios, para que o isolamento de tenant seja lido do token
-# assinado (public.auth_loja_id()) sem subquery em usuarios.
+# RLS v2 (migration 254, Fase 1): carimba SOMENTE app_metadata.loja_id (tenant) no
+# JWT a partir de public.usuarios, para que o isolamento de tenant seja lido do
+# token assinado (public.auth_loja_id()) sem subquery em usuarios. Sem role/perfil.
 [auth.hook.custom_access_token]
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
