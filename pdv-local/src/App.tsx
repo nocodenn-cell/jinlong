@@ -32,7 +32,7 @@ function corIndicadorSync(statusSync: string): string {
 function bgOutboxBanner(resumo: { dlq: number; em_backoff: number }): string {
   if (resumo.dlq > 0) return colors.errorBg
   if (resumo.em_backoff > 0) return colors.warningBg
-  return '#eff6ff' // Light blue info
+  return colors.infoBg
 }
 
 function estiloBannerMensagem(mensagem: string): Pick<CSSProperties, 'color' | 'backgroundColor'> {
@@ -303,8 +303,8 @@ export function App() {
               color: colors.textSecondary,
               padding: '0.2rem 0.6rem',
               borderRadius: 999,
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
+              background: colors.metricBg,
+              border: `1px solid ${colors.metricBorder}`,
               display: 'flex',
               gap: 8,
             }}
@@ -332,7 +332,7 @@ export function App() {
           height: 14,
           borderRadius: '50%',
           zIndex: 30,
-          border: '2px solid #ffffff',
+          border: `2px solid ${colors.syncDotBorder}`,
           boxShadow: '0 0 0 1px rgba(0,0,0,0.08)',
           backgroundColor: corIndicadorSync(statusSync),
         }}
@@ -343,7 +343,7 @@ export function App() {
           style={{
             padding: '0.45rem 1.5rem',
             fontSize: 12,
-            borderBottom: `1px solid ${colors.warningBg}`,
+            borderBottom: `1px solid ${colors.warningBorder}`,
             backgroundColor: colors.warningBg,
             color: colors.warningText,
           }}
@@ -362,9 +362,9 @@ export function App() {
             style={{
               padding: '0.45rem 1.5rem',
               fontSize: 13,
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: `1px solid ${colors.headerBorder}`,
               backgroundColor: bgOutboxBanner(outboxResumo),
-              color: outboxResumo.dlq > 0 ? '#991b1b' : '#374151',
+              color: outboxResumo.dlq > 0 ? colors.outboxDlqText : colors.buttonText,
               display: 'flex',
               flexWrap: 'wrap',
               alignItems: 'center',
@@ -387,9 +387,9 @@ export function App() {
                     fontWeight: 600,
                     padding: '0.25rem 0.65rem',
                     borderRadius: 8,
-                    border: '1px solid #dc2626',
-                    background: reprocessandoDlq ? '#fecaca' : '#ffffff',
-                    color: '#991b1b',
+                    border: `1px solid ${colors.outboxDlqBorder}`,
+                    background: reprocessandoDlq ? colors.outboxDlqButtonDisabledBg : colors.clearButtonBg,
+                    color: colors.outboxDlqText,
                     cursor: reprocessandoDlq ? 'default' : 'pointer',
                   }}
                 >
@@ -402,7 +402,7 @@ export function App() {
                   Fila de sync: <strong>{outboxResumo.prontos_sync}</strong> pronto(s)
                 </span>
                 {outboxResumo.em_backoff > 0 ? (
-                  <span style={{ color: '#92400e' }}>
+                  <span style={{ color: colors.warningText }}>
                     · <strong>{outboxResumo.em_backoff}</strong> aguardando intervalo (retry
                     com backoff)
                   </span>
@@ -417,9 +417,9 @@ export function App() {
           style={{
             padding: '0.5rem 1.5rem',
             fontSize: 13,
-            color: '#92400e',
-            backgroundColor: '#fffbeb',
-            borderBottom: '1px solid #fbbf24',
+            color: colors.warningText,
+            backgroundColor: colors.warningBg,
+            borderBottom: `1px solid ${colors.warningBorder}`,
           }}
         >
           Execução fora do Tauri. Abra o app desktop para gravar as vendas localmente.
@@ -431,9 +431,9 @@ export function App() {
           style={{
             padding: '0.5rem 1.5rem',
             fontSize: 13,
-            color: '#92400e',
-            backgroundColor: '#fffbeb',
-            borderBottom: '1px solid #fbbf24',
+            color: colors.warningText,
+            backgroundColor: colors.warningBg,
+            borderBottom: `1px solid ${colors.warningBorder}`,
           }}
         >
           <strong>Catálogo vazio.</strong> Copie{' '}
@@ -443,7 +443,7 @@ export function App() {
           <code style={{ fontSize: 12 }}>SYNC_KEY</code>, reinicie o
           app e clique em <strong>Sincronizar catálogo</strong>.
           {ultimoErroSincCatalogo && (
-            <div style={{ marginTop: 6, fontSize: 12, color: '#b45309' }}>
+            <div style={{ marginTop: 6, fontSize: 12, color: colors.warningText }}>
               Motivo: {ultimoErroSincCatalogo}
             </div>
           )}
@@ -605,9 +605,9 @@ export function App() {
                 gridTemplateColumns: '3fr 0.8fr 1fr 1fr 0.9fr',
                 padding: '0.5rem 0.75rem',
                 fontSize: 12,
-                background: '#f9fafb',
+                background: colors.tableHeaderBg,
                 color: colors.tableHeaderText,
-                borderBottom: '1px solid #e5e7eb',
+                borderBottom: `1px solid ${colors.headerBorder}`,
               }}
             >
               <span>Produto</span>
@@ -644,7 +644,7 @@ export function App() {
                       gridTemplateColumns: '3fr 0.8fr 1fr 1fr 0.9fr',
                       padding: '0.45rem 0.75rem',
                       fontSize: 12,
-                      borderBottom: '1px solid #f3f4f6',
+                      borderBottom: `1px solid ${colors.tableRowBorder}`,
                       alignItems: 'center',
                     }}
                   >
@@ -677,7 +677,7 @@ export function App() {
                           minHeight: 44,
                           borderRadius: 10,
                           border: `1px solid ${colors.inputBorder}`,
-                          background: '#ffffff',
+                          background: colors.buttonBg,
                           color: colors.foreground,
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -701,7 +701,7 @@ export function App() {
                           padding: '4px 6px',
                           borderRadius: 6,
                           border: `1px solid ${colors.inputBorder}`,
-                          background: '#ffffff',
+                          background: colors.buttonBg,
                           color: colors.foreground,
                         }}
                       />
@@ -713,7 +713,7 @@ export function App() {
                           minHeight: 44,
                           borderRadius: 10,
                           border: `1px solid ${colors.inputBorder}`,
-                          background: '#ffffff',
+                          background: colors.buttonBg,
                           color: colors.foreground,
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -756,7 +756,7 @@ export function App() {
                             padding: '2px 6px',
                             borderRadius: 999,
                             border: '1px solid rgba(22,163,74,0.4)',
-                            color: '#166534',
+                            color: colors.atacadoText,
                             backgroundColor: colors.atacadoBg,
                           }}
                         >
@@ -845,7 +845,7 @@ export function App() {
                   display: 'flex',
                   justifyContent: 'space-between',
                   fontSize: 13,
-                  color: '#dc2626',
+                  color: colors.syncError,
                 }}
               >
                 <span>Desconto gerente ({descontoGerentePercentual.toFixed(1)}%)</span>
@@ -870,7 +870,7 @@ export function App() {
                 <div style={{ fontSize: 12, color: colors.lastItemText, fontWeight: 700 }}>
                   Último item adicionado
                 </div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: '#111827' }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: colors.foreground }}>
                   {ultimoItemAdicionado.nome}
                 </div>
               </div>
@@ -904,8 +904,8 @@ export function App() {
                 padding: '0.6rem 0.9rem',
                 borderRadius: 999,
                 border: `1px solid ${colors.inputBorder}`,
-                background: '#f9fafb',
-                color: itens.length === 0 ? '#9ca3af' : '#374151',
+                background: colors.clearButtonDisabledBg,
+                color: itens.length === 0 ? colors.textDisabled : colors.buttonText,
                 fontSize: 12,
                 fontWeight: 500,
                 cursor: itens.length === 0 ? 'default' : 'pointer',
@@ -975,7 +975,7 @@ export function App() {
                   padding: '0.65rem 0.9rem',
                   borderRadius: 999,
                   border: `1px solid ${colors.inputBorder}`,
-                  background: '#ffffff',
+                  background: colors.buttonBg,
                   color: colors.foreground,
                   fontSize: 12,
                   fontWeight: 500,
@@ -995,7 +995,7 @@ export function App() {
                   padding: '0.65rem 0.9rem',
                   borderRadius: 999,
                   border: `1px solid ${colors.inputBorder}`,
-                  background: '#ffffff',
+                  background: colors.buttonBg,
                   color: colors.foreground,
                   fontSize: 12,
                   fontWeight: 500,
@@ -1017,7 +1017,7 @@ export function App() {
                   padding: '0.55rem 0.9rem',
                   borderRadius: 999,
                   border: `1px solid ${colors.inputBorder}`,
-                  background: '#ffffff',
+                  background: colors.buttonBg,
                   color: colors.foreground,
                   fontSize: 12,
                   fontWeight: 500,
@@ -1037,11 +1037,17 @@ export function App() {
                 padding: '1rem 1rem',
                 borderRadius: 999,
                 border: 'none',
+                /*
+                 * Auditoria WCAG: texto #ecfdf3 sobre o gradiente #16a34a→#059669 media
+                 * 3.14-3.79:1 (17px bold nao atinge o limiar de "texto grande" do WCAG,
+                 * que exige 14pt/18.66px bold) — FALHA AA. Gradiente escurecido para
+                 * #047857→#065f46 (5.53-7.77:1) e texto para branco puro.
+                 */
                 background:
                   itens.length === 0 || isFinalizandoVenda
-                    ? '#86efac'
-                    : 'linear-gradient(135deg,#16a34a,#059669)',
-                color: '#ecfdf3',
+                    ? colors.finalizarDisabledBg
+                    : 'linear-gradient(135deg,#047857,#065f46)',
+                color: itens.length === 0 || isFinalizandoVenda ? colors.finalizarDisabledText : '#ffffff',
                 fontSize: 17,
                 fontWeight: 800,
                 cursor: itens.length === 0 || isFinalizandoVenda ? 'default' : 'pointer',

@@ -182,10 +182,17 @@
   box-shadow: 0 1px 2px color-mix(in srgb, rgba(0, 0, 0, 0.2) 50%, transparent);
 }
 
+/*
+ * Auditoria WCAG: cores originais (fundo escuro #7f1d1d + texto claro #fecaca)
+ * foram desenhadas para tema escuro. Com o app travado em tema claro (Fase 0),
+ * o fundo resultante ficava claro/rosado e o texto claro ficava ilegível sobre
+ * ele (contraste medido: 1.60:1). Ajustado para o padrão claro-com-texto-escuro
+ * já usado no restante do sistema (--jl-status-danger-*): 6.86:1.
+ */
 .app-btn-danger {
   border: 1px solid color-mix(in srgb, #ef4444 45%, var(--border));
-  background: color-mix(in srgb, #7f1d1d 40%, var(--surface-soft));
-  color: #fecaca;
+  background: color-mix(in srgb, #ef4444 12%, var(--surface-soft));
+  color: #991b1b;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateY(0);
   box-shadow: 0 1px 3px color-mix(in srgb, rgba(239, 68, 68, 0.3) 50%, transparent);
@@ -295,22 +302,31 @@ button:focus-visible:not(.app-btn-accent):not(.app-btn-neutral):not(.app-btn-dan
     0 0 0 4px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
+/*
+ * Auditoria WCAG: as três badges abaixo misturavam uma cor sólida ESCURA com
+ * "transparent" — pensado para revelar um fundo escuro por trás (tema
+ * noturno). Com o app travado em tema claro (Fase 0), "transparent" revela
+ * branco, e o resultado é um par claro-sobre-quase-claro. Contraste medido
+ * antes da correção: positive 1.49:1, danger 1.00:1, warn 2.75:1 —
+ * praticamente invisíveis. Ajustado para o padrão claro-com-texto-escuro
+ * (--jl-status-*): positive 6.44:1, danger 7.16:1, warn ~4.9:1.
+ */
 .app-badge-positive {
   border: 1px solid color-mix(in srgb, #10b981 45%, var(--border));
-  background: color-mix(in srgb, #064e3b 35%, transparent);
-  color: #a7f3d0;
+  background: color-mix(in srgb, #10b981 12%, var(--surface));
+  color: #166534;
 }
 
 .app-badge-warn {
   border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
-  background: color-mix(in srgb, var(--accent-strong) 20%, transparent);
-  color: color-mix(in srgb, var(--accent) 82%, #fff 18%);
+  background: color-mix(in srgb, var(--accent-strong) 12%, var(--surface));
+  color: var(--accent-strong);
 }
 
 .app-badge-danger {
   border: 1px solid color-mix(in srgb, #f87171 45%, var(--border));
-  background: color-mix(in srgb, #7f1d1d 20%, transparent);
-  color: #fecaca;
+  background: color-mix(in srgb, #ef4444 12%, var(--surface));
+  color: #991b1b;
 }
 
 
@@ -415,7 +431,8 @@ html:has(.login-premium-root) body {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-dragon-gold-luxury) 52%, transparent);
+  /* Auditoria WCAG: 52% opacidade media 3.14:1 sobre o fundo preto do login — FALHA AA. Ajustado para 5.72:1. */
+  color: color-mix(in srgb, var(--color-dragon-gold-luxury) 75%, transparent);
 }
 
 .login-premium-input {
@@ -521,6 +538,41 @@ html:has(.login-premium-root) body {
   background:
     radial-gradient(circle at 50% -10%, rgba(251, 191, 36, 0.16) 0%, transparent 42%),
     linear-gradient(180deg, #1f2937 0%, #111827 54%, #0b1220 100%);
+}
+
+/*
+ * Auditoria WCAG (contraste global): o Caixa em modo padrão (sem
+ * data-caixa-layout='classic') tem fundo escuro, mas os componentes filhos
+ * (CaixaCartList e outros) usam classes Tailwind shadcn (text-foreground,
+ * text-primary, text-muted-foreground, bg-card, bg-muted, border-border...)
+ * que resolviam para os tokens --foreground/--primary/--muted-foreground/etc
+ * de app/globals.css — todos calibrados para fundo CLARO. Sem esta
+ * sobreposição, o texto do carrinho (nome do produto, preços, totais) ficava
+ * com contraste medido de 1.01:1–2.68:1 contra o gradiente escuro
+ * (praticamente invisível). Valores abaixo replicam a paleta clara já usada
+ * em rgb() no restante do sistema dragon-dark (--jl-fg-1/2/3 dark variant).
+ */
+.caixa-oriental-root:not([data-caixa-layout='classic']) {
+  --background: 217.2 32.6% 17.5%;
+  --foreground: 210 40% 98%;
+  --card: 217.2 32.6% 17.5%;
+  --card-foreground: 210 40% 98%;
+  --popover: 217.2 32.6% 17.5%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 215.3 25% 26.7%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 215.3 25% 26.7%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 215.3 25% 26.7%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 72% 62%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 215.4 16.3% 46.9%;
+  --input: 215.4 16.3% 46.9%;
+  --ring: 210 40% 98%;
+  color: hsl(var(--foreground));
 }
 
 .caixa-oriental-root::before {
@@ -1098,7 +1150,8 @@ html:has(.login-premium-root) body {
 }
 
 [data-gerente-ui-theme='dragon-light'] .gerente-fin-input::placeholder {
-  color: rgb(148 163 184);
+  /* Auditoria WCAG: rgb(148 163 184) media 2.58:1 sobre fundo branco. Ajustado para var(--jl-fg-3) (5.63:1). */
+  color: var(--jl-fg-3);
 }
 
 .gerente-fin-input:focus {

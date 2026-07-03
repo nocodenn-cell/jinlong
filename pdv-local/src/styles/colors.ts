@@ -76,6 +76,9 @@ export const colors = {
   varejoBg: '#f9fafb',
 
   // === MESSAGES ===
+  // Info (fila de sync em dia)
+  infoBg: '#eff6ff',
+
   // Success
   successBg: '#dcfce7',
   successText: '#166534',
@@ -107,6 +110,26 @@ export const colors = {
   // === BOOT SPLASH ===
   goldLuxury: '#d4af37',
   goldCinzel: '#bfa76a',
+
+  // === METRICS BAR ===
+  metricBg: '#f8fafc',
+  metricBorder: '#e2e8f0',
+
+  // === SYNC INDICATOR ===
+  syncDotBorder: '#ffffff',
+
+  // === WARNING BANNER (border forte, distinto do bg) ===
+  warningBorder: '#fbbf24',
+
+  // === OUTBOX DLQ ===
+  outboxDlqText: '#991b1b',
+  outboxDlqBorder: '#dc2626',
+  outboxDlqButtonDisabledBg: '#fecaca',
+
+  // === FINALIZAR VENDA (botao principal) ===
+  // Auditoria WCAG: texto branco/#ecfdf3 sobre #86efac media 1.41:1 quando disabled.
+  finalizarDisabledBg: '#86efac',
+  finalizarDisabledText: '#166534', // 5.13:1 sobre finalizarDisabledBg
 } as const;
 
 export type ColorToken = typeof colors;

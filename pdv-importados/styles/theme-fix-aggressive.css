@@ -27,7 +27,12 @@
   /* Foreground */
   --jl-fg-1: var(--surface-text, rgb(15 23 42));       /* primary text — slate-900 */
   --jl-fg-2: rgb(100 116 139);                          /* secondary text — slate-500 */
-  --jl-fg-3: rgb(148 163 184);                          /* tertiary text — slate-400 */
+  /*
+   * Auditoria WCAG: rgb(148 163 184) (slate-400) tinha 2.58:1 sobre fundo
+   * branco — FALHA AA (4.5:1). Usado em nav-group-label, badge-muted,
+   * hints/placeholders em ~100+ locais. Ajustado para 5.63:1.
+   */
+  --jl-fg-3: rgb(90 105 128);                           /* tertiary text — slate-500/600 */
 
   /* Accent (Bling blue) */
   --jl-accent: var(--accent, #2563eb);
@@ -106,7 +111,7 @@
   /* Foreground */
   --jl-fg-1: rgb(15, 23, 42);       /* slate-900 — texto primário */
   --jl-fg-2: rgb(100, 116, 139);    /* slate-500 — secundário */
-  --jl-fg-3: rgb(148, 163, 184);    /* slate-400 — muted/labels */
+  --jl-fg-3: rgb(90, 105, 128);     /* muted/labels — WCAG AA (5.63:1, era 2.58:1) */
 
   /* Accent (Bling blue) */
   --jl-accent: #2563eb;             /* blue-600 — brand light */
