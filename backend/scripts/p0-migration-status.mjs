@@ -96,14 +96,21 @@ function main() {
   let stdout;
   let stderr = "";
   try {
-    stdout = execSync("npx supabase migration list", {
+    // Redireciona stderr→stdout: alguns CLIs Go (supabase-cli incluído, em
+    // certas versões/terminais) escrevem a tabela de dados no stderr mesmo em
+    // execução bem-sucedida, só usando stdout para JSON/máquina. Sem isso,
+    // `execSync` descarta o stderr no caminho de sucesso e o parser via zero
+    // linhas mesmo com o CLI funcionando corretamente.
+    stdout = execSync("npx supabase migration list 2>&1", {
       cwd: BACKEND_ROOT,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       maxBuffer: 10 * 1024 * 1024,
     });
   } catch (e) {
-    stderr = e.stderr?.toString?.() ?? String(e.stderr ?? "");
+    // Com `2>&1` no comando, o stderr do CLI já vem mesclado em e.stdout —
+    // e.stderr tende a ficar vazio. Usa o que existir.
+    stderr = (e.stdout?.toString?.() ?? String(e.stdout ?? "")) || (e.stderr?.toString?.() ?? String(e.stderr ?? ""));
     const hint =
       "Confira: pasta `backend`, `npx supabase link --project-ref <ref>` e login CLI.";
     if (opts.json) {
@@ -134,9 +141,12 @@ function main() {
     const msg =
       "Nenhuma linha de migration foi interpretada. Atualize o parser se o formato do CLI mudou.";
     if (opts.json) {
-      console.log(JSON.stringify({ ok: false, error: "parse_empty", message: msg }, null, 2));
+      console.log(JSON.stringify({ ok: false, error: "parse_empty", message: msg, rawStdout: stdout }, null, 2));
     } else {
       console.error(msg);
+      console.error("\n--- stdout bruto de `npx supabase migration list` (para diagnóstico) ---");
+      console.error(stdout);
+      console.error("--- fim do stdout bruto ---\n");
     }
     process.exit(2);
   }
