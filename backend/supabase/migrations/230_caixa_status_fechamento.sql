@@ -68,6 +68,10 @@ COMMENT ON FUNCTION public.obter_status_caixa_operador(uuid) IS
   'Status operacional único do caixa: ABERTO | FECHADO | ERRO.';
 
 -- Fechamento idempotente: segundo clique retorna sucesso com o_ja_fechado = true.
+-- DROP necessário: adiciona a coluna o_ja_fechado ao RETURNS TABLE da 207 —
+-- CREATE OR REPLACE não permite mudar o tipo de retorno de uma função existente.
+DROP FUNCTION IF EXISTS public.fechar_caixa_atomico(uuid, numeric, text);
+
 CREATE OR REPLACE FUNCTION public.fechar_caixa_atomico(
   p_operador_id uuid,
   p_valor_contado numeric,

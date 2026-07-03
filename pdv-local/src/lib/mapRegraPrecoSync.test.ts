@@ -41,4 +41,25 @@ describe('mapRegraPrecoRow (sync catálogo)', () => {
     expect(r.ativo).toBe(false)
     expect(r.dataValidade).toBe('2026-12-31')
   })
+
+  it('normaliza caixa/espaços dos discriminadores (SQLite offline não tem CHECK)', () => {
+    // O CHECK do Postgres garante uppercase online, mas a cópia sincronizada em
+    // SQLite não — e o PricingService compara `tipo` por igualdade exata. Sem a
+    // normalização no mapper, 'produto ' viraria ATACADO (não-match silencioso).
+    const r = mapRegraPrecoRow({
+      id: 'r-3',
+      tipo_regra: 'produto ',
+      produto_id: 'p-3',
+      categoria_id: null,
+      quantidade_minima: 1,
+      quantidade_maxima: null,
+      tipo_desconto: ' percentual',
+      valor_desconto: 10,
+      data_validade: null,
+      ativo: true,
+    })
+    expect(r.tipo).toBe('VAREJO')
+    expect(r.descontoPercentual).toBe(10)
+    expect(r.precoFixo).toBeUndefined()
+  })
 })

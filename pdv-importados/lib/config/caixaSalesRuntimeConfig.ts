@@ -29,8 +29,25 @@ function parseBoolean(rawValue: string | undefined): boolean | undefined {
   return undefined
 }
 
+/**
+ * Flag vazia/só-espaços (`FLAG=` em .env) equivale a NÃO DEFINIDA: aplica o
+ * default seguro sem marcar inválida. `hasInvalidFlags` existe para pegar
+ * typo em valor (ex.: 'ture') — e bloqueia a finalização de venda em
+ * caixaVendas.impl.ts; uma linha vazia de .env não pode derrubar o caixa.
+ */
+function isBlank(rawValue: string | undefined): boolean {
+  return rawValue === undefined || rawValue.trim() === ''
+}
+
 function resolveFlag(flagName: CriticalSalesFlagName): ParsedFlag {
   const rawValue = process.env[flagName]
+  if (isBlank(rawValue)) {
+    return {
+      value: DEFAULT_FLAGS[flagName],
+      rawValue: undefined,
+      usedDefault: true,
+    }
+  }
   const parsed = parseBoolean(rawValue)
   if (parsed === undefined) {
     return {

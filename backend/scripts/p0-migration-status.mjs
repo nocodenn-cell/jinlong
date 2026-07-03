@@ -38,18 +38,47 @@ function listMigrationVersionsFromDisk() {
   return versions;
 }
 
+// CLIs Go recentes (incl. supabase-cli) costumam renderizar tabelas com
+// box-drawing Unicode (│ ─ ┼) em vez de ASCII puro (| -), inclusive em modo
+// não-interativo/CI. Normalizamos para ASCII antes de aplicar as regras de
+// parsing, para não depender de qual variante o CLI instalado usa.
+function normalizeTableChars(line) {
+  return line.replace(/[│┃┆┊╎╏]/g, "|").replace(/[─━┄┈╌]/g, "-");
+}
+
+/**
+ * Formato real do `supabase migration list` (CLI 2.109, confirmado via
+ * stdout bruto capturado no CI do PR #132 — cada valor de célula vem entre
+ * crases simples:
+ *
+ *    Local            | Remote           | Time (UTC)
+ *   ------------------|------------------|-----------------------
+ *    `001`            | `001`            | `001`
+ *    `205`            | ` `              | `205`
+ *
+ * O parser anterior esperava dígitos nus no início da linha
+ * (`^(\d+)\s*\|...`) e nunca casava nenhuma linha real — daí "Nenhuma
+ * linha de migration foi interpretada" mesmo com o CLI funcionando
+ * corretamente. Remove as crases antes de aplicar a regra de extração.
+ */
+function stripBackticks(cell) {
+  return cell.trim().replace(/^`|`$/g, "").trim();
+}
+
 function parseMigrationListTable(stdout) {
   const rows = [];
-  for (const line of stdout.split(/\r?\n/)) {
-    const trimmed = line.trim();
+  for (const rawLine of stdout.split(/\r?\n/)) {
+    const trimmed = normalizeTableChars(rawLine.trim());
     if (!trimmed.includes("|")) continue;
-    if (/^[-\s|]+$/.test(trimmed)) continue;
+    if (/^[-\s|┼┿╂╁╀+]+$/.test(trimmed)) continue;
     if (/^\s*local\s*\|/i.test(trimmed)) continue;
 
-    const m = trimmed.match(/^(\d+)\s*\|\s*(\d*)\s*(?:\|.*)?$/i);
-    if (!m) continue;
-    const local = m[1].padStart(3, "0");
-    const remoteRaw = m[2].trim();
+    const cells = trimmed.split("|").map(stripBackticks);
+    if (cells.length < 2) continue;
+    const [localCell, remoteCell] = cells;
+    if (!/^\d+$/.test(localCell)) continue;
+    const local = localCell.padStart(3, "0");
+    const remoteRaw = remoteCell ?? "";
     const remote = remoteRaw === "" ? null : remoteRaw.padStart(3, "0");
     rows.push({ local, remote });
   }
@@ -88,14 +117,21 @@ function main() {
   let stdout;
   let stderr = "";
   try {
-    stdout = execSync("npx supabase migration list", {
+    // Redireciona stderr→stdout: alguns CLIs Go (supabase-cli incluído, em
+    // certas versões/terminais) escrevem a tabela de dados no stderr mesmo em
+    // execução bem-sucedida, só usando stdout para JSON/máquina. Sem isso,
+    // `execSync` descarta o stderr no caminho de sucesso e o parser via zero
+    // linhas mesmo com o CLI funcionando corretamente.
+    stdout = execSync("npx supabase migration list 2>&1", {
       cwd: BACKEND_ROOT,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       maxBuffer: 10 * 1024 * 1024,
     });
   } catch (e) {
-    stderr = e.stderr?.toString?.() ?? String(e.stderr ?? "");
+    // Com `2>&1` no comando, o stderr do CLI já vem mesclado em e.stdout —
+    // e.stderr tende a ficar vazio. Usa o que existir.
+    stderr = (e.stdout?.toString?.() ?? String(e.stdout ?? "")) || (e.stderr?.toString?.() ?? String(e.stderr ?? ""));
     const hint =
       "Confira: pasta `backend`, `npx supabase link --project-ref <ref>` e login CLI.";
     if (opts.json) {
@@ -126,9 +162,12 @@ function main() {
     const msg =
       "Nenhuma linha de migration foi interpretada. Atualize o parser se o formato do CLI mudou.";
     if (opts.json) {
-      console.log(JSON.stringify({ ok: false, error: "parse_empty", message: msg }, null, 2));
+      console.log(JSON.stringify({ ok: false, error: "parse_empty", message: msg, rawStdout: stdout }, null, 2));
     } else {
       console.error(msg);
+      console.error("\n--- stdout bruto de `npx supabase migration list` (para diagnóstico) ---");
+      console.error(stdout);
+      console.error("--- fim do stdout bruto ---\n");
     }
     process.exit(2);
   }

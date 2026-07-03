@@ -1,4 +1,14 @@
--- 225_rls_admin_alinha_painel_gerente.sql
+-- 251_rls_admin_alinha_painel_gerente.sql
+--
+-- RENUMERADO de 225 para 251 em 2026-07-03: colidia com
+-- 225_dashboard_serie_horaria_semana_anterior.sql (mesmo prefixo numérico,
+-- dois arquivos reivindicando a mesma versão) — quebrava `db reset`/replay
+-- sequencial com duplicate key em schema_migrations_pkey. Confirmado com o
+-- usuário via `npx supabase migration list` contra produção: nem esta
+-- migration nem sua colidente tinham entrada em Remote antes desta mudança,
+-- portanto seguro renumerar sem afetar histórico já aplicado. Conteúdo
+-- abaixo inalterado (sem dependência cruzada com a 225 nem com migrations
+-- vizinhas, verificado antes de renumerar).
 --
 -- CONSISTÊNCIA DE PERMISSÕES (ADMIN = GERENTE pleno no painel).
 --

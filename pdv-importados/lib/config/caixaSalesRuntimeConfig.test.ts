@@ -28,14 +28,49 @@ describe('getCaixaSalesRuntimeConfig', () => {
   })
 
   it('marca flags inválidas quando valor não é booleano reconhecido', () => {
+    // 'TRUE'/'True' são ACEITOS (parse case-insensitive) — rejeitá-los
+    // bloquearia a finalização de venda (caixaVendas.impl.ts aborta com
+    // hasInvalidFlags) para ambientes com essa grafia. Valor inválido de
+    // verdade é algo fora do vocabulário booleano, ex.: 'maybe'.
     setEnv({
-      STRICT_MANAGER_DISCOUNT_AUTH: 'TRUE',
+      STRICT_MANAGER_DISCOUNT_AUTH: 'maybe',
       AUTO_ENQUEUE_FISCAL_ON_SALE: '0',
     })
 
     const cfg = getCaixaSalesRuntimeConfig()
     expect(cfg.hasInvalidFlags).toBe(true)
+    expect(cfg.invalidFlags).toEqual(['STRICT_MANAGER_DISCOUNT_AUTH'])
     expect(cfg.strictManagerDiscountAuth).toBe(true)
     expect(cfg.autoEnqueueFiscalOnSale).toBe(false)
+  })
+
+  it('aceita booleanos com caixa mista (TRUE/False) sem marcar inválido', () => {
+    setEnv({
+      STRICT_MANAGER_DISCOUNT_AUTH: 'TRUE',
+      AUTO_ENQUEUE_FISCAL_ON_SALE: 'False',
+    })
+
+    const cfg = getCaixaSalesRuntimeConfig()
+    expect(cfg.hasInvalidFlags).toBe(false)
+    expect(cfg.strictManagerDiscountAuth).toBe(true)
+    expect(cfg.autoEnqueueFiscalOnSale).toBe(false)
+    expect(cfg.source.STRICT_MANAGER_DISCOUNT_AUTH).toBe('env')
+  })
+
+  it('flag vazia ou só espaços equivale a não definida (default, sem inválido)', () => {
+    // `FLAG=` em .env não pode bloquear a finalização de venda: vazio não é
+    // typo — é ausência. Default seguro aplicado, hasInvalidFlags=false.
+    setEnv({
+      STRICT_MANAGER_DISCOUNT_AUTH: '',
+      AUTO_ENQUEUE_FISCAL_ON_SALE: '   ',
+    })
+
+    const cfg = getCaixaSalesRuntimeConfig()
+    expect(cfg.hasInvalidFlags).toBe(false)
+    expect(cfg.invalidFlags).toEqual([])
+    expect(cfg.strictManagerDiscountAuth).toBe(true)
+    expect(cfg.autoEnqueueFiscalOnSale).toBe(false)
+    expect(cfg.source.STRICT_MANAGER_DISCOUNT_AUTH).toBe('default')
+    expect(cfg.source.AUTO_ENQUEUE_FISCAL_ON_SALE).toBe('default')
   })
 })

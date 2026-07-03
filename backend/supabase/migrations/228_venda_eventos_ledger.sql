@@ -109,7 +109,7 @@ AS $$
           2
         )
       )
-      ORDER BY elem.ord
+      ORDER BY t.ord
     ),
     '[]'::jsonb
   )

@@ -19,3 +19,15 @@ export function isPerfilPainelGerencial(
     perfil === 'GERENTE' || perfil === 'DONO' || perfil === 'ADMIN'
   )
 }
+
+/**
+ * Destino pós-login por perfil — mesma regra de `isPerfilPainelGerencial`
+ * (fonte também usada por `adminPolicy.canAccessAdmin`). Perfis desconhecidos
+ * caem no PDV (destino seguro), nunca no painel.
+ */
+export function destinoPosLoginPorPerfil(
+  perfil: string | null | undefined,
+  rotas: { caixaHome: string; adminDashboard: string }
+): string {
+  return isPerfilPainelGerencial(perfil) ? rotas.adminDashboard : rotas.caixaHome
+}

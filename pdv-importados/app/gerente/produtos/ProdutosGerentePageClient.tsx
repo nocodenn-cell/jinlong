@@ -7,6 +7,7 @@ import {
   FileDown,
   Filter,
   FolderInput,
+  BadgeCheck,
   Pencil,
   Plus,
   Printer,
@@ -46,8 +47,12 @@ import {
   atualizarPrecoVarejoProduto,
   buscarProdutosComFiltros,
   buscarProdutosParaExportacao,
+  publicarProduto,
+  publicarProdutosLote,
 } from './actions'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
+import { STATUS_PUBLICACAO_BADGE } from './statusPublicacaoBadge'
+import { podePublicarProduto } from '@/core/catalog/statusPublicacao'
 import { parseTagsFiltroTexto } from './produtoGerenteFiltrosUtils'
 
 export type { ProdutoGerenteRow } from './produtoGerenteTypes'
@@ -351,6 +356,39 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
       return null
     },
     { successMessage: m.comum.sucesso },
+  )
+
+  // Publica um rascunho individual (DRAFT → PUBLICADO). Fonte única: server action
+  // `publicarProduto`; a UI apenas dispara o evento e revalida a lista.
+  const { mutate: publicar, loading: publicarLoading } = useGerenteMutation(
+    async (produtoId: string) => {
+      const r = await publicarProduto(produtoId)
+      if (!r.success) throw new Error(r.error)
+      void fetchList(filtros, paginaAtual)
+      router.refresh()
+      return null
+    },
+    { successMessage: m.produtos.criado_publicado },
+  )
+
+  const { mutate: publicarLote, loading: publicarLoteLoading } = useGerenteMutation(
+    async () => {
+      const ids = Array.from(selectedIds)
+      const r = await publicarProdutosLote(ids)
+      if (!r.success) throw new Error(r.error)
+      setSelectedIds(new Set())
+      void fetchList(filtros, paginaAtual)
+      router.refresh()
+      return r.data.publicados
+    },
+    {
+      onSuccess: (publicados) => {
+        emitGerenteToast({
+          kind: 'success',
+          message: interpolateTemplate(m.produtos.publicados_sucesso, { count: String(publicados) }),
+        })
+      },
+    },
   )
 
   const { mutate: ativarLote, loading: ativarLoteLoading } = useGerenteMutation(
@@ -755,6 +793,15 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 </span>
                 <button
                   type="button"
+                  disabled={publicarLoteLoading}
+                  onClick={() => void publicarLote(null)}
+                  className="inline-flex h-7 items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+                >
+                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                  {publicarLoteLoading ? '…' : m.produtos.publicar_lote}
+                </button>
+                <button
+                  type="button"
                   disabled={ativarLoteLoading}
                   onClick={() => void ativarLote(null)}
                   className="inline-flex h-7 items-center gap-1 rounded-md border border-green-500/30 bg-green-500/10 px-2.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-50"
@@ -1050,16 +1097,30 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                     />
                   )}
                 </td>
-                {/* Status */}
+                {/* Status — dirigido por status_publicacao (DRAFT visível como Rascunho,
+                     não mais colapsado em "Inativo"). Fonte da vendabilidade: productEngine. */}
                 <td className="px-2 py-1">
                   <GerenteStatusBadge
-                    status={p.ativo ? 'ATIVO' : 'INATIVO'}
-                    label={p.ativo ? m.produtos.ativo : m.produtos.inativo}
+                    status={STATUS_PUBLICACAO_BADGE[p.status_publicacao].key}
+                    label={m.produtos[STATUS_PUBLICACAO_BADGE[p.status_publicacao].labelKey]}
                   />
                 </td>
-                {/* Ações compactas — 3 ícones em linha */}
+                {/* Ações compactas — ícones em linha (Publicar só para rascunho;
+                     decisão vem do core via podePublicarProduto — guard:core). */}
                 <td className="px-1 py-1 text-center">
                   <div className="flex items-center justify-center gap-0.5">
+                    {podePublicarProduto(p.status_publicacao) && (
+                      <button
+                        type="button"
+                        disabled={publicarLoading}
+                        onClick={() => void publicar(p.id)}
+                        title={m.produtos.publicar}
+                        aria-label={m.produtos.publicar}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-emerald-400/70 transition-colors hover:bg-emerald-500/10 hover:text-emerald-400 disabled:opacity-40"
+                      >
+                        <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={toggleLoading}

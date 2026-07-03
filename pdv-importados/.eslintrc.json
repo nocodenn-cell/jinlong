@@ -12,7 +12,13 @@
   "plugins": ["@typescript-eslint"],
   "rules": {
     "no-console": ["error", { "allow": ["warn", "error"] }],
-    "@typescript-eslint/no-unused-vars": "error",
+    // Prefixo `_` = intencionalmente não usado (ex.: `_ativo` em
+    // resolveStatusPublicacaoLeitura, mantido para preservar a assinatura dos
+    // call sites). A config anterior não honrava a convenção já usada no código.
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }
+    ],
     "@typescript-eslint/no-explicit-any": "warn",
     "prefer-const": "error",
     "no-restricted-syntax": [
@@ -30,7 +36,14 @@
   "overrides": [
     {
       "files": ["**/*.{ts,tsx}"],
-      "excludedFiles": ["app/caixa/server/**/*", "app/caixa/actions.ts"],
+      // fetchPdvStateSnapshot.internal.ts é infra server-side do PDV evaluation
+      // (usa supabase/server; consumido só por runPdvEvaluation) — import
+      // server→server legítimo, fora do alvo da regra (UI→server).
+      "excludedFiles": [
+        "app/caixa/server/**/*",
+        "app/caixa/actions.ts",
+        "lib/pdv/fetchPdvStateSnapshot.internal.ts"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -110,8 +123,11 @@
         ]
       }
     },
+    // Login/legal são páginas cerimoniais pré-auth (preto+ouro) — exceção deliberada
+    // e auditada ao tema claro. Fora do escopo dos PageTypes operacionais do Layout
+    // Compiler. (Nota: "comment" como propriedade é rejeitado pelo schema do ESLint
+    // e quebrava `npm run lint` inteiro — comentários JSONC como este são suportados.)
     {
-      "comment": "Login/legal são páginas cerimoniais pré-auth (preto+ouro) — exceção deliberada e auditada ao tema claro. Fora do escopo dos PageTypes operacionais do Layout Compiler.",
       "files": ["app/login/**/*.{ts,tsx}", "components/legal/**/*.{ts,tsx}"],
       "rules": {
         "no-restricted-syntax": "off"

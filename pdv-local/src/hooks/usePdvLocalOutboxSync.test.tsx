@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePdvLocalOutboxSync } from './usePdvLocalOutboxSync'
 
@@ -28,7 +28,7 @@ describe('usePdvLocalOutboxSync', () => {
       throw new Error(`Comando inesperado: ${cmd}`)
     })
 
-    const { result } = renderHook(() =>
+    const { result, unmount } = renderHook(() =>
       usePdvLocalOutboxSync({
         tauriDisponivel: true,
         caixaAtualId: null,
@@ -42,8 +42,15 @@ describe('usePdvLocalOutboxSync', () => {
       expect(result.current.outboxResumo?.pendentes_total).toBe(2)
     })
     expect(result.current.statusSync).toBe('pendente')
+    unmount()
   })
 
+  // NOTA (React 19 + RTL 16): envolver `reprocessarDlq()` em `await act(async…)`
+  // trava até o timeout do teste — a promise nunca liquida dentro do wrapper.
+  // O padrão da casa (o teste de mount acima e os specs de pdv-importados) é
+  // chamar direto e assertar via `waitFor`, que já aplica act internamente.
+  // `unmount()` ao final evita vazar os intervals (12s/15s) do hook para além
+  // do teardown do jsdom ("window is not defined" como unhandled error).
   it('reprocessa DLQ com sync e envia mensagem de sucesso', async () => {
     const onMensagem = vi.fn()
     const onSyncElapsedMs = vi.fn()
@@ -62,7 +69,7 @@ describe('usePdvLocalOutboxSync', () => {
       throw new Error(`Comando inesperado: ${cmd}`)
     })
 
-    const { result } = renderHook(() =>
+    const { result, unmount } = renderHook(() =>
       usePdvLocalOutboxSync({
         tauriDisponivel: true,
         caixaAtualId: 'cx-1',
@@ -72,15 +79,16 @@ describe('usePdvLocalOutboxSync', () => {
       }),
     )
 
-    await act(async () => {
-      await result.current.reprocessarDlq()
-    })
+    await result.current.reprocessarDlq()
 
     expect(invokeMock).toHaveBeenCalledWith('outbox_reprocessar_dlq_cmd')
     expect(invokeMock).toHaveBeenCalledWith('sync_outbox_real_cmd', { limite: 50 })
     expect(onSyncElapsedMs).toHaveBeenCalledTimes(1)
     expect(onMensagem).toHaveBeenCalledWith('Eventos repostos na fila. Sync executada em seguida.')
-    expect(result.current.reprocessandoDlq).toBe(false)
+    await waitFor(() => {
+      expect(result.current.reprocessandoDlq).toBe(false)
+    })
+    unmount()
   })
 
   it('retorna mensagem formatada quando reprocessar DLQ falha', async () => {
@@ -99,7 +107,7 @@ describe('usePdvLocalOutboxSync', () => {
       return null
     })
 
-    const { result } = renderHook(() =>
+    const { result, unmount } = renderHook(() =>
       usePdvLocalOutboxSync({
         tauriDisponivel: true,
         caixaAtualId: 'cx-2',
@@ -109,11 +117,12 @@ describe('usePdvLocalOutboxSync', () => {
       }),
     )
 
-    await act(async () => {
-      await result.current.reprocessarDlq()
-    })
+    await result.current.reprocessarDlq()
 
     expect(onMensagem).toHaveBeenCalledWith('erro-formatado')
-    expect(result.current.reprocessandoDlq).toBe(false)
+    await waitFor(() => {
+      expect(result.current.reprocessandoDlq).toBe(false)
+    })
+    unmount()
   })
 })

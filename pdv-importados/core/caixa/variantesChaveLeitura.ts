@@ -1,31 +1,9 @@
 /**
- * Paridade com pdv-local/src/catalogoLookup.ts — variantes da leitura (scanner/teclado)
- * para bater com o que está cadastrado em codigo_barras.
+ * Variantes de leitura (scanner/teclado) para bater com `codigo_barras`.
+ *
+ * FONTE ÚNICA: `shared-core/src/caixa/variantesChaveLeitura`. Este módulo apenas
+ * reexporta para consumidores web que importam via `@/core/caixa/...`, eliminando
+ * a segunda implementação (idêntica em comportamento) que o pdv-local já consumia
+ * direto do shared-core — evitando drift silencioso entre web e desktop.
  */
-
-export function variantesChaveLeitura(input: string): string[] {
-  const t = input.trim()
-  const out: string[] = []
-  const seen = new Set<string>()
-  const add = (s: string) => {
-    if (!s || seen.has(s)) return
-    seen.add(s)
-    out.push(s)
-  }
-
-  add(t)
-  add(t.toLowerCase())
-  add(t.replace(/\s+/g, ''))
-
-  const digits = t.replace(/\D/g, '')
-  if (digits) {
-    add(digits)
-    const stripped = digits.replace(/^0+/, '') || '0'
-    if (stripped !== digits) add(stripped)
-    if (digits.length > 13) add(digits.slice(0, 13))
-    if (digits.length > 12) add(digits.slice(0, 12))
-    if (digits.length > 8) add(digits.slice(0, 8))
-  }
-
-  return out
-}
+export { variantesChaveLeitura } from '@shared-core/src/caixa/variantesChaveLeitura'

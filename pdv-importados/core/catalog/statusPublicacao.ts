@@ -55,3 +55,12 @@ export function isVendavelPdv(
 ): boolean {
   return isProdutoVendavel({ ativo: ativo ?? false, status_publicacao: status ?? null })
 }
+
+/**
+ * Decisão de negócio: só rascunho é publicável (ação "Publicar" individual).
+ * A UI consome este predicado — nunca compara status_publicacao por literal
+ * (enforçado por scripts/core-rule-guard.mjs).
+ */
+export function podePublicarProduto(status: StatusPublicacao | null | undefined): boolean {
+  return resolveStatusPublicacaoLeitura(status) === 'DRAFT'
+}
