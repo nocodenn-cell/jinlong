@@ -39,6 +39,15 @@ ALTER TABLE public.clientes
   ADD COLUMN IF NOT EXISTS tipo text NOT NULL DEFAULT 'PF',
   ADD COLUMN IF NOT EXISTS endereco text;
 
+-- A coluna `tipo` já pode existir com valores/DEFAULT divergentes, vindos da
+-- captura 20260620200253_244 (aplicada direto no DB em 2026-06-20, com
+-- DEFAULT 'PESSOA_FISICA'). ADD COLUMN IF NOT EXISTS acima é no-op nesse
+-- caso — normaliza aqui os valores legados para o domínio PF/PJ e corrige
+-- o DEFAULT antes de travar o CHECK abaixo.
+UPDATE public.clientes SET tipo = 'PF' WHERE tipo = 'PESSOA_FISICA';
+UPDATE public.clientes SET tipo = 'PJ' WHERE tipo = 'PESSOA_JURIDICA';
+ALTER TABLE public.clientes ALTER COLUMN tipo SET DEFAULT 'PF';
+
 -- Garante o domínio PF/PJ sem falhar se já existir
 DO $$
 BEGIN
