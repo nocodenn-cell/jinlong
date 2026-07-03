@@ -46,6 +46,25 @@ function normalizeTableChars(line) {
   return line.replace(/[│┃┆┊╎╏]/g, "|").replace(/[─━┄┈╌]/g, "-");
 }
 
+/**
+ * Formato real do `supabase migration list` (CLI 2.109, confirmado via
+ * stdout bruto capturado no CI do PR #132 — cada valor de célula vem entre
+ * crases simples:
+ *
+ *    Local            | Remote           | Time (UTC)
+ *   ------------------|------------------|-----------------------
+ *    `001`            | `001`            | `001`
+ *    `205`            | ` `              | `205`
+ *
+ * O parser anterior esperava dígitos nus no início da linha
+ * (`^(\d+)\s*\|...`) e nunca casava nenhuma linha real — daí "Nenhuma
+ * linha de migration foi interpretada" mesmo com o CLI funcionando
+ * corretamente. Remove as crases antes de aplicar a regra de extração.
+ */
+function stripBackticks(cell) {
+  return cell.trim().replace(/^`|`$/g, "").trim();
+}
+
 function parseMigrationListTable(stdout) {
   const rows = [];
   for (const rawLine of stdout.split(/\r?\n/)) {
@@ -54,10 +73,12 @@ function parseMigrationListTable(stdout) {
     if (/^[-\s|┼┿╂╁╀+]+$/.test(trimmed)) continue;
     if (/^\s*local\s*\|/i.test(trimmed)) continue;
 
-    const m = trimmed.match(/^(\d+)\s*\|\s*(\d*)\s*(?:\|.*)?$/i);
-    if (!m) continue;
-    const local = m[1].padStart(3, "0");
-    const remoteRaw = m[2].trim();
+    const cells = trimmed.split("|").map(stripBackticks);
+    if (cells.length < 2) continue;
+    const [localCell, remoteCell] = cells;
+    if (!/^\d+$/.test(localCell)) continue;
+    const local = localCell.padStart(3, "0");
+    const remoteRaw = remoteCell ?? "";
     const remote = remoteRaw === "" ? null : remoteRaw.padStart(3, "0");
     rows.push({ local, remote });
   }
