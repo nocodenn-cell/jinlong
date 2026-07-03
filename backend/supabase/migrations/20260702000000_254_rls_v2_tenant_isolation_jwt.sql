@@ -28,15 +28,16 @@
 --      Nenhuma regra de perfil (GERENTE/DONO/ADMIN) permanece em policy.
 --   5. Nenhum subquery em `usuarios` dentro de policy.
 --
---   A autorização por papel (quem pode cancelar venda, aprovar desconto, editar
---   catálogo global, etc.) migra para a camada de aplicação e para as RPCs
---   SECURITY DEFINER, que passam a ler o claim `perfil` do JWT em vez de fazer
---   subquery em `usuarios`. Ver docs/rls_v2_auth_isolation.md (Fase 2).
+--   ESCOPO DESTA MIGRATION (Fase 1 — infra de segurança / tenant):
+--   apenas o claim de TENANT (`loja_id`) e o isolamento por loja. NENHUMA
+--   lógica de papel/permissão de negócio (perfil, roles, "quem pode o quê").
+--   A autorização por papel — incluindo o claim `perfil` no JWT e os checks das
+--   RPCs — é FASE 2, fora deste PR. Ver docs/rls_v2_auth_isolation.md.
 --
 -- ORDEM DE ROLLOUT (obrigatória — ver doc)
---   Esta migration já grava `loja_id`/`perfil` em auth.users.raw_app_meta_data
---   (backfill) e instala o hook que mantém o claim sincronizado a cada emissão
---   de token. Como o Supabase copia `raw_app_meta_data` para o claim
+--   Esta migration grava `loja_id` em auth.users.raw_app_meta_data (backfill) e
+--   instala o hook que mantém o claim de tenant sincronizado a cada emissão de
+--   token. Como o Supabase copia `raw_app_meta_data` para o claim
 --   `app_metadata`, tokens EMITIDOS APÓS o backfill já carregam `loja_id`.
 --   Sessões ativas com token antigo (sem o claim) só passam a enxergar dados
 --   após o refresh do token (<= jwt_expiry, 3600s) OU novo login. Planeje a
@@ -70,11 +71,12 @@ GRANT EXECUTE ON FUNCTION public.auth_loja_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.auth_loja_id() TO service_role;
 
 -- ---------------------------------------------------------------------------
--- 2. CUSTOM ACCESS TOKEN HOOK — carimba loja_id/perfil no JWT a cada emissão
+-- 2. CUSTOM ACCESS TOKEN HOOK — carimba SOMENTE loja_id (tenant) no JWT
 -- ---------------------------------------------------------------------------
 -- SECURITY DEFINER (dono = postgres) para ler public.usuarios sem esbarrar em
--- RLS. Mantém o claim sincronizado quando a loja/perfil do usuário muda, sem
+-- RLS. Mantém o claim de tenant sincronizado quando a loja do usuário muda, sem
 -- depender do backfill manual em auth.users.
+-- Fase 1: apenas tenant. O claim de papel (perfil) é Fase 2 — não injetado aqui.
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -86,10 +88,9 @@ DECLARE
   v_claims jsonb;
   v_meta   jsonb;
   v_loja   uuid;
-  v_perfil text;
 BEGIN
-  SELECT u.loja_id, u.perfil
-    INTO v_loja, v_perfil
+  SELECT u.loja_id
+    INTO v_loja
   FROM public.usuarios u
   WHERE u.id = (event ->> 'user_id')::uuid;
 
@@ -99,9 +100,6 @@ BEGIN
   IF v_loja IS NOT NULL THEN
     v_meta := jsonb_set(v_meta, '{loja_id}', to_jsonb(v_loja::text));
   END IF;
-  IF v_perfil IS NOT NULL THEN
-    v_meta := jsonb_set(v_meta, '{perfil}', to_jsonb(v_perfil));
-  END IF;
 
   v_claims := jsonb_set(v_claims, '{app_metadata}', v_meta);
   event    := jsonb_set(event, '{claims}', v_claims);
@@ -110,22 +108,22 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.custom_access_token_hook(jsonb) IS
-  'RLS v2: injeta app_metadata.loja_id e app_metadata.perfil no JWT a partir de public.usuarios. Habilitar em config.toml [auth.hook.custom_access_token].';
+  'RLS v2 (Fase 1): injeta SOMENTE app_metadata.loja_id (tenant) no JWT a partir de public.usuarios. Sem perfil/role. Habilitar em config.toml [auth.hook.custom_access_token].';
 
 -- Apenas o role do GoTrue pode executar o hook.
 REVOKE EXECUTE ON FUNCTION public.custom_access_token_hook(jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.custom_access_token_hook(jsonb) TO supabase_auth_admin;
 
 -- ---------------------------------------------------------------------------
--- 3. BACKFILL — grava loja_id/perfil no app_metadata dos usuários existentes
+-- 3. BACKFILL — grava SOMENTE loja_id no app_metadata dos usuários existentes
 -- ---------------------------------------------------------------------------
 -- O Supabase copia raw_app_meta_data para o claim app_metadata. Assim, o
 -- próximo token emitido a cada usuário já carrega loja_id mesmo antes do hook
--- estar habilitado no painel/config.
+-- estar habilitado no painel/config. Sem perfil/role (Fase 2).
 UPDATE auth.users au
 SET raw_app_meta_data =
       COALESCE(au.raw_app_meta_data, '{}'::jsonb)
-      || jsonb_build_object('loja_id', u.loja_id::text, 'perfil', u.perfil)
+      || jsonb_build_object('loja_id', u.loja_id::text)
 FROM public.usuarios u
 WHERE u.id = au.id
   AND u.loja_id IS NOT NULL;

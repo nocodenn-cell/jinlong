@@ -3,6 +3,12 @@
 Migration: `20260702000000_254_rls_v2_tenant_isolation_jwt.sql`
 Config: `[auth.hook.custom_access_token]` habilitado em `config.toml`.
 
+> **Escopo por fase.** Esta migration é **Fase 1 (infra de segurança / tenant)**:
+> injeta e usa **apenas** o claim de tenant `app_metadata.loja_id` e o isolamento
+> por loja. O claim de **papel** (`perfil`) e toda a autorização por cargo são
+> **Fase 2** — não fazem parte deste PR. As linhas abaixo que citam `perfil`/papel
+> descrevem o problema v1 ou o alvo final de Fase 2, marcados como tal.
+
 ## Problema (modelo v1)
 
 No modelo atual, **toda** policy (~93, ver `224_rls_initplan_wrap_auth_select.sql`)
@@ -29,7 +35,7 @@ Consequências:
 |--------|-----------|-------------|
 | Identidade | `auth.uid()` (via subquery em usuarios) | `auth.uid()` (claim assinado do JWT) |
 | Tenant `loja_id` | `SELECT loja_id FROM usuarios ...` em cada policy | `app_metadata.loja_id` no JWT, lido por `public.auth_loja_id()` |
-| Papel (GERENTE/DONO/ADMIN) | policies + RPCs + app | **fora do RLS**; app + RPCs lendo o claim `perfil` |
+| Papel (GERENTE/DONO/ADMIN) _(Fase 2, não neste PR)_ | policies + RPCs + app | **fora do RLS**; app + RPCs lendo o claim `perfil` |
 | `public.usuarios` | identidade + tenant + papel | **apenas metadado de domínio** (nome, idioma, ativo) |
 
 Invariante de policy v2, por categoria de tabela:
