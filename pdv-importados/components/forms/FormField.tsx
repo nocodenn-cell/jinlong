@@ -5,8 +5,24 @@ import React, { useId } from 'react'
 /**
  * FormField - Accessible form field wrapper with WCAG 2.1 AA compliance
  *
- * Provides consistent labeling, error handling, and hint text patterns.
- * Handles aria-labelledby, aria-describedby, and aria-invalid automatically.
+ * Wraps form inputs with automatic aria attribute handling for:
+ * - Label associations (htmlFor/id)
+ * - Error messages (aria-invalid + aria-describedby)
+ * - Helper text (aria-describedby)
+ * - Required field indicators (aria-required)
+ *
+ * Usage:
+ * ```tsx
+ * <FormField
+ *   id="email"
+ *   label="Email"
+ *   hint="Your work email"
+ *   error={errors.email}
+ *   required
+ * >
+ *   <input type="email" />
+ * </FormField>
+ * ```
  */
 
 interface FormFieldProps {
@@ -15,8 +31,7 @@ interface FormFieldProps {
   hint?: string
   error?: string
   required?: boolean
-  children: React.ReactElement
-  /** Optional className for the wrapper */
+  children: React.ReactElement<any>
   className?: string
 }
 
@@ -26,12 +41,13 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
     const errorId = error ? `${id}-error` : undefined
     const descriptionIds = [hintId, errorId].filter(Boolean).join(' ')
 
+    // Clone child with ARIA attributes for accessibility
     const enhancedChild = React.cloneElement(children, {
       id,
       'aria-describedby': descriptionIds || undefined,
       'aria-invalid': !!error,
       'aria-required': required || undefined,
-    } as any)
+    })
 
     return (
       <div ref={ref} className={`form-field ${className}`.trim()}>
