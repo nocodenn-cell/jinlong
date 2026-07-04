@@ -93,7 +93,7 @@ describe('ProdutoApplicationService', () => {
         preco_custo: 50,
         categoria_id: 'cat-1',
         ativo: true,
-        status_publicacao: 'DRAFT',
+        status_publicacao: 'PUBLICADO',
         origem: 'manual',
         tem_nf: true,
       }

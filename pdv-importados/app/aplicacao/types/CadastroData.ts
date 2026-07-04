@@ -10,6 +10,8 @@
  * Aplicação monta comando com os 3 concerns separados.
  */
 
+import { StatusPublicacao } from '@shared-core/src/engine/productEngine'
+
 export interface CadastroData {
   /** Identificação do produto */
   nome: string
@@ -32,7 +34,7 @@ export interface CadastroData {
 
   /** Status */
   ativo?: boolean
-  status_publicacao?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  status_publicacao?: StatusPublicacao
 
   /** Metadados legados (não usados por pricing) */
   origem?: string

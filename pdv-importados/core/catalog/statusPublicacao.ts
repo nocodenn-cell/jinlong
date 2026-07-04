@@ -2,8 +2,7 @@
  * Lifecycle catálogo R1 — dual-write status_publicacao + ativo.
  */
 import { isProdutoVendavel } from '../../../shared-core/src/catalog/isProdutoVendavel'
-
-export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
+import { type StatusPublicacao } from '../../../shared-core/src/engine/productEngine'
 
 export function ativoFromStatusPublicacao(status: StatusPublicacao): boolean {
   return status === 'PUBLICADO'

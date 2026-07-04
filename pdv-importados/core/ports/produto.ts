@@ -2,7 +2,7 @@
  * Porta de persistência de produtos — implementação em lib/adapters/supabase.
  * O domínio não conhece Supabase.
  */
-export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
+export { type StatusPublicacao } from '@shared-core/src/engine/productEngine'
 
 export type OrigemProduto = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
 
