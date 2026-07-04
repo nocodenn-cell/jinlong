@@ -31,8 +31,7 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
       'aria-describedby': descriptionIds || undefined,
       'aria-invalid': !!error,
       'aria-required': required || undefined,
-      ...children.props,
-    } as React.HTMLAttributes<HTMLElement>)
+    } as any)
 
     return (
       <div ref={ref} className={`form-field ${className}`.trim()}>
