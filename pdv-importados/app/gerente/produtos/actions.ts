@@ -156,7 +156,7 @@ export async function criarProduto(
   const context: ContextoApp = {
     lojaId,
     source: 'ui',
-    userId: auth.usuario?.id,
+    userId: auth.session.userId,
   }
 
   // FLUXO ÚNICO: Domínio → Aplicação → Persistência
