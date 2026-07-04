@@ -13,9 +13,12 @@
  *
  * INVARIANTE: Uma única representação canônica (precos_atacado) para todas as políticas.
  * O Price Engine (RPC) nunca consulta quantidade_gatilho_atacado ou pdv_config.
+ *
+ * NOTA: PolicyInput é genérico e workspace-agnóstico. Implementadores (como pdv-importados)
+ * estendem com campos específicos (origem, tem_nf, etc.).
  */
 
-import type { NovoProdutoInput } from '../../pdv-importados/core/ports/produto'
+import type { PolicyInput } from './policyInput'
 
 /**
  * Representa uma política comercial materializada como tier em precos_atacado.
@@ -64,7 +67,7 @@ export class PricingPolicyService {
    *   • preco_atacado: opcional, se fornecido deve ser < preco_varejo
    *   • quantidade_minima: opcional, se fornecido deve ser >= 1
    */
-  validateSimplePolicy(input: NovoProdutoInput): PolicyValidationResult {
+  validateSimplePolicy(input: PolicyInput): PolicyValidationResult {
     const errors: string[] = []
 
     // Validação de preco_varejo
@@ -103,14 +106,14 @@ export class PricingPolicyService {
    * IMPORTANTE: O cadastro não sabe que está criando um tier.
    * A transformação é completamente invisível para ele.
    *
-   * @param input - Intenção do cadastro (NovoProdutoInput)
+   * @param input - Intenção do cadastro (PolicyInput)
    * @param produtoId - ID do produto recém-criado
    * @param defaultMinimumQuantity - Fallback se usuario não especificar (padrão: 6)
    * @param lojaId - Loja contexto (NULL = global)
    * @returns Tier materializado ou erro
    */
   materializeSimplePolicy(
-    input: NovoProdutoInput,
+    input: PolicyInput,
     produtoId: string,
     defaultMinimumQuantity: number = 6,
     lojaId: string | null = null,

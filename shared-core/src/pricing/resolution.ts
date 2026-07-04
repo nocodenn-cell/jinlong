@@ -21,7 +21,7 @@
  *
  *   1. precos_atacado (tabela de tiers, por produto + loja)
  *      Representação: Canônica e única
- *      Materialização: PricingPolicyService (de NovoProdutoInput)
+ *      Materialização: PricingPolicyService (de PolicyInput)
  *      Condição: ativo=true AND quantidade_minima <= quantidade_carrinho
  *      Critério de desempate: maior quantidade_minima vence (tier mais específico)
  *      Resultado: ATACADO com fonte='tier'

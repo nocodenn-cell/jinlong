@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { PricingPolicyService } from './pricingPolicyService'
-import type { NovoProdutoInput } from '@/core/ports/produto'
+import type { PolicyInput } from './policyInput'
 
 describe('PricingPolicyService', () => {
   const service = new PricingPolicyService()
 
   describe('validateSimplePolicy', () => {
     it('should reject if preco_varejo is missing or <= 0', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Test',
         preco_varejo: 0,
         preco_atacado: null,
@@ -21,7 +21,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should reject if preco_atacado >= preco_varejo', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Test',
         preco_varejo: 10.0,
         preco_atacado: 10.0,
@@ -35,7 +35,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should reject if quantidade_gatilho_atacado < 1', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Test',
         preco_varejo: 10.0,
         preco_atacado: 8.0,
@@ -50,7 +50,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should accept valid simple policy', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Product A',
         preco_varejo: 10.0,
         preco_atacado: 8.0,
@@ -65,7 +65,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should accept policy without atacado price', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Product B',
         preco_varejo: 10.0,
         preco_atacado: null,
@@ -80,7 +80,7 @@ describe('PricingPolicyService', () => {
 
   describe('materializeSimplePolicy', () => {
     it('should not create tier if preco_atacado is null', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'No Atacado',
         preco_varejo: 10.0,
         preco_atacado: null,
@@ -94,7 +94,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should create tier with default quantity if not specified', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Product A',
         preco_varejo: 10.0,
         preco_atacado: 8.0,
@@ -111,7 +111,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should create tier with custom quantity if specified', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Product B',
         preco_varejo: 100.0,
         preco_atacado: 80.0,
@@ -127,7 +127,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should respect permitir_abaixo_custo flag', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Liquidation',
         preco_varejo: 10.0,
         preco_atacado: 5.0,
@@ -142,7 +142,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should set loja_id correctly', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Store Specific',
         preco_varejo: 10.0,
         preco_atacado: 8.0,
@@ -156,7 +156,7 @@ describe('PricingPolicyService', () => {
     })
 
     it('should reject invalid policy', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Invalid',
         preco_varejo: 10.0,
         preco_atacado: 15.0, // Greater than varejo!
@@ -172,7 +172,7 @@ describe('PricingPolicyService', () => {
 
   describe('INVARIANT: Canonical Representation', () => {
     it('should always materialize as precos_atacado tier, never multiple sources', () => {
-      const input: NovoProdutoInput = {
+      const input: PolicyInput = {
         nome: 'Canonical Test',
         preco_varejo: 100.0,
         preco_atacado: 80.0,
