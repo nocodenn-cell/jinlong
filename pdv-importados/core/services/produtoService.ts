@@ -7,8 +7,8 @@ import type { PricingPolicyService } from '@shared-core/src/pricing/pricingPolic
 import type { PolicyInput } from '@shared-core/src/pricing/policyInput'
 import { ProdutoApplicationService } from '@/app/aplicacao/ProdutoApplicationService'
 import { ProdutoRepository } from '@/app/infraestrutura/repositories/ProdutoRepository'
-import type { CadastroData } from '@/app/aplicacao/types/CadastroData'
-import type { ContextoApp } from '@/app/aplicacao/types/ContextoApp'
+import type { CadastroData } from '@shared-core/src/domain/product/requests/CadastroData'
+import type { ContextoApp } from '@shared-core/src/domain/product/requests/ContextoApp'
 import { SupabaseClient } from '@supabase/supabase-js'
 
 export type CriarProdutoResult =

@@ -1,10 +1,11 @@
 /**
- * ContextoApp: Contexto de Execução da Aplicação
+ * ContextoApp — Contexto de Execução da Aplicação
  *
- * Informações sobre COMO e ONDE o comando está sendo executado.
- * Usado para rastreabilidade, auditoria e contexto de persistência.
+ * Request/Input contract for application execution context.
+ * Contains information about HOW and WHERE the command is being executed.
+ * Used for traceability, auditing, and persistence context.
  *
- * Domínio (pricing) nunca vê isso.
+ * Domain (pricing) NEVER sees this.
  */
 
 export interface ContextoApp {

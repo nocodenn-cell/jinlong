@@ -19,14 +19,14 @@ import {
 } from '@/core/services/produtoService'
 import { createPricingPolicyService } from '@shared-core/src/pricing/pricingPolicyService'
 import type { PolicyInput } from '@shared-core/src/pricing/policyInput'
-import type { CadastroData } from '@/app/aplicacao/types/CadastroData'
-import type { ContextoApp } from '@/app/aplicacao/types/ContextoApp'
+import type { CadastroData } from '@shared-core/src/domain/product/requests/CadastroData'
+import type { ContextoApp } from '@shared-core/src/domain/product/requests/ContextoApp'
 import {
   dualWriteFromStatus,
   resolveStatusPublicacaoLeitura,
   statusFromAtivoLegacy,
-} from '@/core/catalog/statusPublicacao'
-import { statusInicialProduto } from '@/core/systemRules'
+  statusInicialProduto,
+} from '@shared-core/src/domain/product/engine'
 import type { NovoProdutoInput, StatusPublicacao } from '@/core/ports/produto'
 import { PRODUTO_IMPORT_MAX_FILE_BYTES } from '@/lib/gerente/produtosCsvContract'
 import { validateProdutoImportCsvDocument } from '@/lib/gerente/parseProdutoImportCsv'

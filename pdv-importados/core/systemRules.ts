@@ -13,7 +13,7 @@ import {
   statusInicialProduto,
   evaluateProduct,
   type ProdutoOrigem,
-} from '@shared-core/src/engine/productEngine'
+} from '@shared-core/src/domain/product/engine'
 
 // Reexporta o motor para os consumidores (server actions etc.).
 export { statusInicialProduto, evaluateProduct, type ProdutoOrigem }

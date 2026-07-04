@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateProduct } from '@shared-core/src/engine/productEngine'
+import { evaluateProduct } from '@shared-core/src/domain/product/engine'
 import { STATUS_PUBLICACAO_BADGE } from './statusPublicacaoBadge'
 import type { StatusPublicacao } from '@/core/ports/produto'
 

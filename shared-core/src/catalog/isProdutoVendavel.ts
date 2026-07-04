@@ -5,7 +5,7 @@
  * API estável de catálogo (caixa web, pdv-local, validação pós-sync) para não
  * quebrar imports existentes.
  */
-import { evaluateProduct, PRODUCT_RULES, type StatusPublicacao } from '../engine/productEngine'
+import { evaluateProduct, PRODUCT_RULES, type StatusPublicacao } from '../domain/product/engine'
 
 export type { StatusPublicacao }
 

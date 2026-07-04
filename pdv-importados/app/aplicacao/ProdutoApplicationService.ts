@@ -18,8 +18,8 @@ import type {
   RpcExecutionResult,
 } from '@shared-core/src/pricing/requests/CreateProductRpcRequest'
 
-import type { CadastroData } from './types/CadastroData'
-import type { ContextoApp } from './types/ContextoApp'
+import type { CadastroData } from '@shared-core/src/domain/product/requests/CadastroData'
+import type { ContextoApp } from '@shared-core/src/domain/product/requests/ContextoApp'
 import type { ProdutoRepository } from '../infraestrutura/repositories/ProdutoRepository'
 
 export class ProdutoApplicationService {
