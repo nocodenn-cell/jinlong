@@ -13,7 +13,7 @@
 export interface CadastroData {
   /** Identificação do produto */
   nome: string
-  codigo_barras: string
+  codigo_barras?: string
 
   /** Custos */
   preco_custo?: number
