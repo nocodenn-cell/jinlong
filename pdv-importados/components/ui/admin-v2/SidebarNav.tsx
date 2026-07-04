@@ -55,6 +55,7 @@ export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarN
           href={href}
           title={`${primary}${secondary ? ` · ${secondary}` : ''}${hintText ? ` — ${hintText}` : ''}`}
           data-active={active}
+          aria-current={active ? 'page' : undefined}
           className={cn(
             'admin-v2-nav-link flex items-center gap-3 rounded-full border border-transparent px-3 py-2.5',
             'data-[active=true]:border-[rgba(251,191,36,0.35)] data-[active=true]:bg-[rgba(251,191,36,0.1)] data-[active=true]:text-[var(--color-brand-primary)]',
@@ -85,6 +86,8 @@ export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarN
           type="button"
           onClick={() => setShowMore((current) => !current)}
           aria-expanded={showMore}
+          aria-label={`Menu adicional ${showMore ? 'expandido' : 'recolhido'}`}
+          aria-controls="nav-expanded-items"
           className="admin-v2-nav-group-label mb-2 flex w-full items-center justify-between px-3 text-left transition-colors hover:text-jl-fg-2"
         >
           <span>Mais</span>
@@ -93,7 +96,11 @@ export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarN
             aria-hidden
           />
         </button>
-        {showMore ? <ul className="flex flex-col gap-1">{ADMIN_V2_EXPANDED_ITEMS.map((item) => renderItem(item))}</ul> : null}
+        {showMore ? (
+          <ul id="nav-expanded-items" className="flex flex-col gap-1">
+            {ADMIN_V2_EXPANDED_ITEMS.map((item) => renderItem(item))}
+          </ul>
+        ) : null}
       </div>
 
       <div>

@@ -82,7 +82,11 @@ export function FilterBar({
   }, [filters, searchParams, router, pathname])
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)}>
+    <section
+      role="search"
+      aria-label="Filtros de busca"
+      className={cn('flex flex-wrap items-center gap-2', className)}
+    >
       {filters.map((filter) => {
         switch (filter.type) {
           case 'pills':
@@ -121,13 +125,14 @@ export function FilterBar({
         <button
           type="button"
           onClick={clearAll}
+          aria-label="Limpar todos os filtros"
           className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium text-jl-fg-3 transition-colors hover:text-jl-fg-1"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
           {clearLabel}
         </button>
       ) : null}
-    </div>
+    </section>
   )
 }
 
@@ -154,6 +159,7 @@ function PillsControl({
             type="button"
             onClick={() => onChange(opt.value)}
             aria-pressed={active}
+            aria-label={`${opt.label}${active ? ' (ativo)' : ''}`}
             className={cn(
               'rounded-[5px] px-2.5 py-1 text-[11px] font-medium leading-none transition-colors',
               active

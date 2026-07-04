@@ -96,13 +96,28 @@ export function DataTable<T>({
 
   return (
     <div className={cn('overflow-x-auto rounded-lg border border-jl-border-1', className)}>
-      <table className="w-full border-collapse text-left">
+      <table
+        className="w-full border-collapse text-left"
+        role="table"
+        aria-rowcount={data.length}
+        aria-colcount={columns.length + (rowActions ? 1 : 0)}
+      >
         <thead>
           <tr className="border-b border-jl-border-1">
             {columns.map((col) => {
               const sortable = !!col.sortValue
               const isActive = activeSort?.key === col.key
               const alignClass = ALIGN_CLASS[col.align ?? 'left']
+              const sortStatus = isActive
+                ? activeSort.direction === 'asc'
+                  ? 'ordem crescente'
+                  : 'ordem decrescente'
+                : sortable
+                  ? 'não ordenado'
+                  : null
+              const sortLabel = sortable
+                ? `${col.header}, ${sortStatus}. Clique para ${isActive && activeSort.direction === 'asc' ? 'inverter para decrescente' : 'ordenar'}`
+                : col.header
               return (
                 <th
                   key={col.key}
@@ -115,6 +130,7 @@ export function DataTable<T>({
                     col.headerClassName,
                   )}
                   onClick={sortable ? () => handleHeaderClick(col) : undefined}
+                  aria-label={sortLabel}
                   aria-sort={
                     isActive
                       ? activeSort.direction === 'asc'

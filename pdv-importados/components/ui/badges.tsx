@@ -74,9 +74,11 @@ type PillProps = {
   children: React.ReactNode
   className?: string
   title?: string
+  ariaLabel?: string
+  role?: 'status' | 'img' | string
 }
 
-function Pill({ tone, icon: Icon, children, className, title }: PillProps) {
+function Pill({ tone, icon: Icon, children, className, title, ariaLabel, role }: PillProps) {
   return (
     <span
       className={cn(
@@ -86,6 +88,8 @@ function Pill({ tone, icon: Icon, children, className, title }: PillProps) {
       )}
       style={TONE_STYLE[tone]}
       title={title}
+      aria-label={ariaLabel}
+      role={role}
     >
       {Icon ? <Icon size={11} strokeWidth={2} aria-hidden /> : null}
       {children}
@@ -123,9 +127,15 @@ export function StatusBadge({
   label?: string
   className?: string
 }) {
+  const displayLabel = label ?? STATUS_LABEL[status]
   return (
-    <Pill tone={STATUS_TONE[status]} className={className}>
-      {label ?? STATUS_LABEL[status]}
+    <Pill
+      tone={STATUS_TONE[status]}
+      className={className}
+      role="status"
+      ariaLabel={`Status: ${displayLabel}`}
+    >
+      {displayLabel}
     </Pill>
   )
 }
