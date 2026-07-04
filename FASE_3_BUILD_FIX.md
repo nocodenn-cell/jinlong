@@ -86,12 +86,46 @@ const enhancedChild = React.cloneElement(children, {
 
 ---
 
+## Fix #2: useAccessibility Hook JSX Error (Commit 0ef31cc)
+
+### Issue
+TypeScript error in `useAccessibility.ts`:
+```
+Cannot find name 'span'.
+  38 |     <span className="sr-only">{text}</span>
+```
+
+### Cause
+The `srOnly` function was attempting to return JSX in a `.ts` file. TypeScript only allows JSX in `.tsx` files. The file is typed as `.ts` because it only exports utilities, not components.
+
+### Solution
+Converted `srOnly` function to `srOnlyClass` constant:
+```tsx
+// Before (❌ TypeScript error)
+export function srOnly(text: string) {
+  return <span className="sr-only">{text}</span>
+}
+
+// After (✅ Works)
+export const srOnlyClass = 'sr-only'
+// Usage: <span className={srOnlyClass}>Text</span>
+```
+
+### Why This Works
+- No JSX in `.ts` file
+- Simpler and more flexible
+- Aligns with CSS class usage pattern
+- No type errors
+
+---
+
 ## Next Steps
 
-1. ✅ Branch re-pushed with fixes
-2. ⏳ Vercel build should now pass
-3. ⏳ PR #134 status updated
-4. ⏳ Ready for continued testing
+1. ✅ Both TypeScript errors fixed
+2. ✅ Branch re-pushed with fixes
+3. ⏳ Vercel build should now pass
+4. ⏳ PR #134 status updated
+5. ⏳ Ready for continued testing
 
 ---
 
