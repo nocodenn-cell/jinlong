@@ -52,7 +52,7 @@ import {
 } from './actions'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 import { STATUS_PUBLICACAO_BADGE } from './statusPublicacaoBadge'
-import { podePublicarProduto } from '@/core/catalog/statusPublicacao'
+import { podePublicarProduto } from '@shared-core/src/domain/product/engine'
 import { parseTagsFiltroTexto } from './produtoGerenteFiltrosUtils'
 
 export type { ProdutoGerenteRow } from './produtoGerenteTypes'

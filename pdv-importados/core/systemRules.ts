@@ -12,11 +12,12 @@ import {
   PRODUCT_RULES,
   statusInicialProduto,
   evaluateProduct,
-  type ProdutoOrigem,
 } from '@shared-core/src/domain/product/engine'
+import type { ProdutoOrigem } from '@shared-core/src/domain/product/types'
 
 // Reexporta o motor para os consumidores (server actions etc.).
-export { statusInicialProduto, evaluateProduct, type ProdutoOrigem }
+export { statusInicialProduto, evaluateProduct }
+export type { ProdutoOrigem }
 
 export const SYSTEM_RULES = {
   product: {

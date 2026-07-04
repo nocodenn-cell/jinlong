@@ -8,8 +8,6 @@
 import { evaluateProduct, PRODUCT_RULES } from '../domain/product/engine'
 import type { StatusPublicacao } from '../domain/product/types'
 
-export type { StatusPublicacao }
-
 export const STATUS_PUBLICACAO_PUBLICADO = PRODUCT_RULES.vendavel.status_publicacao
 
 export type ProdutoVendavelFields = {

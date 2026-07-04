@@ -14,10 +14,6 @@
 
 import type { StatusPublicacao, ProdutoOrigem } from './types'
 
-// ⚠️ Re-export types for backwards compatibility during transition
-// TODO: Remove these exports once all imports are updated to use types.ts directly
-export type { StatusPublicacao, ProdutoOrigem }
-
 /**
  * Configuração DECLARATIVA das regras de produto (a "constituição").
  * É só dado; a decisão (lógica) vive nas funções abaixo.

@@ -9,7 +9,7 @@ import {
   defaultStatusNovoProduto,
   dualWriteFromStatus,
   statusFromAtivoLegacy,
-} from '@/core/catalog/statusPublicacao'
+} from '@shared-core/src/domain/product/engine'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
