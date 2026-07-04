@@ -12,11 +12,15 @@ import { createProdutoRepository } from '@/lib/adapters/supabase/produtoReposito
 import {
   criarProdutoComEstoque,
   criarProdutoComEstoqueEPoliticaComercial,
+  criarProdutoComTierAtomico,
   alternarAtivoProduto as alternarAtivoNoDominio,
   publicarProdutoCatalogo,
   inativarProdutoCatalogo,
 } from '@/core/services/produtoService'
 import { createPricingPolicyService } from '@shared-core/src/pricing/pricingPolicyService'
+import type { PolicyInput } from '@shared-core/src/pricing/policyInput'
+import type { CadastroData } from '@/app/aplicacao/types/CadastroData'
+import type { ContextoApp } from '@/app/aplicacao/types/ContextoApp'
 import {
   dualWriteFromStatus,
   resolveStatusPublicacaoLeitura,
@@ -118,20 +122,50 @@ export async function criarProduto(
   }
 
   // CORE decide o status; o server apenas executa. Cadastro manual → PUBLICADO.
-  // (CSV continua DRAFT no seu próprio caminho `importarProdutosCsv`.)
   const { status_publicacao } = statusInicialProduto('human')
   const supabase = await createClient()
-  const repo = createProdutoRepository(supabase)
   const pricingService = createPricingPolicyService()
 
   // Obter loja_id do contexto do usuário
   const lojaId = await getGerenteLojaId()
 
-  const result = await criarProdutoComEstoqueEPoliticaComercial(
-    { ...parsed.data, status_publicacao },
-    repo,
-    pricingService,
+  // SEPARAÇÃO DE CONCERNS
+  const policyInput: PolicyInput = {
+    preco_varejo: parsed.data.preco_varejo,
+    preco_atacado: parsed.data.preco_atacado ?? null,
+    quantidade_gatilho_atacado: parsed.data.quantidade_gatilho_atacado ?? null,
+    permitir_abaixo_custo: parsed.data.permitir_abaixo_custo ?? false,
+  }
+
+  const cadastro: CadastroData = {
+    nome: parsed.data.nome,
+    codigo_barras: parsed.data.codigo_barras ?? undefined,
+    preco_custo: parsed.data.preco_custo ?? undefined,
+    categoria_id: parsed.data.categoria_id ?? undefined,
+    marca_id: parsed.data.marca_id ?? undefined,
+    fornecedor_id: parsed.data.fornecedor_id ?? undefined,
+    unidade_medida: parsed.data.unidade_medida ?? undefined,
+    observacao: parsed.data.observacao ?? undefined,
+    ncm: parsed.data.ncm ?? undefined,
+    ativo: true,
+    status_publicacao,
+    origem: parsed.data.origem,
+    tem_nf: parsed.data.tem_nf,
+  }
+
+  const context: ContextoApp = {
     lojaId,
+    source: 'ui',
+    userId: auth.usuario?.id,
+  }
+
+  // FLUXO ÚNICO: Domínio → Aplicação → Persistência
+  const result = await criarProdutoComTierAtomico(
+    policyInput,
+    cadastro,
+    context,
+    supabase,
+    pricingService,
   )
 
   if (result.success) {

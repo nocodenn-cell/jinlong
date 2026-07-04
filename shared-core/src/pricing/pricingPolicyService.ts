@@ -19,6 +19,7 @@
  */
 
 import type { PolicyInput } from './policyInput'
+import type { PricingDecision, PricingTier } from './decisions/PricingDecision'
 
 /**
  * Representa uma política comercial materializada como tier em precos_atacado.
@@ -159,6 +160,48 @@ export class PricingPolicyService {
       success: true,
       tier,
     }
+  }
+
+  /**
+   * Cria uma decisão comercial de precificação.
+   *
+   * RESPONSABILIDADE: Retorna UMA DECISÃO PURA (tier ou null).
+   * Sem dados de cadastro, sem contexto, sem metadados de explicabilidade.
+   *
+   * A decisão é final. Nenhuma camada seguinte deve reinterpretar.
+   *
+   * @param input - PolicyInput (apenas: preco_varejo, preco_atacado, quantidade, permitir_abaixo_custo)
+   * @returns PricingDecision (tier | null) ou erro de validação
+   */
+  createPricingDecision(
+    input: PolicyInput,
+    defaultMinimumQuantity: number = 6,
+  ): PricingDecision | { error: string }
+  {
+    // STEP 1: Validar
+    const validation = this.validateSimplePolicy(input)
+    if (!validation.valid) {
+      return { error: validation.errors.join('; ') }
+    }
+
+    // STEP 2: Se não há preco_atacado, retorna tier null
+    if (input.preco_atacado === null || input.preco_atacado === undefined) {
+      return {
+        tier: null,
+      }
+    }
+
+    // STEP 3: Materializa tier (decisão pura)
+    const quantidadeMinima = input.quantidade_gatilho_atacado ?? defaultMinimumQuantity
+
+    const tier: PricingTier = {
+      quantidade_minima: quantidadeMinima,
+      preco_unitario: input.preco_atacado,
+      ativo: true,
+      permitir_abaixo_custo: input.permitir_abaixo_custo ?? false,
+    }
+
+    return { tier }
   }
 }
 

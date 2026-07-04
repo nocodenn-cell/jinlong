@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { PricingPolicyService } from './pricingPolicyService'
 import type { PolicyInput } from './policyInput'
+import type { PricingDecision } from './decisions/PricingDecision'
 
 describe('PricingPolicyService', () => {
   const service = new PricingPolicyService()
@@ -8,11 +9,8 @@ describe('PricingPolicyService', () => {
   describe('validateSimplePolicy', () => {
     it('should reject if preco_varejo is missing or <= 0', () => {
       const input: PolicyInput = {
-        nome: 'Test',
         preco_varejo: 0,
         preco_atacado: null,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
       const result = service.validateSimplePolicy(input)
@@ -22,11 +20,8 @@ describe('PricingPolicyService', () => {
 
     it('should reject if preco_atacado >= preco_varejo', () => {
       const input: PolicyInput = {
-        nome: 'Test',
         preco_varejo: 10.0,
         preco_atacado: 10.0,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
       const result = service.validateSimplePolicy(input)
@@ -36,12 +31,9 @@ describe('PricingPolicyService', () => {
 
     it('should reject if quantidade_gatilho_atacado < 1', () => {
       const input: PolicyInput = {
-        nome: 'Test',
         preco_varejo: 10.0,
         preco_atacado: 8.0,
         quantidade_gatilho_atacado: 0,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
       const result = service.validateSimplePolicy(input)
@@ -51,12 +43,9 @@ describe('PricingPolicyService', () => {
 
     it('should accept valid simple policy', () => {
       const input: PolicyInput = {
-        nome: 'Product A',
         preco_varejo: 10.0,
         preco_atacado: 8.0,
         quantidade_gatilho_atacado: 6,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
       const result = service.validateSimplePolicy(input)
@@ -66,11 +55,8 @@ describe('PricingPolicyService', () => {
 
     it('should accept policy without atacado price', () => {
       const input: PolicyInput = {
-        nome: 'Product B',
         preco_varejo: 10.0,
         preco_atacado: null,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
       const result = service.validateSimplePolicy(input)
@@ -78,119 +64,95 @@ describe('PricingPolicyService', () => {
     })
   })
 
-  describe('materializeSimplePolicy', () => {
-    it('should not create tier if preco_atacado is null', () => {
+  describe('createPricingDecision', () => {
+    it('should return tier=null if preco_atacado is null', () => {
       const input: PolicyInput = {
-        nome: 'No Atacado',
         preco_varejo: 10.0,
         preco_atacado: null,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
-      const result = service.materializeSimplePolicy(input, 'prod-123')
-      expect(result.success).toBe(true)
-      expect(result.tier.ativo).toBe(false) // Inactive if no atacado price
+      const result = service.createPricingDecision(input)
+      expect('error' in result).toBe(false)
+
+      const decision = result as PricingDecision
+      expect(decision.tier).toBeNull()
+    })
+
+    it('should return error if validation fails', () => {
+      const input: PolicyInput = {
+        preco_varejo: 10.0,
+        preco_atacado: 15.0, // Invalid: > varejo
+      }
+
+      const result = service.createPricingDecision(input)
+      expect('error' in result).toBe(true)
+      expect((result as any).error).toContain('Preço de atacado deve ser menor')
     })
 
     it('should create tier with default quantity if not specified', () => {
       const input: PolicyInput = {
-        nome: 'Product A',
         preco_varejo: 10.0,
         preco_atacado: 8.0,
-        quantidade_gatilho_atacado: null,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
-      const result = service.materializeSimplePolicy(input, 'prod-123', 6, null)
-      expect(result.success).toBe(true)
-      expect(result.tier.quantidade_minima).toBe(6)
-      expect(result.tier.preco_unitario).toBe(8.0)
-      expect(result.tier.ativo).toBe(true)
+      const result = service.createPricingDecision(input, 6)
+      expect('error' in result).toBe(false)
+
+      const decision = result as PricingDecision
+      expect(decision.tier).not.toBeNull()
+      expect(decision.tier!.quantidade_minima).toBe(6)
+      expect(decision.tier!.preco_unitario).toBe(8.0)
+      expect(decision.tier!.ativo).toBe(true)
     })
 
     it('should create tier with custom quantity if specified', () => {
       const input: PolicyInput = {
-        nome: 'Product B',
         preco_varejo: 100.0,
         preco_atacado: 80.0,
         quantidade_gatilho_atacado: 12,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
-      const result = service.materializeSimplePolicy(input, 'prod-456', 6, null)
-      expect(result.success).toBe(true)
-      expect(result.tier.quantidade_minima).toBe(12)
-      expect(result.tier.preco_unitario).toBe(80.0)
+      const result = service.createPricingDecision(input)
+      expect('error' in result).toBe(false)
+
+      const decision = result as PricingDecision
+      expect(decision.tier!.quantidade_minima).toBe(12)
+      expect(decision.tier!.preco_unitario).toBe(80.0)
     })
 
     it('should respect permitir_abaixo_custo flag', () => {
       const input: PolicyInput = {
-        nome: 'Liquidation',
         preco_varejo: 10.0,
         preco_atacado: 5.0,
         permitir_abaixo_custo: true,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
-      const result = service.materializeSimplePolicy(input, 'prod-789')
-      expect(result.success).toBe(true)
-      expect(result.tier.permitir_abaixo_custo).toBe(true)
+      const result = service.createPricingDecision(input)
+      expect('error' in result).toBe(false)
+
+      const decision = result as PricingDecision
+      expect(decision.tier!.permitir_abaixo_custo).toBe(true)
     })
 
-    it('should set loja_id correctly', () => {
+    it('INVARIANT: decision is pure (no produto data, no context)', () => {
       const input: PolicyInput = {
-        nome: 'Store Specific',
-        preco_varejo: 10.0,
-        preco_atacado: 8.0,
-        origem: 'china_manual',
-        tem_nf: false,
-      }
-
-      const result = service.materializeSimplePolicy(input, 'prod-101', 6, 'loja-sp')
-      expect(result.success).toBe(true)
-      expect(result.tier.loja_id).toBe('loja-sp')
-    })
-
-    it('should reject invalid policy', () => {
-      const input: PolicyInput = {
-        nome: 'Invalid',
-        preco_varejo: 10.0,
-        preco_atacado: 15.0, // Greater than varejo!
-        origem: 'china_manual',
-        tem_nf: false,
-      }
-
-      const result = service.materializeSimplePolicy(input, 'prod-bad')
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('inválida')
-    })
-  })
-
-  describe('INVARIANT: Canonical Representation', () => {
-    it('should always materialize as precos_atacado tier, never multiple sources', () => {
-      const input: PolicyInput = {
-        nome: 'Canonical Test',
         preco_varejo: 100.0,
         preco_atacado: 80.0,
         quantidade_gatilho_atacado: 10,
-        origem: 'china_manual',
-        tem_nf: false,
       }
 
-      const result = service.materializeSimplePolicy(input, 'prod-canon')
-      expect(result.success).toBe(true)
+      const result = service.createPricingDecision(input)
+      const decision = result as PricingDecision
 
-      // Exactly one tier representation
-      expect(result.tier.produto_id).toBe('prod-canon')
-      expect(result.tier.quantidade_minima).toBe(10)
-      expect(result.tier.preco_unitario).toBe(80.0)
+      // ✅ Decision contains ONLY tier
+      expect(Object.keys(decision)).toEqual(['tier'])
 
-      // No other representation should exist
-      // (quantidade_gatilho_atacado field is ignored; tier is the canonical source)
+      // ✅ No produto data
+      expect((decision as any).produto).toBeUndefined()
+
+      // ✅ No context
+      expect((decision as any).context).toBeUndefined()
+      expect((decision as any).decision_rationale).toBeUndefined()
     })
   })
 })

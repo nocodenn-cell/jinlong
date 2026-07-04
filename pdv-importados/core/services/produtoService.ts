@@ -4,6 +4,12 @@ import type {
   StatusPublicacao,
 } from '@/core/ports/produto'
 import type { PricingPolicyService } from '@shared-core/src/pricing/pricingPolicyService'
+import type { PolicyInput } from '@shared-core/src/pricing/policyInput'
+import { ProdutoApplicationService } from '@/app/aplicacao/ProdutoApplicationService'
+import { ProdutoRepository } from '@/app/infraestrutura/repositories/ProdutoRepository'
+import type { CadastroData } from '@/app/aplicacao/types/CadastroData'
+import type { ContextoApp } from '@/app/aplicacao/types/ContextoApp'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 export type CriarProdutoResult =
   | { success: true; data: { id: string } }
@@ -110,6 +116,42 @@ export async function inativarProdutoCatalogo(
   const result = await repo.updateStatusPublicacao(produtoId, 'INATIVO')
   if (!result.ok) return { success: false, error: result.message }
   return { success: true }
+}
+
+/**
+ * Cria produto com tier de forma atômica (NOVO).
+ *
+ * Usa ProdutoApplicationService para orquestração correta:
+ * 1. Separa concerns: PolicyInput + CadastroData + ContextoApp
+ * 2. Chama domínio: PricingPolicyService.createPricingDecision()
+ * 3. Constrói requisição: CreateProductRpcRequest
+ * 4. Executa: Repository.execute(rpcRequest)
+ * 5. Resultado: Atomicidade garantida via RPC transacional
+ *
+ * @param policyInput - Apenas dados de pricing (varejo, atacado, quantidade)
+ * @param cadastro - Dados de cadastro (nome, categoria, fornecedor)
+ * @param context - Contexto (lojaId, source, userId)
+ * @param supabase - Cliente Supabase
+ * @param pricingService - Serviço de precificação (domínio)
+ * @returns Resultado com ID do produto ou erro
+ */
+export async function criarProdutoComTierAtomico(
+  policyInput: PolicyInput,
+  cadastro: CadastroData,
+  context: ContextoApp,
+  supabase: SupabaseClient,
+  pricingService: PricingPolicyService,
+): Promise<CriarProdutoResult> {
+  const repository = new ProdutoRepository(supabase)
+  const appService = new ProdutoApplicationService(pricingService, repository)
+
+  const result = await appService.criarProdutoComTier(policyInput, cadastro, context)
+
+  if (!result.success) {
+    return { success: false, error: result.error }
+  }
+
+  return { success: true, data: { id: result.id } }
 }
 
 export type { StatusPublicacao }
