@@ -16,7 +16,7 @@ import {
   publicarProdutoCatalogo,
   inativarProdutoCatalogo,
 } from '@/core/services/produtoService'
-import { createPricingPolicyService } from '@/pricing/pricingPolicyService'
+import { createPricingPolicyService } from '@shared-core/src/pricing/pricingPolicyService'
 import {
   dualWriteFromStatus,
   resolveStatusPublicacaoLeitura,

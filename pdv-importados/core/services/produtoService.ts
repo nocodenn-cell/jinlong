@@ -3,7 +3,7 @@ import type {
   ProdutoRepositoryPort,
   StatusPublicacao,
 } from '@/core/ports/produto'
-import type { PricingPolicyService } from '@/pricing/pricingPolicyService'
+import type { PricingPolicyService } from '@shared-core/src/pricing/pricingPolicyService'
 
 export type CriarProdutoResult =
   | { success: true; data: { id: string } }
