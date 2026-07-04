@@ -11,10 +11,12 @@ import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { createProdutoRepository } from '@/lib/adapters/supabase/produtoRepository'
 import {
   criarProdutoComEstoque,
+  criarProdutoComEstoqueEPoliticaComercial,
   alternarAtivoProduto as alternarAtivoNoDominio,
   publicarProdutoCatalogo,
   inativarProdutoCatalogo,
 } from '@/core/services/produtoService'
+import { createPricingPolicyService } from '@/pricing/pricingPolicyService'
 import {
   dualWriteFromStatus,
   resolveStatusPublicacaoLeitura,
@@ -120,9 +122,16 @@ export async function criarProduto(
   const { status_publicacao } = statusInicialProduto('human')
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
-  const result = await criarProdutoComEstoque(
+  const pricingService = createPricingPolicyService()
+
+  // Obter loja_id do contexto do usuário
+  const lojaId = await getGerenteLojaId()
+
+  const result = await criarProdutoComEstoqueEPoliticaComercial(
     { ...parsed.data, status_publicacao },
     repo,
+    pricingService,
+    lojaId,
   )
 
   if (result.success) {

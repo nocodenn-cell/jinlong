@@ -38,8 +38,20 @@ export interface NovoProdutoInput {
   ncm?: string | null
 }
 
+export interface PrecosAtacadoTierInput {
+  produto_id: string
+  loja_id: string | null
+  quantidade_minima: number
+  preco_unitario: number
+  ativo: boolean
+  permitir_abaixo_custo: boolean
+}
+
 export interface ProdutoRepositoryPort {
   createWithDefaultEstoque(input: NovoProdutoInput): Promise<
+    { ok: true; id: string } | { ok: false; message: string }
+  >
+  createPrecosAtacadoTier(tier: PrecosAtacadoTierInput): Promise<
     { ok: true; id: string } | { ok: false; message: string }
   >
   updateAtivo(

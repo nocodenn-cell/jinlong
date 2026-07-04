@@ -1,35 +1,45 @@
 /**
- * REGRA DE PRECEDÊNCIA DE PREÇO — fonte canônica.
+ * REGRA DE PRECEDÊNCIA DE PREÇO — Representação Canônica.
  *
- * Qualquer código que calcule, exiba ou valide preço DEVE seguir esta ordem.
- * A implementação autoritativa vive na RPC `calcular_preco_produto` (migration 234).
- * Este arquivo documenta a mesma lógica em TypeScript para que a regra seja
- * encontrável, testável e resistente a refatorações.
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║ PRINCÍPIO ARQUITETURAL:                                                    ║
+ * ║                                                                            ║
+ * ║ A tabela precos_atacado é a ÚNICA representação canônica de qualquer      ║
+ * ║ política comercial de precificação (simples ou avançada).                 ║
+ * ║                                                                            ║
+ * ║ O Price Engine (RPC calcular_preco_produto) consome EXCLUSIVAMENTE de     ║
+ * ║ precos_atacado. Nenhuma outra tabela representa regras de preço.          ║
+ * ║                                                                            ║
+ * ║ HISTÓRICO (NÃO CONSULTADO):                                               ║
+ * ║   • produtos.quantidade_gatilho_atacado: campo legado (materializado em   ║
+ * ║     precos_atacado via PricingPolicyService)                              ║
+ * ║   • pdv_config.quantidade_minima_atacado_padrao: apenas configuração de   ║
+ * ║     default para UI, nunca consultado pelo RPC                            ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
  *
  * ORDEM DE PRECEDÊNCIA (maior índice = menor prioridade):
  *
  *   1. precos_atacado (tabela de tiers, por produto + loja)
+ *      Representação: Canônica e única
+ *      Materialização: PricingPolicyService (de NovoProdutoInput)
  *      Condição: ativo=true AND quantidade_minima <= quantidade_carrinho
  *      Critério de desempate: maior quantidade_minima vence (tier mais específico)
  *      Resultado: ATACADO com fonte='tier'
  *
- *   2. produtos.preco_atacado + pdv_config.quantidade_minima_atacado_padrao
- *      Condição: preco_atacado IS NOT NULL AND quantidade >= min_padrao_sistema
- *      Resultado: ATACADO com fonte='catalogo'
- *
- *   3. produtos.preco_varejo (fallback incondicional)
+ *   2. produtos.preco_varejo (fallback incondicional)
  *      Resultado: VAREJO com fonte='varejo'
  *
- * REGRA DE CONFLITO:
- *   Quando uma entrada em precos_atacado existe para o produto, ela SEMPRE vence
- *   sobre produtos.preco_atacado, independente de qual valor é menor.
- *   A precedência é por fonte, não por valor.
+ * OBSERVAÇÃO IMPORTANTE:
+ *   A precedência original incluía "produtos.preco_atacado + pdv_config" como
+ *   fallback. Esse padrão é DEPRECADO. A representação canônica é sempre
+ *   precos_atacado (tier). Qualquer política, mesmo simples, é um tier.
  *
  * ADICIONANDO UMA NOVA FONTE DE PREÇO:
- *   1. Adicione um novo item a PriceSourceKind abaixo com índice maior que os existentes
- *   2. Atualize calcular_preco_produto (crie nova migration ≥ 245)
- *   3. Adicione um caso em PRICE_RESOLUTION_CHAIN
- *   4. A fonte nova deve ter prioridade explicitamente definida — nunca implícita
+ *   1. Adicione uma nova coluna em precos_atacado (nullable para compat)
+ *   2. Atualize calcular_preco_produto RPC: adicione WHERE novo_campo IS NULL OR ...
+ *   3. Atualize PricingPolicyService para validar nova regra
+ *   4. Nenhuma mudança em PriceSourceKind ou PRICE_RESOLUTION_CHAIN necessária
+ *      (tudo é um tier em precos_atacado)
  */
 
 /** Identifica de onde veio o preço retornado pelo PDV. */

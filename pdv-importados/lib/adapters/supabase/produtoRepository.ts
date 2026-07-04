@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   NovoProdutoInput,
   ProdutoRepositoryPort,
+  PrecosAtacadoTierInput,
   StatusPublicacao,
 } from '@/core/ports/produto'
 import {
@@ -90,6 +91,32 @@ export function createProdutoRepository(
             'Estoque inicial do produto',
             estoqueError.message,
           ),
+        }
+      }
+
+      return { ok: true, id: data.id }
+    },
+
+    async createPrecosAtacadoTier(tier: PrecosAtacadoTierInput) {
+      const { data, error } = await supabase
+        .from('precos_atacado')
+        .insert({
+          produto_id: tier.produto_id,
+          loja_id: tier.loja_id,
+          quantidade_minima: tier.quantidade_minima,
+          preco_unitario: tier.preco_unitario,
+          ativo: tier.ativo,
+          permitir_abaixo_custo: tier.permitir_abaixo_custo,
+        })
+        .select('id')
+        .single()
+
+      if (error || !data) {
+        return {
+          ok: false,
+          message: error
+            ? mensagemErroComSecao('Tier de preço atacado', error.message)
+            : 'Não foi possível criar o tier de preço. Tente de novo.',
         }
       }
 
