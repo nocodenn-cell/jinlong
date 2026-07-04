@@ -15,7 +15,7 @@
  * O Price Engine (RPC) nunca consulta quantidade_gatilho_atacado ou pdv_config.
  */
 
-import type { NovoProdutoInput } from '@/core/ports/produto'
+import type { NovoProdutoInput } from '../../pdv-importados/core/ports/produto'
 
 /**
  * Representa uma política comercial materializada como tier em precos_atacado.
