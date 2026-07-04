@@ -30,11 +30,7 @@ export function combineAriaIds(...ids: (string | undefined)[]): string | undefin
 }
 
 /**
- * Create sr-only (screen reader only) class
- * Use for text that should only be read by screen readers
+ * Get sr-only className for screen reader only text
+ * Usage: <span className={srOnlyClass}>Text for screen readers only</span>
  */
-export function srOnly(text: string) {
-  return (
-    <span className="sr-only">{text}</span>
-  )
-}
+export const srOnlyClass = 'sr-only'
