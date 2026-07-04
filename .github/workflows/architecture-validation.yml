@@ -1,0 +1,65 @@
+name: Architecture Validation
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - claude/**
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  validate-architecture:
+    name: Validate Architecture Rules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate domain type uniqueness
+        run: npm run validate:arch:types
+        continue-on-error: false
+
+      - name: Validate import direction rules
+        run: npm run validate:arch:direction
+        continue-on-error: false
+
+      - name: Detect multi-path symbols
+        run: npm run validate:arch:multipaths
+        continue-on-error: false
+
+      - name: Generate architecture report
+        if: always()
+        run: |
+          echo "## Architecture Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Checks Performed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Domain type uniqueness (single source of truth)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Import direction rules (domain/app/infra boundaries)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Multi-path symbol detection (no duplicate import paths)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All architecture rules validated successfully." >> $GITHUB_STEP_SUMMARY
+
+      - name: Report failures
+        if: failure()
+        run: |
+          echo "## ❌ Architecture Validation Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "One or more architectural rules were violated." >> $GITHUB_STEP_SUMMARY
+          echo "See logs above for details." >> $GITHUB_STEP_SUMMARY
+          exit 1

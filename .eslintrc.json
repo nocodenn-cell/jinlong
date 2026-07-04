@@ -32,6 +32,38 @@
       "rules": {
         "no-console": "off"
       }
+    },
+    {
+      "files": ["shared-core/src/domain/product/**/*.ts", "pdv-importados/**/*.ts"],
+      "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+      },
+      "rules": {
+        "architecture/no-direct-re-export-types": "error",
+        "architecture/no-forbidden-layer-imports": [
+          "error",
+          {
+            "rules": [
+              {
+                "source": "pdv-importados/app/aplicacao",
+                "forbidden": ["@/core/catalog", "/core/catalog"],
+                "message": "Application layer cannot import business logic from core/catalog"
+              },
+              {
+                "source": "pdv-importados/app/aplicacao",
+                "forbidden": ["@/core/services", "/core/services"],
+                "message": "Application layer must use domain services, not core/services"
+              },
+              {
+                "source": "shared-core/src",
+                "forbidden": ["pdv-importados"],
+                "message": "shared-core cannot depend on pdv-importados"
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
