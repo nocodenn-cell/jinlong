@@ -10,7 +10,6 @@ export { enfileirarDocumentoFiscalPosVenda } from '@/app/caixa/server/caixaFisca
 export {
   LIMITE_DIVERGENCIA_FECHAMENTO,
   parseMoneyInput,
-  calcularValorSistemaDinheiroCaixa,
 } from '@/app/caixa/server/caixaFechamentoServer'
 export { coletarAuditoriaRequest } from '@/app/caixa/server/caixaAuditoriaRequest'
 export {

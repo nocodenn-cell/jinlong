@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { calcularValorSistemaDinheiroCaixa } from '@/app/caixa/server/caixaActionsInternals'
+import { calcularValorSistemaDinheiroCaixa } from './valorSistemaCaixaRpc'
 import type { PdvStateSnapshot } from '../../../shared-core/src/pdv/invariants'
 
 export async function fetchPdvStateSnapshot(
