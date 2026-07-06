@@ -50,3 +50,4 @@ fastproduct/
 # MCP local (pode conter Personal Access Token do Supabase)
 .mcp.json
 .claude/worktrees/
+.vs/
