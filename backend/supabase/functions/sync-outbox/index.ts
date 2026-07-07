@@ -54,6 +54,36 @@ const CORS_ALLOW_METHODS = "GET, POST, OPTIONS";
 const CORS_ALLOW_HEADERS =
   "content-type, x-sync-key, x-sync-ts, x-sync-nonce, x-sync-signature, x-device-fingerprint";
 
+type SyncCorsMode =
+  | { kind: "wildcard" }
+  | { kind: "allowlist"; origins: Set<string> };
+
+function resolveSyncCorsMode(): SyncCorsMode {
+  const strict = (() => {
+    const raw = Deno.env.get("SYNC_OUTBOX_CORS_STRICT");
+    const v = (raw ?? "").trim().toLowerCase();
+    return v === "true" || v === "1" || v === "yes";
+  })();
+  const raw = Deno.env.get("SYNC_OUTBOX_ALLOWED_ORIGINS")?.trim() ?? "";
+
+  if (!raw) {
+    if (strict) return { kind: "allowlist", origins: new Set() };
+    return { kind: "wildcard" };
+  }
+
+  const set = new Set<string>();
+  for (const part of raw.split(",")) {
+    const n = part.trim().replace(/\/+$/, "").toLowerCase();
+    if (n) set.add(n);
+  }
+
+  if (set.size === 0) {
+    if (strict) return { kind: "allowlist", origins: new Set() };
+    return { kind: "wildcard" };
+  }
+  return { kind: "allowlist", origins: set };
+}
+
 function hexOfBytes(bytes: Uint8Array): string {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -343,15 +373,26 @@ function jsonResponse(req: Request, status: number, body: unknown) {
   });
 }
 
-function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("Origin") ?? req.headers.get("origin");
-  return {
-    "Access-Control-Allow-Origin": origin?.trim() || "*",
+function corsHeaders(req: Request, mode?: SyncCorsMode): Record<string, string> {
+  const resolved = mode ?? resolveSyncCorsMode();
+  const base: Record<string, string> = {
     "Access-Control-Allow-Methods": CORS_ALLOW_METHODS,
     "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
+  if (resolved.kind === "wildcard") {
+    base["Access-Control-Allow-Origin"] = "*";
+    return base;
+  }
+  const origin = req.headers.get("Origin") ?? req.headers.get("origin");
+  if (origin?.trim()) {
+    const normalized = origin.trim().replace(/\/+$/, "").toLowerCase();
+    if (resolved.origins.has(normalized)) {
+      base["Access-Control-Allow-Origin"] = origin.trim();
+    }
+  }
+  return base;
 }
 
 function isUuid(s: string | null | undefined): s is string {
