@@ -4,6 +4,10 @@ import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMessages } from '@/i18n/getMessages'
+import {
+  expectFluxoAtacadoAberto,
+  preencherESalvarProdutoDemo,
+} from '@/app/admin/catalogo/_components/catalogoNovoProdutoFluxo.test-helpers'
 
 const criarProdutoMock = vi.fn()
 
@@ -45,12 +49,6 @@ function render(ui: React.ReactElement) {
   flushSync(() => root.render(ui))
 }
 
-function setInputValue(el: HTMLInputElement, value: string) {
-  const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-  nativeSetter?.call(el, value)
-  el.dispatchEvent(new Event('input', { bubbles: true }))
-}
-
 describe('NovoProdutoModal — fluxo cadastro + atacado', () => {
   it('após salvar permanece aberto e exibe editor de faixas na aba venda', async () => {
     const onCriado = vi.fn()
@@ -64,35 +62,12 @@ describe('NovoProdutoModal — fluxo cadastro + atacado', () => {
       />,
     )
 
-    const nome = container.querySelector('#nome-produto, input') as HTMLInputElement
-    setInputValue(nome, 'Produto Demo')
-
-    const vendaTab = Array.from(container.querySelectorAll('[role="tab"]')).find((el) =>
-      el.textContent?.includes(m.produtos.aba_venda_atacado),
-    ) as HTMLButtonElement
-    flushSync(() => vendaTab.click())
-
-    const precoInput = container.querySelector('input[inputmode="decimal"]') as HTMLInputElement | null
-    expect(precoInput).not.toBeNull()
-    setInputValue(precoInput as HTMLInputElement, '10,00')
-
-    const salvar = Array.from(container.querySelectorAll('button')).find((el) =>
-      el.textContent?.includes(m.comum.salvar),
-    ) as HTMLButtonElement
-    flushSync(() => {
-      salvar.click()
-    })
-    await vi.waitFor(() => {
-      expect(criarProdutoMock).toHaveBeenCalled()
-      expect(container.querySelector('[data-testid="faixas-editor"]')).not.toBeNull()
-    })
+    await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
 
     expect(onCriado).toHaveBeenCalled()
+    expectFluxoAtacadoAberto(container, m)
     expect(container.querySelector('[data-testid="faixas-editor"]')?.getAttribute('data-produto-id')).toBe(
       'produto-uuid-1',
     )
-    expect(
-      Array.from(container.querySelectorAll('button')).some((el) => el.textContent?.includes(m.comum.concluir)),
-    ).toBe(true)
   })
 })
