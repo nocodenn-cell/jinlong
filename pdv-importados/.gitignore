@@ -22,3 +22,6 @@ Thumbs.db
 
 # Relatórios locais jscpd (`npx jscpd ... --output`)
 report-jscpd*/
+
+# Sentry Config File
+.env.sentry-build-plugin
