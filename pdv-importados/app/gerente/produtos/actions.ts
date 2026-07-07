@@ -1197,3 +1197,105 @@ export async function buscarProdutosParaExportacao(
   if (!r.success) return { success: false, error: r.error }
   return { success: true, data: r.data.rows }
 }
+
+// ─── Tela de detalhe (somente leitura) /admin/catalogo/[id] ─────────────────
+
+export type ProdutoDetalhe = {
+  id: string
+  nome: string
+  codigo_interno: string | null
+  codigo_barras: string | null
+  categoria_id: string | null
+  marca_id: string | null
+  unidade_medida: string
+  preco_varejo: number
+  preco_atacado: number | null
+  quantidade_gatilho_atacado: number | null
+  quantidade_atual: number | null
+  estoque_minimo: number | null
+  localizacao_prateleira: string | null
+  ativo: boolean
+  status_publicacao: StatusPublicacao
+}
+
+type ProdutoDetalheRow = {
+  id: string
+  nome: string
+  codigo_interno: string | null
+  codigo_barras: string | null
+  categoria_id: string | null
+  marca_id: string | null
+  unidade_medida: string
+  preco_varejo: number
+  preco_atacado: number | null
+  quantidade_gatilho_atacado: number | null
+  localizacao_prateleira: string | null
+  ativo: boolean
+  status_publicacao: StatusPublicacao | null
+}
+
+type EstoqueDetalheRow = { quantidade_atual: number; estoque_minimo: number }
+
+export async function buscarProdutoDetalhe(produtoId: string): Promise<ActionResult<ProdutoDetalhe>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const idValido = z.string().uuid().safeParse(produtoId)
+  if (!idValido.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod('ID do produto inválido.', idioma) }
+  }
+
+  const supabase = await createClient()
+  const [produtoRes, estoqueRes] = await Promise.all([
+    supabase
+      .from('produtos')
+      .select(
+        'id, nome, codigo_interno, codigo_barras, categoria_id, marca_id, unidade_medida, preco_varejo, preco_atacado, quantidade_gatilho_atacado, localizacao_prateleira, ativo, status_publicacao',
+      )
+      .eq('id', produtoId)
+      .maybeSingle(),
+    supabase
+      .from('estoque')
+      .select('quantidade_atual, estoque_minimo')
+      .eq('produto_id', produtoId)
+      .maybeSingle(),
+  ])
+
+  if (produtoRes.error) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroComSecao('Produto', produtoRes.error.message, idioma) }
+  }
+  if (!produtoRes.data) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroComSecao('Produto', 'Produto não encontrado.', idioma) }
+  }
+
+  const row = produtoRes.data as ProdutoDetalheRow
+  const estoque = estoqueRes.data as EstoqueDetalheRow | null
+
+  return {
+    success: true,
+    data: {
+      id: row.id,
+      nome: row.nome,
+      codigo_interno: row.codigo_interno ?? null,
+      codigo_barras: row.codigo_barras ?? null,
+      categoria_id: row.categoria_id ?? null,
+      marca_id: row.marca_id ?? null,
+      unidade_medida: row.unidade_medida,
+      preco_varejo: Number(row.preco_varejo),
+      preco_atacado: row.preco_atacado != null ? Number(row.preco_atacado) : null,
+      quantidade_gatilho_atacado:
+        row.quantidade_gatilho_atacado != null ? Number(row.quantidade_gatilho_atacado) : null,
+      quantidade_atual: estoque?.quantidade_atual ?? null,
+      estoque_minimo: estoque?.estoque_minimo ?? null,
+      localizacao_prateleira: row.localizacao_prateleira ?? null,
+      ativo: row.ativo,
+      status_publicacao: resolveStatusPublicacaoLeitura(
+        row.status_publicacao ?? statusFromAtivoLegacy(row.ativo),
+        row.ativo,
+      ),
+    },
+  }
+}

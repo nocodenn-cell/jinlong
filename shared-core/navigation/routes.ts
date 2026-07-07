@@ -68,6 +68,11 @@ export function adminCatalogoProdutoQuery(id: string): string {
   return `${ROUTES.admin.catalogo}?produto=${id}`
 }
 
+/** Tela de detalhe (somente leitura) de um produto do catálogo. */
+export function adminCatalogoProduto(id: string): string {
+  return `${ROUTES.admin.catalogo}/${id}`
+}
+
 export function catalogoPublicProduto(id: string): string {
   return `${ROUTES.catalogoPublic.produtos}/${id}`
 }

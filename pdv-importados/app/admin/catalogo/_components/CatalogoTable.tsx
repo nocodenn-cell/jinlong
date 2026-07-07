@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminCatalogoProduto } from '@shared-core/navigation/routes'
 import { Eye, ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
@@ -250,7 +250,7 @@ export function CatalogoTable({
             >
               <Pencil size={13} aria-hidden />
             </button>
-            <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
+            <ActionBtn href={adminCatalogoProduto(row.id)} label={`Ver ${row.nome}`}>
               <Eye size={13} aria-hidden />
             </ActionBtn>
           </div>
