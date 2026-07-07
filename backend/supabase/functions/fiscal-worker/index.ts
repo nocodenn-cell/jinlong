@@ -29,8 +29,8 @@ Deno.serve(async (req) => {
     if (isRecord(body) && typeof body.limit === "number" && Number.isFinite(body.limit)) {
       limit = Math.max(1, Math.min(100, Math.floor(body.limit)));
     }
-  } catch {
-    // ignora e usa limit default
+  } catch (e) {
+    console.warn(JSON.stringify({ scope: "fiscal-worker", event: "body_parse_fallback", message: e instanceof Error ? e.message : String(e) }));
   }
 
   const providerType = (Deno.env.get("FISCAL_PROVIDER_TYPE") ?? "mock").toLowerCase() as ProviderConfig["type"];

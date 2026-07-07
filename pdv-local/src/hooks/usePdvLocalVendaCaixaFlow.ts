@@ -211,7 +211,8 @@ export function usePdvLocalVendaCaixaFlow({
         await onSyncOutbox(50)
         await onRefreshOutboxResumo()
         onSetMensagem('Venda registrada e sincronizada (quando possível).')
-      } catch {
+      } catch (syncErr) {
+        logError('Sync após venda falhou (venda já salva localmente)', { error: syncErr })
         await onRefreshOutboxResumo()
         onSetMensagem('Venda registrada localmente. Sincronização pendente.')
       }

@@ -35,7 +35,8 @@ export function useIdioma() {
         const perfilUsuario = normalizePerfilUsuario(usuario?.perfil)
         setPerfil(perfilUsuario)
         setIdioma(normalizeIdioma(usuario?.idioma_preferido))
-      } catch {
+      } catch (e) {
+        console.warn('[useIdioma] failed to load user data, defaulting to pt/OPERADOR:', e instanceof Error ? e.message : e)
         setIdioma('pt')
         setPerfil('OPERADOR')
       } finally {

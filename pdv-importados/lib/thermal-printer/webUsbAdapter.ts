@@ -110,7 +110,8 @@ export class WebUsbPrinter {
 
     try {
       await this.openDevice(device)
-    } catch {
+    } catch (e) {
+      console.warn('[WebUsbPrinter] reconnect openDevice failed:', e instanceof Error ? e.message : e)
       return null
     }
     const info = this.getInfo()!

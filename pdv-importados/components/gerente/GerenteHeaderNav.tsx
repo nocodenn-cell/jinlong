@@ -155,7 +155,8 @@ export function GerenteHeaderNav({
       setFiscalFila(data.fiscal_fila ?? 0)
       setLastCheckAt(new Date())
       return true
-    } catch {
+    } catch (e) {
+      console.warn('[GerenteHeaderNav] health check failed:', e instanceof Error ? e.message : e)
       setSysStatus('offline')
       return false // backoff via usePolling
     }
@@ -179,7 +180,8 @@ export function GerenteHeaderNav({
       const data = (await res.json()) as FilaStatusPayload
       setFilaStatus(data)
       return true
-    } catch {
+    } catch (e) {
+      console.warn('[GerenteHeaderNav] fila status fetch failed:', e instanceof Error ? e.message : e)
       return false // backoff via usePolling
     }
   }, [])
@@ -196,7 +198,8 @@ export function GerenteHeaderNav({
       const data = (await res.json()) as { count: number }
       setNotifCount(data.count ?? 0)
       return true
-    } catch {
+    } catch (e) {
+      console.warn('[GerenteHeaderNav] notif count fetch failed:', e instanceof Error ? e.message : e)
       return false // backoff via usePolling
     }
   }, [])

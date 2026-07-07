@@ -7,6 +7,7 @@ import { parseCancelarVendaGerenteForm } from '@/app/gerente/vendas/parseCancela
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { logCaughtServerError } from '@/lib/logging/server-error'
 
 export type VendaListRow = {
   id: string
@@ -185,7 +186,8 @@ export async function obterKpisVendas(
       qtdCanceladas: Number(row.qtd_canceladas ?? 0),
       valorCanceladas: Number(row.valor_canceladas ?? 0),
     }
-  } catch {
+  } catch (e) {
+    logCaughtServerError('obterKpisVendas', e)
     return vazio
   }
 }
@@ -225,8 +227,8 @@ export async function obterVendasCompletaParaExport(
       if (raw.length < EXPORT_PAGE) break
       offset += EXPORT_PAGE
     }
-  } catch {
-    // retorna parcial
+  } catch (e) {
+    logCaughtServerError('obterVendasCompletaParaExport', e)
   }
   return acc
 }

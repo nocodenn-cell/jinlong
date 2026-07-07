@@ -54,7 +54,9 @@ export function useGerenteQuery<TData>(
       setLoading(false)
       return
     }
-    refetch().catch(() => undefined)
+    refetch().catch((e) => {
+      console.warn('[useGerenteQuery] initial fetch failed:', e instanceof Error ? e.message : e)
+    })
   }, [options?.enabled, refetch])
 
   return { data, loading, error, refetch }

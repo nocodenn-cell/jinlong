@@ -91,8 +91,8 @@ export async function gerarPdfEtiquetas(
         config.largura - config.margem * 2,
         6
       )
-    } catch {
-      // Fallback: mostrar código em texto se falhar
+    } catch (e) {
+      console.warn('[gerarPdf] barcode image failed, using text fallback:', e instanceof Error ? e.message : e)
       pdf.setFontSize(config.fontSizeCodigo)
       pdf.text(item.codigoBarras, config.margem, config.altura - config.margem - 2)
     }
