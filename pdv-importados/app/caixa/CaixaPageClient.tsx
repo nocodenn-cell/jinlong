@@ -29,6 +29,7 @@ import {
 import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
+import { useReprecificarQuantidadeCaixa } from "@/app/caixa/hooks/useReprecificarQuantidadeCaixa"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
@@ -229,6 +230,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
   const adicionarItem = useCarrinhoStore((s) => s.adicionarItem)
   const alterarQuantidade = useCarrinhoStore((s) => s.alterarQuantidade)
+  const { reprecificar } = useReprecificarQuantidadeCaixa()
   const removerItem = useCarrinhoStore((s) => s.removerItem)
   const restaurarUltimoRemovido = useCarrinhoStore((s) => s.restaurarUltimoRemovido)
   const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
@@ -419,7 +421,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         if (last && last.codigo === scannedCode && now - last.ts < 500) {
           const item = useCarrinhoStore.getState().itens.find((i) => i.id === last.itemId)
           if (item) {
-            alterarQuantidade(last.itemId, item.quantidade + 1)
+            const novaQuantidade = item.quantidade + 1
+            alterarQuantidade(last.itemId, novaQuantidade)
+            reprecificar({
+              itemId: last.itemId,
+              produtoId: item.produtoId,
+              quantidade: novaQuantidade,
+              tipoPrecoAtual: item.resultado?.tipoPreco ?? "VAREJO",
+            })
             lastScanItemRef.current = { ...last, ts: now }
             return
           }
@@ -436,7 +445,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
         }
       },
-      [alterarQuantidade, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
+      [alterarQuantidade, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, reprecificar, setCaixaMensagem],
     ),
     {
       enabled: true,
@@ -454,14 +463,25 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setCaixaMensagem(m.caixa.msg_item_removido_qtde_zero, { kind: "info" })
         return
       }
-      // Alteração de quantidade: preço já foi calculado no scan (ação unificada)
-      // Não é necessário recalcular no hot-path
+      // Atualização otimista da quantidade; o preço é reconferido logo em seguida
+      // via RPC (debounced) para refletir mudança de faixa de atacado.
       alterarQuantidade(itemId, quantidade)
+      const item = useCarrinhoStore.getState().itens.find((i) => i.id === itemId)
+      if (item) {
+        reprecificar({
+          itemId,
+          produtoId: item.produtoId,
+          quantidade,
+          tipoPrecoAtual: item.resultado?.tipoPreco ?? "VAREJO",
+          debounce: true,
+        })
+      }
     },
     [
       alterarQuantidade,
       m.caixa.msg_item_removido_qtde_zero,
       removerItem,
+      reprecificar,
       setCaixaMensagem,
     ],
   )
