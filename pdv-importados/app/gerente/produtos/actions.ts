@@ -45,6 +45,12 @@ import {
 import { motivoBloqueioExclusaoFisica } from '@/lib/gerente/produtoExclusaoLote'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 
+const optionalTexto = (max: number) =>
+  z.string().nullable().optional().transform((s) => {
+    const t = (s ?? '').trim()
+    return t.length === 0 ? null : t.slice(0, max)
+  })
+
 const NovoProdutoSchema = z.object({
   nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
   codigo_barras: z
@@ -59,6 +65,10 @@ const NovoProdutoSchema = z.object({
       (s) => s === null || s.length >= 3,
       'Código de barras: mínimo 3 caracteres ou deixe em branco',
     ),
+  codigo_interno: optionalTexto(60),
+  referencia_fornecedor: optionalTexto(60),
+  nome_reduzido_pdv: optionalTexto(40),
+  localizacao_prateleira: optionalTexto(60),
   preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
   preco_atacado: z.coerce.number().positive('O preço de atacado deve ser maior que zero (ou deixe em branco).').nullable().optional().transform((v) => v ?? null),
   preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
@@ -570,6 +580,10 @@ const EditarProdutoCatalogoSchema = z.object({
       (s) => s === null || s.length >= 3,
       'Código de barras: mínimo 3 caracteres ou deixe em branco',
     ),
+  codigo_interno: optionalTexto(60),
+  referencia_fornecedor: optionalTexto(60),
+  nome_reduzido_pdv: optionalTexto(40),
+  localizacao_prateleira: optionalTexto(60),
   origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf'], {
     errorMap: () => ({ message: 'Origem do produto inválida.' }),
   }),
@@ -779,6 +793,10 @@ export async function atualizarDadosProdutoGerente(
     .update({
       nome: parsed.data.nome,
       codigo_barras: parsed.data.codigo_barras,
+      codigo_interno: parsed.data.codigo_interno,
+      referencia_fornecedor: parsed.data.referencia_fornecedor,
+      nome_reduzido_pdv: parsed.data.nome_reduzido_pdv,
+      localizacao_prateleira: parsed.data.localizacao_prateleira,
       origem: parsed.data.origem,
       tem_nf: parsed.data.tem_nf,
       preco_varejo: parsed.data.preco_varejo,
@@ -960,37 +978,55 @@ export async function buscarProdutosComFiltros(
   const productIds = list.map((r) => r.id)
   const [estoqueRes, extraRes] = productIds.length > 0
     ? await Promise.all([
-        supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
+        supabase
+          .from('estoque')
+          .select('produto_id, quantidade_atual, estoque_minimo')
+          .in('produto_id', productIds),
         supabase
           .from('produtos')
-          .select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo, status_publicacao')
+          .select(
+            'id, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_custo, preco_custo_medio, permitir_abaixo_custo, status_publicacao',
+          )
           .in('id', productIds),
       ])
     : [
-        { data: [] as { produto_id: string; quantidade_atual: number }[] },
+        { data: [] as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[] },
         {
           data: [] as {
             id: string
             codigo_interno: string | null
+            referencia_fornecedor?: string | null
+            nome_reduzido_pdv?: string | null
             localizacao_prateleira?: string | null
             preco_custo?: number | null
+            preco_custo_medio?: number | null
             permitir_abaixo_custo?: boolean
             status_publicacao?: StatusPublicacao | null
           }[],
         },
       ]
 
-  const estoqueMap = new Map<string, number>()
-  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
-    estoqueMap.set(e.produto_id, e.quantidade_atual)
+  const estoqueMap = new Map<string, { quantidade_atual: number; estoque_minimo: number }>()
+  for (const e of ((estoqueRes.data ?? []) as {
+    produto_id: string
+    quantidade_atual: number
+    estoque_minimo: number
+  }[])) {
+    estoqueMap.set(e.produto_id, {
+      quantidade_atual: e.quantidade_atual,
+      estoque_minimo: e.estoque_minimo,
+    })
   }
 
   const extraMap = new Map<
     string,
     {
       codigo_interno: string | null
+      referencia_fornecedor: string | null
+      nome_reduzido_pdv: string | null
       localizacao_prateleira: string | null
       preco_custo: number | null
+      preco_custo_medio: number
       permitir_abaixo_custo: boolean
       status_publicacao: StatusPublicacao | null
     }
@@ -998,15 +1034,21 @@ export async function buscarProdutosComFiltros(
   for (const p of ((extraRes.data ?? []) as {
     id: string
     codigo_interno?: string | null
+    referencia_fornecedor?: string | null
+    nome_reduzido_pdv?: string | null
     localizacao_prateleira?: string | null
     preco_custo?: number | null
+    preco_custo_medio?: number | null
     permitir_abaixo_custo?: boolean
     status_publicacao?: StatusPublicacao | null
   }[])) {
     extraMap.set(p.id, {
       codigo_interno: p.codigo_interno ?? null,
+      referencia_fornecedor: p.referencia_fornecedor ?? null,
+      nome_reduzido_pdv: p.nome_reduzido_pdv ?? null,
       localizacao_prateleira: p.localizacao_prateleira ?? null,
       preco_custo: p.preco_custo != null ? Number(p.preco_custo) : null,
+      preco_custo_medio: p.preco_custo_medio != null ? Number(p.preco_custo_medio) : 0,
       permitir_abaixo_custo: p.permitir_abaixo_custo ?? false,
       status_publicacao: p.status_publicacao ?? null,
     })
@@ -1014,6 +1056,7 @@ export async function buscarProdutosComFiltros(
 
   const rows: ProdutoGerenteRow[] = list.map((r) => {
     const extra = extraMap.get(r.id)
+    const estoque = estoqueMap.get(r.id)
     const statusPublicacao = resolveStatusPublicacaoLeitura(
       extra?.status_publicacao ?? statusFromAtivoLegacy(r.ativo),
       r.ativo,
@@ -1023,13 +1066,17 @@ export async function buscarProdutosComFiltros(
       nome: r.nome,
       codigo_barras: r.codigo_barras,
       codigo_interno: extra?.codigo_interno ?? null,
+      referencia_fornecedor: extra?.referencia_fornecedor ?? null,
+      nome_reduzido_pdv: extra?.nome_reduzido_pdv ?? null,
       localizacao_prateleira: extra?.localizacao_prateleira ?? null,
       preco_varejo: Number(r.preco_varejo),
       preco_atacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
       preco_custo: extra?.preco_custo ?? null,
+      preco_custo_medio: extra?.preco_custo_medio ?? 0,
       permitir_abaixo_custo: extra?.permitir_abaixo_custo ?? false,
       quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
-      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id) ?? null) : null,
+      quantidade_atual: estoque?.quantidade_atual ?? null,
+      estoque_minimo: estoque?.estoque_minimo ?? null,
       origem: r.origem,
       tem_nf: r.tem_nf,
       ativo: r.ativo,

@@ -1692,10 +1692,12 @@ export type Database = {
           id: string
           imagem_url: string | null
           limite_transferencia_sem_observacao: number | null
+          localizacao_prateleira: string | null
           loja_id: string
           marca_id: string | null
           ncm: string | null
           nome: string
+          nome_reduzido_pdv: string | null
           observacao: string | null
           origem: string
           permitir_abaixo_custo: boolean
@@ -1727,10 +1729,12 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           limite_transferencia_sem_observacao?: number | null
+          localizacao_prateleira?: string | null
           loja_id: string
           marca_id?: string | null
           ncm?: string | null
           nome: string
+          nome_reduzido_pdv?: string | null
           observacao?: string | null
           origem: string
           permitir_abaixo_custo?: boolean
@@ -1762,10 +1766,12 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           limite_transferencia_sem_observacao?: number | null
+          localizacao_prateleira?: string | null
           loja_id?: string
           marca_id?: string | null
           ncm?: string | null
           nome?: string
+          nome_reduzido_pdv?: string | null
           observacao?: string | null
           origem?: string
           permitir_abaixo_custo?: boolean

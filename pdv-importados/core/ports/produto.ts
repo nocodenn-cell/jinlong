@@ -12,6 +12,14 @@ export interface NovoProdutoInput {
   nome: string
   /** Opcional no cadastro rápido; persiste NULL se vazio (único só quando informado). */
   codigo_barras: string | null
+  /** Código interno / SKU do produto (opcional). */
+  codigo_interno?: string | null
+  /** Referência do produto no catálogo do fornecedor (opcional). */
+  referencia_fornecedor?: string | null
+  /** Nome curto opcional para exibição compacta no PDV (cupom/tela de venda). */
+  nome_reduzido_pdv?: string | null
+  /** Localização física na loja (ex.: "A-12"); apenas informativo. */
+  localizacao_prateleira?: string | null
   preco_varejo: number
   /** Preço atacado opcional (catálogo); exige quantidade mínima em pdv_config. */
   preco_atacado?: number | null

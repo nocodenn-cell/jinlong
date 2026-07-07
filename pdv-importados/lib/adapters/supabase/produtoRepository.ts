@@ -47,6 +47,10 @@ export function createProdutoRepository(
         .insert({
           nome: input.nome,
           codigo_barras: input.codigo_barras?.trim() || null,
+          codigo_interno: input.codigo_interno?.trim() || null,
+          referencia_fornecedor: input.referencia_fornecedor?.trim() || null,
+          nome_reduzido_pdv: input.nome_reduzido_pdv?.trim() || null,
+          localizacao_prateleira: input.localizacao_prateleira?.trim() || null,
           preco_varejo: input.preco_varejo,
           preco_atacado: pa,
           preco_custo: pc,
