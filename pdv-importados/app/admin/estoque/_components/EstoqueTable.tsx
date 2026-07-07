@@ -99,7 +99,7 @@ function ActionBtn({
         e.stopPropagation()
         onClick()
       }}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
+      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-[var(--color-background-tertiary)] hover:text-jl-fg-1"
     >
       {children}
     </button>

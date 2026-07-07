@@ -3,7 +3,7 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatBRL } from '@/lib/format/money'
 import { ChartLayoutGate } from '@/components/charts/ChartLayoutGate'
-import { CHART_COLORS, CHART_UI_COLORS, RECHARTS_LABEL_STYLE } from '@/lib/tokens/chartColors'
+import { CHART_COLORS, CHART_UI_COLORS } from '@/lib/tokens/chartColors'
 
 export type PaymentSlice = {
   label: string

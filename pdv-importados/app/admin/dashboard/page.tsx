@@ -80,7 +80,7 @@ function collectSupabaseErrors(
 function ErrorBanner({ messages, title }: { messages: string[]; title: string }) {
   if (messages.length === 0) return null
   return (
-    <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
+    <div className="admin-v2-alert-danger mb-4 rounded-lg px-4 py-3 text-sm" role="alert">
       <div className="mb-2 flex items-center gap-2 font-semibold">
         <AlertCircle className="shrink-0" size={18} />
         {title}
@@ -98,10 +98,10 @@ function statusBadge(status: VendaStatus, labels: { concluida: string; cancelada
   const label = status === 'CONCLUIDA' ? labels.concluida : labels.cancelada
   const config: Record<VendaStatus, { className: string }> = {
     CONCLUIDA: {
-      className: 'border border-success/30 bg-success/20 text-success',
+      className: 'admin-v2-badge-success',
     },
     CANCELADA: {
-      className: 'border border-destructive/30 bg-destructive/20 text-destructive',
+      className: 'admin-v2-badge-danger',
     },
   }
   const meta = config[status]
@@ -460,7 +460,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       />
 
       {periodSalesFailed && (
-        <div className="mb-6 rounded-lg border-2 border-destructive/35 bg-destructive/10 px-4 py-4 text-sm text-destructive" role="alert">
+        <div className="admin-v2-alert-danger mb-6 rounded-lg px-4 py-4 text-sm" role="alert">
           <div className="flex gap-2 font-semibold">
             <AlertCircle className="mt-0.5 shrink-0" size={18} />
             {adminUi.errors.criticalSalesTitle[lk]}
@@ -484,7 +484,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       <div className="admin-v2-grid-3-main">
         {periodSalesFailed ? (
           <ChartCard title={L.chartTitle[lk]}>
-            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
+            <div className="admin-v2-alert-danger flex h-full items-center justify-center rounded-md px-4 text-center text-sm">
               {adminUi.errors.chartUnavailable[lk]}
             </div>
           </ChartCard>
@@ -496,7 +496,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
         <SectionCard title={L.hourlyChartTitle[lk]} className="admin-v2-chart-area">
           {periodSalesFailed ? (
-            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 text-center text-sm text-destructive">
+            <div className="admin-v2-alert-danger flex h-full items-center justify-center rounded-md px-4 text-center text-sm">
               {adminUi.errors.chartUnavailable[lk]}
             </div>
           ) : (
@@ -522,13 +522,13 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           subtitle={L.lowStockSubtitle[lk]}
         >
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-bold tabular-nums text-[#c9a227]">
+            <span className="text-4xl font-bold tabular-nums text-[var(--color-chart-gold)]">
               {formatNumberLocale(estoqueBaixoCount, locale)}
             </span>
             <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>
           </div>
           {showStockAlerts && estoqueBaixoLista.length > 0 ? (
-            <ul className="mt-3 flex flex-col gap-1.5 border-t border-[#242424] pt-3">
+            <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--color-border-secondary)] pt-3">
               {estoqueBaixoLista.map((item) => (
                 <li key={item.nome} className="flex items-center justify-between text-[12px]">
                   <span className="truncate text-jl-fg-2">{item.nome}</span>
@@ -555,7 +555,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           ) : (
             <table className="w-full min-w-[800px] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-[#242424] text-left text-sm text-jl-fg-3">
+                <tr className="border-b border-[var(--color-border-secondary)] text-left text-sm text-jl-fg-3">
                   <th className="px-3 py-2 font-medium">{L.tableColId[lk]}</th>
                   <th className="px-3 py-2 font-medium">{L.tableColOperador[lk]}</th>
                   <th className="px-3 py-2 font-medium">{L.tableColData[lk]}</th>
@@ -566,7 +566,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               </thead>
               <tbody>
                 {latestOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-[#242424] transition-colors hover:bg-white/[0.03]">
+                  <tr key={order.id} className="border-b border-[var(--color-border-secondary)] transition-colors hover:bg-white/[0.03]">
                     <td className="max-w-[120px] truncate px-3 py-3 font-medium text-jl-fg-1" title={order.id}>
                       {order.id}
                     </td>

@@ -12,7 +12,7 @@ export type RechartsThemeVariant = 'default' | 'oriental'
  * Usa var() que será resolvido pelo browser
  */
 export function getRechartsTooltipStyle(variant: RechartsThemeVariant = 'default') {
-  const preset = CHART_THEME_PRESETS[variant]
+  void variant
   return {
     background: CHART_UI_COLORS.tooltipBg,
     border: `1px solid ${CHART_UI_COLORS.tooltipBorder}`,

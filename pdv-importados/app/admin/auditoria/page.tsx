@@ -207,7 +207,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       <SectionCard
         title="Trilha de eventos"
         action={
-          <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+          <span className="rounded-full border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
             {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
           </span>
         }
@@ -226,7 +226,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
         </div>
 
         {loadError ? (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
+          <div className="admin-v2-alert-danger mb-3 rounded-lg px-4 py-3 text-[12px]">
             {loadError}
           </div>
         ) : null}

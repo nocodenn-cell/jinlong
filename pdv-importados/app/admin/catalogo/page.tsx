@@ -248,7 +248,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   )
 
   const countBadge = (
-    <span className="rounded-full border border-[#242424] bg-[#0f0f0f] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+    <span className="rounded-full border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-2.5 py-0.5 text-[11px] text-jl-fg-3">
       {totalCount} {totalCount === 1 ? ui.catalogo_produto_sg : ui.catalogo_produtos_pl}
     </span>
   )
@@ -281,7 +281,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       </div>
 
       {loadError ? (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
+        <div className="admin-v2-alert-danger mb-4 rounded-lg px-4 py-3 text-[12px]">
           {loadError}
         </div>
       ) : null}
@@ -352,7 +352,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="cursor-not-allowed rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
+      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
         {children}
       </span>
     )
@@ -360,7 +360,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-[#242424] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-[#161616] hover:text-jl-fg-1"
+      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-[var(--color-background-tertiary)] hover:text-jl-fg-1"
     >
       {children}
     </Link>
@@ -384,7 +384,7 @@ function PageNumber({
         'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-[11px] font-medium transition-colors ' +
         (active
           ? 'border border-jl-accent/35 bg-jl-accent/10 text-jl-accent'
-          : 'border border-[#242424] text-jl-fg-3 hover:bg-[#161616] hover:text-jl-fg-1')
+          : 'border border-[var(--color-border-secondary)] text-jl-fg-3 hover:bg-[var(--color-background-tertiary)] hover:text-jl-fg-1')
       }
     >
       {children}
