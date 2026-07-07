@@ -70,6 +70,7 @@ import {
   type CaixaPdvOperadorTabId,
 } from "@/app/caixa/CaixaPdvOperadorTabs"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
+import { resolveCaixaPdvLayoutVariant } from "@/lib/caixa/resolveCaixaPdvLayoutVariant"
 import { cn } from "@/lib/utils"
 import "@/styles/theme-oriental.css"
 
@@ -129,8 +130,7 @@ type Props = {
 }
 
 export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
-  const pdvLayoutVariant: CaixaPdvLayoutVariant =
-    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "classic" ? "classic" : "default"
+  const pdvLayoutVariant: CaixaPdvLayoutVariant = resolveCaixaPdvLayoutVariant()
 
   const {
     mensagem,
