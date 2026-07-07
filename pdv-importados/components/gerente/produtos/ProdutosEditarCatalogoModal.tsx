@@ -14,6 +14,7 @@ import { ProdutoFormTabStrip, type ProdutoFormTabId } from './produtoFormSection
 import { DadosBasicosTab } from './produtoFormSections/DadosBasicosTab'
 import { EstoqueOperacaoTab } from './produtoFormSections/EstoqueOperacaoTab'
 import { CompraCustoTab } from './produtoFormSections/CompraCustoTab'
+import { FaixasAtacadoEditor } from './produtoFormSections/FaixasAtacadoEditor'
 
 type OrigemCode = 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'  // brasil_sem_nf is legacy DB value
 type UnidadeCode = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
@@ -301,6 +302,14 @@ export function ProdutosEditarCatalogoModal({
               const cor = pct < 0 ? 'text-red-400' : pct < 20 ? 'text-amber-400' : 'text-emerald-400'
               return <p className={`mt-1.5 text-[11px] font-mono ${cor}`}>Margem: {pct.toFixed(1)}%</p>
             })()}
+
+            <div className="mt-5">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+                {p.titulo_faixas_atacado}
+              </p>
+              <p className="mb-3 text-[11px] text-jl-fg-3">{p.hint_faixas_atacado}</p>
+              <FaixasAtacadoEditor produtoId={produto.id} p={p} />
+            </div>
 
             <details className="mt-4 rounded-md border border-[var(--color-border-secondary)] p-3">
               <summary className="cursor-pointer text-xs font-medium text-jl-fg-2">

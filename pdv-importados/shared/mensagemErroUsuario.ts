@@ -270,6 +270,16 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
     )
   }
 
+  // Guard de margem negativa (produtos/regras_preco/precos_atacado, migrations 124/125):
+  // trigger levanta *_ABAIXO_CUSTO quando o preço de venda fica menor que o custo.
+  if (lower.includes('abaixo_custo')) {
+    return t(
+      idioma,
+      'Preço abaixo do custo do produto. Marque "permitir abaixo do custo" para autorizar essa margem negativa.',
+      '销售价格低于商品成本。请勾选"允许低于成本销售"以授权此负毛利。',
+    )
+  }
+
   if (lower.includes('check constraint')) {
     return t(
       idioma,
