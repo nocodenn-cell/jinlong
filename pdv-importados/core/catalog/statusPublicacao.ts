@@ -42,6 +42,7 @@ export function resolveStatusPublicacaoLeitura(
   status: StatusPublicacao | null | undefined,
   _ativo?: boolean | null,
 ): StatusPublicacao {
+  void _ativo
   if (status === 'DRAFT' || status === 'PUBLICADO' || status === 'INATIVO') {
     return status
   }

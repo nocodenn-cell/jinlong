@@ -15,7 +15,7 @@ const LANGS: { value: Idioma; label: string; title: string; font?: string }[] = 
   { value: 'zh', label: '普通话', title: 'Mandarim (简体)', font: '"Noto Sans SC","PingFang SC",sans-serif' },
 ]
 
-export default function LanguageToggle({ idiomaAtual, variant = 'default' }: Props) {
+export default function LanguageToggle({ idiomaAtual }: Props) {
   const baseBtn = cn(
     'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
     'app-btn-neutral disabled:cursor-default disabled:opacity-55',
