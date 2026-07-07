@@ -271,7 +271,8 @@
     "custo_compra_label": "Custo de compra",
     "custo_medio_label": "Custo médio",
     "custo_medio_hint": "Calculado automaticamente pelas entradas de compra.",
-    "faixas_disponivel_apos_salvar": "As faixas de preço atacado ficam disponíveis para cadastro depois de salvar o produto (edite-o em seguida).",
+    "faixas_disponivel_apos_salvar": "Ao salvar, você poderá cadastrar as faixas de atacado nesta mesma tela.",
+    "faixas_apos_criar_titulo": "Produto salvo. Cadastre as faixas de atacado abaixo ou clique em Concluir.",
     "atacado_legado_titulo": "Atacado automático (avançado)",
     "atacado_legado_hint": "Ativa no PDV quando a quantidade no carrinho atinge o mínimo configurado no sistema. Faixas cadastradas acima têm prioridade sobre este valor.",
     "titulo_faixas_atacado": "Faixas de preço atacado",
@@ -1589,6 +1590,7 @@
     "idioma": "Idioma",
     "sair": "Sair",
     "fechar": "Fechar",
+    "concluir": "Concluir",
     "limpar_filtros": "Limpar filtros",
     "salvando": "Salvando…"
   },

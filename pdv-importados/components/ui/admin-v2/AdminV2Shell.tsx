@@ -37,6 +37,7 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
               aria-label={m.login.nav_marca}
               className="rounded-lg outline-none ring-offset-2 ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-amber-400/70"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- logo estático no shell admin */}
               <img
                 src="/branding/brand-double-dragon.png"
                 alt="Jīn Lóng"

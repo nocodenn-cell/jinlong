@@ -36,7 +36,6 @@ export function CatalogoNovoButton({
         m={m}
         opcoes={opcoes}
         onCriado={() => {
-          setOpen(false)
           router.refresh()
         }}
       />

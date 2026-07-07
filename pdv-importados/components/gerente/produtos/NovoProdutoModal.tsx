@@ -13,6 +13,8 @@ import { ProdutoFormTabStrip, type ProdutoFormTabId } from './produtoFormSection
 import { DadosBasicosTab } from './produtoFormSections/DadosBasicosTab'
 import { EstoqueOperacaoTab } from './produtoFormSections/EstoqueOperacaoTab'
 import { CompraCustoTab } from './produtoFormSections/CompraCustoTab'
+import { FaixasAtacadoEditor } from './produtoFormSections/FaixasAtacadoEditor'
+import { formatBRL } from '@/lib/format/money'
 
 type OrigemCode = 'china_manual' | 'brasil_nf'
 type UnidadeCode = 'UN' | 'KG' | 'CX' | 'FD' | 'M'
@@ -49,6 +51,9 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
   const precoAtacadoInput = useMoneyInput()
   const precoCustoInput = useMoneyInput()
   const [saving, setSaving] = useState(false)
+  const [produtoIdCriado, setProdutoIdCriado] = useState<string | null>(null)
+
+  const emFaseAtacado = produtoIdCriado !== null
 
   const fechar = useCallback(() => {
     if (saving) return
@@ -73,11 +78,18 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     precoAtacadoInput.reset()
     precoCustoInput.reset()
     setSaving(false)
+    setProdutoIdCriado(null)
     requestAnimationFrame(() => nomeRef.current?.focus())
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  const concluir = useCallback(() => {
+    onCriado()
+    fechar()
+  }, [onCriado, fechar])
+
   const salvar = useCallback(async () => {
+    if (emFaseAtacado) return
     const nomeTrim = nome.trim()
     if (!nomeTrim) {
       emitGerenteToast({ kind: 'error', message: p.nome_obrigatorio })
@@ -114,8 +126,9 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
         return
       }
       emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      setProdutoIdCriado(r.data.id)
+      setTab('venda')
       onCriado()
-      fechar()
     } finally {
       setSaving(false)
     }
@@ -123,7 +136,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
     nome, codigoInterno, codigoBarras, referenciaFornecedor, nomeReduzidoPdv, localizacaoPrateleira,
     origem, unidadeMedida, categoriaId, marcaId, fornecedorId,
     precoVarejoInput, precoAtacadoInput, precoCustoInput,
-    p, m.comum.sucesso, onCriado, fechar,
+    p, m.comum.sucesso, onCriado, emFaseAtacado,
   ])
 
   if (!open) return null
@@ -156,19 +169,35 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
           >
             {m.comum.cancelar ?? 'Cancelar'}
           </button>
-          <Button
-            type="button"
-            onClick={() => void salvar()}
-            disabled={saving}
-            className="h-9 app-btn-accent px-5 text-sm font-semibold disabled:opacity-60"
-          >
-            {saving ? '…' : m.comum.salvar}
-          </Button>
+          {emFaseAtacado ? (
+            <Button
+              type="button"
+              onClick={concluir}
+              disabled={saving}
+              className="h-9 app-btn-accent px-5 text-sm font-semibold disabled:opacity-60"
+            >
+              {m.comum.concluir ?? 'Concluir'}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={() => void salvar()}
+              disabled={saving}
+              className="h-9 app-btn-accent px-5 text-sm font-semibold disabled:opacity-60"
+            >
+              {saving ? '…' : m.comum.salvar}
+            </Button>
+          )}
         </>
       }
     >
       <div className="pb-1">
-        <ProdutoFormTabStrip tabs={tabs} active={tab} onChange={setTab} disabled={saving} />
+        <ProdutoFormTabStrip
+          tabs={tabs}
+          active={tab}
+          onChange={setTab}
+          disabled={saving || emFaseAtacado}
+        />
 
         {tab === 'basico' ? (
           <DadosBasicosTab
@@ -230,19 +259,40 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
 
         {tab === 'venda' ? (
           <div className="space-y-4">
+            {emFaseAtacado ? (
+              <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                {p.faixas_apos_criar_titulo}
+              </p>
+            ) : null}
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.preco_varejo} *
-              <input
-                type="text"
-                inputMode="decimal"
-                className={`${FIN_IN_MONO} mt-1`}
-                value={precoVarejoInput.display}
-                onChange={precoVarejoInput.onChange}
-                disabled={saving}
-                placeholder="0,00"
-              />
+              {emFaseAtacado ? (
+                <p className={`${FIN_IN_MONO} mt-1 flex h-9 items-center`}>
+                  {formatBRL(precoVarejoInput.parse() ?? 0)}
+                </p>
+              ) : (
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={`${FIN_IN_MONO} mt-1`}
+                  value={precoVarejoInput.display}
+                  onChange={precoVarejoInput.onChange}
+                  disabled={saving}
+                  placeholder="0,00"
+                />
+              )}
             </label>
-            <p className="text-[11px] text-jl-fg-3">{p.faixas_disponivel_apos_salvar}</p>
+            {emFaseAtacado && produtoIdCriado ? (
+              <div className="mt-2">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+                  {p.titulo_faixas_atacado}
+                </p>
+                <p className="mb-3 text-[11px] text-jl-fg-3">{p.hint_faixas_atacado}</p>
+                <FaixasAtacadoEditor produtoId={produtoIdCriado} p={p} />
+              </div>
+            ) : (
+              <p className="text-[11px] text-jl-fg-3">{p.faixas_disponivel_apos_salvar}</p>
+            )}
           </div>
         ) : null}
       </div>

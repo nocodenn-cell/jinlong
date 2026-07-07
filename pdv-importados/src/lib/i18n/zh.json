@@ -271,7 +271,8 @@
     "custo_compra_label": "采购成本",
     "custo_medio_label": "平均成本",
     "custo_medio_hint": "根据采购入库自动计算。",
-    "faixas_disponivel_apos_salvar": "保存产品后即可添加批发价阶梯（保存后请再次编辑该产品）。",
+    "faixas_disponivel_apos_salvar": "保存后可在本窗口继续添加批发价阶梯。",
+    "faixas_apos_criar_titulo": "产品已保存。请在下方添加批发价阶梯，或点击完成。",
     "atacado_legado_titulo": "自动批发价（高级）",
     "atacado_legado_hint": "当购物车中数量达到系统设置的最低数量时，在 PDV 中生效。上方设置的阶梯价优先于此数值。",
     "titulo_faixas_atacado": "批发价阶梯",
@@ -1760,6 +1761,7 @@
     "idioma": "语言",
     "sair": "退出登录",
     "fechar": "关闭",
+    "concluir": "完成",
     "limpar_filtros": "清除筛选",
     "salvando": "保存中…"
   },
