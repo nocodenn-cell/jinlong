@@ -3,6 +3,7 @@ import type {
   AplicarDescontoGerenteResult,
   ValidarPercentualPermitidoResult,
 } from './types'
+import { roundMoney2 as roundMoney } from '../money/roundMoney'
 
 /**
  * Teto padrão (em %) de desconto que um gerente pode autorizar.
@@ -13,10 +14,6 @@ import type {
  * Esta constante é apenas defesa em profundidade no cliente offline.
  */
 export const DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL = 20
-
-function roundMoney(valor: number): number {
-  return Math.round(valor * 100) / 100
-}
 
 function sanitizarNumero(valor: number, fallback: number): number {
   return Number.isFinite(valor) ? valor : fallback

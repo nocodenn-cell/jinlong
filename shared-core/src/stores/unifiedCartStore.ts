@@ -6,6 +6,7 @@ import {
   aplicarDescontoGerenteSobreTotal,
   clampPercentualDesconto,
 } from '../managerDiscount/policy'
+import { roundMoney2 as roundMoney } from '../money/roundMoney'
 
 export interface ItemCarrinho {
   id: string
@@ -83,10 +84,6 @@ type ItensComTotais = Pick<
   | 'descontoGerentePercentual'
   | 'descontoGerenteValor'
 >
-
-function roundMoney(valor: number) {
-  return Math.round(valor * 100) / 100
-}
 
 /** Coerção defensiva: total/preço/quantidade não-finitos (NaN/Infinity/null) viram 0
  * para que os totais do carrinho nunca propaguem NaN à UI ou ao payload da venda. */

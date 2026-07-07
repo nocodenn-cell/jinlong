@@ -1,4 +1,4 @@
-import { LIMITE_DIVERGENCIA_FECHAMENTO, moneyApproxEqual } from './money'
+import { LIMITE_DIVERGENCIA_FECHAMENTO, moneyApproxEqual, roundMoney2 } from './money'
 import type { PdvStateSnapshot, PdvViolation } from './types'
 
 const VALID_CAIXA_STATUS = new Set(['ABERTO', 'FECHADO'])
@@ -100,5 +100,5 @@ export function detectInvariants(snapshot: PdvStateSnapshot): PdvViolation[] {
 }
 
 function roundDiff(valorFechamento: number, valorSistema: number): number {
-  return Math.round((valorFechamento - valorSistema) * 100) / 100
+  return roundMoney2(valorFechamento - valorSistema)
 }

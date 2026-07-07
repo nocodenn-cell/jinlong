@@ -4,6 +4,7 @@
 
 import type { ItemCarrinho } from '../../shared-core/src/stores/unifiedCartStore'
 import type { RegraPreco, ResultadoPreco, PricingContext } from './types'
+import { roundMoney2 } from '../../shared-core/src/money/roundMoney'
 
 export class PricingService {
   private resolverPrecoOriginal(item: ItemCarrinho): number {
@@ -72,9 +73,9 @@ export class PricingService {
     const descontoUnitario = precoOriginal - precoUnitario
 
     return {
-      precoUnitario: Math.round(precoUnitario * 100) / 100,
+      precoUnitario: roundMoney2(precoUnitario),
       precoOriginal,
-      descontoUnitario: Math.round(descontoUnitario * 100) / 100,
+      descontoUnitario: roundMoney2(descontoUnitario),
       tipoPreco
     }
   }
