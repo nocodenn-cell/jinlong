@@ -3,6 +3,13 @@ import type { PricingContext, RegraPreco } from '@core/pricing/types'
 import { pricingService } from '@shared/pricing/PricingService'
 import { useDesktopCartStore } from '../stores/cartStore'
 
+/** Mesma hierarquia de `precoVarejoRef` em `sincronizarPrecoCalculadoRpc` (store unificada). */
+function resolverPrecoBaseCanonicoItem(item: ItemCarrinho): number {
+  const metaRef = item.metaPdv?.precoVarejoReferencia
+  if (typeof metaRef === 'number' && Number.isFinite(metaRef)) return metaRef
+  return item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
+}
+
 /**
  * Recalcula localmente o preço de um item do carrinho após alteração de
  * quantidade — mesmo `PricingService`/regras já usados ao adicionar o item
@@ -20,8 +27,9 @@ export function recalcularPrecoItemLocal(
   if (tipoAtual === 'MANUAL' || tipoAtual === 'PROMOCAO') return
   if (!Number.isFinite(novaQuantidade) || novaQuantidade <= 0) return
 
+  const precoBase = resolverPrecoBaseCanonicoItem(item)
   const resultado = pricingService.calcularPrecoItem(
-    { ...item, quantidade: novaQuantidade },
+    { ...item, quantidade: novaQuantidade, precoUnitario: precoBase },
     regras,
     pricingCtx,
   )

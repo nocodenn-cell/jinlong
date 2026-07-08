@@ -103,4 +103,23 @@ describe('recalcularPrecoItemLocal', () => {
     expect(atualizado.resultado?.tipoPreco).toBe('VAREJO')
     expect(atualizado.resultado?.precoUnitario).toBe(100)
   })
+
+  it('VAREJO → ATACADO → redução de quantidade retorna ao preço base de VAREJO', () => {
+    const item = seedItem()
+
+    recalcularPrecoItemLocal(item, 60, REGRAS, DEFAULT_PRICING_CONTEXT)
+    let atualizado = useDesktopCartStore.getState().itens[0]
+    expect(atualizado.resultado?.tipoPreco).toBe('ATACADO')
+    expect(atualizado.resultado?.precoUnitario).toBe(70)
+    expect(atualizado.resultado?.precoOriginal).toBe(100)
+
+    useDesktopCartStore.getState().alterarQuantidade(item.id, 4)
+    recalcularPrecoItemLocal(atualizado, 4, REGRAS, DEFAULT_PRICING_CONTEXT)
+
+    atualizado = useDesktopCartStore.getState().itens[0]
+    expect(atualizado.resultado?.tipoPreco).toBe('VAREJO')
+    expect(atualizado.resultado?.precoUnitario).toBe(100)
+    expect(atualizado.resultado?.precoOriginal).toBe(100)
+    expect(useDesktopCartStore.getState().totalLiquido).toBe(400)
+  })
 })

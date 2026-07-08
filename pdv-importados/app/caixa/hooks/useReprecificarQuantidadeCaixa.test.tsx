@@ -205,4 +205,44 @@ describe("useReprecificarQuantidadeCaixa", () => {
     const item = useCarrinhoStore.getState().itens[0]
     expect(item?.resultado?.precoUnitario).toBe(19)
   })
+
+  it("VAREJO → ATACADO → redução de quantidade retorna ao preço base de VAREJO", async () => {
+    seedItemVarejo()
+    calcularPrecoProdutoCaixaMock
+      .mockResolvedValueOnce({ ok: true, preco: 21, tipo: "ATACADO" })
+      .mockResolvedValueOnce({ ok: true, preco: 25, tipo: "VAREJO" })
+
+    await act(async () => {
+      reprecificarAtual?.({
+        itemId: "item-1",
+        produtoId: "produto-1",
+        quantidade: 60,
+        tipoPrecoAtual: "VAREJO",
+      })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    useCarrinhoStore.getState().alterarQuantidade("item-1", 60)
+    let item = useCarrinhoStore.getState().itens[0]
+    expect(item?.resultado?.tipoPreco).toBe("ATACADO")
+    expect(item?.resultado?.precoUnitario).toBe(21)
+
+    await act(async () => {
+      reprecificarAtual?.({
+        itemId: "item-1",
+        produtoId: "produto-1",
+        quantidade: 4,
+        tipoPrecoAtual: "ATACADO",
+      })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    useCarrinhoStore.getState().alterarQuantidade("item-1", 4)
+    item = useCarrinhoStore.getState().itens[0]
+    expect(item?.resultado?.tipoPreco).toBe("VAREJO")
+    expect(item?.resultado?.precoUnitario).toBe(25)
+    expect(useCarrinhoStore.getState().totalLiquido).toBe(100)
+  })
 })
