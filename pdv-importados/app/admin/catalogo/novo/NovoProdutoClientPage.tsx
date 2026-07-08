@@ -22,8 +22,7 @@ export function NovoProdutoClientPage({ m, opcoes }: Props) {
   }
 
   function handleCriado() {
-    setOpen(false)
-    router.push(ROUTES.admin.catalogo)
+    router.refresh()
   }
 
   return (

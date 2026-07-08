@@ -648,12 +648,12 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 <button
                   type="button"
                   onClick={() => setNovoProdutoModalAberto(true)}
-                  title={m.produtos.cadastro_rapido}
-                  aria-label={m.produtos.cadastro_rapido}
+                  title={m.produtos.cadastro_produto}
+                  aria-label={m.produtos.cadastro_produto}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 text-xs font-semibold text-amber-300 transition-colors hover:border-amber-500/60 hover:bg-amber-500/25"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden />
-                  {m.produtos.cadastro_rapido}
+                  {m.produtos.cadastro_produto}
                 </button>
                 <button
                   type="button"

@@ -210,7 +210,6 @@ export function CatalogoTable({
         m={m}
         opcoes={opcoes}
         onCriado={() => {
-          setNovoOpen(false)
           router.refresh()
         }}
       />

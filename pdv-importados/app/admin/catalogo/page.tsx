@@ -243,7 +243,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         <Download size={14} aria-hidden />
         {m.gerente.exportar_csv}
       </Link>
-      <CatalogoNovoButton label={m.produtos.cadastro_rapido} m={m} opcoes={opcoes} />
+      <CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} />
     </>
   )
 
@@ -289,7 +289,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
         <CatalogoTable
           produtos={produtos}
-          labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_rapido, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil }}
+          labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_produto, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil }}
           m={m}
           opcoes={opcoes}
         />
