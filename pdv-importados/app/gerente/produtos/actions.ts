@@ -44,53 +44,10 @@ import {
 } from '@/lib/gerente/produtoImagemStorage'
 import { motivoBloqueioExclusaoFisica } from '@/lib/gerente/produtoExclusaoLote'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
-
-const NovoProdutoSchema = z.object({
-  nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
-  codigo_barras: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((s) => {
-      const t = (s ?? '').trim()
-      return t.length === 0 ? null : t
-    })
-    .refine(
-      (s) => s === null || s.length >= 3,
-      'Código de barras: mínimo 3 caracteres ou deixe em branco',
-    ),
-  preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
-  preco_atacado: z.coerce.number().positive('O preço de atacado deve ser maior que zero (ou deixe em branco).').nullable().optional().transform((v) => v ?? null),
-  preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
-  permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
-  quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
-  origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf'], {
-    errorMap: () => ({ message: 'Origem do produto inválida.' }),
-  }),
-  tem_nf: z.coerce.boolean(),
-  unidade_medida: z.enum(['UN', 'KG', 'CX', 'FD', 'M']).optional().default('UN'),
-  observacao: z.string().nullable().optional().transform((v) => v?.trim() || null),
-  categoria_id: z.string().uuid().nullable().optional().transform((v) => v || null),
-  marca_id: z.string().uuid().nullable().optional().transform((v) => v || null),
-  fornecedor_id: z.string().uuid().nullable().optional().transform((v) => v || null),
-  /** CSV legado pode enviar `true` → PUBLICADO; omitido → DRAFT (R1). */
-  ativo: z.boolean().optional(),
-  status_publicacao: z.enum(['DRAFT', 'PUBLICADO', 'INATIVO']).optional(),
-  ncm: z
-    .string()
-    .optional()
-    .transform((s) => s?.trim().replace(/\D/g, '') || null)
-    .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
-    .nullable(),
-}).superRefine((data, ctx) => {
-  if (data.preco_atacado !== null && data.preco_atacado >= data.preco_varejo) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['preco_atacado'],
-      message: 'O preço de atacado deve ser menor que o preço de varejo.',
-    })
-  }
-})
+import {
+  EditarProdutoCatalogoSchema,
+  NovoProdutoSchema,
+} from './produtoFormSchema'
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -556,66 +513,6 @@ const LoteExclusaoSchema = z.object({
   produto_ids: z.array(z.string().uuid()).min(1).max(100),
 })
 
-const EditarProdutoCatalogoSchema = z.object({
-  produto_id: z.string().uuid('ID do produto inválido.'),
-  nome: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
-  codigo_barras: z
-    .string()
-    .optional()
-    .transform((s) => {
-      const t = (s ?? '').trim()
-      return t.length === 0 ? null : t
-    })
-    .refine(
-      (s) => s === null || s.length >= 3,
-      'Código de barras: mínimo 3 caracteres ou deixe em branco',
-    ),
-  origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf'], {
-    errorMap: () => ({ message: 'Origem do produto inválida.' }),
-  }),
-  tem_nf: z.coerce.boolean(),
-  preco_varejo: z.coerce.number().positive('O preço de varejo deve ser maior que zero.'),
-  preco_atacado: z.coerce.number().positive('O preço de atacado deve ser maior que zero (ou deixe em branco).').nullable().optional().transform((v) => v ?? null),
-  preco_custo: z.coerce.number().nonnegative('O preço de custo não pode ser negativo.').nullable().optional().transform((v) => v ?? null),
-  permitir_abaixo_custo: z.coerce.boolean().optional().transform((v) => v ?? false),
-  quantidade_gatilho_atacado: z.coerce.number().int().min(1).nullable().optional().transform((v) => v ?? null),
-  categoria_id: z.string().uuid().nullable().optional().transform((v) => v || null),
-  marca_id: z.string().uuid().nullable().optional().transform((v) => v || null),
-  fornecedor_id: z.string().uuid().nullable().optional().transform((v) => v || null),
-  unidade_medida: z.enum(['UN', 'KG', 'CX', 'FD', 'M']).default('UN'),
-  observacao: z.string().nullable().optional().transform((v) => v?.trim() || null),
-  // ── Campos fiscais (Focus NFe) ──────────────────────────────────────────
-  ncm: z
-    .string()
-    .optional()
-    .transform((s) => s?.trim().replace(/\D/g, '') || null)
-    .refine((s) => s === null || /^\d{8}$/.test(s), 'NCM deve ter exatamente 8 dígitos.')
-    .nullable(),
-  cfop_produto: z
-    .string()
-    .optional()
-    .transform((s) => s?.trim().replace(/\D/g, '') || null)
-    .refine((s) => s === null || /^\d{4}$/.test(s), 'CFOP deve ter 4 dígitos.')
-    .nullable(),
-  csosn: z.string().nullable().optional().transform((v) => v?.trim() || null),
-  cest: z
-    .string()
-    .optional()
-    .transform((s) => s?.trim().replace(/\D/g, '') || null)
-    .refine((s) => s === null || /^\d{7}$/.test(s), 'CEST deve ter 7 dígitos.')
-    .nullable(),
-  cst_pis: z.string().nullable().optional().transform((v) => v?.trim() || null),
-  cst_cofins: z.string().nullable().optional().transform((v) => v?.trim() || null),
-}).superRefine((data, ctx) => {
-  if (data.preco_atacado !== null && data.preco_atacado >= data.preco_varejo) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['preco_atacado'],
-      message: 'O preço de atacado deve ser menor que o preço de varejo.',
-    })
-  }
-})
-
 export type ResultadoExclusaoLote = Readonly<{
   removidos: number
   inativados: number
@@ -779,6 +676,10 @@ export async function atualizarDadosProdutoGerente(
     .update({
       nome: parsed.data.nome,
       codigo_barras: parsed.data.codigo_barras,
+      codigo_interno: parsed.data.codigo_interno,
+      referencia_fornecedor: parsed.data.referencia_fornecedor,
+      nome_reduzido_pdv: parsed.data.nome_reduzido_pdv,
+      localizacao_prateleira: parsed.data.localizacao_prateleira,
       origem: parsed.data.origem,
       tem_nf: parsed.data.tem_nf,
       preco_varejo: parsed.data.preco_varejo,
@@ -960,37 +861,55 @@ export async function buscarProdutosComFiltros(
   const productIds = list.map((r) => r.id)
   const [estoqueRes, extraRes] = productIds.length > 0
     ? await Promise.all([
-        supabase.from('estoque').select('produto_id, quantidade_atual').in('produto_id', productIds),
+        supabase
+          .from('estoque')
+          .select('produto_id, quantidade_atual, estoque_minimo')
+          .in('produto_id', productIds),
         supabase
           .from('produtos')
-          .select('id, codigo_interno, localizacao_prateleira, preco_custo, permitir_abaixo_custo, status_publicacao')
+          .select(
+            'id, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_custo, preco_custo_medio, permitir_abaixo_custo, status_publicacao',
+          )
           .in('id', productIds),
       ])
     : [
-        { data: [] as { produto_id: string; quantidade_atual: number }[] },
+        { data: [] as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[] },
         {
           data: [] as {
             id: string
             codigo_interno: string | null
+            referencia_fornecedor?: string | null
+            nome_reduzido_pdv?: string | null
             localizacao_prateleira?: string | null
             preco_custo?: number | null
+            preco_custo_medio?: number | null
             permitir_abaixo_custo?: boolean
             status_publicacao?: StatusPublicacao | null
           }[],
         },
       ]
 
-  const estoqueMap = new Map<string, number>()
-  for (const e of ((estoqueRes.data ?? []) as { produto_id: string; quantidade_atual: number }[])) {
-    estoqueMap.set(e.produto_id, e.quantidade_atual)
+  const estoqueMap = new Map<string, { quantidade_atual: number; estoque_minimo: number }>()
+  for (const e of ((estoqueRes.data ?? []) as {
+    produto_id: string
+    quantidade_atual: number
+    estoque_minimo: number
+  }[])) {
+    estoqueMap.set(e.produto_id, {
+      quantidade_atual: e.quantidade_atual,
+      estoque_minimo: e.estoque_minimo,
+    })
   }
 
   const extraMap = new Map<
     string,
     {
       codigo_interno: string | null
+      referencia_fornecedor: string | null
+      nome_reduzido_pdv: string | null
       localizacao_prateleira: string | null
       preco_custo: number | null
+      preco_custo_medio: number
       permitir_abaixo_custo: boolean
       status_publicacao: StatusPublicacao | null
     }
@@ -998,15 +917,21 @@ export async function buscarProdutosComFiltros(
   for (const p of ((extraRes.data ?? []) as {
     id: string
     codigo_interno?: string | null
+    referencia_fornecedor?: string | null
+    nome_reduzido_pdv?: string | null
     localizacao_prateleira?: string | null
     preco_custo?: number | null
+    preco_custo_medio?: number | null
     permitir_abaixo_custo?: boolean
     status_publicacao?: StatusPublicacao | null
   }[])) {
     extraMap.set(p.id, {
       codigo_interno: p.codigo_interno ?? null,
+      referencia_fornecedor: p.referencia_fornecedor ?? null,
+      nome_reduzido_pdv: p.nome_reduzido_pdv ?? null,
       localizacao_prateleira: p.localizacao_prateleira ?? null,
       preco_custo: p.preco_custo != null ? Number(p.preco_custo) : null,
+      preco_custo_medio: p.preco_custo_medio != null ? Number(p.preco_custo_medio) : 0,
       permitir_abaixo_custo: p.permitir_abaixo_custo ?? false,
       status_publicacao: p.status_publicacao ?? null,
     })
@@ -1014,6 +939,7 @@ export async function buscarProdutosComFiltros(
 
   const rows: ProdutoGerenteRow[] = list.map((r) => {
     const extra = extraMap.get(r.id)
+    const estoque = estoqueMap.get(r.id)
     const statusPublicacao = resolveStatusPublicacaoLeitura(
       extra?.status_publicacao ?? statusFromAtivoLegacy(r.ativo),
       r.ativo,
@@ -1023,13 +949,17 @@ export async function buscarProdutosComFiltros(
       nome: r.nome,
       codigo_barras: r.codigo_barras,
       codigo_interno: extra?.codigo_interno ?? null,
+      referencia_fornecedor: extra?.referencia_fornecedor ?? null,
+      nome_reduzido_pdv: extra?.nome_reduzido_pdv ?? null,
       localizacao_prateleira: extra?.localizacao_prateleira ?? null,
       preco_varejo: Number(r.preco_varejo),
       preco_atacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
       preco_custo: extra?.preco_custo ?? null,
+      preco_custo_medio: extra?.preco_custo_medio ?? 0,
       permitir_abaixo_custo: extra?.permitir_abaixo_custo ?? false,
       quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
-      quantidade_atual: estoqueMap.has(r.id) ? (estoqueMap.get(r.id) ?? null) : null,
+      quantidade_atual: estoque?.quantidade_atual ?? null,
+      estoque_minimo: estoque?.estoque_minimo ?? null,
       origem: r.origem,
       tem_nf: r.tem_nf,
       ativo: r.ativo,
@@ -1149,4 +1079,106 @@ export async function buscarProdutosParaExportacao(
   const r = await buscarProdutosComFiltros({ ...parsed.data, page: 1, pageSize: cap })
   if (!r.success) return { success: false, error: r.error }
   return { success: true, data: r.data.rows }
+}
+
+// ─── Tela de detalhe (somente leitura) /admin/catalogo/[id] ─────────────────
+
+export type ProdutoDetalhe = {
+  id: string
+  nome: string
+  codigo_interno: string | null
+  codigo_barras: string | null
+  categoria_id: string | null
+  marca_id: string | null
+  unidade_medida: string
+  preco_varejo: number
+  preco_atacado: number | null
+  quantidade_gatilho_atacado: number | null
+  quantidade_atual: number | null
+  estoque_minimo: number | null
+  localizacao_prateleira: string | null
+  ativo: boolean
+  status_publicacao: StatusPublicacao
+}
+
+type ProdutoDetalheRow = {
+  id: string
+  nome: string
+  codigo_interno: string | null
+  codigo_barras: string | null
+  categoria_id: string | null
+  marca_id: string | null
+  unidade_medida: string
+  preco_varejo: number
+  preco_atacado: number | null
+  quantidade_gatilho_atacado: number | null
+  localizacao_prateleira: string | null
+  ativo: boolean
+  status_publicacao: StatusPublicacao | null
+}
+
+type EstoqueDetalheRow = { quantidade_atual: number; estoque_minimo: number }
+
+export async function buscarProdutoDetalhe(produtoId: string): Promise<ActionResult<ProdutoDetalhe>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const idValido = z.string().uuid().safeParse(produtoId)
+  if (!idValido.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroValidacaoZod('ID do produto inválido.', idioma) }
+  }
+
+  const supabase = await createClient()
+  const [produtoRes, estoqueRes] = await Promise.all([
+    supabase
+      .from('produtos')
+      .select(
+        'id, nome, codigo_interno, codigo_barras, categoria_id, marca_id, unidade_medida, preco_varejo, preco_atacado, quantidade_gatilho_atacado, localizacao_prateleira, ativo, status_publicacao',
+      )
+      .eq('id', produtoId)
+      .maybeSingle(),
+    supabase
+      .from('estoque')
+      .select('quantidade_atual, estoque_minimo')
+      .eq('produto_id', produtoId)
+      .maybeSingle(),
+  ])
+
+  if (produtoRes.error) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroComSecao('Produto', produtoRes.error.message, idioma) }
+  }
+  if (!produtoRes.data) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: mensagemErroComSecao('Produto', 'Produto não encontrado.', idioma) }
+  }
+
+  const row = produtoRes.data as ProdutoDetalheRow
+  const estoque = estoqueRes.data as EstoqueDetalheRow | null
+
+  return {
+    success: true,
+    data: {
+      id: row.id,
+      nome: row.nome,
+      codigo_interno: row.codigo_interno ?? null,
+      codigo_barras: row.codigo_barras ?? null,
+      categoria_id: row.categoria_id ?? null,
+      marca_id: row.marca_id ?? null,
+      unidade_medida: row.unidade_medida,
+      preco_varejo: Number(row.preco_varejo),
+      preco_atacado: row.preco_atacado != null ? Number(row.preco_atacado) : null,
+      quantidade_gatilho_atacado:
+        row.quantidade_gatilho_atacado != null ? Number(row.quantidade_gatilho_atacado) : null,
+      quantidade_atual: estoque?.quantidade_atual ?? null,
+      estoque_minimo: estoque?.estoque_minimo ?? null,
+      localizacao_prateleira: row.localizacao_prateleira ?? null,
+      ativo: row.ativo,
+      status_publicacao: resolveStatusPublicacaoLeitura(
+        row.status_publicacao ?? statusFromAtivoLegacy(row.ativo),
+        row.ativo,
+      ),
+    },
+  }
 }
