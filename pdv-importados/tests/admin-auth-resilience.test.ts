@@ -92,7 +92,7 @@ function configureAuthScenario(scenario: AuthScenario) {
         error: null,
       })
       mockSingle.mockResolvedValue({
-        data: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: null },
+        data: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: 'loja-1' },
         error: null,
       })
       break

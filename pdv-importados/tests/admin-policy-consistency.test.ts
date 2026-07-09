@@ -60,7 +60,7 @@ describe('admin policy authority convergence', () => {
     const raw: RawSession = {
       status: 'authenticated',
       user: { id: 'op-1', email: 'op@test.local' },
-      usuario: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: null },
+      usuario: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: 'loja-1' },
     }
     const normalized = normalizeAdminSession(raw, 'edge')
 
@@ -76,6 +76,22 @@ describe('admin policy authority convergence', () => {
     })
     expect(api.type).toBe('deny')
     expect(action.type).toBe('deny')
+  })
+
+  it('operador sem loja vinculada: bloqueado em qualquer rota protegida', () => {
+    const raw: RawSession = {
+      status: 'authenticated',
+      user: { id: 'op-1', email: 'op@test.local' },
+      usuario: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: null },
+    }
+    const normalized = normalizeAdminSession(raw, 'edge')
+
+    expect(normalized.authState).toBe('blocked')
+    expect(normalized.blockedReason).toBe('sem_loja')
+    const edge = middlewareAdminDecision(normalized, '/caixa')
+    expect(edge.type).toBe('redirect')
+    expect(edge.target).toContain('/login')
+    expect(edge.reason).toBe('conta_sem_loja')
   })
 
   it('gerente autenticado: pode abrir o PDV /caixa (sem redirect para /gerente)', () => {

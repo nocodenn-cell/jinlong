@@ -95,6 +95,42 @@ describe.sequential('sessionConsistency', { timeout: 15_000 }, () => {
       expect(normalized.contract?.permissions.length).toBeGreaterThan(0)
       expect(normalized.authState).toBe('authenticated')
     })
+
+    it('bloqueia usuário com ativo = false (sem sessão nem contrato)', () => {
+      const raw = {
+        status: 'authenticated' as const,
+        user: gerenteUser,
+        usuario: { ...gerenteRow, ativo: false },
+      }
+      const normalized = normalizeAdminSession(raw, 'edge')
+      expect(normalized.authState).toBe('blocked')
+      expect(normalized.blockedReason).toBe('inativo')
+      expect(normalized.session).toBeNull()
+      expect(normalized.contract).toBeNull()
+    })
+
+    it('bloqueia usuário sem loja_id', () => {
+      const raw = {
+        status: 'authenticated' as const,
+        user: gerenteUser,
+        usuario: { ...gerenteRow, loja_id: null },
+      }
+      const normalized = normalizeAdminSession(raw, 'edge')
+      expect(normalized.authState).toBe('blocked')
+      expect(normalized.blockedReason).toBe('sem_loja')
+      expect(normalized.session).toBeNull()
+    })
+
+    it('ativo null/ausente é tratado como ativo (compat)', () => {
+      const raw = {
+        status: 'authenticated' as const,
+        user: gerenteUser,
+        usuario: { ...gerenteRow, ativo: null },
+      }
+      const normalized = normalizeAdminSession(raw, 'ssr')
+      expect(normalized.authState).toBe('authenticated')
+      expect(normalized.session).not.toBeNull()
+    })
   })
 
   describe('fetchRawSession', () => {
