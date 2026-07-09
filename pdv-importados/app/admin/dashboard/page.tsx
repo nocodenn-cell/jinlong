@@ -541,7 +541,6 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             <span className="text-4xl font-bold tabular-nums text-[color:var(--color-dragon-gold-warm)]">
               {formatNumberLocale(estoqueBaixoCount, locale)}
             </span>
-            <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>
           </div>
           {showStockAlerts && estoqueBaixoLista.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--color-border-secondary)] pt-3">
