@@ -143,7 +143,7 @@ export function DocumentoFiscalDetalheClient({ doc, eventos, voltarLabel, locale
       <section className="dragon-glass-card rounded-xl p-5">
         <h2 className="gerente-section-accent mb-4 text-base font-semibold">Timeline</h2>
         {eventos.length === 0 ? (
-          <p className="gerente-fin-muted text-sm">Nenhum evento registrado (aplique a migration 066).</p>
+          <p className="gerente-fin-muted text-sm">Nenhum evento registrado para este documento ainda.</p>
         ) : (
           <ol className="m-0 flex list-decimal flex-col gap-4 pl-5 text-sm">
             {eventos.map((e) => {
