@@ -116,25 +116,31 @@ export function ProdutoFormModal({
 
     setSaving(true)
     try {
-      const r = editando
-        ? await atualizarDadosProdutoGerente({ ...payload, produto_id: produto.id })
-        : await criarProduto(payload)
+      if (editando) {
+        const r = await atualizarDadosProdutoGerente({ ...payload, produto_id: produto.id })
+        if (!r.success) {
+          emitGerenteToast({ kind: 'error', message: r.error })
+          return
+        }
+        emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+        onSaved()
+        onOpenChange(false)
+        return
+      }
+
+      const r = await criarProduto(payload)
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
       emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
       onSaved()
-      if (!editando) {
-        if (opts?.continuar) {
-          form.limparParaNovoCadastro()
-          requestAnimationFrame(() => nomeRef.current?.focus())
-          return
-        }
-        setPosCriacao({ id: r.data.id, nome: payload.nome, imagemUrl: null })
+      if (opts?.continuar) {
+        form.limparParaNovoCadastro()
+        requestAnimationFrame(() => nomeRef.current?.focus())
         return
       }
-      onOpenChange(false)
+      setPosCriacao({ id: r.data.id, nome: payload.nome, imagemUrl: null })
     } finally {
       setSaving(false)
     }
