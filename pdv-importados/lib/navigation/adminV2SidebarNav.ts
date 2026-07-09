@@ -6,7 +6,6 @@ import {
   FileBarChart2,
   Inbox,
   LayoutDashboard,
-  Layers3,
   Monitor,
   Package,
   Percent,
@@ -48,7 +47,6 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
 
 export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'relatorios', href: ROUTES.admin.relatorios, icon: FileBarChart2, labelOverridePt: 'Relatórios', dictKey: 'relatorios' },
-  { id: 'gerente', href: ROUTES.gerente.home, icon: Layers3, labelOverridePt: 'Painel gerencial', dictKey: 'gerente' },
   { id: 'recebimento', href: ROUTES.admin.estoqueRecebimento, icon: Inbox, labelOverridePt: 'Recebimento', dictKey: 'recebimento' },
   { id: 'transferencias', href: ROUTES.admin.estoqueTransferencias, icon: ArrowRightLeft, labelOverridePt: 'Transferências', dictKey: 'transferencias' },
   { id: 'caixas', href: ROUTES.admin.vendas, icon: Building2, labelOverridePt: 'Caixas', dictKey: 'caixas' },

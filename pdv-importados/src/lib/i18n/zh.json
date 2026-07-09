@@ -1818,7 +1818,6 @@
     "grafico_carregando": "图表加载中…",
     "financeiro_titulo": "财务与税务",
     "financeiro_subtitulo": "应收账款、税务队列与发票管理",
-    "financeiro_abrir_modulo": "打开完整模块",
     "financeiro_kpi_titulos": "未结应收单",
     "financeiro_kpi_valor_aberto": "未结金额",
     "financeiro_kpi_hint_capped": "约；上限 {{n}} 条",

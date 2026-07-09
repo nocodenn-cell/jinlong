@@ -1647,7 +1647,6 @@
     "grafico_carregando": "Carregando gráfico…",
     "financeiro_titulo": "Financeiro e fiscal",
     "financeiro_subtitulo": "Contas a receber, fila fiscal e controle de emissão",
-    "financeiro_abrir_modulo": "Abrir módulo completo",
     "financeiro_kpi_titulos": "Títulos em aberto",
     "financeiro_kpi_valor_aberto": "Valor aberto",
     "financeiro_kpi_hint_capped": "aprox.; capped em {{n}} itens",
