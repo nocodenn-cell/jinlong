@@ -7,6 +7,8 @@
  * tabelas de vendas por dia, top produtos e estoque baixo. Usa DataTable (Fase 2).
  */
 
+import Link from 'next/link'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { ChartCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
@@ -49,6 +51,7 @@ export type RelatoriosLabels = {
   labelAjustes: string
   secTopProdutos: string
   secEstoqueReposicao: string
+  linkVerRelatorioEstoque: string
   secMargemPorVenda: string
   margemVendaColData: string
   margemVendaColLiquido: string
@@ -306,7 +309,17 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
           <SectionCard title={labels.secTopProdutos}>
             <TopProdutosList top={dados.top} labels={labels} />
           </SectionCard>
-          <SectionCard title={labels.secEstoqueReposicao}>
+          <SectionCard
+            title={labels.secEstoqueReposicao}
+            action={
+              <Link
+                href={ROUTES.admin.relatoriosEstoque}
+                className="text-[11px] font-medium text-jl-fg-3 transition-colors hover:text-jl-fg-1"
+              >
+                {labels.linkVerRelatorioEstoque}
+              </Link>
+            }
+          >
             <EstoqueReposicaoList baixo={dados.baixo} labels={labels} />
           </SectionCard>
         </div>

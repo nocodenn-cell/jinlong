@@ -65,6 +65,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         labelAjustes: ui.relatorios_label_ajustes,
         secTopProdutos: ui.relatorios_sec_top_produtos,
         secEstoqueReposicao: ui.relatorios_sec_estoque_reposicao,
+        linkVerRelatorioEstoque: m.relatorios_estoque.link_ver_relatorio,
         secMargemPorVenda: ui.relatorios_sec_margem_por_venda,
         margemVendaColData: ui.relatorios_margem_venda_col_data,
         margemVendaColLiquido: ui.relatorios_margem_venda_col_liquido,
