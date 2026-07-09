@@ -131,7 +131,7 @@ export function KardexSheet({
                         <span
                           className={cn(
                             'shrink-0 text-[12px] font-semibold tabular-nums',
-                            entrada ? 'text-emerald-400' : 'text-red-400',
+                            entrada ? 'text-success' : 'text-destructive',
                           )}
                         >
                           {entrada ? '+' : '−'}

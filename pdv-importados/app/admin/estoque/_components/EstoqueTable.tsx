@@ -76,9 +76,9 @@ function severidadeSaldo(atual: number | null, minimo: number | null): Severity 
 }
 
 const SEV_CLASS: Record<Severity, string> = {
-  zero: 'font-semibold text-red-400',
-  low: 'font-semibold text-amber-400',
-  ok: 'text-emerald-400',
+  zero: 'font-semibold text-destructive',
+  low: 'font-semibold text-[color:var(--color-warning-500)]',
+  ok: 'text-success',
 }
 
 function ActionBtn({
@@ -152,7 +152,7 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
       sortValue: (r) => r.deficit ?? 0,
       cell: (r) =>
         r.deficit != null && r.deficit > 0 ? (
-          <span className="font-medium text-amber-400">-{r.deficit}</span>
+          <span className="font-medium text-[color:var(--color-warning-500)]">-{r.deficit}</span>
         ) : (
           <span className="text-jl-fg-3">—</span>
         ),

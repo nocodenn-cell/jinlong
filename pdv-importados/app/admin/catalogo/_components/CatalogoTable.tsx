@@ -160,7 +160,7 @@ export function CatalogoTable({
         if (r.quantidade_atual === null) return <span className="text-jl-fg-3">—</span>
         const v = r.quantidade_atual
         return (
-          <span className={v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400'}>{v}</span>
+          <span className={v <= 0 ? 'font-medium text-destructive' : 'text-success'}>{v}</span>
         )
       },
     },

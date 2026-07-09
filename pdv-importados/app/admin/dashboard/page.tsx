@@ -547,7 +547,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               {estoqueBaixoLista.map((item) => (
                 <li key={item.nome} className="flex items-center justify-between text-[12px]">
                   <span className="truncate text-jl-fg-2">{item.nome}</span>
-                  <span className="shrink-0 tabular-nums text-amber-400">
+                  <span className="shrink-0 tabular-nums text-[color:var(--color-warning-500)]">
                     {item.quantidade_atual} / {item.estoque_minimo}
                   </span>
                 </li>

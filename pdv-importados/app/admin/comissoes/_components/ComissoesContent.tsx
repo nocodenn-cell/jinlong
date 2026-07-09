@@ -168,7 +168,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       align: 'right',
       sortValue: (r) => r.total_pago,
       cell: (r) => (
-        <span className="text-[12px] text-emerald-400">{formatBRL(r.total_pago)}</span>
+        <span className="text-[12px] text-success">{formatBRL(r.total_pago)}</span>
       ),
     },
     {
@@ -177,7 +177,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       align: 'right',
       sortValue: (r) => r.total_pendente,
       cell: (r) => (
-        <span className="text-[12px] text-amber-400">{formatBRL(r.total_pendente)}</span>
+        <span className="text-[12px] text-[color:var(--color-warning-500)]">{formatBRL(r.total_pendente)}</span>
       ),
     },
   ]
@@ -303,7 +303,7 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
                         </p>
                         <p
                           className={`text-[11px] ${
-                            isPendente ? 'text-amber-400' : 'text-emerald-400'
+                            isPendente ? 'text-[color:var(--color-warning-500)]' : 'text-success'
                           }`}
                         >
                           {isPendente ? labels.statusPendente : labels.statusPago}

@@ -73,9 +73,9 @@ function StatusCell({ status, labels }: { status: string | null; labels: VendasL
   const tone = statusDotTone(status)
   const dotClass =
     tone === 'success'
-      ? 'bg-emerald-400'
+      ? 'bg-success'
       : tone === 'danger'
-        ? 'bg-red-400'
+        ? 'bg-destructive'
         : 'bg-jl-fg-3'
   if (s) {
     const label = s === 'CONCLUIDA' ? labels.concluida : s === 'CANCELADA' ? labels.cancelada : s
