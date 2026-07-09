@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { invoke } from '@tauri-apps/api/core'
 import { useDesktopCartStore } from './stores/cartStore'
 import type { ItemCarrinho } from '@core/cart/types'
+import type { ItemCarrinho as ItemCarrinhoStore } from '@core/stores/unifiedCartStore'
 import { defaultPdvConfig } from './config/pdvConfig'
 import { resolverProdutoNoCatalogo, type ProdutoCacheLite } from './catalogoLookup'
 import { mensagemErroDeExcecao } from './lib/mensagemErroUsuario'
@@ -10,6 +11,7 @@ import { usePdvLocalCatalogo } from './hooks/usePdvLocalCatalogo'
 import { usePdvLocalOutboxSync } from './hooks/usePdvLocalOutboxSync'
 import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
 import { pricingService } from '@shared/pricing/PricingService'
+import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 
 function mensagemEhErro(msg: string): boolean {
   return /^(falha|não foi possível|sessão|acesso negado|problema|muitas tentativas|dados inválidos|configuração inválida|limite de envio|este registro|você não tem permissão)/i.test(
@@ -91,6 +93,20 @@ export function App() {
     setCaixaAtualId,
     setMensagem,
   })
+
+  const handleAlterarQuantidadeLocal = useCallback(
+    (item: ItemCarrinhoStore, novaQuantidade: number) => {
+      const quantidade = Math.max(1, novaQuantidade)
+      alterarQuantidade(item.id, quantidade)
+      recalcularPrecoItemLocal(
+        item,
+        quantidade,
+        regrasRef.current,
+        useDesktopCartStore.getState().pricingCtx,
+      )
+    },
+    [alterarQuantidade, regrasRef],
+  )
 
   const [confirmarLimparAte, setConfirmarLimparAte] = useState(0)
   const inputLeituraRef = useRef<HTMLInputElement | null>(null)
@@ -669,7 +685,7 @@ export function App() {
                       <button
                         type="button"
                         onClick={() =>
-                          alterarQuantidade(item.id, Math.max(1, item.quantidade - 1))
+                          handleAlterarQuantidadeLocal(item, item.quantidade - 1)
                         }
                         style={{
                           minWidth: 44,
@@ -690,7 +706,7 @@ export function App() {
                         min={1}
                         value={item.quantidade}
                         onChange={(e) =>
-                          alterarQuantidade(item.id, Number(e.target.value))
+                          handleAlterarQuantidadeLocal(item, Number(e.target.value))
                         }
                         style={{
                           width: 60,
@@ -706,7 +722,7 @@ export function App() {
                       />
                       <button
                         type="button"
-                        onClick={() => alterarQuantidade(item.id, item.quantidade + 1)}
+                        onClick={() => handleAlterarQuantidadeLocal(item, item.quantidade + 1)}
                         style={{
                           minWidth: 44,
                           minHeight: 44,

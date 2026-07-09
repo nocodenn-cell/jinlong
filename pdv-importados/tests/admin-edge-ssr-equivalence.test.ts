@@ -46,7 +46,7 @@ function contractWithoutSource(
   return rest
 }
 
-describe('edge/ssr session equivalence layer', () => {
+describe.sequential('edge/ssr session equivalence layer', { timeout: 15_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

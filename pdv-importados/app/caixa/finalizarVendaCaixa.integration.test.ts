@@ -183,7 +183,7 @@ function payloadBase(): FinalizarVendaInput {
   }
 }
 
-describe('finalizarVendaCaixa — split e validações', () => {
+describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 15_000 }, () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()

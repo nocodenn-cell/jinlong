@@ -50,3 +50,7 @@ fastproduct/
 # MCP local (pode conter Personal Access Token do Supabase)
 .mcp.json
 .claude/worktrees/
+
+# Backups locais de sprint / artefatos do Agent (não versionar)
+_sprint-ux-backup-*/
+my-agent/

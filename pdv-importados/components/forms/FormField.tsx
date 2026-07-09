@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useId } from 'react'
+import React from 'react'
 
 /**
  * FormField - Accessible form field wrapper with WCAG 2.1 AA compliance
@@ -31,7 +31,7 @@ interface FormFieldProps {
   hint?: string
   error?: string
   required?: boolean
-  children: React.ReactElement<any>
+  children: React.ReactElement<Record<string, unknown>>
   className?: string
 }
 

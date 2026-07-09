@@ -57,7 +57,7 @@ npm run test:e2e:report
 | `PLAYWRIGHT_REUSE_SERVER` | Não | Fora do CI, reutilizar `next dev` já na mesma porta é o **padrão**. Defina `0` para forçar o Playwright a subir `next dev` via `webServer` (falha se a porta estiver ocupada). |
 | `PLAYWRIGHT_TEST_EMAIL` | Para suite gerente | Usuário **GERENTE** ou **DONO** |
 | `PLAYWRIGHT_TEST_PASSWORD` | Para suite gerente | Senha do usuário de teste |
-| `PLAYWRIGHT_CAIXA_TEST_EMAIL` | Para `/caixa` (`caixa.spec`, `caixa-fluxos-criticos`, pipeline `test:e2e:critical`) | Usuário com **`perfil = OPERADOR`** (o middleware redireciona GERENTE/DONO para `/gerente`) |
+| `PLAYWRIGHT_CAIXA_TEST_EMAIL` | Para `/caixa` (`caixa.spec`, `caixa-venda`, `caixa-venda-multi-pagamento`, `caixa-fluxos-criticos`, pipeline `test:e2e:critical`) | Usuário com **`perfil = OPERADOR`** (o middleware redireciona GERENTE/DONO para `/gerente`) |
 | `PLAYWRIGHT_CAIXA_TEST_PASSWORD` | Idem | Senha do operador de teste |
 | `PLAYWRIGHT_E2E_PRODUTO_CODIGO` | Não | Código de barras existente no Postgres (padrão **7898512340003** — seed migration `027`). Usado em `e2e/caixa-venda.spec.ts`. |
 
@@ -65,7 +65,20 @@ Sem `PLAYWRIGHT_TEST_*`, os testes do arquivo `gerente.spec.ts` são **pulados**
 
 `admin-idioma.spec.ts` cobre troca/persistência de idioma no `/admin` e roda também nos projetos mobile.
 
-O ficheiro `e2e/caixa-venda-multi-pagamento.spec.ts` (pipeline crítico) exige as mesmas variáveis de operador e catálogo que `caixa-venda.spec.ts`: split **DINHEIRO + PIX** com valores lidos do total no rodapé.
+O ficheiro `e2e/caixa-venda-multi-pagamento.spec.ts` faz parte do pipeline **`test:e2e:critical`** (após `caixa-venda.spec.ts`). Exige as mesmas variáveis de operador e catálogo que `caixa-venda.spec.ts`: split **DINHEIRO + PIX** (e cenário de 3 parcelas) na **aba Pgto** do PDV — não no footer. Valores lidos de `data-testid="caixa-total-liquido"` no rodapé.
+
+### Financial Gate (complemento ao E2E)
+
+O gate financeiro de produção (`npm run gate:pdv` na raiz do monorepo) **não** roda no pipeline Playwright, mas é **bloqueante para go-live** (ver [pdv-production-financial-gate.md](./pdv-production-financial-gate.md)). Pré-requisitos compartilhados com E2E de caixa:
+
+| Variável | Uso no gate |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_URL` | Projeto staging alvo |
+| `SUPABASE_SERVICE_ROLE_KEY` | RPCs admin + validação ledger |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Login operador (`e2e-operador@localhost.test`) |
+| `SEED_DEV_PASSWORD` ou `PLAYWRIGHT_TEST_PASSWORD` | Senha do operador seed |
+
+Antes do gate: `npm run seed:dev-users && npm run seed:demo-fluxo` em `pdv-importados`. Saída esperada: `[PDV SIMULATED PRODUCTION GATE]` com `FINAL RESULT: GO`.
 
 Sem `PLAYWRIGHT_CAIXA_TEST_*`, os testes de **caixa** são **pulados** (local e CI). Para o smoke `test:e2e:critical` e `caixa-fluxos-criticos.spec.ts` exercitarem `/caixa`, defina esses secrets no GitHub (usuário **OPERADOR** do seed, ex.: `e2e-operador@localhost.test`).
 
@@ -105,7 +118,15 @@ Em **`main`**, o único gate pós-deploy de **decisão** é **SSRA** (`validate-
 
 ### E2E crítico (sistema de risco, assíncrono)
 
-No workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), após **build-and-test**, o job **`e2e-critical`** corre **`npm run test:e2e:critical`** em **paralelo** com `deploy`. Não participa da cadeia `deploy` → `validate-production`. Falha → tratar como risco (issue, repro, rollback manual se necessário).
+No workflow [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), após **build-and-test**, o job **`e2e-critical`** corre o pipeline Playwright crítico em **paralelo** com `deploy`. Na raiz do monorepo:
+
+```bash
+npm run test:e2e:critical
+```
+
+Equivalente explícito: `npm run test:e2e:critical -w pdv-importados` (script em `pdv-importados/scripts/e2e-critical-pipeline.mjs`: `env:check`, smoke sync-outbox, depois `sync-fluxo-gerente`, `caixa-venda`, `caixa-venda-multi-pagamento`, `caixa-fluxos-criticos`). Não participa da cadeia `deploy` → `validate-production`. Falha → tratar como risco (issue, repro, rollback manual se necessário).
+
+**Complemento bloqueante para go-live (não Playwright):** `npm run gate:pdv` na raiz — ver [pdv-production-financial-gate.md](./pdv-production-financial-gate.md).
 
 Secrets **obrigatórios** no repositório (Actions):
 

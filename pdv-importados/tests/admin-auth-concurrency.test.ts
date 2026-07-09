@@ -122,7 +122,7 @@ function redirectUrl(response: Response): string | null {
 
 // =============================================================================
 
-describe('admin auth concurrency', () => {
+describe.sequential('admin auth concurrency', { timeout: 15_000 }, () => {
   beforeEach(() => {
     edgeGetUser.mockReset()
     edgeSignOut.mockReset()

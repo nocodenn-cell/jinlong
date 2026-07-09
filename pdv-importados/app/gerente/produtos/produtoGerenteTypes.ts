@@ -7,12 +7,20 @@ export type ProdutoGerenteRow = {
   codigo_barras: string | null
   /** Código interno / SKU do produto. */
   codigo_interno: string | null
+  /** Referência do produto no catálogo do fornecedor. */
+  referencia_fornecedor: string | null
+  /** Nome curto opcional para exibição compacta no PDV (cupom/tela de venda). */
+  nome_reduzido_pdv: string | null
   /** Localização física na loja (ex: "A-12", "ESTANTE 3"). */
   localizacao_prateleira: string | null
   preco_varejo: number
   preco_atacado: number | null
   /** Preço de custo (base da trava de margem); null = não informado. */
   preco_custo: number | null
+  /** Custo médio calculado (entradas/compras); somente leitura no cadastro. */
+  preco_custo_medio: number
+  /** Estoque mínimo configurado (tabela `estoque`, por loja); somente leitura no cadastro. */
+  estoque_minimo: number | null
   /** Override: permite preço de venda abaixo do custo. */
   permitir_abaixo_custo: boolean
   quantidade_gatilho_atacado: number | null
