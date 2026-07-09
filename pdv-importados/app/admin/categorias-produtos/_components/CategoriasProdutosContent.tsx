@@ -128,6 +128,7 @@ export function CategoriasProdutosContent({ dados }: Props) {
             onClick={() => handleToggleAtivo(r.id, r.ativo)}
             className="rounded px-2 py-1 text-[12px] text-jl-fg-2 transition-colors hover:bg-white/[0.04]"
             title={r.ativo ? 'Desativar' : 'Ativar'}
+            aria-label={r.ativo ? 'Desativar categoria' : 'Ativar categoria'}
           >
             {r.ativo ? '✓' : '○'}
           </button>
@@ -137,6 +138,7 @@ export function CategoriasProdutosContent({ dados }: Props) {
               setEditingNome(r.nome)
             }}
             className="rounded p-1 text-jl-fg-3 transition-colors hover:bg-white/[0.04] hover:text-jl-fg-1"
+            aria-label="Editar categoria"
           >
             <Edit2 size={14} />
           </button>
@@ -182,12 +184,14 @@ export function CategoriasProdutosContent({ dados }: Props) {
               onClick={handleCreate}
               disabled={loading || !newNome.trim()}
               className="admin-v2-btn-primary disabled:opacity-50"
+              aria-label="Confirmar"
             >
               <Check size={14} />
             </button>
             <button
               onClick={() => setCreatingNew(false)}
               className="admin-v2-btn-secondary"
+              aria-label="Cancelar"
             >
               <X size={14} />
             </button>
@@ -213,12 +217,14 @@ export function CategoriasProdutosContent({ dados }: Props) {
               onClick={() => handleUpdate(editingId)}
               disabled={loading || !editingNome.trim()}
               className="admin-v2-btn-primary disabled:opacity-50"
+              aria-label="Confirmar"
             >
               <Check size={14} />
             </button>
             <button
               onClick={() => setEditingId(null)}
               className="admin-v2-btn-secondary"
+              aria-label="Cancelar"
             >
               <X size={14} />
             </button>
