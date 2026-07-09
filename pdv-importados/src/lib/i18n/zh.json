@@ -1887,7 +1887,7 @@
     "dashboard_erro_banner_pl": "{{n}}条加载错误",
     "grafico_carregando": "图表加载中…",
     "financeiro_titulo": "财务与税务",
-    "financeiro_subtitulo": "应收账款、税务队列与发票管理",
+    "financeiro_subtitulo": "应收账款、税务队列与发票管理。此流程尚未启用与 Sefaz 的真实对接。",
     "financeiro_fila_fiscal_vazio_titulo": "税务队列中没有文件",
     "financeiro_fila_fiscal_vazio_sub": "销售产生待处理或有误的发票后，文件会显示在此处。",
     "financeiro_kpi_titulos": "未结应收单",

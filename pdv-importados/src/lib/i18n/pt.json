@@ -1716,7 +1716,7 @@
     "dashboard_erro_banner_pl": "{{n}} erros ao carregar",
     "grafico_carregando": "Carregando gráfico…",
     "financeiro_titulo": "Financeiro e fiscal",
-    "financeiro_subtitulo": "Contas a receber, fila fiscal e controle de emissão",
+    "financeiro_subtitulo": "Contas a receber, fila fiscal e controle de emissão. Integração real com Sefaz ainda não está ativa neste fluxo.",
     "financeiro_fila_fiscal_vazio_titulo": "Nenhum documento na fila fiscal",
     "financeiro_fila_fiscal_vazio_sub": "Documentos aparecem aqui conforme vendas geram notas fiscais pendentes ou com erro.",
     "financeiro_kpi_titulos": "Títulos em aberto",
