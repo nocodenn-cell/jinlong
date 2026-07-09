@@ -75,6 +75,7 @@
     "publicados_sucesso": "{{count}} produto(s) publicado(s) e liberado(s) no PDV.",
     "cadastro_rapido": "Cadastro rápido",
     "cadastro_produto": "Cadastro de Produto",
+    "salvar_e_continuar": "Salvar e continuar",
     "criado_rascunho": "Produto salvo como rascunho. Publique no catálogo para liberar no PDV.",
     "criado_publicado": "Produto publicado e liberado no PDV.",
     "lista_produtos": "Lista de produtos",

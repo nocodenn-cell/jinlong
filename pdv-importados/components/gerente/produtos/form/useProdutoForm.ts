@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import { useMoneyInput } from '@/hooks/useMoneyInput'
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
@@ -150,6 +150,34 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
 
   const readOnly = useMemo(() => readOnlyFromProduto(produto), [produto])
 
+  const limparParaNovoCadastro = useCallback(() => {
+    resetFormState(null, {
+      setNome,
+      setCodigoInterno,
+      setCodigoBarras,
+      setOrigem,
+      setUnidadeMedida,
+      setReferenciaFornecedor,
+      setNomeReduzidoPdv,
+      setLocalizacaoPrateleira,
+      setCategoriaId,
+      setMarcaId,
+      setFornecedorId,
+      setObservacao,
+      setQuantidadeGatilho,
+      setPermitirAbaixoCusto,
+      setNcm,
+      setCfopProduto,
+      setCsosn,
+      setCest,
+      setCstPis,
+      setCstCofins,
+      precoVarejoInput,
+      precoAtacadoInput,
+      precoCustoInput,
+    })
+  }, [precoAtacadoInput, precoCustoInput, precoVarejoInput])
+
   return {
     nome,
     setNome,
@@ -195,6 +223,7 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
     precoAtacadoInput,
     precoCustoInput,
     readOnly,
+    limparParaNovoCadastro,
   }
 }
 

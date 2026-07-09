@@ -59,7 +59,8 @@ export function ProdutoFormModal({
     onOpenChange(false)
   }, [saving, onOpenChange])
 
-  const salvar = useCallback(async () => {
+  const salvar = useCallback(
+    async (opts?: { continuar?: boolean }) => {
     const precoVarejo = form.precoVarejoInput.parse()
     if (!precoVarejo || precoVarejo <= 0) {
       emitGerenteToast({ kind: 'error', message: p.preco_invalido })
@@ -108,11 +109,18 @@ export function ProdutoFormModal({
       }
       emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
       onSaved()
-      fechar()
+      if (opts?.continuar && !editando) {
+        form.limparParaNovoCadastro()
+        requestAnimationFrame(() => nomeRef.current?.focus())
+        return
+      }
+      onOpenChange(false)
     } finally {
       setSaving(false)
     }
-  }, [editando, produto, form, p, m.comum.sucesso, onSaved, fechar])
+  },
+    [editando, produto, form, p, m.comum.sucesso, onSaved, onOpenChange],
+  )
 
   if (!open) return null
   if (editando && !produto) return null
@@ -132,6 +140,17 @@ export function ProdutoFormModal({
           <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={saving}>
             {m.comum.cancelar}
           </Button>
+          {!editando ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="app-btn-neutral"
+              disabled={saving}
+              onClick={() => void salvar({ continuar: true })}
+            >
+              {saving ? '…' : p.salvar_e_continuar}
+            </Button>
+          ) : null}
           <Button type="button" className="app-btn-accent" disabled={saving} onClick={() => void salvar()}>
             {saving ? '…' : editando ? p.editar_modal_salvar : m.comum.salvar}
           </Button>
