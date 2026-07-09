@@ -290,7 +290,7 @@ export function ContasPagarListClient({
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.contas_pagar.acoes_rapidas}
           </div>
-          <Button type="button" className="app-btn-accent mt-2 gap-1.5">
+          <Button type="button" className="app-btn-accent mt-2 gap-1.5" disabled title={m.comum.em_breve}>
             <Plus className="h-4 w-4" aria-hidden /> {m.contas_pagar.lancar}
           </Button>
         </div>
