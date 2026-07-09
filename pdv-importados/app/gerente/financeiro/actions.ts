@@ -133,13 +133,27 @@ export async function liquidarTitulo(input: {
   return { success: true, data: null }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
   if (!venda_id?.trim()) return { success: false, error: 'Venda obrigatória' }
+  const idTrim = venda_id.trim()
+  if (!UUID_RE.test(idTrim)) {
+    return { success: false, error: 'ID de venda inválido — informe um UUID válido.' }
+  }
   const supabase = await createClient()
+  const { data: vendaExiste } = await supabase
+    .from('vendas')
+    .select('id')
+    .eq('id', idTrim)
+    .maybeSingle()
+  if (!vendaExiste) {
+    return { success: false, error: 'Venda não encontrada. Confira o ID informado.' }
+  }
   const { error } = await supabase.from('documentos_fiscais_pendentes').insert({
-    venda_id,
+    venda_id: idTrim,
     tipo_doc: 'NFC_E_STUB',
     status: 'PENDENTE',
     payload: { origem: 'painel_gerente' },
