@@ -22,6 +22,31 @@
    */
   --color-dragon-gold-luxury: #d4af37; /* ouro do botão/realces do login */
   --color-dragon-gold-cinzel: #bfa76a; /* ouro do wordmark serif (Cinzel) */
+
+  /*
+   * Tokens --color-* consumidos por styles/admin-v2.css e por diversas telas
+   * do /admin (Dashboard, Catálogo, Estoque, Financeiro, Comissões, Vendas).
+   * Só existiam em styles/tokens/{base,semantic}.css, que não é importado em
+   * produção (só no Storybook) — sem isto, badges/alerts de sucesso/erro/aviso
+   * do admin-v2 perdem cor via color-mix() inválido. Valores espelham os já
+   * decididos para o tema claro em styles/tokens/theme.css.
+   */
+  --color-background-primary: #f8fafc;
+  --color-background-secondary: #f1f5f9;
+  --color-background-tertiary: #e2e8f0;
+  --color-background-surface: #ffffff;
+  --color-border-secondary: #e2e8f0;
+  --color-brand-primary: #2563eb;
+  --color-brand-secondary: #3b82f6;
+  --color-brand-contrast: #ffffff;
+  --color-text-secondary: rgb(71 85 105);
+  --color-text-tertiary: rgb(100 116 139);
+  --color-success-500: #10b981;
+  --color-danger-500: #ef4444;
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-chart-gold: #c9a227;
+  --color-dragon-gold-warm: #c9a227;
 }
 
 /* Tema único "clássico" (claro). O nome 'noturno' foi aposentado na Fase 0. */
