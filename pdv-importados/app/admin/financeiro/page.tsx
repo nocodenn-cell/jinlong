@@ -117,9 +117,14 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         title={ui.financeiro_titulo}
         subtitle={ui.financeiro_subtitulo}
         filters={
-          <Link href={ROUTES.gerente.financeiro} className="admin-v2-btn-primary">
-            {ui.financeiro_abrir_modulo}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={ROUTES.gerente.financeiro} className="admin-v2-btn-primary">
+              {ui.financeiro_abrir_modulo}
+            </Link>
+            <Link href={ROUTES.gerente.financeiroContasPagar} className="admin-v2-btn-secondary">
+              {m.contas_pagar.titulo}
+            </Link>
+          </div>
         }
       />
 

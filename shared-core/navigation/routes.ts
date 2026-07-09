@@ -88,7 +88,7 @@ export const LEGACY_GERENTE_REDIRECTS: Record<string, string> = {
   transferencias: ROUTES.admin.estoqueTransferencias,
   vendas: ROUTES.admin.vendas,
   financeiro: ROUTES.admin.financeiro,
-  'financeiro/contas-pagar': ROUTES.admin.financeiro,
+  'financeiro/contas-pagar': ROUTES.gerente.financeiroContasPagar,
   relatorios: ROUTES.admin.relatorios,
   'relatorios/estoque': ROUTES.admin.relatorios,
   'relatorios/sem-giro': ROUTES.admin.relatorios,
