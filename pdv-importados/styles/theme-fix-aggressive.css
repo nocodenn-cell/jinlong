@@ -27,7 +27,7 @@
   /* Foreground */
   --jl-fg-1: var(--surface-text, rgb(15 23 42));       /* primary text — slate-900 */
   --jl-fg-2: rgb(100 116 139);                          /* secondary text — slate-500 */
-  --jl-fg-3: rgb(148 163 184);                          /* tertiary text — slate-400 */
+  --jl-fg-3: rgb(100 116 139);                          /* tertiary text — slate-500 (era slate-400, ~2.56:1, falhava WCAG AA) */
 
   /* Accent (Bling blue) */
   --jl-accent: var(--accent, #2563eb);
@@ -106,7 +106,7 @@
   /* Foreground */
   --jl-fg-1: rgb(15, 23, 42);       /* slate-900 — texto primário */
   --jl-fg-2: rgb(100, 116, 139);    /* slate-500 — secundário */
-  --jl-fg-3: rgb(148, 163, 184);    /* slate-400 — muted/labels */
+  --jl-fg-3: rgb(100, 116, 139);    /* slate-500 — muted/labels (era slate-400, ~2.56:1, falhava WCAG AA) */
 
   /* Accent (Bling blue) */
   --jl-accent: #2563eb;             /* blue-600 — brand light */
