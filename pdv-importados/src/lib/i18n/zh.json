@@ -1786,7 +1786,8 @@
     "fechar": "关闭",
     "concluir": "完成",
     "limpar_filtros": "清除筛选",
-    "salvando": "保存中…"
+    "salvando": "保存中…",
+    "em_breve": "即将推出"
   },
   "admin_ui": {
     "catalogo_titulo": "商品目录",

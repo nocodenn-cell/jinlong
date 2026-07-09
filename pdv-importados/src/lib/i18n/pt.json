@@ -1615,7 +1615,8 @@
     "fechar": "Fechar",
     "concluir": "Concluir",
     "limpar_filtros": "Limpar filtros",
-    "salvando": "Salvando…"
+    "salvando": "Salvando…",
+    "em_breve": "Em breve"
   },
   "admin_ui": {
     "catalogo_titulo": "Catálogo",
