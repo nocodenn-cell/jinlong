@@ -71,10 +71,11 @@ export function SuspensaoContent({ statusInicial }: Props) {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block text-[11px] font-medium uppercase tracking-wider text-jl-fg-3">
+          <label htmlFor="suspensao-motivo" className="mb-2 block text-[11px] font-medium uppercase tracking-wider text-jl-fg-3">
             Motivo (se suspensas)
           </label>
           <textarea
+            id="suspensao-motivo"
             value={motivo}
             onChange={(e) => setMotivo(e.target.value.slice(0, 300))}
             placeholder="Descreva o motivo da suspensão (máx 300 caracteres)..."
