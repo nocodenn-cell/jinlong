@@ -1,3 +1,5 @@
+> **ARQUIVADO (2026-07-09):** auditoria pontual anterior, superada pela auditoria completa do sistema (foco em produto e experiência do usuário) e pelas correções executadas em `claude/product-registration-audit-ssz7r5`. Mantida apenas como histórico.
+
 # Auditoria UX/UI — FastProduct (`pdv-importados`)
 
 **Data:** 2026-05-12  

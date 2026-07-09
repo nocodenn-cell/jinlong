@@ -1,3 +1,5 @@
+> **ARQUIVADO (2026-07-09):** relatório pontual de uma migração de tokens específica, superado pela auditoria completa do sistema e pelas correções executadas em `claude/product-registration-audit-ssz7r5`. Mantido apenas como histórico.
+
 # 🎨 FastProduct Design Tokens Migration - Status Report
 
 **Branch:** `claude/zealous-lamport-8j6t67`  
