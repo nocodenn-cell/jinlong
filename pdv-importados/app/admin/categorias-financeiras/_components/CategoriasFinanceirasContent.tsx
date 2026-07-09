@@ -216,7 +216,8 @@ export function CategoriasFinanceirasContent({ dados }: Props) {
             <span className="text-3xl text-jl-fg-3" aria-hidden>
               💰
             </span>
-            <p className="text-[12px] text-jl-fg-3">Nenhuma categoria encontrada</p>
+            <p className="text-[13px] font-medium text-jl-fg-2">Nenhuma categoria encontrada</p>
+            <p className="text-[11px] text-jl-fg-3">Use o campo acima para cadastrar a primeira categoria.</p>
           </div>
         }
         className="rounded-none border-x-0 border-[var(--color-border-secondary)]"

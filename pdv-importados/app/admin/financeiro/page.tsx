@@ -53,10 +53,24 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const { limite, ...filters } = parsed
 
   const supabase = await createClient()
-  const [listaRes, kpisRes] = await Promise.all([
+  const [listaRes, kpisRes, fiscalRes] = await Promise.all([
     fetchContasReceberListagem(supabase, filters, limite),
     fetchFinanceiroTitulosKpis(supabase),
+    supabase
+      .from('documentos_fiscais_pendentes')
+      .select('id, tipo_doc, status, created_at')
+      .in('status', ['PENDENTE', 'ERRO'])
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(10),
   ])
+
+  const fiscal = (fiscalRes.data ?? []).map((row) => ({
+    id: row.id,
+    tipoDoc: row.tipo_doc,
+    status: row.status,
+    criadoEm: row.created_at,
+  }))
 
   const contas: ContaLinha[] = listaRes.titulos.map((t) => ({
     id: t.id,
@@ -146,7 +160,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
           />
           <MetricCard
             label={ui.financeiro_kpi_docs_fiscais}
-            value="3"
+            value={String(fiscal.length)}
             icon="file-check-2"
             tone="warning"
           />
@@ -173,15 +187,13 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
 
         <FinanceiroPanels
           contas={contas}
+          fiscal={fiscal}
           labels={{
             titulosEmAberto: ui.financeiro_section_titulos,
             filaFiscal: ui.financeiro_section_fila,
-            documentosFiscais: ui.financeiro_section_docs,
-            emitirSelecionados: ui.financeiro_emitir_selecionados,
-            colDocumento: ui.financeiro_col_documento,
-            colSerie: ui.financeiro_col_serie,
-            colValor: m.gerente.col_total,
-            colSituacao: ui.financeiro_col_situacao,
+            filaFiscalVazioTitulo: ui.financeiro_fila_fiscal_vazio_titulo,
+            filaFiscalVazioSub: ui.financeiro_fila_fiscal_vazio_sub,
+            locale,
             contas: {
               colCliente: ui.financeiro_col_cliente,
               colVencimento: ui.financeiro_col_vencimento,
