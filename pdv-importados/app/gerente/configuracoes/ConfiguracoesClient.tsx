@@ -91,6 +91,7 @@ export function ConfiguracoesClient({ idioma, lojaInicial, pdvConfigInicial }: P
       tema_padrao: 'noturno',
       imprimir_cupom_auto: true,
       formato_impressao: 'TERMICA',
+      show_stock_alerts: false,
     },
   )
   const [salvandoPdv, setSalvandoPdv] = useState(false)
