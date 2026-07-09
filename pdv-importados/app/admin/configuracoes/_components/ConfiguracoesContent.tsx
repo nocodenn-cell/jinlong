@@ -63,6 +63,7 @@ export type ConfiguracoesPrefsLabels = {
   formato: string
   checkLembrete: string
   checkResumo: string
+  checkAlertasEstoque: string
   sucesso: string
   btnSalvar: string
 }
@@ -107,6 +108,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
   const [lojaSucesso, setLojaSucesso] = useState(false)
   const [pdvErro, setPdvErro] = useState<string | null>(null)
   const [pdvSucesso, setPdvSucesso] = useState(false)
+  const [showStockAlerts, setShowStockAlerts] = useState(dados.pdvConfig?.show_stock_alerts ?? false)
 
   const handleLojaSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -164,6 +166,9 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
       imprimir_cupom_auto: fd.get('imprimir_cupom_auto')
         ? fd.get('imprimir_cupom_auto') === 'on'
         : (dados.pdvConfig?.imprimir_cupom_auto ?? false),
+      show_stock_alerts: fd.get('show_stock_alerts')
+        ? fd.get('show_stock_alerts') === 'on'
+        : showStockAlerts,
       formato_impressao: String(
         fd.get('formato_impressao') ?? dados.pdvConfig?.formato_impressao ?? 'TERMICA',
       ) as 'TERMICA' | 'A4',
@@ -353,6 +358,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               name="imprimir_cupom_auto"
               value={dados.pdvConfig?.imprimir_cupom_auto ? 'on' : 'off'}
             />
+            <input type="hidden" name="show_stock_alerts" value={showStockAlerts ? 'on' : 'off'} />
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.fiscal.regime}>
@@ -422,6 +428,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               name="imprimir_cupom_auto"
               value={dados.pdvConfig?.imprimir_cupom_auto ? 'on' : 'off'}
             />
+            <input type="hidden" name="show_stock_alerts" value={showStockAlerts ? 'on' : 'off'} />
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.prefs.idioma}>
@@ -445,6 +452,14 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
             </div>
 
             <div className="space-y-2">
+              <CheckboxLabel>
+                <input
+                  type="checkbox"
+                  checked={showStockAlerts}
+                  onChange={(e) => setShowStockAlerts(e.target.checked)}
+                />
+                {labels.prefs.checkAlertasEstoque}
+              </CheckboxLabel>
               <CheckboxLabel>
                 <input type="checkbox" disabled />
                 {labels.prefs.checkLembrete}

@@ -45,7 +45,7 @@ export default async function AdminConfiguracoes() {
         `
         loja_id, cfop_padrao, cst_padrao, regime_tributario,
         auto_enqueue_fiscal, idioma_padrao, tema_padrao,
-        imprimir_cupom_auto, formato_impressao
+        imprimir_cupom_auto, formato_impressao, show_stock_alerts
       `
       )
       .maybeSingle(),
@@ -111,6 +111,7 @@ export default async function AdminConfiguracoes() {
           formato: ui.configuracoes_prefs_formato,
           checkLembrete: ui.configuracoes_prefs_check_lembrete,
           checkResumo: ui.configuracoes_prefs_check_resumo,
+          checkAlertasEstoque: ui.configuracoes_prefs_check_alertas_estoque,
           sucesso: ui.configuracoes_prefs_sucesso,
           btnSalvar: ui.configuracoes_prefs_btn_salvar,
         },

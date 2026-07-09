@@ -71,6 +71,8 @@ export type PdvConfig = {
   tema_padrao: 'noturno' | 'novem'
   imprimir_cupom_auto: boolean
   formato_impressao: 'TERMICA' | 'A4'
+  /** Exibe alertas de estoque baixo no dashboard/sidebar do admin (migration 235, default false). */
+  show_stock_alerts: boolean
 }
 
 function validarLoja(d: LojaConfig): string | null {
@@ -155,6 +157,7 @@ export async function atualizarConfiguracoesPdvAction(
       idioma_padrao: input.idioma_padrao,
       tema_padrao: input.tema_padrao,
       imprimir_cupom_auto: input.imprimir_cupom_auto,
+      show_stock_alerts: input.show_stock_alerts,
       formato_impressao: input.formato_impressao,
     }
 

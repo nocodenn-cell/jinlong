@@ -1861,6 +1861,7 @@
     "configuracoes_prefs_formato": "Formato de impressão",
     "configuracoes_prefs_check_lembrete": "Ativar lembrete de fechamento diário (placeholder)",
     "configuracoes_prefs_check_resumo": "Enviar resumo automático por e-mail (placeholder)",
+    "configuracoes_prefs_check_alertas_estoque": "Mostrar alertas de estoque baixo no dashboard e na barra lateral",
     "configuracoes_prefs_sucesso": "Preferências salvas com sucesso",
     "configuracoes_prefs_btn_salvar": "Salvar",
     "configuracoes_enum_regime_simples": "Simples Nacional",

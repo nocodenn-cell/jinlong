@@ -2032,6 +2032,7 @@
     "configuracoes_prefs_formato": "打印格式",
     "configuracoes_prefs_check_lembrete": "启用每日关闭提醒（占位符）",
     "configuracoes_prefs_check_resumo": "自动发送邮件摘要（占位符）",
+    "configuracoes_prefs_check_alertas_estoque": "在仪表盘和侧边栏显示低库存提醒",
     "configuracoes_prefs_sucesso": "偏好设置已保存",
     "configuracoes_prefs_btn_salvar": "保存",
     "configuracoes_enum_regime_simples": "简单税制",
