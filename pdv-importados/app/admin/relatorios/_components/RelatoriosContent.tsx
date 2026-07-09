@@ -297,11 +297,6 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
               slices={[
                 { label: labels.labelConcluidas, value: dados.resumoExecutivo.vendas_concluidas, color: '#c9a227' },
                 { label: labels.labelCanceladas, value: dados.resumoExecutivo.vendas_canceladas, color: '#f59e0b' },
-                {
-                  label: labels.labelAjustes,
-                  value: Math.max(1, Math.round(dados.resumoExecutivo.vendas_concluidas * 0.08)),
-                  color: '#6b7280',
-                },
               ]}
             />
           </ChartCard>
