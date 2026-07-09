@@ -30,11 +30,25 @@ export async function criarCliente(input: { nome: string; documento?: string; te
   }
 
   const supabase = await createClient()
+  const documento = input.documento?.trim() || null
+
+  if (documento) {
+    const { data: existente } = await supabase
+      .from('clientes')
+      .select('id')
+      .eq('loja_id', lojaId)
+      .eq('documento', documento)
+      .maybeSingle()
+    if (existente) {
+      return { success: false, error: 'Já existe um cliente cadastrado com esse CPF/CNPJ.' }
+    }
+  }
+
   const { data, error } = await supabase
     .from('clientes')
     .insert({
       nome,
-      documento: input.documento?.trim() || null,
+      documento,
       telefone: input.telefone?.trim() || null,
       loja_id: lojaId,
     })
