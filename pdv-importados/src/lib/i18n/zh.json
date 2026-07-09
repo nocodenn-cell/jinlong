@@ -1869,6 +1869,7 @@
     "vendas_detalhe_desconto": "折扣",
     "vendas_detalhe_liquido": "净额",
     "vendas_detalhe_nenhum_item": "本订单暂无商品记录。",
+    "vendas_cancelar_venda": "取消订单",
     "filtro_todos": "全部",
     "filtro_todas": "全部",
     "filtro_ativos": "在售",

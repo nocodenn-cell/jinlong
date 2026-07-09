@@ -1698,6 +1698,7 @@
     "vendas_detalhe_desconto": "Desconto",
     "vendas_detalhe_liquido": "Líquido",
     "vendas_detalhe_nenhum_item": "Nenhum item registrado nesta venda.",
+    "vendas_cancelar_venda": "Cancelar venda",
     "filtro_todos": "Todos",
     "filtro_todas": "Todas",
     "filtro_ativos": "Ativos",

@@ -118,8 +118,10 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
         id: v.id,
         data: v.data,
         total_liquido: v.total_liquido,
+        total_bruto: v.total_bruto,
         forma_pagamento: v.forma_pagamento,
         status: v.status,
+        caixa_id: v.caixa_id,
         qtd_itens_total: v.qtd_itens_total,
         qtd_itens_distintos: v.qtd_itens_distintos,
         primeiro_produto: v.primeiro_produto,
@@ -295,7 +297,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} labels={{
+        <VendasTable vendas={vendas} m={m} locale={locale} labels={{
           colVenda: ui.vendas_col_venda,
           colHora: ui.vendas_col_hora,
           colItens: ui.vendas_col_itens,
@@ -330,6 +332,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           detalheLiquido: ui.vendas_detalhe_liquido,
           detalheItens: m.gerente.sec_itens_venda,
           detalheNenhumItem: ui.vendas_detalhe_nenhum_item,
+          cancelarVenda: ui.vendas_cancelar_venda,
         }} />
 
         {page > 1 || hasMore ? (

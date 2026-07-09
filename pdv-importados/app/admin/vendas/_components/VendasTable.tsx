@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Eye, XCircle } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
+import type { Mensagens } from '@/i18n/getMessages'
+import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
 
@@ -11,8 +14,10 @@ export type VendaLinha = {
   id: string
   data: string | null
   total_liquido: number | null
+  total_bruto: number | null
   forma_pagamento: string | null
   status: string | null
+  caixa_id: string | null
   qtd_itens_total: number
   qtd_itens_distintos: number
   primeiro_produto: string | null
@@ -53,6 +58,7 @@ export type VendasLabels = {
   detalheLiquido: string
   detalheItens: string
   detalheNenhumItem: string
+  cancelarVenda: string
 }
 
 function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
@@ -156,8 +162,20 @@ function ActionBtn({
   )
 }
 
-export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: VendasLabels }) {
+export function VendasTable({
+  vendas,
+  labels,
+  m,
+  locale,
+}: {
+  vendas: VendaLinha[]
+  labels: VendasLabels
+  m: Mensagens
+  locale: string
+}) {
+  const router = useRouter()
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
+  const [cancelarAlvo, setCancelarAlvo] = useState<VendaLinha | null>(null)
 
   const columns: Column<VendaLinha>[] = [
     {
@@ -237,8 +255,36 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
             <ActionBtn label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
               <Eye size={13} aria-hidden />
             </ActionBtn>
+            {String(row.status ?? '').toUpperCase() !== 'CANCELADA' ? (
+              <ActionBtn label={labels.cancelarVenda} onClick={() => setCancelarAlvo(row)}>
+                <XCircle size={13} aria-hidden />
+              </ActionBtn>
+            ) : null}
           </div>
         )}
+      />
+
+      <VendaCancelarModal
+        venda={
+          cancelarAlvo
+            ? {
+                id: cancelarAlvo.id,
+                data: cancelarAlvo.data,
+                total_liquido: cancelarAlvo.total_liquido,
+                total_bruto: cancelarAlvo.total_bruto,
+                forma_pagamento: cancelarAlvo.forma_pagamento,
+                status: cancelarAlvo.status,
+                caixa_id: cancelarAlvo.caixa_id,
+                qtd_itens_total: cancelarAlvo.qtd_itens_total,
+                qtd_itens_distintos: cancelarAlvo.qtd_itens_distintos,
+                primeiro_produto: cancelarAlvo.primeiro_produto,
+              }
+            : null
+        }
+        locale={locale}
+        m={m}
+        onClose={() => setCancelarAlvo(null)}
+        onCancelado={() => router.refresh()}
       />
 
       <VendaDetailSheet
