@@ -514,7 +514,9 @@ export function FinanceiroGerentePageClient({
                             name="valor"
                             type="number"
                             min={0.01}
+                            max={Number(t.valor_aberto)}
                             step="0.01"
+                            title={f.liq_valor_max_title.replace('{{valor}}', fmtGerenteBRL(Number(t.valor_aberto), locale))}
                             placeholder={f.liq_placeholder_valor}
                             className={`${inputClass} sm:max-w-[120px]`}
                           />

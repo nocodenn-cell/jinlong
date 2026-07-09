@@ -533,6 +533,7 @@
       "col_aberto": "未结",
       "col_liquidar": "核销",
       "liq_placeholder_valor": "金额",
+      "liq_valor_max_title": "最高：{{valor}}（该票据未结余额）",
       "liq_ok": "核销",
       "liq_loading": "…",
       "col_venda": "销售",

@@ -533,6 +533,7 @@
       "col_aberto": "Aberto",
       "col_liquidar": "Liquidar",
       "liq_placeholder_valor": "Valor",
+      "liq_valor_max_title": "Máximo: {{valor}} (valor em aberto do título)",
       "liq_ok": "Liquidar",
       "liq_loading": "…",
       "col_venda": "Venda",
