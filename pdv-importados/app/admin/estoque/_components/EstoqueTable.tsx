@@ -123,10 +123,12 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
       ),
     },
     {
+      // Sem sortValue: a listagem é paginada 25-a-25 pelo servidor sempre em ordem
+      // de nome — ordenar por saldo/mínimo/déficit reordenaria só a página atual,
+      // dando a falsa impressão de mostrar o maior/menor saldo do catálogo inteiro.
       key: 'saldo',
       header: labels.saldo,
       align: 'right',
-      sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
       cell: (r) => {
         if (r.quantidade_atual === null) return <span className="text-jl-fg-3">—</span>
         const sev = severidadeSaldo(r.quantidade_atual, r.estoque_minimo)
@@ -137,7 +139,6 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
       key: 'minimo',
       header: labels.minimo,
       align: 'right',
-      sortValue: (r) => r.estoque_minimo ?? Number.NEGATIVE_INFINITY,
       cell: (r) =>
         r.estoque_minimo === null ? (
           <span className="text-jl-fg-3">—</span>
@@ -149,7 +150,6 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
       key: 'deficit',
       header: labels.deficit,
       align: 'right',
-      sortValue: (r) => r.deficit ?? 0,
       cell: (r) =>
         r.deficit != null && r.deficit > 0 ? (
           <span className="font-medium text-[color:var(--color-warning-500)]">-{r.deficit}</span>
