@@ -113,11 +113,12 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       if (listaCod.length > 0) {
         const ids = new Set(listaCod.map((r) => r.id))
         if (ids.size > 1) {
+          const nomes = listaCod.slice(0, 5).map((r) => r.nome).join(', ')
           return {
             ok: true,
             status: 'ambiguo',
             mensagem:
-              'Vários produtos batem com o código lido. Use o nome ou corrija códigos duplicados no cadastro.',
+              `Vários produtos batem com o código lido (${nomes}). Use o nome ou corrija códigos duplicados no cadastro.`,
           }
         }
         const row = listaCod[0]
@@ -168,10 +169,11 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
 
     if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
     if (lista.length > 1) {
+      const nomes = lista.slice(0, 5).map((r) => r.nome).join(', ')
       return {
         ok: true,
         status: 'ambiguo',
-        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Use o código de barras ou refine a busca.`,
+        mensagem: `Vários produtos batem com “${frag}”: ${nomes}. Use o código de barras ou refine a busca.`,
       }
     }
 
