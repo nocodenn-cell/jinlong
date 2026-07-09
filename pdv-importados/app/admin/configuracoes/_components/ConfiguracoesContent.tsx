@@ -210,7 +210,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
       {abaAtiva === 'loja' && (
         <SectionCard title={labels.loja.secDados}>
           <form onSubmit={handleLojaSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.loja.nome}>
                 <input name="nome" type="text" defaultValue={dados.loja?.nome ?? ''} className={inputClass} required />
               </FormField>
@@ -226,7 +226,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.loja.razaoSocial}>
                 <input name="razao_social" type="text" defaultValue={dados.loja?.razao_social ?? ''} className={inputClass} />
               </FormField>
@@ -235,7 +235,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.loja.inscricaoEstadual}>
                 <input
                   name="inscricao_estadual"
@@ -250,7 +250,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
             </div>
 
             <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secContato}</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.loja.telefone}>
                 <input name="telefone" type="tel" defaultValue={dados.loja?.telefone ?? ''} className={inputClass} />
               </FormField>
@@ -263,7 +263,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
             <FormField label={labels.loja.logradouro}>
               <input name="endereco_logradouro" type="text" defaultValue={dados.loja?.endereco_logradouro ?? ''} className={inputClass} />
             </FormField>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <FormField label={labels.loja.numero}>
                 <input name="endereco_numero" type="text" defaultValue={dados.loja?.endereco_numero ?? ''} className={inputClass} />
               </FormField>
@@ -274,7 +274,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
                 <input name="endereco_bairro" type="text" defaultValue={dados.loja?.endereco_bairro ?? ''} className={inputClass} />
               </FormField>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <FormField label={labels.loja.cidade}>
                 <input name="endereco_cidade" type="text" defaultValue={dados.loja?.endereco_cidade ?? ''} className={inputClass} />
               </FormField>
@@ -293,7 +293,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
             </div>
 
             <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secSerieFiscal}</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.loja.nfce}>
                 <input
                   name="numero_serie_nfce"
@@ -354,7 +354,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               value={dados.pdvConfig?.imprimir_cupom_auto ? 'on' : 'off'}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.fiscal.regime}>
                 <select name="regime_tributario" defaultValue={dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL'} className={inputClass}>
                   {REGIMES.map((r) => (
@@ -366,7 +366,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.fiscal.cfop}>
                 <input
                   name="cfop_padrao"
@@ -423,7 +423,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               value={dados.pdvConfig?.imprimir_cupom_auto ? 'on' : 'off'}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label={labels.prefs.idioma}>
                 <select name="idioma_padrao" defaultValue={dados.pdvConfig?.idioma_padrao ?? 'pt'} className={inputClass}>
                   {IDIOMAS.map((i) => (
