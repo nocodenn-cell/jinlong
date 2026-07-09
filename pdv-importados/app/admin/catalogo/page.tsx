@@ -18,7 +18,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
-import { Download, Upload } from 'lucide-react'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
@@ -29,7 +28,7 @@ import {
   listarOpcoesFiltrosProdutos,
 } from '@/app/gerente/produtos/actions'
 import { CatalogoTable, type CatalogoProduto } from './_components/CatalogoTable'
-import { CatalogoNovoButton } from './_components/CatalogoNovoButton'
+import { CatalogoHeaderActions } from './_components/CatalogoHeaderActions'
 
 const PAGE_SIZE = 20
 
@@ -234,17 +233,21 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   if (imagem !== 'todos') chips.push({ key: 'imagem', label: imagem === 'com_imagem' ? ui.catalogo_imagem_com : ui.catalogo_imagem_sem })
 
   const headerActions = (
-    <>
-      <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
-        <Upload size={14} aria-hidden />
-        {ui.catalogo_importar_nfe}
-      </Link>
-      <Link href={ROUTES.admin.catalogo} className="admin-v2-btn-secondary">
-        <Download size={14} aria-hidden />
-        {m.gerente.exportar_csv}
-      </Link>
-      <CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} />
-    </>
+    <CatalogoHeaderActions
+      m={m}
+      ui={ui}
+      opcoes={opcoes}
+      filtrosExport={{
+        situacao: status,
+        origem,
+        estoque,
+        imagens: imagem,
+        categoriaId: categoria,
+        marcaId: marca,
+        fornecedorId: fornecedor,
+        busca: q,
+      }}
+    />
   )
 
   const countBadge = (
