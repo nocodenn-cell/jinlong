@@ -86,6 +86,22 @@ function newCupomSessionId(): string {
 
 const FINALIZACAO_TIMEOUT_MS = 30_000
 
+/** Persiste o último cupom emitido para sobreviver a F5/reconexão — reimpressão não deve
+ *  depender só de estado em memória perdido em qualquer refresh da página. */
+const ULTIMO_RECIBO_STORAGE_KEY = "caixa:ultimoRecibo"
+
+function lerUltimoReciboArmazenado(): ReciboVenda | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = sessionStorage.getItem(ULTIMO_RECIBO_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as ReciboVenda
+    return { ...parsed, data: new Date(parsed.data) }
+  } catch {
+    return null
+  }
+}
+
 /** Referência estável de carrinho vazio para o STATE READY GATE (pré-mount). */
 const EMPTY_ITENS: ItemCarrinhoComPreco[] = []
 
@@ -278,7 +294,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
-  const lastReciboRef = useRef<ReciboVenda | null>(null)
+  const [ultimoRecibo, setUltimoReciboState] = useState<ReciboVenda | null>(() => lerUltimoReciboArmazenado())
+  const setUltimoRecibo = useCallback((recibo: ReciboVenda | null) => {
+    setUltimoReciboState(recibo)
+    try {
+      if (recibo) sessionStorage.setItem(ULTIMO_RECIBO_STORAGE_KEY, JSON.stringify(recibo))
+      else sessionStorage.removeItem(ULTIMO_RECIBO_STORAGE_KEY)
+    } catch {
+      // sessionStorage indisponível (modo privado, quota etc.) — recibo continua válido em memória.
+    }
+  }, [])
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
 
   const thermal = useThermalPrinter()
@@ -799,7 +824,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         ),
       ])
       if (res.ok) {
-        lastReciboRef.current = {
+        setUltimoRecibo({
           vendaId: res.vendaId,
           data: new Date(),
           itens: itens.map((i) => ({
@@ -816,7 +841,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           descontoGerentePercentual: descontoGerentePercentualEfetivo,
           valorDescontoGerente,
           moeda: m.caixa.moeda_prefixo,
-        }
+        })
         setCheckoutHint(null)
         setReimprimirModalAberto(true)
         vendaIdempotenciaRef.current = null
@@ -923,8 +948,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onFocarBusca: focarCampoBusca,
     onNovoCupom: handleNovoCupom,
     onReimprimir: useCallback(() => {
-      if (lastReciboRef.current) setReimprimirModalAberto(true)
-    }, []),
+      if (ultimoRecibo) setReimprimirModalAberto(true)
+    }, [ultimoRecibo]),
     onDesfazerRemocao: handleDesfazerRemocao,
     pdvClassicAtalhos,
   })
@@ -1161,7 +1186,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               >
                 {m.caixa.novo_cupom}
               </button>
-              {lastReciboRef.current && (
+              {ultimoRecibo && (
                 <button
                   type="button"
                   className={cn(
@@ -1284,9 +1309,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
-      {reimprimirModalAberto && lastReciboRef.current && (
+      {reimprimirModalAberto && ultimoRecibo && (
         <CaixaReciboModal
-          venda={lastReciboRef.current}
+          venda={ultimoRecibo}
           m={m}
           onClose={() => setReimprimirModalAberto(false)}
           onNovaVenda={() => {
