@@ -272,6 +272,7 @@
     "estoque_atual_label": "当前库存",
     "estoque_minimo_label": "最低库存",
     "estoque_minimo_hint": "在库存页面设置（含审计记录）。",
+    "estoque_minimo_hint_criacao": "可选。保存后可在库存页面调整（含审计记录）。",
     "estoque_minimo_link": "前往库存页面编辑 →",
     "fornecedor_principal_label": "主要供应商",
     "custo_compra_label": "采购成本",

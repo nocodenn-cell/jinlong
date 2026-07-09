@@ -113,6 +113,7 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
   const [cest, setCest] = useState('')
   const [cstPis, setCstPis] = useState<string>(FISCAL_DEFAULTS.cstPis)
   const [cstCofins, setCstCofins] = useState<string>(FISCAL_DEFAULTS.cstCofins)
+  const [estoqueMinimoInicial, setEstoqueMinimoInicial] = useState('')
 
   const precoVarejoInput = useMoneyInput()
   const precoAtacadoInput = useMoneyInput()
@@ -145,6 +146,7 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       precoAtacadoInput,
       precoCustoInput,
     })
+    setEstoqueMinimoInicial('')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, produto])
 
@@ -176,6 +178,7 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       precoAtacadoInput,
       precoCustoInput,
     })
+    setEstoqueMinimoInicial('')
   }, [precoAtacadoInput, precoCustoInput, precoVarejoInput])
 
   return {
@@ -195,6 +198,8 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
     setNomeReduzidoPdv,
     localizacaoPrateleira,
     setLocalizacaoPrateleira,
+    estoqueMinimoInicial,
+    setEstoqueMinimoInicial,
     categoriaId,
     setCategoriaId,
     marcaId,

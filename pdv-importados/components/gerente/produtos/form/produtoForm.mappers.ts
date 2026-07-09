@@ -19,6 +19,13 @@ export function parseGatilhoSubmit(raw: string): number | null {
   return Number.isInteger(n) && n >= 1 ? n : null
 }
 
+export function parseGatilhoSubmitNaoNegativo(raw: string): number | null {
+  const t = raw.trim()
+  if (!t) return null
+  const n = Number.parseInt(t, 10)
+  return Number.isInteger(n) && n >= 0 ? n : null
+}
+
 export function buildSubmitPayload(
   state: {
     nome: string
@@ -27,6 +34,7 @@ export function buildSubmitPayload(
     referenciaFornecedor: string
     nomeReduzidoPdv: string
     localizacaoPrateleira: string
+    estoqueMinimoInicial: string
     origem: OrigemCode
     unidadeMedida: UnidadeCode
     categoriaId: string
@@ -54,6 +62,7 @@ export function buildSubmitPayload(
     referencia_fornecedor: state.referenciaFornecedor.trim() || null,
     nome_reduzido_pdv: state.nomeReduzidoPdv.trim() || null,
     localizacao_prateleira: state.localizacaoPrateleira.trim() || null,
+    estoque_minimo: parseGatilhoSubmitNaoNegativo(state.estoqueMinimoInicial),
     preco_varejo: state.precoVarejo,
     preco_atacado: state.precoAtacado,
     preco_custo: state.precoCusto,

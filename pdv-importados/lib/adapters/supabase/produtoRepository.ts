@@ -89,7 +89,7 @@ export function createProdutoRepository(
         produto_id: data.id,
         loja_id: lojaId,
         quantidade_atual: 0,
-        estoque_minimo: 0,
+        estoque_minimo: input.estoque_minimo ?? 0,
       })
 
       if (estoqueError) {

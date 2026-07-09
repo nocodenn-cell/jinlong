@@ -29,6 +29,8 @@ export interface NovoProdutoInput {
   permitir_abaixo_custo?: boolean
   /** Quantidade mínima de itens para acionar preço atacado. */
   quantidade_gatilho_atacado?: number | null
+  /** Estoque mínimo inicial (linha de estoque criada junto do produto). NULL/omitido = 0. */
+  estoque_minimo?: number | null
   origem: OrigemProduto
   tem_nf: boolean
   unidade_medida?: UnidadeMedida

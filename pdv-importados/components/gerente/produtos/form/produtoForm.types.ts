@@ -36,6 +36,10 @@ export type ProdutoFormState = Readonly<{
   setNomeReduzidoPdv: (v: string) => void
   localizacaoPrateleira: string
   setLocalizacaoPrateleira: (v: string) => void
+  /** Só usado na criação — editar estoque mínimo de um produto existente exige o
+   *  fluxo auditado em /admin/estoque (ver ProdutoFormReadOnly.estoqueMinimo). */
+  estoqueMinimoInicial: string
+  setEstoqueMinimoInicial: (v: string) => void
   origem: OrigemCode
   setOrigem: (v: OrigemCode) => void
   unidadeMedida: UnidadeCode

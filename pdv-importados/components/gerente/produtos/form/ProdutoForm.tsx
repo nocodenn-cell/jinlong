@@ -50,6 +50,8 @@ export function ProdutoForm(props: Props) {
     setNomeReduzidoPdv: props.setNomeReduzidoPdv,
     localizacaoPrateleira: props.localizacaoPrateleira,
     setLocalizacaoPrateleira: props.setLocalizacaoPrateleira,
+    estoqueMinimoInicial: props.estoqueMinimoInicial,
+    setEstoqueMinimoInicial: props.setEstoqueMinimoInicial,
     categoriaId: props.categoriaId,
     setCategoriaId: props.setCategoriaId,
     marcaId: props.marcaId,

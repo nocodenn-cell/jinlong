@@ -36,24 +36,42 @@ export function EstoqueSection() {
           />
         </label>
 
-        <div className="grid grid-cols-1 gap-3 rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3 sm:grid-cols-2">
-          <LeituraCampo
-            label={p.estoque_atual_label}
-            value={readOnly.estoqueAtual !== null ? String(readOnly.estoqueAtual) : '—'}
-          />
-          <LeituraCampo
-            label={p.estoque_minimo_label}
-            value={readOnly.estoqueMinimo !== null ? String(readOnly.estoqueMinimo) : '—'}
-            hint={p.estoque_minimo_hint}
-          />
-        </div>
+        {readOnly.produtoId === null ? (
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.estoque_minimo_label}
+            <input
+              type="text"
+              inputMode="numeric"
+              className={`${inputClassName} mt-1`}
+              value={ctx.estoqueMinimoInicial}
+              onChange={(e) => ctx.setEstoqueMinimoInicial(e.target.value.replace(/\D/g, ''))}
+              disabled={disabled}
+              placeholder="0"
+            />
+            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.estoque_minimo_hint_criacao}</span>
+          </label>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-3 rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3 sm:grid-cols-2">
+              <LeituraCampo
+                label={p.estoque_atual_label}
+                value={readOnly.estoqueAtual !== null ? String(readOnly.estoqueAtual) : '—'}
+              />
+              <LeituraCampo
+                label={p.estoque_minimo_label}
+                value={readOnly.estoqueMinimo !== null ? String(readOnly.estoqueMinimo) : '—'}
+                hint={p.estoque_minimo_hint}
+              />
+            </div>
 
-        <Link
-          href={ROUTES.admin.estoque}
-          className="inline-flex text-[11px] font-medium text-jl-accent hover:underline"
-        >
-          {p.estoque_minimo_link}
-        </Link>
+            <Link
+              href={ROUTES.admin.estoque}
+              className="inline-flex text-[11px] font-medium text-jl-accent hover:underline"
+            >
+              {p.estoque_minimo_link}
+            </Link>
+          </>
+        )}
       </div>
     </section>
   )

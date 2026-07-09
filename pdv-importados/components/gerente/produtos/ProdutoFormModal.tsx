@@ -88,6 +88,7 @@ export function ProdutoFormModal({
       referenciaFornecedor: form.referenciaFornecedor,
       nomeReduzidoPdv: form.nomeReduzidoPdv,
       localizacaoPrateleira: form.localizacaoPrateleira,
+      estoqueMinimoInicial: form.estoqueMinimoInicial,
       origem: form.origem,
       unidadeMedida: form.unidadeMedida,
       categoriaId: form.categoriaId,

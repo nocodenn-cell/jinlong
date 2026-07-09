@@ -61,6 +61,15 @@ const produtoFormBaseObject = z.object({
     .nullable()
     .optional()
     .transform((v) => v ?? null),
+  /** Só é usado na criação (criarProdutoComEstoque); edição continua exigindo o
+   *  fluxo auditado de ajuste em /admin/estoque. */
+  estoque_minimo: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .nullable()
+    .optional()
+    .transform((v) => v ?? null),
   origem: z.enum(['china_manual', 'brasil_nf', 'brasil_sem_nf'], {
     errorMap: () => ({ message: 'Origem do produto inválida.' }),
   }),
