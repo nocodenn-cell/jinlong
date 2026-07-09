@@ -10,6 +10,7 @@ import type {
   AdminSession,
   AdminSessionContract,
   SessionAuthState,
+  SessionBlockedReason,
   SessionNormalization,
   SessionSource,
 } from './types'
@@ -18,6 +19,8 @@ export type RawUsuarioRow = {
   perfil: string | null | undefined
   idioma_preferido: string | null | undefined
   loja_id: string | null | undefined
+  /** `false` bloqueia o acesso; `null`/ausente é tratado como ativo (compat com linhas antigas). */
+  ativo?: boolean | null
 }
 
 export type RawSession =
@@ -27,7 +30,7 @@ export type RawSession =
   | { status: 'auth_error'; error: Error }
   | { status: 'db_error'; user: User; error: Error }
 
-const USUARIO_SELECT = 'perfil, idioma_preferido, loja_id'
+const USUARIO_SELECT = 'perfil, idioma_preferido, loja_id, ativo'
 
 function rawToAuthState(raw: RawSession): SessionAuthState {
   switch (raw.status) {
@@ -118,23 +121,39 @@ export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSess
   return { status: 'authenticated', user, usuario }
 }
 
+/** Bloqueio de identidade: conta desativada ou sem loja vinculada não entra em rota protegida. */
+function resolveBlockedReason(raw: RawSession): SessionBlockedReason | null {
+  if (raw.status !== 'authenticated') return null
+  if (raw.usuario?.ativo === false) return 'inativo'
+  if (!raw.usuario?.loja_id) return 'sem_loja'
+  return null
+}
+
 /**
  * Única função de normalização edge/SSR → contrato policy + sessão.
  * Idempotente: mesmo RawSession + source produz resultado determinístico.
  */
 export function normalizeAdminSession(raw: RawSession, source: SessionSource): SessionNormalization {
-  const authState = rawToAuthState(raw)
+  let authState = rawToAuthState(raw)
   let perfil: PerfilUsuario | null = null
   let session: AdminSession | null = null
 
+  const blockedReason = resolveBlockedReason(raw)
+
   if (raw.status === 'authenticated') {
     perfil = normalizePerfilUsuario(raw.usuario?.perfil ?? null)
-    session = buildAdminSession(raw)
+    if (blockedReason) {
+      authState = 'blocked'
+    } else {
+      session = buildAdminSession(raw)
+    }
   }
 
   const contract = session ? buildContract(session, source) : null
 
-  return { contract, session, authState, perfil, source }
+  return blockedReason
+    ? { contract, session, authState, perfil, source, blockedReason }
+    : { contract, session, authState, perfil, source }
 }
 
 /**

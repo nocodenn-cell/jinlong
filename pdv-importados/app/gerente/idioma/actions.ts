@@ -20,9 +20,7 @@ export async function setIdiomaAction(formData: FormData) {
     .update({ idioma_preferido: idioma })
     .eq('id', auth.session.userId)
 
-  revalidatePath('/gerente/produtos')
-  revalidatePath('/gerente/dashboard')
-  revalidatePath('/gerente')
-  revalidatePath('/admin')
-  revalidatePath('/admin/dashboard')
+  // 'layout' cascateia para TODA a árvore /admin — sem isso, só as rotas
+  // listadas literalmente re-renderizavam com o idioma novo.
+  revalidatePath('/admin', 'layout')
 }
