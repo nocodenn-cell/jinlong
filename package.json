@@ -29,6 +29,7 @@
     "gate:pdv": "tsx dev-tools/pdv-production-gate-simulator.ts",
     "gate:pdv:hybrid": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=hybrid",
     "gate:pdv:full": "tsx dev-tools/pdv-production-gate-simulator.ts -- --mode=full",
+    "test:e2e:critical": "npm run test:e2e:critical -w pdv-importados",
     "check:vendabilidade": "node scripts/check-vendabilidade-invariant.mjs",
     "check:routes": "node scripts/check-routes-invariant.mjs",
     "guard:core": "node scripts/core-rule-guard.mjs",

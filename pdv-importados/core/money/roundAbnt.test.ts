@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { roundMoney2 } from '@/shared/cart/totals'
 import { roundAbnt } from './roundAbnt'
 
 describe('roundAbnt (alinhado a Postgres ROUND / round_abnt)', () => {
@@ -19,8 +20,7 @@ describe('roundAbnt (alinhado a Postgres ROUND / round_abnt)', () => {
     expect(roundAbnt(0.1254, 3)).toBe(0.125)
   })
 
-  it('roundMoney2 via re-export usa scale 2', async () => {
-    const { roundMoney2 } = await import('@/shared/cart/totals')
+  it('roundMoney2 via re-export usa scale 2', () => {
     expect(roundMoney2(10.125)).toBe(10.13)
   })
 })

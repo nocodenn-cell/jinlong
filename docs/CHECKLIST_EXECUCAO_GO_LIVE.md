@@ -9,7 +9,7 @@ Use com [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md), [DONE_DEFI
 | B1 | Feature freeze assinado | Link/cópia `FEATURE_FREEZE_PILOTO.md` |
 | B2 | `migration list` sem lacunas no ref do piloto | Print CLI |
 | B3 | `verify_p0_producao.sql` sem falha | Print SQL Editor |
-| B4 | Financial gate 5/5 PASS | Output `stress:pdv` + SQL apêndices |
+| B4 | Financial gate 5/5 PASS | Output `npm run gate:pdv` (raiz) + SQL apêndices |
 | B5 | `USE_UNIFIED_SALES_FLOW=true` em produção | Vercel env |
 | B6 | Smoke §4b: abrir → vender split → fechar → ver em `/admin/vendas` | Ata curta |
 | B7 | PITR/backup ativo | Print Supabase |
@@ -52,8 +52,8 @@ Use com [P0_CHECKLIST_OPERACIONAL.md](./P0_CHECKLIST_OPERACIONAL.md), [DONE_DEFI
 # Raiz do monorepo
 npm run ci
 
-# Gate financeiro (staging)
-cd pdv-importados && npm run stress:pdv
+# Gate financeiro (staging) — raiz do monorepo
+npm run gate:pdv
 
 # Onboarding mínimo
 cd pdv-importados && npm run seed:demo-fluxo

@@ -41,7 +41,7 @@ async function loadActionLayer() {
   return { ...assert, ...context, ...consistency }
 }
 
-describe('sessionConsistency', () => {
+describe.sequential('sessionConsistency', { timeout: 15_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

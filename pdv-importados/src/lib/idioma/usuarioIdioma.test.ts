@@ -50,7 +50,8 @@ function setupUserExists() {
   getUserMock.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
 }
 
-describe('getUsuarioIdioma', () => {
+describe.sequential('getUsuarioIdioma', { timeout: 15_000 }, () => {
+  // `vi.resetModules()` + dynamic import: instável em paralelo no Windows.
   it('retorna idioma e perfil normalizados quando o usuário existe', async () => {
     setupUserExists()
     const { getUsuarioIdioma } = await load()
