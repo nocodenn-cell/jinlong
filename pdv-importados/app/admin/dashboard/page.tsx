@@ -538,7 +538,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           subtitle={L.lowStockSubtitle[lk]}
         >
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-bold tabular-nums" style={{ color: 'var(--color-dragon-gold-warm)' }}>
+            <span className="text-4xl font-bold tabular-nums text-[color:var(--color-dragon-gold-warm)]">
               {formatNumberLocale(estoqueBaixoCount, locale)}
             </span>
             <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>
