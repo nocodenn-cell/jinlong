@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, Trash2, X, Check } from 'lucide-react'
+import { Loader2, Pencil, Plus, Trash2, X, Check } from 'lucide-react'
 import {
   listarFaixasAtacado,
   criarFaixaAtacado,
@@ -103,10 +103,10 @@ function FaixaFormRow({
           type="button"
           onClick={() => void confirmar()}
           disabled={salvando}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-emerald-400 hover:bg-emerald-400/10 disabled:opacity-50"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-success hover:bg-success/10 disabled:opacity-50"
           title={p.faixa_confirmar}
         >
-          <Check size={14} />
+          {salvando ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Check size={14} />}
         </button>
         {onCancelar ? (
           <button
@@ -231,10 +231,14 @@ export function FaixasAtacadoEditor({ produtoId, p }: Props) {
                   type="button"
                   onClick={() => void remover(f.id)}
                   disabled={removendoId === f.id}
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-red-400 hover:bg-red-400/10 disabled:opacity-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-md text-destructive hover:bg-destructive/10 disabled:opacity-50"
                   title={p.faixa_remover}
                 >
-                  <Trash2 size={13} />
+                  {removendoId === f.id ? (
+                    <Loader2 size={13} className="animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
                 </button>
               </div>
             </div>

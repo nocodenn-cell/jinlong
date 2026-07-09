@@ -3,7 +3,8 @@ import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTyp
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
 
 export function mapOrigemFromRow(origem: string): OrigemCode {
-  return origem === 'brasil_sem_nf' ? 'brasil_nf' : (origem as OrigemCode)
+  if (origem === 'brasil_nf' || origem === 'brasil_sem_nf' || origem === 'china_manual') return origem
+  return 'china_manual'
 }
 
 export function parseGatilhoDisplay(value: number | null | undefined): string {

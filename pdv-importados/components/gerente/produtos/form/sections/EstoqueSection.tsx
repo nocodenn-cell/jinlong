@@ -36,7 +36,7 @@ export function EstoqueSection() {
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-3 rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3">
+        <div className="grid grid-cols-1 gap-3 rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3 sm:grid-cols-2">
           <LeituraCampo
             label={p.estoque_atual_label}
             value={readOnly.estoqueAtual !== null ? String(readOnly.estoqueAtual) : '—'}

@@ -562,10 +562,10 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
 
   /* ─── chip helpers ─────────────────────────────────────────── */
   const chipBase = 'inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors'
-  const chipInativo = 'border-white/[.1] app-muted hover:border-white/[.2] hover:text-slate-200'
+  const chipInativo = 'border-white/[.1] app-muted hover:border-white/[.2] hover:text-jl-fg-1'
   const chipAtivo = 'border-amber-500/40 bg-amber-500/15 text-amber-300'
   const iconBtnBase =
-    'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/[.1] app-muted transition-colors hover:border-white/[.2] hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40'
+    'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/[.1] app-muted transition-colors hover:border-white/[.2] hover:text-jl-fg-1 disabled:cursor-not-allowed disabled:opacity-40'
 
   return (
     <>
@@ -776,7 +776,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                   <button
                     type="button"
                     onClick={onLimpar}
-                    className="h-8 rounded-md px-3 text-xs font-medium app-muted hover:text-slate-200 transition-colors"
+                    className="h-8 rounded-md px-3 text-xs font-medium app-muted hover:text-jl-fg-1 transition-colors"
                   >
                     {m.comum.limpar_filtros}
                   </button>
@@ -842,7 +842,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
             {/* Linha 4: seletor de categoria em lote (inline) */}
             {categoriaLoteModalAberto && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-500/25 bg-blue-500/[.06] px-3 py-2">
-                <span className="text-xs text-slate-300">
+                <span className="text-xs text-jl-fg-2">
                   {interpolateTemplate(m.produtos.categoria_lote_label, { n: selectedIds.size })}
                 </span>
                 <select
@@ -866,7 +866,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 <button
                   type="button"
                   onClick={() => setCategoriaLoteModalAberto(false)}
-                  className="h-8 rounded-md px-3 text-xs app-muted hover:text-slate-200"
+                  className="h-8 rounded-md px-3 text-xs app-muted hover:text-jl-fg-1"
                 >
                   Cancelar
                 </button>
@@ -1033,7 +1033,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                 {/* Localização/Prateleira */}
                 <td className="gerente-fin-cell px-2 py-1 align-middle">
                   {p.localizacao_prateleira ? (
-                    <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-white/[.06] text-slate-300">
+                    <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-white/[.06] text-jl-fg-2">
                       {p.localizacao_prateleira}
                     </span>
                   ) : (
@@ -1072,7 +1072,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                           ? 'text-red-400/80'
                           : p.quantidade_atual === 0
                             ? 'text-amber-400/70'
-                            : 'text-slate-300',
+                            : 'text-jl-fg-2',
                       )}
                     >
                       {p.quantidade_atual}
@@ -1127,7 +1127,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                       onClick={() => abrirEditar(p)}
                       title={m.produtos.editar_catalogo}
                       aria-label={m.produtos.editar_catalogo}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors app-muted hover:bg-white/[.08] hover:text-slate-100 disabled:opacity-40"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors app-muted hover:bg-white/[.08] hover:text-jl-fg-1 disabled:opacity-40"
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden />
                     </button>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Building2 } from 'lucide-react'
+import { Building2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
@@ -198,7 +198,13 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
             {m.comum.cancelar}
           </Button>
           <Button type="submit" form="forn-form" className="app-btn-accent" disabled={salvando}>
-            {salvando ? m.comum.carregando ?? '…' : editando ? m.fornecedores.modal_salvar : m.fornecedores.modal_cadastrar}
+            {salvando ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : editando ? (
+              m.fornecedores.modal_salvar
+            ) : (
+              m.fornecedores.modal_cadastrar
+            )}
           </Button>
         </>
       }
@@ -219,7 +225,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
                     className={cn(
                       'h-8 rounded-md text-xs font-medium transition-colors',
                       tipo === t
-                        ? 'bg-gradient-to-b from-amber-300 to-amber-600 font-semibold text-slate-900'
+                        ? 'bg-[color:var(--accent)] font-semibold text-[color:var(--accent-contrast)]'
                         : 'text-jl-fg-3 hover:text-jl-fg-1',
                     )}
                   >
@@ -245,9 +251,9 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
                 maxLength={120}
                 aria-invalid={!!erros.nome}
                 aria-describedby={erros.nome ? 'err-nome' : undefined}
-                className={cn(`${finIn} mt-1`, erros.nome && 'border-red-400/60')}
+                className={cn(`${finIn} mt-1`, erros.nome && 'border-destructive/60')}
               />
-              {erros.nome && <span id="err-nome" className="mt-1 block text-xs text-red-300">{erros.nome}</span>}
+              {erros.nome && <span id="err-nome" className="mt-1 block text-xs text-destructive">{erros.nome}</span>}
             </label>
 
             {/* Doc + Tel */}
@@ -262,10 +268,10 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
                   disabled={salvando}
                   required
                   placeholder={tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
-                  className={cn(`${finIn} mt-1 font-mono`, erros.documento && 'border-red-400/60')}
+                  className={cn(`${finIn} mt-1 font-mono`, erros.documento && 'border-destructive/60')}
                   aria-invalid={!!erros.documento}
                 />
-                {erros.documento && <span className="mt-1 block text-xs text-red-300">{erros.documento}</span>}
+                {erros.documento && <span className="mt-1 block text-xs text-destructive">{erros.documento}</span>}
               </label>
               <label className="block text-xs font-medium text-jl-fg-3">
                 {m.fornecedores.field_telefone}
@@ -294,10 +300,10 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
                   }}
                   disabled={salvando}
                   placeholder="compras@fornecedor.com.br"
-                  className={cn(`${finIn} mt-1`, erros.email && 'border-red-400/60')}
+                  className={cn(`${finIn} mt-1`, erros.email && 'border-destructive/60')}
                   aria-invalid={!!erros.email}
                 />
-                {erros.email && <span className="mt-1 block text-xs text-red-300">{erros.email}</span>}
+                {erros.email && <span className="mt-1 block text-xs text-destructive">{erros.email}</span>}
               </label>
               <label className="block text-xs font-medium text-jl-fg-3">
                 {m.fornecedores.field_contato}
@@ -340,9 +346,9 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
                     onChange={handleCep}
                     disabled={salvando}
                     placeholder="00000-000"
-                    className={cn(`${finIn} mt-1 font-mono tabular-nums`, erros.cep && 'border-red-400/60')}
+                    className={cn(`${finIn} mt-1 font-mono tabular-nums`, erros.cep && 'border-destructive/60')}
                   />
-                  {erros.cep && <span className="mt-1 block text-xs text-red-300">{erros.cep}</span>}
+                  {erros.cep && <span className="mt-1 block text-xs text-destructive">{erros.cep}</span>}
                 </label>
                 <label className="block text-xs font-medium text-jl-fg-3">
                   {m.fornecedores.field_logradouro}

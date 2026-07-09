@@ -39,7 +39,7 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
           />
         </label>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.preco_varejo} *
             <input
@@ -78,7 +78,7 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.codigo_barras}
             <input
@@ -91,7 +91,9 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
             />
           </label>
           <div>
-            <p className="text-xs font-medium text-jl-fg-3">{p.fornecedor_principal_label}</p>
+            <p className="text-xs font-medium text-jl-fg-3" id="produto-fornecedor-label">
+              {p.fornecedor_principal_label}
+            </p>
             <div className="mt-1">
               <FornecedorCombobox
                 p={p}
@@ -102,6 +104,7 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
                 disabled={disabled}
                 selectClassName={selectClassName}
                 idioma={idioma}
+                label={p.fornecedor_principal_label}
               />
             </div>
           </div>

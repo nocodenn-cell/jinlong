@@ -909,6 +909,67 @@ export type Database = {
         }
         Relationships: []
       }
+      historico_precos_produto: {
+        Row: {
+          alterado_em: string
+          alterado_por: string | null
+          id: string
+          preco_atacado_anterior: number | null
+          preco_atacado_novo: number | null
+          preco_custo_anterior: number | null
+          preco_custo_novo: number | null
+          preco_varejo_anterior: number | null
+          preco_varejo_novo: number | null
+          produto_id: string
+        }
+        Insert: {
+          alterado_em?: string
+          alterado_por?: string | null
+          id?: string
+          preco_atacado_anterior?: number | null
+          preco_atacado_novo?: number | null
+          preco_custo_anterior?: number | null
+          preco_custo_novo?: number | null
+          preco_varejo_anterior?: number | null
+          preco_varejo_novo?: number | null
+          produto_id: string
+        }
+        Update: {
+          alterado_em?: string
+          alterado_por?: string | null
+          id?: string
+          preco_atacado_anterior?: number | null
+          preco_atacado_novo?: number | null
+          preco_custo_anterior?: number | null
+          preco_custo_novo?: number | null
+          preco_varejo_anterior?: number | null
+          preco_varejo_novo?: number | null
+          produto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_precos_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_precos_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_precos_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       importacoes_nfe: {
         Row: {
           chave_acesso: string

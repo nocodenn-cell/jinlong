@@ -18,7 +18,7 @@ export function ComercialSection({ faixasSlot }: Props) {
     <section aria-labelledby="produto-secao-comercial">
       <ProdutoFormSectionHeading title={p.secao_comercial} />
       <div id="produto-secao-comercial" className="mt-3 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.origem_label}
             <select
@@ -29,6 +29,7 @@ export function ComercialSection({ faixasSlot }: Props) {
             >
               <option value="china_manual">{p.origem_china}</option>
               <option value="brasil_nf">{p.origem_brasil_nf}</option>
+              <option value="brasil_sem_nf">{p.origem_brasil_sem_nf}</option>
             </select>
           </label>
           <label className="block text-xs font-medium text-jl-fg-3">
@@ -48,7 +49,7 @@ export function ComercialSection({ faixasSlot }: Props) {
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.categoria_label}
             <select
@@ -79,7 +80,7 @@ export function ComercialSection({ faixasSlot }: Props) {
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.codigo_interno_label}
             <input
