@@ -154,6 +154,17 @@ export function middlewareAdminDecision(
       ? redirect(loginPath(pathname), 'db_error', 'edge')
       : allow('db_error_public_route', 'edge')
   }
+  if (authState === 'blocked') {
+    // Conta desativada (usuarios.ativo = false) ou sem loja vinculada: não entra
+    // em nenhuma rota protegida — nem painel, nem /caixa.
+    return isProtectedRoute(pathname)
+      ? redirect(
+          loginPath(pathname),
+          normalized.blockedReason === 'inativo' ? 'conta_inativa' : 'conta_sem_loja',
+          'edge'
+        )
+      : allow('blocked_public_route', 'edge')
+  }
   if (isProtectedRoute(pathname) && authState === 'anonymous') {
     return redirect(loginPath(pathname), 'unauthenticated', 'edge')
   }

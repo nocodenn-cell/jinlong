@@ -85,7 +85,7 @@ export function LoginForm({ messages: m }: Props) {
 
     const { data: u, error: perfilErr } = await supabase
       .from('usuarios')
-      .select('perfil')
+      .select('perfil, ativo, loja_id')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -110,6 +110,22 @@ export function LoginForm({ messages: m }: Props) {
     if (!u) {
       setErro(
         'Sua conta de login existe, mas ainda não está vinculada ao cadastro da loja. Peça ao administrador para criar seu usuário no painel.',
+      )
+      setLoading(false)
+      return
+    }
+
+    if (u.ativo === false) {
+      await supabase.auth.signOut()
+      setErro('Sua conta está desativada. Fale com o administrador da loja para reativar o acesso.')
+      setLoading(false)
+      return
+    }
+
+    if (!u.loja_id) {
+      await supabase.auth.signOut()
+      setErro(
+        'Sua conta ainda não está vinculada a uma loja. Peça ao administrador para concluir o cadastro antes de acessar.',
       )
       setLoading(false)
       return

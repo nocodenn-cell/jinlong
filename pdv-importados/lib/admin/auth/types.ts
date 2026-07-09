@@ -26,6 +26,10 @@ export type SessionAuthState =
   | 'auth_error'
   | 'db_error'
   | 'authenticated'
+  | 'blocked'
+
+/** Motivo de bloqueio de usuário autenticado (authState === 'blocked'). */
+export type SessionBlockedReason = 'inativo' | 'sem_loja'
 
 /**
  * Resultado completo da normalização: contrato policy + sessão legada + metadados.
@@ -36,6 +40,8 @@ export type SessionNormalization = {
   authState: SessionAuthState
   perfil: PerfilUsuario | null
   source: SessionSource
+  /** Presente apenas quando authState === 'blocked'. */
+  blockedReason?: SessionBlockedReason
 }
 
 /** Sessão admin enriquecida (compatibilidade com contexto/UI existente). */

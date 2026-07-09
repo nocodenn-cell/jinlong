@@ -137,6 +137,18 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const now = new Date()
   const { start, end, previousStart, previousEnd } = getPeriodRange(period, now)
 
+  // Observabilidade visual: algum caixa aberto agora? Best-effort — falha mantém "fechado".
+  let algumCaixaAberto = false
+  try {
+    const { count } = await supabase
+      .from('caixas')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'ABERTO')
+    algumCaixaAberto = (count ?? 0) > 0
+  } catch {
+    algumCaixaAberto = false
+  }
+
   let vendasRange: Array<{
     id: string
     data: string
@@ -514,7 +526,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         </SectionCard>
       </div>
 
-      <CaixaShortcut title={L.caixaShortcutTitle[lk]} status={L.caixaShortcutStatus[lk]} openBtn={L.caixaShortcutBtn[lk]} />
+      <CaixaShortcut
+        title={L.caixaShortcutTitle[lk]}
+        status={algumCaixaAberto ? L.caixaShortcutStatusAberto[lk] : L.caixaShortcutStatusFechado[lk]}
+        openBtn={L.caixaShortcutBtn[lk]}
+      />
 
       <div className="admin-v2-grid-2">
         <SectionCard
@@ -522,7 +538,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
           subtitle={L.lowStockSubtitle[lk]}
         >
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-bold tabular-nums" style={{ color: 'var(--color-dragon-gold-warm)' }}>
+            <span className="text-4xl font-bold tabular-nums text-[color:var(--color-dragon-gold-warm)]">
               {formatNumberLocale(estoqueBaixoCount, locale)}
             </span>
             <span className="mb-1 text-sm text-jl-fg-3">mín. N</span>

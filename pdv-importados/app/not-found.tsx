@@ -6,10 +6,10 @@ export default function NotFound() {
       <h1 className="text-2xl font-bold text-slate-900">Página não encontrada</h1>
       <p className="text-sm text-slate-600">O endereço não existe ou foi movido.</p>
       <div className="mt-2 flex flex-wrap justify-center gap-3 text-sm">
-        <Link href="/" className="font-medium text-blue-700 underline hover:text-blue-900">
+        <Link href="/" className="font-medium text-primary underline hover:text-primary/80">
           Início
         </Link>
-        <Link href="/login" className="font-medium text-blue-700 underline hover:text-blue-900">
+        <Link href="/login" className="font-medium text-primary underline hover:text-primary/80">
           Login
         </Link>
       </div>

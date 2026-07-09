@@ -5,6 +5,7 @@ import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import type { AdminSession } from '@/lib/admin/auth/types'
+import LanguageToggle from '@/app/gerente/idioma/LanguageToggle'
 import { SidebarNav } from './SidebarNav'
 import { SidebarUserFooter } from './SidebarUserFooter'
 
@@ -47,6 +48,9 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
             </Link>
           </div>
           <SidebarNav admin={admin} chineseLanguage={chineseLanguage} stockAlertCount={stockAlertCount} />
+          <div className="flex justify-center px-4 pb-1">
+            <LanguageToggle idiomaAtual={idioma} />
+          </div>
           <SidebarUserFooter session={session} />
         </aside>
 

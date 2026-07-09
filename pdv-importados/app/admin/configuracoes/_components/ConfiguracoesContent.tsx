@@ -95,7 +95,6 @@ type Aba = 'loja' | 'impostos' | 'preferencias'
 
 const REGIMES = ['SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL', 'MEI'] as const
 const IDIOMAS = ['pt', 'zh'] as const
-const TEMAS = ['noturno', 'novem'] as const
 const FORMATOS = ['TERMICA', 'A4'] as const
 
 const inputClass =
@@ -412,6 +411,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
             <input type="hidden" name="regime_tributario" value={dados.pdvConfig?.regime_tributario ?? 'SIMPLES_NACIONAL'} />
             <input type="hidden" name="cfop_padrao" value={dados.pdvConfig?.cfop_padrao ?? '5102'} />
             <input type="hidden" name="cst_padrao" value={dados.pdvConfig?.cst_padrao ?? '00'} />
+            <input type="hidden" name="tema_padrao" value={dados.pdvConfig?.tema_padrao ?? 'noturno'} />
             <input
               type="hidden"
               name="auto_enqueue_fiscal"
@@ -423,21 +423,12 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               value={dados.pdvConfig?.imprimir_cupom_auto ? 'on' : 'off'}
             />
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <FormField label={labels.prefs.idioma}>
                 <select name="idioma_padrao" defaultValue={dados.pdvConfig?.idioma_padrao ?? 'pt'} className={inputClass}>
                   {IDIOMAS.map((i) => (
                     <option key={i} value={i}>
                       {labels.enums.idiomas[i] ?? i}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-              <FormField label={labels.prefs.tema}>
-                <select name="tema_padrao" defaultValue={dados.pdvConfig?.tema_padrao ?? 'noturno'} className={inputClass}>
-                  {TEMAS.map((t) => (
-                    <option key={t} value={t}>
-                      {labels.enums.temas[t] ?? t}
                     </option>
                   ))}
                 </select>

@@ -133,7 +133,7 @@ export function DragonModal({
 
   const accent =
     variant === 'danger'
-      ? 'text-red-400 bg-red-500/10'
+      ? 'text-destructive bg-destructive/10'
       : 'text-amber-400 bg-amber-400/10'
 
   return (

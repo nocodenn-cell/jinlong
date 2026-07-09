@@ -25,6 +25,10 @@ export default defineConfig(({ mode }) => {
     test: {
       setupFiles: [path.join(__dirname, '../shared/vitest-localstorage-polyfill.ts')],
       environment: 'node',
+      // `vi.resetModules()` + dynamic import falham sob alta paralelização (Windows/CI).
+      pool: 'forks',
+      maxWorkers: process.env.CI ? 1 : 4,
+      testTimeout: 10_000,
       include: [
         'core/**/*.test.ts',
         'lib/**/*.test.ts',
@@ -42,7 +46,7 @@ export default defineConfig(({ mode }) => {
         '../shared-core/src/**/*.test.ts',
       ],
       // Testes de integração que exigem Next.js request scope (cookies()) e Supabase real.
-      // Devem rodar via Playwright (`test:e2e:critical`), não via Vitest.
+      // Devem rodar via Playwright (`npm run test:e2e:critical` na raiz ou neste workspace), não via Vitest.
       exclude: [
         '**/node_modules/**',
         '**/dist/**',
