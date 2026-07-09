@@ -70,7 +70,6 @@ import {
 } from "@/app/caixa/CaixaPdvOperadorTabs"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { cn } from "@/lib/utils"
-import "@/styles/theme-oriental.css"
 
 /** Banner «PDV clássico» em /caixa: oculto em produção salvo `NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER=1`; em dev aparece salvo `0`/`false`. */
 function showClassicLayoutPreviewBanner(): boolean {

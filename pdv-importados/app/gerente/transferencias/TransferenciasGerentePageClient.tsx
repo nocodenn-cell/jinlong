@@ -7,6 +7,7 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/admin-v2'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { transferenciaActionResultToLegacy } from '@/lib/observability/actionResultAdapters'
@@ -185,12 +186,12 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
   }
 
   return (
-    <div className={`mx-auto max-w-xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+    <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+      <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />
+
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
-      <h1 className="gerente-fin-page-title mt-4 text-2xl font-semibold tracking-tight">{m.gerente.nav_transferencias}</h1>
-      <p className="gerente-fin-muted mt-2 text-sm leading-relaxed">{t.intro}</p>
 
       {!podeTransferir ? (
         <div className="mt-6 rounded-xl border p-4 text-sm leading-relaxed app-badge-warn" role="status">

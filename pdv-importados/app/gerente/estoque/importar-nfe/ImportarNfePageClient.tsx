@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
+import { PageHeader } from '@/components/ui/admin-v2'
 import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { formatBRL } from '@/lib/format/money'
@@ -187,9 +187,8 @@ export function ImportarNfePageClient({ idioma }: Props) {
   }
 
   return (
-    <div className={`mx-auto w-full max-w-5xl space-y-4 px-4 py-6 md:px-6 ${fontClass}`}>
-      <GerenteFilterBar title={mi.titulo} />
-      <p className="gerente-fin-muted -mt-2 text-sm leading-relaxed">{mi.subtitulo}</p>
+    <div className={`admin-v2-page space-y-4 ${fontClass}`}>
+      <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
 
       <Link href="/gerente/estoque" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {mi.voltar}

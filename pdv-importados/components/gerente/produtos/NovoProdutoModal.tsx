@@ -137,7 +137,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
             {p.secao_identificacao}
           </p>
           <div className="space-y-3">
-            <label className="block text-xs font-medium text-jl-fg-3">
+            <label className="block text-[11px] font-medium text-jl-fg-3">
               {p.nome} *
               <input
                 ref={nomeRef}
@@ -151,7 +151,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
               />
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-xs font-medium text-jl-fg-3">
+              <label className="block text-[11px] font-medium text-jl-fg-3">
                 {p.codigo_barras}
                 <input
                   className={`${finInMono} mt-1`}
@@ -162,7 +162,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                   autoComplete="off"
                 />
               </label>
-              <label className="block text-xs font-medium text-jl-fg-3">
+              <label className="block text-[11px] font-medium text-jl-fg-3">
                 {p.origem_label}
                 <select
                   className={`${finSelect} mt-1`}
@@ -182,7 +182,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
             {p.secao_precificacao}
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-medium text-jl-fg-3">
+            <label className="block text-[11px] font-medium text-jl-fg-3">
               {p.preco_varejo} *
               <input
                 type="text"
@@ -194,7 +194,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
                 placeholder="0,00"
               />
             </label>
-            <label className="block text-xs font-medium text-jl-fg-3">
+            <label className="block text-[11px] font-medium text-jl-fg-3">
               {p.preco_custo}
               <input
                 type="text"
@@ -222,7 +222,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
           })()}
           {/* Preço atacado */}
           <div className="mt-3">
-            <label className="block text-xs font-medium text-jl-fg-3">
+            <label className="block text-[11px] font-medium text-jl-fg-3">
               {p.preco_atacado}
               <input
                 type="text"
@@ -245,7 +245,7 @@ export function NovoProdutoModal({ open, onOpenChange, m, opcoes, onCriado }: No
               <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
                 {p.categoria}
               </p>
-              <label className="block text-xs font-medium text-jl-fg-3">
+              <label className="block text-[11px] font-medium text-jl-fg-3">
                 <select
                   className={`${finSelect} mt-1`}
                   value={categoriaId}

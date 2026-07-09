@@ -14,7 +14,7 @@ import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
-import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
+import { PageHeader } from '@/components/ui/admin-v2'
 import { criarRemessaConferencia } from './actions'
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }
@@ -101,21 +101,20 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
   )
 
   return (
-    <>
-      <GerenteStickyToolbar>
-        <div className="flex flex-wrap items-center gap-3 px-4 sm:px-6">
-          <h1 className="gerente-fin-page-title text-xl font-semibold tracking-tight">{r.titulo}</h1>
+    <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+      <PageHeader
+        title={r.titulo}
+        subtitle={r.subtitulo}
+        filters={
           <span className="gerente-fin-badge rounded-full border px-2.5 py-0.5 text-xs font-semibold ring-1">
             {r.badge}
           </span>
-        </div>
-      </GerenteStickyToolbar>
-      <div className={`mx-auto max-w-3xl px-4 py-6 sm:px-6 ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+        }
+      />
+
       <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
-
-      <p className="gerente-fin-muted mt-5 max-w-2xl text-sm leading-relaxed">{r.subtitulo}</p>
 
       {semProdutos ? (
         <div
@@ -332,6 +331,5 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         </div>
       </section>
     </div>
-    </>
   )
 }
