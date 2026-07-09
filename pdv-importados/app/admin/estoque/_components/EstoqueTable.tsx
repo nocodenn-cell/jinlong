@@ -255,6 +255,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
           semMovimentosSub: labels.semMovimentosSub,
           tipoMap: {
             VENDA: labels.tipoVenda,
+            SAIDA_VENDA: labels.tipoVenda,
+            ENTRADA_CANCELAMENTO_VENDA: labels.tipoDevolucao,
             COMPRA: labels.tipoCompra,
             ENTRADA_NFE: labels.tipoEntradaNf,
             ENTRADA_OC: labels.tipoCompra,

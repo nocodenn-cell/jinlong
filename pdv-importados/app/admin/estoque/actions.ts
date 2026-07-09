@@ -32,6 +32,9 @@ const KARDEX_LIMITE = 60
 
 /**
  * Últimas movimentações de estoque de um produto na loja do usuário logado.
+ * Lê `v_kardex_unificado` (migration 060) — une ajustes/entradas/transferências
+ * (`movimentos_estoque_log`) com saídas por venda e reposições de cancelamento,
+ * que não são gravadas em `movimentos_estoque_log`.
  * Read-only; em qualquer erro retorna lista vazia (o Sheet mostra o empty state).
  */
 export async function obterKardexProduto(produtoId: string): Promise<KardexMovimento[]> {
@@ -47,18 +50,18 @@ export async function obterKardexProduto(produtoId: string): Promise<KardexMovim
   const loja = auth.session.lojaId ?? LOJA_MATRIZ_ID
 
   const { data, error } = await supabase
-    .from('movimentos_estoque_log')
-    .select('id, created_at, tipo_codigo, quantidade_delta, observacao')
+    .from('v_kardex_unificado')
+    .select('evento_id, ocorrido_em, tipo_codigo, quantidade_delta, observacao')
     .eq('produto_id', produtoId)
     .eq('loja_id', loja)
-    .order('created_at', { ascending: false })
+    .order('ocorrido_em', { ascending: false })
     .limit(KARDEX_LIMITE)
 
   if (error || !data) return []
 
   return data.map((r) => ({
-    id: String(r.id),
-    created_at: String(r.created_at),
+    id: String(r.evento_id),
+    created_at: String(r.ocorrido_em),
     tipo_codigo: String(r.tipo_codigo ?? ''),
     quantidade_delta: Number(r.quantidade_delta ?? 0),
     observacao: r.observacao == null ? null : String(r.observacao),
