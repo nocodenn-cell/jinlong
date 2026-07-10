@@ -17,11 +17,11 @@ export type CaixaMessageBannerProps = {
 }
 
 const classesError =
-  'rounded-md border border-rose-500/50 bg-rose-950/30 px-3 py-2 text-sm font-medium text-rose-200'
+  'rounded-md border px-3 py-2 text-sm font-medium border-[color:var(--jl-status-danger-border)] bg-[color:var(--jl-status-danger-bg)] text-[color:var(--jl-status-danger-text)]'
 const classesWarning =
-  'rounded-md border border-amber-500/45 bg-amber-950/25 px-3 py-2 text-sm font-medium text-amber-200'
+  'rounded-md border px-3 py-2 text-sm font-medium border-[color:var(--jl-status-warning-border)] bg-[color:var(--jl-status-warning-bg)] text-[color:var(--jl-status-warning-text)]'
 const classesVendaOk =
-  'dragon-decreto-frame dragon-decreto-print relative overflow-hidden rounded-lg border border-emerald-600/60 bg-emerald-950/35 px-3 py-2.5 text-sm font-medium text-emerald-100'
+  'dragon-decreto-frame dragon-decreto-print relative overflow-hidden rounded-lg border px-3 py-2.5 text-sm font-medium border-[color:var(--jl-status-success-border)] bg-[color:var(--jl-status-success-bg)] text-[color:var(--jl-status-success-text)]'
 
 export function CaixaMessageBanner({ mensagem, msgVendaOk, kind, hint }: CaixaMessageBannerProps) {
   if (!mensagem) return null
@@ -56,8 +56,8 @@ export function CaixaMessageBanner({ mensagem, msgVendaOk, kind, hint }: CaixaMe
         <span
           className={
             kind === 'error'
-              ? 'mt-0.5 block text-xs font-normal text-rose-300/80'
-              : 'mt-0.5 block text-xs font-normal text-amber-300/80'
+              ? 'mt-0.5 block text-xs font-normal text-[color:var(--jl-status-danger-text)]/80'
+              : 'mt-0.5 block text-xs font-normal text-[color:var(--jl-status-warning-text)]/80'
           }
           data-testid="caixa-status-hint"
         >

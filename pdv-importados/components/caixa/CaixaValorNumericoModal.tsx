@@ -95,15 +95,15 @@ export function CaixaValorNumericoModal({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle id="caixa-valor-modal-title" className="text-lg text-slate-50">
+          <CardTitle id="caixa-valor-modal-title" className="text-lg text-foreground">
             {title}
           </CardTitle>
           {description ? (
-            <p className="text-xs text-slate-400 mt-1">{description}</p>
+            <p className="text-xs text-muted-foreground mt-1">{description}</p>
           ) : null}
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-2">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-muted-foreground">
             {campoLabel}
             <Input
               ref={inputRef}

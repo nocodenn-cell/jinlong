@@ -85,15 +85,15 @@ export function CaixaMotivoMinModal({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle id="caixa-motivo-modal-title" className="text-lg text-slate-50">
+          <CardTitle id="caixa-motivo-modal-title" className="text-lg text-foreground">
             {title}
           </CardTitle>
           {description ? (
-            <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap">{description}</p>
+            <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{description}</p>
           ) : null}
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-2">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-muted-foreground">
             {m.caixa.modal_motivo_label}
             <Input
               ref={inputRef}
@@ -105,7 +105,7 @@ export function CaixaMotivoMinModal({
                 setErro(null)
               }}
               placeholder={m.caixa.modal_motivo_placeholder}
-              className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+              className="mt-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault()
