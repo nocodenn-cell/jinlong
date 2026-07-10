@@ -4,14 +4,15 @@ import { formatBRL } from '@/lib/format/money'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
 import { HistoricoPrecosPanel } from '../../produtoFormSections/HistoricoPrecosPanel'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 
 export function CompraSection() {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const { disabled, inputClassName, readOnly } = ctx
 
-  const custo = ctx.precoCustoInput.parse()
-  const varejo = ctx.precoVarejoInput.parse()
+  const custo = ctx.precoCusto
+  const varejo = ctx.precoVarejo
   const margem = custo != null && varejo != null && varejo > 0
     ? ((varejo - custo) / varejo) * 100
     : null
@@ -22,12 +23,10 @@ export function CompraSection() {
       <div id="produto-secao-compra" className="mt-3 space-y-3">
         <label className="block text-xs font-medium text-jl-fg-3">
           {p.custo_compra_label}
-          <input
-            type="text"
-            inputMode="decimal"
+          <CurrencyInput
             className={`${inputClassName} mt-1 font-mono`}
-            value={ctx.precoCustoInput.display}
-            onChange={ctx.precoCustoInput.onChange}
+            value={ctx.precoCusto}
+            onValueChange={ctx.setPrecoCusto}
             disabled={disabled}
             placeholder="—"
           />

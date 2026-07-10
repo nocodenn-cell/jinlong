@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
-import { useMoneyInput } from '@/hooks/useMoneyInput'
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
 import { mapOrigemFromRow, parseGatilhoDisplay, readOnlyFromProduto } from './produtoForm.mappers'
 
@@ -35,9 +34,9 @@ function resetFormState(
     setCest: (v: string) => void
     setCstPis: (v: string) => void
     setCstCofins: (v: string) => void
-    precoVarejoInput: ReturnType<typeof useMoneyInput>
-    precoAtacadoInput: ReturnType<typeof useMoneyInput>
-    precoCustoInput: ReturnType<typeof useMoneyInput>
+    setPrecoVarejo: (v: number | null) => void
+    setPrecoAtacado: (v: number | null) => void
+    setPrecoCusto: (v: number | null) => void
   },
 ) {
   if (!produto) {
@@ -61,9 +60,9 @@ function resetFormState(
     setters.setCest('')
     setters.setCstPis(FISCAL_DEFAULTS.cstPis)
     setters.setCstCofins(FISCAL_DEFAULTS.cstCofins)
-    setters.precoVarejoInput.reset()
-    setters.precoAtacadoInput.reset()
-    setters.precoCustoInput.reset()
+    setters.setPrecoVarejo(null)
+    setters.setPrecoAtacado(null)
+    setters.setPrecoCusto(null)
     return
   }
 
@@ -87,9 +86,9 @@ function resetFormState(
   setters.setCest(produto.cest ?? '')
   setters.setCstPis(produto.cst_pis ?? FISCAL_DEFAULTS.cstPis)
   setters.setCstCofins(produto.cst_cofins ?? FISCAL_DEFAULTS.cstCofins)
-  setters.precoVarejoInput.reset(produto.preco_varejo)
-  setters.precoAtacadoInput.reset(produto.preco_atacado ?? undefined)
-  setters.precoCustoInput.reset(produto.preco_custo ?? undefined)
+  setters.setPrecoVarejo(produto.preco_varejo)
+  setters.setPrecoAtacado(produto.preco_atacado ?? null)
+  setters.setPrecoCusto(produto.preco_custo ?? null)
 }
 
 export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null) {
@@ -115,9 +114,9 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
   const [cstCofins, setCstCofins] = useState<string>(FISCAL_DEFAULTS.cstCofins)
   const [estoqueMinimoInicial, setEstoqueMinimoInicial] = useState('')
 
-  const precoVarejoInput = useMoneyInput()
-  const precoAtacadoInput = useMoneyInput()
-  const precoCustoInput = useMoneyInput()
+  const [precoVarejo, setPrecoVarejo] = useState<number | null>(null)
+  const [precoAtacado, setPrecoAtacado] = useState<number | null>(null)
+  const [precoCusto, setPrecoCusto] = useState<number | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -142,9 +141,9 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       setCest,
       setCstPis,
       setCstCofins,
-      precoVarejoInput,
-      precoAtacadoInput,
-      precoCustoInput,
+      setPrecoVarejo,
+      setPrecoAtacado,
+      setPrecoCusto,
     })
     setEstoqueMinimoInicial('')
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -174,12 +173,12 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       setCest,
       setCstPis,
       setCstCofins,
-      precoVarejoInput,
-      precoAtacadoInput,
-      precoCustoInput,
+      setPrecoVarejo,
+      setPrecoAtacado,
+      setPrecoCusto,
     })
     setEstoqueMinimoInicial('')
-  }, [precoAtacadoInput, precoCustoInput, precoVarejoInput])
+  }, [])
 
   return {
     nome,
@@ -224,9 +223,12 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
     setCstPis,
     cstCofins,
     setCstCofins,
-    precoVarejoInput,
-    precoAtacadoInput,
-    precoCustoInput,
+    precoVarejo,
+    setPrecoVarejo,
+    precoAtacado,
+    setPrecoAtacado,
+    precoCusto,
+    setPrecoCusto,
     readOnly,
     limparParaNovoCadastro,
   }

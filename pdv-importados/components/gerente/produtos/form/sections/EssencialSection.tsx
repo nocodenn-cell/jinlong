@@ -4,6 +4,7 @@ import type { RefObject } from 'react'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
 import { FornecedorCombobox } from '../fields/FornecedorCombobox'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = Readonly<{
@@ -42,24 +43,20 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.preco_varejo} *
-            <input
-              type="text"
-              inputMode="decimal"
+            <CurrencyInput
               className={`${inputMonoClassName} mt-1`}
-              value={ctx.precoVarejoInput.display}
-              onChange={ctx.precoVarejoInput.onChange}
+              value={ctx.precoVarejo}
+              onValueChange={ctx.setPrecoVarejo}
               disabled={disabled}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </label>
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.preco_atacado}
-            <input
-              type="text"
-              inputMode="decimal"
+            <CurrencyInput
               className={`${inputMonoClassName} mt-1`}
-              value={ctx.precoAtacadoInput.display}
-              onChange={ctx.precoAtacadoInput.onChange}
+              value={ctx.precoAtacado}
+              onValueChange={ctx.setPrecoAtacado}
               disabled={disabled}
               placeholder="—"
             />

@@ -71,7 +71,7 @@ export function ProdutoFormModal({
 
   const salvar = useCallback(
     async (opts?: { continuar?: boolean }) => {
-    const precoVarejo = form.precoVarejoInput.parse()
+    const precoVarejo = form.precoVarejo
     if (!precoVarejo || precoVarejo <= 0) {
       emitGerenteToast({ kind: 'error', message: p.preco_invalido })
       return
@@ -104,8 +104,8 @@ export function ProdutoFormModal({
       cstPis: form.cstPis,
       cstCofins: form.cstCofins,
       precoVarejo,
-      precoAtacado: form.precoAtacadoInput.parse(),
-      precoCusto: form.precoCustoInput.parse(),
+      precoAtacado: form.precoAtacado,
+      precoCusto: form.precoCusto,
       temNf: form.readOnly.temNf,
     })
 

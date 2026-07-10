@@ -1,4 +1,3 @@
-import type { MoneyInputBag } from '@/hooks/useMoneyInput'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
@@ -68,9 +67,12 @@ export type ProdutoFormState = Readonly<{
   setCstPis: (v: string) => void
   cstCofins: string
   setCstCofins: (v: string) => void
-  precoVarejoInput: MoneyInputBag
-  precoAtacadoInput: MoneyInputBag
-  precoCustoInput: MoneyInputBag
+  precoVarejo: number | null
+  setPrecoVarejo: (v: number | null) => void
+  precoAtacado: number | null
+  setPrecoAtacado: (v: number | null) => void
+  precoCusto: number | null
+  setPrecoCusto: (v: number | null) => void
 }>
 
 export type ProdutoFormShellProps = Readonly<{

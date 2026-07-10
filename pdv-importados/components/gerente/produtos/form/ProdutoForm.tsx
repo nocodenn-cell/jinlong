@@ -76,9 +76,12 @@ export function ProdutoForm(props: Props) {
     setCstPis: props.setCstPis,
     cstCofins: props.cstCofins,
     setCstCofins: props.setCstCofins,
-    precoVarejoInput: props.precoVarejoInput,
-    precoAtacadoInput: props.precoAtacadoInput,
-    precoCustoInput: props.precoCustoInput,
+    precoVarejo: props.precoVarejo,
+    setPrecoVarejo: props.setPrecoVarejo,
+    precoAtacado: props.precoAtacado,
+    setPrecoAtacado: props.setPrecoAtacado,
+    precoCusto: props.precoCusto,
+    setPrecoCusto: props.setPrecoCusto,
   }
 
   const p = props.m.produtos
