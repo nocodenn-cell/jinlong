@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Eye, XCircle } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
+import type { Mensagens } from '@/i18n/getMessages'
+import { VendaCancelarModal, type VendaCancelarAlvo } from '@/app/gerente/vendas/VendaCancelarModal'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
 
@@ -13,6 +16,7 @@ export type VendaLinha = {
   total_liquido: number | null
   forma_pagamento: string | null
   status: string | null
+  caixa_id: string | null
   qtd_itens_total: number
   qtd_itens_distintos: number
   primeiro_produto: string | null
@@ -53,6 +57,8 @@ export type VendasLabels = {
   detalheLiquido: string
   detalheItens: string
   detalheNenhumItem: string
+  cancelarVenda: string
+  acoesAria: string
 }
 
 function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
@@ -156,8 +162,20 @@ function ActionBtn({
   )
 }
 
-export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: VendasLabels }) {
+export function VendasTable({
+  vendas,
+  labels,
+  locale,
+  m,
+}: {
+  vendas: VendaLinha[]
+  labels: VendasLabels
+  locale: string
+  m: Mensagens
+}) {
+  const router = useRouter()
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
+  const [cancelAlvo, setCancelAlvo] = useState<VendaCancelarAlvo | null>(null)
 
   const columns: Column<VendaLinha>[] = [
     {
@@ -237,6 +255,22 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
             <ActionBtn label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
               <Eye size={13} aria-hidden />
             </ActionBtn>
+            {row.status !== 'CANCELADA' ? (
+              <ActionBtn
+                label={labels.cancelarVenda}
+                onClick={() =>
+                  setCancelAlvo({
+                    id: row.id,
+                    data: row.data,
+                    total_liquido: row.total_liquido,
+                    forma_pagamento: row.forma_pagamento,
+                    caixa_id: row.caixa_id,
+                  })
+                }
+              >
+                <XCircle size={13} aria-hidden />
+              </ActionBtn>
+            ) : null}
           </div>
         )}
       />
@@ -257,6 +291,17 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
           liquido: labels.detalheLiquido,
           itens: labels.detalheItens,
           nenhumItem: labels.detalheNenhumItem,
+        }}
+      />
+
+      <VendaCancelarModal
+        venda={cancelAlvo}
+        locale={locale}
+        m={m}
+        onClose={() => setCancelAlvo(null)}
+        onCancelado={() => {
+          setAlvo(null)
+          router.refresh()
         }}
       />
     </>

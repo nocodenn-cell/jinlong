@@ -56,9 +56,8 @@ type ActionResult<T> =
   | { success: false; error: string }
 
 function revalidateCatalogoPaths() {
-  revalidatePath('/gerente/produtos')
-  revalidatePath('/gerente/estoque')
   revalidatePath('/admin/catalogo')
+  revalidatePath('/admin/estoque')
 }
 
 export async function criarProduto(
@@ -125,7 +124,7 @@ export async function atualizarPrecoVarejoProduto(
     }
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidatePath('/admin/catalogo')
   return { success: true, data: null }
 }
 
@@ -366,7 +365,7 @@ export async function uploadImagemProduto(
     await supabase.storage.from(PRODUTO_IMAGEM_BUCKET).remove([oldPath])
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidatePath('/admin/catalogo')
   return { success: true, data: { imagem_url: publicUrl } }
 }
 
@@ -408,7 +407,7 @@ export async function removerImagemProduto(produtoId: string): Promise<ActionRes
     await supabase.storage.from(PRODUTO_IMAGEM_BUCKET).remove([path])
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidatePath('/admin/catalogo')
   return { success: true, data: null }
 }
 
@@ -654,7 +653,7 @@ export async function aplicarExclusaoOuInativacaoEmLote(
   }
 
   if (removidos > 0 || inativados > 0) {
-    revalidatePath('/gerente/produtos')
+    revalidatePath('/admin/catalogo')
   }
 
   return {
@@ -1087,7 +1086,7 @@ export async function alterarCategoriaLoteProdutos(
     return { success: false, error: mensagemErroComSecao('Bulk categoria', error.message) }
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidatePath('/admin/catalogo')
   return { success: true, data: { atualizados: count ?? parsed.data.produto_ids.length } }
 }
 
