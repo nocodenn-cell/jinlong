@@ -1074,9 +1074,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   idioma={idioma}
                   itens={itens}
                   moeda={m.caixa.moeda_prefixo}
-                  listEmptyVariant={
-                    pdvLayoutVariant === "classic" ? "pdv_classic" : "default"
-                  }
                   onAlterarQuantidade={handleAlterarQuantidade}
                   onRemover={handleRemover}
                 />

@@ -10,22 +10,17 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { formatDecimal2 } from "@/lib/format/money"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
-import { DragonIcon } from "@/components/icons/DragonIcon"
 import { labelOrigemCaixa } from "@/lib/caixa/metaProdutoUi"
 import type { OrigemProdutoCaixa } from "@/app/caixa/caixaActionTypes"
 
 /** Chip “positivo” no caixa (atacado, NF, origem BR com NF) — alinhado aos tokens `success`. */
 const CAIXA_CHIP_SUCCESS = 'border-success/40 bg-success/15 text-success'
 
-export type CaixaCartListEmptyVariant = "default" | "pdv_classic"
-
 type Props = {
   m: Mensagens
   idioma: Idioma
   itens: ItemCarrinhoComPreco[]
   moeda: string
-  /** Empty state alinhado ao mockup PDV clássico (sem o guardião). */
-  listEmptyVariant?: CaixaCartListEmptyVariant
   onAlterarQuantidade: (itemId: string, quantidade: number) => void
   onRemover: (itemId: string) => void
 }
@@ -322,53 +317,29 @@ function CaixaCartListInner({
   idioma,
   itens,
   moeda,
-  listEmptyVariant = "default",
   onAlterarQuantidade,
   onRemover,
 }: Props) {
   const locale = listLocale(idioma)
 
   if (itens.length === 0) {
-    if (listEmptyVariant === "pdv_classic") {
-      return (
-        <div className="flex h-full min-h-[10rem] flex-col justify-between px-4 py-3">
-          {/* Mensagem discreta — sem ícone grande */}
-          <p className="text-sm text-jl-fg-2">
-            {m.caixa.cart_empty_sem_pedido} · {m.caixa.empty_cta_scan}
-          </p>
-          {/* Atalhos de teclado: rodapé, linha única, opacidade reduzida */}
-          <div className="flex flex-wrap items-center gap-1.5 opacity-60">
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
-              Enter · {m.caixa.adicionar_enter}
-            </span>
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
-              Ctrl+B · {m.caixa.empty_shortcut_focus}
-            </span>
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
-              F4 · {m.caixa.finalizar_venda}
-            </span>
-          </div>
-        </div>
-      )
-    }
     return (
-      <div className="h-full min-h-[14rem] flex flex-col items-center justify-center gap-4 px-6 text-center">
-        <DragonIcon className="h-24 w-24 app-subtle shrink-0 opacity-40" />
-        <p className="text-base font-semibold text-foreground/90">{m.caixa.empty_guardiao}</p>
-        <div className="max-w-md space-y-2">
-          <p className="text-sm font-semibold text-foreground/95">{m.caixa.empty_cta_scan}</p>
-          <p className="text-sm text-foreground/85">{m.caixa.empty_cta_type_enter}</p>
-          <div className="flex flex-wrap justify-center gap-2 pt-1 opacity-60">
-            <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
-              Enter · {m.caixa.adicionar_enter}
-            </span>
-            <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
-              Ctrl+B · {m.caixa.empty_shortcut_focus}
-            </span>
-            <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
-              F4 · {m.caixa.finalizar_venda}
-            </span>
-          </div>
+      <div className="flex h-full min-h-[10rem] flex-col justify-between px-4 py-3">
+        {/* Mensagem discreta — sem ícone grande */}
+        <p className="text-sm text-jl-fg-2">
+          {m.caixa.cart_empty_sem_pedido} · {m.caixa.empty_cta_scan}
+        </p>
+        {/* Atalhos de teclado: rodapé, linha única, opacidade reduzida */}
+        <div className="flex flex-wrap items-center gap-1.5 opacity-60">
+          <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            Enter · {m.caixa.adicionar_enter}
+          </span>
+          <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            Ctrl+B · {m.caixa.empty_shortcut_focus}
+          </span>
+          <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            F4 · {m.caixa.finalizar_venda}
+          </span>
         </div>
       </div>
     )
