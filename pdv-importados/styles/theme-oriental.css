@@ -115,7 +115,8 @@
 }
 
 .app-input {
-  border: 1px solid var(--border);
+  /* slate-300 (não var(--border)=slate-200): campo visível em repouso — auditoria UX §1.3 */
+  border: 1px solid var(--jl-input-border, #cbd5e1);
   background: var(--surface-soft);
   color: var(--surface-text);
 }

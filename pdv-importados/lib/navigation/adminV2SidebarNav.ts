@@ -8,11 +8,13 @@ import {
   Monitor,
   Package,
   Percent,
+  Printer,
   ScrollText,
   Settings,
   ShieldOff,
   ShoppingCart,
   Tag,
+  Users,
 } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 
@@ -41,6 +43,14 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
     labelCn: '审计',
     hint: 'Linha do tempo de eventos operacionais.',
   },
+  {
+    id: 'clientes',
+    href: ROUTES.admin.clientes,
+    icon: Users,
+    labelOverridePt: 'Clientes',
+    labelCn: '客户',
+    hint: 'Cadastro, crediário e histórico de clientes.',
+  },
   { id: 'financeiro', href: ROUTES.admin.financeiro, icon: Banknote, labelOverridePt: 'Financeiro e fiscal', dictKey: 'financeiro' },
 ] as const
 
@@ -48,6 +58,14 @@ export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'relatorios', href: ROUTES.admin.relatorios, icon: FileBarChart2, labelOverridePt: 'Relatórios', dictKey: 'relatorios' },
   { id: 'recebimento', href: ROUTES.admin.estoqueRecebimento, icon: Inbox, labelOverridePt: 'Recebimento', dictKey: 'recebimento' },
   { id: 'transferencias', href: ROUTES.admin.estoqueTransferencias, icon: ArrowRightLeft, labelOverridePt: 'Transferências', dictKey: 'transferencias' },
+  {
+    id: 'etiquetas',
+    href: ROUTES.admin.estoqueImprimirEtiquetas,
+    icon: Printer,
+    labelOverridePt: 'Etiquetas',
+    labelCn: '标签',
+    hint: 'Imprimir etiquetas de produtos (PDF).',
+  },
   { id: 'comissoes', href: ROUTES.admin.comissoes, icon: Percent, labelOverridePt: 'Comissões', dictKey: 'comissoes' },
 ] as const
 
