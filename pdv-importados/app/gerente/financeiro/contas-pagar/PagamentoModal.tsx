@@ -7,10 +7,10 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
-import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 import {
   registrarPagamentoAction,
   type ContaPagarRow,
@@ -37,7 +37,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   const m = getMessages(idioma)
   const aberto = roundMoney2(conta.valor_total - conta.valor_pago)
 
-  const [valor, setValor] = useState(formatDecimalBRL(aberto))
+  const [valor, setValor] = useState<number | null>(aberto)
   const [forma, setForma] = useState<FormaPagamento>('PIX')
   const [dataPag, setDataPag] = useState(new Date().toISOString().slice(0, 10))
   const [observacao, setObservacao] = useState('')
@@ -52,12 +52,12 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     return () => clearTimeout(t)
   }, [])
 
-  const valorNum = parseBRL(valor) ?? 0
+  const valorNum = valor ?? 0
   const novoAberto = Math.max(0, aberto - valorNum)
   const quita = valorNum >= aberto - 0.001
 
   function sujo(): boolean {
-    return (parseBRL(valor) ?? 0) > 0
+    return (valor ?? 0) > 0
   }
 
   const fechar = useCallback(() => {
@@ -65,14 +65,6 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
     onClose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valor, onClose, m])
-
-  function handleValor(e: React.ChangeEvent<HTMLInputElement>) {
-    let v = e.target.value.replace(/[^\d,]/g, '')
-    const parts = v.split(',')
-    if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
-    setValor(v)
-    if (erros.valor) setErros((x) => ({ ...x, valor: null }))
-  }
 
   function validar(): boolean {
     const e: Record<string, string> = {}
@@ -172,29 +164,30 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                 {m.contas_pagar.modal_valor}<span className="ml-0.5 text-[color:var(--accent)]">*</span>
               </label>
               <div className="flex items-center rounded-xl border-2 border-amber-400 bg-jl-surface-soft px-4 py-3">
-                <span className="mr-2 text-base text-jl-fg-3">R$</span>
-                <input
+                <CurrencyInput
                   ref={valorRef}
                   id="pg-valor"
-                  inputMode="decimal"
                   value={valor}
-                  onChange={handleValor}
+                  onValueChange={(v) => {
+                    setValor(v)
+                    if (erros.valor) setErros((x) => ({ ...x, valor: null }))
+                  }}
                   aria-invalid={!!erros.valor}
                   aria-describedby={erros.valor ? 'err-valor' : 'hint-valor'}
-                  className="w-full bg-transparent text-right text-2xl font-extrabold tabular-nums text-amber-400 outline-none"
+                  className="w-full border-0 bg-transparent p-0 text-right text-2xl font-extrabold tabular-nums text-amber-400 outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={m.contas_pagar.valores_sugeridos}>
                 <button
                   type="button"
-                  onClick={() => setValor(formatDecimalBRL(aberto))}
+                  onClick={() => setValor(aberto)}
                   className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
                 >
                   {m.contas_pagar.quitar} · {fmtGerenteBRL(aberto, locale)}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setValor(formatDecimalBRL(aberto / 2))}
+                  onClick={() => setValor(aberto / 2)}
                   className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
                 >
                   {m.contas_pagar.metade}
@@ -205,7 +198,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                       <button
                         key={v}
                         type="button"
-                        onClick={() => setValor(formatDecimalBRL(v))}
+                        onClick={() => setValor(v)}
                         className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
                       >
                         {fmtGerenteBRL(v, locale)}
