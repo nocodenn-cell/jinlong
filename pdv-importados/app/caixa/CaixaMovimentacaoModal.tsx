@@ -10,11 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/CurrencyInput"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
-import { formatDecimalBRL, parseBRL } from "@/lib/format/money"
+import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
   open: boolean
@@ -51,7 +52,7 @@ export function CaixaMovimentacaoModal({
   onOpenChange,
   onSubmit,
 }: Props) {
-  const [valorStr, setValorStr] = useState("")
+  const [valor, setValor] = useState<number | null>(null)
   const [motivoCodigo, setMotivoCodigo] = useState<string>(MOTIVOS_BASE[0])
   const [motivoOutro, setMotivoOutro] = useState("")
   const [gerenteSenha, setGerenteSenha] = useState("")
@@ -62,7 +63,7 @@ export function CaixaMovimentacaoModal({
 
   const title = tipo === "sangria" ? m.caixa.modal_sangria_titulo : m.caixa.modal_suprimento_titulo
   const precisaSenhaGerente =
-    tipo === "sangria" && Number(valorStr.replace(",", ".")) > limiteSangriaSemGerente
+    tipo === "sangria" && (valor ?? 0) > limiteSangriaSemGerente
 
   const motivoLabel = useMemo(
     () => ({
@@ -75,7 +76,7 @@ export function CaixaMovimentacaoModal({
   )
 
   const limparEstado = useCallback(() => {
-    setValorStr("")
+    setValor(null)
     setMotivoCodigo(MOTIVOS_BASE[0])
     setMotivoOutro("")
     setGerenteSenha("")
@@ -109,7 +110,6 @@ export function CaixaMovimentacaoModal({
 
   const handleSalvar = useCallback(async () => {
     setErroLocal(null)
-    const valor = parseBRL(valorStr)
     if (valor === null || valor <= 0) {
       setErroLocal(m.caixa.movimentacao_valor_invalido)
       return
@@ -144,7 +144,7 @@ export function CaixaMovimentacaoModal({
     }
     onOpenChange(false)
   }, [
-    valorStr,
+    valor,
     tipo,
     saldoEstimado,
     motivoFinal,
@@ -178,12 +178,11 @@ export function CaixaMovimentacaoModal({
         <CardContent className="px-4 sm:px-6 space-y-3 overflow-y-auto">
           <label className="block text-xs app-muted">
             {m.caixa.modal_movimentacao_valor}
-            <Input
+            <CurrencyInput
               ref={valorRef}
-              inputMode="decimal"
-              value={valorStr}
-              onChange={(e) => setValorStr(e.target.value)}
-              placeholder="0,00"
+              value={valor}
+              onValueChange={setValor}
+              placeholder="R$ 0,00"
               className="mt-1 app-input"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleSalvar()
@@ -199,7 +198,7 @@ export function CaixaMovimentacaoModal({
                 size="sm"
                 variant="outline"
                 className="app-btn-neutral"
-                onClick={() => setValorStr(String(s))}
+                onClick={() => setValor(s)}
               >
                 {m.caixa.moeda_prefixo} {formatDecimalBRL(s)}
               </Button>

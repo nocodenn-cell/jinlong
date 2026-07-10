@@ -9,6 +9,7 @@ import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { CurrencyInput } from "@/components/ui/CurrencyInput"
 
 export type CaixaPdvOperadorTabId = "produto" | "cliente" | "pgto"
 
@@ -227,16 +228,9 @@ export function CaixaPdvOperadorTabs({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`shrink-0 text-[10px] font-medium ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>{moedaPrefixo}</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0"
-                    value={p.valor === 0 ? "" : p.valor.toFixed(2)}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value)
-                      onAtualizarValor(idx, Number.isFinite(v) ? v : 0)
-                    }}
+                  <CurrencyInput
+                    value={p.valor}
+                    onValueChange={(v) => onAtualizarValor(idx, v ?? 0)}
                     aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
                     data-caixa-atalho-bloqueado="true"
                     className={classicChrome
