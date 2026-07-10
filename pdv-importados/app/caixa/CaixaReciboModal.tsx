@@ -167,7 +167,7 @@ export function CaixaReciboModal({
       role="dialog"
       aria-modal="true"
       aria-label="Recibo da venda"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center dragon-glass-backdrop p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">

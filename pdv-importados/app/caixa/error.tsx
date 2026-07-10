@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import * as Sentry from '@sentry/nextjs'
+import { Button } from '@/components/ui/button'
 
 export default function CaixaError({
   error,
@@ -23,24 +24,16 @@ export default function CaixaError({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
       <h1 className="text-xl font-semibold">Erro no ponto de venda</h1>
-      <p className="max-w-sm text-sm opacity-70">
+      <p className="max-w-sm text-sm text-muted-foreground">
         Ocorreu um erro inesperado no PDV. Seus dados no carrinho não foram perdidos.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={() => reset()}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
+        <Button type="button" onClick={() => reset()}>
           Tentar de novo
-        </button>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100"
-        >
+        </Button>
+        <Button type="button" variant="outline" onClick={() => window.location.reload()}>
           Recarregar página
-        </button>
+        </Button>
       </div>
     </div>
   )

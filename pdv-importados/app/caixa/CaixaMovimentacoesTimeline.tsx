@@ -79,7 +79,7 @@ function CaixaMovimentacoesTimelineImpl({
                     >
                       {item.status === 'aprovado' ? (
                         <ImperialSealIcon
-                          className="h-3.5 w-3.5 shrink-0 text-[color:var(--caixa-imperial-red,#b91c1c)]"
+                          className="h-3.5 w-3.5 shrink-0 text-destructive"
                           title={m.caixa.aria_selo_mov_aprovada}
                         />
                       ) : null}

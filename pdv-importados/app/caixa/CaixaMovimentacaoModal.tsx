@@ -243,7 +243,7 @@ export function CaixaMovimentacaoModal({
             <label className="block text-xs app-accent-text">
               <span className="mb-1 flex items-center gap-2 app-accent-text">
                 <ImperialSealIcon
-                  className="h-5 w-5 shrink-0 text-[color:var(--dragon-imperial-red,#b91c1c)]"
+                  className="h-5 w-5 shrink-0 text-destructive"
                   title={m.caixa.aria_selo_gerente}
                   pulse
                 />
