@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, type ReactNode } from "react"
+import { memo } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
@@ -34,8 +34,6 @@ type Props = {
   valorDescontoGerente: number
   totalLiquidoComGerente: number
   moedaPrefixo: string
-  /** Layout padrão: seletor de forma de pagamento acima do botão finalizar. */
-  metodoPagamentoPanel?: ReactNode
   /** Collapse state for financial summary (only in default layout) */
   summaryCollapsed?: boolean
   onToggleSummaryCollapse?: () => void
@@ -70,7 +68,6 @@ function CaixaFooterImpl({
   valorDescontoGerente,
   totalLiquidoComGerente,
   moedaPrefixo,
-  metodoPagamentoPanel,
   summaryCollapsed = false,
   onToggleSummaryCollapse,
 }: Props) {
@@ -230,9 +227,6 @@ function CaixaFooterImpl({
               </div>
             </div>
           )}
-          {metodoPagamentoPanel ? (
-            <div className="w-full min-w-[12rem] max-w-md">{metodoPagamentoPanel}</div>
-          ) : null}
           {/* #12: total dominante — eyebrow uppercase tracked-out + número maior
               p/ não competir com bruto/descontos (que já estão adjacentes). */}
           <div className="text-right min-w-[7rem]">

@@ -1312,7 +1312,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   totalBruto={totalBruto}
                   totalDesconto={totalDesconto}
                   moedaPrefixo={m.caixa.moeda_prefixo}
-                  metodoPagamentoPanel={metodoPagamentoSelector}
                 />
               )}
             </section>
@@ -1459,9 +1458,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             valorDescontoGerente={valorDescontoGerente}
             totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}
-            metodoPagamentoPanel={
-              pdvLayoutVariant === "default" ? metodoPagamentoSelector : undefined
-            }
             summaryCollapsed={summaryCollapsed && pdvLayoutVariant !== "classic"}
             onToggleSummaryCollapse={() => setSummaryCollapsed(!summaryCollapsed)}
           />

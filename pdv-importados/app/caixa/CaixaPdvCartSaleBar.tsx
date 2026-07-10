@@ -1,6 +1,5 @@
 "use client"
 
-import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import { formatDecimalBRL } from "@/lib/format/money"
@@ -19,7 +18,6 @@ type Props = {
   totalBruto?: number
   totalDesconto?: number
   moedaPrefixo: string
-  metodoPagamentoPanel?: ReactNode
 }
 
 export function CaixaPdvCartSaleBar({
@@ -36,7 +34,6 @@ export function CaixaPdvCartSaleBar({
   totalBruto = 0,
   totalDesconto = 0,
   moedaPrefixo,
-  metodoPagamentoPanel,
 }: Props) {
   const excluirDisabled =
     !caixaAberto || movimentandoCaixa || finalizando || carregandoRegras
@@ -49,8 +46,6 @@ export function CaixaPdvCartSaleBar({
       data-caixa-cart-sale-bar
     >
       <div className="flex flex-col gap-3">
-        {metodoPagamentoPanel ? <div className="w-full">{metodoPagamentoPanel}</div> : null}
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <Button
