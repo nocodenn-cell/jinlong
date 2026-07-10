@@ -61,13 +61,16 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport }: Props) {
 
   return (
     <>
-      <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
+      <div className="mb-2 w-full basis-full rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-[11px] text-jl-fg-2">
+        {ui.catalogo_hint_volume}
+      </div>
+      <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-primary">
         <Upload size={14} aria-hidden />
         {ui.catalogo_importar_nfe}
       </Link>
       <button
         type="button"
-        className="admin-v2-btn-secondary"
+        className="admin-v2-btn-primary"
         onClick={() => setImportOpen(true)}
       >
         <FileUp size={14} aria-hidden />
@@ -82,7 +85,7 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport }: Props) {
         <Download size={14} aria-hidden />
         {exporting ? m.comum.carregando : m.gerente.exportar_csv}
       </button>
-      <CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} />
+      <CatalogoNovoButton label={m.produtos.cadastro_rapido} m={m} opcoes={opcoes} />
 
       <ProdutosImportarModal
         open={importOpen}

@@ -38,6 +38,8 @@ function resetFormState(
     precoVarejoInput: ReturnType<typeof useMoneyInput>
     precoAtacadoInput: ReturnType<typeof useMoneyInput>
     precoCustoInput: ReturnType<typeof useMoneyInput>
+    setEstoqueInicialQty: (v: string) => void
+    setEstoqueInicialMin: (v: string) => void
   },
 ) {
   if (!produto) {
@@ -64,6 +66,8 @@ function resetFormState(
     setters.precoVarejoInput.reset()
     setters.precoAtacadoInput.reset()
     setters.precoCustoInput.reset()
+    setters.setEstoqueInicialQty('')
+    setters.setEstoqueInicialMin('')
     return
   }
 
@@ -90,6 +94,8 @@ function resetFormState(
   setters.precoVarejoInput.reset(produto.preco_varejo)
   setters.precoAtacadoInput.reset(produto.preco_atacado ?? undefined)
   setters.precoCustoInput.reset(produto.preco_custo ?? undefined)
+  setters.setEstoqueInicialQty('')
+  setters.setEstoqueInicialMin('')
 }
 
 export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null) {
@@ -113,6 +119,8 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
   const [cest, setCest] = useState('')
   const [cstPis, setCstPis] = useState<string>(FISCAL_DEFAULTS.cstPis)
   const [cstCofins, setCstCofins] = useState<string>(FISCAL_DEFAULTS.cstCofins)
+  const [estoqueInicialQty, setEstoqueInicialQty] = useState('')
+  const [estoqueInicialMin, setEstoqueInicialMin] = useState('')
 
   const precoVarejoInput = useMoneyInput()
   const precoAtacadoInput = useMoneyInput()
@@ -144,6 +152,8 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       precoVarejoInput,
       precoAtacadoInput,
       precoCustoInput,
+      setEstoqueInicialQty,
+      setEstoqueInicialMin,
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, produto])
@@ -175,6 +185,8 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       precoVarejoInput,
       precoAtacadoInput,
       precoCustoInput,
+      setEstoqueInicialQty,
+      setEstoqueInicialMin,
     })
   }, [precoAtacadoInput, precoCustoInput, precoVarejoInput])
 
@@ -222,6 +234,10 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
     precoVarejoInput,
     precoAtacadoInput,
     precoCustoInput,
+    estoqueInicialQty,
+    setEstoqueInicialQty,
+    estoqueInicialMin,
+    setEstoqueInicialMin,
     readOnly,
     limparParaNovoCadastro,
   }

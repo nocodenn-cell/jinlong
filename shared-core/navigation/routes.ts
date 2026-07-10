@@ -40,6 +40,7 @@ export const ROUTES = {
     estoque: '/admin/estoque',
     estoqueRecebimento: '/admin/estoque/recebimento',
     estoqueTransferencias: '/admin/estoque/transferencias',
+    estoqueImprimirEtiquetas: '/admin/estoque/imprimir-etiquetas',
     importNfe: '/admin/estoque/importar-nfe',
     vendas: '/admin/vendas',
     auditoria: '/admin/auditoria',
@@ -68,6 +69,22 @@ export function adminCatalogoProdutoQuery(id: string): string {
   return `${ROUTES.admin.catalogo}?produto=${id}`
 }
 
+export function adminEstoqueProdutoQuery(busca: string): string {
+  const q = new URLSearchParams()
+  if (busca.trim()) q.set('q', busca.trim())
+  return pathWithQuery(ROUTES.admin.estoque, q)
+}
+
+export function adminEtiquetasProdutoQuery(opts: {
+  codigo?: string | null
+  produtoId?: string | null
+}): string {
+  const q = new URLSearchParams()
+  if (opts.codigo?.trim()) q.set('codigo', opts.codigo.trim())
+  if (opts.produtoId?.trim()) q.set('produto', opts.produtoId.trim())
+  return pathWithQuery(ROUTES.admin.estoqueImprimirEtiquetas, q)
+}
+
 export function catalogoPublicProduto(id: string): string {
   return `${ROUTES.catalogoPublic.produtos}/${id}`
 }
@@ -81,7 +98,7 @@ export const LEGACY_GERENTE_REDIRECTS: Record<string, string> = {
   estoque: ROUTES.admin.estoque,
   'estoque/importar': ROUTES.admin.importNfe,
   'estoque/importar-nfe': ROUTES.admin.importNfe,
-  'estoque/imprimir-etiquetas': ROUTES.admin.estoque,
+  'estoque/imprimir-etiquetas': ROUTES.admin.estoqueImprimirEtiquetas,
   'estoque/recebimento': ROUTES.admin.estoqueRecebimento,
   'estoque/transferencias': ROUTES.admin.estoqueTransferencias,
   recebimento: ROUTES.admin.estoqueRecebimento,

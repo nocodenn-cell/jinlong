@@ -78,7 +78,9 @@ export async function criarCategoriaProduto(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = NovaCategoriaSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-  return criarCadastro(TABELA, { nome: parsed.data.nome.trim(), ativo: true }, 'Criar categoria', [REVALIDATE_PATH, '/gerente/produtos'])
+  const result = await criarCadastro(TABELA, { nome: parsed.data.nome.trim(), ativo: true }, 'Criar categoria', [REVALIDATE_PATH, '/gerente/produtos'])
+  if (result.success) revalidateTag('catalogo-opcoes-filtro')
+  return result
 }
 
 export async function atualizarCategoriaProduto(

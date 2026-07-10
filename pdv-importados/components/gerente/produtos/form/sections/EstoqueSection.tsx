@@ -18,7 +18,10 @@ function LeituraCampo({ label, value, hint }: { label: string; value: string; hi
 export function EstoqueSection() {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
-  const { disabled, inputClassName, readOnly } = ctx
+  const { disabled, inputClassName, inputMonoClassName, readOnly } = ctx
+  const isCreate = readOnly.produtoId === null
+  const estoqueZero =
+    !isCreate && readOnly.estoqueAtual !== null && readOnly.estoqueAtual <= 0
 
   return (
     <section aria-labelledby="produto-secao-estoque">
@@ -36,24 +39,70 @@ export function EstoqueSection() {
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-3 rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3">
-          <LeituraCampo
-            label={p.estoque_atual_label}
-            value={readOnly.estoqueAtual !== null ? String(readOnly.estoqueAtual) : '—'}
-          />
-          <LeituraCampo
-            label={p.estoque_minimo_label}
-            value={readOnly.estoqueMinimo !== null ? String(readOnly.estoqueMinimo) : '—'}
-            hint={p.estoque_minimo_hint}
-          />
-        </div>
-
-        <Link
-          href={ROUTES.admin.estoque}
-          className="inline-flex text-[11px] font-medium text-jl-accent hover:underline"
-        >
-          {p.estoque_minimo_link}
-        </Link>
+        {isCreate ? (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.estoque_inicial_label}
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`${inputMonoClassName} mt-1`}
+                value={ctx.estoqueInicialQty}
+                onChange={(e) =>
+                  ctx.setEstoqueInicialQty(e.target.value.replace(/\D/g, ''))
+                }
+                disabled={disabled}
+                placeholder="0"
+              />
+              <span className="mt-0.5 block text-[10px] text-jl-fg-3">
+                {p.hint_estoque_inicial}
+              </span>
+            </label>
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.estoque_minimo_label}
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`${inputMonoClassName} mt-1`}
+                value={ctx.estoqueInicialMin}
+                onChange={(e) =>
+                  ctx.setEstoqueInicialMin(e.target.value.replace(/\D/g, ''))
+                }
+                disabled={disabled}
+                placeholder="0"
+              />
+            </label>
+          </div>
+        ) : (
+          <>
+            {estoqueZero ? (
+              <p className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-800">
+                {p.aviso_estoque_zero}
+              </p>
+            ) : null}
+            <div className="grid grid-cols-2 gap-3 rounded-md border border-[var(--color-border-secondary)] bg-white/[.04] p-3">
+              <LeituraCampo
+                label={p.estoque_atual_label}
+                value={
+                  readOnly.estoqueAtual !== null ? String(readOnly.estoqueAtual) : '—'
+                }
+              />
+              <LeituraCampo
+                label={p.estoque_minimo_label}
+                value={
+                  readOnly.estoqueMinimo !== null ? String(readOnly.estoqueMinimo) : '—'
+                }
+                hint={p.estoque_minimo_hint}
+              />
+            </div>
+            <Link
+              href={ROUTES.admin.estoque}
+              className="inline-flex text-[11px] font-medium text-jl-accent hover:underline"
+            >
+              {p.estoque_minimo_link}
+            </Link>
+          </>
+        )}
       </div>
     </section>
   )

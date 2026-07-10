@@ -46,7 +46,9 @@ import { motivoBloqueioExclusaoFisica } from '@/lib/gerente/produtoExclusaoLote'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 import {
   EditarProdutoCatalogoSchema,
+  EditarProdutoRascunhoSchema,
   NovoProdutoSchema,
+  NovoProdutoRascunhoSchema,
 } from './produtoFormSchema'
 
 type ActionResult<T> =
@@ -65,20 +67,24 @@ export async function criarProduto(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const parsed = NovoProdutoSchema.safeParse(input)
+  const raw = input as { status_publicacao?: string }
+  const asDraft = raw.status_publicacao === 'DRAFT'
+  const parsed = asDraft
+    ? NovoProdutoRascunhoSchema.safeParse(input)
+    : NovoProdutoSchema.safeParse(input)
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? 'Erro de validação.'
     const { idioma } = await getUsuarioIdioma()
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
-  // CORE decide o status; o server apenas executa. Cadastro manual → PUBLICADO.
-  // (CSV continua DRAFT no seu próprio caminho `importarProdutosCsv`.)
-  const { status_publicacao } = statusInicialProduto('human')
+  const lifecycle = asDraft
+    ? { status_publicacao: 'DRAFT' as const, ativo: false }
+    : statusInicialProduto('human')
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
   const result = await criarProdutoComEstoque(
-    { ...parsed.data, status_publicacao },
+    { ...parsed.data, ...lifecycle },
     repo,
   )
 
@@ -663,7 +669,10 @@ export async function atualizarDadosProdutoGerente(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const parsed = EditarProdutoCatalogoSchema.safeParse(input)
+  const asDraft = (input as { status_publicacao?: string }).status_publicacao === 'DRAFT'
+  const parsed = asDraft
+    ? EditarProdutoRascunhoSchema.safeParse(input)
+    : EditarProdutoCatalogoSchema.safeParse(input)
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? 'Erro de validação.'
     const { idioma } = await getUsuarioIdioma()
@@ -671,6 +680,27 @@ export async function atualizarDadosProdutoGerente(
   }
 
   const supabase = await createClient()
+
+  // Preserva INATIVO ao editar/salvar; só muda status em rascunho explícito
+  // ou ao publicar um DRAFT via "Salvar" (ação explícita de publicação).
+  const { data: atualRow } = await supabase
+    .from('produtos')
+    .select('status_publicacao')
+    .eq('id', parsed.data.produto_id)
+    .maybeSingle()
+  const statusAtual = (atualRow?.status_publicacao ?? null) as StatusPublicacao | null
+
+  let lifecycle: { status_publicacao: StatusPublicacao; ativo: boolean } | null = null
+  if (asDraft) {
+    lifecycle = dualWriteFromStatus('DRAFT')
+  } else if (statusAtual === 'DRAFT') {
+    lifecycle = dualWriteFromStatus('PUBLICADO')
+  } else if (statusAtual === 'INATIVO') {
+    lifecycle = null
+  } else {
+    lifecycle = dualWriteFromStatus('PUBLICADO')
+  }
+
   const { error } = await supabase
     .from('produtos')
     .update({
@@ -692,7 +722,9 @@ export async function atualizarDadosProdutoGerente(
       fornecedor_id: parsed.data.fornecedor_id,
       unidade_medida: parsed.data.unidade_medida,
       observacao: parsed.data.observacao,
-      // Campos fiscais
+      ...(lifecycle
+        ? { ativo: lifecycle.ativo, status_publicacao: lifecycle.status_publicacao }
+        : {}),
       ncm: parsed.data.ncm,
       cfop_produto: parsed.data.cfop_produto,
       csosn: parsed.data.csosn,

@@ -3,16 +3,14 @@
 import type { RefObject } from 'react'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
-import { FornecedorCombobox } from '../fields/FornecedorCombobox'
-import type { Idioma } from '@/idioma/normalizeIdioma'
+import type { UnidadeCode } from '../produtoForm.types'
 
 type Props = Readonly<{
   nomeRef?: RefObject<HTMLInputElement | null>
   onEnterSubmit?: () => void
-  idioma: Idioma
 }>
 
-export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
+export function EssencialSection({ nomeRef, onEnterSubmit }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const { disabled, inputClassName, inputMonoClassName, selectClassName } = ctx
@@ -20,6 +18,7 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
   return (
     <section aria-labelledby="produto-secao-essencial">
       <ProdutoFormSectionHeading title={p.secao_essencial} />
+      <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_essencial_obrigatorios}</p>
       <div id="produto-secao-essencial" className="mt-3 space-y-3">
         <label className="block text-xs font-medium text-jl-fg-3">
           {p.nome} *
@@ -33,52 +32,33 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
             autoComplete="off"
             onKeyDown={
               onEnterSubmit
-                ? (e) => { if (e.key === 'Enter') { e.preventDefault(); onEnterSubmit() } }
+                ? (e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      onEnterSubmit()
+                    }
+                  }
                 : undefined
             }
           />
         </label>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className="block text-xs font-medium text-jl-fg-3">
-            {p.preco_varejo} *
-            <input
-              type="text"
-              inputMode="decimal"
-              className={`${inputMonoClassName} mt-1`}
-              value={ctx.precoVarejoInput.display}
-              onChange={ctx.precoVarejoInput.onChange}
+            {p.unidade_medida} *
+            <select
+              className={`${selectClassName} mt-1`}
+              value={ctx.unidadeMedida}
+              onChange={(e) => ctx.setUnidadeMedida(e.target.value as UnidadeCode)}
               disabled={disabled}
-              placeholder="0,00"
-            />
+            >
+              <option value="UN">{p.unidade_medida_un}</option>
+              <option value="KG">{p.unidade_medida_kg}</option>
+              <option value="CX">{p.unidade_medida_cx}</option>
+              <option value="FD">{p.unidade_medida_fd}</option>
+              <option value="M">{p.unidade_medida_m}</option>
+            </select>
           </label>
-          <label className="block text-xs font-medium text-jl-fg-3">
-            {p.preco_atacado}
-            <input
-              type="text"
-              inputMode="decimal"
-              className={`${inputMonoClassName} mt-1`}
-              value={ctx.precoAtacadoInput.display}
-              onChange={ctx.precoAtacadoInput.onChange}
-              disabled={disabled}
-              placeholder="—"
-            />
-          </label>
-          <label className="block text-xs font-medium text-jl-fg-3">
-            {p.qtd_gatilho_atacado}
-            <input
-              type="text"
-              inputMode="numeric"
-              className={`${inputMonoClassName} mt-1`}
-              value={ctx.quantidadeGatilho}
-              onChange={(e) => ctx.setQuantidadeGatilho(e.target.value.replace(/\D/g, ''))}
-              disabled={disabled}
-              placeholder="—"
-            />
-          </label>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.codigo_barras}
             <input
@@ -89,22 +69,20 @@ export function EssencialSection({ nomeRef, onEnterSubmit, idioma }: Props) {
               placeholder={p.codigo_barras_opcional}
               autoComplete="off"
             />
+            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_codigo_barras}</span>
           </label>
-          <div>
-            <p className="text-xs font-medium text-jl-fg-3">{p.fornecedor_principal_label}</p>
-            <div className="mt-1">
-              <FornecedorCombobox
-                p={p}
-                fornecedores={ctx.opcoes.fornecedores}
-                value={ctx.fornecedorId}
-                onChange={ctx.setFornecedorId}
-                onFornecedoresChange={ctx.onFornecedoresChange}
-                disabled={disabled}
-                selectClassName={selectClassName}
-                idioma={idioma}
-              />
-            </div>
-          </div>
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.codigo_interno_label}
+            <input
+              className={`${inputMonoClassName} mt-1`}
+              value={ctx.codigoInterno}
+              onChange={(e) => ctx.setCodigoInterno(e.target.value)}
+              disabled={disabled}
+              placeholder={p.codigo_interno_placeholder}
+              autoComplete="off"
+            />
+            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_codigo_interno}</span>
+          </label>
         </div>
       </div>
     </section>

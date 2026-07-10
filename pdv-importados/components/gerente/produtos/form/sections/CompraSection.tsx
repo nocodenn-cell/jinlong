@@ -7,25 +7,12 @@ import { useProdutoFormContext } from '../ProdutoFormContext'
 export function CompraSection() {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
-  const { disabled, inputClassName, readOnly } = ctx
+  const { disabled, readOnly } = ctx
 
   return (
     <section aria-labelledby="produto-secao-compra">
       <ProdutoFormSectionHeading title={p.secao_compra} />
       <div id="produto-secao-compra" className="mt-3 space-y-3">
-        <label className="block text-xs font-medium text-jl-fg-3">
-          {p.custo_compra_label}
-          <input
-            type="text"
-            inputMode="decimal"
-            className={`${inputClassName} mt-1 font-mono`}
-            value={ctx.precoCustoInput.display}
-            onChange={ctx.precoCustoInput.onChange}
-            disabled={disabled}
-            placeholder="—"
-          />
-        </label>
-
         <label className="flex h-9 cursor-pointer items-center gap-2 text-xs font-medium text-jl-fg-3">
           <input
             type="checkbox"

@@ -1,8 +1,10 @@
 'use client'
 
 import type { RefObject } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { FaixasAtacadoEditor } from '../produtoFormSections/FaixasAtacadoEditor'
+import { ProdutoImagemCell } from '../ProdutoImagemCell'
 import {
   defaultFieldClasses,
   ProdutoFormProvider,
@@ -11,6 +13,7 @@ import {
 import type { UseProdutoFormReturn } from './useProdutoForm'
 import type { ProdutoFormShellProps } from './produtoForm.types'
 import { EssencialSection } from './sections/EssencialSection'
+import { PrecosSection } from './sections/PrecosSection'
 import { ComercialSection } from './sections/ComercialSection'
 import { CompraSection } from './sections/CompraSection'
 import { EstoqueSection } from './sections/EstoqueSection'
@@ -22,6 +25,8 @@ type Props = ProdutoFormShellProps &
     nomeRef?: RefObject<HTMLInputElement | null>
     onEnterSubmit?: () => void
     idioma: Idioma
+    modoCompleto: boolean
+    onToggleModoCompleto: () => void
   }>
 
 export function ProdutoForm(props: Props) {
@@ -33,6 +38,8 @@ export function ProdutoForm(props: Props) {
     readOnly: props.readOnly,
     disabled: props.disabled,
     onFornecedoresChange: props.onFornecedoresChange,
+    onCategoriasChange: props.onCategoriasChange,
+    onMarcasChange: props.onMarcasChange,
     ...fields,
     nome: props.nome,
     setNome: props.setNome,
@@ -77,6 +84,10 @@ export function ProdutoForm(props: Props) {
     precoVarejoInput: props.precoVarejoInput,
     precoAtacadoInput: props.precoAtacadoInput,
     precoCustoInput: props.precoCustoInput,
+    estoqueInicialQty: props.estoqueInicialQty,
+    setEstoqueInicialQty: props.setEstoqueInicialQty,
+    estoqueInicialMin: props.estoqueInicialMin,
+    setEstoqueInicialMin: props.setEstoqueInicialMin,
   }
 
   const p = props.m.produtos
@@ -90,15 +101,55 @@ export function ProdutoForm(props: Props) {
   return (
     <ProdutoFormProvider value={ctx}>
       <div className="space-y-1 pb-1">
+        {props.readOnly.produtoId && props.produto ? (
+          <div className="mb-3 flex items-center gap-3 rounded-md border border-jl-border-1 bg-jl-surface-soft p-3">
+            <ProdutoImagemCell
+              produtoId={props.produto.id}
+              nome={props.produto.nome}
+              imagemUrl={props.produto.imagem_url}
+              disabled={props.disabled}
+              m={props.m}
+              onDone={() => props.onImagemChange?.()}
+            />
+            <div>
+              <p className="text-xs font-medium text-jl-fg-2">{p.foto_form_label}</p>
+              <p className="text-[10px] text-jl-fg-3">{p.hint_foto_form}</p>
+            </div>
+          </div>
+        ) : null}
+
         <EssencialSection
           nomeRef={props.nomeRef}
           onEnterSubmit={props.onEnterSubmit}
-          idioma={props.idioma}
         />
-        <ComercialSection faixasSlot={faixasSlot} />
-        <CompraSection />
+        <PrecosSection />
         <EstoqueSection />
-        <FiscalSection />
+
+        <button
+          type="button"
+          onClick={props.onToggleModoCompleto}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-jl-border-1 bg-jl-surface-soft px-3 py-2 text-xs font-semibold text-jl-fg-2 transition hover:border-primary hover:text-primary"
+        >
+          {props.modoCompleto ? (
+            <>
+              <ChevronUp size={14} aria-hidden />
+              {p.modo_compacto}
+            </>
+          ) : (
+            <>
+              <ChevronDown size={14} aria-hidden />
+              {p.modo_completo}
+            </>
+          )}
+        </button>
+
+        {props.modoCompleto ? (
+          <>
+            <ComercialSection faixasSlot={faixasSlot} idioma={props.idioma} />
+            <CompraSection />
+            <FiscalSection />
+          </>
+        ) : null}
       </div>
     </ProdutoFormProvider>
   )

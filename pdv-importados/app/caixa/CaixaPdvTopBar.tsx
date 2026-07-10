@@ -69,7 +69,7 @@ export function CaixaPdvTopBar({
       className={cn(
         "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5",
         classic
-          ? "border-border bg-primary text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]"
+          ? "border-border bg-jl-surface-elev text-jl-fg-1 shadow-sm"
           : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}
@@ -78,12 +78,12 @@ export function CaixaPdvTopBar({
         <span
           className={cn(
             "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
-            classic ? "border-primary-foreground/25 bg-white/10 text-primary-foreground" : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1",
+            classic ? "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1" : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1",
           )}
         >
           <DragonEmblemIcon className="h-5 w-5" />
         </span>
-        <h1 className={cn("min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg", classic && "text-primary-foreground")}>
+        <h1 className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg text-jl-fg-1">
           {m.caixa.topbar_titulo}
         </h1>
       </div>
@@ -93,7 +93,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[11rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
+              classic ? "border-jl-border-1 bg-jl-surface-soft" : "border-jl-border-1 bg-jl-surface-base",
             )}
             title={turnoText}
           >
@@ -102,7 +102,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[14rem] truncate rounded-md border px-2 py-1 font-medium",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
+              classic ? "border-jl-border-1 bg-jl-surface-soft" : "border-jl-border-1 bg-jl-surface-base",
             )}
             title={operadorText}
           >
@@ -111,7 +111,7 @@ export function CaixaPdvTopBar({
           <span
             className={cn(
               "max-w-[12rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
+              classic ? "border-jl-border-1 bg-jl-surface-soft" : "border-jl-border-1 bg-jl-surface-base",
             )}
             title={fundoText}
           >
@@ -123,16 +123,10 @@ export function CaixaPdvTopBar({
               className={cn(
                 "max-w-[10rem] truncate rounded-md border px-2 py-1 text-xs font-medium",
                 printerStatus === "connected"
-                  ? classic
-                    ? "border-emerald-400/50 bg-emerald-400/20 text-emerald-100"
-                    : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
                   : printerStatus === "error"
-                    ? classic
-                      ? "border-red-400/50 bg-red-400/20 text-red-100"
-                      : "border-destructive/40 bg-destructive/10 text-destructive"
-                    : classic
-                      ? "border-primary-foreground/30 bg-white/10"
-                      : "border-jl-border-1 bg-jl-surface-base",
+                    ? "border-destructive/40 bg-destructive/10 text-destructive"
+                    : "border-jl-border-1 bg-jl-surface-soft",
               )}
             >
               {printerStatus === "connected" ? "🖨 OK" : printerStatus === "error" ? "🖨 Erro" : "🖨 …"}
@@ -143,7 +137,7 @@ export function CaixaPdvTopBar({
         <div
           className={cn(
             "flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3",
-            classic ? "border-primary-foreground/25" : "border-white/[0.12]",
+            classic ? "border-jl-border-1" : "border-white/[0.12]",
           )}
         >
           {aberto ? (
@@ -151,11 +145,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className={cn(
-                "text-xs font-semibold sm:text-sm",
-                classic &&
-                  "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
-              )}
+              className="text-xs font-semibold sm:text-sm"
               onClick={onFecharCaixa}
               disabled={processandoCaixa}
               aria-busy={processandoCaixa}
@@ -169,7 +159,7 @@ export function CaixaPdvTopBar({
               variant="outline"
               className={cn(
                 "text-xs font-semibold sm:text-sm",
-                classic && "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
+                classic && "border-jl-border-1",
               )}
               onClick={onAbrirCaixa}
               disabled={carregandoStatus}
@@ -183,7 +173,7 @@ export function CaixaPdvTopBar({
               variant="outline"
               className={cn(
                 "text-xs font-semibold sm:text-sm",
-                classic && "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
+                classic && "border-jl-border-1",
               )}
               onClick={onAbrirCaixa}
               disabled={processandoCaixa || carregandoStatus}
@@ -197,9 +187,7 @@ export function CaixaPdvTopBar({
             label={m.comum.sair}
             className={cn(
               "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
-              classic
-                ? "border border-primary-foreground/35 bg-white/10 text-primary-foreground hover:bg-white/20"
-                : "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
+              "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
             )}
           />
         </div>
