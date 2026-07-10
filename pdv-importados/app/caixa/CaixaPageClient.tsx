@@ -9,7 +9,14 @@ import {
   abrirCaixaOperador,
   fecharCaixaOperador,
   validarGerenteDesconto,
+  colocarVendaEmEsperaCaixa,
+  listarVendasEmEsperaCaixa,
+  retomarVendaEmEsperaCaixa,
+  descartarVendaEmEsperaCaixa,
+  obterDetalheHistoricoVendaCaixa,
 } from "@/app/caixa/actions"
+import type { VendaEmEsperaCard } from "@/app/caixa/actions"
+import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import {
@@ -38,8 +45,12 @@ import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaFooter } from "@/app/caixa/CaixaFooter"
 import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
-import { CaixaPdvOperacoesButtons } from "@/app/caixa/CaixaPdvOperacoesButtons"
+import { CaixaPdvOperacoesMenu } from "@/app/caixa/CaixaPdvOperacoesMenu"
 import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
+import { CaixaEmAbertoList } from "@/app/caixa/CaixaEmAbertoList"
+import { CaixaConsultaRapidaModal } from "@/app/caixa/CaixaConsultaRapidaModal"
+import { CaixaHistoricoSheet } from "@/app/caixa/CaixaHistoricoSheet"
+import { CaixaAbrirTurnoModal } from "@/app/caixa/CaixaAbrirTurnoModal"
 import {
   CaixaGerenteModal,
   type ValidarSenhaGerenteResult,
@@ -181,6 +192,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   >(null)
   const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
+  const [consultaRapidaAberta, setConsultaRapidaAberta] = useState(false)
+  const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [abrirTurnoAberto, setAbrirTurnoAberto] = useState(false)
+  const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>([])
+  const [carregandoEmEspera, setCarregandoEmEspera] = useState(false)
 
   const {
     caixaStatus,
@@ -233,6 +249,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const removerItem = useCarrinhoStore((s) => s.removerItem)
   const restaurarUltimoRemovido = useCarrinhoStore((s) => s.restaurarUltimoRemovido)
   const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
+  const substituirCarrinho = useCarrinhoStore((s) => s.substituirCarrinho)
 
   const economiaPrecoAtacadoAuto = useMemo(() => {
     return itens.reduce((acc, it) => {
@@ -523,6 +540,141 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
   ])
 
+  const recarregarEmEspera = useCallback(async () => {
+    setCarregandoEmEspera(true)
+    try {
+      const res = await listarVendasEmEsperaCaixa()
+      if (res.ok) setVendasEmEspera(res.vendas)
+    } finally {
+      setCarregandoEmEspera(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void recarregarEmEspera()
+  }, [recarregarEmEspera, turnoRefreshToken])
+
+  /** Nova Venda (+): se há itens, coloca em espera; senão limpa cupom. */
+  const handleNovaVendaOuEspera = useCallback(async () => {
+    if (itens.length === 0) {
+      handleNovoCupom()
+      return
+    }
+    const caixaId = isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null
+    const res = await colocarVendaEmEsperaCaixa({
+      itens,
+      totalBruto,
+      totalDesconto,
+      totalLiquido: totalLiquidoComGerente,
+      caixaId,
+      descontoGerentePercentual:
+        descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
+    })
+    if (!res.ok) {
+      setCaixaMensagem(res.error, { kind: "error" })
+      tocarFeedback("erro")
+      return
+    }
+    setCaixaMensagem(
+      caixaFmt(m.caixa.em_aberto_colocada, { n: String(res.numeroLocal) }),
+      { kind: "success" },
+    )
+    tocarFeedback("ok")
+    handleNovoCupom()
+    await recarregarEmEspera()
+  }, [
+    itens,
+    caixaStatus,
+    totalBruto,
+    totalDesconto,
+    totalLiquidoComGerente,
+    descontoGerentePercentual,
+    handleNovoCupom,
+    m.caixa.em_aberto_colocada,
+    recarregarEmEspera,
+    setCaixaMensagem,
+    tocarFeedback,
+  ])
+
+  const handleRetomarEmEspera = useCallback(
+    async (id: string) => {
+      if (itens.length > 0) {
+        setCaixaMensagem(m.caixa.em_aberto_finalize_antes, { kind: "warning" })
+        const parked = await colocarVendaEmEsperaCaixa({
+          itens,
+          totalBruto,
+          totalDesconto,
+          totalLiquido: totalLiquidoComGerente,
+          caixaId: isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null,
+          descontoGerentePercentual:
+            descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
+        })
+        if (!parked.ok) {
+          setCaixaMensagem(parked.error, { kind: "error" })
+          tocarFeedback("erro")
+          return
+        }
+        handleNovoCupom()
+      }
+      const res = await retomarVendaEmEsperaCaixa(id)
+      if (!res.ok) {
+        setCaixaMensagem(res.error, { kind: "error" })
+        tocarFeedback("erro")
+        return
+      }
+      // Token de gerente não é restaurado: exige nova autorização se precisar desconto.
+      limparEstadoDescontoGerente()
+      substituirCarrinho(res.itens)
+      // Recalcula VAREJO/ATACADO com a quantidade retomada (spec Fase 2).
+      for (const item of res.itens) {
+        const tipo = item.resultado?.tipoPreco ?? "VAREJO"
+        reprecificar({
+          itemId: item.id,
+          produtoId: item.produtoId,
+          quantidade: item.quantidade,
+          tipoPrecoAtual: tipo,
+        })
+      }
+      setCaixaMensagem(
+        caixaFmt(m.caixa.em_aberto_retomada, { n: String(res.numeroLocal) }),
+        { kind: "success" },
+      )
+      tocarFeedback("ok")
+      await recarregarEmEspera()
+      focarCampoBusca()
+    },
+    [
+      itens,
+      totalBruto,
+      totalDesconto,
+      totalLiquidoComGerente,
+      caixaStatus,
+      descontoGerentePercentual,
+      handleNovoCupom,
+      limparEstadoDescontoGerente,
+      substituirCarrinho,
+      reprecificar,
+      m.caixa.em_aberto_retomada,
+      m.caixa.em_aberto_finalize_antes,
+      recarregarEmEspera,
+      setCaixaMensagem,
+      tocarFeedback,
+      focarCampoBusca,
+    ],
+  )
+
+  const handleDescartarEmEspera = useCallback(
+    async (id: string) => {
+      const res = await descartarVendaEmEsperaCaixa(id)
+      if (!res.ok) {
+        setCaixaMensagem(res.error, { kind: "error" })
+        return
+      }
+      await recarregarEmEspera()
+    },
+    [recarregarEmEspera, setCaixaMensagem],
+  )
+
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
     if (raw == null) return null
     const normalizado = raw.trim().replace(",", ".")
@@ -576,8 +728,34 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleAbrirCaixa = useCallback(() => {
     if (processandoCaixa) return
-    setValorNumericoModal({ fluxo: "abrir_caixa", initial: "0" })
+    setAbrirTurnoAberto(true)
   }, [processandoCaixa])
+
+  const handleConfirmarAbrirTurno = useCallback(
+    (v: number) => {
+      void (async () => {
+        setProcessandoCaixa(true)
+        setCaixaMensagem(null)
+        try {
+          const res = await abrirCaixaOperador(v)
+          if (!res.ok) {
+            setCaixaMensagem(res.error, { kind: "error" })
+            tocarFeedback("erro")
+            return
+          }
+          setCaixaMensagem(
+            caixaFmt(m.caixa.msg_caixa_aberto, { id: res.caixaId.slice(0, 8) }),
+            { kind: "success" },
+          )
+          tocarFeedback("ok")
+          await recarregarStatusCaixa()
+        } finally {
+          setProcessandoCaixa(false)
+        }
+      })()
+    },
+    [m.caixa.msg_caixa_aberto, recarregarStatusCaixa, setCaixaMensagem, tocarFeedback],
+  )
 
   const handleFecharCaixa = useCallback(() => {
     if (processandoCaixa) return
@@ -613,26 +791,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (!valorNumericoModal) return
       const { fluxo } = valorNumericoModal
       if (fluxo === "abrir_caixa") {
-        void (async () => {
-          setProcessandoCaixa(true)
-          setCaixaMensagem(null)
-          try {
-            const res = await abrirCaixaOperador(v)
-            if (!res.ok) {
-              setCaixaMensagem(res.error, { kind: "error" })
-              tocarFeedback("erro")
-              return
-            }
-            setCaixaMensagem(
-              caixaFmt(m.caixa.msg_caixa_aberto, { id: res.caixaId.slice(0, 8) }),
-              { kind: "success" },
-            )
-            tocarFeedback("ok")
-            await recarregarStatusCaixa()
-          } finally {
-            setProcessandoCaixa(false)
-          }
-        })()
+        // Abrir caixa usa CaixaAbrirTurnoModal; ramo legado mantido por segurança.
+        handleConfirmarAbrirTurno(v)
         return
       }
       const blind = isCaixaAberto(caixaStatus) && caixaStatus.blindClosureEnabled
@@ -654,10 +814,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       valorNumericoModal,
       caixaStatus,
       executarFecharCaixa,
-      recarregarStatusCaixa,
-      setCaixaMensagem,
-      tocarFeedback,
-      m,
+      handleConfirmarAbrirTurno,
     ],
   )
 
@@ -925,9 +1082,28 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onReimprimir: useCallback(() => {
       if (lastReciboRef.current) setReimprimirModalAberto(true)
     }, []),
+    onConsultaRapida: () => setConsultaRapidaAberta(true),
     onDesfazerRemocao: handleDesfazerRemocao,
     pdvClassicAtalhos,
   })
+
+  const handleImprimirCupomHistorico = useCallback(
+    async (vendaId: string) => {
+      const res = await obterDetalheHistoricoVendaCaixa(vendaId)
+      if (!res.ok) {
+        setCaixaMensagem(res.error, { kind: "error" })
+        return
+      }
+      if (res.detalhe.itens.length === 0) {
+        setCaixaMensagem(m.caixa.historico_itens_indisponiveis, { kind: "error" })
+        return
+      }
+      lastReciboRef.current = historicoDetalheParaRecibo(res.detalhe, m.caixa.moeda_prefixo)
+      setHistoricoAberto(false)
+      setReimprimirModalAberto(true)
+    },
+    [m, setCaixaMensagem],
+  )
 
   const handleValidateSenhaGerente = useCallback(
     async (senha: string): Promise<ValidarSenhaGerenteResult> => {
@@ -1156,25 +1332,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                     ? "border-border bg-primary text-primary-foreground hover:bg-primary/90"
                     : "app-btn-accent",
                 )}
-                onClick={handleNovoCupom}
+                onClick={() => void handleNovaVendaOuEspera()}
                 disabled={carregandoRegras || finalizando}
               >
-                {m.caixa.novo_cupom}
+                {m.caixa.nova_venda_espera}
               </button>
-              {lastReciboRef.current && (
-                <button
-                  type="button"
-                  className={cn(
-                    "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
-                    pdvLayoutVariant === "classic"
-                      ? "border-border bg-card text-foreground hover:bg-muted"
-                      : "app-btn-neutral",
-                  )}
-                  onClick={() => setReimprimirModalAberto(true)}
-                >
-                  {m.caixa.reimprimir_cupom}
-                </button>
-              )}
               <div
                 className={cn(
                   "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
@@ -1183,7 +1345,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               >
                 {m.caixa.rail_titulo_operacoes}
               </div>
-              <CaixaPdvOperacoesButtons
+              <CaixaPdvOperacoesMenu
                 m={m}
                 idioma={idioma}
                 variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
@@ -1194,9 +1356,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 finalizando={finalizando}
                 validandoGerente={validandoGerente}
                 gerenteValidadoAte={gerenteValidadoAte}
+                podeReimprimir={!!lastReciboRef.current}
                 onAbrirSuprimento={handleAbrirSuprimento}
                 onAbrirSangria={handleAbrirSangria}
                 onValidarGerente={abrirGerenteModal}
+                onHistorico={() => setHistoricoAberto(true)}
+                onImprimirUltima={() => setReimprimirModalAberto(true)}
+                onFecharCaixa={handleFecharCaixaClick}
+                onAbrirCaixa={handleAbrirCaixaClick}
+                onConsultaRapida={() => setConsultaRapidaAberta(true)}
               />
               <div
                 className={cn(
@@ -1206,13 +1374,23 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               >
                 {m.caixa.rail_titulo_em_aberto}
               </div>
-              <CaixaRailTurnoSummary
+              <CaixaEmAbertoList
                 m={m}
-                idioma={idioma}
-                caixaAberto={isCaixaAberto(caixaStatus)}
+                vendas={vendasEmEspera}
+                carregando={carregandoEmEspera}
                 layoutVariant={pdvLayoutVariant === "classic" ? "classic" : "default"}
-                refreshToken={turnoRefreshToken}
+                onRetomar={(id) => void handleRetomarEmEspera(id)}
+                onDescartar={(id) => void handleDescartarEmEspera(id)}
               />
+              <div className="mt-auto border-t pt-2">
+                <CaixaRailTurnoSummary
+                  m={m}
+                  idioma={idioma}
+                  caixaAberto={isCaixaAberto(caixaStatus)}
+                  layoutVariant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+                  refreshToken={turnoRefreshToken}
+                />
+              </div>
             </aside>
           </div>
           {pdvLayoutVariant === "classic" && (
@@ -1226,7 +1404,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 {m.caixa.rail_titulo_operacoes}
               </div>
               <div className="mt-2">
-                <CaixaPdvOperacoesButtons
+                <CaixaPdvOperacoesMenu
                   m={m}
                   idioma={idioma}
                   variant="classic"
@@ -1237,9 +1415,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   finalizando={finalizando}
                   validandoGerente={validandoGerente}
                   gerenteValidadoAte={gerenteValidadoAte}
+                  podeReimprimir={!!lastReciboRef.current}
                   onAbrirSuprimento={handleAbrirSuprimento}
                   onAbrirSangria={handleAbrirSangria}
                   onValidarGerente={abrirGerenteModal}
+                  onHistorico={() => setHistoricoAberto(true)}
+                  onImprimirUltima={() => setReimprimirModalAberto(true)}
+                  onFecharCaixa={handleFecharCaixaClick}
+                  onAbrirCaixa={handleAbrirCaixaClick}
+                  onConsultaRapida={() => setConsultaRapidaAberta(true)}
                 />
               </div>
             </div>
@@ -1415,6 +1599,27 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           if (!open) setConfirmacaoPendente(null)
         }}
         onConfirm={handleConfirmarAcaoSensivel}
+      />
+      <CaixaConsultaRapidaModal
+        open={consultaRapidaAberta}
+        onOpenChange={setConsultaRapidaAberta}
+        m={m}
+        termoInicial={codigo}
+      />
+      <CaixaHistoricoSheet
+        open={historicoAberto}
+        onOpenChange={setHistoricoAberto}
+        m={m}
+        onImprimirCupom={handleImprimirCupomHistorico}
+      />
+      <CaixaAbrirTurnoModal
+        open={abrirTurnoAberto}
+        onOpenChange={setAbrirTurnoAberto}
+        m={m}
+        operadorLabel={operadorLabel}
+        initialValor="0"
+        parseValor={parseValorMonetario}
+        onConfirm={handleConfirmarAbrirTurno}
       />
     </>
   )

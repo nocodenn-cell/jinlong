@@ -50,8 +50,25 @@ import {
   registrarMovimentacaoImpl,
 } from '@/app/caixa/server/caixaMovimentacoes.impl'
 import { obterResumoVendasTurnoImpl } from '@/app/caixa/server/caixaTurnoResumo.impl'
+import { consultarProdutoRapidoCaixaImpl } from '@/app/caixa/server/caixaConsultaRapida.impl'
+import {
+  colocarVendaEmEsperaImpl,
+  descartarVendaEmEsperaImpl,
+  listarHistoricoOperadorImpl,
+  listarVendasEmEsperaImpl,
+  obterDetalheHistoricoVendaImpl,
+  retomarVendaEmEsperaImpl,
+} from '@/app/caixa/server/caixaVendaEspera.impl'
+import type { ItemCarrinho } from '@/stores/unifiedCartStore'
+import type { ConsultaRapidaResult } from '@/app/caixa/caixaActionTypes'
 
 export type { TurnoResumoResult } from '@/app/caixa/server/caixaTurnoResumo.impl'
+export type {
+  VendaEmEsperaCard,
+  HistoricoVendaOperador,
+  HistoricoVendaDetalhe,
+  HistoricoVendaItemDetalhe,
+} from '@/app/caixa/server/caixaVendaEspera.impl'
 
 export type {
   AbrirCaixaOperadorResult,
@@ -63,6 +80,7 @@ export type {
   CancelarVendaResult,
   CarregarRegrasResult,
   CaixaStatusOperadorResult,
+  ConsultaRapidaResult,
   CotacaoUsdBrlResult,
   FecharCaixaOperadorResult,
   FinalizarVendaCaixaResult,
@@ -186,6 +204,45 @@ export async function estornarMovimentacaoCaixa(
 
 export async function obterResumoVendasTurno() {
   return obterResumoVendasTurnoImpl()
+}
+
+export async function consultarProdutoRapidoCaixa(termo: string): Promise<ConsultaRapidaResult> {
+  return consultarProdutoRapidoCaixaImpl(termo)
+}
+
+export async function colocarVendaEmEsperaCaixa(input: {
+  itens: ItemCarrinho[]
+  totalBruto: number
+  totalDesconto: number
+  totalLiquido: number
+  caixaId?: string | null
+  rotulo?: string | null
+  descontoGerentePercentual?: number | null
+}) {
+  return colocarVendaEmEsperaImpl(input)
+}
+
+export async function listarVendasEmEsperaCaixa() {
+  return listarVendasEmEsperaImpl()
+}
+
+export async function retomarVendaEmEsperaCaixa(id: string) {
+  return retomarVendaEmEsperaImpl(id)
+}
+
+export async function descartarVendaEmEsperaCaixa(id: string, motivo?: string) {
+  return descartarVendaEmEsperaImpl(id, motivo)
+}
+
+export async function listarHistoricoOperadorCaixa(input?: {
+  inicio?: string | null
+  fim?: string | null
+}) {
+  return listarHistoricoOperadorImpl(input)
+}
+
+export async function obterDetalheHistoricoVendaCaixa(vendaId: string) {
+  return obterDetalheHistoricoVendaImpl(vendaId)
 }
 
 export async function cancelarVenda(

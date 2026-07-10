@@ -10,6 +10,7 @@ export const ROUTES = {
   onboarding: '/onboarding',
   caixa: {
     home: '/caixa',
+    historico: '/caixa/historico',
   },
   gerente: {
     home: '/gerente',
