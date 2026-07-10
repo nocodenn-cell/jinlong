@@ -78,7 +78,7 @@ function CaixaHeaderImpl({
         printerStatus={printerStatus}
         printerDeviceName={printerDeviceName}
       />
-      {layoutVariant !== "classic" && currentDateTime ? (
+      {currentDateTime ? (
         <div className="flex items-center gap-2 border-b border-jl-border-1 bg-jl-surface-base px-4 py-1 sm:px-6">
           <span className="inline-flex items-center rounded border border-jl-border-1 bg-jl-surface-soft px-2 py-0.5 text-[11px] tabular-nums text-jl-fg-3">
             {currentDateTime}
