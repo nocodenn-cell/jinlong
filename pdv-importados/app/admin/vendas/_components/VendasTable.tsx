@@ -1,22 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Eye, Ban } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
+import type { Mensagens } from '@/i18n/getMessages'
+import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
+import type { VendaListRow } from '@/app/gerente/vendas/actions'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
-import type { Mensagens } from '@/i18n/getMessages'
 
 export type VendaLinha = {
   id: string
   data: string | null
   total_liquido: number | null
+  total_bruto: number | null
   forma_pagamento: string | null
   status: string | null
+  caixa_id: string | null
   qtd_itens_total: number
   qtd_itens_distintos: number
   primeiro_produto: string | null
+  vendedor_nome: string | null
 }
 
 export type VendasLabels = {
@@ -25,7 +31,6 @@ export type VendasLabels = {
   colItens: string
   colPagamento: string
   colTotal: string
-  colCaixa: string
   colStatus: string
   colVendedor: string
   concluida: string
@@ -54,6 +59,22 @@ export type VendasLabels = {
   detalheLiquido: string
   detalheItens: string
   detalheNenhumItem: string
+  cancelarAcao: string
+}
+
+function toVendaListRow(linha: VendaLinha): VendaListRow {
+  return {
+    id: linha.id,
+    data: linha.data,
+    total_liquido: linha.total_liquido,
+    total_bruto: linha.total_bruto,
+    forma_pagamento: linha.forma_pagamento,
+    status: linha.status,
+    caixa_id: linha.caixa_id,
+    qtd_itens_total: linha.qtd_itens_total,
+    qtd_itens_distintos: linha.qtd_itens_distintos,
+    primeiro_produto: linha.primeiro_produto,
+  }
 }
 
 function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
@@ -168,7 +189,9 @@ export function VendasTable({
   m: Mensagens
   locale: string
 }) {
+  const router = useRouter()
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
+  const [cancelarAlvo, setCancelarAlvo] = useState<VendaLinha | null>(null)
 
   const columns: Column<VendaLinha>[] = [
     {
@@ -210,12 +233,6 @@ export function VendasTable({
         ),
     },
     {
-      key: 'caixa',
-      header: labels.colCaixa,
-      align: 'center',
-      cell: () => <span className="text-[12px] text-jl-fg-2">01</span>,
-    },
-    {
       key: 'status',
       header: labels.colStatus,
       align: 'center',
@@ -224,7 +241,7 @@ export function VendasTable({
     {
       key: 'vendedor',
       header: labels.colVendedor,
-      cell: () => <span className="text-[12px] text-jl-fg-3">—</span>,
+      cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.vendedor_nome ?? '—'}</span>,
     },
   ]
 
@@ -248,8 +265,21 @@ export function VendasTable({
             <ActionBtn label={`${labels.detalheTitulo} ${row.id.slice(0, 8)}`} onClick={() => setAlvo({ id: row.id })}>
               <Eye size={13} aria-hidden />
             </ActionBtn>
+            {row.status === 'CONCLUIDA' ? (
+              <ActionBtn label={`${labels.cancelarAcao} ${row.id.slice(0, 8)}`} onClick={() => setCancelarAlvo(row)}>
+                <Ban size={13} aria-hidden />
+              </ActionBtn>
+            ) : null}
           </div>
         )}
+      />
+
+      <VendaCancelarModal
+        venda={cancelarAlvo ? toVendaListRow(cancelarAlvo) : null}
+        locale={locale}
+        m={m}
+        onClose={() => setCancelarAlvo(null)}
+        onCancelado={() => router.refresh()}
       />
 
       <VendaDetailSheet
@@ -270,7 +300,7 @@ export function VendasTable({
           liquido: labels.detalheLiquido,
           itens: labels.detalheItens,
           nenhumItem: labels.detalheNenhumItem,
-          cancelar: 'Cancelar venda',
+          cancelar: labels.cancelarAcao,
         }}
       />
     </>

@@ -110,6 +110,17 @@ async function avaliarProdutoTesteApp(codigo: string): Promise<DiagnosticoCheck[
       },
     ]
   }
+  if (res.status === 'ambiguo') {
+    return [
+      {
+        id: 'app_produto_busca',
+        categoria: 'estoque',
+        titulo: 'Busca produto teste (app)',
+        status: 'aviso',
+        detalhe: res.mensagem,
+      },
+    ]
+  }
   const q = res.produto.quantidade_estoque
   const saldoOk = q !== null && q > 0
   return [
