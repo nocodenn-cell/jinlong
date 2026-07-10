@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils"
 
 type Props = {
   m: Mensagens
-  variant?: "default" | "classic"
   className?: string
 }
 
@@ -85,41 +84,35 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       ],
     },
     {
-      category: "Gerente (PDV Clássico)",
+      category: "Navegação por abas",
       shortcuts: [
         {
           keys: "Alt+Q",
           label: m.caixa.cart_bar_excluir_venda || "Excluir Venda",
-          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+S",
           label: m.caixa.finalizar_venda,
-          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+Z",
           label: m.caixa.pdv_tab_produto || "Aba Produto",
-          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+C",
           label: m.caixa.pdv_tab_cliente || "Aba Cliente",
-          context: "Apenas PDV clássico",
         },
         {
           keys: "Alt+B",
           label: m.caixa.pdv_tab_pgto || "Aba Pagamento",
-          context: "Apenas PDV clássico",
         },
       ],
     },
   ]
 }
 
-export function CaixaKeyboardShortcutsReference({ m, variant = "default", className }: Props) {
+export function CaixaKeyboardShortcutsReference({ m, className }: Props) {
   const [open, setOpen] = useState(false)
-  const classic = variant === "classic"
   const shortcutsData = buildShortcutsData(m)
 
   return (
@@ -129,10 +122,7 @@ export function CaixaKeyboardShortcutsReference({ m, variant = "default", classN
         size="sm"
         variant="ghost"
         className={cn(
-          "text-xs font-medium px-2 py-1.5 h-auto",
-          classic
-            ? "text-primary-foreground hover:bg-white/15"
-            : "text-jl-fg-2 hover:bg-jl-surface-soft",
+          "text-xs font-medium px-2 py-1.5 h-auto text-primary-foreground hover:bg-white/15",
           className,
         )}
         onClick={() => setOpen(true)}

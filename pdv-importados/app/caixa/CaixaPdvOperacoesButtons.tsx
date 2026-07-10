@@ -8,7 +8,6 @@ import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
-import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
@@ -24,8 +23,6 @@ type Props = {
   onAbrirSuprimento: () => void
   onAbrirSangria: () => void
   onValidarGerente: () => void
-  /** PDV clássico: botões em contraste com trilho / faixa mobile azul (alinhado à TopBar). */
-  variant?: "default" | "classic"
 }
 
 function CaixaPdvOperacoesButtonsImpl({
@@ -41,9 +38,7 @@ function CaixaPdvOperacoesButtonsImpl({
   onAbrirSuprimento,
   onAbrirSangria,
   onValidarGerente,
-  variant = "default",
 }: Props) {
-  const classic = variant === "classic"
   const [sistemaAberto, setSistemaAberto] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const painelRef = useRef<HTMLDivElement>(null)
@@ -106,12 +101,7 @@ function CaixaPdvOperacoesButtonsImpl({
           ref={triggerRef}
           type="button"
           variant="secondary"
-          className={cn(
-            "w-full min-h-11 text-xs sm:text-sm",
-            classic
-              ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
-          )}
+          className="w-full min-h-11 text-xs sm:text-sm border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
           aria-expanded={sistemaAberto}
           aria-haspopup="dialog"
           aria-controls={sistemaAberto ? painelId : undefined}
@@ -168,12 +158,7 @@ function CaixaPdvOperacoesButtonsImpl({
         <Button
           type="button"
           variant="secondary"
-          className={cn(
-            "min-h-11",
-            classic
-              ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
-          )}
+          className="min-h-11 border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
           onClick={onAbrirSuprimento}
           disabled={!caixaAberto || movimentandoCaixa || finalizando}
           aria-busy={movimentandoCaixa}
@@ -183,12 +168,7 @@ function CaixaPdvOperacoesButtonsImpl({
         <Button
           type="button"
           variant="secondary"
-          className={cn(
-            "min-h-11",
-            classic
-              ? "border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20"
-              : "border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20",
-          )}
+          className="min-h-11 border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20"
           onClick={onAbrirSangria}
           disabled={!caixaAberto || movimentandoCaixa || finalizando}
           aria-busy={movimentandoCaixa}
@@ -200,22 +180,14 @@ function CaixaPdvOperacoesButtonsImpl({
         <Button
           type="button"
           variant="secondary"
-          className={cn(
-            "inline-flex min-h-11 items-center gap-2",
-            classic
-              ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
-              : "border border-jl-accent/40 bg-jl-accent/10 text-jl-accent hover:bg-jl-accent/20",
-          )}
+          className="inline-flex min-h-11 items-center gap-2 border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
           onClick={onValidarGerente}
           disabled={validandoGerente || movimentandoCaixa}
           aria-busy={validandoGerente}
         >
           {!gerenteValidadoAte ? (
             <ImperialSealIcon
-              className={cn(
-                "h-4 w-4 shrink-0",
-                classic ? "text-primary drop-shadow-sm" : "app-accent-text",
-              )}
+              className="h-4 w-4 shrink-0 text-primary drop-shadow-sm"
               title={m.caixa.aria_selo_gerente}
               pulse
             />

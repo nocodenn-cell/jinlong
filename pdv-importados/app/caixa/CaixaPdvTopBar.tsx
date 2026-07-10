@@ -62,28 +62,16 @@ export function CaixaPdvTopBar({
           valor: `${m.caixa.moeda_prefixo} ${formatDecimalBRL(caixaStatus.valorSistemaDinheiro)}`,
         })
 
-  const classic = layoutVariant === "classic"
-
   return (
     <header
-      className={cn(
-        "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5",
-        classic
-          ? "border-border bg-primary text-primary-foreground shadow-[var(--jl-elev-1)]"
-          : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
-      )}
+      className="shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5 border-border bg-primary text-primary-foreground shadow-[var(--jl-elev-1)]"
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-        <span
-          className={cn(
-            "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
-            classic ? "border-primary-foreground/25 bg-white/10 text-primary-foreground" : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1",
-          )}
-        >
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary-foreground/25 bg-white/10 text-primary-foreground">
           <DragonEmblemIcon className="h-5 w-5" />
         </span>
-        <h1 className={cn("min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg", classic && "text-primary-foreground")}>
+        <h1 className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg text-primary-foreground">
           {m.caixa.topbar_titulo}
         </h1>
       </div>
@@ -91,28 +79,19 @@ export function CaixaPdvTopBar({
       <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:w-auto sm:flex-nowrap">
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-xs sm:text-sm">
           <span
-            className={cn(
-              "max-w-[11rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
-            )}
+            className="max-w-[11rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums border-primary-foreground/30 bg-white/10"
             title={turnoText}
           >
             {turnoText}
           </span>
           <span
-            className={cn(
-              "max-w-[14rem] truncate rounded-md border px-2 py-1 font-medium",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
-            )}
+            className="max-w-[14rem] truncate rounded-md border px-2 py-1 font-medium border-primary-foreground/30 bg-white/10"
             title={operadorText}
           >
             {operadorText}
           </span>
           <span
-            className={cn(
-              "max-w-[12rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-primary-foreground/30 bg-white/10" : "border-jl-border-1 bg-jl-surface-base",
-            )}
+            className="max-w-[12rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums border-primary-foreground/30 bg-white/10"
             title={fundoText}
           >
             {fundoText}
@@ -123,16 +102,10 @@ export function CaixaPdvTopBar({
               className={cn(
                 "max-w-[10rem] truncate rounded-md border px-2 py-1 text-xs font-medium",
                 printerStatus === "connected"
-                  ? classic
-                    ? "border-emerald-400/50 bg-emerald-400/20 text-emerald-100"
-                    : "border-[color:var(--jl-status-success-border)] bg-[color:var(--jl-status-success-bg)] text-[color:var(--jl-status-success-text)]"
+                  ? "border-emerald-400/50 bg-emerald-400/20 text-emerald-100"
                   : printerStatus === "error"
-                    ? classic
-                      ? "border-red-400/50 bg-red-400/20 text-red-100"
-                      : "border-destructive/40 bg-destructive/10 text-destructive"
-                    : classic
-                      ? "border-primary-foreground/30 bg-white/10"
-                      : "border-jl-border-1 bg-jl-surface-base",
+                    ? "border-red-400/50 bg-red-400/20 text-red-100"
+                    : "border-primary-foreground/30 bg-white/10",
               )}
             >
               {printerStatus === "connected" ? "🖨 OK" : printerStatus === "error" ? "🖨 Erro" : "🖨 …"}
@@ -140,22 +113,13 @@ export function CaixaPdvTopBar({
           )}
         </div>
 
-        <div
-          className={cn(
-            "flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3",
-            classic ? "border-primary-foreground/25" : "border-white/[0.12]",
-          )}
-        >
+        <div className="flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3 border-primary-foreground/25">
           {aberto ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className={cn(
-                "text-xs font-semibold sm:text-sm",
-                classic &&
-                  "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
-              )}
+              className="text-xs font-semibold sm:text-sm border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25"
               onClick={onFecharCaixa}
               disabled={processandoCaixa}
               aria-busy={processandoCaixa}
@@ -167,10 +131,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className={cn(
-                "text-xs font-semibold sm:text-sm",
-                classic && "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
-              )}
+              className="text-xs font-semibold sm:text-sm border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25"
               onClick={onAbrirCaixa}
               disabled={carregandoStatus}
             >
@@ -181,10 +142,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className={cn(
-                "text-xs font-semibold sm:text-sm",
-                classic && "border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25",
-              )}
+              className="text-xs font-semibold sm:text-sm border-primary-foreground/40 bg-white/15 text-primary-foreground hover:bg-white/25"
               onClick={onAbrirCaixa}
               disabled={processandoCaixa || carregandoStatus}
               aria-busy={processandoCaixa}
@@ -192,15 +150,10 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
-          <CaixaKeyboardShortcutsReference m={m} variant={classic ? "classic" : "default"} />
+          <CaixaKeyboardShortcutsReference m={m} />
           <SignOutButton
             label={m.comum.sair}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
-              classic
-                ? "border border-primary-foreground/35 bg-white/10 text-primary-foreground hover:bg-white/20"
-                : "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
-            )}
+            className="rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm border border-primary-foreground/35 bg-white/10 text-primary-foreground hover:bg-white/20"
           />
         </div>
       </div>

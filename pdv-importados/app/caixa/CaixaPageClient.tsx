@@ -375,7 +375,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         value={metodoPagamento}
         onChange={setMetodoPagamento}
         disabled={pagamentoControlesDesabilitados}
-        variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
       />
     ),
     [m, metodoPagamento, setMetodoPagamento, pagamentoControlesDesabilitados, pdvLayoutVariant],
@@ -1004,14 +1003,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "caixa-oriental-root",
         )}
       >
-        {pdvLayoutVariant !== "classic" && (
-          <span
-            aria-hidden
-            className="pointer-events-none fixed right-6 bottom-6 select-none text-[7rem] leading-none font-black text-amber-400/[0.06] z-0"
-          >
-            龍
-          </span>
-        )}
         <CaixaHeader
           m={m}
           idioma={idioma}
@@ -1155,7 +1146,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               <CaixaPdvOperacoesButtons
                 m={m}
                 idioma={idioma}
-                variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
                 carregandoRegras={carregandoRegras}
                 caixaStatus={caixaStatus}
                 caixaAberto={isCaixaAberto(caixaStatus)}
@@ -1179,7 +1169,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 m={m}
                 idioma={idioma}
                 caixaAberto={isCaixaAberto(caixaStatus)}
-                layoutVariant={pdvLayoutVariant === "classic" ? "classic" : "default"}
                 refreshToken={turnoRefreshToken}
               />
             </aside>
@@ -1197,7 +1186,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               <CaixaPdvOperacoesButtons
                 m={m}
                 idioma={idioma}
-                variant="classic"
                 carregandoRegras={carregandoRegras}
                 caixaStatus={caixaStatus}
                 caixaAberto={isCaixaAberto(caixaStatus)}
