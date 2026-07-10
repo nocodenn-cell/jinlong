@@ -20,6 +20,8 @@ export function labelFormaPagamentoVenda(
     case 'OUTROS':
     case 'OUTRO':
       return m.gerente.forma_outros
+    case 'FIADO':
+      return m.gerente.forma_fiado_historico
     default:
       return raw && String(raw).trim() ? String(raw).trim() : '—'
   }

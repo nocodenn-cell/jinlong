@@ -49,6 +49,26 @@ export type CalcularPrecoProdutoCaixaResult =
   | { ok: true; preco: number; tipo: 'VAREJO' | 'ATACADO' }
   | { ok: false; error: string }
 
+export type ConsultaRapidaProdutoDTO = {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  precoCalculado: number
+  tipoPreco: 'VAREJO' | 'ATACADO'
+  quantidade_estoque: number | null
+  estoque_minimo: number | null
+  ultimaVendaEm: string | null
+  ultimaCompraEm: string | null
+  margemPercentual: number | null
+  mostrarMargem: boolean
+}
+
+export type ConsultaRapidaResult =
+  | { ok: true; status: 'encontrado'; produto: ConsultaRapidaProdutoDTO }
+  | { ok: true; status: 'nao_encontrado' }
+  | { ok: true; status: 'ambiguo'; mensagem: string }
+  | { ok: false; error: string }
+
 export type ValidarGerenteDescontoResult =
   | { ok: true; token: string; expiraEm: string; maxDescontoPercentual: number; gerenteId: string }
   | { ok: false; error: string; scope?: string; lockUntil?: string }

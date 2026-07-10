@@ -22,6 +22,8 @@ type Params = {
   onFocarBusca: () => void
   onNovoCupom: () => void
   onReimprimir?: () => void
+  /** F3: consulta rápida de produto (sem adicionar ao carrinho). */
+  onConsultaRapida?: () => void
   /** Ctrl+Z: repõe o último item removido do carrinho (achado #13). */
   onDesfazerRemocao?: () => void
   pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
@@ -46,6 +48,7 @@ export function useCaixaKeyboardShortcuts({
   onFocarBusca,
   onNovoCupom,
   onReimprimir,
+  onConsultaRapida,
   onDesfazerRemocao,
   pdvClassicAtalhos = null,
 }: Params) {
@@ -78,6 +81,11 @@ export function useCaixaKeyboardShortcuts({
       if (e.code === "F2") {
         e.preventDefault()
         onFocarBusca()
+        return
+      }
+      if (e.code === "F3") {
+        e.preventDefault()
+        onConsultaRapida?.()
         return
       }
       if (e.code === "F6") {
@@ -150,6 +158,7 @@ export function useCaixaKeyboardShortcuts({
     onFocarBusca,
     onNovoCupom,
     onReimprimir,
+    onConsultaRapida,
     onDesfazerRemocao,
     pdvClassicAtalhos,
   ])

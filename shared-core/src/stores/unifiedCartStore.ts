@@ -52,6 +52,8 @@ export interface CarrinhoState {
   restaurarUltimoRemovido: () => void
   atualizarQuantidade: (id: string, quantidade: number) => void
   limparCarrinho: () => void
+  /** Substitui o carrinho por um snapshot (ex.: retomar venda em espera). */
+  substituirCarrinho: (itens: ItemCarrinho[]) => void
   setCartOwnerForSession: (userId: string | null) => void
   setRegras: (regras: unknown[]) => void
   alterarQuantidade: (id: string, quantidade: number) => void
@@ -279,6 +281,18 @@ export const useCartStore = create<CarrinhoState>()(
         set((state) => commitItensComTotais(state, updateItemQuantity(state.itens, id, quantidade))),
 
       limparCarrinho: () => set((state) => emptyCartFields(state)),
+
+      substituirCarrinho: (itens) =>
+        set((state) => {
+          const normalizados = itens.map(normalizarItemCarrinho)
+          return {
+            ...commitItensComTotais(state, normalizados),
+            descontoGerentePercentual: 0,
+            descontoGerenteValor: 0,
+            descontoGerenteToken: null,
+            ultimoRemovido: null,
+          }
+        }),
 
       setCartOwnerForSession: (userId) =>
         set((state) => {

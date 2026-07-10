@@ -48,6 +48,11 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
           context: "Sempre disponível",
         },
         {
+          keys: "F3",
+          label: m.caixa.operacoes_consulta_rapida,
+          context: "Sempre disponível",
+        },
+        {
           keys: "F6",
           label: m.caixa.fechar,
           context: "Caixa aberto",
