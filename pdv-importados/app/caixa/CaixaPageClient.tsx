@@ -173,7 +173,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   } | null>(null)
   type ValorModalFluxo = "abrir_caixa" | "fechar_contado"
   const [valorNumericoModal, setValorNumericoModal] = useState<
-    null | { fluxo: ValorModalFluxo; initial: string }
+    null | { fluxo: ValorModalFluxo; initial: number | null }
   >(null)
   const [motivoFecharModal, setMotivoFecharModal] = useState<
     | null
@@ -548,15 +548,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
   ])
 
-  const parseValorMonetario = useCallback((raw: string | null): number | null => {
-    if (raw == null) return null
-    const normalizado = raw.trim().replace(",", ".")
-    if (!normalizado) return null
-    const parsed = Number(normalizado)
-    if (!Number.isFinite(parsed) || parsed < 0) return null
-    return roundMoney2(parsed)
-  }, [])
-
   const erroExigeMotivoFechamento = useCallback((error: string) => {
     const e = error.toLowerCase()
     return e.includes("exige motivo") || (e.includes("diferença") && e.includes("motivo"))
@@ -601,7 +592,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const handleAbrirCaixa = useCallback(() => {
     if (processandoCaixa) return
-    setValorNumericoModal({ fluxo: "abrir_caixa", initial: "0" })
+    setValorNumericoModal({ fluxo: "abrir_caixa", initial: 0 })
   }, [processandoCaixa])
 
   const handleFecharCaixa = useCallback(() => {
@@ -610,7 +601,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.msg_fechar_cupom_nao_vazio, { kind: "warning" })
       return
     }
-    setValorNumericoModal({ fluxo: "fechar_contado", initial: "" })
+    setValorNumericoModal({ fluxo: "fechar_contado", initial: null })
   }, [processandoCaixa, itens.length, m.caixa.msg_fechar_cupom_nao_vazio, setCaixaMensagem])
 
   const handleAbrirSuprimento = useCallback(() => {
@@ -1387,7 +1378,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           placeholder={m.caixa.modal_valor_placeholder}
           initial={valorNumericoModal.initial}
           m={m}
-          parseValor={(raw) => parseValorMonetario(raw)}
           mensagemInvalido={
             valorNumericoModal.fluxo === "abrir_caixa"
               ? m.caixa.msg_valor_inicial_invalido

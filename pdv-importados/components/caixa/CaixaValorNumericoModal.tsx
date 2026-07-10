@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/CurrencyInput"
 import type { Mensagens } from "@/i18n/getMessages"
 
 export type CaixaValorNumericoModalProps = {
@@ -19,10 +19,8 @@ export type CaixaValorNumericoModalProps = {
   description?: string
   campoLabel: string
   placeholder?: string
-  initial: string
+  initial: number | null
   m: Mensagens
-  /** Interpreta texto (aceita vírgula decimal); null = inválido. */
-  parseValor: (raw: string) => number | null
   mensagemInvalido: string
   onConfirm: (valor: number) => void
 }
@@ -36,11 +34,10 @@ export function CaixaValorNumericoModal({
   placeholder,
   initial,
   m,
-  parseValor,
   mensagemInvalido,
   onConfirm,
 }: CaixaValorNumericoModalProps) {
-  const [valorStr, setValorStr] = useState(initial)
+  const [valor, setValor] = useState<number | null>(initial)
   const [erro, setErro] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -50,7 +47,7 @@ export function CaixaValorNumericoModal({
 
   useEffect(() => {
     if (!open) return
-    setValorStr(initial)
+    setValor(initial)
     setErro(null)
     queueMicrotask(() => inputRef.current?.focus())
   }, [open, initial])
@@ -68,14 +65,13 @@ export function CaixaValorNumericoModal({
   }, [open, fechar])
 
   const handleConfirmar = useCallback(() => {
-    const v = parseValor(valorStr)
-    if (v === null) {
+    if (valor === null || valor < 0) {
       setErro(mensagemInvalido)
       return
     }
-    onConfirm(v)
+    onConfirm(valor)
     fechar()
-  }, [valorStr, parseValor, mensagemInvalido, onConfirm, fechar])
+  }, [valor, mensagemInvalido, onConfirm, fechar])
 
   if (!open) return null
 
@@ -105,14 +101,11 @@ export function CaixaValorNumericoModal({
         <CardContent className="px-4 sm:px-6 space-y-2">
           <label className="block text-xs text-muted-foreground">
             {campoLabel}
-            <Input
+            <CurrencyInput
               ref={inputRef}
-              type="text"
-              inputMode="decimal"
-              autoComplete="off"
-              value={valorStr}
-              onChange={(e) => {
-                setValorStr(e.target.value)
+              value={valor}
+              onValueChange={(v) => {
+                setValor(v)
                 setErro(null)
               }}
               placeholder={placeholder}

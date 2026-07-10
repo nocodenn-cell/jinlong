@@ -16,6 +16,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 import { cn } from '@/lib/utils'
 import {
   criarCliente,
@@ -177,6 +178,57 @@ function JadeActionButton({
   )
 }
 
+function LiquidarTituloForm({
+  valorAberto,
+  f,
+  locale,
+  loading,
+  onSubmit,
+}: Readonly<{
+  valorAberto: number
+  f: ReturnType<typeof getMessages>['gerente']['financeiro_stub']
+  locale: string
+  loading: boolean
+  onSubmit: (p: { valor: number; forma_pagamento: (typeof FORMAS)[number] }) => void
+}>) {
+  const [valor, setValor] = useState<number | null>(null)
+
+  return (
+    <form
+      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+      onSubmit={(e) => {
+        e.preventDefault()
+        const fd = new FormData(e.currentTarget)
+        const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
+        onSubmit({ valor: valor ?? 0, forma_pagamento: forma })
+      }}
+    >
+      <CurrencyInput
+        value={valor}
+        onValueChange={setValor}
+        title={f.liq_valor_max_title.replace('{{valor}}', fmtGerenteBRL(valorAberto, locale))}
+        placeholder={f.liq_placeholder_valor}
+        className={`${inputClass} sm:max-w-[120px]`}
+      />
+      <select name="forma" className={`${selectClass} sm:max-w-[200px]`}>
+        <option value="DINHEIRO">DINHEIRO</option>
+        <option value="PIX">PIX</option>
+        <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
+        <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
+        <option value="OUTROS">OUTROS</option>
+      </select>
+      <button
+        type="submit"
+        disabled={loading || !valor || valor <= 0 || valor > valorAberto}
+        className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
+      >
+        {loading ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
+        {loading ? f.liq_loading : f.liq_ok}
+      </button>
+    </form>
+  )
+}
+
 export function FinanceiroGerentePageClient({
   idioma,
   clientes,
@@ -191,6 +243,7 @@ export function FinanceiroGerentePageClient({
   const router = useRouter()
   const refetch = useCallback(() => router.refresh(), [router])
   const semClientes = clientes.length === 0
+  const [valorTitulo, setValorTitulo] = useState<number | null>(null)
 
   const { mutate: mutCliente, loading: loadCliente } = useGerenteMutation(
     async (p: { nome: string; documento: string; telefone: string }) => {
@@ -497,45 +550,13 @@ export function FinanceiroGerentePageClient({
                         <GerenteStatusBadge status={t.status} />
                       </td>
                       <td className="min-w-[220px] px-3 py-2.5">
-                        <form
-                          className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
-                          onSubmit={(e) => {
-                            e.preventDefault()
-                            const fd = new FormData(e.currentTarget)
-                            const forma = parseForma(readFormDataString(fd, 'forma', 'DINHEIRO'))
-                            void mutLiquidar({
-                              titulo_id: t.id,
-                              valor: Number(fd.get('valor')),
-                              forma_pagamento: forma,
-                            })
-                          }}
-                        >
-                          <input
-                            name="valor"
-                            type="number"
-                            min={0.01}
-                            max={Number(t.valor_aberto)}
-                            step="0.01"
-                            title={f.liq_valor_max_title.replace('{{valor}}', fmtGerenteBRL(Number(t.valor_aberto), locale))}
-                            placeholder={f.liq_placeholder_valor}
-                            className={`${inputClass} sm:max-w-[120px]`}
-                          />
-                          <select name="forma" className={`${selectClass} sm:max-w-[200px]`}>
-                            <option value="DINHEIRO">DINHEIRO</option>
-                            <option value="PIX">PIX</option>
-                            <option value="CARTAO_DEBITO">CARTAO_DEBITO</option>
-                            <option value="CARTAO_CREDITO">CARTAO_CREDITO</option>
-                            <option value="OUTROS">OUTROS</option>
-                          </select>
-                          <button
-                            type="submit"
-                            disabled={loadLiquidar}
-                            className="inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold shadow-sm disabled:opacity-55 app-btn-neutral"
-                          >
-                            {loadLiquidar ? <DragonOuroLoader iconClassName="h-3.5 w-3.5" /> : null}
-                            {loadLiquidar ? f.liq_loading : f.liq_ok}
-                          </button>
-                        </form>
+                        <LiquidarTituloForm
+                          valorAberto={Number(t.valor_aberto)}
+                          f={f}
+                          locale={locale}
+                          loading={loadLiquidar}
+                          onSubmit={(p) => void mutLiquidar({ titulo_id: t.id, ...p })}
+                        />
                       </td>
                     </tr>
                   ))
@@ -616,7 +637,7 @@ export function FinanceiroGerentePageClient({
                 const fd = new FormData(e.currentTarget)
                 void mutTitulo({
                   cliente_id: readFormDataString(fd, 'cliente_id'),
-                  valor_total: Number(fd.get('valor_total')),
+                  valor_total: valorTitulo ?? 0,
                   descricao: readFormDataString(fd, 'descricao'),
                   vencimento: readFormDataString(fd, 'vencimento'),
                 })
@@ -638,13 +659,10 @@ export function FinanceiroGerentePageClient({
                 </select>
               </FinField>
               <FinField id="fin-valor-tit" label={f.label_valor_total}>
-                <input
+                <CurrencyInput
                   id="fin-valor-tit"
-                  name="valor_total"
-                  type="number"
-                  min={0.01}
-                  step="0.01"
-                  required
+                  value={valorTitulo}
+                  onValueChange={setValorTitulo}
                   placeholder={f.ph_valor_titulo}
                   className={inputClass}
                 />
@@ -655,7 +673,10 @@ export function FinanceiroGerentePageClient({
               <FinField id="fin-ven" label={f.label_vencimento}>
                 <input id="fin-ven" name="vencimento" type="date" className={inputClass} />
               </FinField>
-              <JadeSubmitButton loading={loadTitulo} disabled={semClientes} className="sm:col-span-2 sm:justify-self-end">
+              <JadeSubmitButton
+                loading={loadTitulo}
+                disabled={semClientes || !valorTitulo || valorTitulo <= 0}
+                className="sm:col-span-2 sm:justify-self-end">
                 {loadTitulo ? f.btn_criando : f.btn_criar_titulo}
               </JadeSubmitButton>
             </form>
