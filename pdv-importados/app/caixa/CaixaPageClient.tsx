@@ -890,22 +890,19 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   })
 
   const pdvClassicAtalhos = useMemo(
-    () =>
-      pdvLayoutVariant === "classic"
-        ? {
-            onExcluirVenda: handleNovoCupom,
-            onFinalizarVenda: () => void handleFinalizar(),
-            abas: {
-              produto: () => {
-                setAbaPdvAtiva("produto")
-                focarCampoBusca()
-              },
-              cliente: () => setAbaPdvAtiva("cliente"),
-              pgto: () => setAbaPdvAtiva("pgto"),
-            },
-          }
-        : null,
-    [pdvLayoutVariant, handleNovoCupom, handleFinalizar, focarCampoBusca],
+    () => ({
+      onExcluirVenda: handleNovoCupom,
+      onFinalizarVenda: () => void handleFinalizar(),
+      abas: {
+        produto: () => {
+          setAbaPdvAtiva("produto")
+          focarCampoBusca()
+        },
+        cliente: () => setAbaPdvAtiva("cliente"),
+        pgto: () => setAbaPdvAtiva("pgto"),
+      },
+    }),
+    [handleNovoCupom, handleFinalizar, focarCampoBusca],
   )
 
   useCaixaKeyboardShortcuts({
@@ -1038,7 +1035,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 tab={abaPdvAtiva}
                 onTabChange={setAbaPdvAtiva}
                 layoutVariant={pdvLayoutVariant}
-                mostrarAtalhos={pdvLayoutVariant === "classic"}
+                mostrarAtalhos
                 operadorLabel={operadorLabel}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}

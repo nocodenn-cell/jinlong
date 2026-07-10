@@ -1,10 +1,10 @@
 import { useEffect } from "react"
 
-/** Atalhos extras do layout PDV clássico (Fase E). Só passar quando `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic`. */
+/** Atalhos Alt+Q/S/Z/C/B do PDV (layout único). */
 export type CaixaPdvClassicAtalhos = {
   onExcluirVenda: () => void
   onFinalizarVenda: () => void
-  /** Só registra Alt+Z/C/B quando `abas` for passado (layout PDV clássico). */
+  /** Só registra Alt+Z/C/B quando `abas` for passado. */
   abas?: {
     produto?: () => void
     cliente?: () => void
