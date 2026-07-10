@@ -125,7 +125,7 @@ export function CaixaPdvTopBar({
                 printerStatus === "connected"
                   ? classic
                     ? "border-emerald-400/50 bg-emerald-400/20 text-emerald-100"
-                    : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    : "border-[color:var(--jl-status-success-border)] bg-[color:var(--jl-status-success-bg)] text-[color:var(--jl-status-success-text)]"
                   : printerStatus === "error"
                     ? classic
                       ? "border-red-400/50 bg-red-400/20 text-red-100"

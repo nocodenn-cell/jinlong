@@ -20,7 +20,7 @@ const kindClass: Record<CaixaToastKind, string> = {
   success:
     'border border-success/45 bg-card/95 text-success shadow-lg backdrop-blur-sm',
   warning:
-    'border border-amber-500/45 bg-card/95 text-amber-800 shadow-lg backdrop-blur-sm',
+    'border border-[color:var(--jl-status-warning-border)] bg-card/95 text-[color:var(--jl-status-warning-text)] shadow-lg backdrop-blur-sm',
   error:
     'border border-destructive/45 bg-card/95 text-destructive shadow-lg backdrop-blur-sm',
 }

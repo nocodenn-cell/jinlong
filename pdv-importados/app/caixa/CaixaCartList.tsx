@@ -440,7 +440,7 @@ function MetaPdvBloco({
 
   const origemClass =
     origem === "china_manual"
-      ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
+      ? "border-[color:var(--jl-status-warning-border)] bg-[color:var(--jl-status-warning-bg)] text-[color:var(--jl-status-warning-text)]"
       : CAIXA_CHIP_SUCCESS
 
   return (
@@ -477,7 +477,7 @@ function TipoPrecoBadge({
       : tipo === "MANUAL"
         ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
         : tipo === "PROMOCAO"
-          ? "bg-blue-900/30 text-blue-400 border border-blue-700"
+          ? "border-[color:var(--jl-status-info-border)] bg-[color:var(--jl-status-info-bg)] text-[color:var(--jl-status-info-text)]"
           : "border border-border text-muted-foreground bg-muted"
   const badge = (
     <Badge

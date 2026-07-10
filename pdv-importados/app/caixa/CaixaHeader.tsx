@@ -87,9 +87,9 @@ function CaixaHeaderImpl({
             className={cn(
               "inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-medium",
               isCaixaAberto(caixaStatus)
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                ? "border-[color:var(--jl-status-success-border)] bg-[color:var(--jl-status-success-bg)] text-[color:var(--jl-status-success-text)]"
                 : caixaStatus?.status === "ERRO"
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                  ? "border-[color:var(--jl-status-danger-border)] bg-[color:var(--jl-status-danger-bg)] text-[color:var(--jl-status-danger-text)]"
                   : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-3",
             )}
           >
