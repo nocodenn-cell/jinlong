@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
+import { createClient } from '@/lib/supabase/server'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
@@ -113,18 +114,32 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   }
 
   const res = await buscarVendasPaginadasAction(page, filtros)
-  const vendas: VendaLinha[] = res.ok
-    ? res.vendas.map((v) => ({
-        id: v.id,
-        data: v.data,
-        total_liquido: v.total_liquido,
-        forma_pagamento: v.forma_pagamento,
-        status: v.status,
-        qtd_itens_total: v.qtd_itens_total,
-        qtd_itens_distintos: v.qtd_itens_distintos,
-        primeiro_produto: v.primeiro_produto,
-      }))
-    : []
+  const vendasRes = res.ok ? res.vendas : []
+
+  const operadorIds = Array.from(
+    new Set(vendasRes.map((v) => v.operador_id).filter((id): id is string => Boolean(id))),
+  )
+  const nomeOperadorPorId = new Map<string, string>()
+  if (operadorIds.length > 0) {
+    const supabase = await createClient()
+    const { data: usuariosRaw } = await supabase.from('usuarios').select('id, nome').in('id', operadorIds)
+    for (const u of usuariosRaw ?? []) nomeOperadorPorId.set(u.id, u.nome)
+  }
+
+  const vendas: VendaLinha[] = vendasRes.map((v) => ({
+    id: v.id,
+    data: v.data,
+    total_liquido: v.total_liquido,
+    total_bruto: v.total_bruto,
+    forma_pagamento: v.forma_pagamento,
+    status: v.status,
+    caixa_id: v.caixa_id,
+    operador_id: v.operador_id,
+    qtd_itens_total: v.qtd_itens_total,
+    qtd_itens_distintos: v.qtd_itens_distintos,
+    primeiro_produto: v.primeiro_produto,
+    vendedor_nome: v.operador_id ? nomeOperadorPorId.get(v.operador_id) ?? null : null,
+  }))
   const hasMore = res.ok ? res.hasMore : false
   const loadError = res.ok ? null : res.error
 
@@ -295,13 +310,12 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} labels={{
+        <VendasTable vendas={vendas} m={m} locale={locale} labels={{
           colVenda: ui.vendas_col_venda,
           colHora: ui.vendas_col_hora,
           colItens: ui.vendas_col_itens,
           colPagamento: m.gerente.col_forma,
           colTotal: m.gerente.col_total,
-          colCaixa: ui.vendas_col_caixa,
           colStatus: m.gerente.col_status,
           colVendedor: ui.vendas_col_vendedor,
           concluida: m.gerente.venda_status_concluida,
@@ -330,6 +344,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           detalheLiquido: ui.vendas_detalhe_liquido,
           detalheItens: m.gerente.sec_itens_venda,
           detalheNenhumItem: ui.vendas_detalhe_nenhum_item,
+          cancelarAcao: ui.vendas_acao_cancelar,
         }} />
 
         {page > 1 || hasMore ? (

@@ -190,7 +190,12 @@ export function CaixaPdvOperadorTabs({
               </button>
             )}
           </div>
-          {metodoPagamentoPanel ? <div className="mb-1">{metodoPagamentoPanel}</div> : null}
+          {/* Seletor rápido só é relevante para o pagamento em parcela única — uma vez
+              que o operador abre o split, cada parcela tem sua própria forma (abaixo)
+              e o seletor rápido deixaria de refletir a realidade se continuasse visível. */}
+          {metodoPagamentoPanel && pagamentos.length === 1 ? (
+            <div className="mb-1">{metodoPagamentoPanel}</div>
+          ) : null}
 
           {/* Lista de parcelas */}
           <div className="space-y-3">

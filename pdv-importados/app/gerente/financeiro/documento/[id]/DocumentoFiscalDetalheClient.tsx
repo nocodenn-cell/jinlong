@@ -43,10 +43,17 @@ type Props = Readonly<{
   doc: DocumentoFiscalDetalheDoc
   eventos: DocumentoFiscalDetalheEvento[]
   voltarLabel: string
+  voltarHref?: string
   locale: string
 }>
 
-export function DocumentoFiscalDetalheClient({ doc, eventos, voltarLabel, locale }: Props) {
+export function DocumentoFiscalDetalheClient({
+  doc,
+  eventos,
+  voltarLabel,
+  voltarHref = '/gerente/financeiro',
+  locale,
+}: Props) {
   const router = useRouter()
   const refetch = useCallback(() => router.refresh(), [router])
 
@@ -64,7 +71,7 @@ export function DocumentoFiscalDetalheClient({ doc, eventos, voltarLabel, locale
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-      <Link href="/gerente/financeiro" className="gerente-nav-back text-sm font-medium hover:underline">
+      <Link href={voltarHref} className="gerente-nav-back text-sm font-medium hover:underline">
         ← {voltarLabel}
       </Link>
       <h1 className="gerente-fin-page-title mt-4 text-2xl font-semibold tracking-tight">Documento fiscal</h1>

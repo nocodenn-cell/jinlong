@@ -58,7 +58,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     fetchFinanceiroTitulosKpis(supabase),
     supabase
       .from('documentos_fiscais_pendentes')
-      .select('id, tipo_doc, status, created_at')
+      .select('id, venda_id, tipo_doc, status, tentativas, ultimo_erro, created_at')
       .in('status', ['PENDENTE', 'ERRO'])
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -67,8 +67,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
 
   const fiscal = (fiscalRes.data ?? []).map((row) => ({
     id: row.id,
+    vendaId: row.venda_id,
     tipoDoc: row.tipo_doc,
     status: row.status,
+    tentativas: row.tentativas ?? 0,
+    ultimoErro: row.ultimo_erro,
     criadoEm: row.created_at,
   }))
 
@@ -132,7 +135,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         subtitle={ui.financeiro_subtitulo}
         filters={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={ROUTES.gerente.financeiroContasPagar} className="admin-v2-btn-secondary">
+            <Link href={ROUTES.admin.financeiroContasPagar} className="admin-v2-btn-secondary">
               {m.contas_pagar.titulo}
             </Link>
           </div>
@@ -200,6 +203,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             filaFiscal: ui.financeiro_section_fila,
             filaFiscalVazioTitulo: ui.financeiro_fila_fiscal_vazio_titulo,
             filaFiscalVazioSub: ui.financeiro_fila_fiscal_vazio_sub,
+            filaFiscalLinkTimeline: ui.financeiro_fila_fiscal_link_timeline,
+            filaFiscalBtnReprocessar: ui.financeiro_fila_fiscal_btn_reprocessar,
+            filaFiscalBtnReprocessando: ui.financeiro_fila_fiscal_btn_reprocessando,
+            filaFiscalConfirmReprocessar: ui.financeiro_fila_fiscal_confirm_reprocessar,
+            filaFiscalToastReprocessarOk: ui.financeiro_fila_fiscal_toast_reprocessar_ok,
             locale,
             contas: {
               colCliente: ui.financeiro_col_cliente,
