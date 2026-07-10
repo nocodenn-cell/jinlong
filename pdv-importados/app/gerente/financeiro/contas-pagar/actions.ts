@@ -162,6 +162,7 @@ export async function registrarPagamentoAction(
     }
 
     revalidatePath('/gerente/financeiro/contas-pagar')
+    revalidatePath('/admin/financeiro')
     return { ok: true, conta: mapRow(data as Record<string, unknown>) }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao registrar pagamento.' }
@@ -192,6 +193,7 @@ export async function cancelarContaPagarAction(
       .in('status', ['PENDENTE', 'PARCIAL', 'ATRASADO'])
     if (error) return { ok: false, error: mensagemErroComSecao('Conta a pagar', error.message) }
     revalidatePath('/gerente/financeiro/contas-pagar')
+    revalidatePath('/admin/financeiro')
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao cancelar.' }

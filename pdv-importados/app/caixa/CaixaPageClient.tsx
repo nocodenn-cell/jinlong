@@ -76,10 +76,7 @@ import {
   metodoPagamentoToForma,
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
-import {
-  CaixaPdvOperadorTabs,
-  type CaixaPdvOperadorTabId,
-} from "@/app/caixa/CaixaPdvOperadorTabs"
+import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { cn } from "@/lib/utils"
 
@@ -190,7 +187,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     | { tipo: "cancelar"; item: MovimentacaoCaixaDTO }
     | { tipo: "estornar"; item: MovimentacaoCaixaDTO }
   >(null)
-  const [abaPdvAtiva, setAbaPdvAtiva] = useState<CaixaPdvOperadorTabId>("produto")
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
   const [consultaRapidaAberta, setConsultaRapidaAberta] = useState(false)
   const [historicoAberto, setHistoricoAberto] = useState(false)
@@ -529,7 +525,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem(null)
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
-    setAbaPdvAtiva("produto")
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
@@ -1058,12 +1053,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             onExcluirVenda: handleNovoCupom,
             onFinalizarVenda: () => void handleFinalizar(),
             abas: {
-              produto: () => {
-                setAbaPdvAtiva("produto")
-                focarCampoBusca()
-              },
-              cliente: () => setAbaPdvAtiva("cliente"),
-              pgto: () => setAbaPdvAtiva("pgto"),
+              produto: () => focarCampoBusca(),
             },
           }
         : null,
@@ -1218,12 +1208,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             <div className="min-h-0 flex flex-col md:min-h-0">
               <CaixaPdvOperadorTabs
                 m={m}
-                idioma={idioma}
-                tab={abaPdvAtiva}
-                onTabChange={setAbaPdvAtiva}
                 layoutVariant={pdvLayoutVariant}
-                mostrarAtalhos={pdvLayoutVariant === "classic"}
-                operadorLabel={operadorLabel}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}

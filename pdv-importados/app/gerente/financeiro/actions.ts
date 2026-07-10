@@ -49,6 +49,7 @@ export async function criarCliente(input: { nome: string; documento?: string; te
     }
   }
   revalidatePath('/gerente/financeiro')
+  revalidatePath('/admin/financeiro')
   return { success: true, data: data.id as string }
 }
 
@@ -89,6 +90,7 @@ export async function criarTituloReceber(input: {
         )
       }
       revalidatePath('/gerente/financeiro')
+  revalidatePath('/admin/financeiro')
       return data.id as string
     }),
   )
@@ -116,6 +118,7 @@ export async function liquidarTitulo(input: {
   })
   if (error) return { success: false, error: mensagemErroComSecao('Liquidação', error.message) }
   revalidatePath('/gerente/financeiro')
+  revalidatePath('/admin/financeiro')
   return { success: true, data: null }
 }
 
@@ -133,6 +136,7 @@ export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
   if (error)
     return { success: false, error: mensagemErroComSecao('Documento fiscal', error.message) }
   revalidatePath('/gerente/financeiro', 'layout')
+  revalidatePath('/admin/financeiro', 'layout')
   return { success: true, data: null }
 }
 
@@ -147,7 +151,9 @@ export async function reprocessarDocumentoFiscal(documento_id: string): Promise<
   if (error)
     return { success: false, error: mensagemErroComSecao('Reprocessar documento', error.message) }
   revalidatePath('/gerente/financeiro', 'layout')
+  revalidatePath('/admin/financeiro', 'layout')
   revalidatePath(`/gerente/financeiro/documento/${documento_id}`)
+  revalidatePath('/admin/financeiro')
   return { success: true, data: null }
 }
 
@@ -187,6 +193,7 @@ export async function processarFilaFiscalAgora(limit = 20): Promise<R<{ emitted:
       }
     }
     revalidatePath('/gerente/financeiro', 'layout')
+  revalidatePath('/admin/financeiro', 'layout')
     return {
       success: true,
       data: {

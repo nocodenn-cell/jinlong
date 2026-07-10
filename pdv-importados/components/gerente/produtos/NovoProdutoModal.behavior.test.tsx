@@ -78,7 +78,7 @@ describe('NovoProdutoModal — ProdutoForm unificado', () => {
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
 
     expectPayloadComGatilho(criarProdutoMock)
-    expect(onCriado).toHaveBeenCalled()
-    expect(onOpenChange).toHaveBeenCalledWith(false)
+    await vi.waitFor(() => expect(onCriado).toHaveBeenCalled())
+    expect(container.textContent).toContain(m.produtos.pos_salvar_hint)
   })
 })

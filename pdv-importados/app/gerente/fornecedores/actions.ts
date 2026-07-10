@@ -158,6 +158,7 @@ export async function salvarFornecedorAction(
       return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     }
     revalidatePath('/gerente/fornecedores')
+    revalidatePath('/admin/fornecedores')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, fornecedor: data as FornecedorListRow }
   } catch (e) {
@@ -191,6 +192,7 @@ export async function excluirFornecedorAction(
     const { error } = await supabase.from('fornecedores').delete().eq('id', id)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     revalidatePath('/gerente/fornecedores')
+    revalidatePath('/admin/fornecedores')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true }
   } catch (e) {
@@ -216,6 +218,7 @@ export async function bulkAtivarFornecedoresAction(
       .select('id')
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     revalidatePath('/gerente/fornecedores')
+    revalidatePath('/admin/fornecedores')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, afetados: data?.length ?? 0 }
   } catch (e) {
@@ -247,6 +250,7 @@ export async function bulkExcluirFornecedoresAction(
     const { error } = await supabase.from('fornecedores').delete().in('id', liberados)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     revalidatePath('/gerente/fornecedores')
+    revalidatePath('/admin/fornecedores')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, excluidos: liberados.length, bloqueados: bloqueadosIds.size }
   } catch (e) {

@@ -52,6 +52,7 @@ export default defineConfig(({ mode }) => {
         '**/dist/**',
         '**/.next/**',
         'app/caixa/server/vendaConsistency.test.ts',
+        'app/caixa/server/cancelarVendaContrato.integration.test.ts',
       ],
       globals: false,
       coverage: {

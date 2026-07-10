@@ -104,17 +104,7 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
         },
         {
           keys: "Alt+Z",
-          label: m.caixa.pdv_tab_produto || "Aba Produto",
-          context: "Apenas PDV clássico",
-        },
-        {
-          keys: "Alt+C",
-          label: m.caixa.pdv_tab_cliente || "Aba Cliente",
-          context: "Apenas PDV clássico",
-        },
-        {
-          keys: "Alt+B",
-          label: m.caixa.pdv_tab_pgto || "Aba Pagamento",
+          label: m.caixa.pdv_tab_produto || "Focar busca",
           context: "Apenas PDV clássico",
         },
       ],

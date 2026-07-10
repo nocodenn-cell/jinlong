@@ -116,6 +116,7 @@ export async function cancelarVendaImpl(
     if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
 
     revalidatePath('/caixa')
+    revalidatePath('/admin/vendas')
     revalidatePath('/gerente/vendas')
     revalidatePath(`/gerente/vendas/${vendaIdTrim}`)
     revalidatePath('/gerente/caixas')
@@ -383,6 +384,7 @@ export async function finalizarVendaCaixaImpl(
     await registrarAlertasLevesVenda(supabase, String(row.venda_id), lojaId, itensAut)
 
     revalidatePath('/caixa')
+    revalidatePath('/admin/vendas')
     revalidatePath('/gerente/vendas')
     revalidatePath('/gerente/caixas')
     revalidatePath('/gerente/financeiro')

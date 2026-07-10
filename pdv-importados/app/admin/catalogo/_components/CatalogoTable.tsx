@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
 import { Eye, ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
@@ -87,8 +88,15 @@ export function CatalogoTable({
   opcoes: OpcoesFiltrosProdutos
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [editando, setEditando] = useState<CatalogoProduto | null>(null)
   const [novoOpen, setNovoOpen] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('modal') === 'novo') {
+      setNovoOpen(true)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -159,8 +167,18 @@ export function CatalogoTable({
       cell: (r) => {
         if (r.quantidade_atual === null) return <span className="text-jl-fg-3">—</span>
         const v = r.quantidade_atual
+        const estoqueHref = adminEstoqueProdutoQuery(r.nome)
         return (
-          <span className={v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400'}>{v}</span>
+          <Link
+            href={estoqueHref}
+            title="Ver e ajustar no estoque"
+            className={cn(
+              'tabular-nums underline-offset-2 hover:underline',
+              v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400',
+            )}
+          >
+            {v}
+          </Link>
         )
       },
     },

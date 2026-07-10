@@ -6,6 +6,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
+import type { Mensagens } from '@/i18n/getMessages'
 
 export type VendaLinha = {
   id: string
@@ -156,7 +157,17 @@ function ActionBtn({
   )
 }
 
-export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: VendasLabels }) {
+export function VendasTable({
+  vendas,
+  labels,
+  m,
+  locale,
+}: {
+  vendas: VendaLinha[]
+  labels: VendasLabels
+  m: Mensagens
+  locale: string
+}) {
   const [alvo, setAlvo] = useState<VendaAlvo | null>(null)
 
   const columns: Column<VendaLinha>[] = [
@@ -244,6 +255,8 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
       <VendaDetailSheet
         alvo={alvo}
         onClose={() => setAlvo(null)}
+        m={m}
+        locale={locale}
         labels={{
           titulo: labels.detalheTitulo,
           erroTitulo: labels.detalheErroTitulo,
@@ -257,6 +270,7 @@ export function VendasTable({ vendas, labels }: { vendas: VendaLinha[]; labels: 
           liquido: labels.detalheLiquido,
           itens: labels.detalheItens,
           nenhumItem: labels.detalheNenhumItem,
+          cancelar: 'Cancelar venda',
         }}
       />
     </>

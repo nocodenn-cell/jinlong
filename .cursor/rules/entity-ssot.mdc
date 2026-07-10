@@ -1,0 +1,68 @@
+---
+description: Single Source of Truth para entidades de negócio (pós-consolidação Admin V2)
+alwaysApply: true
+---
+
+# SSoT de entidades — telas oficiais
+
+Nenhuma **nova tela ou fluxo** pode criar ou alterar cadastros fora destas casas:
+
+| Entidade | Tela oficial | Rota |
+|----------|--------------|------|
+| Produto | Catálogo | `/admin/catalogo` |
+| Cliente | Clientes | `/admin/clientes` |
+| Fornecedor | Fornecedores | `/admin/fornecedores` |
+| Estoque (saldo manual) | Estoque | `/admin/estoque` |
+
+## Permitido
+
+- **Produto:** modal/página do catálogo, import CSV no catálogo, import NF-e em `/admin/estoque/importar-nfe`.
+- **Cliente:** lista/modal em `/admin/clientes`.
+- **Fornecedor:** lista/modal em `/admin/fornecedores`.
+- **Estoque:** ajuste, recebimento, transferência, kardex em `/admin/estoque/*`.
+- **Venda:** criar apenas em `/caixa` (e `pdv-local`); cancelar em `/admin/vendas`.
+- **Financeiro:** receber/pagar/fiscal unificados em `/admin/financeiro` (abas).
+
+## Bloqueado em código novo
+
+- PDV (`/caixa`) criar cliente completo ou fornecedor.
+- Estoque criar produto (exceto NF-e/recebimento já previstos).
+- Financeiro criar fornecedor ou cliente (usar link para telas oficiais).
+- Novos atalhos inline duplicando CRUD (ex.: combobox com modal de cadastro completo).
+
+## Exceções legadas (dívida — não replicar)
+
+### `FornecedorCombobox` (cadastro inline no form de produto)
+
+Cadastro rápido de fornecedor dentro do modal de produto. Preferir `/admin/fornecedores`.
+
+### `ProdutoFormModal` — estoque inicial **somente na criação**
+
+**Única exceção SSoT de estoque com escopo fechado:**
+
+| Momento | Permitido | Proibido |
+|---------|-----------|----------|
+| **Durante criação** (primeiro save, produto ainda não existe) | `aplicarEstoqueInicial()` via `atualizarEstoqueProduto` com motivo `ACERTO_INVENTARIO` | — |
+| **Após criação** (produto já persistido) | — | Qualquer alteração de saldo fora de `/admin/estoque/*` |
+
+**Regra para código novo:** não usar `ProdutoFormModal` / `aplicarEstoqueInicial` como precedente para ajustar estoque em outros fluxos (PDV, financeiro, recebimento manual, etc.). Pós-criação → sempre `/admin/estoque`.
+
+Implementação: `components/gerente/produtos/ProdutoFormModal.tsx` → `aplicarEstoqueInicial`.
+
+### Actions `app/gerente/*/actions.ts`
+
+Camada de dados compartilhada com Admin V2 — não é UI nova; redirects apontam para `/admin/*`.
+
+## Componentes gerente arquivados (evidência de migração)
+
+Page clients em `app/gerente/*/*PageClient.tsx` marcados `@legacy` — **não apagar** até 1–2 releases estáveis. Substitutos em `/admin/*`.
+
+## Verificação
+
+Rodar antes de PRs que tocam CRUD:
+
+```bash
+npm run check:entity-ssot
+```
+
+Script: `pdv-importados/scripts/check-entity-ssot-boundary.mjs`.

@@ -186,6 +186,7 @@ export async function salvarClienteAction(
     if (readErr) return { ok: false, error: readErr.message }
 
     revalidatePath('/gerente/clientes')
+    revalidatePath('/admin/clientes')
     return { ok: true, cliente: mapClienteRow(row as ClienteViewRow) }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar cliente.' }
@@ -253,6 +254,7 @@ export async function excluirClienteAction(
       if (anonErr) return { ok: false, error: anonErr.message }
 
       revalidatePath('/gerente/clientes')
+    revalidatePath('/admin/clientes')
       return { ok: true, anonimizado: true }
     }
 
@@ -261,6 +263,7 @@ export async function excluirClienteAction(
     if (delErr) return { ok: false, error: delErr.message }
 
     revalidatePath('/gerente/clientes')
+    revalidatePath('/admin/clientes')
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir cliente.' }

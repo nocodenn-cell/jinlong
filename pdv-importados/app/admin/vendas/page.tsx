@@ -330,7 +330,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           detalheLiquido: ui.vendas_detalhe_liquido,
           detalheItens: m.gerente.sec_itens_venda,
           detalheNenhumItem: ui.vendas_detalhe_nenhum_item,
-        }} />
+        }} m={m} locale={locale} />
 
         {page > 1 || hasMore ? (
           <div className="mt-4 flex items-center justify-between gap-3">

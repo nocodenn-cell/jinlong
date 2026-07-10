@@ -42,6 +42,11 @@ type PosSalvarState = Readonly<{
   estoqueZerado: boolean
 }>
 
+/**
+ * EXCEÇÃO SSoT (entity-ssot.mdc): estoque inicial permitido **somente** no primeiro save,
+ * quando o produto ainda não existe. Após criação, saldo manual → `/admin/estoque` apenas.
+ * Não reutilizar este padrão em outros fluxos.
+ */
 async function aplicarEstoqueInicial(
   produtoId: string,
   qtyRaw: string,

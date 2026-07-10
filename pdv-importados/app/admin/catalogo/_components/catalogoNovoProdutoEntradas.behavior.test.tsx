@@ -12,6 +12,15 @@ import {
 const criarProdutoMock = vi.fn()
 const routerRefreshMock = vi.fn()
 const routerPushMock = vi.fn()
+const { getMockSearchParams, setMockSearchParams } = vi.hoisted(() => {
+  let value = ''
+  return {
+    getMockSearchParams: () => value,
+    setMockSearchParams: (next: string) => {
+      value = next
+    },
+  }
+})
 
 vi.mock('@/app/gerente/produtos/actions', () => ({
   criarProduto: (...args: unknown[]) => criarProdutoMock(...args),
@@ -23,6 +32,7 @@ vi.mock('@/lib/gerente/toast', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: routerRefreshMock, push: routerPushMock }),
+  useSearchParams: () => new URLSearchParams(getMockSearchParams()),
 }))
 
 vi.mock('next/link', () => ({
@@ -41,7 +51,6 @@ vi.mock('@/app/admin/catalogo/_components/CatalogoPublicacaoActions', () => ({
 
 import { CatalogoNovoButton } from '@/app/admin/catalogo/_components/CatalogoNovoButton'
 import { CatalogoTable } from '@/app/admin/catalogo/_components/CatalogoTable'
-import { NovoProdutoClientPage } from '@/app/admin/catalogo/novo/NovoProdutoClientPage'
 
 const m = getMessages('pt')
 const opcoes = { categorias: [], marcas: [], fornecedores: [] }
@@ -74,6 +83,7 @@ beforeEach(() => {
   criarProdutoMock.mockResolvedValue({ success: true, data: { id: 'produto-uuid-entrada' } })
   routerRefreshMock.mockReset()
   routerPushMock.mockReset()
+  setMockSearchParams('')
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -122,12 +132,14 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
     expect(routerRefreshMock).toHaveBeenCalled()
   })
 
-  it('entrada /novo (NovoProdutoClientPage): salvar fecha modal e redireciona ao catálogo', async () => {
-    render(<NovoProdutoClientPage m={m} opcoes={opcoes} />)
+  it('entrada deep-link ?modal=novo (CatalogoTable): abre modal e salva', async () => {
+    setMockSearchParams('modal=novo')
+    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} />)
 
+    await vi.waitFor(() => expect(modalAberto()).toBe(true))
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
     await vi.waitFor(() => expect(modalAberto()).toBe(false))
     expect(routerRefreshMock).toHaveBeenCalled()
-    expect(routerPushMock).toHaveBeenCalledWith('/admin/catalogo')
+    expect(routerPushMock).not.toHaveBeenCalled()
   })
 })

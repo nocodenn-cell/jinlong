@@ -7,6 +7,7 @@ export function setInputValue(el: HTMLInputElement, value: string) {
   const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
   nativeSetter?.call(el, value)
   el.dispatchEvent(new Event('input', { bubbles: true }))
+  el.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
 export async function preencherESalvarProdutoDemo(
@@ -17,8 +18,10 @@ export async function preencherESalvarProdutoDemo(
   const nome = container.querySelector('input[autocomplete="off"]') as HTMLInputElement
   setInputValue(nome, 'Produto Demo Entrada')
 
-  const precoInputs = Array.from(container.querySelectorAll('input[inputmode="decimal"]'))
-  const precoVarejo = precoInputs[0] as HTMLInputElement
+  const precoVarejo = Array.from(container.querySelectorAll('input[inputmode="decimal"]')).find(
+    (el) => (el as HTMLInputElement).placeholder === '0,00',
+  ) as HTMLInputElement
+  expect(precoVarejo, 'input preço varejo').toBeTruthy()
   setInputValue(precoVarejo, '10,00')
 
   const gatilho = container.querySelector('input[inputmode="numeric"]') as HTMLInputElement

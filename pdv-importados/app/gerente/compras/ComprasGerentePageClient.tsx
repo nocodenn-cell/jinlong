@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * @legacy Gerente shell — migrado para Admin V2 (`/admin/estoque/recebimento`).
+ * Evidência de migração; remover após 1–2 releases estáveis.
+ * NÃO reutilizar em fluxos novos.
+ */
+
 import { useCallback, useEffect, useState } from 'react'
 import { Plus, FilterX } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'

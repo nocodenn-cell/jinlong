@@ -12,6 +12,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
+    "test:integration:cancelamento": "vitest run --config vitest.integration.config.ts",
     "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --exclude \"app/caixa/**/*.test.ts\" --exclude \"app/caixa/**/*.integration.test.ts\"",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -28,6 +29,7 @@
     "seed:demo-fluxo": "node scripts/seed-demo-fluxo-staging.mjs",
     "test:demo-fluxo": "vitest run lib/pdv ../shared-core/src/pdv/invariants",
     "check:pdv-invariant-boundary": "node scripts/check-pdv-invariant-boundary.mjs",
+    "check:entity-ssot": "node scripts/check-entity-ssot-boundary.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook"

@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
-import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
@@ -10,7 +9,8 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
 
-export type CaixaPdvOperadorTabId = "produto" | "cliente" | "pgto"
+/** Mantido por compatibilidade com atalhos legados — fluxo linear sem abas. */
+export type CaixaPdvOperadorTabId = "produto"
 
 type PagamentoLinha = {
   formaPagamento: FinalizarVendaInput["formaPagamento"]
@@ -19,12 +19,7 @@ type PagamentoLinha = {
 
 type Props = {
   m: Mensagens
-  idioma: Idioma
-  tab: CaixaPdvOperadorTabId
-  onTabChange: (id: CaixaPdvOperadorTabId) => void
   layoutVariant?: CaixaPdvLayoutVariant
-  mostrarAtalhos: boolean
-  operadorLabel: string
   pagamentos: PagamentoLinha[]
   totalLiquidoComGerente: number
   somaParcelas: number
@@ -38,17 +33,172 @@ type Props = {
   onAutoCompletar: () => void
   moedaPrefixo: string
   produtoPanel: ReactNode
-  /** Seletor de forma de pagamento (aba Pgto). */
   metodoPagamentoPanel?: ReactNode
+}
+
+function PagamentoPanel({
+  m,
+  classicChrome,
+  pagamentos,
+  totalLiquidoComGerente,
+  somaParcelas,
+  diferenca,
+  podeAdicionarParcela,
+  formasDisponiveis,
+  onAdicionarParcela,
+  onRemoverParcela,
+  onAtualizarForma,
+  onAtualizarValor,
+  onAutoCompletar,
+  moedaPrefixo,
+  metodoPagamentoPanel,
+}: Omit<Props, "produtoPanel" | "layoutVariant"> & { classicChrome: boolean }) {
+  const somaOk = Math.abs(diferenca) <= 0.01
+  const temTroco = diferenca > 0.01
+
+  return (
+    <section
+      aria-label={m.caixa.pdv_tab_aria_pgto}
+      className={
+        classicChrome
+          ? "flex shrink-0 flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
+          : "flex shrink-0 flex-col gap-3 rounded-lg border border-jl-border-1 bg-jl-surface-elev p-3"
+      }
+    >
+      <div className="flex items-center justify-between">
+        <h3 className={`text-sm font-semibold ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>
+          {m.caixa.pdv_pgto_parcelas_titulo}
+        </h3>
+        {pagamentos.length > 1 ? (
+          <button
+            type="button"
+            onClick={onAutoCompletar}
+            className={
+              classicChrome
+                ? "rounded-md border border-border bg-muted/60 px-2 py-1 text-[10px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
+                : "rounded-md border border-jl-border-1 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold text-jl-fg-2 transition hover:bg-white/[0.10] hover:text-jl-fg-1"
+            }
+          >
+            {m.caixa.pdv_pgto_auto_completar}
+          </button>
+        ) : null}
+      </div>
+      {metodoPagamentoPanel ? <div className="mb-1">{metodoPagamentoPanel}</div> : null}
+      <div className="space-y-3">
+        {pagamentos.map((p, idx) => (
+          <div
+            key={`parcela-${idx}`}
+            className={`flex flex-col gap-1.5 rounded-lg border p-2.5 ${classicChrome ? "border-border/60 bg-muted/20" : "border-jl-border-1 bg-white/[0.04]"}`}
+          >
+            <div className="flex items-center gap-2">
+              <select
+                value={p.formaPagamento}
+                onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
+                aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
+                className={
+                  classicChrome
+                    ? "flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    : "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-xs font-medium text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"
+                }
+              >
+                {formasDisponiveis.map((f) => (
+                  <option key={f} value={f}>
+                    {labelFormaPagamentoVenda(f, m)}
+                  </option>
+                ))}
+              </select>
+              {pagamentos.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => onRemoverParcela(idx)}
+                  aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
+                  className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[10px] font-semibold text-destructive transition hover:bg-destructive/20"
+                >
+                  ✕
+                </button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`shrink-0 text-[10px] font-medium ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>
+                {moedaPrefixo}
+              </span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                value={p.valor === 0 ? "" : p.valor.toFixed(2)}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value)
+                  onAtualizarValor(idx, Number.isFinite(v) ? v : 0)
+                }}
+                aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
+                data-caixa-atalho-bloqueado="true"
+                className={
+                  classicChrome
+                    ? "w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    : "w-full rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"
+                }
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      {podeAdicionarParcela ? (
+        <button
+          type="button"
+          onClick={() => onAdicionarParcela()}
+          aria-label={m.caixa.aria_adicionar_parcela}
+          className={
+            classicChrome
+              ? "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              : "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-jl-border-1 py-2 text-xs font-semibold text-jl-fg-3 transition hover:border-amber-400/50 hover:text-jl-fg-1"
+          }
+        >
+          + {m.caixa.pdv_pgto_adicionar_forma}
+        </button>
+      ) : (
+        <p className={`text-center text-[10px] ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>
+          {m.caixa.pdv_pgto_max_parcelas}
+        </p>
+      )}
+      <dl className={`space-y-2 border-t pt-3 text-sm ${classicChrome ? "border-border" : "border-jl-border-1"}`}>
+        <div className="flex justify-between gap-3">
+          <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.total_pagar}</dt>
+          <dd className={`font-semibold tabular-nums ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>
+            {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-3 text-xs">
+          <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.pdv_pgto_soma_parcelas}</dt>
+          <dd className={`tabular-nums font-semibold ${somaOk ? "text-emerald-500" : "text-destructive"}`}>
+            {moedaPrefixo} {formatDecimalBRL(somaParcelas)}
+          </dd>
+        </div>
+        {temTroco ? (
+          <div className="flex justify-between gap-3 text-xs">
+            <dt className="font-medium text-emerald-600">{m.caixa.pdv_pgto_troco_cliente}</dt>
+            <dd className="tabular-nums font-bold text-emerald-500">
+              {moedaPrefixo} {formatDecimalBRL(diferenca)}
+            </dd>
+          </div>
+        ) : null}
+        {diferenca < -0.01 ? (
+          <div className="flex justify-between gap-3 text-xs">
+            <dt className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</dt>
+            <dd className="tabular-nums font-bold text-destructive">
+              {moedaPrefixo} {formatDecimalBRL(Math.abs(diferenca))}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+    </section>
+  )
 }
 
 export function CaixaPdvOperadorTabs({
   m,
-  tab,
-  onTabChange,
   layoutVariant = "default",
-  mostrarAtalhos,
-  operadorLabel,
   pagamentos,
   totalLiquidoComGerente,
   somaParcelas,
@@ -66,239 +216,26 @@ export function CaixaPdvOperadorTabs({
 }: Props) {
   const classicChrome = layoutVariant === "classic"
 
-  const tabs: { id: CaixaPdvOperadorTabId; label: string; aria: string; atalho?: string }[] = [
-    { id: "produto", label: m.caixa.pdv_tab_produto, aria: m.caixa.pdv_tab_aria_produto, atalho: "Alt+Z" },
-    { id: "cliente", label: m.caixa.pdv_tab_cliente, aria: m.caixa.pdv_tab_aria_cliente, atalho: "Alt+C" },
-    { id: "pgto", label: m.caixa.pdv_tab_pgto, aria: m.caixa.pdv_tab_aria_pgto, atalho: "Alt+B" },
-  ]
-
-  const somaOk = Math.abs(diferenca) <= 0.01
-  const temTroco = diferenca > 0.01
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <div
-        role="tablist"
-        aria-label={m.caixa.pdv_tabs_lista_aria}
-        className={
-          classicChrome
-            ? "flex shrink-0 gap-1 border-b border-border/80 bg-muted/25 px-0.5 pt-1"
-            : "flex shrink-0 gap-1 rounded-lg border border-jl-border-1 bg-jl-surface-base p-1"
-        }
-      >
-        {tabs.map((t) => {
-          const selected = tab === t.id
-          const title = mostrarAtalhos && t.atalho ? `${t.aria} (${t.atalho})` : t.aria
-          const tabButtonClass = classicChrome
-            ? selected
-              ? "relative z-[1] -mb-px flex-1 rounded-t-md border-x-0 border-b-2 border-b-background border-t-2 border-t-primary bg-background px-2 py-2 text-center text-sm font-semibold text-foreground shadow-[0_-1px_6px_rgba(0,0,0,0.05)]"
-              : "flex-1 rounded-t-md border border-transparent bg-muted/60 px-2 py-2 text-center text-sm font-medium text-foreground/80 ring-1 ring-border/70 hover:bg-muted/90 hover:text-foreground"
-            : selected
-              ? "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-elev px-2 py-2 text-center text-sm font-semibold text-jl-fg-1 shadow-sm"
-              : "flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-jl-fg-3 hover:bg-white/[0.06] hover:text-jl-fg-1"
-          const atalhoClass = classicChrome
-            ? selected
-              ? "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-foreground/70"
-              : "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-foreground/55"
-            : "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-jl-fg-3"
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              id={`caixa-pdv-tab-${t.id}`}
-              aria-selected={selected}
-              aria-controls={`caixa-pdv-panel-${t.id}`}
-              tabIndex={selected ? 0 : -1}
-              title={title}
-              className={tabButtonClass}
-              onClick={() => onTabChange(t.id)}
-            >
-              <span className="block leading-tight">{t.label}</span>
-              {mostrarAtalhos && t.atalho ? <span className={atalhoClass}>{t.atalho}</span> : null}
-            </button>
-          )
-        })}
-      </div>
-
-      <div
-        className={
-          classicChrome
-            ? "min-h-0 flex flex-1 flex-col gap-2 overflow-hidden"
-            : "min-h-0 flex flex-1 flex-col gap-3 overflow-hidden"
-        }
-      >
-        <div
-          role="tabpanel"
-          id="caixa-pdv-panel-produto"
-          aria-labelledby="caixa-pdv-tab-produto"
-          hidden={tab !== "produto"}
-          className={tab === "produto" ? "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto" : "hidden"}
-        >
-          {produtoPanel}
-        </div>
-
-        <div
-          role="tabpanel"
-          id="caixa-pdv-panel-cliente"
-          aria-labelledby="caixa-pdv-tab-cliente"
-          hidden={tab !== "cliente"}
-          className={
-            tab === "cliente"
-              ? classicChrome
-                ? "flex flex-1 flex-col gap-3 rounded-lg border-x border-b border-border/60 border-t-2 border-t-primary bg-card/60 p-4 shadow-sm"
-                : "flex flex-1 flex-col gap-3 rounded-lg border border-jl-border-1 bg-jl-surface-elev p-4"
-              : "hidden"
-          }
-        >
-          <div>
-            <h3 className={`text-sm font-semibold ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>{m.caixa.pdv_cliente_cupom_titulo}</h3>
-            <p className={`mt-2 text-sm leading-relaxed ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>{m.caixa.pdv_cliente_sem_cadastro_desc}</p>
-          </div>
-          <dl className={`space-y-2 border-t pt-3 text-sm ${classicChrome ? "border-border" : "border-jl-border-1"}`}>
-            <div className="flex justify-between gap-3">
-              <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.pdv_cliente_operador_label}</dt>
-              <dd className={`max-w-[65%] text-right font-medium break-words ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>{operadorLabel}</dd>
-            </div>
-          </dl>
-        </div>
-
-        <div
-          role="tabpanel"
-          id="caixa-pdv-panel-pgto"
-          aria-labelledby="caixa-pdv-tab-pgto"
-          hidden={tab !== "pgto"}
-          className={
-            tab === "pgto"
-              ? classicChrome
-                ? "flex flex-1 flex-col gap-3 rounded-lg border-x border-b border-border/60 border-t-2 border-t-primary bg-card/60 p-4 shadow-sm overflow-y-auto"
-                : "flex flex-1 flex-col gap-3 rounded-lg border border-jl-border-1 bg-jl-surface-elev p-4 overflow-y-auto"
-              : "hidden"
-          }
-        >
-          <div className="flex items-center justify-between">
-            <h3 className={`text-sm font-semibold ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>{m.caixa.pdv_pgto_parcelas_titulo}</h3>
-            {pagamentos.length > 1 && (
-              <button
-                type="button"
-                onClick={onAutoCompletar}
-                className={classicChrome
-                  ? "rounded-md border border-border bg-muted/60 px-2 py-1 text-[10px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
-                  : "rounded-md border border-jl-border-1 bg-white/[0.06] px-2 py-1 text-[10px] font-semibold text-jl-fg-2 transition hover:bg-white/[0.10] hover:text-jl-fg-1"}
-              >
-                {m.caixa.pdv_pgto_auto_completar}
-              </button>
-            )}
-          </div>
-          {metodoPagamentoPanel ? <div className="mb-1">{metodoPagamentoPanel}</div> : null}
-
-          {/* Lista de parcelas */}
-          <div className="space-y-3">
-            {pagamentos.map((p, idx) => (
-              <div
-                key={`parcela-${idx}`}
-                className={`flex flex-col gap-1.5 rounded-lg border p-2.5 ${classicChrome ? "border-border/60 bg-muted/20" : "border-jl-border-1 bg-white/[0.04]"}`}
-              >
-                <div className="flex items-center gap-2">
-                  <select
-                    value={p.formaPagamento}
-                    onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
-                    aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
-                    className={classicChrome
-                      ? "flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-                      : "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-xs font-medium text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"}
-                  >
-                    {formasDisponiveis.map((f) => (
-                      <option key={f} value={f}>
-                        {labelFormaPagamentoVenda(f, m)}
-                      </option>
-                    ))}
-                  </select>
-                  {pagamentos.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => onRemoverParcela(idx)}
-                      aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
-                      className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[10px] font-semibold text-destructive transition hover:bg-destructive/20"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`shrink-0 text-[10px] font-medium ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>{moedaPrefixo}</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0"
-                    value={p.valor === 0 ? "" : p.valor.toFixed(2)}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value)
-                      onAtualizarValor(idx, Number.isFinite(v) ? v : 0)
-                    }}
-                    aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
-                    data-caixa-atalho-bloqueado="true"
-                    className={classicChrome
-                      ? "w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-                      : "w-full rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Botão adicionar parcela */}
-          {podeAdicionarParcela ? (
-            <button
-              type="button"
-              onClick={() => onAdicionarParcela()}
-              aria-label={m.caixa.aria_adicionar_parcela}
-              className={classicChrome
-              ? "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
-              : "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-jl-border-1 py-2 text-xs font-semibold text-jl-fg-3 transition hover:border-amber-400/50 hover:text-jl-fg-1"}
-            >
-              + {m.caixa.pdv_pgto_adicionar_forma}
-            </button>
-          ) : (
-            <p className={`text-center text-[10px] ${classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}`}>
-              {m.caixa.pdv_pgto_max_parcelas}
-            </p>
-          )}
-
-          {/* Resumo financeiro */}
-          <dl className={`space-y-2 border-t pt-3 text-sm ${classicChrome ? "border-border" : "border-jl-border-1"}`}>
-            <div className="flex justify-between gap-3">
-              <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.total_pagar}</dt>
-              <dd className={`font-semibold tabular-nums ${classicChrome ? "text-foreground" : "text-jl-fg-1"}`}>
-                {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3 text-xs">
-              <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.pdv_pgto_soma_parcelas}</dt>
-              <dd className={`tabular-nums font-semibold ${somaOk ? "text-emerald-500" : "text-destructive"}`}>
-                {moedaPrefixo} {formatDecimalBRL(somaParcelas)}
-              </dd>
-            </div>
-            {temTroco && (
-              <div className="flex justify-between gap-3 text-xs">
-                <dt className="font-medium text-emerald-600">{m.caixa.pdv_pgto_troco_cliente}</dt>
-                <dd className="tabular-nums font-bold text-emerald-500">
-                  {moedaPrefixo} {formatDecimalBRL(diferenca)}
-                </dd>
-              </div>
-            )}
-            {diferenca < -0.01 && (
-              <div className="flex justify-between gap-3 text-xs">
-                <dt className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</dt>
-                <dd className="tabular-nums font-bold text-destructive">
-                  {moedaPrefixo} {formatDecimalBRL(Math.abs(diferenca))}
-                </dd>
-              </div>
-            )}
-          </dl>
-        </div>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">{produtoPanel}</div>
+      <PagamentoPanel
+        m={m}
+        classicChrome={classicChrome}
+        pagamentos={pagamentos}
+        totalLiquidoComGerente={totalLiquidoComGerente}
+        somaParcelas={somaParcelas}
+        diferenca={diferenca}
+        podeAdicionarParcela={podeAdicionarParcela}
+        formasDisponiveis={formasDisponiveis}
+        onAdicionarParcela={onAdicionarParcela}
+        onRemoverParcela={onRemoverParcela}
+        onAtualizarForma={onAtualizarForma}
+        onAtualizarValor={onAtualizarValor}
+        onAutoCompletar={onAutoCompletar}
+        moedaPrefixo={moedaPrefixo}
+        metodoPagamentoPanel={metodoPagamentoPanel}
+      />
     </div>
   )
 }

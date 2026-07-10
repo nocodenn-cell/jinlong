@@ -1,22 +1,17 @@
-import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import { redirect } from 'next/navigation'
-import { ImprimirEtiquetasPageClient } from './ImprimirEtiquetasPageClient'
+import { adminEtiquetasProdutoQuery } from '@shared-core/navigation/routes'
 
 type SearchParams = { codigo?: string; produto?: string }
 
 type PageProps = { searchParams?: Promise<SearchParams> }
 
-export default async function GerenteImprimirEtiquetasPage({ searchParams }: PageProps) {
-  const session = await resolveAdminSession()
-  if (!session) redirect('/login')
-
+/** Legado — mesma tela em /admin/estoque/imprimir-etiquetas. */
+export default async function GerenteImprimirEtiquetasRedirectPage({ searchParams }: PageProps) {
   const sp = (searchParams ? await searchParams : {}) ?? {}
-
-  return (
-    <ImprimirEtiquetasPageClient
-      idioma={session.idioma}
-      initialCodigo={typeof sp.codigo === 'string' ? sp.codigo : undefined}
-      initialProdutoId={typeof sp.produto === 'string' ? sp.produto : undefined}
-    />
+  redirect(
+    adminEtiquetasProdutoQuery({
+      codigo: typeof sp.codigo === 'string' ? sp.codigo : undefined,
+      produtoId: typeof sp.produto === 'string' ? sp.produto : undefined,
+    }),
   )
 }

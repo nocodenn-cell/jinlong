@@ -13,6 +13,8 @@ import {
   ShieldOff,
   ShoppingCart,
   Tag,
+  Truck,
+  Users,
 } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 
@@ -32,6 +34,7 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'dashboard', href: ROUTES.admin.dashboard, icon: LayoutDashboard, labelOverridePt: 'Visão geral', dictKey: 'dashboard' },
   { id: 'vendas', href: ROUTES.admin.vendas, icon: ShoppingCart, labelOverridePt: 'Vendas e caixa', dictKey: 'vendas' },
   { id: 'produtos', href: ROUTES.admin.catalogo, icon: Tag, labelOverridePt: 'Catálogo', dictKey: 'produtos' },
+  { id: 'clientes', href: ROUTES.admin.clientes, icon: Users, labelOverridePt: 'Clientes', dictKey: 'clientes' },
   { id: 'estoque', href: ROUTES.admin.estoque, icon: Package, labelOverridePt: 'Estoque', dictKey: 'estoque' },
   {
     id: 'auditoria',
@@ -49,6 +52,7 @@ export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'recebimento', href: ROUTES.admin.estoqueRecebimento, icon: Inbox, labelOverridePt: 'Recebimento', dictKey: 'recebimento' },
   { id: 'transferencias', href: ROUTES.admin.estoqueTransferencias, icon: ArrowRightLeft, labelOverridePt: 'Transferências', dictKey: 'transferencias' },
   { id: 'comissoes', href: ROUTES.admin.comissoes, icon: Percent, labelOverridePt: 'Comissões', dictKey: 'comissoes' },
+  { id: 'fornecedores', href: ROUTES.admin.fornecedores, icon: Truck, labelOverridePt: 'Fornecedores', dictKey: 'fornecedores' },
 ] as const
 
 export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
