@@ -95,7 +95,7 @@ export function CaixaPdvOperadorTabs({
               : "flex-1 rounded-t-md border border-transparent bg-muted/60 px-2 py-2 text-center text-sm font-medium text-foreground/80 ring-1 ring-border/70 hover:bg-muted/90 hover:text-foreground"
             : selected
               ? "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-elev px-2 py-2 text-center text-sm font-semibold text-jl-fg-1 shadow-sm"
-              : "flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-jl-fg-3 hover:bg-white/[0.06] hover:text-jl-fg-1"
+              : "flex-1 rounded-md border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-jl-fg-3 hover:bg-jl-surface-soft hover:text-jl-fg-1"
           const atalhoClass = classicChrome
             ? selected
               ? "mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-foreground/70"
@@ -197,7 +197,7 @@ export function CaixaPdvOperadorTabs({
             {pagamentos.map((p, idx) => (
               <div
                 key={`parcela-${idx}`}
-                className={`flex flex-col gap-1.5 rounded-lg border p-2.5 ${classicChrome ? "border-border/60 bg-muted/20" : "border-jl-border-1 bg-white/[0.04]"}`}
+                className={`flex flex-col gap-1.5 rounded-lg border p-2.5 ${classicChrome ? "border-border/60 bg-muted/20" : "border-jl-border-1 bg-jl-surface-soft"}`}
               >
                 <div className="flex items-center gap-2">
                   <select
@@ -206,7 +206,7 @@ export function CaixaPdvOperadorTabs({
                     aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
                     className={classicChrome
                       ? "flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-                      : "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-xs font-medium text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"}
+                      : "flex-1 rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-xs font-medium text-jl-fg-1 focus:border-jl-accent/60 focus:outline-none focus:ring-1 focus:ring-jl-accent/20"}
                   >
                     {formasDisponiveis.map((f) => (
                       <option key={f} value={f}>
@@ -241,7 +241,7 @@ export function CaixaPdvOperadorTabs({
                     data-caixa-atalho-bloqueado="true"
                     className={classicChrome
                       ? "w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-                      : "w-full rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-jl-fg-1 focus:border-amber-400/60 focus:outline-none focus:ring-1 focus:ring-amber-400/20"}
+                      : "w-full rounded-md border border-jl-border-1 bg-jl-surface-base px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-jl-fg-1 focus:border-jl-accent/60 focus:outline-none focus:ring-1 focus:ring-jl-accent/20"}
                   />
                 </div>
               </div>
@@ -256,7 +256,7 @@ export function CaixaPdvOperadorTabs({
               aria-label={m.caixa.aria_adicionar_parcela}
               className={classicChrome
               ? "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
-              : "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-jl-border-1 py-2 text-xs font-semibold text-jl-fg-3 transition hover:border-amber-400/50 hover:text-jl-fg-1"}
+              : "flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-jl-border-1 py-2 text-xs font-semibold text-jl-fg-3 transition hover:border-jl-accent/50 hover:text-jl-fg-1"}
             >
               + {m.caixa.pdv_pgto_adicionar_forma}
             </button>
@@ -276,14 +276,14 @@ export function CaixaPdvOperadorTabs({
             </div>
             <div className="flex justify-between gap-3 text-xs">
               <dt className={classicChrome ? "text-muted-foreground" : "text-jl-fg-3"}>{m.caixa.pdv_pgto_soma_parcelas}</dt>
-              <dd className={`tabular-nums font-semibold ${somaOk ? "text-emerald-500" : "text-destructive"}`}>
+              <dd className={`tabular-nums font-semibold ${somaOk ? "text-success" : "text-destructive"}`}>
                 {moedaPrefixo} {formatDecimalBRL(somaParcelas)}
               </dd>
             </div>
             {temTroco && (
               <div className="flex justify-between gap-3 text-xs">
-                <dt className="font-medium text-emerald-600">{m.caixa.pdv_pgto_troco_cliente}</dt>
-                <dd className="tabular-nums font-bold text-emerald-500">
+                <dt className="font-medium text-success">{m.caixa.pdv_pgto_troco_cliente}</dt>
+                <dd className="tabular-nums font-bold text-success">
                   {moedaPrefixo} {formatDecimalBRL(diferenca)}
                 </dd>
               </div>

@@ -132,7 +132,7 @@ export function CaixaKeyboardShortcutsReference({ m, variant = "default", classN
           "text-xs font-medium px-2 py-1.5 h-auto",
           classic
             ? "text-primary-foreground hover:bg-white/15"
-            : "text-jl-fg-2 hover:bg-white/[0.06]",
+            : "text-jl-fg-2 hover:bg-jl-surface-soft",
           className,
         )}
         onClick={() => setOpen(true)}

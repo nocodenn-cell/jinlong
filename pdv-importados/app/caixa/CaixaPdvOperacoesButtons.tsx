@@ -110,7 +110,7 @@ function CaixaPdvOperacoesButtonsImpl({
             "w-full min-h-11 text-xs sm:text-sm",
             classic
               ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]",
+              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
           )}
           aria-expanded={sistemaAberto}
           aria-haspopup="dialog"
@@ -142,7 +142,7 @@ function CaixaPdvOperacoesButtonsImpl({
               </h2>
               <button
                 type="button"
-                className="shrink-0 rounded-sm px-2 py-0.5 text-jl-fg-3 hover:bg-white/10 hover:text-jl-fg-1"
+                className="shrink-0 rounded-sm px-2 py-0.5 text-jl-fg-3 hover:bg-jl-surface-soft hover:text-jl-fg-1"
                 aria-label={m.caixa.aria_pd_sistema_catalogo_fechar}
                 onClick={fecharSistema}
               >
@@ -172,7 +172,7 @@ function CaixaPdvOperacoesButtonsImpl({
             "min-h-11",
             classic
               ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]",
+              : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
           )}
           onClick={onAbrirSuprimento}
           disabled={!caixaAberto || movimentandoCaixa || finalizando}
@@ -187,7 +187,7 @@ function CaixaPdvOperacoesButtonsImpl({
             "min-h-11",
             classic
               ? "border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20"
-              : "border-destructive/45 bg-destructive/15 text-destructive hover:bg-destructive/25",
+              : "border-destructive/45 bg-destructive/10 text-destructive hover:bg-destructive/20",
           )}
           onClick={onAbrirSangria}
           disabled={!caixaAberto || movimentandoCaixa || finalizando}
@@ -204,7 +204,7 @@ function CaixaPdvOperacoesButtonsImpl({
             "inline-flex min-h-11 items-center gap-2",
             classic
               ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
-              : "border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
+              : "border border-jl-accent/40 bg-jl-accent/10 text-jl-accent hover:bg-jl-accent/20",
           )}
           onClick={onValidarGerente}
           disabled={validandoGerente || movimentandoCaixa}
