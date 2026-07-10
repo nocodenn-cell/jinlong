@@ -1169,7 +1169,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               className={cn(
                 "hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex",
                 pdvLayoutVariant === "classic"
-                  ? "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]"
+                  ? "border-border bg-card text-foreground shadow-[var(--jl-elev-1)]"
                   : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
               )}
             >
@@ -1244,7 +1244,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             <div
               className={cn(
                 "border-t px-4 py-3 sm:px-6 md:hidden",
-                "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]",
+                "border-border bg-card text-foreground shadow-[var(--jl-elev-1)]",
               )}
             >
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

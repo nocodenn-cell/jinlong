@@ -92,7 +92,7 @@ function CaixaFooterImpl({
       <footer
         className={cn(
           "shrink-0 border-t backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10",
-          "border-border bg-primary text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]",
+          "border-border bg-primary text-primary-foreground shadow-[var(--jl-elev-1)]",
         )}
       >
         <div className="flex flex-col gap-3 text-sm md:flex-row md:flex-wrap md:items-end md:justify-between">
@@ -114,13 +114,13 @@ function CaixaFooterImpl({
             </div>
             <div className="text-right text-sm text-primary-foreground/90">
               <div>{m.caixa.bruto}</div>
-              <div className="text-lg font-semibold tabular-nums text-white">
+              <div className="text-lg font-semibold tabular-nums text-primary-foreground">
                 {moedaPrefixo} {formatDecimalBRL(totalBruto)}
               </div>
             </div>
             <div className="text-right text-sm text-primary-foreground/90">
               <div>{m.caixa.descontos_regras}</div>
-              <div className="text-lg font-bold tabular-nums text-white">
+              <div className="text-lg font-bold tabular-nums text-primary-foreground">
                 - {moedaPrefixo} {formatDecimalBRL(totalDesconto)}
               </div>
               {economiaPrecoAtacadoAuto > 0.005 && (
@@ -138,7 +138,7 @@ function CaixaFooterImpl({
                     pct: descontoGerentePercentual.toFixed(2),
                   })}
                 </div>
-                <div className="text-lg font-bold tabular-nums text-white">
+                <div className="text-lg font-bold tabular-nums text-primary-foreground">
                   - {moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
                 </div>
               </div>
@@ -178,9 +178,9 @@ function CaixaFooterImpl({
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <span className="text-sm text-jl-fg-2">{resumoItens}</span>
           {gerenteLinha && (
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-amber-400">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--jl-status-warning-text)]">
               <ImperialSealIcon
-                className="h-5 w-5 shrink-0 text-amber-400"
+                className="h-5 w-5 shrink-0 text-[color:var(--jl-status-warning-text)]"
                 title={m.caixa.aria_selo_gerente}
               />
               {gerenteLinha}
@@ -205,7 +205,7 @@ function CaixaFooterImpl({
               {moedaPrefixo} {formatDecimalBRL(totalBruto)}
             </div>
           </div>
-          <div className="text-right text-sm text-amber-400">
+          <div className="text-right text-sm text-[color:var(--jl-status-warning-text)]">
             <div>{m.caixa.descontos_regras}</div>
             <div className="text-lg font-bold tabular-nums">
               - {moedaPrefixo} {formatDecimalBRL(totalDesconto)}
@@ -219,7 +219,7 @@ function CaixaFooterImpl({
             )}
           </div>
           {descontoGerentePercentual > 0 && (
-            <div className="text-right text-sm text-amber-400">
+            <div className="text-right text-sm text-[color:var(--jl-status-warning-text)]">
               <div>
                 {caixaFmt(m.caixa.desconto_gerente_label, {
                   pct: descontoGerentePercentual.toFixed(2),
@@ -242,7 +242,7 @@ function CaixaFooterImpl({
             <div
               data-testid="caixa-total-liquido"
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-3xl sm:text-4xl font-extrabold leading-none tabular-nums text-amber-400"
+              className="text-3xl sm:text-4xl font-extrabold leading-none tabular-nums text-[color:var(--jl-status-warning-text)]"
             >
               {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
             </div>

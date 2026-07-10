@@ -69,7 +69,7 @@ export function CaixaPdvTopBar({
       className={cn(
         "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5",
         classic
-          ? "border-border bg-primary text-primary-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]"
+          ? "border-border bg-primary text-primary-foreground shadow-[var(--jl-elev-1)]"
           : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}

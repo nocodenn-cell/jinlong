@@ -45,7 +45,7 @@ export function CaixaPdvCartSaleBar({
 
   return (
     <div
-      className="shrink-0 border-t border-jl-border-1 bg-jl-surface-elev px-3 py-3 shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] sm:px-4"
+      className="shrink-0 border-t border-jl-border-1 bg-jl-surface-elev px-3 py-3 shadow-[var(--jl-elev-1)] sm:px-4"
       data-caixa-cart-sale-bar
     >
       <div className="flex flex-col gap-3">
@@ -81,7 +81,7 @@ export function CaixaPdvCartSaleBar({
                   <span>
                     {moedaPrefixo} {formatDecimalBRL(totalBruto)}
                   </span>
-                  <span className="text-amber-400/80">
+                  <span className="text-[color:var(--jl-status-warning-text)]/80">
                     -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
                   </span>
                 </div>
