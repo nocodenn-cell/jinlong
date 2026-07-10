@@ -1,5 +1,6 @@
 # 🛒 PDV — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[04_PDV]] (2026-07-10)
 > [[Home]] | [[Arquitetura]] | [[Cadastro Produto]]
 
 ---

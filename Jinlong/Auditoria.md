@@ -1,5 +1,6 @@
 # 🔍 Auditoria Arquitetural — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[03_ARQUITETURA]] e [[08_PROBLEMAS_E_SOLUCOES]] (2026-07-10)
 > [[Home]] | [[Dívida Técnica]] | [[Decisoes]]
 
 ---

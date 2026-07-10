@@ -1,5 +1,6 @@
 # 📊 Estatísticas do Projeto — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[02_ESTADO_ATUAL]] (2026-07-10)
 > [[Home]] | [[Arquitetura]]
 > Última atualização: 2026-07-09
 

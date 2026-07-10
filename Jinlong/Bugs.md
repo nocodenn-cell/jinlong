@@ -1,5 +1,6 @@
 # 🐛 Bugs — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[08_PROBLEMAS_E_SOLUCOES]] (2026-07-10)
 > [[Home]] | [[Dashboard]] | [[Dívida Técnica]]
 
 ---

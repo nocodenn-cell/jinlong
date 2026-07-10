@@ -1,5 +1,6 @@
 # 🏗️ Arquitetura — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[03_ARQUITETURA]] (2026-07-10)
 > [[Home]] | [[Dashboard]]
 
 ---

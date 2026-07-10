@@ -1,5 +1,6 @@
 # 📅 Changelog — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[01_HISTORICO_PROJETO]] e [[99_LOG_ATUALIZACOES]] (2026-07-10)
 > Linha do tempo de mudanças reconstruída a partir de migrations, commits e documentação.
 > [[Home]] | [[Dashboard]]
 

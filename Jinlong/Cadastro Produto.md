@@ -1,5 +1,6 @@
 # 📦 Cadastro de Produto — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[05_CADASTRO_PRODUTO]] (2026-07-10)
 > [[Home]] | [[Arquitetura]] | [[PDV]]
 
 ---

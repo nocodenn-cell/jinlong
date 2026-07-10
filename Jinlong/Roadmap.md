@@ -1,5 +1,6 @@
 # 🗺️ Roadmap — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[06_ROADMAP]] (2026-07-10)
 > [[Home]] | [[Dashboard]] | [[Backlog]]
 
 ---

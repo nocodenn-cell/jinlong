@@ -1,5 +1,6 @@
 # 🏚️ Dívida Técnica — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[08_PROBLEMAS_E_SOLUCOES]] e [[02_ESTADO_ATUAL]] (2026-07-10)
 > [[Home]] | [[Bugs]] | [[Auditoria]]
 
 ---

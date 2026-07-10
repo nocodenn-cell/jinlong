@@ -1,5 +1,6 @@
 # 📊 Dashboard Executivo — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[00_DASHBOARD_PROJETO]] (2026-07-10)
 > Última atualização: 2026-07-10 | [[Home]]
 
 ---

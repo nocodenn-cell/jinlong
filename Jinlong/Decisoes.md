@@ -1,5 +1,6 @@
 # ⚖️ Decisões Arquiteturais — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[07_DECISOES_ARQUITETURAIS]] (2026-07-10)
 > [[Home]] | [[Arquitetura]]
 
 ---

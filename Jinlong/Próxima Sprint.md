@@ -1,5 +1,6 @@
 # 🚀 Próxima Sprint — Jīn Lóng
 
+> ⚠️ **Arquivo legado** — conteúdo canônico em [[09_OPERACAO_PRIMEIRO_CLIENTE]] (2026-07-10)
 > Gerado automaticamente em: 2026-07-10
 > Contexto: Feature Freeze ativo — piloto 1º cliente pagante (canal web)
 > [[Home]] | [[Dashboard]] | [[Roadmap]] | [[Backlog]]
