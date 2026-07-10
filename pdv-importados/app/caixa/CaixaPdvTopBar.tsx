@@ -14,12 +14,9 @@ import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortc
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 
-export type CaixaPdvLayoutVariant = "default" | "classic"
-
 type Props = {
   m: Mensagens
   idioma: Idioma
-  layoutVariant: CaixaPdvLayoutVariant
   operadorLabel: string
   caixaStatus: CaixaStatusUi | null
   carregandoStatus?: boolean
@@ -33,7 +30,6 @@ type Props = {
 export function CaixaPdvTopBar({
   m,
   idioma,
-  layoutVariant,
   operadorLabel,
   caixaStatus,
   carregandoStatus = false,

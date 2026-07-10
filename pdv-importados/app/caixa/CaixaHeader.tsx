@@ -4,7 +4,7 @@ import React, { memo, useState, useEffect } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { ThermalStatus } from "@/hooks/useThermalPrinter"
-import { CaixaPdvTopBar, type CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
+import { CaixaPdvTopBar } from "@/app/caixa/CaixaPdvTopBar"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { cn } from "@/lib/utils"
@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils"
 type Props = {
   m: Mensagens
   idioma: Idioma
-  layoutVariant: CaixaPdvLayoutVariant
   operadorLabel: string
   caixaStatus: CaixaStatusUi | null
   carregandoStatus: boolean
@@ -27,7 +26,6 @@ type Props = {
 function CaixaHeaderImpl({
   m,
   idioma,
-  layoutVariant,
   operadorLabel,
   caixaStatus,
   carregandoStatus,
@@ -68,7 +66,6 @@ function CaixaHeaderImpl({
       <CaixaPdvTopBar
         m={m}
         idioma={idioma}
-        layoutVariant={layoutVariant}
         operadorLabel={operadorLabel}
         caixaStatus={caixaStatus}
         carregandoStatus={carregandoStatus}

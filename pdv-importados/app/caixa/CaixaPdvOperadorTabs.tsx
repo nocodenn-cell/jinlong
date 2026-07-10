@@ -4,7 +4,6 @@ import type { ReactNode } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
-import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
@@ -23,7 +22,6 @@ type Props = {
   idioma: Idioma
   tab: CaixaPdvOperadorTabId
   onTabChange: (id: CaixaPdvOperadorTabId) => void
-  layoutVariant?: CaixaPdvLayoutVariant
   mostrarAtalhos: boolean
   operadorLabel: string
   pagamentos: PagamentoLinha[]
