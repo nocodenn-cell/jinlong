@@ -36,7 +36,7 @@ import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import { formatDecimalBRL } from '@/lib/format/money'
-import { useMoneyInput } from '@/hooks/useMoneyInput'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import type { BuscarProdutosComFiltrosInput, OpcoesFiltrosProdutos } from './actions'
@@ -135,35 +135,32 @@ function PrecoVarejoCell({
   atualizadoMessage: string
   ariaLabel: string
 }>) {
-  const moneyInput = useMoneyInput(precoVarejo)
+  const [valor, setValor] = useState<number | null>(precoVarejo)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    moneyInput.reset(precoVarejo)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setValor(precoVarejo)
   }, [precoVarejo, produtoId])
 
   return (
-    <input
-      type="text"
-      inputMode="decimal"
+    <CurrencyInput
       disabled={saving}
-      value={moneyInput.display}
-      onChange={moneyInput.onChange}
+      value={valor}
+      onValueChange={setValor}
       onBlur={async () => {
-        const n = moneyInput.parse()
+        const n = valor
         if (n === null) {
           emitGerenteToast({ kind: 'error', message: msgInvalido })
-          moneyInput.reset(precoVarejo)
+          setValor(precoVarejo)
           return
         }
         if (n <= 0) {
           emitGerenteToast({ kind: 'error', message: msgMaiorZero })
-          moneyInput.reset(precoVarejo)
+          setValor(precoVarejo)
           return
         }
         if (Math.abs(n - precoVarejo) < 0.005) {
-          moneyInput.reset(precoVarejo)
+          setValor(precoVarejo)
           return
         }
         setSaving(true)
@@ -171,7 +168,7 @@ function PrecoVarejoCell({
           const r = await atualizarPrecoVarejoProduto({ produto_id: produtoId, preco_varejo: n })
           if (!r.success) {
             emitGerenteToast({ kind: 'error', message: r.error })
-            moneyInput.reset(precoVarejo)
+            setValor(precoVarejo)
             return
           }
           emitGerenteToast({ kind: 'success', message: atualizadoMessage })

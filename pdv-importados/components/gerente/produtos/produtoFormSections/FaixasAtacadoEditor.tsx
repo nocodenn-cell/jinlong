@@ -12,7 +12,7 @@ import {
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { formatBRL } from '@/lib/format/money'
-import { useMoneyInput } from '@/hooks/useMoneyInput'
+import { CurrencyInput } from '@/components/ui/CurrencyInput'
 
 type Props = Readonly<{
   produtoId: string
@@ -57,12 +57,11 @@ function FaixaFormRow({
   const [quantidadeTexto, setQuantidadeTexto] = useState(
     inicial ? String(inicial.quantidade_minima) : '',
   )
-  const precoInput = useMoneyInput(inicial?.preco_unitario ?? null)
+  const [preco, setPreco] = useState<number | null>(inicial?.preco_unitario ?? null)
   const [salvando, setSalvando] = useState(false)
 
   const confirmar = useCallback(async () => {
     const quantidade = quantidadeTexto.trim() === '' ? null : Number(quantidadeTexto)
-    const preco = precoInput.parse()
     const erro = validarFaixa(quantidade, preco, faixasExistentes, ignorarId, p)
     if (erro) {
       emitGerenteToast({ kind: 'error', message: erro })
@@ -74,7 +73,7 @@ function FaixaFormRow({
     } finally {
       setSalvando(false)
     }
-  }, [quantidadeTexto, precoInput, faixasExistentes, ignorarId, p, onSalvar])
+  }, [quantidadeTexto, preco, faixasExistentes, ignorarId, p, onSalvar])
 
   return (
     <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 rounded-md border border-jl-accent/40 bg-white/[.03] p-2">
@@ -89,13 +88,11 @@ function FaixaFormRow({
         disabled={salvando}
         autoFocus
       />
-      <input
-        type="text"
-        inputMode="decimal"
+      <CurrencyInput
         className={IN}
-        placeholder="0,00"
-        value={precoInput.display}
-        onChange={precoInput.onChange}
+        placeholder="R$ 0,00"
+        value={preco}
+        onValueChange={setPreco}
         disabled={salvando}
       />
       <div className="flex gap-1">
