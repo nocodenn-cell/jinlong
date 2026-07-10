@@ -1207,35 +1207,33 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               />
             </aside>
           </div>
-          {pdvLayoutVariant === "classic" && (
-            <div
-              className={cn(
-                "border-t px-4 py-3 sm:px-6 md:hidden",
-                "border-border bg-card text-foreground shadow-[var(--jl-elev-1)]",
-              )}
-            >
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {m.caixa.rail_titulo_operacoes}
-              </div>
-              <div className="mt-2">
-                <CaixaPdvOperacoesButtons
-                  m={m}
-                  idioma={idioma}
-                  variant="classic"
-                  carregandoRegras={carregandoRegras}
-                  caixaStatus={caixaStatus}
-                  caixaAberto={isCaixaAberto(caixaStatus)}
-                  movimentandoCaixa={movimentandoCaixa}
-                  finalizando={finalizando}
-                  validandoGerente={validandoGerente}
-                  gerenteValidadoAte={gerenteValidadoAte}
-                  onAbrirSuprimento={handleAbrirSuprimento}
-                  onAbrirSangria={handleAbrirSangria}
-                  onValidarGerente={abrirGerenteModal}
-                />
-              </div>
+          <div
+            className={cn(
+              "border-t px-4 py-3 sm:px-6 md:hidden",
+              "border-border bg-card text-foreground shadow-[var(--jl-elev-1)]",
+            )}
+          >
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {m.caixa.rail_titulo_operacoes}
             </div>
-          )}
+            <div className="mt-2">
+              <CaixaPdvOperacoesButtons
+                m={m}
+                idioma={idioma}
+                variant="classic"
+                carregandoRegras={carregandoRegras}
+                caixaStatus={caixaStatus}
+                caixaAberto={isCaixaAberto(caixaStatus)}
+                movimentandoCaixa={movimentandoCaixa}
+                finalizando={finalizando}
+                validandoGerente={validandoGerente}
+                gerenteValidadoAte={gerenteValidadoAte}
+                onAbrirSuprimento={handleAbrirSuprimento}
+                onAbrirSangria={handleAbrirSangria}
+                onValidarGerente={abrirGerenteModal}
+              />
+            </div>
+          </div>
           {isCaixaAberto(caixaStatus) && (
             <CaixaMovimentacoesTimeline
               m={m}
