@@ -3,7 +3,14 @@ import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTyp
 import type { OrigemCode, UnidadeCode } from './produtoForm.types'
 
 export function mapOrigemFromRow(origem: string): OrigemCode {
-  return origem === 'brasil_sem_nf' ? 'brasil_nf' : (origem as OrigemCode)
+  if (origem === 'brasil_sem_nf' || origem === 'brasil_nf' || origem === 'china_manual') {
+    return origem
+  }
+  return 'china_manual'
+}
+
+export function temNfFromOrigem(origem: OrigemCode): boolean {
+  return origem === 'brasil_nf'
 }
 
 export function parseGatilhoDisplay(value: number | null | undefined): string {
@@ -43,7 +50,6 @@ export function buildSubmitPayload(
     precoVarejo: number
     precoAtacado: number | null
     precoCusto: number | null
-    temNf: boolean
   },
 ): ProdutoFormBaseValues {
   return {
@@ -59,7 +65,7 @@ export function buildSubmitPayload(
     permitir_abaixo_custo: state.permitirAbaixoCusto,
     quantidade_gatilho_atacado: parseGatilhoSubmit(state.quantidadeGatilho),
     origem: state.origem,
-    tem_nf: state.temNf,
+    tem_nf: temNfFromOrigem(state.origem),
     unidade_medida: state.unidadeMedida,
     observacao: state.observacao.trim() || null,
     categoria_id: state.categoriaId || null,

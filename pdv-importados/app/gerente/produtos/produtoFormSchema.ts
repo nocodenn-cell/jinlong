@@ -96,10 +96,31 @@ const produtoFormBaseObject = z.object({
 /** SSOT — campos compartilhados entre criar e editar produto. */
 export const ProdutoFormBaseSchema = produtoFormBaseObject.superRefine(precoAtacadoRefine)
 
+export const NovoProdutoRascunhoSchema = produtoFormBaseObject
+  .extend({
+    preco_varejo: z.coerce
+      .number()
+      .nonnegative('O preço de varejo não pode ser negativo.')
+      .default(0),
+    status_publicacao: z.literal('DRAFT'),
+  })
+  .superRefine(precoAtacadoRefine)
+
 export const NovoProdutoSchema = produtoFormBaseObject
   .extend({
     ativo: z.boolean().optional(),
     status_publicacao: z.enum(['DRAFT', 'PUBLICADO', 'INATIVO']).optional(),
+  })
+  .superRefine(precoAtacadoRefine)
+
+export const EditarProdutoRascunhoSchema = produtoFormBaseObject
+  .extend({
+    produto_id: z.string().uuid('ID do produto inválido.'),
+    preco_varejo: z.coerce
+      .number()
+      .nonnegative('O preço de varejo não pode ser negativo.')
+      .default(0),
+    status_publicacao: z.literal('DRAFT').optional(),
   })
   .superRefine(precoAtacadoRefine)
 

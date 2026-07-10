@@ -39,7 +39,7 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
       <span
         className={cn(
           "text-xs font-semibold uppercase tracking-wide",
-          classic ? "text-blue-100/85" : "text-foreground/80",
+          classic ? "text-jl-fg-2" : "text-foreground/80",
         )}
       >
         {m.caixa.pdv_metodo_pagamento_titulo}
@@ -63,8 +63,8 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
                 "min-h-11 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
                 classic
                   ? selected
-                    ? "border border-white/50 bg-white text-blue-900 shadow-sm"
-                    : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
+                    ? "border border-primary bg-primary/10 text-primary shadow-sm"
+                    : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev"
                   : selected
                     ? "app-btn-accent"
                     : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 transition-colors hover:border-amber-400/70 hover:bg-amber-400/10 hover:text-jl-fg-1",

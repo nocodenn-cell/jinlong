@@ -10,70 +10,98 @@ import { baixarPdfEtiquetas } from '@/lib/etiqueta/gerarPdf'
 import { getEtiquetaConfig } from '@/lib/etiqueta/EtiquetaConfig'
 import type { ItemCarrinho } from '@/lib/etiqueta/types'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { getMessages } from '@/i18n/getMessages'
 
 type Props = {
   idioma: Idioma
+  initialCodigo?: string
+  initialProdutoId?: string
 }
 
-export function ImprimirEtiquetasPageClient({ idioma }: Props) {
-  const m = getMessages(idioma)
+function toCarrinhoItem(produto: {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  preco_varejo: number
+}): ItemCarrinho {
+  return {
+    produtoId: produto.id,
+    nome: produto.nome,
+    codigoBarras: produto.codigo_barras || '',
+    precoVarejo: produto.preco_varejo,
+    quantidade: 1,
+  }
+}
+
+export function ImprimirEtiquetasPageClient({
+  idioma,
+  initialCodigo,
+  initialProdutoId,
+}: Props) {
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
-  const [codigoBusca, setCodigoBusca] = useState('')
+  const [codigoBusca, setCodigoBusca] = useState(initialCodigo?.trim() ?? '')
   const [gerandoPdf, setGerandoPdf] = useState(false)
+  const [preloadDone, setPreloadDone] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-focus no input ao montar
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  // Mutation para buscar produto por código
   const { mutate: buscarProduto, loading: buscando } = useGerenteMutation(
     buscarProdutoPorCodigo,
-    { successMessage: m.comum.sucesso }
   )
 
-  // Mutation para buscar estoque atual (para "Imprimir Saldo Total")
   const { mutate: buscarEstoque, loading: buscandoEstoque } = useGerenteMutation(
     buscarEstoqueAtual,
-    { successMessage: m.comum.sucesso }
   )
 
-  // Adicionar produto ao carrinho
+  const adicionarAoCarrinho = (produto: {
+    id: string
+    nome: string
+    codigo_barras: string | null
+    preco_varejo: number
+  }) => {
+    setCarrinho((prev) => {
+      const existente = prev.find((item) => item.produtoId === produto.id)
+      if (existente) {
+        return prev.map((item) =>
+          item.produtoId === produto.id
+            ? { ...item, quantidade: item.quantidade + 1 }
+            : item,
+        )
+      }
+      return [...prev, toCarrinhoItem(produto)]
+    })
+  }
+
+  useEffect(() => {
+    if (preloadDone) return
+    let cancelled = false
+
+    async function preload() {
+      if (initialCodigo?.trim()) {
+        const r = await buscarProdutoPorCodigo(initialCodigo.trim())
+        if (!cancelled && r.success && r.data) adicionarAoCarrinho(r.data)
+      } else if (initialProdutoId?.trim()) {
+        const r = await buscarEstoqueAtual([initialProdutoId.trim()])
+        if (!cancelled && r.success && r.data?.[0]) adicionarAoCarrinho(r.data[0])
+      }
+      if (!cancelled) setPreloadDone(true)
+    }
+
+    void preload()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCodigo, initialProdutoId, preloadDone])
+
   const handleAdicionarProduto = async () => {
     if (!codigoBusca.trim()) return
 
     const resultado = await buscarProduto(codigoBusca.trim())
     if (resultado && resultado.success && resultado.data) {
-      const produto = resultado.data
-      
-      // Verificar se já existe no carrinho
-      const existente = carrinho.find((item) => item.produtoId === produto.id)
-      if (existente) {
-        // Incrementar quantidade
-        setCarrinho((prev) =>
-          prev.map((item) =>
-            item.produtoId === produto.id
-              ? { ...item, quantidade: item.quantidade + 1 }
-              : item
-          )
-        )
-      } else {
-        // Adicionar novo item
-        setCarrinho((prev) => [
-          ...prev,
-          {
-            produtoId: produto.id,
-            nome: produto.nome,
-            codigoBarras: produto.codigo_barras || '',
-            precoVarejo: produto.preco_varejo,
-            quantidade: 1,
-          },
-        ])
-      }
-
-      // Limpar input e manter focus
+      adicionarAoCarrinho(resultado.data)
       setCodigoBusca('')
       inputRef.current?.focus()
     }

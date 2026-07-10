@@ -67,6 +67,10 @@ export type ProdutoFormState = Readonly<{
   precoVarejoInput: MoneyInputBag
   precoAtacadoInput: MoneyInputBag
   precoCustoInput: MoneyInputBag
+  estoqueInicialQty: string
+  setEstoqueInicialQty: (v: string) => void
+  estoqueInicialMin: string
+  setEstoqueInicialMin: (v: string) => void
 }>
 
 export type ProdutoFormShellProps = Readonly<{
@@ -75,5 +79,9 @@ export type ProdutoFormShellProps = Readonly<{
   produto: ProdutoGerenteRow | null
   readOnly: ProdutoFormReadOnly
   disabled: boolean
+  modoCompleto?: boolean
   onFornecedoresChange?: (fornecedores: OpcoesFiltrosProdutos['fornecedores']) => void
+  onCategoriasChange?: (categorias: OpcoesFiltrosProdutos['categorias']) => void
+  onMarcasChange?: (marcas: OpcoesFiltrosProdutos['marcas']) => void
+  onImagemChange?: () => void
 }>

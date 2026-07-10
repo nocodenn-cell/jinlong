@@ -129,7 +129,7 @@ type Props = {
 
 export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
   const pdvLayoutVariant: CaixaPdvLayoutVariant =
-    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "classic" ? "classic" : "default"
+    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "default" ? "default" : "classic"
 
   const {
     mensagem,
@@ -1006,10 +1006,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   return (
     <>
       <div
-        data-caixa-layout={pdvLayoutVariant === "classic" ? "classic" : undefined}
+        data-caixa-layout={pdvLayoutVariant}
         className={cn(
-          "h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5",
-          pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "caixa-oriental-root",
+          "caixa-oriental-root h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5",
+          pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "",
         )}
       >
         {pdvLayoutVariant !== "classic" && (
