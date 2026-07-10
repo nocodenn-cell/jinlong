@@ -59,7 +59,6 @@ import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipe
 import { useThermalPrinter } from "@/hooks/useThermalPrinter"
 import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal"
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
-import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
 import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
 import {
   metodoPagamentoToForma,
@@ -71,14 +70,6 @@ import {
 } from "@/app/caixa/CaixaPdvOperadorTabs"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { cn } from "@/lib/utils"
-
-/** Banner «PDV clássico» em /caixa: oculto em produção salvo `NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER=1`; em dev aparece salvo `0`/`false`. */
-function showClassicLayoutPreviewBanner(): boolean {
-  const v = process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER
-  if (v === "0" || v === "false") return false
-  if (v === "1" || v === "true") return true
-  return process.env.NODE_ENV === "development"
-}
 
 function newCupomSessionId(): string {
   return crypto.randomUUID()
@@ -1051,9 +1042,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
         />
         <div className="flex-1 flex flex-col min-h-0">
-          {pdvLayoutVariant === "classic" && showClassicLayoutPreviewBanner() ? (
-            <CaixaPdvLayoutPreviewBanner m={m} />
-          ) : null}
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
             <div className="min-h-0 flex flex-col md:min-h-0">
               <CaixaPdvOperadorTabs
