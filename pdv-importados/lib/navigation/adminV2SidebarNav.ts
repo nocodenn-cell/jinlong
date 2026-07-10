@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Banknote,
   ArrowRightLeft,
+  ClipboardCheck,
   FileBarChart2,
   Inbox,
   LayoutDashboard,
@@ -57,6 +58,13 @@ export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
 
 export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'configuracoes', href: ROUTES.admin.configuracoes, icon: Settings, labelOverridePt: 'Configurações', dictKey: 'configuracoes' },
+  {
+    id: 'diagnostico-caixa',
+    href: ROUTES.admin.diagnosticoCaixa,
+    icon: ClipboardCheck,
+    labelOverridePt: 'Diagnóstico do Caixa',
+    hint: 'Checklist pré-produção do PDV.',
+  },
   { id: 'suspensao', href: ROUTES.admin.suspensao, icon: ShieldOff, labelOverridePt: 'Suspensão de licença', dictKey: 'suspensao' },
   {
     id: 'pdv',

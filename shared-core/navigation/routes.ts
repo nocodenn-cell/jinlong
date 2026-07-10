@@ -52,6 +52,7 @@ export const ROUTES = {
     comissoes: '/admin/comissoes',
     configuracoes: '/admin/configuracoes',
     suspensao: '/admin/suspensao',
+    diagnosticoCaixa: '/admin/diagnostico-caixa',
     categoriasProdutos: '/admin/categorias-produtos',
     categoriasFinanceiras: '/admin/categorias-financeiras',
   },

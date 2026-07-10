@@ -30,6 +30,7 @@
     "test:demo-fluxo": "vitest run lib/pdv ../shared-core/src/pdv/invariants",
     "check:pdv-invariant-boundary": "node scripts/check-pdv-invariant-boundary.mjs",
     "check:entity-ssot": "node scripts/check-entity-ssot-boundary.mjs",
+    "check:caixa-pre-producao": "node scripts/check-caixa-pre-producao.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook"
