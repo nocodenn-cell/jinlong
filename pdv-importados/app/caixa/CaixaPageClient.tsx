@@ -1054,33 +1054,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
-                  pdvLayoutVariant === "classic" ? (
-                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
-                      <div className="shrink-0">
-                        <CaixaSearchBar
-                          ref={buscaInputRef}
-                          m={m}
-                          codigo={codigo}
-                          onCodigoChange={setCodigo}
-                          onSubmit={handleAdicionar}
-                          onNovoCupom={handleNovoCupom}
-                          buscando={buscandoPipeline}
-                          carregandoRegras={carregandoRegras}
-
-                          somAtivo={somFeedbackAtivo}
-                          onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
-                          hideNovoCupom
-                          compact={codigo.trim().length > 0}
-                        />
-                      </div>
-                      <div className="shrink-0">
-                        <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                    <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                    <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
                         m={m}
@@ -1092,10 +1068,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         carregandoRegras={carregandoRegras}
                         somAtivo={somFeedbackAtivo}
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                        hideNovoCupom
+                        compact={codigo.trim().length > 0}
                       />
+                    </div>
+                    <div className="shrink-0">
                       <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
-                    </>
-                  )
+                    </div>
+                  </div>
                 }
               />
             </div>
