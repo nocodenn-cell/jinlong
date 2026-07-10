@@ -179,7 +179,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     useState<number>(0)
   const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
-  const [summaryCollapsed, setSummaryCollapsed] = useState(true)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
     | null
     | { tipo: "sangria" }
@@ -326,17 +325,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       window.removeEventListener('pointerdown', reset)
     }
   }, [focarCampoBusca])
-
-  /* Auto-expand/collapse financial summary based on cart state */
-  useEffect(() => {
-    if (itens.length === 0) {
-      /* Cart is empty → collapse summary */
-      setSummaryCollapsed(true)
-    } else if (summaryCollapsed && itens.length > 0) {
-      /* First item added → auto-expand summary */
-      setSummaryCollapsed(false)
-    }
-  }, [itens.length, summaryCollapsed])
 
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
@@ -1262,12 +1250,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           <CaixaFooter
             m={m}
             idioma={idioma}
-            layout={pdvLayoutVariant === "classic" ? "classic_summary" : "full"}
-            onFinalizar={handleFinalizarClick}
-            finalizando={finalizando}
-            itensLength={itens.length}
-            buscando={buscandoPipeline}
-            carregandoRegras={carregandoRegras}
             totalItens={totalItens}
             totalUnidades={totalUnidades}
             gerenteValidadoAte={gerenteValidadoAte}
@@ -1277,13 +1259,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             totalDesconto={totalDesconto}
             economiaPrecoAtacadoAuto={economiaPrecoAtacadoAuto}
             valorDescontoGerente={valorDescontoGerente}
-            totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}
-            metodoPagamentoPanel={
-              pdvLayoutVariant === "default" ? metodoPagamentoSelector : undefined
-            }
-            summaryCollapsed={summaryCollapsed && pdvLayoutVariant !== "classic"}
-            onToggleSummaryCollapse={() => setSummaryCollapsed(!summaryCollapsed)}
           />
         </div>
       </div>
