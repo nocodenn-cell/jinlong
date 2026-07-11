@@ -52,5 +52,8 @@
     "turbo": "^2.5.4",
     "vitest": "^3.2.6"
   },
-  "packageManager": "npm@10.9.2"
+  "packageManager": "npm@10.9.2",
+  "dependencies": {
+    "@sentry/nextjs": "^10.65.0"
+  }
 }
