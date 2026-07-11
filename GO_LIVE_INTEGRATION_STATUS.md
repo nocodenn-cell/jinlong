@@ -197,8 +197,40 @@ git push -f origin main
 
 **Status Summary:**
 - **PRs Integrated:** 6 of 9 (162, 158, 161, 159, 152, 150)
-- **Conflicts:** 9 (all resolved)
-- **Migrations:** 259-267 (clean sequence)
-- **Ready for:** Testing & validation
-- **Blocked On:** Sentry proxy (npm ci), E2E suite, Vercel CI
+- **Conflicts:** 9 merge + 2 migration collisions (all resolved)
+- **Migrations:** 259-268 (clean sequence, v4 unified)
+- **PR:** #163 (draft)
+- **Ready for:** E2E validation (FASE 3)
+- **Blocked On:** GitHub Actions `npm ci` (Sentry proxy 403 — admin fix), E2E suite
+
+---
+
+## UPDATE — Build/Type Fixes (post-integration validation)
+
+After the initial 6-PR merge, real local validation (TS 5.9.3, full `next build`,
+`guard:all`) surfaced additional blockers — all fixed:
+
+| Fix | File | Cause | Commit |
+|-----|------|-------|--------|
+| routes.ts superset | shared-core/navigation/routes.ts | #150 merge took stale routes → `ROUTES.admin.compras` broke Vercel build | eb352ec |
+| Funcionarios reconcile | admin/funcionarios/page.tsx + delete orphan | #159 commission UI vs #161 API mismatch | d699949 |
+| clienteId dedup | finalizarVendaValidation.ts | #158 merge artifact (TS1117) | d699949 |
+| ignoreDeprecations | tsconfig.typecheck.json | TS 5.9.3 accepts "5.0" not "6.0" | d699949 |
+| i18n key | CaixaOperadorContextBar.tsx | `status_caixa_aberto` doesn't exist → `status_aberto` | f38dfc8 |
+| **v4 RPC unify** | 268_..._guard_suspensao_cliente.sql | #158+#152 both fully redefined v4, each dropping the other's feature | 8ce6e76 |
+
+### Final Validation Results
+- ✅ `npm run build` (next build) → **exit 0** (all pages generated)
+- ✅ `npm run typecheck` → clean
+- ✅ `npm run guard:all` → 7/7 pass
+- ⚠️ GitHub Actions → `npm ci` fails on Sentry CLI proxy 403 (infra, admin-level; affects all branches equally)
+
+### Migration Sequence (Final)
+```
+259 vendas_cliente_id          263 comissoes_regras
+260 finalizar_venda_v4_cliente 264 comissoes_congelamento
+261 remover_modulo_fiado       265 rls_vendor_isolation
+262 funcionarios_separate      267 funcionarios_meta_crud
+                               268 v4_guard_suspensao + cliente (authoritative v4)
+```
 
