@@ -23,6 +23,13 @@
    */
   --jl-border-1: #e2e8f0;                               /* primary divider — slate-200 */
   --jl-border-2: #e2e8f0;                               /* secondary divider — slate-200 */
+  /*
+   * Borda de CAMPOS de formulário — mais escura que os divisores para o input
+   * não "sumir" no card branco (auditoria UX §1.3). slate-300, não slate-200:
+   * visível em repouso sem pesar como um divisor. Usada por `.app-input` e pelo
+   * token shadcn `--input`; NÃO afeta bordas de card/tabela.
+   */
+  --jl-input-border: #cbd5e1;                           /* form field border — slate-300 */
 
   /* Foreground */
   --jl-fg-1: var(--surface-text, rgb(15 23 42));       /* primary text — slate-900 */
