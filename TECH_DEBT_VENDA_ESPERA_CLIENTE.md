@@ -56,7 +56,7 @@ Quando um operador coloca uma venda em espera com **intenção de cliente futuro
 - ✓ `retomar_venda_em_espera()` retorna `cliente_id`
 - ✗ `listar_vendas_em_espera()` não inclui `cliente_id` no JSON
 
-**Arquivo**: `backend/supabase/migrations/255_vendas_em_espera_e_consulta_rapida.sql`
+**Arquivo**: `backend/supabase/migrations/247c_vendas_em_espera_e_consulta_rapida.sql`
 
 ### 2. TypeScript (Backend)
 - ✗ `colocarVendaEmEsperaImpl()` não aceita `clienteId` no input
@@ -240,7 +240,7 @@ LEFT JOIN public.clientes c ON v.cliente_id = c.id
 
 ## 📎 Referências
 
-- **Migration**: `backend/supabase/migrations/255_vendas_em_espera_e_consulta_rapida.sql`
+- **Migration**: `backend/supabase/migrations/247c_vendas_em_espera_e_consulta_rapida.sql`
 - **Tipos**: `pdv-importados/app/caixa/server/caixaVendaEspera.impl.ts`
 - **Frontend**: `pdv-importados/app/caixa/CaixaPageClient.tsx`
 - **UI Listagem**: `pdv-importados/app/caixa/CaixaEmAbertoList.tsx`
