@@ -1631,13 +1631,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         parseValor={parseValorMonetario}
         onConfirm={handleConfirmarAbrirTurno}
       />
-      <CaixaSelecionarClienteModal  {/* ✅ NOVO (Fase 5b) */}
+      {/* ✅ NOVO (Fase 5b): Modal para seleção de cliente */}
+      <CaixaSelecionarClienteModal
         aberto={selecionarClienteModalAberto}
         onSelecionado={(id) => {
           setClienteId(id)
           setSelecionarClienteModalAberto(false)
-          // Retentativa de finalização com cliente agora selecionado
-          // Uma próxima tentativa de clique em "Finalizar" usará o clienteId
         }}
         onCancelado={() => setSelecionarClienteModalAberto(false)}
       />
