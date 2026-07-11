@@ -151,7 +151,10 @@ CREATE TRIGGER trg_funcionarios_meta_audit_update
 -- ============================================================================
 
 -- RPC: Criar funcionário (recebe usuario_id já criado)
-DROP FUNCTION IF EXISTS public.fn_criar_funcionario(uuid, uuid, text, text, text, numeric, text, numeric);
+DROP FUNCTION IF EXISTS public.fn_criar_funcionario(
+  uuid, uuid, text, text, text,
+  numeric DEFAULT NULL, text DEFAULT NULL, numeric DEFAULT NULL
+);
 
 CREATE OR REPLACE FUNCTION public.fn_criar_funcionario(
   p_usuario_id          uuid,
@@ -272,7 +275,9 @@ GRANT EXECUTE ON FUNCTION public.fn_criar_funcionario(uuid, uuid, text, text, te
   TO authenticated;
 
 -- RPC: Listar funcionários (com filtros)
-DROP FUNCTION IF EXISTS public.fn_listar_funcionarios_gerente(uuid, text, text);
+DROP FUNCTION IF EXISTS public.fn_listar_funcionarios_gerente(
+  uuid, text DEFAULT NULL, text DEFAULT 'todos'
+);
 
 CREATE OR REPLACE FUNCTION public.fn_listar_funcionarios_gerente(
   p_loja_id uuid,
@@ -328,7 +333,11 @@ GRANT EXECUTE ON FUNCTION public.fn_listar_funcionarios_gerente(uuid, text, text
   TO authenticated;
 
 -- RPC: Atualizar funcionário
-DROP FUNCTION IF EXISTS public.fn_atualizar_funcionario(uuid, text, text, numeric, text, numeric);
+DROP FUNCTION IF EXISTS public.fn_atualizar_funcionario(
+  uuid,
+  text DEFAULT NULL, text DEFAULT NULL, numeric DEFAULT NULL,
+  text DEFAULT NULL, numeric DEFAULT NULL
+);
 
 CREATE OR REPLACE FUNCTION public.fn_atualizar_funcionario(
   p_funcionario_id       uuid,
@@ -443,7 +452,9 @@ GRANT EXECUTE ON FUNCTION public.fn_desativar_funcionario(uuid)
 -- ============================================================================
 
 -- RPC: Total vendas por funcionário
-DROP FUNCTION IF EXISTS public.total_vendas_por_funcionario(uuid, date, date);
+DROP FUNCTION IF EXISTS public.total_vendas_por_funcionario(
+  uuid, date DEFAULT NULL, date DEFAULT NULL
+);
 
 CREATE OR REPLACE FUNCTION public.total_vendas_por_funcionario(
   p_loja_id uuid,
@@ -485,7 +496,9 @@ GRANT EXECUTE ON FUNCTION public.total_vendas_por_funcionario(uuid, date, date)
   TO authenticated;
 
 -- RPC: Resumo comissões por funcionário
-DROP FUNCTION IF EXISTS public.resumo_comissoes_por_funcionario(uuid, date, date);
+DROP FUNCTION IF EXISTS public.resumo_comissoes_por_funcionario(
+  uuid, date DEFAULT NULL, date DEFAULT NULL
+);
 
 CREATE OR REPLACE FUNCTION public.resumo_comissoes_por_funcionario(
   p_loja_id uuid,
