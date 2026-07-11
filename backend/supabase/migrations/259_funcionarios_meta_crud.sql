@@ -466,8 +466,8 @@ AS $$
     fm.usuario_id,
     fm.nome_exibicao,
     COUNT(v.id) AS total_vendas,
-    SUM(v.total) AS valor_total,
-    AVG(v.total) AS valor_medio
+    SUM(v.total_liquido) AS valor_total,
+    AVG(v.total_liquido) AS valor_medio
   FROM public.funcionarios_meta fm
   LEFT JOIN public.usuarios u ON u.id = fm.usuario_id
   LEFT JOIN public.vendas v ON v.operador_id = u.id
@@ -476,6 +476,7 @@ AS $$
     AND (p_de IS NULL OR DATE(v.created_at) >= p_de)
     AND (p_ate IS NULL OR DATE(v.created_at) <= p_ate)
     AND v.id IS NOT NULL
+    AND v.status = 'CONCLUIDA'
   GROUP BY fm.usuario_id, fm.nome_exibicao
   ORDER BY valor_total DESC NULLS LAST;
 $$;
