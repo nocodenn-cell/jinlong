@@ -20,6 +20,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { podeSalvarComoRascunho, getTextoSalvarEdicao } from '@shared-core/product/statusRules'
 import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
 import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
 import { ProdutoForm } from './form/ProdutoForm'
@@ -88,7 +89,7 @@ export function ProdutoFormModal({
 }: ProdutoFormModalProps) {
   const p = m.produtos
   const editando = produto !== null
-  const podeSalvarRascunho = !editando || produto?.status_publicacao === 'DRAFT'
+  const podeSalvarRascunho = podeSalvarComoRascunho(editando, produto?.status_publicacao)
   const nomeRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
@@ -198,8 +199,8 @@ export function ProdutoFormModal({
         const msg = (() => {
           if (comoRascunho) return p.criado_rascunho
           if (!editando) return p.criado_publicado
-          if (produto.status_publicacao === 'DRAFT') return p.criado_publicado
-          return m.comum.sucesso
+          const statusAtual = produto.status_publicacao || 'PUBLICADO'
+          return statusAtual === 'DRAFT' ? p.criado_publicado : m.comum.sucesso
         })()
         emitGerenteToast({ kind: 'success', message: msg })
         if (!estoqueOk) {
@@ -344,9 +345,7 @@ export function ProdutoFormModal({
           >
             {saving
               ? '…'
-              : editando && produto.status_publicacao !== 'DRAFT'
-                ? p.editar_modal_salvar
-                : p.publicar_no_pdv}
+              : getTextoSalvarEdicao(editando, produto?.status_publicacao, p.publicar_no_pdv, p.editar_modal_salvar)}
           </Button>
         </>
       }
