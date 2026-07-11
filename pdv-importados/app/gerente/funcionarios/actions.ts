@@ -3,7 +3,6 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
-import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 export type FuncionarioRow = {
   id: string
