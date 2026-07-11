@@ -3,6 +3,7 @@ const MSG_CAIXA_INDISPONIVEL = 'Caixa indisponível no momento.'
 const MSG_MOVIMENTACOES_PENDENTES = 'Há vendas pendentes para finalizar.'
 const MSG_CAIXA_FECHADO = 'Caixa fechado. Abra o caixa antes de finalizar a venda.'
 const MSG_SESSAO = 'Sessão expirada. Faça login novamente.'
+const MSG_VENDAS_SUSPENSAS = 'Vendas suspensas pelo gerente.'
 
 function lower(raw: string): string {
   return raw.toLowerCase()
@@ -17,6 +18,9 @@ export function caixaErroOperador(detalheTecnico: string | undefined | null): st
 
   if (l.includes('sessão expirada') || l.includes('sessao expirada') || l.includes('jwt')) {
     return MSG_SESSAO
+  }
+  if (l.includes('finalizar_venda_vendas_suspensas')) {
+    return MSG_VENDAS_SUSPENSAS
   }
   if (l.includes('fechar_caixa_movimentacoes_pendentes') || l.includes('movimentação') && l.includes('pendente')) {
     return MSG_MOVIMENTACOES_PENDENTES

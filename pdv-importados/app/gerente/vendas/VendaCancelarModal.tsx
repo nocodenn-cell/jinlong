@@ -7,10 +7,19 @@ import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/form
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import type { Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { cancelarVendaGerenteAction, type VendaListRow } from './actions'
+import { cancelarVendaGerenteAction } from './actions'
+
+/** Subconjunto de campos que o modal precisa — aceita VendaListRow (gerente) e VendaLinha (admin). */
+export type VendaCancelarAlvo = Readonly<{
+  id: string
+  data: string | null
+  total_liquido: number | null
+  forma_pagamento: string | null
+  caixa_id: string | null
+}>
 
 type Props = Readonly<{
-  venda: VendaListRow | null
+  venda: VendaCancelarAlvo | null
   locale: string
   m: Mensagens
   onClose: () => void
@@ -44,7 +53,11 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
     fd.set('motivo', motivoTrim)
     startTransition(async () => {
       try {
-        await cancelarVendaGerenteAction(fd)
+        const result = await cancelarVendaGerenteAction(fd)
+        if (!result.ok) {
+          emitGerenteToast({ kind: 'error', message: result.error })
+          return
+        }
         emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
         onCancelado()
         onClose()
