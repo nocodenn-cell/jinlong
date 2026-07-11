@@ -25,7 +25,7 @@ function CaixaOperadorContextBarImpl({ m, idioma, configCaixaWeb, caixaAberto }:
       {caixaAberto && (
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          ✅ {m.caixa.status_caixa_aberto || 'Caixa Aberto'}
+          ✅ {m.caixa.status_aberto || 'Caixa Aberto'}
         </span>
       )}
 
