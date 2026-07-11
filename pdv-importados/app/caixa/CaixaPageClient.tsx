@@ -1254,7 +1254,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 produtoPanel={
                   pdvLayoutVariant === "classic" ? (
                     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} caixaAberto={isCaixaAberto(caixaStatus)} />
                       <div className="shrink-0">
                         <CaixaSearchBar
                           ref={buscaInputRef}
@@ -1278,7 +1278,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                     </div>
                   ) : (
                     <>
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} caixaAberto={isCaixaAberto(caixaStatus)} />
                       <CaixaSearchBar
                         ref={buscaInputRef}
                         m={m}

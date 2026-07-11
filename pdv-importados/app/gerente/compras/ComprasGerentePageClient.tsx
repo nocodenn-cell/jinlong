@@ -83,8 +83,7 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
 
   useEffect(() => {
     setPagina(0)
-    const t = setTimeout(() => void carregar(0), 280)
-    return () => clearTimeout(t)
+    void carregar(0)
   }, [carregar])
 
   const totalPages = Math.max(1, Math.ceil(dados.total / LIMITE_PAG))

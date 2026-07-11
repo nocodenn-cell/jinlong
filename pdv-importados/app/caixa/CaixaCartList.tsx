@@ -178,7 +178,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
         <QuantidadeStepper
           m={m}
           item={item}
-          size="sm"
+          size="md"
           onAlterarQuantidade={onAlterarQuantidade}
           onRemover={onRemover}
         />
