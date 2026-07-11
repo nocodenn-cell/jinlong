@@ -82,8 +82,12 @@ export async function criarFuncionarioAction(
       // Se falhar, tentar deletar o auth.user criado (cleanup)
       try {
         await supabase.auth.admin.deleteUser(newAuthUserId)
-      } catch {
-        // Ignore cleanup errors
+      } catch (cleanupError) {
+        console.error('[FUNCIONARIOS] CLEANUP FALHOU - ÓRFÃO DEIXADO', {
+          newAuthUserId,
+          usuariosError,
+          cleanupError,
+        })
       }
       return { ok: false, error: `Erro ao registrar usuário: ${usuariosError.message}` }
     }
@@ -108,8 +112,12 @@ export async function criarFuncionarioAction(
       try {
         await supabase.auth.admin.deleteUser(newAuthUserId)
         await supabase.from('usuarios').delete().eq('id', newAuthUserId)
-      } catch {
-        // Ignore cleanup errors
+      } catch (cleanupError) {
+        console.error('[FUNCIONARIOS] CLEANUP FALHOU APÓS RPC ERROR - ÓRFÃO DEIXADO', {
+          newAuthUserId,
+          rpcError,
+          cleanupError,
+        })
       }
       const msg = rpcResult?.[0]?.message || rpcError.message
       return { ok: false, error: `Erro ao criar funcionário: ${msg}` }
@@ -121,15 +129,37 @@ export async function criarFuncionarioAction(
       try {
         await supabase.auth.admin.deleteUser(newAuthUserId)
         await supabase.from('usuarios').delete().eq('id', newAuthUserId)
-      } catch {
-        // Ignore
+      } catch (cleanupError) {
+        console.error('[FUNCIONARIOS] CLEANUP FALHOU APÓS RPC RETORNAR FALSE - ÓRFÃO DEIXADO', {
+          newAuthUserId,
+          rpcMessage: result?.message,
+          cleanupError,
+        })
       }
       return { ok: false, error: result?.message || 'Erro desconhecido ao criar funcionário.' }
     }
 
-    // PASSO 4: Enviar email com recovery link (TODO: usar Edge Function ou Resend)
-    // Por agora, apenas registrar que o usuário foi criado
-    // Em produção, chamar Edge Function: send-employee-invite
+    // PASSO 4: Enviar email com recovery link via Edge Function
+    // Isso é assíncrono — não esperar resposta, apenas tentar
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (supabaseUrl) {
+        await fetch(`${supabaseUrl}/functions/v1/send-employee-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: input.email,
+            nome: input.nome_exibicao,
+            auth_user_id: newAuthUserId,
+          }),
+        }).catch((err) => {
+          // Log mas não falha o fluxo — usuário já foi criado
+          console.error('[FUNCIONARIOS] Edge Function error (non-blocking):', err)
+        })
+      }
+    } catch {
+      // Ignorar erro de email — o funcionário já foi criado com sucesso
+    }
 
     revalidatePath(`/app/admin/funcionarios`)
     revalidatePath(`/app/gerente/funcionarios`)

@@ -186,13 +186,22 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Validar permissão: caller é GERENTE/ADMIN da loja
+  -- Validar: usuario_id pertence à mesma loja (multi-tenant safety)
+  IF NOT EXISTS (
+    SELECT 1 FROM public.usuarios u
+    WHERE u.id = p_usuario_id AND u.loja_id = p_loja_id
+  ) THEN
+    RETURN QUERY SELECT FALSE, 'USUARIO_LOJA_MISMATCH'::text, NULL::uuid;
+    RETURN;
+  END IF;
+
+  -- Validar permissão: caller é GERENTE/ADMIN/DONO da loja
   IF NOT EXISTS (
     SELECT 1 FROM public.usuarios u
     WHERE u.id = v_gerente_id
       AND u.perfil IN ('GERENTE', 'ADMIN')
       AND u.loja_id = p_loja_id
-  ) THEN
+  ) AND NOT public.auth_usuario_eh_dono() THEN
     RETURN QUERY SELECT FALSE, 'PERMISSAO_NEGADA'::text, NULL::uuid;
     RETURN;
   END IF;
