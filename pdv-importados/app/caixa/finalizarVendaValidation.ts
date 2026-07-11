@@ -59,6 +59,7 @@ export const finalizarVendaInputSchema = z.object({
     .optional(),
   pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
+  clienteId: z.string().uuid('ID do cliente inválido.').optional(), // ✅ NOVO (Fase 5b)
 }).superRefine((value, ctx) => {
   const hasToken = !!value.descontoGerenteToken
   const hasPercentual = value.descontoGerentePercentual !== undefined
