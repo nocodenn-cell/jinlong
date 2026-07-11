@@ -28,11 +28,7 @@ export function CaixaSelecionarClienteModal({ aberto, onSelecionado, onCancelado
 
     setCarregando(true)
     try {
-      const resultado = await buscarClientesPaginadosAction({
-        pagina: 1,
-        limite: 20,
-        busca: busca.trim(),
-      })
+      const resultado = await buscarClientesPaginadosAction(1, busca.trim())
 
       if (resultado.ok && resultado.clientes) {
         setClientes(
