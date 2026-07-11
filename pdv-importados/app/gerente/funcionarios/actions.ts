@@ -84,6 +84,19 @@ const CriarComissaoRegraSchema = z.object({
 
 type CriarComissaoRegraInput = z.infer<typeof CriarComissaoRegraSchema>
 
+const AtualizarComissaoRegraSchema = z.object({
+  id: z.string().uuid(),
+  produto_id: z.string().uuid().nullable().optional(),
+  categoria_id: z.string().uuid().nullable().optional(),
+  margem_minima: z.number().nullable().optional(),
+  margem_maxima: z.number().nullable().optional(),
+  percentual: z.number().min(0).max(100),
+  vigencia_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  vigencia_fim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+})
+
+type AtualizarComissaoRegraInput = z.infer<typeof AtualizarComissaoRegraSchema>
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Funcionarios CRUD
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,10 +116,10 @@ export async function listarFuncionarios(
     .select(
       `
       id, loja_id, nome, cpf, telefone, email, ativo, created_at,
-      usuarios!funcionarios_id (
-        id as usuario_id,
-        nome as usuario_nome,
-        perfil as usuario_perfil
+      usuarios!usuarios_funcionario_id_fkey (
+        usuario_id:id,
+        usuario_nome:nome,
+        usuario_perfil:perfil
       )
     `
     )
@@ -200,6 +213,9 @@ export async function criarFuncionario(input: unknown): Promise<ActionResult<Fun
   })
 
   if (regraError) {
+    // Sem transação disponível aqui: remove o funcionário órfão para não deixar
+    // um registro sem regra padrão nem permitir duplicata em nova tentativa.
+    await supabase.from('funcionarios').delete().eq('id', newFuncionario.id)
     return { success: false, error: mensagemErroComSecao('Criar comissão padrão', regraError.message) }
   }
 
@@ -264,19 +280,40 @@ export async function atualizarFuncionario(input: unknown): Promise<ActionResult
 
   // Update default commission rule if provided
   if (parsed.data.comissao_padrao_percentual !== undefined) {
-    const { data: regraAtual } = await supabase
+    const { data: regraAtual, error: regraSelectError } = await supabase
       .from('comissoes_regras_funcionario')
       .select('id')
       .eq('funcionario_id', parsed.data.id)
       .eq('tipo_regra', 'padrao')
       .eq('ativo', true)
-      .single()
+      .maybeSingle()
+
+    if (regraSelectError) {
+      return { success: false, error: mensagemErroComSecao('Atualizar comissão padrão', regraSelectError.message) }
+    }
 
     if (regraAtual) {
-      await supabase
+      const { error: regraUpdateError } = await supabase
         .from('comissoes_regras_funcionario')
         .update({ percentual: parsed.data.comissao_padrao_percentual })
         .eq('id', regraAtual.id)
+      if (regraUpdateError) {
+        return { success: false, error: mensagemErroComSecao('Atualizar comissão padrão', regraUpdateError.message) }
+      }
+    } else {
+      // Sem regra padrão ativa (estado inconsistente): recria em vez de falhar silenciosamente.
+      const { error: regraCreateError } = await supabase.from('comissoes_regras_funcionario').insert({
+        funcionario_id: parsed.data.id,
+        loja_id: lojaId,
+        tipo_regra: 'padrao',
+        percentual: parsed.data.comissao_padrao_percentual,
+        vigencia_inicio: new Date().toISOString().split('T')[0],
+        ativo: true,
+        created_by: auth.session.userId,
+      })
+      if (regraCreateError) {
+        return { success: false, error: mensagemErroComSecao('Atualizar comissão padrão', regraCreateError.message) }
+      }
     }
   }
 
@@ -502,4 +539,122 @@ export async function carregarComissaoHistorico(funcionarioId: string): Promise<
       alterado_em: h.alterado_em,
     })),
   }
+}
+
+export async function atualizarComissaoRegra(input: unknown): Promise<ActionResult<ComissaoRegraRow>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = AtualizarComissaoRegraSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Dados inválidos.' }
+
+  const supabase = await createClient()
+
+  const { data: regraAnterior, error: getError } = await supabase
+    .from('comissoes_regras_funcionario')
+    .select('*')
+    .eq('id', parsed.data.id)
+    .single()
+
+  if (getError || !regraAnterior) return { success: false, error: 'Regra não encontrada.' }
+
+  // O tipo da regra não é editável (imutável após criada); valida os campos
+  // de alvo de acordo com o tipo já existente.
+  if (regraAnterior.tipo_regra === 'por_produto' && !parsed.data.produto_id) {
+    return { success: false, error: 'Produto é obrigatório para regra por produto.' }
+  }
+  if (regraAnterior.tipo_regra === 'por_categoria' && !parsed.data.categoria_id) {
+    return { success: false, error: 'Categoria é obrigatória para regra por categoria.' }
+  }
+  if (regraAnterior.tipo_regra === 'por_margem' && (!parsed.data.margem_minima || !parsed.data.margem_maxima)) {
+    return { success: false, error: 'Margem mínima e máxima são obrigatórias para regra por margem.' }
+  }
+
+  const { data: regraAtualizada, error: updateError } = await supabase
+    .from('comissoes_regras_funcionario')
+    .update({
+      produto_id: regraAnterior.tipo_regra === 'por_produto' ? parsed.data.produto_id || null : null,
+      categoria_id: regraAnterior.tipo_regra === 'por_categoria' ? parsed.data.categoria_id || null : null,
+      margem_minima: regraAnterior.tipo_regra === 'por_margem' ? parsed.data.margem_minima || null : null,
+      margem_maxima: regraAnterior.tipo_regra === 'por_margem' ? parsed.data.margem_maxima || null : null,
+      percentual: parsed.data.percentual,
+      vigencia_inicio: parsed.data.vigencia_inicio,
+      vigencia_fim: parsed.data.vigencia_fim || null,
+    })
+    .eq('id', parsed.data.id)
+    .select()
+    .single()
+
+  if (updateError) return { success: false, error: mensagemErroComSecao('Atualizar regra', updateError.message) }
+
+  // Log to audit trail
+  await supabase.from('comissoes_regras_historico').insert({
+    regra_id: regraAtualizada.id,
+    funcionario_id: regraAtualizada.funcionario_id,
+    acao: 'alterada',
+    dados_anteriores: regraAnterior,
+    dados_novos: regraAtualizada,
+    alterado_por: auth.session.userId,
+  })
+
+  revalidatePath('/gerente/funcionarios')
+
+  return {
+    success: true,
+    data: {
+      id: regraAtualizada.id,
+      tipo_regra: regraAtualizada.tipo_regra,
+      produto_id: regraAtualizada.produto_id,
+      produto_nome: null,
+      categoria_id: regraAtualizada.categoria_id,
+      categoria_nome: null,
+      margem_minima: regraAtualizada.margem_minima,
+      margem_maxima: regraAtualizada.margem_maxima,
+      percentual: regraAtualizada.percentual,
+      vigencia_inicio: regraAtualizada.vigencia_inicio,
+      vigencia_fim: regraAtualizada.vigencia_fim,
+      ativo: regraAtualizada.ativo,
+      created_at: regraAtualizada.created_at,
+    },
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dropdown data (produtos / categorias) para o editor de regras
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function listarProdutosParaComissao(): Promise<ActionResult<{ id: string; nome: string }[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = auth.session.lojaId ?? LOJA_MATRIZ_ID
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('produtos')
+    .select('id, nome')
+    .eq('loja_id', lojaId)
+    .eq('ativo', true)
+    .order('nome')
+
+  if (error) return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
+
+  return { success: true, data: data ?? [] }
+}
+
+export async function listarCategoriasParaComissao(): Promise<ActionResult<{ id: string; nome: string }[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('categorias')
+    .select('id, nome')
+    .eq('ativo', true)
+    .order('nome')
+
+  if (error) return { success: false, error: mensagemErroComSecao('Categorias', error.message) }
+
+  return { success: true, data: data ?? [] }
 }

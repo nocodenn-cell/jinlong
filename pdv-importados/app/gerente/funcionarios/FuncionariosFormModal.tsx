@@ -2,8 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
-import { criarFuncionario, atualizarFuncionario, type FuncionarioRow } from './actions'
-import { listarFuncionarios } from './actions'
+import {
+  criarFuncionario,
+  atualizarFuncionario,
+  listarFuncionarios,
+  listarComissoesRegras,
+  type FuncionarioRow,
+  type ComissaoRegraRow,
+} from './actions'
+import { ComissaoRulesEditor } from './ComissaoRulesEditor'
+import { ComissaoHistoricoList } from './ComissaoHistoricoList'
 
 interface Props {
   funcionarioId?: string | null
@@ -73,7 +81,10 @@ export function FuncionariosFormModal({ funcionarioId, onClose, onSuccess, local
 
       return null
     },
-    { successMessage: funcionarioId ? 'Funcionário atualizado.' : 'Funcionário criado.' },
+    {
+      successMessage: funcionarioId ? 'Funcionário atualizado.' : 'Funcionário criado.',
+      onSuccess: () => onSuccess(),
+    },
   )
 
   const isEditing = !!funcionarioId
@@ -275,6 +286,28 @@ function AcessoTab({ funcionario }: { funcionario: FuncionarioRow | null }) {
   )
 }
 
+const TIPO_LABEL: Record<ComissaoRegraRow['tipo_regra'], string> = {
+  por_produto: 'Produto',
+  por_categoria: 'Categoria',
+  por_margem: 'Margem',
+  padrao: 'Padrão',
+}
+
+// Ordem de prioridade usada pelo motor de comissão: produto > categoria > margem > padrão.
+const PRIORIDADE_ORDEM: Record<ComissaoRegraRow['tipo_regra'], number> = {
+  por_produto: 1,
+  por_categoria: 2,
+  por_margem: 3,
+  padrao: 4,
+}
+
+function alvoDaRegra(r: ComissaoRegraRow): string {
+  if (r.tipo_regra === 'por_produto') return r.produto_nome ?? '—'
+  if (r.tipo_regra === 'por_categoria') return r.categoria_nome ?? '—'
+  if (r.tipo_regra === 'por_margem') return `${r.margem_minima}% – ${r.margem_maxima}%`
+  return '—'
+}
+
 function ComissaoTab({
   comissaoPadrao,
   setComissaoPadrao,
@@ -286,6 +319,32 @@ function ComissaoTab({
 }) {
   const inputClass =
     'w-full rounded-lg border border-jl-border-1 bg-[#0a0f1e] px-3 py-2 text-sm text-jl-fg-1 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/30'
+
+  const [regras, setRegras] = useState<ComissaoRegraRow[]>([])
+  const [loading, setLoading] = useState(false)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [regraEditando, setRegraEditando] = useState<ComissaoRegraRow | null>(null)
+
+  const carregarRegras = () => {
+    if (!funcionarioId) return
+    setLoading(true)
+    listarComissoesRegras(funcionarioId).then((r) => {
+      setLoading(false)
+      if (r.success) {
+        // Prioridade produto > categoria > margem (a regra "padrao" já tem seção própria acima)
+        setRegras(
+          r.data
+            .filter((x) => x.tipo_regra !== 'padrao')
+            .sort((a, b) => PRIORIDADE_ORDEM[a.tipo_regra] - PRIORIDADE_ORDEM[b.tipo_regra]),
+        )
+      }
+    })
+  }
+
+  useEffect(() => {
+    carregarRegras()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [funcionarioId])
 
   return (
     <div className="space-y-4">
@@ -304,82 +363,112 @@ function ComissaoTab({
           <span className="text-jl-fg-1 font-medium">%</span>
         </div>
         <p className="text-xs text-jl-fg-3 mt-1">
-          Taxa padrão aplicada quando nenhuma regra específica se aplica.
+          Taxa aplicada quando nenhuma regra específica abaixo se aplica (menor prioridade).
         </p>
       </div>
 
-      {funcionarioId && (
+      {funcionarioId ? (
         <div className="mt-6 pt-4 border-t border-jl-border-1">
-          <p className="text-sm font-medium text-jl-fg-1 mb-3">Regras Específicas</p>
-          <p className="text-xs text-jl-fg-3 mb-3">
-            Configure regras de comissão para produtos específicos, categorias, ou margens.
-          </p>
-          <button
-            type="button"
-            className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors"
-          >
-            + Adicionar Regra
-          </button>
-          <p className="text-xs text-jl-fg-3 mt-2">
-            (Funcionalidade disponível após salvar o funcionário)
-          </p>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium text-jl-fg-1">Regras Específicas</p>
+              <p className="text-xs text-jl-fg-3">
+                Ordem de prioridade: Produto → Categoria → Margem → Padrão.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setRegraEditando(null)
+                setEditorOpen(true)
+              }}
+              className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors shrink-0"
+            >
+              + Nova Regra
+            </button>
+          </div>
+
+          {loading ? (
+            <p className="text-sm app-muted">Carregando…</p>
+          ) : regras.length === 0 ? (
+            <p className="text-sm app-muted">Nenhuma regra específica cadastrada.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-jl-border-1">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-jl-border-1 bg-jl-surface-elev text-jl-fg-3">
+                    <th className="px-3 py-2 text-left font-medium">Prioridade</th>
+                    <th className="px-3 py-2 text-left font-medium">Tipo</th>
+                    <th className="px-3 py-2 text-left font-medium">Alvo</th>
+                    <th className="px-3 py-2 text-right font-medium">Comissão</th>
+                    <th className="px-3 py-2 text-left font-medium">Status</th>
+                    <th className="px-3 py-2 text-right font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-jl-border-1">
+                  {regras.map((r) => (
+                    <tr key={r.id} className="gerente-fin-row-hover">
+                      <td className="gerente-fin-cell px-3 py-2 tabular-nums">
+                        {PRIORIDADE_ORDEM[r.tipo_regra]}
+                      </td>
+                      <td className="gerente-fin-cell px-3 py-2">{TIPO_LABEL[r.tipo_regra]}</td>
+                      <td className="gerente-fin-cell px-3 py-2">{alvoDaRegra(r)}</td>
+                      <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums font-semibold">
+                        {r.percentual}%
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            r.ativo ? 'app-badge-positive' : 'app-badge-warn'
+                          }`}
+                        >
+                          {r.ativo ? 'Ativa' : 'Inativa'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegraEditando(r)
+                            setEditorOpen(true)
+                          }}
+                          className="text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
+                        >
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
+      ) : (
+        <p className="text-xs text-jl-fg-3 mt-2">
+          Salve o funcionário para configurar regras específicas de produto, categoria ou margem.
+        </p>
+      )}
+
+      {editorOpen && funcionarioId && (
+        <ComissaoRulesEditor
+          funcionarioId={funcionarioId}
+          regraExistente={regraEditando}
+          onClose={() => setEditorOpen(false)}
+          onSuccess={() => {
+            setEditorOpen(false)
+            carregarRegras()
+          }}
+        />
       )}
     </div>
   )
 }
 
 function HistoricoTab({ funcionarioId, locale }: { funcionarioId?: string | null; locale: string }) {
-  const [historico, setHistorico] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (funcionarioId) {
-      // Load historico when tab opens
-      setLoading(true)
-      // Will be implemented with carregarComissaoHistorico action
-      setLoading(false)
-    }
-  }, [funcionarioId])
-
   if (!funcionarioId) {
     return <p className="text-sm app-muted">Salve o funcionário para ver o histórico.</p>
   }
 
-  if (loading) {
-    return <p className="text-sm app-muted">Carregando…</p>
-  }
-
-  if (historico.length === 0) {
-    return <p className="text-sm app-muted">Nenhuma alteração registrada.</p>
-  }
-
-  return (
-    <div className="overflow-x-auto rounded-lg border border-jl-border-1">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-jl-border-1 bg-jl-surface-elev text-jl-fg-3">
-            <th className="px-3 py-2 text-left font-medium">Data</th>
-            <th className="px-3 py-2 text-left font-medium">Ação</th>
-            <th className="px-3 py-2 text-left font-medium">Valores</th>
-            <th className="px-3 py-2 text-left font-medium">Alterado por</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-jl-border-1">
-          {historico.map((h) => (
-            <tr key={h.id} className="gerente-fin-row-hover">
-              <td className="gerente-fin-cell px-3 py-2">
-                {new Date(h.alterado_em).toLocaleDateString(locale)}
-              </td>
-              <td className="gerente-fin-cell px-3 py-2 capitalize">{h.acao}</td>
-              <td className="gerente-fin-cell px-3 py-2 text-xs">
-                {h.dados_anteriores && `${JSON.stringify(h.dados_anteriores).slice(0, 30)}...`}
-              </td>
-              <td className="gerente-fin-cell px-3 py-2">{h.alterado_por_nome}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+  return <ComissaoHistoricoList funcionarioId={funcionarioId} locale={locale} />
 }

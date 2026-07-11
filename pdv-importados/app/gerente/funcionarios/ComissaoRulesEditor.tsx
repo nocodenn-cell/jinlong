@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
-import { criarComissaoRegra, desativarComissaoRegra, type ComissaoRegraRow } from './actions'
+import {
+  criarComissaoRegra,
+  atualizarComissaoRegra,
+  desativarComissaoRegra,
+  listarProdutosParaComissao,
+  listarCategoriasParaComissao,
+  type ComissaoRegraRow,
+} from './actions'
 
 interface Props {
   funcionarioId: string
@@ -21,8 +28,8 @@ export function ComissaoRulesEditor({ funcionarioId, regraExistente, onClose, on
   const [percentual, setPercentual] = useState(regraExistente?.percentual || 5)
   const [produtoId, setProdutoId] = useState(regraExistente?.produto_id || '')
   const [categoriaId, setCategoriaId] = useState(regraExistente?.categoria_id || '')
-  const [margemMin, setMargemMin] = useState(regraExistente?.margem_minima?.toString() || '0')
-  const [margemMax, setMargemMax] = useState(regraExistente?.margem_maxima?.toString() || '0')
+  const [margemMin, setMargemMin] = useState(regraExistente?.margem_minima?.toString() ?? '')
+  const [margemMax, setMargemMax] = useState(regraExistente?.margem_maxima?.toString() ?? '')
   const [vigenciaInicio, setVigenciaInicio] = useState(
     regraExistente?.vigencia_inicio || new Date().toISOString().split('T')[0]
   )
@@ -35,17 +42,22 @@ export function ComissaoRulesEditor({ funcionarioId, regraExistente, onClose, on
   const [categoriasLoading, setCategoriasLoading] = useState(false)
 
   useEffect(() => {
-    // Load produtos
-    setProdutosLoading(true)
-    // In production, would call an action to list produtos
-    // For now, placeholder
-    setProdutosLoading(false)
-
-    // Load categorias
-    setCategoriasLoading(true)
-    // In production, would call an action to list categorias
-    setCategoriasLoading(false)
-  }, [])
+    if (tipoRegra === 'por_produto' && produtos.length === 0) {
+      setProdutosLoading(true)
+      listarProdutosParaComissao().then((r) => {
+        if (r.success) setProdutos(r.data)
+        setProdutosLoading(false)
+      })
+    }
+    if (tipoRegra === 'por_categoria' && categorias.length === 0) {
+      setCategoriasLoading(true)
+      listarCategoriasParaComissao().then((r) => {
+        if (r.success) setCategorias(r.data)
+        setCategoriasLoading(false)
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoRegra])
 
   const { mutate: salvar, loading: salvando } = useGerenteMutation(
     async () => {
@@ -67,8 +79,19 @@ export function ComissaoRulesEditor({ funcionarioId, regraExistente, onClose, on
       }
 
       if (regraExistente) {
-        // Edit existing rule - not implemented in Phase 1
-        throw new Error('Edição de regras será implementada em versão futura.')
+        const input = {
+          id: regraExistente.id,
+          produto_id: tipoRegra === 'por_produto' ? produtoId : null,
+          categoria_id: tipoRegra === 'por_categoria' ? categoriaId : null,
+          margem_minima: tipoRegra === 'por_margem' ? parseFloat(margemMin) : null,
+          margem_maxima: tipoRegra === 'por_margem' ? parseFloat(margemMax) : null,
+          percentual,
+          vigencia_inicio: vigenciaInicio,
+          vigencia_fim: vigenciaFim || null,
+        }
+
+        const r = await atualizarComissaoRegra(input)
+        if (!r.success) throw new Error(r.error)
       } else {
         // Create new rule
         const input = {
@@ -89,7 +112,7 @@ export function ComissaoRulesEditor({ funcionarioId, regraExistente, onClose, on
 
       return null
     },
-    { successMessage: 'Regra salva com sucesso.' }
+    { successMessage: 'Regra salva com sucesso.', onSuccess: () => onSuccess() }
   )
 
   const { mutate: deletar, loading: deletando } = useGerenteMutation(
@@ -99,7 +122,7 @@ export function ComissaoRulesEditor({ funcionarioId, regraExistente, onClose, on
       if (!r.success) throw new Error(r.error)
       return null
     },
-    { successMessage: 'Regra desativada.' }
+    { successMessage: 'Regra desativada.', onSuccess: () => onSuccess() }
   )
 
   return (

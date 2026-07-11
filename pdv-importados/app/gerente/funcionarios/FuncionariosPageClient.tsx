@@ -37,7 +37,7 @@ export function FuncionariosPageClient({ idioma }: Props) {
     return r.data
   }, [filtro])
 
-  const { data: funcionarios, loading, refetch } = useGerenteQuery(queryFn)
+  const { data: funcionarios, loading, error, refetch } = useGerenteQuery(queryFn)
 
   const { mutate: toggleAtivo } = useGerenteMutation(
     async (id: string) => {
@@ -97,6 +97,18 @@ export function FuncionariosPageClient({ idioma }: Props) {
       <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
         {loading ? (
           <p className="text-sm app-muted">Carregando…</p>
+        ) : error ? (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
+            <p className="text-sm text-red-400">Não foi possível carregar os funcionários.</p>
+            <p className="text-xs text-red-400/80 mt-1">{error}</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="mt-2 rounded-md border px-3 py-1 text-xs font-medium transition-colors app-border app-btn-neutral"
+            >
+              Tentar novamente
+            </button>
+          </div>
         ) : !funcionarios || funcionarios.length === 0 ? (
           <p className="text-sm app-muted">Nenhum funcionário cadastrado.</p>
         ) : (
