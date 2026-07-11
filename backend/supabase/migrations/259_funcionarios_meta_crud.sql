@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.funcionarios_meta (
 
   -- Comissão (override de produto + default global)
   comissao_percentual   numeric(5, 2) CHECK (comissao_percentual >= 0 AND comissao_percentual <= 100),
-  comissao_tipo         text CHECK (comissao_tipo IN ('percentual', 'fixo', NULL)),
+  comissao_tipo         text CHECK (comissao_tipo IN ('percentual', 'fixo') OR comissao_tipo IS NULL),
   comissao_valor        numeric(10, 4) CHECK (comissao_valor >= 0),
 
   -- Auditoria
