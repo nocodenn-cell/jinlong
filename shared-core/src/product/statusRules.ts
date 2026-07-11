@@ -2,9 +2,12 @@
  * Regras de negócio centralizadas para status de publicação de produtos.
  * Este arquivo é o único lugar onde a lógica de status_publicacao é decidida.
  * UI deve delegar para estas funções (arquitetura de "deixe a UI só apresentar").
+ *
+ * NOTA: StatusPublicacao é definido UMA ÚNICA VEZ em shared-core/src/engine/productEngine.ts
+ * (fonte canônica). Importamos de lá para evitar duplicação e conflitos de tipo.
  */
 
-type StatusPublicacao = 'DRAFT' | 'PUBLICADO'
+import type { StatusPublicacao } from '../engine/productEngine'
 
 /**
  * Determina se um produto pode ser salvo como rascunho.
