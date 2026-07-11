@@ -216,17 +216,17 @@ BEGIN
   END IF;
 
   -- Validar: campos obrigatórios
-  IF p_nome_exibicao IS NULL OR btrim(p_nome_exibicao) = '' THEN
+  IF p_nome_exibicao IS NULL OR trim(p_nome_exibicao) = '' THEN
     RETURN QUERY SELECT FALSE, 'NOME_OBRIGATORIO'::text, NULL::uuid;
     RETURN;
   END IF;
 
-  IF p_email IS NULL OR btrim(p_email) = '' THEN
+  IF p_email IS NULL OR trim(p_email) = '' THEN
     RETURN QUERY SELECT FALSE, 'EMAIL_OBRIGATORIO'::text, NULL::uuid;
     RETURN;
   END IF;
 
-  IF p_cargo IS NULL OR btrim(p_cargo) = '' THEN
+  IF p_cargo IS NULL OR trim(p_cargo) = '' THEN
     RETURN QUERY SELECT FALSE, 'CARGO_OBRIGATORIO'::text, NULL::uuid;
     RETURN;
   END IF;
