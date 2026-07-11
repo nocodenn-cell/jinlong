@@ -97,7 +97,7 @@ export function FuncionariosListClient({ idioma, funcionariosIniciais, hasMoreIn
 
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value as any)}
+          onChange={(e) => setStatus(e.target.value as 'todos' | 'ativos' | 'inativos')}
           className="app-input h-9 rounded-md px-3 text-sm"
         >
           <option value="todos">Todos</option>
@@ -272,7 +272,7 @@ function CriarFuncionarioModal({
             <label className="block text-xs font-medium text-jl-fg-2">Cargo</label>
             <select
               value={cargo}
-              onChange={(e) => setCargo(e.target.value as any)}
+              onChange={(e) => setCargo(e.target.value as 'operador' | 'gerente' | 'supervisor' | 'outro')}
               className="app-input mt-1 w-full rounded-md px-3 py-2 text-sm"
             >
               <option value="operador">Operador</option>
