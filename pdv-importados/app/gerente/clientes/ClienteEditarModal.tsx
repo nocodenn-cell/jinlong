@@ -7,8 +7,6 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
-import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { salvarClienteAction, type ClienteListRow, type ClienteInput } from './actions'
 
 type Props = Readonly<{
@@ -54,9 +52,6 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
   const [email, setEmail] = useState(cliente?.email ?? '')
   const [telefone, setTelefone] = useState(cliente?.telefone ? maskTel(cliente.telefone) : '')
   const [endereco, setEndereco] = useState(cliente?.endereco ?? '')
-  const [limite, setLimite] = useState(
-    cliente ? formatDecimalBRL(Number(cliente.limite_crediario)) : '0,00',
-  )
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
   const [consentimentoLgpd, setConsentimentoLgpd] = useState(false)
@@ -70,15 +65,14 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
   }, [])
 
   function sujo(): boolean {
-    if (!editando) return !!(nome || documento || email || telefone || endereco || limite !== '0,00')
+    if (!editando) return !!(nome || documento || email || telefone || endereco)
     return (
       nome !== cliente!.nome ||
       tipo !== cliente!.tipo ||
       documento.replace(/\D/g, '') !== cliente!.documento ||
       (email || '') !== (cliente!.email ?? '') ||
       telefone.replace(/\D/g, '') !== (cliente!.telefone ?? '') ||
-      (endereco || '') !== (cliente!.endereco ?? '') ||
-      (parseBRL(limite) ?? 0) !== Number(cliente!.limite_crediario)
+      (endereco || '') !== (cliente!.endereco ?? '')
     )
   }
 
@@ -86,7 +80,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     if (sujo() && !confirm(m.clientes.confirmar_descartar)) return
     onClose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nome, documento, email, telefone, endereco, limite, tipo, cliente, onClose, m])
+  }, [nome, documento, email, telefone, endereco, tipo, cliente, onClose, m])
 
   function handleTipo(t: 'PF' | 'PJ') {
     setTipo(t)
@@ -100,12 +94,6 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     setTelefone(maskTel(e.target.value))
     if (erros.telefone) setErros((x) => ({ ...x, telefone: null }))
   }
-  function handleLimite(e: React.ChangeEvent<HTMLInputElement>) {
-    let v = e.target.value.replace(/[^\d,]/g, '')
-    const parts = v.split(',')
-    if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('')
-    setLimite(v)
-  }
 
   function validar(): boolean {
     const e: Record<string, string> = {}
@@ -118,8 +106,6 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = m.clientes.err_email
     const tDigits = telefone.replace(/\D/g, '')
     if (tDigits && tDigits.length < 10) e.telefone = m.clientes.err_telefone
-    const lim = parseBRL(limite) ?? 0
-    if (lim < 0) e.limite_crediario = m.clientes.err_limite_negativo
     if (!editando && !consentimentoLgpd) {
       e.consentimento_lgpd = 'Confirme o consentimento do titular antes de cadastrar.'
     }
@@ -139,7 +125,6 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
       email: email.trim() || null,
       telefone: telefone.replace(/\D/g, '') || null,
       endereco: endereco.trim() || null,
-      limite_crediario: parseBRL(limite) ?? 0,
       // Registra o momento do consentimento LGPD apenas para novos clientes
       ...(!editando && consentimentoLgpd
         ? { termos_aceitos_em: now, consentimento_privacidade_em: now }
@@ -170,16 +155,6 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
       size="lg"
       icon={Icon}
       title={editando ? cliente!.nome : titulo}
-      subtitle={
-        editando && Number(cliente!.saldo_crediario) > 0 ? (
-          <>
-            {m.clientes.saldo_atual}:{' '}
-            <strong className="tabular-nums text-amber-400">
-              {fmtGerenteBRL(Number(cliente!.saldo_crediario), locale)}
-            </strong>
-          </>
-        ) : undefined
-      }
       dismissable={!salvando}
       closeLabel={m.comum.cancelar}
       footer={
@@ -325,32 +300,6 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
                 placeholder={m.clientes.placeholder_endereco}
                 className={`${finIn} mt-1`}
               />
-            </label>
-
-            {/* Limite */}
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {m.clientes.field_limite_crediario}
-              <div className="mt-1 flex items-center gap-2">
-                <span className="flex h-10 items-center rounded-md app-border border bg-jl-surface-soft px-3 text-sm text-jl-fg-3">
-                  R$
-                </span>
-                <input
-                  inputMode="decimal"
-                  value={limite}
-                  onChange={handleLimite}
-                  disabled={salvando}
-                  aria-invalid={!!erros.limite_crediario}
-                  aria-describedby={erros.limite_crediario ? 'err-lim' : 'hint-lim'}
-                  placeholder="0,00"
-                  className={`${finIn} flex-1 text-right font-mono tabular-nums ${erros.limite_crediario ? 'border-red-400/60' : ''}`}
-                />
-              </div>
-              <span id="hint-lim" className="mt-1 block text-[11px] text-jl-fg-3">
-                {m.clientes.hint_limite}
-              </span>
-              {erros.limite_crediario && (
-                <span id="err-lim" className="mt-1 block text-xs text-red-300">{erros.limite_crediario}</span>
-              )}
             </label>
 
           {/* Consentimento LGPD — obrigatório apenas para novos clientes */}

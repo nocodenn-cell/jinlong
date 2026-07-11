@@ -12,8 +12,6 @@ export type ClienteListRow = {
   email: string | null
   telefone: string | null
   endereco: string | null
-  limite_crediario: number
-  saldo_crediario: number
   ultima_compra: string | null
   criado_em: string | null
 }
@@ -26,7 +24,6 @@ export type ClienteInput = {
   email: string | null
   telefone: string | null // somente dígitos
   endereco: string | null
-  limite_crediario: number
   // Consentimento LGPD — preenchidos apenas na criação de novo cliente
   termos_aceitos_em?: string | null
   consentimento_privacidade_em?: string | null
@@ -34,11 +31,10 @@ export type ClienteInput = {
 
 const PAGE_SIZE = 20
 
-// Colunas REAIS expostas pela view v_clientes_gerente (migration 244).
-// `saldo_crediario` é computado de contas_receber em aberto; `ultima_compra`
-// é NULL até a Fase 7 (vendas ainda não possui cliente_id).
-const VIEW_COLS =
-  'id, nome, tipo, documento, email, telefone, endereco, limite_credito, saldo_crediario, ultima_compra, created_at'
+// Colunas expostas pela view v_clientes_gerente.
+// Nota: limite_credito e saldo_crediario removidos em migration 267 (fiado desabilitado).
+// `ultima_compra` é NULL até a Fase 7 (vendas ainda não possui cliente_id).
+const VIEW_COLS = 'id, nome, tipo, documento, email, telefone, endereco, ultima_compra, created_at'
 
 type ClienteViewRow = {
   id: string
@@ -48,8 +44,6 @@ type ClienteViewRow = {
   email: string | null
   telefone: string | null
   endereco: string | null
-  limite_credito: number | string | null
-  saldo_crediario: number | string | null
   ultima_compra: string | null
   created_at: string | null
 }
@@ -64,8 +58,6 @@ function mapClienteRow(r: ClienteViewRow): ClienteListRow {
     email: r.email,
     telefone: r.telefone,
     endereco: r.endereco,
-    limite_crediario: Number(r.limite_credito ?? 0),
-    saldo_crediario: Number(r.saldo_crediario ?? 0),
     ultima_compra: r.ultima_compra ?? null,
     criado_em: r.created_at ?? null,
   }
@@ -120,7 +112,6 @@ function validar(input: ClienteInput): string | null {
   if (input.tipo === 'PF' && docDigits.length !== 11) return 'CPF deve ter 11 dígitos.'
   if (input.tipo === 'PJ' && docDigits.length !== 14) return 'CNPJ deve ter 14 dígitos.'
   if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) return 'E-mail inválido.'
-  if (input.limite_crediario < 0) return 'Limite não pode ser negativo.'
   return null
 }
 
@@ -135,8 +126,8 @@ export async function salvarClienteAction(
 
   try {
     const supabase = await createClient()
-    // Mapeia o contrato de UI (`limite_crediario`) para a coluna real do banco
-    // (`limite_credito`). `tipo`/`endereco` são colunas adicionadas na migration 244.
+    // Payload de cliente: sem limite_credito (fiado removido em migration 267).
+    // `tipo`/`endereco` são colunas adicionadas em migration 244.
     const basePayload = {
       nome: input.nome.trim(),
       tipo: input.tipo,
@@ -144,7 +135,6 @@ export async function salvarClienteAction(
       email: input.email?.trim() || null,
       telefone: input.telefone?.replace(/\D/g, '') || null,
       endereco: input.endereco?.trim() || null,
-      limite_credito: input.limite_crediario,
     }
 
     let id = input.id
@@ -212,51 +202,17 @@ export async function excluirClienteAction(
   try {
     const supabase = await createClient()
 
-    // saldo_crediario é computado na view v_clientes_gerente (não é coluna de clientes).
+    // Verificar que cliente existe
     const { data: existente, error: getErr } = await supabase
       .from('v_clientes_gerente')
-      .select('saldo_crediario, nome')
+      .select('id, nome')
       .eq('id', id)
       .maybeSingle()
 
     if (getErr) return { ok: false, error: getErr.message }
     if (!existente) return { ok: false, error: 'Cliente não encontrado.' }
-    if (Number(existente.saldo_crediario) > 0) {
-      return {
-        ok: false,
-        error: `Cliente "${existente.nome}" possui crediário aberto. Quite o saldo antes de excluir.`,
-      }
-    }
 
-    // Verifica existência de histórico de fiado/vendas
-    const { count: historico, error: histErr } = await supabase
-      .from('contas_receber')
-      .select('id', { count: 'exact', head: true })
-      .eq('cliente_id', id)
-
-    if (histErr) return { ok: false, error: histErr.message }
-
-    if (historico && historico > 0) {
-      // Há histórico financeiro — anonimiza dados pessoais em vez de deletar
-      const { error: anonErr } = await supabase
-        .from('clientes')
-        .update({
-          nome: 'CLIENTE_ANONIMIZADO_LGPD',
-          documento: null,
-          telefone: null,
-          email: null,
-          endereco: null,
-          ativo: false,
-        })
-        .eq('id', id)
-
-      if (anonErr) return { ok: false, error: anonErr.message }
-
-      revalidatePath('/gerente/clientes')
-      return { ok: true, anonimizado: true }
-    }
-
-    // Sem histórico — remoção física permitida
+    // Remoção física: contas_receber está desabilitada (fiado removido em migration 267)
     const { error: delErr } = await supabase.from('clientes').delete().eq('id', id)
     if (delErr) return { ok: false, error: delErr.message }
 
