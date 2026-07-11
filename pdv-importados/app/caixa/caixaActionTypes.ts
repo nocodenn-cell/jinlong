@@ -89,6 +89,7 @@ export type FinalizarVendaCaixaResult =
       documentoFiscal?: unknown
       itensAtualizados?: unknown
       estoqueBaixado?: unknown
+      contasRecebeId?: string  // ✅ NOVO (Fase 5b - contas_receber automático)
     }
   | { ok: false; error: string }
 

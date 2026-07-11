@@ -59,7 +59,6 @@ function CaixaEmAbertoListImpl({
               </div>
               <p className={cn("mt-0.5 text-[11px]", muted)}>
                 {v.qtdItens} {v.qtdItens === 1 ? m.caixa.em_aberto_item : m.caixa.em_aberto_itens}
-                {v.rotulo ? ` · ${v.rotulo}` : ""}
               </p>
             </button>
             <button

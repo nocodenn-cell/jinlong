@@ -81,6 +81,7 @@ import {
   type CaixaPdvOperadorTabId,
 } from "@/app/caixa/CaixaPdvOperadorTabs"
 import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
+import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 import { cn } from "@/lib/utils"
 
 /** Banner «PDV clássico» em /caixa: oculto em produção salvo `NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER=1`; em dev aparece salvo `0`/`false`. */
@@ -278,6 +279,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     pagamentos,
     somaParcelas,
     diferenca: diferencaPagamento,
+    saldoPendente,  // ✅ NOVO (Fase 5b)
     podeAdicionarParcela,
     formasDisponiveis,
     adicionarParcela,
@@ -297,6 +299,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
   const lastReciboRef = useRef<ReciboVenda | null>(null)
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
+  const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
+  const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
 
   const thermal = useThermalPrinter()
 
@@ -922,6 +926,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (!vendaIdempotenciaRef.current) {
         vendaIdempotenciaRef.current = crypto.randomUUID()
       }
+      // ✅ VALIDAÇÃO FASE 5b: Se há saldo pendente, validar cliente antes de finalizar
+      if (saldoPendente > 0.009 && !clienteId) {
+        setSelecionarClienteModalAberto(true)
+        setFinalizando(false)
+        setCaixaMensagem('Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.', { kind: "warning" })
+        return
+      }
+
       const payload: FinalizarVendaInput = {
         idempotencyKey: vendaIdempotenciaRef.current,
         formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
@@ -944,6 +956,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           precoUnitario: i.precoUnitario,
           tipoPreco: i.tipoPreco,
         })),
+        clienteId: clienteId ?? undefined,  // ✅ NOVO (Fase 5b)
       }
       const timeoutResult: { ok: false; error: string } = {
         ok: false,
@@ -980,6 +993,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         limparCarrinho()
         limparEstadoDescontoGerente()
         resetPagamentos()
+        setClienteId(null)  // ✅ NOVO (Fase 5b) - reset após venda bem-sucedida
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
@@ -1616,6 +1630,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         initialValor="0"
         parseValor={parseValorMonetario}
         onConfirm={handleConfirmarAbrirTurno}
+      />
+      {/* ✅ NOVO (Fase 5b): Modal para seleção de cliente */}
+      <CaixaSelecionarClienteModal
+        aberto={selecionarClienteModalAberto}
+        onSelecionado={(id) => {
+          setClienteId(id)
+          setSelecionarClienteModalAberto(false)
+        }}
+        onCancelado={() => setSelecionarClienteModalAberto(false)}
       />
     </>
   )

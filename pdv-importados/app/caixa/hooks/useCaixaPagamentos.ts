@@ -50,13 +50,13 @@ export function useCaixaPagamentos(
 
     setParcelas((old) => {
       if (old.length === 1) {
-        return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
+        const currentValor = old[0].valor
+        if (currentValor <= 0.009) {
+          return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
+        }
+        return old
       }
-      const somaOutras = old.slice(0, -1).reduce((s, p) => s + p.valor, 0)
-      const restante = roundMoney2(Math.max(0, totalLiquidoComGerente - somaOutras))
-      const copy = [...old]
-      copy[copy.length - 1] = { ...copy[copy.length - 1], valor: restante }
-      return copy
+      return old
     })
   }, [totalLiquidoComGerente])
 
@@ -94,7 +94,10 @@ export function useCaixaPagamentos(
   const autoCompletarUltima = useCallback(() => {
     setParcelas((old) => {
       if (old.length < 2) {
-        return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
+        if (old[0].valor <= 0.009) {
+          return [{ ...old[0], valor: roundMoney2(Math.max(0, totalLiquidoComGerente)) }]
+        }
+        return old
       }
       const somaOutras = old.slice(0, -1).reduce((s, p) => s + p.valor, 0)
       const restante = roundMoney2(Math.max(0, totalLiquidoComGerente - somaOutras))
@@ -110,11 +113,13 @@ export function useCaixaPagamentos(
 
   const somaParcelas = roundMoney2(parcelas.reduce((s, p) => s + p.valor, 0))
   const diferenca = roundMoney2(somaParcelas - totalLiquidoComGerente)
+  const saldoPendente = roundMoney2(totalLiquidoComGerente - somaParcelas)
 
   return {
     pagamentos: parcelas,
     somaParcelas,
     diferenca,
+    saldoPendente,
     podeAdicionarParcela: parcelas.length < MAX_PARCELAS,
     formasDisponiveis: FORMAS_PAGAMENTO_CAIXA,
     adicionarParcela,

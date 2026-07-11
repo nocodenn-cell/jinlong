@@ -52,6 +52,7 @@ type RpcFinalizarVendaRow = {
   itens_atualizados?: unknown
   estoque_baixado?: unknown
   event_id?: unknown
+  contas_receber_id?: unknown  // ✅ NOVO (Fase 5b)
 }
 
 function firstRpcVendaRow<T>(data: unknown): T | undefined {
@@ -249,6 +250,17 @@ export async function finalizarVendaCaixaImpl(
 
     const caixaId = caixaExistente.id
 
+    // ✅ VALIDAÇÃO FASE 5b: Se há saldo pendente, cliente_id é obrigatório
+    const somaPagamentos = roundMoney2(input.pagamentos.reduce((acc, p) => acc + p.valor, 0))
+    const saldoPendente = roundMoney2(computedFinal.totalLiquido - somaPagamentos)
+
+    if (saldoPendente > 0.009 && !input.clienteId) {
+      return {
+        ok: false,
+        error: 'Pagamento parcial requer seleção de cliente para gerar crédito. Selecione o cliente antes de finalizar.',
+      }
+    }
+
     const vendaId = resolveVendaIdForFinalize({
       idempotencyKey: input.idempotencyKey,
       randomUuid: () => crypto.randomUUID(),
@@ -298,6 +310,7 @@ export async function finalizarVendaCaixaImpl(
       p_user_agent: userAgent,
       p_device_id: getDeviceFingerprint(),
       p_terminal_id: 'web-caixa',
+      p_cliente_id: input.clienteId ?? null,  // ✅ NOVO (Fase 5b)
     })
 
     if (txErr) {
@@ -394,6 +407,7 @@ export async function finalizarVendaCaixaImpl(
       documentoFiscal: row.dados_fiscais,
       itensAtualizados: row.itens_atualizados,
       estoqueBaixado: row.estoque_baixado,
+      contasRecebeId: row.contas_receber_id ? String(row.contas_receber_id) : undefined,  // ✅ NOVO (Fase 5b)
     }
   } catch (e) {
     captureMessage('[caixa.finalizar_venda.excecao_nao_tratada]', {
