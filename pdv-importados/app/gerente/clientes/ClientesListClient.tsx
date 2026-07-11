@@ -8,7 +8,6 @@ import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { Button } from '@/components/ui/button'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import {
@@ -151,8 +150,6 @@ export function ClientesListClient({
     emitGerenteToast({ kind: 'success', message: m.clientes.toast_excluido })
   }
 
-  const totalCrediario = clientes.reduce((s, c) => s + Number(c.saldo_crediario), 0)
-
   return (
     <>
       <DataTablePage
@@ -172,15 +169,6 @@ export function ClientesListClient({
         meta={
           <>
             {clientes.length} {m.clientes.contagem}
-            {totalCrediario > 0 && (
-              <>
-                {' · '}
-                <strong className="tabular-nums text-jl-fg-1">
-                  {fmtGerenteBRL(totalCrediario, locale)}
-                </strong>{' '}
-                {m.clientes.em_crediario}
-              </>
-            )}
           </>
         }
         actions={
@@ -199,17 +187,10 @@ export function ClientesListClient({
           { key: 'cliente', header: m.clientes.col_cliente,   priority: 'primary'    },
           { key: 'doc',     header: m.clientes.col_documento,  priority: 'contextual' },
           { key: 'tel',     header: m.clientes.col_telefone                           },
-          { key: 'saldo',   header: m.clientes.col_saldo,     width: 220, numeric: true, priority: 'primary' },
           { key: 'acoes',   header: <span className="sr-only">{m.clientes.col_acoes}</span>, width: 90, align: 'right', priority: 'contextual' },
         ]}
       >
-        {clientes.map((c) => {
-          const lim = Number(c.limite_crediario)
-          const used = Number(c.saldo_crediario)
-          const pct = lim > 0 ? Math.min(100, (used / lim) * 100) : 0
-          const alerta = pct >= 70
-
-          return (
+        {clientes.map((c) => (
             <tr key={c.id} className="gerente-fin-row-hover transition-colors">
               {/* Nome + tipo + e-mail */}
               <td className="px-3 py-2">
@@ -240,43 +221,6 @@ export function ClientesListClient({
               <td className="gerente-fin-cell px-3 py-2 font-mono text-xs">{maskDoc(c.documento)}</td>
               <td className="gerente-fin-cell px-3 py-2 tabular-nums">{maskTel(c.telefone)}</td>
 
-              {/* Saldo crediário */}
-              <td className="gerente-fin-cell px-3 py-2">
-                <div className="flex items-baseline justify-between gap-2.5">
-                  <span
-                    className={`font-semibold tabular-nums ${
-                      used === 0
-                        ? 'text-jl-fg-3 font-normal'
-                        : alerta
-                          ? 'text-red-300'
-                          : 'text-amber-200'
-                    }`}
-                  >
-                    {fmtGerenteBRL(used, locale)}
-                  </span>
-                  <span className="text-[11px] tabular-nums text-jl-fg-3">
-                    / {fmtGerenteBRL(lim, locale)}
-                  </span>
-                </div>
-                <div
-                  className="mt-1 h-[5px] overflow-hidden rounded-full bg-jl-surface-soft"
-                  role="progressbar"
-                  aria-valuenow={Math.round(pct)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`${Math.round(pct)}% do limite usado`}
-                >
-                  <div
-                    className={`h-full transition-[width] duration-200 ${
-                      alerta
-                        ? 'bg-gradient-to-r from-amber-500 to-red-700'
-                        : 'bg-gradient-to-r from-amber-400 to-amber-700'
-                    }`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </td>
-
               {/* Ações */}
               <td className="px-3 py-2 text-right">
                 <div className="gerente-row-actions flex items-center justify-end gap-1">
@@ -303,11 +247,11 @@ export function ClientesListClient({
               </td>
             </tr>
           )
-        })}
+        )}
 
         {clientes.length === 0 && !loading && (
           <tr>
-            <td colSpan={5} className="gerente-fin-empty px-4 py-12 text-center">
+            <td colSpan={4} className="gerente-fin-empty px-4 py-12 text-center">
               <div className="font-serif text-5xl text-amber-400/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
                 客
               </div>
