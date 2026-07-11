@@ -7,7 +7,6 @@ import type { ItemCarrinho } from '@/stores/unifiedCartStore'
 export type VendaEmEsperaCard = {
   id: string
   numeroLocal: number
-  rotulo: string | null
   totalLiquido: number
   qtdItens: number
   criadaEm: string
@@ -72,7 +71,6 @@ function mapCard(row: Record<string, unknown>): VendaEmEsperaCard {
   return {
     id: String(row.id),
     numeroLocal: Number(row.numero_local ?? 0),
-    rotulo: typeof row.rotulo === 'string' ? row.rotulo : null,
     totalLiquido: Number.isFinite(totalLiquido) ? totalLiquido : 0,
     qtdItens: Number(row.qtd_itens ?? 0),
     criadaEm: String(row.criada_em ?? ''),
@@ -92,7 +90,6 @@ export async function colocarVendaEmEsperaImpl(input: {
   totalDesconto: number
   totalLiquido: number
   caixaId?: string | null
-  rotulo?: string | null
   descontoGerentePercentual?: number | null
 }): Promise<ColocarEmEsperaResult> {
   try {
@@ -111,7 +108,6 @@ export async function colocarVendaEmEsperaImpl(input: {
         totalLiquido: input.totalLiquido,
       },
       p_caixa_id: input.caixaId ?? null,
-      p_rotulo: input.rotulo ?? null,
       p_cliente_id: null,
       p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
       p_desconto_gerente_token: null,
