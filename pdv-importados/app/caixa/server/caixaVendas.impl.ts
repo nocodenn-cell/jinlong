@@ -298,6 +298,7 @@ export async function finalizarVendaCaixaImpl(
       p_user_agent: userAgent,
       p_device_id: getDeviceFingerprint(),
       p_terminal_id: 'web-caixa',
+      p_cliente_id: input.clienteId ?? null,
     })
 
     if (txErr) {

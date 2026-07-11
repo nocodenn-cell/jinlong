@@ -57,6 +57,7 @@ export const finalizarVendaInputSchema = z.object({
     .positive('O desconto do gerente deve ser maior que zero.')
     .max(100, 'O desconto do gerente não pode passar de 100%.')
     .optional(),
+  clienteId: z.string().uuid('ID do cliente inválido.').optional(),
   pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
 }).superRefine((value, ctx) => {
