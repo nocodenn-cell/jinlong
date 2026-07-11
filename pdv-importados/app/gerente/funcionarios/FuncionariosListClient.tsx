@@ -9,7 +9,6 @@ import { emitGerenteToast } from '@/lib/gerente/toast'
 import {
   criarFuncionarioAction,
   listarFuncionariosPaginadoAction,
-  atualizarFuncionarioAction,
   desativarFuncionarioAction,
   type FuncionarioRow,
   type CriarFuncionarioInput,
@@ -32,7 +31,6 @@ export function FuncionariosListClient({ idioma, funcionariosIniciais, hasMoreIn
   const [status, setStatus] = useState<'todos' | 'ativos' | 'inativos'>('todos')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
 
   const carregar = useCallback(
     async (pag: number) => {
