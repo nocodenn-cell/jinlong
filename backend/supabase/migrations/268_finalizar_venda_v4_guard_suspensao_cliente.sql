@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 259: Guard de suspensão de vendas na RPC v4
+-- Migration 268: Guard de suspensão de vendas na RPC v4
 --
 -- Achado de auditoria (2026-07-10): o guard de "vendas_suspensas"
 -- (introduzido em 105_suspensao_vendas.sql para a v3) nunca foi portado
@@ -35,7 +35,8 @@ CREATE OR REPLACE FUNCTION public.finalizar_venda_transacional_canonica_v4(
   p_ip_address text DEFAULT NULL::text,
   p_user_agent text DEFAULT NULL::text,
   p_device_id text DEFAULT NULL::text,
-  p_terminal_id text DEFAULT NULL::text
+  p_terminal_id text DEFAULT NULL::text,
+  p_cliente_id uuid DEFAULT NULL::uuid
 )
  RETURNS TABLE(venda_id uuid, status text, mensagem text, dados_fiscais jsonb, itens_atualizados jsonb, estoque_baixado jsonb, event_id uuid)
  LANGUAGE plpgsql
@@ -196,10 +197,10 @@ BEGIN
   END IF;
 
   INSERT INTO public.vendas (
-    id, caixa_id, operador_id, total_bruto, total_desconto, total_liquido, forma_pagamento, status
+    id, caixa_id, operador_id, total_bruto, total_desconto, total_liquido, forma_pagamento, status, cliente_id
   ) VALUES (
     p_venda_id, p_caixa_id, v_uid, v_total_bruto_calc, v_total_desconto_final_calc,
-    v_total_liquido_final_calc, p_forma_pagamento, 'CONCLUIDA'
+    v_total_liquido_final_calc, p_forma_pagamento, 'CONCLUIDA', p_cliente_id
   ) ON CONFLICT (id) DO NOTHING;
 
   FOR v_item IN SELECT value FROM jsonb_array_elements(p_itens)
@@ -273,4 +274,4 @@ $function$;
 COMMENT ON FUNCTION public.finalizar_venda_transacional_canonica_v4(
   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text
 ) IS
-  'v4 canônica: guard de suspensão de vendas (259) + validação de preço/totais/pagamentos server-side + transação atômica (venda+itens+estoque+pagamentos+ledger) + fiscal desacoplado.';
+  'v4 canônica: guard de suspensão de vendas (268) + cliente_id + validação de preço/totais/pagamentos server-side + transação atômica (venda+itens+estoque+pagamentos+ledger) + fiscal desacoplado.';
