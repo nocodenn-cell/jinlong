@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 export type FornecedorListRow = {
@@ -86,12 +87,12 @@ export async function buscarFornecedoresPaginadosAction(
     }
 
     const { data, error } = await query
-    if (error) return { ok: false, error: error.message }
+    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
     const rows = (data ?? []) as FornecedorListRow[]
     const hasMore = rows.length > PAGE_SIZE
     return { ok: true, fornecedores: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao buscar fornecedores.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao buscar fornecedores.' }
   }
 }
 
@@ -161,7 +162,7 @@ export async function salvarFornecedorAction(
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, fornecedor: data as FornecedorListRow }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar fornecedor.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao salvar fornecedor.' }
   }
 }
 
@@ -180,7 +181,7 @@ export async function excluirFornecedorAction(
       .select('id', { count: 'exact', head: true })
       .eq('fornecedor_id', id)
       .in('status', ['PENDENTE', 'PARCIAL'])
-    if (countErr) return { ok: false, error: countErr.message }
+    if (countErr) return { ok: false, error: mensagemErroParaUsuario(countErr.message) }
     if ((count ?? 0) > 0) {
       return {
         ok: false,
@@ -194,7 +195,7 @@ export async function excluirFornecedorAction(
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir fornecedor.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao excluir fornecedor.' }
   }
 }
 
@@ -219,7 +220,7 @@ export async function bulkAtivarFornecedoresAction(
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, afetados: data?.length ?? 0 }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao atualizar fornecedores.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao atualizar fornecedores.' }
   }
 }
 
@@ -250,6 +251,6 @@ export async function bulkExcluirFornecedoresAction(
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, excluidos: liberados.length, bloqueados: bloqueadosIds.size }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir fornecedores.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao excluir fornecedores.' }
   }
 }

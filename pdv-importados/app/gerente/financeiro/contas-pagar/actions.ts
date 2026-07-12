@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
@@ -95,12 +96,12 @@ export async function buscarContasPagarAction(
     }
 
     const { data, error } = await query
-    if (error) return { ok: false, error: error.message }
+    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
     const rows = (data ?? []).map((r) => mapRow(r as Record<string, unknown>))
     const hasMore = rows.length > PAGE_SIZE
     return { ok: true, contas: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao buscar contas a pagar.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao buscar contas a pagar.' }
   }
 }
 
@@ -164,7 +165,7 @@ export async function registrarPagamentoAction(
     revalidatePath('/gerente/financeiro/contas-pagar')
     return { ok: true, conta: mapRow(data as Record<string, unknown>) }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao registrar pagamento.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao registrar pagamento.' }
   }
 }
 
@@ -194,7 +195,7 @@ export async function cancelarContaPagarAction(
     revalidatePath('/gerente/financeiro/contas-pagar')
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao cancelar.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao cancelar.' }
   }
 }
 

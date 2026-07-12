@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 
 export type ClienteListRow = {
   id: string
@@ -101,13 +102,13 @@ export async function buscarClientesPaginadosAction(
     }
 
     const { data, error } = await query
-    if (error) return { ok: false, error: error.message }
+    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
 
     const rows = ((data ?? []) as ClienteViewRow[]).map(mapClienteRow)
     const hasMore = rows.length > PAGE_SIZE
     return { ok: true, clientes: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao buscar clientes.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao buscar clientes.' }
   }
 }
 
@@ -150,7 +151,7 @@ export async function salvarClienteAction(
     let id = input.id
     if (id) {
       const { error } = await supabase.from('clientes').update(basePayload).eq('id', id)
-      if (error) return { ok: false, error: error.message }
+      if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
     } else {
       // `clientes.loja_id` é NOT NULL (migration 112): preenche com a loja do gerente.
       const lojaId = authCheck.session.lojaId
@@ -173,7 +174,7 @@ export async function salvarClienteAction(
         .insert(insertPayload)
         .select('id')
         .single()
-      if (error) return { ok: false, error: error.message }
+      if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
       id = data.id
     }
 
@@ -183,12 +184,12 @@ export async function salvarClienteAction(
       .select(VIEW_COLS)
       .eq('id', id)
       .single()
-    if (readErr) return { ok: false, error: readErr.message }
+    if (readErr) return { ok: false, error: mensagemErroParaUsuario(readErr.message) }
 
     revalidatePath('/gerente/clientes')
     return { ok: true, cliente: mapClienteRow(row as ClienteViewRow) }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar cliente.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao salvar cliente.' }
   }
 }
 
@@ -219,7 +220,7 @@ export async function excluirClienteAction(
       .eq('id', id)
       .maybeSingle()
 
-    if (getErr) return { ok: false, error: getErr.message }
+    if (getErr) return { ok: false, error: mensagemErroParaUsuario(getErr.message) }
     if (!existente) return { ok: false, error: 'Cliente não encontrado.' }
     if (Number(existente.saldo_crediario) > 0) {
       return {
@@ -234,7 +235,7 @@ export async function excluirClienteAction(
       .select('id', { count: 'exact', head: true })
       .eq('cliente_id', id)
 
-    if (histErr) return { ok: false, error: histErr.message }
+    if (histErr) return { ok: false, error: mensagemErroParaUsuario(histErr.message) }
 
     if (historico && historico > 0) {
       // Há histórico financeiro — anonimiza dados pessoais em vez de deletar
@@ -250,7 +251,7 @@ export async function excluirClienteAction(
         })
         .eq('id', id)
 
-      if (anonErr) return { ok: false, error: anonErr.message }
+      if (anonErr) return { ok: false, error: mensagemErroParaUsuario(anonErr.message) }
 
       revalidatePath('/gerente/clientes')
       return { ok: true, anonimizado: true }
@@ -258,11 +259,11 @@ export async function excluirClienteAction(
 
     // Sem histórico — remoção física permitida
     const { error: delErr } = await supabase.from('clientes').delete().eq('id', id)
-    if (delErr) return { ok: false, error: delErr.message }
+    if (delErr) return { ok: false, error: mensagemErroParaUsuario(delErr.message) }
 
     revalidatePath('/gerente/clientes')
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao excluir cliente.' }
+    return { ok: false, error: e instanceof Error ? mensagemErroParaUsuario(e.message) : 'Erro ao excluir cliente.' }
   }
 }

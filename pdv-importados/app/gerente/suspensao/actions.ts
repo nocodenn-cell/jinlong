@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -23,7 +24,7 @@ export async function carregarSuspensaoVendas(): Promise<ActionResult<SuspensaoS
     .select('chave, valor')
     .in('chave', ['vendas_suspensas', 'motivo_suspensao'])
 
-  if (error) return { success: false, error: error.message }
+  if (error) return { success: false, error: mensagemErroParaUsuario(error.message) }
 
   const map = Object.fromEntries((data ?? []).map((r) => [r.chave as string, r.valor as string]))
   return {
@@ -54,7 +55,7 @@ export async function atualizarSuspensaoVendas(
       .from('configuracoes_gerais')
       .update({ valor: u.valor })
       .eq('chave', u.chave)
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: mensagemErroParaUsuario(error.message) }
   }
 
   revalidatePath('/gerente')
