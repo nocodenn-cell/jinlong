@@ -33,7 +33,9 @@ import { cn } from '@/lib/utils'
 
 // ─── Pílula base ────────────────────────────────────────────────────────────
 
-type Tone = 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'neutral'
+// `danger`  = vermelho operacional (ex.: venda cancelada — estado normal do negócio).
+// `critical` = vermelho crítico/forte (ex.: falha fiscal de NF-e — exige atenção).
+type Tone = 'success' | 'warning' | 'danger' | 'critical' | 'info' | 'purple' | 'neutral'
 
 const TONE_STYLE: Record<Tone, React.CSSProperties> = {
   success: {
@@ -50,6 +52,12 @@ const TONE_STYLE: Record<Tone, React.CSSProperties> = {
     background: 'var(--fp-danger-bg)',
     border: '1px solid var(--fp-danger-border)',
     color: 'var(--fp-danger)',
+  },
+  // Vermelho crítico (sólido, alto contraste) — falhas fiscais/sistema. Theme-agnóstico.
+  critical: {
+    background: '#dc2626',
+    border: '1px solid #b91c1c',
+    color: '#ffffff',
   },
   info: {
     background: 'var(--fp-info-bg)',
@@ -206,7 +214,7 @@ const FISCAL_CONFIG: Record<Fiscal, { tone: Tone; icon: LucideIcon; label: strin
   EMITIDA: { tone: 'success', icon: CheckCircle2, label: 'Emitida' },
   PENDENTE: { tone: 'warning', icon: Clock, label: 'Pendente' },
   CANCELADA: { tone: 'danger', icon: Ban, label: 'Cancelada' },
-  ERRO: { tone: 'danger', icon: AlertTriangle, label: 'Erro' },
+  ERRO: { tone: 'critical', icon: AlertTriangle, label: 'Erro' },
   SEM_NOTA: { tone: 'neutral', icon: FileX, label: 'Sem nota' },
 }
 
