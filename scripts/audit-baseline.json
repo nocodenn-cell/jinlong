@@ -1,0 +1,25 @@
+{
+  "_description": "Baseline de falhas PRÉ-EXISTENTES aceitas pelo pipeline continuous-audit. O pipeline reporta apenas falhas NOVAS (não presentes aqui). Atualize com intenção ao corrigir/aceitar um item.",
+  "guardCore": {
+    "_note": "Arquivos com violação de core-rule já conhecida (dívida técnica pré-existente). Violação em QUALQUER outro arquivo = NOVA.",
+    "allowedFiles": ["ProdutoFormModal.tsx", "LoginForm.tsx"]
+  },
+  "lint": {
+    "_note": "Assinaturas normalizadas (caminho::regra::mensagem) de problemas de lint pré-existentes.",
+    "allowedSignatures": [
+      "app/caixa/CaixaPageClient.tsx::react-hooks/exhaustive-deps::React Hook useCallback has missing dependencies: 'clienteId' and 'saldoPendente'. Either include them or remove the dependency array.",
+      "app/caixa/CaixaSelecionarClienteModal.tsx::@typescript-eslint/no-explicit-any::Unexpected any. Specify a different type.",
+      "e2e/caixa-fase5b-contas-receber.spec.ts::@typescript-eslint/no-unused-vars::'createClient' is defined but never used. Allowed unused vars must match /^_/u.",
+      "e2e/caixa-fase5b-contas-receber.spec.ts::@typescript-eslint/no-explicit-any::Unexpected any. Specify a different type.",
+      "e2e/caixa-fase5b-contas-receber.spec.ts::@typescript-eslint/no-unused-vars::'outraLoja' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "e2e/caixa-fase6-reconciliacao.spec.ts::@typescript-eslint/no-unused-vars::'page' is defined but never used. Allowed unused args must match /^_/u.",
+      "e2e/caixa-fase6-reconciliacao.spec.ts::@typescript-eslint/no-unused-vars::'mockVendas' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "e2e/caixa-venda-multi-pagamento.spec.ts::@typescript-eslint/no-unused-vars::'selects' is assigned a value but never used. Allowed unused vars must match /^_/u."
+    ]
+  },
+  "requiresLiveEnv": {
+    "_note": "Steps que dependem de Supabase/seed vivo. Sem env, são marcados SKIPPED (não contam como falha nova).",
+    "steps": ["stress:pdv", "gate:pdv"],
+    "envVar": "NEXT_PUBLIC_SUPABASE_URL"
+  }
+}
