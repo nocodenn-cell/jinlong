@@ -30,6 +30,25 @@ uma venda.
 > corrigidas por estarem fora do escopo seguro (mexeriam em validação de venda / UI
 > de produto, exigindo confirmação).
 
+## Estado do CI na PR (#165) — falhas pré-existentes, não desta missão
+
+A PR abre com dois checks vermelhos. **Ambos são pré-existentes no branch** (o
+range da PR é `main..HEAD` = 44 commits, dos quais só 8 são desta missão) e
+**nenhum toca arquivos alterados por esta missão** (verificado por `git log` por
+arquivo). O deploy **Vercel do branch passou (Ready)**, confirmando que o código
+desta PR compila.
+
+| Check | Causa | Arquivo(s) | Introduzido aqui? |
+|---|---|---|---|
+| `build-and-test` | `npm run guard:all` → **guard:core** falha (regra de negócio na UI) e o passo de teste bate na falha unitária conhecida | `ProdutoFormModal.tsx`, `LoginForm.tsx`, `finalizarVendaCaixa.integration.test.ts` | ❌ não (commits pré-existentes) |
+| `gitleaks` | scan do range `main..HEAD` inclui 36 commits anteriores; meus 8 commits **não introduzem segredo** (docs + remoção de banner) | histórico anterior a esta missão | ❌ não |
+
+**Por que não foram corrigidos aqui:** guard:core exige refatorar regra de negócio
+para fora de `LoginForm.tsx` (fluxo de login — sensível) e `ProdutoFormModal.tsx`
+(mudança arquitetural); a falha de teste está no **conjunto de testes do fluxo de
+venda** (protegido pela regra "não alterar fluxo de venda existente"). Ambos exigem
+autorização explícita e ficam **documentados, não executados**.
+
 ## O que foi entregue nesta missão
 
 | Fase | Entrega | Commit |
