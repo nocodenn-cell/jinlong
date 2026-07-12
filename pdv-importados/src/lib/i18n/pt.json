@@ -957,7 +957,6 @@
     "valor_final": "Valor em caixa",
     "diferenca": "Diferença",
     "regras_carregando": "carregando regras…",
-    "lead_time_importacao_banner": "Lead time típico de importação: {{min}}–{{max}} dias.",
     "busca_placeholder": "Código de barras, nome ou categoria…",
     "busca_label_principal": "Leitura / busca principal",
     "busca_dica": "Enter adiciona ao cupom. Se o nome não bater, buscamos também pela categoria cadastrada.",

@@ -957,7 +957,6 @@
     "valor_final": "当前现金",
     "diferenca": "差额",
     "regras_carregando": "加载规则中…",
-    "lead_time_importacao_banner": "进口典型交期：{{min}}–{{max}} 天。",
     "busca_placeholder": "条码、名称或类别…",
     "busca_label_principal": "主输入 / 搜索",
     "busca_dica": "回车加入。若名称未命中，也会按已登记类别搜索。",

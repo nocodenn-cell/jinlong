@@ -41,7 +41,6 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
-import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaFooter } from "@/app/caixa/CaixaFooter"
 import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
@@ -1254,7 +1253,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 produtoPanel={
                   pdvLayoutVariant === "classic" ? (
                     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
                       <div className="shrink-0">
                         <CaixaSearchBar
                           ref={buscaInputRef}
@@ -1278,7 +1276,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                     </div>
                   ) : (
                     <>
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
                       <CaixaSearchBar
                         ref={buscaInputRef}
                         m={m}
