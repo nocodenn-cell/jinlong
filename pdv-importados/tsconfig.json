@@ -56,7 +56,10 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.test-helpers.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
     "**/__tests__/**",
+    "e2e/**",
     ".next"
   ]
 }
