@@ -50,21 +50,21 @@ Adicione em **Variables** do PreviewKit (não em `.env`):
 # Essencial para produção
 NODE_ENV=production
 
-# Autonoma - Obrigatórias
-AUTONOMA_CLIENT_ID=<seu_client_id_aqui>
-AUTONOMA_SECRET_ID=<seu_secret_id_aqui>
+# Autonoma - Obrigatórias (substituir pelos valores reais)
+AUTONOMA_CLIENT_ID=YOUR_CLIENT_ID
+AUTONOMA_SECRET_ID=YOUR_SECRET_ID
 
 # Features/Demo (opcional)
 NEXT_PUBLIC_ENABLE_DEMO_FLUXO=true
 
-# Supabase (se usar)
-NEXT_PUBLIC_SUPABASE_URL=<url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<key>
+# Supabase (se usar, substituir pelos valores reais)
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_KEY
 
-# Sentry (se usar)
-SENTRY_ORG=<org>
-SENTRY_PROJECT=<project>
-SENTRY_AUTH_TOKEN=<token>
+# Sentry (se usar, substituir pelos valores reais)
+SENTRY_ORG=YOUR_ORG
+SENTRY_PROJECT=YOUR_PROJECT
+SENTRY_AUTH_TOKEN=YOUR_AUTH_TOKEN
 ```
 
 **Importante**: 
