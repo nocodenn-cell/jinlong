@@ -23,7 +23,6 @@ export interface BarcodeOptions {
 export async function gerarBarcodeDataUrl(
   options: BarcodeOptions
 ): Promise<string> {
-  // @ts-ignore bwip-js é instalado mas TypeScript não resolve dynamic import
   const bwipModule = await import('bwip-js')
   type BwipToCanvas = (
     canvas: HTMLCanvasElement,
