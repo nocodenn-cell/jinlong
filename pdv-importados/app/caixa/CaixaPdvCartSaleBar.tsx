@@ -1,5 +1,6 @@
 "use client"
 
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import { formatDecimalBRL } from "@/lib/format/money"
@@ -92,7 +93,14 @@ export function CaixaPdvCartSaleBar({
               }
               aria-busy={finalizando}
             >
-              {m.caixa.finalizar_venda}
+              {finalizando ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                  {m.caixa.finalizando}
+                </span>
+              ) : (
+                m.caixa.finalizar_venda
+              )}
             </Button>
           </div>
         </div>

@@ -60,7 +60,7 @@
     "nunca_vendido": "Nunca vendido",
     "um_dia_parado": "1 dia parado",
     "dias_parado": "{{dias}} dias parado",
-    "vazio": "Nenhum produto sem giro no período. 🎉",
+    "vazio": "Nenhum produto sem giro no período.",
     "resumo": "{{n}} produto(s) parado(s) · {{valor}} imobilizados"
   },
   "produtos": {

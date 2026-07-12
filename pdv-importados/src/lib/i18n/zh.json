@@ -60,7 +60,7 @@
     "nunca_vendido": "从未售出",
     "um_dia_parado": "已滞销 1 天",
     "dias_parado": "已滞销 {{dias}} 天",
-    "vazio": "所选期间无滞销商品。🎉",
+    "vazio": "所选期间无滞销商品。",
     "resumo": "{{n}} 件滞销 · 占用 {{valor}}"
   },
   "produtos": {
