@@ -28,5 +28,7 @@ export function formatDateTimeLocaleDefault(
 
 /** Dia/mês para eixos de gráfico (ex.: admin dashboard). */
 export function formatDayMonthInLocale(date: Date, locale: string): string {
+  // Guarda defensiva: eixos de gráfico nunca devem exibir "Invalid Date".
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '—'
   return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })
 }
