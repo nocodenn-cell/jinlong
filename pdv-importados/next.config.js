@@ -60,8 +60,13 @@ module.exports = withSentryConfig(nextConfig, {
   silent: !process.env.CI,
   // Source maps ocultos no bundle público
   hideSourceMaps: true,
-  // Não faz upload de source maps se DSN não estiver configurado
-  disableLogger: true,
-  // Não adiciona monitors automáticos do Vercel Cron
-  automaticVercelMonitors: false,
+  // Opções de build migradas para o wrapper `webpack` (Sentry SDK v10):
+  webpack: {
+    // Substitui `disableLogger` (depreciado): remove logs de debug do SDK no bundle.
+    treeshake: {
+      removeDebugLogging: true,
+    },
+    // Substitui o `automaticVercelMonitors` de topo (depreciado): sem monitors de Cron automáticos.
+    automaticVercelMonitors: false,
+  },
 });

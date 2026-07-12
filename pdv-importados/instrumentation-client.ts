@@ -1,3 +1,5 @@
+// Instrumentação de cliente do Sentry (Next 15). Substitui `sentry.client.config.js`.
+// O Next carrega este arquivo automaticamente no bundle do navegador.
 import * as Sentry from '@sentry/nextjs'
 import { replayIntegration } from '@sentry/browser'
 
@@ -12,7 +14,9 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.0,
 
-  enabled: process.env.NODE_ENV !== 'development' || Boolean(process.env.NEXT_PUBLIC_SENTRY_FORCE_ENABLE),
+  enabled:
+    process.env.NODE_ENV !== 'development' ||
+    Boolean(process.env.NEXT_PUBLIC_SENTRY_FORCE_ENABLE),
 
   integrations: [
     replayIntegration({
@@ -33,3 +37,6 @@ Sentry.init({
     return event
   },
 })
+
+// Hook do Next 15 App Router para instrumentar navegações client-side.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart
