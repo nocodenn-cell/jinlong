@@ -52,6 +52,11 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.test-helpers.tsx",
+    "**/__tests__/**",
+    ".next"
   ]
 }
