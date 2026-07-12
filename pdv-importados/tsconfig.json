@@ -49,25 +49,9 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "types/**/*.d.ts"
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.test-helpers.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx",
-    "**/*.stories.ts",
-    "**/*.stories.tsx",
-    "**/__tests__/**",
-    "e2e/**",
-    "stories/**",
-    ".next",
-    "playwright.config.ts",
-    "vitest.config.ts",
-    "next.config.js"
+    "node_modules"
   ]
 }
