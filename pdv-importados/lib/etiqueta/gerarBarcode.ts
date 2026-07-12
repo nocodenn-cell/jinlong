@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Gera código de barras como imagem usando bwip-js.
  * Dynamic import para evitar bundle bloat no carregamento inicial.
