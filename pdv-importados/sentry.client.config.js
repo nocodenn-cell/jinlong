@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/nextjs'
-import { replayIntegration } from '@sentry/browser'
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -15,7 +14,7 @@ Sentry.init({
   enabled: process.env.NODE_ENV !== 'development' || Boolean(process.env.NEXT_PUBLIC_SENTRY_FORCE_ENABLE),
 
   integrations: [
-    replayIntegration({
+    Sentry.replayIntegration({
       maskAllText: true,
       blockAllMedia: true,
     }),
