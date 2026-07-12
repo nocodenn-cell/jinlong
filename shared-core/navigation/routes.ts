@@ -56,6 +56,7 @@ export const ROUTES = {
     clientes: '/admin/clientes',
     fornecedores: '/admin/fornecedores',
     compras: '/admin/compras',
+    funcionarios: '/admin/funcionarios',
   },
   catalogoPublic: {
     produtos: '/catalogo/produtos',

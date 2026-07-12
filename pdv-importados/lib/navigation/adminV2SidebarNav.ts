@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   Tag,
   Users,
+  UserCog,
   Truck,
   ClipboardList,
 } from 'lucide-react'
@@ -55,6 +56,7 @@ export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'recebimento', href: ROUTES.admin.estoqueRecebimento, icon: Inbox, labelOverridePt: 'Recebimento', dictKey: 'recebimento' },
   { id: 'transferencias', href: ROUTES.admin.estoqueTransferencias, icon: ArrowRightLeft, labelOverridePt: 'Transferências', dictKey: 'transferencias' },
   { id: 'comissoes', href: ROUTES.admin.comissoes, icon: Percent, labelOverridePt: 'Comissões', dictKey: 'comissoes' },
+  { id: 'funcionarios', href: ROUTES.admin.funcionarios, icon: UserCog, labelOverridePt: 'Funcionários', labelCn: '员工' },
 ] as const
 
 export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
