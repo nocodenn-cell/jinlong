@@ -285,6 +285,7 @@ DECLARE
   v_valor_estorno numeric(10, 2);
   v_valor_caixa numeric(10, 2) := 0;
   v_cr record;
+  v_contas_receber_id uuid := NULL;
   v_event_items jsonb := '[]'::jsonb;
   c_source constant text := 'gerente_panel';
 BEGIN
@@ -382,6 +383,7 @@ BEGIN
     IF v_cr.valor_aberto < v_valor_estorno - 0.01 THEN
       RAISE EXCEPTION 'DEVOLVER_VENDA_VALOR_EXCEDE_ABERTO';
     END IF;
+    v_contas_receber_id := v_cr.id;
   END IF;
 
   v_operacao_id := gen_random_uuid();
@@ -394,7 +396,7 @@ BEGIN
     v_operacao_id, v_key, p_venda_id, v_tipo, v_motivo,
     v_valor_estorno, 0, v_forma,
     v_uid, v_caixa.id, p_venda_substituta_id,
-    CASE WHEN v_forma = 'CREDITO_CLIENTE' THEN v_cr.id ELSE NULL END
+    v_contas_receber_id
   );
 
   -- Processar itens: estoque + linhas de operação
@@ -484,7 +486,7 @@ BEGIN
   ) ON CONFLICT (idempotency_key) DO NOTHING;
 
   RETURN QUERY
-  SELECT v_operacao_id, p_venda_id, v_tipo, v_valor_estornado, v_valor_caixa, 'CONCLUIDA'::text;
+  SELECT v_operacao_id, p_venda_id, v_tipo, v_valor_estorno, v_valor_caixa, 'CONCLUIDA'::text;
 END;
 $$;
 
