@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
+import { caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
 import type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
@@ -64,7 +65,7 @@ export async function registrarMovimentacaoImpl(
       p_gerente_id: dados.gerenteId ?? null,
     })
 
-    if (error) return { ok: false, error: mensagemErroComSecao('Movimentação de caixa', error.message) }
+    if (error) return { ok: false, error: caixaErroOperador(error.message) }
     const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) {
       return { ok: false, error: 'A movimentação não retornou identificador.' }

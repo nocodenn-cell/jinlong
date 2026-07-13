@@ -18,6 +18,11 @@ Cliente → POST /caixa/action
 
 **Caller único autorizado:** `pdv-importados/app/caixa/server/caixaVendas.impl.ts`
 
+**Pagamento parcial (Fase 5b):** SSoT de limiar/cliente em
+`pdv-importados/app/caixa/caixaPagamentoSaldo.ts` (`pagamentoParcialExigeCliente`,
+`SALDO_PENDENTE_EPS`). UI (`CaixaPageClient`) e servidor usam o mesmo helper;
+a RPC recebe `p_cliente_id` quando há saldo pendente.
+
 **Garantias:**
 - Idempotência via `pg_advisory_xact_lock(hashtext(venda_id))` + `ON CONFLICT DO NOTHING`
 - Validação de preço autoritativa no servidor antes da chamada

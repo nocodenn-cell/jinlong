@@ -16,6 +16,7 @@ import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
 import { caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
+import { pagamentoParcialExigeCliente } from '@/app/caixa/caixaPagamentoSaldo'
 import { resolveVendaIdForFinalize } from '@/lib/caixa/resolveVendaIdForFinalize'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import {
@@ -255,7 +256,7 @@ export async function finalizarVendaCaixaImpl(
     const somaPagamentos = roundMoney2(input.pagamentos.reduce((acc, p) => acc + p.valor, 0))
     const saldoPendente = roundMoney2(computedFinal.totalLiquido - somaPagamentos)
 
-    if (saldoPendente > 0.009 && !input.clienteId) {
+    if (pagamentoParcialExigeCliente(saldoPendente, input.clienteId)) {
       return {
         ok: false,
         error: 'Pagamento parcial requer seleção de cliente para gerar crédito. Selecione o cliente antes de finalizar.',

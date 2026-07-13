@@ -22,4 +22,9 @@ describe('caixaErroOperador', () => {
       caixaErroOperador('function calcular_valor does not exist — Aplique migrations 048'),
     ).toBe('Caixa indisponível no momento.')
   })
+
+  it('mapeia MOV_CAIXA_SALDO_INSUFICIENTE sem expor o código RPC', () => {
+    expect(caixaErroOperador('MOV_CAIXA_SALDO_INSUFICIENTE')).toContain('Saldo insuficiente')
+    expect(caixaErroOperador('MOV_CAIXA_SALDO_INSUFICIENTE')).not.toContain('MOV_CAIXA')
+  })
 })

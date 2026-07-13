@@ -130,4 +130,30 @@ describe('finalizarVendaValidation', () => {
     })
     expect(r.success).toBe(false)
   })
+
+  it('finalizarVendaInputSchema aceita clienteId UUID opcional', () => {
+    const r = finalizarVendaInputSchema.safeParse({
+      formaPagamento: 'DINHEIRO',
+      totalBruto: 20,
+      totalDesconto: 0,
+      totalLiquido: 20,
+      pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 5 }],
+      clienteId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      itens: [itemBase],
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('finalizarVendaInputSchema rejeita clienteId inválido', () => {
+    const r = finalizarVendaInputSchema.safeParse({
+      formaPagamento: 'DINHEIRO',
+      totalBruto: 20,
+      totalDesconto: 0,
+      totalLiquido: 20,
+      pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 5 }],
+      clienteId: 'cliente-x',
+      itens: [itemBase],
+    })
+    expect(r.success).toBe(false)
+  })
 })

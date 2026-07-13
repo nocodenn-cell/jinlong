@@ -239,5 +239,36 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
     if (result.ok) return
     expect(result.error).toContain('Pagamento parcial requer seleção de cliente')
   })
+
+  it('aceita pagamento parcial com cliente e envia p_cliente_id (Fase 5b)', async () => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+    const payloadParcial = payloadBase()
+    payloadParcial.pagamentos = [{ formaPagamento: 'DINHEIRO', valor: 10 }]
+    payloadParcial.clienteId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    const result = await finalizarVendaCaixa(payloadParcial)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(txCall?.params.p_cliente_id).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+    expect(txCall?.params.p_pagamentos).toEqual([{ forma_pagamento: 'DINHEIRO', valor: 10 }])
+  })
+
+  it('pagamento 100% envia p_cliente_id null sem exigir cliente', async () => {
+    const { supabase, rpcCalls } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+    const payload = payloadBase()
+    payload.pagamentos = [{ formaPagamento: 'DINHEIRO', valor: 30 }]
+
+    const result = await finalizarVendaCaixa(payload)
+    expect(result.ok).toBe(true)
+
+    const txCall = rpcCalls.find((c) => c.name === 'finalizar_venda_transacional_canonica_v4')
+    expect(txCall?.params.p_cliente_id).toBeNull()
+  })
 })
 

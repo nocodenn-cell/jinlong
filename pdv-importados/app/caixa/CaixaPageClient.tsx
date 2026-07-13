@@ -29,6 +29,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { useCaixaMensagens } from "@/app/caixa/hooks/useCaixaMensagens"
 import { useCaixaPagamentos } from "@/app/caixa/hooks/useCaixaPagamentos"
+import { pagamentoParcialExigeCliente } from "@/app/caixa/caixaPagamentoSaldo"
 import {
   isCaixaAberto,
   useCaixaStatusMovimentacoes,
@@ -922,7 +923,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         vendaIdempotenciaRef.current = crypto.randomUUID()
       }
       // ✅ VALIDAÇÃO FASE 5b: Se há saldo pendente, validar cliente antes de finalizar
-      if (saldoPendente > 0.009 && !clienteId) {
+      if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
         setSelecionarClienteModalAberto(true)
         setFinalizando(false)
         setCaixaMensagem('Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.', { kind: "warning" })
