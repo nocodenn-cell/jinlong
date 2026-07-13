@@ -73,14 +73,30 @@ export async function finalizarVenda(page: Page): Promise<void> {
   await dismissReciboSeAberto(page)
 }
 
-/** Fecha o modal de recibo pós-venda para não interceptar cliques seguintes. */
+/**
+ * Fecha o modal de recibo pós-venda para não interceptar cliques seguintes.
+ * Race: `caixa-msg-venda-ok` e o dialog abrem no mesmo commit React; um
+ * `isVisible()` imediato pode retornar false e deixar o overlay aberto.
+ */
 export async function dismissReciboSeAberto(page: Page): Promise<void> {
   const recibo = page.getByRole('dialog', { name: /Recibo da venda|收据|收據/i })
-  if (!(await recibo.isVisible().catch(() => false))) return
-  const fechar = recibo.getByRole('button', {
-    name: /Fechar|关闭|關閉|Adicionar nova venda|Nova venda|新单|新單|继续/i,
-  })
-  if (await fechar.first().isVisible().catch(() => false)) {
+  const apareceu = await recibo
+    .waitFor({ state: 'visible', timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!apareceu) return
+
+  const novaVenda = recibo.getByTestId('caixa-recibo-nova-venda').or(
+    recibo.getByRole('button', {
+      name: /Adicionar nova venda|添加新销售|Nova venda|新单|新單/i,
+    }),
+  )
+  const fechar = recibo.getByTestId('caixa-recibo-fechar').or(
+    recibo.getByRole('button', { name: /Fechar recibo|Fechar|关闭|關閉/i }),
+  )
+  if (await novaVenda.first().isVisible().catch(() => false)) {
+    await novaVenda.first().click()
+  } else if (await fechar.first().isVisible().catch(() => false)) {
     await fechar.first().click()
   } else {
     await page.keyboard.press('Escape')
