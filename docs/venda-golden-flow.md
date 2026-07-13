@@ -10,8 +10,11 @@
 Cliente → POST /caixa/action
   → caixaVendas.impl.ts (Server Action Next.js)
     → revalidação de preço autoritativa (caixaPrecoAutoritativoServer.ts)
+      → rpc obter_pricing_version_ativa (NULL = legado / versionamento off)
+      → rpc calcular_preco_produto (por item; qtd via quantidadeParaRpcPreco)
     → supabase.rpc('finalizar_venda_transacional_canonica_v4')
       [transação atômica no DB: vendas + itens_venda + estoque + venda_eventos]
+    → rpc registrar_pricing_version_venda (best-effort se houver versão ativa)
     ← { ok, vendaId, eventId, documentoFiscal? }
   → registrarAlertasLevesVenda (best-effort, após conclusão)
 ```
