@@ -26,10 +26,13 @@ import { getDeviceFingerprint } from '@/lib/security/deviceFingerprint'
 import { getCaixaSalesRuntimeConfig } from '@/lib/config/caixaSalesRuntimeConfig'
 import {
   obterMapaConfiguracoesParaCaixaWeb,
-  parseMoneyConfig,
   parsePercentConfig,
 } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
+import {
+  MSG_CANCELAR_VENDA_PERFIL,
+  perfilPodeCancelarVenda,
+} from '@/app/caixa/server/cancelarVendaPerfil'
 import {
   captureVendaError,
   captureRpcVendaError,
@@ -88,21 +91,9 @@ export async function cancelarVendaImpl(
       .eq('id', user.id)
       .maybeSingle()
 
-    if (urow?.perfil === 'OPERADOR') {
-      const [{ data: vrow }, cfgMap] = await Promise.all([
-        supabase.from('vendas').select('total_liquido').eq('id', vendaIdTrim).maybeSingle(),
-        obterMapaConfiguracoesParaCaixaWeb(supabase),
-      ])
-
-      const totalLiq = Number(vrow?.total_liquido ?? 0)
-      const maxCancel = parseMoneyConfig(cfgMap.cancelamento_maximo_valor_sem_gerente, 500)
-
-      if (Number.isFinite(totalLiq) && totalLiq > maxCancel + 0.01) {
-        return {
-          ok: false,
-          error: `Cancelamento não permitido: valor da venda (R$ ${totalLiq.toFixed(2)}) ultrapassa o limite do operador (R$ ${maxCancel.toFixed(2)}).`,
-        }
-      }
+    if (!perfilPodeCancelarVenda(urow?.perfil)) {
+      // BA-013: SSoT = RPC cancelar_venda_transacional (GERENTE/DONO/ADMIN).
+      return { ok: false, error: MSG_CANCELAR_VENDA_PERFIL }
     }
 
     const { data, error } = await supabase.rpc('cancelar_venda_transacional', {
