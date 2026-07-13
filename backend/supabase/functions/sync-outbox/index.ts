@@ -22,7 +22,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { timingSafeEqualSecret, timingSafeEqualStr } from "../_shared/crypto.ts";
 import { validateGerenteAndIssueToken } from "../_shared/gerente-auth.ts";
-import { logJson } from "../../../../shared/logger.ts";
+import { logJson } from "../_shared/logger.ts";
 import { maybeEnqueueFiscalDocumentAfterSyncedVenda } from "./fiscal_enqueue_after_venda_sync.ts";
 import { captureEdgeException } from "../_shared/sentryEdge.ts";
 
@@ -738,8 +738,15 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
   if (regrasRes.error) throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
   if (atacadoRes.error) throw new Error(`ERRO_CATALOGO_PRECOS_ATACADO: ${atacadoRes.error.message}`);
 
-  const precosAtacado = (atacadoRes.data ?? []).filter((row) => {
-    const lid = row.loja_id as string | null;
+  const precosAtacado = ((atacadoRes.data ?? []) as Array<{
+    id: string;
+    produto_id: string;
+    loja_id: string | null;
+    quantidade_minima: number;
+    preco_unitario: number;
+    ativo: boolean;
+  }>).filter((row) => {
+    const lid = row.loja_id;
     return lid == null || (lojaId != null && lid === lojaId);
   });
 
