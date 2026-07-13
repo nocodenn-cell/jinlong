@@ -12,15 +12,29 @@ import {
   mensagemErroComContexto,
   mensagemErroParaUsuario,
 } from '../lib/mensagemErroUsuario'
+import {
+  mapPrecoAtacadoRow,
+  type PrecoCanonicoSnapshot,
+} from '../lib/resolverPrecoCanonicoLocal'
 
 type CatalogoLocalInvoke = {
   produtos?: ProdutoCacheLite[]
   regras?: RegraPrecoRow[]
+  precos_atacado?: Array<{
+    id: string
+    produto_id: string
+    loja_id?: string | null
+    quantidade_minima: number
+    preco_unitario: number
+    ativo?: boolean
+  }>
 }
 
 type PdvConfigLocalInvoke = {
   gerente_id: string
   max_desconto_gerente_percentual: number
+  quantidade_minima_atacado_padrao?: number | null
+  loja_id?: string | null
 }
 
 export type CaixaSessaoInvoke = {
@@ -33,6 +47,8 @@ type Params = {
   setMaxDescontoGerentePercentual: (n: number) => void
   setCaixaAtualId: (id: string | null) => void
   setMensagem: (msg: string | null) => void
+  setQuantidadeMinimaAtacadoPadrao?: (n: number | null) => void
+  setLojaId?: (id: string | null) => void
 }
 
 export function usePdvLocalCatalogo({
@@ -41,6 +57,8 @@ export function usePdvLocalCatalogo({
   setMaxDescontoGerentePercentual,
   setCaixaAtualId,
   setMensagem,
+  setQuantidadeMinimaAtacadoPadrao,
+  setLojaId,
 }: Params) {
   const [tauriDisponivel, setTauriDisponivel] = useState(false)
   const [produtosPorCodigoBarras, setProdutosPorCodigoBarras] = useState<
@@ -50,8 +68,13 @@ export function usePdvLocalCatalogo({
   const [carregandoCatalogo, setCarregandoCatalogo] = useState(true)
   const [ultimoErroSincCatalogo, setUltimoErroSincCatalogo] = useState<string | null>(null)
   const [sincronizandoCatalogo, setSincronizandoCatalogo] = useState(false)
-  /** Espelho tipado de regras para consumo local pelo Pricing Engine, sem passar por unknown[]. */
+  /** Regras legado (PROMOCAO etc.) — não alimentam preço automático ATACADO. */
   const regrasRef = useRef<RegraPreco[]>([])
+  const precoCanonicoRef = useRef<PrecoCanonicoSnapshot>({
+    lojaId: null,
+    quantidadeMinimaAtacadoPadrao: null,
+    tiers: [],
+  })
 
   const aplicarCacheCatalogo = useCallback(
     (cache: CatalogoLocalInvoke | null | undefined) => {
@@ -63,12 +86,46 @@ export function usePdvLocalCatalogo({
       regrasRef.current = regras
       setRegras(regras)
 
+      const tiers = (cache.precos_atacado ?? []).map(mapPrecoAtacadoRow)
+      precoCanonicoRef.current = {
+        ...precoCanonicoRef.current,
+        tiers,
+      }
+
       const produtosArr = cache.produtos ?? []
       const produtosVendaveis = produtosCatalogoVendaveis(produtosArr)
       setProdutosCatalogo(produtosVendaveis)
       setProdutosPorCodigoBarras(buildMapaProdutoChaves(produtosVendaveis))
     },
     [setRegras],
+  )
+
+  const aplicarConfig = useCallback(
+    (cfg: PdvConfigLocalInvoke | null | undefined) => {
+      if (!cfg) return
+      setGerenteId(cfg.gerente_id ?? defaultPdvConfig.gerenteId)
+      setMaxDescontoGerentePercentual(
+        Number(cfg.max_desconto_gerente_percentual ?? defaultPdvConfig.maxDescontoGerentePercentual),
+      )
+      const minPadrao =
+        cfg.quantidade_minima_atacado_padrao == null
+          ? null
+          : Number(cfg.quantidade_minima_atacado_padrao)
+      const loja = cfg.loja_id?.trim() ? cfg.loja_id.trim() : null
+      precoCanonicoRef.current = {
+        ...precoCanonicoRef.current,
+        quantidadeMinimaAtacadoPadrao: minPadrao,
+        lojaId: loja,
+      }
+      setQuantidadeMinimaAtacadoPadrao?.(minPadrao)
+      setLojaId?.(loja)
+    },
+    [
+      setGerenteId,
+      setMaxDescontoGerentePercentual,
+      setQuantidadeMinimaAtacadoPadrao,
+      setLojaId,
+    ],
   )
 
   const sincronizarCatalogoManual = useCallback(async () => {
@@ -79,11 +136,13 @@ export function usePdvLocalCatalogo({
       const r = await invoke<{
         produtos_salvos: number
         regras_salvas: number
+        precos_atacado_salvos?: number
       }>('sync_catalogo_real_cmd')
       const cache2 = (await invoke('catalogo_local_get_cmd')) as CatalogoLocalInvoke
       aplicarCacheCatalogo(cache2)
+      const tiers = r.precos_atacado_salvos ?? 0
       setMensagem(
-        `Catálogo atualizado: ${r.produtos_salvos} produto(s), ${r.regras_salvas} regra(s).`,
+        `Catálogo atualizado: ${r.produtos_salvos} produto(s), ${r.regras_salvas} regra(s), ${tiers} faixa(s) atacado.`,
       )
     } catch (e) {
       const msg = String(e)
@@ -127,12 +186,7 @@ export function usePdvLocalCatalogo({
     async function inicializar() {
       try {
         const cfg = await invoke<PdvConfigLocalInvoke | null>('pdv_config_local_get_cmd')
-        if (!cancelled && cfg) {
-          setGerenteId(cfg.gerente_id ?? defaultPdvConfig.gerenteId)
-          setMaxDescontoGerentePercentual(
-            Number(cfg.max_desconto_gerente_percentual ?? defaultPdvConfig.maxDescontoGerentePercentual),
-          )
-        }
+        if (!cancelled) aplicarConfig(cfg)
       } catch {
         // fallback abaixo
       }
@@ -149,12 +203,7 @@ export function usePdvLocalCatalogo({
       try {
         await invoke('sync_pdv_config_real_cmd')
         const cfg2 = await invoke<PdvConfigLocalInvoke | null>('pdv_config_local_get_cmd')
-        if (!cancelled && cfg2) {
-          setGerenteId(cfg2.gerente_id ?? defaultPdvConfig.gerenteId)
-          setMaxDescontoGerentePercentual(
-            Number(cfg2.max_desconto_gerente_percentual ?? defaultPdvConfig.maxDescontoGerentePercentual),
-          )
-        }
+        if (!cancelled) aplicarConfig(cfg2)
       } catch {
         // offline: mantém cache local/fallback
       }
@@ -184,7 +233,7 @@ export function usePdvLocalCatalogo({
     return () => {
       cancelled = true
     }
-  }, [tauriDisponivel, setMaxDescontoGerentePercentual, aplicarCacheCatalogo, setGerenteId, setCaixaAtualId])
+  }, [tauriDisponivel, aplicarConfig, aplicarCacheCatalogo, setCaixaAtualId])
 
   return {
     tauriDisponivel,
@@ -195,7 +244,8 @@ export function usePdvLocalCatalogo({
     sincronizandoCatalogo,
     sincronizarCatalogoManual,
     aplicarCacheCatalogo,
-    /** Regras de preço carregadas — fonte para o Pricing Engine no add-item. */
     regrasRef,
+    /** Inputs da PRICE_RESOLUTION_CHAIN (tiers + loja + min padrao). */
+    precoCanonicoRef,
   }
 }

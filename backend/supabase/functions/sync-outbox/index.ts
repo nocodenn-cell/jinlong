@@ -10,7 +10,7 @@
 // --- Matriz ?op= (após authorizeSync: chave + HMAC + nonce) ---
 // | Método | op (query)     | Handler / efeito           | Dados sensíveis na resposta |
 // |--------|----------------|----------------------------|-----------------------------|
-// | GET    | catalogo       | handleCatalogoSync         | Catálogo: produtos + regras_preco + projeção precos_atacado (BA-011) — comercial sensível |
+// | GET    | catalogo       | handleCatalogoSync         | Catálogo: produtos + regras_preco + precos_atacado (Aut#1 / PRICE_RESOLUTION_CHAIN) |
 // | GET    | pdv_config     | handlePdvConfigSync        | gerente_id, max_desconto…; strict_manager_auth (sem hash de senha) |
 // | GET    | outro/ausente  | —                          | 400 INVALID_OPERATION |
 // | POST   | validar_gerente| handleValidarGerentePdvSync| token gerente + expiração (se ok) — token sensível; erros genéricos |
@@ -52,7 +52,7 @@ const MAX_CLOCK_SKEW_SECONDS = 5 * 60;
 const NONCE_TTL_SECONDS = 10 * 60;
 const CORS_ALLOW_METHODS = "GET, POST, OPTIONS";
 const CORS_ALLOW_HEADERS =
-  "content-type, x-sync-key, x-sync-ts, x-sync-nonce, x-sync-signature, x-device-fingerprint";
+  "content-type, x-sync-key, x-sync-ts, x-sync-nonce, x-sync-signature, x-device-fingerprint, x-loja-id";
 
 function hexOfBytes(bytes: Uint8Array): string {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -700,25 +700,37 @@ async function processVenda(
   });
 }
 
+function parseLojaIdHeader(req: Request): string | null {
+  const raw = (req.headers.get("x-loja-id") ?? "").trim();
+  if (!raw) {
+    const fromEnv = (Deno.env.get("DEFAULT_PDV_LOJA_ID") ?? "").trim();
+    return fromEnv.length > 0 ? fromEnv : null;
+  }
+  return raw;
+}
+
 async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
-  // BA-011: SSoT de faixas Web = precos_atacado. Projetar no payload de regras
-  // para o cache Local (PricingService), sem dual-write em regras_preco.
+  // Aut#1: precos_atacado como array canônico (não projetar em regras_preco).
+  const lojaId = parseLojaIdHeader(req);
   const [produtosRes, regrasRes, atacadoRes] = await Promise.all([
     supabase
       .from("produtos")
-      .select("id,nome,codigo_barras,preco_varejo,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url")
+      .select(
+        "id,nome,codigo_barras,preco_varejo,preco_atacado,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url",
+      )
       .order("nome", { ascending: true })
       .limit(100000),
     supabase
       .from("regras_preco")
-      .select("id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo")
+      .select(
+        "id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo",
+      )
       .eq("ativo", true)
       .limit(100000),
     supabase
       .from("precos_atacado")
       .select("id,produto_id,loja_id,quantidade_minima,preco_unitario,ativo")
       .eq("ativo", true)
-      .is("loja_id", null)
       .limit(100000),
   ]);
 
@@ -726,44 +738,25 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
   if (regrasRes.error) throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
   if (atacadoRes.error) throw new Error(`ERRO_CATALOGO_PRECOS_ATACADO: ${atacadoRes.error.message}`);
 
-  const regrasDeAtacado = projectPrecosAtacadoAsRegras(atacadoRes.data ?? []);
-  const regrasLegadas = regrasRes.data ?? [];
-  const regras = [...regrasDeAtacado, ...regrasLegadas];
+  const precosAtacado = (atacadoRes.data ?? []).filter((row) => {
+    const lid = row.loja_id as string | null;
+    return lid == null || (lojaId != null && lid === lojaId);
+  });
 
-  return jsonResponse(req, 200, { ok: true, produtos: produtosRes.data ?? [], regras });
-}
-
-type PrecoAtacadoSyncRow = {
-  id: string;
-  produto_id: string;
-  loja_id: string | null;
-  quantidade_minima: number;
-  preco_unitario: number;
-  ativo: boolean;
-};
-
-/** Projeta faixas canônicas (precos_atacado) no shape consumido pelo cache Local. */
-function projectPrecosAtacadoAsRegras(rows: PrecoAtacadoSyncRow[]) {
-  return rows
-    .map((r) => ({
-      id: r.id,
-      tipo_regra: "ATACADO",
-      produto_id: r.produto_id,
-      categoria_id: null as string | null,
-      quantidade_minima: r.quantidade_minima,
-      quantidade_maxima: null as number | null,
-      tipo_desconto: "VALOR_FIXO",
-      valor_desconto: Number(r.preco_unitario),
-      data_validade: null as string | null,
-      ativo: true,
-    }))
-    .sort((a, b) => Number(b.quantidade_minima) - Number(a.quantidade_minima));
+  return jsonResponse(req, 200, {
+    ok: true,
+    produtos: produtosRes.data ?? [],
+    regras: regrasRes.data ?? [],
+    precos_atacado: precosAtacado,
+    loja_id: lojaId,
+  });
 }
 
 async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin) {
+  const lojaId = parseLojaIdHeader(req);
   const { data, error, status } = await supabase
     .from("pdv_config")
-    .select("gerente_id, max_desconto_gerente_percentual")
+    .select("gerente_id, max_desconto_gerente_percentual, quantidade_minima_atacado_padrao")
     .eq("id", 1)
     .maybeSingle();
 
@@ -772,10 +765,13 @@ async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin) {
     throw new Error(`ERRO_PDV_CONFIG: ${error.message}`);
   }
 
-  const configComFlag = data ? {
-    ...data,
-    strict_manager_auth: Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true"
-  } : null;
+  const configComFlag = data
+    ? {
+      ...data,
+      loja_id: lojaId,
+      strict_manager_auth: Deno.env.get("STRICT_MANAGER_DISCOUNT_AUTH") === "true",
+    }
+    : null;
 
   return jsonResponse(req, 200, { ok: true, config: configComFlag });
 }

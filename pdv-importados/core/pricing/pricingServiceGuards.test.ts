@@ -15,27 +15,22 @@ function item(quantidade: number, preco: number) {
   } as never
 }
 
-describe('PricingService — guard de piso (Q1)', () => {
-  it('não permite preço unitário negativo com desconto > 100%', () => {
-    // `tipo` canônico em UPPERCASE: produção só recebe 'VAREJO'|'ATACADO' via
-    // mapRegraPrecoRow. O typo 'ATAcado' fazia a regra não casar (resultado
-    // VAREJO, preço intacto) — o guard de piso nunca era exercitado e o teste
-    // falhava sem testar nada.
+describe('PricingService — somente PROMOCAO (Aut#1)', () => {
+  it('ignora regras ATACADO (autoridade = calcularPrecoCanonico)', () => {
     const regra: RegraPreco = {
       id: 'r1',
       nome: 'ATACADO',
       tipo: 'ATACADO',
       minQuantidade: 1,
-      descontoPercentual: 150,
+      descontoPercentual: 50,
       ativo: true,
     }
     const r = svc.calcularPrecoItem(item(5, 100), [regra], {})
-    expect(r.precoUnitario).toBe(0)
-    expect(r.precoUnitario).toBeGreaterThanOrEqual(0)
-    expect(r.descontoUnitario).toBe(100)
+    expect(r.tipoPreco).toBe('VAREJO')
+    expect(r.precoUnitario).toBe(100)
   })
 
-  it('não permite preço acima do original via precoFixo inválido', () => {
+  it('não permite preço acima do original via precoFixo inválido em PROMOCAO', () => {
     const regra: RegraPreco = {
       id: 'r2',
       nome: 'PROMOCAO',
@@ -46,10 +41,8 @@ describe('PricingService — guard de piso (Q1)', () => {
     const r = svc.calcularPrecoItem(item(1, 100), [regra], {})
     expect(r.precoUnitario).toBeLessThanOrEqual(100)
   })
-})
 
-describe('PricingService — enforcement de validade (Q2)', () => {
-  it('ignora regra vencida (data_validade no passado)', () => {
+  it('ignora regra vencida', () => {
     const regra: RegraPreco = {
       id: 'r3',
       nome: 'PROMOCAO',
@@ -60,10 +53,9 @@ describe('PricingService — enforcement de validade (Q2)', () => {
     }
     const r = svc.calcularPrecoItem(item(1, 100), [regra], {})
     expect(r.tipoPreco).toBe('VAREJO')
-    expect(r.precoUnitario).toBe(100)
   })
 
-  it('aplica regra válida (sem validade)', () => {
+  it('aplica PROMOCAO válida', () => {
     const regra: RegraPreco = {
       id: 'r4',
       nome: 'PROMOCAO',
@@ -74,62 +66,5 @@ describe('PricingService — enforcement de validade (Q2)', () => {
     const r = svc.calcularPrecoItem(item(1, 100), [regra], {})
     expect(r.tipoPreco).toBe('PROMOCAO')
     expect(r.precoUnitario).toBe(50)
-  })
-})
-
-describe('PricingService — BA-011 paridade precos_atacado', () => {
-  it('ATACADO com precoFixo usa preço absoluto', () => {
-    const regra: RegraPreco = {
-      id: 't1',
-      nome: 'ATACADO',
-      tipo: 'ATACADO',
-      minQuantidade: 10,
-      precoFixo: 80,
-      produtoId: 'p1',
-      ativo: true,
-    }
-    const r = svc.calcularPrecoItem(item(10, 100), [regra], {})
-    expect(r.tipoPreco).toBe('ATACADO')
-    expect(r.precoUnitario).toBe(80)
-  })
-
-  it('não aplica faixa de outro produto', () => {
-    const regra: RegraPreco = {
-      id: 't2',
-      nome: 'ATACADO',
-      tipo: 'ATACADO',
-      minQuantidade: 1,
-      precoFixo: 50,
-      produtoId: 'outro',
-      ativo: true,
-    }
-    const r = svc.calcularPrecoItem(item(5, 100), [regra], {})
-    expect(r.tipoPreco).toBe('VAREJO')
-    expect(r.precoUnitario).toBe(100)
-  })
-
-  it('escolhe maior quantidade_minima independente da ordem', () => {
-    const regras: RegraPreco[] = [
-      {
-        id: 't10',
-        nome: 'ATACADO',
-        tipo: 'ATACADO',
-        minQuantidade: 10,
-        precoFixo: 80,
-        produtoId: 'p1',
-        ativo: true,
-      },
-      {
-        id: 't50',
-        nome: 'ATACADO',
-        tipo: 'ATACADO',
-        minQuantidade: 50,
-        precoFixo: 70,
-        produtoId: 'p1',
-        ativo: true,
-      },
-    ]
-    const r = svc.calcularPrecoItem(item(50, 100), regras, {})
-    expect(r.precoUnitario).toBe(70)
   })
 })

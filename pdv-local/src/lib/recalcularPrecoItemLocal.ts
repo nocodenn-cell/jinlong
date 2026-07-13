@@ -1,7 +1,9 @@
 import type { ItemCarrinho } from '@core/stores/unifiedCartStore'
-import type { PricingContext, RegraPreco } from '@core/pricing/types'
-import { pricingService } from '@shared/pricing/PricingService'
 import { useDesktopCartStore } from '../stores/cartStore'
+import {
+  resolverPrecoCanonicoLocal,
+  type PrecoCanonicoSnapshot,
+} from './resolverPrecoCanonicoLocal'
 
 /** Mesma hierarquia de `precoVarejoRef` em `sincronizarPrecoCalculadoRpc` (store unificada). */
 function resolverPrecoBaseCanonicoItem(item: ItemCarrinho): number {
@@ -10,28 +12,36 @@ function resolverPrecoBaseCanonicoItem(item: ItemCarrinho): number {
   return item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
 }
 
+function resolverPrecoAtacadoItem(item: ItemCarrinho): number | null {
+  const meta = item.metaPdv as { precoAtacadoCatalogo?: number | null } | undefined
+  const v = meta?.precoAtacadoCatalogo
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  return null
+}
+
 /**
- * Recalcula localmente o preço de um item do carrinho após alteração de
- * quantidade — mesmo `PricingService`/regras já usados ao adicionar o item
- * (offline-first, sem chamada de rede).
- *
- * Não recalcula linhas MANUAL/PROMOCAO (preço já é uma decisão manual/override).
+ * Recalcula preço automático via PRICE_RESOLUTION_CHAIN / calcularPrecoCanonico.
+ * Não recalcula linhas MANUAL/PROMOCAO.
  */
 export function recalcularPrecoItemLocal(
   item: ItemCarrinho,
   novaQuantidade: number,
-  regras: RegraPreco[],
-  pricingCtx: PricingContext,
+  snap: PrecoCanonicoSnapshot,
 ): void {
   const tipoAtual = item.resultado?.tipoPreco
   if (tipoAtual === 'MANUAL' || tipoAtual === 'PROMOCAO') return
   if (!Number.isFinite(novaQuantidade) || novaQuantidade <= 0) return
 
-  const precoBase = resolverPrecoBaseCanonicoItem(item)
-  const resultado = pricingService.calcularPrecoItem(
-    { ...item, quantidade: novaQuantidade, precoUnitario: precoBase },
-    regras,
-    pricingCtx,
+  const precoVarejo = resolverPrecoBaseCanonicoItem(item)
+  const resultado = resolverPrecoCanonicoLocal(
+    {
+      id: item.produtoId,
+      ativo: true,
+      preco_varejo: precoVarejo,
+      preco_atacado: resolverPrecoAtacadoItem(item),
+    },
+    novaQuantidade,
+    snap,
   )
   if (resultado.tipoPreco !== 'VAREJO' && resultado.tipoPreco !== 'ATACADO') return
 
