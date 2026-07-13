@@ -4,6 +4,7 @@ import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
   filtrarSomenteProdutosVendaveis,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
+import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -52,13 +53,6 @@ const EPS_PRECO = 0.02
  * 1 RPC por item em paralelo ilimitado (carrinho grande) reabriria esse risco.
  */
 const PRECO_REVALIDACAO_CONCORRENCIA = 5
-
-/** Mesma convenção do caixa ao chamar `calcular_preco_produto` (inteiro). */
-function quantidadeInteiraParaRpcPreco(q: number): number {
-  const n = Number(q)
-  if (!Number.isFinite(n) || n <= 0) return 0
-  return Math.max(1, Math.floor(n))
-}
 
 /** `map` com no máximo `limit` promessas em voo; preserva a ordem do índice. */
 async function mapComConcorrencia<T, R>(
@@ -189,7 +183,7 @@ export async function recalcularItensNoServidor(
       if (i.tipoPreco === 'MANUAL' || i.tipoPreco === 'PROMOCAO') {
         return { kind: 'snapshot' }
       }
-      const qRpc = quantidadeInteiraParaRpcPreco(i.quantidade)
+      const qRpc = quantidadeParaRpcPreco(i.quantidade)
       if (qRpc < 1) {
         return { kind: 'qty_invalid' }
       }
