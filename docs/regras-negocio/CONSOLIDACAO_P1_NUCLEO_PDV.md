@@ -5,7 +5,7 @@
 **Data:** 2026-07-13  
 **Premissa:** uma regra, uma autoridade, um algoritmo por domínio.
 
-Não substitui [venda-golden-flow.md](../venda-golden-flow.md) (congelado). Complementa com decisões pós-auditoria P0/P1.
+Não substitui [venda-golden-flow.md](../venda-golden-flow.md) (congelado). Matriz viva: [MATRIZ_AUTORIDADES_P1.md](./MATRIZ_AUTORIDADES_P1.md).
 
 ---
 

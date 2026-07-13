@@ -11,7 +11,7 @@ Documento único para **deploy da Edge**, **secrets**, **teste ponta a ponta** e
 | | **Caixa web** (`/caixa`) | **PDV desktop** (Tauri) |
 |---|---------------------------|---------------------------|
 | **Quem usa** | OPERADOR logado no navegador (idealmente com internet). | Operador na frente de loja (Windows); funciona **offline-first** com cache SQLite. |
-| **Catálogo e preços** | Lê **Supabase** ao vivo (`produtos`, `estoque`, `regras_preco`). Motor de preço no cliente (Zustand + `core`). | Cache local sincronizado (**Sincronizar catálogo**); mesmo tipo de regras em cache. |
+| **Catálogo e preços** | Online: RPC `calcular_preco_produto` (`PRICE_RESOLUTION_CHAIN` — `precos_atacado` → catálogo → varejo). Autoridade: ver `docs/regras-negocio/MATRIZ_AUTORIDADES_P1.md`. | Offline-first: cache SQLite; **deve** espelhar a mesma cadeia (plano Aut#1). `regras_preco` **não** é SSoT de atacado. |
 | **Registro de venda** | **Finalizar venda** grava `vendas` / `itens_venda` e baixa estoque via **`decrementar_estoque_seguro`** (dentro de `finalizar_venda_transacional_canonica_v2` ou `finalizar_venda_transacional`; migrations **016**+**038**, com **007**/`estoque_baixas` para idempotência por par venda+produto). Alternativa: fluxo desktop + outbox (abaixo). | **Grava venda em SQLite**, enfileira **outbox** e envia para a Edge **`sync-outbox`** (`SYNC_*`), que aplica a mesma lógica (**`decrementar_estoque_seguro`** ou RPC canónica v2). |
 | **Para relatórios / gerente** | Vendas gravadas pela web ou pelo desktop aparecem em `/gerente/*` após persistência no Postgres. | Após sync com sucesso, vendas e estoque refletem no Supabase. |
 

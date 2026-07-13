@@ -8,7 +8,7 @@ Não altera o [Golden Flow](../venda-golden-flow.md) congelado; complementa com 
 | # | Domínio | Autoridade única | Runtime | Estado |
 |---|---------|------------------|---------|--------|
 | 1 | Preço atacado (automático) | `calcular_preco_produto` ≡ `PRICE_RESOLUTION_CHAIN` | Web: RPC. Local: espelhar (inventário+plano em `PLANO_AUTORIDADE_1_PRECO.md`). `regras_preco` **fora** do atacado. | **Aberta / #182 bloqueada** — algoritmo+dados+caminho definidos; sem implementação |
-| 2 | Pagamento parcial | RPC v4 + `caixaPagamentoSaldo` (`SALDO_PENDENTE_EPS=0.009`) | Web. Local sem CR (dual-canal). | **#180 pronta** — aguardando CI verde (billing Actions) para merge; escopo congelado |
+| 2 | Pagamento parcial | RPC v4 + `caixaPagamentoSaldo` (`SALDO_PENDENTE_EPS=0.009`) | Web. Local sem CR (dual-canal). | **#180 pronta** — CI Actions bloqueado (billing; jobs ~2s). Merge na liberação. Escopo congelado |
 | 3 | Venda em espera | RPCs `vendas_em_espera` | Web. `cliente_id` null = dívida Fase 7. | Aceito |
 | 4 | Estoque na venda | Web: baixa na TX v4. Local: `aplicarBaixaEstoquePorItem` pós-venda (BA-012). | Dual declarado. | Aceito |
 | 5 | Fechamento de venda | Web: `caixaVendas.impl` → v4. Local: `sync-outbox` → `registrar_venda_com_itens`. | Callers únicos (`rpc-gate-guard`). | Canônica |
