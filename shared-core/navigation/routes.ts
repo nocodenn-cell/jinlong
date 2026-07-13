@@ -48,6 +48,7 @@ export const ROUTES = {
     vendas: '/admin/vendas',
     auditoria: '/admin/auditoria',
     financeiro: '/admin/financeiro',
+    financeiroContasPagar: '/admin/financeiro/contas-pagar',
     relatorios: '/admin/relatorios',
     comissoes: '/admin/comissoes',
     configuracoes: '/admin/configuracoes',
@@ -55,6 +56,7 @@ export const ROUTES = {
     diagnosticoCaixa: '/admin/diagnostico-caixa',
     categoriasProdutos: '/admin/categorias-produtos',
     categoriasFinanceiras: '/admin/categorias-financeiras',
+    compras: '/admin/compras',
   },
   catalogoPublic: {
     produtos: '/catalogo/produtos',
@@ -71,6 +73,10 @@ export const ROUTES = {
 
 export function adminCatalogoProdutoQuery(id: string): string {
   return `${ROUTES.admin.catalogo}?produto=${id}`
+}
+
+export function adminFinanceiroDocumentoHref(id: string): string {
+  return `${ROUTES.admin.financeiro}/documento/${id}`
 }
 
 export function adminEstoqueProdutoQuery(busca: string): string {
@@ -119,7 +125,7 @@ export const LEGACY_GERENTE_REDIRECTS: Record<string, string> = {
   'categorias-produtos': ROUTES.admin.categoriasProdutos,
   'categorias-financeiras': ROUTES.admin.categoriasFinanceiras,
   suspensao: ROUTES.admin.suspensao,
-  compras: ROUTES.admin.estoqueRecebimento,
+  compras: ROUTES.admin.compras,
   clientes: ROUTES.admin.clientes,
   fornecedores: ROUTES.admin.fornecedores,
   caixas: ROUTES.admin.vendas,

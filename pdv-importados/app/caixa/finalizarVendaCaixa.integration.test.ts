@@ -210,18 +210,34 @@ describe.sequential('finalizarVendaCaixa — split e validações', { timeout: 1
     ])
   })
 
-  it('retorna mensagem de erro esperada para payload inválido (pagamentos != total)', async () => {
+  it('retorna mensagem de erro esperada para payload inválido (pagamentos > total)', async () => {
     const { supabase } = makeSupabase()
     createClientMock.mockResolvedValue(supabase)
     const { finalizarVendaCaixa } = await import('./actions')
     const payloadInvalido = payloadBase()
-    payloadInvalido.pagamentos = [{ formaPagamento: 'DINHEIRO', valor: 1 }]
+    payloadInvalido.pagamentos = [
+      { formaPagamento: 'DINHEIRO', valor: 20 },
+      { formaPagamento: 'PIX', valor: 15 },
+    ]
 
     const result = await finalizarVendaCaixa(payloadInvalido)
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.error).toContain('Dados inválidos:')
-    expect(result.error).toContain('A soma das parcelas deve ser igual ao total líquido')
+    expect(result.error).toContain('A soma das parcelas não pode exceder o total líquido')
+  })
+
+  it('exige cliente quando pagamento é parcial (Fase 5b)', async () => {
+    const { supabase } = makeSupabase()
+    createClientMock.mockResolvedValue(supabase)
+    const { finalizarVendaCaixa } = await import('./actions')
+    const payloadParcial = payloadBase()
+    payloadParcial.pagamentos = [{ formaPagamento: 'DINHEIRO', valor: 1 }]
+
+    const result = await finalizarVendaCaixa(payloadParcial)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toContain('Pagamento parcial requer seleção de cliente')
   })
 })
 

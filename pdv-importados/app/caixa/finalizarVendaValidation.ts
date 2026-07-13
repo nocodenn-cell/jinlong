@@ -59,6 +59,7 @@ export const finalizarVendaInputSchema = z.object({
     .optional(),
   pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
+  clienteId: z.string().uuid('ID do cliente inválido.').optional(), // ✅ NOVO (Fase 5b)
 }).superRefine((value, ctx) => {
   const hasToken = !!value.descontoGerenteToken
   const hasPercentual = value.descontoGerentePercentual !== undefined
@@ -71,11 +72,20 @@ export const finalizarVendaInputSchema = z.object({
   }
 
   const somaPagamentos = roundMoney2(value.pagamentos.reduce((acc, p) => acc + p.valor, 0))
-  if (Math.abs(somaPagamentos - value.totalLiquido) > 0.01) {
+
+  if (somaPagamentos > value.totalLiquido + 0.01) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['pagamentos'],
-      message: 'A soma das parcelas deve ser igual ao total líquido.',
+      message: 'A soma das parcelas não pode exceder o total líquido.',
+    })
+  }
+
+  if (somaPagamentos <= 0.009) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pagamentos'],
+      message: 'Informe um valor de pagamento maior que zero.',
     })
   }
 })

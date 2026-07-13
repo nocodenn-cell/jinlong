@@ -20,7 +20,8 @@ const POLL_MS = 30_000
 
 function CaixaRailTurnoSummaryImpl({ m, caixaAberto, layoutVariant, refreshToken }: Props) {
   const [quantidadeVendas, setQuantidadeVendas] = useState(0)
-  const [totalLiquido, setTotalLiquido] = useState(0)
+  const [totalRecebido, setTotalRecebido] = useState(0)  // ✅ NOVO (Fase 6): Valor efetivamente recebido
+  const [totalAReceber, setTotalAReceber] = useState(0)  // ✅ NOVO (Fase 6): Valor em crédito
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const classic = layoutVariant === "classic"
   useEffect(() => {
@@ -31,7 +32,8 @@ function CaixaRailTurnoSummaryImpl({ m, caixaAberto, layoutVariant, refreshToken
       const res = await obterResumoVendasTurno()
       if (!cancelled && res.ok) {
         setQuantidadeVendas(res.quantidadeVendas)
-        setTotalLiquido(res.totalLiquido)
+        setTotalRecebido(res.totalRecebido)
+        setTotalAReceber(res.totalAReceber)
       }
     }
 
@@ -59,10 +61,18 @@ function CaixaRailTurnoSummaryImpl({ m, caixaAberto, layoutVariant, refreshToken
           {caixaFmt(m.caixa.rail_turno_vendas, { n: String(quantidadeVendas) })}
         </dt>
       </div>
+      {/* ✅ FASE 6: Mostrar valor recebido em caixa (correto para pagamento parcial) */}
       <div className="flex justify-between gap-2">
         <dt className={labelCls}>{m.caixa.rail_turno_total}</dt>
-        <dd className={valueCls}>{m.caixa.moeda_prefixo} {formatDecimalBRL(totalLiquido)}</dd>
+        <dd className={valueCls}>{m.caixa.moeda_prefixo} {formatDecimalBRL(totalRecebido)}</dd>
       </div>
+      {/* ✅ FASE 6: Mostrar saldo a receber se houver */}
+      {totalAReceber > 0.009 && (
+        <div className="flex justify-between gap-2 text-yellow-600">
+          <dt className="text-xs">Saldo a Receber</dt>
+          <dd className="font-semibold tabular-nums">{m.caixa.moeda_prefixo} {formatDecimalBRL(totalAReceber)}</dd>
+        </div>
+      )}
     </dl>
   )
 }

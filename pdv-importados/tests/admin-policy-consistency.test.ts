@@ -11,8 +11,9 @@ import {
   middlewareAdminDecision,
   middlewareAllowsAccess,
 } from '@/lib/admin/policy/adminPolicy'
+import { mockSupabaseUser } from './helpers/mockSupabaseUser'
 
-const gerenteUser = { id: 'mgr-1', email: 'gerente@test.local' }
+const gerenteUser = mockSupabaseUser('mgr-1', 'gerente@test.local')
 const gerenteRow = { perfil: 'GERENTE', idioma_preferido: 'pt', loja_id: 'loja-1' }
 
 function makeSession(overrides: Partial<AdminSession> = {}): AdminSession {
@@ -59,7 +60,7 @@ describe('admin policy authority convergence', () => {
   it('operador autenticado: edge redirect /caixa; api/action deny', () => {
     const raw: RawSession = {
       status: 'authenticated',
-      user: { id: 'op-1', email: 'op@test.local' },
+      user: mockSupabaseUser('op-1', 'op@test.local'),
       usuario: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: 'loja-1' },
     }
     const normalized = normalizeAdminSession(raw, 'edge')
@@ -81,7 +82,7 @@ describe('admin policy authority convergence', () => {
   it('operador sem loja vinculada: bloqueado em qualquer rota protegida', () => {
     const raw: RawSession = {
       status: 'authenticated',
-      user: { id: 'op-1', email: 'op@test.local' },
+      user: mockSupabaseUser('op-1', 'op@test.local'),
       usuario: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: null },
     }
     const normalized = normalizeAdminSession(raw, 'edge')

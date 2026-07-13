@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { getAdminContext } from '@/lib/admin/context/adminContext'
 import type { AdminSession } from '@/lib/admin/auth/types'
+import { mockSupabaseUser } from './helpers/mockSupabaseUser'
 
 function makeSession(overrides: Partial<AdminSession> = {}): AdminSession {
   return {
     userId: 'mgr-1',
-    user: { id: 'mgr-1', email: 'gerente@test.local' },
+    user: mockSupabaseUser('mgr-1', 'gerente@test.local'),
     perfil: 'GERENTE',
     idioma: 'pt',
     lojaId: 'loja-1',

@@ -1,4 +1,4 @@
--- 255 — Vendas em espera (parked sales) + consulta rápida auxiliar.
+-- 247c — Vendas em espera (parked sales) + consulta rápida auxiliar.
 -- Isolado do núcleo transacional (não toca finalizar_venda_* / estoque / caixas).
 
 CREATE TABLE IF NOT EXISTS public.vendas_em_espera (

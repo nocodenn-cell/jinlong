@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const assertGerenteSessionMock = vi.fn()
 const revalidatePathMock = vi.fn()
@@ -18,6 +18,10 @@ vi.mock('next/cache', () => ({
 }))
 
 describe('gerente/transferencias actions', () => {
+  beforeAll(async () => {
+    await import('./actions')
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     assertGerenteSessionMock.mockResolvedValue({

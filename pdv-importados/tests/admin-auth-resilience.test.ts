@@ -221,18 +221,24 @@ describe('admin auth resilience', () => {
     it('sessão expirada → fallback correto sem loop de redirect', async () => {
       const pipeline = await simulateAdminPipeline('/admin/dashboard', 'expired')
       expect(pipeline.ok).toBe(false)
-      expect(pipeline.stage).toBe('middleware')
-      expect(pipeline.redirectTo).toContain('/login')
+      if (!pipeline.ok) {
+        expect(pipeline.stage).toBe('middleware')
+        expect(pipeline.redirectTo).toContain('/login')
+      }
       expect(mockSignOut).toHaveBeenCalled()
 
       mockResolveAdminSession.mockResolvedValue(null)
       const layout = await runLayoutGate()
       expect(layout.ok).toBe(false)
-      expect(layout.redirectTo).toBe('/login?next=/admin')
+      if (!layout.ok) {
+        expect(layout.redirectTo).toBe('/login?next=/admin')
+      }
 
       const layoutAgain = await runLayoutGate()
       expect(layoutAgain.ok).toBe(false)
-      expect(layoutAgain.redirectTo).toBe('/login?next=/admin')
+      if (!layoutAgain.ok) {
+        expect(layoutAgain.redirectTo).toBe('/login?next=/admin')
+      }
       expect(redirectCalls).toEqual(['/login?next=/admin', '/login?next=/admin'])
     })
 

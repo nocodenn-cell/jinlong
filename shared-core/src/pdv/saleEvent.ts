@@ -6,7 +6,7 @@ export type SaleEventItem = {
   total: number
 }
 
-export type SaleEventType = 'SALE_REGISTERED' | 'SALE_CANCELLED'
+export type SaleEventType = 'SALE_REGISTERED' | 'SALE_CANCELLED' | 'SALE_PARTIAL_RETURN'
 
 export type SaleEventSource = 'web_caixa' | 'sync_outbox' | 'backfill' | 'gerente_panel'
 

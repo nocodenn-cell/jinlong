@@ -19,6 +19,7 @@ export type VendaLinha = {
   forma_pagamento: string | null
   status: string | null
   caixa_id: string | null
+  operador_id: string | null
   qtd_itens_total: number
   qtd_itens_distintos: number
   primeiro_produto: string | null
@@ -60,6 +61,7 @@ export type VendasLabels = {
   detalheItens: string
   detalheNenhumItem: string
   cancelarAcao: string
+  devolverAcao: string
 }
 
 function toVendaListRow(linha: VendaLinha): VendaListRow {
@@ -71,6 +73,7 @@ function toVendaListRow(linha: VendaLinha): VendaListRow {
     forma_pagamento: linha.forma_pagamento,
     status: linha.status,
     caixa_id: linha.caixa_id,
+    operador_id: linha.operador_id,
     qtd_itens_total: linha.qtd_itens_total,
     qtd_itens_distintos: linha.qtd_itens_distintos,
     primeiro_produto: linha.primeiro_produto,
@@ -301,6 +304,7 @@ export function VendasTable({
           itens: labels.detalheItens,
           nenhumItem: labels.detalheNenhumItem,
           cancelar: labels.cancelarAcao,
+          devolver: labels.devolverAcao,
         }}
       />
     </>

@@ -5,7 +5,7 @@ import { loginCaixaOperador } from './helpers/login'
 import { gotoApp } from './helpers/url'
 test.describe.configure({ mode: 'serial' })
 
-test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida do footer)', () => {
+test.describe('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida do footer)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     if (!hasCaixaOperadorUser()) {
       testInfo.skip(
@@ -195,6 +195,50 @@ test.describe.skip('Caixa — venda com split DINHEIRO + PIX (UI de parcelas rem
     await inputs.nth(0).fill(String(p1))
     await inputs.nth(1).fill(String(p2))
     await inputs.nth(2).fill(String(p3))
+
+    await expect(page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i })).toBeEnabled({
+      timeout: 15_000,
+    })
+    await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
+
+    await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
+  })
+
+  test('venda com pagamento parcial (apenas 40% do total)', async ({ page }) => {
+    await gotoApp(page, '/caixa')
+    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
+
+    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
+    if (await abrir.isVisible().catch(() => false)) {
+      await abrir.click()
+      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
+      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
+    }
+
+    const codigo = e2eProdutoCodigoBarras()
+    const busca = page.getByRole('textbox', {
+      name: /código de barras|nome do produto|条码|商品名称/i,
+    })
+    await busca.fill(codigo)
+    await busca.press('Enter')
+
+    const status = page.getByTestId('caixa-status')
+    await expect(status).toBeVisible({ timeout: 20_000 })
+    const statusTxt = (await status.innerText()).toLowerCase()
+    if (statusTxt.includes('não encontrad') || statusTxt.includes('not found') || statusTxt.includes('找不到')) {
+      test.skip(true, `Produto «${codigo}» não encontrado.`)
+      return
+    }
+    await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
+
+    const footer = page.locator('footer')
+    const selects = footer.locator('select')
+    const inputs = footer.locator('input[type="number"]')
+
+    const total = await readTotalLiquidoFooter(page)
+    const paga = round2(total * 0.4)
+
+    await inputs.nth(0).fill(String(paga))
 
     await expect(page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i })).toBeEnabled({
       timeout: 15_000,

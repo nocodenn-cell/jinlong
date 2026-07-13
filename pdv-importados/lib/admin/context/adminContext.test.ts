@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { getAdminContext } from './adminContext'
+import { mockSupabaseUser } from '../../../tests/helpers/mockSupabaseUser'
 
 const session: AdminSession = {
   userId: 'mgr-1',
-  user: { id: 'mgr-1', email: 'g@test.local' },
+  user: mockSupabaseUser('mgr-1', 'g@test.local'),
   perfil: 'GERENTE',
   idioma: 'pt',
   lojaId: 'loja-1',

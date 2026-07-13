@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { cancelarVenda } from '@/app/caixa/actions'
 import { parseCancelarVendaGerenteForm } from '@/app/gerente/vendas/parseCancelarVendaGerenteForm'
+import { parseDevolverVendaForm } from '@/app/gerente/vendas/parseDevolverVendaForm'
+import { devolverOuTrocarVendaImpl } from '@/app/gerente/vendas/devolverOuTrocarVenda.impl'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
@@ -16,6 +18,7 @@ export type VendaListRow = {
   forma_pagamento: string | null
   status: string | null
   caixa_id: string | null
+  operador_id: string | null
   qtd_itens_total: number
   qtd_itens_distintos: number
   primeiro_produto: string | null
@@ -96,6 +99,7 @@ function mapEventRow(raw: RpcEventRow): VendaListRow {
     forma_pagamento: raw.forma_pagamento,
     status: raw.event_type === 'SALE_CANCELLED' ? 'CANCELADA' : 'CONCLUIDA',
     caixa_id: raw.caixa_id,
+    operador_id: raw.operador_id ?? null,
     qtd_itens_total: Number(raw.qtd_itens_total ?? 0),
     qtd_itens_distintos: Number(raw.qtd_itens_distintos ?? 0),
     primeiro_produto: raw.primeiro_produto,
@@ -237,4 +241,20 @@ export async function cancelarVendaGerenteAction(formData: FormData) {
   const parsed = parseCancelarVendaGerenteForm(formData)
   if (!parsed) return
   await cancelarVenda(parsed.vendaId, parsed.motivo)
+}
+
+export async function devolverOuTrocarVendaAction(formData: FormData) {
+  const authCheck = await assertGerenteSession()
+  if (!authCheck.ok) {
+    throw new Error(authCheck.error)
+  }
+  const parsed = parseDevolverVendaForm(formData)
+  if (!parsed) {
+    throw new Error('Dados inválidos para devolução.')
+  }
+  const result = await devolverOuTrocarVendaImpl(parsed)
+  if (!result.ok) {
+    throw new Error(result.error)
+  }
+  return result
 }

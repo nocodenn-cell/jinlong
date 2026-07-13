@@ -1,0 +1,60 @@
+-- Migration 247a: Idempotência de contas_receber via UNIQUE(venda_id)
+--
+-- DATA: 2026-07-11
+-- FASE: 5b (Automação de Contas a Receber)
+-- BLOCKER: Sim (requerido antes de criar títulos automáticos via RPC)
+--
+-- PROBLEMA
+-- ========
+-- Retry da RPC v4 (finalizar_venda_transacional_canonica_v4) poderia criar
+-- múltiplos títulos para a mesma venda se houvesse timeout/desconexão.
+--
+-- Cenário:
+--   1ª execução: contas_receber T1 criado (venda_id=V1)
+--   Timeout na resposta, cliente retenta
+--   2ª execução: contas_receber T2 criado (NOVO ID, mesma venda_id=V1)
+--   Resultado: 2 títulos para 1 venda (cliente vê saldo duplicado)
+--
+-- SOLUÇÃO
+-- =======
+-- Adicionar constraint UNIQUE(venda_id) para garantir:
+--   - Uma venda gera no máximo UM título de contas_receber
+--   - Retry de RPC: ON CONFLICT (venda_id) DO UPDATE (idempotente)
+--
+-- MODELO DE DOMÍNIO
+-- =================
+-- Válido para: Fase 5b (saldo único por venda, crédito simples)
+--
+-- Evoluções Futuras:
+--   - Parcelamento (Fase 8): substituir por UNIQUE(venda_id, parcela_numero)
+--     e adicionar campos: parcela_numero int, total_parcelas int
+--   - Origem genérica (Fase 8): adicionar origem_tipo, origem_id, sequencia
+--
+-- IDEMPOTÊNCIA
+-- ============
+-- RPC v4 usará:
+--   INSERT INTO contas_receber (...)
+--   ON CONFLICT (venda_id) DO UPDATE
+--     SET valor_total = EXCLUDED.valor_total,
+--         valor_aberto = EXCLUDED.valor_aberto;
+--
+-- Garantias:
+--   ✅ Retry: mesmo chamado 3x, apenas 1 título existe
+--   ✅ Atomicidade: tudo ou nada por transaction
+--   ✅ Sem aplicação: constraint transparente para código existente
+--
+-- IMPACTO
+-- =======
+-- Tabelas: contas_receber
+-- Colunas: nenhuma adicionada (apenas constraint)
+-- Índices: implícito (postgres cria para UNIQUE)
+-- RLS: nenhum impacto (constraint é DB-level)
+--
+-- ROLLBACK
+-- ========
+-- ALTER TABLE public.contas_receber
+--   DROP CONSTRAINT IF EXISTS contas_receber_venda_id_unique;
+
+ALTER TABLE public.contas_receber
+  ADD CONSTRAINT contas_receber_venda_id_unique
+  UNIQUE (venda_id) WHERE venda_id IS NOT NULL;
