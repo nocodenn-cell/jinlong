@@ -29,6 +29,7 @@ Cliente → POST /caixa/action
 **Pagamento parcial (Fase 5b / BA-001):** SSoT = RPC v4 + `caixaPagamentoSaldo` (`pagamentoParcialExigeCliente`,
 `SALDO_PENDENTE_EPS`). UI do caixa permite underpay; sem cliente abre modal de seleção.
 Com cliente, finalize envia `p_cliente_id` e a RPC cria `contas_receber` pelo saldo.
+**E2E oficial (UI):** `pdv-importados/e2e/caixa-fase5b-golden-flow-ui.spec.ts`.
 
 **Garantias:**
 - Idempotência via `pg_advisory_xact_lock(hashtext(venda_id))` + `ON CONFLICT DO NOTHING`
