@@ -15,10 +15,12 @@ export async function confirmarModalValorNumerico(
   titulo: RegExp,
   valor: string,
 ): Promise<void> {
-  const dialog = page.getByRole('dialog', { name: titulo })
-  await expect(dialog).toBeVisible({ timeout: 15_000 })
-  await dialog.getByRole('textbox').fill(valor)
-  await dialog.getByRole('button', { name: BTN_CONFIRMAR }).click()
+  const dialog = page
+    .getByRole('dialog', { name: titulo })
+    .or(page.getByRole('dialog').filter({ hasText: titulo }))
+  await expect(dialog.first()).toBeVisible({ timeout: 15_000 })
+  await dialog.first().getByRole('textbox').fill(valor)
+  await dialog.first().getByRole('button', { name: BTN_CONFIRMAR }).click()
 }
 
 export async function confirmarModalMotivoMin(
@@ -26,8 +28,10 @@ export async function confirmarModalMotivoMin(
   titulo: RegExp,
   motivo: string,
 ): Promise<void> {
-  const dialog = page.getByRole('dialog', { name: titulo })
-  await expect(dialog).toBeVisible({ timeout: 15_000 })
-  await dialog.getByRole('textbox').fill(motivo)
-  await dialog.getByRole('button', { name: BTN_CONFIRMAR }).click()
+  const dialog = page
+    .getByRole('dialog', { name: titulo })
+    .or(page.getByRole('dialog').filter({ hasText: titulo }))
+  await expect(dialog.first()).toBeVisible({ timeout: 15_000 })
+  await dialog.first().getByRole('textbox').fill(motivo)
+  await dialog.first().getByRole('button', { name: BTN_CONFIRMAR }).click()
 }

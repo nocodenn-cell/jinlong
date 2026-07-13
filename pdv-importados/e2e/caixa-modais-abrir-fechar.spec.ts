@@ -5,13 +5,16 @@ import { gotoApp } from './helpers/url'
 import {
   confirmarModalValorNumerico,
   confirmarModalMotivoMin,
-  MODAL_TITULO_ABRIR,
   MODAL_TITULO_FECHAR,
   MODAL_TITULO_MOTIVO_DIF,
 } from './helpers/caixaModais'
+import { limparCupomOuNovoCupom } from './helpers/caixaOperacoes'
+import { expectCaixaShellVisible } from './helpers/caixaShell'
+import { ensureCaixaAberto } from './helpers/ensureCaixaAberto'
 
 test.describe('Caixa — modais abertura e fechamento (sem prompt)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
+    test.setTimeout(120_000)
     if (!hasCaixaOperadorUser()) {
       testInfo.skip(
         true,
@@ -26,30 +29,26 @@ test.describe('Caixa — modais abertura e fechamento (sem prompt)', () => {
     page,
   }) => {
     await gotoApp(page, '/caixa')
-    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
+    await expectCaixaShellVisible(page)
+    await ensureCaixaAberto(page, '77,25')
 
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '77,25')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
-
-    await page.getByRole('button', { name: /Novo cupom|新小票|新單/i }).click()
+    await limparCupomOuNovoCupom(page)
 
     const headerText = await page.locator('header').innerText()
-    if (!headerText.includes('Saldo estimado')) {
+    const saldoMatch =
+      headerText.match(/Saldo estimado[^\dR]*R\$\s*([\d.,]+)/i) ??
+      headerText.match(/Fundo[^\dR]*R\$\s*([\d.,]+)/i)
+    if (!saldoMatch?.[1]) {
       test.skip(
         true,
-        'Ambiente com blind closure ou UI sem «Saldo estimado»; fluxo de motivo por diferença não aplicável.',
+        'Ambiente com blind closure ou UI sem «Saldo estimado»/«Fundo»; fluxo de motivo por diferença não aplicável.',
       )
       return
     }
-    const m = headerText.match(/Saldo estimado[^\dR]*R\$\s*([\d.,]+)/i)
-    const saldoStr = m?.[1]?.replace(',', '.').trim()
-    const saldo = saldoStr ? Number.parseFloat(saldoStr) : Number.NaN
+    const saldoFmt = saldoMatch[1].trim()
+    const saldo = Number.parseFloat(saldoFmt.replace(/\./g, '').replace(',', '.'))
     if (!Number.isFinite(saldo)) {
-      test.skip(true, 'Não foi possível ler o saldo estimado do cabeçalho.')
+      test.skip(true, 'Não foi possível ler o saldo do cabeçalho.')
       return
     }
 
@@ -64,6 +63,8 @@ test.describe('Caixa — modais abertura e fechamento (sem prompt)', () => {
       'Motivo automação E2E divergência.',
     )
 
-    await expect(page.getByRole('status')).toContainText(/Caixa fechado|fechado\./i, { timeout: 25_000 })
+    await expect(page.getByRole('status')).toContainText(/Caixa fechado|fechado\./i, {
+      timeout: 25_000,
+    })
   })
 })

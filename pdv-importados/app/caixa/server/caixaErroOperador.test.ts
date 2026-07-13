@@ -22,4 +22,20 @@ describe('caixaErroOperador', () => {
       caixaErroOperador('function calcular_valor does not exist — Aplique migrations 048'),
     ).toBe('Caixa indisponível no momento.')
   })
+
+  it('mapeia caixa fechado no contexto de finalizar', () => {
+    expect(caixaErroOperador('FINALIZAR: caixa fechado')).toBe(
+      'Caixa fechado. Abra o caixa antes de finalizar a venda.',
+    )
+  })
+
+  it('mapeia ausência de caixa aberto para fechamento', () => {
+    expect(caixaErroOperador('Não há caixa aberto')).toBe(
+      'Não há caixa aberto para fechar.',
+    )
+  })
+
+  it('mapeia sessão/JWT sem vazar detalhe técnico', () => {
+    expect(caixaErroOperador('JWT expired')).toBe('Sessão expirada. Faça login novamente.')
+  })
 })

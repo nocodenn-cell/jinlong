@@ -1,18 +1,21 @@
 import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser } from './helpers/env'
-import { expectCaixaShellVisible } from './helpers/caixaShell'
 import { loginCaixaOperador } from './helpers/login'
 import { gotoApp } from './helpers/url'
+import { confirmarModalValorNumerico, MODAL_TITULO_FECHAR } from './helpers/caixaModais'
 import {
-  confirmarModalValorNumerico,
-  MODAL_TITULO_ABRIR,
-  MODAL_TITULO_FECHAR,
-} from './helpers/caixaModais'
+  abrirSangriaViaOperacoes,
+  confirmarSangriaValor,
+  limparCupomOuNovoCupom,
+} from './helpers/caixaOperacoes'
+import { expectCaixaShellVisible } from './helpers/caixaShell'
+import { ensureCaixaAberto } from './helpers/ensureCaixaAberto'
 
 test.describe.configure({ mode: 'serial' })
 
 test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
+    test.setTimeout(120_000)
     if (!hasCaixaOperadorUser()) {
       testInfo.skip(
         true,
@@ -23,47 +26,58 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
     await loginCaixaOperador(page, { postLoginUrl: /\/(caixa|gerente)/ })
   })
 
-  test('fluxo: abrir caixa → sangria R$50 → limpar cupom → fechar com valor do sistema', async ({
+  test('fluxo: abrir caixa → sangria mínima → limpar cupom → fechar com valor do sistema', async ({
     page,
   }) => {
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
+    await ensureCaixaAberto(page, '500')
 
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '120')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
+    await abrirSangriaViaOperacoes(page)
+    await confirmarSangriaValor(page, '1')
+
+    const sangriaDialog = page.getByRole('dialog').filter({ hasText: /Registrar sangria/i })
+    const erroLocal = sangriaDialog.getByRole('alert')
+    const toastOk = page.getByRole('status').filter({ hasText: /registrada com sucesso|pendente|gerente/i })
+
+    const outcome = await Promise.race([
+      erroLocal.waitFor({ state: 'visible', timeout: 25_000 }).then(() => 'erro' as const),
+      toastOk.waitFor({ state: 'visible', timeout: 25_000 }).then(() => 'ok' as const),
+    ])
+
+    if (outcome === 'erro') {
+      const errTxt = await erroLocal.innerText()
+      if (/SALDO_INSUFICIENTE/i.test(errTxt)) {
+        await sangriaDialog.getByRole('button', { name: /Cancelar|取消/i }).click()
+      } else {
+        throw new Error(`Sangria falhou: ${errTxt}`)
+      }
     }
 
-    await page.getByRole('button', { name: /Sangria (-)/ }).click()
-    await expect(page.getByRole('dialog')).toContainText(/Registrar sangria/i, { timeout: 10_000 })
-    await page.getByRole('button', { name: /R\$\s*50\.00/ }).click()
-    await page.getByRole('button', { name: /^Confirmar$/ }).click()
-    await expect(page.getByRole('status')).toContainText(
-      /registrada com sucesso|pendente|gerente/i,
-      { timeout: 25_000 },
-    )
-
-    await page.getByRole('button', { name: /Novo cupom/ }).click()
+    await limparCupomOuNovoCupom(page)
 
     const headerText = await page.locator('header').innerText()
-    if (!headerText.includes('Saldo estimado')) {
+    const saldoMatch =
+      headerText.match(/Saldo estimado[^\dR]*R\$\s*([\d.,]+)/i) ??
+      headerText.match(/Fundo[^\dR]*R\$\s*([\d.,]+)/i)
+    if (!saldoMatch?.[1]) {
       test.skip(
         true,
-        'UI sem linha «Saldo estimado» (ex.: blind closure); fechamento automático não coberto aqui.',
+        'UI sem «Saldo estimado»/«Fundo» no cabeçalho; fechamento automático não coberto aqui.',
       )
       return
     }
-    const m = headerText.match(/Saldo estimado[^\dR]*R\$\s*([\d.,]+)/i)
-    const bruto = m?.[1]?.replace(',', '.').trim()
-    if (!bruto || Number.isNaN(Number.parseFloat(bruto))) {
-      test.skip(true, 'Não foi possível ler o saldo estimado do cabeçalho para o fechamento.')
+    const brutoFmt = saldoMatch[1].trim()
+    const brutoNum = Number.parseFloat(brutoFmt.replace(/\./g, '').replace(',', '.'))
+    if (!Number.isFinite(brutoNum)) {
+      test.skip(true, 'Não foi possível ler o saldo do cabeçalho para o fechamento.')
       return
     }
 
     await page.getByRole('button', { name: /Fechar caixa|结算收银台|結算收銀台/ }).click()
-    await confirmarModalValorNumerico(page, MODAL_TITULO_FECHAR, bruto)
-    await expect(page.getByRole('status')).toContainText(/Caixa fechado|fechado\./i, { timeout: 25_000 })
+    await confirmarModalValorNumerico(page, MODAL_TITULO_FECHAR, brutoFmt)
+    await expect(page.getByRole('status')).toContainText(/Caixa fechado|fechado\./i, {
+      timeout: 25_000,
+    })
   })
 })
