@@ -170,8 +170,11 @@ BEGIN
       v_pag_total := public.round_abnt(v_pag_total + v_pag_valor, 2);
     END LOOP;
   END IF;
-  IF ABS(v_pag_total - v_total_liquido_final_calc) > 0.01 THEN
-    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_PAGAMENTOS_DIVERGENTES';
+  IF v_pag_total > v_total_liquido_final_calc + 0.01 THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_PAGAMENTOS_EXCEDEM_TOTAL';
+  END IF;
+  IF v_pag_total <= 0.009 THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_PAGAMENTO_ZERO';
   END IF;
   IF p_total_bruto IS NOT NULL AND p_total_desconto IS NOT NULL AND p_total_liquido IS NOT NULL
      AND (ABS(v_total_bruto_calc - p_total_bruto) > 0.02

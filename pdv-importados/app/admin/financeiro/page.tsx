@@ -61,7 +61,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     fetchFinanceiroTitulosKpis(supabase),
     supabase
       .from('documentos_fiscais_pendentes')
-      .select('id, tipo_doc, status, created_at')
+      .select('id, venda_id, tipo_doc, status, tentativas, ultimo_erro, created_at')
       .in('status', ['PENDENTE', 'ERRO'])
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -73,8 +73,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
 
   const fiscal = (fiscalRes.data ?? []).map((row) => ({
     id: row.id,
+    vendaId: row.venda_id,
     tipoDoc: row.tipo_doc,
     status: row.status,
+    tentativas: row.tentativas ?? 0,
+    ultimoErro: row.ultimo_erro,
     criadoEm: row.created_at,
   }))
 

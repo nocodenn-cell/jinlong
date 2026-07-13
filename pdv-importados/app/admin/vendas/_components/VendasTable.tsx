@@ -7,7 +7,6 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { Mensagens } from '@/i18n/getMessages'
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
-import type { VendaListRow } from '@/app/gerente/vendas/actions'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
 
@@ -19,6 +18,7 @@ export type VendaLinha = {
   forma_pagamento: string | null
   status: string | null
   caixa_id: string | null
+  operador_id: string | null
   qtd_itens_total: number
   qtd_itens_distintos: number
   primeiro_produto: string | null
@@ -60,21 +60,6 @@ export type VendasLabels = {
   detalheItens: string
   detalheNenhumItem: string
   cancelarAcao: string
-}
-
-function toVendaListRow(linha: VendaLinha): VendaListRow {
-  return {
-    id: linha.id,
-    data: linha.data,
-    total_liquido: linha.total_liquido,
-    total_bruto: linha.total_bruto,
-    forma_pagamento: linha.forma_pagamento,
-    status: linha.status,
-    caixa_id: linha.caixa_id,
-    qtd_itens_total: linha.qtd_itens_total,
-    qtd_itens_distintos: linha.qtd_itens_distintos,
-    primeiro_produto: linha.primeiro_produto,
-  }
 }
 
 function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
@@ -275,7 +260,7 @@ export function VendasTable({
       />
 
       <VendaCancelarModal
-        venda={cancelarAlvo ? toVendaListRow(cancelarAlvo) : null}
+        venda={cancelarAlvo}
         locale={locale}
         m={m}
         onClose={() => setCancelarAlvo(null)}

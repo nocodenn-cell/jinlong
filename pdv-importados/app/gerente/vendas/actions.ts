@@ -16,6 +16,7 @@ export type VendaListRow = {
   forma_pagamento: string | null
   status: string | null
   caixa_id: string | null
+  operador_id: string | null
   qtd_itens_total: number
   qtd_itens_distintos: number
   primeiro_produto: string | null
@@ -96,6 +97,7 @@ function mapEventRow(raw: RpcEventRow): VendaListRow {
     forma_pagamento: raw.forma_pagamento,
     status: raw.event_type === 'SALE_CANCELLED' ? 'CANCELADA' : 'CONCLUIDA',
     caixa_id: raw.caixa_id,
+    operador_id: raw.operador_id ?? null,
     qtd_itens_total: Number(raw.qtd_itens_total ?? 0),
     qtd_itens_distintos: Number(raw.qtd_itens_distintos ?? 0),
     primeiro_produto: raw.primeiro_produto,

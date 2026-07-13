@@ -2,7 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 
 export type TurnoResumoResult =
-  | { ok: true; quantidadeVendas: number; totalLiquido: number; caixaId: string }
+  | {
+      ok: true
+      quantidadeVendas: number
+      totalRecebido: number  // ✅ NOVO (Fase 6): Valor efetivamente recebido em caixa
+      totalAReceber: number  // ✅ NOVO (Fase 6): Valor em crédito (contas_receber)
+      caixaId: string
+    }
   | { ok: false; error: string }
 
 export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
@@ -23,18 +29,52 @@ export async function obterResumoVendasTurnoImpl(): Promise<TurnoResumoResult> {
       .maybeSingle()
 
     if (caixaErr) return { ok: false, error: mensagemErroComSecao('Caixa', caixaErr.message) }
-    if (!caixa) return { ok: true, quantidadeVendas: 0, totalLiquido: 0, caixaId: '' }
+    if (!caixa) return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalAReceber: 0, caixaId: '' }
 
-    const { data: rows, error: vendasErr } = await supabase
+    // ✅ FASE 6: Reconciliação corrigida para pagamento parcial
+    // 1. Obter vendas concluídas
+    const { data: vendas, error: vendasErr } = await supabase
       .from('vendas')
-      .select('total_liquido')
+      .select('id')
       .eq('caixa_id', caixa.id)
       .eq('status', 'CONCLUIDA')
 
     if (vendasErr) return { ok: false, error: mensagemErroComSecao('Vendas', vendasErr.message) }
 
-    const total = (rows ?? []).reduce((sum, r) => sum + Number(r.total_liquido ?? 0), 0)
-    return { ok: true, quantidadeVendas: (rows ?? []).length, totalLiquido: total, caixaId: caixa.id }
+    if (!vendas || vendas.length === 0) {
+      return { ok: true, quantidadeVendas: 0, totalRecebido: 0, totalAReceber: 0, caixaId: caixa.id }
+    }
+
+    const vendaIds = vendas.map((v) => v.id)
+
+    // 2. Somar pagamentos recebidos (verdadeiro valor em caixa)
+    const { data: pagamentos, error: pagErr } = await supabase
+      .from('vendas_pagamentos')
+      .select('valor')
+      .in('venda_id', vendaIds)
+
+    if (pagErr) return { ok: false, error: mensagemErroComSecao('Pagamentos', pagErr.message) }
+
+    const totalRecebido = (pagamentos ?? []).reduce((sum, p) => sum + Number(p.valor ?? 0), 0)
+
+    // 3. Somar títulos em aberto (contas_receber)
+    const { data: contasReceber, error: crErr } = await supabase
+      .from('contas_receber')
+      .select('valor_aberto')
+      .in('venda_id', vendaIds)
+      .eq('status', 'ABERTO')
+
+    if (crErr) return { ok: false, error: mensagemErroComSecao('Contas a Receber', crErr.message) }
+
+    const totalAReceber = (contasReceber ?? []).reduce((sum, cr) => sum + Number(cr.valor_aberto ?? 0), 0)
+
+    return {
+      ok: true,
+      quantidadeVendas: vendas.length,
+      totalRecebido,
+      totalAReceber,
+      caixaId: caixa.id,
+    }
   } catch (e) {
     return { ok: false, error: mensagemErroDeExcecao(e, 'Não foi possível carregar o resumo do turno.') }
   }

@@ -16,6 +16,7 @@ import {
   Tag,
   Truck,
   Users,
+  ClipboardList,
 } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 
@@ -49,11 +50,13 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
 ] as const
 
 export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
+  { id: 'clientes', href: ROUTES.admin.clientes, icon: Users, labelOverridePt: 'Clientes', labelCn: '客户' },
+  { id: 'fornecedores', href: ROUTES.admin.fornecedores, icon: Truck, labelOverridePt: 'Fornecedores', labelCn: '供应商' },
+  { id: 'compras', href: ROUTES.admin.compras, icon: ClipboardList, labelOverridePt: 'Compras', labelCn: '采购' },
   { id: 'relatorios', href: ROUTES.admin.relatorios, icon: FileBarChart2, labelOverridePt: 'Relatórios', dictKey: 'relatorios' },
   { id: 'recebimento', href: ROUTES.admin.estoqueRecebimento, icon: Inbox, labelOverridePt: 'Recebimento', dictKey: 'recebimento' },
   { id: 'transferencias', href: ROUTES.admin.estoqueTransferencias, icon: ArrowRightLeft, labelOverridePt: 'Transferências', dictKey: 'transferencias' },
   { id: 'comissoes', href: ROUTES.admin.comissoes, icon: Percent, labelOverridePt: 'Comissões', dictKey: 'comissoes' },
-  { id: 'fornecedores', href: ROUTES.admin.fornecedores, icon: Truck, labelOverridePt: 'Fornecedores', dictKey: 'fornecedores' },
 ] as const
 
 export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [

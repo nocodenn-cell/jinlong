@@ -42,6 +42,7 @@ function toVendaListRow(v: VendaDetalhe): VendaListRow {
     forma_pagamento: v.forma_pagamento,
     status: v.status,
     caixa_id: null,
+    operador_id: null,
     qtd_itens_total: v.itens.reduce((s, i) => s + i.quantidade, 0),
     qtd_itens_distintos: v.itens.length,
     primeiro_produto: v.itens[0]?.nome ?? null,

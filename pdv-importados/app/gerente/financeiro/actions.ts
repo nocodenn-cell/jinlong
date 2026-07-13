@@ -153,7 +153,8 @@ export async function reprocessarDocumentoFiscal(documento_id: string): Promise<
   revalidatePath('/gerente/financeiro', 'layout')
   revalidatePath('/admin/financeiro', 'layout')
   revalidatePath(`/gerente/financeiro/documento/${documento_id}`)
-  revalidatePath('/admin/financeiro')
+  revalidatePath('/admin/financeiro', 'layout')
+  revalidatePath(`/admin/financeiro/documento/${documento_id}`)
   return { success: true, data: null }
 }
 

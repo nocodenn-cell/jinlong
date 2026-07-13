@@ -216,7 +216,6 @@ export async function colocarVendaEmEsperaCaixa(input: {
   totalDesconto: number
   totalLiquido: number
   caixaId?: string | null
-  rotulo?: string | null
   descontoGerentePercentual?: number | null
 }) {
   return colocarVendaEmEsperaImpl(input)
