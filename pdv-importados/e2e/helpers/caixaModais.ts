@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
-/** Botões dos modais de caixa usam `m.comum.confirmar`. */
-const BTN_CONFIRMAR = /Confirmar|确认|確認/
+/** Primary CTA nos modais de caixa (`m.comum.confirmar` ou `m.caixa.abrir` no turno). */
+const BTN_CONFIRMAR = /Confirmar|Abrir caixa|确认|確認|开班|開啟/
 
 /** `CaixaValorNumericoModal` — título (`m.caixa.modal_valor_titulo_*`). */
 export const MODAL_TITULO_ABRIR = /Abrir caixa|开启收银|開啟收銀/i

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
 import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
 import { loginCaixaOperador } from './helpers/login'
+import { expectCaixaShellVisible } from './helpers/caixaShell'
 import { gotoApp } from './helpers/url'
 
 test.describe.configure({ mode: 'serial' })
@@ -20,7 +21,7 @@ test.describe('Caixa — finalizar venda (catálogo seed)', () => {
 
   test('busca produto demo, adiciona ao cupom e finaliza venda (DINHEIRO)', async ({ page }) => {
     await gotoApp(page, '/caixa')
-    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
+    await expectCaixaShellVisible(page)
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
     if (await abrir.isVisible().catch(() => false)) {

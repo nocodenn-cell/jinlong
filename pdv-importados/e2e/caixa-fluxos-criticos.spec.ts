@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser } from './helpers/env'
+import { expectCaixaShellVisible } from './helpers/caixaShell'
 import { loginCaixaOperador } from './helpers/login'
 import { gotoApp } from './helpers/url'
 import {
@@ -26,7 +27,7 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
     page,
   }) => {
     await gotoApp(page, '/caixa')
-    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
+    await expectCaixaShellVisible(page)
 
     const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
     if (await abrir.isVisible().catch(() => false)) {
