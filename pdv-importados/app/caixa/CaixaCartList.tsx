@@ -9,6 +9,10 @@ import type { ItemCarrinhoComPreco } from "@/stores/carrinhoStore"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { formatDecimal2 } from "@/lib/format/money"
+import {
+  parseQuantidadeCaixaFromString,
+  QUANTIDADE_CAIXA_MIN,
+} from "@/lib/format/quantidadeCaixa"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { DragonIcon } from "@/components/icons/DragonIcon"
 import { labelOrigemCaixa } from "@/lib/caixa/metaProdutoUi"
@@ -37,10 +41,7 @@ function listLocale(idioma: Idioma) {
 }
 
 function parseQuantidadeInput(raw: string): number {
-  const normalizado = raw.replace(",", ".").trim()
-  const valor = Number(normalizado)
-  if (!Number.isFinite(valor) || valor <= 0) return 0
-  return Math.max(1, Math.round(valor))
+  return parseQuantidadeCaixaFromString(raw)
 }
 
 function resultadoLinha(item: ItemCarrinhoComPreco) {
@@ -78,11 +79,16 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
       onRemover(item.id)
       return
     }
-    onAlterarQuantidade(item.id, item.quantidade - 1)
+    const next = parseQuantidadeCaixaFromString(String(item.quantidade - 1))
+    if (next < QUANTIDADE_CAIXA_MIN) {
+      onRemover(item.id)
+      return
+    }
+    onAlterarQuantidade(item.id, next)
   }
 
   const handleIncrement = () => {
-    onAlterarQuantidade(item.id, item.quantidade + 1)
+    onAlterarQuantidade(item.id, parseQuantidadeCaixaFromString(String(item.quantidade + 1)))
   }
 
   return (
@@ -103,9 +109,9 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
       </Button>
       <Input
         type="number"
-        inputMode="numeric"
-        min={1}
-        step={1}
+        inputMode="decimal"
+        min={QUANTIDADE_CAIXA_MIN}
+        step={QUANTIDADE_CAIXA_MIN}
         value={item.quantidade}
         aria-label={caixaFmt(m.caixa.aria_qtde_item, { nome: item.nome })}
         onChange={(e) =>

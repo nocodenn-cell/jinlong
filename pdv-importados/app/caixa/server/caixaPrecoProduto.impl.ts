@@ -3,6 +3,7 @@ import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import type { CalcularPrecoProdutoCaixaResult } from '@/app/caixa/caixaActionTypes'
+import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
 
 type RpcRow = {
   preco: number | string | null
@@ -20,8 +21,8 @@ export async function calcularPrecoProdutoCaixaImpl(input: {
     if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
 
-    const q = Math.floor(Number(input.quantidade))
-    if (!Number.isFinite(q) || q < 1) {
+    const q = quantidadeParaRpcPreco(input.quantidade)
+    if (q < 1) {
       return { ok: false, error: 'Quantidade inválida.' }
     }
 
