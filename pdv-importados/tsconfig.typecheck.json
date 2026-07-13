@@ -13,6 +13,7 @@
   ],
   "exclude": [
     "node_modules",
+    "e2e/**",
     "app/caixa/**",
     "**/*.test.ts",
     "**/*.test.tsx",
