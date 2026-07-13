@@ -8,7 +8,7 @@
 
 | Item | Resultado |
 |------|-----------|
-| Deploy | **OK** — versão **64** ACTIVE (`verify_jwt=false` como antes via `config.toml`) |
+| Deploy | **OK** — versão **65** ACTIVE (`verify_jwt=false` como antes via `config.toml`) |
 | Bundle fix | Import `shared/logger.ts` (fora do Docker) → `_shared/logger.ts` |
 | `deno check` | **OK** após tipagem do filtro `precos_atacado` |
 
@@ -25,7 +25,9 @@ Fonte: MCP `execute_sql` no projeto jinlong.
 
 - Colunas confirmadas: `produtos.preco_atacado`; `precos_atacado.{produto_id,loja_id,quantidade_minima,preco_unitario}`
 - `pdv_config.quantidade_minima_atacado_padrao` = **6**
-- Tiers ativos existem (amostra usada nos testes de paridade)
+- Produtos ativos com `preco_atacado`: **20**
+- Tiers ativos: **6** globais (`loja_id` null), **0** por loja
+- Amostra de tiers usada nos testes de paridade operacional
 
 ## 3. SQLite upgrade
 
