@@ -12,13 +12,14 @@ Cliente → POST /caixa/action
     → revalidação de preço autoritativa (caixaPrecoAutoritativoServer.ts)
       → rpc obter_pricing_version_ativa (NULL = legado / versionamento off)
       → rpc calcular_preco_produto (por item; qtd via quantidadeParaRpcPreco)
-    → supabase.rpc('finalizar_venda_transacional_canonica_v4')
-      [transação atômica no DB: vendas + itens_venda + estoque + venda_eventos]
+    → supabase.rpc('finalizar_venda_transacional_canonica_v4')  -- overload ÚNICO com p_cliente_id
+      [TX: vendas + itens + estoque + pagamentos + contas_receber (se saldo) + eventos]
     → rpc registrar_pricing_version_venda (best-effort se houver versão ativa)
-    ← { ok, vendaId, eventId, documentoFiscal? }
+    ← { ok, vendaId, eventId, contas_receber_id?, documentoFiscal? }
   → registrarAlertasLevesVenda (best-effort, após conclusão)
 ```
 
+**Contrato v4 (Cycle 3):** um único overload (`…, p_cliente_id uuid`). Pagamento parcial (`SUM < total`) exige cliente da loja e gera `contas_receber` idempotente.
 **Caller único autorizado:** `pdv-importados/app/caixa/server/caixaVendas.impl.ts`
 
 **Garantias:**
