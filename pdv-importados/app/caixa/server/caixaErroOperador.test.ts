@@ -22,4 +22,22 @@ describe('caixaErroOperador', () => {
       caixaErroOperador('function calcular_valor does not exist — Aplique migrations 048'),
     ).toBe('Caixa indisponível no momento.')
   })
+
+  it('mapeia estoque insuficiente da RPC canônica', () => {
+    expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_ESTOQUE:SEM_SALDO')).toBe(
+      'Estoque insuficiente para um ou mais itens. Ajuste o carrinho e tente novamente.',
+    )
+  })
+
+  it('mapeia divergência de preço', () => {
+    expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_PRECO_DIVERGENTE:abc')).toContain(
+      'preços do carrinho mudaram',
+    )
+  })
+
+  it('mapeia saldo pendente sem cliente', () => {
+    expect(caixaErroOperador('FINALIZAR_VENDA_CANONICA_SALDO_PENDENTE_EXIGE_CLIENTE')).toContain(
+      'cliente',
+    )
+  })
 })

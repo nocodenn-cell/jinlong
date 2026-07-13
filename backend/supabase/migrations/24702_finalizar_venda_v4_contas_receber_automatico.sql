@@ -98,6 +98,11 @@ BEGIN
     RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_OPERADOR_OBRIGATORIO';
   END IF;
 
+  -- Fiado removido do produto: nenhuma venda pode ser fiado (cabeçalho).
+  IF upper(COALESCE(p_forma_pagamento, '')) = 'FIADO' THEN
+    RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_FIADO_DESABILITADO';
+  END IF;
+
   -- Advisory lock por venda previne race condition em retentativas simultâneas.
   PERFORM pg_advisory_xact_lock(hashtext(p_venda_id::text));
 
@@ -238,10 +243,10 @@ BEGIN
 
   -- PASSO 2: header da venda ANTES da baixa de estoque (causalidade).
   INSERT INTO public.vendas (
-    id, caixa_id, operador_id, total_bruto, total_desconto, total_liquido, forma_pagamento, status
+    id, caixa_id, operador_id, total_bruto, total_desconto, total_liquido, forma_pagamento, status, cliente_id
   ) VALUES (
     p_venda_id, p_caixa_id, v_uid, v_total_bruto_calc, v_total_desconto_final_calc,
-    v_total_liquido_final_calc, p_forma_pagamento, 'CONCLUIDA'
+    v_total_liquido_final_calc, p_forma_pagamento, 'CONCLUIDA', p_cliente_id
   ) ON CONFLICT (id) DO NOTHING;
 
   -- PASSO 3: itens + baixa de estoque.
@@ -269,15 +274,21 @@ BEGIN
   END LOOP;
 
   -- PASSO 4: registrar pagamentos no banco (split payment)
-  FOR v_pag IN SELECT value FROM jsonb_array_elements(p_pagamentos)
-  LOOP
-    v_pag_forma := upper(COALESCE(v_pag->>'forma_pagamento', ''));
-    v_pag_valor := public.round_abnt(COALESCE((v_pag->>'valor')::numeric, 0), 2);
-
+  IF p_pagamentos IS NULL THEN
     INSERT INTO public.vendas_pagamentos (venda_id, forma_pagamento, valor)
-    VALUES (p_venda_id, v_pag_forma, v_pag_valor)
-    ON CONFLICT (venda_id, forma_pagamento) DO UPDATE SET valor = vendas_pagamentos.valor + EXCLUDED.valor;
-  END LOOP;
+    VALUES (p_venda_id, p_forma_pagamento, v_total_liquido_final_calc)
+    ON CONFLICT (venda_id, forma_pagamento) DO NOTHING;
+  ELSE
+    FOR v_pag IN SELECT value FROM jsonb_array_elements(p_pagamentos)
+    LOOP
+      v_pag_forma := upper(COALESCE(v_pag->>'forma_pagamento', ''));
+      v_pag_valor := public.round_abnt(COALESCE((v_pag->>'valor')::numeric, 0), 2);
+
+      INSERT INTO public.vendas_pagamentos (venda_id, forma_pagamento, valor)
+      VALUES (p_venda_id, v_pag_forma, v_pag_valor)
+      ON CONFLICT (venda_id, forma_pagamento) DO UPDATE SET valor = vendas_pagamentos.valor + EXCLUDED.valor;
+    END LOOP;
+  END IF;
 
   -- ✅ DENTRO DA TRANSAÇÃO (Fase 5b): Recalcular saldo para validação 2ª linha
   SELECT COALESCE(SUM(vp.valor), 0)

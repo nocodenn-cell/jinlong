@@ -2788,6 +2788,7 @@ export type Database = {
       finalizar_venda_transacional_canonica_v4: {
         Args: {
           p_caixa_id: string
+          p_cliente_id?: string | null
           p_desconto_gerente_percentual?: number
           p_desconto_gerente_token?: string
           p_device_id?: string
@@ -2807,6 +2808,7 @@ export type Database = {
           p_venda_id: string
         }
         Returns: {
+          contas_receber_id: string | null
           dados_fiscais: Json
           estoque_baixado: Json
           event_id: string
