@@ -192,3 +192,57 @@ SELECT has_function_privilege(
   'public.finalizar_venda_transacional_canonica_v2(uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, text, numeric, boolean)',
   'EXECUTE'
 ) AS finalizar_venda_canonica_v2__service_role_execute;
+
+-- =====================================================================
+-- 13) SEQUÊNCIA OFICIAL — resolução da duplicidade 247a/b/c (2026-07-13)
+-- =====================================================================
+-- Não é uma verificação SQL executável; é a documentação da numeração
+-- linear canônica em torno da faixa 246-258, para não deixar margem a
+-- `supabase db reset` quebrado por prefixo ambíguo/inválido.
+--
+-- DECISÃO: 247a/247b/247c NÃO coexistem como família alfabética — foram
+-- renumeradas para inteiros puros, únicos, dentro da sequência existente.
+-- Motivo: o prefixo alfabético ("247a_...") não casa com `^\d+_`, a regex
+-- usada tanto pelo Supabase CLI quanto por scripts/migration-sequence-guard.mjs
+-- para extrair a versão do arquivo. Os três arquivos ficavam **invisíveis**
+-- ao guard (não contados, não checados quanto a colisão) e sujeitos a
+-- comportamento indefinido do CLI num `db reset`/`db push` real.
+--
+--   246_remover_venda_fiado.sql                          (inalterado)
+--   247_contas_receber_idempotencia_unique_venda.sql      (era 247a)
+--   248_finalizar_venda_v4_contas_receber_automatico.sql  (era 247b)
+--   249_pricing_version_governance.sql … 255_grant_baseline_tabelas_authenticated.sql (inalterados)
+--   256_vendas_em_espera_e_consulta_rapida.sql            (era 255, depois 247c)
+--   258_produtos_localizacao_nome_reduzido.sql            (inalterado; 257 é gap livre)
+--
+-- Esta é a ÚNICA linha de evolução válida para `db reset` local a partir
+-- desta faixa. `node scripts/migration-sequence-guard.mjs` deve retornar
+-- OK e contar 256/257/258 como numerados (não como gap oculto) — se
+-- reportar um gap em 247-248 ou 256-257 de volta, alguém reintroduziu
+-- sufixo alfabético e quebrou a regra acima.
+--
+-- ⚠️ CAVEAT DE PRODUÇÃO (não resolvido nesta tarefa — só documentado):
+-- 256_vendas_em_espera_e_consulta_rapida.sql já está aplicado no projeto
+-- Supabase `jinlong` (kbabmewnahysfvlybiak) sob a versão remota
+-- 20260710163032, registrada lá com o nome antigo
+-- "255_vendas_em_espera_e_consulta_rapida". Como o Supabase CLI casa
+-- migrations por versão (prefixo do arquivo) e não por conteúdo, um
+-- `supabase db push` ingênuo tentaria reaplicar esse arquivo em produção
+-- (falharia nas 3 `CREATE POLICY`, que não são idempotentes). Reconciliar
+-- via `supabase migration repair` antes de qualquer push real — ver
+-- AUDITORIA_DRIFT_PRODUCAO_REPOSITORIO.md (Fase A/B).
+--
+-- Adicionalmente, `mcp Supabase list_migrations` (consultado em
+-- 2026-07-13) mostra migrations aplicadas em produção SEM arquivo local
+-- correspondente: 259_historico_precos_produto, 259_funcionarios_separate_from_usuarios
+-- (duas migrations "259" distintas já aplicadas — colisão real, herdada,
+-- do lado do banco), 260_comissoes_regras_funcionario,
+-- 261_comissoes_vendedores_regra_e_congelamento, 263_vendas_cliente_id,
+-- 264_finalizar_venda_canonica_v4_cliente_id, 265_clientes_insert_operador_pdv,
+-- 266_clientes_unique_documento_loja, 267_funcionarios_meta_crud. Este
+-- drift é anterior a esta tarefa e está fora do escopo de "resolver
+-- 247a/b/c" — é o mesmo P0 já descrito em
+-- AUDITORIA_DRIFT_PRODUCAO_REPOSITORIO.md §4. Não renumerar/inventar
+-- arquivos locais para essas versões sem antes rodar Fase A (baseline
+-- única) daquele documento — senão a duplicidade só migra de "247" para
+-- "259+".

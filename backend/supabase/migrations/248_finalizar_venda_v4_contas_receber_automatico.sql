@@ -1,8 +1,11 @@
--- Migration 247b: RPC v4 com Automação de Contas_Receber
+-- Migration 248: RPC v4 com Automação de Contas_Receber
 --
 -- DATA: 2026-07-11
 -- FASE: 5b (Automação de Títulos com Garantias ACID)
--- BLOCKER PRÉ-REQ: Migration 247a (UNIQUE constraint em contas_receber.venda_id)
+-- BLOCKER PRÉ-REQ: Migration 247 (UNIQUE constraint em contas_receber.venda_id)
+--
+-- RENUMERADA em 2026-07-13 (era "247b" — ver migration 247 para detalhes
+-- do porquê da renumeração).
 --
 -- ALTERAÇÕES
 -- ==========

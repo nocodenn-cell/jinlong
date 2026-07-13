@@ -1,8 +1,13 @@
--- Migration 247a: Idempotência de contas_receber via UNIQUE(venda_id)
+-- Migration 247: Idempotência de contas_receber via UNIQUE(venda_id)
 --
 -- DATA: 2026-07-11
 -- FASE: 5b (Automação de Contas a Receber)
 -- BLOCKER: Sim (requerido antes de criar títulos automáticos via RPC)
+--
+-- RENUMERADA em 2026-07-13 (era "247a"): prefixo alfabético não é versão
+-- válida para o Supabase CLI nem para scripts/migration-sequence-guard.mjs
+-- (regex exige `^\d+_`) — ficava invisível ao guard. Sequência oficial
+-- documentada em backend/supabase/scripts/verify_p0_producao.sql.
 --
 -- PROBLEMA
 -- ========

@@ -1,5 +1,29 @@
--- 247c — Vendas em espera (parked sales) + consulta rápida auxiliar.
+-- Migration 256 — Vendas em espera (parked sales) + consulta rápida auxiliar.
 -- Isolado do núcleo transacional (não toca finalizar_venda_* / estoque / caixas).
+--
+-- HISTÓRICO DE RENUMERAÇÃO (2026-07-13):
+--   Este arquivo já foi "255_vendas_em_espera_e_consulta_rapida.sql" e depois
+--   "247c_vendas_em_espera_e_consulta_rapida.sql". Nenhuma das duas era um
+--   prefixo válido/único: "255" colidia com
+--   255_grant_baseline_tabelas_authenticated.sql, e "247c" (sufixo
+--   alfabético) não bate com `^\d+_` — regex usada pelo Supabase CLI e por
+--   scripts/migration-sequence-guard.mjs — e por isso ficava invisível ao
+--   guard. Renumerado para o próximo slot livre real (256).
+--
+-- ⚠️ DRIFT CONHECIDO COM PRODUÇÃO — LEIA ANTES DE FAZER `supabase db push`:
+--   Este conteúdo já está aplicado no projeto Supabase `jinlong`
+--   (kbabmewnahysfvlybiak) sob a versão remota 20260710163032, registrada
+--   com o nome antigo "255_vendas_em_espera_e_consulta_rapida". O Supabase
+--   CLI casa migrations por VERSÃO (prefixo numérico do arquivo), não por
+--   nome/conteúdo — "256" não bate com "20260710163032". Um `db push`
+--   ingênuo tentará reaplicar este arquivo em produção. Todas as
+--   declarações aqui são idempotentes (`CREATE TABLE/INDEX IF NOT EXISTS`,
+--   `CREATE OR REPLACE FUNCTION`) EXCETO as 3 `CREATE POLICY` abaixo, que
+--   falham com "already exists" se reaplicadas. Antes de um push real,
+--   reconciliar via `supabase migration repair` (marcar 256 como já
+--   aplicada) — não reaplicar às cegas. Ver AUDITORIA_DRIFT_PRODUCAO_REPOSITORIO.md
+--   (Fase A/B) para o plano de reconciliação completo — isso ainda não foi
+--   executado.
 
 CREATE TABLE IF NOT EXISTS public.vendas_em_espera (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
