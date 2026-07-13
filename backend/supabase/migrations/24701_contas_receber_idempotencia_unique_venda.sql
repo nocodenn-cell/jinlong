@@ -52,9 +52,10 @@
 --
 -- ROLLBACK
 -- ========
--- ALTER TABLE public.contas_receber
---   DROP CONSTRAINT IF EXISTS contas_receber_venda_id_unique;
+-- DROP INDEX IF EXISTS public.contas_receber_venda_id_unique;
 
-ALTER TABLE public.contas_receber
-  ADD CONSTRAINT contas_receber_venda_id_unique
-  UNIQUE (venda_id) WHERE venda_id IS NOT NULL;
+-- UNIQUE parcial: Postgres não aceita UNIQUE (... ) WHERE em CONSTRAINT de tabela.
+-- Índice único parcial cobre NULLS e habilita ON CONFLICT (venda_id) na RPC v4.
+CREATE UNIQUE INDEX IF NOT EXISTS contas_receber_venda_id_unique
+  ON public.contas_receber (venda_id)
+  WHERE venda_id IS NOT NULL;

@@ -517,6 +517,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+#variable_conflict use_column
 DECLARE
   v_uid uuid := COALESCE(auth.uid(), p_operador_id);
   v_motivo text := NULLIF(btrim(p_motivo), '');

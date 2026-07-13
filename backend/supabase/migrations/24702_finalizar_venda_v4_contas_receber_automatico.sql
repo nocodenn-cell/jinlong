@@ -30,9 +30,12 @@
 --   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
 --   jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid
 -- );
--- CREATE OR REPLACE FUNCTION public.finalizar_venda_transacional_canonica_v4(
---   [versão anterior sem p_cliente_id]
--- )
+
+-- Remove overload anterior (sem p_cliente_id) para PostgREST não ambigüizar.
+DROP FUNCTION IF EXISTS public.finalizar_venda_transacional_canonica_v4(
+  uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
+  jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text
+);
 
 CREATE OR REPLACE FUNCTION public.finalizar_venda_transacional_canonica_v4(
   p_venda_id uuid,
@@ -253,11 +256,16 @@ BEGIN
     v_desconto_unitario := GREATEST(0, v_preco_original - v_preco_unitario);
 
     INSERT INTO public.itens_venda (
-      id, venda_id, produto_id, quantidade, preco_original, preco_unitario, desconto_unitario, tipo_preco
+      id, venda_id, produto_id, quantidade, preco_unitario_original, preco_unitario, desconto_unitario, tipo_preco
     ) VALUES (v_item_id, p_venda_id, v_produto_id, v_quantidade, v_preco_original, v_preco_unitario, v_desconto_unitario, v_tipo_preco)
     ON CONFLICT (id) DO NOTHING;
 
-    PERFORM public.baixar_estoque_vendas(p_venda_id, v_produto_id, v_quantidade, p_loja_id);
+    SELECT * INTO v_rpc_row
+    FROM public.decrementar_estoque_seguro(v_produto_id, v_quantidade, p_venda_id)
+    LIMIT 1;
+    IF v_rpc_row IS NULL OR v_rpc_row.sucesso IS DISTINCT FROM true THEN
+      RAISE EXCEPTION 'FINALIZAR_VENDA_CANONICA_ESTOQUE:%', COALESCE(v_rpc_row.mensagem, 'DESCONHECIDO');
+    END IF;
   END LOOP;
 
   -- PASSO 4: registrar pagamentos no banco (split payment)
@@ -300,7 +308,8 @@ BEGIN
       gen_random_uuid(), p_cliente_id, p_venda_id, p_loja_id,
       v_total_liquido_final_calc, v_saldo_pendente_atual, 'ABERTO', now()
     )
-    ON CONFLICT (venda_id) DO UPDATE SET
+    -- Índice parcial contas_receber_venda_id_unique exige predicado no ON CONFLICT.
+    ON CONFLICT (venda_id) WHERE (venda_id IS NOT NULL) DO UPDATE SET
       valor_total = EXCLUDED.valor_total,
       valor_aberto = EXCLUDED.valor_aberto
     RETURNING id INTO v_contas_receber_id;

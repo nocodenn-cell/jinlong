@@ -95,6 +95,9 @@ SELECT * FROM (
 
   UNION ALL SELECT * FROM pg_temp.diag_check(30, 'grants', 'grant_finalizar_venda_v4_authenticated',
     has_function_privilege('authenticated',
+      'public.finalizar_venda_transacional_canonica_v4(uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid)',
+      'EXECUTE')
+    OR has_function_privilege('authenticated',
       'public.finalizar_venda_transacional_canonica_v4(uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text)',
       'EXECUTE'),
     'EXECUTE finalizar_venda v4 → authenticated.')
@@ -147,17 +150,17 @@ SELECT * FROM (
 
   UNION ALL SELECT * FROM pg_temp.diag_check(70, 'estoque_teste', 'produto_demo_existe',
     EXISTS (SELECT 1 FROM public.produtos p
-      WHERE p.codigo_barras = '7898512340003' OR p.codigo_interno = '7898512340003' LIMIT 1),
+      WHERE p.codigo_barras = '7898512340003' LIMIT 1),
     'Produto demo 7898512340003 (seed 027) ou defina PDV_DIAGNOSTICO_PRODUTO_CODIGO.',
     NOT EXISTS (SELECT 1 FROM public.produtos p
-      WHERE p.codigo_barras = '7898512340003' OR p.codigo_interno = '7898512340003' LIMIT 1))
+      WHERE p.codigo_barras = '7898512340003' LIMIT 1))
   UNION ALL SELECT * FROM pg_temp.diag_check(71, 'estoque_teste', 'produto_demo_saldo_positivo',
     EXISTS (SELECT 1 FROM public.produtos p JOIN public.estoque e ON e.produto_id = p.id
-      WHERE (p.codigo_barras = '7898512340003' OR p.codigo_interno = '7898512340003')
+      WHERE p.codigo_barras = '7898512340003'
         AND e.quantidade_atual > 0 LIMIT 1),
     'Saldo > 0 para produto demo em estoque.',
     NOT EXISTS (SELECT 1 FROM public.produtos p JOIN public.estoque e ON e.produto_id = p.id
-      WHERE (p.codigo_barras = '7898512340003' OR p.codigo_interno = '7898512340003')
+      WHERE p.codigo_barras = '7898512340003'
         AND e.quantidade_atual > 0 LIMIT 1))
 ) all_checks;
 
