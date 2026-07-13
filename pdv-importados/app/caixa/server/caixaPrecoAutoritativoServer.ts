@@ -5,6 +5,8 @@ import {
   filtrarSomenteProdutosVendaveis,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
 import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
+import { captureMessage } from '@/lib/sentry/vendaSentry'
+import { isPricingVersionRpcAusente } from '@/app/caixa/server/pricingVersionRpcError'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -134,14 +136,29 @@ export async function recalcularItensNoServidor(
   const { data: resolvedVersion, error: versionErr } = await supabase.rpc(
     'obter_pricing_version_ativa',
   )
+  let pricingVersionId: string | null = null
   if (versionErr) {
-    return {
-      ok: false,
-      error: 'Não foi possível verificar a versão de configuração de preços. Tente novamente.',
+    // Preserva causa original em observabilidade; operador recebe mensagem segura.
+    captureMessage('[caixa.pricing_version.obter_falhou]', {
+      level: 'error',
+      extra: {
+        code: versionErr.code ?? null,
+        message: versionErr.message ?? null,
+        details: versionErr.details ?? null,
+        hint: versionErr.hint ?? null,
+      },
+    })
+    // Migration ainda não provisionada / schema cache: modo legado (NULL),
+    // alinhado ao contrato da migration 249 (ausência = versionamento off).
+    if (!isPricingVersionRpcAusente(versionErr)) {
+      return {
+        ok: false,
+        error: 'Não foi possível verificar a versão de configuração de preços. Tente novamente.',
+      }
     }
+  } else if (resolvedVersion != null) {
+    pricingVersionId = String(resolvedVersion)
   }
-  const pricingVersionId: string | null =
-    resolvedVersion != null ? String(resolvedVersion) : null
 
   const produtosIds = Array.from(new Set(itensInput.map((i) => i.produtoId)))
   const { data: produtosRows, error: prodErr } = await supabase
@@ -240,11 +257,22 @@ export async function recalcularItensNoServidor(
     }
 
     if (prefetch.error) {
+      captureMessage('[caixa.pricing.calcular_preco_rpc_falhou]', {
+        level: 'error',
+        extra: {
+          produtoId: i.produtoId,
+          message: prefetch.error.message,
+        },
+      })
       return { ok: false, error: mensagemErroComSecao('Preço do produto', prefetch.error.message) }
     }
 
     const esperado = parseCalcularPrecoProdutoRpc(prefetch.data)
     if (!esperado) {
+      captureMessage('[caixa.pricing.calcular_preco_resposta_invalida]', {
+        level: 'error',
+        extra: { produtoId: i.produtoId, data: prefetch.data },
+      })
       return {
         ok: false,
         error: 'Não foi possível validar o preço do produto no servidor. Tente novamente.',

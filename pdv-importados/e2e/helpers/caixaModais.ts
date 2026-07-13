@@ -3,9 +3,12 @@ import { expect, type Page } from '@playwright/test'
 /** Primary CTA nos modais de caixa (`m.comum.confirmar` ou `m.caixa.abrir` no turno). */
 const BTN_CONFIRMAR = /Confirmar|Abrir caixa|确认|確認|开班|開啟/
 
-/** `CaixaValorNumericoModal` — título (`m.caixa.modal_valor_titulo_*`). */
-export const MODAL_TITULO_ABRIR = /Abrir caixa|开启收银|開啟收銀/i
-export const MODAL_TITULO_FECHAR = /Fechar caixa|关闭收银|關閉收銀/i
+/**
+ * Título do modal de abertura (`CaixaAbrirTurnoModal` = abrir_turno_titulo;
+ * legado modal_valor_titulo_abrir). Inclui 开班 (zh turno).
+ */
+export const MODAL_TITULO_ABRIR = /Abrir caixa|开启收银|開啟收銀|开班/i
+export const MODAL_TITULO_FECHAR = /Fechar caixa|结算收银台|关闭收银|關閉收銀/i
 
 /** `CaixaMotivoMinModal` — diferença > limite (`m.caixa.modal_motivo_diferenca_titulo`). */
 export const MODAL_TITULO_MOTIVO_DIF = /Motivo da diferença|差额原因|差額原因/i

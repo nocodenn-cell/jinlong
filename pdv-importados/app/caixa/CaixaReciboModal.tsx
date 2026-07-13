@@ -167,6 +167,7 @@ export function CaixaReciboModal({
       role="dialog"
       aria-modal="true"
       aria-label="Recibo da venda"
+      data-testid="caixa-recibo-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
@@ -208,6 +209,7 @@ export function CaixaReciboModal({
               type="button"
               onClick={onClose}
               aria-label="Fechar recibo"
+              data-testid="caixa-recibo-fechar"
               className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-semibold"
             >
               ✕
@@ -311,6 +313,8 @@ export function CaixaReciboModal({
           <button
             type="button"
             onClick={onNovaVenda}
+            data-testid="caixa-recibo-nova-venda"
+            aria-label={m.caixa.btn_adicionar_nova_venda}
             className="app-btn-accent w-full rounded-md px-4 py-2.5 text-sm font-semibold"
           >
             {m.caixa.btn_adicionar_nova_venda}

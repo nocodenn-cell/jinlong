@@ -140,6 +140,18 @@ function CaixaFooterImpl({
                 </div>
               </div>
             )}
+            <div className="text-right min-w-[7rem]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
+                {m.caixa.total_pagar}
+              </div>
+              <div
+                data-testid="caixa-total-liquido"
+                data-total-liquido={totalLiquidoComGerente.toFixed(2)}
+                className="text-2xl font-extrabold leading-none tabular-nums text-amber-400"
+              >
+                {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
+              </div>
+            </div>
           </div>
         </div>
       </footer>

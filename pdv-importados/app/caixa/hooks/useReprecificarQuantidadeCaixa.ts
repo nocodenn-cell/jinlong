@@ -39,7 +39,16 @@ export function useReprecificarQuantidadeCaixa() {
       const res = await calcularPrecoProdutoCaixa({ produtoId, quantidade })
 
       if (sequenciaRef.current.get(itemId) !== seq) return
-      if (!res.ok) return
+      if (!res.ok) {
+        // Não bloqueia a qty (finalização revalida); nunca engolir o motivo.
+        console.error('[caixa.reprecificar_quantidade.falhou]', {
+          itemId,
+          produtoId,
+          quantidade,
+          error: 'error' in res ? res.error : 'unknown',
+        })
+        return
+      }
 
       sincronizarPrecoCalculadoRpc(itemId, { precoUnitario: res.preco, tipoPreco: res.tipo })
     },

@@ -11,6 +11,7 @@ import { usePdvLocalCatalogo } from './hooks/usePdvLocalCatalogo'
 import { usePdvLocalOutboxSync } from './hooks/usePdvLocalOutboxSync'
 import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
 import { pricingService } from '@shared/pricing/PricingService'
+import { parseQuantidadeCaixaInput } from '@shared/format/quantidadeCaixa'
 import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
 
 function mensagemEhErro(msg: string): boolean {
@@ -96,8 +97,10 @@ export function App() {
 
   const handleAlterarQuantidadeLocal = useCallback(
     (item: ItemCarrinhoStore, novaQuantidade: number) => {
-      const quantidade = Math.max(1, novaQuantidade)
+      // SSoT numeric(10,3) — mesmo contrato do caixa web (Cycle 1 / Cycle 4).
+      const quantidade = parseQuantidadeCaixaInput(novaQuantidade)
       alterarQuantidade(item.id, quantidade)
+      if (quantidade <= 0) return
       recalcularPrecoItemLocal(
         item,
         quantidade,

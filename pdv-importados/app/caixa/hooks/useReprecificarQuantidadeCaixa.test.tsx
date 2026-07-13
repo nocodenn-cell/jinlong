@@ -98,6 +98,35 @@ describe("useReprecificarQuantidadeCaixa", () => {
     expect(item?.resultado?.precoOriginal).toBe(25)
   })
 
+  it("falha da RPC de preço é logada e não aplica preço stale", async () => {
+    seedItemVarejo()
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    calcularPrecoProdutoCaixaMock.mockResolvedValue({ ok: false, error: "timeout" })
+
+    await act(async () => {
+      reprecificarAtual?.({
+        itemId: "item-1",
+        produtoId: "produto-1",
+        quantidade: 60,
+        tipoPrecoAtual: "VAREJO",
+      })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(errSpy).toHaveBeenCalledWith(
+      "[caixa.reprecificar_quantidade.falhou]",
+      expect.objectContaining({
+        itemId: "item-1",
+        produtoId: "produto-1",
+        quantidade: 60,
+        error: "timeout",
+      }),
+    )
+    expect(useCarrinhoStore.getState().itens[0]?.resultado?.precoUnitario).toBe(25)
+    errSpy.mockRestore()
+  })
+
   it("linha MANUAL não dispara recálculo", () => {
     seedItemVarejo()
 

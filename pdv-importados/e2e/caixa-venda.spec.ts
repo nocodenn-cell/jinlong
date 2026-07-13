@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
-import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
 import { loginCaixaOperador } from './helpers/login'
 import { expectCaixaShellVisible } from './helpers/caixaShell'
+import { ensureCaixaAberto } from './helpers/ensureCaixaAberto'
 import { gotoApp } from './helpers/url'
 
 test.describe.configure({ mode: 'serial' })
@@ -20,15 +20,10 @@ test.describe('Caixa — finalizar venda (catálogo seed)', () => {
   })
 
   test('busca produto demo, adiciona ao cupom e finaliza venda (DINHEIRO)', async ({ page }) => {
+    test.setTimeout(90_000)
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
-
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
+    await ensureCaixaAberto(page, '300')
 
     const codigo = e2eProdutoCodigoBarras()
     const busca = page.getByRole('textbox', {

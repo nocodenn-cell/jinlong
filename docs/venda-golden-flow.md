@@ -10,13 +10,21 @@
 Cliente → POST /caixa/action
   → caixaVendas.impl.ts (Server Action Next.js)
     → revalidação de preço autoritativa (caixaPrecoAutoritativoServer.ts)
-    → supabase.rpc('finalizar_venda_transacional_canonica_v4')
-      [transação atômica no DB: vendas + itens_venda + estoque + venda_eventos]
-    ← { ok, vendaId, eventId, documentoFiscal? }
+      → rpc obter_pricing_version_ativa (NULL = legado / versionamento off)
+      → rpc calcular_preco_produto (por item; qtd via quantidadeParaRpcPreco)
+    → supabase.rpc('finalizar_venda_transacional_canonica_v4')  -- overload ÚNICO com p_cliente_id
+      [TX: vendas + itens + estoque + pagamentos + contas_receber (se saldo) + eventos]
+    → rpc registrar_pricing_version_venda (best-effort se houver versão ativa)
+    ← { ok, vendaId, eventId, contas_receber_id?, documentoFiscal? }
   → registrarAlertasLevesVenda (best-effort, após conclusão)
 ```
 
+**Contrato v4 (Cycle 3):** um único overload (`…, p_cliente_id uuid`). Pagamento parcial (`SUM < total`) exige cliente da loja e gera `contas_receber` idempotente.
 **Caller único autorizado:** `pdv-importados/app/caixa/server/caixaVendas.impl.ts`
+
+**Caixa / espécie (Cycle 4):** `caixas.saldo_atual` **não** é incrementado pela v4. O valor esperado em dinheiro no fechamento vem de `calcular_valor_sistema_dinheiro_caixa` (valor_inicial + vendas DINHEIRO + movimentações − devoluções). `saldo_atual` muda em sangria/suprimento/estorno (e estorno de cancelamento em DINHEIRO).
+
+**Quantidade fracionada:** itens aceitam `numeric(10,3)`; preço de faixa usa `quantidadeParaRpcPreco` → `GREATEST(1, FLOOR(qtd))` na RPC `calcular_preco_produto(integer)`. Helpers SSoT: `@shared/format/quantidadeCaixa`.
 
 **Garantias:**
 - Idempotência via `pg_advisory_xact_lock(hashtext(venda_id))` + `ON CONFLICT DO NOTHING`
