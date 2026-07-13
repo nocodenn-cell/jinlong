@@ -16,6 +16,8 @@
     "app/caixa/**",
     "**/*.test.ts",
     "**/*.test.tsx",
+    "**/*.test-helpers.ts",
+    "**/*.test-helpers.tsx",
     "**/*.integration.test.ts"
   ]
 }
