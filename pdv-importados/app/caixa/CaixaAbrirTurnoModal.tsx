@@ -79,6 +79,7 @@ export function CaixaAbrirTurnoModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={tituloId}
+        data-testid="caixa-abrir-turno-modal"
         className="w-full rounded-none border border-jl-border-1 bg-jl-surface-elev text-jl-fg-1 shadow-lg sm:max-w-md sm:rounded-lg"
         onMouseDown={(e) => e.stopPropagation()}
         data-caixa-atalho-bloqueado="true"

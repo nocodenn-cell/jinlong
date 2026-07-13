@@ -1,13 +1,8 @@
 import { expect, type Page } from '@playwright/test'
-import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './caixaModais'
+import { ensureCaixaAberto } from './ensureCaixaAberto'
 
 export async function abrirCaixaSeNecessario(page: Page): Promise<void> {
-  const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-  if (await abrir.isVisible().catch(() => false)) {
-    await abrir.click()
-    await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
-    await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-  }
+  await ensureCaixaAberto(page, '300')
 }
 
 export async function adicionarProdutoDemo(page: Page, codigo: string): Promise<void> {
@@ -27,17 +22,22 @@ export async function adicionarProdutoDemo(page: Page, codigo: string): Promise<
 }
 
 export async function irParaAbaPgto(page: Page): Promise<void> {
-  await page.getByRole('tab', { name: /Pgto|付款|收銀/i }).click()
-  await expect(page.locator('#caixa-pdv-panel-pgto')).toBeVisible({ timeout: 10_000 })
+  const tab = page.getByRole('tab', { name: /Pgto|付款|收銀/i })
+  if (await tab.isVisible().catch(() => false)) {
+    await tab.click()
+  }
+  await expect(painelPgto(page)).toBeVisible({ timeout: 10_000 })
 }
 
 function painelPgto(page: Page) {
-  return page.locator('#caixa-pdv-panel-pgto')
+  const byId = page.locator('#caixa-pdv-panel-pgto')
+  // Layout clássico: painel sempre visível como region (sem tab).
+  return byId.or(page.getByRole('region', { name: /Pagamento|Parcelas do cupom|付款/i }))
 }
 
 export async function adicionarParcela(page: Page): Promise<void> {
   const btn = painelPgto(page).getByRole('button', {
-    name: /Adicionar forma|添加付款方式|新增付款方式/i,
+    name: /Adicionar forma|Adicionar parcela|添加付款方式|新增付款方式/i,
   })
   await btn.click()
 }
@@ -70,4 +70,20 @@ export async function finalizarVenda(page: Page): Promise<void> {
   })
   await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
   await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
+  await dismissReciboSeAberto(page)
+}
+
+/** Fecha o modal de recibo pós-venda para não interceptar cliques seguintes. */
+export async function dismissReciboSeAberto(page: Page): Promise<void> {
+  const recibo = page.getByRole('dialog', { name: /Recibo da venda|收据|收據/i })
+  if (!(await recibo.isVisible().catch(() => false))) return
+  const fechar = recibo.getByRole('button', {
+    name: /Fechar|关闭|關閉|Adicionar nova venda|Nova venda|新单|新單|继续/i,
+  })
+  if (await fechar.first().isVisible().catch(() => false)) {
+    await fechar.first().click()
+  } else {
+    await page.keyboard.press('Escape')
+  }
+  await expect(recibo).toBeHidden({ timeout: 10_000 })
 }

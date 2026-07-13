@@ -72,6 +72,10 @@ export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperado
       blindClosureEnabled: Boolean(row.blind_closure_enabled),
     }
   } catch (e) {
+    logJson('caixa.status.excecao', {
+      message: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+    })
     return {
       ok: false,
       status: 'ERRO',
@@ -115,6 +119,11 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
     revalidatePath('/gerente/caixas')
     return { ok: true, caixaId: novo.id }
   } catch (e) {
+    logJson('caixa.abrir.excecao', {
+      message: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+      valorInicial: valorInicialSanitizado,
+    })
     return {
       ok: false,
       error: caixaErroOperador(e instanceof Error ? e.message : null),

@@ -5,9 +5,9 @@ import { loginCaixaOperador } from './helpers/login'
 import { gotoApp } from './helpers/url'
 import {
   confirmarModalValorNumerico,
-  MODAL_TITULO_ABRIR,
   MODAL_TITULO_FECHAR,
 } from './helpers/caixaModais'
+import { ensureCaixaAberto } from './helpers/ensureCaixaAberto'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -29,12 +29,7 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
 
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '120')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
+    await ensureCaixaAberto(page, '120')
 
     await page.getByRole('button', { name: /Sangria (-)/ }).click()
     await expect(page.getByRole('dialog')).toContainText(/Registrar sangria/i, { timeout: 10_000 })

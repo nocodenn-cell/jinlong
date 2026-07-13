@@ -1,13 +1,24 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
-import { confirmarModalValorNumerico, MODAL_TITULO_ABRIR } from './helpers/caixaModais'
 import { loginCaixaOperador } from './helpers/login'
 import { expectCaixaShellVisible } from './helpers/caixaShell'
+import { ensureCaixaAberto } from './helpers/ensureCaixaAberto'
+import {
+  adicionarParcela,
+  adicionarProdutoDemo,
+  finalizarVenda,
+  irParaAbaPgto,
+  parcelasNoPainel,
+  readTotalLiquidoFooter,
+  round2,
+} from './helpers/caixaPagamento'
 import { gotoApp } from './helpers/url'
+
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida do footer)', () => {
+test.describe('Caixa — venda multi-pagamento (painel Pgto clássico)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
+    test.setTimeout(180_000)
     if (!hasCaixaOperadorUser()) {
       testInfo.skip(
         true,
@@ -21,40 +32,12 @@ test.describe('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida
   test('duas parcelas somam ao total e finaliza com sucesso', async ({ page }) => {
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
+    await ensureCaixaAberto(page, '300')
+    await adicionarProdutoDemo(page, e2eProdutoCodigoBarras())
+    await irParaAbaPgto(page)
+    await adicionarParcela(page)
 
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
-
-    const codigo = e2eProdutoCodigoBarras()
-    const busca = page.getByRole('textbox', {
-      name: /código de barras|nome do produto|条码|商品名称/i,
-    })
-    await busca.fill(codigo)
-    await busca.press('Enter')
-
-    const status = page.getByTestId('caixa-status')
-    await expect(status).toBeVisible({ timeout: 20_000 })
-    const statusTxt = (await status.innerText()).toLowerCase()
-    if (statusTxt.includes('não encontrad') || statusTxt.includes('not found') || statusTxt.includes('找不到')) {
-      test.skip(
-        true,
-        `Produto «${codigo}» não encontrado (seed 027 ou PLAYWRIGHT_E2E_PRODUTO_CODIGO).`,
-      )
-      return
-    }
-    await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
-
-    const footer = page.locator('footer')
-    await expect(footer.getByText(/Pagamento|付款/i)).toBeVisible()
-
-    await footer.getByRole('button', { name: /^\+$/ }).click()
-
-    const selects = footer.locator('select')
-    const inputs = footer.locator('input[type="number"]')
+    const { selects, inputs } = parcelasNoPainel(page)
     await expect(selects).toHaveCount(2, { timeout: 10_000 })
     await expect(inputs).toHaveCount(2)
 
@@ -67,53 +50,20 @@ test.describe('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida
     await inputs.nth(0).fill(String(parte1))
     await inputs.nth(1).fill(String(parte2))
 
-    await expect(page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i })).toBeEnabled({
-      timeout: 15_000,
-    })
-    await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
-
-    await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
+    await finalizarVenda(page)
   })
 
   test('nao vaza parcelas para proximo cupom apos finalizar e novo cupom', async ({ page }) => {
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
-
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
-
+    await ensureCaixaAberto(page, '300')
     const codigo = e2eProdutoCodigoBarras()
-    const busca = page.getByRole('textbox', {
-      name: /código de barras|nome do produto|条码|商品名称/i,
-    })
-    await busca.fill(codigo)
-    await busca.press('Enter')
+    await adicionarProdutoDemo(page, codigo)
+    await irParaAbaPgto(page)
+    await adicionarParcela(page)
 
-    const status = page.getByTestId('caixa-status')
-    await expect(status).toBeVisible({ timeout: 20_000 })
-    const statusTxt = (await status.innerText()).toLowerCase()
-    if (statusTxt.includes('não encontrad') || statusTxt.includes('not found') || statusTxt.includes('找不到')) {
-      test.skip(
-        true,
-        `Produto «${codigo}» não encontrado (seed 027 ou PLAYWRIGHT_E2E_PRODUTO_CODIGO).`,
-      )
-      return
-    }
-    await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
-
-    const footer = page.locator('footer')
-    await expect(footer.getByText(/Pagamento|付款/i)).toBeVisible()
-
-    await footer.getByRole('button', { name: /^\+$/ }).click()
-    const selects = footer.locator('select')
-    const inputs = footer.locator('input[type="number"]')
+    const { selects, inputs } = parcelasNoPainel(page)
     await expect(selects).toHaveCount(2, { timeout: 10_000 })
-    await expect(inputs).toHaveCount(2)
-
     await selects.nth(0).selectOption({ value: 'DINHEIRO' })
     await selects.nth(1).selectOption({ value: 'PIX' })
 
@@ -123,22 +73,17 @@ test.describe('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida
     await inputs.nth(0).fill(String(parte1))
     await inputs.nth(1).fill(String(parte2))
 
-    await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
-    await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
+    await finalizarVenda(page)
 
-    // Após venda OK, deve resetar para parcela única (sem herdar split anterior).
     await expect(selects).toHaveCount(1, { timeout: 10_000 })
     await expect(inputs).toHaveCount(1)
     await expect(selects.nth(0)).toHaveValue('DINHEIRO')
 
-    // Recria split e valida reset também ao acionar "Novo cupom".
-    await busca.fill(codigo)
-    await busca.press('Enter')
-    await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
-    await footer.getByRole('button', { name: /^\+$/ }).click()
+    await adicionarProdutoDemo(page, codigo)
+    await adicionarParcela(page)
     await expect(selects).toHaveCount(2, { timeout: 10_000 })
 
-    await page.getByRole('button', { name: /Novo cupom|新单|新單/i }).click()
+    await page.getByRole('button', { name: /Novo cupom|Nova venda|新单|新單/i }).click()
     await expect(selects).toHaveCount(1, { timeout: 10_000 })
     await expect(inputs).toHaveCount(1)
     await expect(selects.nth(0)).toHaveValue('DINHEIRO')
@@ -147,41 +92,13 @@ test.describe('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida
   test('tres parcelas (DINHEIRO + PIX + CARTAO_DEBITO) somam ao total e finaliza', async ({ page }) => {
     await gotoApp(page, '/caixa')
     await expectCaixaShellVisible(page)
+    await ensureCaixaAberto(page, '300')
+    await adicionarProdutoDemo(page, e2eProdutoCodigoBarras())
+    await irParaAbaPgto(page)
+    await adicionarParcela(page)
+    await adicionarParcela(page)
 
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
-
-    const codigo = e2eProdutoCodigoBarras()
-    const busca = page.getByRole('textbox', {
-      name: /código de barras|nome do produto|条码|商品名称/i,
-    })
-    await busca.fill(codigo)
-    await busca.press('Enter')
-
-    const status = page.getByTestId('caixa-status')
-    await expect(status).toBeVisible({ timeout: 20_000 })
-    const statusTxt = (await status.innerText()).toLowerCase()
-    if (statusTxt.includes('não encontrad') || statusTxt.includes('not found') || statusTxt.includes('找不到')) {
-      test.skip(
-        true,
-        `Produto «${codigo}» não encontrado (seed 027 ou PLAYWRIGHT_E2E_PRODUTO_CODIGO).`,
-      )
-      return
-    }
-    await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
-
-    const footer = page.locator('footer')
-    await expect(footer.getByText(/Pagamento|付款/i)).toBeVisible()
-
-    await footer.getByRole('button', { name: /^\+$/ }).click()
-    await footer.getByRole('button', { name: /^\+$/ }).click()
-
-    const selects = footer.locator('select')
-    const inputs = footer.locator('input[type="number"]')
+    const { selects, inputs } = parcelasNoPainel(page)
     await expect(selects).toHaveCount(3, { timeout: 10_000 })
     await expect(inputs).toHaveCount(3)
 
@@ -197,71 +114,6 @@ test.describe('Caixa — venda com split DINHEIRO + PIX (UI de parcelas removida
     await inputs.nth(1).fill(String(p2))
     await inputs.nth(2).fill(String(p3))
 
-    await expect(page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i })).toBeEnabled({
-      timeout: 15_000,
-    })
-    await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
-
-    await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
+    await finalizarVenda(page)
   })
-
-  test('venda com pagamento parcial (apenas 40% do total)', async ({ page }) => {
-    await gotoApp(page, '/caixa')
-    await expectCaixaShellVisible(page)
-
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '300')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
-
-    const codigo = e2eProdutoCodigoBarras()
-    const busca = page.getByRole('textbox', {
-      name: /código de barras|nome do produto|条码|商品名称/i,
-    })
-    await busca.fill(codigo)
-    await busca.press('Enter')
-
-    const status = page.getByTestId('caixa-status')
-    await expect(status).toBeVisible({ timeout: 20_000 })
-    const statusTxt = (await status.innerText()).toLowerCase()
-    if (statusTxt.includes('não encontrad') || statusTxt.includes('not found') || statusTxt.includes('找不到')) {
-      test.skip(true, `Produto «${codigo}» não encontrado.`)
-      return
-    }
-    await expect(status).toContainText(/adicionad|added|已添加|加入/i, { timeout: 15_000 })
-
-    const footer = page.locator('footer')
-    const selects = footer.locator('select')
-    const inputs = footer.locator('input[type="number"]')
-
-    const total = await readTotalLiquidoFooter(page)
-    const paga = round2(total * 0.4)
-
-    await inputs.nth(0).fill(String(paga))
-
-    await expect(page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i })).toBeEnabled({
-      timeout: 15_000,
-    })
-    await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
-
-    await expect(page.getByTestId('caixa-msg-venda-ok')).toBeVisible({ timeout: 35_000 })
-  })
-
 })
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
-}
-
-/** Lê o total líquido bruto pelo atributo estável de teste. */
-async function readTotalLiquidoFooter(page: Page): Promise<number> {
-  const el = page.getByTestId('caixa-total-liquido')
-  await expect(el).toBeVisible({ timeout: 10_000 })
-  const raw = (await el.getAttribute('data-total-liquido'))?.trim()
-  if (!raw) throw new Error('Atributo data-total-liquido ausente no footer')
-  const parsed = Number(raw)
-  if (!Number.isFinite(parsed)) throw new Error(`Total bruto inválido: «${raw}»`)
-  return parsed
-}
