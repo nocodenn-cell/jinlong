@@ -48,8 +48,6 @@
     "next-env.d.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
-    "lib/**/*.ts",
-    "lib/**/*.tsx",
     "src/**/*.ts",
     "src/**/*.tsx",
     "pages/**/*.ts",
@@ -66,7 +64,6 @@
   "exclude": [
     "node_modules",
     "e2e/**",
-    "lib/etiqueta/**",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.test-helpers.ts",
