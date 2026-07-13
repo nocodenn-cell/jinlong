@@ -39,13 +39,14 @@ export const GERENTE_NAV_HREF: Record<PainelGerencialNavKey, string> = {
   fornecedores: ROUTES.admin.fornecedores,
   financeiro: ROUTES.admin.financeiro,
   comissoes: ROUTES.admin.comissoes,
-  contas_pagar: `${ROUTES.admin.financeiro}?tab=pagar`,
+  contas_pagar: ROUTES.admin.financeiroContasPagar,
   configuracoes: ROUTES.admin.configuracoes,
   suspensao: ROUTES.admin.suspensao,
   caixas: ROUTES.admin.vendas,
   relatorios: ROUTES.admin.relatorios,
   relatorios_vendas: ROUTES.admin.relatorios,
-  compras: ROUTES.admin.estoqueRecebimento,
+  /** SSoT: compras ≠ recebimento; recebimento tem chave própria. */
+  compras: ROUTES.admin.compras,
 }
 
 export type AdminNavDictionaryKey = keyof Mensagens['admin']['nav']

@@ -29,7 +29,7 @@
 | Ação | Arquivo | Motivo |
 |------|---------|--------|
 | Removido | `pdv-importados/app/admin/financeiro/_components/FinanceiroPanels.tsx` | Substituído por `FinanceiroContent`; teste `consolidacao-post-audit` exigia remoção |
-| Renomeado | `255_vendas_em_espera_*` → `247c_vendas_em_espera_e_consulta_rapida.sql` | Sequência de migrations 247a/b/c coerente |
+| Renomeado | `255_vendas_em_espera_*` → `24703_vendas_em_espera_e_consulta_rapida.sql` (via 247c → 24703) | CLI Supabase exige `^\d+_`; sufixo letteral era ignorado |
 | Adicionado ao CI | `package.json` → `guard:all` inclui `check:entity-ssot` | Enforcement SSoT de entidades em PRs |
 
 ---
@@ -94,10 +94,10 @@ Rotas geradas incluem `/admin/compras`, `/admin/financeiro/contas-pagar`, `/caix
 
 | Melhoria | Origem conceitual | Implementação nativa |
 |----------|-------------------|----------------------|
-| Contas a receber automáticas na finalização | ERPNext/Odoo — AR na venda a prazo | `247b_finalizar_venda_v4_contas_receber_automatico.sql` |
-| Idempotência CR por venda | Padrão POS enterprise (retry-safe) | `247a_contas_receber_idempotencia_unique_venda.sql` |
+| Contas a receber automáticas na finalização | ERPNext/Odoo — AR na venda a prazo | `24702_finalizar_venda_v4_contas_receber_automatico.sql` |
+| Idempotência CR por venda | Padrão POS enterprise (retry-safe) | `24701_contas_receber_idempotencia_unique_venda.sql` |
 | Seleção de cliente no PDV | POS Awesome / Saleor — customer on credit sale | `CaixaSelecionarClienteModal.tsx` + validação parcial |
-| Vendas em espera + consulta rápida | Hold/recall de carrinho (POS padrão) | `247c_vendas_em_espera_e_consulta_rapida.sql` |
+| Vendas em espera + consulta rápida | Hold/recall de carrinho (POS padrão) | `24703_vendas_em_espera_e_consulta_rapida.sql` |
 | Admin Compras | Módulo compras ERP | `/admin/compras` |
 | Reprocessar documento fiscal | Observabilidade fiscal | `ReprocessarDocumentoButton.tsx` |
 

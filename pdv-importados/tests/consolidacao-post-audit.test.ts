@@ -37,7 +37,7 @@ describe('consolidação pós-audit — contratos de rota e código morto', () =
     expect(LEGACY_GERENTE_REDIRECTS.vendas).toBe(ROUTES.admin.vendas)
     expect(LEGACY_GERENTE_REDIRECTS.financeiro).toBe(ROUTES.admin.financeiro)
     expect(LEGACY_GERENTE_REDIRECTS['financeiro/contas-pagar']).toBe(
-      `${ROUTES.admin.financeiro}?tab=pagar`,
+      ROUTES.admin.financeiroContasPagar,
     )
     expect(LEGACY_GERENTE_REDIRECTS.produtos).toBe(ROUTES.admin.catalogo)
     expect(LEGACY_GERENTE_REDIRECTS['produtos/novo']).toBe(ROUTES.admin.catalogoNovo)
