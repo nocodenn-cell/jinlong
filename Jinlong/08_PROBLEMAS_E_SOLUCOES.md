@@ -54,7 +54,7 @@ Problema → Causa raiz → Solução → Commit/Migration → Impacto
 
 ---
 
-### BUG-P0-004: Conflito Migration 255 (NOVO — auditoria 2026-07-10)
+### BUG-P0-004: Conflito Migration 255 (auditoria 2026-07-10 — RESOLVIDO 2026-07-13)
 
 | Campo | Valor |
 |---|---|
@@ -62,8 +62,8 @@ Problema → Causa raiz → Solução → Commit/Migration → Impacto
 | **Arquivos** | `255_grant_baseline_tabelas_authenticated.sql` + `255_vendas_em_espera_e_consulta_rapida.sql` |
 | **Causa raiz** | Numeração colidida entre branches/features |
 | **Impacto** | `supabase db push` pode aplicar apenas um; ambiente inconsistente |
-| **Solução** | **Pendente decisão humana** — renumerar um dos arquivos |
-| **Status** | 🔴 Aberto |
+| **Solução** | `main` renumerou o arquivo para `247c_vendas_em_espera_e_consulta_rapida.sql`; renumeração incorporada ao mergear `main` em `feat/admin-screen-consolidation` (commit `888e725`) |
+| **Status** | 🟢 Resolvido — ver [[Home#📅 Trabalho de Hoje — 2026-07-13]] |
 
 ---
 
