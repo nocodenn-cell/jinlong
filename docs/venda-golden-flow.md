@@ -22,6 +22,10 @@ Cliente → POST /caixa/action
 **Contrato v4 (Cycle 3):** um único overload (`…, p_cliente_id uuid`). Pagamento parcial (`SUM < total`) exige cliente da loja e gera `contas_receber` idempotente.
 **Caller único autorizado:** `pdv-importados/app/caixa/server/caixaVendas.impl.ts`
 
+**Caixa / espécie (Cycle 4):** `caixas.saldo_atual` **não** é incrementado pela v4. O valor esperado em dinheiro no fechamento vem de `calcular_valor_sistema_dinheiro_caixa` (valor_inicial + vendas DINHEIRO + movimentações − devoluções). `saldo_atual` muda em sangria/suprimento/estorno (e estorno de cancelamento em DINHEIRO).
+
+**Quantidade fracionada:** itens aceitam `numeric(10,3)`; preço de faixa usa `quantidadeParaRpcPreco` → `GREATEST(1, FLOOR(qtd))` na RPC `calcular_preco_produto(integer)`. Helpers SSoT: `@shared/format/quantidadeCaixa`.
+
 **Garantias:**
 - Idempotência via `pg_advisory_xact_lock(hashtext(venda_id))` + `ON CONFLICT DO NOTHING`
 - Validação de preço autoritativa no servidor antes da chamada
