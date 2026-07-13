@@ -8,6 +8,10 @@ import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
+import {
+  EXCESSO_PAGAMENTO_EPS,
+  SALDO_PENDENTE_EPS,
+} from "@/app/caixa/caixaPagamentoSaldo"
 
 /** Mantido por compatibilidade com atalhos legados — fluxo linear sem abas. */
 export type CaixaPdvOperadorTabId = "produto"
@@ -53,8 +57,8 @@ function PagamentoPanel({
   moedaPrefixo,
   metodoPagamentoPanel,
 }: Omit<Props, "produtoPanel" | "layoutVariant"> & { classicChrome: boolean }) {
-  const somaOk = Math.abs(diferenca) <= 0.01
-  const temTroco = diferenca > 0.01
+  const somaOk = Math.abs(diferenca) <= SALDO_PENDENTE_EPS
+  const temTroco = diferenca > EXCESSO_PAGAMENTO_EPS
 
   return (
     <section
@@ -183,7 +187,7 @@ function PagamentoPanel({
             </dd>
           </div>
         ) : null}
-        {diferenca < -0.01 ? (
+        {diferenca < -SALDO_PENDENTE_EPS ? (
           <div className="flex justify-between gap-3 text-xs">
             <dt className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</dt>
             <dd className="tabular-nums font-bold text-destructive">

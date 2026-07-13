@@ -1,7 +1,10 @@
-import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
+import { roundMoney2 } from '@/shared/cart/totals'
 
-/** Limiar alinhado a `caixaVendas.impl` / RPC v4 (Fase 5b). */
+/** Limiar de saldo a receber — alinhado à RPC v4 / Fase 5b (`> 0.009`). */
 export const SALDO_PENDENTE_EPS = 0.009
+
+/** Limiar de troco / excesso de pagamento (Zod + UI). */
+export const EXCESSO_PAGAMENTO_EPS = 0.01
 
 export type ResumoParcelas = {
   somaParcelas: number

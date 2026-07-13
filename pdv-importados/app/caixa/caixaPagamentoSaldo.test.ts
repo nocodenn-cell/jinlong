@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
+  EXCESSO_PAGAMENTO_EPS,
   SALDO_PENDENTE_EPS,
   calcularResumoParcelas,
   pagamentoParcialExigeCliente,
 } from '@/app/caixa/caixaPagamentoSaldo'
 
 describe('caixaPagamentoSaldo', () => {
-  it('calcula saldo pendente e diferença', () => {
+  it('EPS canônicos: parcial 0.009 e excesso 0.01', () => {
+    expect(SALDO_PENDENTE_EPS).toBe(0.009)
+    expect(EXCESSO_PAGAMENTO_EPS).toBe(0.01)
+  })
+
+  it('calcularResumoParcelas: underpay e overpay', () => {
     const r = calcularResumoParcelas(100, 40)
     expect(r.somaParcelas).toBe(40)
     expect(r.diferenca).toBe(-60)

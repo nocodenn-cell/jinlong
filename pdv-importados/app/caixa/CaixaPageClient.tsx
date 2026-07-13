@@ -19,7 +19,7 @@ import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
-import { pagamentoParcialExigeCliente } from "@/app/caixa/caixaPagamentoSaldo"
+import { pagamentoParcialExigeCliente, EXCESSO_PAGAMENTO_EPS } from "@/app/caixa/caixaPagamentoSaldo"
 import {
   buildCheckoutSnapshot,
   validateCheckoutSnapshot,
@@ -866,7 +866,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       valor: p.valor,
     }))
     const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
-    if (excesso > 0.01) {
+    if (excesso > EXCESSO_PAGAMENTO_EPS) {
       let idxDinheiro = -1
       for (let i = parcelasNormalizadas.length - 1; i >= 0; i--) {
         if (parcelasNormalizadas[i].formaPagamento === "DINHEIRO") {
