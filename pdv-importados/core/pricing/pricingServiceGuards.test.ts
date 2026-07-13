@@ -76,3 +76,60 @@ describe('PricingService — enforcement de validade (Q2)', () => {
     expect(r.precoUnitario).toBe(50)
   })
 })
+
+describe('PricingService — BA-011 paridade precos_atacado', () => {
+  it('ATACADO com precoFixo usa preço absoluto', () => {
+    const regra: RegraPreco = {
+      id: 't1',
+      nome: 'ATACADO',
+      tipo: 'ATACADO',
+      minQuantidade: 10,
+      precoFixo: 80,
+      produtoId: 'p1',
+      ativo: true,
+    }
+    const r = svc.calcularPrecoItem(item(10, 100), [regra], {})
+    expect(r.tipoPreco).toBe('ATACADO')
+    expect(r.precoUnitario).toBe(80)
+  })
+
+  it('não aplica faixa de outro produto', () => {
+    const regra: RegraPreco = {
+      id: 't2',
+      nome: 'ATACADO',
+      tipo: 'ATACADO',
+      minQuantidade: 1,
+      precoFixo: 50,
+      produtoId: 'outro',
+      ativo: true,
+    }
+    const r = svc.calcularPrecoItem(item(5, 100), [regra], {})
+    expect(r.tipoPreco).toBe('VAREJO')
+    expect(r.precoUnitario).toBe(100)
+  })
+
+  it('escolhe maior quantidade_minima independente da ordem', () => {
+    const regras: RegraPreco[] = [
+      {
+        id: 't10',
+        nome: 'ATACADO',
+        tipo: 'ATACADO',
+        minQuantidade: 10,
+        precoFixo: 80,
+        produtoId: 'p1',
+        ativo: true,
+      },
+      {
+        id: 't50',
+        nome: 'ATACADO',
+        tipo: 'ATACADO',
+        minQuantidade: 50,
+        precoFixo: 70,
+        produtoId: 'p1',
+        ativo: true,
+      },
+    ]
+    const r = svc.calcularPrecoItem(item(50, 100), regras, {})
+    expect(r.precoUnitario).toBe(70)
+  })
+})

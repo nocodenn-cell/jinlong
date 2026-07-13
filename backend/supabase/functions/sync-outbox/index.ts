@@ -10,7 +10,7 @@
 // --- Matriz ?op= (após authorizeSync: chave + HMAC + nonce) ---
 // | Método | op (query)     | Handler / efeito           | Dados sensíveis na resposta |
 // |--------|----------------|----------------------------|-----------------------------|
-// | GET    | catalogo       | handleCatalogoSync         | Catálogo completo: produtos (preço, nome, codigo_barras, …) + regras_preco ativas — comercial sensível |
+// | GET    | catalogo       | handleCatalogoSync         | Catálogo: produtos + regras_preco + projeção precos_atacado (BA-011) — comercial sensível |
 // | GET    | pdv_config     | handlePdvConfigSync        | gerente_id, max_desconto…; strict_manager_auth (sem hash de senha) |
 // | GET    | outro/ausente  | —                          | 400 INVALID_OPERATION |
 // | POST   | validar_gerente| handleValidarGerentePdvSync| token gerente + expiração (se ok) — token sensível; erros genéricos |
@@ -701,7 +701,9 @@ async function processVenda(
 }
 
 async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
-  const [produtosRes, regrasRes] = await Promise.all([
+  // BA-011: SSoT de faixas Web = precos_atacado. Projetar no payload de regras
+  // para o cache Local (PricingService), sem dual-write em regras_preco.
+  const [produtosRes, regrasRes, atacadoRes] = await Promise.all([
     supabase
       .from("produtos")
       .select("id,nome,codigo_barras,preco_varejo,categoria_id,ativo,status_publicacao,origem,tem_nf,imagem_url")
@@ -712,12 +714,50 @@ async function handleCatalogoSync(req: Request, supabase: SupabaseAdmin) {
       .select("id,tipo_regra,produto_id,categoria_id,quantidade_minima,quantidade_maxima,tipo_desconto,valor_desconto,data_validade,ativo")
       .eq("ativo", true)
       .limit(100000),
+    supabase
+      .from("precos_atacado")
+      .select("id,produto_id,loja_id,quantidade_minima,preco_unitario,ativo")
+      .eq("ativo", true)
+      .is("loja_id", null)
+      .limit(100000),
   ]);
 
   if (produtosRes.error) throw new Error(`ERRO_CATALOGO_PRODUTOS: ${produtosRes.error.message}`);
   if (regrasRes.error) throw new Error(`ERRO_CATALOGO_REGRAS: ${regrasRes.error.message}`);
+  if (atacadoRes.error) throw new Error(`ERRO_CATALOGO_PRECOS_ATACADO: ${atacadoRes.error.message}`);
 
-  return jsonResponse(req, 200, { ok: true, produtos: produtosRes.data ?? [], regras: regrasRes.data ?? [] });
+  const regrasDeAtacado = projectPrecosAtacadoAsRegras(atacadoRes.data ?? []);
+  const regrasLegadas = regrasRes.data ?? [];
+  const regras = [...regrasDeAtacado, ...regrasLegadas];
+
+  return jsonResponse(req, 200, { ok: true, produtos: produtosRes.data ?? [], regras });
+}
+
+type PrecoAtacadoSyncRow = {
+  id: string;
+  produto_id: string;
+  loja_id: string | null;
+  quantidade_minima: number;
+  preco_unitario: number;
+  ativo: boolean;
+};
+
+/** Projeta faixas canônicas (precos_atacado) no shape consumido pelo cache Local. */
+function projectPrecosAtacadoAsRegras(rows: PrecoAtacadoSyncRow[]) {
+  return rows
+    .map((r) => ({
+      id: r.id,
+      tipo_regra: "ATACADO",
+      produto_id: r.produto_id,
+      categoria_id: null as string | null,
+      quantidade_minima: r.quantidade_minima,
+      quantidade_maxima: null as number | null,
+      tipo_desconto: "VALOR_FIXO",
+      valor_desconto: Number(r.preco_unitario),
+      data_validade: null as string | null,
+      ativo: true,
+    }))
+    .sort((a, b) => Number(b.quantidade_minima) - Number(a.quantidade_minima));
 }
 
 async function handlePdvConfigSync(req: Request, supabase: SupabaseAdmin) {

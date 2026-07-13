@@ -53,8 +53,14 @@ export class PricingService {
     let precoUnitario = precoOriginal
     let tipoPreco: ResultadoPreco['tipoPreco'] = 'VAREJO'
 
-    if (regraAplicavel.tipo === 'ATACADO' && item.quantidade >= (regraAplicavel.minQuantidade || 1)) {      const desconto = (precoOriginal * (regraAplicavel.descontoPercentual || 0)) / 100
-      precoUnitario = precoOriginal - desconto
+    if (regraAplicavel.tipo === 'ATACADO' && item.quantidade >= (regraAplicavel.minQuantidade || 1)) {
+      if (regraAplicavel.precoFixo != null) {
+        // Absoluto (faixas precos_atacado projetadas no sync) — paridade com RPC.
+        precoUnitario = regraAplicavel.precoFixo
+      } else {
+        const desconto = (precoOriginal * (regraAplicavel.descontoPercentual || 0)) / 100
+        precoUnitario = precoOriginal - desconto
+      }
       tipoPreco = 'ATACADO'
     } else if (regraAplicavel.tipo === 'PROMOCAO') {
       if (regraAplicavel.precoFixo != null) {
@@ -97,13 +103,17 @@ export class PricingService {
 
     if (regraPromocao) return regraPromocao
 
-    const regraAtacado = regrasAtivas.find(r => 
-      r.tipo === 'ATACADO' && 
-      item.quantidade >= (r.minQuantidade || 1) &&
-      this.verificarCondicoesRegra(item, r, ctx)
+    // BA-011: rpc escolher maior quantidade_minima; não depender da ordem do array.
+    const atacadoMatches = regrasAtivas.filter(
+      (r) =>
+        r.tipo === 'ATACADO' &&
+        item.quantidade >= (r.minQuantidade || 1) &&
+        this.verificarCondicoesRegra(item, r, ctx),
     )
-
-    return regraAtacado || null
+    if (atacadoMatches.length === 0) return null
+    return atacadoMatches.reduce((best, r) =>
+      (r.minQuantidade || 0) > (best.minQuantidade || 0) ? r : best,
+    )
   }
 
   /**
@@ -131,8 +141,14 @@ export class PricingService {
       return false
     }
 
-    // Verificar condições de perfil (se aplicável)
-    // Aqui poderíamos adicionar lógica mais complexa baseada no contexto
+    // Escopo produto/categoria (evita aplicar faixa de outro SKU).
+    if (regra.produtoId && regra.produtoId !== item.produtoId) {
+      return false
+    }
+    if (regra.categoriaId) {
+      const catItem = (item as { categoriaId?: string }).categoriaId
+      if (!catItem || regra.categoriaId !== catItem) return false
+    }
 
     return true
   }

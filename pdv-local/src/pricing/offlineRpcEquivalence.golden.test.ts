@@ -18,10 +18,9 @@
  *   4. senão                     → VAREJO (preco_varejo)
  *
  * ─── Invariante operacional para equivalência ─────────────────────────────────
- *   O RPC seleciona o tier de MAIOR quantidade_minima aplicável; PricingService
- *   usa `.find` (primeiro match na ordem do array). Para os dois concordarem, as
- *   regras offline devem chegar ordenadas por quantidade_minima DESC. Este teste
- *   constrói as regras nessa ordem e documenta a dependência explicitamente.
+ *   O RPC seleciona o tier de MAIOR quantidade_minima aplicável. PricingService
+ *   (BA-011) também escolhe o maior minQuantidade entre matches — a ordem do
+ *   array não deve alterar o resultado.
  */
 import { describe, it, expect } from 'vitest'
 import { pricingService } from '@shared/pricing/PricingService'
@@ -132,17 +131,33 @@ describe('Golden — equivalência Offline (PricingService) × RPC (calcular_pre
     })
   }
 
-  it('documenta a sensibilidade de ordenação: tiers em ordem ASC divergem em qty=50', () => {
-    // Mesmas regras, mas em ordem ASC (min10 antes de min50). PricingService.find
-    // pega o PRIMEIRO match (min10 → R$80), enquanto o RPC pega o maior (min50 → R$70).
+  it('BA-011: tiers em ordem ASC ainda concordam com RPC em qty=50', () => {
     const regrasAsc = [...regras].sort(
       (a, b) => Number(a.quantidade_minima) - Number(b.quantidade_minima),
     )
     const offAsc = precoOffline(VAREJO, regrasAsc, 50)
     const rpc = rpcCalcularPreco(PRODUTO, TIERS, 50, MIN_PADRAO)
-    // Prova a divergência: por isso o invariante exige DESC.
-    expect(offAsc.preco).toBe(80)
-    expect(rpc.preco).toBe(70)
-    expect(offAsc.preco).not.toBe(rpc.preco)
+    expect(offAsc.preco).toBe(rpc.preco)
+    expect(offAsc.preco).toBe(70)
+  })
+
+  it('BA-011: VALOR_FIXO (projeção precos_atacado) equivale ao RPC', () => {
+    const regrasFixas: RegraPrecoRow[] = TIERS.map((t, i) => ({
+      id: `f${i}`,
+      tipo_regra: 'ATACADO',
+      produto_id: 'p1',
+      categoria_id: null,
+      quantidade_minima: t.quantidade_minima,
+      quantidade_maxima: null,
+      tipo_desconto: 'VALOR_FIXO',
+      valor_desconto: t.preco_unitario,
+      data_validade: null,
+      ativo: true,
+    }))
+    for (const caso of CASOS.filter((c) => c.tipo === 'ATACADO')) {
+      const off = precoOffline(VAREJO, regrasFixas, caso.qty)
+      const rpc = rpcCalcularPreco(PRODUTO, TIERS, caso.qty, MIN_PADRAO)
+      expect(off.preco).toBe(rpc.preco)
+    }
   })
 })
