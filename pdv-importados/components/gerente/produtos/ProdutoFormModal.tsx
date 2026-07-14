@@ -51,11 +51,11 @@ async function aplicarEstoqueInicial(
   produtoId: string,
   qtyRaw: string,
   minRaw: string,
-): Promise<boolean> {
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const qty = Number.parseInt(qtyRaw || '0', 10)
   const min = Number.parseInt(minRaw || '0', 10)
   if ((!Number.isFinite(qty) || qty <= 0) && (!Number.isFinite(min) || min <= 0)) {
-    return true
+    return { ok: true }
   }
   const r = await atualizarEstoqueProduto({
     produto_id: produtoId,
@@ -64,7 +64,8 @@ async function aplicarEstoqueInicial(
     motivo: 'ACERTO_INVENTARIO',
     observacao: 'Estoque inicial no cadastro de produto',
   })
-  return r.ok === true
+  if (r.ok) return { ok: true }
+  return { ok: false, error: r.error }
 }
 
 async function sincronizarFaixaAtacado(
@@ -186,13 +187,16 @@ export function ProdutoFormModal({
         }
 
         let estoqueOk = true
+        let estoqueErro: string | null = null
         const createdId = !editando && r.data && 'id' in r.data ? r.data.id : null
         if (createdId) {
-          estoqueOk = await aplicarEstoqueInicial(
+          const estoqueRes = await aplicarEstoqueInicial(
             createdId,
             form.estoqueInicialQty,
             form.estoqueInicialMin,
           )
+          estoqueOk = estoqueRes.ok
+          if (!estoqueRes.ok) estoqueErro = estoqueRes.error
           await sincronizarFaixaAtacado(
             createdId,
             precoAtacado,
@@ -208,7 +212,12 @@ export function ProdutoFormModal({
         })()
         emitGerenteToast({ kind: 'success', message: msg })
         if (!estoqueOk) {
-          emitGerenteToast({ kind: 'error', message: p.erro_estoque_inicial })
+          emitGerenteToast({
+            kind: 'error',
+            message: estoqueErro
+              ? `${p.erro_estoque_inicial} (${estoqueErro})`
+              : p.erro_estoque_inicial,
+          })
         }
         onSaved()
 
