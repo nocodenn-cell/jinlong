@@ -56,6 +56,8 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         p_estoque_minimo: parsed.data.estoque_minimo,
         p_motivo_codigo: parsed.data.motivo,
         p_observacao: observacao ?? undefined,
+        // service_role → auth.uid() nulo; ator = sessão já validada em assertGerenteSession
+        p_ator_id: auth.session.userId,
       })
       if (error) {
         throw new Error(mensagemErroComSecao('Estoque', error.message))
