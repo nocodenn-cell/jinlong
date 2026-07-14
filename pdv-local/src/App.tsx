@@ -10,9 +10,9 @@ import { logger } from './lib/logger'
 import { usePdvLocalCatalogo } from './hooks/usePdvLocalCatalogo'
 import { usePdvLocalOutboxSync } from './hooks/usePdvLocalOutboxSync'
 import { usePdvLocalVendaCaixaFlow } from './hooks/usePdvLocalVendaCaixaFlow'
-import { pricingService } from '@shared/pricing/PricingService'
 import { parseQuantidadeCaixaInput } from '@shared/format/quantidadeCaixa'
 import { recalcularPrecoItemLocal } from './lib/recalcularPrecoItemLocal'
+import { resolverPrecoCanonicoLocal } from './lib/resolverPrecoCanonicoLocal'
 
 function mensagemEhErro(msg: string): boolean {
   return /^(falha|não foi possível|sessão|acesso negado|problema|muitas tentativas|dados inválidos|configuração inválida|limite de envio|este registro|você não tem permissão)/i.test(
@@ -86,7 +86,7 @@ export function App() {
     ultimoErroSincCatalogo,
     sincronizandoCatalogo,
     sincronizarCatalogoManual,
-    regrasRef,
+    precoCanonicoRef,
   } = usePdvLocalCatalogo({
     setRegras,
     setGerenteId,
@@ -101,14 +101,9 @@ export function App() {
       const quantidade = parseQuantidadeCaixaInput(novaQuantidade)
       alterarQuantidade(item.id, quantidade)
       if (quantidade <= 0) return
-      recalcularPrecoItemLocal(
-        item,
-        quantidade,
-        regrasRef.current,
-        useDesktopCartStore.getState().pricingCtx,
-      )
+      recalcularPrecoItemLocal(item, quantidade, precoCanonicoRef.current)
     },
-    [alterarQuantidade, regrasRef],
+    [alterarQuantidade, precoCanonicoRef],
   )
 
   const [confirmarLimparAte, setConfirmarLimparAte] = useState(0)
@@ -203,6 +198,10 @@ export function App() {
       return
     }
 
+    const atacadoCat =
+      typeof produto.preco_atacado === 'number' && Number.isFinite(produto.preco_atacado)
+        ? produto.preco_atacado
+        : null
     const itemBase: ItemCarrinho = {
       id: `${produto.id}-${Date.now()}`,
       produtoId: produto.id,
@@ -212,6 +211,10 @@ export function App() {
       precoUnitario: produto.preco_varejo,
       precoOriginal: produto.preco_varejo,
       categoriaId: produto.categoria_id ?? undefined,
+      metaPdv: {
+        precoVarejoReferencia: produto.preco_varejo,
+        precoAtacadoCatalogo: atacadoCat,
+      },
       resultado: {
         precoUnitario: produto.preco_varejo,
         precoOriginal: produto.preco_varejo,
@@ -219,10 +222,15 @@ export function App() {
         tipoPreco: 'VAREJO',
       },
     }
-    const resultado = pricingService.calcularPrecoItem(
-      itemBase,
-      regrasRef.current,
-      useDesktopCartStore.getState().pricingCtx,
+    const resultado = resolverPrecoCanonicoLocal(
+      {
+        id: produto.id,
+        ativo: produto.ativo !== false,
+        preco_varejo: produto.preco_varejo,
+        preco_atacado: atacadoCat,
+      },
+      1,
+      precoCanonicoRef.current,
     )
     const item: ItemCarrinho = {
       ...itemBase,

@@ -10,4 +10,6 @@ export type ItemCarrinho = {
   nome: string
   categoriaId?: string
   resultado: ResultadoPreco
+  /** Metadados PDV (referências de preço canônico, etc.). */
+  metaPdv?: Record<string, unknown>
 }

@@ -1,5 +1,9 @@
 /**
- * Serviço de precificação unificado
+ * Serviço de precificação.
+ *
+ * Preço AUTOMÁTICO (varejo/atacado) NÃO é decidido aqui —
+ * use `calcularPrecoCanonico` / PRICE_RESOLUTION_CHAIN.
+ * Este serviço permanece apenas para overrides PROMOCAO manuais.
  */
 
 import type { ItemCarrinho } from '../../shared-core/src/stores/unifiedCartStore'
@@ -14,9 +18,6 @@ export class PricingService {
     return item.precoUnitario ?? item.precoOriginal ?? item.precoVariejo ?? 0
   }
 
-  /**
-   * Recalcula preços do carrinho baseado nas regras e contexto
-   */
   recalcularCarrinho(
     itens: Array<ItemCarrinho & { resultado: ResultadoPreco }>,
     regras: RegraPreco[],
@@ -29,18 +30,18 @@ export class PricingService {
   }
 
   /**
-   * Calcula preço para um item específico
+   * Aplica apenas PROMOCAO (override). ATACADO automático → calcularPrecoCanonico.
    */
   calcularPrecoItem(
     item: ItemCarrinho,
     regras: RegraPreco[],
     ctx: PricingContext
   ): ResultadoPreco {
-    const regraAplicavel = this.encontrarRegraAplicavel(item, regras, ctx)
     const precoOriginalBase = this.resolverPrecoOriginal(item)
     const precoUnitarioBase = this.resolverPrecoUnitario(item)
-    
-    if (!regraAplicavel) {
+    const promocao = this.encontrarPromocao(item, regras, ctx)
+
+    if (!promocao) {
       return {
         precoUnitario: precoUnitarioBase,
         precoOriginal: precoOriginalBase,
@@ -51,23 +52,13 @@ export class PricingService {
 
     const precoOriginal = precoOriginalBase
     let precoUnitario = precoOriginal
-    let tipoPreco: ResultadoPreco['tipoPreco'] = 'VAREJO'
 
-    if (regraAplicavel.tipo === 'ATACADO' && item.quantidade >= (regraAplicavel.minQuantidade || 1)) {      const desconto = (precoOriginal * (regraAplicavel.descontoPercentual || 0)) / 100
-      precoUnitario = precoOriginal - desconto
-      tipoPreco = 'ATACADO'
-    } else if (regraAplicavel.tipo === 'PROMOCAO') {
-      if (regraAplicavel.precoFixo != null) {
-        precoUnitario = regraAplicavel.precoFixo
-      } else if (regraAplicavel.descontoPercentual) {
-        precoUnitario = precoOriginal - (precoOriginal * regraAplicavel.descontoPercentual) / 100
-      }
-      tipoPreco = 'PROMOCAO'
+    if (promocao.precoFixo != null) {
+      precoUnitario = promocao.precoFixo
+    } else if (promocao.descontoPercentual) {
+      precoUnitario = precoOriginal - (precoOriginal * promocao.descontoPercentual) / 100
     }
 
-    // Guard de piso: preço unitário nunca negativo e nunca acima do original
-    // (ex.: descontoPercentual > 100 ou precoFixo inválido). O desconto é derivado
-    // do preço já clampado para manter precoOriginal - descontoUnitario === precoUnitario.
     precoUnitario = Math.min(precoOriginal, Math.max(0, precoUnitario))
     const descontoUnitario = precoOriginal - precoUnitario
 
@@ -75,46 +66,28 @@ export class PricingService {
       precoUnitario: Math.round(precoUnitario * 100) / 100,
       precoOriginal,
       descontoUnitario: Math.round(descontoUnitario * 100) / 100,
-      tipoPreco
+      tipoPreco: 'PROMOCAO'
     }
   }
 
-  /**
-   * Encontra a regra mais aplicável para o item
-   */
-  private encontrarRegraAplicavel(
+  private encontrarPromocao(
     item: ItemCarrinho,
     regras: RegraPreco[],
     ctx: PricingContext
   ): RegraPreco | null {
-    const regrasAtivas = regras.filter(r => r.ativo)
-
-    // Prioridade: PROMOCAO > ATACADO > VAREJO
-    const regraPromocao = regrasAtivas.find(r => 
-      r.tipo === 'PROMOCAO' && 
-      this.verificarCondicoesRegra(item, r, ctx)
-    )
-
-    if (regraPromocao) return regraPromocao
-
-    const regraAtacado = regrasAtivas.find(r => 
-      r.tipo === 'ATACADO' && 
-      item.quantidade >= (r.minQuantidade || 1) &&
-      this.verificarCondicoesRegra(item, r, ctx)
-    )
-
-    return regraAtacado || null
+    return regras.find(
+      (r) =>
+        r.ativo &&
+        r.tipo === 'PROMOCAO' &&
+        this.verificarCondicoesRegra(item, r, ctx),
+    ) ?? null
   }
 
-  /**
-   * Verifica se as condições da regra são atendidas
-   */
   private verificarCondicoesRegra(
     item: ItemCarrinho,
     regra: RegraPreco,
     ctx: PricingContext
   ): boolean {
-    // Validade: regra vencida não se aplica (compara com dataReferencia do contexto ou agora).
     if (regra.dataValidade) {
       const validade = new Date(regra.dataValidade)
       const referencia = ctx.dataReferencia ?? new Date()
@@ -123,7 +96,6 @@ export class PricingService {
       }
     }
 
-    // Verificar limites de quantidade
     if (regra.minQuantidade && item.quantidade < regra.minQuantidade) {
       return false
     }
@@ -131,8 +103,13 @@ export class PricingService {
       return false
     }
 
-    // Verificar condições de perfil (se aplicável)
-    // Aqui poderíamos adicionar lógica mais complexa baseada no contexto
+    if (regra.produtoId && regra.produtoId !== item.produtoId) {
+      return false
+    }
+    if (regra.categoriaId) {
+      const catItem = (item as { categoriaId?: string }).categoriaId
+      if (!catItem || regra.categoriaId !== catItem) return false
+    }
 
     return true
   }
