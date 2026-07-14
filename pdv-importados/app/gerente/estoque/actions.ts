@@ -48,7 +48,13 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
   return runServerActionWithObservability(
     'gerente/estoque/atualizar',
     async () => {
-      const admin = createAdminClient()
+      let admin: ReturnType<typeof createAdminClient>
+      try {
+        admin = createAdminClient()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Falha na configuração do servidor de estoque.'
+        throw new Error(mensagemErroComSecao('Estoque', msg))
+      }
       const { error } = await admin.rpc('ajustar_estoque_manual', {
         p_produto_id: parsed.data.produto_id,
         p_loja_id: lojaId,

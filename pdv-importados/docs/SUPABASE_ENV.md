@@ -8,6 +8,7 @@ Este arquivo **não contém segredos** — só o que colocar em cada variável e
 |----------|---------|--------------------------------------------------------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | **URL do projeto** | Sempre começa com **`https://`** e termina com **`.supabase.co`** |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave **pública** (anon) | JWT longo começando com **`eyJ`** **ou**, no painel novo, chave **`sb_publishable_...`** (se a versão do `@supabase/supabase-js` / dashboard indicar uso dessa chave) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave **privada** (server only) | JWT `service_role` do Dashboard → API. **Obrigatória na Vercel (Production)** para estoque inicial no cadastro (`ajustar_estoque_manual` só com GRANT `service_role`). Nunca prefixo `NEXT_PUBLIC_`. |
 
 ### Erro comum (evite)
 
