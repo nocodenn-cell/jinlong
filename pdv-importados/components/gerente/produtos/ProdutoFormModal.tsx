@@ -72,15 +72,17 @@ async function sincronizarFaixaAtacado(
   produtoId: string,
   precoAtacado: number | null,
   gatilhoRaw: string,
-): Promise<void> {
-  if (precoAtacado == null || precoAtacado <= 0) return
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (precoAtacado == null || precoAtacado <= 0) return { ok: true }
   const gatilho = parseGatilhoSubmit(gatilhoRaw)
-  if (gatilho == null) return
-  await criarFaixaAtacado({
+  if (gatilho == null) return { ok: true }
+  const r = await criarFaixaAtacado({
     produto_id: produtoId,
     quantidade_minima: gatilho,
     preco_unitario: precoAtacado,
   })
+  if (r.success) return { ok: true }
+  return { ok: false, error: r.error }
 }
 
 export function ProdutoFormModal({
@@ -188,6 +190,8 @@ export function ProdutoFormModal({
 
         let estoqueOk = true
         let estoqueErro: string | null = null
+        let faixaOk = true
+        let faixaErro: string | null = null
         const createdId = !editando && r.data && 'id' in r.data ? r.data.id : null
         if (createdId) {
           const estoqueRes = await aplicarEstoqueInicial(
@@ -197,11 +201,13 @@ export function ProdutoFormModal({
           )
           estoqueOk = estoqueRes.ok
           if (!estoqueRes.ok) estoqueErro = estoqueRes.error
-          await sincronizarFaixaAtacado(
+          const faixaRes = await sincronizarFaixaAtacado(
             createdId,
             precoAtacado,
             form.quantidadeGatilho,
           )
+          faixaOk = faixaRes.ok
+          if (!faixaRes.ok) faixaErro = faixaRes.error
         }
 
         const msg = (() => {
@@ -217,6 +223,14 @@ export function ProdutoFormModal({
             message: estoqueErro
               ? `${p.erro_estoque_inicial} (${estoqueErro})`
               : p.erro_estoque_inicial,
+          })
+        }
+        if (!faixaOk) {
+          emitGerenteToast({
+            kind: 'error',
+            message: faixaErro
+              ? `${p.erro_faixa_inicial} (${faixaErro})`
+              : p.erro_faixa_inicial,
           })
         }
         onSaved()

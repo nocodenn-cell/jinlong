@@ -141,6 +141,8 @@ describe('consolidação pós-audit — guarda SSoT', () => {
     const modal = read('components/gerente/produtos/ProdutoFormModal.tsx')
     expect(modal).toContain('EXCEÇÃO SSoT')
     expect(modal).toContain('aplicarEstoqueInicial')
+    expect(modal).toContain('sincronizarFaixaAtacado')
+    expect(modal).toContain('erro_faixa_inicial')
     const rule = fs.readFileSync(path.resolve(ROOT, '..', '.cursor', 'rules', 'entity-ssot.mdc'), 'utf8')
     expect(rule).toContain('somente na criação')
   })
