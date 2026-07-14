@@ -105,11 +105,23 @@ pub struct ProdutoCacheDto {
     pub nome: String,
     pub codigo_barras: Option<String>,
     pub preco_varejo: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preco_atacado: Option<f64>,
     pub categoria_id: Option<String>,
     pub ativo: bool,
     pub status_publicacao: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imagem_url: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct PrecoAtacadoCacheDto {
+    pub id: String,
+    pub produto_id: String,
+    pub loja_id: Option<String>,
+    pub quantidade_minima: f64,
+    pub preco_unitario: f64,
+    pub ativo: bool,
 }
 
 #[derive(Serialize)]
@@ -130,18 +142,24 @@ pub struct RegraPrecoCacheDto {
 pub struct PdvConfigCacheDto {
     pub gerente_id: String,
     pub max_desconto_gerente_percentual: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quantidade_minima_atacado_padrao: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loja_id: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct CatalogoLocalDto {
     pub produtos: Vec<ProdutoCacheDto>,
     pub regras: Vec<RegraPrecoCacheDto>,
+    pub precos_atacado: Vec<PrecoAtacadoCacheDto>,
 }
 
 #[derive(Serialize)]
 pub struct SyncCatalogoResultDto {
     pub produtos_salvos: usize,
     pub regras_salvas: usize,
+    pub precos_atacado_salvos: usize,
 }
 
 pub fn db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -291,6 +309,25 @@ pub fn init_db(app: &tauri::AppHandle) -> Result<(), String> {
     let _ = conn.execute(
         "UPDATE produtos_cache SET status_publicacao = CASE WHEN ativo = 1 THEN 'PUBLICADO' ELSE 'INATIVO' END WHERE status_publicacao IS NULL",
         [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE produtos_cache ADD COLUMN preco_atacado REAL",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE pdv_config_cache ADD COLUMN quantidade_minima_atacado_padrao REAL",
+        [],
+    );
+    let _ = conn.execute("ALTER TABLE pdv_config_cache ADD COLUMN loja_id TEXT", []);
+    let _ = conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS precos_atacado_cache (
+          id TEXT PRIMARY KEY,
+          produto_id TEXT NOT NULL,
+          loja_id TEXT,
+          quantidade_minima REAL NOT NULL,
+          preco_unitario REAL NOT NULL,
+          ativo INTEGER NOT NULL
+        );",
     );
 
     Ok(())
@@ -634,7 +671,8 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
 
     let mut stmt = conn
         .prepare(
-            "SELECT gerente_id, max_desconto_gerente_percentual
+            "SELECT gerente_id, max_desconto_gerente_percentual,
+                    quantidade_minima_atacado_padrao, loja_id
              FROM pdv_config_cache
              WHERE id = 1",
         )
@@ -645,6 +683,8 @@ pub fn pdv_config_local_get(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
             Ok(PdvConfigCacheDto {
                 gerente_id: row.get(0)?,
                 max_desconto_gerente_percentual: row.get(1)?,
+                quantidade_minima_atacado_padrao: row.get(2)?,
+                loja_id: row.get(3)?,
             })
         })
         .optional();
@@ -665,7 +705,7 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
 
     let mut produtos_stmt = conn
         .prepare(
-            "SELECT id, nome, codigo_barras, preco_varejo, categoria_id, ativo, status_publicacao, imagem_url
+            "SELECT id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id, ativo, status_publicacao, imagem_url
              FROM produtos_cache",
         )
         .map_err(|e| e.to_string())?;
@@ -676,10 +716,11 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
             nome: row.get(1)?,
             codigo_barras: row.get(2)?,
             preco_varejo: row.get(3)?,
-            categoria_id: row.get(4)?,
-            ativo: row.get::<_, i64>(5)? != 0,
-            status_publicacao: row.get(6)?,
-            imagem_url: row.get(7)?,
+            preco_atacado: row.get(4)?,
+            categoria_id: row.get(5)?,
+            ativo: row.get::<_, i64>(6)? != 0,
+            status_publicacao: row.get(7)?,
+            imagem_url: row.get(8)?,
         })
     });
 
@@ -720,7 +761,36 @@ pub fn catalogo_local_get(app: &tauri::AppHandle) -> Result<CatalogoLocalDto, St
         Err(e) => return Err(e.to_string()),
     };
 
-    Ok(CatalogoLocalDto { produtos, regras })
+    let mut tiers_stmt = conn
+        .prepare(
+            "SELECT id, produto_id, loja_id, quantidade_minima, preco_unitario, ativo
+             FROM precos_atacado_cache",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let tiers_iter = tiers_stmt.query_map([], |row| {
+        Ok(PrecoAtacadoCacheDto {
+            id: row.get(0)?,
+            produto_id: row.get(1)?,
+            loja_id: row.get(2)?,
+            quantidade_minima: row.get(3)?,
+            preco_unitario: row.get(4)?,
+            ativo: row.get::<_, i64>(5)? != 0,
+        })
+    });
+
+    let precos_atacado: Vec<PrecoAtacadoCacheDto> = match tiers_iter {
+        Ok(it) => it
+            .map(|r| r.map_err(|e| e.to_string()))
+            .collect::<Result<Vec<_>, _>>()?,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    Ok(CatalogoLocalDto {
+        produtos,
+        regras,
+        precos_atacado,
+    })
 }
 
 // -----------------------------
@@ -732,6 +802,8 @@ struct ProdutoSupabaseRow {
     nome: String,
     codigo_barras: Option<String>,
     preco_varejo: f64,
+    #[serde(default)]
+    preco_atacado: Option<f64>,
     categoria_id: Option<String>,
     ativo: bool,
     #[serde(default)]
@@ -757,9 +829,28 @@ struct RegraPrecoSupabaseRow {
 }
 
 #[derive(Deserialize)]
+struct PrecoAtacadoSupabaseRow {
+    id: String,
+    produto_id: String,
+    loja_id: Option<String>,
+    quantidade_minima: f64,
+    preco_unitario: f64,
+    #[serde(default = "default_true")]
+    ativo: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Deserialize)]
 struct PdvConfigSupabaseRow {
     gerente_id: String,
     max_desconto_gerente_percentual: f64,
+    #[serde(default)]
+    quantidade_minima_atacado_padrao: Option<f64>,
+    #[serde(default)]
+    loja_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -769,6 +860,10 @@ struct EdgeCatalogoResponse {
     produtos: Vec<ProdutoSupabaseRow>,
     #[serde(default)]
     regras: Vec<RegraPrecoSupabaseRow>,
+    #[serde(default)]
+    precos_atacado: Vec<PrecoAtacadoSupabaseRow>,
+    #[serde(default)]
+    loja_id: Option<String>,
     error: Option<String>,
 }
 
@@ -858,6 +953,15 @@ fn signed_headers_for_request(
         "X-SYNC-SIGNATURE",
         reqwest::header::HeaderValue::from_str(&signature).map_err(|e| e.to_string())?,
     );
+    if let Ok(loja) = std::env::var("PDV_LOJA_ID") {
+        let loja = loja.trim();
+        if !loja.is_empty() {
+            headers.insert(
+                "x-loja-id",
+                reqwest::header::HeaderValue::from_str(loja).map_err(|e| e.to_string())?,
+            );
+        }
+    }
 
     Ok(headers)
 }
@@ -894,9 +998,11 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
 
     let produtos_rows = parsed.produtos;
     let regras_rows = parsed.regras;
+    let tiers_rows = parsed.precos_atacado;
 
     let produtos_len = produtos_rows.len();
     let regras_len = regras_rows.len();
+    let tiers_len = tiers_rows.len();
 
     let path = db_path(app)?;
     let mut conn = Connection::open(path).map_err(|e| e.to_string())?;
@@ -906,17 +1012,20 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
         .map_err(|e| e.to_string())?;
     tx.execute("DELETE FROM regras_preco_cache", [])
         .map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM precos_atacado_cache", [])
+        .map_err(|e| e.to_string())?;
 
     for p in produtos_rows {
         tx.execute(
             "INSERT OR REPLACE INTO produtos_cache
-             (id, nome, codigo_barras, preco_varejo, categoria_id, ativo, status_publicacao, origem, tem_nf, imagem_url)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+             (id, nome, codigo_barras, preco_varejo, preco_atacado, categoria_id, ativo, status_publicacao, origem, tem_nf, imagem_url)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 p.id,
                 p.nome,
                 p.codigo_barras,
                 p.preco_varejo,
+                p.preco_atacado,
                 p.categoria_id,
                 if p.ativo { 1 } else { 0 },
                 p.status_publicacao,
@@ -950,10 +1059,36 @@ pub fn sync_catalogo_real(app: &tauri::AppHandle) -> Result<SyncCatalogoResultDt
         .map_err(|e| e.to_string())?;
     }
 
+    for t in tiers_rows {
+        tx.execute(
+            "INSERT OR REPLACE INTO precos_atacado_cache
+             (id, produto_id, loja_id, quantidade_minima, preco_unitario, ativo)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                t.id,
+                t.produto_id,
+                t.loja_id,
+                t.quantidade_minima,
+                t.preco_unitario,
+                if t.ativo { 1 } else { 0 }
+            ],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    // Persistir loja do payload (quando Edge devolve) no config cache se já existir linha.
+    if let Some(loja) = parsed.loja_id {
+        let _ = tx.execute(
+            "UPDATE pdv_config_cache SET loja_id = ?1 WHERE id = 1",
+            params![loja],
+        );
+    }
+
     tx.commit().map_err(|e| e.to_string())?;
     Ok(SyncCatalogoResultDto {
         produtos_salvos: produtos_len,
         regras_salvas: regras_len,
+        precos_atacado_salvos: tiers_len,
     })
 }
 
@@ -1067,15 +1202,24 @@ pub fn sync_pdv_config_real(app: &tauri::AppHandle) -> Result<Option<PdvConfigCa
     let path = db_path(app)?;
     let conn = Connection::open(path).map_err(|e| e.to_string())?;
     conn.execute(
-        "INSERT OR REPLACE INTO pdv_config_cache (id, gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual)
-         VALUES (1, ?1, '', ?2)",
-        params![row.gerente_id, row.max_desconto_gerente_percentual],
+        "INSERT OR REPLACE INTO pdv_config_cache
+         (id, gerente_id, gerente_senha_sha256, max_desconto_gerente_percentual,
+          quantidade_minima_atacado_padrao, loja_id)
+         VALUES (1, ?1, '', ?2, ?3, ?4)",
+        params![
+            row.gerente_id,
+            row.max_desconto_gerente_percentual,
+            row.quantidade_minima_atacado_padrao,
+            row.loja_id
+        ],
     )
     .map_err(|e| e.to_string())?;
 
     Ok(Some(PdvConfigCacheDto {
         gerente_id: row.gerente_id,
         max_desconto_gerente_percentual: row.max_desconto_gerente_percentual,
+        quantidade_minima_atacado_padrao: row.quantidade_minima_atacado_padrao,
+        loja_id: row.loja_id,
     }))
 }
 

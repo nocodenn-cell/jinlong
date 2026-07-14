@@ -294,4 +294,33 @@ if (!allOk) {
   process.exit(1);
 }
 
+// BA-010: fechamento Local deve chamar a RPC atômica (não UPDATE direto em caixas).
+const syncOutboxPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "supabase",
+  "functions",
+  "sync-outbox",
+  "index.ts",
+);
+const syncSrc = fs.readFileSync(syncOutboxPath, "utf8");
+allOk =
+  runCase("CAIXA_FECHADO usa fechar_caixa_pdv_atomico", () => {
+    if (!syncSrc.includes('rpc("fechar_caixa_pdv_atomico"') &&
+        !syncSrc.includes("rpc('fechar_caixa_pdv_atomico'")) {
+      throw new Error("processCaixaFechado deve chamar fechar_caixa_pdv_atomico");
+    }
+    const fechadoFn = syncSrc.slice(
+      syncSrc.indexOf("async function processCaixaFechado"),
+      syncSrc.indexOf("async function processMovimentoCaixa"),
+    );
+    if (fechadoFn.includes('.from("caixas")') && fechadoFn.includes(".update(")) {
+      throw new Error("processCaixaFechado não deve fazer UPDATE direto em caixas");
+    }
+  }) && allOk;
+
+if (!allOk) {
+  process.exit(1);
+}
+
 console.log("✅ Contract smoke OK (sync-outbox v1)");
