@@ -75,6 +75,28 @@ export function hasCaixaOperadorUser(): boolean {
   )
 }
 
+/** Fase 5b UI Golden Flow: operador + service role para seed/assert de contas_receber. */
+export function hasFase5bGoldenFlowEnv(): boolean {
+  return (
+    hasCaixaOperadorUser() &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) &&
+    Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())
+  )
+}
+
+export function assertFase5bGoldenFlowEnvInCi(): void {
+  if (!isCi()) return
+  assertSupabasePublicEnvInCi()
+  if (!hasCaixaOperadorUser()) {
+    throw new Error(
+      'E2E Fase 5b no CI exige PLAYWRIGHT_CAIXA_TEST_EMAIL e PLAYWRIGHT_CAIXA_TEST_PASSWORD.',
+    )
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    throw new Error('E2E Fase 5b no CI exige SUPABASE_SERVICE_ROLE_KEY para seed/assert CR.')
+  }
+}
+
 export function caixaOperadorEmail(): string {
   return process.env.PLAYWRIGHT_CAIXA_TEST_EMAIL!.trim()
 }

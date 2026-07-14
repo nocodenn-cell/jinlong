@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { buscarClientesPaginadosAction, type ClienteListRow } from "@/app/gerente/clientes/actions"
+import { buscarClientesCaixa } from "@/app/caixa/actions"
 
 type Cliente = {
   id: string
@@ -28,15 +28,15 @@ export function CaixaSelecionarClienteModal({ aberto, onSelecionado, onCancelado
 
     setCarregando(true)
     try {
-      const resultado = await buscarClientesPaginadosAction(1, busca.trim())
+      const resultado = await buscarClientesCaixa(busca.trim())
 
       if (resultado.ok && resultado.clientes) {
         setClientes(
-          resultado.clientes.map((c: ClienteListRow) => ({
+          resultado.clientes.map((c) => ({
             id: c.id,
             nome: c.nome,
             documento: c.documento ?? undefined,
-          }))
+          })),
         )
       } else {
         setClientes([])

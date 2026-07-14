@@ -116,4 +116,26 @@ test.describe('Caixa — venda multi-pagamento (painel Pgto clássico)', () => {
 
     await finalizarVenda(page)
   })
+
+  test('pagamento parcial sem cliente abre modal Fase 5b (BA-001)', async ({ page }) => {
+    await gotoApp(page, '/caixa')
+    await expectCaixaShellVisible(page)
+    await ensureCaixaAberto(page, '300')
+    await adicionarProdutoDemo(page, e2eProdutoCodigoBarras())
+    await irParaAbaPgto(page)
+
+    const { inputs } = parcelasNoPainel(page)
+    const total = await readTotalLiquidoFooter(page)
+    const paga = round2(total * 0.4)
+    await inputs.nth(0).fill(String(paga))
+
+    await expect(page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i })).toBeEnabled({
+      timeout: 15_000,
+    })
+    await page.getByRole('button', { name: /Finalizar venda|完成销售|完成銷售/i }).click()
+
+    await expect(page.getByRole('heading', { name: /Selecionar Cliente/i })).toBeVisible({
+      timeout: 15_000,
+    })
+  })
 })

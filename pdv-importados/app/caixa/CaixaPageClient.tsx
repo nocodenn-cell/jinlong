@@ -19,6 +19,7 @@ import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
+import { pagamentoParcialExigeCliente, EXCESSO_PAGAMENTO_EPS } from "@/app/caixa/caixaPagamentoSaldo"
 import {
   buildCheckoutSnapshot,
   validateCheckoutSnapshot,
@@ -849,12 +850,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     const totalPagamentos = roundMoney2(
       pagamentos.reduce((acc, pagamento) => acc + pagamento.valor, 0),
     )
-    if (totalPagamentos < totalLiquidoComGerente - 0.01) {
+    // Fase 5b (BA-001): underpay permitido — saldo vira contas a receber.
+    // Sem cliente, abre modal (SSoT alinhada a caixaPagamentoSaldo + RPC v4).
+    if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
+      setSelecionarClienteModalAberto(true)
       setCaixaMensagem(
-        caixaFmt(m.caixa.msg_pagamento_split_invalido, {
-          esperado: formatDecimalBRL(totalLiquidoComGerente),
-          informado: formatDecimalBRL(totalPagamentos),
-        }),
+        "Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.",
         { kind: "warning" },
       )
       return
@@ -865,7 +866,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       valor: p.valor,
     }))
     const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
-    if (excesso > 0.01) {
+    if (excesso > EXCESSO_PAGAMENTO_EPS) {
       let idxDinheiro = -1
       for (let i = parcelasNormalizadas.length - 1; i >= 0; i--) {
         if (parcelasNormalizadas[i].formaPagamento === "DINHEIRO") {
@@ -921,11 +922,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (!vendaIdempotenciaRef.current) {
         vendaIdempotenciaRef.current = crypto.randomUUID()
       }
-      // ✅ VALIDAÇÃO FASE 5b: Se há saldo pendente, validar cliente antes de finalizar
-      if (saldoPendente > 0.009 && !clienteId) {
+      // Defense-in-depth Fase 5b (já checado no início de handleFinalizar)
+      if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
         setSelecionarClienteModalAberto(true)
         setFinalizando(false)
-        setCaixaMensagem('Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.', { kind: "warning" })
+        setCaixaMensagem(
+          "Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.",
+          { kind: "warning" },
+        )
         return
       }
 
