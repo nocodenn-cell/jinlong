@@ -103,9 +103,12 @@ describe('admin v2 ui hardening', () => {
   it('admin loading route usa token de superfície (tema claro único, Fase 0)', () => {
     // Antes exigia '#0a0a0a' (era dark). Após a migração Layout Compiler Fase 0
     // (tema claro único), fundo escuro hardcoded é PROIBIDO — inclusive por
-    // lint (no-restricted-syntax). O loading usa token de superfície.
+    // lint (no-restricted-syntax). O loading usa Skeleton (token `bg-muted`)
+    // sobre classes admin-v2 (`admin-v2-page`, `var(--admin-v2-border)`) —
+    // nenhuma cor literal, só tokens de design.
     const src = fs.readFileSync(path.join(ROOT, 'app', 'admin', 'loading.tsx'), 'utf8')
-    expect(src).toContain('bg-jl-surface-soft')
-    expect(src).not.toContain('#0a0a0a')
+    expect(src).toContain('components/ui/skeleton')
+    expect(src).toContain('admin-v2-page')
+    expect(src).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
   })
 })

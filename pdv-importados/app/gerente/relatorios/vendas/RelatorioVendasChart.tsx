@@ -1,6 +1,7 @@
 'use client'
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ChartLayoutGate } from '@/components/charts/ChartLayoutGate'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 
 export type RelatorioVendasChartProps = {
@@ -11,7 +12,7 @@ export type RelatorioVendasChartProps = {
 
 export default function RelatorioVendasChart({ data, locale, faturamentoLabel }: RelatorioVendasChartProps) {
   return (
-    <div className="h-[260px] w-full">
+    <ChartLayoutGate className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           {/* stroke/fill viram ATRIBUTOS SVG → não resolvem var()/color-mix; ficam literais. */}
@@ -42,6 +43,6 @@ export default function RelatorioVendasChart({ data, locale, faturamentoLabel }:
           <Bar dataKey="total_liquido" fill="var(--jl-accent)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartLayoutGate>
   )
 }

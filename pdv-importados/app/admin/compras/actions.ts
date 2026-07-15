@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -316,7 +317,7 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
   const { error: e2 } = await supabase.from('ordens_compra_itens').insert(itensRows)
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da ordem', e2.message) }
 
-  revalidatePath('/gerente/compras')
+  revalidatePath(ROUTES.admin.compras)
   return { success: true, data: oc.id }
 }
 
@@ -371,7 +372,7 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
   const { error: e2 } = await supabase.from('ordens_compra_itens').insert(itensRows)
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da ordem', e2.message) }
 
-  revalidatePath('/gerente/compras')
+  revalidatePath(ROUTES.admin.compras)
   return { success: true, data: null }
 }
 
@@ -406,7 +407,7 @@ export async function atualizarStatusOC(id: string, novoStatus: StatusOC): Promi
 
   if (error) return { success: false, error: mensagemErroComSecao('Status', error.message) }
 
-  revalidatePath('/gerente/compras')
+  revalidatePath(ROUTES.admin.compras)
   return { success: true, data: null }
 }
 
@@ -429,7 +430,7 @@ export async function registrarRecebimentoOC(
 
   if (error) return { success: false, error: mensagemErroComSecao('Recebimento', error.message) }
 
-  revalidatePath('/gerente/compras')
-  revalidatePath('/gerente/estoque')
+  revalidatePath(ROUTES.admin.compras)
+  revalidatePath(ROUTES.admin.estoque)
   return { success: true, data: null }
 }

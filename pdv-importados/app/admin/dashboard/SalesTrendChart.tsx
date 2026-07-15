@@ -3,7 +3,7 @@
 import { formatNumberLocale } from '@/lib/format/money'
 import { useIdioma } from '@/hooks/useIdioma'
 import { ChartLayoutGate } from '@/components/charts/ChartLayoutGate'
-import { useEffect, useId, useState } from 'react'
+import { useId } from 'react'
 import {
   Area,
   AreaChart,
@@ -47,27 +47,20 @@ export default function SalesTrendChart({
   data: SalesPoint[]
   variant?: keyof typeof THEMES
 }) {
-  const [ready, setReady] = useState(false)
   const { idioma } = useIdioma()
   const gradId = useId().replace(/:/g, '')
   const t = THEMES[variant]
 
-  useEffect(() => {
-    setReady(true)
-  }, [])
-
-  if (!ready) {
-    return (
-      <div
-        className={`h-full w-full animate-pulse rounded-md ${
-          variant === 'oriental' ? 'bg-[var(--color-warning-50)]/80' : 'border border-jl-border-1 bg-jl-surface-soft'
-        }`}
-      />
-    )
-  }
+  const placeholder = (
+    <div
+      className={`h-full w-full animate-pulse rounded-md ${
+        variant === 'oriental' ? 'bg-[var(--color-warning-50)]/80' : 'border border-jl-border-1 bg-jl-surface-soft'
+      }`}
+    />
+  )
 
   return (
-    <ChartLayoutGate>
+    <ChartLayoutGate fallback={placeholder}>
       <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} className={idioma === 'zh' ? 'font-noto-sc' : ''}>
         <defs>
