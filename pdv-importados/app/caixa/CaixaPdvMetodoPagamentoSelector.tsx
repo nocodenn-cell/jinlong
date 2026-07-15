@@ -45,22 +45,24 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
         {m.caixa.pdv_metodo_pagamento_titulo}
       </span>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-        {OPCOES.map((op) => {
+        {OPCOES.map((op, i) => {
           const selected = value === op.id
           // Obtém o texto da chave correta em m.caixa (como string)
           const label = m.caixa[op.labelKey] as string
+          const atalho = i + 1
           return (
             <button
               key={op.id}
               type="button"
               role="radio"
               aria-checked={selected}
+              aria-keyshortcuts={`${atalho}`}
               disabled={disabled}
-              title={label}
+              title={`${label} (tecla ${atalho})`}
               className={cn(
                 // #32 hit-target de toque (tablet/touch): 44px (antes 36px) p/ os
                 // botões mais tocados do PDV — PIX/Cartão/Dinheiro/Débito.
-                "min-h-11 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
+                "relative min-h-11 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
                 classic
                   ? selected
                     ? "border border-primary bg-primary/10 text-primary shadow-sm"
@@ -71,6 +73,15 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
               )}
               onClick={() => onChange(op.id)}
             >
+              <span
+                aria-hidden
+                className={cn(
+                  "absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded text-[10px] font-bold tabular-nums",
+                  selected ? "bg-black/15 text-current" : "bg-black/10 text-jl-fg-3",
+                )}
+              >
+                {atalho}
+              </span>
               {label}
             </button>
           )

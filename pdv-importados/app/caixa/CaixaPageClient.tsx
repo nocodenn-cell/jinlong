@@ -1094,6 +1094,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }, []),
     onConsultaRapida: () => setConsultaRapidaAberta(true),
     onDesfazerRemocao: handleDesfazerRemocao,
+    onSelecionarMetodo: useCallback(
+      (indice: 1 | 2 | 3 | 4) => {
+        if (pagamentoControlesDesabilitados) return
+        const metodos: MetodoPagamentoUi[] = ["dinheiro", "pix", "debito", "credito"]
+        setMetodoPagamento(metodos[indice - 1])
+      },
+      [pagamentoControlesDesabilitados],
+    ),
     pdvClassicAtalhos,
   })
 
