@@ -103,10 +103,16 @@ export function DragonModal({
         }
         const first = focusables[0]
         const last = focusables[focusables.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
+        const active = document.activeElement
+        const activeDentro = active instanceof HTMLElement && focusables.includes(active)
+        // Se o foco está FORA do ciclo (ex.: no próprio cartão tabIndex=-1 após
+        // abrir, ou escapou para trás do modal), puxa de volta para dentro:
+        // Tab → primeiro, Shift+Tab → último. Sem isso, Shift+Tab a partir do
+        // cartão vazaria o foco para fora do diálogo.
+        if (e.shiftKey && (active === first || !activeDentro)) {
           e.preventDefault()
           last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
+        } else if (!e.shiftKey && (active === last || !activeDentro)) {
           e.preventDefault()
           first.focus()
         }

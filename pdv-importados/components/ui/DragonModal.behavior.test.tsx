@@ -112,6 +112,57 @@ describe('DragonModal', () => {
     expect(card.className).not.toContain('items-end')
   })
 
+  it('Shift+Tab a partir do cartão NÃO vaza — foca o último focável', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const card = document.querySelector('.dragon-elev-2') as HTMLElement
+    card.focus()
+    expect(document.activeElement).toBe(card)
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }))
+
+    const salvar = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Salvar',
+    )
+    expect(document.activeElement).toBe(salvar)
+  })
+
+  it('Tab a partir do último focável cicla para o primeiro', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const salvar = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Salvar',
+    ) as HTMLElement
+    salvar.focus()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }))
+
+    expect(document.activeElement).toBe(document.querySelector('[aria-label="Fechar"]'))
+  })
+
+  it('Shift+Tab a partir do primeiro focável cicla para o último', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const x = document.querySelector('[aria-label="Fechar"]') as HTMLElement
+    x.focus()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }))
+
+    const salvar = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Salvar',
+    )
+    expect(document.activeElement).toBe(salvar)
+  })
+
   it('restaura o overflow do body ao fechar', () => {
     render(
       <DragonModal open onClose={() => {}} title="T">
