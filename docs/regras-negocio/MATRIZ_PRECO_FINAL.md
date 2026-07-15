@@ -150,17 +150,20 @@ Rastreado para remoção — não é autoridade de nada:
 
 ## 10. Testes que representam o contrato
 
-| Regra | Teste |
-|-------|-------|
-| Preço automático (tier/catálogo/varejo/fracionado) | `shared-core/src/pricing/calcularPrecoCanonico.spec.ts` |
-| Paridade Web≡Local | `pdv-local/src/pricing/offlineRpcEquivalence.golden.test.ts` |
-| Desconto de gerente (clamp/valor) | `shared-core/src/managerDiscount/policy.test.ts` |
-| Totais do carrinho | `shared/cart` + `pdv-importados/app/caixa/carrinhoStore.behavior.test.ts` |
-| Finalização (revalidação/totais) | `pdv-importados/app/caixa/finalizarVendaCaixa.integration.test.ts` |
+| Regra | Autoridade | Teste | Camada |
+|-------|-----------|-------|--------|
+| Preço automático (tier/catálogo/varejo/fracionado) | `calcularPrecoCanonico` | `shared-core/src/pricing/calcularPrecoCanonico.spec.ts` | vitest (local) |
+| Paridade Web≡Local (preço) | `calcularPrecoCanonico` | `pdv-local/src/pricing/offlineRpcEquivalence.golden.test.ts` | vitest (local) |
+| Desconto de gerente (clamp/cap/acumulação sobre o total/arredondamento) | `managerDiscount/policy.ts` | `shared-core/src/managerDiscount/policy.test.ts` | vitest (local) |
+| Totais do carrinho | `shared/cart/totals.ts` | `pdv-importados/app/caixa/carrinhoStore.behavior.test.ts` | vitest (local) |
+| Finalização (revalidação/totais) | RPC v4 | `pdv-importados/app/caixa/finalizarVendaCaixa.integration.test.ts` | vitest (local) |
+| Teto de 15% por item (rejeita MANUAL>15%, isenta ATACADO) | trigger 122 | `backend/supabase/scripts/smoke_122_teto_desconto_manual_item.sql` | SQL smoke (DEV/staging) |
+| Web×Local: `tipo_preco` sintético no Local | RPC 014 | `backend/supabase/scripts/smoke_014_local_tipo_preco_sintetico.sql` | SQL smoke (DEV/staging) |
 
-**Lacunas conhecidas** (não bloqueiam o contrato; recomenda-se adicionar):
-- teto de 15% por item (trigger 122) e acumulação do desconto de gerente sobre o total;
-- divergência Web/Local de `tipo_preco` e do teto por item (§5) — nenhum teste fixa hoje que o Local rotula descontos como ATACADO.
+Cada regra é testada **na sua camada de autoridade**: a lógica em TypeScript por
+vitest (executável localmente); os invariantes que vivem em trigger/RPC do Postgres
+por smoke SQL (convenção DEV/staging do repo, ex.: `smoke_023_*`), exigindo um banco
+com fixtures — não reimplementados em TS para não criar autoridade paralela.
 
 ---
 
