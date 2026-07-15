@@ -2,7 +2,9 @@
  * REGRA DE PRECEDÊNCIA DE PREÇO — fonte canônica.
  *
  * Qualquer código que calcule, exiba ou valide preço DEVE seguir esta ordem.
- * A implementação autoritativa vive na RPC `calcular_preco_produto` (migration 234).
+ * A implementação autoritativa vive na RPC `calcular_preco_produto`. Origem:
+ * migration 234 (SECURITY DEFINER); precedência formalizada e contrato de saída
+ * simétrico { preco, tipo, fonte, regra_id } fixados nas migrations 245 e 250.
  * Este arquivo documenta a mesma lógica em TypeScript para que a regra seja
  * encontrável, testável e resistente a refatorações.
  *

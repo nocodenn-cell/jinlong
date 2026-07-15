@@ -14,21 +14,22 @@ export type RegraPrecoRow = {
 }
 
 /**
- * Normalização canônica de discriminadores textuais vindos de fora do motor.
+ * Normalização canônica de discriminadores textuais de `regras_preco`.
  *
- * No Postgres, `tipo_regra` tem CHECK ('PRODUTO','CATEGORIA') e `tipo_desconto`
- * chega uppercase — mas o pdv-local consome cópias sincronizadas em SQLite
- * (sem CHECK) e o PricingService compara `tipo` por igualdade EXATA. Uma linha
- * com caixa divergente passaria silenciosamente como não-match (preço varejo
- * mantido, sem desconto). Normalizar aqui torna a garantia explícita no único
- * ponto de entrada do motor, em vez de depender do transporte.
+ * ⚠️ `regras_preco` NÃO é autoridade de preço (ver MATRIZ_PRECO_FINAL.md §Legado).
+ * O preço automático é resolvido exclusivamente por `calcular_preco_produto` ≡
+ * `PRICE_RESOLUTION_CHAIN`. Este mapper permanece apenas como transporte legado
+ * (as linhas são sincronizadas/armazenadas mas nenhum consumidor as aplica ao
+ * preço). Mantém-se a normalização de caixa para não deixar dados inconsistentes
+ * em `pdv-local` (SQLite sem CHECK) enquanto o plumbing legado não é removido.
  */
 function normalizeDiscriminator(value: string): string {
   return String(value ?? '').trim().toUpperCase()
 }
 
 /**
- * Converte linhas de regras_preco para o tipo do motor de preço.
+ * Converte linhas de regras_preco para RegraPreco (transporte legado — não é
+ * consumido pelo cálculo de preço; ver MATRIZ_PRECO_FINAL.md).
  */
 export function mapRegraPrecoRow(row: RegraPrecoRow): RegraPreco {
   const qMin = Number(row.quantidade_minima)

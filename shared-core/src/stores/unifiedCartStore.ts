@@ -14,8 +14,6 @@ export interface ItemCarrinho {
   precoVariejo?: number
   precoUnitario?: number
   precoOriginal?: number
-  /** Piso de preço: desconto manual não pode levar o precoUnitario abaixo deste valor. */
-  precoMinimo?: number
   nome: string
   descricao?: string
   sku?: string
@@ -193,8 +191,8 @@ function updateItemQuantity(itens: ItemCarrinho[], id: string, quantidade: numbe
 
 function applyItemDiscount(item: ItemCarrinho, descontoValor: number): ItemCarrinho {
   const precoOriginal = item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
-  const floor = typeof item.precoMinimo === 'number' && item.precoMinimo > 0 ? item.precoMinimo : 0
-  const precoComDesconto = Math.max(floor, roundMoney(precoOriginal - descontoValor))
+  // Piso canônico do desconto manual: R$ 0,00 (nunca negativo). Ver MATRIZ_PRECO_FINAL.md §D.
+  const precoComDesconto = Math.max(0, roundMoney(precoOriginal - descontoValor))
   return normalizarItemCarrinho({
     ...item,
     precoOriginal,
