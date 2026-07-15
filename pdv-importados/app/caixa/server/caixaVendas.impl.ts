@@ -177,15 +177,8 @@ export async function finalizarVendaCaixaImpl(
 
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
 
-    const itensCliente = input.itens.map((i) => ({
-      produtoId: i.produtoId,
-      quantidade: i.quantidade,
-      precoOriginal: i.precoOriginal,
-      precoUnitario: i.precoUnitario,
-      tipoPreco: i.tipoPreco,
-    }))
-
-    const recalc = await recalcularItensNoServidor(supabase, itensCliente, lojaId)
+    // input.itens já é a forma canônica (ItemFinalizarVenda) — sem remapeamento manual.
+    const recalc = await recalcularItensNoServidor(supabase, input.itens, lojaId)
     if (!recalc.ok) return { ok: false, error: recalc.error }
 
     const itensAut = recalc.itens

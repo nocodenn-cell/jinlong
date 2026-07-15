@@ -95,6 +95,13 @@ export const finalizarVendaInputSchema = z.object({
 })
 
 export type FinalizarVendaInput = z.infer<typeof finalizarVendaInputSchema>
+
+/**
+ * Item de venda — forma canônica na fronteira de wire (client→server).
+ * `ItemAutoritativo` (caixaPrecoAutoritativoServer.ts) estende este tipo com
+ * os campos de revalidação/auditoria; não redeclara os campos base.
+ */
+export type ItemFinalizarVenda = z.infer<typeof itemFinalizarVendaSchema>
 export type ItemTotalizacaoServidor = {
   precoOriginal: number
   precoUnitario: number

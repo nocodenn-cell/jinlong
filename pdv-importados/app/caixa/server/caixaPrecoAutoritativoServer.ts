@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { roundMoney2 } from '@/app/caixa/finalizarVendaValidation'
+import { roundMoney2, type ItemFinalizarVenda } from '@/app/caixa/finalizarVendaValidation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
   filtrarSomenteProdutosVendaveis,
@@ -10,13 +10,14 @@ import { isPricingVersionRpcAusente } from '@/app/caixa/server/pricingVersionRpc
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
-export type ItemAutoritativo = {
-  produtoId: string
-  quantidade: number
-  precoOriginal: number
-  precoUnitario: number
+/**
+ * Item de venda revalidado no servidor — estende o item canônico de wire
+ * (`ItemFinalizarVenda`, mesma forma que chega em `FinalizarVendaInput.itens`)
+ * com os campos de auditoria/observabilidade resolvidos nesta revalidação.
+ * Não redeclara produtoId/quantidade/precoOriginal/precoUnitario/tipoPreco.
+ */
+export type ItemAutoritativo = ItemFinalizarVenda & {
   descontoUnitario: number
-  tipoPreco: 'VAREJO' | 'ATACADO' | 'MANUAL' | 'PROMOCAO'
   /** Observabilidade visual (não usado em cálculo): snapshot de produtos.preco_custo. */
   custoUnitarioSnap: number | null
   /** Observabilidade visual (não usado em cálculo): id da faixa/regra usada como referência. */
@@ -38,13 +39,8 @@ export type ItemAutoritativo = {
   pricingVersionId: string | null
 }
 
-export type ItemEntradaFinalizacao = {
-  produtoId: string
-  quantidade: number
-  precoOriginal: number
-  precoUnitario: number
-  tipoPreco: ItemAutoritativo['tipoPreco']
-}
+/** Entrada da revalidação — é o próprio item canônico de wire, sem campos extras. */
+export type ItemEntradaFinalizacao = ItemFinalizarVenda
 
 const EPS_PRECO = 0.02
 
