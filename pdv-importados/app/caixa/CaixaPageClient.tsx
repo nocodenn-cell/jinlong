@@ -19,11 +19,8 @@ import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
-import { pagamentoParcialExigeCliente, EXCESSO_PAGAMENTO_EPS } from "@/app/caixa/caixaPagamentoSaldo"
-import {
-  buildCheckoutSnapshot,
-  validateCheckoutSnapshot,
-} from "@shared-core/src/caixa/checkoutSnapshot"
+import { pagamentoParcialExigeCliente } from "@/app/caixa/caixaPagamentoSaldo"
+import { buildFinalizarVendaPayload } from "@/app/caixa/buildFinalizarVendaPayload"
 import { aplicarDescontoGerenteSobreTotal } from "@/stores/managerDiscount"
 import { getDeviceFingerprint } from "@/lib/security/deviceFingerprint"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -847,9 +844,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       setCaixaMensagem(m.caixa.msg_token_expirado, { kind: "warning" })
       return
     }
-    const totalPagamentos = roundMoney2(
-      pagamentos.reduce((acc, pagamento) => acc + pagamento.valor, 0),
-    )
     // Fase 5b (BA-001): underpay permitido — saldo vira contas a receber.
     // Sem cliente, abre modal (SSoT alinhada a caixaPagamentoSaldo + RPC v4).
     if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
@@ -860,60 +854,31 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       )
       return
     }
-    // Normalizar parcelas: desconta troco da última parcela DINHEIRO
-    const parcelasNormalizadas = pagamentos.map((p) => ({
-      formaPagamento: p.formaPagamento,
-      valor: p.valor,
-    }))
-    const excesso = roundMoney2(totalPagamentos - totalLiquidoComGerente)
-    if (excesso > EXCESSO_PAGAMENTO_EPS) {
-      let idxDinheiro = -1
-      for (let i = parcelasNormalizadas.length - 1; i >= 0; i--) {
-        if (parcelasNormalizadas[i].formaPagamento === "DINHEIRO") {
-          idxDinheiro = i
-          break
-        }
-      }
-      // Always distribute from back to front; prioritise DINHEIRO parcel first
-      let remaining = excesso
-      if (idxDinheiro >= 0 && remaining > 0.001) {
-        const deduct = Math.min(parcelasNormalizadas[idxDinheiro].valor, remaining)
-        parcelasNormalizadas[idxDinheiro].valor = roundMoney2(
-          parcelasNormalizadas[idxDinheiro].valor - deduct,
-        )
-        remaining = roundMoney2(remaining - deduct)
-      }
-      for (let i = parcelasNormalizadas.length - 1; i >= 0 && remaining > 0.001; i--) {
-        if (i === idxDinheiro) continue
-        const deduct = Math.min(parcelasNormalizadas[i].valor, remaining)
-        parcelasNormalizadas[i].valor = roundMoney2(parcelasNormalizadas[i].valor - deduct)
-        remaining = roundMoney2(remaining - deduct)
-      }
-    }
-    const parcelasFiltradas = parcelasNormalizadas.filter((p) => p.valor > 0)
-    const parcelasParaEnviar =
-      parcelasFiltradas.length > 0
-        ? parcelasFiltradas
-        : [{ formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO", valor: 0 }]
 
-    // GUARD RAIL — snapshot imutável da venda + validação fail-fast contra a
-    // função canônica de totais. Bloqueia a finalização (sem fallback silencioso)
-    // se houver qualquer inconsistência entre o carrinho exibido e os itens reais.
-    const checkoutSnapshot = buildCheckoutSnapshot(itens, {
+    // Ponto único de montagem do payload (snapshot imutável + validação
+    // fail-fast + normalização de troco) — ver app/caixa/buildFinalizarVendaPayload.ts.
+    const payloadResult = buildFinalizarVendaPayload({
+      itens,
       totalBruto,
-      totalLiquido,
       totalDesconto,
+      totalLiquido,
+      descontoGerentePercentualEfetivo,
+      valorDescontoGerente,
+      totalLiquidoComGerente,
+      gerenteToken,
+      pagamentos,
+      clienteId,
     })
-    const snapshotCheck = validateCheckoutSnapshot(checkoutSnapshot)
-    if (!snapshotCheck.ok) {
-      console.error("[caixa/checkout-snapshot]", snapshotCheck.violations)
+    if (!payloadResult.ok) {
+      console.error("[caixa/checkout-snapshot]", payloadResult.violations)
       setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
       // Diagnóstico concreto: nunca bloquear sem dizer o motivo (a 1ª violação do
       // snapshot já é uma mensagem legível, ex.: "Carrinho vazio — nada a finalizar.").
-      setCheckoutHint(snapshotCheck.violations[0]?.message ?? m.caixa.msg_checkout_hint_cupom)
+      setCheckoutHint(payloadResult.violations[0]?.message ?? m.caixa.msg_checkout_hint_cupom)
       tocarFeedback("erro")
       return
     }
+    const parcelasParaEnviar = payloadResult.payload.pagamentos
 
     setFinalizando(true)
     setCaixaMensagem(null)
@@ -934,29 +899,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       }
 
       const payload: FinalizarVendaInput = {
+        ...payloadResult.payload,
         idempotencyKey: vendaIdempotenciaRef.current,
-        formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
-        totalBruto,
-        totalDesconto:
-          descontoGerentePercentualEfetivo > 0
-            ? roundMoney2(totalDesconto + valorDescontoGerente)
-            : totalDesconto,
-        totalLiquido: totalLiquidoComGerente,
-        descontoGerenteToken:
-          descontoGerentePercentualEfetivo > 0 ? gerenteToken ?? undefined : undefined,
-        descontoGerentePercentual:
-          descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
-        pagamentos: parcelasParaEnviar,
-        // Itens derivados do snapshot imutável já validado — não do store mutável.
-        itens: checkoutSnapshot.itens.map((i) => ({
-          produtoId: i.produtoId,
-          quantidade: i.quantidade,
-          precoOriginal: i.precoOriginal,
-          precoUnitario: i.precoUnitario,
-          tipoPreco: i.tipoPreco,
-        })),
-        clienteId: clienteId ?? undefined,  // ✅ NOVO (Fase 5b)
       }
+
       const timeoutResult: { ok: false; error: string } = {
         ok: false,
         error: m.caixa.msg_checkout_timeout,

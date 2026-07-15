@@ -24,11 +24,21 @@ const checks = [
   {
     file: path.join(pdv, 'app', 'caixa', 'CaixaPageClient.tsx'),
     must: [
-      { token: 'buildCheckoutSnapshot', why: 'snapshot imutável de venda' },
-      { token: 'validateCheckoutSnapshot', why: 'validação fail-fast antes de finalizar' },
+      // Montagem do payload (snapshot + validação fail-fast + troco) foi extraída
+      // para buildFinalizarVendaPayload.ts (Fase 1 — Aggregate); o guard rail em
+      // si é checado no bloco abaixo, dedicado a esse arquivo. Aqui só garantimos
+      // que o componente de fato chama o ponto único de montagem.
+      { token: 'buildFinalizarVendaPayload', why: 'chamada ao ponto único de montagem do payload de venda' },
       { token: 'useHasMounted', why: 'gate de hidratação (React #418)' },
       { token: 'try {', why: 'try/catch na finalização' },
       { token: 'catch', why: 'tratamento de erro na finalização (motivo claro)' },
+    ],
+  },
+  {
+    file: path.join(pdv, 'app', 'caixa', 'buildFinalizarVendaPayload.ts'),
+    must: [
+      { token: 'buildCheckoutSnapshot', why: 'snapshot imutável de venda' },
+      { token: 'validateCheckoutSnapshot', why: 'validação fail-fast antes de finalizar' },
     ],
   },
   {
