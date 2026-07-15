@@ -46,7 +46,6 @@ const LEGACY_ORPHAN_WARN = [
   '/app/gerente/financeiro/FinanceiroGerentePageClient.tsx',
   '/app/gerente/produtos/ProdutosGerentePageClient.tsx',
   '/app/gerente/vendas/VendasGerenteListClient.tsx',
-  '/app/gerente/compras/ComprasGerentePageClient.tsx',
   '/app/gerente/relatorios/RelatoriosGerentePageClient.tsx',
 ]
 
