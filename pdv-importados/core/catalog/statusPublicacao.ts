@@ -5,6 +5,14 @@ import { isProdutoVendavel } from '../../../shared-core/src/catalog/isProdutoVen
 
 export type StatusPublicacao = 'DRAFT' | 'PUBLICADO' | 'INATIVO'
 
+/**
+ * Símbolo do core para o valor 'DRAFT' — permite que a UI sinalize a intenção
+ * "salvar como rascunho" no payload sem escrever o literal ela mesma
+ * (enforçado por scripts/core-rule-guard.mjs: nenhum literal de
+ * status_publicacao em componente cliente).
+ */
+export const STATUS_PUBLICACAO_DRAFT: StatusPublicacao = 'DRAFT'
+
 export function ativoFromStatusPublicacao(status: StatusPublicacao): boolean {
   return status === 'PUBLICADO'
 }

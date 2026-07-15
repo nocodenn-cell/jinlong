@@ -6,7 +6,6 @@ export {
 } from '@/app/caixa/server/caixaProdutoSql'
 export { estoqueResumoParaCaixa } from '@/app/caixa/server/caixaEstoqueServer'
 export { fetchPdvConfigParaCaixaWeb } from '@/app/caixa/server/caixaPdvConfigRpc'
-export { enfileirarDocumentoFiscalPosVenda } from '@/app/caixa/server/caixaFiscalEnqueueServer'
 export {
   LIMITE_DIVERGENCIA_FECHAMENTO,
   parseMoneyInput,

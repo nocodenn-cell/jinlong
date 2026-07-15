@@ -14,6 +14,7 @@ import {
 } from '@/app/gerente/produtos/actions'
 import { criarFaixaAtacado } from '@/app/gerente/produtos/precosAtacadoActions'
 import { atualizarEstoqueProduto } from '@/app/gerente/estoque/actions'
+import { podePublicarProduto, STATUS_PUBLICACAO_DRAFT } from '@/core/catalog/statusPublicacao'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
@@ -96,7 +97,7 @@ export function ProdutoFormModal({
 }: ProdutoFormModalProps) {
   const p = m.produtos
   const editando = produto !== null
-  const podeSalvarRascunho = !editando || produto?.status_publicacao === 'DRAFT'
+  const podeSalvarRascunho = !editando || podePublicarProduto(produto?.status_publicacao)
   const nomeRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
@@ -175,7 +176,7 @@ export function ProdutoFormModal({
           precoAtacado,
           precoCusto: form.precoCustoInput.parse(),
         }),
-        ...(comoRascunho ? { status_publicacao: 'DRAFT' as const } : {}),
+        ...(comoRascunho ? { status_publicacao: STATUS_PUBLICACAO_DRAFT } : {}),
       }
 
       setSaving(true)
@@ -213,7 +214,7 @@ export function ProdutoFormModal({
         const msg = (() => {
           if (comoRascunho) return p.criado_rascunho
           if (!editando) return p.criado_publicado
-          if (produto.status_publicacao === 'DRAFT') return p.criado_publicado
+          if (podePublicarProduto(produto.status_publicacao)) return p.criado_publicado
           return m.comum.sucesso
         })()
         emitGerenteToast({ kind: 'success', message: msg })
@@ -372,7 +373,7 @@ export function ProdutoFormModal({
           >
             {saving
               ? '…'
-              : editando && produto.status_publicacao !== 'DRAFT'
+              : editando && !podePublicarProduto(produto.status_publicacao)
                 ? p.editar_modal_salvar
                 : p.publicar_no_pdv}
           </Button>

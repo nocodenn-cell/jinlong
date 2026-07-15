@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isContaAtiva } from '@/core/auth/contaAtiva'
 import { clearStaleSessionIfNeeded } from '@/lib/auth/staleSession'
 import { isPerfilPainelGerencial } from '@/lib/auth/painelGerencial'
 import { normalizeIdioma } from '@/idioma/normalizeIdioma'
@@ -124,7 +125,7 @@ export async function fetchRawSession(supabase: SupabaseClient): Promise<RawSess
 /** Bloqueio de identidade: conta desativada ou sem loja vinculada não entra em rota protegida. */
 function resolveBlockedReason(raw: RawSession): SessionBlockedReason | null {
   if (raw.status !== 'authenticated') return null
-  if (raw.usuario?.ativo === false) return 'inativo'
+  if (!isContaAtiva(raw.usuario?.ativo)) return 'inativo'
   if (!raw.usuario?.loja_id) return 'sem_loja'
   return null
 }

@@ -82,8 +82,8 @@ FISCAL_DEFAULT_DOC_TYPE=NFC_E_STUB
 ```
 
 **📍 Onde são usadas:**
-- `app/caixa/server/caixaFiscalEnqueueServer.ts` - Linha 26-28
-- RPC `fiscal_enfileirar_documento_venda`
+- `app/caixa/server/caixaVendas.impl.ts` (flag `p_fiscal_auto_enqueue` passada à RPC de venda)
+- RPC `finalizar_venda_transacional_canonica_v4` (enfileira `fiscal_enfileirar_documento_venda` internamente, na mesma transação)
 
 **⚠️ Impacto se faltarem:**
 - Documentos fiscais não enfileirados

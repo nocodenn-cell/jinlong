@@ -29,6 +29,7 @@
     "seed:demo-fluxo": "node scripts/seed-demo-fluxo-staging.mjs",
     "test:demo-fluxo": "vitest run lib/pdv ../shared-core/src/pdv/invariants",
     "check:pdv-invariant-boundary": "node scripts/check-pdv-invariant-boundary.mjs",
+    "check:pdv-domain-boundary": "node scripts/check-pdv-domain-boundary.mjs",
     "check:entity-ssot": "node scripts/check-entity-ssot-boundary.mjs",
     "check:caixa-pre-producao": "node scripts/check-caixa-pre-producao.mjs",
     "storybook": "storybook dev -p 6006",

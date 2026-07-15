@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { isContaAtiva } from '@/core/auth/contaAtiva'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import type { Mensagens } from '@/i18n/getMessages'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -120,7 +121,7 @@ export function LoginForm({ messages: m }: Props) {
         return
       }
 
-      if (u.ativo === false) {
+      if (!isContaAtiva(u.ativo)) {
         await supabase.auth.signOut()
         setErro('Sua conta está desativada. Fale com o administrador da loja para reativar o acesso.')
         return
