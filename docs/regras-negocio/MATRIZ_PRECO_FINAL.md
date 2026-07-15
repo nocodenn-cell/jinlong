@@ -82,14 +82,24 @@ Existiam duas leituras sobre a autoridade do gerente. **Resolução canônica (c
 
 ## 5. Web × Local — exceções deliberadas
 
-| Aspecto | Web | Local (pdv-local) | Deliberada? |
+Autoridade de finalização por canal (locked; guardado por `scripts/rpc-gate-guard.mjs`):
+**Web** = `finalizar_venda_transacional_canonica_v4` (`authenticated`); **Local** =
+`registrar_venda_com_itens` (`service_role`, via `sync-outbox`). v2/v3 revogadas de
+`authenticated`. Não há caminho paralelo alcançável por cliente web.
+
+| Aspecto | Web (v4) | Local (`registrar_venda_com_itens`, migration 014) | Deliberada? |
 |---------|-----|-------------------|:-----------:|
 | Preço automático | RPC `calcular_preco_produto` | `calcularPrecoCanonico` (mesmo algoritmo, cache dos mesmos inputs) | mesma regra — golden test garante paridade |
-| Revalidação de preço na finalização | v4 revalida VAREJO/ATACADO no servidor | `sync-outbox` → `registrar_venda_com_itens` **não revalida** | **Sim** (migration 123): preço offline era legítimo no momento da venda |
+| Revalidação de preço na finalização | revalida VAREJO/ATACADO no servidor | **não revalida** (confia no snapshot offline) | **Sim** (migration 123): preço offline era legítimo no momento da venda |
+| Semântica de `tipo_preco` | vinda do cliente e revalidada; MANUAL/PROMOCAO preservados | **sintetizada** pela RPC 014: `preco_unitario < preco_original → ATACADO`, senão `VAREJO`. **MANUAL/PROMOCAO nunca persistem offline.** | consequência do modelo offline — **dívida técnica** (§9), não bug |
+| Teto de desconto por item (15%, trigger 122) | **aplicado** (MANUAL não é isento) | **não aplicado**: todo item descontado vira `ATACADO`, e o trigger isenta ATACADO | **Sim** por decisão de confiar no PDV offline; efeito colateral do `tipo_preco` sintético |
+| Desconto de gerente | v4 valida contra `pdv_config.max_desconto_gerente_percentual` + token | grava `descontos_venda` **sem validar cap/token** (validado no PDV local no momento da venda) | **Sim** (mesma premissa offline) |
 | Contas a receber (parcial) | v4 gera CR | não gera | **Sim** (canal dual documentado) |
 | Baixa de estoque | atômica na v4 | passo separado (BA-012) | dívida conhecida, não reabrir aqui |
 
-Divergências acima são **exceções deliberadas e documentadas**. Qualquer outra divergência Web/Local é bug.
+Todas as divergências Web/Local acima são **deliberadas** (premissa única: o PDV Local
+valida no momento da venda e o servidor confia no snapshot sincronizado — migration 123).
+Qualquer divergência **não listada aqui** é bug.
 
 ---
 
@@ -134,6 +144,7 @@ Rastreado para remoção — não é autoridade de nada:
 | Campo `precoMinimo` | nunca atribuído | **REMOVIDO** nesta sprint | — |
 | Plumbing `regras`/`setRegras` + fetch/sync de `regras_preco` | armazenado, nunca consumido no cálculo | remover em follow-up | requer alterar contrato de sync offline + cache SQLite, validado ponta-a-ponta |
 | Função legada `finalizar_venda_transacional` (plain) + branch `session.gerente_token_validado` no trigger 122 | não chamada pelo app; flag só setado por ela | remover em follow-up (migration dedicada) | requer validação em DB real |
+| `tipo_preco` sintético em `registrar_venda_com_itens` (RPC 014) | rotula `preco_unitario<preco_original → ATACADO`; diverge da semântica canônica e isenta o teto por item no Local (§5) | reconciliar com o modelo canônico **se** o produto decidir espelhar invariantes Web no Local | decisão de produto + validação em DB real |
 
 ---
 
@@ -147,7 +158,9 @@ Rastreado para remoção — não é autoridade de nada:
 | Totais do carrinho | `shared/cart` + `pdv-importados/app/caixa/carrinhoStore.behavior.test.ts` |
 | Finalização (revalidação/totais) | `pdv-importados/app/caixa/finalizarVendaCaixa.integration.test.ts` |
 
-**Lacuna conhecida:** não há teste cobrindo o teto de 15% por item nem a acumulação do desconto de gerente sobre o total. Recomenda-se adicionar (não bloqueia o contrato).
+**Lacunas conhecidas** (não bloqueiam o contrato; recomenda-se adicionar):
+- teto de 15% por item (trigger 122) e acumulação do desconto de gerente sobre o total;
+- divergência Web/Local de `tipo_preco` e do teto por item (§5) — nenhum teste fixa hoje que o Local rotula descontos como ATACADO.
 
 ---
 
