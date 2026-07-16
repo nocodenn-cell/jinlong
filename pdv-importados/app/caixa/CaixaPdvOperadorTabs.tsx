@@ -11,6 +11,7 @@ import { formatDecimalBRL } from "@/lib/format/money"
 import {
   EXCESSO_PAGAMENTO_EPS,
   SALDO_PENDENTE_EPS,
+  calcularTroco,
 } from "@/app/caixa/caixaPagamentoSaldo"
 
 /** Mantido por compatibilidade com atalhos legados — fluxo linear sem abas. */
@@ -148,6 +149,41 @@ function PagamentoPanel({
           </div>
         ))}
       </div>
+      {pagamentos.length === 1 && pagamentos[0].formaPagamento === "DINHEIRO"
+        ? (() => {
+            // Leitura inline de troco para dinheiro em pagamento único: o operador
+            // vê o troco vivo ao lado do valor recebido, via cálculo canônico
+            // (SSoT), sem precisar ler o resumo lá embaixo.
+            const t = calcularTroco(totalLiquidoComGerente, pagamentos[0].valor)
+            return (
+              <div
+                data-testid="caixa-troco-inline"
+                className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs ${
+                  t.troco > 0
+                    ? "bg-emerald-500/10"
+                    : classicChrome
+                      ? "bg-muted/30"
+                      : "bg-white/[0.04]"
+                }`}
+              >
+                <span className={`font-medium ${classicChrome ? "text-muted-foreground" : "text-jl-fg-2"}`}>
+                  {m.caixa.pdv_pgto_troco_cliente}
+                </span>
+                <span
+                  className={`tabular-nums font-bold ${
+                    t.troco > 0
+                      ? "text-emerald-500"
+                      : classicChrome
+                        ? "text-foreground"
+                        : "text-jl-fg-1"
+                  }`}
+                >
+                  {moedaPrefixo} {formatDecimalBRL(t.troco)}
+                </span>
+              </div>
+            )
+          })()
+        : null}
       {podeAdicionarParcela ? (
         <button
           type="button"
