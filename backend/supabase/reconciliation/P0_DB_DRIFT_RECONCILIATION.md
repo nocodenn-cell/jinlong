@@ -95,6 +95,25 @@ Capturar o DDL dos objetos do §3 (via `pg_get_functiondef` / introspecção) e 
 - **R-RPC:** 9 overloads `finalizar_venda*`, vários SECURITY DEFINER legados — superfície morta.
 - **R-LEDGER:** numeração de migration não-autoritativa (timestamps mandam); dois `259`, dois `268`.
 
+## 8.1 P0.1 — Captura de reconciliação de schema (EXECUTADO, não-destrutivo)
+
+Objetos que existiam **só em produção** foram capturados como migrations idempotentes e behavior-preserving (reconstruídas por introspecção fiel de 2026-07-16 — `information_schema`, `pg_policies`, `pg_get_triggerdef`, `pg_get_functiondef`). **Nenhuma alteração em produção.**
+
+| Migration de captura | Reproduz (ledger de prod) | Conteúdo |
+|---|---|---|
+| `270_capture_funcionarios.sql` | 259_funcionarios_separate + 267_funcionarios_meta_crud | tabelas `funcionarios`, `funcionarios_meta` (+índices, RLS, 10 policies, trigger) + fns `fn_criar/atualizar/desativar_funcionario`, `fn_audit_update_funcionarios_meta` |
+| `271_capture_historico_precos_produto.sql` | 259_historico_precos_produto | tabela `historico_precos_produto` + índice + RLS + policy + fn+trigger `registrar_historico_preco_produto` em `produtos` |
+| `272_capture_comissoes_regras.sql` | 260 + 261 comissões | tabelas `comissoes_regras_funcionario`, `comissoes_regras_historico` (+RLS, policies, FKs) |
+| `273_capture_vendas_cliente_id_e_clientes.sql` | 263 + 265 + 266 | `vendas.cliente_id` + índice; `clientes_loja_documento_unique`; policy `clientes_insert_loja` |
+
+**Validação:** `guard:migrations` OK (270–273 sem colisão; preenchem o gap 259–267 documentado). `guard:all` 7/7 OK. Estrutura idêntica à de produção **por construção** (cada objeto reconstruído a partir da introspecção). Idempotência: `IF NOT EXISTS` / `CREATE OR REPLACE` / `DROP POLICY IF EXISTS` → em produção é **no-op**; em rebuild limpo, recria o schema real.
+
+**Ainda DIVERGENTE (não capturado neste passo):**
+1. **RPC `finalizar_venda_transacional_canonica_v4` (ledger 264, `p_cliente_id`)** — evolução de assinatura de uma função existente e extensa; capturar o corpo atual completo exige diff cuidadoso vs. a v4 do repo. **Item aberto** (capturar corpo completo em passo focado).
+2. **`268_drop_v4_overloads`** — não consolidou: 9 overloads `finalizar_venda*` vivos (v2/v3/stubs). É **limpeza de superfície morta SECURITY DEFINER** → tratado no **P1 (Segurança)**, não é captura.
+
+**Ressalva de validação de rebuild:** equivalência estrutural está garantida por construção; a validação de rebuild **byte-a-byte** (aplicar todas as migrations num banco limpo e comparar com produção) exige um Postgres/branch descartável — **bloqueada pelo plano Supabase** (branching = Pro; Free no limite de 2 projetos). Documentado como dependência.
+
 ## 8. Situação do P0
 - ✅ Auditadas todas as migrations pendentes (forward + reverso) — **por evidência de objeto**.
 - ✅ Ordem de aplicação validada; dependências confirmadas; idempotência verificada; **sem conflito** para 248/252/256.
