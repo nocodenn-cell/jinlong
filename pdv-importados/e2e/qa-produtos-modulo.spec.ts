@@ -73,15 +73,16 @@ test.describe('QA módulo produtos (gerente)', () => {
     await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible({ timeout: 60_000 })
   })
 
-  test('1 — Importação CSV (modelo, criar, atualizar, inválida, toast, modal aberto)', async ({ page }) => {
+  test('1 — Bulk Import (grade, CSV, validação em tempo real, bloqueio, correção, commit)', async ({ page }) => {
     const suffix = String(Date.now())
     const novoNome = `QA CSV NOVO ${suffix}`
     const segundoNome = `QA CSV SEG ${suffix}`
+    // Contrato canónico de importação (11 colunas). A 3ª linha de dados é inválida (nome vazio).
     const csv = [
-      'id,nome,codigo_barras,preco_varejo,origem,tem_nf,ativo',
-      `,${novoNome},QA${suffix}CB,9.99,china_manual,1,1`,
-      `,${segundoNome},QA${suffix}S2,11.00,china_manual,0,1`,
-      ',,QA999BAD,1,china_manual,1,1',
+      'id,nome,codigo_barras,preco_varejo,preco_atacado,quantidade_gatilho_atacado,unidade_medida,observacao,origem,tem_nf,ativo',
+      `,${novoNome},QA${suffix}CB,9.99,,,,,china_manual,1,1`,
+      `,${segundoNome},QA${suffix}S2,11.00,,,,,china_manual,0,1`,
+      `,,QA${suffix}BAD,1,,,,,china_manual,1,1`,
     ].join('\n')
     const csvPath = path.join(process.cwd(), 'test-results', `qa-import-${suffix}.csv`)
     fs.mkdirSync(path.dirname(csvPath), { recursive: true })
@@ -90,6 +91,7 @@ test.describe('QA módulo produtos (gerente)', () => {
     await page.getByRole('button', { name: /Importar produtos a partir de CSV/i }).click()
     await expect(page.getByRole('dialog', { name: /Importar produtos|导入商品/ })).toBeVisible()
 
+    // Baixar modelo continua disponível e mantém o cabeçalho canónico.
     const [dl] = await Promise.all([
       page.waitForEvent('download', { timeout: 15_000 }),
       page.getByRole('button', { name: /Baixar planilha modelo|下载模板表格/i }).click(),
@@ -100,25 +102,32 @@ test.describe('QA módulo produtos (gerente)', () => {
     const head = fs.readFileSync(tmpl!, 'utf8').trim().split('\n')[0]
     expect(head).toContain('id,nome,codigo_barras')
 
+    // Carrega o CSV para a grade editável (não commita direto).
+    await page.locator('input[type=file][accept*="csv"]').setInputFiles(csvPath)
+
+    // Validação em tempo real: a linha inválida bloqueia o commit e mostra o erro.
+    await expect(
+      page.getByRole('button', { name: /Corrija .*erro|请修正/ }),
+    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/Nome demasiado curto|名称过短/)).toBeVisible()
+
+    // Filtro "somente com erro" isola a linha inválida; removê-la desbloqueia o commit.
     await page
       .locator('label')
-      .filter({ hasText: /Permitir atualização por id|允许按 id/ })
+      .filter({ hasText: /Somente com erro|仅显示错误/ })
       .locator('input[type=checkbox]')
-      .uncheck()
+      .check()
+    await page.getByRole('button', { name: /Remover linha|删除第/ }).first().click()
 
-    await page.locator('input[type=file][accept*="csv"]').setInputFiles(csvPath)
-    await page.getByRole('button', { name: /Iniciar importação|开始导入/ }).click()
+    const commit = page.getByRole('button', { name: /Salvar \d+ produto|保存 \d+ 个商品/ })
+    await expect(commit).toBeEnabled({ timeout: 10_000 })
+    await commit.click()
 
-    await expect(page.locator('[aria-live="polite"]').first()).toBeVisible({ timeout: 35_000 })
+    // Sucesso → toast e modal fecha.
     const toast = page.locator('[aria-live="polite"]').first()
-    await expect(toast).toContainText(/criado|创建|行|linha|另有/i, { timeout: 20_000 })
-
-    await expect(page.getByRole('dialog', { name: /Importar produtos|导入商品/ })).toBeVisible()
-    await expect(page.getByText(/Erros por linha|行错误|错误/i)).toBeVisible()
-    await expect(page.getByText(/L4/)).toBeVisible()
-
-    await page.getByRole('button', { name: /^Cancelar$|^取消$/ }).click()
+    await expect(toast).toContainText(/criado|创建/i, { timeout: 25_000 })
     await expect(page.getByRole('dialog', { name: /Importar produtos|导入商品/ })).toHaveCount(0, { timeout: 10_000 })
+
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toBeVisible({ timeout: 30_000 })
 

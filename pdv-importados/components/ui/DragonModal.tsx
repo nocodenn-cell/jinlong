@@ -5,7 +5,7 @@ import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type DragonModalVariant = 'default' | 'danger'
-export type DragonModalSize = 'sm' | 'md' | 'lg'
+export type DragonModalSize = 'sm' | 'md' | 'lg' | 'xl'
 
 type Props = Readonly<{
   open: boolean
@@ -35,6 +35,7 @@ const sizeClass: Record<DragonModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-2xl',
+  xl: 'max-w-6xl',
 }
 
 // Strings literais (não `sm:${...}`) p/ o Tailwind JIT enxergar e gerar a classe.
@@ -42,6 +43,7 @@ const sheetSizeClass: Record<DragonModalSize, string> = {
   sm: 'sm:max-w-sm',
   md: 'sm:max-w-md',
   lg: 'sm:max-w-2xl',
+  xl: 'sm:max-w-6xl',
 }
 
 function isFocusable(el: Element): el is HTMLElement {

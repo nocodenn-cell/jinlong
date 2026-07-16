@@ -17,13 +17,19 @@ import {
 } from '@/core/services/produtoService'
 import {
   dualWriteFromStatus,
+  isIntencaoRascunho,
+  lifecycleAoEditarProduto,
   resolveStatusPublicacaoLeitura,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
 import { statusInicialProduto } from '@/core/systemRules'
 import type { NovoProdutoInput, StatusPublicacao } from '@/core/ports/produto'
-import { PRODUTO_IMPORT_MAX_FILE_BYTES } from '@/lib/gerente/produtosCsvContract'
-import { validateProdutoImportCsvDocument } from '@/lib/gerente/parseProdutoImportCsv'
+import { PRODUTO_IMPORT_MAX_FILE_BYTES, PRODUTO_IMPORT_MAX_ROWS } from '@/lib/gerente/produtosCsvContract'
+import {
+  parseAndValidateImportRow,
+  validateProdutoImportCsvDocument,
+  type ProdutoImportRowParsed,
+} from '@/lib/gerente/parseProdutoImportCsv'
 import {
   importCsvFatalToString,
   importCsvRowFailToString,
@@ -67,8 +73,8 @@ export async function criarProduto(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const raw = input as { status_publicacao?: string }
-  const asDraft = raw.status_publicacao === 'DRAFT'
+  const raw = input as { status_publicacao?: unknown }
+  const asDraft = isIntencaoRascunho(raw.status_publicacao)
   const parsed = asDraft
     ? NovoProdutoRascunhoSchema.safeParse(input)
     : NovoProdutoSchema.safeParse(input)
@@ -78,9 +84,7 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
-  const lifecycle = asDraft
-    ? { status_publicacao: 'DRAFT' as const, ativo: false }
-    : statusInicialProduto('human')
+  const lifecycle = asDraft ? dualWriteFromStatus('DRAFT') : statusInicialProduto('human')
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
   const result = await criarProdutoComEstoque(
@@ -280,6 +284,234 @@ export async function importarProdutosCsv(
   }
 
   return { success: true, criados, atualizados, falhas }
+}
+
+/**
+ * Commit em lote da grade editável (Bulk Import).
+ *
+ * Diferente da importação CSV linha-a-linha, este caminho é **tudo-ou-nada**:
+ *  1. Revalida cada linha no servidor (fonte única da verdade). Se **qualquer** linha
+ *     for inválida, nada é gravado e todos os erros são devolvidos por linha.
+ *  2. Pré-checa códigos de barras duplicados (dentro do lote e contra a base) antes de
+ *     escrever — o conflito mais comum é reportado com precisão, sem gravar nada.
+ *  3. Grava com **rollback seguro**: em qualquer falha inesperada no meio do lote, as
+ *     criações são apagadas e as atualizações são revertidas a partir do snapshot.
+ */
+export async function importarProdutosLote(
+  linhasRaw: ReadonlyArray<Record<string, string>>,
+  atualizarPorId: boolean,
+): Promise<ImportarProdutosCsvResult> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const { idioma } = await getUsuarioIdioma()
+  const m = getMessages(idioma).produtos
+
+  if (!Array.isArray(linhasRaw) || linhasRaw.length === 0) {
+    return { success: false, error: m.import_lote_vazio }
+  }
+  if (linhasRaw.length > PRODUTO_IMPORT_MAX_ROWS) {
+    return {
+      success: false,
+      error: interpolateTemplate(m.import_fatal_too_many_rows, {
+        count: String(linhasRaw.length),
+        max: String(PRODUTO_IMPORT_MAX_ROWS),
+      }),
+    }
+  }
+
+  // 1. Revalidação (SSoT) — tudo-ou-nada.
+  const falhas: ImportarProdutosCsvLinhaFalha[] = []
+  const validas: Array<{ linha: number; data: ProdutoImportRowParsed }> = []
+  for (let i = 0; i < linhasRaw.length; i++) {
+    const linha = i + 1
+    const v = parseAndValidateImportRow(linhasRaw[i] ?? {}, {
+      permiteAtualizacaoPorId: atualizarPorId,
+    })
+    if (!v.ok) {
+      falhas.push({ linha, motivo: importCsvRowFailToString(v.reason, m) })
+    } else {
+      validas.push({ linha, data: v.data })
+    }
+  }
+  if (falhas.length > 0) {
+    return { success: true, criados: 0, atualizados: 0, falhas }
+  }
+
+  // 2. Pré-checagem de código de barras duplicado (só para linhas de criação).
+  const criacao = validas.filter(({ data }) => !(typeof data.id === 'string' && data.id.length > 0))
+  const barcodePorLinha = new Map<string, number[]>()
+  for (const { linha, data } of criacao) {
+    const cb = data.codigo_barras
+    if (!cb) continue
+    const arr = barcodePorLinha.get(cb) ?? []
+    arr.push(linha)
+    barcodePorLinha.set(cb, arr)
+  }
+  const dupFalhas: ImportarProdutosCsvLinhaFalha[] = []
+  for (const [, linhas] of barcodePorLinha) {
+    if (linhas.length > 1) {
+      for (const linha of linhas) {
+        dupFalhas.push({ linha, motivo: m.import_row_barcode_dup_lote })
+      }
+    }
+  }
+
+  const supabase = await createClient()
+
+  const barcodesUnicos = [...barcodePorLinha.entries()]
+    .filter(([, linhas]) => linhas.length === 1)
+    .map(([cb]) => cb)
+  if (barcodesUnicos.length > 0) {
+    const { data: existentes, error: cbErr } = await supabase
+      .from('produtos')
+      .select('codigo_barras')
+      .in('codigo_barras', barcodesUnicos)
+    if (cbErr) {
+      return {
+        success: false,
+        error: mensagemErroComSecao(m.import_lote_rollback_secao, cbErr.message, idioma),
+      }
+    }
+    const existentesSet = new Set(
+      (existentes ?? []).map((r) => (r as { codigo_barras: string | null }).codigo_barras),
+    )
+    for (const [cb, linhas] of barcodePorLinha) {
+      if (linhas.length === 1 && existentesSet.has(cb)) {
+        dupFalhas.push({ linha: linhas[0], motivo: m.import_row_barcode_exists })
+      }
+    }
+  }
+  if (dupFalhas.length > 0) {
+    dupFalhas.sort((a, b) => a.linha - b.linha)
+    return { success: true, criados: 0, atualizados: 0, falhas: dupFalhas }
+  }
+
+  // 3. Gravação com rollback seguro.
+  const repo = createProdutoRepository(supabase)
+  const criadosIds: string[] = []
+  const snapshotsUpdate: Array<{ id: string; prev: Record<string, unknown> }> = []
+  const UPDATE_FIELDS = [
+    'nome',
+    'codigo_barras',
+    'preco_varejo',
+    'preco_atacado',
+    'quantidade_gatilho_atacado',
+    'unidade_medida',
+    'observacao',
+    'origem',
+    'tem_nf',
+    'ativo',
+    'status_publicacao',
+  ] as const
+
+  async function reverter(): Promise<void> {
+    // Reverte atualizações (ordem inversa) a partir do snapshot.
+    for (let i = snapshotsUpdate.length - 1; i >= 0; i--) {
+      const s = snapshotsUpdate[i]
+      await supabase.from('produtos').update(s.prev).eq('id', s.id)
+    }
+    // Remove criações (estoque antes de produtos por causa da FK).
+    if (criadosIds.length > 0) {
+      await supabase.from('estoque').delete().in('produto_id', criadosIds)
+      await supabase.from('produtos').delete().in('id', criadosIds)
+    }
+  }
+
+  let criados = 0
+  let atualizados = 0
+
+  for (const { linha, data } of validas) {
+    const idPreenchido = typeof data.id === 'string' && data.id.length > 0
+
+    if (atualizarPorId && idPreenchido) {
+      const { data: existente, error: exErr } = await supabase
+        .from('produtos')
+        .select(UPDATE_FIELDS.join(','))
+        .eq('id', data.id)
+        .maybeSingle()
+      if (exErr || !existente) {
+        await reverter()
+        return {
+          success: true,
+          criados: 0,
+          atualizados: 0,
+          falhas: [
+            {
+              linha,
+              motivo: exErr
+                ? mensagemErroComSecao(m.import_row_atualizar_secao, exErr.message, idioma)
+                : interpolateTemplate(m.import_row_id_nao_encontrado, { id: data.id }),
+            },
+          ],
+        }
+      }
+      snapshotsUpdate.push({ id: data.id, prev: existente as unknown as Record<string, unknown> })
+
+      const csvLifecycle = data.ativo
+        ? dualWriteFromStatus('PUBLICADO')
+        : dualWriteFromStatus('INATIVO')
+      const { error: upErr } = await supabase
+        .from('produtos')
+        .update({
+          nome: data.nome,
+          codigo_barras: data.codigo_barras,
+          preco_varejo: data.preco_varejo,
+          preco_atacado: data.preco_atacado ?? null,
+          quantidade_gatilho_atacado: data.quantidade_gatilho_atacado ?? null,
+          unidade_medida: data.unidade_medida ?? 'UN',
+          observacao: data.observacao ?? null,
+          origem: data.origem,
+          tem_nf: data.tem_nf,
+          ativo: csvLifecycle.ativo,
+          status_publicacao: csvLifecycle.status_publicacao,
+        })
+        .eq('id', data.id)
+      if (upErr) {
+        await reverter()
+        return {
+          success: true,
+          criados: 0,
+          atualizados: 0,
+          falhas: [
+            { linha, motivo: mensagemErroComSecao(m.import_row_atualizar_secao, upErr.message, idioma) },
+          ],
+        }
+      }
+      atualizados++
+      continue
+    }
+
+    const input: NovoProdutoInput = {
+      nome: data.nome,
+      codigo_barras: data.codigo_barras,
+      preco_varejo: data.preco_varejo,
+      preco_atacado: data.preco_atacado ?? null,
+      quantidade_gatilho_atacado: data.quantidade_gatilho_atacado ?? null,
+      unidade_medida: data.unidade_medida ?? 'UN',
+      observacao: data.observacao ?? null,
+      origem: data.origem,
+      tem_nf: data.tem_nf,
+      ativo: data.ativo,
+    }
+    const result = await criarProdutoComEstoque(input, repo)
+    if (!result.success) {
+      await reverter()
+      return {
+        success: true,
+        criados: 0,
+        atualizados: 0,
+        falhas: [{ linha, motivo: result.error }],
+      }
+    }
+    criadosIds.push(result.data.id)
+    criados++
+  }
+
+  if (criados > 0 || atualizados > 0) {
+    revalidateCatalogoPaths()
+  }
+  return { success: true, criados, atualizados, falhas: [] }
 }
 
 export async function uploadImagemProduto(
@@ -669,7 +901,7 @@ export async function atualizarDadosProdutoGerente(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const asDraft = (input as { status_publicacao?: string }).status_publicacao === 'DRAFT'
+  const asDraft = isIntencaoRascunho((input as { status_publicacao?: unknown }).status_publicacao)
   const parsed = asDraft
     ? EditarProdutoRascunhoSchema.safeParse(input)
     : EditarProdutoCatalogoSchema.safeParse(input)
@@ -681,8 +913,6 @@ export async function atualizarDadosProdutoGerente(
 
   const supabase = await createClient()
 
-  // Preserva INATIVO ao editar/salvar; só muda status em rascunho explícito
-  // ou ao publicar um DRAFT via "Salvar" (ação explícita de publicação).
   const { data: atualRow } = await supabase
     .from('produtos')
     .select('status_publicacao')
@@ -690,16 +920,7 @@ export async function atualizarDadosProdutoGerente(
     .maybeSingle()
   const statusAtual = (atualRow?.status_publicacao ?? null) as StatusPublicacao | null
 
-  let lifecycle: { status_publicacao: StatusPublicacao; ativo: boolean } | null = null
-  if (asDraft) {
-    lifecycle = dualWriteFromStatus('DRAFT')
-  } else if (statusAtual === 'DRAFT') {
-    lifecycle = dualWriteFromStatus('PUBLICADO')
-  } else if (statusAtual === 'INATIVO') {
-    lifecycle = null
-  } else {
-    lifecycle = dualWriteFromStatus('PUBLICADO')
-  }
+  const lifecycle = lifecycleAoEditarProduto(asDraft, statusAtual)
 
   const { error } = await supabase
     .from('produtos')

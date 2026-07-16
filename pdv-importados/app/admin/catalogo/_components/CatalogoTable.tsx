@@ -265,6 +265,7 @@ export function CatalogoTable({
               produtoId={row.id}
               status={row.status_publicacao}
               labels={{ publicar: labels.publicar, inativar: labels.inativar }}
+              erroGenerico={m.comum.erro}
             />
             <button
               type="button"
