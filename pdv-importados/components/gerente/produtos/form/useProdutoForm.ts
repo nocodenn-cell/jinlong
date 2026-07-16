@@ -161,6 +161,11 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
   const readOnly = useMemo(() => readOnlyFromProduto(produto), [produto])
 
   const limparParaNovoCadastro = useCallback(() => {
+    // Cadastro em volume: ao "Salvar e continuar", preserva o CONTEXTO que
+    // costuma se repetir entre itens (categoria, marca, fornecedor, origem) e
+    // limpa só o que é específico do item. Antes resetava tudo, forçando o
+    // operador a re-selecionar a categoria a cada produto.
+    const contexto = { categoriaId, marcaId, fornecedorId, origem }
     resetFormState(null, {
       setNome,
       setCodigoInterno,
@@ -188,7 +193,20 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       setEstoqueInicialQty,
       setEstoqueInicialMin,
     })
-  }, [precoAtacadoInput, precoCustoInput, precoVarejoInput])
+    // Reaplica o contexto após o reset (o set posterior vence no batch do React).
+    setCategoriaId(contexto.categoriaId)
+    setMarcaId(contexto.marcaId)
+    setFornecedorId(contexto.fornecedorId)
+    setOrigem(contexto.origem)
+  }, [
+    categoriaId,
+    marcaId,
+    fornecedorId,
+    origem,
+    precoAtacadoInput,
+    precoCustoInput,
+    precoVarejoInput,
+  ])
 
   return {
     nome,
