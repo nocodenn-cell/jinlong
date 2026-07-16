@@ -5,31 +5,24 @@ import { Printer, Search, Package, Layers } from 'lucide-react'
 import { GerenteFilterBar } from '@/components/gerente/GerenteFilterBar'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { EtiquetaCarrinho } from './EtiquetaCarrinho'
-import { buscarProdutoPorCodigo, buscarEstoqueAtual } from './actions'
+import { buscarProdutoPorCodigo, buscarEstoqueAtual, buscarProdutosPorCategoria } from './actions'
+import { listarCategoriasProdutos } from '@/app/gerente/categorias-produtos/actions'
+import type { CategoriaProdutoRow } from '@/app/gerente/categorias-produtos/categoriasProdutosTypes'
+import { emitGerenteToast } from '@/lib/gerente/toast'
 import { baixarPdfEtiquetas } from '@/lib/etiqueta/gerarPdf'
 import { getEtiquetaConfig } from '@/lib/etiqueta/EtiquetaConfig'
 import type { ItemCarrinho } from '@/lib/etiqueta/types'
 import type { Idioma } from '@/idioma/normalizeIdioma'
+import {
+  toCarrinhoItem,
+  mesclarProdutosNoCarrinho,
+  type ProdutoParaEtiqueta,
+} from './etiquetaCarrinhoMerge'
 
 type Props = {
   idioma: Idioma
   initialCodigo?: string
   initialProdutoId?: string
-}
-
-function toCarrinhoItem(produto: {
-  id: string
-  nome: string
-  codigo_barras: string | null
-  preco_varejo: number
-}): ItemCarrinho {
-  return {
-    produtoId: produto.id,
-    nome: produto.nome,
-    codigoBarras: produto.codigo_barras || '',
-    precoVarejo: produto.preco_varejo,
-    quantidade: 1,
-  }
 }
 
 export function ImprimirEtiquetasPageClient({
@@ -41,6 +34,10 @@ export function ImprimirEtiquetasPageClient({
   const [codigoBusca, setCodigoBusca] = useState(initialCodigo?.trim() ?? '')
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [preloadDone, setPreloadDone] = useState(false)
+  const [categorias, setCategorias] = useState<CategoriaProdutoRow[]>([])
+  const [categoriasCarregadas, setCategoriasCarregadas] = useState(false)
+  const [carregandoCategorias, setCarregandoCategorias] = useState(false)
+  const [seletorCategoriaAberto, setSeletorCategoriaAberto] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -53,6 +50,10 @@ export function ImprimirEtiquetasPageClient({
 
   const { mutate: buscarEstoque, loading: buscandoEstoque } = useGerenteMutation(
     buscarEstoqueAtual,
+  )
+
+  const { mutate: buscarPorCategoria, loading: buscandoCategoria } = useGerenteMutation(
+    buscarProdutosPorCategoria,
   )
 
   const adicionarAoCarrinho = (produto: {
@@ -71,6 +72,59 @@ export function ImprimirEtiquetasPageClient({
         )
       }
       return [...prev, toCarrinhoItem(produto)]
+    })
+  }
+
+  const adicionarVariosAoCarrinho = (produtos: ProdutoParaEtiqueta[]) => {
+    setCarrinho((prev) => mesclarProdutosNoCarrinho(prev, produtos))
+  }
+
+  // Abre/fecha o seletor de categoria, carregando as categorias ativas na
+  // primeira abertura (lazy — evita query em toda visita à tela).
+  const handleToggleSeletorCategoria = async () => {
+    const abrindo = !seletorCategoriaAberto
+    setSeletorCategoriaAberto(abrindo)
+    if (!abrindo || categoriasCarregadas || carregandoCategorias) return
+
+    setCarregandoCategorias(true)
+    try {
+      const r = await listarCategoriasProdutos({ situacao: 'ativos', pageSize: 100 })
+      if (r.success) {
+        setCategorias(r.data.rows)
+        setCategoriasCarregadas(true)
+      } else {
+        emitGerenteToast({ kind: 'error', message: r.error })
+      }
+    } finally {
+      setCarregandoCategorias(false)
+    }
+  }
+
+  // Carrega todos os produtos da categoria e adiciona ao carrinho de etiquetas.
+  const handleSelecionarCategoria = async (categoriaId: string) => {
+    if (!categoriaId) return
+    const resultado = await buscarPorCategoria(categoriaId)
+    if (!resultado || !resultado.success) return
+
+    if (resultado.data.length === 0) {
+      emitGerenteToast({
+        kind: 'info',
+        message:
+          idioma === 'zh'
+            ? '该类别没有产品'
+            : 'Nenhum produto encontrado nesta categoria',
+      })
+      return
+    }
+
+    adicionarVariosAoCarrinho(resultado.data)
+    setSeletorCategoriaAberto(false)
+    emitGerenteToast({
+      kind: 'success',
+      message:
+        idioma === 'zh'
+          ? `已添加 ${resultado.data.length} 个产品`
+          : `${resultado.data.length} produto(s) adicionado(s)`,
     })
   }
 
@@ -278,22 +332,64 @@ export function ImprimirEtiquetasPageClient({
                 </p>
               </button>
 
-              {/* Seleção por Categoria (placeholder para futuro) */}
+              {/* Seleção por Categoria */}
               <button
                 type="button"
-                disabled
-                className="w-full rounded-lg border px-4 py-2 text-left text-sm text-gray-400 disabled:cursor-not-allowed"
+                onClick={handleToggleSeletorCategoria}
+                disabled={buscandoCategoria}
+                aria-expanded={seletorCategoriaAberto}
+                className="w-full rounded-lg border px-4 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <div className="flex items-center gap-2">
-                  <Layers className="h-4 w-4" />
+                  <Layers className="h-4 w-4 text-blue-600" />
                   <span>
                     {idioma === 'zh' ? '按类别选择' : 'Selecionar por Categoria'}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-gray-400">
-                  {idioma === 'zh' ? '即将推出' : 'Em breve'}
+                <p className="mt-1 text-xs text-gray-500">
+                  {idioma === 'zh'
+                    ? '添加该类别的所有产品'
+                    : 'Adicionar todos os produtos da categoria'}
                 </p>
               </button>
+
+              {seletorCategoriaAberto && (
+                <div className="rounded-lg border bg-gray-50 p-3">
+                  {carregandoCategorias ? (
+                    <p className="text-xs text-gray-500">
+                      {idioma === 'zh' ? '加载类别中…' : 'Carregando categorias…'}
+                    </p>
+                  ) : categorias.length === 0 ? (
+                    <p className="text-xs text-gray-500">
+                      {idioma === 'zh' ? '没有可用类别' : 'Nenhuma categoria disponível'}
+                    </p>
+                  ) : (
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-gray-600">
+                        {idioma === 'zh' ? '选择类别' : 'Escolha a categoria'}
+                      </span>
+                      <select
+                        defaultValue=""
+                        disabled={buscandoCategoria}
+                        onChange={(e) => {
+                          void handleSelecionarCategoria(e.target.value)
+                          e.target.value = ''
+                        }}
+                        className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="" disabled>
+                          {idioma === 'zh' ? '— 选择 —' : '— Selecionar —'}
+                        </option>
+                        {categorias.map((categoria) => (
+                          <option key={categoria.id} value={categoria.id}>
+                            {categoria.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
