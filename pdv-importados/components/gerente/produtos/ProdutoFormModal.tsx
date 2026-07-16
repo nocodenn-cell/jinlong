@@ -20,6 +20,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { isRascunho, payloadStatusRascunho } from '@/core/catalog/statusPublicacao'
 import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
 import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
 import { ProdutoForm } from './form/ProdutoForm'
@@ -96,7 +97,7 @@ export function ProdutoFormModal({
 }: ProdutoFormModalProps) {
   const p = m.produtos
   const editando = produto !== null
-  const podeSalvarRascunho = !editando || produto?.status_publicacao === 'DRAFT'
+  const podeSalvarRascunho = !editando || isRascunho(produto?.status_publicacao)
   const nomeRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
@@ -175,7 +176,7 @@ export function ProdutoFormModal({
           precoAtacado,
           precoCusto: form.precoCustoInput.parse(),
         }),
-        ...(comoRascunho ? { status_publicacao: 'DRAFT' as const } : {}),
+        ...(comoRascunho ? payloadStatusRascunho() : {}),
       }
 
       setSaving(true)
@@ -213,7 +214,7 @@ export function ProdutoFormModal({
         const msg = (() => {
           if (comoRascunho) return p.criado_rascunho
           if (!editando) return p.criado_publicado
-          if (produto.status_publicacao === 'DRAFT') return p.criado_publicado
+          if (isRascunho(produto.status_publicacao)) return p.criado_publicado
           return m.comum.sucesso
         })()
         emitGerenteToast({ kind: 'success', message: msg })
@@ -372,7 +373,7 @@ export function ProdutoFormModal({
           >
             {saving
               ? '…'
-              : editando && produto.status_publicacao !== 'DRAFT'
+              : editando && !isRascunho(produto.status_publicacao)
                 ? p.editar_modal_salvar
                 : p.publicar_no_pdv}
           </Button>
