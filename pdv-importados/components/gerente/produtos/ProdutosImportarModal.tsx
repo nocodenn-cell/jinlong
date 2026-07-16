@@ -381,6 +381,12 @@ export function ProdutosImportarModal({
                     key={row.rowId}
                     numero={idx + 1}
                     colunas={colunas}
+                    labelFor={(key) =>
+                      (p as unknown as Record<string, string>)[
+                        colunas.find((c) => c.key === key)?.labelKey ?? ''
+                      ] ?? key
+                    }
+                    ariaTemplate={p.bulk_celula_aria}
                     cells={row.cells}
                     erro={temErro}
                     valida={v.status === 'ok' && !temErro}
@@ -400,24 +406,15 @@ export function ProdutosImportarModal({
           ) : null}
         </div>
 
-        {/* Feedback de progresso */}
+        {/* Feedback de progresso — o commit é atómico (tudo-ou-nada), por isso a
+            barra é indeterminada enquanto grava e não simula percentagens falsas. */}
         {progresso ? (
-          <div className="space-y-1" aria-live="polite">
-            <div className="flex items-center justify-between text-[11px] text-jl-fg-2">
-              <span>
-                {interpolateTemplate(p.bulk_progresso, {
-                  done: String(progresso.done),
-                  total: String(progresso.total),
-                })}
-              </span>
+          <div className="space-y-1" aria-live="polite" role="status">
+            <div className="text-[11px] text-jl-fg-2">
+              {interpolateTemplate(p.bulk_salvando, { count: String(progresso.total) })}
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-jl-surface-soft">
-              <div
-                className={`h-full rounded-full bg-[color:var(--accent)] transition-all duration-300 ${isPending ? 'animate-pulse' : ''}`}
-                style={{
-                  width: `${progresso.total > 0 ? Math.round((progresso.done / progresso.total) * 100) : 0}%`,
-                }}
-              />
+              <div className="h-full w-full animate-pulse rounded-full bg-[color:var(--accent)]" />
             </div>
           </div>
         ) : null}
@@ -429,6 +426,8 @@ export function ProdutosImportarModal({
 type RowFragmentProps = Readonly<{
   numero: number
   colunas: BulkGridColumn[]
+  labelFor: (key: BulkGridColumnKey) => string
+  ariaTemplate: string
   cells: BulkRowCells
   erro: boolean
   valida: boolean
@@ -443,6 +442,8 @@ type RowFragmentProps = Readonly<{
 function RowFragment({
   numero,
   colunas,
+  labelFor,
+  ariaTemplate,
   cells,
   erro,
   valida,
@@ -477,6 +478,10 @@ function RowFragment({
                 list={listId}
                 value={cells[c.key] ?? ''}
                 disabled={disabled}
+                aria-label={interpolateTemplate(ariaTemplate, {
+                  coluna: labelFor(c.key),
+                  linha: String(numero),
+                })}
                 aria-invalid={invalido || undefined}
                 className={`w-full bg-transparent px-2 py-1.5 text-xs text-jl-fg-1 outline-none focus:bg-white/[0.04] focus:ring-1 focus:ring-[color:var(--accent)] ${
                   invalido ? 'ring-1 ring-inset ring-destructive/70' : ''
