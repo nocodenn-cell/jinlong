@@ -56,11 +56,33 @@ export function isVendavelPdv(
   return isProdutoVendavel({ ativo: ativo ?? false, status_publicacao: status ?? null })
 }
 
+/** Predicado base de leitura: o produto está em rascunho? (leitura pessimista). */
+export function isStatusRascunho(status: StatusPublicacao | null | undefined): boolean {
+  return resolveStatusPublicacaoLeitura(status) === 'DRAFT'
+}
+
 /**
  * Decisão de negócio: só rascunho é publicável (ação "Publicar" individual).
  * A UI consome este predicado — nunca compara status_publicacao por literal
  * (enforçado por scripts/core-rule-guard.mjs).
  */
 export function podePublicarProduto(status: StatusPublicacao | null | undefined): boolean {
-  return resolveStatusPublicacaoLeitura(status) === 'DRAFT'
+  return isStatusRascunho(status)
+}
+
+/**
+ * Decisão de negócio: quando o formulário pode oferecer "salvar como rascunho".
+ * Ao criar, sempre; ao editar, apenas enquanto ainda for rascunho — um produto
+ * já publicado não regressa a rascunho por este caminho.
+ */
+export function podeSalvarComoRascunho(
+  editando: boolean,
+  status: StatusPublicacao | null | undefined,
+): boolean {
+  return !editando || isStatusRascunho(status)
+}
+
+/** Intenção "salvar como rascunho" → status a persistir. Mantém o literal no core. */
+export function statusPublicacaoRascunho(): StatusPublicacao {
+  return 'DRAFT'
 }
