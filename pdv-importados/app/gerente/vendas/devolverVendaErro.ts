@@ -26,5 +26,15 @@ export function mensagemErroDevolverVenda(codigoBruto: string): string {
   for (const [chave, msg] of Object.entries(MAPA)) {
     if (codigo.includes(chave)) return msg
   }
+  // Mesmo padrão de app/caixa/server/caixaErroOperador.ts: RPC ausente (migration
+  // pendente) não é um erro transitório — "tentar novamente" seria enganoso.
+  const lower = codigoBruto.toLowerCase()
+  const rpcAusente =
+    lower.includes('migration') ||
+    lower.includes('could not find the function') ||
+    (lower.includes('function') && lower.includes('does not exist'))
+  if (rpcAusente) {
+    return 'Recurso de devolução/troca indisponível no momento. Fale com o suporte.'
+  }
   return 'Não foi possível registrar a devolução. Tente novamente.'
 }

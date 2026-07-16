@@ -1933,6 +1933,8 @@
     "estoque_kardex_titulo": "库存卡",
     "estoque_sem_movimentos": "暂无移动记录",
     "estoque_sem_movimentos_sub": "该商品的入库和出库记录将显示在这里。",
+    "estoque_kardex_erro_titulo": "无法加载历史记录",
+    "estoque_kardex_tentar_novamente": "重试",
     "estoque_tipo_venda": "销售",
     "estoque_tipo_compra": "采购",
     "estoque_tipo_entrada_nf": "入库 NF-e",

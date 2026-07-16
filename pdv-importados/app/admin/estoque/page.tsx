@@ -244,6 +244,8 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           kardexTitulo: ui.estoque_kardex_titulo,
           semMovimentos: ui.estoque_sem_movimentos,
           semMovimentosSub: ui.estoque_sem_movimentos_sub,
+          kardexErroCarregar: ui.estoque_kardex_erro_titulo,
+          kardexTentarNovamente: ui.estoque_kardex_tentar_novamente,
           tipoVenda: ui.estoque_tipo_venda,
           tipoCompra: ui.estoque_tipo_compra,
           tipoEntradaNf: ui.estoque_tipo_entrada_nf,

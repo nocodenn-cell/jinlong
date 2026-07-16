@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { X } from 'lucide-react'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { atualizarEstoqueProduto } from '@/app/gerente/estoque/actions'
 import { cn } from '@/lib/utils'
 
@@ -44,20 +44,6 @@ export function AjusteSaldoModal({
   const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!alvo) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !pending) onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
-  }, [alvo, pending, onClose])
-
-  useEffect(() => {
     if (alvo) setErro(null)
   }, [alvo])
 
@@ -90,96 +76,75 @@ export function AjusteSaldoModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ajuste-saldo-titulo"
-    >
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={pending ? undefined : onClose}
-        aria-hidden
-      />
-      <div className="admin-v2-panel relative z-10 w-full max-w-md rounded-[14px] p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id="ajuste-saldo-titulo" className="text-[15px] font-semibold text-jl-fg-1">
-              {labels.titulo}
-            </h2>
-            <p className="mt-0.5 truncate text-[12px] text-jl-fg-2">{alvo.produtoNome}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={pending}
-            aria-label="Fechar"
-            className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
-          >
-            <X size={16} aria-hidden />
+    <DragonModal
+      open
+      onClose={onClose}
+      title={labels.titulo}
+      subtitle={alvo.produtoNome}
+      size="sm"
+      dismissable={!pending}
+      closeLabel={labels.cancelar}
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={pending} className="admin-v2-btn-secondary">
+            {labels.cancelar}
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={labels.saldoAtual}>
-              <input
-                name="quantidade_atual"
-                type="number"
-                min={0}
-                step="0.001"
-                required
-                defaultValue={alvo.quantidadeAtual}
-                className={inputClassName}
-              />
-            </Field>
-            <Field label={labels.estoqueMinimo}>
-              <input
-                name="estoque_minimo"
-                type="number"
-                min={0}
-                step="0.001"
-                required
-                defaultValue={alvo.estoqueMinimo}
-                className={inputClassName}
-              />
-            </Field>
-          </div>
-
-          <Field label={labels.motivo}>
-            <select name="motivo" required defaultValue="ACERTO_INVENTARIO" className={inputClassName}>
-              {labels.motivos.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label={labels.observacao}>
+          <button type="submit" form="ajuste-saldo-form" disabled={pending} className="admin-v2-btn-primary">
+            {pending ? labels.salvando : labels.salvar}
+          </button>
+        </>
+      }
+    >
+      <form id="ajuste-saldo-form" onSubmit={handleSubmit} className="flex flex-col gap-3 py-1">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={labels.saldoAtual}>
             <input
-              name="observacao"
-              maxLength={500}
-              placeholder='Opcional (obrigatória se o motivo for "Outro")'
+              name="quantidade_atual"
+              type="number"
+              min={0}
+              step="0.001"
+              required
+              defaultValue={alvo.quantidadeAtual}
               className={inputClassName}
             />
           </Field>
+          <Field label={labels.estoqueMinimo}>
+            <input
+              name="estoque_minimo"
+              type="number"
+              min={0}
+              step="0.001"
+              required
+              defaultValue={alvo.estoqueMinimo}
+              className={inputClassName}
+            />
+          </Field>
+        </div>
 
-          {erro ? (
-            <p className={cn('admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]')}>{erro}</p>
-          ) : null}
+        <Field label={labels.motivo}>
+          <select name="motivo" required defaultValue="ACERTO_INVENTARIO" className={inputClassName}>
+            {labels.motivos.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </Field>
 
-          <div className="mt-1 flex items-center justify-end gap-2">
-            <button type="button" onClick={onClose} disabled={pending} className="admin-v2-btn-secondary">
-              {labels.cancelar}
-            </button>
-            <button type="submit" disabled={pending} className="admin-v2-btn-primary">
-              {pending ? labels.salvando : labels.salvar}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Field label={labels.observacao}>
+          <input
+            name="observacao"
+            maxLength={500}
+            placeholder='Opcional (obrigatória se o motivo for "Outro")'
+            className={inputClassName}
+          />
+        </Field>
+
+        {erro ? (
+          <p className={cn('admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]')}>{erro}</p>
+        ) : null}
+      </form>
+    </DragonModal>
   )
 }
 

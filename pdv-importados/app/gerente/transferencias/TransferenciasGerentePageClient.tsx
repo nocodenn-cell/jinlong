@@ -26,9 +26,11 @@ type Props = Readonly<{
   idioma: Idioma
   lojas: TransferenciaLojaRow[]
   produtos: TransferenciaProdutoOpt[]
+  /** Falha ao carregar lojas/produtos (RLS, rede) — distinto de "só 1 loja cadastrada". */
+  loadError?: string | null
 }>
 
-export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Props) {
+export function TransferenciasGerentePageClient({ idioma, lojas, produtos, loadError = null }: Props) {
   const m = getMessages(idioma)
   const t = m.gerente.transferencias_page
   const router = useRouter()
@@ -193,7 +195,11 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
         ← {m.gerente.inicio}
       </Link>
 
-      {!podeTransferir ? (
+      {loadError ? (
+        <div className="mt-6 rounded-xl border p-4 text-sm leading-relaxed admin-v2-alert-danger" role="alert">
+          {loadError}
+        </div>
+      ) : !podeTransferir ? (
         <div className="mt-6 rounded-xl border p-4 text-sm leading-relaxed app-badge-warn" role="status">
           <strong>{t.uma_loja_aviso_titulo}</strong> {t.uma_loja_aviso_texto}
         </div>

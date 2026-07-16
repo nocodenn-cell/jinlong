@@ -1762,6 +1762,8 @@
     "estoque_kardex_titulo": "Kardex",
     "estoque_sem_movimentos": "Sem movimentações registradas",
     "estoque_sem_movimentos_sub": "As entradas e saídas deste produto aparecerão aqui.",
+    "estoque_kardex_erro_titulo": "Não foi possível carregar o histórico",
+    "estoque_kardex_tentar_novamente": "Tentar novamente",
     "estoque_tipo_venda": "Venda",
     "estoque_tipo_compra": "Compra",
     "estoque_tipo_entrada_nf": "Entrada NF-e",
