@@ -1909,6 +1909,7 @@
     "catalogo_produtos_pl": "件商品",
     "catalogo_vazio_titulo": "未找到商品",
     "catalogo_vazio_sub": "请调整筛选条件或新增商品",
+    "catalogo_atalho_novo_hint": "快捷键：按 N",
     "catalogo_col_varejo": "零售价",
     "catalogo_col_atacado": "批发价",
     "catalogo_chip_categoria": "分类：{{nome}}",

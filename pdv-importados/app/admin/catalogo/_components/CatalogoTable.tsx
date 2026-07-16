@@ -100,17 +100,23 @@ export function CatalogoTable({
   }, [searchParams])
 
   useEffect(() => {
+    // Não reabrir "novo produto" por cima de um modal já aberto (editar,
+    // duplicar ou o próprio "novo") — o listener é global e não é limitado ao
+    // foco estar dentro do modal, então isso podia empilhar dois modals
+    // simultâneos (inclusive dois usando o mesmo NovoProdutoModal).
+    if (novoOpen || editando || duplicando) return
     function onKey(e: KeyboardEvent) {
       if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+        const target = e.target as HTMLElement
+        const tag = target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return
         e.preventDefault()
         setNovoOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [novoOpen, editando, duplicando])
 
   const statusLabel: Record<StatusPublicacao, string> = {
     DRAFT: labels.rascunho,

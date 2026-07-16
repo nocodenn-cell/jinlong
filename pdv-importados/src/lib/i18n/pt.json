@@ -1738,6 +1738,7 @@
     "catalogo_produtos_pl": "produtos encontrados",
     "catalogo_vazio_titulo": "Nenhum produto encontrado",
     "catalogo_vazio_sub": "Tente ajustar os filtros ou cadastre um novo produto",
+    "catalogo_atalho_novo_hint": "Atalho: pressione N",
     "catalogo_col_varejo": "Varejo",
     "catalogo_col_atacado": "Atacado",
     "catalogo_chip_categoria": "Categoria: {{nome}}",

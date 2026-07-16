@@ -85,7 +85,12 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport }: Props) {
         <Download size={14} aria-hidden />
         {exporting ? m.comum.carregando : m.gerente.exportar_csv}
       </button>
-      <CatalogoNovoButton label={m.produtos.cadastro_rapido} m={m} opcoes={opcoes} />
+      <CatalogoNovoButton
+        label={m.produtos.cadastro_rapido}
+        m={m}
+        opcoes={opcoes}
+        atalhoHint={ui.catalogo_atalho_novo_hint}
+      />
 
       <ProdutosImportarModal
         open={importOpen}

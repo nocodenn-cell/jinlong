@@ -50,7 +50,7 @@ vi.mock('@/app/admin/catalogo/_components/CatalogoPublicacaoActions', () => ({
 }))
 
 import { CatalogoNovoButton } from '@/app/admin/catalogo/_components/CatalogoNovoButton'
-import { CatalogoTable } from '@/app/admin/catalogo/_components/CatalogoTable'
+import { CatalogoTable, type CatalogoProduto } from '@/app/admin/catalogo/_components/CatalogoTable'
 
 const m = getMessages('pt')
 const opcoes = { categorias: [], marcas: [], fornecedores: [] }
@@ -102,6 +102,42 @@ function modalAberto() {
   return container.textContent?.includes(m.produtos.secao_essencial) ?? false
 }
 
+const produtoFake: CatalogoProduto = {
+  id: 'produto-fake-1',
+  sku: 'SKU-1',
+  nome: 'Produto Fake',
+  codigo_barras: null,
+  codigo_interno: null,
+  referencia_fornecedor: null,
+  nome_reduzido_pdv: null,
+  localizacao_prateleira: null,
+  preco_varejo: 10,
+  preco_atacado: null,
+  preco_custo: null,
+  preco_custo_medio: 0,
+  estoque_minimo: null,
+  permitir_abaixo_custo: false,
+  quantidade_gatilho_atacado: null,
+  quantidade_atual: 5,
+  origem: 'china_manual',
+  tem_nf: false,
+  ativo: true,
+  status_publicacao: 'PUBLICADO',
+  imagem_url: null,
+  categoria_id: null,
+  marca_id: null,
+  fornecedor_id: null,
+  unidade_medida: 'UN',
+  observacao: null,
+  tags: null,
+  ncm: null,
+  cfop_produto: null,
+  csosn: null,
+  cest: null,
+  cst_pis: null,
+  cst_cofins: null,
+}
+
 describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => {
   it('entrada header (CatalogoNovoButton): salvar fecha modal e envia gatilho', async () => {
     render(<CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} />)
@@ -141,5 +177,31 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
     await vi.waitFor(() => expect(modalAberto()).toBe(false))
     expect(routerRefreshMock).toHaveBeenCalled()
     expect(routerPushMock).not.toHaveBeenCalled()
+  })
+
+  it('atalho "n": não abre "novo produto" por cima de um modal de edição já aberto (regressão)', () => {
+    render(<CatalogoTable produtos={[produtoFake]} labels={labels} m={m} opcoes={opcoes} />)
+    expect(modalAberto()).toBe(false)
+
+    const editar = container.querySelector(
+      `button[aria-label="Editar ${produtoFake.nome}"]`,
+    ) as HTMLButtonElement
+    expect(editar, 'botão editar').toBeTruthy()
+    flushSync(() => editar.click())
+
+    flushSync(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true }))
+    })
+    expect(modalAberto()).toBe(false)
+  })
+
+  it('atalho "n": funciona quando nenhum modal está aberto e foco não está em campo de texto', () => {
+    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} />)
+    expect(modalAberto()).toBe(false)
+
+    flushSync(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true }))
+    })
+    expect(modalAberto()).toBe(true)
   })
 })
