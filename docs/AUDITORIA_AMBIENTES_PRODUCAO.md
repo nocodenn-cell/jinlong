@@ -44,10 +44,12 @@ Legenda de células das matrizes: `✅` presente/esperado · `—` não se aplic
 
 Seção dedicada ao risco central de "duas autoridades": existem **dois** projetos Supabase na conta.
 
-| Papel | Projeto | Ref | URL | Região |
-|---|---|---|---|---|
-| **PRODUÇÃO (oficial)** | `jinlong` | `kbabmewnahysfvlybiak` | `https://kbabmewnahysfvlybiak.supabase.co` | sa-east-1 |
-| **SECUNDÁRIO** | `ageguard` | `dusngyacduoihxhkqmhv` | `https://dusngyacduoihxhkqmhv.supabase.co` | us-west-2 |
+| Papel | Projeto | Ref | URL | Região | Status (confirmado via MCP) |
+|---|---|---|---|---|---|
+| **PRODUÇÃO (oficial)** | `jinlong` | `kbabmewnahysfvlybiak` | `https://kbabmewnahysfvlybiak.supabase.co` | sa-east-1 | **ACTIVE_HEALTHY** · Postgres 17.6 |
+| **SECUNDÁRIO** | `ageguard` | `dusngyacduoihxhkqmhv` | `https://dusngyacduoihxhkqmhv.supabase.co` | us-west-2 | **INACTIVE** (mesma org) |
+
+> ✅ **Atualização (reconciliação com nuvem):** `ageguard` está **INACTIVE** — não serve tráfego. O risco de "segunda autoridade" é **latente, não ativo**. Ambos os projetos estão na mesma organização (`cmgixawhsltzcudyeukz`).
 
 **Edge Functions ativas no projeto de produção (`jinlong`):** `sync-outbox` (v68), `validar-gerente` (v43, `verify_jwt`), `fiscal-worker` (v35).
 
@@ -171,7 +173,9 @@ Conforme instrução da sprint: variável sem uso **não é removida automaticam
 
 **Produção está usando:**
 
-- **Vercel:** projeto `pdv-importados` (team `jinlong`) · domínio `pdv-importados.vercel.app` · branch `main` · Node 24.x. Env vars: **verificar no dashboard** (não legível por API).
+- **Vercel:** projeto `pdv-importados` (team `jinlong`) · branch `main` · Node 24.x. **Deploy de produção atual = commit `8deb540` (#193), estado READY** (confirmado via MCP), igual ao HEAD de `main` (sem drift repo↔prod); rollback candidate `c41f241` (#190) disponível. Env vars: **verificar no dashboard** (não legível por API).
+- **Advisors Supabase (jinlong):** segurança 114 (0 ERROR; 33 funções `SECURITY DEFINER` executáveis por `anon` a revisar; leaked-password-protection desligado; 2 RLS-sem-policy); performance 266 (0 ERROR; otimização, não bloqueante). Ver `RISK_REGISTER.md` R8–R10, R14.
+- **Migrations (jinlong):** 18 rastreadas no ledger; repo tem migrations ausentes em produção (248, 250–253, 256). Ver `DEPLOY_ORDER.md` Passo 1.
 - **Supabase:** projeto `jinlong` — ref `kbabmewnahysfvlybiak` (`https://kbabmewnahysfvlybiak.supabase.co`, sa-east-1). Edge Functions ativas: **`sync-outbox`** (v68), **`validar-gerente`** (v43, verify_jwt), **`fiscal-worker`** (v35).
 - **GitHub:** Actions Secrets/Variables conforme §3.4 (nomes extraídos dos workflows; valores verificar no dashboard).
 
