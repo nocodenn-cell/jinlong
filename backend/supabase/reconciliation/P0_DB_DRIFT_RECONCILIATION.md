@@ -95,6 +95,37 @@ Capturar o DDL dos objetos do §3 (via `pg_get_functiondef` / introspecção) e 
 - **R-RPC:** 9 overloads `finalizar_venda*`, vários SECURITY DEFINER legados — superfície morta.
 - **R-LEDGER:** numeração de migration não-autoritativa (timestamps mandam); dois `259`, dois `268`.
 
+## 8.0 P0.1 — Respostas definitivas (2ª varredura exaustiva, 2026-07-16)
+
+Nesta rodada o inventário deixou de ser por amostragem e passou a ser **exaustivo**: todas as 55 tabelas + 7 views + 95 nomes de função de `public` foram enumerados em produção e cruzados contra o conteúdo real dos arquivos de migration (não só nomes de arquivo).
+
+**1. O repositório é novamente a fonte única de verdade do schema?**
+**Sim, para estrutura (tabelas/colunas/índices/RLS/policies/triggers/funções) — com uma ressalva de GRANT.** Todos os objetos estruturais encontrados em produção sem migration correspondente foram capturados (270–276, ver §8.1). A única divergência que **sobra depois da captura** é de **privilégio**, não de estrutura: o `GRANT`/`REVOKE` da função `finalizar_venda_transacional_canonica_v4` em produção não bate com o que a migration 268 (já presente no repo) declara — ver pergunta 3.
+
+**2. Existe algum objeto em produção sem migration correspondente?**
+Havia. Lista completa encontrada e **todos capturados nesta sessão**:
+- 1ª varredura (amostra dirigida): `funcionarios`, `funcionarios_meta`, `historico_precos_produto`, `comissoes_regras_funcionario`, `comissoes_regras_historico`, `vendas.cliente_id`, policies/índices de `clientes` → migrations 270–273.
+- 2ª varredura (inventário exaustivo de 95 funções + 55 tabelas): mais 7 funções (`baixar_estoque_venda`, `caixa_integridade_gate_check`, `fn_listar_funcionarios_gerente`, `listar_valores_sistema_dinheiro_caixas`, `resumo_comissoes_por_funcionario`, `shadow_validar_venda_engine_v4`, `total_vendas_por_funcionario`) + 1 tabela de suporte (`venda_engine_shadow_runs`) + 1 tabela legada órfã (`perfis`, 3 linhas, 0 uso no app — superada por `usuarios.perfil`) → migrations 274–276.
+- **Após 270–276: nenhum objeto estrutural remanescente sem migration correspondente** (verificado por enumeração completa, não por amostra).
+
+**3. Existe alguma migration que NÃO reflita o estado real da produção?**
+**Sim — achado concreto.** A migration `268_reconcile_finalizar_venda_v4_single_overload.sql` (já no repo) executa `REVOKE ALL ... FROM PUBLIC` seguido de `GRANT EXECUTE ... TO authenticated, service_role` para `finalizar_venda_transacional_canonica_v4`. Consultei `information_schema.routine_privileges` diretamente em produção:
+
+```
+grantee        | privilege_type
+anon           | EXECUTE   ← não deveria estar aqui segundo a migration 268
+authenticated  | EXECUTE
+postgres       | EXECUTE
+service_role   | EXECUTE
+```
+
+**`anon` tem `EXECUTE`** na função canônica de venda, apesar do arquivo declarar o oposto. Causa provável: privilégio padrão de schema (`ALTER DEFAULT PRIVILEGES`) do Supabase re-concede `EXECUTE` a `anon`/`authenticated` sempre que uma função é recriada, e isso ocorreu **depois** da 268 rodar (ou a 268 rodou antes de tal default ter sido configurado). Não há como determinar a causa exata sem log de auditoria — mas o **fato objetivo** é: migration diz uma coisa, produção está em outro estado. **Ação corretiva vai para o P1 (S1), não é uma nova captura de schema** — é uma correção de GRANT.
+
+**4. Um ambiente reconstruído apenas pelas migrations produzirá exatamente o mesmo banco da produção?**
+**Estruturalmente sim (schema idêntico por construção); em GRANTs, não totalmente** — o item da pergunta 3 mostra que replay das migrations reproduziria o `REVOKE`/`GRANT` pretendido (sem `anon`), que é **mais restritivo** que o estado atual de produção. Ou seja: um rebuild a partir das migrations ficaria **mais seguro** que a produção atual nesse ponto específico — não replicaria o "bug" de grant. Validação **byte-a-byte por execução real** (aplicar tudo num Postgres limpo e comparar) continua **bloqueada pelo plano Supabase** (branching = Pro; Free no limite de 2 projetos) — não foi possível executar fisicamente o rebuild, apenas comprovar equivalência estrutural por introspecção completa.
+
+---
+
 ## 8.1 P0.1 — Captura de reconciliação de schema (EXECUTADO, não-destrutivo)
 
 Objetos que existiam **só em produção** foram capturados como migrations idempotentes e behavior-preserving (reconstruídas por introspecção fiel de 2026-07-16 — `information_schema`, `pg_policies`, `pg_get_triggerdef`, `pg_get_functiondef`). **Nenhuma alteração em produção.**
@@ -105,6 +136,9 @@ Objetos que existiam **só em produção** foram capturados como migrations idem
 | `271_capture_historico_precos_produto.sql` | 259_historico_precos_produto | tabela `historico_precos_produto` + índice + RLS + policy + fn+trigger `registrar_historico_preco_produto` em `produtos` |
 | `272_capture_comissoes_regras.sql` | 260 + 261 comissões | tabelas `comissoes_regras_funcionario`, `comissoes_regras_historico` (+RLS, policies, FKs) |
 | `273_capture_vendas_cliente_id_e_clientes.sql` | 263 + 265 + 266 | `vendas.cliente_id` + índice; `clientes_loja_documento_unique`; policy `clientes_insert_loja` |
+| `274_capture_funcionarios_comissoes_relatorios.sql` | (sem ledger — inventário exaustivo) | `fn_listar_funcionarios_gerente`, `resumo_comissoes_por_funcionario`, `total_vendas_por_funcionario`, `baixar_estoque_venda` (legado/paralelo), `caixa_integridade_gate_check`, `listar_valores_sistema_dinheiro_caixas` |
+| `275_capture_shadow_venda_engine.sql` | (sem ledger) | tabela `venda_engine_shadow_runs` + fn `shadow_validar_venda_engine_v4` (dry-run da v4) |
+| `276_capture_perfis_legado.sql` | (sem ledger) | tabela `perfis` — órfã, superada por `usuarios.perfil`, 3 linhas, 0 uso no app |
 
 **Validação:** `guard:migrations` OK (270–273 sem colisão; preenchem o gap 259–267 documentado). `guard:all` 7/7 OK. Estrutura idêntica à de produção **por construção** (cada objeto reconstruído a partir da introspecção). Idempotência: `IF NOT EXISTS` / `CREATE OR REPLACE` / `DROP POLICY IF EXISTS` → em produção é **no-op**; em rebuild limpo, recria o schema real.
 
