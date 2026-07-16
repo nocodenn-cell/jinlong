@@ -61,7 +61,9 @@ Funções de leitura que só consultam catálogo do sistema ou dados já legíve
 ### 2.D — Candidata à remoção (superfície morta)
 Overloads legados da venda, superados pela v4 (código só chama a v4 — `guard:rpc` confirma):
 `finalizar_venda_transacional(7 args)`, `finalizar_venda_transacional(9 args)`, `finalizar_venda_transacional_canonica_v2(10 args)`, `_v2(12 args)`, `_v2(13 args)`, `_v3(18 args)`, mais os **stubs vazios** `finalizar_venda_transacional_canonica_v2()` e `_v3()` (assinatura sem parâmetros, achados na varredura anterior — provavelmente definições quebradas/de teste esquecidas).
-→ **DROP** (8 objetos). `268_drop_v4_overloads` (no ledger de produção) deveria ter feito isto e não fez — só consolidou a v4.
+→ **DROP** (8 objetos). `268_drop_v4_overloads` (no ledger de produção) deveria ter feito isto e não fez — só consolidou a v4. **Atualização de execução:** verificado que 7 dos 8 já são stubs desabilitados (`RAISE EXCEPTION 'LEGACY_DISABLED_USE_V4'`); script pronto com snapshot+rollback em `03_security_drop_legacy_overloads.sql` / `03_security_rollback_recreate_legacy.sql`.
+
+**RPC adicional sem uso (achada na varredura de limpeza do repositório):** `is_feature_enabled(flag_name text)` — 0 chamadas em código de aplicação (só aparece em `database.types.ts` gerado). Candidata a remoção da mesma classe do §2.D acima; DROP é mutação de produção, portanto **não executado** — requer sua confirmação como os demais itens S4.
 
 ---
 
