@@ -98,7 +98,11 @@ function resetFormState(
   setters.setEstoqueInicialMin('')
 }
 
-export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null) {
+export function useProdutoForm(
+  open: boolean,
+  produto: ProdutoGerenteRow | null,
+  duplicarDe: ProdutoGerenteRow | null = null,
+) {
   const [nome, setNome] = useState('')
   const [codigoInterno, setCodigoInterno] = useState('')
   const [codigoBarras, setCodigoBarras] = useState('')
@@ -128,7 +132,7 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
 
   useEffect(() => {
     if (!open) return
-    resetFormState(produto, {
+    const setters = {
       setNome,
       setCodigoInterno,
       setCodigoBarras,
@@ -154,9 +158,22 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       precoCustoInput,
       setEstoqueInicialQty,
       setEstoqueInicialMin,
-    })
+    }
+    if (produto) {
+      // Edição: hidrata do produto existente.
+      resetFormState(produto, setters)
+    } else if (duplicarDe) {
+      // Duplicar para criar: hidrata do produto base como um NOVO cadastro
+      // (editando=false) e limpa só o que precisa ser único por item.
+      resetFormState(duplicarDe, setters)
+      setCodigoBarras('')
+      setCodigoInterno('')
+    } else {
+      // Cadastro em branco.
+      resetFormState(null, setters)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, produto])
+  }, [open, produto, duplicarDe])
 
   const readOnly = useMemo(() => readOnlyFromProduto(produto), [produto])
 

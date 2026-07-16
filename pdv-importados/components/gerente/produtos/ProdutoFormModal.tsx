@@ -33,6 +33,9 @@ export type ProdutoFormModalProps = Readonly<{
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
   produto: ProdutoGerenteRow | null
+  /** Duplicar para criar: semeia um NOVO cadastro a partir deste produto
+   *  (limpa código de barras/interno). Ignorado quando `produto` está definido. */
+  duplicarDe?: ProdutoGerenteRow | null
   onSaved: () => void
   idioma?: Idioma
 }>
@@ -93,6 +96,7 @@ export function ProdutoFormModal({
   m,
   opcoes: opcoesIniciais,
   produto,
+  duplicarDe = null,
   onSaved,
   idioma = 'pt',
 }: ProdutoFormModalProps) {
@@ -105,7 +109,7 @@ export function ProdutoFormModal({
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
   const [modoCompleto, setModoCompleto] = useState(editando)
 
-  const form = useProdutoForm(open, produto)
+  const form = useProdutoForm(open, produto, duplicarDe)
 
   useEffect(() => {
     if (open) {
