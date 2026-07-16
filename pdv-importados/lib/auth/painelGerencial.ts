@@ -21,14 +21,6 @@ export function isPerfilPainelGerencial(
 }
 
 /**
- * Regra de acesso: uma conta de usuário desativada (`ativo === false`) não pode
- * entrar. A UI (LoginForm) apresenta o erro; a decisão vive aqui.
- */
-export function contaUsuarioBloqueada(u: { ativo?: boolean | null }): boolean {
-  return u.ativo === false
-}
-
-/**
  * Destino pós-login por perfil — mesma regra de `isPerfilPainelGerencial`
  * (fonte também usada por `adminPolicy.canAccessAdmin`). Perfis desconhecidos
  * caem no PDV (destino seguro), nunca no painel.

@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import type { Mensagens } from '@/i18n/getMessages'
 import { ROUTES } from '@shared-core/navigation/routes'
-import { contaUsuarioBloqueada, destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
+import { destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
+import { isContaDesativada } from '@/core/auth/contaUsuario'
 
 /** Evita open redirect: só `/gerente...` ou `/caixa...`. */
 function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string {
@@ -120,7 +121,7 @@ export function LoginForm({ messages: m }: Props) {
         return
       }
 
-      if (contaUsuarioBloqueada(u)) {
+      if (isContaDesativada(u)) {
         await supabase.auth.signOut()
         setErro('Sua conta está desativada. Fale com o administrador da loja para reativar o acesso.')
         return

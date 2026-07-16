@@ -56,9 +56,24 @@ export function isVendavelPdv(
   return isProdutoVendavel({ ativo: ativo ?? false, status_publicacao: status ?? null })
 }
 
-/** Predicado base de leitura: o produto está em rascunho? (leitura pessimista). */
-export function isStatusRascunho(status: StatusPublicacao | null | undefined): boolean {
+/**
+ * Leitura de negócio: o produto está em rascunho? A UI consome este predicado
+ * em vez de comparar status_publicacao por literal (enforçado por
+ * scripts/core-rule-guard.mjs). Leitura pessimista: ausente → não é rascunho.
+ *
+ * Predicado canônico único (a antiga `isStatusRascunho`, byte-idêntica, foi
+ * consolidada aqui na reconciliação #191 × #196).
+ */
+export function isRascunho(status: StatusPublicacao | null | undefined): boolean {
   return resolveStatusPublicacaoLeitura(status) === 'DRAFT'
+}
+
+/**
+ * Intenção de salvar como rascunho → payload canônico. Mantém o literal 'DRAFT'
+ * dentro do core; a UI apenas envia a intenção (opts.rascunho) e espalha isto.
+ */
+export function payloadStatusRascunho(): { status_publicacao: 'DRAFT' } {
+  return { status_publicacao: 'DRAFT' }
 }
 
 /**
@@ -67,7 +82,7 @@ export function isStatusRascunho(status: StatusPublicacao | null | undefined): b
  * (enforçado por scripts/core-rule-guard.mjs).
  */
 export function podePublicarProduto(status: StatusPublicacao | null | undefined): boolean {
-  return isStatusRascunho(status)
+  return isRascunho(status)
 }
 
 /**
@@ -79,7 +94,7 @@ export function podeSalvarComoRascunho(
   editando: boolean,
   status: StatusPublicacao | null | undefined,
 ): boolean {
-  return !editando || isStatusRascunho(status)
+  return !editando || isRascunho(status)
 }
 
 /** Intenção "salvar como rascunho" → status a persistir. Mantém o literal no core. */

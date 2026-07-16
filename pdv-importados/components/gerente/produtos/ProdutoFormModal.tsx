@@ -21,14 +21,15 @@ import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import {
-  isStatusRascunho,
+  isRascunho,
+  payloadStatusRascunho,
   podeSalvarComoRascunho,
-  statusPublicacaoRascunho,
 } from '@/core/catalog/statusPublicacao'
 import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
 import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
 import { ProdutoForm } from './form/ProdutoForm'
 import { useProdutoForm } from './form/useProdutoForm'
+import { acaoTecladoProduto } from './form/produtoFormKeyboard'
 
 export type ProdutoFormModalProps = Readonly<{
   open: boolean
@@ -36,6 +37,9 @@ export type ProdutoFormModalProps = Readonly<{
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
   produto: ProdutoGerenteRow | null
+  /** Duplicar para criar: semeia um NOVO cadastro a partir deste produto
+   *  (limpa código de barras/interno). Ignorado quando `produto` está definido. */
+  duplicarDe?: ProdutoGerenteRow | null
   onSaved: () => void
   idioma?: Idioma
 }>
@@ -96,6 +100,7 @@ export function ProdutoFormModal({
   m,
   opcoes: opcoesIniciais,
   produto,
+  duplicarDe = null,
   onSaved,
   idioma = 'pt',
 }: ProdutoFormModalProps) {
@@ -108,7 +113,7 @@ export function ProdutoFormModal({
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
   const [modoCompleto, setModoCompleto] = useState(editando)
 
-  const form = useProdutoForm(open, produto)
+  const form = useProdutoForm(open, produto, duplicarDe)
 
   useEffect(() => {
     if (open) {
@@ -180,7 +185,7 @@ export function ProdutoFormModal({
           precoAtacado,
           precoCusto: form.precoCustoInput.parse(),
         }),
-        ...(comoRascunho ? { status_publicacao: statusPublicacaoRascunho() } : {}),
+        ...(comoRascunho ? payloadStatusRascunho() : {}),
       }
 
       setSaving(true)
@@ -218,7 +223,7 @@ export function ProdutoFormModal({
         const msg = (() => {
           if (comoRascunho) return p.criado_rascunho
           if (!editando) return p.criado_publicado
-          if (isStatusRascunho(produto.status_publicacao)) return p.criado_publicado
+          if (isRascunho(produto.status_publicacao)) return p.criado_publicado
           return m.comum.sucesso
         })()
         emitGerenteToast({ kind: 'success', message: msg })
@@ -377,33 +382,43 @@ export function ProdutoFormModal({
           >
             {saving
               ? '…'
-              : editando && !isStatusRascunho(produto.status_publicacao)
+              : editando && !isRascunho(produto.status_publicacao)
                 ? p.editar_modal_salvar
                 : p.publicar_no_pdv}
           </Button>
         </>
       }
     >
-      <ProdutoForm
-        m={m}
-        opcoes={opcoes}
-        produto={produto}
-        disabled={saving}
-        modoCompleto={modoCompleto}
-        onToggleModoCompleto={() => setModoCompleto((v) => !v)}
-        onFornecedoresChange={(fornecedores) =>
-          setOpcoes((prev) => ({ ...prev, fornecedores }))
-        }
-        onCategoriasChange={(categorias) =>
-          setOpcoes((prev) => ({ ...prev, categorias }))
-        }
-        onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
-        onImagemChange={onSaved}
-        idioma={idioma}
-        nomeRef={nomeRef}
-        onEnterSubmit={() => void salvar()}
-        {...form}
-      />
+      <div
+        onKeyDown={(e) => {
+          const acao = acaoTecladoProduto(e, { editando })
+          if (!acao || saving) return
+          e.preventDefault()
+          if (acao === 'publicar') void salvar()
+          else void salvar({ continuar: true })
+        }}
+      >
+        <ProdutoForm
+          m={m}
+          opcoes={opcoes}
+          produto={produto}
+          disabled={saving}
+          modoCompleto={modoCompleto}
+          onToggleModoCompleto={() => setModoCompleto((v) => !v)}
+          onFornecedoresChange={(fornecedores) =>
+            setOpcoes((prev) => ({ ...prev, fornecedores }))
+          }
+          onCategoriasChange={(categorias) =>
+            setOpcoes((prev) => ({ ...prev, categorias }))
+          }
+          onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
+          onImagemChange={onSaved}
+          idioma={idioma}
+          nomeRef={nomeRef}
+          onEnterSubmit={() => void salvar()}
+          {...form}
+        />
+      </div>
     </DragonModal>
   )
 }

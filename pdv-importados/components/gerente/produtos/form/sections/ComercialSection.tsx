@@ -1,7 +1,6 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { criarCategoriaProduto } from '@/app/gerente/categorias-produtos/actions'
 import { criarMarcaProduto } from '@/app/gerente/marcas-produtos/actions'
 import { FornecedorCombobox } from '../fields/FornecedorCombobox'
 import { SelectComCadastroRapido } from '../fields/SelectComCadastroRapido'
@@ -26,31 +25,9 @@ export function ComercialSection({ faixasSlot, idioma }: Props) {
       <ProdutoFormSectionHeading title={p.secao_classificacao} />
       <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_classificacao_recomendados}</p>
       <div id="produto-secao-comercial" className="mt-3 space-y-3">
+        {/* Categoria saiu daqui para a área sempre visível (CategoriaQuickField).
+            Marca segue no modo completo. */}
         <div className="grid grid-cols-2 gap-3">
-          <SelectComCadastroRapido
-            label={p.categoria_label}
-            value={ctx.categoriaId}
-            onChange={ctx.setCategoriaId}
-            opcoes={opcoes.categorias}
-            vazioLabel={p.nenhuma_categoria}
-            disabled={disabled}
-            selectClassName={selectClassName}
-            modalTitulo={p.cadastro_rapido_categoria}
-            modalNomeLabel={p.categoria_label}
-            modalPlaceholder={p.categoria_label}
-            cancelarLabel={c.cancelar}
-            salvarLabel={c.salvar}
-            salvandoLabel={c.carregando}
-            onCriar={async (nome) => {
-              const r = await criarCategoriaProduto({ nome })
-              return r.success
-                ? { success: true, id: r.data.id }
-                : { success: false, error: r.error }
-            }}
-            onOpcaoCriada={(opcao) =>
-              ctx.onCategoriasChange?.([...opcoes.categorias, opcao])
-            }
-          />
           <SelectComCadastroRapido
             label={p.marca_label}
             value={ctx.marcaId}

@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
-import { Eye, ImageIcon, Pencil } from 'lucide-react'
+import { Copy, Eye, ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { StatusPublicacao } from '@/core/ports/produto'
@@ -91,6 +91,7 @@ export function CatalogoTable({
   const searchParams = useSearchParams()
   const [editando, setEditando] = useState<CatalogoProduto | null>(null)
   const [novoOpen, setNovoOpen] = useState(false)
+  const [duplicando, setDuplicando] = useState<CatalogoProduto | null>(null)
 
   useEffect(() => {
     if (searchParams.get('modal') === 'novo') {
@@ -223,11 +224,18 @@ export function CatalogoTable({
   return (
     <>
       <NovoProdutoModal
-        open={novoOpen}
-        onOpenChange={setNovoOpen}
+        open={novoOpen || duplicando !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setNovoOpen(false)
+            setDuplicando(null)
+          }
+        }}
         m={m}
         opcoes={opcoes}
+        duplicarDe={duplicando}
         onCriado={() => {
+          setDuplicando(null)
           router.refresh()
         }}
       />
@@ -267,6 +275,15 @@ export function CatalogoTable({
               className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
             >
               <Pencil size={13} aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label={`Duplicar ${row.nome}`}
+              title={`Duplicar ${row.nome}`}
+              onClick={() => setDuplicando(row)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
+            >
+              <Copy size={13} aria-hidden />
             </button>
             <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
               <Eye size={13} aria-hidden />

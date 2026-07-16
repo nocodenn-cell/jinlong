@@ -4,8 +4,9 @@ import {
   dualWriteFromStatus,
   defaultStatusNovoProduto,
   isIntencaoRascunho,
-  isStatusRascunho,
+  isRascunho,
   lifecycleAoEditarProduto,
+  payloadStatusRascunho,
   podePublicarProduto,
   podeSalvarComoRascunho,
   resolveStatusPublicacaoLeitura,
@@ -37,13 +38,18 @@ describe('statusPublicacao — fonte única da verdade do lifecycle', () => {
     expect(resolveStatusPublicacaoLeitura(undefined)).toBe('INATIVO')
   })
 
-  it('isStatusRascunho / podePublicarProduto: só DRAFT é publicável', () => {
-    expect(isStatusRascunho('DRAFT')).toBe(true)
-    expect(isStatusRascunho('PUBLICADO')).toBe(false)
-    expect(isStatusRascunho('INATIVO')).toBe(false)
-    expect(isStatusRascunho(null)).toBe(false)
+  it('isRascunho / podePublicarProduto: só DRAFT é publicável (predicado canônico único)', () => {
+    expect(isRascunho('DRAFT')).toBe(true)
+    expect(isRascunho('PUBLICADO')).toBe(false)
+    expect(isRascunho('INATIVO')).toBe(false)
+    expect(isRascunho(null)).toBe(false)
+    expect(isRascunho(undefined)).toBe(false)
     expect(podePublicarProduto('DRAFT')).toBe(true)
     expect(podePublicarProduto('PUBLICADO')).toBe(false)
+  })
+
+  it('payloadStatusRascunho: devolve o payload canônico de rascunho', () => {
+    expect(payloadStatusRascunho()).toEqual({ status_publicacao: 'DRAFT' })
   })
 
   it('podeSalvarComoRascunho: criação sempre permite; edição só enquanto DRAFT', () => {
