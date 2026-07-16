@@ -3,16 +3,19 @@
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { inativarProduto, publicarProduto } from '@/app/gerente/produtos/actions'
+import { ativoFromStatusPublicacao } from '@/core/catalog/statusPublicacao'
 import type { StatusPublicacao } from '@/core/ports/produto'
+import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 
 type Props = Readonly<{
   produtoId: string
   status: StatusPublicacao
   labels: { publicar: string; inativar: string }
+  erroGenerico: string
 }>
 
-export function CatalogoPublicacaoActions({ produtoId, status, labels }: Props) {
+export function CatalogoPublicacaoActions({ produtoId, status, labels, erroGenerico }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
@@ -22,7 +25,11 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels }: Props) 
         action === 'publicar'
           ? await publicarProduto(produtoId)
           : await inativarProduto(produtoId)
-      if (result.success) router.refresh()
+      if (result.success) {
+        router.refresh()
+        return
+      }
+      emitGerenteToast({ kind: 'error', message: result.error || erroGenerico })
     })
   }
 
@@ -31,7 +38,7 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels }: Props) 
     pending && 'pointer-events-none opacity-50',
   )
 
-  if (status === 'PUBLICADO') {
+  if (ativoFromStatusPublicacao(status)) {
     return (
       <button
         type="button"

@@ -17,6 +17,8 @@ import {
 } from '@/core/services/produtoService'
 import {
   dualWriteFromStatus,
+  isIntencaoRascunho,
+  lifecycleAoEditarProduto,
   resolveStatusPublicacaoLeitura,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
@@ -71,8 +73,8 @@ export async function criarProduto(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const raw = input as { status_publicacao?: string }
-  const asDraft = raw.status_publicacao === 'DRAFT'
+  const raw = input as { status_publicacao?: unknown }
+  const asDraft = isIntencaoRascunho(raw.status_publicacao)
   const parsed = asDraft
     ? NovoProdutoRascunhoSchema.safeParse(input)
     : NovoProdutoSchema.safeParse(input)
@@ -82,9 +84,7 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
-  const lifecycle = asDraft
-    ? { status_publicacao: 'DRAFT' as const, ativo: false }
-    : statusInicialProduto('human')
+  const lifecycle = asDraft ? dualWriteFromStatus('DRAFT') : statusInicialProduto('human')
   const supabase = await createClient()
   const repo = createProdutoRepository(supabase)
   const result = await criarProdutoComEstoque(
@@ -901,7 +901,7 @@ export async function atualizarDadosProdutoGerente(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const asDraft = (input as { status_publicacao?: string }).status_publicacao === 'DRAFT'
+  const asDraft = isIntencaoRascunho((input as { status_publicacao?: unknown }).status_publicacao)
   const parsed = asDraft
     ? EditarProdutoRascunhoSchema.safeParse(input)
     : EditarProdutoCatalogoSchema.safeParse(input)
@@ -913,8 +913,6 @@ export async function atualizarDadosProdutoGerente(
 
   const supabase = await createClient()
 
-  // Preserva INATIVO ao editar/salvar; só muda status em rascunho explícito
-  // ou ao publicar um DRAFT via "Salvar" (ação explícita de publicação).
   const { data: atualRow } = await supabase
     .from('produtos')
     .select('status_publicacao')
@@ -922,16 +920,7 @@ export async function atualizarDadosProdutoGerente(
     .maybeSingle()
   const statusAtual = (atualRow?.status_publicacao ?? null) as StatusPublicacao | null
 
-  let lifecycle: { status_publicacao: StatusPublicacao; ativo: boolean } | null = null
-  if (asDraft) {
-    lifecycle = dualWriteFromStatus('DRAFT')
-  } else if (statusAtual === 'DRAFT') {
-    lifecycle = dualWriteFromStatus('PUBLICADO')
-  } else if (statusAtual === 'INATIVO') {
-    lifecycle = null
-  } else {
-    lifecycle = dualWriteFromStatus('PUBLICADO')
-  }
+  const lifecycle = lifecycleAoEditarProduto(asDraft, statusAtual)
 
   const { error } = await supabase
     .from('produtos')

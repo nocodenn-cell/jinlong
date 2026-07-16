@@ -86,3 +86,28 @@ export function podeSalvarComoRascunho(
 export function statusPublicacaoRascunho(): StatusPublicacao {
   return 'DRAFT'
 }
+
+/**
+ * Lê a intenção "salvar como rascunho" em dados brutos (pré-validação Zod, nas
+ * server actions de criar/editar produto). Mantém o literal 'DRAFT' só aqui.
+ */
+export function isIntencaoRascunho(rawStatusPublicacao: unknown): boolean {
+  return rawStatusPublicacao === 'DRAFT'
+}
+
+/**
+ * Decisão de negócio: transição de lifecycle ao editar/salvar um produto existente.
+ * - Salvar como rascunho (intenção explícita) → DRAFT.
+ * - INATIVO é preservado — editar não republica um produto inativado.
+ * - Nos demais casos (rascunho em edição normal, já publicado, ou status
+ *   desconhecido) → PUBLICADO, pois "Salvar" fora do rascunho é publicação implícita.
+ * Retorna null quando o lifecycle atual (dual-write) não deve ser alterado.
+ */
+export function lifecycleAoEditarProduto(
+  comoRascunho: boolean,
+  statusAtual: StatusPublicacao | null,
+): { status_publicacao: StatusPublicacao; ativo: boolean } | null {
+  if (comoRascunho) return dualWriteFromStatus('DRAFT')
+  if (statusAtual === 'INATIVO') return null
+  return dualWriteFromStatus('PUBLICADO')
+}
