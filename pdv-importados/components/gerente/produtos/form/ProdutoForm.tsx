@@ -14,6 +14,7 @@ import type { UseProdutoFormReturn } from './useProdutoForm'
 import type { ProdutoFormShellProps } from './produtoForm.types'
 import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
+import { CategoriaQuickField } from './sections/CategoriaQuickField'
 import { ComercialSection } from './sections/ComercialSection'
 import { CompraSection } from './sections/CompraSection'
 import { EstoqueSection } from './sections/EstoqueSection'
@@ -123,6 +124,10 @@ export function ProdutoForm(props: Props) {
           onEnterSubmit={props.onEnterSubmit}
         />
         <PrecosSection />
+        {/* Categoria sempre visível (modo simples e completo) — campo primário. */}
+        <div className="mt-1">
+          <CategoriaQuickField />
+        </div>
         <EstoqueSection />
 
         <button

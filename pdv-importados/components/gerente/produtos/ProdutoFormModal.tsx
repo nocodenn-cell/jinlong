@@ -25,6 +25,7 @@ import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappe
 import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
 import { ProdutoForm } from './form/ProdutoForm'
 import { useProdutoForm } from './form/useProdutoForm'
+import { acaoTecladoProduto } from './form/produtoFormKeyboard'
 
 export type ProdutoFormModalProps = Readonly<{
   open: boolean
@@ -380,26 +381,36 @@ export function ProdutoFormModal({
         </>
       }
     >
-      <ProdutoForm
-        m={m}
-        opcoes={opcoes}
-        produto={produto}
-        disabled={saving}
-        modoCompleto={modoCompleto}
-        onToggleModoCompleto={() => setModoCompleto((v) => !v)}
-        onFornecedoresChange={(fornecedores) =>
-          setOpcoes((prev) => ({ ...prev, fornecedores }))
-        }
-        onCategoriasChange={(categorias) =>
-          setOpcoes((prev) => ({ ...prev, categorias }))
-        }
-        onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
-        onImagemChange={onSaved}
-        idioma={idioma}
-        nomeRef={nomeRef}
-        onEnterSubmit={() => void salvar()}
-        {...form}
-      />
+      <div
+        onKeyDown={(e) => {
+          const acao = acaoTecladoProduto(e, { editando })
+          if (!acao || saving) return
+          e.preventDefault()
+          if (acao === 'publicar') void salvar()
+          else void salvar({ continuar: true })
+        }}
+      >
+        <ProdutoForm
+          m={m}
+          opcoes={opcoes}
+          produto={produto}
+          disabled={saving}
+          modoCompleto={modoCompleto}
+          onToggleModoCompleto={() => setModoCompleto((v) => !v)}
+          onFornecedoresChange={(fornecedores) =>
+            setOpcoes((prev) => ({ ...prev, fornecedores }))
+          }
+          onCategoriasChange={(categorias) =>
+            setOpcoes((prev) => ({ ...prev, categorias }))
+          }
+          onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
+          onImagemChange={onSaved}
+          idioma={idioma}
+          nomeRef={nomeRef}
+          onEnterSubmit={() => void salvar()}
+          {...form}
+        />
+      </div>
     </DragonModal>
   )
 }
