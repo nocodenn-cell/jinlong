@@ -1,3 +1,5 @@
+import { mensagemErroOperacaoPrivilegiada } from '@/lib/errors/operacaoPrivilegiadaErro'
+
 const MAPA: Record<string, string> = {
   DEVOLVER_VENDA_AUTH: 'Sessão expirada. Faça login novamente.',
   DEVOLVER_VENDA_IDEMPOTENCY_OBRIGATORIA: 'Chave de idempotência ausente.',
@@ -8,7 +10,6 @@ const MAPA: Record<string, string> = {
   DEVOLVER_VENDA_NAO_ENCONTRADA: 'Venda não encontrada.',
   DEVOLVER_VENDA_STATUS_INVALIDO: 'Somente vendas concluídas podem ser devolvidas.',
   DEVOLVER_VENDA_CAIXA_NAO_ENCONTRADO: 'Caixa da venda não encontrado.',
-  DEVOLVER_VENDA_SEM_PERMISSAO: 'Sem permissão para devolver vendas nesta loja.',
   DEVOLVER_VENDA_SUBSTITUTA_INVALIDA: 'Venda substituta inválida ou não concluída.',
   DEVOLVER_VENDA_ITEM_INVALIDO: 'Item ou quantidade inválidos.',
   DEVOLVER_VENDA_ITEM_NAO_PERTENCE: 'Item não pertence a esta venda.',
@@ -22,6 +23,9 @@ const MAPA: Record<string, string> = {
 }
 
 export function mensagemErroDevolverVenda(codigoBruto: string): string {
+  const msgOperacaoPrivilegiada = mensagemErroOperacaoPrivilegiada(codigoBruto)
+  if (msgOperacaoPrivilegiada) return msgOperacaoPrivilegiada
+
   const codigo = codigoBruto.trim().toUpperCase()
   for (const [chave, msg] of Object.entries(MAPA)) {
     if (codigo.includes(chave)) return msg

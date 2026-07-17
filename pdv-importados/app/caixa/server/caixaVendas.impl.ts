@@ -67,12 +67,14 @@ function firstRpcVendaRow<T>(data: unknown): T | undefined {
 export async function cancelarVendaImpl(
   vendaId: string,
   motivo: string,
+  gerenteToken?: string | null,
 ): Promise<
   | { ok: true; vendaId: string; status: 'CANCELADA' }
   | { ok: false; error: string }
 > {
   const vendaIdTrim = vendaId.trim()
   const motivoTrim = motivo.trim()
+  const tokenTrim = gerenteToken?.trim() || null
 
   if (!vendaIdTrim) return { ok: false, error: 'Venda inválida.' }
   if (motivoTrim.length < 2) return { ok: false, error: 'Motivo obrigatório (mín. 2 caracteres).' }
@@ -86,21 +88,27 @@ export async function cancelarVendaImpl(
 
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
-    const { data: urow } = await supabase
-      .from('usuarios')
-      .select('perfil')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Sem token de gerente: exige que quem está executando já seja GERENTE/DONO/ADMIN
+    // (checagem local, fail-fast). Com token: a RPC valida o token — operador comum
+    // autorizado pontualmente (Fase 5, Entrega 2).
+    if (!tokenTrim) {
+      const { data: urow } = await supabase
+        .from('usuarios')
+        .select('perfil')
+        .eq('id', user.id)
+        .maybeSingle()
 
-    if (!perfilPodeCancelarVenda(urow?.perfil)) {
-      // BA-013: SSoT = RPC cancelar_venda_transacional (GERENTE/DONO/ADMIN).
-      return { ok: false, error: MSG_CANCELAR_VENDA_PERFIL }
+      if (!perfilPodeCancelarVenda(urow?.perfil)) {
+        // BA-013: SSoT = RPC cancelar_venda_transacional (GERENTE/DONO/ADMIN ou token de gerente).
+        return { ok: false, error: MSG_CANCELAR_VENDA_PERFIL }
+      }
     }
 
     const { data, error } = await supabase.rpc('cancelar_venda_transacional', {
       p_venda_id: vendaIdTrim,
       p_motivo: motivoTrim,
       p_operador_id: user.id,
+      p_gerente_token: tokenTrim,
     })
 
     if (error) return { ok: false, error: caixaErroOperador(error.message) }

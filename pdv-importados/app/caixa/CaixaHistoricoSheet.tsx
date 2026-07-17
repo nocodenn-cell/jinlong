@@ -6,18 +6,28 @@ import type { Mensagens } from "@/i18n/getMessages"
 import {
   listarHistoricoOperadorCaixa,
   obterDetalheHistoricoVendaCaixa,
+  cancelarVenda,
+  obterVendaDetalheParaDevolucaoCaixa,
   type HistoricoVendaDetalhe,
   type HistoricoVendaOperador,
+  type VendaDetalhe,
 } from "@/app/caixa/actions"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { labelFormaPagamentoVenda, labelStatusVenda } from "@/lib/format/vendaLabels"
 import { downloadCsvBrowser } from "@/lib/gerente/gerenteCadastroUi"
 import { cn } from "@/lib/utils"
+import { CaixaGerenteSenhaModal } from "@/app/caixa/CaixaGerenteSenhaModal"
+import { CaixaCancelarVendaModal } from "@/app/caixa/CaixaCancelarVendaModal"
+import { CaixaDevolverVendaModal } from "@/app/caixa/CaixaDevolverVendaModal"
+import { useAutorizacaoGerentePontual } from "@/app/caixa/hooks/useAutorizacaoGerentePontual"
+
+const PERFIS_GERENTE = ["GERENTE", "DONO", "ADMIN"]
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   m: Mensagens
+  perfil: string | null
   onImprimirCupom?: (vendaId: string) => void
 }
 
@@ -257,18 +267,26 @@ type FerramentasProps = {
   m: Mensagens
   temSelecao: boolean
   temItens: boolean
+  podeCancelarOuDevolver: boolean
+  carregandoDevolucao: boolean
   onImprimirCupom: () => void
   onExportarLista: () => void
   onExportarDetalhe: () => void
+  onCancelarVenda: () => void
+  onDevolverVenda: () => void
 }
 
 function HistoricoFerramentas({
   m,
   temSelecao,
   temItens,
+  podeCancelarOuDevolver,
+  carregandoDevolucao,
   onImprimirCupom,
   onExportarLista,
   onExportarDetalhe,
+  onCancelarVenda,
+  onDevolverVenda,
 }: FerramentasProps) {
   const btnClass = "h-9 w-full justify-start text-xs"
   return (
@@ -315,11 +333,30 @@ function HistoricoFerramentas({
       >
         {m.caixa.historico_tool_gerar_nfe}
       </Button>
+      <div className="mt-1 border-t border-jl-border-1 pt-2" />
+      <Button
+        type="button"
+        variant="secondary"
+        className={cn(btnClass, "text-red-400 hover:text-red-300")}
+        disabled={!podeCancelarOuDevolver}
+        onClick={onCancelarVenda}
+      >
+        {m.caixa.historico_tool_cancelar_venda}
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        className={btnClass}
+        disabled={!podeCancelarOuDevolver || carregandoDevolucao}
+        onClick={onDevolverVenda}
+      >
+        {m.caixa.historico_tool_devolver_venda}
+      </Button>
     </aside>
   )
 }
 
-export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: Props) {
+export function CaixaHistoricoSheet({ open, onOpenChange, m, perfil, onImprimirCupom }: Props) {
   const [vendas, setVendas] = useState<HistoricoVendaOperador[]>([])
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -328,7 +365,19 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
   const [detalheLoading, setDetalheLoading] = useState(false)
   const tituloId = useId()
 
+  // Fase 5, Entrega 2 — cancelamento/devolução direto do caixa.
+  const autorizacaoGerente = useAutorizacaoGerentePontual(m)
+  const [gerenteToken, setGerenteToken] = useState<string | null>(null)
+  const [cancelarModalAberto, setCancelarModalAberto] = useState(false)
+  const [cancelando, setCancelando] = useState(false)
+  const [erroCancelar, setErroCancelar] = useState<string | null>(null)
+  const [devolverModalAberto, setDevolverModalAberto] = useState(false)
+  const [vendaParaDevolucao, setVendaParaDevolucao] = useState<VendaDetalhe | null>(null)
+  const [carregandoVendaDevolucao, setCarregandoVendaDevolucao] = useState(false)
+
   const fechar = useCallback(() => onOpenChange(false), [onOpenChange])
+
+  const podeAgirDireto = perfil !== null && PERFIS_GERENTE.includes(perfil)
 
   useEffect(() => {
     if (!open) return
@@ -388,9 +437,87 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
     }
   }, [open, fechar])
 
+  const refrescarAposAcao = useCallback(async () => {
+    const res = await listarHistoricoOperadorCaixa()
+    if (res.ok) setVendas(res.vendas)
+    if (selecionadoId) {
+      const det = await obterDetalheHistoricoVendaCaixa(selecionadoId)
+      setDetalhe(det.ok ? det.detalhe : null)
+    }
+  }, [selecionadoId])
+
+  const abrirModalParaAcao = useCallback(
+    async (acao: "cancelar" | "devolver") => {
+      if (acao === "cancelar") {
+        setErroCancelar(null)
+        setCancelarModalAberto(true)
+        return
+      }
+      if (!selecionadoId) return
+      setCarregandoVendaDevolucao(true)
+      const res = await obterVendaDetalheParaDevolucaoCaixa(selecionadoId)
+      setCarregandoVendaDevolucao(false)
+      if (!res.ok) {
+        setErro(res.error)
+        return
+      }
+      setVendaParaDevolucao(res.venda)
+      setDevolverModalAberto(true)
+    },
+    [selecionadoId],
+  )
+
+  const iniciarAcao = useCallback(
+    (acao: "cancelar" | "devolver") => {
+      if (!selecionadoId || !detalhe) return
+      if (String(detalhe.status ?? "").toUpperCase() === "CANCELADA") return
+      if (podeAgirDireto) {
+        setGerenteToken(null)
+        void abrirModalParaAcao(acao)
+        return
+      }
+      autorizacaoGerente.solicitar((token) => {
+        setGerenteToken(token)
+        void abrirModalParaAcao(acao)
+      })
+    },
+    [selecionadoId, detalhe, podeAgirDireto, abrirModalParaAcao, autorizacaoGerente],
+  )
+
+  const handleConfirmarCancelamento = useCallback(
+    async (motivo: string) => {
+      if (!selecionadoId) return
+      setCancelando(true)
+      setErroCancelar(null)
+      try {
+        const res = await cancelarVenda(selecionadoId, motivo, gerenteToken)
+        if (!res.ok) {
+          setErroCancelar(res.error)
+          return
+        }
+        setCancelarModalAberto(false)
+        setGerenteToken(null)
+        await refrescarAposAcao()
+      } finally {
+        setCancelando(false)
+      }
+    },
+    [selecionadoId, gerenteToken, refrescarAposAcao],
+  )
+
+  const handleConcluidoDevolucao = useCallback(() => {
+    setGerenteToken(null)
+    setVendaParaDevolucao(null)
+    void refrescarAposAcao()
+  }, [refrescarAposAcao])
+
   if (!open) return null
 
   const temItens = (detalhe?.itens.length ?? 0) > 0
+  const podeCancelarOuDevolver =
+    !!selecionadoId &&
+    !!detalhe &&
+    String(detalhe.status ?? "").toUpperCase() !== "CANCELADA"
 
   return (
     <div
@@ -452,6 +579,8 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
             m={m}
             temSelecao={!!selecionadoId}
             temItens={temItens}
+            podeCancelarOuDevolver={podeCancelarOuDevolver}
+            carregandoDevolucao={carregandoVendaDevolucao}
             onImprimirCupom={() => {
               if (selecionadoId) onImprimirCupom?.(selecionadoId)
             }}
@@ -459,6 +588,8 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
             onExportarDetalhe={() => {
               if (detalhe) exportarDetalheCsv(detalhe)
             }}
+            onCancelarVenda={() => iniciarAcao("cancelar")}
+            onDevolverVenda={() => iniciarAcao("devolver")}
           />
         </div>
 
@@ -468,6 +599,34 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
           </Button>
         </footer>
       </div>
+
+      <CaixaGerenteSenhaModal
+        open={autorizacaoGerente.aberto}
+        onOpenChange={autorizacaoGerente.setAberto}
+        m={m}
+        validando={autorizacaoGerente.validando}
+        onValidateSenha={autorizacaoGerente.handleValidateSenha}
+        onAutorizado={autorizacaoGerente.handleAutorizado}
+      />
+      <CaixaCancelarVendaModal
+        open={cancelarModalAberto}
+        onOpenChange={setCancelarModalAberto}
+        m={m}
+        processing={cancelando}
+        erro={erroCancelar}
+        onConfirm={(motivo) => void handleConfirmarCancelamento(motivo)}
+      />
+      <CaixaDevolverVendaModal
+        open={devolverModalAberto}
+        venda={vendaParaDevolucao}
+        gerenteToken={gerenteToken}
+        m={m}
+        onClose={() => {
+          setDevolverModalAberto(false)
+          setVendaParaDevolucao(null)
+        }}
+        onConcluido={handleConcluidoDevolucao}
+      />
     </div>
   )
 }

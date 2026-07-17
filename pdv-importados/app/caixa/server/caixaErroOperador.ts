@@ -1,3 +1,5 @@
+import { mensagemErroOperacaoPrivilegiada } from '@/lib/errors/operacaoPrivilegiadaErro'
+
 const MSG_PADRAO = 'Não foi possível concluir. Tente novamente.'
 const MSG_CAIXA_INDISPONIVEL = 'Caixa indisponível no momento.'
 const MSG_MOVIMENTACOES_PENDENTES = 'Há vendas pendentes para finalizar.'
@@ -18,6 +20,9 @@ export function caixaErroOperador(detalheTecnico: string | undefined | null): st
   if (!raw) return MSG_PADRAO
 
   const l = lower(raw)
+
+  const msgOperacaoPrivilegiada = mensagemErroOperacaoPrivilegiada(raw)
+  if (msgOperacaoPrivilegiada) return msgOperacaoPrivilegiada
 
   if (l.includes('sessão expirada') || l.includes('sessao expirada') || l.includes('jwt')) {
     return MSG_SESSAO

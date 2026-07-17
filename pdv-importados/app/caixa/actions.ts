@@ -32,6 +32,11 @@ import {
   cancelarVendaImpl,
   finalizarVendaCaixaImpl,
 } from '@/app/caixa/server/caixaVendas.impl'
+import {
+  devolverVendaCaixaImpl,
+  obterVendaDetalheParaDevolucaoCaixaImpl,
+} from '@/app/caixa/server/caixaVendaDevolucao.impl'
+import type { DevolverVendaInput } from '@/app/gerente/vendas/parseDevolverVendaForm'
 import { buscarClientesCaixaImpl } from '@/app/caixa/server/caixaClientesSearch.impl'
 import {
   abrirCaixaOperadorImpl,
@@ -71,6 +76,8 @@ export type {
   HistoricoVendaDetalhe,
   HistoricoVendaItemDetalhe,
 } from '@/app/caixa/server/caixaVendaEspera.impl'
+export type { VendaDetalhe, VendaItemDetalhe } from '@/app/admin/vendas/actions'
+export type { DevolverVendaInput } from '@/app/gerente/vendas/parseDevolverVendaForm'
 
 export type {
   AbrirCaixaOperadorResult,
@@ -255,8 +262,19 @@ export async function obterDetalheHistoricoVendaCaixa(vendaId: string) {
 export async function cancelarVenda(
   vendaId: string,
   motivo: string,
+  gerenteToken?: string | null,
 ): Promise<CancelarVendaResult> {
-  return cancelarVendaImpl(vendaId, motivo)
+  return cancelarVendaImpl(vendaId, motivo, gerenteToken)
+}
+
+/** Fase 5, Entrega 2: detalhe de venda do próprio operador para devolução no caixa. */
+export async function obterVendaDetalheParaDevolucaoCaixa(vendaId: string) {
+  return obterVendaDetalheParaDevolucaoCaixaImpl(vendaId)
+}
+
+/** Fase 5, Entrega 2: devolução/troca a partir do caixa (com token de gerente ou perfil próprio). */
+export async function devolverVendaCaixa(input: DevolverVendaInput) {
+  return devolverVendaCaixaImpl(input)
 }
 
 /**

@@ -1636,6 +1636,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         open={historicoAberto}
         onOpenChange={setHistoricoAberto}
         m={m}
+        perfil={perfil}
         onImprimirCupom={handleImprimirCupomHistorico}
       />
       <CaixaAbrirTurnoModal

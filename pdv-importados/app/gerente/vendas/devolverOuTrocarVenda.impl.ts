@@ -54,6 +54,7 @@ export async function devolverOuTrocarVendaImpl(
       p_forma_estorno: input.formaEstorno,
       p_venda_substituta_id: input.vendaSubstitutaId ?? null,
       p_operador_id: user.id,
+      p_gerente_token: input.gerenteToken ?? null,
     })
 
     if (error) {
@@ -71,6 +72,7 @@ export async function devolverOuTrocarVendaImpl(
     revalidatePath('/gerente/financeiro')
     revalidatePath('/admin/financeiro')
     revalidatePath('/admin/estoque')
+    revalidatePath('/caixa')
 
     return {
       ok: true,

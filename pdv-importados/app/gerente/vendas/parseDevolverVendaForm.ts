@@ -24,6 +24,9 @@ export const devolverVendaInputSchema = z.object({
   valorEstorno: z.number().positive(),
   formaEstorno: z.enum(FORMAS_ESTORNO_DEVOLUCAO),
   vendaSubstitutaId: z.string().uuid().optional(),
+  // Fase 5, Entrega 2: token pontual de gerente — permite operador comum
+  // devolver a partir do caixa sem estar logado como GERENTE/DONO/ADMIN.
+  gerenteToken: z.string().min(1).optional(),
 })
 
 export type DevolverVendaInput = z.infer<typeof devolverVendaInputSchema>
