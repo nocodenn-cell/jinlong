@@ -73,6 +73,10 @@ import {
   marcarOrcamentoConvertidoImpl,
   obterOrcamentoImpl,
 } from '@/app/caixa/server/caixaOrcamento.impl'
+import {
+  criarAuthorizationChallengeImpl,
+  obterAuthorizationChallengeImpl,
+} from '@/app/caixa/server/caixaAuthorizationChallenge.impl'
 import type { ItemCarrinho } from '@/stores/unifiedCartStore'
 import type { ConsultaRapidaResult } from '@/app/caixa/caixaActionTypes'
 
@@ -283,6 +287,25 @@ export async function cancelarOrcamentoCaixa(id: string, motivo?: string) {
 /** Best-effort: marca o orçamento de origem como CONVERTIDO pós-finalização. */
 export async function marcarOrcamentoConvertidoCaixa(id: string, vendaId: string) {
   return marcarOrcamentoConvertidoImpl(id, vendaId)
+}
+
+/**
+ * Infraestrutura de Authorization Challenge (QR Code/PIN futuros) — sem
+ * consumidor de UI ainda. Ver lib/authorization/providers/QrCodeAuthorizationProvider.
+ */
+export async function criarAuthorizationChallengeCaixa(input: {
+  operation: string
+  method: string
+  caixaId?: string | null
+  payload?: Record<string, unknown>
+  ttlSeconds?: number
+  deviceFingerprint?: string | null
+}) {
+  return criarAuthorizationChallengeImpl(input)
+}
+
+export async function obterAuthorizationChallengeCaixa(id: string) {
+  return obterAuthorizationChallengeImpl(id)
 }
 
 export async function listarHistoricoOperadorCaixa(input?: {

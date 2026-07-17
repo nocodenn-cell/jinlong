@@ -20,6 +20,7 @@ import { CaixaGerenteSenhaModal } from "@/app/caixa/CaixaGerenteSenhaModal"
 import { CaixaCancelarVendaModal } from "@/app/caixa/CaixaCancelarVendaModal"
 import { CaixaDevolverVendaModal } from "@/app/caixa/CaixaDevolverVendaModal"
 import { useAutorizacaoGerentePontual } from "@/app/caixa/hooks/useAutorizacaoGerentePontual"
+import { OperacaoPrivilegiada } from "@/lib/authorization"
 
 const PERFIS_GERENTE = ["GERENTE", "DONO", "ADMIN"]
 
@@ -476,7 +477,9 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, perfil, onImprimirC
         void abrirModalParaAcao(acao)
         return
       }
-      autorizacaoGerente.solicitar((token) => {
+      const operation =
+        acao === "cancelar" ? OperacaoPrivilegiada.CANCELAR_VENDA : OperacaoPrivilegiada.DEVOLVER_VENDA
+      autorizacaoGerente.solicitar(operation, (token) => {
         setGerenteToken(token)
         void abrirModalParaAcao(acao)
       })
