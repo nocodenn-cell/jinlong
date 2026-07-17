@@ -12,6 +12,20 @@ import {
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
+async function removerProdutoSemEstoque(
+  supabase: SupabaseClient,
+  produtoId: string,
+): Promise<string | null> {
+  const { error } = await supabase
+    .from('produtos')
+    .delete()
+    .eq('id', produtoId)
+
+  return error
+    ? mensagemErroComSecao('Rollback do produto', error.message)
+    : null
+}
+
 export function createProdutoRepository(
   supabase: SupabaseClient
 ): ProdutoRepositoryPort {
@@ -93,12 +107,16 @@ export function createProdutoRepository(
       })
 
       if (estoqueError) {
+        const rollbackError = await removerProdutoSemEstoque(supabase, data.id)
+        const estoqueMessage = mensagemErroComSecao(
+          'Estoque inicial do produto',
+          estoqueError.message,
+        )
         return {
           ok: false,
-          message: mensagemErroComSecao(
-            'Estoque inicial do produto',
-            estoqueError.message,
-          ),
+          message: rollbackError
+            ? `${estoqueMessage} ${rollbackError}`
+            : estoqueMessage,
         }
       }
 
