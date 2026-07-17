@@ -282,8 +282,21 @@ function mapEventoItens(raw: unknown): HistoricoVendaItemDetalhe[] {
   })
 }
 
-/** Enriquece itens do histórico com dados ATUAIS do produto (código/preço), para etiqueta. */
-async function enriquecerComDadosAtuaisProduto(
+/**
+ * Anexa código de barras e preço de varejo ATUAIS do catálogo (`produtos`) aos
+ * itens do histórico — **somente para alimentar a reimpressão de etiqueta**
+ * (Fase 5, Entrega 9). Os campos `nome`/`precoUnitario`/`total` no item
+ * continuam sendo o snapshot histórico (vindo de `venda_eventos.items`, o que
+ * foi de fato vendido); `codigoBarras`/`precoVarejoAtual` são deliberadamente
+ * dados de HOJE, não da venda — uma etiqueta reimprime o preço de venda atual
+ * do produto, não o preço da venda antiga.
+ *
+ * NÃO usar o resultado desta função para auditoria, relatórios financeiros ou
+ * qualquer leitura que precise refletir o que foi vendido na data: se o
+ * produto teve preço/código alterado desde a venda, os itens retornados aqui
+ * não representam mais a venda histórica para esses dois campos.
+ */
+async function anexarDadosAtuaisDeCatalogoParaEtiqueta(
   supabase: Awaited<ReturnType<typeof createClient>>,
   itens: HistoricoVendaItemDetalhe[],
 ): Promise<HistoricoVendaItemDetalhe[]> {
@@ -442,8 +455,8 @@ export async function obterDetalheHistoricoVendaImpl(
         : Promise.resolve({ data: null }),
     ])
 
-    const itensBrutos = mapEventoItens(eventoRes.data?.items)
-    const itens = await enriquecerComDadosAtuaisProduto(supabase, itensBrutos)
+    const itensSnapshotVenda = mapEventoItens(eventoRes.data?.items)
+    const itens = await anexarDadosAtuaisDeCatalogoParaEtiqueta(supabase, itensSnapshotVenda)
     const pagamentosRaw = pagamentosRes.data ?? []
     const pagamentos =
       pagamentosRaw.length > 0
