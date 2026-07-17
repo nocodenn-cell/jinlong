@@ -42,6 +42,12 @@ const SINGLE_CALLER = {
     'pdv-importados/app/caixa/server/caixaVendas.impl.ts',
   'registrar_venda_com_itens':
     'backend/supabase/functions/sync-outbox/index.ts',
+  // Fase 5, Entrega 1: cancelamento e devolução também têm caller único —
+  // hoje só de fato (verificado manualmente), agora enforced em CI.
+  'cancelar_venda_transacional':
+    'pdv-importados/app/caixa/server/caixaVendas.impl.ts',
+  'devolver_ou_trocar_venda':
+    'pdv-importados/app/gerente/vendas/devolverOuTrocarVenda.impl.ts',
 }
 
 /**

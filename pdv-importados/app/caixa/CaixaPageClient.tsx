@@ -12,6 +12,7 @@ import {
   colocarVendaEmEsperaCaixa,
   listarVendasEmEsperaCaixa,
   retomarVendaEmEsperaCaixa,
+  marcarVendaEmEsperaConvertidaCaixa,
   descartarVendaEmEsperaCaixa,
   obterDetalheHistoricoVendaCaixa,
 } from "@/app/caixa/actions"
@@ -298,6 +299,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
+  // Origem da venda atual quando veio de "retomar em espera" — usado para marcar
+  // CONVERTIDA após finalizar com sucesso (Fase 5, Entrega 3+4).
+  const esperaOrigemIdRef = useRef<string | null>(null)
 
   const thermal = useThermalPrinter()
 
@@ -530,6 +534,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem(null)
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
+    setClienteId(null)
+    esperaOrigemIdRef.current = null
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
@@ -567,6 +573,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       totalDesconto,
       totalLiquido: totalLiquidoComGerente,
       caixaId,
+      clienteId,
       descontoGerentePercentual:
         descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
     })
@@ -588,6 +595,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     totalBruto,
     totalDesconto,
     totalLiquidoComGerente,
+    clienteId,
     descontoGerentePercentual,
     handleNovoCupom,
     m.caixa.em_aberto_colocada,
@@ -606,6 +614,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           totalDesconto,
           totalLiquido: totalLiquidoComGerente,
           caixaId: isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null,
+          clienteId,
           descontoGerentePercentual:
             descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
         })
@@ -624,6 +633,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       }
       // Token de gerente não é restaurado: exige nova autorização se precisar desconto.
       limparEstadoDescontoGerente()
+      setClienteId(res.clienteId)
+      esperaOrigemIdRef.current = res.id
       substituirCarrinho(res.itens)
       // Recalcula VAREJO/ATACADO com a quantidade retomada (spec Fase 2).
       for (const item of res.itens) {
@@ -649,6 +660,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       totalDesconto,
       totalLiquidoComGerente,
       caixaStatus,
+      clienteId,
       descontoGerentePercentual,
       handleNovoCupom,
       limparEstadoDescontoGerente,
@@ -993,6 +1005,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         limparEstadoDescontoGerente()
         resetPagamentos()
         setClienteId(null)  // ✅ NOVO (Fase 5b) - reset após venda bem-sucedida
+        if (esperaOrigemIdRef.current) {
+          // Best-effort: não bloqueia nem falha a venda já concluída.
+          void marcarVendaEmEsperaConvertidaCaixa(esperaOrigemIdRef.current)
+          esperaOrigemIdRef.current = null
+        }
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),

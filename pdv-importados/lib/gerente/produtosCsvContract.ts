@@ -10,7 +10,7 @@ import { rowsToCsv } from '@/lib/csv'
  * **FKs / referências a `public.produtos` (inventário não exaustivo):**
  * - `estoque.produto_id` → `produtos(id)` (schema inicial)
  * - `regras_preco.produto_id` → `produtos(id)` (schema inicial)
- * - `venda_itens` / vendas: ver `050_cancelar_venda_transacional.sql` (`ON DELETE RESTRICT`)
+ * - `venda_itens` / vendas: ver migration `050` (cancelamento de venda, `ON DELETE RESTRICT`)
  * - `034_remessas_movimentos_transferencias.sql`: movimentos com `produto_id`
  *
  * **Cabeçalho canónico:** validação estrita usa esta ordem fixa, após normalizar BOM (`﻿`) e `trim` nas células.

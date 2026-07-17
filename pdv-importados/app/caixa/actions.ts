@@ -57,6 +57,7 @@ import {
   descartarVendaEmEsperaImpl,
   listarHistoricoOperadorImpl,
   listarVendasEmEsperaImpl,
+  marcarVendaEmEsperaConvertidaImpl,
   obterDetalheHistoricoVendaImpl,
   retomarVendaEmEsperaImpl,
 } from '@/app/caixa/server/caixaVendaEspera.impl'
@@ -217,6 +218,7 @@ export async function colocarVendaEmEsperaCaixa(input: {
   totalDesconto: number
   totalLiquido: number
   caixaId?: string | null
+  clienteId?: string | null
   descontoGerentePercentual?: number | null
 }) {
   return colocarVendaEmEsperaImpl(input)
@@ -228,6 +230,11 @@ export async function listarVendasEmEsperaCaixa() {
 
 export async function retomarVendaEmEsperaCaixa(id: string) {
   return retomarVendaEmEsperaImpl(id)
+}
+
+/** Best-effort: marca a venda em espera de origem como CONVERTIDA pós-finalização. */
+export async function marcarVendaEmEsperaConvertidaCaixa(id: string) {
+  return marcarVendaEmEsperaConvertidaImpl(id)
 }
 
 export async function descartarVendaEmEsperaCaixa(id: string, motivo?: string) {

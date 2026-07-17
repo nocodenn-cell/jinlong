@@ -25,7 +25,7 @@
 |---|---|---|
 | `finalizar_venda_transacional_canonica_v4` | `pdv-importados/app/caixa/server/caixaVendas.impl.ts` | `scripts/rpc-gate-guard.mjs` |
 | `registrar_venda_com_itens` | `backend/supabase/functions/sync-outbox/index.ts` | `scripts/rpc-gate-guard.mjs` |
-| `cancelar_venda_transacional` (migrations 050, 059) | `pdv-importados/app/gerente/vendas/actions.ts` (via `parseCancelarVendaGerenteForm.ts`) | manual (sem guard dedicado) |
+| `cancelar_venda_transacional` (migrations 050, 059) | `pdv-importados/app/caixa/server/caixaVendas.impl.ts` (`cancelarVendaImpl`, chamado por `gerente/vendas/actions.ts` via `@/app/caixa/actions`) | manual (sem guard dedicado) |
 | `devolver_ou_trocar_venda` (migration 248) | `pdv-importados/app/gerente/vendas/devolverOuTrocarVenda.impl.ts` | manual (sem guard dedicado) |
 | `colocar_venda_em_espera` / `retomar_venda_em_espera` / `listar_vendas_em_espera` (migration 24703) | `pdv-importados/app/caixa/server/caixaVendaEspera.impl.ts` | manual |
 

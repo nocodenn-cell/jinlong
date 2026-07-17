@@ -11,6 +11,8 @@ export type VendaEmEsperaCard = {
   qtdItens: number
   criadaEm: string
   atualizadaEm: string
+  clienteId: string | null
+  nomeCliente: string | null
 }
 
 export type ColocarEmEsperaResult =
@@ -27,6 +29,7 @@ export type RetomarEmEsperaResult =
       id: string
       numeroLocal: number
       itens: ItemCarrinho[]
+      clienteId: string | null
     }
   | { ok: false; error: string }
 
@@ -75,6 +78,8 @@ function mapCard(row: Record<string, unknown>): VendaEmEsperaCard {
     qtdItens: Number(row.qtd_itens ?? 0),
     criadaEm: String(row.criada_em ?? ''),
     atualizadaEm: String(row.atualizada_em ?? ''),
+    clienteId: row.cliente_id ? String(row.cliente_id) : null,
+    nomeCliente: row.nome_cliente ? String(row.nome_cliente) : null,
   }
 }
 
@@ -90,6 +95,7 @@ export async function colocarVendaEmEsperaImpl(input: {
   totalDesconto: number
   totalLiquido: number
   caixaId?: string | null
+  clienteId?: string | null
   descontoGerentePercentual?: number | null
 }): Promise<ColocarEmEsperaResult> {
   try {
@@ -108,7 +114,7 @@ export async function colocarVendaEmEsperaImpl(input: {
         totalLiquido: input.totalLiquido,
       },
       p_caixa_id: input.caixaId ?? null,
-      p_cliente_id: null,
+      p_cliente_id: input.clienteId ?? null,
       p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
       p_desconto_gerente_token: null,
     })
@@ -158,12 +164,26 @@ export async function retomarVendaEmEsperaImpl(id: string): Promise<RetomarEmEsp
       id: String(row.id),
       numeroLocal: Number(row.numero_local ?? 0),
       itens: mapItens(row.itens),
+      clienteId: row.cliente_id ? String(row.cliente_id) : null,
     }
   } catch (e) {
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível retomar a venda em espera.'),
     }
+  }
+}
+
+/**
+ * Marca a venda em espera de origem como CONVERTIDA após a venda retomada ser
+ * finalizada com sucesso (best-effort — não deve falhar a venda já concluída).
+ */
+export async function marcarVendaEmEsperaConvertidaImpl(id: string): Promise<void> {
+  try {
+    const supabase = await createClient()
+    await supabase.rpc('marcar_venda_em_espera_convertida', { p_id: id })
+  } catch {
+    // best-effort: a venda já foi finalizada; falha aqui não deve propagar.
   }
 }
 

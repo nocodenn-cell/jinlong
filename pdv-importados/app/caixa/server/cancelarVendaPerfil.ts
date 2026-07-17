@@ -1,4 +1,4 @@
-/** Perfis autorizados a cancelar venda — alinhado a cancelar_venda_transacional. */
+/** Perfis autorizados a cancelar venda — alinhado à RPC canônica de cancelamento. */
 const PERFIS_CANCELAR_VENDA = new Set(['GERENTE', 'DONO', 'ADMIN'])
 
 export function perfilPodeCancelarVenda(perfil: string | null | undefined): boolean {
