@@ -484,46 +484,11 @@ html:has(.login-premium-root) body {
   color: rgba(253, 230, 138, 0.95);
 }
 
-/* Caixa / superfícies escuras - v2025-05-05-cor-fundo-gerente */
+/* Caixa — Fase 6.1 (Onda 3): layout único (classic); base dark + glow âmbar
+   (ramo dragon) removidos junto com o dualismo em CaixaPageClient. */
 .caixa-oriental-root {
-  position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(circle at 50% -10%, rgba(251, 191, 36, 0.16) 0%, transparent 42%),
-    linear-gradient(180deg, #1f2937 0%, #111827 54%, #0b1220 100%);
-}
-
-.caixa-oriental-root::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  background-image:
-    radial-gradient(ellipse 88% 50% at 12% 18%, rgba(251, 191, 36, 0.16) 0%, transparent 56%),
-    radial-gradient(ellipse 70% 42% at 88% 12%, rgba(148, 163, 184, 0.14) 0%, transparent 56%),
-    radial-gradient(ellipse 78% 50% at 50% 88%, rgba(226, 232, 240, 0.1) 0%, transparent 58%),
-    radial-gradient(ellipse 44% 20% at 22% 72%, rgba(251, 191, 36, 0.11) 0%, transparent 72%),
-    radial-gradient(ellipse 40% 18% at 76% 64%, rgba(148, 163, 184, 0.1) 0%, transparent 72%);
-  background-size: 120% 100%, 100% 80%, 130% 100%, 72% 52%, 66% 48%;
-}
-
-.caixa-oriental-root > * {
-  position: relative;
-  z-index: 1;
-}
-
-/*
- * Variante PDV clássico (padrão): fundo branco operacional — sem gradiente azul residual.
- */
-.caixa-oriental-root[data-caixa-layout='classic'] {
   background: var(--jl-surface-base, #f8fafc);
   color: var(--jl-fg-1, rgb(30 41 59));
-}
-
-.caixa-oriental-root[data-caixa-layout='classic']::before {
-  display: none;
 }
 
 
