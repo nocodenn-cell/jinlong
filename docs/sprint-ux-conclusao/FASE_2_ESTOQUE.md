@@ -1,10 +1,11 @@
 # Fase 2 — Estoque: relatório de fechamento
 
-**Status: FECHADA — código 100% concluído.** PR #198.
+**Status: FECHADA — 100% (código + banco).** PR #198.
 
-O código do módulo está completo. O único item pendente (Devolução/Troca) depende
-de uma migration de produção — é uma **dependência operacional de produção**,
-não uma pendência de desenvolvimento. Ver seção final.
+> ✅ **Atualização 2026-07-17:** a migration 248 (Devolução/Troca) foi aplicada
+> em produção com autorização explícita. Detalhes, evidências e dois achados
+> de segurança corrigidos em `docs/sprint-ux-conclusao/FASE_2_ESTOQUE_FECHAMENTO_248.md`.
+> Não há mais nenhuma pendência nesta fase.
 
 ## Páginas e arquivos auditados (varredura completa do módulo)
 
@@ -73,14 +74,14 @@ Removidos após confirmar via grep que não havia nenhum importador/chamador em 
 
 Todos os componentes/telas do módulo com lógica de estado relevante (erro, vazio, foco) agora têm teste de comportamento dedicado: `AjusteSaldoModal`, `KardexSheet`, `devolverVendaErro`, `RecebimentoGerentePageClient`, `TransferenciasGerentePageClient`. `ImportarNfePageClient` e `ImprimirEtiquetasPageClient` seguem sem teste de comportamento dedicado (componentes grandes com múltiplas dependências assíncronas; risco residual baixo — usam os mesmos padrões de erro/toast já validados nos demais componentes do módulo, e passaram por leitura completa linha a linha nesta auditoria).
 
-## Pendências — exclusivamente externas ao código
+## Pendências
 
-| Item | Por que é externo, não pendência de código |
-|---|---|
-| Devolução/Troca — RPC `devolver_ou_trocar_venda` ausente em produção (migration 248) | Requer aplicar uma migration em produção — mutação de banco fora do meu escopo de execução autônoma. Código, UI e mensagens de erro já estão corretos e testados; o recurso ficará funcional assim que a migration for aplicada. Script de reconciliação já pronto em `backend/supabase/reconciliation/` (P0), aguardando sua confirmação. |
+**Nenhuma.** A migration 248 (Devolução/Troca) foi aplicada em produção em
+2026-07-17 com autorização explícita, incluindo smoke comportamental completo
+direto em produção (transações com `ROLLBACK`, zero resíduo) e correção de
+dois achados de segurança de GRANT encontrados durante a aplicação. Ver
+`docs/sprint-ux-conclusao/FASE_2_ESTOQUE_FECHAMENTO_248.md` para evidências.
 
-Nenhum outro item do módulo depende de infraestrutura, dashboard ou configuração externa.
+## Percentual do módulo
 
-## Percentual do código do módulo
-
-**100%.** Todo bug identificado foi corrigido, todo código morto no escopo foi removido, toda tela e action foi auditada, a suíte de testes está verde, guard:all está verde e o typecheck está limpo. A única pendência restante (migration 248) é uma dependência operacional de produção — não reduz a completude do código.
+**100% — código e banco.** Todo bug identificado foi corrigido, todo código morto no escopo foi removido, toda tela e action foi auditada, a suíte de testes está verde, guard:all está verde e o typecheck está limpo. A migration 248 foi aplicada e validada em produção; não resta nenhuma pendência de código nem de banco nesta fase.

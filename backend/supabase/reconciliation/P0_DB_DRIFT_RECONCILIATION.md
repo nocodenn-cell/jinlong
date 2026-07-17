@@ -2,7 +2,8 @@
 
 **Data:** 2026-07-16 · **Projeto:** `jinlong` (`kbabmewnahysfvlybiak`, sa-east-1, Postgres 17.6) · **Método:** consultas read-only diretas em produção (não confiei em nomes de migration — provei por existência de objeto).
 
-> ⚠️ **Nenhuma migration foi aplicada.** Este pacote é o **plano** + scripts. Aplicação em produção só com sua confirmação explícita.
+> ✅ **248 aplicada em produção em 2026-07-17**, com sua confirmação explícita. Detalhes completos, evidências e dois achados de segurança corrigidos (migration 277) em `docs/sprint-ux-conclusao/FASE_2_ESTOQUE_FECHAMENTO_248.md`.
+> 252 e 256 **continuam pendentes** (não fizeram parte desta autorização — mesmo plano de aplicação abaixo continua válido para elas).
 
 ---
 

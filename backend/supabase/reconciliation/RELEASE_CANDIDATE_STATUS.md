@@ -20,12 +20,13 @@
 
 ## Riscos restantes (documentados, sem mutação de produção)
 - Segundo projeto Supabase `ageguard` (INACTIVE — risco latente, não ativo).
-- Migration 248 (devolução) só homologada em ambiente local.
+- ~~Migration 248 (devolução) só homologada em ambiente local.~~ **Resolvido 2026-07-17** — aplicada em produção com smoke comportamental direto em `jinlong` (transações com `ROLLBACK`); ver `docs/sprint-ux-conclusao/FASE_2_ESTOQUE_FECHAMENTO_248.md`.
+- `jinlong` está no plano Free do Supabase — sem PITR disponível para futuras mutações de produção (mitigado caso a caso via rollback por script + captura de definições PRE, mas vale avaliar upgrade de plano antes do go-live).
 - Provider fiscal abstrato (sem emissão real) — decisão de escopo do piloto pendente.
 - UI dupla `/gerente` ↔ Admin V2 — viva, cross-linked; requer gate de validação por módulo antes de consolidar (não é remoção segura).
 
 ## Itens que dependem de você (mutação de produção)
-1. **Banco:** aplicar migrations 248 (após homologação remota) / 252 / 256 em `jinlong`.
-2. **Segurança:** executar REVOKE `anon` (S1-S3, reversível) e DROP dos overloads legados + `is_feature_enabled` (S4, requer snapshot).
+1. **Banco:** aplicar migrations 252 / 256 em `jinlong` (248 já aplicada em 2026-07-17).
+2. **Segurança:** executar REVOKE `anon` (S1-S3, reversível) e DROP dos overloads legados + `is_feature_enabled` (S4, requer snapshot). Nota: 2 novos achados do mesmo padrão (grant-drift de `anon`) já foram corrigidos como parte da aplicação da 248 (migration 277).
 3. **Configuração:** confirmar valores nos cofres Vercel/GitHub/Supabase; remover 4 variáveis órfãs.
 4. **Produto:** decidir escopo Fiscal (congelar vs. Focus real); autorizar início da consolidação `/gerente`→Admin V2.
