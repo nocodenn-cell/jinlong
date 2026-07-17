@@ -289,11 +289,25 @@ de forma limpa.
 **Sintoma:** Todos os jobs de CI do PR #199 (e de outros PRs) falhavam em ~2-3 s, sem sequer chegar
 a rodar os passos de build/teste/lint. Falha uniforme e independente do conteúdo do commit.
 
-**Causa raiz:** Os workflows fixavam `actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5` —
-um SHA que **não corresponde a nenhuma release publicada** do `actions/checkout`. O GitHub Actions
-falha imediatamente no passo de checkout ao não resolver a ação nesse SHA, derrubando o job inteiro
-antes de qualquer trabalho útil. Como o checkout é o primeiro passo de todo job, o pipeline inteiro
-ficava vermelho. Identificada durante a Frente 7.
+**Diagnóstico — DUAS causas distintas (correção após evidência do commit f2751c0):**
+
+1. **Causa observada do vermelho atual = cota/billing do GitHub Actions esgotada.** Inspeção
+   job-a-job via API (`get_workflow_job` para gitleaks 87923071884 e build-and-test 87923071931 no
+   head f2751c0, já com o SHA corrigido) mostra: duração 2 s, `runner_id: 0`, `runner_name: ""`,
+   **nenhum step executado**. Os jobs falham **antes de um runner ser atribuído** — assinatura de
+   bloqueio por cota/billing, não de erro dentro do job. Isso **confirma o que o usuário informou** e
+   **não é corrigível por código**; depende de restaurar a cota da conta.
+
+2. **Bug latente REAL corrigido (não era a causa do vermelho atual): SHA inválido de checkout.** Os
+   workflows fixavam `actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5`, um SHA que **não
+   corresponde a nenhuma release publicada**. Assim que a cota for restaurada, os jobs passariam a
+   rodar em runner e falhariam no passo de checkout por causa desse SHA. Corrigir agora evita trocar
+   um bloqueio (cota) por outro (checkout) quando a cota voltar.
+
+**Correção do diagnóstico anterior:** na Frente 7 eu atribuí o vermelho ~2-3 s ao SHA de checkout por
+inferência (SHA inválido + timing curto), **sem inspecionar o nível de step**. A evidência job-a-job
+mostra que a causa observada é a cota (jobs morrem antes do runner). O fix do SHA continua válido e
+necessário como correção de bug latente — mas **não** torna o CI verde enquanto a cota estiver esgotada.
 
 **Correção aplicada:** substituídas **16 ocorrências** em **5 workflows** pelo SHA correto de
 `actions/checkout` v4.2.2 (`11bd71901bbe5b1630ceea73d27597364c9af683`), preservando os comentários
@@ -302,14 +316,15 @@ reorganização de workflow) — escopo estrito da causa raiz.
 
 **Validação:** consistência de sintaxe YAML dos 5 arquivos confirmada localmente (`yaml.safe_load`);
 `git diff` confirma que **apenas** linhas `actions/checkout` mudaram (16 inserções/16 deleções).
-**Validação remota pendente:** os pipelines não foram re-executados porque a conta GitHub está sem
-cota de Actions disponível — a confirmação de que os jobs passam do checkout ocorrerá quando houver
-cota. A correção é determinística (SHA correto de uma release real), então o desbloqueio do checkout
-é esperado com alta confiança.
+**Validação remota impossível agora:** a cota de Actions está esgotada (causa #1), então os jobs nem
+chegam a rodar em runner — a confirmação de que o checkout resolve só será possível quando a cota for
+restaurada. A correção é determinística (SHA correto de uma release real), então o desbloqueio do
+checkout é esperado com alta confiança, mas **o CI só ficará verde depois de restaurada a cota**.
 
-**Escopo deliberadamente restrito:** esta frente NÃO ataca a paridade prod↔repo (`migration-remote-drift`
-pode continuar vermelho por outras razões — DEC-09) — apenas remove o bloqueio universal do checkout
-que mascarava qualquer sinal real do CI.
+**Escopo deliberadamente restrito:** esta frente remove apenas o bug latente do SHA de checkout. NÃO
+resolve a cota de Actions (fora do código) nem a paridade prod↔repo (`migration-remote-drift` pode
+continuar vermelho por DEC-09). O usuário pediu explicitamente para não re-executar pipelines por
+causa da cota — respeitado.
 
 ---
 

@@ -339,9 +339,11 @@ preservando comentários `# v4`. Corrige a falha universal de CI (~2-3 s no chec
 **Escopo estrito:** nenhuma outra action, Node, teste, Supabase ou reorganização de workflow foi
 tocada — `git diff` mostra só linhas `actions/checkout` (16 ins/16 del).
 
-**Validação:** sintaxe YAML dos 5 arquivos OK (`yaml.safe_load`). Validação remota (re-executar os
-pipelines) **pendente por falta de cota GitHub Actions** — não foi possível confirmar o verde remoto
-nesta sessão.
+**Validação:** sintaxe YAML dos 5 arquivos OK (`yaml.safe_load`). Validação remota **impossível agora**:
+inspeção job-a-job (API) do commit já corrigido mostra jobs morrendo em 2 s **sem runner atribuído**
+(`runner_id: 0`, sem steps) — assinatura de **cota/billing de GitHub Actions esgotada**, não de erro
+de checkout. Ou seja, o fix do SHA é um bug latente real corrigido, mas o CI só ficará verde após a
+cota ser restaurada. Ver DEC-10 (diagnóstico corrigido com evidência).
 
 ---
 
