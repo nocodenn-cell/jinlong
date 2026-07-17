@@ -39,7 +39,7 @@
   --color-warning-500: #f59e0b;
 
   /* === TOKENS FASTPRODUCT (--fp-*) === */
-  /* Substituem fallbacks hardcoded em components/ui/MetricCard.tsx, badges.tsx, etc */
+  /* Substituem fallbacks hardcoded em components/ui/badges.tsx, gráficos, etc */
   --fp-text-muted: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
   --fp-text-secondary: var(--color-text-secondary);
   --fp-text-primary: var(--color-text-primary);
@@ -69,7 +69,7 @@
   --fp-purple-bg: color-mix(in srgb, #8b5cf6 12%, transparent);
   --fp-purple-border: color-mix(in srgb, #8b5cf6 35%, transparent);
 
-  /* Aliases de compatibilidade (admin-v2, gráficos) — semantic.css aposentado */
+  /* Aliases de compatibilidade (admin-v2, gráficos) — semantic.css removido na Fase 6.1 */
   --color-chart-gold: var(--color-brand-primary);
   --color-background-primary: var(--color-background-surface-soft);
   --color-background-secondary: var(--color-background-surface);
