@@ -132,10 +132,38 @@ preserva a assinatura e sinaliza a intenção. Permitida (0 callers), mas o stub
 
 ---
 
-## Pendências de decisão (frentes futuras)
+## DEC-06 — Views: securizar as 3 com drift; manter monitoramento; órfãs viram candidatas a DROP com gate (Frente 4)
 
-- **DEC-06 (Frente 4 — Views):** `v_vendas_dia`, `v_top_produtos`, `v_venda_consistencia_anomalias`
-  sem `security_invoker`. Aguardando confirmação de uso.
+**Status:** ✅ (security_invoker versionado na migration 279) · 🔶 (DROP das 2 órfãs pendente de gate)
+
+**Contexto:** Auditoria de views. No PostgreSQL, uma view sem `security_invoker` roda com o
+privilégio do owner (`postgres`), contornando a RLS das tabelas base.
+
+**Evidência (produção, 2026-07-17):** 7 views, **todas já com `security_invoker` habilitado** —
+produção está segura. Mas 3 são criadas no repositório SEM `security_invoker` (anteriores ao padrão
+da migration 040): `v_vendas_dia` (001), `v_top_produtos` (001), `v_venda_consistencia_anomalias`
+(244). Um `db reset` do zero as recriaria inseguras (bypass de RLS de `vendas`/`itens_venda` numa
+instalação nova). Nenhuma das 3 é consultada pelo app (0 `.from()`).
+
+**Decisão:**
+1. **Securizar as 3** com `ALTER VIEW ... SET (security_invoker = true)` (migration 279) — fecha o
+   bypass no bootstrap, casa com produção, no-op no remoto (idempotente).
+2. **`v_venda_consistencia_anomalias`**: mantida — é view de monitoramento/auditoria de
+   consistência (0 anomalias por N dias é um check de homologação em `docs/FASE_5_ACCEPTANCE.md`).
+3. **`v_vendas_dia` e `v_top_produtos`**: classificadas **órfãs** (substituídas pelas RPCs
+   `relatorio_vendas_por_dia_periodo` / `relatorio_top_produtos_periodo`; 0 uso no app; **0
+   dependências no banco** — `pg_depend` vazio). Candidatas a `DROP`, mas **não removidas nesta
+   sprint**: como se chamam "vendas do dia" e "top produtos", podem ser lidas por um consumidor
+   externo (BI/dashboard/planilha) fora do repositório, que o grep não alcança. **Gate para o
+   DROP:** confirmar com o time que nenhuma ferramenta externa consulta essas views; então
+   `DROP VIEW`. Postura consistente com DEC-02 (não destruir unilateralmente).
+
+**Alternativa rejeitada:** DROP imediato das 2 órfãs — rejeitada pelo risco de quebrar um consumidor
+externo não rastreável pelo código. Securizar já elimina o risco de segurança sem esse risco.
+
+---
+
+## Pendências de decisão (frentes futuras)
 - **DEC-07 (Frente 7 — Bootstrap):** estratégia para o problema de ordenação lexicográfica
   numérico × timestamp. Aguardando análise.
 - **DEC-08 (Frente 8 — CI):** causa raiz do pipeline quebrado. Aguardando investigação (fora

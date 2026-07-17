@@ -111,7 +111,51 @@ alinhado ao estado seguro (e ao estado que produção deve assumir quando a migr
 
 ---
 
+---
+
+## Frente 4 — Views
+
+### Auditoria completa (evidência: pg_class/reloptions de produção, 2026-07-17)
+
+| View | Repo cria em | `security_invoker` repo | `security_invoker` prod | Uso app (`.from`) | Status | Decisão |
+|---|---|---|---|---|---|---|
+| `v_vendas_dia` | 001 | **não** | on | 0 | Órfã (substituída por RPC) | Securizar (FIX-4.1); DROP com gate (DEC-06) |
+| `v_top_produtos` | 001 | **não** | on | 0 | Órfã (substituída por RPC) | Securizar (FIX-4.1); DROP com gate (DEC-06) |
+| `v_venda_consistencia_anomalias` | 244 | **não** | true | 0 | Monitoramento/auditoria | Securizar + manter (FIX-4.1) |
+| `v_estoque_baixo` | 040 | sim | true | — | Ativa | OK |
+| `v_kardex_unificado` | 248 | sim | true | — | Ativa | OK |
+| `v_clientes_gerente` | 253 | sim | true | — | Ativa | OK |
+| `v_fiscal_doc_status_event_mismatch` | 066 | sim | true | — | Ativa | OK |
+
+**Inversão vs. relatório inicial:** o `DATABASE_INTEGRITY_REPORT.md` §5.2 (auditoria estática)
+apontava as 3 primeiras como bypass de RLS em produção. A verificação direta mostra o oposto:
+**produção está segura** (todas com `security_invoker`); o risco real é de **bootstrap** — o repo
+recria 3 views inseguras numa instalação nova. Nenhuma view fantasma: as 7 de produção têm CREATE
+no repo (v_vendas_dia/v_top_produtos em 001, via `create view` minúsculo).
+
+### FIX-4.1 — `security_invoker` nas 3 views com drift de bootstrap
+
+**Arquivo criado:** `backend/supabase/migrations/279_views_security_invoker_bootstrap.sql`
+
+**O que faz:** `ALTER VIEW ... SET (security_invoker = true)` em `v_vendas_dia`, `v_top_produtos`,
+`v_venda_consistencia_anomalias`. Fecha o bypass de RLS que ocorreria num `db reset` do zero (owner
+`postgres` sem security_invoker contorna a RLS de `vendas`/`itens_venda`). Idempotente/no-op no
+remoto (as 3 já têm o atributo em produção).
+
+**Validação (evidência):**
+1. Retrato completo de `pg_class`/`reloptions` de produção → 7 views, exatamente 3 com drift repo↔prod.
+2. `pg_depend` → **0 dependências** de outros objetos sobre `v_vendas_dia`/`v_top_produtos` (viabiliza
+   o DROP futuro; DEC-06).
+3. `grep .from('<view>')` em todo o código → 0 (nenhuma das 3 é consultada pelo app; as "9 menções"
+   de `v_top_produtos` são metadados de FK em `database.types.ts`, não uso).
+4. `node scripts/migration-sequence-guard.mjs` → OK.
+
+**Impacto em bootstrap:** um `db reset` do zero passa a produzir todas as 7 views com
+`security_invoker`, eliminando qualquer caminho paralelo de leitura que ignore a RLS.
+
+---
+
 ## Pendentes (frentes futuras)
 
-- Frente 4 (Views), Frente 5 (Grants), Frente 6 (Índices),
+- Frente 5 (Grants), Frente 6 (Índices),
   Frente 7 (Bootstrap determinístico), Frente 8 (CI) — ainda não iniciadas.
