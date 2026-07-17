@@ -155,7 +155,68 @@ remoto (as 3 já têm o atributo em produção).
 
 ---
 
+---
+
+## Frente 5 — Grants (menor privilégio em funções)
+
+### Inventário completo (evidência: pg_proc/has_function_privilege de produção, 2026-07-17)
+
+**Grants EXCESSIVOS — 33 overloads `SECURITY DEFINER` executáveis por `anon` e/ou `PUBLIC`** (todos
+com `authenticated`+`service_role` preservados → remoção de anon/PUBLIC não afeta acesso legítimo):
+
+`caixa_integridade_gate_check`, `calcular_preco_produto`, `colocar_venda_em_espera`,
+`descartar_venda_em_espera`, `ensure_venda_evento_registrado`, `fechar_caixa_atomico`,
+`fechar_caixa_pdv_atomico`, `finalizar_venda_transacional_canonica_v2` (×3),
+`finalizar_venda_transacional_canonica_v3` *(também PUBLIC)*, `finalizar_venda_transacional_canonica_v4`,
+`fiscal_registrar_evento_enqueue_erro`, `fn_atualizar_funcionario` *(PUBLIC)*,
+`fn_audit_update_funcionarios_meta` *(PUBLIC, trigger)*, `fn_criar_funcionario` *(PUBLIC)*,
+`fn_desativar_funcionario` *(PUBLIC)*, `kpis_venda_eventos_gerente`, `listar_venda_eventos_gerente`,
+`listar_vendas_em_espera`, `obter_pricing_version_ativa`, `obter_status_caixa_operador`,
+`pdv_config_flags_visuais` *(PUBLIC)*, `proximo_numero_venda_em_espera`,
+`registrar_historico_preco_produto` *(PUBLIC, trigger)*, `registrar_pricing_version_venda`,
+`registrar_venda_evento`, `relatorio_consistencia_vendas`, `retomar_venda_em_espera`,
+`shadow_validar_venda_engine_v4`, `venda_eventos_items_from_payload` *(PUBLIC)*,
+`venda_eventos_items_from_sale` *(PUBLIC)*, `verificar_consistencia_venda`.
+
+**Grants NECESSÁRIOS (mantidos em todas):** `authenticated` + `service_role`.
+
+**Fora de escopo (mantidos, baixo risco) — `SECURITY INVOKER` anon-executáveis (~21):**
+relatorios `*_periodo`, `relatorio_cobertura_estoque`, `resumo/detalhe_comissoes_*`, `round_abnt`,
+`total_vendas_por_funcionario`, `venda_evento_idempotency_key`, `dashboard_gerente_resumo`,
+`gerente_estoque_list_page`, `baixar_estoque_venda`, `fn_listar_funcionarios_gerente`, e funções de
+trigger (`set_updated_at`, `oc_set_updated_at`, `relatorio_settings_normalize_timezone`,
+`update_feature_flags_updated_at`). Rodam sob RLS do papel chamador; `anon` não vê dado. Ver DEC-07.
+
+### FIX-5.1 — Re-varredura de REVOKE anon/PUBLIC em SECURITY DEFINER
+
+**Arquivo criado:** `backend/supabase/migrations/280_revoke_anon_public_execute_security_definer_sweep.sql`
+
+**O que faz:** re-aplica verbatim os DO-loops das migrations 218 (revoga `anon`) + 221 (garante
+`authenticated`+`service_role`, revoga `PUBLIC`) em toda função `SECURITY DEFINER` do schema public.
+Rodando por último, captura as 33 que escaparam por terem sido criadas após 218/221.
+
+**Causa raiz:** 218/221 são varreduras pontuais; funções SECURITY DEFINER criadas depois (v4,
+vendas_em_espera, fn_*_funcionario, fechar_caixa_pdv_atomico…) reganharam o EXECUTE default a
+anon/PUBLIC. Ver DEC-07.
+
+**Justificativa da remoção:** cada uma das 33 já possui `authenticated`+`service_role`; o grant a
+`anon`/`PUBLIC` é privilégio desnecessário que amplia a superfície de ataque — na v4,
+`COALESCE(auth.uid(), p_operador_id)` permitiria a um chamador anon passar `p_operador_id` e contornar
+a checagem de identidade.
+
+**Validação:**
+- **Inventário (evidência):** consulta read-only de `has_function_privilege` enumerou exatamente as 33
+  (anon/PUBLIC) + confirmou que todas mantêm authenticated+service_role.
+- **Lógica:** cópia verbatim de 218/221, migrations já shippadas e comprovadas; idempotentes.
+- `node scripts/migration-sequence-guard.mjs` → OK.
+- **Pós-aplicação (roda no `db push` de homologação):** a query embutida na migration deve retornar
+  **0** funções SECURITY DEFINER anon/PUBLIC-executáveis.
+
+**Impacto em bootstrap:** um `db reset` do zero passa a produzir todas as funções SECURITY DEFINER
+sem exposição a anon/PUBLIC — o estado seguro que 218/221 pretendiam e que o drift havia reaberto.
+
+---
+
 ## Pendentes (frentes futuras)
 
-- Frente 5 (Grants), Frente 6 (Índices),
-  Frente 7 (Bootstrap determinístico), Frente 8 (CI) — ainda não iniciadas.
+- Frente 6 (Índices), Frente 7 (Bootstrap determinístico), Frente 8 (CI) — ainda não iniciadas.

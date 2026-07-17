@@ -163,6 +163,46 @@ externo não rastreável pelo código. Securizar já elimina o risco de seguran�
 
 ---
 
+## DEC-07 — Grants: revogar anon/PUBLIC de SECURITY DEFINER (re-varredura 218/221); manter INVOKER (Frente 5)
+
+**Status:** ✅ (sweep versionado na migration 280) · 🔶 (aplicação em produção pendente de homologação)
+
+**Contexto:** Princípio do menor privilégio em funções. `SECURITY DEFINER` roda como owner
+(`postgres`), contornando RLS; expô-las a `anon` (não autenticado) é o alvo do advisor
+`anon_security_definer_function_executable`.
+
+**Evidência (pg_proc de produção, 2026-07-17):** 33 overloads `SECURITY DEFINER` executáveis por
+`anon` e/ou `PUBLIC`, incluindo escrita crítica (v4, `fechar_caixa_*`, família `vendas_em_espera`,
+`fn_*_funcionario`). **Todas** já têm grant explícito a `authenticated` + `service_role`.
+
+**Causa raiz:** as varreduras 218 (revoga anon) e 221 (revoga PUBLIC) são DO-loops **pontuais**;
+funções `SECURITY DEFINER` criadas depois (v4, vendas_em_espera, kits, orçamentos, funcionários…)
+reganharam o EXECUTE default a anon/PUBLIC e nunca foram varridas de novo. Agravado pela ordenação
+lexicográfica das migrations timestamp.
+
+**Grants necessários (mantidos):** `authenticated` (app logado) + `service_role` (backend/sync).
+**Grants excessivos (removidos):** `anon` + `PUBLIC`.
+
+**Decisão:** Migration 280 **re-aplica verbatim os loops de 218+221** (idempotentes, sobre o catálogo
+vivo), agora rodando por último → captura todas as funções criadas desde então. Justificativa por
+remoção: cada uma das 33 já tem authenticated+service_role, logo anon/PUBLIC é privilégio
+desnecessário que só amplia a superfície de ataque (ex.: bypass de identidade na v4 via
+`COALESCE(auth.uid(), p_operador_id)`). Salvaguarda da 221 preservada (funções service_role-only
+sem PUBLIC não são tocadas).
+
+**Escopo — decisão de NÃO tocar em SECURITY INVOKER com anon:** ~21 funções `SECURITY INVOKER`
+(relatorios `*_periodo`, `round_abnt`, `total_vendas_por_funcionario`, funções de trigger
+`set_updated_at`/`oc_set_updated_at`/etc.) também são anon-executáveis, mas rodam sob a RLS do papel
+chamador — `anon` (sem `auth.uid()`) não enxerga dado — e utilitários puros (`round_abnt`) não tocam
+dado. Fora do padrão 218/221 e de baixo risco. Não removidas agora para não arriscar quebrar um
+eventual fluxo pré-autenticação; documentadas como hardening opcional futuro.
+
+**Alternativa rejeitada:** REVOKE manual por função (enumerar as 33) — rejeitada em favor do DO-loop
+idempotente, que também cobre qualquer função nova até a data de aplicação e é o padrão já
+estabelecido/aprovado do repositório.
+
+---
+
 ## Pendências de decisão (frentes futuras)
 - **DEC-07 (Frente 7 — Bootstrap):** estratégia para o problema de ordenação lexicográfica
   numérico × timestamp. Aguardando análise.
