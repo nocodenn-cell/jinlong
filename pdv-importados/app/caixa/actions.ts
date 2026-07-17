@@ -66,6 +66,13 @@ import {
   obterDetalheHistoricoVendaImpl,
   retomarVendaEmEsperaImpl,
 } from '@/app/caixa/server/caixaVendaEspera.impl'
+import {
+  cancelarOrcamentoImpl,
+  criarOrcamentoImpl,
+  listarOrcamentosImpl,
+  marcarOrcamentoConvertidoImpl,
+  obterOrcamentoImpl,
+} from '@/app/caixa/server/caixaOrcamento.impl'
 import type { ItemCarrinho } from '@/stores/unifiedCartStore'
 import type { ConsultaRapidaResult } from '@/app/caixa/caixaActionTypes'
 
@@ -78,6 +85,7 @@ export type {
 } from '@/app/caixa/server/caixaVendaEspera.impl'
 export type { VendaDetalhe, VendaItemDetalhe } from '@/app/admin/vendas/actions'
 export type { DevolverVendaInput } from '@/app/gerente/vendas/parseDevolverVendaForm'
+export type { OrcamentoCard } from '@/app/caixa/server/caixaOrcamento.impl'
 
 export type {
   AbrirCaixaOperadorResult,
@@ -246,6 +254,35 @@ export async function marcarVendaEmEsperaConvertidaCaixa(id: string) {
 
 export async function descartarVendaEmEsperaCaixa(id: string, motivo?: string) {
   return descartarVendaEmEsperaImpl(id, motivo)
+}
+
+/** Fase 5, Entrega 6 — Orçamento (venda não vinculante, converte via finalize normal). */
+export async function criarOrcamentoCaixa(input: {
+  itens: ItemCarrinho[]
+  totalBruto: number
+  totalDesconto: number
+  totalLiquido: number
+  clienteId?: string | null
+  validadeDias?: number
+}) {
+  return criarOrcamentoImpl(input)
+}
+
+export async function listarOrcamentosCaixa() {
+  return listarOrcamentosImpl()
+}
+
+export async function obterOrcamentoCaixa(id: string) {
+  return obterOrcamentoImpl(id)
+}
+
+export async function cancelarOrcamentoCaixa(id: string, motivo?: string) {
+  return cancelarOrcamentoImpl(id, motivo)
+}
+
+/** Best-effort: marca o orçamento de origem como CONVERTIDO pós-finalização. */
+export async function marcarOrcamentoConvertidoCaixa(id: string, vendaId: string) {
+  return marcarOrcamentoConvertidoImpl(id, vendaId)
 }
 
 export async function listarHistoricoOperadorCaixa(input?: {

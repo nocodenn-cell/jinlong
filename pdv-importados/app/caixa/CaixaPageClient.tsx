@@ -15,6 +15,9 @@ import {
   marcarVendaEmEsperaConvertidaCaixa,
   descartarVendaEmEsperaCaixa,
   obterDetalheHistoricoVendaCaixa,
+  criarOrcamentoCaixa,
+  obterOrcamentoCaixa,
+  marcarOrcamentoConvertidoCaixa,
 } from "@/app/caixa/actions"
 import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
@@ -52,6 +55,7 @@ import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
 import { CaixaEmAbertoList } from "@/app/caixa/CaixaEmAbertoList"
 import { CaixaConsultaRapidaModal } from "@/app/caixa/CaixaConsultaRapidaModal"
 import { CaixaHistoricoSheet } from "@/app/caixa/CaixaHistoricoSheet"
+import { CaixaOrcamentosModal } from "@/app/caixa/CaixaOrcamentosModal"
 import { CaixaAbrirTurnoModal } from "@/app/caixa/CaixaAbrirTurnoModal"
 import {
   CaixaGerenteModal,
@@ -302,6 +306,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   // Origem da venda atual quando veio de "retomar em espera" — usado para marcar
   // CONVERTIDA após finalizar com sucesso (Fase 5, Entrega 3+4).
   const esperaOrigemIdRef = useRef<string | null>(null)
+  // Origem da venda atual quando veio de um orçamento — mesmo padrão, marca
+  // CONVERTIDO após finalizar (Fase 5, Entrega 6).
+  const orcamentoOrigemIdRef = useRef<string | null>(null)
+  const [orcamentosModalAberto, setOrcamentosModalAberto] = useState(false)
 
   const thermal = useThermalPrinter()
 
@@ -536,6 +544,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     limparEstadoDescontoGerente()
     setClienteId(null)
     esperaOrigemIdRef.current = null
+    orcamentoOrigemIdRef.current = null
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
@@ -603,6 +612,106 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
     tocarFeedback,
   ])
+
+  /** Fase 5, Entrega 6 — salva o carrinho atual como orçamento (não reserva estoque). */
+  const handleSalvarOrcamento = useCallback(async () => {
+    if (itens.length === 0) return
+    const res = await criarOrcamentoCaixa({
+      itens,
+      totalBruto,
+      totalDesconto,
+      totalLiquido: totalLiquidoComGerente,
+      clienteId,
+    })
+    if (!res.ok) {
+      setCaixaMensagem(res.error, { kind: "error" })
+      tocarFeedback("erro")
+      return
+    }
+    setCaixaMensagem(
+      caixaFmt(m.caixa.orcamentos_criado, { n: String(res.numeroLocal) }),
+      { kind: "success" },
+    )
+    tocarFeedback("ok")
+    handleNovoCupom()
+  }, [
+    itens,
+    totalBruto,
+    totalDesconto,
+    totalLiquidoComGerente,
+    clienteId,
+    handleNovoCupom,
+    m.caixa.orcamentos_criado,
+    setCaixaMensagem,
+    tocarFeedback,
+  ])
+
+  /** Carrega um orçamento no carrinho para conversão em venda (finalize normal). */
+  const handleConverterOrcamento = useCallback(
+    async (id: string) => {
+      if (itens.length > 0) {
+        const parked = await colocarVendaEmEsperaCaixa({
+          itens,
+          totalBruto,
+          totalDesconto,
+          totalLiquido: totalLiquidoComGerente,
+          caixaId: isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null,
+          clienteId,
+          descontoGerentePercentual:
+            descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
+        })
+        if (!parked.ok) {
+          setCaixaMensagem(parked.error, { kind: "error" })
+          tocarFeedback("erro")
+          return
+        }
+        handleNovoCupom()
+      }
+      const res = await obterOrcamentoCaixa(id)
+      if (!res.ok) {
+        setCaixaMensagem(res.error, { kind: "error" })
+        tocarFeedback("erro")
+        return
+      }
+      limparEstadoDescontoGerente()
+      setClienteId(res.clienteId)
+      orcamentoOrigemIdRef.current = res.id
+      substituirCarrinho(res.itens)
+      for (const item of res.itens) {
+        const tipo = item.resultado?.tipoPreco ?? "VAREJO"
+        reprecificar({
+          itemId: item.id,
+          produtoId: item.produtoId,
+          quantidade: item.quantidade,
+          tipoPrecoAtual: tipo,
+        })
+      }
+      setOrcamentosModalAberto(false)
+      setCaixaMensagem(
+        caixaFmt(m.caixa.orcamentos_convertido_aviso, { n: String(res.numeroLocal) }),
+        { kind: "success" },
+      )
+      tocarFeedback("ok")
+      focarCampoBusca()
+    },
+    [
+      itens,
+      totalBruto,
+      totalDesconto,
+      totalLiquidoComGerente,
+      caixaStatus,
+      clienteId,
+      descontoGerentePercentual,
+      handleNovoCupom,
+      limparEstadoDescontoGerente,
+      substituirCarrinho,
+      reprecificar,
+      m.caixa.orcamentos_convertido_aviso,
+      setCaixaMensagem,
+      tocarFeedback,
+      focarCampoBusca,
+    ],
+  )
 
   const handleRetomarEmEspera = useCallback(
     async (id: string) => {
@@ -1010,6 +1119,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           void marcarVendaEmEsperaConvertidaCaixa(esperaOrigemIdRef.current)
           esperaOrigemIdRef.current = null
         }
+        if (orcamentoOrigemIdRef.current) {
+          // Best-effort: não bloqueia nem falha a venda já concluída.
+          void marcarOrcamentoConvertidoCaixa(orcamentoOrigemIdRef.current, res.vendaId)
+          orcamentoOrigemIdRef.current = null
+        }
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
@@ -1394,6 +1508,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onFecharCaixa={handleFecharCaixaClick}
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
+                onSalvarOrcamento={() => void handleSalvarOrcamento()}
+                onAbrirOrcamentos={() => setOrcamentosModalAberto(true)}
               />
               <div
                 className={cn(
@@ -1453,6 +1569,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   onFecharCaixa={handleFecharCaixaClick}
                   onAbrirCaixa={handleAbrirCaixaClick}
                   onConsultaRapida={() => setConsultaRapidaAberta(true)}
+                  onSalvarOrcamento={() => void handleSalvarOrcamento()}
+                  onAbrirOrcamentos={() => setOrcamentosModalAberto(true)}
                 />
               </div>
             </div>
@@ -1638,6 +1756,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         m={m}
         perfil={perfil}
         onImprimirCupom={handleImprimirCupomHistorico}
+      />
+      <CaixaOrcamentosModal
+        open={orcamentosModalAberto}
+        onOpenChange={setOrcamentosModalAberto}
+        m={m}
+        onConverter={(id) => void handleConverterOrcamento(id)}
       />
       <CaixaAbrirTurnoModal
         open={abrirTurnoAberto}

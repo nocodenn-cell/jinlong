@@ -30,6 +30,8 @@ type Props = {
   onFecharCaixa: () => void
   onAbrirCaixa: () => void
   onConsultaRapida: () => void
+  onSalvarOrcamento: () => void
+  onAbrirOrcamentos: () => void
   variant?: "default" | "classic"
 }
 
@@ -61,6 +63,8 @@ function CaixaPdvOperacoesMenuImpl({
   onFecharCaixa,
   onAbrirCaixa,
   onConsultaRapida,
+  onSalvarOrcamento,
+  onAbrirOrcamentos,
   variant = "default",
 }: Props) {
   const classic = variant === "classic"
@@ -143,6 +147,16 @@ function CaixaPdvOperacoesMenuImpl({
       shortcut: "F12",
       disabled: !podeReimprimir,
       onClick: () => runAndClose(onImprimirUltima),
+    },
+    {
+      id: "salvar-orcamento",
+      label: m.caixa.operacoes_salvar_orcamento,
+      onClick: () => runAndClose(onSalvarOrcamento),
+    },
+    {
+      id: "orcamentos",
+      label: m.caixa.operacoes_orcamentos,
+      onClick: () => runAndClose(onAbrirOrcamentos),
     },
   ]
 
