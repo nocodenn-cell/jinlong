@@ -6,8 +6,7 @@
 
 /* === TEMA CLÁSSICO (ÚNICO, claro) === */
 :root,
-[data-app-theme='classico'],
-[data-app-theme='noturno'] {
+[data-app-theme='classico'] {
   /* Surface colors */
   --color-background-surface: #ffffff;
   --color-background-surface-soft: #f8fafc;
@@ -76,56 +75,15 @@
   --color-background-tertiary: var(--color-background-surface-soft);
 }
 
-/* === TEMA DRAGON-DARK (GERENTE) === */
-[data-gerente-ui-theme='dragon-dark'] {
-  /* Surface colors */
-  --color-background-surface: rgba(2, 6, 23, 0.35);
-  --color-background-surface-soft: rgba(15, 23, 42, 0.5);
-  --color-background-overlay: rgba(2, 6, 23, 0.58);
-
-  /* Text colors */
-  --color-text-primary: rgb(248, 250, 252);
-  --color-text-secondary: rgb(203, 213, 225);
-  --color-text-tertiary: rgb(148, 163, 184);
-  --color-text-disabled: rgb(100 116 139);
-
-  /* Border colors */
-  --color-border-primary: rgba(71, 85, 105, 0.75);
-  --color-border-secondary: rgba(71, 85, 105, 0.5);
-  --color-border-disabled: rgba(51, 65, 85, 0.6);
-
-  /* Brand colors */
-  --color-brand-primary: var(--color-dragon-gold-400);
-  --color-brand-secondary: var(--color-dragon-gold-500);
-  --color-brand-strong: var(--color-dragon-gold-600);
-  --color-brand-contrast: rgb(17, 24, 39);
-
-  /* Component overrides */
-  --table-bg: rgba(2, 6, 23, 0.35);
-  --table-header-bg: rgba(15, 23, 42, 0.5);
-  --table-header-text: rgb(203, 213, 225);
-  --table-row-hover-bg: rgba(30, 41, 59, 0.45);
-  --table-border: rgba(71, 85, 105, 0.5);
-}
-
-/* === RESPONSIVE THEME ADJUSTMENTS === */
-@media (max-width: 640px) {
-  :root,
-  [data-app-theme='noturno'] {
-    --btn-accent-shadow-hover: none;
-    --btn-neutral-shadow-hover: none;
-    --btn-danger-shadow-hover: none;
-    --chip-shadow-hover: none;
-  }
-}
+/* Fase 6.1 (Onda 2): bloco [data-gerente-ui-theme='dragon-dark'] removido —
+   o atributo é fixado em 'dragon-light' (app/layout.tsx, GerenteLayoutShell) e
+   o tipo GerenteUiTheme não admite outro valor; seletor inalcançável.
+   Também removidos os ajustes responsive/high-contrast que só definiam tokens
+   de botão e chip do sistema component.css deletado (0 consumidores). */
 
 /* === HIGH CONTRAST MODE === */
 @media (prefers-contrast: high) {
   :root {
     --color-border-primary: rgba(148, 163, 184, 0.8);
-    --color-border-focus: var(--color-brand-primary);
-    --btn-accent-border: var(--color-brand-primary);
-    --btn-neutral-border: var(--color-brand-primary);
-    --btn-danger-border: var(--color-danger-500);
   }
 }
