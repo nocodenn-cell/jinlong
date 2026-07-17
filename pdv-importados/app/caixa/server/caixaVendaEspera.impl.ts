@@ -233,6 +233,9 @@ export type HistoricoVendaItemDetalhe = {
   quantidade: number
   precoUnitario: number
   total: number
+  /** Para reimpressão de etiqueta — preço/código ATUAIS do produto, não o preço vendido. */
+  codigoBarras: string | null
+  precoVarejoAtual: number
 }
 
 export type HistoricoVendaDetalhe = {
@@ -245,6 +248,8 @@ export type HistoricoVendaDetalhe = {
   formaPagamento: string | null
   status: string | null
   clienteNome: string | null
+  numeroNf: string | null
+  chaveNf: string | null
   itens: HistoricoVendaItemDetalhe[]
   pagamentos: Array<{ formaPagamento: string; valor: number }>
 }
@@ -271,7 +276,38 @@ function mapEventoItens(raw: unknown): HistoricoVendaItemDetalhe[] {
       quantidade: Number.isFinite(qtd) ? qtd : 0,
       precoUnitario: Number.isFinite(pu) ? pu : 0,
       total: Number.isFinite(total) ? total : 0,
+      codigoBarras: null,
+      precoVarejoAtual: 0,
     }
+  })
+}
+
+/** Enriquece itens do histórico com dados ATUAIS do produto (código/preço), para etiqueta. */
+async function enriquecerComDadosAtuaisProduto(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  itens: HistoricoVendaItemDetalhe[],
+): Promise<HistoricoVendaItemDetalhe[]> {
+  const produtoIds = [...new Set(itens.map((i) => i.produtoId).filter(Boolean))]
+  if (produtoIds.length === 0) return itens
+
+  const { data } = await supabase
+    .from('produtos')
+    .select('id, codigo_barras, preco_varejo')
+    .in('id', produtoIds)
+
+  const mapa = new Map<string, { codigoBarras: string | null; precoVarejo: number }>()
+  for (const row of data ?? []) {
+    mapa.set(String(row.id), {
+      codigoBarras: row.codigo_barras ? String(row.codigo_barras) : null,
+      precoVarejo: Number(row.preco_varejo ?? 0),
+    })
+  }
+
+  return itens.map((item) => {
+    const atual = mapa.get(item.produtoId)
+    return atual
+      ? { ...item, codigoBarras: atual.codigoBarras, precoVarejoAtual: atual.precoVarejo }
+      : item
   })
 }
 
@@ -305,7 +341,7 @@ export async function listarHistoricoOperadorImpl(input?: {
 
     let q = supabase
       .from('vendas')
-      .select('id, data, total_liquido, forma_pagamento, status, caixa_id')
+      .select('id, data, total_liquido, forma_pagamento, status, caixa_id, cliente_id')
       .eq('operador_id', userId)
       .order('data', { ascending: false })
       .limit(50)
@@ -330,8 +366,17 @@ export async function listarHistoricoOperadorImpl(input?: {
       }
     }
 
+    const clienteIds = [...new Set(rows.map((r) => r.cliente_id).filter((v): v is string => !!v))]
+    const nomesPorCliente = new Map<string, string>()
+    if (clienteIds.length > 0) {
+      const { data: clientes } = await supabase
+        .from('clientes')
+        .select('id, nome')
+        .in('id', clienteIds)
+      for (const c of clientes ?? []) nomesPorCliente.set(String(c.id), String(c.nome ?? ''))
+    }
+
     // TODO(auditoria-255): filtrar explicitamente por lojaId quando necessário
-    // TODO(fase-7): vendas.cliente_id → join clientes para clienteNome na lista
     void lojaId
     void LOJA_MATRIZ_ID
 
@@ -345,7 +390,7 @@ export async function listarHistoricoOperadorImpl(input?: {
         formaPagamento: r.forma_pagamento ? String(r.forma_pagamento) : null,
         status: r.status ? String(r.status) : null,
         qtdItens: contagem.get(String(r.id)) ?? 0,
-        clienteNome: null,
+        clienteNome: r.cliente_id ? nomesPorCliente.get(String(r.cliente_id)) ?? null : null,
       })),
     }
   } catch (e) {
@@ -370,7 +415,7 @@ export async function obterDetalheHistoricoVendaImpl(
     const { data: venda, error: vendaError } = await supabase
       .from('vendas')
       .select(
-        'id, data, total_bruto, total_desconto, total_liquido, forma_pagamento, status',
+        'id, data, total_bruto, total_desconto, total_liquido, forma_pagamento, status, cliente_id, numero_nf, chave_nf',
       )
       .eq('id', id)
       .eq('operador_id', userId)
@@ -379,7 +424,7 @@ export async function obterDetalheHistoricoVendaImpl(
     if (vendaError) return { ok: false, error: mensagemErroParaUsuario(vendaError.message) }
     if (!venda) return { ok: false, error: 'Venda não encontrada.' }
 
-    const [eventoRes, pagamentosRes] = await Promise.all([
+    const [eventoRes, pagamentosRes, clienteRes] = await Promise.all([
       supabase
         .from('venda_eventos')
         .select('items, total, total_bruto, forma_pagamento, occurred_at')
@@ -392,9 +437,13 @@ export async function obterDetalheHistoricoVendaImpl(
         .from('vendas_pagamentos')
         .select('forma_pagamento, valor')
         .eq('venda_id', id),
+      venda.cliente_id
+        ? supabase.from('clientes').select('nome').eq('id', venda.cliente_id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
 
-    const itens = mapEventoItens(eventoRes.data?.items)
+    const itensBrutos = mapEventoItens(eventoRes.data?.items)
+    const itens = await enriquecerComDadosAtuaisProduto(supabase, itensBrutos)
     const pagamentosRaw = pagamentosRes.data ?? []
     const pagamentos =
       pagamentosRaw.length > 0
@@ -420,7 +469,9 @@ export async function obterDetalheHistoricoVendaImpl(
         totalLiquido: Number(venda.total_liquido ?? 0),
         formaPagamento: venda.forma_pagamento ? String(venda.forma_pagamento) : null,
         status: venda.status ? String(venda.status) : null,
-        clienteNome: null,
+        clienteNome: clienteRes.data?.nome ? String(clienteRes.data.nome) : null,
+        numeroNf: venda.numero_nf ? String(venda.numero_nf) : null,
+        chaveNf: venda.chave_nf ? String(venda.chave_nf) : null,
         itens,
         pagamentos,
       },

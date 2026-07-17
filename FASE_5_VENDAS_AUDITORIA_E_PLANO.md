@@ -194,9 +194,11 @@ Cada entrega é pequena, testável isoladamente e reversível (feature isolada, 
 - **8c Baixa de estoque composta — ⏸️ adiada, por decisão explícita:** desenhada e pronta para plugar (`core/inventory/InventoryExpansionService.ts` + porta `core/ports/kitComposicao.ts` + adapter Supabase), mas **não integrada a `finalizar_venda_transacional_canonica_v4`** — a RPC está congelada ("FREEZE: CORE TRANSACIONAL") e baixa estoque 1:1 pelo `produto_id` de cada linha de `p_itens`; um kit precisa aparecer como 1 linha (recibo/preço/margem/kardex) mas baixar N componentes, e resolver essa divergência dentro da v4 exige validação contra um banco real que este ambiente de execução não tem. Rejeitadas nesta sessão: (a) modificar a v4 sem poder testar, (b) expandir o kit em N linhas de componente antes da v4 (perderia o kit como item único no recibo). Fica para entrega futura, com ambiente de teste real.
 - **8d UI de venda — ⏸️ adiada:** depende de 8c estar integrado (não faz sentido vender kit no PDV sem a baixa de estoque funcionando).
 
-### Entrega 9 — Histórico: cliente da venda, reimpressão NF-e, etiqueta pelo operador
-- Depende de `vendas.cliente_id` populado (parte disso já é resolvido pela Entrega 4 para vendas com espera; vendas diretas já podem ter `clienteId` — confirmar).
-- **Teste:** histórico mostra cliente quando presente; reimpressão gera o mesmo documento fiscal, sem reemitir.
+### Entrega 9 — Histórico: cliente da venda, reimpressão NF-e, etiqueta pelo operador — ✅ concluída (parcial por dependência externa)
+- **Drift real encontrado e corrigido (migration 276):** `finalizar_venda_transacional_canonica_v4` (migrations 24702/268) já lê/grava `vendas.cliente_id` desde a Fase 5b, mas nenhuma migration no repositório continha o `ALTER TABLE` correspondente, e `database.types.ts` não listava a coluna. `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` idempotente reconcilia o repositório com a realidade (seguro nos dois cenários: coluna já existia via caminho fora do histórico de migrations, ou nunca existiu e a v4 estaria falhando silenciosamente).
+- **Cliente da venda no histórico:** ✅ `listarHistoricoOperadorImpl`/`obterDetalheHistoricoVendaImpl` (`caixaVendaEspera.impl.ts`) agora fazem join em `clientes` por `vendas.cliente_id` — fecha o TODO que estava rotulado (incorretamente) como "Fase 7".
+- **Etiqueta pelo operador:** ✅ botão "Imprimir etiqueta" no histórico do caixa, reusa `lib/etiqueta/gerarPdf.ts` (já existente para o gerente/estoque) com código de barras e preço **atuais** do produto (não o preço histórico vendido).
+- **Reimpressão NF-e:** ⚠️ parcial — histórico agora mostra `numero_nf` quando presente (view-only). Emissão/reimpressão real de documento fiscal depende da Fase 6 (Fiscal), que aguarda credenciais Focus NFe e ainda não começou — não implementável agora sem simular uma capacidade que não existe.
 
 ---
 
@@ -205,7 +207,7 @@ Cada entrega é pequena, testável isoladamente e reversível (feature isolada, 
 1. **Guards de CI**: `guard:all` passa, incluindo extensão do `rpc-gate-guard.mjs` para cancelamento e devolução (Entrega 1).
 2. **Zero TODOs abertos** da lista da seção 3 sem decisão registrada (implementado ou formalmente adiado com justificativa, como já é feito para Fase 7).
 3. **Paridade operador/gerente**: operador de caixa consegue cancelar/devolver venda recente sem sair do PDV (Entrega 2), com auditoria idêntica à via gerente.
-4. **Cliente presente em 100% dos pontos do ciclo de venda** onde já existe UI de cliente (venda direta, venda em espera, histórico) — sem descarte silencioso de `clienteId`.
+4. ✅ **Cliente presente em 100% dos pontos do ciclo de venda** onde já existe UI de cliente (venda direta, venda em espera — Entrega 4, histórico — Entrega 9) — sem descarte silencioso de `clienteId`.
 5. **RLS de `vendas_em_espera` fechada por loja** e testada (Entrega 3).
 6. **Ledger de auditoria completo**: toda operação de desconto, cancelamento, devolução E espera (park/resume/discard) gera evento rastreável — hoje só as 3 primeiras geram.
 7. **Orçamento e reabertura**: ✅ orçamento implementado (Entrega 6, migration 273); reabertura formalmente descartada via ADR-VENDAS-001 (Entrega 7) — não é um item pendurado, é uma decisão aceita com item de backlog decorrente (Duplicar/Refazer Venda). Falta apenas: testes E2E do fluxo de orçamento.

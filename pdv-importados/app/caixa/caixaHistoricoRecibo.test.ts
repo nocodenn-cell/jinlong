@@ -12,6 +12,8 @@ const detalheBase: HistoricoVendaDetalhe = {
   formaPagamento: 'DINHEIRO',
   status: 'CONCLUIDA',
   clienteNome: null,
+  numeroNf: null,
+  chaveNf: null,
   itens: [
     {
       produtoId: 'p1',
@@ -19,6 +21,8 @@ const detalheBase: HistoricoVendaDetalhe = {
       quantidade: 2,
       precoUnitario: 50,
       total: 100,
+      codigoBarras: null,
+      precoVarejoAtual: 50,
     },
   ],
   pagamentos: [{ formaPagamento: 'DINHEIRO', valor: 100 }],

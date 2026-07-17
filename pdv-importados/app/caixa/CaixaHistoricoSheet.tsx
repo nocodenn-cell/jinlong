@@ -187,6 +187,11 @@ function HistoricoDetalhe({ detalhe, carregando, m }: DetalheProps) {
               {detalhe.clienteNome ?? m.caixa.historico_sem_cliente}
             </strong>
           </span>
+          {detalhe.numeroNf ? (
+            <span>
+              {m.caixa.historico_col_nfe}: <strong className="text-jl-fg-2">{detalhe.numeroNf}</strong>
+            </span>
+          ) : null}
           <span
             className={cn(
               "rounded-full px-1.5 py-0.5 font-semibold",
@@ -275,6 +280,7 @@ type FerramentasProps = {
   onExportarDetalhe: () => void
   onCancelarVenda: () => void
   onDevolverVenda: () => void
+  onImprimirEtiqueta: () => void
 }
 
 function HistoricoFerramentas({
@@ -288,6 +294,7 @@ function HistoricoFerramentas({
   onExportarDetalhe,
   onCancelarVenda,
   onDevolverVenda,
+  onImprimirEtiqueta,
 }: FerramentasProps) {
   const btnClass = "h-9 w-full justify-start text-xs"
   return (
@@ -308,8 +315,8 @@ function HistoricoFerramentas({
         type="button"
         variant="secondary"
         className={btnClass}
-        disabled
-        title={m.caixa.historico_tool_etiqueta_todo}
+        disabled={!temSelecao || !temItens}
+        onClick={onImprimirEtiqueta}
       >
         {m.caixa.historico_tool_imprimir_etiqueta}
       </Button>
@@ -446,6 +453,29 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, perfil, onImprimirC
       setDetalhe(det.ok ? det.detalhe : null)
     }
   }, [selecionadoId])
+
+  /** Fase 5, Entrega 9 — reimpressão de etiqueta a partir do histórico do caixa. */
+  const handleImprimirEtiqueta = useCallback(async () => {
+    if (!detalhe || detalhe.itens.length === 0) return
+    try {
+      const { baixarPdfEtiquetas } = await import('@/lib/etiqueta/gerarPdf')
+      const { getEtiquetaConfig } = await import('@/lib/etiqueta/EtiquetaConfig')
+      await baixarPdfEtiquetas(
+        detalhe.itens
+          .filter((i) => i.codigoBarras)
+          .map((i) => ({
+            produtoId: i.produtoId,
+            nome: i.nome,
+            codigoBarras: i.codigoBarras as string,
+            precoVarejo: i.precoVarejoAtual,
+            quantidade: Math.max(1, Math.round(i.quantidade)),
+          })),
+        { config: getEtiquetaConfig(), nomeArquivo: `etiquetas-${detalhe.numeroVenda.replace('#', '')}.pdf` },
+      )
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível gerar as etiquetas.')
+    }
+  }, [detalhe])
 
   const abrirModalParaAcao = useCallback(
     async (acao: "cancelar" | "devolver") => {
@@ -593,6 +623,7 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, perfil, onImprimirC
             }}
             onCancelarVenda={() => iniciarAcao("cancelar")}
             onDevolverVenda={() => iniciarAcao("devolver")}
+            onImprimirEtiqueta={() => void handleImprimirEtiqueta()}
           />
         </div>
 

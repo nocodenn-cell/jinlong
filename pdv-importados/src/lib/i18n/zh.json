@@ -932,6 +932,7 @@
     "historico_col_cliente": "客户",
     "historico_col_total": "合计",
     "historico_col_status": "状态",
+    "historico_col_nfe": "发票",
     "historico_sem_cliente": "—",
     "historico_selecione_venda": "请在列表中选择一笔销售。",
     "historico_itens_indisponiveis": "此销售暂无明细（账本缺失）。",

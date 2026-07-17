@@ -932,6 +932,7 @@
     "historico_col_cliente": "Cliente",
     "historico_col_total": "Total",
     "historico_col_status": "Status",
+    "historico_col_nfe": "NF-e",
     "historico_sem_cliente": "—",
     "historico_selecione_venda": "Selecione uma venda na lista.",
     "historico_itens_indisponiveis": "Itens indisponíveis para esta venda (ledger ausente).",
