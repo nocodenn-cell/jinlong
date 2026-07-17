@@ -266,6 +266,60 @@ produção.
 
 ---
 
+---
+
+## Frente 7 — Bootstrap determinístico
+
+### Prova empírica (executada nesta sessão)
+
+Ambiente: PostgreSQL 16 local + shim mínimo de compatibilidade Supabase (roles, `auth`/`storage`,
+stubs `auth.*`, `pg_cron`/`pg_net`, publication `supabase_realtime`). Bootstrap das **205 migrations**
+aplicado do zero em **dois bancos independentes**; `pg_dump -s` normalizado de cada; `diff`.
+
+**Resultado:**
+- **205/205 migrations aplicaram** limpo em cada banco (usando só o repositório).
+- Diff dos dois schemas: **ZERO diferenças em 8730 linhas** (exceto o nonce de sessão do `pg_dump`).
+- → **Determinismo e auto-suficiência PROVADOS.** Duas instalações independentes = mesmo schema.
+
+**Validação cruzada das Frentes 2–6 no install limpo** (query no banco bootstrapado):
+
+| Frente | Verificação no bootstrap | Resultado |
+|---|---|---|
+| 2 | policy `clientes_loja_isolado` presente | 1 ✓ |
+| 3 | overloads `finalizar_venda_transacional` como LEGACY_DISABLED | 2 ✓ |
+| 4 | `v_vendas_dia` com `security_invoker` | true ✓ |
+| 5 | funções SECURITY DEFINER executáveis por `anon` | **0** (era 33) ✓ |
+| 6 | `idx_contas_receber_venda_id` removido | 0 ✓ |
+
+**Paridade com produção (drift conhecido, não é defeito de determinismo):**
+
+| Objeto | Bootstrap | Produção | Origem da diferença |
+|---|---|---|---|
+| Tabelas | 62 | 61 | drift bidirecional (dead tables só-prod DEC-02; repo-only) |
+| Funções | 162 | 106 | overloads legados acumulados no repo, squashados em prod |
+| Policies | 123 | 126 | dead-table policies não versionadas (DEC-02) |
+| Views | 7 | 7 | paridade |
+| Índices | 220 | 229 | 2 removidos (281) + índices só-prod |
+
+### FIX-7.1 — Harness de determinismo reproduzível
+
+**Arquivos criados:**
+- `backend/supabase/scripts/bootstrap-shim.sql` — camada mínima de compatibilidade Supabase (não é
+  migration; não vai para produção).
+- `backend/supabase/scripts/bootstrap-determinism-check.sh` — aplica as migrations em 2 bancos limpos
+  e compara os dumps; sai 0 se idênticos, imprime o diff se não. Reproduzível pelo time e gate-able
+  em CI (após a Frente 8).
+
+**Validação:** o próprio harness foi executado nesta sessão → "OK — bootstrap determinístico:
+2 instalações independentes = schema idêntico (8730 linhas)", 205 migrations por banco.
+
+**Não incluído (deferido — DEC-09):** paridade bit-a-bit repo↔produção exige o squash para baseline
+única (`supabase db pull` + numeração timestamp + gate `db diff`), uma iniciativa própria que
+reescreve o histórico — não uma correção pontual desta sprint.
+
+---
+
 ## Pendentes (frentes futuras)
 
-- Frente 7 (Bootstrap determinístico), Frente 8 (CI) — ainda não iniciadas.
+- Frente 8 (CI) — causa raiz identificada (SHA inválido de `actions/checkout`, ver DEC-10); bloqueada
+  até autorização do usuário para mexer em CI.

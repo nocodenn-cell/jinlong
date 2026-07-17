@@ -238,8 +238,53 @@ falta de evidência de uso confiável e pelo risco de degradar paths quentes por
 
 ---
 
+## DEC-09 — Bootstrap determinístico: provado empiricamente; paridade parcial é o drift conhecido (Frente 7)
+
+**Status:** ✅ (determinismo provado + harness commitado) · 🔶 (paridade total = squash-baseline, deferido)
+
+**Contexto:** O problema-raiz que atravessou todas as auditorias: migrations numéricas (`NNN_`) e
+timestamp (`YYYYMMDDHHMMSS_`) coexistem, e o Supabase CLI ordena lexicograficamente — o bloco
+timestamp roda entre a 127 e a 205, fora da ordem cronológica. O time remendou com comentários
+"GUARD" para tolerar a execução fora de ordem.
+
+**Evidência empírica (executada nesta sessão, PostgreSQL 16 local + shim Supabase mínimo):**
+Bootstrap das **205 migrations** aplicado do zero em **dois bancos independentes**; `pg_dump -s` de
+cada; diff normalizado = **ZERO diferenças em 8730 linhas de schema**. Reproduzível via
+`backend/supabase/scripts/bootstrap-determinism-check.sh`.
+
+**Conclusões objetivas:**
+1. **Determinismo: PROVADO.** Duas instalações independentes convergem ao mesmo schema (byte a byte,
+   exceto o nonce de sessão do próprio `pg_dump`).
+2. **Auto-suficiência: PROVADA.** As 205 migrations aplicam do zero usando **apenas o repositório** —
+   nenhuma depende de estado manual (os GUARDs das migrations "capture" resolvem a ausência do estado
+   de produção de forma determinística; nenhuma quebra o `db reset`).
+3. **Sem dependência de efeito colateral que quebre o bootstrap: confirmado** — mas as migrations
+   toleram a ordem errada via GUARDs defensivos (complexidade real; a solução limpa é o squash).
+4. **Validação cruzada das Frentes 2–6 no bootstrap:** policy 277 presente; 2 stubs LEGACY (278);
+   `v_vendas_dia` com security_invoker (279); **0 SECURITY DEFINER executável por anon (280, de 33)**;
+   índice redundante removido (281). Todas as correções da sprint funcionam num install limpo.
+
+**Paridade com produção: PARCIAL (drift conhecido, não é defeito de determinismo).** Contagens
+bootstrap vs prod: tabelas 62/61, funções 162/106, policies 123/126, views 7/7, índices 220/229. As
+diferenças vêm de (a) objetos mortos deliberadamente não-versionados (DEC-02), (b) overloads legados
+que o repo acumula e a produção já "squashou", (c) objetos criados manualmente só em produção.
+
+**Decisão:** Aceitar o estado atual como **determinístico e auto-suficiente** (o que o gate da Fase 6
+exige de um bootstrap). A paridade bit-a-bit repo↔produção **não é alcançável incrementalmente** — exige
+o squash para baseline única (`supabase db pull` como migration 0 + numeração 100% timestamp daqui em
+diante + gate de CI `db diff` vazio), já planejado em `AUDITORIA_DRIFT_PRODUCAO_REPOSITORIO.md` §8 e
+`PLANO_EXECUTIVO_EXECUCAO_JINLONG.md` S1. Isso é uma **iniciativa própria** (reescreve o histórico de
+migrations), não uma correção pontual desta sprint — deferida com plano.
+
+**Alternativa rejeitada:** reordenar/renomear as migrations timestamp para a posição cronológica —
+rejeitada porque quebraria o histórico já aplicado em produção e é exatamente o que o squash resolve
+de forma limpa.
+
+---
+
 ## Pendências de decisão (frentes futuras)
-- **DEC-07 (Frente 7 — Bootstrap):** estratégia para o problema de ordenação lexicográfica
-  numérico × timestamp. Aguardando análise.
-- **DEC-08 (Frente 8 — CI):** causa raiz do pipeline quebrado. Aguardando investigação (fora
-  de escopo até autorização — usuário pediu para não mexer em CI agora).
+- **DEC-10 (Frente 8 — CI):** causa raiz do pipeline quebrado. **Identificada** durante a Frente 7:
+  `.github/workflows/ci-backend-supabase.yml` (e outros) fixam `actions/checkout@34e114876b0b11...`,
+  um SHA que **não corresponde** a nenhuma release do checkout — todo job falha no passo de checkout
+  em ~2-3s. Correção = re-fixar no SHA correto de v4.2.2 (`11bd71901bbe...`). Fora de escopo até
+  autorização (usuário pediu para não mexer em CI agora); registrado para a Frente 8.
