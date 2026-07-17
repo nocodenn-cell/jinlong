@@ -203,6 +203,41 @@ estabelecido/aprovado do repositório.
 
 ---
 
+## DEC-08 — Índices: remover só 2 redundantes com survivor de constraint; manter o resto (Frente 6)
+
+**Status:** ✅ (migration 281) · postura conservadora deliberada
+
+**Contexto:** Otimização de índices. Risco explícito (definido pelo usuário): nesta fase o maior
+perigo é trocar estabilidade por ganho marginal; `idx_scan` de janela curta não prova inutilidade.
+
+**Evidência (pg_index/pg_stat de produção, 2026-07-17):** 229 índices. Classificação:
+- **A) Duplicados exatos:** apenas 2 pares, ambos em `funcionarios_meta` — **tabela morta** (DEC-02).
+- **B) Redundantes:** 7 por prefixo (single-column `loja_id`/`venda_id` cobertos por composto) +
+  2 same-column com survivor de constraint (`idx_produtos_categoria_id`, `idx_contas_receber_venda_id`).
+- **C) Não-usados (idx_scan=0, não-constraint):** 96 — em ambiente de baixo tráfego (1 cliente,
+  contas_receber vazia), reflete workload não exercido, não inutilidade.
+
+**Decisão:**
+1. **Remover 2** (migration 281): `idx_produtos_categoria_id` (duplicata exata de
+   `idx_produtos_categoria`; nem existe em prod → corrige só bootstrap) e
+   `idx_contas_receber_venda_id` (redundante com a UNIQUE parcial). Critério = idêntico ao da
+   migration 222 (survivor com constraint/nome canônico, cobertura preservada, **independe de uso**).
+2. **Manter os 7 redundantes-por-prefixo** (`idx_caixas_loja_id`, `idx_clientes_loja`,
+   `idx_contas_pagar_loja`, `idx_contas_receber_loja`, `idx_estoque_loja`,
+   `idx_vendas_pagamentos_venda_id`): a migration 222 **deliberadamente os manteve**; são paths
+   multi-tenant quentes (filtro por loja é onipresente em RLS/listagens); o índice de coluna única
+   é menor e pode ser mais barato que o composto para scans só por `loja_id`. Dropar = ganho
+   marginal por risco de estabilidade — exatamente o que o usuário pediu para evitar.
+3. **Não agir sobre os 96 "não-usados"**: `idx_scan=0` não é evidência confiável neste ambiente.
+   A remoção correta (se houver) depende de `pg_stat` sobre janela representativa (incl. pico de
+   venda, fechamento de caixa, relatórios de fim de período) em produção real — deferido.
+4. **Duplicados de `funcionarios_meta`**: somem com o DROP da tabela morta (DEC-02).
+
+**Alternativa rejeitada:** dropar os 96 não-usados ou os 7 prefixo-redundantes — rejeitada pela
+falta de evidência de uso confiável e pelo risco de degradar paths quentes por ganho marginal.
+
+---
+
 ## Pendências de decisão (frentes futuras)
 - **DEC-07 (Frente 7 — Bootstrap):** estratégia para o problema de ordenação lexicográfica
   numérico × timestamp. Aguardando análise.

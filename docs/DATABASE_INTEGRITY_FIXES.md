@@ -217,6 +217,55 @@ sem exposição a anon/PUBLIC — o estado seguro que 218/221 pretendiam e que o
 
 ---
 
+---
+
+## Frente 6 — Índices
+
+### Inventário e classificação (evidência: pg_index/pg_stat_user_indexes de produção, 2026-07-17)
+
+229 índices no total. Tabela de decisão:
+
+| Índice | Tabela | Ação | Motivo | Evidência | Risco |
+|---|---|---|---|---|---|
+| `idx_produtos_categoria_id` | produtos | **remover** | Duplicata exata de `idx_produtos_categoria` (mesma coluna) | Não existe em prod (0 pg_class); repo cria em 085 além de 001 → duplicata só no bootstrap | Baixo (no-op no remoto) |
+| `idx_contas_receber_venda_id` | contas_receber | **remover** | Redundante com `contas_receber_venda_id_unique` (UNIQUE parcial, mesma coluna) | Survivor respaldado por constraint cobre todos os lookups por venda_id | Baixo |
+| `idx_caixas_loja_id` | caixas | manter | Prefixo de `idx_caixas_loja_status`, mas 222 manteve por escolha | scans=0 (não confiável); path multi-tenant | — |
+| `idx_clientes_loja` | clientes | manter | Prefixo de `idx_clientes_loja_nome` | scans=3; 222 manteve deliberadamente | — |
+| `idx_contas_pagar_loja` | contas_pagar | manter | Prefixo de `_status`/`_vencimento` | path multi-tenant quente | — |
+| `idx_contas_receber_loja` | contas_receber | manter | Prefixo de `idx_cr_loja_status`; 222 manteve | — | — |
+| `idx_estoque_loja` | estoque | manter | Prefixo de `estoque_loja_produto_unique` | **scans=70 (em uso)** | — |
+| `idx_vendas_pagamentos_venda_id` | vendas_pagamentos | manter | Prefixo de `uq_vendas_pagamentos_venda_forma` | path de venda | — |
+| 2× em `funcionarios_meta` | funcionarios_meta | (via DEC-02) | Duplicados exatos | Tabela morta — some no DROP da tabela | — |
+| 96 índices `idx_scan=0` | várias | manter | Métrica não confiável (baixo tráfego) | Usuário: "janela curta não prova inutilidade" | — |
+
+### FIX-6.1 — Remoção de 2 índices redundantes
+
+**Arquivo criado:** `backend/supabase/migrations/281_indices_redundantes_cleanup.sql`
+
+**O que faz:** `DROP INDEX IF EXISTS` em `idx_produtos_categoria_id` e `idx_contas_receber_venda_id`,
+seguindo o critério exato da migration 222 (survivor com constraint/nome canônico, cobertura
+preservada, independe de estatísticas de uso). Idempotente.
+
+**Análise de risco (módulos críticos):** nenhum dos 2 é usado por PK, UNIQUE ou FK enforcement (os
+survivors cobrem a mesma coluna); nenhum toca RLS policies (índices não participam de policy); PDV/
+estoque/financeiro seguem cobertos pelos survivors. `idx_contas_receber_venda_id`: lookups por
+venda_id migram para a UNIQUE parcial (mesma coluna). `idx_produtos_categoria_id`: nem existe em
+produção.
+
+**Validação:**
+- Inventário completo classificado (A/B/C) via pg_index + pg_stat.
+- `idx_produtos_categoria_id` confirmado ausente em prod (DROP no-op lá); survivors confirmados presentes.
+- `node scripts/migration-sequence-guard.mjs` → OK.
+- **Pós-aplicação (homologação):** queries embutidas na migration confirmam (1) os 2 sumiram e os
+  survivors permanecem, (2) a constraint UNIQUE de contas_receber segue válida, (3) nenhum índice de
+  PK/UNIQUE foi removido.
+
+**Postura:** deliberadamente mínima. Os 96 "não-usados" e os 7 prefixo-redundantes NÃO foram tocados
+(ver DEC-08) — a otimização por uso exige `pg_stat` sobre janela representativa de produção real
+(pico de venda, fechamento, relatórios), não uma janela curta de baixo tráfego.
+
+---
+
 ## Pendentes (frentes futuras)
 
-- Frente 6 (Índices), Frente 7 (Bootstrap determinístico), Frente 8 (CI) — ainda não iniciadas.
+- Frente 7 (Bootstrap determinístico), Frente 8 (CI) — ainda não iniciadas.
