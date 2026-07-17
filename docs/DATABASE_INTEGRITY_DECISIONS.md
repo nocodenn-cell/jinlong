@@ -102,10 +102,38 @@ read-only a `pg_policies`, a suposição foi eliminada — a definição é a re
 
 ---
 
+## DEC-05 — `finalizar_venda_transacional` legada desativada via stub LEGACY_DISABLED (Frente 3)
+
+**Status:** ✅ (stub versionado na migration 278) · 🔶 (aplicação em produção pendente de homologação)
+
+**Contexto:** Auditoria de RPCs. A função-base `public.finalizar_venda_transacional` (sem sufixo
+`_canonica_vN`) é a v1 da finalização de venda, anterior à cadeia v2→v3→v4.
+
+**Evidência (produção jinlong, 2026-07-17):**
+- 2 overloads: o **7-arg** já era stub `LEGACY_DISABLED`; o **9-arg** estava **VIVO** — 6 KB de
+  lógica real, `SECURITY DEFINER`, `GRANT EXECUTE` a `authenticated`. Ambos `RETURNS void`.
+- No repositório, ambos overloads estavam vivos (020 cria o 7-arg, 122 cria o 9-arg). Nenhuma
+  migration os desativou — os stubs LEGACY do repo cobriam apenas v2/v3.
+- **Callers reais = 0.** `grep` de `.rpc('finalizar_venda_transacional')` em todo o código
+  (pdv-importados, pdv-local, shared, shared-core, backend/functions) só encontra 2 referências em
+  documentação `.md`. Único caller ativo de finalização: `..._canonica_v4` (`caixaVendas.impl.ts`).
+
+**Impacto medido:** caminho de finalização de venda paralelo à golden flow v4, executável por
+qualquer `authenticated` via PostgREST, sem as blindagens da v4 (cliente_id/contas_receber,
+revalidação de preço, auditoria de evento). Violação de SSoT + superfície de risco real.
+
+**Decisão:** Desativar ambos overloads com `RAISE EXCEPTION 'LEGACY_DISABLED_USE_V4'` (mesmo padrão
+de v2/v3), mantendo assinatura e `RETURNS void`, e revogar `EXECUTE` de anon/authenticated/public
+(defesa em profundidade). Migration `278_stub_finalizar_venda_transacional_legada.sql`. Não é DROP:
+o stub dá erro claro a qualquer caller residual (melhor DX/segurança que "função não existe").
+
+**Alternativa rejeitada:** DROP das funções — rejeitada em favor do precedente de stub (v2/v3), que
+preserva a assinatura e sinaliza a intenção. Permitida (0 callers), mas o stub é mais defensivo.
+
+---
+
 ## Pendências de decisão (frentes futuras)
 
-- **DEC-05 (Frente 3 — RPCs legadas):** destino de `finalizar_venda_transacional` (sem sufixo v4),
-  ainda executável por `authenticated` sem os hardenings de v2/v3/v4. Aguardando auditoria de callers.
 - **DEC-06 (Frente 4 — Views):** `v_vendas_dia`, `v_top_produtos`, `v_venda_consistencia_anomalias`
   sem `security_invoker`. Aguardando confirmação de uso.
 - **DEC-07 (Frente 7 — Bootstrap):** estratégia para o problema de ordenação lexicográfica
