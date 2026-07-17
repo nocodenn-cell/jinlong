@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 25
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       # Tag de referência: v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -172,7 +172,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       # Tag de referência: v2.0.4 (major v2)
       - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Contract smoke (sync-outbox payload v1)
         run: node backend/scripts/sync-outbox-contract-smoke.mjs
@@ -198,7 +198,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -233,7 +233,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       # Tag de referência: v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -270,7 +270,7 @@ jobs:
       pull-requests: read
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Detect sync-outbox changes
         id: changes

@@ -25,7 +25,7 @@ jobs:
 
     steps:
       # Sonar githubactions:S7637 — SHA do release da tag indicada
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -45,7 +45,7 @@ jobs:
   rust-tauri-checks:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
