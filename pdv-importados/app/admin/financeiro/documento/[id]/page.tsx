@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
+import { getMessages } from '@/i18n/getMessages'
 import {
   DocumentoFiscalDetalheClient,
   type DocumentoFiscalDetalheDoc,
@@ -22,7 +23,7 @@ export default async function AdminDocumentoFiscalPage({ params }: PageProps) {
   })
 
   const supabase = await createClient()
-  const [{ data: docRaw }, { data: eventosRaw }] = await Promise.all([
+  const [{ data: docRaw, error: docErr }, { data: eventosRaw }] = await Promise.all([
     supabase
       .from('documentos_fiscais_pendentes')
       .select(DOC_COLS)
@@ -36,6 +37,9 @@ export default async function AdminDocumentoFiscalPage({ params }: PageProps) {
       .order('created_at', { ascending: true }),
   ])
 
+  // docErr: falha real de consulta (RLS, rede) — não pode virar 404, pois isso
+  // diria ao operador "documento não existe" quando na verdade a busca falhou.
+  if (docErr) throw new Error('Não foi possível carregar o documento fiscal. Tente novamente.')
   if (!docRaw) notFound()
 
   const doc: DocumentoFiscalDetalheDoc = docRaw
@@ -49,11 +53,14 @@ export default async function AdminDocumentoFiscalPage({ params }: PageProps) {
     created_at: e.created_at,
   }))
 
+  const ui = getMessages(session.idioma).admin_ui
+
   return (
     <DocumentoFiscalDetalheClient
+      idioma={session.idioma}
       doc={doc}
       eventos={eventos}
-      voltarLabel="Financeiro"
+      voltarLabel={ui.financeiro_titulo}
       voltarHref={ROUTES.admin.financeiro}
       locale={localeFromIdioma(session.idioma)}
     />

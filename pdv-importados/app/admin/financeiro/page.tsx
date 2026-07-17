@@ -14,6 +14,7 @@ import {
 import { buscarClientesPaginadosAction } from '@/app/gerente/clientes/actions'
 import { buscarContasPagarAction } from '@/app/gerente/financeiro/contas-pagar/actions'
 import { buscarFornecedoresPaginadosAction } from '@/app/gerente/fornecedores/actions'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { formatBRL } from '@/lib/format/money'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
@@ -70,6 +71,11 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     buscarContasPagarAction(1, { status: statusPagar, periodo: periodoPagar || undefined }),
     buscarFornecedoresPaginadosAction(1, { status: 'ativos' }),
   ])
+
+  // listaRes.error/kpisRes.error/fiscalRes.error: falha real de carga (RLS, rede)
+  // distinta de "sem títulos/documentos" — tela financeira não pode mostrar R$
+  // 0,00 ou "vazio" por falha silenciosa (mesmo padrão já corrigido em Estoque).
+  const loadError = listaRes.error ?? kpisRes.error ?? (fiscalRes.error ? mensagemErroComSecao('Financeiro', fiscalRes.error.message) : null)
 
   const fiscal = (fiscalRes.data ?? []).map((row) => ({
     id: row.id,
@@ -181,8 +187,15 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     <div className="admin-v2-page">
       <PageHeader title={ui.financeiro_titulo} subtitle={ui.financeiro_subtitulo} />
 
+      {loadError ? (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive" role="alert">
+          {loadError}
+        </div>
+      ) : null}
+
       <div className="admin-v2-stack">
         <FinanceiroContent
+          idioma={session.idioma}
           activeTab={activeTab}
           contas={contas}
           fiscal={fiscal}
@@ -218,6 +231,7 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             fornecedoresOpts: fornRes.ok ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome })) : [],
             statusInicial: statusPagar,
             periodoInicial: periodoPagar,
+            loadErrorInicial: !pagarRes.ok ? pagarRes.error : null,
           }}
         />
       </div>

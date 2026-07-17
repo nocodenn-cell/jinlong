@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 
 /** Filtros da listagem de contas a receber (sincronizados com a URL). */
 export type FinanceiroTituloFilters = {
@@ -95,17 +96,27 @@ export async function fetchContasReceberListagem(
   supabase: SupabaseClient,
   filters: FinanceiroTituloFilters,
   limite: number,
-): Promise<{ titulos: FinanceiroTituloListaRow[]; capped: boolean }> {
+): Promise<{ titulos: FinanceiroTituloListaRow[]; capped: boolean; error: string | null }> {
   const take = limite + 1
+  const falha = (msg: string) => ({
+    titulos: [],
+    capped: false,
+    error: mensagemErroComSecao('Financeiro', msg),
+  })
 
   let idsPorClienteNarrow: string[] | null = null
   const needleCliente = filters.nomeCliente.trim()
   if (needleCliente) {
     const patternNome = `%${escapeIlike(needleCliente)}%`
-    const { data: cli } = await supabase.from('clientes').select('id').ilike('nome', patternNome).limit(500)
+    const { data: cli, error: eCli } = await supabase
+      .from('clientes')
+      .select('id')
+      .ilike('nome', patternNome)
+      .limit(500)
+    if (eCli) return falha(eCli.message)
     idsPorClienteNarrow = cli?.map((c) => c.id as string) ?? []
     if (idsPorClienteNarrow.length === 0) {
-      return { titulos: [], capped: false }
+      return { titulos: [], capped: false, error: null }
     }
   }
 
@@ -113,14 +124,17 @@ export async function fetchContasReceberListagem(
   const qNeedle = filters.q.trim()
   if (qNeedle) {
     const pat = `%${escapeIlike(qNeedle)}%`
-    const [{ data: byDesc }, { data: cliQ }] = await Promise.all([
+    const [{ data: byDesc, error: eDesc }, { data: cliQ, error: eCliQ }] = await Promise.all([
       supabase.from('contas_receber').select('id').ilike('descricao', pat).limit(2000),
       supabase.from('clientes').select('id').ilike('nome', pat).limit(500),
     ])
+    if (eDesc) return falha(eDesc.message)
+    if (eCliQ) return falha(eCliQ.message)
     const fromCliIds = cliQ?.map((c) => c.id as string) ?? []
     let fromClienteTitulos: { id: string }[] = []
     if (fromCliIds.length > 0) {
       const r = await supabase.from('contas_receber').select('id').in('cliente_id', fromCliIds).limit(2000)
+      if (r.error) return falha(r.error.message)
       fromClienteTitulos = r.data ?? []
     }
     const set = new Set<string>()
@@ -128,7 +142,7 @@ export async function fetchContasReceberListagem(
     for (const r of fromClienteTitulos) set.add(r.id as string)
     idsPorBusca = [...set]
     if (idsPorBusca.length === 0) {
-      return { titulos: [], capped: false }
+      return { titulos: [], capped: false, error: null }
     }
     const MAX_IDS_BUSCA = 1200
     if (idsPorBusca.length > MAX_IDS_BUSCA) {
@@ -154,7 +168,8 @@ export async function fetchContasReceberListagem(
   if (idsPorClienteNarrow) q = q.in('cliente_id', idsPorClienteNarrow)
   if (idsPorBusca) q = q.in('id', idsPorBusca)
 
-  const { data: raw } = await q.order('created_at', { ascending: false }).limit(take)
+  const { data: raw, error: eLista } = await q.order('created_at', { ascending: false }).limit(take)
+  if (eLista) return falha(eLista.message)
   const rows = raw ?? []
   const capped = rows.length > limite
   const sliced = capped ? rows.slice(0, limite) : rows
@@ -172,29 +187,50 @@ export async function fetchContasReceberListagem(
       cliente_nome: nomeCliente ?? null,
     }
   })
-  return { titulos, capped }
+  return { titulos, capped, error: null }
 }
 
 export const FIN_KPI_SOMA_CAP = 8000
 
 const KPI_SUM_CAP = FIN_KPI_SOMA_CAP
 
-/** KPIs globais (não dependem dos filtros da tabela). */
+/**
+ * KPIs globais (não dependem dos filtros da tabela).
+ * `error` distingue "sem títulos em aberto" (0 real) de falha na consulta —
+ * mostrar R$ 0,00 por falha silenciosa é enganoso numa tela financeira.
+ */
 export async function fetchFinanceiroTitulosKpis(supabase: SupabaseClient): Promise<{
   titulosAbertosCount: number
   valorAbertoTotal: number
   kpiValorTruncado: boolean
+  error: string | null
 }> {
-  const { count } = await supabase
+  const { count, error: eCount } = await supabase
     .from('contas_receber')
     .select('*', { count: 'exact', head: true })
     .in('status', ['ABERTO', 'PARCIAL'])
+  if (eCount) {
+    return {
+      titulosAbertosCount: 0,
+      valorAbertoTotal: 0,
+      kpiValorTruncado: false,
+      error: mensagemErroComSecao('Financeiro', eCount.message),
+    }
+  }
 
-  const { data: vals } = await supabase
+  const { data: vals, error: eVals } = await supabase
     .from('contas_receber')
     .select('valor_aberto')
     .in('status', ['ABERTO', 'PARCIAL'])
     .limit(KPI_SUM_CAP + 1)
+  if (eVals) {
+    return {
+      titulosAbertosCount: 0,
+      valorAbertoTotal: 0,
+      kpiValorTruncado: false,
+      error: mensagemErroComSecao('Financeiro', eVals.message),
+    }
+  }
 
   const rows = vals ?? []
   const kpiValorTruncado = rows.length > KPI_SUM_CAP
@@ -204,5 +240,6 @@ export async function fetchFinanceiroTitulosKpis(supabase: SupabaseClient): Prom
     titulosAbertosCount: count ?? 0,
     valorAbertoTotal,
     kpiValorTruncado,
+    error: null,
   }
 }

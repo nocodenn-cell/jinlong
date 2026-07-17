@@ -200,14 +200,13 @@ export async function cancelarContaPagarAction(
   }
 }
 
-/** Exporta TODAS as linhas que batem nos filtros (paginação em chunks). */
+/** Exporta TODAS as linhas que batem nos filtros (pagina até `hasMore` acabar). */
 export async function exportarContasPagarParaCSVAction(
   filters: ContasPagarFilters,
 ): Promise<{ ok: true; rows: ContaPagarRow[] } | { ok: false; error: string }> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { ok: false, error: auth.error }
 
-  const CHUNK = 500
   const MAX = 10_000
   const acc: ContaPagarRow[] = []
   let page = 1
@@ -215,7 +214,10 @@ export async function exportarContasPagarParaCSVAction(
     const r = await buscarContasPagarAction(page, filters)
     if (!r.ok) return { ok: false, error: r.error }
     acc.push(...r.contas)
-    if (!r.hasMore || r.contas.length < CHUNK) break
+    // buscarContasPagarAction pagina em PAGE_SIZE (20) por chamada — o
+    // sinal correto de "acabou" é hasMore, não comparar contas.length com
+    // um CHUNK maior (isso fazia o export parar sempre na 1ª página).
+    if (!r.hasMore) break
     page++
   }
   return { ok: true, rows: acc }

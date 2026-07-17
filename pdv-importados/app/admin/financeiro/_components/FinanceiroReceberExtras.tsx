@@ -5,20 +5,26 @@ import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
+import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { getMessages } from '@/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 import { criarTituloReceber, liquidarTitulo } from '@/app/gerente/financeiro/actions'
 import type { ContaLinha } from './ContasReceberTable'
 
 type ClienteOpt = { id: string; nome: string }
 
 type Props = {
+  idioma: Idioma
   contas: ContaLinha[]
   clientesIniciais: ClienteOpt[]
 }
 
 const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO', 'OUTROS'] as const
 
-export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
+export function FinanceiroReceberExtras({ idioma, contas, clientesIniciais }: Props) {
+  const m = getMessages(idioma)
+  const ui = m.admin_ui
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
@@ -31,7 +37,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
     const valor = Number(fd.get('valor'))
     const forma = String(fd.get('forma') ?? 'DINHEIRO') as (typeof FORMAS)[number]
     if (!Number.isFinite(valor) || valor <= 0) {
-      emitGerenteToast({ kind: 'error', message: 'Informe um valor válido.' })
+      emitGerenteToast({ kind: 'error', message: ui.financeiro_liquidar_toast_valor_invalido })
       return
     }
     startTransition(async () => {
@@ -40,7 +46,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: 'Liquidação registrada.' })
+      emitGerenteToast({ kind: 'success', message: ui.financeiro_liquidar_toast_ok })
       refresh()
     })
   }
@@ -60,7 +66,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: 'Título criado.' })
+      emitGerenteToast({ kind: 'success', message: ui.financeiro_novo_titulo_toast_ok })
       e.currentTarget.reset()
       refresh()
     })
@@ -73,7 +79,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
       {abertas.length > 0 ? (
         <div className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
-            Liquidar título
+            {ui.financeiro_liquidar_secao}
           </h3>
           <ul className="space-y-2">
             {abertas.slice(0, 8).map((c) => (
@@ -83,7 +89,9 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
               >
                 <div className="min-w-0 flex-1 text-xs">
                   <span className="font-medium text-jl-fg-1">{c.cliente_nome}</span>
-                  <span className="ml-2 text-jl-fg-3">{formatBRL(c.valor_aberto)} em aberto</span>
+                  <span className="ml-2 text-jl-fg-3">
+                    {formatBRL(c.valor_aberto)} {ui.financeiro_liquidar_em_aberto}
+                  </span>
                 </div>
                 <form
                   className="flex flex-wrap items-center gap-1.5"
@@ -99,17 +107,17 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
                     step="0.01"
                     defaultValue={c.valor_aberto}
                     className="admin-v2-input w-24 text-right text-xs"
-                    aria-label="Valor a liquidar"
+                    aria-label={ui.financeiro_liquidar_valor_label}
                   />
                   <select name="forma" className="admin-v2-input text-xs" defaultValue="DINHEIRO">
                     {FORMAS.map((f) => (
                       <option key={f} value={f}>
-                        {f}
+                        {labelFormaPagamentoVenda(f, m)}
                       </option>
                     ))}
                   </select>
                   <button type="submit" disabled={pending} className="admin-v2-btn-secondary text-xs">
-                    Liquidar
+                    {ui.financeiro_liquidar_btn}
                   </button>
                 </form>
               </li>
@@ -120,14 +128,14 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
 
       <div className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">Novo título a receber</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">{ui.financeiro_novo_titulo_secao}</h3>
           <Link href={ROUTES.admin.clientes} className="text-[11px] font-medium text-amber-400 hover:underline">
-            Gerenciar clientes
+            {ui.financeiro_novo_titulo_gerenciar_clientes}
           </Link>
         </div>
         <form className="grid gap-2 sm:grid-cols-2" onSubmit={handleNovoTitulo}>
           <select name="cliente_id" required className="admin-v2-input text-sm sm:col-span-2">
-            <option value="">Selecione o cliente</option>
+            <option value="">{ui.financeiro_novo_titulo_selecionar_cliente}</option>
             {clientesIniciais.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nome}
@@ -140,14 +148,14 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
             min={0.01}
             step="0.01"
             required
-            placeholder="Valor total"
+            placeholder={ui.financeiro_novo_titulo_valor_placeholder}
             className="admin-v2-input text-sm"
           />
           <input name="vencimento" type="date" className="admin-v2-input text-sm" />
           <input
             name="descricao"
             type="text"
-            placeholder="Descrição (opcional)"
+            placeholder={ui.financeiro_novo_titulo_descricao_placeholder}
             className="admin-v2-input text-sm sm:col-span-2"
           />
           <button
@@ -155,16 +163,15 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
             disabled={pending || clientesIniciais.length === 0}
             className="admin-v2-btn-primary text-sm sm:col-span-2 sm:justify-self-end"
           >
-            Criar título
+            {ui.financeiro_novo_titulo_btn}
           </button>
         </form>
         {clientesIniciais.length === 0 ? (
           <p className="mt-2 text-[11px] text-jl-fg-3">
-            Cadastre um cliente em{' '}
+            {ui.financeiro_novo_titulo_sem_clientes}{' '}
             <Link href={ROUTES.admin.clientes} className="text-amber-400 hover:underline">
-              Clientes
-            </Link>{' '}
-            antes de lançar títulos.
+              {ui.financeiro_novo_titulo_gerenciar_clientes}
+            </Link>
           </p>
         ) : null}
       </div>

@@ -22,6 +22,7 @@ export type DocumentoFiscalPendenteRow = {
 type ClienteOpt = { id: string; nome: string }
 
 type Props = {
+  idioma: Idioma
   activeTab: FinanceiroTabId
   contas: ContaLinha[]
   fiscal: DocumentoFiscalPendenteRow[]
@@ -42,6 +43,7 @@ type Props = {
     fornecedoresOpts: Array<{ id: string; nome: string }>
     statusInicial: string
     periodoInicial: string
+    loadErrorInicial?: string | null
   }
   filterSection: ReactNode
   kpiSection: ReactNode
@@ -90,6 +92,7 @@ function FiscalList({
 }
 
 export function FinanceiroContent({
+  idioma,
   activeTab,
   contas,
   fiscal,
@@ -105,7 +108,7 @@ export function FinanceiroContent({
   return (
     <>
       <Suspense fallback={<div className="h-9" />}>
-        <FinanceiroTabNav activeTab={activeTab} />
+        <FinanceiroTabNav idioma={idioma} activeTab={activeTab} />
       </Suspense>
 
       {activeTab === 'receber' ? (
@@ -115,7 +118,7 @@ export function FinanceiroContent({
           <div className="admin-v2-grid-2">
             <SectionCard title={panelLabels.titulosEmAberto}>
               <ContasReceberTable contas={contas} labels={contasLabels} />
-              <FinanceiroReceberExtras contas={contas} clientesIniciais={clientesOpts} />
+              <FinanceiroReceberExtras idioma={idioma} contas={contas} clientesIniciais={clientesOpts} />
             </SectionCard>
             <SectionCard title={panelLabels.filaFiscal}>
               <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
@@ -133,6 +136,7 @@ export function FinanceiroContent({
           fornecedoresOpts={contasPagar.fornecedoresOpts}
           statusInicial={contasPagar.statusInicial}
           periodoInicial={contasPagar.periodoInicial}
+          loadErrorInicial={contasPagar.loadErrorInicial}
         />
       ) : null}
 
@@ -143,6 +147,7 @@ export function FinanceiroContent({
       ) : null}
 
       <DocumentoFiscalDetailSheet
+        idioma={idioma}
         documentoId={fiscalDetalheId}
         onClose={() => setFiscalDetalheId(null)}
         locale={panelLabels.locale}

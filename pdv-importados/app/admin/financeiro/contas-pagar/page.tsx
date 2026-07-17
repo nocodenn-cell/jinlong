@@ -32,6 +32,8 @@ export default async function AdminContasPagarPage({ searchParams }: PageProps) 
   const fornecedoresOpts = fornRes.ok
     ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome }))
     : []
+  // listaRes.error: falha real de carga (RLS, rede) — distinto de "nenhuma conta".
+  const loadErrorInicial = !listaRes.ok ? listaRes.error : null
 
   return (
     <ContasPagarListClient
@@ -42,6 +44,7 @@ export default async function AdminContasPagarPage({ searchParams }: PageProps) 
       fornecedoresOpts={fornecedoresOpts}
       statusInicial={statusInicial}
       periodoInicial={periodoInicial}
+      loadErrorInicial={loadErrorInicial}
     />
   )
 }

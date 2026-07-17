@@ -30,6 +30,8 @@ type Props = Readonly<{
   fornecedoresOpts: Array<{ id: string; nome: string }>
   statusInicial: string
   periodoInicial: string
+  /** Falha ao carregar a página inicial (RLS, rede) — distinto de "nenhuma conta". */
+  loadErrorInicial?: string | null
 }>
 
 const STATUS_LIST = ['todos', 'pendente', 'parcial', 'atrasado', 'pago', 'cancelado'] as const
@@ -71,12 +73,14 @@ export function ContasPagarListClient({
   fornecedoresOpts,
   statusInicial,
   periodoInicial,
+  loadErrorInicial = null,
 }: Props) {
   const m = getMessages(idioma)
   const [contas, setContas] = useState<ContaPagarRow[]>(contasIniciais)
   const [hasMore, setHasMore] = useState(hasMoreInicial)
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [loadError, setLoadError] = useState(loadErrorInicial)
 
   // Filtros
   const [termo, setTermo] = useState('')
@@ -158,6 +162,7 @@ export function ContasPagarListClient({
       }
       setContas(r.contas)
       setHasMore(r.hasMore)
+      setLoadError(null)
       setLoading(false)
     })
     return () => { cancelled = true }
@@ -250,6 +255,11 @@ export function ContasPagarListClient({
 
   return (
     <>
+      {loadError ? (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive" role="alert">
+          {loadError}
+        </div>
+      ) : null}
       <DataTablePage
         kpis={
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
