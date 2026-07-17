@@ -1843,6 +1843,8 @@
     "col_documento": "证件号",
     "col_telefone": "电话",
     "col_saldo": "欠款余额",
+    "col_ultima_compra": "最近购买",
+    "col_ultima_compra_nunca": "从未购买",
     "col_acoes": "操作",
     "vazio_titulo": "未找到客户",
     "vazio_sub": "尝试其他搜索词，或新建客户。",

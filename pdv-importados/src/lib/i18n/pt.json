@@ -1677,6 +1677,8 @@
     "col_documento": "Documento",
     "col_telefone": "Telefone",
     "col_saldo": "Saldo em aberto",
+    "col_ultima_compra": "Última compra",
+    "col_ultima_compra_nunca": "Nunca comprou",
     "col_acoes": "Ações",
     "vazio_titulo": "Nenhum cliente encontrado",
     "vazio_sub": "Tente outro termo de busca, ou cadastre um novo cliente.",

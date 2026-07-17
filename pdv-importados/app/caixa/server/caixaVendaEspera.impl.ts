@@ -195,6 +195,13 @@ export function formatNumeroVendaHistorico(vendaId: string): string {
   return short ? `#${short}` : '—'
 }
 
+/** Nome do cliente a partir do join `clientes(nome)` (array ou objeto, conforme o Supabase decide a cardinalidade). */
+export function nomeDoClienteJoined(cliente: unknown): string | null {
+  const c = Array.isArray(cliente) ? cliente[0] : cliente
+  const nome = (c as { nome?: unknown } | null | undefined)?.nome
+  return typeof nome === 'string' && nome.trim() ? nome : null
+}
+
 /** Histórico do operador no PDV — vendas do próprio usuário (dia/turno). */
 export type HistoricoVendaOperador = {
   id: string
@@ -285,7 +292,7 @@ export async function listarHistoricoOperadorImpl(input?: {
 
     let q = supabase
       .from('vendas')
-      .select('id, data, total_liquido, forma_pagamento, status, caixa_id')
+      .select('id, data, total_liquido, forma_pagamento, status, caixa_id, cliente:clientes!vendas_cliente_id_fkey ( nome )')
       .eq('operador_id', userId)
       .order('data', { ascending: false })
       .limit(50)
@@ -311,7 +318,6 @@ export async function listarHistoricoOperadorImpl(input?: {
     }
 
     // TODO(auditoria-255): filtrar explicitamente por lojaId quando necessário
-    // TODO(fase-7): vendas.cliente_id → join clientes para clienteNome na lista
     void lojaId
     void LOJA_MATRIZ_ID
 
@@ -325,7 +331,7 @@ export async function listarHistoricoOperadorImpl(input?: {
         formaPagamento: r.forma_pagamento ? String(r.forma_pagamento) : null,
         status: r.status ? String(r.status) : null,
         qtdItens: contagem.get(String(r.id)) ?? 0,
-        clienteNome: null,
+        clienteNome: nomeDoClienteJoined(r.cliente),
       })),
     }
   } catch (e) {
@@ -350,7 +356,7 @@ export async function obterDetalheHistoricoVendaImpl(
     const { data: venda, error: vendaError } = await supabase
       .from('vendas')
       .select(
-        'id, data, total_bruto, total_desconto, total_liquido, forma_pagamento, status',
+        'id, data, total_bruto, total_desconto, total_liquido, forma_pagamento, status, cliente:clientes!vendas_cliente_id_fkey ( nome )',
       )
       .eq('id', id)
       .eq('operador_id', userId)
@@ -400,7 +406,7 @@ export async function obterDetalheHistoricoVendaImpl(
         totalLiquido: Number(venda.total_liquido ?? 0),
         formaPagamento: venda.forma_pagamento ? String(venda.forma_pagamento) : null,
         status: venda.status ? String(venda.status) : null,
-        clienteNome: null,
+        clienteNome: nomeDoClienteJoined(venda.cliente),
         itens,
         pagamentos,
       },

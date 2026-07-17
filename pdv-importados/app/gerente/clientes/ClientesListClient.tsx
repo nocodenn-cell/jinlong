@@ -8,7 +8,7 @@ import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { Button } from '@/components/ui/button'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
-import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
+import { fmtGerenteBRL, fmtGerenteDateTime } from '@/lib/format/gerenteValues'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import {
@@ -210,6 +210,7 @@ export function ClientesListClient({
           { key: 'doc',     header: m.clientes.col_documento,  priority: 'contextual' },
           { key: 'tel',     header: m.clientes.col_telefone                           },
           { key: 'saldo',   header: m.clientes.col_saldo,     width: 220, numeric: true, priority: 'primary' },
+          { key: 'ultima',  header: m.clientes.col_ultima_compra, width: 140, priority: 'contextual' },
           { key: 'acoes',   header: <span className="sr-only">{m.clientes.col_acoes}</span>, width: 90, align: 'right', priority: 'contextual' },
         ]}
       >
@@ -287,6 +288,15 @@ export function ClientesListClient({
                 </div>
               </td>
 
+              {/* Última compra */}
+              <td className="gerente-fin-cell px-3 py-2 text-xs tabular-nums">
+                {c.ultima_compra ? (
+                  fmtGerenteDateTime(c.ultima_compra, locale)
+                ) : (
+                  <span className="text-jl-fg-3">{m.clientes.col_ultima_compra_nunca}</span>
+                )}
+              </td>
+
               {/* Ações */}
               <td className="px-3 py-2 text-right">
                 <div className="gerente-row-actions flex items-center justify-end gap-1">
@@ -317,7 +327,7 @@ export function ClientesListClient({
 
         {clientes.length === 0 && !loading && (
           <tr>
-            <td colSpan={5} className="gerente-fin-empty px-4 py-12 text-center">
+            <td colSpan={6} className="gerente-fin-empty px-4 py-12 text-center">
               <div className="font-serif text-5xl text-amber-400/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
                 客
               </div>

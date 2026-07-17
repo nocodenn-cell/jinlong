@@ -1,10 +1,12 @@
 # Fase 4 — Clientes: auditoria completa e plano de execução
 
-**Status: AUDITORIA CONCLUÍDA. Aguardando autorização para executar.**
+**Status: FECHADA — 100% (código + banco).** Autorizada e executada em 2026-07-17.
 
-Por instrução explícita, esta fase é entregue como auditoria + plano —
-nenhuma implementação foi feita ainda. Módulos anteriores (Produtos, Estoque,
-Financeiro) estão 100% fechados (código + banco).
+> ✅ Todas as 6 entregas (1-5 obrigatórias + 6 opcional) foram concluídas.
+> Ver seção "Fechamento" ao final deste documento para evidências.
+
+Módulos anteriores (Produtos, Estoque, Financeiro) já estavam 100% fechados
+(código + banco) quando esta fase começou.
 
 ## 1. Funcionalidades previstas (o que já existe hoje)
 
@@ -157,4 +159,22 @@ precisar de alternativa mais simples.
 fechar o mesmo tema de "cliente_id finalmente sendo usado em toda parte") →
 6 (opcional, depois do 4).
 
-**Aguardando sua autorização para começar a execução.**
+## Fechamento (2026-07-17)
+
+Todas as 6 entregas foram executadas na ordem recomendada, com autorização
+explícita para a Entrega 4 (única com mutação de produção).
+
+| Entrega | Status | Evidência |
+|---|---|---|
+| 1 — `loadError` honesto | ✅ | `app/admin/clientes/page.tsx` + `ClientesListClient.tsx`; 2 testes de comportamento |
+| 2 — i18n (subtitle + LGPD) | ✅ | `page.tsx`, `ClienteEditarModal.tsx`, `pt.json`/`zh.json` com paridade de chaves confirmada |
+| 3 — erro amigável de documento duplicado | ✅ | `salvarClienteAction` trata `error.code === '23505'`; 3 testes unitários (criação, atualização, outro código passa reto) |
+| 4 — `v_clientes_gerente.ultima_compra` | ✅ | Migration `278_fix_v_clientes_gerente_ultima_compra.sql` aplicada em produção; índice `idx_vendas_cliente_id` confirmado antes de aplicar; smoke comportamental em transação com `ROLLBACK` confirmou que a view escolhe a venda `CONCLUIDA` mais recente (não a mais antiga) e que `saldo_crediario` não regrediu; zero resíduo em produção |
+| 5 — cliente no histórico do operador (fecha o TODO) | ✅ | `caixaVendaEspera.impl.ts`: `listarHistoricoOperadorImpl` e `obterDetalheHistoricoVendaImpl` agora fazem join com `clientes` via `vendas_cliente_id_fkey`; UI (`CaixaHistoricoSheet.tsx`) já tratava `clienteNome` null com fallback — zero mudança de UI necessária; `guard:pdv` continua verde; 4 testes unitários do helper `nomeDoClienteJoined` (objeto, array, null/vazio, nome em branco) |
+| 6 — coluna "Última compra" na tabela (opcional) | ✅ | Nova coluna em `ClientesListClient.tsx`, prioridade `contextual` (responsiva), fallback "Nunca comprou" quando null |
+
+**Correção de escopo em relação ao plano original:** a Entrega 5 foi renomeada de "cliente na lista de vendas em espera" para "cliente no histórico do operador" — a investigação durante a implementação mostrou que o TODO real estava em `listarHistoricoOperadorImpl`/`obterDetalheHistoricoVendaImpl` (histórico de vendas já finalizadas), não nas funções de `venda em espera` propriamente ditas (`listarVendasEmEsperaImpl` etc.), que não têm — nem deveriam ter — conceito de cliente antes da venda ser finalizada.
+
+**Validação final:** 558/558 testes verdes (9 novos nesta fase: 2 + 3 + 4), guard:all 8/8, guard:migrations sem colisão (191 migrations), typecheck limpo.
+
+**Pendências:** nenhuma. Fase 4 (Clientes) 100% concluída — código e banco.

@@ -36,9 +36,10 @@ export type ClienteInput = {
 
 const PAGE_SIZE = 20
 
-// Colunas REAIS expostas pela view v_clientes_gerente (migration 244).
-// `saldo_crediario` é computado de contas_receber em aberto; `ultima_compra`
-// é NULL até a Fase 7 (vendas ainda não possui cliente_id).
+// Colunas REAIS expostas pela view v_clientes_gerente (migration 244, com
+// ultima_compra corrigida na migration 278). `saldo_crediario` é computado
+// de contas_receber em aberto; `ultima_compra`, da venda CONCLUIDA mais
+// recente vinculada ao cliente.
 const VIEW_COLS =
   'id, nome, tipo, documento, email, telefone, endereco, limite_credito, saldo_crediario, ultima_compra, created_at'
 
