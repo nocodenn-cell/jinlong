@@ -121,7 +121,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     const lim = parseBRL(limite) ?? 0
     if (lim < 0) e.limite_crediario = m.clientes.err_limite_negativo
     if (!editando && !consentimentoLgpd) {
-      e.consentimento_lgpd = 'Confirme o consentimento do titular antes de cadastrar.'
+      e.consentimento_lgpd = m.clientes.lgpd_consentimento_erro
     }
     setErros(e)
     return Object.keys(e).length === 0
@@ -370,8 +370,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
                   aria-describedby={erros.consentimento_lgpd ? 'err-lgpd' : undefined}
                 />
                 <span className="select-none text-xs leading-relaxed text-jl-fg-3">
-                  Confirmo que os dados pessoais acima foram coletados com o consentimento
-                  do titular em conformidade com a LGPD.
+                  {m.clientes.lgpd_consentimento_texto}
                   <span className="ml-0.5 text-[color:var(--accent)]">*</span>
                 </span>
               </label>

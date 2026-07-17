@@ -1663,6 +1663,11 @@
   },
   "clientes": {
     "titulo": "Clientes",
+    "subtitulo": "Cadastro e gestão de clientes",
+    "erro_carregar": "Não foi possível carregar os clientes. Tente novamente.",
+    "documento_duplicado": "Já existe um cliente com este documento nesta loja.",
+    "lgpd_consentimento_erro": "Confirme o consentimento do titular antes de cadastrar.",
+    "lgpd_consentimento_texto": "Confirmo que os dados pessoais acima foram coletados com o consentimento do titular em conformidade com a LGPD.",
     "contagem": "clientes",
     "novo": "Novo cliente",
     "editar": "Editar",

@@ -1875,7 +1875,12 @@
     "err_cnpj_invalido": "CNPJ 须为 14 位数字。",
     "err_email": "邮箱无效。",
     "err_telefone": "电话不完整。",
-    "err_limite_negativo": "额度不能为负数。"
+    "err_limite_negativo": "额度不能为负数。",
+    "subtitulo": "客户档案与管理",
+    "erro_carregar": "无法加载客户。请重试。",
+    "documento_duplicado": "该门店已存在使用此证件号的客户。",
+    "lgpd_consentimento_erro": "请先确认已获得数据主体同意后再进行登记。",
+    "lgpd_consentimento_texto": "我确认以上个人数据的收集已获得数据主体的同意，符合 LGPD（巴西通用数据保护法）的规定。"
   },
   "comum": {
     "salvar": "保存",

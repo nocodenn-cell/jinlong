@@ -23,6 +23,8 @@ type Props = Readonly<{
   locale: string
   clientesIniciais: ClienteListRow[]
   hasMoreInicial: boolean
+  /** Falha ao carregar a página inicial (RLS, rede) — distinto de "nenhum cliente". */
+  loadErrorInicial?: string | null
 }>
 
 function maskDoc(d: string): string {
@@ -47,11 +49,13 @@ export function ClientesListClient({
   locale,
   clientesIniciais,
   hasMoreInicial,
+  loadErrorInicial = null,
 }: Props) {
   const m = getMessages(idioma)
   const [clientes, setClientes] = useState<ClienteListRow[]>(clientesIniciais)
   const [hasMore, setHasMore] = useState(hasMoreInicial)
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(loadErrorInicial)
   const [termo, setTermo] = useState('')
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<ClienteListRow | null>(null)
@@ -118,6 +122,7 @@ export function ClientesListClient({
       }
       setClientes(r.clientes)
       setHasMore(r.hasMore)
+      setLoadError(null)
       setLoading(false)
     })
     return () => { cancelled = true }
@@ -155,6 +160,11 @@ export function ClientesListClient({
 
   return (
     <>
+      {loadError ? (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive" role="alert">
+          {loadError}
+        </div>
+      ) : null}
       <DataTablePage
         filters={
           <div className="relative w-full min-w-[240px] max-w-[420px]">

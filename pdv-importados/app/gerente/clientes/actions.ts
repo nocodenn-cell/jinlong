@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { getMessages } from '@/i18n/getMessages'
 
 export type ClienteListRow = {
   id: string
@@ -150,7 +152,13 @@ export async function salvarClienteAction(
     let id = input.id
     if (id) {
       const { error } = await supabase.from('clientes').update(basePayload).eq('id', id)
-      if (error) return { ok: false, error: error.message }
+      if (error) {
+        if (error.code === '23505') {
+          const { idioma } = await getUsuarioIdioma()
+          return { ok: false, error: getMessages(idioma).clientes.documento_duplicado }
+        }
+        return { ok: false, error: error.message }
+      }
     } else {
       // `clientes.loja_id` é NOT NULL (migration 112): preenche com a loja do gerente.
       const lojaId = authCheck.session.lojaId
@@ -173,7 +181,13 @@ export async function salvarClienteAction(
         .insert(insertPayload)
         .select('id')
         .single()
-      if (error) return { ok: false, error: error.message }
+      if (error) {
+        if (error.code === '23505') {
+          const { idioma } = await getUsuarioIdioma()
+          return { ok: false, error: getMessages(idioma).clientes.documento_duplicado }
+        }
+        return { ok: false, error: error.message }
+      }
       id = data.id
     }
 

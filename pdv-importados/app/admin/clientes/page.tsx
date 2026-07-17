@@ -17,15 +17,18 @@ export default async function AdminClientesPage() {
   const inicial = await buscarClientesPaginadosAction(1)
   const clientesIniciais = inicial.ok ? inicial.clientes : []
   const hasMoreInicial = inicial.ok ? inicial.hasMore : false
+  // inicial.error: falha real de carga (RLS, rede) — distinto de "nenhum cliente".
+  const loadErrorInicial = !inicial.ok ? inicial.error : null
 
   return (
     <div className="admin-v2-page">
-      <PageHeader title={m.clientes.titulo} subtitle="Cadastro e gestão de clientes" />
+      <PageHeader title={m.clientes.titulo} subtitle={m.clientes.subtitulo} />
       <ClientesListClient
         idioma={session.idioma}
         locale={locale}
         clientesIniciais={clientesIniciais}
         hasMoreInicial={hasMoreInicial}
+        loadErrorInicial={loadErrorInicial}
       />
     </div>
   )
