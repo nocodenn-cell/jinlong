@@ -282,9 +282,37 @@ de forma limpa.
 
 ---
 
+## DEC-10 — Correção do CI: SHA inválido de `actions/checkout` (Frente 8)
+
+**Status:** ✅ (correção aplicada) · 🔶 (validação remota pendente — cota GitHub Actions esgotada)
+
+**Sintoma:** Todos os jobs de CI do PR #199 (e de outros PRs) falhavam em ~2-3 s, sem sequer chegar
+a rodar os passos de build/teste/lint. Falha uniforme e independente do conteúdo do commit.
+
+**Causa raiz:** Os workflows fixavam `actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5` —
+um SHA que **não corresponde a nenhuma release publicada** do `actions/checkout`. O GitHub Actions
+falha imediatamente no passo de checkout ao não resolver a ação nesse SHA, derrubando o job inteiro
+antes de qualquer trabalho útil. Como o checkout é o primeiro passo de todo job, o pipeline inteiro
+ficava vermelho. Identificada durante a Frente 7.
+
+**Correção aplicada:** substituídas **16 ocorrências** em **5 workflows** pelo SHA correto de
+`actions/checkout` v4.2.2 (`11bd71901bbe5b1630ceea73d27597364c9af683`), preservando os comentários
+`# v4` existentes. Nenhuma outra alteração (nenhuma outra action, Node, teste, Supabase ou
+reorganização de workflow) — escopo estrito da causa raiz.
+
+**Validação:** consistência de sintaxe YAML dos 5 arquivos confirmada localmente (`yaml.safe_load`);
+`git diff` confirma que **apenas** linhas `actions/checkout` mudaram (16 inserções/16 deleções).
+**Validação remota pendente:** os pipelines não foram re-executados porque a conta GitHub está sem
+cota de Actions disponível — a confirmação de que os jobs passam do checkout ocorrerá quando houver
+cota. A correção é determinística (SHA correto de uma release real), então o desbloqueio do checkout
+é esperado com alta confiança.
+
+**Escopo deliberadamente restrito:** esta frente NÃO ataca a paridade prod↔repo (`migration-remote-drift`
+pode continuar vermelho por outras razões — DEC-09) — apenas remove o bloqueio universal do checkout
+que mascarava qualquer sinal real do CI.
+
+---
+
 ## Pendências de decisão (frentes futuras)
-- **DEC-10 (Frente 8 — CI):** causa raiz do pipeline quebrado. **Identificada** durante a Frente 7:
-  `.github/workflows/ci-backend-supabase.yml` (e outros) fixam `actions/checkout@34e114876b0b11...`,
-  um SHA que **não corresponde** a nenhuma release do checkout — todo job falha no passo de checkout
-  em ~2-3s. Correção = re-fixar no SHA correto de v4.2.2 (`11bd71901bbe...`). Fora de escopo até
-  autorização (usuário pediu para não mexer em CI agora); registrado para a Frente 8.
+
+- (nenhuma — Frentes 1–8 concluídas)

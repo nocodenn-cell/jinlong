@@ -319,7 +319,34 @@ reescreve o histórico — não uma correção pontual desta sprint.
 
 ---
 
-## Pendentes (frentes futuras)
+---
 
-- Frente 8 (CI) — causa raiz identificada (SHA inválido de `actions/checkout`, ver DEC-10); bloqueada
-  até autorização do usuário para mexer em CI.
+## Frente 8 — CI
+
+### FIX-8.1 — Correção do SHA inválido de `actions/checkout`
+
+**Arquivos alterados (5 workflows, 16 ocorrências):**
+- `.github/workflows/ci-backend-supabase.yml` (7)
+- `.github/workflows/ci-pdv-importados.yml` (5)
+- `.github/workflows/ci-pdv-local.yml` (2)
+- `.github/workflows/e2e-playwright-only.yml` (1)
+- `.github/workflows/secret-scan.yml` (1)
+
+**O que faz:** substitui `actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5` (SHA inválido,
+sem release correspondente) por `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` (v4.2.2),
+preservando comentários `# v4`. Corrige a falha universal de CI (~2-3 s no checkout). Ver DEC-10.
+
+**Escopo estrito:** nenhuma outra action, Node, teste, Supabase ou reorganização de workflow foi
+tocada — `git diff` mostra só linhas `actions/checkout` (16 ins/16 del).
+
+**Validação:** sintaxe YAML dos 5 arquivos OK (`yaml.safe_load`). Validação remota (re-executar os
+pipelines) **pendente por falta de cota GitHub Actions** — não foi possível confirmar o verde remoto
+nesta sessão.
+
+---
+
+## Status da sprint
+
+Frentes 1–8 concluídas. Pendências deferidas com plano: DROP das tabelas/policies mortas (DEC-02),
+DROP das views órfãs com gate (DEC-06), squash-to-baseline para paridade total (DEC-09), e aplicação
+das migrations em homologação/produção (`db push`) com as validações pós-aplicação embutidas.
