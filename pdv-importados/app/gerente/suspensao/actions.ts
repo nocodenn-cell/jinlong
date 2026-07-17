@@ -3,6 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+
+const SECAO = 'Suspensão de vendas'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -17,13 +21,14 @@ export async function carregarSuspensaoVendas(): Promise<ActionResult<SuspensaoS
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
+  const { idioma } = await getUsuarioIdioma()
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('configuracoes_gerais')
     .select('chave, valor')
     .in('chave', ['vendas_suspensas', 'motivo_suspensao'])
 
-  if (error) return { success: false, error: error.message }
+  if (error) return { success: false, error: mensagemErroComSecao(SECAO, error.message, idioma) }
 
   const map = Object.fromEntries((data ?? []).map((r) => [r.chave as string, r.valor as string]))
   return {
@@ -42,6 +47,7 @@ export async function atualizarSuspensaoVendas(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
+  const { idioma } = await getUsuarioIdioma()
   const supabase = await createClient()
 
   const updates = [
@@ -54,7 +60,7 @@ export async function atualizarSuspensaoVendas(
       .from('configuracoes_gerais')
       .update({ valor: u.valor })
       .eq('chave', u.chave)
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: mensagemErroComSecao(SECAO, error.message, idioma) }
   }
 
   revalidatePath('/gerente')
