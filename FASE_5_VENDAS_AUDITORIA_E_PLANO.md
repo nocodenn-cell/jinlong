@@ -180,14 +180,13 @@ Cada entrega é pequena, testável isoladamente e reversível (feature isolada, 
 - **Teste:** unitário de que cada operação gera exatamente 1 evento.
 - **Reversível:** aditivo, não altera contrato de retorno das RPCs existentes.
 
-### Entrega 6 — Orçamento (venda não vinculante)
-- Novo status de venda `ORCAMENTO` (não gera baixa de estoque, não gera evento fiscal), com conversão explícita para venda real reaproveitando o fluxo de finalização v4 (não duplicar regra de preço/desconto).
-- **Teste:** orçamento não move estoque; conversão usa a mesma validação de preço autoritativa da v4.
-- **Reversível:** feature nova e isolada; pode ser desligada sem afetar vendas normais.
+### Entrega 6 — Orçamento (venda não vinculante) — ✅ concluída (migration 273)
+- Implementado como **tabela própria `orcamentos`** (não como novo status em `vendas`) — decisão tomada durante a implementação: `vendas` tem CHECK restritivo e é lida por relatórios financeiros/consistência assumindo que toda linha é uma transação real; um orçamento não é uma transação. Conversão em venda reaproveita o fluxo normal de finalização v4 sem nenhuma alteração nele (orçamento só prefilla o carrinho).
+- RPCs: `criar_orcamento`, `listar_orcamentos`, `obter_orcamento`, `cancelar_orcamento`, `marcar_orcamento_convertido`. UI: botões "Salvar orçamento"/"Orçamentos" no menu de operações do caixa.
 
-### Entrega 7 — Reabertura de venda concluída
-- Definir escopo primeiro (reabrir = permitir editar itens de uma venda já concluída dentro de uma janela de tempo, com auditoria); avaliar se isso não deveria ser sempre modelado como devolução+nova venda para preservar imutabilidade fiscal.
-- **Decisão explícita necessária antes de implementar** (ver seção 6 — risco fiscal de reabrir venda já emitida).
+### Entrega 7 — Reabertura de venda concluída — ✅ concluída (decisão formalizada, sem código de reabertura)
+- **Decisão (ADR-VENDAS-001, `docs/adr/ADR-VENDAS-imutabilidade-pos-conclusao.md`):** venda `CONCLUIDA` é imutável — não existe e não haverá reabertura. Fluxo oficial de correção: cancelamento (Entrega 2) e/ou devolução parcial (Entrega 2) + nova venda quando necessário.
+- Item de backlog decorrente, fora do escopo da Fase 5: **Duplicar/Refazer Venda** — duplica itens de uma venda do histórico para um novo carrinho (preço sempre revalidado na nova finalização, nunca herdado), sem reabrir nem referenciar a venda original.
 
 ### Entrega 8 — Kits de produto
 - Maior escopo: nova entidade `kit_produto` (composição), reflexo em precificação (varejo/atacado do kit), baixa de estoque dos componentes.
@@ -207,7 +206,7 @@ Cada entrega é pequena, testável isoladamente e reversível (feature isolada, 
 4. **Cliente presente em 100% dos pontos do ciclo de venda** onde já existe UI de cliente (venda direta, venda em espera, histórico) — sem descarte silencioso de `clienteId`.
 5. **RLS de `vendas_em_espera` fechada por loja** e testada (Entrega 3).
 6. **Ledger de auditoria completo**: toda operação de desconto, cancelamento, devolução E espera (park/resume/discard) gera evento rastreável — hoje só as 3 primeiras geram.
-7. **Orçamento e reabertura**: ou implementados com testes E2E, ou formalmente declarados fora de escopo da Fase 5 com decisão registrada em `docs/decisoes/` (evitar item "pendurado" sem dono).
+7. **Orçamento e reabertura**: ✅ orçamento implementado (Entrega 6, migration 273); reabertura formalmente descartada via ADR-VENDAS-001 (Entrega 7) — não é um item pendurado, é uma decisão aceita com item de backlog decorrente (Duplicar/Refazer Venda). Falta apenas: testes E2E do fluxo de orçamento.
 8. **Kits**: ou implementado (8a-8d completos), ou explicitamente movido para fase própria com documento de escopo.
 9. **`v_venda_consistencia_anomalias` (migration 244) com 0 anomalias** em produção nas últimas 7 dias antes do fechamento da fase — mesma régua usada no golden-flow (`0 divergências em 7 checks`).
 10. **`docs/venda-golden-flow.md` atualizado** cobrindo os 4 fluxos (finalizar, cancelar, devolver, espera) com o mesmo nível de detalhe hoje reservado só à finalização.
