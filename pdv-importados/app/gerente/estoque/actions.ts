@@ -14,13 +14,9 @@ import {
   runServerActionWithObservability,
   type ActionResult,
 } from '@/lib/observability/runServerAction'
-import { AtualizarEstoqueSchema, EstoqueListagemInputSchema, ProdutoIdSchema } from './actions.validation'
+import { AtualizarEstoqueSchema, EstoqueListagemInputSchema } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
-
-type LegacyEstoqueMutationResult<T = null> =
-  | { success: true; data: T }
-  | { success: false; error: string }
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
   return getGerenteLojaId()
@@ -74,54 +70,6 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
     },
     'ajustar_estoque_manual',
   )
-}
-
-/**
- * Produtos legados sem linha em `estoque`: cria registro inicial (0 / 0).
- */
-export async function garantirLinhaEstoque(input: unknown): Promise<LegacyEstoqueMutationResult> {
-  const auth = await assertGerenteSession()
-  if (!auth.ok) return { success: false, error: auth.error }
-
-  const parsed = ProdutoIdSchema.safeParse(input)
-  if (!parsed.success) {
-    return { success: false, error: 'Produto inválido' }
-  }
-
-  const supabase = await createClient()
-  const lojaId = await lojaIdDoUsuarioLogado()
-  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
-
-  const { error } = await supabase.from('estoque').insert({
-    produto_id: parsed.data.produto_id,
-    loja_id: lojaId,
-    quantidade_atual: 0,
-    estoque_minimo: 0,
-  })
-
-  if (error) {
-    if (error.code === '23505') {
-      return { success: false, error: 'Estoque já existe para este produto.' }
-    }
-    return { success: false, error: mensagemErroComSecao('Estoque', error.message) }
-  }
-
-  revalidatePath('/gerente/estoque')
-  return { success: true, data: null }
-}
-
-export type EstoqueRowDTO = {
-  id: string
-  quantidade_atual: number
-  estoque_minimo: number
-}
-
-export type ProdutoComEstoqueDTO = {
-  id: string
-  nome: string
-  codigo_barras: string | null
-  unidade_medida: string
-  estoque: EstoqueRowDTO | null
 }
 
 export type EstoqueGerenteLinhaDTO = Readonly<{
@@ -205,75 +153,4 @@ export async function obterListaEstoqueGerente(input: unknown): Promise<EstoqueG
     throw new Error(mensagemErroComSecao('Estoque', error.message))
   }
   return parseListaPayload(data)
-}
-
-const EXPORT_PAGE = 400
-const EXPORT_MAX_ROWS = 12_000
-
-/** Todas as linhas que batem nos filtros (paginação servidor em blocos); teto por segurança. */
-export async function obterListaEstoqueGerenteCompletaParaExport(input: unknown): Promise<EstoqueGerenteLinhaDTO[]> {
-  const parsed = EstoqueListagemInputSchema.omit({ limite: true, offset: true }).safeParse(input)
-  if (!parsed.success) return []
-  const base = parsed.data
-  const acc: EstoqueGerenteLinhaDTO[] = []
-  let offset = 0
-  while (acc.length < EXPORT_MAX_ROWS) {
-    const chunk = await obterListaEstoqueGerente({
-      ...base,
-      limite: EXPORT_PAGE,
-      offset,
-    })
-    acc.push(...chunk.rows)
-    if (chunk.rows.length === 0 || acc.length >= chunk.total || chunk.rows.length < EXPORT_PAGE) break
-    offset += EXPORT_PAGE
-  }
-  return acc
-}
-
-export async function atualizarEstoqueProdutoThrow(input: unknown): Promise<void> {
-  const r = await atualizarEstoqueProduto(input)
-  if (!r.ok) throw new Error(r.error)
-}
-
-export async function garantirLinhaEstoqueThrow(input: unknown): Promise<void> {
-  const r = await garantirLinhaEstoque(input)
-  if (!r.success) throw new Error(r.error)
-}
-
-export type EstoqueKpisDTO = Readonly<{
-  total_geral: number
-  total_critico: number
-  total_zerado: number
-}>
-
-export async function obterKpisEstoque(): Promise<EstoqueKpisDTO> {
-  const supabase = await createClient()
-  const lojaId = await lojaIdResolvidaGestao()
-
-  const base = {
-    visao: 'geral' as const,
-    busca: '',
-    categoria_id: null,
-    origem: '',
-    ordem: 'nome' as const,
-    dir_asc: true,
-    limite: 1,
-    offset: 0,
-  }
-
-  const [geralRes, criticoRes, zeradoRes] = await Promise.all([
-    obterListaEstoqueGerente(base),
-    obterListaEstoqueGerente({ ...base, visao: 'critico' }),
-    supabase
-      .from('estoque')
-      .select('id', { count: 'exact', head: true })
-      .eq('loja_id', lojaId)
-      .eq('quantidade_atual', 0),
-  ])
-
-  return {
-    total_geral: geralRes.total,
-    total_critico: criticoRes.total,
-    total_zerado: zeradoRes.count ?? 0,
-  }
 }

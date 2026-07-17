@@ -13,13 +13,18 @@ type Props = {
   idioma: Idioma
 }
 
-const LABELS: Record<Idioma, { quantidade: string; remover: string; limpar: string; total: string; preco: string }> = {
+const LABELS: Record<
+  Idioma,
+  { quantidade: string; remover: string; limpar: string; total: string; preco: string; diminuir: string; aumentar: string }
+> = {
   pt: {
     quantidade: 'Qtd',
     remover: 'Remover',
     limpar: 'Limpar Carrinho',
     total: 'Total',
     preco: 'Preço',
+    diminuir: 'Diminuir quantidade',
+    aumentar: 'Aumentar quantidade',
   },
   zh: {
     quantidade: '数量',
@@ -27,6 +32,8 @@ const LABELS: Record<Idioma, { quantidade: string; remover: string; limpar: stri
     limpar: '清空购物车',
     total: '总计',
     preco: '价格',
+    diminuir: '减少数量',
+    aumentar: '增加数量',
   },
 }
 
@@ -84,9 +91,10 @@ export function EtiquetaCarrinho({
                 type="button"
                 onClick={() => onAtualizarQuantidade(item.produtoId, Math.max(1, item.quantidade - 1))}
                 disabled={item.quantidade <= 1}
+                aria-label={labels.diminuir}
                 className="rounded-md p-1 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
               >
-                <Minus className="h-4 w-4" />
+                <Minus className="h-4 w-4" aria-hidden />
               </button>
 
               <span className="w-8 text-center text-sm font-medium">{item.quantidade}</span>
@@ -94,9 +102,10 @@ export function EtiquetaCarrinho({
               <button
                 type="button"
                 onClick={() => onAtualizarQuantidade(item.produtoId, item.quantidade + 1)}
+                aria-label={labels.aumentar}
                 className="rounded-md p-1 hover:bg-gray-100"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4" aria-hidden />
               </button>
             </div>
 
@@ -105,8 +114,9 @@ export function EtiquetaCarrinho({
               onClick={() => onRemover(item.produtoId)}
               className="rounded-md p-2 text-destructive hover:bg-destructive/10"
               title={labels.remover}
+              aria-label={labels.remover}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" aria-hidden />
             </button>
           </div>
         ))}

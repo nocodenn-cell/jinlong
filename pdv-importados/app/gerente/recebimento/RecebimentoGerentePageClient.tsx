@@ -34,6 +34,8 @@ type Props = Readonly<{
   idioma: Idioma
   produtos: RecebimentoProdutoOpt[]
   remessasRecentes: RemessaRecenteRow[]
+  /** Falha ao carregar produtos/remessas (RLS, rede) — distinto de "nenhum produto cadastrado". */
+  loadError?: string | null
 }>
 
 const inputClass = 'w-full rounded-lg px-3 py-2 text-sm shadow-sm app-input'
@@ -42,7 +44,12 @@ const selectClass = 'w-full rounded-lg px-3 py-2 text-sm shadow-sm app-select'
 const btnPrimary =
   'inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:min-w-[200px] app-btn-accent'
 
-export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecentes }: Props) {
+export function RecebimentoGerentePageClient({
+  idioma,
+  produtos,
+  remessasRecentes,
+  loadError = null,
+}: Props) {
   const m = getMessages(idioma)
   const r = m.gerente.recebimento_page
   const locale = useMemo(() => localeFromIdioma(idioma), [idioma])
@@ -116,7 +123,11 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         ← {m.gerente.inicio}
       </Link>
 
-      {semProdutos ? (
+      {loadError ? (
+        <div className="mt-8 rounded-xl border p-5 shadow-sm admin-v2-alert-danger" role="alert">
+          <p className="font-semibold">{loadError}</p>
+        </div>
+      ) : semProdutos ? (
         <div
           className="mt-8 rounded-xl border p-5 shadow-sm app-badge-warn"
           role="status"

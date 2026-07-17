@@ -15,7 +15,7 @@ export default async function AdminEstoqueRecebimentoPage() {
   const { idioma, lojaId } = session
   const supabase = await createClient()
 
-  const [{ data: produtosRaw }, { data: remessasRaw }] = await Promise.all([
+  const [{ data: produtosRaw, error: produtosErr }, { data: remessasRaw, error: remessasErr }] = await Promise.all([
     supabase
       .from('produtos')
       .select('id, nome, codigo_barras')
@@ -29,7 +29,7 @@ export default async function AdminEstoqueRecebimentoPage() {
           .eq('loja_id', lojaId)
           .order('created_at', { ascending: false })
           .limit(20)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   const produtos: RecebimentoProdutoOpt[] = (produtosRaw ?? []).map((p) => ({
@@ -45,11 +45,21 @@ export default async function AdminEstoqueRecebimentoPage() {
     created_at: r.created_at,
   }))
 
+  // produtosErr/remessasErr: falha real de carga (RLS, rede) — distinto de "nenhum
+  // produto cadastrado". Sem isso o operador via o aviso errado ("cadastre
+  // produtos") quando na verdade a consulta falhou (mesmo bug já corrigido em
+  // Kardex e Transferências nesta fase).
+  const loadError =
+    produtosErr || remessasErr
+      ? 'Não foi possível carregar produtos/remessas para recebimento. Tente novamente.'
+      : null
+
   return (
     <RecebimentoGerentePageClient
       idioma={idioma}
       produtos={produtos}
       remessasRecentes={remessasRecentes}
+      loadError={loadError}
     />
   )
 }

@@ -225,12 +225,12 @@ export function ImprimirEtiquetasPageClient({
         config,
         nomeArquivo: `etiquetas-${Date.now()}.pdf`,
       })
-    } catch {
-      alert(
-        idioma === 'zh'
-          ? '生成PDF时出错'
-          : 'Erro ao gerar PDF'
-      )
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : null
+      emitGerenteToast({
+        kind: 'error',
+        message: msg ?? (idioma === 'zh' ? '生成PDF时出错' : 'Erro ao gerar PDF'),
+      })
     } finally {
       setGerandoPdf(false)
     }
@@ -265,9 +265,10 @@ export function ImprimirEtiquetasPageClient({
                 type="button"
                 onClick={handleAdicionarProduto}
                 disabled={buscando || !codigoBusca.trim()}
+                aria-label={idioma === 'zh' ? '添加产品' : 'Adicionar produto'}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Search className="h-5 w-5" />
+                <Search className="h-5 w-5" aria-hidden />
               </button>
             </div>
           </div>

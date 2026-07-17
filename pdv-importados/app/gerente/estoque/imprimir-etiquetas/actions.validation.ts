@@ -23,15 +23,3 @@ export const buscarEstoqueAtualSchema = z.object({
   loja_id: z.string().uuid('ID da loja inválido'),
 })
 
-/** Schema para validar item do carrinho */
-export const itemCarrinhoSchema = z.object({
-  produtoId: z.string().uuid('ID do produto inválido'),
-  nome: z.string().min(1, 'Nome do produto é obrigatório'),
-  codigoBarras: z.string().min(1, 'Código de barras é obrigatório'),
-  precoVarejo: z.number().positive('Preço deve ser positivo'),
-  quantidade: z.number().int().positive('Quantidade deve ser positiva'),
-  atributo: z.string().optional(),
-})
-
-/** Schema para validar lista de itens do carrinho */
-export const carrinhoSchema = z.array(itemCarrinhoSchema).max(500, 'Máximo de 500 itens por PDF')
