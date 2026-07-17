@@ -45,6 +45,8 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
 
   const res = await carregarResumoComissoes({ de, ate, status })
   const dados = res.success ? res.data : []
+  // res.error: falha real de carga — distinto de "nenhuma comissão no período".
+  const loadError = res.success ? null : res.error
 
   return (
     <div className="admin-v2-page">
@@ -56,6 +58,7 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
         <ComissoesContent
           dados={dados}
+          loadError={loadError}
           filtroInicial={{ de, ate, status }}
           labels={{
             colOperador: ui.comissoes_col_operador,
@@ -83,6 +86,10 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
             vendaPrefix: ui.comissoes_venda_prefix,
             semComissoes: ui.comissoes_sem_comissoes,
             erroPagarFallback: ui.comissoes_erro_marcar,
+            filtroDe: ui.comissoes_filtro_de,
+            filtroAte: ui.comissoes_filtro_ate,
+            filtrar: ui.comissoes_filtrar,
+            limparFiltros: ui.comissoes_limpar_filtros,
             locale,
           }}
         />

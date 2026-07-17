@@ -69,7 +69,7 @@ export type AuditoriaFiltro = Readonly<{
 }>
 
 export type ListarEventosResult =
-  | { ok: true; eventos: AuditoriaEvento[]; truncado: boolean }
+  | { ok: true; eventos: AuditoriaEvento[]; truncado: boolean; fontesComErro: AuditoriaTipo[] }
   | { ok: false; error: string }
 
 const TIPO_AJUSTE_LABEL: Record<string, string> = {
@@ -124,6 +124,7 @@ export async function listarEventosAuditoria(
   const eventos: AuditoriaEvento[] = []
   const operadorIds = new Set<string>()
   const produtoIds = new Set<string>()
+  const fontesComErro: AuditoriaTipo[] = []
 
   // ── 1. Vendas registradas (venda_eventos · SALE_REGISTERED) ───────────────
   if (wantsTipo(filtro, 'VENDA')) {
@@ -140,8 +141,10 @@ export async function listarEventosAuditoria(
 
     const { data, error } = await q
     // Resiliência: uma fonte indisponível (ex.: ledger ainda não migrado neste
-    // ambiente) é ignorada — a timeline segue com as demais fontes.
-    const rows = error ? [] : (data ?? [])
+    // ambiente) não derruba a timeline inteira — mas o erro é reportado em
+    // `fontesComErro` para não virar silenciosamente "0 eventos".
+    if (error) fontesComErro.push('VENDA')
+    const rows = data ?? []
     for (const r of rows) {
       const itensCount = Array.isArray(r.items) ? r.items.length : 0
       const opId = str(r.operador_id)
@@ -181,7 +184,8 @@ export async function listarEventosAuditoria(
     if (operadorFiltro) q = q.eq('operador_id', operadorFiltro)
 
     const { data, error } = await q
-    const rows = error ? [] : (data ?? [])
+    if (error) fontesComErro.push('CANCELAMENTO')
+    const rows = data ?? []
 
     // Enriquecimento opcional de motivo/valor estornado (batched, 1 query).
     const saleIds = rows.map((r) => str(r.sale_id)).filter((v): v is string => v != null)
@@ -238,7 +242,8 @@ export async function listarEventosAuditoria(
     if (operadorFiltro) q = q.eq('usuario_id', operadorFiltro)
 
     const { data, error } = await q
-    const rows = error ? [] : (data ?? [])
+    if (error) fontesComErro.push('AJUSTE_ESTOQUE')
+    const rows = data ?? []
     for (const r of rows) {
       const opId = str(r.usuario_id)
       if (opId && UUID_RE.test(opId)) operadorIds.add(opId)
@@ -276,7 +281,8 @@ export async function listarEventosAuditoria(
     if (filtro.fim) q = q.lte('criado_em', filtro.fim)
 
     const { data, error } = await q
-    const rows = error ? [] : (data ?? [])
+    if (error) fontesComErro.push('ALERTA')
+    const rows = data ?? []
     for (const r of rows) {
       const prodId = str(r.produto_id)
       if (prodId) produtoIds.add(prodId)
@@ -310,7 +316,8 @@ export async function listarEventosAuditoria(
     if (operadorFiltro) q = q.eq('operador_id', operadorFiltro)
 
     const { data, error } = await q
-    const rows = error ? [] : (data ?? [])
+    if (error) fontesComErro.push('DESCONTO')
+    const rows = data ?? []
     for (const r of rows) {
       const opId = str(r.operador_id)
       if (opId) operadorIds.add(opId)
@@ -369,5 +376,5 @@ export async function listarEventosAuditoria(
   // Mesclar: ordenar por data desc e aplicar teto final.
   enriquecidos.sort((a, b) => b.ocorridoEm.localeCompare(a.ocorridoEm))
   const truncado = enriquecidos.length > LIMITE_FINAL
-  return { ok: true, eventos: enriquecidos.slice(0, LIMITE_FINAL), truncado }
+  return { ok: true, eventos: enriquecidos.slice(0, LIMITE_FINAL), truncado, fontesComErro }
 }

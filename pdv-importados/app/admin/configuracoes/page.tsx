@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
+import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { ConfiguracoesContent, type ConfigDados } from './_components/ConfiguracoesContent'
 
@@ -26,7 +27,7 @@ export default async function AdminConfiguracoes() {
 
   const supabase = await createClient()
 
-  const [{ data: loja }, { data: pdvConfig }] = await Promise.all([
+  const [{ data: loja, error: lojaLoadError }, { data: pdvConfig, error: pdvLoadError }] = await Promise.all([
     supabase
       .from('lojas')
       .select(
@@ -55,10 +56,18 @@ export default async function AdminConfiguracoes() {
     loja: loja ?? null,
     pdvConfig: pdvConfig ?? null,
   }
+  // lojaLoadError/pdvLoadError: falha real de carga — nunca deve renderizar
+  // o formulário como se estivesse vazio/default silenciosamente.
+  const loadError = lojaLoadError
+    ? mensagemErroComSecao('Configurações', lojaLoadError.message, session.idioma)
+    : pdvLoadError
+      ? mensagemErroComSecao('Configurações', pdvLoadError.message, session.idioma)
+      : null
 
   return (
     <ConfiguracoesContent
       dados={dados}
+      loadError={loadError}
       labels={{
         titulo: ui.configuracoes_titulo,
         subtitulo: ui.configuracoes_subtitulo,
@@ -107,7 +116,6 @@ export default async function AdminConfiguracoes() {
         prefs: {
           sec: ui.configuracoes_prefs_sec,
           idioma: ui.configuracoes_prefs_idioma,
-          tema: ui.configuracoes_prefs_tema,
           formato: ui.configuracoes_prefs_formato,
           checkLembrete: ui.configuracoes_prefs_check_lembrete,
           checkResumo: ui.configuracoes_prefs_check_resumo,
@@ -124,10 +132,6 @@ export default async function AdminConfiguracoes() {
           idiomas: {
             pt: ui.configuracoes_enum_idioma_pt,
             zh: ui.configuracoes_enum_idioma_zh,
-          },
-          temas: {
-            noturno: ui.configuracoes_enum_tema_noturno,
-            novem: ui.configuracoes_enum_tema_novem,
           },
           formatos: {
             TERMICA: ui.configuracoes_enum_formato_termica,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle,
   Package,
@@ -12,7 +12,10 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
+import type { Mensagens } from '@/i18n/getMessages'
 import type { AuditoriaEvento, AuditoriaTipo } from '../actions'
+
+type AuditoriaLabels = Mensagens['admin_ui']
 
 const dtFmt = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -23,7 +26,6 @@ const dtFmt = new Intl.DateTimeFormat('pt-BR', {
 })
 
 type TipoVisual = {
-  label: string
   icon: LucideIcon
   /** Classe do badge/ícone (reusa tokens admin-v2 / tailwind já presentes). */
   chipClass: string
@@ -31,55 +33,47 @@ type TipoVisual = {
 }
 
 const TIPO_VISUAL: Record<AuditoriaTipo, TipoVisual> = {
-  VENDA: {
-    label: 'Venda',
-    icon: ShoppingCart,
-    chipClass: 'admin-v2-badge-success',
-    iconClass: 'admin-v2-alert-success',
-  },
-  CANCELAMENTO: {
-    label: 'Cancelamento',
-    icon: XCircle,
-    chipClass: 'admin-v2-badge-danger',
-    iconClass: 'admin-v2-alert-danger',
-  },
-  AJUSTE_ESTOQUE: {
-    label: 'Estoque',
-    icon: Package,
-    chipClass: 'admin-v2-badge-muted',
-    iconClass: 'bg-white/[0.06] text-jl-fg-2',
-  },
-  ALERTA: {
-    label: 'Alerta',
-    icon: AlertTriangle,
-    chipClass: 'admin-v2-badge-warning',
-    iconClass: 'admin-v2-alert-warning',
-  },
-  DESCONTO: {
-    label: 'Desconto',
-    icon: Percent,
-    chipClass: 'admin-v2-badge-gold',
-    iconClass: 'admin-v2-alert-warning',
-  },
+  VENDA: { icon: ShoppingCart, chipClass: 'admin-v2-badge-success', iconClass: 'admin-v2-alert-success' },
+  CANCELAMENTO: { icon: XCircle, chipClass: 'admin-v2-badge-danger', iconClass: 'admin-v2-alert-danger' },
+  AJUSTE_ESTOQUE: { icon: Package, chipClass: 'admin-v2-badge-muted', iconClass: 'bg-white/[0.06] text-jl-fg-2' },
+  ALERTA: { icon: AlertTriangle, chipClass: 'admin-v2-badge-warning', iconClass: 'admin-v2-alert-warning' },
+  DESCONTO: { icon: Percent, chipClass: 'admin-v2-badge-gold', iconClass: 'admin-v2-alert-warning' },
 }
 
-const DETALHE_LABELS: Record<string, string> = {
-  forma_pagamento: 'Forma de pagamento',
-  total_bruto: 'Total bruto',
-  total_liquido: 'Total líquido',
-  itens: 'Itens',
-  venda_id: 'Venda',
-  motivo: 'Motivo',
-  valor_estornado: 'Valor estornado',
-  produto_id: 'Produto (ID)',
-  produto_nome: 'Produto',
-  tipo_codigo: 'Tipo de movimento',
-  quantidade_delta: 'Quantidade',
-  observacao: 'Observação',
-  tipo: 'Tipo de alerta',
-  gerente_id: 'Gerente',
-  desconto_percentual: 'Desconto (%)',
-  desconto_valor: 'Desconto (R$)',
+function tipoVisualLabel(tipo: AuditoriaTipo, l: AuditoriaLabels): string {
+  const map: Record<AuditoriaTipo, string> = {
+    VENDA: l.auditoria_tipo_venda_singular,
+    CANCELAMENTO: l.auditoria_tipo_cancelamento_singular,
+    AJUSTE_ESTOQUE: l.auditoria_tipo_estoque_singular,
+    ALERTA: l.auditoria_tipo_alerta_singular,
+    DESCONTO: l.auditoria_tipo_desconto_singular,
+  }
+  return map[tipo]
+}
+
+function detalheLabels(l: AuditoriaLabels): Record<string, string> {
+  return {
+    forma_pagamento: l.auditoria_detalhe_forma_pagamento,
+    total_bruto: l.auditoria_detalhe_total_bruto,
+    total_liquido: l.auditoria_detalhe_total_liquido,
+    itens: l.auditoria_detalhe_itens,
+    venda_id: l.auditoria_detalhe_venda_id,
+    motivo: l.auditoria_detalhe_motivo,
+    valor_estornado: l.auditoria_detalhe_valor_estornado,
+    produto_id: l.auditoria_detalhe_produto_id,
+    produto_nome: l.auditoria_detalhe_produto_nome,
+    tipo_codigo: l.auditoria_detalhe_tipo_codigo,
+    quantidade_delta: l.auditoria_detalhe_quantidade_delta,
+    observacao: l.auditoria_detalhe_observacao,
+    tipo: l.auditoria_detalhe_tipo,
+    gerente_id: l.auditoria_detalhe_gerente_id,
+    desconto_percentual: l.auditoria_detalhe_desconto_percentual,
+    desconto_valor: l.auditoria_detalhe_desconto_valor,
+  }
+}
+
+function isFocusable(el: Element): el is HTMLElement {
+  return el instanceof HTMLElement && !el.hasAttribute('disabled') && el.tabIndex !== -1
 }
 
 function detalheValor(chave: string, valor: string | number | null): string {
@@ -90,7 +84,7 @@ function detalheValor(chave: string, valor: string | number | null): string {
   return String(valor)
 }
 
-export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
+export function AuditoriaTimeline({ eventos, labels }: { eventos: AuditoriaEvento[]; labels: AuditoriaLabels }) {
   const [aberto, setAberto] = useState<AuditoriaEvento | null>(null)
 
   if (eventos.length === 0) {
@@ -99,10 +93,8 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
         <span className="text-3xl text-jl-fg-3" aria-hidden>
           🗒️
         </span>
-        <p className="text-[13px] font-medium text-jl-fg-2">Nenhum evento no período</p>
-        <p className="text-[11px] text-jl-fg-3">
-          Ajuste o período ou o tipo de evento para ver a trilha de auditoria.
-        </p>
+        <p className="text-[13px] font-medium text-jl-fg-2">{labels.auditoria_vazio_titulo}</p>
+        <p className="text-[11px] text-jl-fg-3">{labels.auditoria_vazio_sub}</p>
       </div>
     )
   }
@@ -144,7 +136,7 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
                         visual.chipClass,
                       )}
                     >
-                      {visual.label}
+                      {tipoVisualLabel(e.tipo, labels)}
                     </span>
                     <span className="text-[10px] text-jl-fg-3">{dtFmt.format(new Date(e.ocorridoEm))}</span>
                     {e.operadorNome ? (
@@ -158,7 +150,7 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
         })}
       </ul>
 
-      {aberto ? <AuditoriaDetailSheet evento={aberto} onClose={() => setAberto(null)} /> : null}
+      {aberto ? <AuditoriaDetailSheet evento={aberto} onClose={() => setAberto(null)} labels={labels} /> : null}
     </>
   )
 }
@@ -166,30 +158,78 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
 function AuditoriaDetailSheet({
   evento,
   onClose,
+  labels,
 }: {
   evento: AuditoriaEvento
   onClose: () => void
+  labels: AuditoriaLabels
 }) {
+  const panelRef = useRef<HTMLElement>(null)
+
+  // Escape + trava de scroll + ciclo de Tab contido no painel (mesma técnica
+  // de KardexSheet.tsx — este sheet lateral não usa DragonModal porque é um
+  // padrão de UI diferente — drawer, não diálogo centralizado — mas precisa
+  // do mesmo comportamento de foco para não vazar Tab para trás do overlay).
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+    const previouslyFocused = document.activeElement as HTMLElement | null
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+      if (e.key === 'Tab') {
+        const panel = panelRef.current
+        if (!panel) return
+        const focusables = Array.from(
+          panel.querySelectorAll<HTMLElement>(
+            'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter(isFocusable)
+        if (focusables.length === 0) {
+          e.preventDefault()
+          panel.focus()
+          return
+        }
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        const active = document.activeElement
+        const activeDentro = active instanceof HTMLElement && focusables.includes(active)
+        if (e.shiftKey && (active === first || !activeDentro)) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && (active === last || !activeDentro)) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
+
+    document.addEventListener('keydown', onKeyDown)
+    const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    const raf = requestAnimationFrame(() => {
+      const panel = panelRef.current
+      if (panel && !panel.contains(document.activeElement)) panel.focus()
+    })
+
     return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = prevOverflow
+      cancelAnimationFrame(raf)
+      previouslyFocused?.focus?.()
     }
   }, [onClose])
 
   const visual = TIPO_VISUAL[evento.tipo]
   const entradas = Object.entries(evento.detalhe).filter(([, v]) => v != null && v !== '')
+  const DETALHE_LABELS = detalheLabels(labels)
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="auditoria-detalhe-titulo">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col">
+      <aside ref={panelRef} tabIndex={-1} className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col outline-none">
         <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border-secondary)] px-5 py-4">
           <div className="min-w-0">
             <h2 id="auditoria-detalhe-titulo" className="text-[15px] font-semibold text-jl-fg-1">
@@ -202,7 +242,7 @@ function AuditoriaDetailSheet({
                   visual.chipClass,
                 )}
               >
-                {visual.label}
+                {tipoVisualLabel(evento.tipo, labels)}
               </span>
               <span>{dtFmt.format(new Date(evento.ocorridoEm))}</span>
               {evento.operadorNome ? <span>· {evento.operadorNome}</span> : null}
@@ -211,7 +251,7 @@ function AuditoriaDetailSheet({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fechar"
+            aria-label={labels.auditoria_fechar}
             className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06]"
           >
             <X size={16} aria-hidden />
@@ -221,7 +261,7 @@ function AuditoriaDetailSheet({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
           {evento.valor != null ? (
             <div className="admin-v2-panel mb-3 rounded-[10px] p-3">
-              <div className="text-[11px] text-jl-fg-3">Valor</div>
+              <div className="text-[11px] text-jl-fg-3">{labels.auditoria_valor_label}</div>
               <div className="text-[18px] font-semibold tabular-nums text-jl-fg-1">
                 {formatBRL(evento.valor)}
               </div>
@@ -230,7 +270,7 @@ function AuditoriaDetailSheet({
 
           <dl className="flex flex-col">
             {entradas.length === 0 ? (
-              <p className="py-4 text-center text-[12px] text-jl-fg-3">Sem detalhes adicionais.</p>
+              <p className="py-4 text-center text-[12px] text-jl-fg-3">{labels.auditoria_sem_detalhes}</p>
             ) : (
               entradas.map(([chave, valor]) => (
                 <div

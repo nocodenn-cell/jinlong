@@ -1,6 +1,10 @@
 # Fase 5 — Administração: auditoria completa e plano de execução
 
-**Status: AUDITORIA CONCLUÍDA — aguardando autorização para execução.**
+**Status: FECHADA — 100% (código; nenhuma migração de banco necessária nesta fase).**
+Autorizada e executada em 2026-07-17.
+
+> ✅ Todas as 8 entregas foram concluídas.
+> Ver seção "Fechamento" ao final deste documento para evidências.
 
 Fases anteriores (Produtos, Estoque, Financeiro, Clientes) já estão 100%
 fechadas (código + banco). Esta fase cobre os 7 sub-módulos do Admin V2 sob
@@ -239,3 +243,31 @@ entregas correspondentes — não são chamadas de engenharia:
 análise.** Aguardando autorização explícita antes de iniciar qualquer
 implementação, seguindo o mesmo ritmo desta sessão (auditoria → plano →
 confirmação → execução) usado nas Fases 2 e 4.
+
+## Fechamento (2026-07-17)
+
+Autorização recebida explicitamente para as 8 entregas, incluindo as duas
+decisões de produto da seção 10: (a) minerar a UI dos 3 componentes órfãos
+antes de excluir, (b) remover a UI morta de `tema_padrao` em vez de
+construir o seletor.
+
+| Entrega | Status | Evidência |
+|---|---|---|
+| 1 — Suspensão: `loadError` + bloquear Salvar em estado desconhecido | ✅ | `app/admin/suspensao/page.tsx` + `SuspensaoContent.tsx`: banner de erro, checkbox/textarea/botão desabilitados enquanto `loadError` estiver presente; 3 testes de comportamento |
+| 2 — Suspensão: erro amigável + i18n | ✅ | `app/gerente/suspensao/actions.ts` roteia por `mensagemErroComSecao`; namespace `admin_ui.suspensao_*` (13 chaves, paridade pt/zh confirmada); 3 testes unitários |
+| 3 — Categorias Produtos/Financeiras: `loadError`, busca, paginação real, exclusão | ✅ | Reescrita de `CategoriasProdutosContent.tsx`/`CategoriasFinanceirasContent.tsx` com busca + filtro (situação/tipo) + paginação anterior/próxima URL-driven + exclusão via `ConfirmExcluirCadastroModal` (reaproveitado dos órfãos); `aria-label` em todos os botões de ícone; 11 testes de comportamento (6 + 5) |
+| 4 — Comissões: `loadError` + filtros reais de período/status | ✅ | `page.tsx`/`ComissoesContent.tsx`: inputs de data reais + select de status substituindo o texto read-only, navegação via URL; banner de erro na carga inicial; 5 testes de comportamento |
+| 5 — Configurações: `loadError` + remover UI morta de `tema_padrao` | ✅ | `page.tsx` desestrutura `error` das 2 queries iniciais e traduz via `mensagemErroComSecao`; banner + botões de Salvar desabilitados nas 3 abas enquanto `loadError`; labels/enum de `tema_padrao` removidos de `ConfiguracoesContent.tsx`/i18n (hidden input mantido — preserva o valor ao salvar); 3 testes de comportamento |
+| 6 — Auditoria: `loadError` por-fonte + focus-trap real + i18n completo | ✅ | `actions.ts`: cada um dos 5 blocos de query agora reporta falha em `fontesComErro` em vez de mascarar como "0 eventos"; `AuditoriaTimeline.tsx`: `AuditoriaDetailSheet` migrado para o mesmo padrão de focus-trap manual de `KardexSheet.tsx` (foco inicial, Tab contido, restauração de foco) — **correção em relação ao plano original**: não usa `DragonModal` (componente de diálogo centralizado) porque o sheet é um drawer lateral; `KardexSheet.tsx` também não usa `DragonModal`, usa a mesma técnica manual, então a migração seguiu o precedente real do código, não a descrição textual do achado; i18n completo (49 chaves `admin_ui.auditoria_*`, paridade pt/zh confirmada) |
+| 7 — Diagnóstico Caixa: remover chamada duplicada de `loadAdminContext` | ✅ | `page.tsx`: removida a chamada própria — `executarDiagnosticoCaixaPreProducao()` já gate por dentro; **correção em relação ao plano original**: a chamada interna não podia ser removida (é o único guard de autorização do caminho da server action `executarDiagnosticoCaixaAction`, usada pelo botão "rodar novamente") — a redundância real estava em `page.tsx`, não no impl |
+| 8 — Excluir/minerar órfãos | ✅ | UI de busca/filtro/paginação/exclusão de `CategoriasProdutosPageClient.tsx`/`CategoriasFinanceirasPageClient.tsx` minerada para a Entrega 3 (via `ConfirmExcluirCadastroModal`, `useState` de filtros URL-driven); os 3 arquivos órfãos excluídos; `check:entity-ssot` confirma zero referência remanescente e nenhuma rota quebrada |
+
+**Correções de escopo em relação ao plano original:**
+- Entrega 6: o achado #23 dizia "migrar para `DragonModal` como `KardexSheet.tsx`/`DocumentoFiscalDetailSheet.tsx` já fazem" — na prática, `KardexSheet.tsx` **não** usa `DragonModal` (é um drawer lateral, não um diálogo centralizado), usa a mesma técnica de focus-trap manual documentada em seu próprio comentário. A migração seguiu o precedente real do código.
+- Entrega 7: a chamada redundante de `loadAdminContext` estava em `page.tsx`, não dentro de `executarDiagnosticoCaixaPreProducao` — essa segunda chamada é o único guard de autorização para a server action de "rodar novamente", que não tem gate próprio.
+
+**Validação final:** 583/583 testes verdes (36 novos nesta fase), `npm run typecheck` limpo, `guard:all` 8/8 verde (`guard:core`, `guard:pdv`, `guard:routes` — 23 rotas `/admin` sem 404 estrutural, `guard:rpc`, `guard:pricing`, `guard:deps`, `guard:migrations` — 191 migrations sem colisão, zero migração nova nesta fase, `check:entity-ssot` — zero referência aos 3 arquivos excluídos, apenas os 5 avisos `@legacy` pré-existentes e não relacionados a esta fase).
+
+**Pendências:** nenhuma. Fase 5 (Administração) 100% concluída — código. Sem
+superfície de banco nesta fase (todos os achados eram de código de
+aplicação), então não há item de "banco" a fechar, diferente das Fases 2 e 4.

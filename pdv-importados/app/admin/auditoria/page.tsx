@@ -12,6 +12,7 @@
 import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -64,22 +65,36 @@ function periodoFim(periodo: Periodo): string | null {
   return d.toISOString()
 }
 
-const PERIODO_LABEL: Record<Periodo, string> = {
-  hoje: 'Hoje',
-  ontem: 'Ontem',
-  '7d': '7 dias',
-  mes: 'Este mês',
-  tudo: 'Tudo',
+function periodoLabels(ui: Mensagens['admin_ui']): Record<Periodo, string> {
+  return {
+    hoje: ui.auditoria_periodo_hoje,
+    ontem: ui.auditoria_periodo_ontem,
+    '7d': ui.auditoria_periodo_7d,
+    mes: ui.auditoria_periodo_mes,
+    tudo: ui.auditoria_periodo_tudo,
+  }
 }
 
-const TIPO_OPTIONS: Array<{ id: TipoFiltro; label: string }> = [
-  { id: 'all', label: 'Todos os eventos' },
-  { id: 'VENDA', label: 'Vendas' },
-  { id: 'CANCELAMENTO', label: 'Cancelamentos' },
-  { id: 'AJUSTE_ESTOQUE', label: 'Estoque' },
-  { id: 'ALERTA', label: 'Alertas' },
-  { id: 'DESCONTO', label: 'Descontos' },
-]
+function tipoOptions(ui: Mensagens['admin_ui']): Array<{ id: TipoFiltro; label: string }> {
+  return [
+    { id: 'all', label: ui.auditoria_tipo_todos },
+    { id: 'VENDA', label: ui.auditoria_tipo_venda },
+    { id: 'CANCELAMENTO', label: ui.auditoria_tipo_cancelamento },
+    { id: 'AJUSTE_ESTOQUE', label: ui.auditoria_tipo_estoque },
+    { id: 'ALERTA', label: ui.auditoria_tipo_alerta },
+    { id: 'DESCONTO', label: ui.auditoria_tipo_desconto },
+  ]
+}
+
+function tipoLabels(ui: Mensagens['admin_ui']): Record<AuditoriaTipo, string> {
+  return {
+    VENDA: ui.auditoria_tipo_venda,
+    CANCELAMENTO: ui.auditoria_tipo_cancelamento,
+    AJUSTE_ESTOQUE: ui.auditoria_tipo_estoque,
+    ALERTA: ui.auditoria_tipo_alerta,
+    DESCONTO: ui.auditoria_tipo_desconto,
+  }
+}
 
 type SearchParams = { periodo?: string; tipo?: string }
 type PageProps = { searchParams?: Promise<SearchParams> }
@@ -89,8 +104,13 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     pathname: ROUTES.admin.auditoria,
     resource: `route:${ROUTES.admin.auditoria}`,
   })
+  const ui = getMessages(session.idioma).admin_ui
   const locale = localeFromIdioma(session.idioma)
   const sp = (searchParams ? await searchParams : {}) ?? {}
+
+  const PERIODO_LABEL = periodoLabels(ui)
+  const TIPO_OPTIONS = tipoOptions(ui)
+  const TIPO_LABEL = tipoLabels(ui)
 
   const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], '7d')
   const tipo = oneOf<TipoFiltro>(
@@ -110,6 +130,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
   const eventos = res.ok ? res.eventos : []
   const truncado = res.ok ? res.truncado : false
   const loadError = res.ok ? null : res.error
+  const fontesComErro = res.ok ? res.fontesComErro : []
 
   const contagem = eventos.reduce<Record<AuditoriaTipo, number>>(
     (acc, e) => {
@@ -127,26 +148,26 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     hint?: string
   }> = [
     {
-      label: 'Eventos',
+      label: ui.auditoria_metric_eventos,
       value: formatNumberLocale(eventos.length, locale),
       icon: 'list-filter',
       tone: 'gold',
-      hint: truncado ? 'Exibindo os mais recentes' : undefined,
+      hint: truncado ? ui.auditoria_metric_exibindo_recentes : undefined,
     },
     {
-      label: 'Vendas',
+      label: ui.auditoria_metric_vendas,
       value: formatNumberLocale(contagem.VENDA, locale),
       icon: 'shopping-bag',
       tone: 'success',
     },
     {
-      label: 'Cancelamentos',
+      label: ui.auditoria_metric_cancelamentos,
       value: formatNumberLocale(contagem.CANCELAMENTO, locale),
       icon: 'x-circle',
       tone: 'warning',
     },
     {
-      label: 'Alertas',
+      label: ui.auditoria_metric_alertas,
       value: formatNumberLocale(contagem.ALERTA, locale),
       icon: 'alert-circle',
       tone: 'warning',
@@ -173,8 +194,8 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
   return (
     <div className="admin-v2-page admin-v2-stack">
       <PageHeader
-        title="Auditoria"
-        subtitle="Linha do tempo de eventos operacionais — vendas, cancelamentos, estoque, alertas e descontos."
+        title={ui.auditoria_titulo}
+        subtitle={ui.auditoria_subtitulo}
         filters={(
           <div className="admin-v2-segmented">
             {(['hoje', 'ontem', '7d', 'mes', 'tudo'] as Periodo[]).map((option) => (
@@ -205,10 +226,10 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       </div>
 
       <SectionCard
-        title="Trilha de eventos"
+        title={ui.auditoria_trilha_titulo}
         action={
           <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-[11px] text-jl-fg-3">
-            {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
+            {eventos.length} {eventos.length === 1 ? ui.auditoria_evento_singular : ui.auditoria_evento_plural}
           </span>
         }
       >
@@ -226,17 +247,27 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
         </div>
 
         {loadError ? (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
+          <div
+            className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive"
+            role="alert"
+          >
             {loadError}
           </div>
         ) : null}
 
-        <AuditoriaTimeline eventos={eventos} />
+        {fontesComErro.length > 0 ? (
+          <div
+            className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive"
+            role="alert"
+          >
+            {ui.auditoria_erro_fontes.replace('{{fontes}}', fontesComErro.map((t) => TIPO_LABEL[t]).join(', '))}
+          </div>
+        ) : null}
+
+        <AuditoriaTimeline eventos={eventos} labels={ui} />
 
         {truncado ? (
-          <p className="mt-4 text-[11px] text-jl-fg-3">
-            Exibindo os 150 eventos mais recentes do período. Use um período menor ou filtre por tipo para refinar.
-          </p>
+          <p className="mt-4 text-[11px] text-jl-fg-3">{ui.auditoria_truncado}</p>
         ) : null}
       </SectionCard>
     </div>

@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { MetricCard, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
@@ -44,28 +44,40 @@ export type ComissoesLabels = {
   vendaPrefix: string
   semComissoes: string
   erroPagarFallback: string
+  filtroDe: string
+  filtroAte: string
+  filtrar: string
+  limparFiltros: string
   locale: string
 }
 
 type Props = {
   dados: ComissaoResumoRow[]
+  loadError: string | null
   filtroInicial: FiltroComissoes
   labels: ComissoesLabels
 }
 
-export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
+export function ComissoesContent({ dados, loadError, filtroInicial, labels }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
   const [rows] = useState(dados)
+  const [de, setDe] = useState(filtroInicial.de ?? '')
+  const [ate, setAte] = useState(filtroInicial.ate ?? '')
+  const [status, setStatus] = useState(filtroInicial.status)
   const [detalheOperador, setDetalheOperador] = useState<ComissaoResumoRow | null>(null)
   const [detalheRows, setDetalheRows] = useState<ComissaoDetalheRow[]>([])
   const [detalheLoading, setDetalheLoading] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
 
-  const statusDisplayMap: Record<string, string> = {
-    todos: labels.statusTodos,
-    pendente: labels.statusPendente,
-    pago: labels.statusPago,
+  function navegar(params: { de?: string; ate?: string; status?: FiltroComissoes['status'] }) {
+    const sp = new URLSearchParams()
+    sp.set('de', params.de ?? de)
+    sp.set('ate', params.ate ?? ate)
+    const s = params.status ?? status
+    if (s !== 'todos') sp.set('status', s)
+    router.push(`${pathname}?${sp.toString()}`)
   }
 
   const abrirDetalhe = useCallback(async (row: ComissaoResumoRow) => {
@@ -182,20 +194,76 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
     },
   ]
 
-  const statusDisplay = statusDisplayMap[filtroInicial.status] ?? filtroInicial.status
-
   return (
     <div className="flex flex-col gap-6">
+      {loadError && (
+        <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]" role="alert">
+          {loadError}
+        </div>
+      )}
+
       {error && (
         <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">
           {error}
         </div>
       )}
 
-      <SectionCard
-        title={labels.operadoresTitulo.replace('{{n}}', String(rows.length))}
-        subtitle={`${labels.periodoLabel}: ${filtroInicial.de}${labels.aSeparator}${filtroInicial.ate} · ${labels.statusLabel}: ${statusDisplay}`}
-      >
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-jl-fg-3">{labels.filtroDe}</span>
+          <input
+            type="date"
+            value={de}
+            onChange={(e) => setDe(e.target.value)}
+            className="admin-v2-input px-3 py-2 text-[12px] outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-jl-fg-3">{labels.filtroAte}</span>
+          <input
+            type="date"
+            value={ate}
+            onChange={(e) => setAte(e.target.value)}
+            className="admin-v2-input px-3 py-2 text-[12px] outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-jl-fg-3">{labels.statusLabel}</span>
+          <select
+            value={status}
+            onChange={(e) => {
+              const v = e.target.value as FiltroComissoes['status']
+              setStatus(v)
+              navegar({ status: v })
+            }}
+            className="admin-v2-input px-3 py-2 text-[12px] outline-none"
+          >
+            <option value="todos">{labels.statusTodos}</option>
+            <option value="pendente">{labels.statusPendente}</option>
+            <option value="pago">{labels.statusPago}</option>
+          </select>
+        </label>
+        <button onClick={() => navegar({})} className="admin-v2-btn-secondary">
+          {labels.filtrar}
+        </button>
+        {(de !== filtroInicial.de || ate !== filtroInicial.ate || status !== 'todos') && (
+          <button
+            onClick={() => {
+              const hoje = new Date().toISOString().slice(0, 10)
+              const trintaDiasAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+              setDe(trintaDiasAtras)
+              setAte(hoje)
+              setStatus('todos')
+              navegar({ de: trintaDiasAtras, ate: hoje, status: 'todos' })
+            }}
+            className="admin-v2-btn-secondary"
+          >
+            {labels.limparFiltros}
+          </button>
+        )}
+      </div>
+
+      <SectionCard title={labels.operadoresTitulo.replace('{{n}}', String(rows.length))}>
         <DataTable
           data={rows}
           columns={columns}

@@ -1,16 +1,13 @@
-import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@shared-core/navigation/routes'
 import { executarDiagnosticoCaixaPreProducao } from '@/app/admin/diagnostico-caixa/diagnosticoCaixa.impl'
 import { DiagnosticoCaixaContent } from '@/app/admin/diagnostico-caixa/_components/DiagnosticoCaixaContent'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminDiagnosticoCaixaPage() {
-  await loadAdminContext({
-    pathname: ROUTES.admin.diagnosticoCaixa,
-    resource: `route:${ROUTES.admin.diagnosticoCaixa}`,
-  })
-
+  // executarDiagnosticoCaixaPreProducao() já chama loadAdminContext internamente
+  // (é o mesmo guard usado pela server action de "rodar novamente" em
+  // DiagnosticoCaixaContent, que não tem gate próprio) — chamar aqui de novo
+  // seria redundante.
   const inicial = await executarDiagnosticoCaixaPreProducao()
 
   return <DiagnosticoCaixaContent inicial={inicial} />

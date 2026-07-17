@@ -59,7 +59,6 @@ export type ConfiguracoesFiscalLabels = {
 export type ConfiguracoesPrefsLabels = {
   sec: string
   idioma: string
-  tema: string
   formato: string
   checkLembrete: string
   checkResumo: string
@@ -70,7 +69,6 @@ export type ConfiguracoesPrefsLabels = {
 export type ConfiguracoesEnumsLabels = {
   regimes: Record<string, string>
   idiomas: Record<string, string>
-  temas: Record<string, string>
   formatos: Record<string, string>
 }
 
@@ -100,7 +98,15 @@ const FORMATOS = ['TERMICA', 'A4'] as const
 const inputClass =
   'admin-v2-input w-full px-2.5 py-2 text-xs outline-none transition-colors focus:border-jl-accent/50'
 
-export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; labels: ConfiguracoesLabels }) {
+export function ConfiguracoesContent({
+  dados,
+  loadError,
+  labels,
+}: {
+  dados: ConfigDados
+  loadError: string | null
+  labels: ConfiguracoesLabels
+}) {
   const router = useRouter()
   const [abaAtiva, setAbaAtiva] = useState<Aba>('loja')
   const [lojaErro, setLojaErro] = useState<string | null>(null)
@@ -187,6 +193,12 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
   return (
     <div className="admin-v2-page">
       <PageHeader title={labels.titulo} subtitle={labels.subtitulo} />
+
+      {loadError && (
+        <div className="admin-v2-alert-danger mb-4 rounded-lg px-3 py-2 text-[12px]" role="alert">
+          {loadError}
+        </div>
+      )}
 
       <div className="mb-6 flex flex-wrap gap-2 border-b border-[var(--color-border-secondary)] pb-3">
         {(['loja', 'impostos', 'preferencias'] as const).map((aba) => (
@@ -322,7 +334,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
             )}
 
             <div className="flex gap-2">
-              <button type="submit" className="admin-v2-btn-primary">
+              <button type="submit" className="admin-v2-btn-primary disabled:opacity-50" disabled={Boolean(loadError)}>
                 {labels.loja.btnSalvar}
               </button>
             </div>
@@ -396,7 +408,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
             )}
 
             <div className="flex gap-2">
-              <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
+              <button type="submit" className="admin-v2-btn-primary disabled:opacity-50" disabled={!dados.loja?.id || Boolean(loadError)}>
                 {labels.fiscal.btnSalvar}
               </button>
             </div>
@@ -460,7 +472,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.prefs.sucesso}</div>
             )}
 
-            <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
+            <button type="submit" className="admin-v2-btn-primary disabled:opacity-50" disabled={!dados.loja?.id || Boolean(loadError)}>
               {labels.prefs.btnSalvar}
             </button>
           </form>
