@@ -148,6 +148,7 @@ export function CaixaGerenteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-gerente-modal-title"
+        data-testid="caixa-gerente-modal"
         className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >

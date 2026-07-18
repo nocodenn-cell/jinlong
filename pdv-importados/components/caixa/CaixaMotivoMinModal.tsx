@@ -81,6 +81,7 @@ export function CaixaMotivoMinModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-motivo-modal-title"
+        data-testid="caixa-motivo-min-modal"
         className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >

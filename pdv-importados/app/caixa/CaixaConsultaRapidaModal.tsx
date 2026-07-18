@@ -111,6 +111,7 @@ export function CaixaConsultaRapidaModal({ open, onOpenChange, m, termoInicial =
         role="dialog"
         aria-modal="true"
         aria-labelledby={tituloId}
+        data-testid="caixa-consulta-rapida-modal"
         className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-none border border-jl-border-1 bg-jl-surface-elev text-jl-fg-1 shadow-lg sm:max-w-lg sm:rounded-lg"
         onMouseDown={(e) => e.stopPropagation()}
         data-caixa-atalho-bloqueado="true"
