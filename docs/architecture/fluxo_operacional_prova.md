@@ -11,18 +11,20 @@
 
 | Etapa | Evidência no repo | Tipo |
 |-------|-------------------|------|
-| Abrir caixa | `e2e/caixa-modais-abrir-fechar.spec.ts` · adapters CashSessionWriter | E2E + unit |
+| Login | middleware + `usuarios` · e2e login | Auth |
+| Abrir caixa | `e2e/caixa-modais-abrir-fechar.spec.ts` · CashSessionWriter | E2E + unit |
+| Cadastrar funcionário | **Runbook** Auth+SQL — sem UI | Gate (NO-GO UI) |
 | Cadastrar cliente | Customers 100 · `admin/clientes` adapters | Domain closed |
 | Cadastrar produto | Products 100 · ProductWriter RPC 270 | Domain closed |
 | Entrada estoque | Inventory Adjustment / remessa / NF-e | Domain closed |
 | Venda | `e2e/caixa-venda*.spec.ts` · `finalizar_venda_*` | E2E |
-| Pagamento | mesma TX venda (`vendas_pagamentos`) | RPC sales |
-| Baixa estoque | efeito na TX venda | Inventory/sales |
-| Financeiro | AR liquidação adapter · Fase 5b e2e CR | Domain + E2E |
+| Pagamento / recebimento | TX venda + AR liquidação adapter | RPC + domain |
+| Contas a receber | ReceivableReader/Writer/Liquidation | Domain |
+| Contas a pagar | PayableReader/Payment | Domain |
 | Comissão | `marcar_comissoes_pagas` (satélite) | Action gerente |
 | Fechar caixa | CashSessionWriter · e2e abrir/fechar | E2E + adapter |
-| Auditoria | `/admin/auditoria` reads | UI |
 | Relatórios | admin relatórios / KPIs | UI |
+| Auditoria | `/admin/auditoria` reads | UI |
 
 ## Specs âncora
 

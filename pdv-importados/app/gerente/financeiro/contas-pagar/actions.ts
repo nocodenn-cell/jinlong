@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { createPayablePaymentService } from '@/app/admin/financeiro/payablePayment'
+import { createPayableReader } from '@/app/admin/financeiro/payableReader'
+import type { PayableTitle } from '@shared-core/src/financial'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
 
@@ -23,8 +25,6 @@ export type ContaPagarRow = {
 }
 
 export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
-
-const PAGE_SIZE = 20
 
 const COLUMNS = `
   id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
@@ -51,6 +51,22 @@ function mapRow(raw: Record<string, unknown>): ContaPagarRow {
   }
 }
 
+function payableToRow(p: PayableTitle): ContaPagarRow {
+  return {
+    id: p.contaId,
+    fornecedor_id: p.fornecedorId,
+    fornecedor_nome: p.fornecedorNome,
+    descricao: p.descricao,
+    valor_total: p.valorTotal,
+    valor_pago: p.valorPago,
+    vencimento: p.vencimento,
+    status: p.status.toUpperCase() as ContaPagarStatus,
+    nfe_numero: p.nfeNumero,
+    nfe_importacao_id: p.nfeImportacaoId,
+    criado_em: p.criadoEm,
+  }
+}
+
 export type ContasPagarFilters = {
   status?: string // 'todos' | 'pendente' | 'parcial' | 'atrasado' | 'pago' | 'cancelado'
   fornecedor_id?: string
@@ -66,40 +82,20 @@ export async function buscarContasPagarAction(
 > {
   try {
     const supabase = await createClient()
-    const from = (page - 1) * PAGE_SIZE
-    const to = from + PAGE_SIZE
-
-    let query = supabase
-      .from('contas_pagar')
-      .select(COLUMNS)
-      .order('vencimento', { ascending: true, nullsFirst: false })
-      .range(from, to)
-
-    if (filters?.status && filters.status !== 'todos') {
-      query = query.eq('status', filters.status.toUpperCase())
+    const reader = createPayableReader(supabase)
+    const listed = await reader.list({
+      page,
+      status: filters?.status,
+      fornecedorId: filters?.fornecedor_id,
+      periodo: filters?.periodo,
+      termo: filters?.termo,
+    })
+    if (!listed.ok) return { ok: false, error: listed.error }
+    return {
+      ok: true,
+      contas: listed.contas.map(payableToRow),
+      hasMore: listed.hasMore,
     }
-    if (filters?.fornecedor_id) {
-      query = query.eq('fornecedor_id', filters.fornecedor_id)
-    }
-    if (filters?.periodo) {
-      // 'YYYY-MM' → janela do mês
-      const [y, mo] = filters.periodo.split('-').map(Number)
-      if (y && mo) {
-        const start = new Date(Date.UTC(y, mo - 1, 1)).toISOString()
-        const end = new Date(Date.UTC(y, mo, 1)).toISOString()
-        query = query.gte('vencimento', start).lt('vencimento', end)
-      }
-    }
-    if (filters?.termo && filters.termo.trim()) {
-      const t = filters.termo.trim()
-      query = query.or(`descricao.ilike.%${t}%,nfe_numero.ilike.%${t}%`)
-    }
-
-    const { data, error } = await query
-    if (error) return { ok: false, error: error.message }
-    const rows = (data ?? []).map((r) => mapRow(r as Record<string, unknown>))
-    const hasMore = rows.length > PAGE_SIZE
-    return { ok: true, contas: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao buscar contas a pagar.' }
   }

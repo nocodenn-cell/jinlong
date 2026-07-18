@@ -25,7 +25,8 @@ UI /admin/financeiro
 | `ReceivableWriter` | `receivableWriter.ts` | Wire criar título |
 | `ReceivableLiquidationService` | idem | Wire liquidar |
 | `PayablePaymentService` | `payablePayment.ts` | Wire pagar/cancelar |
-| `PayableReader` / `ReceivableReader` | — | P1 (listagens ainda nas actions) |
+| `PayableReader` | `payableReader.ts` | Wire `buscarContasPagarAction` (2026-07-18) |
+| `ReceivableReader` | `receivableReader.ts` | Wire `fetchContasReceberListagem` (2026-07-18) |
 
 ## Autoridade
 
@@ -41,7 +42,7 @@ UI /admin/financeiro
 |----|------------|------|
 | D-F1 | P1 | `criarCliente` no financeiro — não expandir |
 | D-F2 | P1 | Dual-layer gerente |
-| D-F-READ | P1 | Readers tipados pendentes |
+| D-F-READ | — | **Fechado** — PayableReader + ReceivableReader wire |
 
 ## Veredito
 

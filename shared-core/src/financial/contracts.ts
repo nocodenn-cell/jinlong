@@ -78,5 +78,24 @@ export type PayablePaymentService = {
   cancel(command: CancelPayableCommand): Promise<PayPayableResult>
 }
 
-/** Tipagem de leitura AR — adapter pode mapear listagem legada. */
-export type ReceivableListRow = ReceivableTitle
+/** Tipagem de leitura AR — inclui nome do cliente para listagem UI. */
+export type ReceivableListRow = ReceivableTitle & {
+  clienteNome: string | null
+}
+
+export type ListReceivablesQuery = {
+  opcao: 'mix' | 'ABERTO' | 'PARCIAL'
+  nomeCliente: string
+  q: string
+  de: string
+  ate: string
+  limite: number
+}
+
+export type ListReceivablesResult =
+  | { ok: true; titulos: ReceivableListRow[]; capped: boolean }
+  | { ok: false; error: string; code?: FinancialErrorCode }
+
+export type ReceivableReader = {
+  list(query: ListReceivablesQuery): Promise<ListReceivablesResult>
+}

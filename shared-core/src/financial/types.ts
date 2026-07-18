@@ -36,4 +36,7 @@ export type PayableTitle = {
   valorPago: number
   vencimento: string | null
   status: string
+  nfeNumero: string | null
+  nfeImportacaoId: string | null
+  criadoEm: string | null
 }

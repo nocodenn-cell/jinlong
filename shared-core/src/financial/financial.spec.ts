@@ -3,6 +3,8 @@ import type {
   ReceivableWriter,
   ReceivableLiquidationService,
   PayablePaymentService,
+  PayableReader,
+  ReceivableReader,
 } from './index'
 import { validateCreateReceivableInput } from './index'
 
@@ -43,5 +45,20 @@ describe('financial — contracts', () => {
 
   it('policy espelha validação legada', () => {
     expect(validateCreateReceivableInput({ clienteId: 'c1', valorTotal: 1 }).ok).toBe(true)
+  })
+
+  it('PayableReader e ReceivableReader tipam list', () => {
+    const payables: PayableReader = {
+      async list() {
+        return { ok: true, contas: [], hasMore: false }
+      },
+    }
+    const receivables: ReceivableReader = {
+      async list() {
+        return { ok: true, titulos: [], capped: false }
+      },
+    }
+    expect(payables.list).toBeTypeOf('function')
+    expect(receivables.list).toBeTypeOf('function')
   })
 })

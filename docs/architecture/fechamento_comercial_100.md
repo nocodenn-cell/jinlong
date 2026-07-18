@@ -50,8 +50,10 @@ Sales permanece orquestrador de venda/cancel (cross-cut inventory + cash A).
 | D-F1 | `criarCliente` no financeiro |
 | D-I3 | `garantirLinhaEstoque` |
 | D-C1 | Abertura caixa sem RPC |
-| D-C-MOV | Approve/cancel/estornar mov ainda no impl |
-| D-F-READ | Readers financial tipados |
+| D-C-MOV | Approve/cancel/estornar mov ainda no impl (write path) |
+| D-C-MOV-R | ~~MovementReader~~ **fechado** (screens-100) |
+| D-F-READ | ~~Readers financial~~ **fechado** (screens-100) |
+| G-FUNC | UI Funcionários inexistente — runbook |
 | D-i18n-CF | Catálogo completo cash/financial err_* |
 
 ### P2

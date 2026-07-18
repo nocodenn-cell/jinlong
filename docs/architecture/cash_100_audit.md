@@ -26,7 +26,7 @@ UI /caixa
 | `CashSessionReader` | `cashSession.ts` | Wire status |
 | `CashSessionWriter` | `cashSession.ts` | Wire abrir/fechar |
 | `CashMovementWriter` | `cashMovementWriter.ts` | Wire registrar |
-| `CashMovementReader` | — | P1 (listagem ainda no impl) |
+| `CashMovementReader` | `cashMovementReader.ts` | Wire `obterMovimentacoesCaixaImpl` (2026-07-18) |
 
 ## Autoridade
 
@@ -41,7 +41,7 @@ UI /caixa
 | ID | Severidade | Nota |
 |----|------------|------|
 | D-C1 | P1 | Abertura INSERT (não RPC) |
-| D-C-MOV-R | P1 | MovementReader não extraído |
+| D-C-MOV-R | — | **Fechado** — CashMovementReader + DTO path único |
 | D-C3 | P2 | revalidate path legado |
 
 ## Veredito
