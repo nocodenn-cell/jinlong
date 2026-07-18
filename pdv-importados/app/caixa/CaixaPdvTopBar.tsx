@@ -78,19 +78,19 @@ export function CaixaPdvTopBar({
       <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:w-auto sm:flex-nowrap">
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-xs sm:text-sm">
           <span
-            className="max-w-[11rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
+            className="max-w-44 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
             title={turnoText}
           >
             {turnoText}
           </span>
           <span
-            className="max-w-[14rem] truncate rounded-md border px-2 py-1 font-medium border-jl-border-1 bg-jl-surface-soft"
+            className="max-w-56 truncate rounded-md border px-2 py-1 font-medium border-jl-border-1 bg-jl-surface-soft"
             title={operadorText}
           >
             {operadorText}
           </span>
           <span
-            className="max-w-[12rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
+            className="max-w-48 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
             title={fundoText}
           >
             {fundoText}
@@ -99,7 +99,7 @@ export function CaixaPdvTopBar({
             <span
               title={printerDeviceName ?? "Impressora"}
               className={cn(
-                "max-w-[10rem] truncate rounded-md border px-2 py-1 text-xs font-medium",
+                "max-w-40 truncate rounded-md border px-2 py-1 text-xs font-medium",
                 printerStatus === "connected"
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
                   : printerStatus === "error"
