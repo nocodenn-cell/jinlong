@@ -98,17 +98,26 @@ Remoção física dos arquivos locais já ignorados: opcional (`git clean -Xf --
 
 ---
 
-## Teste operacional 3.1 (plano)
+## Teste operacional 3.1 — resultado
 
-Fluxo de negócio (não unitário):
+**Veredito: GO** (jinlong · 2026-07-18)
 
-1. **Cadastro** — Produto A: código barras, varejo, atacado, categoria, estoque inicial = 10  
-2. **Validar** — produto criado, estoque = 10, histórico/movimentação  
-3. **PDV** — buscar → carrinho → finalizar  
-4. **Validar** — baixa estoque, venda, pagamento  
-5. **Pós-venda** — estoque, venda, auditoria/movimentação  
+Script: `backend/supabase/scripts/ops_missao3_cadastro_venda.mjs`  
+Evidência: `backend/artifacts/missao3_ops_3_1_2026-07-18T1643.md`
 
-Resultado: ver seção anexada após execução (ou artefato `missao3_ops_3_1_*.md` / SQL log).
+| Passo | Resultado |
+|---|---|
+| Login gerente | OK |
+| Cadastro Produto A (varejo 10 / atacado 8 / estoque inicial 10) | OK `6e5ead95-…` |
+| Estoque = 10 | OK |
+| Histórico `movimentos_estoque_log` | OK (1 movimento no create) |
+| Login operador + caixa aberto | OK |
+| Finalizar venda DINHEIRO R$10 (`finalizar_venda_transacional_canonica_v4`) | OK `fc6c01a7-…` |
+| Baixa estoque 10 → 9 | OK |
+| Pagamento registrado | OK (1 linha DINHEIRO) |
+| Auditoria estoque pós-venda | OK (2 movimentos) |
+
+**CTA / publicação:** não alterado neste ciclo (congelado por decisão de UX).
 
 ---
 
