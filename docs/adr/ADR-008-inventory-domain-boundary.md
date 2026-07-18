@@ -235,10 +235,10 @@ Inventory 3+ Reader → AdjustmentService (RPC) → i18n borda → wire admin
 |------|--------|
 | Inventory 0 — inventário | Feito |
 | **ADR-008** (este documento) | Feito |
-| Inventory 2 — scaffold `shared-core/src/inventory` (types/contracts/policies; sem wire) | Pendente — missão explícita |
-| Inventory 3+ — Reader → Adjustment → i18n borda | Pendente |
-| Limpeza D-I3 (`garantirLinhaEstoque`) | Pendente — não bloqueia scaffold se I1 for respeitado em código novo |
-| Inventário físico formal (D-I2) | Pendente — missão de produto se piloto exigir |
+| Inventory 2 — scaffold `shared-core/src/inventory` (types/contracts/policies; sem wire) | Feito |
+| Inventory 3+ — Reader → Adjustment → MovementWriter → i18n borda | Feito — [inventory_100_audit.md](../architecture/inventory_100_audit.md) |
+| Limpeza D-I3 (`garantirLinhaEstoque`) | Pendente — P1; não bloqueia piloto |
+| Inventário físico formal (D-I2) | Pendente — P2; piloto usa `ACERTO_INVENTARIO` |
 
 ---
 

@@ -1,22 +1,17 @@
 'use server'
 
 /**
- * FastProduct Admin — Estoque (Fase 5) · actions
+ * FastProduct Admin — Estoque · actions
  *
- * A LISTAGEM e o AJUSTE reusam as queries EXISTENTES do gerente
- * (`obterListaEstoqueGerente` / `atualizarEstoqueProduto`) — nenhuma query nova
- * é adicionada para essas operações.
- *
- * A ÚNICA action nova é o KARDEX (histórico de movimentações), porque não havia
- * nenhuma leitura desse tipo no projeto e o Sheet de kardex da Fase 5 depende
- * dela. É READ-ONLY, escopada por loja (RLS + filtro explícito) e não altera
- * schema algum — só lê `movimentos_estoque_log`.
+ * LISTAGEM / AJUSTE: facades em `gerente/estoque/actions` (QueryService / AdjustmentService).
+ * KARDEX: InventoryMovementReader (SELECT `movimentos_estoque_log`).
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { assertAdminSession } from '@/lib/admin/auth/assertAdminSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { ROUTES } from '@shared-core/navigation/routes'
+import { createInventoryMovementReader } from '@/app/admin/estoque/inventoryMovementReader'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -45,22 +40,15 @@ export async function obterKardexProduto(produtoId: string): Promise<KardexMovim
 
   const supabase = await createClient()
   const loja = auth.session.lojaId ?? LOJA_MATRIZ_ID
+  const reader = createInventoryMovementReader(supabase, loja)
+  const result = await reader.listByProduct({ productId: produtoId, limit: KARDEX_LIMITE })
+  if (!result.ok) return []
 
-  const { data, error } = await supabase
-    .from('movimentos_estoque_log')
-    .select('id, created_at, tipo_codigo, quantidade_delta, observacao')
-    .eq('produto_id', produtoId)
-    .eq('loja_id', loja)
-    .order('created_at', { ascending: false })
-    .limit(KARDEX_LIMITE)
-
-  if (error || !data) return []
-
-  return data.map((r) => ({
-    id: String(r.id),
-    created_at: String(r.created_at),
-    tipo_codigo: String(r.tipo_codigo ?? ''),
-    quantidade_delta: Number(r.quantidade_delta ?? 0),
-    observacao: r.observacao == null ? null : String(r.observacao),
+  return result.movements.map((m) => ({
+    id: m.movementId,
+    created_at: m.createdAt,
+    tipo_codigo: m.type,
+    quantidade_delta: m.quantity,
+    observacao: m.reason,
   }))
 }

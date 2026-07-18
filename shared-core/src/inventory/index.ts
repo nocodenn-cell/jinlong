@@ -1,28 +1,57 @@
 /**
  * Domínio inventory (saldo físico / kardex) — barrel público.
- * Missão Inventory 2 / ADR-008.
+ * ADR-008 · Inventory 2–100
  *
- * Apps importam daqui. Sem I/O, sem cálculo de saldo, sem autoridade paralela.
- * Writers/ajustes: ports tipados — implementação em Inventory 3+.
+ * Leitura: InventoryReader · InventoryMovementReader · InventoryQueryService
+ * Escrita: InventoryAdjustmentService · InventoryMovementWriter
  */
 
 export type {
   InventoryItem,
   InventoryMovement,
   InventoryMovementType,
+  InventoryStockListOrdem,
+  InventoryStockListRow,
+  InventoryStockListVisao,
   LojaId,
   MovementId,
   ProductId,
 } from './types'
 
 export type {
+  InventoryAdjustReason,
+  InventoryErrorCode,
+  InventoryErrorParams,
+} from './errorCodes'
+export {
+  INVENTORY_ADJUST_REASONS,
+  INVENTORY_ERROR_CODES,
+  mapAjusteRpcMessageToCode,
+} from './errorCodes'
+
+export type {
   AdjustInventoryCommand,
   AdjustInventoryResult,
+  ConfirmRemessaCommand,
+  ConfirmRemessaResult,
+  ImportNfeCommand,
+  ImportNfeResult,
   InventoryAdjustmentService,
   InventoryBalanceResult,
   InventoryBalancesResult,
+  InventoryMovementReader,
   InventoryMovementWriter,
+  InventoryQueryService,
   InventoryReader,
+  InventoryStockListQuery,
+  InventoryStockListResult,
+  ListMovementsByProductQuery,
+  ListMovementsByProductResult,
   RegisterMovementCommand,
   RegisterMovementResult,
+  TransferStockCommand,
+  TransferStockResult,
 } from './contracts'
+
+export type { ValidateAdjustResult } from './policies/validateAdjustInventory'
+export { validateAdjustInventoryCommand } from './policies/validateAdjustInventory'
