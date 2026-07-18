@@ -31,7 +31,17 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
 
     await ensureCaixaAberto(page, '120')
 
-    await page.getByRole('button', { name: /Sangria (-)/ }).click()
+    // Layout clássico: sangria fica no menu Operações (não há mais botão "Sangria (-)").
+    await page.getByRole('button', { name: /^Operações$/i }).click()
+    // Nome acessível inclui atalho: "Sangria Ctrl+Shift+R"
+    await page.getByRole('menuitem', { name: /Sangria/i }).click()
+    await expect(page.getByRole('dialog')).toContainText(/Registrar sangria|Confirmar sangria/i, {
+      timeout: 10_000,
+    })
+    const confirmarAbertura = page.getByRole('button', { name: /^Confirmar$/i })
+    if (await confirmarAbertura.isVisible().catch(() => false)) {
+      await confirmarAbertura.click()
+    }
     await expect(page.getByRole('dialog')).toContainText(/Registrar sangria/i, { timeout: 10_000 })
     await page.getByRole('button', { name: /R\$\s*50\.00/ }).click()
     await page.getByRole('button', { name: /^Confirmar$/ }).click()
