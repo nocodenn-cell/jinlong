@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { DragonModal } from "@/components/ui/DragonModal"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 
@@ -48,18 +42,6 @@ export function CaixaMovimentacaoAcaoModal({
     queueMicrotask(() => motivoRef.current?.focus())
   }, [open, reset])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        onOpenChange(false)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, onOpenChange])
-
   const confirmar = useCallback(async () => {
     setErroLocal(null)
     const texto = motivo.trim()
@@ -75,44 +57,13 @@ export function CaixaMovimentacaoAcaoModal({
     onOpenChange(false)
   }, [motivo, m, onConfirm, onOpenChange])
 
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 dragon-glass-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onOpenChange(false)
-      }}
-    >
-      <Card
-        role="dialog"
-        aria-modal="true"
-        data-testid="caixa-movimentacao-acao-modal"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle className="text-lg app-surface-text">{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6 space-y-3 overflow-y-auto">
-          <label className="block text-xs app-muted">
-            {m.caixa.timeline_modal_motivo_label}
-            <textarea
-              ref={motivoRef}
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder={m.caixa.timeline_modal_motivo_placeholder}
-              className="mt-1 min-h-24 w-full rounded-md px-2 py-1.5 text-xs app-input"
-            />
-          </label>
-          {erroLocal && (
-            <p className="text-xs app-badge-warn rounded-md border px-2 py-1" role="alert">
-              {erroLocal}
-            </p>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t app-divider mt-2 pt-3">
+    <DragonModal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={title}
+      footer={
+        <>
           <Button
             type="button"
             variant="ghost"
@@ -130,8 +81,26 @@ export function CaixaMovimentacaoAcaoModal({
           >
             {processando ? m.caixa.movimentacao_processando : submitLabel}
           </Button>
-        </CardFooter>
-      </Card>
-    </div>
+        </>
+      }
+    >
+      <div data-testid="caixa-movimentacao-acao-modal" className="space-y-3">
+        <label className="block text-xs app-muted">
+          {m.caixa.timeline_modal_motivo_label}
+          <textarea
+            ref={motivoRef}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder={m.caixa.timeline_modal_motivo_placeholder}
+            className="mt-1 min-h-24 w-full rounded-md px-2 py-1.5 text-xs app-input"
+          />
+        </label>
+        {erroLocal && (
+          <p className="text-xs app-badge-warn rounded-md border px-2 py-1" role="alert">
+            {erroLocal}
+          </p>
+        )}
+      </div>
+    </DragonModal>
   )
 }
