@@ -7,6 +7,7 @@ import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { Select } from "@/components/ui/select"
 import {
   EXCESSO_PAGAMENTO_EPS,
   SALDO_PENDENTE_EPS,
@@ -85,18 +86,18 @@ function PagamentoPanel({
             className="flex flex-col gap-1.5 rounded-lg border p-2.5 border-border/60 bg-muted/20"
           >
             <div className="flex items-center gap-2">
-              <select
+              <Select
                 value={p.formaPagamento}
                 onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
                 aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
-                className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="h-auto focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
               >
                 {formasDisponiveis.map((f) => (
                   <option key={f} value={f}>
                     {labelFormaPagamentoVenda(f, m)}
                   </option>
                 ))}
-              </select>
+              </Select>
               {pagamentos.length > 1 ? (
                 <button
                   type="button"
