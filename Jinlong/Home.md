@@ -63,9 +63,10 @@
 
 - Teste E2E operacional de ponta a ponta adicionado (`e2e/fluxo-operacional-completo.spec.ts`, commit `17c68e5`) cobrindo o fluxo completo: fornecedor → produto → estoque → abrir caixa → venda → desconto → múltiplos pagamentos → baixa de estoque → financeiro → fechar caixa → auditoria.
 - **Validação:** `npm ci --omit=dev && next build` → exit 0, 14/14 páginas geradas, zero "Cannot find module". `typecheck` limpo. Vitest: 403/408 (5 falhas pré-existentes, sem relação).
-- **PR aberta:** [#169](https://github.com/nocodenn-cell/fastproduct/pull/169) (draft) — `claude/jinlong-go-live-audit-n37ble` → `main`.
+- **PR:** ✅ [#169](https://github.com/nocodenn-cell/fastproduct/pull/169) **mergeada em `main`** (commit `38d8b50`) — o fix sistêmico do build já está na branch principal.
 - **Deploy Vercel:** 🟢 **READY** — `pdv-importados-git-claude-jinlong-go-live-audit-n37ble-jinlong.vercel.app`.
-- CI do GitHub Actions segue com 10 falhas pré-existentes (gitleaks, RLS gates, edge-functions-typecheck, migration-drift, Tauri, outbox-contract) — infraestrutura fora de escopo, requer secrets/serviços não disponíveis no CI de branch.
+- CI do GitHub Actions segue com falhas pré-existentes (gitleaks, RLS gates, edge-functions-typecheck, migration-drift, Tauri, outbox-contract) — infraestrutura fora de escopo, requer secrets/serviços não disponíveis no CI de branch.
+- ⚠️ **Pendência aberta:** `feat/admin-screen-consolidation` já incorpora `main` até o commit `4f39afe` (via merge `888e725`), mas `main` avançou ~18 commits desde então — incluindo a própria PR #169. A branch de consolidação **ainda não tem** os fixes de build do Vercel (lockfile, Sentry, tsconfig excludes, `@types/bwip-js`). Recomenda-se novo merge de `main` antes de abrir PR de `feat/admin-screen-consolidation`.
 
 ### B) Merge `main` → `feat/admin-screen-consolidation` (10 conflitos resolvidos)
 
