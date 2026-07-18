@@ -118,7 +118,6 @@ SYNC_KEY=sua-chave-secreta
 3. Finalizar venda
 4. Gerente em `/gerente/vendas`
 5. Verificar venda e itens
-6. (Se staging usa `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic`) Confirmar aviso de pré-visualização do novo layout e validar visual com o cliente antes da Fase B
 
 ### T12: Desktop (só produção)
 1. Sync catálogo
@@ -133,7 +132,6 @@ SYNC_KEY=sua-chave-secreta
 ### Staging
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- (Opcional, homologação visual do caixa web) `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic` — ativa o layout “clínica PDV” em `/caixa` (barra superior estilo mockup, grelha a 3 colunas em ecrãs médios+). A interface mostra um **aviso de pré-visualização** (“novo layout opcional”) até o cliente validar; o passo seguinte no plano é a **Fase B** (carrinho + barra inferior). **Não** definir em produção até decisão explícita.
 
 ### Produção
 - `NEXT_PUBLIC_SUPABASE_URL`

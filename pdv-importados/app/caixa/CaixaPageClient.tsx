@@ -71,24 +71,13 @@ import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipe
 import { useThermalPrinter } from "@/hooks/useThermalPrinter"
 import { CaixaReciboModal, type ReciboVenda } from "@/app/caixa/CaixaReciboModal"
 import { CaixaScanPipelineDevPanel } from "@/app/caixa/scan-pipeline/CaixaScanPipelineDevPanel"
-import { CaixaPdvLayoutPreviewBanner } from "@/app/caixa/CaixaPdvLayoutPreviewBanner"
 import { CaixaPdvMetodoPagamentoSelector } from "@/app/caixa/CaixaPdvMetodoPagamentoSelector"
 import {
   metodoPagamentoToForma,
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
 import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
-import type { CaixaPdvLayoutVariant } from "@/app/caixa/CaixaPdvTopBar"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
-import { cn } from "@/lib/utils"
-
-/** Banner «PDV clássico» em /caixa: oculto em produção salvo `NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER=1`; em dev aparece salvo `0`/`false`. */
-function showClassicLayoutPreviewBanner(): boolean {
-  const v = process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT_PREVIEW_BANNER
-  if (v === "0" || v === "false") return false
-  if (v === "1" || v === "true") return true
-  return process.env.NODE_ENV === "development"
-}
 
 function newCupomSessionId(): string {
   return crypto.randomUUID()
@@ -138,9 +127,6 @@ type Props = {
 }
 
 export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, userId }: Props) {
-  const pdvLayoutVariant: CaixaPdvLayoutVariant =
-    process.env.NEXT_PUBLIC_CAIXA_PDV_LAYOUT === "default" ? "default" : "classic"
-
   const {
     mensagem,
     msgVendaOk,
@@ -182,7 +168,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     useState<number>(0)
   const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
-  const [summaryCollapsed, setSummaryCollapsed] = useState(true)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
     | null
     | { tipo: "sangria" }
@@ -329,17 +314,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }
   }, [focarCampoBusca])
 
-  /* Auto-expand/collapse financial summary based on cart state */
-  useEffect(() => {
-    if (itens.length === 0) {
-      /* Cart is empty → collapse summary */
-      setSummaryCollapsed(true)
-    } else if (summaryCollapsed && itens.length > 0) {
-      /* First item added → auto-expand summary */
-      setSummaryCollapsed(false)
-    }
-  }, [itens.length, summaryCollapsed])
-
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
       if (!somFeedbackAtivo) return
@@ -389,10 +363,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         value={metodoPagamento}
         onChange={setMetodoPagamento}
         disabled={pagamentoControlesDesabilitados}
-        variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
       />
     ),
-    [m, metodoPagamento, setMetodoPagamento, pagamentoControlesDesabilitados, pdvLayoutVariant],
+    [m, metodoPagamento, setMetodoPagamento, pagamentoControlesDesabilitados],
   )
 
   const limparEstadoDescontoGerente = useCallback(() => {
@@ -1067,17 +1040,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   })
 
   const pdvClassicAtalhos = useMemo(
-    () =>
-      pdvLayoutVariant === "classic"
-        ? {
-            onExcluirVenda: handleNovoCupom,
-            onFinalizarVenda: () => void handleFinalizar(),
-            abas: {
-              produto: () => focarCampoBusca(),
-            },
-          }
-        : null,
-    [pdvLayoutVariant, handleNovoCupom, handleFinalizar, focarCampoBusca],
+    () => ({
+      onExcluirVenda: handleNovoCupom,
+      onFinalizarVenda: () => void handleFinalizar(),
+      abas: {
+        produto: () => focarCampoBusca(),
+      },
+    }),
+    [handleNovoCupom, handleFinalizar, focarCampoBusca],
   )
 
   useCaixaKeyboardShortcuts({
@@ -1199,25 +1169,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   return (
     <>
-      <div
-        data-caixa-layout={pdvLayoutVariant}
-        className={cn(
-          "caixa-oriental-root h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5",
-          pdvLayoutVariant === "classic" ? "bg-background text-foreground" : "",
-        )}
-      >
-        {pdvLayoutVariant !== "classic" && (
-          <span
-            aria-hidden
-            className="pointer-events-none fixed right-6 bottom-6 select-none text-[7rem] leading-none font-black text-amber-400/[0.06] z-0"
-          >
-            龍
-          </span>
-        )}
+      <div className="caixa-oriental-root h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5 bg-background text-foreground">
         <CaixaHeader
           m={m}
           idioma={idioma}
-          layoutVariant={pdvLayoutVariant}
           operadorLabel={operadorLabel}
           caixaStatus={caixaStatus}
           carregandoStatus={carregandoStatus}
@@ -1229,14 +1184,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
         />
         <div className="flex-1 flex flex-col min-h-0">
-          {pdvLayoutVariant === "classic" && showClassicLayoutPreviewBanner() ? (
-            <CaixaPdvLayoutPreviewBanner m={m} />
-          ) : null}
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
             <div className="min-h-0 flex flex-col md:min-h-0">
               <CaixaPdvOperadorTabs
                 m={m}
-                layoutVariant={pdvLayoutVariant}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}
@@ -1251,33 +1202,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
-                  pdvLayoutVariant === "classic" ? (
-                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
-                      <div className="shrink-0">
-                        <CaixaSearchBar
-                          ref={buscaInputRef}
-                          m={m}
-                          codigo={codigo}
-                          onCodigoChange={setCodigo}
-                          onSubmit={handleAdicionar}
-                          onNovoCupom={handleNovoCupom}
-                          buscando={buscandoPipeline}
-                          carregandoRegras={carregandoRegras}
-
-                          somAtivo={somFeedbackAtivo}
-                          onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
-                          hideNovoCupom
-                          compact={codigo.trim().length > 0}
-                        />
-                      </div>
-                      <div className="shrink-0">
-                        <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                    <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                    <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
                         m={m}
@@ -1289,78 +1216,61 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         carregandoRegras={carregandoRegras}
                         somAtivo={somFeedbackAtivo}
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
+                        hideNovoCupom
+                        compact={codigo.trim().length > 0}
                       />
+                    </div>
+                    <div className="shrink-0">
                       <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
-                    </>
-                  )
+                    </div>
+                  </div>
                 }
               />
             </div>
-            <section className={cn("flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl md:min-h-0", pdvLayoutVariant === "classic" ? "border border-border bg-card" : "dragon-glass-card")}>
+            <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl md:min-h-0 border border-border bg-card">
               <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                 <CaixaCartList
                   m={m}
                   idioma={idioma}
                   itens={itens}
                   moeda={m.caixa.moeda_prefixo}
-                  listEmptyVariant={
-                    pdvLayoutVariant === "classic" ? "pdv_classic" : "default"
-                  }
+                  listEmptyVariant="pdv_classic"
                   onAlterarQuantidade={handleAlterarQuantidade}
                   onRemover={handleRemover}
                 />
               </div>
-              {pdvLayoutVariant === "classic" && (
-                <CaixaPdvCartSaleBar
-                  m={m}
-                 onExcluirVenda={handleNovoCupom}
-                  onFinalizar={handleFinalizarClick}
-                  finalizando={finalizando}
-                  movimentandoCaixa={movimentandoCaixa}
-                  caixaAberto={isCaixaAberto(caixaStatus)}
-                  itensLength={itens.length}
-                  buscando={buscandoPipeline}
-                  carregandoRegras={carregandoRegras}
-                  totalLiquidoComGerente={totalLiquidoComGerente}
-                  totalBruto={totalBruto}
-                  totalDesconto={totalDesconto}
-                  moedaPrefixo={m.caixa.moeda_prefixo}
-                />
-              )}
+              <CaixaPdvCartSaleBar
+                m={m}
+                onExcluirVenda={handleNovoCupom}
+                onFinalizar={handleFinalizarClick}
+                finalizando={finalizando}
+                movimentandoCaixa={movimentandoCaixa}
+                caixaAberto={isCaixaAberto(caixaStatus)}
+                itensLength={itens.length}
+                buscando={buscandoPipeline}
+                carregandoRegras={carregandoRegras}
+                totalLiquidoComGerente={totalLiquidoComGerente}
+                totalBruto={totalBruto}
+                totalDesconto={totalDesconto}
+                moedaPrefixo={m.caixa.moeda_prefixo}
+              />
             </section>
-            <aside
-              className={cn(
-                "hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex",
-                pdvLayoutVariant === "classic"
-                  ? "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]"
-                  : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
-              )}
-            >
+            <aside className="hidden min-h-0 flex flex-col gap-2 rounded-xl border p-3 text-sm md:flex border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] rounded-[1.4rem]">
               <button
                 type="button"
-                className={cn(
-                  "w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50",
-                  pdvLayoutVariant === "classic"
-                    ? "border-border bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "app-btn-accent",
-                )}
+                className="w-full rounded-md border px-3 py-2 text-center text-sm font-semibold disabled:pointer-events-none disabled:opacity-50 border-border bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => void handleNovaVendaOuEspera()}
                 disabled={carregandoRegras || finalizando}
               >
                 {m.caixa.nova_venda_espera}
               </button>
-              <div
-                className={cn(
-                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic" ? "border-border text-muted-foreground" : "border-jl-border-1 text-jl-fg-3",
-                )}
-              >
+              <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_operacoes}
               </div>
               <CaixaPdvOperacoesMenu
                 m={m}
                 idioma={idioma}
-                variant={pdvLayoutVariant === "classic" ? "classic" : "default"}
+                variant="classic"
                 carregandoRegras={carregandoRegras}
                 caixaStatus={caixaStatus}
                 caixaAberto={isCaixaAberto(caixaStatus)}
@@ -1378,19 +1288,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
               />
-              <div
-                className={cn(
-                  "border-t pt-2 text-xs font-semibold uppercase tracking-wide",
-                  pdvLayoutVariant === "classic" ? "border-border text-muted-foreground" : "border-jl-border-1 text-jl-fg-3",
-                )}
-              >
+              <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
               </div>
               <CaixaEmAbertoList
                 m={m}
                 vendas={vendasEmEspera}
                 carregando={carregandoEmEspera}
-                layoutVariant={pdvLayoutVariant === "classic" ? "classic" : "default"}
                 onRetomar={(id) => void handleRetomarEmEspera(id)}
                 onDescartar={(id) => void handleDescartarEmEspera(id)}
               />
@@ -1399,47 +1303,39 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                   m={m}
                   idioma={idioma}
                   caixaAberto={isCaixaAberto(caixaStatus)}
-                  layoutVariant={pdvLayoutVariant === "classic" ? "classic" : "default"}
                   refreshToken={turnoRefreshToken}
                 />
               </div>
             </aside>
           </div>
-          {pdvLayoutVariant === "classic" && (
-            <div
-              className={cn(
-                "border-t px-4 py-3 sm:px-6 md:hidden",
-                "border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]",
-              )}
-            >
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {m.caixa.rail_titulo_operacoes}
-              </div>
-              <div className="mt-2">
-                <CaixaPdvOperacoesMenu
-                  m={m}
-                  idioma={idioma}
-                  variant="classic"
-                  carregandoRegras={carregandoRegras}
-                  caixaStatus={caixaStatus}
-                  caixaAberto={isCaixaAberto(caixaStatus)}
-                  movimentandoCaixa={movimentandoCaixa}
-                  finalizando={finalizando}
-                  validandoGerente={validandoGerente}
-                  gerenteValidadoAte={gerenteValidadoAte}
-                  podeReimprimir={!!lastReciboRef.current}
-                  onAbrirSuprimento={handleAbrirSuprimento}
-                  onAbrirSangria={handleAbrirSangria}
-                  onValidarGerente={abrirGerenteModal}
-                  onHistorico={() => setHistoricoAberto(true)}
-                  onImprimirUltima={() => setReimprimirModalAberto(true)}
-                  onFecharCaixa={handleFecharCaixaClick}
-                  onAbrirCaixa={handleAbrirCaixaClick}
-                  onConsultaRapida={() => setConsultaRapidaAberta(true)}
-                />
-              </div>
+          <div className="border-t px-4 py-3 sm:px-6 md:hidden border-border bg-card text-foreground shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)]">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {m.caixa.rail_titulo_operacoes}
             </div>
-          )}
+            <div className="mt-2">
+              <CaixaPdvOperacoesMenu
+                m={m}
+                idioma={idioma}
+                variant="classic"
+                carregandoRegras={carregandoRegras}
+                caixaStatus={caixaStatus}
+                caixaAberto={isCaixaAberto(caixaStatus)}
+                movimentandoCaixa={movimentandoCaixa}
+                finalizando={finalizando}
+                validandoGerente={validandoGerente}
+                gerenteValidadoAte={gerenteValidadoAte}
+                podeReimprimir={!!lastReciboRef.current}
+                onAbrirSuprimento={handleAbrirSuprimento}
+                onAbrirSangria={handleAbrirSangria}
+                onValidarGerente={abrirGerenteModal}
+                onHistorico={() => setHistoricoAberto(true)}
+                onImprimirUltima={() => setReimprimirModalAberto(true)}
+                onFecharCaixa={handleFecharCaixaClick}
+                onAbrirCaixa={handleAbrirCaixaClick}
+                onConsultaRapida={() => setConsultaRapidaAberta(true)}
+              />
+            </div>
+          </div>
           {isCaixaAberto(caixaStatus) && (
             <CaixaMovimentacoesTimeline
               m={m}
@@ -1454,7 +1350,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           <CaixaFooter
             m={m}
             idioma={idioma}
-            layout={pdvLayoutVariant === "classic" ? "classic_summary" : "full"}
+            layout="classic_summary"
             onFinalizar={handleFinalizarClick}
             finalizando={finalizando}
             itensLength={itens.length}
@@ -1471,8 +1367,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
             valorDescontoGerente={valorDescontoGerente}
             totalLiquidoComGerente={totalLiquidoComGerente}
             moedaPrefixo={m.caixa.moeda_prefixo}
-            summaryCollapsed={summaryCollapsed && pdvLayoutVariant !== "classic"}
-            onToggleSummaryCollapse={() => setSummaryCollapsed(!summaryCollapsed)}
           />
         </div>
       </div>

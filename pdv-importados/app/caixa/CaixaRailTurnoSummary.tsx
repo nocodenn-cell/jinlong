@@ -11,19 +11,17 @@ type Props = {
   m: Mensagens
   idioma: Idioma
   caixaAberto: boolean
-  layoutVariant: "classic" | "default"
   /** Incrementing this triggers a refresh (e.g. after each finalized sale). */
   refreshToken?: number
 }
 
 const POLL_MS = 30_000
 
-function CaixaRailTurnoSummaryImpl({ m, caixaAberto, layoutVariant, refreshToken }: Props) {
+function CaixaRailTurnoSummaryImpl({ m, caixaAberto, refreshToken }: Props) {
   const [quantidadeVendas, setQuantidadeVendas] = useState(0)
   const [totalRecebido, setTotalRecebido] = useState(0)  // ✅ NOVO (Fase 6): Valor efetivamente recebido
   const [totalAReceber, setTotalAReceber] = useState(0)  // ✅ NOVO (Fase 6): Valor em crédito
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const classic = layoutVariant === "classic"
   useEffect(() => {
     if (!caixaAberto) return
 
@@ -45,8 +43,8 @@ function CaixaRailTurnoSummaryImpl({ m, caixaAberto, layoutVariant, refreshToken
     }
   }, [caixaAberto, refreshToken])
 
-  const labelCls = classic ? "text-muted-foreground" : "text-jl-fg-3"
-  const valueCls = classic ? "font-semibold tabular-nums text-foreground" : "font-semibold tabular-nums text-jl-fg-1"
+  const labelCls = "text-muted-foreground"
+  const valueCls = "font-semibold tabular-nums text-foreground"
 
   if (!caixaAberto) {
     return (
