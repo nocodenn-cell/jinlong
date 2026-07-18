@@ -10,7 +10,6 @@ type Props = Readonly<{
   value: MetodoPagamentoUi
   onChange: (value: MetodoPagamentoUi) => void
   disabled?: boolean
-  variant?: "default" | "classic"
 }>
 
 // Mapeamento usando as chaves corretas de m.caixa
@@ -26,22 +25,14 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
   value,
   onChange,
   disabled = false,
-  variant = "default",
 }: Props) {
-  const classic = variant === "classic"
-
   return (
     <div
       role="radiogroup"
       aria-label={m.caixa.pdv_metodo_pagamento_aria}
       className="flex flex-col gap-1.5"
     >
-      <span
-        className={cn(
-          "text-xs font-semibold uppercase tracking-wide",
-          classic ? "text-jl-fg-2" : "text-foreground/80",
-        )}
-      >
+      <span className="text-xs font-semibold uppercase tracking-wide text-jl-fg-2">
         {m.caixa.pdv_metodo_pagamento_titulo}
       </span>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
@@ -63,13 +54,9 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
                 // #32 hit-target de toque (tablet/touch): 44px (antes 36px) p/ os
                 // botões mais tocados do PDV — PIX/Cartão/Dinheiro/Débito.
                 "relative min-h-11 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
-                classic
-                  ? selected
-                    ? "border border-primary bg-primary/10 text-primary shadow-sm"
-                    : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev"
-                  : selected
-                    ? "app-btn-accent"
-                    : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 transition-colors hover:border-amber-400/70 hover:bg-amber-400/10 hover:text-jl-fg-1",
+                selected
+                  ? "border border-primary bg-primary/10 text-primary shadow-sm"
+                  : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
               )}
               onClick={() => onChange(op.id)}
             >
