@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
 import type { Mensagens } from '@/i18n/getMessages'
+import type { AppLocale } from '@shared-core/src/i18n'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
 import { isContaDesativada } from '@/core/auth/contaUsuario'
@@ -22,9 +23,11 @@ function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string 
 
 type Props = {
   messages: Mensagens
+  /** Locale BCP 47 resolvido pelo catalogAdapter (5.2c); opcional para testes. */
+  locale?: AppLocale
 }
 
-export function LoginForm({ messages: m }: Props) {
+export function LoginForm({ messages: m, locale }: Props) {
   const L = m.login
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -156,7 +159,10 @@ export function LoginForm({ messages: m }: Props) {
   }
 
   return (
-    <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center bg-black px-4 py-10 sm:py-14">
+    <div
+      className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center bg-black px-4 py-10 sm:py-14"
+      data-locale={locale}
+    >
       <div className="flex w-full max-w-[380px] flex-col items-center">
 
         {/* 1 — Hero dragão */}
