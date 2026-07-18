@@ -72,16 +72,17 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
         >
           {m.caixa.busca_label_principal}
         </label>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={onToggleSom}
           className={cn(
-            "rounded-md border border-jl-border-1 bg-jl-surface-soft font-semibold text-jl-fg-1 hover:bg-jl-surface-elev",
+            "h-auto rounded-md border border-jl-border-1 bg-jl-surface-soft font-semibold text-jl-fg-1 hover:bg-jl-surface-elev",
             compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-xs",
           )}
         >
           {somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
-        </button>
+        </Button>
       </div>
       <form
         onSubmit={onSubmit}
@@ -126,8 +127,8 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             className={cn(
               "app-btn-accent inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors",
               hideNovoCupom
-                ? "w-full sm:w-auto flex-1 sm:flex-none min-w-[7rem]"
-                : "flex-1 sm:flex-none min-w-[7rem]",
+                ? "w-full sm:w-auto flex-1 sm:flex-none min-w-28"
+                : "flex-1 sm:flex-none min-w-28",
               compact ? "px-2.5 py-1.5 text-sm" : "h-14 px-4 text-base",
             )}
           >
