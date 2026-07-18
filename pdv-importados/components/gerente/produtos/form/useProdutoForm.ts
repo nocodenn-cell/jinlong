@@ -102,7 +102,9 @@ export function useProdutoForm(
   open: boolean,
   produto: ProdutoGerenteRow | null,
   duplicarDe: ProdutoGerenteRow | null = null,
+  opts?: { codigoBarrasInicial?: string | null },
 ) {
+  const codigoBarrasInicial = opts?.codigoBarrasInicial?.trim() || ''
   const [nome, setNome] = useState('')
   const [codigoInterno, setCodigoInterno] = useState('')
   const [codigoBarras, setCodigoBarras] = useState('')
@@ -171,9 +173,12 @@ export function useProdutoForm(
     } else {
       // Cadastro em branco.
       resetFormState(null, setters)
+      if (codigoBarrasInicial) {
+        setCodigoBarras(codigoBarrasInicial)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, produto, duplicarDe])
+  }, [open, produto, duplicarDe, codigoBarrasInicial])
 
   const readOnly = useMemo(() => readOnlyFromProduto(produto), [produto])
 

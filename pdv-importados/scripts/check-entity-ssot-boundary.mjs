@@ -33,7 +33,6 @@ const ALLOWED_UI = {
   atualizarEstoqueProduto: [
     '/app/admin/estoque/',
     '/app/gerente/estoque/',
-    '/components/gerente/produtos/ProdutoFormModal.tsx',
   ],
   criarCliente: [],
   criarTituloReceber: [
@@ -56,12 +55,6 @@ const KNOWN_SHORTCUT_WARN = [
     file: '/components/gerente/produtos/form/fields/FornecedorCombobox.tsx',
     symbol: 'FornecedorEditarModal',
     reason: 'Cadastro inline de fornecedor no form de produto; preferir /admin/fornecedores',
-  },
-  {
-    file: '/components/gerente/produtos/ProdutoFormModal.tsx',
-    symbol: 'atualizarEstoqueProduto',
-    reason:
-      'EXCEÇÃO FECHADA: estoque inicial apenas no primeiro save (criação). Pós-criação → /admin/estoque. Não replicar.',
   },
 ]
 

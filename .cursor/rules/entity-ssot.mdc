@@ -36,18 +36,18 @@ Nenhuma **nova tela ou fluxo** pode criar ou alterar cadastros fora destas casas
 
 Cadastro rápido de fornecedor dentro do modal de produto. Preferir `/admin/fornecedores`.
 
-### `ProdutoFormModal` — estoque inicial **somente na criação**
+### Estoque inicial no cadastro (TX atômica)
 
-**Única exceção SSoT de estoque com escopo fechado:**
+Saldo inicial no create: RPC `criar_produto_com_estoque_inicial` (mig 270) — produto + `estoque` + opcional `ajustar_estoque_manual`/kardex na **mesma transação**. Idempotência via `client_request_id`.
 
 | Momento | Permitido | Proibido |
 |---------|-----------|----------|
-| **Durante criação** (primeiro save, produto ainda não existe) | `aplicarEstoqueInicial()` via `atualizarEstoqueProduto` com motivo `ACERTO_INVENTARIO` | — |
-| **Após criação** (produto já persistido) | — | Qualquer alteração de saldo fora de `/admin/estoque/*` |
+| **Durante criação** | Payload `estoque_inicial_*` → RPC atômica (actions/repo) | 2º round-trip parcial de estoque no modal |
+| **Após criação** | — | Qualquer alteração de saldo fora de `/admin/estoque/*` |
 
-**Regra para código novo:** não usar `ProdutoFormModal` / `aplicarEstoqueInicial` como precedente para ajustar estoque em outros fluxos (PDV, financeiro, recebimento manual, etc.). Pós-criação → sempre `/admin/estoque`.
+**PDV relâmpago:** `criarProdutoRelampagoPdv` em `/caixa` permite OPERADOR+ criar produto mínimo + estoque inicial (RPC). CRUD completo permanece GERENTE+ em `/admin/catalogo`.
 
-Implementação: `components/gerente/produtos/ProdutoFormModal.tsx` → `aplicarEstoqueInicial`.
+**Regra para código novo:** não reabrir ajuste de estoque no form de produto. Pós-criação → sempre `/admin/estoque`.
 
 ### Actions `app/gerente/*/actions.ts`
 

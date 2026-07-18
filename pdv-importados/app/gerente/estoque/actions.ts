@@ -17,6 +17,7 @@ import {
 import { AtualizarEstoqueSchema, EstoqueListagemInputSchema, ProdutoIdSchema } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
+import { mensagemErroAjusteEstoqueManual } from '@/lib/gerente/estoqueInicialCadastro'
 
 type LegacyEstoqueMutationResult<T = null> =
   | { success: true; data: T }
@@ -55,6 +56,13 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         const msg = e instanceof Error ? e.message : 'Falha na configuração do servidor de estoque.'
         throw new Error(mensagemErroComSecao('Estoque', msg))
       }
+      // service_role → auth.uid() nulo; RPC exige p_ator_id (mig 269).
+      const atorId = auth.session.userId
+      if (!atorId) {
+        throw new Error(
+          mensagemErroComSecao('Estoque', mensagemErroAjusteEstoqueManual('AJUSTE_ESTOQUE_AUTH')),
+        )
+      }
       const { error } = await admin.rpc('ajustar_estoque_manual', {
         p_produto_id: parsed.data.produto_id,
         p_loja_id: lojaId,
@@ -62,11 +70,12 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         p_estoque_minimo: parsed.data.estoque_minimo,
         p_motivo_codigo: parsed.data.motivo,
         p_observacao: observacao ?? undefined,
-        // service_role → auth.uid() nulo; ator = sessão já validada em assertGerenteSession
-        p_ator_id: auth.session.userId,
+        p_ator_id: atorId,
       })
       if (error) {
-        throw new Error(mensagemErroComSecao('Estoque', error.message))
+        throw new Error(
+          mensagemErroComSecao('Estoque', mensagemErroAjusteEstoqueManual(error.message)),
+        )
       }
       revalidatePath('/gerente/estoque')
       revalidatePath('/admin/estoque')
