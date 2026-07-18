@@ -169,6 +169,7 @@ export function CaixaMovimentacaoModal({
       <Card
         role="dialog"
         aria-modal="true"
+        data-testid="caixa-movimentacao-modal"
         className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >

@@ -52,8 +52,14 @@ export function CaixaSelecionarClienteModal({ aberto, onSelecionado, onCancelado
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-        <h2 className="mb-4 text-lg font-semibold">Selecionar Cliente</h2>
+      <div
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="caixa-selecionar-cliente-modal-title"
+        data-testid="caixa-selecionar-cliente-modal"
+      >
+        <h2 id="caixa-selecionar-cliente-modal-title" className="mb-4 text-lg font-semibold">Selecionar Cliente</h2>
 
         <div className="mb-4 flex flex-col gap-2">
           <label htmlFor="busca-cliente" className="text-sm font-medium">

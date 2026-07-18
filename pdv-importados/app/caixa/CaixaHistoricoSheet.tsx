@@ -398,6 +398,7 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
       role="dialog"
       aria-modal="true"
       aria-labelledby={tituloId}
+      data-testid="caixa-historico-sheet"
     >
       <div className="absolute inset-0 bg-black/60" onClick={fechar} aria-hidden />
       <div

@@ -91,6 +91,7 @@ export function CaixaValorNumericoModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="caixa-valor-modal-title"
+        data-testid="caixa-valor-numerico-modal"
         className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
