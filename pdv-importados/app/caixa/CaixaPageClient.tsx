@@ -1527,6 +1527,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       {/* ✅ NOVO (Fase 5b): Modal para seleção de cliente */}
       <CaixaSelecionarClienteModal
         aberto={selecionarClienteModalAberto}
+        m={m}
         onSelecionado={(id) => {
           setClienteId(id)
           setSelecionarClienteModalAberto(false)

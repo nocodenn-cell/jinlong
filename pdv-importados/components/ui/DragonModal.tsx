@@ -29,6 +29,12 @@ type Props = Readonly<{
   dismissable?: boolean
   /** rótulo acessível do botão fechar (i18n). */
   closeLabel?: string
+  /**
+   * `data-testid` aplicado à raiz do diálogo (envolve header, corpo e footer).
+   * Permite que testes escopem o modal inteiro — inclusive botões do `footer` —
+   * sem depender de wrapper interno. Capacidade genérica de primitivo.
+   */
+  'data-testid'?: string
 }>
 
 const sizeClass: Record<DragonModalSize, string> = {
@@ -70,6 +76,7 @@ export function DragonModal({
   children,
   dismissable = true,
   closeLabel = 'Fechar',
+  'data-testid': dataTestId,
 }: Props) {
   const titleId = useId()
   const subtitleId = useId()
@@ -154,6 +161,7 @@ export function DragonModal({
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={subtitle ? subtitleId : undefined}
+      data-testid={dataTestId}
     >
       <div
         className="dragon-glass-backdrop absolute inset-0"
