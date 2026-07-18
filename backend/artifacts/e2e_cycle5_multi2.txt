@@ -1,0 +1,88 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nocod\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WebServer] npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] Could not find `onRequestError` hook in instrumentation file. This indicates outdated 
+configuration of the Sentry SDK. Use `Sentry.captureRequestError` to instrument the `onRequestError` hook: 
+https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#errors-from-nested-react-server-components
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: It is recommended renaming your `sentry.client.config.js` file, or 
+moving its content to `instrumentation-client.ts`. When using Turbopack `sentry.client.config.js` will no longer work. 
+Read more about the `instrumentation-client.ts` file: 
+https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
+
+Running 5 tests using 1 worker
+
+(node:40104) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:28:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda DINHEIRO ponta a ponta com feedback e cupom limpo (32.2s)
+  ok 2 [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:66:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda fracionada (qty 0,5) finaliza e limpa cupom (12.7s)
+  ok 3 [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:32:7 ÔÇ║ Caixa ÔÇö venda multi-pagamento (painel Pgto cl├íssico) ÔÇ║ duas parcelas somam ao total e finaliza com sucesso (8.4s)
+[WebServer]  Ô¿» [Error: aborted]
+  x  4 [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:56:7 ÔÇ║ Caixa ÔÇö venda multi-pagamento (painel Pgto cl├íssico) ÔÇ║ nao vaza parcelas para proximo cupom apos finalizar e novo cupom (3.0m)
+  -  5 [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:92:7 ÔÇ║ Caixa ÔÇö venda multi-pagamento (painel Pgto cl├íssico) ÔÇ║ tres parcelas (DINHEIRO + PIX + CARTAO_DEBITO) somam ao total e finaliza
+
+
+  1) [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:56:7 ÔÇ║ Caixa ÔÇö venda multi-pagamento (painel Pgto cl├íssico) ÔÇ║ nao vaza parcelas para proximo cupom apos finalizar e novo cupom 
+
+    Test timeout of 180000ms exceeded.
+
+    Error: locator.click: Test timeout of 180000ms exceeded.
+    Call log:
+      - waiting for locator('#caixa-pdv-panel-pgto').or(getByRole('region', { name: /Pagamento|Parcelas do cupom|õ╗ÿµ¼¥/i })).getByRole('button', { name: /Adicionar forma|Adicionar parcela|µÀ╗Õèáõ╗ÿµ¼¥µû╣Õ╝Å|µû░Õó×õ╗ÿµ¼¥µû╣Õ╝Å/i })
+        - locator resolved to <button type="button" aria-label="Adicionar parcela de pagamento" class="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground">+ Adicionar forma</button>
+      - attempting click action
+        2 ├ù waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div role="dialog" aria-modal="true" aria-label="Recibo da venda" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">ÔÇª</div> intercepts pointer events
+        - retrying click action
+        - waiting 20ms
+        2 ├ù waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <div role="dialog" aria-modal="true" aria-label="Recibo da venda" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">ÔÇª</div> intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        291 ├ù waiting for element to be visible, enabled and stable
+            - element is visible, enabled and stable
+            - scrolling into view if needed
+            - done scrolling
+            - <div role="dialog" aria-modal="true" aria-label="Recibo da venda" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">ÔÇª</div> intercepts pointer events
+          - retrying click action
+            - waiting 500ms
+
+
+       at helpers\caixaPagamento.ts:42
+
+      40 |     name: /Adicionar forma|Adicionar parcela|µÀ╗Õèáõ╗ÿµ¼¥µû╣Õ╝Å|µû░Õó×õ╗ÿµ¼¥µû╣Õ╝Å/i,
+      41 |   })
+    > 42 |   await btn.click()
+         |             ^
+      43 | }
+      44 |
+      45 | export function parcelasNoPainel(page: Page) {
+        at adicionarParcela (C:\fastproduct\pdv-importados\e2e\helpers\caixaPagamento.ts:42:13)
+        at C:\fastproduct\pdv-importados\e2e\caixa-venda-multi-pagamento.spec.ts:83:27
+
+    Error Context: test-results\caixa-venda-multi-pagament-e9d48-apos-finalizar-e-novo-cupom-chromium\error-context.md
+
+  1 failed
+    [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:56:7 ÔÇ║ Caixa ÔÇö venda multi-pagamento (painel Pgto cl├íssico) ÔÇ║ nao vaza parcelas para proximo cupom apos finalizar e novo cupom 
+  1 did not run
+  3 passed (4.8m)

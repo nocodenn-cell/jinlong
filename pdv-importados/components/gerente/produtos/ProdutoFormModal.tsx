@@ -13,17 +13,30 @@ import {
   type OpcoesFiltrosProdutos,
 } from '@/app/gerente/produtos/actions'
 import { criarFaixaAtacado } from '@/app/gerente/produtos/precosAtacadoActions'
-import { atualizarEstoqueProduto } from '@/app/gerente/estoque/actions'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import {
+  parseEstoqueInicialIntent,
+  resolverFeedbackCadastroEstoque,
+} from '@/lib/gerente/estoqueInicialCadastro'
 import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
 import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
 import { ProdutoForm } from './form/ProdutoForm'
 import { useProdutoForm } from './form/useProdutoForm'
+import {
+  resolveProdutoFormStatusChip,
+  statusChipClassName,
+} from './produtoFormStatusChip'
+import {
+  emitCadastroDuration,
+  fetchSugestaoCadastro,
+  fontesLabel,
+} from '@/lib/gerente/cadastroSugestaoClient'
+import { isGtinLookupCandidate, normalizeGtinDigits } from '@/core/catalog/sugestaoCadastro'
 
 export type ProdutoFormModalProps = Readonly<{
   open: boolean
@@ -33,40 +46,24 @@ export type ProdutoFormModalProps = Readonly<{
   produto: ProdutoGerenteRow | null
   onSaved: () => void
   idioma?: Idioma
+  codigoBarrasInicial?: string | null
 }>
 
 type PosSalvarState = Readonly<{
   produtoId: string
   rascunho: boolean
   codigoBarras: string
+  /** Qty pedida era 0 (ou vazia) — aviso preventivo. */
   estoqueZerado: boolean
+  /** Pediu estoque inicial e a RPC falhou. */
+  estoqueInicialFalhou: boolean
+  estoqueErroDetalhe: string | null
 }>
 
 /**
- * EXCEÇÃO SSoT (entity-ssot.mdc): estoque inicial permitido **somente** no primeiro save,
- * quando o produto ainda não existe. Após criação, saldo manual → `/admin/estoque` apenas.
- * Não reutilizar este padrão em outros fluxos.
+ * EXCEÇÃO SSoT (entity-ssot.mdc): estoque inicial só no create — agora via RPC
+ * `criar_produto_com_estoque_inicial` (mesma TX). Pós-criação → `/admin/estoque`.
  */
-async function aplicarEstoqueInicial(
-  produtoId: string,
-  qtyRaw: string,
-  minRaw: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const qty = Number.parseInt(qtyRaw || '0', 10)
-  const min = Number.parseInt(minRaw || '0', 10)
-  if ((!Number.isFinite(qty) || qty <= 0) && (!Number.isFinite(min) || min <= 0)) {
-    return { ok: true }
-  }
-  const r = await atualizarEstoqueProduto({
-    produto_id: produtoId,
-    quantidade_atual: Number.isFinite(qty) && qty > 0 ? qty : 0,
-    estoque_minimo: Number.isFinite(min) && min > 0 ? min : 0,
-    motivo: 'ACERTO_INVENTARIO',
-    observacao: 'Estoque inicial no cadastro de produto',
-  })
-  if (r.ok) return { ok: true }
-  return { ok: false, error: r.error }
-}
 
 async function sincronizarFaixaAtacado(
   produtoId: string,
@@ -93,30 +90,99 @@ export function ProdutoFormModal({
   produto,
   onSaved,
   idioma = 'pt',
+  codigoBarrasInicial = null,
 }: ProdutoFormModalProps) {
   const p = m.produtos
   const editando = produto !== null
   const podeSalvarRascunho = !editando || produto?.status_publicacao === 'DRAFT'
+  const statusChip = resolveProdutoFormStatusChip(
+    editando,
+    produto?.status_publicacao,
+    p,
+  )
   const nomeRef = useRef<HTMLInputElement>(null)
+  const codigoBarrasRef = useRef<HTMLInputElement>(null)
+  const precoVarejoRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
   const [modoCompleto, setModoCompleto] = useState(editando)
+  const [sugestaoHint, setSugestaoHint] = useState<string | null>(null)
+  const [knownSuggestion, setKnownSuggestion] = useState(false)
+  const [fonteSugestao, setFonteSugestao] = useState<string | null>(null)
+  const openedAtRef = useRef(0)
+  const lastLookupGtinRef = useRef('')
 
-  const form = useProdutoForm(open, produto)
+  const form = useProdutoForm(open, produto, { codigoBarrasInicial })
 
   useEffect(() => {
     if (open) {
       setOpcoes(opcoesIniciais)
       setPosSalvar(null)
       setModoCompleto(editando)
+      setSugestaoHint(null)
+      setKnownSuggestion(false)
+      setFonteSugestao(null)
+      lastLookupGtinRef.current = ''
+      openedAtRef.current = Date.now()
     }
   }, [open, opcoesIniciais, editando])
 
+  const aplicarSugestaoBarcode = useCallback(
+    async (codigoOverride?: string) => {
+      if (editando) return
+      const codigo = (codigoOverride ?? form.codigoBarras).trim()
+      const digits = normalizeGtinDigits(codigo)
+      if (!isGtinLookupCandidate(digits)) return
+      if (digits === lastLookupGtinRef.current) return
+      lastLookupGtinRef.current = digits
+      setSugestaoHint(p.sugestao_buscando)
+      const s = await fetchSugestaoCadastro(codigo)
+      if (!s || s.jaCadastrado) {
+        setSugestaoHint(
+          s?.jaCadastrado ? m.caixa.cadastro_rapido_ja_cadastrado : null,
+        )
+        return
+      }
+      const fonte = fontesLabel(s.fontes)
+      setFonteSugestao(fonte)
+      setKnownSuggestion(s.knownSuggestion)
+      if (!form.nome.trim() && s.nome) form.setNome(s.nome)
+      if (form.precoVarejoInput.parse() == null && s.precoVarejo != null) {
+        form.precoVarejoInput.reset(s.precoVarejo)
+      }
+      if (!form.categoriaId && s.categoriaId) form.setCategoriaId(s.categoriaId)
+      if (!form.ncm.trim() && s.ncm) form.setNcm(s.ncm)
+      if (form.precoCustoInput.parse() == null && s.precoCusto != null) {
+        form.precoCustoInput.reset(s.precoCusto)
+      }
+      setSugestaoHint(
+        s.fontes[0] === 'nenhuma'
+          ? null
+          : p.sugestao_aplicada.replace('{{fonte}}', fonte),
+      )
+    },
+    [editando, form, p.sugestao_buscando, p.sugestao_aplicada, m.caixa.cadastro_rapido_ja_cadastrado],
+  )
+
   useEffect(() => {
     if (!open || posSalvar) return
-    requestAnimationFrame(() => nomeRef.current?.focus())
-  }, [open, produto?.id, posSalvar])
+    requestAnimationFrame(() => {
+      if (!editando) {
+        codigoBarrasRef.current?.focus()
+        codigoBarrasRef.current?.select()
+        return
+      }
+      nomeRef.current?.focus()
+    })
+  }, [open, produto?.id, posSalvar, editando])
+
+  useEffect(() => {
+    if (!open || editando || posSalvar) return
+    const inicial = (codigoBarrasInicial ?? '').trim()
+    if (!inicial || !isGtinLookupCandidate(normalizeGtinDigits(inicial))) return
+    void aplicarSugestaoBarcode(inicial)
+  }, [open, editando, posSalvar, codigoBarrasInicial, aplicarSugestaoBarcode])
 
   const fechar = useCallback(() => {
     if (saving) return
@@ -149,6 +215,15 @@ export function ProdutoFormModal({
         return
       }
 
+      const estoqueIntent = parseEstoqueInicialIntent(
+        form.estoqueInicialQty,
+        form.estoqueInicialMin,
+      )
+      const clientRequestId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : null
+
       const payload = {
         ...buildSubmitPayload({
           nome: form.nome,
@@ -176,6 +251,9 @@ export function ProdutoFormModal({
           precoCusto: form.precoCustoInput.parse(),
         }),
         ...(comoRascunho ? { status_publicacao: 'DRAFT' as const } : {}),
+        estoque_inicial_quantidade: estoqueIntent.quantidade,
+        estoque_inicial_minimo: estoqueIntent.minimo,
+        client_request_id: clientRequestId,
       }
 
       setSaving(true)
@@ -185,22 +263,35 @@ export function ProdutoFormModal({
           : await criarProduto(payload)
         if (!r.success) {
           emitGerenteToast({ kind: 'error', message: r.error })
+          if (!editando) {
+            emitCadastroDuration({
+              surface: 'catalogo_form',
+              openedAt: openedAtRef.current,
+              knownSuggestion,
+              fonteSugestao,
+              gtin: normalizeGtinDigits(form.codigoBarras) || null,
+              sucesso: false,
+            })
+          }
           return
         }
+        if (!editando) {
+          emitCadastroDuration({
+            surface: 'catalogo_form',
+            openedAt: openedAtRef.current,
+            knownSuggestion,
+            fonteSugestao,
+            gtin: normalizeGtinDigits(form.codigoBarras) || null,
+            sucesso: true,
+          })
+        }
 
-        let estoqueOk = true
-        let estoqueErro: string | null = null
+        const estoqueOk = true
+        const estoqueErro: string | null = null
         let faixaOk = true
         let faixaErro: string | null = null
         const createdId = !editando && r.data && 'id' in r.data ? r.data.id : null
         if (createdId) {
-          const estoqueRes = await aplicarEstoqueInicial(
-            createdId,
-            form.estoqueInicialQty,
-            form.estoqueInicialMin,
-          )
-          estoqueOk = estoqueRes.ok
-          if (!estoqueRes.ok) estoqueErro = estoqueRes.error
           const faixaRes = await sincronizarFaixaAtacado(
             createdId,
             precoAtacado,
@@ -210,20 +301,28 @@ export function ProdutoFormModal({
           if (!faixaRes.ok) faixaErro = faixaRes.error
         }
 
-        const msg = (() => {
-          if (comoRascunho) return p.criado_rascunho
-          if (!editando) return p.criado_publicado
-          if (produto.status_publicacao === 'DRAFT') return p.criado_publicado
-          return m.comum.sucesso
-        })()
-        emitGerenteToast({ kind: 'success', message: msg })
-        if (!estoqueOk) {
+        const feedbackEstoque = resolverFeedbackCadastroEstoque({
+          estoquePedido: Boolean(createdId) && estoqueIntent.deveAplicar,
+          estoqueOk,
+          estoqueErro,
+        })
+
+        if (feedbackEstoque.kind === 'produto_ok_estoque_falhou') {
+          const detalhe = feedbackEstoque.errorDetail
           emitGerenteToast({
             kind: 'error',
-            message: estoqueErro
-              ? `${p.erro_estoque_inicial} (${estoqueErro})`
+            message: detalhe
+              ? `${p.erro_estoque_inicial} (${detalhe})`
               : p.erro_estoque_inicial,
           })
+        } else {
+          const msg = (() => {
+            if (comoRascunho) return p.criado_rascunho
+            if (!editando) return p.criado_publicado
+            if (produto.status_publicacao === 'DRAFT') return p.criado_publicado
+            return m.comum.sucesso
+          })()
+          emitGerenteToast({ kind: 'success', message: msg })
         }
         if (!faixaOk) {
           emitGerenteToast({
@@ -235,19 +334,24 @@ export function ProdutoFormModal({
         }
         onSaved()
 
-        if (opts?.continuar && !editando) {
+        const estoqueFalhou = feedbackEstoque.kind === 'produto_ok_estoque_falhou'
+        if (opts?.continuar && !editando && !estoqueFalhou) {
           form.limparParaNovoCadastro()
-          requestAnimationFrame(() => nomeRef.current?.focus())
+          requestAnimationFrame(() => {
+            codigoBarrasRef.current?.focus()
+            codigoBarrasRef.current?.select()
+          })
           return
         }
 
         if (createdId) {
-          const qty = Number.parseInt(form.estoqueInicialQty || '0', 10)
           setPosSalvar({
             produtoId: createdId,
             rascunho: comoRascunho,
             codigoBarras: form.codigoBarras.trim(),
-            estoqueZerado: !Number.isFinite(qty) || qty <= 0,
+            estoqueZerado: !estoqueIntent.deveAplicar || estoqueIntent.quantidade <= 0,
+            estoqueInicialFalhou: estoqueFalhou,
+            estoqueErroDetalhe: estoqueErro,
           })
           return
         }
@@ -257,7 +361,17 @@ export function ProdutoFormModal({
         setSaving(false)
       }
     },
-    [editando, produto, form, p, m.comum.sucesso, onSaved, onOpenChange],
+    [
+      editando,
+      produto,
+      form,
+      p,
+      m.comum.sucesso,
+      onSaved,
+      onOpenChange,
+      knownSuggestion,
+      fonteSugestao,
+    ],
   )
 
   if (!open) return null
@@ -280,7 +394,11 @@ export function ProdutoFormModal({
         size="md"
         icon={Package}
         title={
-          posSalvar.rascunho ? p.pos_salvar_titulo_rascunho : p.pos_salvar_titulo_publicado
+          posSalvar.estoqueInicialFalhou
+            ? p.pos_salvar_titulo_estoque_pendente
+            : posSalvar.rascunho
+              ? p.pos_salvar_titulo_rascunho
+              : p.pos_salvar_titulo_publicado
         }
         dismissable
         closeLabel={m.comum.fechar}
@@ -291,18 +409,38 @@ export function ProdutoFormModal({
         }
       >
         <p className="text-sm text-jl-fg-2">
-          {posSalvar.rascunho ? p.criado_rascunho : p.criado_publicado}
+          {posSalvar.estoqueInicialFalhou
+            ? p.erro_estoque_inicial
+            : posSalvar.rascunho
+              ? p.criado_rascunho
+              : p.criado_publicado}
         </p>
-        {!posSalvar.rascunho && posSalvar.estoqueZerado ? (
+        {posSalvar.estoqueInicialFalhou && posSalvar.estoqueErroDetalhe ? (
+          <p className="mt-2 text-[11px] text-jl-fg-3">{posSalvar.estoqueErroDetalhe}</p>
+        ) : null}
+        {posSalvar.estoqueInicialFalhou ? (
+          <p className="mt-2 rounded-md border border-destructive/35 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+            {p.pos_salvar_hint_estoque_falhou}
+          </p>
+        ) : null}
+        {!posSalvar.rascunho &&
+        !posSalvar.estoqueInicialFalhou &&
+        posSalvar.estoqueZerado ? (
           <p className="mt-2 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-800">
             {p.aviso_estoque_zero_publicado}
           </p>
         ) : null}
-        <p className="mt-2 text-xs text-jl-fg-3">{p.pos_salvar_hint}</p>
+        {!posSalvar.estoqueInicialFalhou ? (
+          <p className="mt-2 text-xs text-jl-fg-3">{p.pos_salvar_hint}</p>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href={estoqueHref}
-            className="app-btn-neutral inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
+            className={
+              posSalvar.estoqueInicialFalhou
+                ? 'app-btn-accent inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold'
+                : 'app-btn-neutral inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold'
+            }
             onClick={fechar}
           >
             <Warehouse size={14} aria-hidden />
@@ -321,6 +459,8 @@ export function ProdutoFormModal({
     )
   }
 
+  const ctaPrincipalLabel = p.salvar_produto
+
   return (
     <DragonModal
       open
@@ -329,6 +469,16 @@ export function ProdutoFormModal({
       size="lg"
       icon={editando ? Pencil : Package}
       title={editando ? p.editar_modal_titulo : p.cadastro_produto}
+      subtitle={
+        <span className="flex flex-col gap-1">
+          <span
+            className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${statusChipClassName(statusChip.tone)}`}
+          >
+            {statusChip.label}
+          </span>
+          <span className="text-[11px] font-normal text-jl-fg-3">{statusChip.hint}</span>
+        </span>
+      }
       dismissable={!saving}
       closeLabel={m.comum.cancelar}
       footer={
@@ -350,7 +500,7 @@ export function ProdutoFormModal({
               disabled={saving}
               onClick={() => void salvar({ continuar: true })}
             >
-              {saving ? '…' : p.salvar_e_continuar}
+              {saving ? '…' : p.salvar_e_novo}
             </Button>
           ) : null}
           {podeSalvarRascunho ? (
@@ -370,11 +520,7 @@ export function ProdutoFormModal({
             disabled={saving}
             onClick={() => void salvar()}
           >
-            {saving
-              ? '…'
-              : editando && produto.status_publicacao !== 'DRAFT'
-                ? p.editar_modal_salvar
-                : p.publicar_no_pdv}
+            {saving ? '…' : ctaPrincipalLabel}
           </Button>
         </>
       }
@@ -396,7 +542,11 @@ export function ProdutoFormModal({
         onImagemChange={onSaved}
         idioma={idioma}
         nomeRef={nomeRef}
+        codigoBarrasRef={codigoBarrasRef}
+        precoVarejoRef={precoVarejoRef}
         onEnterSubmit={() => void salvar()}
+        onCodigoBarrasBlur={() => void aplicarSugestaoBarcode()}
+        sugestaoHint={sugestaoHint}
         {...form}
       />
     </DragonModal>

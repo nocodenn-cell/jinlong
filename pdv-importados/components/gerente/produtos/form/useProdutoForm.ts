@@ -98,7 +98,12 @@ function resetFormState(
   setters.setEstoqueInicialMin('')
 }
 
-export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null) {
+export function useProdutoForm(
+  open: boolean,
+  produto: ProdutoGerenteRow | null,
+  opts?: { codigoBarrasInicial?: string | null },
+) {
+  const codigoBarrasInicial = opts?.codigoBarrasInicial?.trim() || ''
   const [nome, setNome] = useState('')
   const [codigoInterno, setCodigoInterno] = useState('')
   const [codigoBarras, setCodigoBarras] = useState('')
@@ -155,8 +160,11 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       setEstoqueInicialQty,
       setEstoqueInicialMin,
     })
+    if (!produto && codigoBarrasInicial) {
+      setCodigoBarras(codigoBarrasInicial)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, produto])
+  }, [open, produto, codigoBarrasInicial])
 
   const readOnly = useMemo(() => readOnlyFromProduto(produto), [produto])
 

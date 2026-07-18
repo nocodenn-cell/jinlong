@@ -1,0 +1,25 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nocod\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WebServer] npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] Could not find `onRequestError` hook in instrumentation file. This indicates outdated 
+configuration of the Sentry SDK. Use `Sentry.captureRequestError` to instrument the `onRequestError` hook: 
+https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#errors-from-nested-react-server-components
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: It is recommended renaming your `sentry.client.config.js` file, or 
+moving its content to `instrumentation-client.ts`. When using Turbopack `sentry.client.config.js` will no longer work. 
+Read more about the `instrumentation-client.ts` file: 
+https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client

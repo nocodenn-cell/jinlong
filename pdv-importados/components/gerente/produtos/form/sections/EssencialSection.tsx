@@ -3,14 +3,24 @@
 import type { RefObject } from 'react'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
+import { focusOnEnter } from '../focusOnEnter'
 import type { UnidadeCode } from '../produtoForm.types'
 
 type Props = Readonly<{
   nomeRef?: RefObject<HTMLInputElement | null>
-  onEnterSubmit?: () => void
+  codigoBarrasRef?: RefObject<HTMLInputElement | null>
+  precoVarejoRef?: RefObject<HTMLInputElement | null>
+  onCodigoBarrasBlur?: () => void
+  sugestaoHint?: string | null
 }>
 
-export function EssencialSection({ nomeRef, onEnterSubmit }: Props) {
+export function EssencialSection({
+  nomeRef,
+  codigoBarrasRef,
+  precoVarejoRef,
+  onCodigoBarrasBlur,
+  sugestaoHint,
+}: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const { disabled, inputClassName, inputMonoClassName, selectClassName } = ctx
@@ -18,8 +28,29 @@ export function EssencialSection({ nomeRef, onEnterSubmit }: Props) {
   return (
     <section aria-labelledby="produto-secao-essencial">
       <ProdutoFormSectionHeading title={p.secao_essencial} />
-      <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_essencial_obrigatorios}</p>
+      <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_cadastro_scanner}</p>
+      <p className="mt-0.5 text-[11px] text-jl-fg-3">{p.hint_essencial_obrigatorios}</p>
       <div id="produto-secao-essencial" className="mt-3 space-y-3">
+        <label className="block text-xs font-medium text-jl-fg-3">
+          {p.codigo_barras}
+          <input
+            ref={codigoBarrasRef}
+            className={`${inputMonoClassName} mt-1`}
+            value={ctx.codigoBarras}
+            onChange={(e) => ctx.setCodigoBarras(e.target.value)}
+            disabled={disabled}
+            placeholder={p.codigo_barras_opcional}
+            autoComplete="off"
+            data-field="codigo_barras"
+            onBlur={() => onCodigoBarrasBlur?.()}
+            onKeyDown={(e) => focusOnEnter(e, nomeRef?.current)}
+          />
+          <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_codigo_barras}</span>
+          {sugestaoHint ? (
+            <span className="mt-1 block text-[10px] font-medium text-jl-accent">{sugestaoHint}</span>
+          ) : null}
+        </label>
+
         <label className="block text-xs font-medium text-jl-fg-3">
           {p.nome} *
           <input
@@ -30,22 +61,14 @@ export function EssencialSection({ nomeRef, onEnterSubmit }: Props) {
             disabled={disabled}
             placeholder={p.nome}
             autoComplete="off"
-            onKeyDown={
-              onEnterSubmit
-                ? (e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      onEnterSubmit()
-                    }
-                  }
-                : undefined
-            }
+            data-field="nome"
+            onKeyDown={(e) => focusOnEnter(e, precoVarejoRef?.current)}
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs font-medium text-jl-fg-3">
-            {p.unidade_medida} *
+            {p.unidade_medida}
             <select
               className={`${selectClassName} mt-1`}
               value={ctx.unidadeMedida}
@@ -58,18 +81,6 @@ export function EssencialSection({ nomeRef, onEnterSubmit }: Props) {
               <option value="FD">{p.unidade_medida_fd}</option>
               <option value="M">{p.unidade_medida_m}</option>
             </select>
-          </label>
-          <label className="block text-xs font-medium text-jl-fg-3">
-            {p.codigo_barras}
-            <input
-              className={`${inputMonoClassName} mt-1`}
-              value={ctx.codigoBarras}
-              onChange={(e) => ctx.setCodigoBarras(e.target.value)}
-              disabled={disabled}
-              placeholder={p.codigo_barras_opcional}
-              autoComplete="off"
-            />
-            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_codigo_barras}</span>
           </label>
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.codigo_interno_label}

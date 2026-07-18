@@ -49,6 +49,12 @@ export interface NovoProdutoInput {
   cest?: string | null
   cst_pis?: string | null
   cst_cofins?: string | null
+  /** Quantidade inicial (opcional) — aplicada na mesma TX do create (RPC 270). */
+  estoque_inicial_quantidade?: number
+  /** Estoque mínimo inicial (opcional) — mesma TX. */
+  estoque_inicial_minimo?: number
+  /** Idempotência de retry do cadastro (UUID do client). */
+  client_request_id?: string | null
 }
 
 export interface ProdutoRepositoryPort {

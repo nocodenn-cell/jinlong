@@ -12,16 +12,23 @@ export type NovoProdutoModalProps = Readonly<{
   opcoes: OpcoesFiltrosProdutos
   onCriado: () => void
   idioma?: Idioma
+  codigoBarrasInicial?: string | null
 }>
 
 /** Wrapper fino — create usa o mesmo ProdutoFormModal que editar. */
-export function NovoProdutoModal({ onCriado, idioma, ...props }: NovoProdutoModalProps) {
+export function NovoProdutoModal({
+  onCriado,
+  idioma,
+  codigoBarrasInicial,
+  ...props
+}: NovoProdutoModalProps) {
   return (
     <ProdutoFormModal
       {...props}
       produto={null}
       onSaved={onCriado}
       idioma={idioma}
+      codigoBarrasInicial={codigoBarrasInicial}
     />
   )
 }

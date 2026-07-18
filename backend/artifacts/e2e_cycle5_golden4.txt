@@ -1,0 +1,67 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nocod\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WebServer] npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] Could not find `onRequestError` hook in instrumentation file. This indicates outdated 
+configuration of the Sentry SDK. Use `Sentry.captureRequestError` to instrument the `onRequestError` hook: 
+https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#errors-from-nested-react-server-components
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: It is recommended renaming your `sentry.client.config.js` file, or 
+moving its content to `instrumentation-client.ts`. When using Turbopack `sentry.client.config.js` will no longer work. 
+Read more about the `instrumentation-client.ts` file: 
+https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
+
+Running 2 tests using 1 worker
+
+(node:56608) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  1 [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:28:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda DINHEIRO ponta a ponta com feedback e cupom limpo (35.3s)
+  -  2 [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:61:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda fracionada (qty 0,5) finaliza e limpa cupom
+
+
+  1) [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:28:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda DINHEIRO ponta a ponta com feedback e cupom limpo 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator: getByRole('button', { name: /Abrir caixa|Õ╝ÇÕÉ»µöÂÚôÂÕÅ░/i })
+    Expected: enabled
+    Timeout: 25000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeEnabled" with timeout 25000ms
+      - waiting for getByRole('button', { name: /Abrir caixa|Õ╝ÇÕÉ»µöÂÚôÂÕÅ░/i })
+        5 ├ù locator resolved to <button disabled type="button" aria-busy="false" class="inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3 text-xs font-semibold sm:text-sm border-jl-border-1">Abrir caixa</button>
+          - unexpected value "disabled"
+
+
+       at helpers\ensureCaixaAberto.ts:36
+
+      34 |   }
+      35 |
+    > 36 |   await expect(abrir).toBeEnabled({ timeout: 25_000 })
+         |                       ^
+      37 |   await abrir.click()
+      38 |
+      39 |   const turnoModal = page.getByTestId('caixa-abrir-turno-modal')
+        at ensureCaixaAberto (C:\fastproduct\pdv-importados\e2e\helpers\ensureCaixaAberto.ts:36:23)
+        at C:\fastproduct\pdv-importados\e2e\caixa-golden-flow-cycle5.spec.ts:33:19
+
+    Error Context: test-results\caixa-golden-flow-cycle5-C-3eb01--com-feedback-e-cupom-limpo-chromium\error-context.md
+
+  1 failed
+    [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:28:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda DINHEIRO ponta a ponta com feedback e cupom limpo 
+  1 did not run

@@ -1,0 +1,64 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nocod\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WebServer] npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] Could not find `onRequestError` hook in instrumentation file. This indicates outdated 
+configuration of the Sentry SDK. Use `Sentry.captureRequestError` to instrument the `onRequestError` hook: 
+https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#errors-from-nested-react-server-components
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: It is recommended renaming your `sentry.client.config.js` file, or 
+moving its content to `instrumentation-client.ts`. When using Turbopack `sentry.client.config.js` will no longer work. 
+Read more about the `instrumentation-client.ts` file: 
+https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
+
+Running 2 tests using 1 worker
+
+(node:51920) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  1 [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:28:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda DINHEIRO ponta a ponta com feedback e cupom limpo (1.0m)
+  -  2 [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:61:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda fracionada (qty 0,5) finaliza e limpa cupom
+
+
+  1) [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:28:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda DINHEIRO ponta a ponta com feedback e cupom limpo 
+
+    Error: Login n├úo navegou para /\/caixa/ (btn=Entrar)
+
+       at helpers\login.ts:20
+
+      18 |     const btn = (await page.getByRole('button', { name: /Entrar|Entrando/i }).textContent().catch(() => null))?.trim()
+      19 |     const detail = [alertTxt && `alert=${alertTxt}`, btn && `btn=${btn}`].filter(Boolean).join(' | ')
+    > 20 |     throw new Error(
+         |           ^
+      21 |       `Login n├úo navegou para ${postLoginUrl}${detail ? ` (${detail})` : ''}`,
+      22 |       { cause: err },
+      23 |     )
+        at waitPostLogin (C:\fastproduct\pdv-importados\e2e\helpers\login.ts:20:11)
+        at loginCaixaOperador (C:\fastproduct\pdv-importados\e2e\helpers\login.ts:50:3)
+        at C:\fastproduct\pdv-importados\e2e\caixa-golden-flow-cycle5.spec.ts:25:5
+    [cause]: TimeoutError: page.waitForURL: Timeout 60000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation until "domcontentloaded"
+      navigated to "http://localhost:3000/login"
+    ============================================================
+        at waitPostLogin (C:\fastproduct\pdv-importados\e2e\helpers\login.ts:15:16)
+        at loginCaixaOperador (C:\fastproduct\pdv-importados\e2e\helpers\login.ts:50:9)
+        at C:\fastproduct\pdv-importados\e2e\caixa-golden-flow-cycle5.spec.ts:25:5
+
+    Error Context: test-results\caixa-golden-flow-cycle5-C-3eb01--com-feedback-e-cupom-limpo-chromium\error-context.md
+
+  1 failed
+    [chromium] ÔÇ║ e2e\caixa-golden-flow-cycle5.spec.ts:28:7 ÔÇ║ Caixa ÔÇö Golden Flow Cycle 5 (browser) ÔÇ║ venda DINHEIRO ponta a ponta com feedback e cupom limpo 
+  1 did not run

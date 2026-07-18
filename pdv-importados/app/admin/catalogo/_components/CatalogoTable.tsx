@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
-import { Eye, ImageIcon, Pencil } from 'lucide-react'
+import { adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
+import { ImageIcon, Pencil } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { StatusPublicacao } from '@/core/ports/produto'
@@ -53,27 +53,6 @@ const STATUS_BADGE_CLASS: Record<StatusPublicacao, string> = {
   DRAFT: 'admin-v2-badge-warning',
   PUBLICADO: 'admin-v2-badge-success',
   INATIVO: 'admin-v2-badge-muted',
-}
-
-function ActionBtn({
-  href,
-  label,
-  children,
-}: {
-  href: string
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
-    >
-      {children}
-    </Link>
-  )
 }
 
 export function CatalogoTable({
@@ -267,9 +246,6 @@ export function CatalogoTable({
             >
               <Pencil size={13} aria-hidden />
             </button>
-            <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
-              <Eye size={13} aria-hidden />
-            </ActionBtn>
           </div>
         )}
       />

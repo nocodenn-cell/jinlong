@@ -137,14 +137,16 @@ describe('consolidação pós-audit — guarda SSoT', () => {
     }
   })
 
-  it('exceção ProdutoFormModal documentada (estoque só na criação)', () => {
+  it('estoque inicial no create é TX atômica (RPC 270), não 2º round-trip no modal', () => {
     const modal = read('components/gerente/produtos/ProdutoFormModal.tsx')
     expect(modal).toContain('EXCEÇÃO SSoT')
-    expect(modal).toContain('aplicarEstoqueInicial')
+    expect(modal).toContain('criar_produto_com_estoque_inicial')
+    expect(modal).toContain('estoque_inicial_quantidade')
     expect(modal).toContain('sincronizarFaixaAtacado')
-    expect(modal).toContain('erro_faixa_inicial')
+    expect(modal).not.toContain('aplicarEstoqueInicial')
     const rule = fs.readFileSync(path.resolve(ROOT, '..', '.cursor', 'rules', 'entity-ssot.mdc'), 'utf8')
-    expect(rule).toContain('somente na criação')
+    expect(rule).toContain('criar_produto_com_estoque_inicial')
+    expect(rule).toContain('TX atômica')
   })
 
   it('script check:entity-ssot registrado no package.json', () => {

@@ -23,7 +23,11 @@ type Props = ProdutoFormShellProps &
   UseProdutoFormReturn &
   Readonly<{
     nomeRef?: RefObject<HTMLInputElement | null>
+    codigoBarrasRef?: RefObject<HTMLInputElement | null>
+    precoVarejoRef?: RefObject<HTMLInputElement | null>
     onEnterSubmit?: () => void
+    onCodigoBarrasBlur?: () => void
+    sugestaoHint?: string | null
     idioma: Idioma
     modoCompleto: boolean
     onToggleModoCompleto: () => void
@@ -120,10 +124,17 @@ export function ProdutoForm(props: Props) {
 
         <EssencialSection
           nomeRef={props.nomeRef}
+          codigoBarrasRef={props.codigoBarrasRef}
+          precoVarejoRef={props.precoVarejoRef}
+          onCodigoBarrasBlur={props.onCodigoBarrasBlur}
+          sugestaoHint={props.sugestaoHint}
+        />
+        <PrecosSection
+          modoCompleto={props.modoCompleto}
+          precoVarejoRef={props.precoVarejoRef}
           onEnterSubmit={props.onEnterSubmit}
         />
-        <PrecosSection />
-        <EstoqueSection />
+        <EstoqueSection modoCompleto={props.modoCompleto} />
 
         <button
           type="button"

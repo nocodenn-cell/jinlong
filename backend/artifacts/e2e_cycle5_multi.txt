@@ -1,0 +1,64 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\nocod\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WebServer] npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. 
+Use webpack.treeshake.removeDebugLogging instead.
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: automaticVercelMonitors is deprecated and will be removed in a 
+future version. Use webpack.automaticVercelMonitors instead.
+[WebServer] [@sentry/nextjs] Could not find `onRequestError` hook in instrumentation file. This indicates outdated 
+configuration of the Sentry SDK. Use `Sentry.captureRequestError` to instrument the `onRequestError` hook: 
+https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#errors-from-nested-react-server-components
+[WebServer] [@sentry/nextjs] DEPRECATION WARNING: It is recommended renaming your `sentry.client.config.js` file, or 
+moving its content to `instrumentation-client.ts`. When using Turbopack `sentry.client.config.js` will no longer work. 
+Read more about the `instrumentation-client.ts` file: 
+https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
+
+Running 4 tests using 1 worker
+
+(node:37612) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  1 [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:21:7 ÔÇ║ Caixa ÔÇö venda com split DINHEIRO + PIX (UI de parcelas removida do footer) ÔÇ║ duas parcelas somam ao total e finaliza com sucesso (44.6s)
+  -  2 [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:73:7 ÔÇ║ Caixa ÔÇö venda com split DINHEIRO + PIX (UI de parcelas removida do footer) ÔÇ║ nao vaza parcelas para proximo cupom apos finalizar e novo cupom
+  -  3 [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:137:7 ÔÇ║ Caixa ÔÇö venda com split DINHEIRO + PIX (UI de parcelas removida do footer) ÔÇ║ tres parcelas (DINHEIRO + PIX + CARTAO_DEBITO) somam ao total e finaliza
+  -  4 [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:193:7 ÔÇ║ Caixa ÔÇö venda com split DINHEIRO + PIX (UI de parcelas removida do footer) ÔÇ║ venda com pagamento parcial (apenas 40% do total)
+
+
+  1) [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:21:7 ÔÇ║ Caixa ÔÇö venda com split DINHEIRO + PIX (UI de parcelas removida do footer) ÔÇ║ duas parcelas somam ao total e finaliza com sucesso 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('footer').getByText(/Pagamento|õ╗ÿµ¼¥/i)
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('footer').getByText(/Pagamento|õ╗ÿµ¼¥/i)
+
+
+      45 |
+      46 |     const footer = page.locator('footer')
+    > 47 |     await expect(footer.getByText(/Pagamento|õ╗ÿµ¼¥/i)).toBeVisible()
+         |                                                     ^
+      48 |
+      49 |     await footer.getByRole('button', { name: /^\+$/ }).click()
+      50 |
+        at C:\fastproduct\pdv-importados\e2e\caixa-venda-multi-pagamento.spec.ts:47:53
+
+    Error Context: test-results\caixa-venda-multi-pagament-9a352-otal-e-finaliza-com-sucesso-chromium\error-context.md
+
+  1 failed
+    [chromium] ÔÇ║ e2e\caixa-venda-multi-pagamento.spec.ts:21:7 ÔÇ║ Caixa ÔÇö venda com split DINHEIRO + PIX (UI de parcelas removida do footer) ÔÇ║ duas parcelas somam ao total e finaliza com sucesso 
+  3 did not run

@@ -50,6 +50,7 @@ import { CaixaPdvOperacoesMenu } from "@/app/caixa/CaixaPdvOperacoesMenu"
 import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
 import { CaixaEmAbertoList } from "@/app/caixa/CaixaEmAbertoList"
 import { CaixaConsultaRapidaModal } from "@/app/caixa/CaixaConsultaRapidaModal"
+import { CadastroProdutoRelampagoModal } from "@/components/gerente/produtos/CadastroProdutoRelampagoModal"
 import { CaixaHistoricoSheet } from "@/app/caixa/CaixaHistoricoSheet"
 import { CaixaAbrirTurnoModal } from "@/app/caixa/CaixaAbrirTurnoModal"
 import {
@@ -191,6 +192,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   >(null)
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
   const [consultaRapidaAberta, setConsultaRapidaAberta] = useState(false)
+  const [cadastroRapidoCodigo, setCadastroRapidoCodigo] = useState<string | null>(null)
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [abrirTurnoAberto, setAbrirTurnoAberto] = useState(false)
   const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>([])
@@ -377,7 +379,27 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       },
       [],
     ),
+    onProdutoNaoEncontrado: useCallback((codigo: string) => {
+      setCadastroRapidoCodigo(codigo)
+    }, []),
   })
+
+  const handleSalvoCadastroRapido = useCallback(
+    (codigo: string) => {
+      setCadastroRapidoCodigo(null)
+      setCodigo(codigo)
+      const sid = cupomSessionIdRef.current
+      const r = enqueueLeitura(codigo, {
+        source: "form_submit",
+        cupomSessionId: sid,
+        correlationId: sid,
+      })
+      if (r && !r.ok && r.reason === "queue_full") {
+        setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
+      }
+    },
+    [enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem, setCodigo],
+  )
 
   const pagamentoControlesDesabilitados =
     finalizando || buscandoPipeline || carregandoRegras
@@ -1606,6 +1628,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         onOpenChange={setConsultaRapidaAberta}
         m={m}
         termoInicial={codigo}
+      />
+      <CadastroProdutoRelampagoModal
+        open={cadastroRapidoCodigo != null}
+        onOpenChange={(open) => {
+          if (!open) setCadastroRapidoCodigo(null)
+        }}
+        codigoBarras={cadastroRapidoCodigo ?? ""}
+        m={m}
+        onSalvoEVender={handleSalvoCadastroRapido}
       />
       <CaixaHistoricoSheet
         open={historicoAberto}

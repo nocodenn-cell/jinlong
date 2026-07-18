@@ -5,104 +5,36 @@ import type {
   StatusPublicacao,
 } from '@/core/ports/produto'
 import {
-  defaultStatusNovoProduto,
   dualWriteFromStatus,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
-import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import {
+  executarCriarProdutoComEstoqueInicial,
+  type CriarProdutoEstoqueInput,
+} from '@/lib/adapters/supabase/criarProdutoComEstoqueInicialRpc'
 
 export function createProdutoRepository(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
 ): ProdutoRepositoryPort {
   return {
     async createWithDefaultEstoque(input: NovoProdutoInput) {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      let lojaId = LOJA_MATRIZ_ID
-      if (user) {
-        const { data: urow } = await supabase
-          .from('usuarios')
-          .select('loja_id')
-          .eq('id', user.id)
-          .maybeSingle()
-        if (urow?.loja_id) lojaId = urow.loja_id as string
-      }
-
-      const pa =
-        input.preco_atacado !== undefined && input.preco_atacado !== null
-          ? Number(input.preco_atacado)
-          : null
-
-      const pc =
-        input.preco_custo !== undefined && input.preco_custo !== null
-          ? Number(input.preco_custo)
-          : null
-
-      const lifecycle = defaultStatusNovoProduto(input)
-
-      const { data, error } = await supabase
-        .from('produtos')
-        .insert({
-          nome: input.nome,
-          codigo_barras: input.codigo_barras?.trim() || null,
-          codigo_interno: input.codigo_interno?.trim() || null,
-          referencia_fornecedor: input.referencia_fornecedor?.trim() || null,
-          nome_reduzido_pdv: input.nome_reduzido_pdv?.trim() || null,
-          localizacao_prateleira: input.localizacao_prateleira?.trim() || null,
-          preco_varejo: input.preco_varejo,
-          preco_atacado: pa,
-          preco_custo: pc,
-          permitir_abaixo_custo: input.permitir_abaixo_custo ?? false,
-          quantidade_gatilho_atacado: input.quantidade_gatilho_atacado ?? null,
-          origem: input.origem,
-          tem_nf: input.tem_nf,
-          unidade_medida: input.unidade_medida ?? 'UN',
-          observacao: input.observacao ?? null,
-          categoria_id: input.categoria_id ?? null,
-          marca_id: input.marca_id ?? null,
-          fornecedor_id: input.fornecedor_id ?? null,
-          ncm: input.ncm ?? null,
-          cfop_produto: input.cfop_produto ?? null,
-          csosn: input.csosn ?? null,
-          cest: input.cest ?? null,
-          cst_pis: input.cst_pis ?? null,
-          cst_cofins: input.cst_cofins ?? null,
-          ativo: lifecycle.ativo,
-          status_publicacao: lifecycle.status_publicacao,
-          loja_id: lojaId,
-        })
-        .select('id')
-        .single()
-
-      if (error || !data) {
+      if (!user?.id) {
         return {
           ok: false,
-          message: error
-            ? mensagemErroComSecao('Cadastro de produto', error.message)
-            : 'Não foi possível salvar o produto. Tente de novo.',
+          message: 'Sessão inválida para cadastrar produto. Faça login novamente.',
         }
       }
 
-      const { error: estoqueError } = await supabase.from('estoque').insert({
-        produto_id: data.id,
-        loja_id: lojaId,
-        quantidade_atual: 0,
-        estoque_minimo: 0,
+      const result = await executarCriarProdutoComEstoqueInicial({
+        input: input as CriarProdutoEstoqueInput,
+        atorId: user.id,
       })
-
-      if (estoqueError) {
-        return {
-          ok: false,
-          message: mensagemErroComSecao(
-            'Estoque inicial do produto',
-            estoqueError.message,
-          ),
-        }
-      }
-
-      return { ok: true, id: data.id }
+      if (!result.ok) return { ok: false, message: result.message }
+      return { ok: true, id: result.id }
     },
 
     async updateAtivo(produtoId, ativo) {

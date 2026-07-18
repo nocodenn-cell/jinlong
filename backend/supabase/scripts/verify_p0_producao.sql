@@ -65,7 +65,13 @@ DROP TABLE IF EXISTS pg_temp.pdv_diag_checks;
 CREATE TEMP TABLE pg_temp.pdv_diag_checks AS
 SELECT * FROM (
   SELECT * FROM pg_temp.diag_check(10, 'migrations', 'migration_243_v4_finalize',
-    pg_temp.migration_aplicada('%243%'), 'RPC finalizar_venda v4 (243 ou sucessor 246).')
+    pg_temp.funcao_existe('finalizar_venda_transacional_canonica_v4')
+      OR pg_temp.migration_aplicada('%243%')
+      OR EXISTS (
+        SELECT 1 FROM supabase_migrations.schema_migrations m
+        WHERE m.name ILIKE '%243%' OR m.name ILIKE '%canonica_v4%'
+      ),
+    'RPC finalizar_venda v4 (função ou migration 243/264/268).')
   UNION ALL SELECT * FROM pg_temp.diag_check(11, 'migrations', 'migration_127_kardex_estoque',
     pg_temp.migration_aplicada('%127%'), 'Kardex SAIDA_VENDA em movimentos_estoque_log.')
   UNION ALL SELECT * FROM pg_temp.diag_check(12, 'migrations', 'migration_234_calcular_preco',
