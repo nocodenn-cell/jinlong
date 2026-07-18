@@ -60,7 +60,7 @@ export function CaixaPdvCartSaleBar({
           </div>
 
           <div className="flex flex-1 flex-col gap-2 min-w-0 sm:flex-row sm:items-end sm:justify-end sm:gap-6">
-            <div className="text-right sm:min-w-[9rem]">
+            <div className="text-right sm:min-w-36">
               <div className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
                 {m.caixa.cart_bar_total_label}
               </div>
@@ -85,7 +85,7 @@ export function CaixaPdvCartSaleBar({
 
             <Button
               type="button"
-              className="h-14 min-w-[11rem] shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
+              className="h-14 min-w-44 shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
               onClick={onFinalizar}
               disabled={
                 finalizando || itensLength === 0 || buscando || carregandoRegras

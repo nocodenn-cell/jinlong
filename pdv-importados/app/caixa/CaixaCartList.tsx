@@ -337,7 +337,7 @@ function CaixaCartListInner({
   if (itens.length === 0) {
     if (listEmptyVariant === "pdv_classic") {
       return (
-        <div className="flex h-full min-h-[10rem] flex-col justify-between px-4 py-3">
+        <div className="flex h-full min-h-40 flex-col justify-between px-4 py-3">
           {/* Mensagem discreta — sem ícone grande */}
           <p className="text-sm text-jl-fg-2">
             {m.caixa.cart_empty_sem_pedido} · {m.caixa.empty_cta_scan}
@@ -358,7 +358,7 @@ function CaixaCartListInner({
       )
     }
     return (
-      <div className="h-full min-h-[14rem] flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="h-full min-h-56 flex flex-col items-center justify-center gap-4 px-6 text-center">
         <DragonIcon className="h-24 w-24 app-subtle shrink-0 opacity-40" />
         <p className="text-base font-semibold text-foreground/90">{m.caixa.empty_guardiao}</p>
         <div className="max-w-md space-y-2">
