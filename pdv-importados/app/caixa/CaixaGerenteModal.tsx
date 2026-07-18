@@ -1,14 +1,8 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { DragonModal } from "@/components/ui/DragonModal"
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
@@ -78,18 +72,6 @@ export function CaixaGerenteModal({
     queueMicrotask(() => pctRef.current?.focus())
   }, [open, passo])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, fechar])
-
   const handleContinuarSenha = useCallback(async () => {
     if (validando) return
     setErroLocal(null)
@@ -134,137 +116,120 @@ export function CaixaGerenteModal({
     queueMicrotask(() => senhaRef.current?.focus())
   }, [])
 
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 dragon-glass-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) fechar()
-      }}
-    >
-      <Card
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="caixa-gerente-modal-title"
-        data-testid="caixa-gerente-modal"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle
-            id="caixa-gerente-modal-title"
-            className="flex items-center gap-2 text-lg app-surface-text"
-          >
-            {passo === "senha" ? (
+    <DragonModal
+      open={open}
+      onClose={fechar}
+      title={
+        <span className="flex items-center gap-2">
+          {passo === "senha" ? (
+            <ImperialSealIcon
+              className="h-6 w-6 shrink-0 app-accent-text"
+              title={m.caixa.aria_selo_gerente}
+              pulse
+            />
+          ) : null}
+          {m.caixa.modal_gerente_titulo}
+        </span>
+      }
+      sheet
+      closeLabel={m.comum.fechar}
+      footer={
+        passo === "percent" ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="app-btn-neutral"
+              onClick={handleVoltar}
+              disabled={validando}
+            >
+              {m.caixa.modal_gerente_voltar}
+            </Button>
+            <Button
+              type="button"
+              className="app-btn-accent inline-flex items-center gap-2"
+              onClick={handleAplicarPercent}
+              disabled={validando || !ctx}
+            >
               <ImperialSealIcon
-                className="h-6 w-6 shrink-0 app-accent-text"
+                className="h-4 w-4 shrink-0 app-accent-text drop-shadow-sm"
                 title={m.caixa.aria_selo_gerente}
                 pulse
               />
-            ) : null}
-            {m.caixa.modal_gerente_titulo}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6 space-y-3 overflow-y-auto">
-          {passo === "senha" ? (
+              {m.caixa.modal_gerente_aplicar}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              className="app-btn-neutral"
+              onClick={fechar}
+              disabled={validando}
+            >
+              {m.comum.cancelar}
+            </Button>
+            <Button
+              type="button"
+              className="app-btn-accent"
+              onClick={() => void handleContinuarSenha()}
+              disabled={validando}
+            >
+              {validando ? m.caixa.validando_gerente : m.caixa.modal_gerente_seguinte}
+            </Button>
+          </>
+        )
+      }
+    >
+      <div data-testid="caixa-gerente-modal" className="space-y-3">
+        {passo === "senha" ? (
+          <label className="block text-xs app-muted">
+            {m.caixa.modal_gerente_passo_senha}
+            <Input
+              ref={senhaRef}
+              type="password"
+              autoComplete="current-password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder={m.caixa.modal_gerente_senha_placeholder}
+              disabled={validando}
+              className="mt-1 app-input"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleContinuarSenha()
+              }}
+            />
+          </label>
+        ) : (
+          ctx && (
             <>
-              <label className="block text-xs app-muted">
-                {m.caixa.modal_gerente_passo_senha}
-                <Input
-                  ref={senhaRef}
-                  type="password"
-                  autoComplete="current-password"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder={m.caixa.modal_gerente_senha_placeholder}
-                  disabled={validando}
-                  className="mt-1 app-input"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void handleContinuarSenha()
-                  }}
-                />
-              </label>
-            </>
-          ) : (
-            ctx && (
-              <>
-                <p className="text-xs app-muted">
-                  {caixaFmt(m.caixa.modal_gerente_passo_percentual, {
-                    max: ctx.maxDescontoPercentual.toFixed(1),
-                  })}
-                </p>
-                <Input
-                  ref={pctRef}
-                  inputMode="decimal"
-                  value={percentStr}
-                  onChange={(e) => setPercentStr(e.target.value)}
-                  placeholder={m.caixa.modal_gerente_percent_placeholder}
-                  disabled={validando}
-                  className="app-input"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAplicarPercent()
-                  }}
-                />
-              </>
-            )
-          )}
-          {erroLocal && (
-            <p className="rounded-md border px-2 py-1 text-xs app-badge-warn" role="alert">
-              {erroLocal}
-            </p>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t app-divider mt-2 pt-3">
-          {passo === "percent" ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                className="app-btn-neutral"
-                onClick={handleVoltar}
+              <p className="text-xs app-muted">
+                {caixaFmt(m.caixa.modal_gerente_passo_percentual, {
+                  max: ctx.maxDescontoPercentual.toFixed(1),
+                })}
+              </p>
+              <Input
+                ref={pctRef}
+                inputMode="decimal"
+                value={percentStr}
+                onChange={(e) => setPercentStr(e.target.value)}
+                placeholder={m.caixa.modal_gerente_percent_placeholder}
                 disabled={validando}
-              >
-                {m.caixa.modal_gerente_voltar}
-              </Button>
-              <Button
-                type="button"
-                className="app-btn-accent inline-flex items-center gap-2"
-                onClick={handleAplicarPercent}
-                disabled={validando || !ctx}
-              >
-                <ImperialSealIcon
-                  className="h-4 w-4 shrink-0 app-accent-text drop-shadow-sm"
-                  title={m.caixa.aria_selo_gerente}
-                  pulse
-                />
-                {m.caixa.modal_gerente_aplicar}
-              </Button>
+                className="app-input"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAplicarPercent()
+                }}
+              />
             </>
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                className="app-btn-neutral"
-                onClick={fechar}
-                disabled={validando}
-              >
-                {m.comum.cancelar}
-              </Button>
-              <Button
-                type="button"
-                className="app-btn-accent"
-                onClick={() => void handleContinuarSenha()}
-                disabled={validando}
-              >
-                {validando ? m.caixa.validando_gerente : m.caixa.modal_gerente_seguinte}
-              </Button>
-            </>
-          )}
-        </CardFooter>
-      </Card>
-    </div>
+          )
+        )}
+        {erroLocal && (
+          <p className="rounded-md border px-2 py-1 text-xs app-badge-warn" role="alert">
+            {erroLocal}
+          </p>
+        )}
+      </div>
+    </DragonModal>
   )
 }
