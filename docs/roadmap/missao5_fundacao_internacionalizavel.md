@@ -3,11 +3,12 @@
 | Campo | Valor |
 |--------|--------|
 | **ID** | MISSÃO-5 |
-| **Status** | Draft — documento antes de qualquer implementação |
+| **Status** | **Aceito** (sign-off 2026-07-18) — PR 5.1a em entrega; scaffold 5.1b pendente |
 | **Data** | 2026-07-18 |
 | **Pré-requisito** | Missão 3.1 + Missão 4.1–4.5 **GO** · merge em `main` via [#217](https://github.com/nocodenn-cell/fastproduct/pull/217) (`2becdf39`) |
 | **Branch de referência (manter)** | `consolidate/missao3-20260718` — **não apagar** até `main` estável por alguns dias |
-| **Regra** | **Não codar** até este roadmap ser aceito (produto + eng) |
+| **Regra** | Implementação só após este sign-off; 1º PR = inventário + boundary guards (**sem** scaffold neste PR) |
+| **ADR 5.1** | [`docs/adr/ADR-005-fronteiras-dominio-shared-core.md`](../adr/ADR-005-fronteiras-dominio-shared-core.md) |
 
 ---
 
@@ -43,28 +44,42 @@ Ordem estrita: **5.1 → 5.2 → 5.3** (5.3 pode ter itens paralelos de CI, mas 
 
 Introduzir fronteiras de módulo **sem** big-bang rewrite. Extrair contratos e donos; migrar código gradualmente.
 
-### Estrutura alvo (proposta)
+### Path aprovado (ADR-005)
+
+**Único núcleo:** `@fastproduct/shared-core` (workspace existente).
+
+**Não criar:** `modules/shared`, outro `shared-core`, nem pacote de domínio paralelo.
 
 ```
-modules/
+@fastproduct/shared-core/src/
   sales/        # venda, itens, pagamentos da venda, cancel/devolver (contratos)
   inventory/    # estoque, kardex, reposições, ajustes
   cash/         # caixa, E(c), sangria/suprimento, fechamento
   products/     # catálogo, GTIN, cadastro, publicação
-  shared/       # tipos, erros, auth context, ports transversais
+  i18n/         # (scaffold com 5.2)
+  locale/
+  currency/
+  timezone/
+  formatting/
 ```
 
-> Nota de encaixe no monorepo: a árvore `modules/` pode viver sob `pdv-importados/` (ou pacote workspace) — **decisão de path no aceite de 5.1**. O importante é a fronteira, não o nome absoluto no primeiro PR.
+| Camada | Responsabilidade |
+|--------|------------------|
+| **shared-core** | Regras puras, contratos, tipos, cálculos, políticas |
+| **Apps** (`pdv-importados`, `pdv-local`) | UI, adapters, Server Actions, integração Next/Tauri |
+
+**Não mover telas** nesta fase. Detalhe: [ADR-005](../adr/ADR-005-fronteiras-dominio-shared-core.md).
 
 ### Por domínio: dono dos dados · eventos · contratos
 
 | Módulo | Dono dos dados (SSoT) | Eventos (exemplos) | Contratos (interfaces / RPCs) |
 |---|---|---|---|
 | **sales** | `vendas`, `itens_venda`, `vendas_pagamentos`, `devolucoes` (pós-venda), auditoria de cancel | `SALE_REGISTERED`, `SALE_CANCELLED`, `SALE_PARTIAL_RETURN` | `finalizar_venda_*`, `cancelar_venda_*`, `devolver_ou_trocar_*`; ports de venda |
-| **inventory** | `estoque`, `movimentos_estoque_log`, `estoque_reposicoes_cancelamento` | baixa/entrada (kardex unificado) | `criar_produto_com_estoque_inicial` (parte estoque), ajustes `/admin/estoque` |
+| **inventory** | `estoque`, `movimentos_estoque_log`, `estoque_reposicoes_cancelamento` | baixa/entrada (kardex unificado) | parte estoque de `criar_produto_com_estoque_inicial`; ajustes `/admin/estoque` |
 | **cash** | `caixas`, `movimentacoes_caixa`, \(E(c)\) via RPC | abertura/fechamento; sangria/suprimento (não venda) | `calcular_valor_sistema_dinheiro_caixa`, `fechar_caixa_*`, `registrar_movimentacao` |
 | **products** | `produtos`, cache GTIN, status publicação | cadastro / publicação (a definir no ADR de catálogo) | CRUD catálogo SSoT `/admin/catalogo`; sugestão GTIN |
-| **shared** | — (sem entidade de negócio) | — | auth/loja, erros usuário, money helpers (até 5.2 migrar formatting) |
+
+Transversais (auth/loja, erros, money helpers até migrar formatting) ficam no próprio `shared-core` (exports públicos), **não** em `modules/shared`.
 
 ### Regras de fronteira (5.1)
 
@@ -72,21 +87,23 @@ modules/
 2. **Venda não escreve** `movimentacoes_caixa` (já validado na Missão 4).
 3. **Caixa não é SSoT de pagamento** — `vendas_pagamentos` permanece em **sales**.
 4. **\(E(c)\) permanece autoridade de esperado** (ADR-CAIXA-002) — dono **cash**.
-5. **SSoT de entidade UI** (entity-ssot) continua: produto só em `/admin/catalogo`, etc.
-6. Nenhum “god import” de `app/caixa` para `products` sem passar por `shared` ou port.
+5. **`saldo_atual` não é fonte contábil** (ADR-CAIXA-002).
+6. **SSoT de entidade UI** (entity-ssot) continua: produto só em `/admin/catalogo`, etc.
+7. Apps não fazem “god import” de regras de domínio sem passar por port do `shared-core`.
 
-### Entregáveis 5.1 (quando implementar)
+### Entregáveis 5.1
 
-- [ ] Mapa `módulo → tabelas → writers atuais` (inventário)
-- [ ] ADR curto: “Fronteiras modules/*”
-- [ ] Scaffold `modules/{sales,inventory,cash,products,shared}` + regras de import (lint/boundary check)
-- [ ] Mover **apenas** 1–2 ports/helpers por PR (sem mudar comportamento)
+- [x] ADR-005: Fronteiras de domínio e shared-core
+- [x] **PR 5.1a:** Inventário [`docs/architecture/inventario_dominio_modulo_tabela_writer.md`](../architecture/inventario_dominio_modulo_tabela_writer.md) + `npm run guard:domain` ([`scripts/domain-boundary-guard.mjs`](../../scripts/domain-boundary-guard.mjs))
+- [ ] **PR 5.1b:** Scaffold mínimo sob `shared-core/src/{sales,inventory,cash,products,…}` (sem mudar comportamento)
+- [ ] Mover **apenas** 1–2 ports/helpers por PR seguinte (sem mudar comportamento)
 
 ### Fora de 5.1
 
 - Rewrite de RPCs
 - Novo modelo de caixa / materializar `saldo_atual`
 - Tradução completa da UI
+- Mover telas
 
 ---
 
@@ -94,12 +111,12 @@ modules/
 
 ### Objetivo
 
-Criar **núcleo** internacionalizável. **Não** traduzir tudo.
+Criar **núcleo** internacionalizável **no mesmo** `@fastproduct/shared-core`. **Não** traduzir tudo.
 
-### Estrutura alvo
+### Estrutura alvo (ADR-005 §6)
 
 ```
-shared-core/
+shared-core/src/
   i18n/         # catalog, keys, fallback, missing-key policy
   locale/       # locale negotiation (BCP 47)
   currency/     # código moeda, arredondamento (ABNT vs outros — decisão futura)
@@ -107,9 +124,9 @@ shared-core/
   formatting/   # número, data, dinheiro para UI
 ```
 
-### Idiomas iniciais
+### Idiomas / locales iniciais
 
-| Locale | Completude alvo na 5.2 |
+| Locale (BCP 47) | Completude alvo na 5.2 |
 |---|---|
 | **pt-BR** | Completo (fonte atual) |
 | **zh-CN** | Estrutura + chaves críticas PDV (pode herdar parcial do `zh` existente) |
@@ -117,16 +134,19 @@ shared-core/
 
 ### Princípios
 
-1. **Keys estáveis** (`sales.cancel.motivo_obrigatorio`) — não string solta na UI nova.
-2. **Fallback:** `requested → pt-BR → key`.
-3. **Formatting ≠ translation:** moeda/número/data sempre via `formatting/`, nunca `toLocaleString` ad hoc em código novo.
-4. **Timezone da loja** como input de relatório/fechamento (não hardcode `-03`).
-5. Reaproveitar i18n existente (`pt.json` / `zh.json`) como **fonte de migração**, não como destino final.
+1. **Idioma separado de país/região**; locale de UI = BCP 47.
+2. **Keys estáveis** (`sales.cancel.motivo_obrigatorio`) — não string solta na UI nova.
+3. **Fallback:** `requested locale → pt-BR → key`.
+4. **Nenhum domínio conhece idioma** — resolução na borda / via `i18n` + `formatting`.
+5. **Formatting ≠ translation:** moeda/número/data sempre via `formatting/`, nunca `toLocaleString` ad hoc em código novo.
+6. **Timezone da loja** como input de relatório/fechamento (não hardcode `-03`).
+7. Reaproveitar i18n existente (`pt.json` / `zh.json`) como **fonte de migração**, não como destino final.
+8. DEC-007 (sem next-intl / sem prefixo de URL no D0) permanece até ADR de i18n dedicado.
 
 ### Entregáveis 5.2
 
-- [ ] Scaffold `shared-core/*` + 3 locales
-- [ ] ADR: “i18n + formatting policy”
+- [ ] Scaffold `i18n|locale|currency|timezone|formatting` no shared-core + 3 locales
+- [ ] ADR: “i18n + formatting policy” (quando implementar)
 - [ ] 1 tela piloto (ex.: mensagem de erro de cancel) usando o núcleo
 - [ ] Documentar gap: o que ainda está só em JSON legado
 
@@ -186,30 +206,34 @@ Itens **não** são pré-requisito para scaffold 5.1/5.2. São missões/PRs dedi
 
 | Fatia | GO quando |
 |---|---|
-| **5.1** | Scaffold + boundary check; inventário dono/evento/contrato publicado; zero mudança de regra de negócio |
-| **5.2** | `shared-core` com pt-BR/zh-CN/en-US; 1 fluxo piloto; formatting centralizado em código novo |
+| **5.1** | ADR-005 + inventário + boundary check + scaffold sob `@fastproduct/shared-core` (PRs 5.1a → 5.1b); zero mudança de regra de negócio |
+| **5.2** | Núcleo i18n/locale/formatting no mesmo shared-core; pt-BR/zh-CN/en-US; 1 fluxo piloto; formatting centralizado em código novo |
 | **5.3** | Backlog priorizado em issues/ADR; CI com diagnóstico e plano — itens D-A* fechados em PRs próprios |
 
 ---
 
 ## Ordem de execução recomendada
 
-1. **Aceite deste documento** (sign-off abaixo).  
-2. Issue/ADR 5.1 (fronteiras) — só então agente de código.  
-3. Scaffold modules + boundary lint.  
-4. Scaffold shared-core i18n (5.2) em paralelo leve após 5.1 scaffold.  
-5. Trilha CI (5.3) em paralelo desde o dia 1.  
-6. D-A3 / D-A1 quando houver capacidade — **PRs isolados**.
+1. ~~Aceite deste documento~~ — **feito** 2026-07-18 (ADR-005 + Missão 5).  
+2. ~~**PR 5.1a:** inventário + boundary guards~~ — entregue nesta branch.  
+3. **PR 5.1b:** scaffold mínimo sob `@fastproduct/shared-core`.  
+4. PRs seguintes: mover contratos pequenos.  
+5. Scaffold i18n (5.2) após scaffold 5.1b.  
+6. Trilha CI (5.3) em paralelo desde o dia 1.  
+7. D-A3 / D-A1 quando houver capacidade — **PRs isolados**.
 
 ---
 
 ## Relacionados
 
+- **ADR-005 (5.1):** [`docs/adr/ADR-005-fronteiras-dominio-shared-core.md`](../adr/ADR-005-fronteiras-dominio-shared-core.md)
+- **Inventário 5.1a:** [`docs/architecture/inventario_dominio_modulo_tabela_writer.md`](../architecture/inventario_dominio_modulo_tabela_writer.md)
+- **Boundary guard:** [`scripts/domain-boundary-guard.mjs`](../../scripts/domain-boundary-guard.mjs) (`npm run guard:domain`)
 - ADR-CAIXA-002: [`docs/adr/ADR-caixa-contrato-financeiro-pos-cancelamento.md`](../adr/ADR-caixa-contrato-financeiro-pos-cancelamento.md)
 - Consolidação Missão 4: [`backend/artifacts/missao4_5_consolidacao_ciclo_comercial_20260718.md`](../../backend/artifacts/missao4_5_consolidacao_ciclo_comercial_20260718.md)
 - Mapa autoridade caixa: [`backend/artifacts/mapa_autoridade_caixa_20260718.md`](../../backend/artifacts/mapa_autoridade_caixa_20260718.md)
 - Entity SSoT: `.cursor/rules/entity-ssot.mdc`
-- PR merge: [#217](https://github.com/nocodenn-cell/fastproduct/pull/217)
+- PR merge ciclo comercial: [#217](https://github.com/nocodenn-cell/fastproduct/pull/217)
 
 ---
 
@@ -217,15 +241,16 @@ Itens **não** são pré-requisito para scaffold 5.1/5.2. São missões/PRs dedi
 
 | Papel | Nome | Data |
 |---|---|---|
-| Produto | | |
-| Eng lead | | |
+| Produto | Aceite Missão 5 (5.1 / 5.2 / 5.3) + ADR-005 | 2026-07-18 |
+| Eng lead | Path `@fastproduct/shared-core` (ADR-005) + Missão 5 | 2026-07-18 |
 
-**Decisão:** _[aceitar Missão 5 nesta divisão 5.1/5.2/5.3 — ou ajustar path `modules/` / `shared-core/`]_
+**Decisão path 5.1:** aceita — único núcleo `@fastproduct/shared-core` (ver ADR-005).  
+**Decisão Missão 5 agregada:** **aceita** — divisão 5.1 → 5.2 → 5.3; PR 5.1a = inventário + boundary guards (sem scaffold).
 
 ---
 
-## Próxima ação (humana)
+## Próxima ação
 
-1. Revisar e aceitar este roadmap.  
-2. **Não** disparar agente de implementação antes do sign-off.  
+1. ~~PR 5.1a~~ — inventário + `guard:domain` entregues nesta branch.  
+2. **PR 5.1b** — scaffold mínimo sob `@fastproduct/shared-core` (sem mover comportamento).  
 3. Manter `consolidate/missao3-20260718` como referência.
