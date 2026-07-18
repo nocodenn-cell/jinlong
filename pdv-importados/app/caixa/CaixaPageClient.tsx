@@ -1350,12 +1350,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           <CaixaFooter
             m={m}
             idioma={idioma}
-            layout="classic_summary"
-            onFinalizar={handleFinalizarClick}
-            finalizando={finalizando}
-            itensLength={itens.length}
-            buscando={buscandoPipeline}
-            carregandoRegras={carregandoRegras}
             totalItens={totalItens}
             totalUnidades={totalUnidades}
             gerenteValidadoAte={gerenteValidadoAte}
