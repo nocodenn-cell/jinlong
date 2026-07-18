@@ -4,6 +4,10 @@ import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
 import { buscarProdutoComPrecoCaixaImpl } from '@/app/caixa/server/caixaCatalogo.impl'
 import { obterConfiguracoesParaCaixaWebImpl } from '@/app/caixa/server/caixaConfiguracoes.impl'
+import {
+  aplicarFiltroProdutoVendavel,
+  isProdutoVendavel,
+} from '@/lib/catalog/aplicarFiltroProdutoVendavel'
 import type { ConsultaRapidaResult } from '@/app/caixa/caixaActionTypes'
 
 /**
@@ -41,8 +45,24 @@ export async function consultarProdutoRapidoCaixaImpl(
         .limit(1)
         .maybeSingle(),
       obterConfiguracoesParaCaixaWebImpl(),
-      supabase.from('produtos').select('preco_custo').eq('id', produtoId).maybeSingle(),
+      aplicarFiltroProdutoVendavel(
+        supabase
+          .from('produtos')
+          .select('preco_custo, ativo, status_publicacao')
+          .eq('id', produtoId),
+      ).maybeSingle(),
     ])
+
+    const custoRow = custoRes.data
+    if (
+      !custoRow ||
+      !isProdutoVendavel({
+        ativo: Boolean(custoRow.ativo),
+        status_publicacao: custoRow.status_publicacao ?? null,
+      })
+    ) {
+      return { ok: true, status: 'nao_encontrado' }
+    }
 
     let ultimaVendaEm: string | null = null
     const vendaIds = [...new Set((itensRes.data ?? []).map((r) => String(r.venda_id)))]
@@ -64,7 +84,7 @@ export async function consultarProdutoRapidoCaixaImpl(
         cfgRes.mapa.show_margin_visual === '1' ||
         cfgRes.mapa.show_margin_visual === 'TRUE')
 
-    const custoRaw = custoRes.data?.preco_custo
+    const custoRaw = custoRow.preco_custo
     const custo =
       custoRaw == null || custoRaw === undefined ? null : Number(custoRaw)
     const preco = busca.precoCalculado
