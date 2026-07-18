@@ -1,6 +1,10 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { DragonModal } from "@/components/ui/DragonModal"
+import { Input } from "@/components/ui/input"
+import type { Mensagens } from "@/i18n/getMessages"
 import { buscarClientesCaixa } from "@/app/caixa/actions"
 
 type Cliente = {
@@ -11,14 +15,21 @@ type Cliente = {
 
 type Props = {
   aberto: boolean
+  m: Mensagens
   onSelecionado: (clienteId: string) => void
   onCancelado: () => void
 }
 
-export function CaixaSelecionarClienteModal({ aberto, onSelecionado, onCancelado }: Props) {
+export function CaixaSelecionarClienteModal({ aberto, m, onSelecionado, onCancelado }: Props) {
   const [busca, setBusca] = useState("")
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [carregando, setCarregando] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!aberto) return
+    queueMicrotask(() => inputRef.current?.focus())
+  }, [aberto])
 
   const executarBusca = useCallback(async () => {
     if (!busca.trim()) {
@@ -48,80 +59,80 @@ export function CaixaSelecionarClienteModal({ aberto, onSelecionado, onCancelado
     }
   }, [busca])
 
-  if (!aberto) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="caixa-selecionar-cliente-modal-title"
-        data-testid="caixa-selecionar-cliente-modal"
-      >
-        <h2 id="caixa-selecionar-cliente-modal-title" className="mb-4 text-lg font-semibold">Selecionar Cliente</h2>
-
-        <div className="mb-4 flex flex-col gap-2">
-          <label htmlFor="busca-cliente" className="text-sm font-medium">
-            Buscar por nome ou CPF
+    <DragonModal
+      open={aberto}
+      onClose={onCancelado}
+      title={m.caixa.selecionar_cliente_titulo}
+      closeLabel={m.comum.fechar}
+      data-testid="caixa-selecionar-cliente-modal"
+      footer={
+        <Button type="button" variant="secondary" onClick={onCancelado}>
+          {m.comum.cancelar}
+        </Button>
+      }
+    >
+      <div className="space-y-4" data-caixa-atalho-bloqueado="true">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="busca-cliente" className="text-xs text-jl-fg-3">
+            {m.caixa.selecionar_cliente_busca_label}
           </label>
           <div className="flex gap-2">
-            <input
+            <Input
               id="busca-cliente"
+              ref={inputRef}
               type="text"
+              autoComplete="off"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") executarBusca()
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  void executarBusca()
+                }
               }}
-              placeholder="Digite o nome ou CPF..."
-              className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-              autoFocus
+              placeholder={m.caixa.selecionar_cliente_placeholder}
+              className="jl-modal-field flex-1"
             />
-            <button
-              onClick={executarBusca}
+            <Button
+              type="button"
+              onClick={() => void executarBusca()}
               disabled={carregando || !busca.trim()}
-              className="rounded bg-blue-500 px-3 py-2 text-sm font-medium text-white hover:bg-blue-600 disabled:bg-gray-300"
+              className="min-h-10 shrink-0"
             >
-              {carregando ? "..." : "Buscar"}
-            </button>
+              {carregando ? m.caixa.selecionar_cliente_buscando : m.caixa.selecionar_cliente_buscar}
+            </Button>
           </div>
         </div>
 
-        {clientes.length > 0 && (
-          <div className="mb-4 max-h-64 overflow-y-auto rounded border border-gray-200">
+        {clientes.length > 0 ? (
+          <div className="max-h-64 overflow-y-auto rounded-md border border-jl-border-1">
             {clientes.map((cliente) => (
               <button
                 key={cliente.id}
+                type="button"
                 onClick={() => {
                   onSelecionado(cliente.id)
                   setBusca("")
                   setClientes([])
                 }}
-                className="w-full border-b border-gray-100 px-3 py-2 text-left text-sm hover:bg-blue-50"
+                className="w-full border-b border-jl-border-1/60 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-white/[0.04]"
               >
                 <div className="font-medium">{cliente.nome}</div>
-                {cliente.documento && <div className="text-xs text-gray-500">{cliente.documento}</div>}
+                {cliente.documento ? (
+                  <div className="text-xs text-jl-fg-3">{cliente.documento}</div>
+                ) : null}
               </button>
             ))}
           </div>
-        )}
+        ) : null}
 
-        {busca && clientes.length === 0 && !carregando && (
-          <div className="mb-4 rounded bg-gray-100 p-3 text-center text-sm text-gray-600">
-            Nenhum cliente encontrado
-          </div>
-        )}
-
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onCancelado}
-            className="rounded border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
-          >
-            Cancelar
-          </button>
-        </div>
+        {busca && clientes.length === 0 && !carregando ? (
+          <p className="rounded-md bg-white/[0.04] px-3 py-3 text-center text-sm text-jl-fg-3">
+            {m.caixa.selecionar_cliente_vazio}
+          </p>
+        ) : null}
       </div>
-    </div>
+    </DragonModal>
   )
 }

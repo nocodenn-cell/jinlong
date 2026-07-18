@@ -163,6 +163,21 @@ describe('DragonModal', () => {
     expect(document.activeElement).toBe(salvar)
   })
 
+  it('data-testid é aplicado à raiz e escopa footer + corpo', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" data-testid="meu-modal" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const root = document.querySelector('[data-testid="meu-modal"]') as HTMLElement
+    expect(root).not.toBeNull()
+    // raiz == diálogo (envolve corpo e footer)
+    expect(root.getAttribute('role')).toBe('dialog')
+    expect(root.querySelector('input[aria-label="campo"]')).not.toBeNull()
+    const salvar = Array.from(root.querySelectorAll('button')).find((b) => b.textContent === 'Salvar')
+    expect(salvar).toBeTruthy()
+  })
+
   it('restaura o overflow do body ao fechar', () => {
     render(
       <DragonModal open onClose={() => {}} title="T">
