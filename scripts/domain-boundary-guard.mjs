@@ -19,6 +19,7 @@ const DOMAIN_DIRS = [
   'sales',
   'inventory',
   'cash',
+  'financial',
   'products',
   'customers',
   'i18n',

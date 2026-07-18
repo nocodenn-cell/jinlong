@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { createPayablePaymentService } from '@/app/admin/financeiro/payablePayment'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
 
@@ -127,30 +128,17 @@ export async function registrarPagamentoAction(
 
   try {
     const supabase = await createClient()
-    /**
-     * RPC esperada (deve existir no Supabase):
-     *
-     *   create function registrar_pagamento_contas_pagar(
-     *     p_conta_id uuid,
-     *     p_valor numeric,
-     *     p_forma text,
-     *     p_data timestamptz,
-     *     p_observacao text
-     *   ) returns void
-     *
-     * Implementação:
-     *   - INSERT em contas_pagar_pagamentos
-     *   - UPDATE contas_pagar.valor_pago += p_valor
-     *   - SE valor_pago >= valor_total ⇒ status = 'PAGO', SENAO 'PARCIAL'
-     */
-    const { error: rpcErr } = await supabase.rpc('registrar_pagamento_contas_pagar', {
-      p_conta_id: input.conta_id,
-      p_valor: input.valor,
-      p_forma: input.forma,
-      p_data: input.data,
-      p_observacao: input.observacao ?? null,
+    const payment = createPayablePaymentService(supabase)
+    const paid = await payment.pay({
+      contaId: input.conta_id,
+      valor: input.valor,
+      formaPagamento: input.forma,
+      data: input.data,
+      observacao: input.observacao ?? null,
     })
-    if (rpcErr) return { ok: false, error: mensagemErroComSecao('Pagamento', rpcErr.message) }
+    if (!paid.ok) {
+      return { ok: false, error: mensagemErroComSecao('Pagamento', paid.error) }
+    }
 
     const { data, error } = await supabase
       .from('contas_pagar')
@@ -182,16 +170,11 @@ export async function cancelarContaPagarAction(
 
   try {
     const supabase = await createClient()
-    const { error } = await supabase
-      .from('contas_pagar')
-      .update({
-        status: 'CANCELADO',
-        cancelamento_motivo: motivo.trim(),
-        cancelamento_em: new Date().toISOString(),
-      })
-      .eq('id', conta_id)
-      .in('status', ['PENDENTE', 'PARCIAL', 'ATRASADO'])
-    if (error) return { ok: false, error: mensagemErroComSecao('Conta a pagar', error.message) }
+    const payment = createPayablePaymentService(supabase)
+    const cancelled = await payment.cancel({ contaId: conta_id, motivo })
+    if (!cancelled.ok) {
+      return { ok: false, error: mensagemErroComSecao('Conta a pagar', cancelled.error) }
+    }
     revalidatePath('/gerente/financeiro/contas-pagar')
     revalidatePath('/admin/financeiro')
     return { ok: true }
