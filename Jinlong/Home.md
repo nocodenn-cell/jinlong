@@ -1,7 +1,7 @@
 # 🏠 Jīn Lóng — Centro de Comando (Obsidian)
 
 > **Memória permanente do projeto FastProduct/Jinlong**
-> Última atualização: **2026-07-13** · Branches ativas: `feat/admin-screen-consolidation` (HEAD `fdaf5339`) · `claude/jinlong-go-live-audit-n37ble` (HEAD `17c68e55`)
+> Última atualização: **2026-07-17** · Branch atual: `fix/estoque-admin-env-friendly-error` (HEAD `a98576cf`) · Main: `6636aab6`
 
 ---
 
@@ -30,75 +30,60 @@
 
 | Módulo | Status |
 |---|---|
-| PDV web | 🟢 Completo + diagnóstico pré-produção |
-| Cadastro produto | 🟢 SSoT `/admin/catalogo` |
-| Estoque | 🟢 SSoT `/admin/estoque` |
+| PDV web | 🟢 Completo — série BA fechada, qty fracionada, cadeia de preços Web≡Local |
+| Cadastro produto | 🟢 SSoT `/admin/catalogo` — erro silencioso atacado surfacado (#185) |
+| Estoque | 🟢 SSoT `/admin/estoque` — actor de sessão corrigido; erro amigável sem env |
+| Devolução/Troca | 🟢 Sprint B mergeado — RPC corrigido após smoke local |
 | Financeiro | 🟡 Unificado `/admin/financeiro` |
 | Fiscal NFC-e | 🟡 Mock/stub |
 | Desktop Tauri | 🟢 Completo — fora do D0 |
 
 **Próximo objetivo:** Pilotar 1º cliente — ver [[09_OPERACAO_PRIMEIRO_CLIENTE]]
 
-**Bloqueador crítico:** ✅ Resolvido hoje (2026-07-13) — Conflito migration `255` renumerado para `247c` durante o merge de `main`. Ver [[08_PROBLEMAS_E_SOLUCOES#BUG-P0-004]] e seção "Trabalho de Hoje" abaixo.
-
-**Novo bloqueador (resolvido hoje):** Build do Vercel falhava em cascata (lockfile corrompido, import fantasma do Sentry, type-check incluindo artefatos de teste, `@types/bwip-js` mal classificado) — causa raiz sistêmica identificada e corrigida em 5 commits. Deploy preview **READY**. Ver seção "Trabalho de Hoje" abaixo.
+**Bloqueador crítico:** Nenhum bloqueador técnico ativo. PR `fix/estoque-admin-env-friendly-error` aguarda merge final.
 
 ---
 
-## 📅 Trabalho de Hoje — 2026-07-13
+## 📅 Trabalho da Semana — 2026-07-13 a 2026-07-17
 
-> Duas frentes paralelas nesta sessão: (A) destravar o deploy no Vercel (branch `claude/jinlong-go-live-audit-n37ble`) e (B) resolver o merge de `main` pendente na consolidação admin (branch `feat/admin-screen-consolidation`). Ambas resultaram em PRs/commits prontos para revisão.
+> Sessão anterior (2026-07-13) resolveu o build Vercel e o merge admin-screen-consolidation. Esta semana entrou uma série de fixes de estabilização pós-merge, todos em `main`.
 
-### A) Auditoria go-live + correção sistêmica do build Vercel
+### A) Série BA — Caixa PDV (Fase 5b / Cycle 6)
 
-**Contexto:** builds sucessivos no Vercel falhavam com `Cannot find module` (um erro por deploy). Identificado como **causa sistêmica única**: o `npm install` do Vercel roda com `NODE_ENV=production` (`--omit=dev`), e o repositório violava essa invariante de 4 formas diferentes.
+Fixes aplicados após smoke tests da Fase 5b (pagamento parcial + contas a receber):
 
-| # | Causa raiz | Sintoma | Correção | Commit |
-|---|---|---|---|---|
-| 1 | `package-lock.json` corrompido (~80% das 1374 entradas sem `resolved`/`integrity`) | `npm install` não resolvia pacotes | Lockfile regenerado do zero (1550 entradas válidas) | `c600a39` |
-| 2 | Import fantasma `@sentry/browser` (não declarado em `package.json`) | `Cannot find module '@sentry/browser'` | Troca para `Sentry.replayIntegration()` via namespace `@sentry/nextjs` | `a7f31fd` |
-| 3 | Artefatos de dev (`*.test.ts`, `*.spec.ts`, Storybook, e2e) incluídos no type-check de produção | `Cannot find module '@playwright/test'`, `'@storybook/react'` | `tsconfig.json` passa a excluir toda a classe de artefatos dev | `81e4834` |
-| 4 | `@types/bwip-js` em `devDependencies`, mas exigido pelo type-check de `lib/etiqueta/gerarBarcode.ts` (código de produção) | `Cannot find module 'bwip-js'` | Move `@types/bwip-js` para `dependencies` | `09de6f9` |
-| 5 | `tsconfig.typecheck.json` sem excluir `*.spec.ts`/`*.test-helpers.tsx` | Falha em `npm run typecheck` | Excludes adicionados | `a1cb468` |
+| # | Ticket | Fix | Commit |
+|---|---|---|---|
+| 1 | BA-001 | UI de pagamento parcial alinhada ao RPC Fase 5b | `260c371d` |
+| 2 | BA-010 | Outbox fecha caixa local via `fechar_caixa_pdv_atomico` (evitava estado fantasma) | `e8d9a6bc` |
+| 3 | BA-013 | Permissão de cancelar venda alinhada ao RPC — GERENTE+ apenas | `8ddea9dd` |
+| 4 | Cycle 6 | Modal de recibo dispensado automaticamente após venda | `8c968ef3` |
+| 5 | — | Qty fracionada propagada por todo o price chain e cart SSoT (#172) | `94d2def9` |
 
-- Teste E2E operacional de ponta a ponta adicionado (`e2e/fluxo-operacional-completo.spec.ts`, commit `17c68e5`) cobrindo o fluxo completo: fornecedor → produto → estoque → abrir caixa → venda → desconto → múltiplos pagamentos → baixa de estoque → financeiro → fechar caixa → auditoria.
-- **Validação:** `npm ci --omit=dev && next build` → exit 0, 14/14 páginas geradas, zero "Cannot find module". `typecheck` limpo. Vitest: 403/408 (5 falhas pré-existentes, sem relação).
-- **PR aberta:** [#169](https://github.com/nocodenn-cell/fastproduct/pull/169) (draft) — `claude/jinlong-go-live-audit-n37ble` → `main`.
-- **Deploy Vercel:** 🟢 **READY** — `pdv-importados-git-claude-jinlong-go-live-audit-n37ble-jinlong.vercel.app`.
-- CI do GitHub Actions segue com 10 falhas pré-existentes (gitleaks, RLS gates, edge-functions-typecheck, migration-drift, Tauri, outbox-contract) — infraestrutura fora de escopo, requer secrets/serviços não disponíveis no CI de branch.
+### B) Cadeia de Preços Web≡Local (Aut#1 — #182)
 
-### B) Merge `main` → `feat/admin-screen-consolidation` (10 conflitos resolvidos)
+`PRICE_RESOLUTION_CHAIN` unificada entre web e desktop: garante que atacado/varejo e tier de preço resolvem de forma idêntica nos dois contextos.
 
-**Contexto:** branch de consolidação das telas admin estava desatualizada em relação a `main`, que recebera um fix P0 (`#157`) restaurando telas que a consolidação havia quebrado silenciosamente (redirect para Catálogo). Merge gerou 10 arquivos em conflito — resolvidos individualmente, sem `checkout --ours/--theirs` indiscriminado, com investigação de causa raiz por trás de cada lado.
+### C) Estoque — Fixes de integridade
 
-**Decisões de resolução:**
+| Fix | Commit |
+|---|---|
+| `actor_id` de sessão passado para `ajustar_estoque_manual` no estoque inicial (#184) | `f6d0f257` |
+| Erro amigável quando `SUPABASE_SERVICE_ROLE_KEY` ausente no admin de estoque | `a98576cf` |
 
-| Arquivo | Lado vencedor | Motivo |
-|---|---|---|
-| `shared-core/navigation/routes.ts` | `main` | Fix P0 `#157` restaurou `/admin/compras`, `/admin/financeiro/contas-pagar` (antes redirecionavam silenciosamente para Catálogo) |
-| `app/admin/financeiro/_components/FinanceiroPanels.tsx` | `HEAD` (deleção) | Componente morto — coberto por teste de regressão `consolidacao-post-audit.test.ts` |
-| `app/admin/financeiro/page.tsx` | `HEAD` (kpiSection) + limpeza de labels órfãs | `FinanceiroContent`/tabs é a arquitetura atual; reprocessamento fiscal já coberto por `DocumentoFiscalDetailSheet` |
-| `app/admin/clientes/page.tsx`, `app/admin/fornecedores/page.tsx` | `HEAD` | Wrapper `PageHeader`/`admin-v2-page`, padrão usado em 11 outras páginas admin |
-| `lib/navigation/adminV2SidebarNav.ts` | `HEAD` + fix extra | Import `ClipboardList`; removida entrada duplicada "Fornecedores" com `dictKey` inexistente no i18n (regressão de idioma silenciosa) |
-| `app/gerente/financeiro/actions.ts` | `main` | `revalidatePath` do documento fiscal — página `/admin/financeiro/documento/[id]` existe e depende disso |
-| `app/caixa/CaixaPdvOperadorTabs.tsx` | `HEAD` | Fluxo linear sem abas — único caller (`CaixaPageClient.tsx`) já usa esse shape; versão com abas de `main` referenciava props indefinidas |
-| `app/admin/vendas/_components/VendasTable.tsx`, `app/admin/vendas/page.tsx` | `main` | Fix P0 substituindo placeholder hardcoded "Vendedor (—)" por nome real via `operador_id` + i18n do botão cancelar |
+### D) Catálogo — Erro silencioso surfacado (#185)
 
-**Efeito colateral (bônus):** o merge também trouxe a renumeração de `main` para `255_vendas_em_espera_e_consulta_rapida.sql` → `247c_...sql`, **resolvendo o BUG-P0-004** (conflito de numeração de migration) que estava em aberto desde 2026-07-10.
+Falha ao criar tier atacado na gravação de produto agora mostra mensagem de erro ao usuário (antes silenciosa — produto gravava sem preço atacado).
 
-**Fallout do merge corrigido para manter o build verde** (não eram conflitos marcados, mas quebras diretas da resolução):
-- Duplicatas órfãs (`clientes`/`fornecedores`) em `ROUTES.admin`, geradas pelo auto-merge de hunks não sobrepostos.
-- `VendaDetailSheet.tsx`: `operador_id: null` adicionado ao `toVendaListRow` local (mesmo padrão já usado para `caixa_id`).
-- `tsconfig.json`/`tsconfig.typecheck.json`: exclusão de artefatos de teste do type-check de produção (mesma causa raiz da frente A, pré-existente nesta branch).
-- `sentry.client.config.js`: mesmo fix de import fantasma `@sentry/browser` da frente A.
+### E) Sprint B mergeado — Devolução / Troca
 
-**Validação:**
-- `git diff --name-only --diff-filter=U` → vazio
-- `npm run typecheck` → exit 0
-- `npm run build` → exit 0 (34 rotas geradas)
-- `npx playwright test --project=chromium` → 10 passed, 5 failed (testes de integração chamando `supabase.rpc` direto, exigem `SUPABASE_SERVICE_ROLE_KEY`/`.env.local` ausente neste ambiente), 33 skipped (mesma causa). **Nenhuma falha relacionada ao merge** — todos os testes de UI pura (hydration, login, proteção de rota) passaram.
+RPC de devolução corrigido após smoke de homologação local. Sprint B integrado ao `main` via `d74734e7`.
 
-**Commits:** `888e725` (merge, 2 pais) + `fdaf533` (lock de sessão) — pushados para `origin/feat/admin-screen-consolidation`.
+### F) Infraestrutura
+
+- Migrations `24701`, `24702`, `248` aplicadas
+- `.gitignore` atualizado para ignorar artefatos de smoke/E2E e helpers
+- Skill **Engineering Loop** adicionada ao projeto (`6e98ff6c`)
 
 ---
 
@@ -162,7 +147,7 @@
 fastproduct/
 ├── pdv-importados/   → Next.js 15 (web)
 ├── pdv-local/        → Tauri 2 (desktop)
-├── backend/          → Supabase (187 migrations)
+├── backend/          → Supabase (190+ migrations)
 ├── shared-core/      → Domínio TypeScript puro
 └── docs/             → Checklists e runbooks
 ```

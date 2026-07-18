@@ -215,4 +215,16 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     expect(scanStoreTest.itens).toHaveLength(0)
     expect(scanStoreTest.removerItem).toHaveBeenCalled()
   })
+
+  it('nao_encontrado: dispara onProdutoNaoEncontrado com o código lido', async () => {
+    vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
+      ok: true,
+      status: 'nao_encontrado',
+    } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
+    const onProdutoNaoEncontrado = vi.fn()
+    const deps = minimalDeps({ onProdutoNaoEncontrado })
+    const r = await runWebCaixaScanProcess(baseCtx(), deps)
+    expect(r).toEqual({ ok: false, reason: 'not_found' })
+    expect(onProdutoNaoEncontrado).toHaveBeenCalledWith('789')
+  })
 })

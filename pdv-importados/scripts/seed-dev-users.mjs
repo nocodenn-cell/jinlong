@@ -49,6 +49,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || ''
 
 const password =
   process.env.SEED_DEV_PASSWORD?.trim() ||
+  process.env.PLAYWRIGHT_CAIXA_TEST_PASSWORD?.trim() ||
   process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() ||
   ''
 
@@ -57,10 +58,27 @@ const donoEmail =
 const gerenteEmail =
   process.env.SEED_GERENTE_EMAIL?.trim() || 'e2e-gerente@localhost.test'
 const operadorEmail =
-  process.env.SEED_OPERADOR_EMAIL?.trim() || 'e2e-operador@localhost.test'
+  process.env.SEED_OPERADOR_EMAIL?.trim() ||
+  process.env.PLAYWRIGHT_CAIXA_TEST_EMAIL?.trim() ||
+  'e2e-operador@localhost.test'
 
 /** Alinhado a `032_lojas_estoque_por_loja.sql` e `lib/auth/lojaUsuario.ts` (LOJA_MATRIZ_ID). */
 const LOJA_MATRIZ_ID = 'a0000001-0000-4000-8000-000000000001'
+
+async function findAuthUserByEmail(supabase, email) {
+  const target = email.toLowerCase()
+  for (let page = 1; page <= 10; page += 1) {
+    const { data: list, error: listErr } = await supabase.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    })
+    if (listErr) throw listErr
+    const found = list.users.find((u) => u.email?.toLowerCase() === target)
+    if (found) return found
+    if ((list.users?.length ?? 0) < 200) break
+  }
+  return null
+}
 
 async function ensureAuthUser(supabase, email, pwd) {
   const { data: created, error: createErr } = await supabase.auth.admin.createUser({
@@ -78,21 +96,20 @@ async function ensureAuthUser(supabase, email, pwd) {
     throw createErr || new Error('createUser falhou sem mensagem')
   }
 
-  const { data: list, error: listErr } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 200,
-  })
-  if (listErr) throw listErr
-
-  const found = list.users.find(
-    (u) => u.email?.toLowerCase() === email.toLowerCase(),
-  )
+  const found = await findAuthUserByEmail(supabase, email)
   if (!found) {
     throw new Error(
-      `Auth indica que ${email} já existe, mas não foi encontrado em listUsers (primeira página).`,
+      `Auth indica que ${email} já existe, mas não foi encontrado em listUsers.`,
     )
   }
-  return found
+
+  // Re-seed deve alinhar a senha ao .env.local (P0.1): createUser não atualiza existentes.
+  const { data: updated, error: updateErr } = await supabase.auth.admin.updateUserById(
+    found.id,
+    { password: pwd, email_confirm: true },
+  )
+  if (updateErr) throw updateErr
+  return updated?.user ?? found
 }
 
 async function upsertUsuario(supabase, userId, { nome, perfil, idioma_preferido, loja_id }) {
@@ -121,7 +138,24 @@ async function main() {
 
   if (!password) {
     console.error(
-      'Defina SEED_DEV_PASSWORD (recomendado) ou PLAYWRIGHT_TEST_PASSWORD com a senha dos usuários de teste.',
+      'Defina SEED_DEV_PASSWORD (recomendado), PLAYWRIGHT_CAIXA_TEST_PASSWORD ou PLAYWRIGHT_TEST_PASSWORD.',
+    )
+    process.exit(1)
+  }
+
+  const seedPwd = process.env.SEED_DEV_PASSWORD?.trim() || ''
+  const caixaPwd = process.env.PLAYWRIGHT_CAIXA_TEST_PASSWORD?.trim() || ''
+  const painelPwd = process.env.PLAYWRIGHT_TEST_PASSWORD?.trim() || ''
+  if (seedPwd && caixaPwd && seedPwd !== caixaPwd) {
+    console.error(
+      'SEED_DEV_PASSWORD e PLAYWRIGHT_CAIXA_TEST_PASSWORD diferem. ' +
+        'Use a mesma senha nos dois para o E2E de /caixa autenticar no Auth.',
+    )
+    process.exit(1)
+  }
+  if (seedPwd && painelPwd && seedPwd !== painelPwd) {
+    console.error(
+      'SEED_DEV_PASSWORD e PLAYWRIGHT_TEST_PASSWORD diferem. Alinhe as senhas de teste.',
     )
     process.exit(1)
   }
@@ -131,6 +165,10 @@ async function main() {
   })
 
   console.log('Supabase URL:', url)
+  console.log(
+    'Senha fonte:',
+    seedPwd ? 'SEED_DEV_PASSWORD' : caixaPwd ? 'PLAYWRIGHT_CAIXA_TEST_PASSWORD' : 'PLAYWRIGHT_TEST_PASSWORD',
+  )
 
   const dono = await ensureAuthUser(supabase, donoEmail, password)
   await upsertUsuario(supabase, dono.id, {
@@ -156,12 +194,35 @@ async function main() {
   })
   console.log('OK OPERADOR:', operadorEmail, '→', operador.id)
 
-  console.log('\nPlaywright (dono):')
-  console.log(`  PLAYWRIGHT_TEST_EMAIL=${donoEmail}`)
-  console.log(`  PLAYWRIGHT_TEST_PASSWORD=${password === '' ? '(sua senha)' : '***'}`)
-  console.log('\nPlaywright (gerente):')
+  // Prova de login do operador (anon) — critério P0.1 sem imprimir senha.
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    ''
+  if (anonKey) {
+    const anon = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data: sess, error: loginErr } = await anon.auth.signInWithPassword({
+      email: operadorEmail,
+      password,
+    })
+    if (loginErr || !sess.session) {
+      console.error('FAIL login operador (anon):', loginErr?.message || 'sem sessão')
+      process.exit(1)
+    }
+    await anon.auth.signOut()
+    console.log('OK login operador (anon) verificado')
+  } else {
+    console.warn('AVISO: sem ANON/PUBLISHABLE key — login operador não verificado')
+  }
+
+  console.log('\nPlaywright (painel):')
   console.log(`  PLAYWRIGHT_TEST_EMAIL=${gerenteEmail}`)
-  console.log(`  PLAYWRIGHT_TEST_PASSWORD=${password === '' ? '(sua senha)' : '***'}`)
+  console.log('  PLAYWRIGHT_TEST_PASSWORD=*** (mesma senha do seed)')
+  console.log('\nPlaywright (caixa):')
+  console.log(`  PLAYWRIGHT_CAIXA_TEST_EMAIL=${operadorEmail}`)
+  console.log('  PLAYWRIGHT_CAIXA_TEST_PASSWORD=*** (mesma senha do seed)')
   console.log('\nConcluído.')
 }
 

@@ -58,6 +58,8 @@ export type WebCaixaScanDeps = {
   telemetry?: ScanPipelineSink
   /** Chamado após scan bem-sucedido — usado para dedupe (500ms) no nível do scanner. */
   onItemAdded?: (info: { codigo: string; itemId: string; produtoId: string }) => void
+  /** Código sem match — abre cadastro relâmpago no PDV (opcional). */
+  onProdutoNaoEncontrado?: (codigo: string) => void
 }
 
 /**
@@ -126,6 +128,7 @@ export async function runWebCaixaScanProcess(
     if (res.status === 'nao_encontrado') {
       setCaixaMensagem(m.caixa.msg_produto_nao_encontrado_acao, { kind: 'warning' })
       tocarFeedback('erro')
+      deps.onProdutoNaoEncontrado?.(trimmed)
       return { ok: false, reason: 'not_found' }
     }
 

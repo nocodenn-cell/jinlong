@@ -49,6 +49,7 @@ import {
   storagePathFromProdutoImagemPublicUrl,
 } from '@/lib/gerente/produtoImagemStorage'
 import { motivoBloqueioExclusaoFisica } from '@/lib/gerente/produtoExclusaoLote'
+import { mensagemErroCodigoBarrasDuplicado } from '@/lib/gerente/produtoCodigoBarrasDuplicado'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 import {
   EditarProdutoCatalogoSchema,
@@ -957,6 +958,21 @@ export async function atualizarDadosProdutoGerente(
 
   if (error) {
     const { idioma } = await getUsuarioIdioma()
+    const { data: lojaRow } = await supabase
+      .from('produtos')
+      .select('loja_id')
+      .eq('id', parsed.data.produto_id)
+      .maybeSingle()
+    const lojaId = (lojaRow?.loja_id as string | undefined) ?? LOJA_MATRIZ_ID
+    const dupMsg = await mensagemErroCodigoBarrasDuplicado({
+      supabase,
+      error,
+      codigoBarras: parsed.data.codigo_barras,
+      lojaId,
+      excludeProdutoId: parsed.data.produto_id,
+      idioma,
+    })
+    if (dupMsg) return { success: false, error: dupMsg }
     return {
       success: false,
       error: mensagemErroComSecao('Produto', error.message, idioma),

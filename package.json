@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@supabase/supabase-js": "^2.99.3",
+    "@supabase/supabase-js": "^2.110.5",
     "tsx": "^4.19.4",
     "turbo": "^2.5.4",
     "vitest": "^3.2.6"
@@ -59,6 +59,8 @@
     "@sentry/node": "^10.65.0",
     "@sentry/react": "^10.65.0",
     "@sentry/react-native": "^8.18.0",
-    "@sentry/tracing": "^7.120.4"
+    "@sentry/tracing": "^7.120.4",
+    "@supabase/server": "^1.4.0",
+    "@supabase/ssr": "^0.12.3"
   }
 }
