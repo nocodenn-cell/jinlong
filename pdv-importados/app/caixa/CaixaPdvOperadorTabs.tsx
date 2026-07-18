@@ -140,7 +140,7 @@ function PagamentoPanel({
               <div
                 data-testid="caixa-troco-inline"
                 className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs ${
-                  t.troco > 0 ? "bg-emerald-500/10" : "bg-muted/30"
+                  t.troco > 0 ? "bg-success/10" : "bg-muted/30"
                 }`}
               >
                 <span className="font-medium text-muted-foreground">
@@ -148,7 +148,7 @@ function PagamentoPanel({
                 </span>
                 <span
                   className={`tabular-nums font-bold ${
-                    t.troco > 0 ? "text-emerald-500" : "text-foreground"
+                    t.troco > 0 ? "text-success" : "text-foreground"
                   }`}
                 >
                   {moedaPrefixo} {formatDecimalBRL(t.troco)}
@@ -180,14 +180,14 @@ function PagamentoPanel({
         </div>
         <div className="flex justify-between gap-3 text-xs">
           <dt className="text-muted-foreground">{m.caixa.pdv_pgto_soma_parcelas}</dt>
-          <dd className={`tabular-nums font-semibold ${somaOk ? "text-emerald-500" : "text-destructive"}`}>
+          <dd className={`tabular-nums font-semibold ${somaOk ? "text-success" : "text-destructive"}`}>
             {moedaPrefixo} {formatDecimalBRL(somaParcelas)}
           </dd>
         </div>
         {temTroco ? (
           <div className="flex justify-between gap-3 text-xs">
-            <dt className="font-medium text-emerald-600">{m.caixa.pdv_pgto_troco_cliente}</dt>
-            <dd className="tabular-nums font-bold text-emerald-500">
+            <dt className="font-medium text-success">{m.caixa.pdv_pgto_troco_cliente}</dt>
+            <dd className="tabular-nums font-bold text-success">
               {moedaPrefixo} {formatDecimalBRL(diferenca)}
             </dd>
           </div>
