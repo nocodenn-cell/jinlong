@@ -10,17 +10,19 @@ import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { getMessages } from '@/i18n/getMessages'
+import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import {
   buscarClientesPaginadosAction,
   excluirClienteAction,
   type ClienteListRow,
-} from './actions'
+} from '@/app/admin/clientes/actions'
 import { ClienteEditarModal } from './ClienteEditarModal'
 
 type Props = Readonly<{
   idioma: Idioma
   locale: string
+  /** Bundle do catalogAdapter (admin 5.3); senão resolve via getMessages(idioma). */
+  messages?: Mensagens
   clientesIniciais: ClienteListRow[]
   hasMoreInicial: boolean
 }>
@@ -45,10 +47,11 @@ function initials(nome: string): string {
 export function ClientesListClient({
   idioma,
   locale,
+  messages,
   clientesIniciais,
   hasMoreInicial,
 }: Props) {
-  const m = getMessages(idioma)
+  const m = messages ?? getMessages(idioma)
   const [clientes, setClientes] = useState<ClienteListRow[]>(clientesIniciais)
   const [hasMore, setHasMore] = useState(hasMoreInicial)
   const [loading, setLoading] = useState(false)
@@ -323,6 +326,7 @@ export function ClientesListClient({
         <ClienteEditarModal
           idioma={idioma}
           locale={locale}
+          messages={m}
           cliente={emEdicao}
           onClose={() => setModalAberto(false)}
           onSalvo={onSalvo}

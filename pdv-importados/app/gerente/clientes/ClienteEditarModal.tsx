@@ -5,15 +5,21 @@ import { UserPlus, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { getMessages } from '@/i18n/getMessages'
+import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
-import { salvarClienteAction, type ClienteListRow, type ClienteInput } from './actions'
+import {
+  atualizarClienteAction,
+  criarClienteAction,
+} from '@/app/admin/clientes/actions'
+import { type ClienteListRow, type ClienteInput } from './actions'
 
 type Props = Readonly<{
   idioma: Idioma
   locale: string
+  /** Bundle opcional (admin 5.3); senão getMessages(idioma). */
+  messages?: Mensagens
   cliente: ClienteListRow | null
   onClose: () => void
   onSalvo: (c: ClienteListRow) => void
@@ -42,10 +48,18 @@ function maskTel(raw: string): string {
  * - Mesmo componente para create e update (baseado em `cliente !== null`).
  * - a11y: role=dialog, aria-modal, foco volta para a linha de origem,
  *   ESC fecha (com confirmação se o form estiver sujo), focus trap simples.
- * - Validação no client mais a validação server-side em `salvarClienteAction`.
+ * - Validação no client + server: create → `criarClienteAction` (Writer);
+ *   update → `atualizarClienteAction` (Updater).
  */
-export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }: Props) {
-  const m = getMessages(idioma)
+export function ClienteEditarModal({
+  idioma,
+  locale,
+  messages,
+  cliente,
+  onClose,
+  onSalvo,
+}: Props) {
+  const m = messages ?? getMessages(idioma)
   const editando = !!cliente
 
   const [tipo, setTipo] = useState<'PF' | 'PJ'>(cliente?.tipo ?? 'PF')
@@ -121,7 +135,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     const lim = parseBRL(limite) ?? 0
     if (lim < 0) e.limite_crediario = m.clientes.err_limite_negativo
     if (!editando && !consentimentoLgpd) {
-      e.consentimento_lgpd = 'Confirme o consentimento do titular antes de cadastrar.'
+      e.consentimento_lgpd = m.clientes.err_consentimento_lgpd
     }
     setErros(e)
     return Object.keys(e).length === 0
@@ -147,7 +161,7 @@ export function ClienteEditarModal({ idioma, locale, cliente, onClose, onSalvo }
     }
     setSalvando(true)
     try {
-      const r = await salvarClienteAction(input)
+      const r = editando ? await atualizarClienteAction(input) : await criarClienteAction(input)
       if (!r.ok) {
         emitGerenteToast({ kind: 'error', message: r.error })
         return
