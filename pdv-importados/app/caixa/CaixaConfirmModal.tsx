@@ -45,6 +45,7 @@ export function CaixaConfirmModal({
       open={open}
       onClose={() => onOpenChange(false)}
       title={title}
+      sheet
       footer={
         <>
           <Button

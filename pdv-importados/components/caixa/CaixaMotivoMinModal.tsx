@@ -55,6 +55,7 @@ export function CaixaMotivoMinModal({
       open={open}
       onClose={fechar}
       title={title}
+      sheet
       footer={
         <>
           <Button type="button" variant="secondary" onClick={fechar}>

@@ -62,6 +62,7 @@ export function CaixaMovimentacaoAcaoModal({
       open={open}
       onClose={() => onOpenChange(false)}
       title={title}
+      sheet
       footer={
         <>
           <Button
