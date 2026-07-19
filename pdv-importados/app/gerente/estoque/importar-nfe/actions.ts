@@ -11,6 +11,7 @@ import { parseNfeXml, type NfeParsed } from '@/lib/nfe/nfeParser'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { ImportNfePayloadSchema } from './actions.validation'
+import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -279,28 +280,21 @@ export async function executarImportacaoNfe(
     produto_id_destino: linha.produto_id_destino,
   }))
 
-  const { data, error } = await supabase.rpc('importar_nfe_transacao', {
-    p_chave_acesso: p.chave_acesso,
-    p_numero_nf: p.numero_nf,
-    p_fornecedor_cnpj: p.emitente_cnpj,
-    p_fornecedor_nome: p.emitente_nome,
-    p_loja_id: lojaId,
-    p_itens: itensJson,
-    p_atualizar_custo: p.atualizar_custo_padrao,
-    p_duplicatas: p.duplicatas.length > 0 ? p.duplicatas : null,
+  const writer = createInventoryMovementWriter(supabase, lojaId)
+  const result = await writer.importNfe({
+    chaveAcesso: p.chave_acesso,
+    numeroNf: p.numero_nf,
+    fornecedorCnpj: p.emitente_cnpj,
+    fornecedorNome: p.emitente_nome,
+    lojaId,
+    itens: itensJson,
+    atualizarCusto: p.atualizar_custo_padrao,
+    duplicatas: p.duplicatas.length > 0 ? p.duplicatas : null,
   })
 
-  if (error) {
-    return { success: false, error: mapRpcImportNfe(error.message) }
+  if (!result.ok) {
+    return { success: false, error: mapRpcImportNfe(result.error) }
   }
-
-  const row = data as {
-    ok?: boolean
-    itens_processados?: number
-    produtos_novos?: number
-    produtos_vinculados?: number
-  } | null
-  const n = row?.itens_processados ?? 0
 
   revalidatePath('/gerente/estoque')
   revalidatePath('/gerente/produtos')
@@ -308,9 +302,9 @@ export async function executarImportacaoNfe(
   return {
     success: true,
     data: {
-      itens_processados: n,
-      produtos_novos: row?.produtos_novos ?? 0,
-      produtos_vinculados: row?.produtos_vinculados ?? 0,
+      itens_processados: result.itensProcessados,
+      produtos_novos: result.produtosNovos,
+      produtos_vinculados: result.produtosVinculados,
     },
   }
 }

@@ -1,7 +1,14 @@
 /**
  * Helpers do estoque inicial no cadastro de produto (exceção SSoT fechada).
  * Sem novo fluxo de estoque — só intenção, feedback e mapeamento de erros RPC.
+ * Mensagens PT espelham `estoque.err_*` (borda inventory); paths novos usam inventoryMessages.
  */
+
+import {
+  INVENTORY_ERROR_CODES,
+  mapAjusteRpcMessageToCode,
+  type InventoryErrorCode,
+} from '@shared-core/src/inventory'
 
 export type EstoqueInicialIntent = {
   quantidade: number
@@ -22,27 +29,42 @@ export function parseEstoqueInicialIntent(qtyRaw: string, minRaw: string): Estoq
   }
 }
 
-/** Códigos estáveis da RPC `ajustar_estoque_manual`. */
-const AJUSTE_MSGS: Record<string, string> = {
-  AJUSTE_ESTOQUE_AUTH: 'Sessão inválida para ajustar estoque. Faça login novamente.',
-  AJUSTE_ESTOQUE_PERFIL:
-    'Seu perfil não pode ajustar estoque. Use uma conta de gerente, dono ou administrador.',
-  AJUSTE_ESTOQUE_LOJA_INVALIDA: 'A loja da sessão não coincide com a loja do estoque.',
-  AJUSTE_ESTOQUE_QTD_INVALIDA: 'Quantidade de estoque inválida.',
-  AJUSTE_ESTOQUE_MIN_INVALIDO: 'Estoque mínimo inválido.',
-  AJUSTE_ESTOQUE_MOTIVO_INVALIDO: 'Motivo de ajuste de estoque inválido.',
-  AJUSTE_ESTOQUE_OBSERVACAO_OBRIGATORIA: 'Informe uma observação para este ajuste.',
-  AJUSTE_ESTOQUE_LINHA_NAO_ENCONTRADA:
+/** Fallback PT alinhado a `estoque.err_*` — evita import lib → app. */
+const CODE_TO_PT: Record<InventoryErrorCode, string> = {
+  [INVENTORY_ERROR_CODES.NOT_FOUND]:
     'Linha de estoque não encontrada para este produto. Abra Estoque e tente novamente.',
+  [INVENTORY_ERROR_CODES.AUTH_REQUIRED]:
+    'Sessão inválida para ajustar estoque. Faça login novamente.',
+  [INVENTORY_ERROR_CODES.LOJA_REQUIRED]: 'Não foi possível identificar a loja da sessão.',
+  [INVENTORY_ERROR_CODES.LOJA_MISMATCH]:
+    'A loja da sessão não coincide com a loja do estoque.',
+  [INVENTORY_ERROR_CODES.QTY_INVALID]: 'Quantidade de estoque inválida.',
+  [INVENTORY_ERROR_CODES.MIN_INVALID]: 'Estoque mínimo inválido.',
+  [INVENTORY_ERROR_CODES.REASON_INVALID]: 'Motivo de ajuste de estoque inválido.',
+  [INVENTORY_ERROR_CODES.OBS_REQUIRED]: 'Informe uma observação para este ajuste.',
+  [INVENTORY_ERROR_CODES.PROFILE_DENIED]:
+    'Seu perfil não pode ajustar estoque. Use uma conta de gerente, dono ou administrador.',
+  [INVENTORY_ERROR_CODES.INSUFFICIENT]: 'Estoque insuficiente para esta operação.',
+  [INVENTORY_ERROR_CODES.TRANSFER_SAME_STORE]:
+    'Lojas origem e destino devem ser diferentes.',
+  [INVENTORY_ERROR_CODES.TRANSFER_KEY_REQUIRED]: 'Chave de idempotência ausente.',
+  [INVENTORY_ERROR_CODES.REMESSA_ID_REQUIRED]: 'Identificador da remessa ausente.',
+  [INVENTORY_ERROR_CODES.NFE_PAYLOAD_INVALID]: 'Dados da NF-e inválidos para importação.',
+  [INVENTORY_ERROR_CODES.ADJUST_FAILED]: 'Não foi possível ajustar o estoque.',
+  [INVENTORY_ERROR_CODES.MOVEMENT_FAILED]: 'Não foi possível registrar o movimento de estoque.',
+  [INVENTORY_ERROR_CODES.LIST_FAILED]: 'Não foi possível listar o estoque.',
+  [INVENTORY_ERROR_CODES.READ_FAILED]: 'Não foi possível consultar o estoque.',
+  [INVENTORY_ERROR_CODES.UNKNOWN]: 'Erro de estoque desconhecido.',
 }
 
 export function mensagemErroAjusteEstoqueManual(detalhe: string): string {
   const raw = (detalhe ?? '').trim()
-  if (!raw) return 'Não foi possível ajustar o estoque.'
-  for (const code of Object.keys(AJUSTE_MSGS)) {
-    if (raw.includes(code)) return AJUSTE_MSGS[code]!
+  if (!raw) return CODE_TO_PT[INVENTORY_ERROR_CODES.ADJUST_FAILED]
+  const code = mapAjusteRpcMessageToCode(raw)
+  if (code === INVENTORY_ERROR_CODES.ADJUST_FAILED && !raw.includes('AJUSTE_ESTOQUE')) {
+    return raw
   }
-  return raw
+  return CODE_TO_PT[code]
 }
 
 export type FeedbackCadastroEstoque =

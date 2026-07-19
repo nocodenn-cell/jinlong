@@ -112,7 +112,7 @@ export default function PaymentDonutChartRecharts({ data, total, noDataLabel, di
         </ResponsiveContainer>
         </ChartLayoutGate>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-jl-fg-3">
+      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-caption text-fg-subtle">
         {data.map((entry, idx) => (
           <div key={`${entry.name}-legend`} className="flex items-center gap-2">
             <span

@@ -15,7 +15,17 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const DOMAIN_DIRS = ['sales', 'inventory', 'cash', 'products']
+const DOMAIN_DIRS = [
+  'sales',
+  'inventory',
+  'cash',
+  'financial',
+  'products',
+  'customers',
+  'i18n',
+  'locale',
+  'formatting',
+]
 const SKIP = new Set(['node_modules', '.next', 'dist', 'coverage', '.git'])
 
 const violations = []

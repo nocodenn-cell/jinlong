@@ -4,6 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { createPayablePaymentService } from '@/app/admin/financeiro/payablePayment'
+import { createPayableReader } from '@/app/admin/financeiro/payableReader'
+import type { PayableTitle } from '@shared-core/src/financial'
 
 export type ContaPagarStatus = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'ATRASADO' | 'CANCELADO'
 
@@ -22,8 +25,6 @@ export type ContaPagarRow = {
 }
 
 export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'CARTAO' | 'BOLETO' | 'TRANSF'
-
-const PAGE_SIZE = 20
 
 const COLUMNS = `
   id, fornecedor_id, descricao, valor_total, valor_pago, vencimento,
@@ -50,6 +51,22 @@ function mapRow(raw: Record<string, unknown>): ContaPagarRow {
   }
 }
 
+function payableToRow(p: PayableTitle): ContaPagarRow {
+  return {
+    id: p.contaId,
+    fornecedor_id: p.fornecedorId,
+    fornecedor_nome: p.fornecedorNome,
+    descricao: p.descricao,
+    valor_total: p.valorTotal,
+    valor_pago: p.valorPago,
+    vencimento: p.vencimento,
+    status: p.status.toUpperCase() as ContaPagarStatus,
+    nfe_numero: p.nfeNumero,
+    nfe_importacao_id: p.nfeImportacaoId,
+    criado_em: p.criadoEm,
+  }
+}
+
 export type ContasPagarFilters = {
   status?: string // 'todos' | 'pendente' | 'parcial' | 'atrasado' | 'pago' | 'cancelado'
   fornecedor_id?: string
@@ -65,40 +82,20 @@ export async function buscarContasPagarAction(
 > {
   try {
     const supabase = await createClient()
-    const from = (page - 1) * PAGE_SIZE
-    const to = from + PAGE_SIZE
-
-    let query = supabase
-      .from('contas_pagar')
-      .select(COLUMNS)
-      .order('vencimento', { ascending: true, nullsFirst: false })
-      .range(from, to)
-
-    if (filters?.status && filters.status !== 'todos') {
-      query = query.eq('status', filters.status.toUpperCase())
+    const reader = createPayableReader(supabase)
+    const listed = await reader.list({
+      page,
+      status: filters?.status,
+      fornecedorId: filters?.fornecedor_id,
+      periodo: filters?.periodo,
+      termo: filters?.termo,
+    })
+    if (!listed.ok) return { ok: false, error: listed.error }
+    return {
+      ok: true,
+      contas: listed.contas.map(payableToRow),
+      hasMore: listed.hasMore,
     }
-    if (filters?.fornecedor_id) {
-      query = query.eq('fornecedor_id', filters.fornecedor_id)
-    }
-    if (filters?.periodo) {
-      // 'YYYY-MM' → janela do mês
-      const [y, mo] = filters.periodo.split('-').map(Number)
-      if (y && mo) {
-        const start = new Date(Date.UTC(y, mo - 1, 1)).toISOString()
-        const end = new Date(Date.UTC(y, mo, 1)).toISOString()
-        query = query.gte('vencimento', start).lt('vencimento', end)
-      }
-    }
-    if (filters?.termo && filters.termo.trim()) {
-      const t = filters.termo.trim()
-      query = query.or(`descricao.ilike.%${t}%,nfe_numero.ilike.%${t}%`)
-    }
-
-    const { data, error } = await query
-    if (error) return { ok: false, error: error.message }
-    const rows = (data ?? []).map((r) => mapRow(r as Record<string, unknown>))
-    const hasMore = rows.length > PAGE_SIZE
-    return { ok: true, contas: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao buscar contas a pagar.' }
   }
@@ -127,30 +124,17 @@ export async function registrarPagamentoAction(
 
   try {
     const supabase = await createClient()
-    /**
-     * RPC esperada (deve existir no Supabase):
-     *
-     *   create function registrar_pagamento_contas_pagar(
-     *     p_conta_id uuid,
-     *     p_valor numeric,
-     *     p_forma text,
-     *     p_data timestamptz,
-     *     p_observacao text
-     *   ) returns void
-     *
-     * Implementação:
-     *   - INSERT em contas_pagar_pagamentos
-     *   - UPDATE contas_pagar.valor_pago += p_valor
-     *   - SE valor_pago >= valor_total ⇒ status = 'PAGO', SENAO 'PARCIAL'
-     */
-    const { error: rpcErr } = await supabase.rpc('registrar_pagamento_contas_pagar', {
-      p_conta_id: input.conta_id,
-      p_valor: input.valor,
-      p_forma: input.forma,
-      p_data: input.data,
-      p_observacao: input.observacao ?? null,
+    const payment = createPayablePaymentService(supabase)
+    const paid = await payment.pay({
+      contaId: input.conta_id,
+      valor: input.valor,
+      formaPagamento: input.forma,
+      data: input.data,
+      observacao: input.observacao ?? null,
     })
-    if (rpcErr) return { ok: false, error: mensagemErroComSecao('Pagamento', rpcErr.message) }
+    if (!paid.ok) {
+      return { ok: false, error: mensagemErroComSecao('Pagamento', paid.error) }
+    }
 
     const { data, error } = await supabase
       .from('contas_pagar')
@@ -182,16 +166,11 @@ export async function cancelarContaPagarAction(
 
   try {
     const supabase = await createClient()
-    const { error } = await supabase
-      .from('contas_pagar')
-      .update({
-        status: 'CANCELADO',
-        cancelamento_motivo: motivo.trim(),
-        cancelamento_em: new Date().toISOString(),
-      })
-      .eq('id', conta_id)
-      .in('status', ['PENDENTE', 'PARCIAL', 'ATRASADO'])
-    if (error) return { ok: false, error: mensagemErroComSecao('Conta a pagar', error.message) }
+    const payment = createPayablePaymentService(supabase)
+    const cancelled = await payment.cancel({ contaId: conta_id, motivo })
+    if (!cancelled.ok) {
+      return { ok: false, error: mensagemErroComSecao('Conta a pagar', cancelled.error) }
+    }
     revalidatePath('/gerente/financeiro/contas-pagar')
     revalidatePath('/admin/financeiro')
     return { ok: true }

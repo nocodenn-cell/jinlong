@@ -31,6 +31,8 @@
     "check:pdv-invariant-boundary": "node scripts/check-pdv-invariant-boundary.mjs",
     "check:entity-ssot": "node scripts/check-entity-ssot-boundary.mjs",
     "check:caixa-pre-producao": "node scripts/check-caixa-pre-producao.mjs",
+    "check:ds-burndown": "node scripts/ds-legacy-burndown.mjs",
+    "check:ds-coverage": "node scripts/ds-coverage.mjs",
     "guard:design-system": "node ../scripts/design-guard.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

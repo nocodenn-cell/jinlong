@@ -9,6 +9,7 @@ import {
   runServerActionWithObservability,
   type ActionResult,
 } from '@/lib/observability/runServerAction'
+import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
 
 export async function executarTransferencia(input: {
   loja_origem_id: string
@@ -52,27 +53,23 @@ export async function executarTransferencia(input: {
   return runServerActionWithObservability(
     'gerente/transferencia/executar',
     async () => {
-      const { data, error } = await supabase.rpc('transferir_estoque_seguro', {
-        p_loja_origem: input.loja_origem_id,
-        p_loja_destino: input.loja_destino_id,
-        p_produto_id: input.produto_id,
-        p_quantidade: quantidade,
-        p_observacao: input.observacao?.trim() || null,
-        p_idempotency_key: input.idempotency_key.trim(),
-        p_saldo_esperado: estoqueAtual.quantidadeDisponivel,
+      const writer = createInventoryMovementWriter(supabase, input.loja_origem_id)
+      const result = await writer.transfer({
+        lojaOrigemId: input.loja_origem_id,
+        lojaDestinoId: input.loja_destino_id,
+        productId: input.produto_id,
+        quantity: quantidade,
+        observacao: input.observacao?.trim() || null,
+        idempotencyKey: input.idempotency_key.trim(),
+        saldoEsperado: estoqueAtual.quantidadeDisponivel,
       })
-      if (error) {
-        throw new Error(mensagemErroComSecao('Transferência de estoque', error.message))
-      }
-
-      const transferenciaId = typeof data === 'string' ? data : null
-      if (!transferenciaId) {
-        throw new Error('Falha ao concluir transferência: ID não retornado.')
+      if (!result.ok) {
+        throw new Error(mensagemErroComSecao('Transferência de estoque', result.error))
       }
 
       revalidatePath('/gerente/transferencias')
       revalidatePath('/gerente/estoque')
-      return { transferenciaId }
+      return { transferenciaId: result.transferenciaId }
     },
     'transferir_estoque_seguro',
   )

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createReceivableReader } from '@/app/admin/financeiro/receivableReader'
 
 /** Filtros da listagem de contas a receber (sincronizados com a URL). */
 export type FinanceiroTituloFilters = {
@@ -79,100 +80,40 @@ export function isDefaultTituloFilters(f: FinanceiroTituloFilters): boolean {
   )
 }
 
-function escapeIlike(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
-}
-
-function isYmd(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s)
-}
-
 /**
- * Listagem com filtros no Postgres (evita depender só dos N primeiros sem filtro).
- * `limite+1` linhas são lidas para detectar truncagem.
+ * Listagem com filtros no Postgres via ReceivableReader (ADR-010).
+ * `limite+1` linhas são lidas no adapter para detectar truncagem.
  */
 export async function fetchContasReceberListagem(
   supabase: SupabaseClient,
   filters: FinanceiroTituloFilters,
   limite: number,
 ): Promise<{ titulos: FinanceiroTituloListaRow[]; capped: boolean }> {
-  const take = limite + 1
-
-  let idsPorClienteNarrow: string[] | null = null
-  const needleCliente = filters.nomeCliente.trim()
-  if (needleCliente) {
-    const patternNome = `%${escapeIlike(needleCliente)}%`
-    const { data: cli } = await supabase.from('clientes').select('id').ilike('nome', patternNome).limit(500)
-    idsPorClienteNarrow = cli?.map((c) => c.id as string) ?? []
-    if (idsPorClienteNarrow.length === 0) {
-      return { titulos: [], capped: false }
-    }
-  }
-
-  let idsPorBusca: string[] | null = null
-  const qNeedle = filters.q.trim()
-  if (qNeedle) {
-    const pat = `%${escapeIlike(qNeedle)}%`
-    const [{ data: byDesc }, { data: cliQ }] = await Promise.all([
-      supabase.from('contas_receber').select('id').ilike('descricao', pat).limit(2000),
-      supabase.from('clientes').select('id').ilike('nome', pat).limit(500),
-    ])
-    const fromCliIds = cliQ?.map((c) => c.id as string) ?? []
-    let fromClienteTitulos: { id: string }[] = []
-    if (fromCliIds.length > 0) {
-      const r = await supabase.from('contas_receber').select('id').in('cliente_id', fromCliIds).limit(2000)
-      fromClienteTitulos = r.data ?? []
-    }
-    const set = new Set<string>()
-    for (const r of byDesc ?? []) set.add(r.id as string)
-    for (const r of fromClienteTitulos) set.add(r.id as string)
-    idsPorBusca = [...set]
-    if (idsPorBusca.length === 0) {
-      return { titulos: [], capped: false }
-    }
-    const MAX_IDS_BUSCA = 1200
-    if (idsPorBusca.length > MAX_IDS_BUSCA) {
-      idsPorBusca = idsPorBusca.slice(0, MAX_IDS_BUSCA)
-    }
-  }
-
-  let q = supabase
-    .from('contas_receber')
-    .select('id, valor_total, valor_aberto, status, descricao, vencimento, cliente_id, clientes(nome)')
-
-  if (filters.opcao === 'ABERTO') q = q.eq('status', 'ABERTO')
-  else if (filters.opcao === 'PARCIAL') q = q.eq('status', 'PARCIAL')
-  else q = q.in('status', ['ABERTO', 'PARCIAL'])
-
-  if (filters.de.trim() && isYmd(filters.de)) {
-    q = q.not('vencimento', 'is', null).gte('vencimento', filters.de.trim())
-  }
-  if (filters.ate.trim() && isYmd(filters.ate)) {
-    q = q.not('vencimento', 'is', null).lte('vencimento', filters.ate.trim())
-  }
-
-  if (idsPorClienteNarrow) q = q.in('cliente_id', idsPorClienteNarrow)
-  if (idsPorBusca) q = q.in('id', idsPorBusca)
-
-  const { data: raw } = await q.order('created_at', { ascending: false }).limit(take)
-  const rows = raw ?? []
-  const capped = rows.length > limite
-  const sliced = capped ? rows.slice(0, limite) : rows
-  const titulos: FinanceiroTituloListaRow[] = sliced.map((t) => {
-    const cn = t.clientes as { nome?: string } | { nome?: string }[] | null
-    const nomeCliente = Array.isArray(cn) ? cn[0]?.nome : cn?.nome
-    return {
-      id: t.id as string,
-      valor_total: Number(t.valor_total),
-      valor_aberto: Number(t.valor_aberto),
-      status: String(t.status),
-      descricao: t.descricao != null ? String(t.descricao) : null,
-      vencimento: t.vencimento != null ? String(t.vencimento) : null,
-      cliente_id: t.cliente_id as string,
-      cliente_nome: nomeCliente ?? null,
-    }
+  const reader = createReceivableReader(supabase)
+  const result = await reader.list({
+    opcao: filters.opcao,
+    nomeCliente: filters.nomeCliente,
+    q: filters.q,
+    de: filters.de,
+    ate: filters.ate,
+    limite,
   })
-  return { titulos, capped }
+  if (!result.ok) {
+    return { titulos: [], capped: false }
+  }
+  return {
+    titulos: result.titulos.map((t) => ({
+      id: t.tituloId,
+      valor_total: t.valorTotal,
+      valor_aberto: t.valorAberto,
+      status: t.status,
+      descricao: t.descricao,
+      vencimento: t.vencimento,
+      cliente_id: t.clienteId,
+      cliente_nome: t.clienteNome,
+    })),
+    capped: result.capped,
+  }
 }
 
 export const FIN_KPI_SOMA_CAP = 8000

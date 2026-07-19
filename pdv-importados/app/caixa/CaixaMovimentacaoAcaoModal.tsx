@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DragonModal } from "@/components/ui/DragonModal"
+import { Textarea } from "@/components/ui/forms"
+import { ErrorState } from "@/components/ui/feedback"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
 
@@ -67,8 +69,7 @@ export function CaixaMovimentacaoAcaoModal({
         <>
           <Button
             type="button"
-            variant="ghost"
-            className="app-btn-neutral"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={processando}
           >
@@ -76,9 +77,10 @@ export function CaixaMovimentacaoAcaoModal({
           </Button>
           <Button
             type="button"
-            className="app-btn-danger"
+            variant="danger"
             onClick={() => void confirmar()}
             disabled={processando}
+            loading={processando}
           >
             {processando ? m.caixa.movimentacao_processando : submitLabel}
           </Button>
@@ -86,21 +88,17 @@ export function CaixaMovimentacaoAcaoModal({
       }
     >
       <div data-testid="caixa-movimentacao-acao-modal" className="space-y-3">
-        <label className="block text-xs app-muted">
+        <label className="block text-caption text-fg-muted">
           {m.caixa.timeline_modal_motivo_label}
-          <textarea
+          <Textarea
             ref={motivoRef}
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             placeholder={m.caixa.timeline_modal_motivo_placeholder}
-            className="mt-1 min-h-24 w-full rounded-md px-2 py-1.5 text-xs app-input"
+            className="mt-1"
           />
         </label>
-        {erroLocal && (
-          <p className="text-xs app-badge-warn rounded-md border px-2 py-1" role="alert">
-            {erroLocal}
-          </p>
-        )}
+        {erroLocal ? <ErrorState dense description={erroLocal} /> : null}
       </div>
     </DragonModal>
   )

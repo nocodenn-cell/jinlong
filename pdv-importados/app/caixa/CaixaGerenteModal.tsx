@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DragonModal } from "@/components/ui/DragonModal"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/forms"
+import { ErrorState } from "@/components/ui/feedback"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
@@ -140,7 +141,6 @@ export function CaixaGerenteModal({
             <Button
               type="button"
               variant="outline"
-              className="app-btn-neutral"
               onClick={handleVoltar}
               disabled={validando}
             >
@@ -148,12 +148,13 @@ export function CaixaGerenteModal({
             </Button>
             <Button
               type="button"
-              className="app-btn-accent inline-flex items-center gap-2"
+              variant="primary"
+              className="inline-flex items-center gap-2"
               onClick={handleAplicarPercent}
               disabled={validando || !ctx}
             >
               <ImperialSealIcon
-                className="h-4 w-4 shrink-0 app-accent-text drop-shadow-sm"
+                className="h-4 w-4 shrink-0 text-brand drop-shadow-sm"
                 title={m.caixa.aria_selo_gerente}
                 pulse
               />
@@ -164,8 +165,7 @@ export function CaixaGerenteModal({
           <>
             <Button
               type="button"
-              variant="ghost"
-              className="app-btn-neutral"
+              variant="secondary"
               onClick={fechar}
               disabled={validando}
             >
@@ -173,9 +173,10 @@ export function CaixaGerenteModal({
             </Button>
             <Button
               type="button"
-              className="app-btn-accent"
+              variant="primary"
               onClick={() => void handleContinuarSenha()}
               disabled={validando}
+              loading={validando}
             >
               {validando ? m.caixa.validando_gerente : m.caixa.modal_gerente_seguinte}
             </Button>
@@ -185,7 +186,7 @@ export function CaixaGerenteModal({
     >
       <div data-testid="caixa-gerente-modal" className="space-y-3">
         {passo === "senha" ? (
-          <label className="block text-xs app-muted">
+          <label className="block text-caption text-fg-muted">
             {m.caixa.modal_gerente_passo_senha}
             <Input
               ref={senhaRef}
@@ -195,7 +196,7 @@ export function CaixaGerenteModal({
               onChange={(e) => setSenha(e.target.value)}
               placeholder={m.caixa.modal_gerente_senha_placeholder}
               disabled={validando}
-              className="mt-1 app-input"
+              className="mt-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleContinuarSenha()
               }}
@@ -204,7 +205,7 @@ export function CaixaGerenteModal({
         ) : (
           ctx && (
             <>
-              <p className="text-xs app-muted">
+              <p className="text-caption text-fg-muted">
                 {caixaFmt(m.caixa.modal_gerente_passo_percentual, {
                   max: ctx.maxDescontoPercentual.toFixed(1),
                 })}
@@ -216,7 +217,6 @@ export function CaixaGerenteModal({
                 onChange={(e) => setPercentStr(e.target.value)}
                 placeholder={m.caixa.modal_gerente_percent_placeholder}
                 disabled={validando}
-                className="app-input"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleAplicarPercent()
                 }}
@@ -224,11 +224,7 @@ export function CaixaGerenteModal({
             </>
           )
         )}
-        {erroLocal && (
-          <p className="rounded-md border px-2 py-1 text-xs app-badge-warn" role="alert">
-            {erroLocal}
-          </p>
-        )}
+        {erroLocal ? <ErrorState dense description={erroLocal} /> : null}
       </div>
     </DragonModal>
   )

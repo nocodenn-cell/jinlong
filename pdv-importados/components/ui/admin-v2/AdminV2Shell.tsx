@@ -47,7 +47,12 @@ export function AdminV2Shell({ session, children, stockAlertCount }: AdminV2Shel
               />
             </Link>
           </div>
-          <SidebarNav admin={admin} chineseLanguage={chineseLanguage} stockAlertCount={stockAlertCount} />
+          <SidebarNav
+            admin={admin}
+            chineseLanguage={chineseLanguage}
+            stockAlertCount={stockAlertCount}
+            showAdminOnlyItems={session.perfil === 'ADMIN'}
+          />
           <SidebarUserFooter session={session} />
         </aside>
 

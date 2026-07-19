@@ -229,7 +229,6 @@ export function CadastroProdutoRelampagoModal({
           <Button
             type="button"
             variant="secondary"
-            className="app-btn-neutral"
             disabled={saving}
             onClick={fechar}
           >
@@ -238,7 +237,7 @@ export function CadastroProdutoRelampagoModal({
           <Button
             ref={confirmRef}
             type="button"
-            className="app-btn-accent"
+            variant="primary"
             disabled={saving || loadingSugestao}
             onClick={() => void salvarEVender()}
           >
@@ -256,14 +255,14 @@ export function CadastroProdutoRelampagoModal({
         </div>
 
         {loadingSugestao ? (
-          <p className="flex items-center gap-1.5 text-[11px] text-jl-fg-3">
+          <p className="flex items-center gap-1.5 text-caption text-fg-subtle">
             <Sparkles size={12} aria-hidden />
             {c.cadastro_rapido_buscando_sugestao}
           </p>
         ) : null}
 
         {sugestao && !loadingSugestao && sugestao.fontes[0] !== 'nenhuma' ? (
-          <p className="rounded-md border border-jl-accent/30 bg-jl-accent/10 px-3 py-2 text-[11px] text-jl-fg-2">
+          <p className="rounded-md border border-[var(--color-info-border)] bg-[var(--color-info-bg)] px-3 py-2 text-caption text-fg-muted">
             <span className="font-semibold">{c.cadastro_rapido_sugestao_titulo}</span>
             {' · '}
             {fontesLabel(sugestao.fontes)}

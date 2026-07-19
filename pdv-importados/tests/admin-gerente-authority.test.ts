@@ -96,6 +96,8 @@ describe('gerente authority convergence', () => {
     const allowedWithoutGuard = new Set([
       'app/gerente/relatorios/actions.ts',
       'app/gerente/relatorios/vendas/actions.ts',
+      // Facade re-export → auth nas actions admin delegadas
+      'app/gerente/clientes/actions.ts',
     ])
     const filtered = missing.filter((f) => !allowedWithoutGuard.has(f))
     expect(filtered, `actions sem assertGerenteSession: ${filtered.join(', ')}`).toEqual([])

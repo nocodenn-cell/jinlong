@@ -1,8 +1,13 @@
 # Runbook — Criação de usuários oficiais e implantação do primeiro cliente
 
-Fluxo oficial (administrativo/manual) para criar contas de produção. Enquanto não existir
-UI de gestão de usuários, **este documento é o processo canônico** — qualquer conta criada
-fora dele é considerada irregular.
+Fluxo oficial para implantação.
+
+- **Loja + DONO:** wizard interno `/admin/provisionamento` (perfil **ADMIN**, requer
+  `SUPABASE_SERVICE_ROLE_KEY` no servidor). Depois conduza o gate em `/admin/implantacao`.
+- **Funcionários do dia a dia** (OPERADOR / GERENTE): UI `/admin/funcionarios`.
+- **Contas internas ADMIN:** ainda via este runbook (SQL + Auth), se necessário.
+
+Contas criadas só no Auth sem linha em `public.usuarios` continuam irregulares.
 
 ## Modelo oficial de perfis
 
@@ -40,39 +45,68 @@ Ou seja: **desativar um usuário = `UPDATE public.usuarios SET ativo = false WHE
 agora isso bloqueia de verdade (login e navegação). `ativo = NULL` é tratado como ativo
 (compatibilidade com linhas antigas).
 
+## Gate GO-LIVE (obrigatório)
+
+Após provisionar a loja e o DONO, conduza a implantação em **`/admin/implantacao`**:
+
+- Checklist persistido por loja (não Markdown).
+- Cada item: status · responsável · data/hora · observações.
+- Estados: **Não pronto** · **Pronto com pendências** · **GO-LIVE autorizado**.
+- Somente DONO/ADMIN autoriza GO; bloqueado se houver obrigatórios pendentes
+  (fiscal: Stub **ou** NFC-e homologada).
+
+## Recuperação e troca de senha (self-service)
+
+O app expõe:
+
+| Fluxo | Rota |
+|---|---|
+| Esqueci a senha | `/auth/esqueci-senha` (link no login) |
+| Redefinir via e-mail | `/auth/callback` → `/auth/redefinir-senha` |
+| Trocar senha logado | `/auth/alterar-senha` (admin sidebar + PDV) |
+
+**Pré-requisito Supabase:** em Authentication → URL Configuration, adicione o redirect  
+`https://<dominio-do-app>/auth/callback` (e `http://localhost:3000/auth/callback` em dev).  
+Defina `NEXT_PUBLIC_APP_URL` no host Next com a mesma origem.
+
 ## Passo a passo — implantação de um cliente novo
 
-### 1. Criar a loja (nunca reutilizar a Matriz de teste)
+### 1–2. Criar a loja e o DONO — wizard `/admin/provisionamento`
+
+1. Login com conta **ADMIN** (equipe FastProduct).
+2. Abrir **Sistema → Provisionamento**.
+3. Informar nome da loja, e-mail real do DONO, senha inicial e idioma.
+4. Confirmar → o servidor cria `lojas`, Auth user, `public.usuarios` (DONO),
+   `pdv_config` padrão e bootstrap do checklist.
+5. Seguir o link para `/admin/implantacao?lojaId=…` e conduzir o GO-LIVE.
+
+**Nunca reutilizar** a loja `Matriz` (`a0000001-0000-4000-8000-000000000001`) nem a
+`Filial demo` para clientes reais.
+
+#### Fallback (só se o wizard estiver indisponível)
 
 ```sql
 INSERT INTO public.lojas (id, nome)
 VALUES (gen_random_uuid(), '<NOME REAL DA LOJA DO CLIENTE>')
-RETURNING id;  -- guarde este UUID para o passo 3
+RETURNING id;
 ```
 
-A loja `Matriz` (`a0000001-0000-4000-8000-000000000001`) e a `Filial demo` contêm dados de
-teste/E2E — não colocar usuários reais nelas.
-
-### 2. Criar cada usuário no Supabase Auth
-
-Dashboard → **Authentication → Users → Add user**:
-- E-mail **real** da pessoa (nunca `@localhost.test`, `@example.com`, `@exemplo.com`).
-- Senha inicial forte; marcar **Auto Confirm User**.
-- Copiar o **User UID** gerado.
-
-### 3. Vincular o perfil (uma linha por usuário, em `public.usuarios`)
+Dashboard → Authentication → Users → Add user (e-mail real, Auto Confirm), depois:
 
 ```sql
 INSERT INTO public.usuarios (id, nome, perfil, idioma_preferido, ativo, loja_id)
 VALUES
-  ('<UID_DONO>',     '<Nome real do dono>',     'DONO',     'zh', true, '<LOJA_ID_DO_PASSO_1>'),
-  ('<UID_GERENTE>',  '<Nome real do gerente>',  'GERENTE',  'pt', true, '<LOJA_ID_DO_PASSO_1>'),
-  ('<UID_OPERADOR>', '<Nome real do operador>', 'OPERADOR', 'pt', true, '<LOJA_ID_DO_PASSO_1>');
+  ('<UID_DONO>', '<Nome real do dono>', 'DONO', 'zh', true, '<LOJA_ID>');
 ```
 
-- `idioma_preferido`: `pt` ou `zh` — é só o idioma **inicial**; o usuário troca sozinho pelo
-  seletor PT/普通话 na sidebar do painel (adicionado na Fase A).
-- `nome`: nome real — nunca "Demo", "Teste" ou "E2E".
+### 3. Demais funcionários — UI `/admin/funcionarios`
+
+Com o DONO logado no painel:
+1. Abrir **Funcionários**.
+2. Criar GERENTE e OPERADOR (e-mail real + senha inicial).
+3. Desativar contas pelo toggle (equivale a `ativo = false`).
+
+Alternativa legado (só se a UI estiver indisponível): repetir o passo 2 para GERENTE/OPERADOR via Auth + SQL.
 
 ### 4. Validar (checklist de aceite)
 

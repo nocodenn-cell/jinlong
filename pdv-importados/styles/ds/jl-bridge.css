@@ -1,0 +1,22 @@
+/**
+ * Ponte Jin Long → tokens semânticos (SSOT).
+ * Mantém classes jl-* funcionando sem hex literais novos.
+ */
+
+:root,
+[data-admin-v2] {
+  --jl-surface-base: var(--color-surface);
+  --jl-surface-elev: var(--color-surface);
+  --jl-surface-soft: var(--color-surface-soft);
+  --jl-border-1: var(--color-border);
+  --jl-border-2: var(--color-border);
+  --jl-fg-1: var(--color-fg);
+  --jl-fg-2: var(--color-fg-muted);
+  --jl-fg-3: var(--color-fg-subtle);
+  --jl-accent: var(--color-brand);
+  --jl-elev-1: var(--shadow-sm);
+  --jl-elev-2: var(--shadow-md);
+  --admin-v2-radius-card: var(--radius-card);
+  --admin-v2-shadow-card: var(--shadow-card);
+  --admin-v2-accent: var(--color-brand);
+}

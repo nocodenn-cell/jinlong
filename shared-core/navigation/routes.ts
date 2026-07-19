@@ -6,6 +6,10 @@ export const ROUTES = {
   auth: {
     login: '/login',
     signOut: '/auth/signout',
+    forgotPassword: '/auth/esqueci-senha',
+    resetPassword: '/auth/redefinir-senha',
+    changePassword: '/auth/alterar-senha',
+    callback: '/auth/callback',
   },
   onboarding: '/onboarding',
   caixa: {
@@ -39,6 +43,7 @@ export const ROUTES = {
     catalogo: '/admin/catalogo',
     catalogoNovo: '/admin/catalogo/novo',
     clientes: '/admin/clientes',
+    funcionarios: '/admin/funcionarios',
     fornecedores: '/admin/fornecedores',
     estoque: '/admin/estoque',
     estoqueRecebimento: '/admin/estoque/recebimento',
@@ -52,6 +57,8 @@ export const ROUTES = {
     relatorios: '/admin/relatorios',
     comissoes: '/admin/comissoes',
     configuracoes: '/admin/configuracoes',
+    implantacao: '/admin/implantacao',
+    provisionamento: '/admin/provisionamento',
     suspensao: '/admin/suspensao',
     diagnosticoCaixa: '/admin/diagnostico-caixa',
     categoriasProdutos: '/admin/categorias-produtos',

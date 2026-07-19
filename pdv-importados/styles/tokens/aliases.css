@@ -1,0 +1,144 @@
+/**
+ * Design System — Legacy aliases (compatibilidade)
+ * Fase 2 · Onda 2
+ *
+ * Ponte temporária: código legado (--jl-*, --fp-*, --accent, dragon, shadcn)
+ * aponta para o SSOT. Não introduzir novos usos destes prefixos.
+ */
+
+:root {
+  /* Oriental / theme.config contract */
+  --surface: var(--color-surface);
+  --surface-soft: var(--color-surface-soft);
+  --surface-text: var(--color-fg);
+  --border: var(--color-border);
+  --accent: var(--color-brand);
+  --accent-strong: var(--color-brand-strong);
+  --accent-contrast: var(--color-fg-on-brand);
+
+  /* theme.css semantic names */
+  --color-background-surface: var(--color-surface);
+  --color-background-surface-soft: var(--color-surface-soft);
+  --color-background-overlay: var(--color-overlay);
+  --color-background-primary: var(--color-surface-soft);
+  --color-background-secondary: var(--color-surface);
+  --color-background-tertiary: var(--color-surface-soft);
+  --color-text-primary: var(--color-fg);
+  --color-text-secondary: var(--color-fg-muted);
+  --color-text-tertiary: var(--color-fg-subtle);
+  --color-text-disabled: var(--color-fg-disabled);
+  --color-border-primary: var(--color-border);
+  --color-border-secondary: var(--color-border);
+  --color-border-disabled: var(--color-border-disabled);
+  --color-brand-primary: var(--color-brand);
+  --color-brand-secondary: var(--color-brand-soft);
+  --color-brand-strong: var(--color-brand-strong);
+  --color-brand-contrast: var(--color-fg-on-brand);
+  --color-success-50: var(--palette-jade-50);
+  --color-success-500: var(--color-success);
+  --color-danger-50: var(--palette-red-50);
+  --color-danger-500: var(--color-danger);
+  --color-warning-50: var(--palette-amber-50);
+  --color-warning-500: var(--color-warning);
+  --color-chart-gold: var(--color-brand);
+
+  /* FastProduct --fp-* */
+  --fp-text-muted: color-mix(in srgb, var(--color-fg) 65%, transparent);
+  --fp-text-secondary: var(--color-fg-muted);
+  --fp-text-primary: var(--color-fg);
+  --fp-bg-card: var(--color-surface);
+  --fp-bg-card-soft: var(--color-surface-soft);
+  --fp-border: var(--color-border);
+  --fp-border-subtle: color-mix(in srgb, var(--color-border) 50%, transparent);
+  --fp-success: var(--color-success);
+  --fp-success-bg: var(--color-success-bg);
+  --fp-success-border: var(--color-success-border);
+  --fp-danger: var(--color-danger);
+  --fp-danger-bg: var(--color-danger-bg);
+  --fp-danger-border: var(--color-danger-border);
+  --fp-warning: var(--color-warning);
+  --fp-warning-bg: var(--color-warning-bg);
+  --fp-warning-border: var(--color-warning-border);
+  --fp-info: var(--color-info);
+  --fp-info-bg: var(--color-info-bg);
+  --fp-info-border: var(--color-info-border);
+  --fp-purple: var(--color-accent-purple);
+  --fp-purple-bg: var(--color-accent-purple-bg);
+  --fp-purple-border: var(--color-accent-purple-border);
+
+  /* Dragon primitives (login / residual) */
+  --color-dragon-jade-50: var(--palette-jade-50);
+  --color-dragon-jade-100: #d1fae5;
+  --color-dragon-jade-500: var(--palette-jade-500);
+  --color-dragon-jade-600: #059669;
+  --color-dragon-jade-700: var(--palette-jade-700);
+  --color-dragon-jade-900: #064e3b;
+  --color-dragon-gold-50: var(--palette-amber-50);
+  --color-dragon-gold-100: #fef3c7;
+  --color-dragon-gold-400: #fbbf24;
+  --color-dragon-gold-500: var(--palette-amber-500);
+  --color-dragon-gold-600: #d97706;
+  --color-dragon-gold-700: var(--palette-amber-700);
+  --color-dragon-gold-900: #78350f;
+  --color-dragon-gold-luxury: var(--palette-gold-luxury);
+  --color-dragon-gold-cinzel: var(--palette-gold-cinzel);
+  --color-dragon-gold-warm: var(--palette-gold-warm);
+  --color-dragon-imperial-red-50: var(--palette-red-50);
+  --color-dragon-imperial-red-100: #fee2e2;
+  --color-dragon-imperial-red-500: var(--palette-red-500);
+  --color-dragon-imperial-red-600: #dc2626;
+  --color-dragon-imperial-red-700: var(--palette-red-700);
+  --color-dragon-imperial-red-900: #7f1d1d;
+  --color-night-50: var(--palette-slate-50);
+  --color-night-100: var(--palette-slate-100);
+  --color-night-200: var(--palette-slate-200);
+  --color-night-300: #cbd5e1;
+  --color-night-400: var(--palette-slate-400);
+  --color-night-500: var(--palette-slate-500);
+  --color-night-600: var(--palette-slate-600);
+  --color-night-700: var(--palette-slate-700);
+  --color-night-800: #1e293b;
+  --color-night-900: var(--palette-slate-900);
+  --color-night-950: #020617;
+  --color-cloud-cream: #fff7e8;
+
+  /* Opacity scale (legacy) */
+  --opacity-0: 0;
+  --opacity-10: 0.1;
+  --opacity-20: 0.2;
+  --opacity-30: 0.3;
+  --opacity-40: 0.4;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+  --opacity-70: 0.7;
+  --opacity-80: 0.8;
+  --opacity-90: 0.9;
+  --opacity-100: 1;
+
+  /* Radius legacy names */
+  --radius-base: var(--radius-sm);
+  --radius-2xl: var(--radius-xl);
+
+  /* Shadow legacy */
+  --shadow-base: var(--shadow-sm);
+
+  /* Admin V2 */
+  --admin-v2-radius-card: var(--radius-card);
+  --admin-v2-shadow-card: var(--shadow-card);
+  --admin-v2-accent: var(--color-brand);
+  --admin-v2-accent-gold: var(--color-brand);
+
+  /* Breakpoints (doc only — media queries still use literals) */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: color-mix(in srgb, var(--palette-slate-400) 80%, transparent);
+    --color-border-primary: var(--color-border);
+  }
+}

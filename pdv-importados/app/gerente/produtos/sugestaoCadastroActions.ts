@@ -2,8 +2,8 @@
 
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { getUsuarioAtual } from '@/lib/auth/usuarioAtual'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { avaliarMetaCadastroDuration } from '@/core/catalog/sugestaoCadastro'
 import type { SugestaoCadastroProduto } from '@/core/ports/gtinLookup'
 import { sugerirDadosCadastroPorGtinImpl } from '@/lib/adapters/gtin/sugerirDadosCadastro'
@@ -22,13 +22,13 @@ export async function sugerirDadosCadastroPorGtin(
     return { ok: false, error: 'Código inválido para sugestão.' }
   }
 
-  const { userId, lojaId } = await getUsuarioAtual()
-  if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
 
   const supabase = await createClient()
   const data = await sugerirDadosCadastroPorGtinImpl(
     supabase,
-    lojaId ?? LOJA_MATRIZ_ID,
+    auth.session.lojaId ?? LOJA_MATRIZ_ID,
     parsed.data,
   )
   return { ok: true, data }
@@ -51,8 +51,8 @@ export async function registrarCadastroProdutoTelemetry(
   const parsed = TelemetrySchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Payload de telemetria inválido.' }
 
-  const { userId, lojaId } = await getUsuarioAtual()
-  if (!userId) return { ok: false, error: 'Sessão expirada.' }
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
 
   const meta = avaliarMetaCadastroDuration({
     durationMs: parsed.data.durationMs,
@@ -61,8 +61,8 @@ export async function registrarCadastroProdutoTelemetry(
 
   const supabase = await createClient()
   const { error } = await supabase.from('cadastro_produto_telemetry_events').insert({
-    user_id: userId,
-    loja_id: lojaId,
+    user_id: auth.session.userId,
+    loja_id: auth.session.lojaId,
     event_name: 'cadastro_duration_ms',
     surface: parsed.data.surface,
     duration_ms: parsed.data.durationMs,

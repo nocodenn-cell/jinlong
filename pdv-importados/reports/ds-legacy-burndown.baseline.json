@@ -1,0 +1,88 @@
+{
+  "asOf": "2026-07-19",
+  "note": "Fase 2 — teto de dívida visual; só atualizar após redução",
+  "results": [
+    {
+      "id": "app_btn",
+      "label": ".app-btn-* (classes)",
+      "files": 28,
+      "hits": 53,
+      "samples": [
+        "app/gerente/categorias-financeiras/CategoriasFinanceirasPageClient.tsx (1)",
+        "app/gerente/categorias-produtos/CategoriasProdutosPageClient.tsx (1)",
+        "app/gerente/clientes/ClienteEditarModal.tsx (2)",
+        "app/gerente/clientes/ClientesListClient.tsx (3)",
+        "app/gerente/comissoes/ComissoesPageClient.tsx (2)",
+        "app/gerente/compras/ComprasGerentePageClient.tsx (2)",
+        "app/gerente/configuracoes/ConfiguracoesClient.tsx (3)",
+        "app/gerente/configuracoes/ConfiguracoesGerentePageClient.tsx (1)"
+      ]
+    },
+    {
+      "id": "gerente_table",
+      "label": "GerenteTable import",
+      "files": 17,
+      "hits": 17,
+      "samples": [
+        "app/admin/funcionarios/FuncionariosListClient.tsx (1)",
+        "app/gerente/clientes/ClientesListClient.tsx (1)",
+        "app/gerente/comissoes/ComissoesPageClient.tsx (1)",
+        "app/gerente/compras/ComprasGerentePageClient.tsx (1)",
+        "app/gerente/estoque/importar-nfe/ImportarNfePageClient.tsx (1)",
+        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (1)",
+        "app/gerente/financeiro/FinanceiroGerentePageClient.tsx (1)",
+        "app/gerente/produtos/ProdutosGerentePageClient.tsx (1)"
+      ]
+    },
+    {
+      "id": "login_premium_controls",
+      "label": "login-premium-input|submit|label",
+      "files": 0,
+      "hits": 0,
+      "samples": []
+    },
+    {
+      "id": "text_arbitrary_px",
+      "label": "text-[Npx] arbitrário",
+      "files": 78,
+      "hits": 373,
+      "samples": [
+        "app/admin/auditoria/page.tsx (4)",
+        "app/admin/auditoria/_components/AuditoriaTimeline.tsx (15)",
+        "app/admin/categorias-financeiras/_components/CategoriasFinanceirasContent.tsx (8)",
+        "app/admin/comissoes/_components/ComissoesContent.tsx (13)",
+        "app/admin/configuracoes/_components/ConfiguracoesContent.tsx (11)",
+        "app/admin/diagnostico-caixa/_components/DiagnosticoCaixaContent.tsx (13)",
+        "app/admin/estoque/page.tsx (7)",
+        "app/admin/estoque/_components/AjusteSaldoModal.tsx (5)"
+      ]
+    },
+    {
+      "id": "hex_in_tsx",
+      "label": "hex em className (tailwind)",
+      "files": 8,
+      "hits": 19,
+      "samples": [
+        "app/auth/alterar-senha/AlterarSenhaForm.tsx (3)",
+        "app/auth/esqueci-senha/EsqueciSenhaForm.tsx (3)",
+        "app/auth/esqueci-senha/page.tsx (1)",
+        "app/auth/redefinir-senha/RedefinirSenhaForm.tsx (3)",
+        "app/gerente/comissoes/ComissoesPageClient.tsx (1)",
+        "app/gerente/suspensao/SuspensaoPageClient.tsx (1)",
+        "components/auth/AuthShell.tsx (1)",
+        "components/legal/DocumentoLegal.tsx (6)"
+      ]
+    },
+    {
+      "id": "raw_dialog_caixa",
+      "label": "role=\"dialog\" no caixa",
+      "files": 3,
+      "hits": 3,
+      "samples": [
+        "app/caixa/CaixaHistoricoSheet.tsx (1)",
+        "app/caixa/CaixaPageClient.tsx (1)",
+        "app/caixa/CaixaReciboModal.tsx (1)"
+      ]
+    }
+  ]
+}

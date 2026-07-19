@@ -7,6 +7,8 @@ import { Download, FileUp, Upload } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { buscarProdutosParaExportacao } from '@/app/gerente/produtos/actions'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
+import { Button } from '@/components/ui/button'
+import { PageActions } from '@/components/ui/admin-v2'
 import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImportarModal'
 import { CatalogoNovoButton } from './CatalogoNovoButton'
 import { toCatalogoExportInput, type CatalogoExportFiltros } from './catalogoFiltrosExport'
@@ -61,31 +63,32 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport }: Props) {
 
   return (
     <>
-      <div className="mb-2 w-full basis-full rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-[11px] text-jl-fg-2">
+      <div className="mb-2 w-full basis-full rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-caption text-fg-muted">
         {ui.catalogo_hint_volume}
       </div>
-      <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-primary">
-        <Upload size={14} aria-hidden />
-        {ui.catalogo_importar_nfe}
-      </Link>
-      <button
-        type="button"
-        className="admin-v2-btn-primary"
-        onClick={() => setImportOpen(true)}
-      >
-        <FileUp size={14} aria-hidden />
-        {m.produtos.import_modal_titulo}
-      </button>
-      <button
-        type="button"
-        className="admin-v2-btn-secondary"
-        disabled={exporting}
-        onClick={() => void exportarCsv()}
-      >
-        <Download size={14} aria-hidden />
-        {exporting ? m.comum.carregando : m.gerente.exportar_csv}
-      </button>
-      <CatalogoNovoButton label={m.produtos.cadastro_rapido} m={m} opcoes={opcoes} />
+      <PageActions>
+        <Button asChild variant="primary" className="gap-1.5">
+          <Link href={ROUTES.admin.importNfe}>
+            <Upload size={14} aria-hidden />
+            {ui.catalogo_importar_nfe}
+          </Link>
+        </Button>
+        <Button type="button" variant="primary" className="gap-1.5" onClick={() => setImportOpen(true)}>
+          <FileUp size={14} aria-hidden />
+          {m.produtos.import_modal_titulo}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          className="gap-1.5"
+          disabled={exporting}
+          onClick={() => void exportarCsv()}
+        >
+          <Download size={14} aria-hidden />
+          {exporting ? m.comum.carregando : m.gerente.exportar_csv}
+        </Button>
+        <CatalogoNovoButton label={m.produtos.cadastro_rapido} m={m} opcoes={opcoes} />
+      </PageActions>
 
       <ProdutosImportarModal
         open={importOpen}

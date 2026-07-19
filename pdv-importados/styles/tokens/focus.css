@@ -1,0 +1,25 @@
+/**
+ * Design System — Focus ring (SSOT)
+ * Fase 2 · Onda 2
+ *
+ * UM único anel para botão, input, select, tabela e links.
+ */
+
+:root {
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+  --focus-ring-inner: var(--color-surface);
+  --focus-ring-shadow:
+    0 0 0 var(--focus-ring-offset) var(--focus-ring-inner),
+    0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) var(--focus-ring-color);
+}
+
+/**
+ * Utilitário canônico — aplicar em controles do DS.
+ * Regras globais legadas devem apontar para --focus-ring-shadow.
+ */
+.fp-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}

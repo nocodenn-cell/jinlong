@@ -1,10 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { DragonOuroLoader } from '@/components/branding/DragonOuroLoader'
+import { Button } from '@/components/ui/button'
+import { Field, Input } from '@/components/ui/forms'
+import { ErrorState } from '@/components/ui/feedback'
 import type { Mensagens } from '@/i18n/getMessages'
+import type { AppLocale } from '@shared-core/src/i18n'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { destinoPosLoginPorPerfil } from '@/lib/auth/painelGerencial'
 import { isContaDesativada } from '@/core/auth/contaUsuario'
@@ -22,9 +26,11 @@ function destinoAposLogin(nextRaw: string | null, padraoPerfil: string): string 
 
 type Props = {
   messages: Mensagens
+  /** Locale BCP 47 resolvido pelo catalogAdapter (5.2c); opcional para testes. */
+  locale?: AppLocale
 }
 
-export function LoginForm({ messages: m }: Props) {
+export function LoginForm({ messages: m, locale }: Props) {
   const L = m.login
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -156,10 +162,12 @@ export function LoginForm({ messages: m }: Props) {
   }
 
   return (
-    <div className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center bg-black px-4 py-10 sm:py-14">
+    <div
+      data-theme="login"
+      className="login-premium-root flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 py-10 sm:py-14"
+      data-locale={locale}
+    >
       <div className="flex w-full max-w-[380px] flex-col items-center">
-
-        {/* 1 — Hero dragão */}
         <div className="login-premium-art-wrap mb-2 w-full">
           <div className="login-premium-dragon-frame">
             <div className="login-premium-dragon-media">
@@ -177,17 +185,17 @@ export function LoginForm({ messages: m }: Props) {
           </div>
         </div>
 
-        {/* 2 — Wordmark */}
-        <h1 className="login-premium-wordmark mb-8 text-center text-2xl">
+        <h1 className="login-premium-wordmark mb-8 text-center text-h2">
           <span className="login-premium-wordmark-han">{m.brand.logo_subtitle}</span>
-          <span className="mx-2 text-[#bfa76a]/45" aria-hidden>|</span>
+          <span className="login-wordmark-sep mx-2" aria-hidden>
+            |
+          </span>
           <span>Jīn Lóng</span>
         </h1>
 
-        {/* 3 — Formulário */}
         <div className="login-premium-form-block w-full">
           {avisoInatividade ? (
-            <p className="login-premium-inactivity mb-6 rounded-md px-3 py-2.5 text-center text-sm" role="status">
+            <p className="login-inactivity mb-6 px-3 py-2.5 text-center" role="status">
               {L.sessao_inatividade}
             </p>
           ) : null}
@@ -198,12 +206,8 @@ export function LoginForm({ messages: m }: Props) {
             data-testid="login-form"
             data-login-hydrated={hydrated ? '1' : '0'}
           >
-            <div className="flex flex-col gap-2">
-              <label htmlFor="login-email" className="login-premium-label">
-                {L.email_placeholder}
-              </label>
-              <input
-                id="login-email"
+            <Field id="login-email" label={L.email_placeholder} required>
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -211,64 +215,40 @@ export function LoginForm({ messages: m }: Props) {
                 autoComplete="username"
                 required
                 autoFocus
-                className="login-premium-input"
               />
-            </div>
+            </Field>
+
             <div className="flex flex-col gap-2">
-              <label htmlFor="login-senha" className="login-premium-label">
-                {L.senha_placeholder}
-              </label>
-              <input
-                id="login-senha"
-                type="password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder={L.senha_placeholder}
-                autoComplete="current-password"
-                required
-                className="login-premium-input"
-              />
+              <Field id="login-senha" label={L.senha_placeholder} required>
+                <Input
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  placeholder={L.senha_placeholder}
+                  autoComplete="current-password"
+                  required
+                />
+              </Field>
+              <div className="flex justify-end">
+                <Link href={ROUTES.auth.forgotPassword} className="login-link">
+                  {L.esqueci_link}
+                </Link>
+              </div>
             </div>
-            {erro ? (
-              <p className="text-center text-sm text-destructive" role="alert">
-                {erro}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={loading}
-              className="login-premium-submit flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <DragonOuroLoader className="text-black" iconClassName="h-4 w-4 text-black" />
-                  {L.entrando}
-                </>
-              ) : (
-                L.entrar
-              )}
-            </button>
+
+            {erro ? <ErrorState dense description={erro} /> : null}
+
+            <Button type="submit" variant="primary" loading={loading} className="mt-1 w-full">
+              {loading ? L.entrando : L.entrar}
+            </Button>
           </form>
 
-          <p className="mt-6 text-center text-[11px] leading-relaxed text-white/25">
+          <p className="login-legal mt-6 text-center">
             Ao acessar a plataforma, você concorda com nossos{' '}
-            <a
-              href="/termos"
-              className="text-white/40 underline underline-offset-2 transition-colors hover:text-white/60"
-            >
-              Termos de Serviço
-            </a>{' '}
-            e{' '}
-            <a
-              href="/privacidade"
-              className="text-white/40 underline underline-offset-2 transition-colors hover:text-white/60"
-            >
-              Política de Privacidade
-            </a>
-            .
+            <a href="/termos">Termos de Serviço</a> e{' '}
+            <a href="/privacidade">Política de Privacidade</a>.
           </p>
         </div>
-
       </div>
     </div>
   )

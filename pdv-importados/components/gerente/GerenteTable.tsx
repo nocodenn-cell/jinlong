@@ -5,108 +5,79 @@ import { cn } from '@/lib/utils'
 import { DataTableSkeletonRows } from '@/components/gerente/DataTableSkeleton'
 
 /**
- * Prioridade semântica da coluna — controla peso visual do cabeçalho.
- *
- * primary:    texto-fg-1 font-medium  → valor, produto, cliente, nome
- * secondary:  texto-fg-2 (padrão)     → datas, status, tipo
- * contextual: texto-fg-3 text-[11px]  → IDs, operador, metadata, ações
+ * @deprecated Fase 2 · Onda 2 — use `DataTable` de `@/components/ui/DataTable`.
+ * Mantido como shim visual alinhado ao DS (radius/border/focus tokens).
+ * Novas listagens NÃO devem importar este arquivo.
  */
+
 export type GerenteTableColumnPriority = 'primary' | 'secondary' | 'contextual'
 
 export type GerenteTableColumn = {
   key: string
   header: ReactNode
   width?: string | number
-  /** Alinhamento do cabeçalho e sugestão para células. Padrão: 'left'. */
   align?: 'left' | 'right' | 'center'
-  /** Ativa tabular-nums + right-align automaticamente no <th>. */
   numeric?: boolean
-  /** Peso visual da coluna. Padrão: 'secondary'. */
   priority?: GerenteTableColumnPriority
 }
 
-/** Retorna as classes Tailwind para um <td> de acordo com a prioridade de coluna. */
 export function tableCellPriorityCn(
   priority: GerenteTableColumnPriority | undefined,
   ...extra: (string | undefined)[]
 ): string {
   switch (priority) {
-    case 'primary':     return cn('text-jl-fg-1 font-medium', ...extra)
-    case 'contextual':  return cn('text-jl-fg-3 text-[11px]', ...extra)
-    default:            return cn('text-jl-fg-2', ...extra)
+    case 'primary':
+      return cn('font-medium text-[var(--color-fg)]', ...extra)
+    case 'contextual':
+      return cn('text-caption text-[var(--color-fg-subtle)]', ...extra)
+    default:
+      return cn('text-[var(--color-fg-muted)]', ...extra)
   }
 }
 
 type GerenteTableProps = Readonly<{
   columns: GerenteTableColumn[]
   children: ReactNode
-  /** `dragon`: tabela para fundos escuros / dragon-glass-card */
   tone?: 'paper' | 'dragon'
-  /** Reduz padding das linhas — ideal para grids de alta densidade. */
   compact?: boolean
-  /** Quando true, substitui o corpo por linhas-fantasma com shimmer (#28). */
   loading?: boolean
-  /** Nº de linhas-fantasma no estado loading. Default 6. */
   skeletonRows?: number
 }>
 
-/**
- * Retorna classes base para <td> alinhado à direita com números tabulares.
- * Uso: <td className={tableCellNumericCn('px-3 py-2')}>
- */
 export function tableCellNumericCn(...extra: (string | undefined)[]): string {
   return cn('text-right tabular-nums', ...extra)
 }
 
-/**
- * Tabela visual padronizada da área gerente (borda, cabeçalho).
- * Linhas vazias: renderize um <tr> com colSpan no próprio children.
- */
 export const GerenteTable = memo(function GerenteTable({
   columns,
   children,
-  tone = 'paper',
   compact = false,
   loading = false,
   skeletonRows = 6,
 }: GerenteTableProps) {
-  const dragon = tone === 'dragon'
-
   return (
     <div
       className={cn(
-        'overflow-x-auto overscroll-x-contain rounded-xl border shadow-sm [-webkit-overflow-scrolling:touch]',
-        dragon ? 'gerente-table-dragon app-border app-surface-soft' : 'app-border app-surface',
+        'overflow-x-auto overscroll-x-contain rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] [-webkit-overflow-scrolling:touch]',
       )}
     >
-      <table
-        className={cn(
-          'w-full border-collapse text-sm',
-          'app-surface-text',
-        )}
-      >
+      <table className="w-full border-collapse text-body text-[var(--color-fg)]">
         <thead>
-          <tr
-            className={cn(
-              'border-b text-left',
-              dragon ? 'app-divider app-surface' : 'app-divider app-surface-soft',
-            )}
-          >
+          <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-soft)] text-left">
             {columns.map((column) => {
-              const isRight  = column.numeric || column.align === 'right'
+              const isRight = column.numeric || column.align === 'right'
               const isCenter = !isRight && column.align === 'center'
-              const pri      = column.priority ?? 'secondary'
+              const pri = column.priority ?? 'secondary'
               return (
                 <th
                   key={column.key}
                   className={cn(
-                    'whitespace-nowrap px-3',
-                    compact ? 'py-[7px]' : 'py-2.5',
-                    'text-[10px] font-semibold tracking-[0.07em] uppercase',
-                    pri === 'primary'    && 'text-jl-fg-2',
-                    pri === 'secondary'  && 'app-muted',
-                    pri === 'contextual' && 'text-jl-fg-3 opacity-60',
-                    isRight  && 'text-right',
+                    'whitespace-nowrap px-3 text-caption font-semibold uppercase tracking-[var(--letter-spacing-wide)]',
+                    compact ? 'py-1.5' : 'py-2.5',
+                    pri === 'primary' && 'text-[var(--color-fg-muted)]',
+                    pri === 'secondary' && 'text-[var(--color-fg-subtle)]',
+                    pri === 'contextual' && 'text-[var(--color-fg-subtle)] opacity-80',
+                    isRight && 'text-right',
                     isCenter && 'text-center',
                     column.numeric && 'tabular-nums',
                   )}
@@ -118,7 +89,7 @@ export const GerenteTable = memo(function GerenteTable({
             })}
           </tr>
         </thead>
-        <tbody className="divide-y app-divider">
+        <tbody className="divide-y divide-[var(--color-border)]">
           {loading ? (
             <DataTableSkeletonRows columns={columns} rows={skeletonRows} compact={compact} />
           ) : (

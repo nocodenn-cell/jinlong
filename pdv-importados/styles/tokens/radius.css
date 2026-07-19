@@ -1,0 +1,23 @@
+/**
+ * Design System — Radius (SSOT)
+ * Fase 2 · Onda 2
+ *
+ * Escala única. Não usar rounded-[Npx] nem --admin-v2-radius-* literais novos.
+ */
+
+:root {
+  --radius-none: 0;
+  --radius-sm: 0.25rem;   /* 4px — chips, badges */
+  --radius-md: 0.375rem;  /* 6px — buttons, inputs (DEFAULT) */
+  --radius-lg: 0.5rem;    /* 8px — cards, tables, sheets */
+  --radius-xl: 0.75rem;   /* 12px — modals, elevated panels */
+  --radius-full: 9999px;
+
+  /* Canonical aliases used by components */
+  --radius-control: var(--radius-md);
+  --radius-card: var(--radius-lg);
+  --radius-panel: var(--radius-xl);
+
+  /* shadcn / legacy bridge target */
+  --radius: var(--radius-lg);
+}

@@ -13,6 +13,10 @@ import {
   validarCriarTituloInput,
   validarLiquidarTituloInput,
 } from './actions.validation'
+import {
+  createReceivableLiquidationService,
+  createReceivableWriter,
+} from '@/app/admin/financeiro/receivableWriter'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -70,28 +74,19 @@ export async function criarTituloReceber(input: {
   const supabase = await createClient()
   return actionResultToLegacyData(
     await runServerActionWithObservability('gerente/financeiro/criar-titulo', async () => {
-      const { data, error } = await supabase
-        .from('contas_receber')
-        .insert({
-          cliente_id: input.cliente_id,
-          valor_total: input.valor_total,
-          valor_aberto: input.valor_total,
-          descricao: input.descricao?.trim() || null,
-          vencimento: input.vencimento?.trim() || null,
-          status: 'ABERTO',
-        })
-        .select('id')
-        .single()
-      if (error || !data) {
-        throw new Error(
-          error
-            ? mensagemErroComSecao('Conta a receber', error.message)
-            : 'Não foi possível criar o título. Tente de novo.',
-        )
+      const writer = createReceivableWriter(supabase)
+      const created = await writer.create({
+        clienteId: input.cliente_id,
+        valorTotal: input.valor_total,
+        descricao: input.descricao,
+        vencimento: input.vencimento,
+      })
+      if (!created.ok) {
+        throw new Error(mensagemErroComSecao('Conta a receber', created.error))
       }
       revalidatePath('/gerente/financeiro')
-  revalidatePath('/admin/financeiro')
-      return data.id as string
+      revalidatePath('/admin/financeiro')
+      return created.tituloId
     }),
   )
 }
@@ -110,13 +105,16 @@ export async function liquidarTitulo(input: {
   if (erro) return { success: false, error: erro }
 
   const supabase = await createClient()
-  const { error } = await supabase.rpc('registrar_liquidacao_receber', {
-    p_titulo_id: input.titulo_id,
-    p_valor: input.valor,
-    p_forma_pagamento: input.forma_pagamento,
-    p_observacao: null,
+  const liquidation = createReceivableLiquidationService(supabase)
+  const result = await liquidation.liquidate({
+    tituloId: input.titulo_id,
+    valor: input.valor,
+    formaPagamento: input.forma_pagamento,
+    observacao: null,
   })
-  if (error) return { success: false, error: mensagemErroComSecao('Liquidação', error.message) }
+  if (!result.ok) {
+    return { success: false, error: mensagemErroComSecao('Liquidação', result.error) }
+  }
   revalidatePath('/gerente/financeiro')
   revalidatePath('/admin/financeiro')
   return { success: true, data: null }

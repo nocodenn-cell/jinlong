@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { ArrowDownRight, ArrowUpRight, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useEffect, useMemo, useState } from 'react'
+import { History } from 'lucide-react'
 import { obterKardexProduto, type KardexMovimento } from '../actions'
+import { DragonModal } from '@/components/ui/DragonModal'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { EmptyState, Loading } from '@/components/ui/feedback'
+import { MovementBadge } from '@/components/ui/MovementBadge'
+import { StatusChip } from '@/components/ui/StatusChip'
 
 export type KardexAlvo = Readonly<{ produtoId: string; produtoNome: string }>
 
@@ -22,6 +26,17 @@ const dtFmt = new Intl.DateTimeFormat('pt-BR', {
   minute: '2-digit',
 })
 
+/** Tipos de movimento → tom de StatusChip (mesmo padrão visual). */
+function toneStatusForTipo(codigo: string, entrada: boolean): string {
+  if (codigo === 'VENDA' || codigo === 'SAIDA' || codigo === 'PERDA' || codigo === 'QUEBRA') {
+    return 'ERRO'
+  }
+  if (codigo === 'AJUSTE' || codigo === 'ACERTO_INVENTARIO' || codigo === 'TRANSFERENCIA') {
+    return 'PENDENTE'
+  }
+  return entrada ? 'ATIVO' : 'INATIVO'
+}
+
 export function KardexSheet({
   alvo,
   onClose,
@@ -33,20 +48,6 @@ export function KardexSheet({
 }) {
   const [movimentos, setMovimentos] = useState<KardexMovimento[]>([])
   const [carregando, setCarregando] = useState(false)
-
-  useEffect(() => {
-    if (!alvo) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
-  }, [alvo, onClose])
 
   useEffect(() => {
     if (!alvo) return
@@ -65,95 +66,75 @@ export function KardexSheet({
     }
   }, [alvo])
 
-  if (!alvo) return null
-
   const rotuloTipo = (codigo: string): string =>
     labels.tipoMap[codigo] ?? codigo.replace(/_/g, ' ').toLowerCase()
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="kardex-titulo">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col">
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border-secondary)] px-5 py-4">
+  const columns: Column<KardexMovimento>[] = useMemo(
+    () => [
+      {
+        key: 'tipo',
+        header: 'Tipo',
+        priority: 'primary',
+        cell: (m) => (
           <div className="min-w-0">
-            <h2 id="kardex-titulo" className="text-[15px] font-semibold text-jl-fg-1">
-              {labels.titulo}
-            </h2>
-            <p className="mt-0.5 truncate text-[12px] text-jl-fg-2">{alvo.produtoNome}</p>
+            <StatusChip
+              status={toneStatusForTipo(m.tipo_codigo, m.quantidade_delta >= 0)}
+              label={rotuloTipo(m.tipo_codigo)}
+            />
+            {m.observacao ? (
+              <p className="mt-1 truncate text-caption text-fg-subtle">{m.observacao}</p>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06]"
-          >
-            <X size={16} aria-hidden />
-          </button>
-        </div>
+        ),
+      },
+      {
+        key: 'quando',
+        header: '',
+        priority: 'contextual',
+        cell: (m) => (
+          <span className="text-caption text-fg-subtle">
+            {dtFmt.format(new Date(m.created_at))}
+          </span>
+        ),
+      },
+      {
+        key: 'delta',
+        header: '',
+        align: 'right',
+        cell: (m) => <MovementBadge delta={m.quantidade_delta} />,
+      },
+    ],
+    // labels.tipoMap identity is stable per open; rotuloTipo closes over labels
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [labels],
+  )
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
-          {carregando ? (
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-12 rounded-lg bg-jl-surface-soft opacity-60" />
-              ))}
-            </div>
-          ) : movimentos.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-16 text-center">
-              <span className="text-3xl text-jl-fg-3" aria-hidden>
-                🗒️
-              </span>
-              <p className="text-[13px] font-medium text-jl-fg-2">{labels.semMovimentos}</p>
-              <p className="text-[11px] text-jl-fg-3">{labels.semMovimentosSub}</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col">
-              {movimentos.map((m) => {
-                const entrada = m.quantidade_delta >= 0
-                return (
-                  <li
-                    key={m.id}
-                    className="flex items-start gap-3 border-t border-[var(--color-border-secondary)] py-2.5"
-                  >
-                    <span
-                      className={cn(
-                        'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
-                        entrada ? 'admin-v2-alert-success' : 'admin-v2-alert-danger',
-                      )}
-                    >
-                      {entrada ? <ArrowUpRight size={14} aria-hidden /> : <ArrowDownRight size={14} aria-hidden />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-[12px] font-medium text-jl-fg-1">
-                          {rotuloTipo(m.tipo_codigo)}
-                        </span>
-                        <span
-                          className={cn(
-                            'shrink-0 text-[12px] font-semibold tabular-nums',
-                            entrada ? 'text-emerald-400' : 'text-red-400',
-                          )}
-                        >
-                          {entrada ? '+' : '−'}
-                          {Math.abs(m.quantidade_delta)}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-2">
-                        <span className="text-[10px] text-jl-fg-3">
-                          {dtFmt.format(new Date(m.created_at))}
-                        </span>
-                      </div>
-                      {m.observacao ? (
-                        <p className="mt-0.5 text-[11px] text-jl-fg-2">{m.observacao}</p>
-                      ) : null}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </aside>
-    </div>
+  if (!alvo) return null
+
+  return (
+    <DragonModal
+      open
+      onClose={onClose}
+      sheet
+      size="md"
+      icon={History}
+      title={labels.titulo}
+      subtitle={alvo.produtoNome}
+      closeLabel="Fechar"
+    >
+      {carregando ? (
+        <Loading label="…" className="min-h-0 py-12" size="sm" />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={movimentos}
+          rowKey={(m) => m.id}
+          emptyState={
+            <EmptyState title={labels.semMovimentos} description={labels.semMovimentosSub} />
+          }
+          className="rounded-none border-0"
+        />
+      )}
+    </DragonModal>
   )
 }

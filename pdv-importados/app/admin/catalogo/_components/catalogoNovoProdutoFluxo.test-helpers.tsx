@@ -40,7 +40,9 @@ export async function preencherESalvarProdutoDemo(
   const gatilho = labelGatilho!.querySelector('input') as HTMLInputElement
   setInputValue(gatilho, '6')
 
-  const salvar = container.querySelector('button.app-btn-accent') as HTMLButtonElement
+  const salvar = Array.from(container.querySelectorAll('button')).find((b) =>
+    (b.textContent ?? '').includes(m.produtos.salvar_produto),
+  ) as HTMLButtonElement
   expect(salvar, 'botão Salvar principal').toBeTruthy()
   expect(salvar.textContent).toContain(m.produtos.salvar_produto)
   flushSync(() => {

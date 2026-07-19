@@ -44,7 +44,7 @@ async function waitPostLogin(page: Page, postLoginUrl: RegExp, timeout: number):
 }
 
 /** Retry 1x em PGRST303 / JWT future (skew local Docker). */
-async function loginWithRetry(
+export async function loginWithRetry(
   page: Page,
   email: string,
   password: string,

@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -13,6 +14,7 @@ import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortcutsReference"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
+import { ROUTES } from "@shared-core/navigation/routes"
 
 type Props = {
   m: Mensagens
@@ -150,6 +152,15 @@ export function CaixaPdvTopBar({
             </Button>
           )}
           <CaixaKeyboardShortcutsReference m={m} variant="classic" />
+          <Link
+            href={ROUTES.auth.changePassword}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
+              "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
+            )}
+          >
+            {m.login.link_trocar_senha}
+          </Link>
           <SignOutButton
             label={m.comum.sair}
             className={cn(

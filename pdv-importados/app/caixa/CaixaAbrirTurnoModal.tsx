@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DragonModal } from "@/components/ui/DragonModal"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/forms"
+import { ErrorState } from "@/components/ui/feedback"
 import type { Mensagens } from "@/i18n/getMessages"
 
 type Props = {
@@ -96,7 +97,7 @@ export function CaixaAbrirTurnoModal({
               setErro(null)
             }}
             placeholder="0,00"
-            className="mt-1 jl-modal-field"
+            className="mt-1"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault()
@@ -105,11 +106,7 @@ export function CaixaAbrirTurnoModal({
             }}
           />
         </label>
-        {erro ? (
-          <p className="text-xs text-destructive" role="alert">
-            {erro}
-          </p>
-        ) : null}
+        {erro ? <ErrorState dense description={erro} /> : null}
       </div>
     </DragonModal>
   )
