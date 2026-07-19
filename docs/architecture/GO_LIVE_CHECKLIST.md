@@ -111,5 +111,6 @@ Na UI `/admin/implantacao` → **Validar dados de homologação**:
 | Provisionamento loja+DONO pela UI (ADMIN) | **GO** (`/admin/provisionamento`) |
 | Funcionários OPERADOR/GERENTE pela UI | **GO** (`/admin/funcionarios`) |
 | Go-live piloto com checklist `/admin/implantacao` | **GO condicional** |
+| Módulos Venda / Estoque / Financeiro / Cadastro (1º cliente) | **NO-GO** até P0-HOM — ver [P0_SPRINT_ROTEIRO.md](./P0_SPRINT_ROTEIRO.md) |
 
-**Decisão recomendada:** **GO** para Fase 1 (provisionamento + checklist). Liberar primeiro cliente após checklist humano §3 e autorização GO-LIVE na UI.
+**Decisão recomendada:** **GO** para Fase 1 (provisionamento + checklist). Liberar primeiro cliente após checklist humano §3, Engine Loop P0-VEN-PROOF/REV e autorização GO-LIVE na UI.

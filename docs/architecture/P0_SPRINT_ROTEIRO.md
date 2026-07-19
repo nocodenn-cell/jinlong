@@ -2,9 +2,10 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Status** | Em execução |
+| **Status** | Em execução (Engine Loop Go-Live) |
 | **Gate** | APROVADO COM RESSALVAS (2026-07-19) |
-| **DI** | Core v1.0 / Wave A congelados |
+| **DI** | Core v1.0 / Wave A congelados — sem Wave B |
+| **Branch ciclo 1** | `loop/1-p0-dados-homologacao` |
 
 ## Ordem
 
@@ -23,6 +24,30 @@ cd pdv-importados
 npm run check:entity-ssot
 npx vitest run app/admin/implantacao/homologacaoDados.test.ts app/admin/implantacao/implantacaoCatalog.test.ts tests/p0-venda-homologacao.matrix.test.ts
 ```
+
+## Matriz GO / NO-GO (módulos críticos)
+
+| Módulo | Técnico (paths/guards) | Homologação humana (UI) | Declaração |
+|--------|------------------------|-------------------------|------------|
+| Cadastro | PASS (P0-DADOS + SSoT) | pendente loja real | **NO-GO** |
+| Venda | PASS (matriz caminhos) | pendente P0-VEN-PROOF | **NO-GO** |
+| Estoque | PASS (guard SSoT) | pendente prova pós-venda | **NO-GO** |
+| Financeiro | PASS (caminhos + readers) | pendente AR/AP na prova | **NO-GO** |
+
+**Critério de GO por módulo:** técnico PASS **e** cenário humano do roteiro aprovado (P0-HOM).
+
+## Engine Loop — Ciclo 1 (2026-07-19)
+
+| Campo | Valor |
+|--------|--------|
+| **Missão** | Fechar gate P0-DADOS + P0-SSOT (sem feature nova) |
+| **Cenário** | Avaliador de dados mínimos + item `homologacao.dados` + matriz canônica venda/cancel/devolução |
+| **Resultado técnico** | **PASS** (15 testes + `check:entity-ssot` OK) |
+| **Bugs P0** | nenhum |
+| **Correções** | entrega do gate P0-DADOS (coleta + avaliação + UI Validar dados) |
+| **Evidências** | vitest P0; `check:entity-ssot`; commit nesta branch |
+| **CI GitHub Actions** | **bloqueado (human gate)** — jobs falham em ~4s sem steps (billing/spending limit) |
+| **Próximo ciclo** | P0-VEN-PROOF em loja homologada (abrir caixa → venda DINHEIRO/PIX → estoque → financeiro → auditoria) |
 
 ## Declaração GO dos módulos
 
