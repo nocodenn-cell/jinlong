@@ -77,6 +77,7 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin/vendas': ALL_ADMIN_PROFILES,
   'route:/admin/auditoria': ALL_ADMIN_PROFILES,
   'route:/admin/estoque': ALL_ADMIN_PROFILES,
+  'route:/admin/intelligence': ALL_ADMIN_PROFILES,
   'route:/admin/diagnostico-caixa': ALL_ADMIN_PROFILES,
   'api:gerente:health': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:recent': ALL_ADMIN_PROFILES,

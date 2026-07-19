@@ -20,7 +20,7 @@
 | Junta Recommendation ↔ DecisionRecord por id | Duplicar regras de Analysis/Recommendation |
 
 Toda inferência permanece no Engine Loop (Core).  
-Esta camada só disponibiliza resultados para consumo eficiente (futuro `/admin`).
+Esta camada só disponibiliza resultados para consumo eficiente (`/admin/intelligence`).
 
 ## Entradas
 
@@ -47,7 +47,6 @@ Projeções tipadas
 
 ## Restrições
 
-- Sem UI / `/admin`  
 - Sem alterar Engine Loop  
 - Adapter só carrega Snapshot + Records e chama o builder puro  
 
@@ -55,4 +54,5 @@ Projeções tipadas
 
 1. ✅ Core · Persistência · DecisionRecord  
 2. ✅ Este Read Model  
-3. `/admin/intelligence` (consome **apenas** estas projeções)  
+3. ✅ `/admin/intelligence` (`DECISION_INTELLIGENCE_ADMIN_SURFACE.md`)  
+4. Scheduler (operação contínua)  

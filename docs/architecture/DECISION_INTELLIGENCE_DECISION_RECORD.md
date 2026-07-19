@@ -70,4 +70,5 @@ DecisionSnapshot  →  DecisionRecord  →  Read Model (Fase 3)
 1. ✅ Persistência Snapshot  
 2. ✅ Este DecisionRecord  
 3. ✅ Read Model (`DECISION_INTELLIGENCE_READ_MODEL.md`)  
-4. `/admin/intelligence`  
+4. ✅ `/admin/intelligence` (`DECISION_INTELLIGENCE_ADMIN_SURFACE.md`)  
+5. Scheduler (operação contínua)  

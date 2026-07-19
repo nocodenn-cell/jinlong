@@ -40,6 +40,7 @@ const KNOWN_RESOURCES = [
   'route:/admin/vendas',
   'route:/admin/auditoria',
   'route:/admin/estoque',
+  'route:/admin/intelligence',
   'route:/admin/diagnostico-caixa',
   'api:gerente:health',
   'api:gerente:atividades:recent',

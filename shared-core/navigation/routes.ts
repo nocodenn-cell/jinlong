@@ -55,6 +55,7 @@ export const ROUTES = {
     financeiro: '/admin/financeiro',
     financeiroContasPagar: '/admin/financeiro/contas-pagar',
     relatorios: '/admin/relatorios',
+    intelligence: '/admin/intelligence',
     comissoes: '/admin/comissoes',
     configuracoes: '/admin/configuracoes',
     implantacao: '/admin/implantacao',

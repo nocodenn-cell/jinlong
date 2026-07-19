@@ -30,6 +30,7 @@
     "test:demo-fluxo": "vitest run lib/pdv ../shared-core/src/pdv/invariants",
     "check:pdv-invariant-boundary": "node scripts/check-pdv-invariant-boundary.mjs",
     "check:entity-ssot": "node scripts/check-entity-ssot-boundary.mjs",
+    "check:di-admin": "node scripts/check-decision-intelligence-admin.mjs",
     "check:caixa-pre-producao": "node scripts/check-caixa-pre-producao.mjs",
     "check:ds-burndown": "node scripts/ds-legacy-burndown.mjs",
     "check:ds-coverage": "node scripts/ds-coverage.mjs",
