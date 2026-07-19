@@ -8,6 +8,7 @@ import {
   autorizarGoLiveAction,
   atualizarItemImplantacaoAction,
   revogarGoLiveAction,
+  validarDadosHomologacaoAction,
   type ChecklistItemRow,
   type ChecklistSnapshot,
 } from './actions'
@@ -44,6 +45,10 @@ export type ImplantacaoLabels = {
   grupoFiscalHint: string
   salvar: string
   itemSalvo: string
+  validarDados: string
+  validandoDados: string
+  dadosOk: string
+  dadosFalha: string
   secoes: Record<ImplantacaoSecao, string>
   itens: Record<string, string>
 }
@@ -95,6 +100,7 @@ export function ImplantacaoChecklistClient({
   const [goObs, setGoObs] = useState('')
   const [revogarMotivo, setRevogarMotivo] = useState('')
   const [busyGo, setBusyGo] = useState(false)
+  const [busyDados, setBusyDados] = useState(false)
 
   const bySecao = useMemo(() => {
     const map = new Map<ImplantacaoSecao, typeof IMPLANTACAO_ITENS>()
@@ -166,6 +172,24 @@ export function ImplantacaoChecklistClient({
     }
   }
 
+  async function onValidarDados() {
+    setBusyDados(true)
+    try {
+      const r = await validarDadosHomologacaoAction(snap.lojaId)
+      if (!r.ok) {
+        emitGerenteToast({ kind: 'error', message: r.error })
+        return
+      }
+      syncFromSnapshot(r.data.snapshot)
+      emitGerenteToast({
+        kind: r.data.ok ? 'success' : 'error',
+        message: r.data.ok ? L.dadosOk : `${L.dadosFalha}: ${r.data.resumo}`,
+      })
+    } finally {
+      setBusyDados(false)
+    }
+  }
+
   const locked = snap.goAutorizado
 
   return (
@@ -184,6 +208,20 @@ export function ImplantacaoChecklistClient({
           </p>
         ) : null}
       </div>
+
+      {!locked ? (
+        <div className="rounded-xl border border-jl-border-1 bg-jl-surface-soft p-4">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busyDados}
+            onClick={() => void onValidarDados()}
+            data-testid="implantacao-validar-dados"
+          >
+            {busyDados ? L.validandoDados : L.validarDados}
+          </Button>
+        </div>
+      ) : null}
 
       {podeAutorizarGo ? (
         <div className="rounded-xl border border-jl-border-1 bg-jl-surface-soft p-4 space-y-3">

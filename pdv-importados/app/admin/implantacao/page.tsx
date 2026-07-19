@@ -76,6 +76,10 @@ export default async function AdminImplantacaoPage({ searchParams }: PageProps) 
             grupoFiscalHint: ui.grupo_fiscal_hint,
             salvar: ui.salvar,
             itemSalvo: ui.item_salvo,
+            validarDados: ui.validar_dados,
+            validandoDados: ui.validando_dados,
+            dadosOk: ui.dados_ok,
+            dadosFalha: ui.dados_falha,
             secoes,
             itens,
           }}

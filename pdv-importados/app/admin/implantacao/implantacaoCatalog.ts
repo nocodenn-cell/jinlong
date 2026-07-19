@@ -74,6 +74,8 @@ export const IMPLANTACAO_ITENS: readonly ImplantacaoItemDef[] = [
   { key: 'fiscal.stub', secao: 'fiscal', obrigatorio: false, grupo: 'fiscal' },
   { key: 'fiscal.nfce', secao: 'fiscal', obrigatorio: false, grupo: 'fiscal' },
 
+  /** P0-DADOS — gate antes das provas de venda / homologação integrada. */
+  { key: 'homologacao.dados', secao: 'homologacao', obrigatorio: true },
   { key: 'homologacao.fluxo_completo', secao: 'homologacao', obrigatorio: true },
   { key: 'homologacao.cliente_treinado', secao: 'homologacao', obrigatorio: true },
   { key: 'homologacao.aceite', secao: 'homologacao', obrigatorio: true },

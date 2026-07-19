@@ -45,6 +45,21 @@
 - [ ] Conta `ativo=false` bloqueia login
 - [ ] Checklist `/admin/implantacao` reconhece a loja provisionada
 
+### P0-DADOS (antes das provas de venda)
+
+Na UI `/admin/implantacao` → **Validar dados de homologação**:
+
+- [ ] DONO + GERENTE + OPERADOR ativos
+- [ ] ≥1 categoria, ≥3 produtos PUBLICADO com estoque positivo
+- [ ] ≥1 cliente, ≥1 fornecedor
+- [ ] `pdv_config` presente; formas DINHEIRO/PIX no PDV
+- [ ] Item `homologacao.dados` = CONCLUIDO
+
+### Decisões de produto (1º Go-Live)
+
+- [x] Fiscal: **Stub** (`fiscal.stub`)
+- [x] Contas a pagar: **somente originadas por NF-e** (sem UI criar AP)
+
 ### Operação (sem SQL / sem Studio)
 
 - [ ] Login
@@ -52,14 +67,16 @@
 - [ ] Cadastrar cliente (`/admin/clientes`)
 - [ ] Cadastrar produto (`/admin/catalogo`) com estoque inicial se necessário
 - [ ] Entrada/ajuste estoque
-- [ ] Venda (DINHEIRO e PIX)
+- [ ] Venda (DINHEIRO e PIX) — P0-VEN-PROOF
+- [ ] Cancelamento + devolução — P0-VEN-REV
 - [ ] Recebimento / liquidação AR (se título gerado)
-- [ ] Contas a pagar — pagar e cancelar (amostra)
+- [ ] Contas a pagar — pagar e cancelar amostra **de NF-e**
 - [ ] Comissão — visualizar / marcar paga (se aplicável)
 - [ ] Fechar caixa com conferência \(E(c)\)
 - [ ] Relatórios + auditoria mostram eventos
-- [ ] Fila fiscal consulta status sem erro de UI
+- [ ] Fila fiscal Stub sem erro de UI
 - [ ] i18n pt/zh nas telas críticas
+- [ ] Homologação integrada + autorizar GO — **P0-HOM (marco final)**
 
 ### Proibido no go-live
 

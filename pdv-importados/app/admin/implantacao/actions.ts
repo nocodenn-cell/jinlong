@@ -13,6 +13,13 @@ import {
   type GateStatus,
   type ItemStatus,
 } from './implantacaoCatalog'
+import { coletarDadosHomologacao } from './coletarDadosHomologacao'
+import {
+  avaliarDadosHomologacao,
+  formatarGapsHomologacao,
+  type DadosHomologacaoGap,
+  type DadosHomologacaoSnapshot,
+} from './homologacaoDados'
 
 export type ChecklistItemRow = {
   key: string
@@ -301,6 +308,68 @@ export async function autorizarGoLiveAction(
     return carregarChecklistImplantacaoAction(lojaId)
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Erro ao autorizar GO-LIVE.')
+  }
+}
+
+export type ValidarDadosHomologacaoResult = Readonly<{
+  snapshot: ChecklistSnapshot
+  dados: DadosHomologacaoSnapshot
+  ok: boolean
+  gaps: readonly DadosHomologacaoGap[]
+  resumo: string
+}>
+
+/**
+ * P0-DADOS: coleta contagens da loja, avalia mínimos e marca
+ * `homologacao.dados` como CONCLUIDO ou PENDENTE com observação dos gaps.
+ */
+export async function validarDadosHomologacaoAction(
+  lojaIdOverride?: string | null,
+): Promise<ActionResult<ValidarDadosHomologacaoResult>> {
+  const gate = await requireLoja(lojaIdOverride)
+  if (!gate.ok) return fail(gate.error)
+  const lojaId = gate.lojaId
+
+  try {
+    const supabase = await createClient()
+    await ensureChecklistRows(supabase, lojaId)
+
+    const { data: headerGo } = await db(supabase)
+      .from('implantacao_checklists')
+      .select('go_autorizado')
+      .eq('loja_id', lojaId)
+      .maybeSingle()
+
+    if (headerGo?.go_autorizado) {
+      return fail('Checklist bloqueado: GO-LIVE já autorizado. Revogue o GO para editar.')
+    }
+
+    const dados = await coletarDadosHomologacao(supabase, lojaId)
+    const avaliado = avaliarDadosHomologacao(dados)
+    const resumo = formatarGapsHomologacao(avaliado.gaps)
+    const status: ItemStatus = avaliado.ok ? 'CONCLUIDO' : 'PENDENTE'
+
+    const updated = await atualizarItemImplantacaoAction({
+      itemKey: 'homologacao.dados',
+      status,
+      responsavel: gate.session.userId,
+      observacoes: resumo,
+      lojaId,
+    })
+    if (!updated.ok) return fail(updated.error)
+
+    return {
+      ok: true,
+      data: {
+        snapshot: updated.data,
+        dados,
+        ok: avaliado.ok,
+        gaps: avaliado.gaps,
+        resumo,
+      },
+    }
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : 'Erro ao validar dados de homologação.')
   }
 }
 
