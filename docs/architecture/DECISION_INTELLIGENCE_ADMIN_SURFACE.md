@@ -52,20 +52,9 @@ npm run check:di-admin -w pdv-importados
 Script: `pdv-importados/scripts/check-decision-intelligence-admin.mjs`  
 Garante que a UI chama `loadIntelligenceReadModel` e não importa repos/codec/Engine.
 
-## Desafio operacional (próxima fase)
-
-Hoje o Engine Loop ainda é sob demanda (homologação). Para operação contínua, a **Fase 5 — Scheduler** deve:
-
-1. Executar o Engine Loop periodicamente (cron/job/fila)
-2. Persistir novos snapshots
-3. Atualizar a base que o Read Model projeta
-4. Registrar falhas e métricas
-
-Sem scheduler, o cockpit depende de execuções manuais.
-
 ## Ordem
 
 1. ✅ Core · Persistência · DecisionRecord · Read Model  
 2. ✅ Este Admin Surface  
-3. Scheduler / orquestrador (fora do Core)  
-4. Observabilidade · Feedback loop  
+3. ✅ Orchestrator (`DECISION_INTELLIGENCE_ORCHESTRATOR.md`)  
+4. Observabilidade avançada · Feedback loop  

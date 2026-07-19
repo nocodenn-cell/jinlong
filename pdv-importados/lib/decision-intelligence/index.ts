@@ -54,3 +54,24 @@ export {
 } from './read-model'
 export type { DecisionReadModelPort } from './ports/decision-read-model'
 export { createDecisionReadModelAdapter } from './adapters/decision-read-model-adapter'
+
+export {
+  authorizeOrchestratorRequest,
+  computeSnapshotContentFingerprint,
+  createEmptyWaveAProviders,
+  listActiveStoreIds,
+  logOrchestratorMetrics,
+  resolveOrchestratorSecret,
+  runDecisionIntelligenceOrchestrator,
+  runStoreCycle,
+  type FactProvidersFactory,
+  type ListStoreIdsFn,
+  type OrchestratorRunMetrics,
+  type OrchestratorRunResult,
+  type OrchestratorStage,
+  type OrchestratorTrigger,
+  type RunOrchestratorOptions,
+  type RunStoreCycleDeps,
+  type StoreCycleOutcome,
+  type StoreCycleResult,
+} from './orchestrator'

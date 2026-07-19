@@ -24,6 +24,8 @@ const FORBIDDEN = [
   { re: /@shared-core\/src\/intelligence/, msg: 'UI não importa Core de intelligence' },
   { re: /models\/decision-record/, msg: 'UI não acessa DecisionRecord diretamente' },
   { re: /encodeDecisionSnapshotPayload|decodeDecisionSnapshotPayload/, msg: 'UI não usa codec de snapshot' },
+  { re: /runDecisionIntelligenceOrchestrator|runStoreCycle/, msg: 'UI não executa orquestrador' },
+  { re: /orchestrator\//, msg: 'UI não importa orquestrador' },
 ]
 
 function walk(dir, files = []) {

@@ -71,4 +71,4 @@ DecisionSnapshot  →  DecisionRecord  →  Read Model (Fase 3)
 2. ✅ Este DecisionRecord  
 3. ✅ Read Model (`DECISION_INTELLIGENCE_READ_MODEL.md`)  
 4. ✅ `/admin/intelligence` (`DECISION_INTELLIGENCE_ADMIN_SURFACE.md`)  
-5. Scheduler (operação contínua)  
+5. ✅ Orchestrator (`DECISION_INTELLIGENCE_ORCHESTRATOR.md`)  

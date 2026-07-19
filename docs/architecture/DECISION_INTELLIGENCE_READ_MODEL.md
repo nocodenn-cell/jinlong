@@ -55,4 +55,4 @@ Projeções tipadas
 1. ✅ Core · Persistência · DecisionRecord  
 2. ✅ Este Read Model  
 3. ✅ `/admin/intelligence` (`DECISION_INTELLIGENCE_ADMIN_SURFACE.md`)  
-4. Scheduler (operação contínua)  
+4. ✅ Orchestrator (`DECISION_INTELLIGENCE_ORCHESTRATOR.md`)  

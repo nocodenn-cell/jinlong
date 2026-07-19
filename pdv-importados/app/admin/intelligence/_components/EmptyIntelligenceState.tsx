@@ -15,7 +15,7 @@ export function EmptyIntelligenceState() {
     <div className="space-y-4">
       <EmptyState
         title="Nenhuma projeção disponível"
-        description="Ainda não há Decision Snapshot persistido para esta loja. O cockpit só lê o Read Model — a geração periódica virá do scheduler (Fase 5)."
+        description="Ainda não há Decision Snapshot persistido para esta loja. O cockpit só lê o Read Model — a geração vem do Orchestrator (cron /api/cron/decision-intelligence)."
       />
       <nav aria-label="Módulos oficiais" className="flex flex-wrap gap-3 text-caption">
         {MODULE_LINKS.map((item) => (
