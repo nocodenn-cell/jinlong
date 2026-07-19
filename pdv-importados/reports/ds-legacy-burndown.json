@@ -59,12 +59,11 @@
     {
       "id": "hex_in_tsx",
       "label": "hex em className (tailwind)",
-      "files": 8,
-      "hits": 19,
+      "files": 7,
+      "hits": 18,
       "samples": [
         "app/auth/alterar-senha/AlterarSenhaForm.tsx (3)",
         "app/auth/esqueci-senha/EsqueciSenhaForm.tsx (3)",
-        "app/auth/esqueci-senha/page.tsx (1)",
         "app/auth/redefinir-senha/RedefinirSenhaForm.tsx (3)",
         "app/gerente/comissoes/ComissoesPageClient.tsx (1)",
         "app/gerente/suspensao/SuspensaoPageClient.tsx (1)",

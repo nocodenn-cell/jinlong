@@ -38,9 +38,15 @@ function textInputs(): HTMLInputElement[] {
 }
 
 function commitButton(): HTMLButtonElement {
-  const btn = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
-    (b.textContent ?? '').includes(m.produtos.bulk_commit_zero.split(' ')[0] ?? 'Salvar'),
-  )
+  const prefixes = [
+    m.produtos.bulk_commit_zero.split(' ')[0] ?? 'Salvar',
+    m.produtos.bulk_commit_bloqueado.split(' ')[0] ?? 'Corrija',
+    (m.produtos.bulk_commit.split(' ')[0] ?? 'Salvar'),
+  ]
+  const btn = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((b) => {
+    const text = b.textContent ?? ''
+    return prefixes.some((prefix) => text.includes(prefix))
+  })
   if (!btn) {
     throw new Error('Commit button not found')
   }
