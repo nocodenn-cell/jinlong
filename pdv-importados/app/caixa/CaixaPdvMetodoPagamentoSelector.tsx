@@ -4,6 +4,7 @@ import { memo } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { MetodoPagamentoUi } from "@/app/caixa/caixaMetodoPagamento"
 import { cn } from "@/lib/utils"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 type Props = Readonly<{
   m: Mensagens
@@ -27,8 +28,9 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
   disabled = false,
 }: Props) {
   return (
-    <div
-      role="radiogroup"
+    <RadioGroup
+      value={value}
+      onValueChange={(v) => onChange(v as MetodoPagamentoUi)}
       aria-label={m.caixa.pdv_metodo_pagamento_aria}
       className="flex flex-col gap-1.5"
     >
@@ -42,11 +44,9 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
           const label = m.caixa[op.labelKey] as string
           const atalho = i + 1
           return (
-            <button
+            <RadioGroupItem
               key={op.id}
-              type="button"
-              role="radio"
-              aria-checked={selected}
+              value={op.id}
               aria-keyshortcuts={`${atalho}`}
               disabled={disabled}
               title={`${label} (tecla ${atalho})`}
@@ -58,7 +58,6 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
                   ? "border border-primary bg-primary/10 text-primary shadow-sm"
                   : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
               )}
-              onClick={() => onChange(op.id)}
             >
               <span
                 aria-hidden
@@ -70,11 +69,11 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
                 {atalho}
               </span>
               {label}
-            </button>
+            </RadioGroupItem>
           )
         })}
       </div>
-    </div>
+    </RadioGroup>
   )
 }
 
