@@ -68,6 +68,10 @@ if (!pageSrc.includes('loadIntelligenceReadModel')) {
 
 const violations = []
 for (const file of walk(UI_DIR)) {
+  // Server actions podem orquestrar persistência; a UI de apresentação não.
+  if (file.endsWith(`${normalize('/actions.ts')}`) || file.endsWith('actions.ts')) {
+    continue
+  }
   const src = readFileSync(file, 'utf8')
   for (const rule of FORBIDDEN) {
     if (rule.re.test(src)) {
