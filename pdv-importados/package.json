@@ -32,6 +32,7 @@
     "check:entity-ssot": "node scripts/check-entity-ssot-boundary.mjs",
     "check:di-admin": "node scripts/check-decision-intelligence-admin.mjs",
     "check:di-orchestrator": "node scripts/check-decision-intelligence-orchestrator.mjs",
+    "check:di-providers": "node scripts/check-decision-intelligence-providers.mjs",
     "check:caixa-pre-producao": "node scripts/check-caixa-pre-producao.mjs",
     "check:ds-burndown": "node scripts/ds-legacy-burndown.mjs",
     "check:ds-coverage": "node scripts/ds-coverage.mjs",

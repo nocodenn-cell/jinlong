@@ -93,8 +93,8 @@ Auth: `Authorization: Bearer $CRON_SECRET` (ou `DI_ORCHESTRATOR_SECRET` / header
 
 ## Fact Providers
 
-`createEmptyWaveAProviders()` permite o ciclo operar sem SQL (KPIs blocked).  
-Providers reais de produção são **incrementais** (fora do Core) e plugados via `providersFactory`.
+Produção: `createWaveAProviders(supabase)` — ver `DECISION_INTELLIGENCE_FACT_PROVIDERS.md`.  
+Testes offline: `createEmptyWaveAProviders()`.
 
 ## Guards
 

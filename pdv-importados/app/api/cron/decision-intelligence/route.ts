@@ -12,9 +12,9 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   authorizeOrchestratorRequest,
-  createEmptyWaveAProviders,
   createSupabaseDecisionRecordRepository,
   createSupabaseDecisionSnapshotRepository,
+  createWaveAProviders,
   listActiveStoreIds,
   runDecisionIntelligenceOrchestrator,
 } from '@/lib/decision-intelligence'
@@ -52,7 +52,7 @@ async function handle(
     listStoreIds: storeIds ? undefined : () => listActiveStoreIds(supabase),
     snapshots: createSupabaseDecisionSnapshotRepository(supabase),
     decisions: createSupabaseDecisionRecordRepository(supabase),
-    providersFactory: () => createEmptyWaveAProviders(),
+    providersFactory: () => createWaveAProviders(supabase),
     persistRetries: 1,
   })
 
