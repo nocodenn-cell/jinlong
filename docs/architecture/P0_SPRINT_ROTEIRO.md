@@ -51,6 +51,12 @@ npx vitest run app/admin/implantacao/homologacaoDados.test.ts app/admin/implanta
 | **PR** | https://github.com/nocodenn-cell/fastproduct/pull/220 |
 | **Próximo ciclo** | P0-VEN-PROOF em loja homologada (abrir caixa → venda DINHEIRO/PIX → estoque → financeiro → auditoria) — só após desbloquear Actions ou merge com aceite explícito do gate CI |
 
+## Inventário Financeiro / Fiscal
+
+Ver [GO_LIVE_FINANCEIRO_FISCAL.md](./GO_LIVE_FINANCEIRO_FISCAL.md) — telas canônicas EXISTS; ajustes no PR #220 (AP→NF-e, aviso Stub).
+
 ## Declaração GO dos módulos
 
 Somente após **P0-HOM** bem-sucedido: Venda, Estoque, Financeiro e Cadastro = GO.
+
+Decision Intelligence permanece fora deste PR (branch `feat/first-customer-go-live`); homologar cockpit somente leitura após deploy que a contenha.

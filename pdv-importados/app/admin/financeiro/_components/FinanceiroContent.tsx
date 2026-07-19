@@ -7,6 +7,7 @@ import { ContasReceberTable, type ContaLinha, type ContasLabels } from './Contas
 import { FinanceiroReceberExtras } from './FinanceiroReceberExtras'
 import { FinanceiroTabNav, type FinanceiroTabId } from './FinanceiroTabNav'
 import { DocumentoFiscalDetailSheet } from './DocumentoFiscalDetailSheet'
+import { FiscalStubNotice } from './FiscalStubNotice'
 import { ContasPagarListClient } from '@/app/gerente/financeiro/contas-pagar/ContasPagarListClient'
 import type { ContaPagarRow } from '@/app/gerente/financeiro/contas-pagar/actions'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -31,6 +32,8 @@ type Props = {
     filaFiscal: string
     filaFiscalVazioTitulo: string
     filaFiscalVazioSub: string
+    fiscalStubTitulo: string
+    fiscalStubSub: string
     locale: string
   }
   clientesOpts: ClienteOpt[]
@@ -138,6 +141,10 @@ export function FinanceiroContent({
 
       {activeTab === 'fiscal' ? (
         <SectionCard title={panelLabels.filaFiscal}>
+          <FiscalStubNotice
+            titulo={panelLabels.fiscalStubTitulo}
+            subtitulo={panelLabels.fiscalStubSub}
+          />
           <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
         </SectionCard>
       ) : null}

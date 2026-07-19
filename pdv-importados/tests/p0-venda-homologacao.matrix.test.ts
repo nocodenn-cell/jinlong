@@ -1,6 +1,5 @@
 /**
- * P0-VEN-PROOF / P0-VEN-REV — guarda de presença dos caminhos canônicos.
- * Homologação humana com dados reais permanece obrigatória (P0-HOM).
+ * Matriz canônica Go-Live — presença de caminhos (não substitui P0-HOM humano).
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -45,6 +44,49 @@ describe('P0 venda — caminhos canônicos (matriz)', () => {
   it('P0-DADOS: avaliador e item de implantação existem', () => {
     expect(exists('app/admin/implantacao/homologacaoDados.ts')).toBe(true)
     const cat = read('app/admin/implantacao/implantacaoCatalog.ts')
-    expect(cat).toContain("homologacao.dados")
+    expect(cat).toContain('homologacao.dados')
+  })
+})
+
+describe('P0 Financeiro + Fiscal Stub — telas canônicas', () => {
+  it('financeiro unificado tem abas receber/pagar/fiscal', () => {
+    expect(exists('app/admin/financeiro/page.tsx')).toBe(true)
+    const nav = read('app/admin/financeiro/_components/FinanceiroTabNav.tsx')
+    expect(nav).toContain("'receber'")
+    expect(nav).toContain("'pagar'")
+    expect(nav).toContain("'fiscal'")
+  })
+
+  it('AP não cria título manual — CTA aponta para import NF-e', () => {
+    const src = read('app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx')
+    expect(src).toContain('ROUTES.admin.importNfe')
+    expect(src).toContain('origem_nfe_hint')
+  })
+
+  it('fila fiscal tem UI mínima Stub (aviso + sheet + detalhe)', () => {
+    expect(exists('app/admin/financeiro/_components/FiscalStubNotice.tsx')).toBe(true)
+    expect(exists('app/admin/financeiro/_components/DocumentoFiscalDetailSheet.tsx')).toBe(true)
+    expect(exists('app/admin/financeiro/documento/[id]/page.tsx')).toBe(true)
+    const content = read('app/admin/financeiro/_components/FinanceiroContent.tsx')
+    expect(content).toContain('FiscalStubNotice')
+  })
+
+  it('implantacao exige grupo fiscal (stub XOR nfce)', () => {
+    const cat = read('app/admin/implantacao/implantacaoCatalog.ts')
+    expect(cat).toContain("fiscal.stub")
+    expect(cat).toContain("fiscal.nfce")
+    expect(cat).toContain("grupo: 'fiscal'")
+  })
+})
+
+describe('P0 homologação — rotas do fluxo integrado', () => {
+  it('estoque e venda admin existem para a cadeia operacional', () => {
+    expect(exists('app/admin/estoque/page.tsx')).toBe(true)
+    expect(exists('app/admin/vendas/page.tsx')).toBe(true)
+    expect(exists('app/admin/estoque/importar-nfe/page.tsx')).toBe(true)
+  })
+
+  it('gate /admin/implantacao existe', () => {
+    expect(exists('app/admin/implantacao/page.tsx')).toBe(true)
   })
 })
