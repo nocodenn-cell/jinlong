@@ -66,6 +66,13 @@ function buildMetrics(
   let snapshotsReused = 0
   let failuresTotal = 0
   let ruleVersion: string | null = null
+  const totals = {
+    factsUsed: 0,
+    factsBlocked: 0,
+    kpisSupported: 0,
+    kpisBlocked: 0,
+    engineLoopMs: 0,
+  }
 
   for (const r of results) {
     if (r.ruleVersion) ruleVersion = r.ruleVersion
@@ -75,6 +82,15 @@ function buildMetrics(
     if (r.outcome === 'failed') {
       failuresTotal += 1
       if (r.stage) failuresByStage[r.stage] += 1
+    }
+
+    const obs = r.observability
+    if (obs) {
+      totals.factsUsed += obs.factsUsed
+      totals.factsBlocked += obs.factsBlocked
+      totals.kpisSupported += obs.kpisSupported
+      totals.kpisBlocked += obs.kpisBlocked
+      totals.engineLoopMs += obs.engineLoopMs ?? 0
     }
   }
   if (listStoresFailed) {
@@ -96,6 +112,7 @@ function buildMetrics(
     snapshotsReused,
     failuresTotal,
     failuresByStage,
+    totals,
     storeResults: results,
   }
 }
@@ -167,6 +184,7 @@ export async function runDecisionIntelligenceOrchestrator(
         durationMs: 0,
         errorCode: 'DI_ORCH_PROVIDERS',
         errorMessage: message,
+        observability: null,
         readModel: null,
       })
       continue

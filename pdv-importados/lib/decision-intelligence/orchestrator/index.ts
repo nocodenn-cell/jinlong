@@ -15,7 +15,9 @@ export {
   type ListStoreIdsFn,
   type RunOrchestratorOptions,
 } from './run-orchestrator'
+export { extractCycleObservability } from './extract-observability'
 export type {
+  CycleObservability,
   OrchestratorRunMetrics,
   OrchestratorRunResult,
   OrchestratorStage,

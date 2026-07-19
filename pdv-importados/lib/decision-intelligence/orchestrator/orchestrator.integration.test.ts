@@ -182,6 +182,27 @@ describe('Decision Intelligence Orchestrator (Fase 5)', () => {
     }
   })
 
+  it('emite observabilidade com versões e cobertura Fact/KPI', async () => {
+    const snapshots = createInMemoryDecisionSnapshotRepository()
+    const result = await runDecisionIntelligenceOrchestrator({
+      trigger: 'manual',
+      storeIds: ['loja-obs-1'],
+      snapshots,
+      providersFactory: (id) => saleProviders(id),
+      logMetrics: false,
+      now: () => new Date('2026-07-19T22:00:00.000Z'),
+    })
+    const obs = result.metrics.storeResults[0]?.observability
+    expect(obs).toBeTruthy()
+    expect(obs!.coreVersion).toBe('di-core-v1.0')
+    expect(obs!.schemaVersion).toBe(1)
+    expect(obs!.ruleVersion).toBeTruthy()
+    expect(obs!.engineLoopMs).toBeGreaterThanOrEqual(0)
+    expect(obs!.factsUsed).toBeGreaterThan(0)
+    expect(obs!.kpisSupported).toBeGreaterThanOrEqual(1)
+    expect(result.metrics.totals.kpisSupported).toBeGreaterThanOrEqual(1)
+  })
+
   it('computeSnapshotContentFingerprint é determinístico', async () => {
     const snapshots = createInMemoryDecisionSnapshotRepository()
     const cycle = await runStoreCycle({

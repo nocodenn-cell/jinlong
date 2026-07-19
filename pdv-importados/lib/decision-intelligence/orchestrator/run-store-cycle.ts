@@ -11,15 +11,14 @@ import type { DecisionSnapshotRepositoryPort } from '../ports/decision-snapshot-
 import type { DecisionRecordRepositoryPort } from '../ports/decision-record-repository'
 import { buildDecisionIntelligenceReadModel } from '../read-model/build-read-model'
 import { computeSnapshotContentFingerprint } from './content-fingerprint'
+import { extractCycleObservability } from './extract-observability'
 import type { StoreCycleResult } from './types'
 
 export type RunStoreCycleDeps = {
   storeId: string
   providers: readonly FactProviderPort[]
   snapshots: DecisionSnapshotRepositoryPort
-  /** Opcional — só para projetar Read Model após ciclo (records humanos). */
   decisions?: DecisionRecordRepositoryPort
-  /** Retries de persistência (default 1 = uma tentativa + uma reexecução). */
   persistRetries?: number
   now?: () => Date
   waveAOnly?: boolean
@@ -44,6 +43,7 @@ function emptyFailures(
     durationMs: Date.now() - started,
     errorCode: code,
     errorMessage: message,
+    observability: null,
     readModel: null,
   }
 }
@@ -51,8 +51,12 @@ function emptyFailures(
 async function persistWithRetry(
   deps: RunStoreCycleDeps,
   snapshot: Parameters<typeof persistDecisionSnapshot>[0]['snapshot'],
-): Promise<Awaited<ReturnType<typeof persistDecisionSnapshot>>> {
+): Promise<{
+  result: Awaited<ReturnType<typeof persistDecisionSnapshot>>
+  persistMs: number
+}> {
   const attempts = Math.max(1, (deps.persistRetries ?? 1) + 1)
+  const t0 = Date.now()
   let last = await persistDecisionSnapshot({
     repository: deps.snapshots,
     snapshot,
@@ -73,13 +77,12 @@ async function persistWithRetry(
       },
     })
   }
-  return last
+  return { result: last, persistMs: Date.now() - t0 }
 }
 
 /**
  * Ciclo por loja: Engine Loop → idempotência → persist → projeção Read Model.
  * Coordenação apenas — sem recalcular regras do Core.
- * Falha não apaga/altera snapshots existentes (append-only).
  */
 export async function runStoreCycle(
   deps: RunStoreCycleDeps,
@@ -88,6 +91,7 @@ export async function runStoreCycle(
   const { storeId } = deps
 
   let snapshot
+  const engineStarted = Date.now()
   try {
     snapshot = await runEngineLoop({
       storeId,
@@ -99,6 +103,7 @@ export async function runStoreCycle(
     const message = err instanceof Error ? err.message : String(err)
     return emptyFailures(storeId, 'engine_loop', started, 'DI_ORCH_ENGINE', message)
   }
+  const engineLoopMs = Date.now() - engineStarted
 
   const contentFingerprint = computeSnapshotContentFingerprint(snapshot)
   const ruleVersion = snapshot.memory.ruleVersion
@@ -140,12 +145,22 @@ export async function runStoreCycle(
         durationMs: Date.now() - started,
         errorCode: null,
         errorMessage: null,
+        observability: extractCycleObservability({
+          snapshot: latest.payload,
+          traceId: deps.traceId,
+          engineLoopMs,
+          persistMs: 0,
+          snapshotVersion: latest.snapshotVersion,
+        }),
         readModel,
       }
     }
   }
 
-  const persistResult = await persistWithRetry(deps, snapshot)
+  const { result: persistResult, persistMs } = await persistWithRetry(
+    deps,
+    snapshot,
+  )
   if (!persistResult.ok) {
     return {
       storeId,
@@ -158,6 +173,12 @@ export async function runStoreCycle(
       durationMs: Date.now() - started,
       errorCode: persistResult.code,
       errorMessage: persistResult.message,
+      observability: extractCycleObservability({
+        snapshot,
+        traceId: deps.traceId,
+        engineLoopMs,
+        persistMs,
+      }),
       readModel: null,
     }
   }
@@ -185,6 +206,12 @@ export async function runStoreCycle(
       durationMs: Date.now() - started,
       errorCode: 'DI_ORCH_READ_MODEL',
       errorMessage: message,
+      observability: extractCycleObservability({
+        snapshot,
+        traceId: deps.traceId,
+        engineLoopMs,
+        persistMs,
+      }),
       readModel: null,
     }
   }
@@ -200,6 +227,12 @@ export async function runStoreCycle(
     durationMs: Date.now() - started,
     errorCode: null,
     errorMessage: null,
+    observability: extractCycleObservability({
+      snapshot,
+      traceId: deps.traceId,
+      engineLoopMs,
+      persistMs,
+    }),
     readModel,
   }
 }

@@ -73,6 +73,7 @@ async function handle(
         snapshotsReused: result.metrics.snapshotsReused,
         failuresTotal: result.metrics.failuresTotal,
         failuresByStage: result.metrics.failuresByStage,
+        totals: result.metrics.totals,
         storeResults: result.metrics.storeResults.map((r) => ({
           storeId: r.storeId,
           outcome: r.outcome,
@@ -84,6 +85,7 @@ async function handle(
           durationMs: r.durationMs,
           errorCode: r.errorCode,
           errorMessage: r.errorMessage,
+          observability: r.observability,
         })),
       },
     },

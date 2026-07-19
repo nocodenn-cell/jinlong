@@ -64,6 +64,8 @@ export {
   resolveOrchestratorSecret,
   runDecisionIntelligenceOrchestrator,
   runStoreCycle,
+  extractCycleObservability,
+  type CycleObservability,
   type FactProvidersFactory,
   type ListStoreIdsFn,
   type OrchestratorRunMetrics,

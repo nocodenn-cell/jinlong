@@ -20,6 +20,15 @@ export function logOrchestratorMetrics(metrics: OrchestratorRunMetrics): void {
     snapshotsReused: metrics.snapshotsReused,
     failuresTotal: metrics.failuresTotal,
     failuresByStage: metrics.failuresByStage,
+    totals: metrics.totals,
+    stores: metrics.storeResults.map((r) => ({
+      storeId: r.storeId,
+      outcome: r.outcome,
+      stage: r.stage,
+      durationMs: r.durationMs,
+      errorCode: r.errorCode,
+      observability: r.observability,
+    })),
   }
   if (metrics.failuresTotal > 0) {
     console.error(JSON.stringify(summary))

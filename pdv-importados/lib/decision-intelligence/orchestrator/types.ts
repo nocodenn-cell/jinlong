@@ -15,6 +15,29 @@ export type StoreCycleOutcome =
   | 'reused'
   | 'failed'
 
+/** Observabilidade por loja — derivada do snapshot + timings da borda. */
+export type CycleObservability = {
+  traceId: string | null
+  engineLoopMs: number | null
+  persistMs: number | null
+  factsLoaded: number
+  factsUsed: number
+  factsBlocked: number
+  kpisSupported: number
+  kpisPartial: number
+  kpisBlocked: number
+  blockedKpiIds: readonly string[]
+  analysisFindings: number
+  recommendations: number
+  alerts: number
+  actionPlans: number
+  memoryEntries: number
+  coreVersion: string
+  schemaVersion: number
+  ruleVersion: string | null
+  snapshotVersion: string | null
+}
+
 export type StoreCycleResult = {
   storeId: string
   outcome: StoreCycleOutcome
@@ -26,6 +49,7 @@ export type StoreCycleResult = {
   durationMs: number
   errorCode: string | null
   errorMessage: string | null
+  observability: CycleObservability | null
   /** Projeção opcional pós-ciclo (não materializada — só retorno). */
   readModel: DecisionIntelligenceReadModel | null
 }
@@ -45,6 +69,14 @@ export type OrchestratorRunMetrics = {
   snapshotsReused: number
   failuresTotal: number
   failuresByStage: Readonly<Record<OrchestratorStage, number>>
+  /** Totais agregados de cobertura Fact/KPI. */
+  totals: {
+    factsUsed: number
+    factsBlocked: number
+    kpisSupported: number
+    kpisBlocked: number
+    engineLoopMs: number
+  }
   storeResults: readonly StoreCycleResult[]
 }
 
