@@ -33,7 +33,7 @@ function kpi(
     formulaVersion: '1.0.0',
     inputFingerprint: `${partial.id}:t`,
     computedAt: '2026-07-19T18:00:00.000Z',
-    usedFactIds: [],
+    usedFactIds: partial.usedFactIds ?? ['SaleFact'],
     supportLevel,
     confidence,
     ...partial,
@@ -66,7 +66,8 @@ describe('Analysis Engine (Cycle 3)', () => {
     expect(finding?.severity).toBe('WARNING')
     expect(finding?.domain).toBe('MARGIN')
     expect(finding?.titleCode).toBe('intel.analysis.low_margin.title')
-    expect(finding?.confidence).toBe(0.95)
+    expect(finding?.operationalConfidence).toBe(0.95)
+    expect(finding?.sourceFactIds).toContain('SaleFact')
     expect(finding?.evidence.length).toBeGreaterThan(0)
     expect(finding?.evidence[0]?.kpiId).toBe('GrossMargin')
     // Não é recommendation / action
@@ -88,7 +89,7 @@ describe('Analysis Engine (Cycle 3)', () => {
     })
     const finding = snapshot.findings.find((f) => f.id === 'LOW_MARGIN')
     expect(finding?.severity).toBe('CRITICAL')
-    expect(finding?.confidence).toBe(0.72)
+    expect(finding?.operationalConfidence).toBe(0.72)
   })
 
   it('não emite finding quando KPI está BLOCKED/UNAVAILABLE (dados insuficientes)', () => {
@@ -120,7 +121,7 @@ describe('Analysis Engine (Cycle 3)', () => {
     expect(snapshot.skippedInsufficientData).toBeGreaterThan(0)
   })
 
-  it('toda finding tem evidência', () => {
+  it('toda finding tem evidência e sourceFactIds', () => {
     const snapshot = runAnalysisEngine({
       storeId: 'loja-1',
       requestedAt: '2026-07-19T18:00:00.000Z',
@@ -130,11 +131,13 @@ describe('Analysis Engine (Cycle 3)', () => {
           status: 'SUPPORTED',
           value: 0,
           operationalConfidence: 1,
+          usedFactIds: ['SaleFact'],
         }),
       ],
     })
     for (const f of snapshot.findings) {
       expect(f.evidence.length).toBeGreaterThan(0)
+      expect(f.sourceFactIds.length).toBeGreaterThan(0)
     }
   })
 

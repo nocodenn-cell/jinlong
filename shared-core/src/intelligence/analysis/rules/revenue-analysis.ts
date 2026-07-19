@@ -1,4 +1,9 @@
-import { evidenceFrom, minConfidence, usableKpi } from '../kpi-access'
+import {
+  evidenceFrom,
+  minConfidence,
+  sourceFactIdsFrom,
+  usableKpi,
+} from '../kpi-access'
 import type { AnalysisRule } from '../types'
 
 /**
@@ -17,7 +22,8 @@ export const zeroNetRevenueRule: AnalysisRule = {
       domain: 'SALES',
       titleCode: 'intel.analysis.zero_net_revenue.title',
       evidence: [evidenceFrom(net)],
-      confidence: minConfidence([net]),
+      sourceFactIds: sourceFactIdsFrom([net]),
+      operationalConfidence: minConfidence([net]),
     }
   },
 }
@@ -35,7 +41,8 @@ export const nonPositiveAverageTicketRule: AnalysisRule = {
       domain: 'SALES',
       titleCode: 'intel.analysis.non_positive_average_ticket.title',
       evidence: [evidenceFrom(ticket)],
-      confidence: minConfidence([ticket]),
+      sourceFactIds: sourceFactIdsFrom([ticket]),
+      operationalConfidence: minConfidence([ticket]),
     }
   },
 }

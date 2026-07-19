@@ -26,6 +26,21 @@ export type {
   OutcomeSnapshot,
 } from './decision-memory'
 
+export type {
+  MemoryEntry,
+  MemoryEntryKind,
+  MemorySnapshot,
+} from './memory-snapshot'
+
+export type {
+  ExecutiveActionPlanSummary,
+  ExecutiveAlertSummary,
+  ExecutiveFindingSummary,
+  ExecutiveKpiSummary,
+  ExecutiveRecommendationSummary,
+  ExecutiveSnapshot,
+} from './executive-snapshot'
+
 export type { FactEnvelope, FactRegistryEntry } from './fact'
 
 export type { KpiDefinition, KpiId, KpiValue } from './kpi'

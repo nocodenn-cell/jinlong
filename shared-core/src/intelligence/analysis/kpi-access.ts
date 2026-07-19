@@ -1,5 +1,6 @@
 import type { DerivedKpi } from '../contracts/derived-kpi'
 import type { KpiId } from '../contracts/kpi'
+import type { FactId } from '../facts/definitions'
 import type { AnalysisEvidence } from './types'
 
 /** KPI utilizável em finding (tem valor numérico). */
@@ -29,4 +30,13 @@ export function minConfidence(kpis: readonly DerivedKpi[]): number {
     if (k.operationalConfidence < min) min = k.operationalConfidence
   }
   return Math.round(min * 1000) / 1000
+}
+
+/** União dos Facts que sustentam os KPIs de evidência. */
+export function sourceFactIdsFrom(kpis: readonly DerivedKpi[]): FactId[] {
+  const ids = new Set<FactId>()
+  for (const k of kpis) {
+    for (const id of k.usedFactIds) ids.add(id)
+  }
+  return [...ids].sort()
 }

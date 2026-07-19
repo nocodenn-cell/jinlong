@@ -58,6 +58,7 @@ export function buildAlertFromRecommendation(args: BuildAlertArgs): Alert {
     severity: severityPlan.severity,
     severityJustificationCode: severityPlan.justificationCode,
     sourceRecommendationIds: [rec.id],
+    sourceFindingIds: [...rec.sourceFindingIds],
     titleCode: titleCodeFor(rec.recommendationCode),
     operationalConfidence: rec.operationalConfidence,
     urgency,

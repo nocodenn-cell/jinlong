@@ -1,4 +1,9 @@
-import { evidenceFrom, minConfidence, usableKpi } from '../kpi-access'
+import {
+  evidenceFrom,
+  minConfidence,
+  sourceFactIdsFrom,
+  usableKpi,
+} from '../kpi-access'
 import type { AnalysisFinding, AnalysisRule } from '../types'
 
 /**
@@ -30,7 +35,8 @@ export const lowMarginRule: AnalysisRule = {
           kpiStatus: margin.status,
         },
       ],
-      confidence: minConfidence([margin]),
+      sourceFactIds: sourceFactIdsFrom([margin]),
+      operationalConfidence: minConfidence([margin]),
     }
     return finding
   },
@@ -50,7 +56,8 @@ export const negativeGrossProfitRule: AnalysisRule = {
       domain: 'MARGIN',
       titleCode: 'intel.analysis.negative_gross_profit.title',
       evidence: [evidenceFrom(profit)],
-      confidence: minConfidence([profit]),
+      sourceFactIds: sourceFactIdsFrom([profit]),
+      operationalConfidence: minConfidence([profit]),
     }
   },
 }

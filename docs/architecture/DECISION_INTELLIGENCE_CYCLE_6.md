@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Status** | **Especificado** (doc; implementação ainda não iniciada) |
+| **Status** | **Concluído** (core puro) |
 | **Data** | 2026-07-19 |
 | **Checkpoint anterior** | tag `di-cycle-5` |
 | **Código previsto** | `shared-core/src/intelligence/` (action-plan / organizers) |
@@ -140,7 +140,6 @@ Contratos base em `contracts/action-plan.ts` (Cycle 0) — **evoluir** no Cycle 
 ## Ordem
 
 1. ✅ Cycle 5 Alert + tag `di-cycle-5`  
-2. ✅ Este documento (especificação; commit docs-only)  
-3. Implementar Action Plan Engine puro + testes (agregação + rastreio)  
-4. Wire no Engine Loop  
-5. Read model / API → UI `/admin` DI (só com Analysis + Rec + Alert + Plan estáveis)  
+2. ✅ Este documento (especificação)  
+3. ✅ Action Plan Engine + Memory + Executive no Engine Loop  
+4. Read model / API → UI `/admin` DI (projeção dos snapshots)  

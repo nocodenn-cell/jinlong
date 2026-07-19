@@ -1,22 +1,31 @@
-import type { ConfidenceLevel, MoneyAmount, UrgencyTier } from '../types/common'
+import type {
+  ConfidenceLevel,
+  MoneyAmount,
+  OperationalConfidence,
+  UrgencyTier,
+} from '../types/common'
 
 /**
- * Action Plan Contract — ADR-011.
- * Fluxo: Recommendation → Action Plan → Checklist → Execução → Resultado.
- * Cycle 0: contrato apenas.
+ * Action Plan Contract — ADR-011 + Cycle 6 + hardening v1.0.
+ * Organiza trabalho agregado por objetivo — não executa operações.
  */
 
 export type ActionPlanItemStatus = 'TODO' | 'DONE' | 'SKIPPED' | 'DEFERRED'
 
 export type ActionPlanItem = {
   id: string
-  /** Origem obrigatória */
   recommendationId: string
   titleCode: string
+  /** Só revisão / validação / conferência — nunca mutação. */
   actionCode: string
   checklistLabelCode: string
   urgency: UrgencyTier
   confidence: ConfidenceLevel
+  operationalConfidence: OperationalConfidence
+  /** Findings que originaram o item (via Recommendation). */
+  sourceFindingIds: readonly string[]
+  /** Alerts que referenciam a Recommendation deste item. */
+  sourceAlertIds: readonly string[]
   estimatedImpact?: MoneyAmount
   deepLinkHint?: string
   status: ActionPlanItemStatus
@@ -27,8 +36,15 @@ export type ActionPlanItem = {
 export type ActionPlan = {
   id: string
   storeId: string
-  /** Data do plano (calendário da loja / ISO date). */
   planDate: string
+  objectiveCode: string
   items: readonly ActionPlanItem[]
   createdAt: string
+  sourceAlertIds: readonly string[]
+  sourceRecommendationIds: readonly string[]
+  sourceFindingIds: readonly string[]
+  operationalConfidence: OperationalConfidence
+  urgency: UrgencyTier
+  ruleId: string
+  ruleVersion: string
 }

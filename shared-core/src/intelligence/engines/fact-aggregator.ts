@@ -5,6 +5,7 @@ import { evaluateProviderForRecommendation } from '../contracts/provider-support
 import { summarizeFactConfidence } from '../contracts/recommendation-purity'
 import type { DiGateId } from '../gates/data-readiness'
 import { isWaveASupportedFactId } from '../facts/wave-plan'
+import { cloneFactEnvelope } from '../immutability'
 
 export type ProviderLoadBatch = {
   descriptor: FactProviderDescriptor
@@ -74,7 +75,7 @@ function pushFacts(
       continue
     }
     seen.add(key)
-    target.push(fact)
+    target.push(cloneFactEnvelope(fact))
   }
 }
 

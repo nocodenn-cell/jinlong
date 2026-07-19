@@ -99,7 +99,7 @@ export function buildRecommendationFromFinding(
         ? e.value
         : JSON.stringify(e.value),
     confidence: operationalToConfidenceLevel(
-      finding.confidence,
+      finding.operationalConfidence,
       kpiStatusFromEvidence(finding),
     ),
   }))
@@ -117,10 +117,10 @@ export function buildRecommendationFromFinding(
       confidence: 'LOW',
     },
     confidence: operationalToConfidenceLevel(
-      finding.confidence,
+      finding.operationalConfidence,
       kpiStatusFromEvidence(finding),
     ),
-    operationalConfidence: finding.confidence,
+    operationalConfidence: finding.operationalConfidence,
     urgency: severityToUrgency(finding.severity),
     recommendedAction: args.action,
     justification: {
@@ -137,6 +137,6 @@ export function buildRecommendationFromFinding(
     sourceFindingIds: [finding.id],
     ruleId: args.ruleId,
     ruleVersion: args.ruleVersion,
-    inputFingerprint: `${args.storeId}:${finding.id}:${args.recommendationCode}:${finding.confidence}`,
+    inputFingerprint: `${args.storeId}:${finding.id}:${args.recommendationCode}:${finding.operationalConfidence}`,
   }
 }

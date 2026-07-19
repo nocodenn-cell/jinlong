@@ -1,6 +1,6 @@
 /**
  * Decision Intelligence — barrel público (ADR-011).
- * Cycle 5: Alert Engine (Recommendations → atenção priorizada). Sem Action/UI.
+ * Cycles 0–8 v1.0: pipeline completo + hardening de rastreio/imutabilidade.
  */
 
 export type { IntelligenceErrorCode } from './errorCodes'
@@ -51,8 +51,11 @@ export type {
   DerivedKpiStatus,
   Effectiveness,
   EngineCycleMetrics,
+  ExecutiveSnapshot,
   ExecutionStatus,
   FactConfidenceSummary,
+  MemoryEntry,
+  MemorySnapshot,
   FactEnvelope,
   FactProviderDescriptor,
   FactProviderSupportLevel,
@@ -168,8 +171,11 @@ export {
 } from './recommendation'
 
 export {
+  FORBIDDEN_ACTION_PLAN_CODES,
   FORBIDDEN_OPERATIONAL_ACTION_CODES,
+  isForbiddenActionPlanCode,
   isForbiddenOperationalAction,
+  isOrganizingActionCode,
   MIN_RECOMMENDATION_OPERATIONAL_CONFIDENCE,
 } from './policy'
 export type { ForbiddenOperationalActionCode } from './policy'
@@ -190,3 +196,30 @@ export {
   planSeverityFromRecommendation,
   runAlertEngine,
 } from './alerts'
+
+export type {
+  ActionPlanEngineInput,
+  ActionPlanRule,
+  ActionPlanSnapshot,
+} from './action-plan'
+export {
+  ACTION_PLAN_RULES,
+  assertActionPlanDeterminism,
+  listActionPlanRuleIds,
+  objectiveForRecommendationCode,
+  runActionPlanEngine,
+} from './action-plan'
+
+export type { MemoryEngineInput } from './memory'
+export {
+  assertMemoryDeterminism,
+  runMemoryEngine,
+} from './memory'
+
+export type { ExecutiveEngineInput } from './executive'
+export {
+  assertExecutiveDeterminism,
+  runExecutiveEngine,
+} from './executive'
+
+export { cloneFactEnvelope, deepFreeze } from './immutability'

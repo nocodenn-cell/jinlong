@@ -49,6 +49,8 @@ export type DecisionAlertCore = {
   id: string
   severity: AlertSeverity
   sourceRecommendationIds: readonly string[]
+  /** Findings de origem (via Recommendations) — rastreio direto. */
+  sourceFindingIds: readonly string[]
   titleCode: string
   operationalConfidence: OperationalConfidence
   urgency: AlertUrgency

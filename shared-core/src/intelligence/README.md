@@ -7,20 +7,19 @@ Cycle 1 = Engine Loop (`runEngineLoop` → Snapshot).
 Cycle 2 = KPI Derivation (`deriveKpis`) — weakest-link confidence.  
 Cycle 3 = Analysis Engine (`runAnalysisEngine`) — Findings; **não** recomenda ações.  
 Cycle 4 = Recommendation Engine (`runRecommendationEngine`) — opções de revisão.  
-Cycle 5 = **Alert Engine** (`runAlertEngine`) — atenção priorizada a partir de Recommendations. Sem Action / SQL / `/admin` DI.
+Cycle 5 = Alert Engine (`runAlertEngine`) — atenção priorizada.  
+Cycle 6 = **Action Plan** (`runActionPlanEngine`) — trabalho agregado por objetivo.  
+Cycle 7 = **Memory** (`runMemoryEngine`) — `MemorySnapshot` puro (sem DB).  
+Cycle 8 = **Executive** (`runExecutiveEngine`) — composição read-model (sem Facts).  
+Sem Action automática / SQL / `/admin` DI nesta camada.
 
 ## Propósito
 
-Ajudar o empresário a decidir — com evidências e SSoT preservado — evoluindo de Facts → KPIs → Analysis → Recommendations → Action Plan → Decision Memory.
+Ajudar o empresário a decidir — com evidências e SSoT preservado.
 
 ```
-Domínios operacionais (writers / SSoT)
-        ↓ ports de leitura (Cycle 1+)
-Facts canônicos (registry)
-        ↓
-KPIs → Analysis → Recommendations / Alerts
-        ↓
-Action Plan → Decision Memory
+Facts → KPIs → Analysis → Recommendations → Alerts
+        → Action Plans → Memory → Executive
 ```
 
 ## Responsabilidades (esta pasta)
@@ -132,15 +131,16 @@ Separação: `analysis/` identifica · `recommendation/` sugere opções · `pol
 
 | Pasta | Cycle | Conteúdo permitido agora |
 |-------|-------|---------------------------|
-| `engines/` | 2+ | só README lock |
-| `analyzers/` | 3+ | só README lock |
-| `recommendation/` · `policy/` | 4 | engine + limites (implementado) |
-| `recommendations/` (legado lock) | — | preferir `recommendation/` |
-| `alerts/` | 5 | Alert Engine (implementado) |
-| `memory/` | 7+ | só README lock |
+| `analysis/` | 3 | SSoT Analysis (não usar pasta `analyzers`) |
+| `recommendation/` · `policy/` | 4 | SSoT Recommendation |
+| `alerts/` | 5 | Alert Engine |
+| `action-plan/` | 6 | Action Plan Engine |
+| `memory/` | 7 | Memory Engine |
+| `executive/` | 8 | Executive Engine |
+| `testing/` | — | fixtures de contrato (só testes) |
+| `immutability.ts` | — | clone Facts + deepFreeze do Snapshot |
 
-Action Plan = Cycle 6 (contratos já em `contracts/action-plan.ts`).  
-Executive Dashboard = Cycle 8.
+**v1.0 hardening:** Finding.`operationalConfidence` + `sourceFactIds`; Alert.`sourceFindingIds`; ActionPlanItem rastreável; Memory entries granulares; Snapshot deep-frozen.
 
 ## Docs
 

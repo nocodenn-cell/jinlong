@@ -1,10 +1,14 @@
 import type { DerivedKpi } from './derived-kpi'
 import type { KpiId } from './kpi'
 import type { OperationalConfidence } from '../types/common'
+import type { FactId } from '../facts/definitions'
 
 /**
- * Analysis contracts (Cycle 3).
+ * Analysis contracts (Cycle 3 + hardening v1.0).
  * Findings interpretam padrões — não são Recommendations.
+ *
+ * Migração: `confidence` → `operationalConfidence` (mesmo tipo 0–1).
+ * Novo: `sourceFactIds` — Facts que sustentam o Finding (via KPIs).
  */
 
 export type AnalysisSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
@@ -28,7 +32,10 @@ export type AnalysisFinding = {
   domain: AnalysisDomain
   titleCode: string
   evidence: readonly AnalysisEvidence[]
-  confidence: OperationalConfidence
+  /** Facts que sustentam o Finding (união dos usedFactIds dos KPIs de evidência). */
+  sourceFactIds: readonly FactId[]
+  /** Confiança operacional 0–1 (nomenclatura alinhada ao pipeline). */
+  operationalConfidence: OperationalConfidence
 }
 
 export type AnalysisThresholds = {

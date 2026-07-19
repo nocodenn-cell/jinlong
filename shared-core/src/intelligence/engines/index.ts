@@ -22,3 +22,6 @@ export {
   runRecommendationEngine,
 } from '../recommendation/recommendation-engine'
 export { runAlertEngine } from '../alerts/alert-engine'
+export { runActionPlanEngine } from '../action-plan/action-plan-engine'
+export { runMemoryEngine } from '../memory/memory-engine'
+export { runExecutiveEngine } from '../executive/executive-engine'

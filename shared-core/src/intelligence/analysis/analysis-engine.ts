@@ -24,9 +24,19 @@ function mergeThresholds(
   return { ...DEFAULT_ANALYSIS_THRESHOLDS, ...partial }
 }
 
-function assertFindingHasEvidence(finding: AnalysisFinding): void {
+function assertFindingTraceability(finding: AnalysisFinding): void {
   if (finding.evidence.length === 0) {
     throw new Error(`INTEL_ANALYSIS_NO_EVIDENCE:${finding.id}`)
+  }
+  if (finding.sourceFactIds.length === 0) {
+    throw new Error(`INTEL_ANALYSIS_NO_FACTS:${finding.id}`)
+  }
+  if (
+    typeof finding.operationalConfidence !== 'number' ||
+    finding.operationalConfidence < 0 ||
+    finding.operationalConfidence > 1
+  ) {
+    throw new Error(`INTEL_ANALYSIS_BAD_CONFIDENCE:${finding.id}`)
   }
 }
 
@@ -54,7 +64,7 @@ export function runAnalysisEngine(input: AnalysisEngineInput): AnalysisSnapshot 
       continue
     }
     if (result === null) continue
-    assertFindingHasEvidence(result)
+    assertFindingTraceability(result)
     findings.push(result)
   }
 

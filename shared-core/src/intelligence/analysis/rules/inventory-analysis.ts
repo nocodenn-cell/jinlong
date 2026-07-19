@@ -1,4 +1,9 @@
-import { evidenceFrom, minConfidence, usableKpi } from '../kpi-access'
+import {
+  evidenceFrom,
+  minConfidence,
+  sourceFactIdsFrom,
+  usableKpi,
+} from '../kpi-access'
 import type { AnalysisRule } from '../types'
 
 /**
@@ -27,7 +32,8 @@ export const lowInventoryTurnoverRule: AnalysisRule = {
           kpiStatus: turnover.status,
         },
       ],
-      confidence: minConfidence([turnover]),
+      sourceFactIds: sourceFactIdsFrom([turnover]),
+      operationalConfidence: minConfidence([turnover]),
     }
   },
 }
@@ -40,14 +46,14 @@ export const inventoryCapitalPresentRule: AnalysisRule = {
     if (!capital) return 'SKIP_INSUFFICIENT'
     const value = capital.value as number
     if (value <= 0) return null
-    // INFO: capital observável — não é alerta de ação.
     return {
       id: 'INVENTORY_CAPITAL_OBSERVED',
       severity: 'INFO',
       domain: 'STOCK',
       titleCode: 'intel.analysis.inventory_capital_observed.title',
       evidence: [evidenceFrom(capital)],
-      confidence: minConfidence([capital]),
+      sourceFactIds: sourceFactIdsFrom([capital]),
+      operationalConfidence: minConfidence([capital]),
     }
   },
 }

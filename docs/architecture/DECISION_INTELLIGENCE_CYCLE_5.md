@@ -122,11 +122,12 @@ Urgência alta + dados fracos = alerta crítico **com confiança baixa** (explí
 Alert **não** dispara mutação operacional, purchase order, reprice, etc.  
 Action Plan = Cycle 6 (humano / entity-ssot).
 
-## Dívida arquitetural conhecida (não é bug)
+## Dívida arquitetural conhecida (não é bug) — mantida no v1.0 (W8)
 
 **Urgency C5 deriva do tier da Recommendation (`P0`–`P3`), não de delta temporal real.**
 
-Aceitável para fechar o Cycle 5 (pipeline + guards + confidence ortogonal).  
+Aceitável no core v1.0 (pipeline + guards + confidence ortogonal).  
+**Não** implementar tendência temporal neste hardening — senão mistura escopo.  
 **Não** deve virar dependência permanente — senão Alert vira só uma “cópia colorida” da Recommendation.
 
 ### Alvo futuro (pós–C5 / quando Facts de tendência existirem)

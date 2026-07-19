@@ -1,14 +1,18 @@
 import type { DecisionSnapshot, EngineCycleMetrics } from '../contracts/decision-snapshot'
 import type { FactProviderPort, FactQuery } from '../ports/fact-provider'
 import type { RecommendationEnginePort } from '../contracts/recommendation-purity'
+import { runActionPlanEngine } from '../action-plan/action-plan-engine'
+import { runAlertEngine } from '../alerts/alert-engine'
 import { runAnalysisEngine } from '../analysis/analysis-engine'
+import { runExecutiveEngine } from '../executive/executive-engine'
+import { runMemoryEngine } from '../memory/memory-engine'
+import { createRecommendationEngine } from '../recommendation/recommendation-engine'
 import {
   aggregateFacts,
   type ProviderLoadBatch,
 } from './fact-aggregator'
 import { deriveKpis } from './kpi-derivation-engine'
-import { runAlertEngine } from '../alerts/alert-engine'
-import { createRecommendationEngine } from '../recommendation/recommendation-engine'
+import { deepFreeze } from '../immutability'
 import { assertRecommendationInputPurity } from './recommendation-engine-stub'
 
 export type EngineLoopOptions = {
@@ -59,6 +63,8 @@ function buildMetrics(
   aggregate: ReturnType<typeof aggregateFacts>,
   kpi: ReturnType<typeof deriveKpis>,
   analysis: ReturnType<typeof runAnalysisEngine>,
+  actionPlanCount: number,
+  memoryEntryCount: number,
   executionTimeMs: number,
 ): EngineCycleMetrics {
   const { confidenceSummary } = aggregate
@@ -77,13 +83,15 @@ function buildMetrics(
     kpisBlocked: kpi.blockedKpis.length,
     analysisFindings: analysis.findings.length,
     analysisSkippedInsufficient: analysis.skippedInsufficientData,
+    actionPlans: actionPlanCount,
+    memoryEntries: memoryEntryCount,
     executionTimeMs,
   }
 }
 
 /**
- * Engine Loop — pipeline puro.
- * Providers → Aggregate → KPIs → Analysis → Recommendation → Alert → Snapshot.
+ * Engine Loop — pipeline puro completo (Cycles 1–8).
+ * Facts → KPIs → Analysis → Recommendation → Alert → ActionPlan → Memory → Executive
  */
 export async function runEngineLoop(options: EngineLoopOptions): Promise<DecisionSnapshot> {
   const started = Date.now()
@@ -126,13 +134,44 @@ export async function runEngineLoop(options: EngineLoopOptions): Promise<Decisio
     options.recommendationEngine ?? createRecommendationEngine()
   const recommendations = await recommendationEngine.evaluate(recInput)
 
-  const alertSnapshot = runAlertEngine({
+  const alerts = runAlertEngine({
     storeId: options.storeId,
     requestedAt,
     recommendations,
+  }).alerts
+
+  const actionPlans = runActionPlanEngine({
+    storeId: options.storeId,
+    requestedAt,
+    alerts,
+    recommendations,
+    findings: analysis.findings,
+  }).actionPlans
+
+  const memory = runMemoryEngine({
+    storeId: options.storeId,
+    requestedAt,
+    findings: analysis.findings,
+    recommendations,
+    alerts,
+    actionPlans,
+    confidenceSummary: aggregate.confidenceSummary,
   })
 
-  return {
+  const executive = runExecutiveEngine({
+    storeId: options.storeId,
+    requestedAt,
+    supportedKpis: kpi.supportedKpis,
+    partialKpis: kpi.partialKpis,
+    blockedKpis: kpi.blockedKpis,
+    findings: analysis.findings,
+    recommendations,
+    alerts,
+    actionPlans,
+    memory,
+  })
+
+  const snapshot: DecisionSnapshot = {
     timestamp: requestedAt,
     storeId: options.storeId,
     factsUsed: aggregate.factsUsed,
@@ -147,7 +186,18 @@ export async function runEngineLoop(options: EngineLoopOptions): Promise<Decisio
     confidenceSummary: aggregate.confidenceSummary,
     gatesEncountered: aggregate.gatesEncountered,
     recommendations,
-    alerts: alertSnapshot.alerts,
-    metrics: buildMetrics(aggregate, kpi, analysis, Date.now() - started),
+    alerts,
+    actionPlans,
+    memory,
+    executive,
+    metrics: buildMetrics(
+      aggregate,
+      kpi,
+      analysis,
+      actionPlans.length,
+      memory.entries.length,
+      Date.now() - started,
+    ),
   }
+  return deepFreeze(snapshot)
 }

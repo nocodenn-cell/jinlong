@@ -28,7 +28,7 @@ export const reviewMarginDriversRule: RecommendationRule = {
     const { finding } = ctx
     if (!(MARGIN_FINDINGS as readonly string[]).includes(finding.id)) return null
     if (!severityMeetsMin(finding.severity, 'WARNING')) return null
-    if (belowMinConfidence(finding.confidence)) return 'SKIP_POLICY'
+    if (belowMinConfidence(finding.operationalConfidence)) return 'SKIP_POLICY'
 
     return buildRecommendationFromFinding({
       finding,
@@ -59,7 +59,7 @@ export const reviewSalesActivityRule: RecommendationRule = {
     const { finding } = ctx
     if (!(SALES_FINDINGS as readonly string[]).includes(finding.id)) return null
     if (!severityMeetsMin(finding.severity, 'WARNING')) return null
-    if (belowMinConfidence(finding.confidence)) return 'SKIP_POLICY'
+    if (belowMinConfidence(finding.operationalConfidence)) return 'SKIP_POLICY'
 
     return buildRecommendationFromFinding({
       finding,
@@ -92,7 +92,7 @@ export const reviewInventoryCapitalRule: RecommendationRule = {
       return null
     }
     if (!severityMeetsMin(finding.severity, 'WARNING')) return null
-    if (belowMinConfidence(finding.confidence)) return 'SKIP_POLICY'
+    if (belowMinConfidence(finding.operationalConfidence)) return 'SKIP_POLICY'
 
     return buildRecommendationFromFinding({
       finding,

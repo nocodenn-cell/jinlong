@@ -12,6 +12,9 @@ export function assertAlertDeterminism(
   if (alert.sourceRecommendationIds.length === 0) {
     throw new Error(`INTEL_ALERT_NO_RECOMMENDATION:${alert.id}`)
   }
+  if (alert.sourceFindingIds.length === 0) {
+    throw new Error(`INTEL_ALERT_NO_FINDING:${alert.id}`)
+  }
   if (alert.evidences.length === 0) {
     throw new Error(`INTEL_ALERT_NO_EVIDENCE:${alert.id}`)
   }
