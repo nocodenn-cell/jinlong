@@ -46,8 +46,10 @@ npx vitest run app/admin/implantacao/homologacaoDados.test.ts app/admin/implanta
 | **Bugs P0** | nenhum |
 | **Correções** | entrega do gate P0-DADOS (coleta + avaliação + UI Validar dados) |
 | **Evidências** | vitest P0; `check:entity-ssot`; commit nesta branch |
-| **CI GitHub Actions** | **bloqueado (human gate)** — jobs falham em ~4s sem steps (billing/spending limit) |
-| **Próximo ciclo** | P0-VEN-PROOF em loja homologada (abrir caixa → venda DINHEIRO/PIX → estoque → financeiro → auditoria) |
+| **CI GitHub Actions** | **bloqueado (human gate)** — jobs falham em ~3s com 0 steps / runner vazio (billing/spending limit) |
+| **Vercel preview** | **READY** — `pdv-importados-git-loop-1-p0-dados-homologacao-jinlong.vercel.app` |
+| **PR** | https://github.com/nocodenn-cell/fastproduct/pull/220 |
+| **Próximo ciclo** | P0-VEN-PROOF em loja homologada (abrir caixa → venda DINHEIRO/PIX → estoque → financeiro → auditoria) — só após desbloquear Actions ou merge com aceite explícito do gate CI |
 
 ## Declaração GO dos módulos
 
