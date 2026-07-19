@@ -22,6 +22,7 @@ const DOMAIN_DIRS = [
   'financial',
   'products',
   'customers',
+  'intelligence',
   'i18n',
   'locale',
   'formatting',

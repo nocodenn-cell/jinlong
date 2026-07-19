@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.4"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -180,12 +200,14 @@ export type Database = {
           created_at: string
           documento: string | null
           email: string | null
+          endereco: string | null
           id: string
           limite_credito: number
           loja_id: string
           nome: string
           telefone: string | null
           termos_aceitos_em: string | null
+          tipo: string
         }
         Insert: {
           ativo?: boolean
@@ -193,12 +215,14 @@ export type Database = {
           created_at?: string
           documento?: string | null
           email?: string | null
+          endereco?: string | null
           id?: string
           limite_credito?: number
           loja_id: string
           nome: string
           telefone?: string | null
           termos_aceitos_em?: string | null
+          tipo?: string
         }
         Update: {
           ativo?: boolean
@@ -206,12 +230,14 @@ export type Database = {
           created_at?: string
           documento?: string | null
           email?: string | null
+          endereco?: string | null
           id?: string
           limite_credito?: number
           loja_id?: string
           nome?: string
           telefone?: string | null
           termos_aceitos_em?: string | null
+          tipo?: string
         }
         Relationships: [
           {
@@ -227,6 +253,129 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
+          },
+        ]
+      }
+      comissoes_vendedores: {
+        Row: {
+          base_calculo: number
+          created_at: string
+          id: string
+          loja_id: string
+          operador_id: string
+          pago_em: string | null
+          pago_por: string | null
+          status: string
+          valor_comissao: number
+          venda_id: string
+        }
+        Insert: {
+          base_calculo?: number
+          created_at?: string
+          id?: string
+          loja_id: string
+          operador_id: string
+          pago_em?: string | null
+          pago_por?: string | null
+          status?: string
+          valor_comissao?: number
+          venda_id: string
+        }
+        Update: {
+          base_calculo?: number
+          created_at?: string
+          id?: string
+          loja_id?: string
+          operador_id?: string
+          pago_em?: string | null
+          pago_por?: string | null
+          status?: string
+          valor_comissao?: number
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_pago_por_fkey"
+            columns: ["pago_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "comissoes_vendedores_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      configuracoes_gerais: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string | null
+          chave: string
+          criado_em: string
+          descricao: string | null
+          id: string
+          tipo_dado: string
+          valor: string
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          chave: string
+          criado_em?: string
+          descricao?: string | null
+          id?: string
+          tipo_dado: string
+          valor: string
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          chave?: string
+          criado_em?: string
+          descricao?: string | null
+          id?: string
+          tipo_dado?: string
+          valor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracoes_gerais_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -288,6 +437,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contas_pagar_importacao_nfe_id_fkey"
+            columns: ["nfe_importacao_id"]
+            isOneToOne: false
+            referencedRelation: "importacoes_nfe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contas_pagar_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
@@ -300,13 +456,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
             referencedColumns: ["loja_id"]
-          },
-          {
-            foreignKeyName: "contas_pagar_nfe_importacao_id_fkey"
-            columns: ["nfe_importacao_id"]
-            isOneToOne: false
-            referencedRelation: "importacoes_nfe"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -397,6 +546,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contas_receber_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_clientes_gerente"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contas_receber_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
@@ -414,6 +570,13 @@ export type Database = {
             foreignKeyName: "contas_receber_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "contas_receber_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
             referencedRelation: "vendas"
             referencedColumns: ["id"]
           },
@@ -421,24 +584,44 @@ export type Database = {
       }
       descontos_venda: {
         Row: {
+          aplicado_em: string
           desconto_percentual: number | null
           desconto_valor: number | null
           gerente_id: string | null
+          operador_id: string | null
           venda_id: string
         }
         Insert: {
+          aplicado_em?: string
           desconto_percentual?: number | null
           desconto_valor?: number | null
           gerente_id?: string | null
+          operador_id?: string | null
           venda_id: string
         }
         Update: {
+          aplicado_em?: string
           desconto_percentual?: number | null
           desconto_valor?: number | null
           gerente_id?: string | null
+          operador_id?: string | null
           venda_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "descontos_venda_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "descontos_venda_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: true
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
           {
             foreignKeyName: "descontos_venda_venda_id_fkey"
             columns: ["venda_id"]
@@ -454,6 +637,7 @@ export type Database = {
           forma_pagamento: string
           id: string
           motivo: string
+          operacao_id: string | null
           operador_id: string
           valor: number
           venda_id: string
@@ -463,6 +647,7 @@ export type Database = {
           forma_pagamento: string
           id?: string
           motivo: string
+          operacao_id?: string | null
           operador_id: string
           valor: number
           venda_id: string
@@ -472,17 +657,32 @@ export type Database = {
           forma_pagamento?: string
           id?: string
           motivo?: string
+          operacao_id?: string | null
           operador_id?: string
           valor?: number
           venda_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "devolucoes_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "venda_pos_venda_operacoes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "devolucoes_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolucoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
           },
           {
             foreignKeyName: "devolucoes_venda_id_fkey"
@@ -530,12 +730,42 @@ export type Database = {
           tipo_doc?: string
           venda_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documentos_fiscais_dlq_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_fiscais_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_fiscais_dlq_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "v_fiscal_doc_status_event_mismatch"
+            referencedColumns: ["documento_id"]
+          },
+          {
+            foreignKeyName: "documentos_fiscais_dlq_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "documentos_fiscais_dlq_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documentos_fiscais_eventos: {
         Row: {
           actor_role: string | null
           actor_user_id: string | null
+          correlation_id: string
           created_at: string
           documento_id: string
           evento_tipo: string
@@ -548,6 +778,7 @@ export type Database = {
         Insert: {
           actor_role?: string | null
           actor_user_id?: string | null
+          correlation_id: string
           created_at?: string
           documento_id: string
           evento_tipo: string
@@ -560,6 +791,7 @@ export type Database = {
         Update: {
           actor_role?: string | null
           actor_user_id?: string | null
+          correlation_id?: string
           created_at?: string
           documento_id?: string
           evento_tipo?: string
@@ -596,6 +828,7 @@ export type Database = {
       documentos_fiscais_pendentes: {
         Row: {
           chave_fiscal: string | null
+          correlation_id: string
           created_at: string
           deleted_at: string | null
           fiscal_action_hint: string | null
@@ -614,13 +847,16 @@ export type Database = {
           status: string
           tentativas: number
           tipo_doc: string
+          transicao_origem: string | null
           ultima_tentativa_em: string | null
+          ultima_transicao_em: string | null
           ultimo_erro: string | null
           updated_at: string
           venda_id: string
         }
         Insert: {
           chave_fiscal?: string | null
+          correlation_id?: string
           created_at?: string
           deleted_at?: string | null
           fiscal_action_hint?: string | null
@@ -639,13 +875,16 @@ export type Database = {
           status?: string
           tentativas?: number
           tipo_doc?: string
+          transicao_origem?: string | null
           ultima_tentativa_em?: string | null
+          ultima_transicao_em?: string | null
           ultimo_erro?: string | null
           updated_at?: string
           venda_id: string
         }
         Update: {
           chave_fiscal?: string | null
+          correlation_id?: string
           created_at?: string
           deleted_at?: string | null
           fiscal_action_hint?: string | null
@@ -664,12 +903,21 @@ export type Database = {
           status?: string
           tentativas?: number
           tipo_doc?: string
+          transicao_origem?: string | null
           ultima_tentativa_em?: string | null
+          ultima_transicao_em?: string | null
           ultimo_erro?: string | null
           updated_at?: string
           venda_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "documentos_fiscais_pendentes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
           {
             foreignKeyName: "documentos_fiscais_pendentes_venda_id_fkey"
             columns: ["venda_id"]
@@ -811,7 +1059,64 @@ export type Database = {
             foreignKeyName: "estoque_reposicoes_cancelamento_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "estoque_reposicoes_cancelamento_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
             referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estoque_reposicoes_devolucao: {
+        Row: {
+          created_at: string
+          operacao_id: string
+          produto_id: string
+          quantidade: number
+        }
+        Insert: {
+          created_at?: string
+          operacao_id: string
+          produto_id: string
+          quantidade: number
+        }
+        Update: {
+          created_at?: string
+          operacao_id?: string
+          produto_id?: string
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estoque_reposicoes_devolucao_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "venda_pos_venda_operacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_reposicoes_devolucao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_reposicoes_devolucao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_reposicoes_devolucao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
             referencedColumns: ["id"]
           },
         ]
@@ -975,6 +1280,7 @@ export type Database = {
           id: string
           preco_unitario: number
           preco_unitario_original: number
+          pricing_version_id: string | null
           produto_id: string
           quantidade: number
           regra_aplicada_id: string | null
@@ -988,6 +1294,7 @@ export type Database = {
           id?: string
           preco_unitario: number
           preco_unitario_original: number
+          pricing_version_id?: string | null
           produto_id: string
           quantidade: number
           regra_aplicada_id?: string | null
@@ -1001,6 +1308,7 @@ export type Database = {
           id?: string
           preco_unitario?: number
           preco_unitario_original?: number
+          pricing_version_id?: string | null
           produto_id?: string
           quantidade?: number
           regra_aplicada_id?: string | null
@@ -1029,6 +1337,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_top_produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_venda_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
           },
           {
             foreignKeyName: "itens_venda_venda_id_fkey"
@@ -1104,8 +1419,8 @@ export type Database = {
           logo_url: string | null
           nome: string
           nome_fantasia: string | null
-          numero_serie_nfe: number
           numero_serie_nfce: number
+          numero_serie_nfe: number
           razao_social: string | null
           telefone: string | null
         }
@@ -1128,8 +1443,8 @@ export type Database = {
           logo_url?: string | null
           nome: string
           nome_fantasia?: string | null
-          numero_serie_nfe?: number
           numero_serie_nfce?: number
+          numero_serie_nfe?: number
           razao_social?: string | null
           telefone?: string | null
         }
@@ -1152,8 +1467,8 @@ export type Database = {
           logo_url?: string | null
           nome?: string
           nome_fantasia?: string | null
-          numero_serie_nfe?: number
           numero_serie_nfce?: number
+          numero_serie_nfe?: number
           razao_social?: string | null
           telefone?: string | null
         }
@@ -1161,19 +1476,25 @@ export type Database = {
       }
       marcas: {
         Row: {
-          created_at: string | null
+          ativo: boolean
+          created_at: string
           id: string
           nome: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          ativo?: boolean
+          created_at?: string
           id?: string
           nome: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          ativo?: boolean
+          created_at?: string
           id?: string
           nome?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1188,7 +1509,6 @@ export type Database = {
           id: string
           idempotency_key: string
           ip_address: unknown
-          loja_id: string | null
           motivo: string
           motivo_codigo: string
           movimentacao_origem_id: string | null
@@ -1213,7 +1533,6 @@ export type Database = {
           id?: string
           idempotency_key: string
           ip_address?: unknown
-          loja_id?: string | null
           motivo: string
           motivo_codigo?: string
           movimentacao_origem_id?: string | null
@@ -1238,7 +1557,6 @@ export type Database = {
           id?: string
           idempotency_key?: string
           ip_address?: unknown
-          loja_id?: string | null
           motivo?: string
           motivo_codigo?: string
           movimentacao_origem_id?: string | null
@@ -1280,6 +1598,44 @@ export type Database = {
             columns: ["operador_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimentos_caixa: {
+        Row: {
+          caixa_id: string
+          created_at: string
+          id: string
+          observacao: string | null
+          referencia_id: string | null
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          caixa_id: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          referencia_id?: string | null
+          tipo: string
+          valor: number
+        }
+        Update: {
+          caixa_id?: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          referencia_id?: string | null
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentos_caixa_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
             referencedColumns: ["id"]
           },
         ]
@@ -1380,6 +1736,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_estoque_log_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
           },
           {
             foreignKeyName: "movimentos_estoque_log_venda_id_fkey"
@@ -1522,83 +1885,89 @@ export type Database = {
       pdv_config: {
         Row: {
           alertas_leves_ativos: boolean
+          auto_enqueue_fiscal: boolean
           blind_closure: boolean
+          cfop_padrao: string
+          cst_padrao: string
+          formato_impressao: string
           gerente_id: string
           gerente_senha_bcrypt: string | null
+          gerente_senha_sha256: string
           id: number
+          idioma_padrao: string
+          imprimir_cupom_auto: boolean
           limite_sangria_sem_gerente: number
           limite_transferencia_obs: number
+          loja_id: string | null
           max_desconto_gerente_percentual: number
           max_desconto_manual_item_percentual: number
           quantidade_minima_atacado_padrao: number
+          regime_tributario: string
           show_margin_visual: boolean
           show_preco_fonte: boolean
           show_stock_alerts: boolean
+          tema_padrao: string
         }
         Insert: {
           alertas_leves_ativos?: boolean
+          auto_enqueue_fiscal?: boolean
           blind_closure?: boolean
+          cfop_padrao?: string
+          cst_padrao?: string
+          formato_impressao?: string
           gerente_id: string
           gerente_senha_bcrypt?: string | null
+          gerente_senha_sha256: string
           id?: number
+          idioma_padrao?: string
+          imprimir_cupom_auto?: boolean
           limite_sangria_sem_gerente?: number
           limite_transferencia_obs?: number
+          loja_id?: string | null
           max_desconto_gerente_percentual?: number
           max_desconto_manual_item_percentual?: number
           quantidade_minima_atacado_padrao?: number
+          regime_tributario?: string
           show_margin_visual?: boolean
           show_preco_fonte?: boolean
           show_stock_alerts?: boolean
+          tema_padrao?: string
         }
         Update: {
           alertas_leves_ativos?: boolean
+          auto_enqueue_fiscal?: boolean
           blind_closure?: boolean
+          cfop_padrao?: string
+          cst_padrao?: string
+          formato_impressao?: string
           gerente_id?: string
           gerente_senha_bcrypt?: string | null
+          gerente_senha_sha256?: string
           id?: number
+          idioma_padrao?: string
+          imprimir_cupom_auto?: boolean
           limite_sangria_sem_gerente?: number
           limite_transferencia_obs?: number
+          loja_id?: string | null
           max_desconto_gerente_percentual?: number
           max_desconto_manual_item_percentual?: number
           quantidade_minima_atacado_padrao?: number
+          regime_tributario?: string
           show_margin_visual?: boolean
           show_preco_fonte?: boolean
           show_stock_alerts?: boolean
-        }
-        Relationships: []
-      }
-      perfis: {
-        Row: {
-          created_at: string | null
-          id: string
-          loja_id: string | null
-          perfil: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          loja_id?: string | null
-          perfil: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          loja_id?: string | null
-          perfil?: string
-          user_id?: string | null
+          tema_padrao?: string
         }
         Relationships: [
           {
-            foreignKeyName: "perfis_loja_id_fkey"
+            foreignKeyName: "pdv_config_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
             referencedRelation: "lojas"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "perfis_loja_id_fkey"
+            foreignKeyName: "pdv_config_loja_id_fkey"
             columns: ["loja_id"]
             isOneToOne: false
             referencedRelation: "v_estoque_baixo"
@@ -1675,6 +2044,39 @@ export type Database = {
           },
         ]
       }
+      pricing_config_versions: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           ativo: boolean
@@ -1682,31 +2084,31 @@ export type Database = {
           cest: string | null
           cfop_produto: string | null
           codigo_barras: string | null
-          codigo_interno: string | null
+          comissao_tipo: string | null
+          comissao_valor: number | null
           created_at: string
           csosn: string | null
           cst_cofins: string | null
           cst_pis: string | null
-          estoque_minimo: number
           fornecedor_id: string | null
           id: string
           imagem_url: string | null
           limite_transferencia_sem_observacao: number | null
+          localizacao_prateleira: string | null
           loja_id: string
           marca_id: string | null
           ncm: string | null
           nome: string
+          nome_reduzido_pdv: string | null
           observacao: string | null
           origem: string
           permitir_abaixo_custo: boolean
           preco_atacado: number | null
           preco_custo: number | null
-          preco_custo_medio: number
           preco_varejo: number
-          quantidade_gatilho_atacado: number | null
           referencia_fornecedor: string | null
           status_publicacao: string
-          tags: string[] | null
+          tags: string[]
           tem_nf: boolean
           unidade_medida: string
           updated_at: string
@@ -1717,31 +2119,31 @@ export type Database = {
           cest?: string | null
           cfop_produto?: string | null
           codigo_barras?: string | null
-          codigo_interno?: string | null
+          comissao_tipo?: string | null
+          comissao_valor?: number | null
           created_at?: string
           csosn?: string | null
           cst_cofins?: string | null
           cst_pis?: string | null
-          estoque_minimo?: number
           fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
           limite_transferencia_sem_observacao?: number | null
-          loja_id: string
+          localizacao_prateleira?: string | null
+          loja_id?: string
           marca_id?: string | null
           ncm?: string | null
           nome: string
+          nome_reduzido_pdv?: string | null
           observacao?: string | null
           origem: string
           permitir_abaixo_custo?: boolean
           preco_atacado?: number | null
           preco_custo?: number | null
-          preco_custo_medio?: number
           preco_varejo: number
-          quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
           status_publicacao?: string
-          tags?: string[] | null
+          tags?: string[]
           tem_nf?: boolean
           unidade_medida?: string
           updated_at?: string
@@ -1752,31 +2154,31 @@ export type Database = {
           cest?: string | null
           cfop_produto?: string | null
           codigo_barras?: string | null
-          codigo_interno?: string | null
+          comissao_tipo?: string | null
+          comissao_valor?: number | null
           created_at?: string
           csosn?: string | null
           cst_cofins?: string | null
           cst_pis?: string | null
-          estoque_minimo?: number
           fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
           limite_transferencia_sem_observacao?: number | null
+          localizacao_prateleira?: string | null
           loja_id?: string
           marca_id?: string | null
           ncm?: string | null
           nome?: string
+          nome_reduzido_pdv?: string | null
           observacao?: string | null
           origem?: string
           permitir_abaixo_custo?: boolean
           preco_atacado?: number | null
           preco_custo?: number | null
-          preco_custo_medio?: number
           preco_varejo?: number
-          quantidade_gatilho_atacado?: number | null
           referencia_fornecedor?: string | null
           status_publicacao?: string
-          tags?: string[] | null
+          tags?: string[]
           tem_nf?: boolean
           unidade_medida?: string
           updated_at?: string
@@ -2093,11 +2495,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "system_alerts_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
             foreignKeyName: "system_alerts_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
           },
           {
             foreignKeyName: "system_alerts_venda_id_fkey"
@@ -2243,6 +2673,54 @@ export type Database = {
           },
         ]
       }
+      venda_eventos: {
+        Row: {
+          caixa_id: string
+          event_type: string
+          forma_pagamento: string | null
+          id: string
+          idempotency_key: string
+          items: Json
+          loja_id: string
+          occurred_at: string
+          operador_id: string
+          sale_id: string
+          source: string
+          total: number
+          total_bruto: number | null
+        }
+        Insert: {
+          caixa_id: string
+          event_type: string
+          forma_pagamento?: string | null
+          id?: string
+          idempotency_key: string
+          items?: Json
+          loja_id: string
+          occurred_at?: string
+          operador_id: string
+          sale_id: string
+          source: string
+          total: number
+          total_bruto?: number | null
+        }
+        Update: {
+          caixa_id?: string
+          event_type?: string
+          forma_pagamento?: string | null
+          id?: string
+          idempotency_key?: string
+          items?: Json
+          loja_id?: string
+          occurred_at?: string
+          operador_id?: string
+          sale_id?: string
+          source?: string
+          total?: number
+          total_bruto?: number | null
+        }
+        Relationships: []
+      }
       venda_finance_context: {
         Row: {
           atualizado_em: string
@@ -2280,6 +2758,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "venda_finance_context_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_clientes_gerente"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "venda_finance_context_conta_referencia_fkey"
             columns: ["conta_referencia"]
             isOneToOne: false
@@ -2294,9 +2779,184 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "venda_finance_context_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
             foreignKeyName: "venda_finance_context_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: true
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "venda_finance_context_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: true
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venda_pos_venda_itens: {
+        Row: {
+          item_venda_id: string
+          operacao_id: string
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+        }
+        Insert: {
+          item_venda_id: string
+          operacao_id: string
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+        }
+        Update: {
+          item_venda_id?: string
+          operacao_id?: string
+          preco_unitario?: number
+          produto_id?: string
+          quantidade?: number
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venda_pos_venda_itens_item_venda_id_fkey"
+            columns: ["item_venda_id"]
+            isOneToOne: false
+            referencedRelation: "itens_venda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_itens_operacao_id_fkey"
+            columns: ["operacao_id"]
+            isOneToOne: false
+            referencedRelation: "venda_pos_venda_operacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venda_pos_venda_operacoes: {
+        Row: {
+          caixa_id: string
+          contas_receber_id: string | null
+          created_at: string
+          forma_estorno: string
+          id: string
+          idempotency_key: string
+          motivo: string
+          operador_id: string
+          tipo: string
+          valor_caixa_estornado: number
+          valor_estornado: number
+          venda_id: string
+          venda_substituta_id: string | null
+        }
+        Insert: {
+          caixa_id: string
+          contas_receber_id?: string | null
+          created_at?: string
+          forma_estorno: string
+          id?: string
+          idempotency_key: string
+          motivo: string
+          operador_id: string
+          tipo: string
+          valor_caixa_estornado?: number
+          valor_estornado?: number
+          venda_id: string
+          venda_substituta_id?: string | null
+        }
+        Update: {
+          caixa_id?: string
+          contas_receber_id?: string | null
+          created_at?: string
+          forma_estorno?: string
+          id?: string
+          idempotency_key?: string
+          motivo?: string
+          operador_id?: string
+          tipo?: string
+          valor_caixa_estornado?: number
+          valor_estornado?: number
+          venda_id?: string
+          venda_substituta_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_contas_receber_id_fkey"
+            columns: ["contas_receber_id"]
+            isOneToOne: false
+            referencedRelation: "contas_receber"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_venda_substituta_id_fkey"
+            columns: ["venda_substituta_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "venda_pos_venda_operacoes_venda_substituta_id_fkey"
+            columns: ["venda_substituta_id"]
+            isOneToOne: false
             referencedRelation: "vendas"
             referencedColumns: ["id"]
           },
@@ -2310,9 +2970,9 @@ export type Database = {
           data: string
           forma_pagamento: string
           id: string
-          idempotency_key: string | null
           numero_nf: string | null
           operador_id: string | null
+          pricing_version_id: string | null
           status: string
           tipo_venda: string
           total_bruto: number
@@ -2326,9 +2986,9 @@ export type Database = {
           data?: string
           forma_pagamento: string
           id?: string
-          idempotency_key?: string | null
           numero_nf?: string | null
           operador_id?: string | null
+          pricing_version_id?: string | null
           status?: string
           tipo_venda?: string
           total_bruto: number
@@ -2342,9 +3002,9 @@ export type Database = {
           data?: string
           forma_pagamento?: string
           id?: string
-          idempotency_key?: string | null
           numero_nf?: string | null
           operador_id?: string | null
+          pricing_version_id?: string | null
           status?: string
           tipo_venda?: string
           total_bruto?: number
@@ -2418,7 +3078,97 @@ export type Database = {
             foreignKeyName: "vendas_canceladas_auditoria_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: true
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
+          {
+            foreignKeyName: "vendas_canceladas_auditoria_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: true
             referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendas_em_espera: {
+        Row: {
+          atualizada_em: string
+          caixa_id: string | null
+          cliente_id: string | null
+          criada_em: string
+          descartada_motivo: string | null
+          desconto_gerente_percentual: number | null
+          desconto_gerente_token: string | null
+          id: string
+          itens: Json
+          loja_id: string
+          numero_local: number
+          operador_id: string
+          rotulo: string | null
+          status: string
+          totais: Json
+        }
+        Insert: {
+          atualizada_em?: string
+          caixa_id?: string | null
+          cliente_id?: string | null
+          criada_em?: string
+          descartada_motivo?: string | null
+          desconto_gerente_percentual?: number | null
+          desconto_gerente_token?: string | null
+          id?: string
+          itens?: Json
+          loja_id: string
+          numero_local: number
+          operador_id: string
+          rotulo?: string | null
+          status?: string
+          totais?: Json
+        }
+        Update: {
+          atualizada_em?: string
+          caixa_id?: string | null
+          cliente_id?: string | null
+          criada_em?: string
+          descartada_motivo?: string | null
+          desconto_gerente_percentual?: number | null
+          desconto_gerente_token?: string | null
+          id?: string
+          itens?: Json
+          loja_id?: string
+          numero_local?: number
+          operador_id?: string
+          rotulo?: string | null
+          status?: string
+          totais?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendas_em_espera_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_em_espera_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_em_espera_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
+            foreignKeyName: "vendas_em_espera_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -2446,6 +3196,13 @@ export type Database = {
           venda_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vendas_pagamentos_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "v_venda_consistencia_anomalias"
+            referencedColumns: ["venda_id"]
+          },
           {
             foreignKeyName: "vendas_pagamentos_venda_id_fkey"
             columns: ["venda_id"]
@@ -2491,6 +3248,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "vinculos_fornecedor_produto_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vinculos_fornecedor_produto_fornecedor_id_fkey"
             columns: ["fornecedor_id"]
             isOneToOne: false
@@ -2505,16 +3269,70 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vinculos_fornecedor_produto_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+          {
             foreignKeyName: "vinculos_fornecedor_produto_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vinculos_fornecedor_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vinculos_fornecedor_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_produtos"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
+      v_clientes_gerente: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          documento: string | null
+          email: string | null
+          endereco: string | null
+          id: string | null
+          limite_credito: number | null
+          loja_id: string | null
+          nome: string | null
+          saldo_crediario: number | null
+          telefone: string | null
+          tipo: string | null
+          ultima_compra: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "v_estoque_baixo"
+            referencedColumns: ["loja_id"]
+          },
+        ]
+      }
       v_estoque_baixo: {
         Row: {
           codigo_barras: string | null
@@ -2567,6 +3385,41 @@ export type Database = {
         }
         Relationships: []
       }
+      v_venda_consistencia_anomalias: {
+        Row: {
+          caixa_id: string | null
+          created_at: string | null
+          evento_count: number | null
+          evento_duplicado: boolean | null
+          item_count: number | null
+          operador_id: string | null
+          pagamento_count: number | null
+          pagamentos_divergentes: boolean | null
+          pagamentos_total: number | null
+          sem_evento_ledger: boolean | null
+          sem_itens: boolean | null
+          sem_pagamento: boolean | null
+          status: string | null
+          total_liquido: number | null
+          venda_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendas_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_vendas_dia: {
         Row: {
           dia: string | null
@@ -2587,7 +3440,6 @@ export type Database = {
           p_observacao?: string
           p_produto_id: string
           p_quantidade_atual: number
-          p_ator_id?: string
         }
         Returns: undefined
       }
@@ -2608,10 +3460,6 @@ export type Database = {
         }[]
       }
       auth_usuario_eh_dono: { Args: never; Returns: boolean }
-      baixar_estoque_venda: {
-        Args: { p_itens: Json; p_loja_id: string }
-        Returns: undefined
-      }
       calcular_preco_produto: {
         Args: { p_loja_id?: string; p_produto_id: string; p_quantidade: number }
         Returns: Json
@@ -2635,13 +3483,22 @@ export type Database = {
           venda_id: string
         }[]
       }
+      colocar_venda_em_espera: {
+        Args: {
+          p_caixa_id?: string
+          p_cliente_id?: string
+          p_desconto_gerente_percentual?: number
+          p_desconto_gerente_token?: string
+          p_itens: Json
+          p_rotulo?: string
+          p_totais: Json
+        }
+        Returns: Json
+      }
+      configuracoes_para_caixa_web: { Args: never; Returns: Json }
       confirmar_remessa_entrada: {
         Args: { p_remessa_id: string }
         Returns: undefined
-      }
-      configuracoes_para_caixa_web: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
       }
       dashboard_gerente_resumo: {
         Args: { p_loja_id: string; p_tz?: string }
@@ -2658,6 +3515,52 @@ export type Database = {
           mensagem: string
           sucesso: boolean
         }[]
+      }
+      descartar_venda_em_espera: {
+        Args: { p_id: string; p_motivo?: string }
+        Returns: Json
+      }
+      detalhe_comissoes_operador: {
+        Args: {
+          p_ate?: string
+          p_de?: string
+          p_loja_id: string
+          p_operador_id: string
+        }
+        Returns: {
+          base_calculo: number
+          comissao_id: string
+          created_at: string
+          pago_em: string
+          status: string
+          valor_comissao: number
+          venda_id: string
+        }[]
+      }
+      devolver_ou_trocar_venda: {
+        Args: {
+          p_forma_estorno: string
+          p_idempotency_key: string
+          p_itens: Json
+          p_motivo: string
+          p_operador_id?: string
+          p_tipo: string
+          p_valor_estorno: number
+          p_venda_id: string
+          p_venda_substituta_id?: string
+        }
+        Returns: {
+          operacao_id: string
+          status_venda: string
+          tipo: string
+          valor_caixa_estornado: number
+          valor_estornado: number
+          venda_id: string
+        }[]
+      }
+      ensure_venda_evento_registrado: {
+        Args: { p_sale_id: string; p_source?: string }
+        Returns: string
       }
       estornar_movimentacao: {
         Args: {
@@ -2685,6 +3588,21 @@ export type Database = {
         Returns: {
           o_caixa_id: string
           o_diferenca: number
+          o_ja_fechado: boolean
+          o_valor_contado: number
+          o_valor_sistema: number
+        }[]
+      }
+      fechar_caixa_pdv_atomico: {
+        Args: {
+          p_caixa_id: string
+          p_data_fechamento?: string
+          p_observacao?: string
+          p_valor_contado: number
+        }
+        Returns: {
+          o_caixa_id: string
+          o_diferenca: number
           o_valor_contado: number
           o_valor_sistema: number
         }[]
@@ -2704,6 +3622,7 @@ export type Database = {
         Returns: undefined
       }
       finalizar_venda_transacional_canonica_v2:
+        | { Args: never; Returns: undefined }
         | {
             Args: {
               p_caixa_id: string
@@ -2725,6 +3644,7 @@ export type Database = {
               p_caixa_id: string
               p_desconto_gerente_percentual?: number
               p_desconto_gerente_token?: string
+              p_event_source?: string
               p_forma_pagamento?: string
               p_itens?: Json
               p_operador_id?: string
@@ -2737,59 +3657,43 @@ export type Database = {
             }
             Returns: undefined
           }
+      finalizar_venda_transacional_canonica_v3:
+        | { Args: never; Returns: undefined }
         | {
             Args: {
               p_caixa_id: string
-              p_desconto_gerente_percentual: number
-              p_desconto_gerente_token: string
-              p_forma_pagamento: string
-              p_idempotency_key: string
-              p_itens: Json
+              p_desconto_gerente_percentual?: number
+              p_desconto_gerente_token?: string
+              p_device_id?: string
+              p_fiscal_auto_enqueue?: boolean
+              p_forma_pagamento?: string
+              p_ip_address?: string
+              p_itens?: Json
+              p_loja_id: string
               p_operador_id: string
-              p_pagamentos: Json
-              p_strict_manager_discount_auth: boolean
-              p_total_bruto: number
-              p_total_desconto: number
-              p_total_liquido: number
+              p_pagamentos?: Json
+              p_strict_manager_discount_auth?: boolean
+              p_terminal_id?: string
+              p_total_bruto?: number
+              p_total_desconto?: number
+              p_total_liquido?: number
+              p_user_agent?: string
               p_venda_id: string
             }
-            Returns: Json
+            Returns: {
+              dados_fiscais: Json
+              estoque_baixado: Json
+              event_id: string
+              itens_atualizados: Json
+              mensagem: string
+              status: string
+              venda_id: string
+            }[]
           }
-      finalizar_venda_transacional_canonica_v3: {
-        Args: {
-          p_caixa_id: string
-          p_desconto_gerente_percentual?: number
-          p_desconto_gerente_token?: string
-          p_device_id?: string
-          p_fiscal_auto_enqueue?: boolean
-          p_forma_pagamento?: string
-          p_ip_address?: string
-          p_itens?: Json
-          p_loja_id: string
-          p_operador_id: string
-          p_pagamentos?: Json
-          p_strict_manager_discount_auth?: boolean
-          p_terminal_id?: string
-          p_total_bruto?: number
-          p_total_desconto?: number
-          p_total_liquido?: number
-          p_user_agent?: string
-          p_venda_id: string
-        }
-        Returns: {
-          dados_fiscais: Json
-          estoque_baixado: Json
-          event_id: string
-          itens_atualizados: Json
-          mensagem: string
-          status: string
-          venda_id: string
-        }[]
-      }
       finalizar_venda_transacional_canonica_v4: {
         Args: {
           p_caixa_id: string
-          p_cliente_id?: string | null
+          p_cliente_id?: string
           p_desconto_gerente_percentual?: number
           p_desconto_gerente_token?: string
           p_device_id?: string
@@ -2809,7 +3713,7 @@ export type Database = {
           p_venda_id: string
         }
         Returns: {
-          contas_receber_id: string | null
+          contas_receber_id: string
           dados_fiscais: Json
           estoque_baixado: Json
           event_id: string
@@ -2823,6 +3727,7 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           chave_fiscal: string | null
+          correlation_id: string
           created_at: string
           deleted_at: string | null
           fiscal_action_hint: string | null
@@ -2841,7 +3746,9 @@ export type Database = {
           status: string
           tentativas: number
           tipo_doc: string
+          transicao_origem: string | null
           ultima_tentativa_em: string | null
+          ultima_transicao_em: string | null
           ultimo_erro: string | null
           updated_at: string
           venda_id: string
@@ -2853,10 +3760,20 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      fiscal_enfileirar_documento_venda: {
-        Args: { p_payload?: Json; p_tipo_doc?: string; p_venda_id: string }
-        Returns: string
-      }
+      fiscal_enfileirar_documento_venda:
+        | {
+            Args: { p_payload?: Json; p_tipo_doc?: string; p_venda_id: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_loja_id?: string
+              p_payload?: Json
+              p_tipo_doc?: string
+              p_venda_id: string
+            }
+            Returns: string
+          }
       fiscal_marcar_emitido: {
         Args: {
           p_chave_fiscal: string
@@ -2867,58 +3784,41 @@ export type Database = {
         }
         Returns: undefined
       }
-      fiscal_marcar_erro:
-        | {
-            Args: {
-              p_documento_id: string
-              p_erro: string
-              p_transitorio?: boolean
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_documento_id: string
-              p_erro: string
-              p_erro_detalhe?: Json
-              p_erro_normalizado?: string
-              p_retryable?: boolean
-              p_transitorio: boolean
-            }
-            Returns: undefined
-          }
-      fiscal_marcar_erro_normalizado:
-        | {
-            Args: {
-              p_action_hint?: string
-              p_documento_id: string
-              p_erro: string
-              p_error_category?: string
-              p_error_code?: string
-              p_error_payload?: Json
-              p_next_step_url?: string
-              p_retryable?: boolean
-              p_transitorio?: boolean
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_documento_id: string
-              p_erro: string
-              p_erro_detalhe?: Json
-              p_erro_normalizado: string
-              p_retryable?: boolean
-              p_transitorio: boolean
-            }
-            Returns: undefined
-          }
-      fiscal_reprocessar_documento:
-        | { Args: { p_documento_id: string }; Returns: undefined }
-        | {
-            Args: { p_documento_id: string; p_observacao?: string }
-            Returns: undefined
-          }
+      fiscal_marcar_erro: {
+        Args: {
+          p_documento_id: string
+          p_erro: string
+          p_transitorio?: boolean
+        }
+        Returns: undefined
+      }
+      fiscal_marcar_erro_normalizado: {
+        Args: {
+          p_action_hint?: string
+          p_documento_id: string
+          p_erro: string
+          p_error_category?: string
+          p_error_code?: string
+          p_error_payload?: Json
+          p_next_step_url?: string
+          p_retryable?: boolean
+          p_transitorio?: boolean
+        }
+        Returns: undefined
+      }
+      fiscal_registrar_evento_enqueue_erro: {
+        Args: {
+          p_detalhe?: Json
+          p_erro_mensagem: string
+          p_tipo_doc: string
+          p_venda_id: string
+        }
+        Returns: undefined
+      }
+      fiscal_reprocessar_documento: {
+        Args: { p_documento_id: string }
+        Returns: undefined
+      }
       gerente_estoque_list_page: {
         Args: {
           p_busca?: string
@@ -2933,48 +3833,50 @@ export type Database = {
         }
         Returns: Json
       }
-      importar_nfe_transacao:
-        | {
-            Args: {
-              p_atualizar_custo?: boolean
-              p_chave_acesso: string
-              p_fornecedor_cnpj: string
-              p_fornecedor_nome: string
-              p_itens: Json
-              p_loja_id: string
-              p_numero_nf: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_atualizar_custo?: boolean
-              p_chave_acesso: string
-              p_duplicatas?: Json
-              p_fornecedor_cnpj: string
-              p_fornecedor_nome: string
-              p_itens: Json
-              p_loja_id: string
-              p_numero_nf: string
-            }
-            Returns: Json
-          }
+      importar_nfe_transacao: {
+        Args: {
+          p_atualizar_custo?: boolean
+          p_chave_acesso: string
+          p_duplicatas?: Json
+          p_fornecedor_cnpj: string
+          p_fornecedor_nome: string
+          p_itens: Json
+          p_loja_id: string
+          p_numero_nf: string
+        }
+        Returns: Json
+      }
       is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
+      kpis_venda_eventos_gerente: {
+        Args: {
+          p_fim?: string
+          p_formas_pagamento?: string[]
+          p_inicio?: string
+          p_loja_id: string
+        }
+        Returns: {
+          faturado: number
+          qtd_canceladas: number
+          qtd_concluidas: number
+          ticket_medio: number
+          valor_canceladas: number
+        }[]
+      }
       list_produtos_gerente_filtrados: {
         Args: {
-          p_busca?: string
-          p_categoria_id?: string
-          p_estoque_filtro?: string
-          p_fornecedor_id?: string
-          p_imagens_filtro?: string
+          p_busca: string
+          p_categoria_id: string
+          p_estoque_filtro: string
+          p_fornecedor_id: string
+          p_imagens_filtro: string
           p_loja_id: string
-          p_marca_id?: string
-          p_nf_filtro?: string
-          p_origem_filtro?: string
-          p_page?: number
-          p_page_size?: number
-          p_situacao?: string
-          p_tags_filtro?: string[]
+          p_marca_id: string
+          p_nf_filtro: string
+          p_origem_filtro: string
+          p_page: number
+          p_page_size: number
+          p_situacao: string
+          p_tags_filtro: string[]
         }
         Returns: {
           ativo: boolean
@@ -2985,44 +3887,43 @@ export type Database = {
           imagem_url: string
           marca_id: string
           nome: string
-          observacao: string
           origem: string
-          preco_atacado: number
           preco_varejo: number
-          quantidade_gatilho_atacado: number
           tags: string[]
           tem_nf: boolean
           total_count: number
-          unidade_medida: string
         }[]
-      }
-      kpis_venda_eventos_gerente: {
-        Args: {
-          p_fim: string
-          p_formas_pagamento?: string[]
-          p_inicio: string
-          p_loja_id: string
-        }
-        Returns: Json
       }
       listar_venda_eventos_gerente: {
         Args: {
           p_event_types?: string[]
-          p_fim: string
+          p_fim?: string
           p_formas_pagamento?: string[]
-          p_inicio: string
+          p_inicio?: string
           p_limit?: number
           p_loja_id: string
           p_offset?: number
         }
-        Returns: Json
-      }
-      listar_valores_sistema_dinheiro_caixas: {
-        Args: { p_caixa_ids: string[] }
         Returns: {
           caixa_id: string
-          valor: number
+          event_id: string
+          event_type: string
+          forma_pagamento: string
+          items: Json
+          occurred_at: string
+          operador_id: string
+          primeiro_produto: string
+          qtd_itens_distintos: number
+          qtd_itens_total: number
+          sale_id: string
+          total: number
+          total_bruto: number
         }[]
+      }
+      listar_vendas_em_espera: { Args: never; Returns: Json }
+      marcar_comissoes_pagas: {
+        Args: { p_ids: string[]; p_loja_id: string; p_operador_id: string }
+        Returns: number
       }
       obter_estoque_disponivel_transferencia: {
         Args: { p_loja_id: string; p_produto_id: string }
@@ -3033,9 +3934,18 @@ export type Database = {
         }[]
       }
       obter_limite_sangria_sem_gerente: { Args: never; Returns: number }
+      obter_pricing_version_ativa: { Args: never; Returns: string }
       obter_status_caixa_operador: {
-        Args: { p_operador_id: string }
-        Returns: Json
+        Args: { p_operador_id?: string }
+        Returns: {
+          blind_closure_enabled: boolean
+          caixa_id: string
+          data_abertura: string
+          mensagem_operador: string
+          status: string
+          valor_inicial: number
+          valor_sistema_dinheiro: number
+        }[]
       }
       pdv_config_flags_visuais: {
         Args: never
@@ -3052,6 +3962,18 @@ export type Database = {
           blind_closure: boolean
           quantidade_minima_atacado_padrao: number
         }[]
+      }
+      pdv_diagnostico_pre_producao: {
+        Args: { p_produto_codigo?: string }
+        Returns: Json
+      }
+      proximo_numero_venda_em_espera: {
+        Args: { p_operador_id: string }
+        Returns: number
+      }
+      quantidade_devolvida_item_venda: {
+        Args: { p_item_venda_id: string }
+        Returns: number
       }
       recalcular_saldo_caixa: {
         Args: { p_caixa_id: string }
@@ -3109,6 +4031,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_pricing_version_venda: {
+        Args: { p_venda_id: string; p_version_id: string }
+        Returns: undefined
+      }
       registrar_system_alert: {
         Args: {
           p_detalhe?: Json
@@ -3135,17 +4061,47 @@ export type Database = {
         }
         Returns: undefined
       }
-      relatorio_produtos_sem_giro_periodo: {
-        Args: { p_data_fim: string; p_data_inicio: string; p_loja_id: string }
+      registrar_venda_evento: {
+        Args: {
+          p_caixa_id: string
+          p_cancelled?: boolean
+          p_event_type: string
+          p_forma_pagamento: string
+          p_items: Json
+          p_loja_id: string
+          p_operador_id: string
+          p_sale_id: string
+          p_source: string
+          p_total: number
+          p_total_bruto: number
+        }
+        Returns: string
+      }
+      relatorio_cobertura_estoque: {
+        Args: { p_dias_janela?: number; p_limite?: number }
         Returns: {
-          codigo_barras: string
-          estoque_minimo: number
+          dias_cobertura: number
+          loja_id: string
+          media_diaria_vendida: number
           nome: string
-          preco_custo: number
           produto_id: string
           quantidade_atual: number
-          ultima_venda: string
-          valor_imobilizado: number
+        }[]
+      }
+      relatorio_consistencia_vendas: {
+        Args: { p_caixa_id?: string; p_from?: string; p_to?: string }
+        Returns: {
+          evento_duplicado: number
+          pagamentos_divergentes: number
+          periodo_fim: string
+          periodo_inicio: string
+          sem_evento_ledger: number
+          sem_itens: number
+          sem_pagamento: number
+          taxa_consistencia_pct: number
+          total_vendas: number
+          vendas_com_anomalia: number
+          vendas_consistentes: number
         }[]
       }
       relatorio_curva_abc_periodo: {
@@ -3164,24 +4120,26 @@ export type Database = {
         Args: { p_ate: string; p_de: string; p_limite?: number; p_tz?: string }
         Returns: {
           custo_confiavel: boolean
-          custo_total_estimado: number | null
+          custo_total_estimado: number
           data: string
-          margem_estimada: number | null
+          margem_estimada: number
           num_itens: number
           total_desconto: number
           total_liquido: number
           venda_id: string
         }[]
       }
-      relatorio_cobertura_estoque: {
-        Args: { p_dias_janela?: number; p_limite?: number }
+      relatorio_produtos_sem_giro_periodo: {
+        Args: { p_data_fim: string; p_data_inicio: string; p_loja_id: string }
         Returns: {
-          dias_cobertura: number | null
-          loja_id: string
-          media_diaria_vendida: number
+          codigo_barras: string
+          estoque_minimo: number
           nome: string
+          preco_custo: number
           produto_id: string
           quantidade_atual: number
+          ultima_venda: string
+          valor_imobilizado: number
         }[]
       }
       relatorio_resumo_executivo_periodo: {
@@ -3220,9 +4178,30 @@ export type Database = {
           total_liquido: number
         }[]
       }
+      resumo_comissoes_por_operador: {
+        Args: {
+          p_ate?: string
+          p_de?: string
+          p_loja_id: string
+          p_status?: string
+        }
+        Returns: {
+          operador_id: string
+          operador_nome: string
+          total_comissao: number
+          total_pago: number
+          total_pendente: number
+          total_vendas: number
+        }[]
+      }
+      retomar_venda_em_espera: { Args: { p_id: string }; Returns: Json }
       round_abnt: {
         Args: { p_scale?: number; p_value: number }
         Returns: number
+      }
+      sincronizar_finance_context_venda: {
+        Args: { p_venda_id: string }
+        Returns: undefined
       }
       transferir_estoque_entre_lojas: {
         Args: {
@@ -3245,6 +4224,32 @@ export type Database = {
           p_saldo_esperado?: number
         }
         Returns: string
+      }
+      venda_evento_idempotency_key: {
+        Args: { p_cancelled?: boolean; p_sale_id: string; p_source: string }
+        Returns: string
+      }
+      venda_eventos_items_from_payload: {
+        Args: { p_itens: Json }
+        Returns: Json
+      }
+      venda_eventos_items_from_sale: {
+        Args: { p_sale_id: string }
+        Returns: Json
+      }
+      verificar_consistencia_venda: {
+        Args: { p_venda_id: string }
+        Returns: {
+          anomalias: string[]
+          consistente: boolean
+          evento_count: number
+          item_count: number
+          pagamento_count: number
+          pagamentos_total: number
+          status_venda: string
+          total_liquido: number
+          venda_id: string
+        }[]
       }
     }
     Enums: {
@@ -3374,9 +4379,13 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       categoria_financeira_tipo: ["RECEITA", "DESPESA", "AMBOS"],
     },
   },
 } as const
+
