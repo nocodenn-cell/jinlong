@@ -39,3 +39,18 @@ export type {
 } from './ports/decision-record-repository'
 export { createInMemoryDecisionRecordRepository } from './adapters/in-memory-decision-record-repository'
 export { createSupabaseDecisionRecordRepository } from './adapters/supabase-decision-record-repository'
+
+export {
+  buildDecisionIntelligenceReadModel,
+  type BuildReadModelInput,
+  type CriticalAlertsProjection,
+  type DailyActionPlanProjection,
+  type DecisionHistoryProjection,
+  type DecisionIntelligenceReadModel,
+  type DecisionPerformanceProjection,
+  type ExecutiveDashboardProjection,
+  type PendingReviewsProjection,
+  type RecommendationQueueProjection,
+} from './read-model'
+export type { DecisionReadModelPort } from './ports/decision-read-model'
+export { createDecisionReadModelAdapter } from './adapters/decision-read-model-adapter'

@@ -69,4 +69,5 @@ DecisionSnapshot  →  DecisionRecord  →  Read Model (Fase 3)
 
 1. ✅ Persistência Snapshot  
 2. ✅ Este DecisionRecord  
-3. Read Model (inclui estado das decisões)  
+3. ✅ Read Model (`DECISION_INTELLIGENCE_READ_MODEL.md`)  
+4. `/admin/intelligence`  
