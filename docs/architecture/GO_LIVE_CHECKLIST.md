@@ -3,8 +3,13 @@
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-07-18 |
+| **Gate oficial (UI)** | `/admin/implantacao` — persistido em `implantacao_checklists` / `implantacao_checklist_itens` (migração 272) |
 | **Complementa** | [homologacao_comercial_checklist.md](./homologacao_comercial_checklist.md) · [RUNBOOK_PRIMEIRO_CLIENTE.md](../RUNBOOK_PRIMEIRO_CLIENTE.md) |
 | **Auditoria telas** | [SCREENS_100_AUDIT.md](./SCREENS_100_AUDIT.md) |
+
+> **SSoT operacional:** o checklist abaixo é referência. O registro de implantação e a
+> autorização de GO-LIVE ocorrem na tela `/admin/implantacao` (status, responsável,
+> data/hora, observações). GO só libera com itens obrigatórios concluídos (+ grupo fiscal).
 
 ---
 
@@ -31,12 +36,14 @@
 
 ## 3. Checklist funcional (humano — ambiente real)
 
-### Provisionamento (obrigatório — fora da UI)
+### Provisionamento (wizard interno + UI)
 
-- [ ] Loja nova criada (não Matriz de teste)
-- [ ] Usuários Auth + linhas `public.usuarios` (runbook)
+- [ ] Loja nova via `/admin/provisionamento` (ADMIN; não Matriz de teste)
+- [ ] DONO criado pelo wizard (Auth + `public.usuarios`)
+- [ ] GERENTE/OPERADOR via `/admin/funcionarios`
 - [ ] DONO/GERENTE → `/admin/dashboard`; OPERADOR → `/caixa`
 - [ ] Conta `ativo=false` bloqueia login
+- [ ] Checklist `/admin/implantacao` reconhece a loja provisionada
 
 ### Operação (sem SQL / sem Studio)
 
@@ -65,7 +72,7 @@
 
 | Item | Bloqueia go-live? |
 |------|-------------------|
-| UI Funcionários | **Não**, se runbook aceito |
+| UI Funcionários / Provisionamento | **Não** (já na UI ADMIN) |
 | D-F1 criarCliente no financeiro | Não (não expandir) |
 | D-C1 abertura INSERT | Não |
 | E2E sem secrets no CI | Não para piloto local/preview com credenciais |
@@ -77,14 +84,15 @@
 | Usuário criado só no Auth sem `usuarios` | Alta | Runbook + login bloqueia |
 | Dados de teste na loja do cliente | Alta | Loja dedicada |
 | E2E não rodado no ambiente alvo | Média | Rodar golden + abrir/fechar + Fase 5b |
-| Expectativa de self-service de funcionários | Alta | Comunicar processo manual |
+| Expectativa de self-service de funcionários pelo cliente | Média | DONO usa `/admin/funcionarios`; provisionamento inicial é interno |
 
 ## 6. GO / NO-GO
 
 | Critério | Resultado |
 |----------|-----------|
 | Telas operacionais críticas integradas no caminho canônico | **GO** |
-| Provisionamento de usuários pela UI do app | **NO-GO** (runbook) |
-| Go-live piloto com aceite do runbook | **GO condicional** |
+| Provisionamento loja+DONO pela UI (ADMIN) | **GO** (`/admin/provisionamento`) |
+| Funcionários OPERADOR/GERENTE pela UI | **GO** (`/admin/funcionarios`) |
+| Go-live piloto com checklist `/admin/implantacao` | **GO condicional** |
 
-**Decisão recomendada:** **GO condicional** — liberar primeiro cliente após checklist humano §3 completo e aceite explícito de que funcionários entram pelo runbook.
+**Decisão recomendada:** **GO** para Fase 1 (provisionamento + checklist). Liberar primeiro cliente após checklist humano §3 e autorização GO-LIVE na UI.

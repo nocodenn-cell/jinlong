@@ -1,0 +1,132 @@
+/**
+ * Design System — tema cerimonial Login ([data-theme=login])
+ * Fase 2 · Onda 3
+ *
+ * Escopo exclusivo da rota de entrada. Estiliza primitivos DS (Field/Input/Button)
+ * com a paleta --color-login-* — sem hex em TSX.
+ */
+
+[data-theme='login'] {
+  --login-fg: #fafafa;
+  --login-fg-muted: rgb(250 250 250 / 0.38);
+  --login-surface: rgb(13 13 13 / 0.85);
+  --login-surface-strong: rgb(13 13 13 / 0.95);
+  color: var(--login-fg);
+  background: #000000;
+}
+
+[data-theme='login'] .fp-control {
+  border-radius: var(--radius-none);
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-login-gold) 35%, transparent);
+  background: var(--login-surface);
+  padding: 0.65rem 0.25rem 0.55rem;
+  min-height: 2.5rem;
+  color: #f5f5f5;
+  box-shadow: none;
+}
+
+[data-theme='login'] .fp-control::placeholder {
+  color: var(--login-fg-muted);
+}
+
+[data-theme='login'] .fp-control:hover:not(:disabled):not([readonly]) {
+  border-color: transparent;
+  border-bottom-color: color-mix(in srgb, var(--color-login-gold) 55%, transparent);
+}
+
+[data-theme='login'] .fp-control:focus-visible {
+  border-bottom-color: color-mix(in srgb, var(--color-login-gold) 95%, transparent);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--color-login-gold) 65%, transparent);
+  background: var(--login-surface-strong);
+}
+
+[data-theme='login'] .fp-control[data-invalid='true'] {
+  border-bottom-color: var(--color-danger);
+}
+
+[data-theme='login'] label {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-login-gold) 52%, transparent);
+}
+
+[data-theme='login'] .fp-btn--primary {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-login-gold);
+  color: #000000;
+  letter-spacing: var(--letter-spacing-wide);
+  font-weight: var(--font-weight-semibold);
+}
+
+[data-theme='login'] .fp-btn--primary:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--color-login-gold);
+  filter: brightness(1.06);
+}
+
+[data-theme='login'] .fp-btn--primary:focus-visible {
+  box-shadow:
+    0 0 0 2px #000000,
+    0 0 0 4px color-mix(in srgb, var(--color-login-gold) 85%, transparent);
+}
+
+[data-theme='login'] .fp-btn--primary:disabled,
+[data-theme='login'] .fp-btn--primary[aria-disabled='true'] {
+  opacity: 0.65;
+}
+
+[data-theme='login'] .login-link {
+  color: color-mix(in srgb, var(--color-login-gold-wordmark) 70%, transparent);
+  font-size: var(--font-size-caption);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-theme='login'] .login-link:hover {
+  color: var(--color-login-gold-wordmark);
+}
+
+[data-theme='login'] .login-legal {
+  color: rgb(255 255 255 / 0.25);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-relaxed);
+}
+
+[data-theme='login'] .login-legal a {
+  color: rgb(255 255 255 / 0.4);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-theme='login'] .login-legal a:hover {
+  color: rgb(255 255 255 / 0.6);
+}
+
+[data-theme='login'] .login-wordmark-sep {
+  color: color-mix(in srgb, var(--color-login-gold-wordmark) 45%, transparent);
+}
+
+[data-theme='login'] .login-inactivity {
+  border: 1px solid color-mix(in srgb, var(--color-login-gold) 35%, transparent);
+  background: rgb(0 0 0 / 0.55);
+  color: color-mix(in srgb, var(--color-warning) 85%, #fff 15%);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+}
+
+[data-theme='login'] [role='alert'] {
+  border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 18%, #000);
+}
+
+[data-theme='login'] .animate-spin {
+  color: var(--color-login-gold);
+}
+
+[data-theme='login'] [role='status'] p {
+  color: color-mix(in srgb, var(--color-login-gold-wordmark) 80%, transparent);
+}

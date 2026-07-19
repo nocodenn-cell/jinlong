@@ -258,13 +258,13 @@ export function ProdutosImportarModal({
               erros: String(resumo.erros),
             })}
           </div>
-          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={isPending}>
+          <Button type="button" variant="secondary" onClick={fechar} disabled={isPending}>
             {m.comum.cancelar}
           </Button>
           <Button
             type="button"
+            variant="primary"
             disabled={!podeSalvar}
-            className="app-btn-accent"
             onClick={() => salvar()}
           >
             {commitLabel}
@@ -343,7 +343,7 @@ export function ProdutosImportarModal({
           </label>
         </div>
 
-        <p className="text-[11px] text-jl-fg-3">{p.bulk_colar_hint}</p>
+        <p className="text-caption text-fg-subtle">{p.bulk_colar_hint}</p>
 
         {/* Grade editável */}
         <div
@@ -410,7 +410,7 @@ export function ProdutosImportarModal({
             barra é indeterminada enquanto grava e não simula percentagens falsas. */}
         {progresso ? (
           <div className="space-y-1" aria-live="polite" role="status">
-            <div className="text-[11px] text-jl-fg-2">
+            <div className="text-caption text-fg-muted">
               {interpolateTemplate(p.bulk_salvando, { count: String(progresso.total) })}
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-jl-surface-soft">
@@ -513,7 +513,7 @@ function RowFragment({
       {erro && mensagem ? (
         <tr className={rowTone}>
           <td />
-          <td colSpan={colunas.length + 1} className="border-b border-jl-border-1/60 px-2 pb-1.5 text-[11px] text-destructive">
+          <td colSpan={colunas.length + 1} className="border-b border-jl-border-1/60 px-2 pb-1.5 text-caption text-destructive">
             {mensagem}
           </td>
         </tr>

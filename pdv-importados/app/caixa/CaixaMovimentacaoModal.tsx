@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DragonModal } from "@/components/ui/DragonModal"
-import { Input } from "@/components/ui/input"
+import { Input, Select } from "@/components/ui/forms"
+import { ErrorState } from "@/components/ui/feedback"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
@@ -148,8 +149,7 @@ export function CaixaMovimentacaoModal({
         <>
           <Button
             type="button"
-            variant="ghost"
-            className="app-btn-neutral"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={processando}
           >
@@ -157,10 +157,10 @@ export function CaixaMovimentacaoModal({
           </Button>
           <Button
             type="button"
-            className="app-btn-accent"
+            variant="primary"
             onClick={() => void handleSalvar()}
             disabled={processando}
-            aria-busy={processando}
+            loading={processando}
           >
             {processando ? m.caixa.movimentacao_processando : m.comum.confirmar}
           </Button>
@@ -168,7 +168,7 @@ export function CaixaMovimentacaoModal({
       }
     >
       <div data-testid="caixa-movimentacao-modal" className="space-y-3">
-        <label className="block text-xs app-muted">
+        <label className="block text-caption text-fg-muted">
           {m.caixa.modal_movimentacao_valor}
           <Input
             ref={valorRef}
@@ -176,7 +176,7 @@ export function CaixaMovimentacaoModal({
             value={valorStr}
             onChange={(e) => setValorStr(e.target.value)}
             placeholder="0,00"
-            className="mt-1 app-input"
+            className="mt-1"
             onKeyDown={(e) => {
               if (e.key === "Enter") void handleSalvar()
             }}
@@ -190,7 +190,6 @@ export function CaixaMovimentacaoModal({
               type="button"
               size="sm"
               variant="outline"
-              className="app-btn-neutral"
               onClick={() => setValorStr(String(s))}
             >
               {m.caixa.moeda_prefixo} {formatDecimalBRL(s)}
@@ -198,44 +197,45 @@ export function CaixaMovimentacaoModal({
           ))}
         </div>
 
-        <p className="text-xs app-subtle">
+        <p className="text-caption text-fg-subtle">
           {caixaFmt(m.caixa.modal_movimentacao_saldo_estimado, {
             saldo: formatDecimalBRL(saldoEstimado),
           })}
         </p>
 
-        <label className="block text-xs app-muted">
+        <label className="block text-caption text-fg-muted">
           {m.caixa.modal_movimentacao_motivo}
-          <select
+          <Select
             value={motivoCodigo}
             onChange={(e) => setMotivoCodigo(e.target.value)}
-            className="mt-1 w-full h-9 rounded-md px-2 py-1.5 text-xs app-select"
+            className="mt-1"
+            controlSize="sm"
           >
             {MOTIVOS_BASE.map((codigo) => (
               <option key={codigo} value={codigo}>
                 {motivoLabel[codigo]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
 
         {motivoCodigo === "OUTRO" && (
-          <label className="block text-xs app-muted">
+          <label className="block text-caption text-fg-muted">
             {m.caixa.modal_movimentacao_outro}
             <Input
               value={motivoOutro}
               onChange={(e) => setMotivoOutro(e.target.value)}
               placeholder={m.caixa.modal_movimentacao_outro_placeholder}
-              className="mt-1 app-input"
+              className="mt-1"
             />
           </label>
         )}
 
         {precisaSenhaGerente && (
-          <label className="block text-xs app-accent-text">
-            <span className="mb-1 flex items-center gap-2 app-accent-text">
+          <label className="block text-caption text-brand">
+            <span className="mb-1 flex items-center gap-2 text-brand">
               <ImperialSealIcon
-                className="h-5 w-5 shrink-0 text-[color:var(--dragon-imperial-red,#b91c1c)]"
+                className="h-5 w-5 shrink-0 text-[var(--color-danger-strong)]"
                 title={m.caixa.aria_selo_gerente}
                 pulse
               />
@@ -250,16 +250,12 @@ export function CaixaMovimentacaoModal({
               value={gerenteSenha}
               onChange={(e) => setGerenteSenha(e.target.value)}
               placeholder={m.caixa.modal_gerente_senha_placeholder}
-              className="mt-1 app-input"
+              className="mt-1"
             />
           </label>
         )}
 
-        {erroLocal && (
-          <p className="rounded-md border px-2 py-1 text-xs app-badge-warn" role="alert">
-            {erroLocal}
-          </p>
-        )}
+        {erroLocal ? <ErrorState dense description={erroLocal} /> : null}
       </div>
     </DragonModal>
   )

@@ -6,6 +6,7 @@ import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { cn } from "@/lib/utils"
+import { EmptyState, Loading } from "@/components/ui/feedback"
 
 type Props = {
   m: Mensagens
@@ -26,11 +27,11 @@ function CaixaEmAbertoListImpl({
   const card = "border border-dashed border-border bg-card hover:border-primary/50"
 
   if (carregando) {
-    return <p className={cn("text-xs", muted)}>{m.comum.carregando}</p>
+    return <Loading label={m.comum.carregando} className="min-h-0 py-4" size="sm" />
   }
 
   if (vendas.length === 0) {
-    return <p className={cn("text-xs italic", muted)}>{m.caixa.em_aberto_vazio}</p>
+    return <EmptyState title={m.caixa.em_aberto_vazio} className="py-4" />
   }
 
   return (

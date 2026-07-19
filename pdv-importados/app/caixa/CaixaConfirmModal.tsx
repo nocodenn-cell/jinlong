@@ -51,8 +51,7 @@ export function CaixaConfirmModal({
           <Button
             ref={cancelRef}
             type="button"
-            variant="ghost"
-            className="app-btn-neutral"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={processing}
           >
@@ -61,7 +60,7 @@ export function CaixaConfirmModal({
           <Button
             ref={confirmRef}
             type="button"
-            className="app-btn-danger"
+            variant="danger"
             onClick={onConfirm}
             disabled={processing}
           >
@@ -71,7 +70,7 @@ export function CaixaConfirmModal({
       }
     >
       <div data-testid="caixa-confirm-modal">
-        <p className="text-sm app-muted">{description}</p>
+        <p className="text-body text-fg-muted">{description}</p>
       </div>
     </DragonModal>
   )

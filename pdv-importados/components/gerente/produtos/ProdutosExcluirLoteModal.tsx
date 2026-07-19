@@ -95,7 +95,7 @@ export function ProdutosExcluirLoteModal({
       closeLabel={m.comum.cancelar}
       footer={
         phase === 'done' ? (
-          <Button type="button" className="app-btn-accent" onClick={fechar}>
+          <Button type="button" variant="primary" onClick={fechar}>
             {p.exclusao_modal_fechar}
           </Button>
         ) : (
@@ -103,7 +103,6 @@ export function ProdutosExcluirLoteModal({
             <Button
               type="button"
               variant="secondary"
-              className="app-btn-neutral"
               onClick={fechar}
               disabled={phase === 'loading'}
               autoFocus={phase === 'confirm'}
@@ -112,7 +111,7 @@ export function ProdutosExcluirLoteModal({
             </Button>
             <Button
               type="button"
-              className="app-btn-accent"
+              variant="primary"
               disabled={phase === 'loading' || produtoIds.length === 0 || produtoIds.length > 100}
               onClick={() => void confirmar()}
             >
@@ -139,7 +138,7 @@ export function ProdutosExcluirLoteModal({
               {resumo.falhas.length > 0 ? (
                 <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-jl-fg-1">
                   <p className="font-semibold text-amber-900">{p.exclusao_falhas_titulo}</p>
-                  <ul className="mt-2 max-h-36 list-inside list-disc space-y-1 overflow-y-auto font-mono text-[11px]">
+                  <ul className="mt-2 max-h-36 list-inside list-disc space-y-1 overflow-y-auto font-mono text-caption">
                     {resumo.falhas.slice(0, 30).map((f) => (
                       <li key={`${f.produto_id}-${f.motivo.slice(0, 20)}`}>
                         <span className="tabular-nums">{f.produto_id.slice(0, 8)}…</span>: {f.motivo}
@@ -147,7 +146,7 @@ export function ProdutosExcluirLoteModal({
                     ))}
                   </ul>
                   {resumo.falhas.length > 30 ? (
-                    <p className="mt-1 text-[11px] text-jl-fg-3">…</p>
+                    <p className="mt-1 text-caption text-fg-subtle">…</p>
                   ) : null}
                 </div>
               ) : null}

@@ -1,0 +1,35 @@
+/**
+ * Um único anel de foco — sobrescreve anéis paralelos do oriental/jl.
+ */
+
+.app-btn-accent:focus-visible,
+.app-btn-neutral:focus-visible,
+.app-btn-danger:focus-visible,
+.app-chip:focus-visible,
+.app-link-accent:focus-visible,
+.app-input:focus-visible,
+.app-select:focus-visible,
+.jl-focus-ring:focus-visible,
+.jl-modal-field:focus-visible,
+.jl-modal-select:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible,
+button:focus-visible,
+.gerente-nav-back:focus-visible,
+.gerente-section-accent:focus-visible,
+.gerente-chip-action:focus-visible,
+.gerente-btn-csv:focus-visible,
+.gerente-btn-cancel:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+/* Controles do DS shadcn ring → mesmo token */
+.fp-btn:focus-visible,
+.fp-control:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}

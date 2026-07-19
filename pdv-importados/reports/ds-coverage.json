@@ -1,0 +1,134 @@
+{
+  "asOf": "2026-07-19",
+  "screens": {
+    "total": 12,
+    "migrated": 6,
+    "pct": 50,
+    "list": [
+      {
+        "id": "login",
+        "path": "app/login",
+        "migrated": true
+      },
+      {
+        "id": "pdv",
+        "path": "app/caixa",
+        "migrated": true,
+        "note": "1ª passagem"
+      },
+      {
+        "id": "dashboard",
+        "path": "app/admin/dashboard",
+        "migrated": true
+      },
+      {
+        "id": "catalogo",
+        "path": "app/admin/catalogo",
+        "migrated": true,
+        "note": "Módulo único: Produtos + Categorias + Fornecedores"
+      },
+      {
+        "id": "clientes",
+        "path": "app/admin/clientes",
+        "migrated": true
+      },
+      {
+        "id": "estoque",
+        "path": "app/admin/estoque",
+        "migrated": true,
+        "note": "Teste definitivo DS — movimentos + kardex"
+      },
+      {
+        "id": "financeiro",
+        "path": "app/admin/financeiro",
+        "migrated": false
+      },
+      {
+        "id": "funcionarios",
+        "path": "app/admin/funcionarios",
+        "migrated": false
+      },
+      {
+        "id": "configuracoes",
+        "path": "app/admin/configuracoes",
+        "migrated": false
+      },
+      {
+        "id": "implantacao",
+        "path": "app/admin/implantacao",
+        "migrated": false
+      },
+      {
+        "id": "provisionamento",
+        "path": "app/admin/provisionamento",
+        "migrated": false
+      },
+      {
+        "id": "pdv-polish",
+        "path": "app/caixa",
+        "migrated": false,
+        "note": "polish final"
+      }
+    ]
+  },
+  "catalogModule": {
+    "surfaces": [
+      "app/admin/catalogo",
+      "app/admin/categorias-produtos",
+      "app/admin/fornecedores",
+      "app/gerente/fornecedores"
+    ],
+    "tsxTotal": 12,
+    "filesWithDsImport": 10,
+    "pct": 83
+  },
+  "exclusiveComponents": {
+    "objective": "tendendo a zero",
+    "total": 6,
+    "byModule": [
+      {
+        "id": "clientes",
+        "count": 0,
+        "samples": []
+      },
+      {
+        "id": "catalogo",
+        "count": 1,
+        "samples": [
+          "app/admin/catalogo/_components/catalogoNovoProdutoFluxo.test-helpers.tsx"
+        ]
+      },
+      {
+        "id": "dashboard",
+        "count": 5,
+        "samples": [
+          "app/admin/dashboard/PaymentDonutChartLazy.tsx",
+          "app/admin/dashboard/SalesTrendChart.tsx",
+          "app/admin/dashboard/SalesTrendChartLazy.tsx",
+          "app/admin/dashboard/_components/DashboardChart.tsx",
+          "app/admin/dashboard/_components/PaymentDonutChart.tsx"
+        ]
+      },
+      {
+        "id": "estoque",
+        "count": 0,
+        "samples": []
+      }
+    ]
+  },
+  "dsImports": {
+    "appTsxTotal": 159,
+    "filesWithDsImport": 78,
+    "pct": 49
+  },
+  "approvedExceptions": [
+    {
+      "id": "login-ceremonial-theme",
+      "reason": "Tema login em styles/ds/login-theme.css (exceção cerimonial documentada)"
+    },
+    {
+      "id": "chart-canvas-sizes",
+      "reason": "Dimensões de canvas de gráfico (sparkline/Chart.js) não são tipografia"
+    }
+  ]
+}

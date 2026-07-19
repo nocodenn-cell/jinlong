@@ -1,12 +1,15 @@
 'use client'
 
 /**
- * FastProduct Admin — DataTable (Admin V2)
+ * DataTable — única API de tabela do Design System (Fase 2 · Onda 2).
+ * GerenteTable e tabelas manuais devem migrar para este componente.
  */
 
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/feedback/EmptyState'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export type SortDirection = 'asc' | 'desc'
 
@@ -19,6 +22,8 @@ export type Column<T> = {
   width?: string
   className?: string
   headerClassName?: string
+  /** Peso visual do cabeçalho (compat GerenteTable). */
+  priority?: 'primary' | 'secondary' | 'contextual'
 }
 
 type DataTableProps<T> = {
@@ -29,9 +34,15 @@ type DataTableProps<T> = {
   sortKey?: string
   sortDirection?: SortDirection
   emptyState?: React.ReactNode
+  emptyTitle?: string
+  emptyDescription?: string
   rowActions?: (row: T) => React.ReactNode
   onRowClick?: (row: T) => void
   className?: string
+  loading?: boolean
+  skeletonRows?: number
+  compact?: boolean
+  stickyHeader?: boolean
 }
 
 type SortState = { key: string; direction: SortDirection } | null
@@ -42,6 +53,12 @@ const ALIGN_CLASS: Record<NonNullable<Column<unknown>['align']>, string> = {
   center: 'text-center',
 }
 
+function headerPriorityCn(priority: Column<unknown>['priority']): string {
+  if (priority === 'primary') return 'text-[var(--color-fg-muted)]'
+  if (priority === 'contextual') return 'text-[var(--color-fg-subtle)] opacity-80'
+  return 'text-[var(--color-fg-subtle)]'
+}
+
 export function DataTable<T>({
   columns,
   data,
@@ -50,9 +67,15 @@ export function DataTable<T>({
   sortKey,
   sortDirection,
   emptyState,
+  emptyTitle = 'Nenhum registro encontrado',
+  emptyDescription,
   rowActions,
   onRowClick,
   className,
+  loading = false,
+  skeletonRows = 6,
+  compact = false,
+  stickyHeader = false,
 }: DataTableProps<T>) {
   const serverMode = typeof onSort === 'function'
   const [localSort, setLocalSort] = useState<SortState>(null)
@@ -67,7 +90,6 @@ export function DataTable<T>({
     if (!col.sortValue) return
     const nextDir: SortDirection =
       activeSort?.key === col.key && activeSort.direction === 'asc' ? 'desc' : 'asc'
-
     if (serverMode) {
       onSort!(col.key, nextDir)
       return
@@ -93,17 +115,24 @@ export function DataTable<T>({
   }, [serverMode, localSort, data, columns])
 
   const colSpan = columns.length + (rowActions ? 1 : 0)
+  const cellPy = compact ? 'py-1.5' : 'py-2.5'
 
   return (
-    <div className={cn('overflow-x-auto rounded-lg border border-jl-border-1', className)}>
+    <div
+      className={cn(
+        'overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]',
+        className,
+      )}
+    >
       <table
         className="w-full border-collapse text-left"
         role="table"
-        aria-rowcount={data.length}
-        aria-colcount={columns.length + (rowActions ? 1 : 0)}
+        aria-rowcount={loading ? skeletonRows : data.length}
+        aria-colcount={colSpan}
+        aria-busy={loading || undefined}
       >
-        <thead>
-          <tr className="border-b border-jl-border-1">
+        <thead className={cn(stickyHeader && 'sticky top-0 z-[var(--z-sticky)] bg-[var(--color-surface-soft)]')}>
+          <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-soft)]">
             {columns.map((col) => {
               const sortable = !!col.sortValue
               const isActive = activeSort?.key === col.key
@@ -124,7 +153,9 @@ export function DataTable<T>({
                   scope="col"
                   style={{ width: col.width }}
                   className={cn(
-                    'px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3',
+                    'px-3 text-caption font-semibold uppercase tracking-[var(--letter-spacing-wide)]',
+                    cellPy,
+                    headerPriorityCn(col.priority),
                     alignClass,
                     sortable && 'cursor-pointer select-none',
                     col.headerClassName,
@@ -155,15 +186,34 @@ export function DataTable<T>({
                 </th>
               )
             })}
-            {rowActions ? <th className="w-px px-3 py-2.5" aria-label="Ações" /> : null}
+            {rowActions ? (
+              <th className={cn('w-px px-3', cellPy)} aria-label="Ações" />
+            ) : null}
           </tr>
         </thead>
 
         <tbody>
-          {sortedData.length === 0 ? (
+          {loading ? (
+            Array.from({ length: skeletonRows }).map((_, i) => (
+              <tr key={`sk-${i}`} className="border-t border-[var(--color-border)]">
+                {columns.map((col) => (
+                  <td key={col.key} className={cn('px-3', cellPy)}>
+                    <Skeleton className="h-4 w-full" />
+                  </td>
+                ))}
+                {rowActions ? (
+                  <td className={cn('px-3', cellPy)}>
+                    <Skeleton className="ml-auto h-4 w-12" />
+                  </td>
+                ) : null}
+              </tr>
+            ))
+          ) : sortedData.length === 0 ? (
             <tr>
-              <td colSpan={colSpan} className="px-3 py-10 text-center text-[12px] text-jl-fg-3">
-                {emptyState ?? 'Nenhum registro encontrado'}
+              <td colSpan={colSpan} className="p-0">
+                {emptyState ?? (
+                  <EmptyState title={emptyTitle} description={emptyDescription} />
+                )}
               </td>
             </tr>
           ) : (
@@ -171,7 +221,7 @@ export function DataTable<T>({
               <tr
                 key={rowKey(row)}
                 className={cn(
-                  'group border-t border-jl-border-1 transition-colors hover:bg-white/[0.03]',
+                  'border-t border-[var(--color-border)] transition-colors hover:bg-[var(--color-surface-soft)]',
                   onRowClick && 'cursor-pointer',
                 )}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -180,7 +230,8 @@ export function DataTable<T>({
                   <td
                     key={col.key}
                     className={cn(
-                      'px-3 py-2.5 text-[12px] align-middle text-jl-fg-2',
+                      'px-3 text-caption align-middle text-[var(--color-fg-muted)]',
+                      cellPy,
                       ALIGN_CLASS[col.align ?? 'left'],
                       col.align === 'right' && 'tabular-nums',
                       col.className,
@@ -190,10 +241,8 @@ export function DataTable<T>({
                   </td>
                 ))}
                 {rowActions ? (
-                  <td className="px-3 py-2.5 text-right align-middle">
-                    <span className="inline-flex opacity-0 transition-opacity group-hover:opacity-100">
-                      {rowActions(row)}
-                    </span>
+                  <td className={cn('px-3 text-right align-middle', cellPy)}>
+                    <span className="inline-flex">{rowActions(row)}</span>
                   </td>
                 ) : null}
               </tr>
@@ -207,8 +256,15 @@ export function DataTable<T>({
 
 function SortIcon({ active, direction }: { active: boolean; direction?: SortDirection }) {
   if (!active) {
-    return <ChevronsUpDown size={12} strokeWidth={2} aria-hidden className="text-jl-fg-3 opacity-50" />
+    return (
+      <ChevronsUpDown
+        size={12}
+        strokeWidth={2}
+        aria-hidden
+        className="text-[var(--color-fg-subtle)] opacity-50"
+      />
+    )
   }
   const Icon = direction === 'asc' ? ChevronUp : ChevronDown
-  return <Icon size={12} strokeWidth={2.5} aria-hidden className="text-jl-fg-1" />
+  return <Icon size={12} strokeWidth={2.5} aria-hidden className="text-[var(--color-fg)]" />
 }

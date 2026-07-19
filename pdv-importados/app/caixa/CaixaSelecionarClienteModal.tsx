@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DragonModal } from "@/components/ui/DragonModal"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/forms"
+import { EmptyState } from "@/components/ui/feedback"
 import type { Mensagens } from "@/i18n/getMessages"
 import { buscarClientesCaixa } from "@/app/caixa/actions"
 
@@ -74,7 +75,7 @@ export function CaixaSelecionarClienteModal({ aberto, m, onSelecionado, onCancel
     >
       <div className="space-y-4" data-caixa-atalho-bloqueado="true">
         <div className="flex flex-col gap-2">
-          <label htmlFor="busca-cliente" className="text-xs text-jl-fg-3">
+          <label htmlFor="busca-cliente" className="text-caption text-fg-subtle">
             {m.caixa.selecionar_cliente_busca_label}
           </label>
           <div className="flex gap-2">
@@ -92,12 +93,14 @@ export function CaixaSelecionarClienteModal({ aberto, m, onSelecionado, onCancel
                 }
               }}
               placeholder={m.caixa.selecionar_cliente_placeholder}
-              className="jl-modal-field flex-1"
+              className="flex-1"
             />
             <Button
               type="button"
+              variant="primary"
               onClick={() => void executarBusca()}
               disabled={carregando || !busca.trim()}
+              loading={carregando}
               className="min-h-10 shrink-0"
             >
               {carregando ? m.caixa.selecionar_cliente_buscando : m.caixa.selecionar_cliente_buscar}
@@ -128,9 +131,7 @@ export function CaixaSelecionarClienteModal({ aberto, m, onSelecionado, onCancel
         ) : null}
 
         {busca && clientes.length === 0 && !carregando ? (
-          <p className="rounded-md bg-white/[0.04] px-3 py-3 text-center text-sm text-jl-fg-3">
-            {m.caixa.selecionar_cliente_vazio}
-          </p>
+          <EmptyState title={m.caixa.selecionar_cliente_vazio} className="py-6" />
         ) : null}
       </div>
     </DragonModal>

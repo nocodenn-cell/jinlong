@@ -1,15 +1,15 @@
 /**
- * Design Tokens Index - Import centralizado
- * Importa todos os tokens na ordem correta
+ * Design Tokens — porta única (Fase 2 · Onda 2)
+ *
+ * Ordem: primitivos/escalas → focus → aliases de compatibilidade.
  */
 
-/* 1. Base tokens (primitivos) */
-@import './base.css';
-
-/* 2. Theme tokens (semânticos --color-* e --fp-*) */
-@import './theme.css';
-
-/* Fase 6.1 (Onda 1): component.css, semantic.css e migration-guide.css foram
-   removidos — component.css tinha 0 consumidores e ~30 referências a tokens
-   indefinidos; semantic.css estava deprecated desde a Fase 1.
-   Referência: FASE_6_DESIGN_SYSTEM_AUDIT.md §1.3 e FASE_6_1_EXECUTION_PLAN.md. */
+@import './colors.css';
+@import './spacing.css';
+@import './radius.css';
+@import './shadows.css';
+@import './typography.css';
+@import './motion.css';
+@import './z-index.css';
+@import './focus.css';
+@import './aliases.css';

@@ -2,15 +2,18 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PageHeader } from '@/components/ui/admin-v2'
-import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
-import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { StatusChip } from '@/components/ui/StatusChip'
+import { Button } from '@/components/ui/button'
 import { formatBRL } from '@/lib/format/money'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
+import { Checkbox, Input, Textarea } from '@/components/ui/forms'
+import { ROUTES } from '@shared-core/navigation/routes'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
 import type { LinhaPreviewNfe, ProdutoVinculoOpcao, StatusItemNfe } from './actions'
 import {
@@ -24,11 +27,12 @@ type Props = Readonly<{ idioma: Idioma }>
 type LinhaEditavel = LinhaPreviewNfe & {
   fator: number
   atualizar_custo: boolean
-  // Resolução decidida na conferência (null = desconhecido sem decisão).
   acao: 'VINCULAR' | 'CRIAR' | null
   produto_id_destino: string | null
   vinculo_nome: string | null
 }
+
+type LinhaComIndice = { linha: LinhaEditavel; idx: number }
 
 function onlyDigits(s: string): string {
   return s.replace(/\D/g, '')
@@ -142,11 +146,17 @@ export function ImportarNfePageClient({ idioma }: Props) {
   }, [])
 
   const reconhecidos = useMemo(
-    () => linhas.map((l, idx) => ({ l, idx })).filter(({ l }) => l.status_produto !== 'DESCONHECIDO'),
+    (): LinhaComIndice[] =>
+      linhas
+        .map((l, idx) => ({ linha: l, idx }))
+        .filter(({ linha }) => linha.status_produto !== 'DESCONHECIDO'),
     [linhas],
   )
   const desconhecidos = useMemo(
-    () => linhas.map((l, idx) => ({ l, idx })).filter(({ l }) => l.status_produto === 'DESCONHECIDO'),
+    (): LinhaComIndice[] =>
+      linhas
+        .map((l, idx) => ({ linha: l, idx }))
+        .filter(({ linha }) => linha.status_produto === 'DESCONHECIDO'),
     [linhas],
   )
 
@@ -186,11 +196,210 @@ export function ImportarNfePageClient({ idioma }: Props) {
     setDraftNovos(null)
   }
 
+  const reconhecidosColumns: Column<LinhaComIndice>[] = useMemo(
+    () => [
+      {
+        key: 'nome',
+        header: mi.col_item,
+        cell: ({ linha: l }) => (
+          <div className="max-w-[12rem] text-caption font-medium leading-snug">
+            {l.nome_produto}
+            {l.vinculo_nome ? (
+              <span className="mt-0.5 block text-caption text-fg-muted">
+                {mi.vinculado_a}: {l.vinculo_nome}
+              </span>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: 'ref',
+        header: mi.col_ref,
+        cell: ({ linha: l }) => (
+          <span className="font-mono text-caption">{l.ref_fornecedor}</span>
+        ),
+      },
+      {
+        key: 'gtin',
+        header: mi.col_gtin,
+        cell: ({ linha: l }) => (
+          <span className="font-mono text-caption">{l.gtin ?? '—'}</span>
+        ),
+      },
+      {
+        key: 'st',
+        header: mi.col_status,
+        cell: ({ linha: l }) => (
+          <StatusChip
+            status={statusBadgeKey(l.status_produto)}
+            label={
+              l.status_produto === 'RECONHECIDO_DEPARA'
+                ? mi.status_reconhecido_depara
+                : mi.status_reconhecido_ean
+            }
+          />
+        ),
+      },
+      {
+        key: 'q',
+        header: mi.col_q_xml,
+        align: 'right',
+        cell: ({ linha: l }) => (
+          <span className="tabular-nums text-caption">{l.q_com}</span>
+        ),
+      },
+      {
+        key: 'un',
+        header: mi.col_un_nf,
+        cell: ({ linha: l }) => <span className="text-caption">{l.u_com ?? '—'}</span>,
+      },
+      {
+        key: 'fat',
+        header: mi.col_fator,
+        width: '5rem',
+        cell: ({ linha: l, idx }) => (
+          <Input
+            type="number"
+            min={0.001}
+            step={0.001}
+            controlSize="sm"
+            value={l.fator}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              setLinha(idx, { fator: v > 0 ? v : 1 })
+            }}
+            className="text-right"
+          />
+        ),
+      },
+      {
+        key: 'custo',
+        header: mi.col_custo_unit,
+        align: 'right',
+        cell: ({ linha: l }) => (
+          <span className="tabular-nums text-caption font-semibold">
+            {formatBRL(custoUnit(l), locale)}
+          </span>
+        ),
+      },
+      {
+        key: 'ac',
+        header: mi.atualizar_custo_linha,
+        width: '6rem',
+        align: 'center',
+        cell: ({ linha: l, idx }) => (
+          <Checkbox
+            checked={l.atualizar_custo}
+            onChange={(e) => setLinha(idx, { atualizar_custo: e.target.checked })}
+            title={mi.atualizar_custo_linha}
+            aria-label={mi.atualizar_custo_linha}
+          />
+        ),
+      },
+    ],
+    [locale, mi, setLinha],
+  )
+
+  const desconhecidosColumns: Column<LinhaComIndice>[] = useMemo(
+    () => [
+      {
+        key: 'nome',
+        header: mi.col_item,
+        cell: ({ linha: l }) => (
+          <div className="max-w-[12rem] text-caption font-medium leading-snug">{l.nome_produto}</div>
+        ),
+      },
+      {
+        key: 'ref',
+        header: mi.col_ref,
+        cell: ({ linha: l }) => (
+          <span className="font-mono text-caption">{l.ref_fornecedor}</span>
+        ),
+      },
+      {
+        key: 'gtin',
+        header: mi.col_gtin,
+        cell: ({ linha: l }) => (
+          <span className="font-mono text-caption">{l.gtin ?? '—'}</span>
+        ),
+      },
+      {
+        key: 'q',
+        header: mi.col_q_xml,
+        align: 'right',
+        cell: ({ linha: l }) => (
+          <span className="tabular-nums text-caption">{l.q_com}</span>
+        ),
+      },
+      {
+        key: 'fat',
+        header: mi.col_fator,
+        width: '5rem',
+        cell: ({ linha: l, idx }) => (
+          <Input
+            type="number"
+            min={0.001}
+            step={0.001}
+            controlSize="sm"
+            value={l.fator}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              setLinha(idx, { fator: v > 0 ? v : 1 })
+            }}
+            className="text-right"
+          />
+        ),
+      },
+      {
+        key: 'custo',
+        header: mi.col_custo_unit,
+        align: 'right',
+        cell: ({ linha: l }) => (
+          <span className="tabular-nums text-caption font-semibold">
+            {formatBRL(custoUnit(l), locale)}
+          </span>
+        ),
+      },
+      {
+        key: 'res',
+        header: mi.col_resolucao,
+        width: '18rem',
+        cell: ({ linha: l, idx }) => (
+          <ResolverDesconhecido
+            linha={l}
+            labels={{
+              buscar_placeholder: mi.buscar_placeholder,
+              buscar_vazio: mi.buscar_vazio,
+              acao_cadastrar_novo: mi.acao_cadastrar_novo,
+              acao_trocar: mi.acao_trocar,
+              novo_produto: mi.novo_produto,
+              vinculado_a: mi.vinculado_a,
+            }}
+            onVincular={(prod) =>
+              setLinha(idx, {
+                acao: 'VINCULAR',
+                produto_id_destino: prod.id,
+                vinculo_nome: prod.nome,
+              })
+            }
+            onCriar={() =>
+              setLinha(idx, { acao: 'CRIAR', produto_id_destino: null, vinculo_nome: null })
+            }
+            onTrocar={() =>
+              setLinha(idx, { acao: null, produto_id_destino: null, vinculo_nome: null })
+            }
+          />
+        ),
+      },
+    ],
+    [locale, mi, setLinha],
+  )
+
   return (
     <div className={`admin-v2-page space-y-4 ${fontClass}`}>
       <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
 
-      <Link href="/gerente/estoque" className="gerente-nav-back text-sm font-medium hover:underline">
+      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
         ← {mi.voltar}
       </Link>
 
@@ -201,11 +410,13 @@ export function ImportarNfePageClient({ idioma }: Props) {
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`dragon-glass-card rounded-xl border-2 border-dashed p-6 transition-colors ${
-          dragOver ? 'border-amber-500/60 bg-amber-500/5' : 'app-border'
+        className={`admin-v2-section-card rounded-xl border-2 border-dashed p-6 transition-colors ${
+          dragOver
+            ? 'border-[var(--color-warning-border)] bg-[var(--color-warning-bg)]'
+            : 'border-[var(--color-border)]'
         }`}
       >
-        <p className="mb-3 text-center text-sm gerente-fin-muted">{mi.drop_hint}</p>
+        <p className="mb-3 text-center text-body text-fg-muted">{mi.drop_hint}</p>
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
           <input
             type="file"
@@ -217,244 +428,116 @@ export function ImportarNfePageClient({ idioma }: Props) {
               if (f) onFile(f)
             }}
           />
-          <label
-            htmlFor="xml-upload"
-            className="gerente-btn-cursor cursor-pointer rounded-md border px-4 py-2 text-sm font-medium app-border app-surface-soft hover:opacity-90"
-          >
-            XML
-          </label>
-          <button
+          <Button asChild variant="outline" size="sm">
+            <label htmlFor="xml-upload" className="cursor-pointer">
+              XML
+            </label>
+          </Button>
+          <Button
             type="button"
+            variant="primary"
+            size="sm"
             disabled={!xmlText.trim() || previewLoading}
+            loading={previewLoading}
             onClick={() => void previewMut(xmlText)}
-            className="rounded-md px-4 py-2 text-sm font-semibold app-btn-accent disabled:opacity-50"
           >
-            {previewLoading ? '…' : mi.btn_preview}
-          </button>
-          <button type="button" onClick={limpar} className="text-sm gerente-fin-muted hover:underline">
+            {mi.btn_preview}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={limpar}>
             {mi.limpar}
-          </button>
+          </Button>
         </div>
-        <textarea
+        <Textarea
           value={xmlText}
           onChange={(e) => setXmlText(e.target.value)}
           placeholder="XML (opcional colar conteúdo)"
-          className="mt-4 h-24 w-full rounded-md border p-2 font-mono text-[11px] app-border app-input"
+          className="mt-4 h-24 font-mono text-caption"
           spellCheck={false}
         />
       </section>
 
       {parsed ? (
-        <section className="dragon-glass-card space-y-3 rounded-xl p-4">
-          <h2 className="gerente-section-accent text-sm font-semibold">{mi.emitente}</h2>
-          <p className="text-sm">
-            <span className="gerente-fin-muted">{parsed.emitente.nome}</span>
-            <span className="mx-2 font-mono text-xs opacity-80">{onlyDigits(parsed.emitente.cnpj)}</span>
+        <SectionCard title={mi.emitente}>
+          <p className="text-body">
+            <span className="text-fg-muted">{parsed.emitente.nome}</span>
+            <span className="mx-2 font-mono text-caption opacity-80">
+              {onlyDigits(parsed.emitente.cnpj)}
+            </span>
           </p>
-          <p className="font-mono text-[11px] opacity-90">
-            <span className="gerente-fin-muted">{mi.chave}: </span>
+          <p className="font-mono text-caption opacity-90">
+            <span className="text-fg-muted">{mi.chave}: </span>
             {parsed.chave_acesso}
           </p>
           {parsed.numero_nf ? (
-            <p className="text-sm">
-              <span className="gerente-fin-muted">{mi.numero_nf}: </span>
+            <p className="text-body">
+              <span className="text-fg-muted">{mi.numero_nf}: </span>
               {parsed.numero_nf}
             </p>
           ) : null}
 
-          <label className="mt-2 flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+          <label className="mt-2 flex items-center gap-2 text-body">
+            <Checkbox
               checked={atualizarGlobal}
               onChange={(e) => {
                 const v = e.target.checked
                 setAtualizarGlobal(v)
                 setLinhas((rows) => rows.map((r) => ({ ...r, atualizar_custo: v })))
               }}
-              className="h-4 w-4 rounded app-border"
             />
             {mi.atualizar_custo_global}
           </label>
-        </section>
+        </SectionCard>
       ) : null}
 
       {reconhecidos.length > 0 ? (
-        <section className="dragon-glass-card overflow-hidden rounded-xl">
-          <div className="gerente-fin-divider border-b px-3 py-2.5">
-            <h2 className="gerente-section-accent text-sm font-semibold">{mi.secao_reconhecidos}</h2>
-            <p className="gerente-fin-muted mt-0.5 text-xs">{mi.secao_reconhecidos_hint}</p>
-          </div>
-          <div className="overflow-x-auto p-2">
-            <GerenteTable
-              tone="dragon"
-              columns={[
-                { key: 'nome', header: mi.col_item },
-                { key: 'ref', header: mi.col_ref },
-                { key: 'gtin', header: mi.col_gtin },
-                { key: 'st', header: mi.col_status },
-                { key: 'q', header: mi.col_q_xml },
-                { key: 'un', header: mi.col_un_nf },
-                { key: 'fat', header: mi.col_fator, width: '5rem' },
-                { key: 'custo', header: mi.col_custo_unit },
-                { key: 'ac', header: mi.atualizar_custo_linha, width: '6rem' },
-              ]}
-            >
-              {reconhecidos.map(({ l, idx }) => (
-                <tr key={`rec-${l.ref_fornecedor}-${idx}`} className="gerente-fin-row-hover">
-                  <td className="gerente-fin-cell max-w-[12rem] px-2 py-2 text-xs font-medium leading-snug">
-                    {l.nome_produto}
-                    {l.vinculo_nome ? (
-                      <span className="mt-0.5 block text-[10px] gerente-fin-muted">
-                        {mi.vinculado_a}: {l.vinculo_nome}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="gerente-fin-cell px-2 py-2 font-mono text-[11px]">{l.ref_fornecedor}</td>
-                  <td className="gerente-fin-cell px-2 py-2 font-mono text-[11px]">{l.gtin ?? '—'}</td>
-                  <td className="px-2 py-2">
-                    <GerenteStatusBadge
-                      status={statusBadgeKey(l.status_produto)}
-                      label={
-                        l.status_produto === 'RECONHECIDO_DEPARA'
-                          ? mi.status_reconhecido_depara
-                          : mi.status_reconhecido_ean
-                      }
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-2 py-2 text-right tabular-nums text-xs">{l.q_com}</td>
-                  <td className="gerente-fin-cell px-2 py-2 text-xs">{l.u_com ?? '—'}</td>
-                  <td className="gerente-fin-cell px-1 py-1">
-                    <input
-                      type="number"
-                      min={0.001}
-                      step={0.001}
-                      value={l.fator}
-                      onChange={(e) => {
-                        const v = Number(e.target.value)
-                        setLinha(idx, { fator: v > 0 ? v : 1 })
-                      }}
-                      className="w-full rounded-md border px-1 py-1 text-right text-xs app-input"
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-2 py-2 text-right text-xs font-semibold tabular-nums">
-                    {formatBRL(custoUnit(l), locale)}
-                  </td>
-                  <td className="px-2 py-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={l.atualizar_custo}
-                      onChange={(e) => setLinha(idx, { atualizar_custo: e.target.checked })}
-                      className="h-4 w-4 rounded app-border"
-                      title={mi.atualizar_custo_linha}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </GerenteTable>
-          </div>
-        </section>
+        <SectionCard title={mi.secao_reconhecidos} subtitle={mi.secao_reconhecidos_hint}>
+          <DataTable
+            columns={reconhecidosColumns}
+            data={reconhecidos}
+            rowKey={({ linha: l, idx }) => `rec-${l.ref_fornecedor}-${idx}`}
+            compact
+          />
+        </SectionCard>
       ) : null}
 
       {desconhecidos.length > 0 ? (
-        <section className="dragon-glass-card overflow-hidden rounded-xl">
-          <div className="gerente-fin-divider border-b px-3 py-2.5">
-            <h2 className="gerente-section-accent text-sm font-semibold">{mi.secao_desconhecidos}</h2>
-            <p className="gerente-fin-muted mt-0.5 text-xs">{mi.secao_desconhecidos_hint}</p>
-          </div>
-          <div className="overflow-x-auto p-2">
-            <GerenteTable
-              tone="dragon"
-              columns={[
-                { key: 'nome', header: mi.col_item },
-                { key: 'ref', header: mi.col_ref },
-                { key: 'gtin', header: mi.col_gtin },
-                { key: 'q', header: mi.col_q_xml },
-                { key: 'fat', header: mi.col_fator, width: '5rem' },
-                { key: 'custo', header: mi.col_custo_unit },
-                { key: 'res', header: mi.col_resolucao, width: '18rem' },
-              ]}
-            >
-              {desconhecidos.map(({ l, idx }) => (
-                <tr key={`desc-${l.ref_fornecedor}-${idx}`} className="gerente-fin-row-hover">
-                  <td className="gerente-fin-cell max-w-[12rem] px-2 py-2 text-xs font-medium leading-snug">
-                    {l.nome_produto}
-                  </td>
-                  <td className="gerente-fin-cell px-2 py-2 font-mono text-[11px]">{l.ref_fornecedor}</td>
-                  <td className="gerente-fin-cell px-2 py-2 font-mono text-[11px]">{l.gtin ?? '—'}</td>
-                  <td className="gerente-fin-cell px-2 py-2 text-right tabular-nums text-xs">{l.q_com}</td>
-                  <td className="gerente-fin-cell px-1 py-1">
-                    <input
-                      type="number"
-                      min={0.001}
-                      step={0.001}
-                      value={l.fator}
-                      onChange={(e) => {
-                        const v = Number(e.target.value)
-                        setLinha(idx, { fator: v > 0 ? v : 1 })
-                      }}
-                      className="w-full rounded-md border px-1 py-1 text-right text-xs app-input"
-                    />
-                  </td>
-                  <td className="gerente-fin-cell px-2 py-2 text-right text-xs font-semibold tabular-nums">
-                    {formatBRL(custoUnit(l), locale)}
-                  </td>
-                  <td className="px-2 py-2">
-                    <ResolverDesconhecido
-                      linha={l}
-                      labels={{
-                        buscar_placeholder: mi.buscar_placeholder,
-                        buscar_vazio: mi.buscar_vazio,
-                        acao_cadastrar_novo: mi.acao_cadastrar_novo,
-                        acao_trocar: mi.acao_trocar,
-                        novo_produto: mi.novo_produto,
-                        vinculado_a: mi.vinculado_a,
-                      }}
-                      onVincular={(prod) =>
-                        setLinha(idx, {
-                          acao: 'VINCULAR',
-                          produto_id_destino: prod.id,
-                          vinculo_nome: prod.nome,
-                        })
-                      }
-                      onCriar={() =>
-                        setLinha(idx, { acao: 'CRIAR', produto_id_destino: null, vinculo_nome: null })
-                      }
-                      onTrocar={() =>
-                        setLinha(idx, { acao: null, produto_id_destino: null, vinculo_nome: null })
-                      }
-                    />
-                  </td>
-                </tr>
-              ))}
-            </GerenteTable>
-          </div>
-        </section>
+        <SectionCard title={mi.secao_desconhecidos} subtitle={mi.secao_desconhecidos_hint}>
+          <DataTable
+            columns={desconhecidosColumns}
+            data={desconhecidos}
+            rowKey={({ linha: l, idx }) => `desc-${l.ref_fornecedor}-${idx}`}
+            compact
+          />
+        </SectionCard>
       ) : null}
 
       {linhas.length > 0 ? (
         <div className="flex flex-col items-end gap-2">
           {!tudoResolvido ? (
-            <p className="text-xs font-medium text-amber-600">{mi.resolver_pendentes}</p>
+            <p className="text-caption font-medium text-[var(--color-warning-strong)]">
+              {mi.resolver_pendentes}
+            </p>
           ) : null}
           {draftNovos != null && draftNovos > 0 ? (
-            <div className="w-full rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
+            <div className="w-full rounded-lg border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-body text-[var(--color-warning-strong)]">
               <p>{mi.import_draft_aviso.replace('{{n}}', String(draftNovos))}</p>
               <Link
-                href="/admin/catalogo?status=inativos"
+                href={`${ROUTES.admin.catalogo}?status=inativos`}
                 className="mt-1 inline-block font-medium underline hover:no-underline"
               >
                 Ir ao catálogo →
               </Link>
             </div>
           ) : null}
-          <button
+          <Button
             type="button"
-            disabled={!podeImportar || importLoading}
+            variant="primary"
+            disabled={!podeImportar}
+            loading={importLoading}
             onClick={() => handleImportar()}
-            className="rounded-md px-4 py-2 text-sm font-semibold app-btn-accent disabled:opacity-50"
           >
-            {importLoading ? '…' : mi.btn_importar}
-          </button>
+            {mi.btn_importar}
+          </Button>
         </div>
       ) : null}
     </div>
@@ -488,29 +571,26 @@ function ResolverDesconhecido({
   const [aberto, setAberto] = useState(false)
   const [buscando, setBuscando] = useState(false)
 
-  // Resolução já decidida → mostra chip + "Trocar".
   if (linha.acao === 'CRIAR') {
     return (
       <div className="flex items-center justify-between gap-2">
-        <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
-          {labels.novo_produto}
-        </span>
-        <button type="button" onClick={onTrocar} className="text-[11px] gerente-fin-muted hover:underline">
+        <StatusChip status="ATIVO" label={labels.novo_produto} />
+        <Button type="button" variant="ghost" size="sm" className="h-auto px-1 text-caption" onClick={onTrocar}>
           {labels.acao_trocar}
-        </button>
+        </Button>
       </div>
     )
   }
   if (linha.acao === 'VINCULAR' && linha.produto_id_destino) {
     return (
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs">
-          <span className="gerente-fin-muted">{labels.vinculado_a}: </span>
+        <span className="truncate text-caption">
+          <span className="text-fg-muted">{labels.vinculado_a}: </span>
           {linha.vinculo_nome ?? linha.produto_id_destino}
         </span>
-        <button type="button" onClick={onTrocar} className="text-[11px] gerente-fin-muted hover:underline">
+        <Button type="button" variant="ghost" size="sm" className="h-auto px-1 text-caption" onClick={onTrocar}>
           {labels.acao_trocar}
-        </button>
+        </Button>
       </div>
     )
   }
@@ -518,8 +598,9 @@ function ResolverDesconhecido({
   return (
     <div className="space-y-1">
       <div className="relative">
-        <input
+        <Input
           type="text"
+          controlSize="sm"
           value={termo}
           placeholder={labels.buscar_placeholder}
           onChange={(e) => {
@@ -527,7 +608,6 @@ function ResolverDesconhecido({
             setAberto(true)
           }}
           onFocus={() => setAberto(true)}
-          className="w-full rounded-md border px-2 py-1 text-xs app-input"
         />
         <BuscaResultados
           termo={termo}
@@ -544,13 +624,15 @@ function ResolverDesconhecido({
           }}
         />
       </div>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
+        className="w-full border-dashed text-caption"
         onClick={onCriar}
-        className="w-full rounded-md border border-dashed px-2 py-1 text-[11px] font-medium app-border hover:opacity-80"
       >
         + {labels.acao_cadastrar_novo}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -597,11 +679,11 @@ function BuscaResultados({
   if (!aberto || termo.trim().length < 2) return null
 
   return (
-    <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border app-border app-surface shadow-lg">
+    <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
       {buscando ? (
-        <p className="px-2 py-2 text-[11px] gerente-fin-muted">…</p>
+        <p className="px-2 py-2 text-caption text-fg-muted">…</p>
       ) : opcoes.length === 0 ? (
-        <p className="px-2 py-2 text-[11px] gerente-fin-muted">{vazioLabel}</p>
+        <p className="px-2 py-2 text-caption text-fg-muted">{vazioLabel}</p>
       ) : (
         opcoes.map((p) => (
           <button
@@ -611,11 +693,11 @@ function BuscaResultados({
               e.preventDefault()
               onSelecionar(p)
             }}
-            className="block w-full px-2 py-1.5 text-left text-xs gerente-fin-row-hover"
+            className="block w-full px-2 py-1.5 text-left text-caption hover:bg-[var(--color-surface-soft)]"
           >
             <span className="font-medium">{p.nome}</span>
             {p.codigo_barras ? (
-              <span className="ml-2 font-mono text-[10px] gerente-fin-muted">{p.codigo_barras}</span>
+              <span className="ml-2 font-mono text-caption text-fg-muted">{p.codigo_barras}</span>
             ) : null}
           </button>
         ))

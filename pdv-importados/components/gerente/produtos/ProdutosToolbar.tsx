@@ -12,6 +12,7 @@ import {
   UploadCloud,
 } from 'lucide-react'
 import type { Mensagens } from '@/i18n/getMessages'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const btnBase =
@@ -197,15 +198,16 @@ export function ProdutosToolbar({
         <span className="hidden sm:inline">{exportLoading ? '…' : p.toolbar_exportar}</span>
       </button>
 
-      <button
+      <Button
         type="button"
+        variant="primary"
         onClick={onIncluirCadastro}
-        className={cn(btnBase, 'app-btn-accent border-transparent')}
         aria-label={p.toolbar_incluir_aria}
+        className="gap-1.5"
       >
         <Plus className="h-4 w-4 shrink-0" aria-hidden />
         <span className="hidden sm:inline">{p.toolbar_incluir}</span>
-      </button>
+      </Button>
     </div>
   )
 }

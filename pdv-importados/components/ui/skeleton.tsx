@@ -15,28 +15,29 @@ export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
 const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
   ({ className, width, height, variant = "default", animate = true, ...props }, ref) => {
     const variantClasses = {
-      default: "rounded-md",
-      text: "rounded",
+      default: "rounded-control",
+      text: "rounded-sm",
       circular: "rounded-full",
-      rounded: "rounded-lg"
+      rounded: "rounded-card",
     }
 
     const style: React.CSSProperties = {
       ...props.style,
       ...(width && { width }),
-      ...(height && { height })
+      ...(height && { height }),
     }
 
     return (
       <div
         ref={ref}
         className={cn(
-          "shrink-0 bg-muted",
+          "shrink-0 bg-[var(--color-surface-muted)]",
           variantClasses[variant],
           animate && "animate-pulse",
-          className
+          className,
         )}
         style={style}
+        aria-hidden
         {...props}
       />
     )

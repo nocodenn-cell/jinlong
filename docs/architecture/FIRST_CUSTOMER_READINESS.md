@@ -23,7 +23,7 @@ Login → Admin/PDV
   Comissões / Relatórios / Auditoria
 ```
 
-Provisionamento de loja e usuários: **manual** ([RUNBOOK_PRIMEIRO_CLIENTE.md](../RUNBOOK_PRIMEIRO_CLIENTE.md)).
+Provisionamento de loja + DONO: wizard interno `/admin/provisionamento` (ADMIN). Demais usuários: `/admin/funcionarios`. Fallback SQL: [RUNBOOK_PRIMEIRO_CLIENTE.md](../RUNBOOK_PRIMEIRO_CLIENTE.md).
 
 ## 2. Funcionalidades homologadas
 
@@ -46,17 +46,16 @@ Provisionamento de loja e usuários: **manual** ([RUNBOOK_PRIMEIRO_CLIENTE.md](.
 
 ## 3. Pendências
 
-1. **Gate Funcionários:** sem tela CRUD; runbook permanece SSoT.
-2. Dívidas P1 documentadas (D-F1, D-C1, i18n catálogo cash/financial).
-3. Homologação humana do checklist go-live no ambiente do cliente.
-4. Colocation `gerente/` → `admin/` (dívida estrutural, não bloqueia piloto).
+1. Dívidas P1 documentadas (D-F1, D-C1, i18n catálogo cash/financial).
+2. Homologação humana do checklist go-live no ambiente do cliente (`/admin/implantacao`).
+3. Colocation `gerente/` → `admin/` (dívida estrutural, não bloqueia piloto).
 
 ## 4. Riscos
 
 | Risco | Impacto | Status |
 |-------|---------|--------|
-| Esperar self-service de funcionários | Operação / suporte | **Ativo — gate** |
-| Conta Auth sem linha `usuarios` | Login impossível | Mitigado no código |
+| Conta Auth sem linha `usuarios` | Login impossível | Mitigado (wizard + login bloqueia) |
+| Dados de teste na loja do cliente | Operação | Mitigado — loja nova no wizard |
 | Caminhos paralelos nos hot-paths | Drift | Hot-paths migrados; legado dual-layer documentado |
 | E2E sem credenciais | Falsa sensação de cobertura | Documentado |
 
@@ -64,19 +63,12 @@ Provisionamento de loja e usuários: **manual** ([RUNBOOK_PRIMEIRO_CLIENTE.md](.
 
 | Pergunta | Resposta |
 |----------|----------|
-| Telas críticas de operação (exceto CRUD funcionários) estão funcionais, integradas e no caminho canônico? | **GO** |
-| O sistema permite onboarding 100% self-service sem Auth/SQL? | **NO-GO** |
-| Pronto para primeiro cliente com aceite do runbook de usuários? | **GO CONDICIONAL** |
+| Telas críticas de operação + funcionários + provisionamento estão no caminho canônico? | **GO** |
+| Onboarding de loja+DONO sem SQL/Studio (equipe ADMIN)? | **GO** (`/admin/provisionamento`) |
+| Pronto para primeiro cliente com checklist `/admin/implantacao`? | **GO** (Fase 1 encerrada) |
 
 ### Decisão final
 
-**GO CONDICIONAL para o primeiro cliente.**
+**GO para Fase 1.** Homologar o primeiro cliente com checklist humano em [GO_LIVE_CHECKLIST.md](./GO_LIVE_CHECKLIST.md) §3 e autorização GO-LIVE na UI.
 
-Condições:
-
-1. Checklist humano em [GO_LIVE_CHECKLIST.md](./GO_LIVE_CHECKLIST.md) §3 assinado.
-2. Usuários provisionados exclusivamente via runbook.
-3. E2E críticos de caixa executados no ambiente alvo (ou aceite de risco documentado).
-4. Nenhuma exigência de UI de funcionários nesta release.
-
-**Interromper / não declarar GO pleno** se o cliente exigir cadastro de funcionários na UI — isso é **nova feature + novo domínio**, fora do escopo desta missão.
+Próximo: **Fase 2 — UX/UI Freeze** (sem funcionalidade nova / sem mudança de domínio).

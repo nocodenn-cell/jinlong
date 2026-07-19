@@ -1,11 +1,20 @@
 'use client'
 
+/**
+ * Fornecedores — listagem Admin (Catálogo Onda 5).
+ * Mesmo contrato CRUD: toolbar · bulk · DataTable · empty/loading · modal.
+ * Lógica de busca/paginação/lote preservada; chrome visual no DS.
+ */
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { Pencil, Trash2, Plus, Search, Mail } from 'lucide-react'
-import { GerenteTable } from '@/components/gerente/GerenteTable'
-import { DataTablePage } from '@/components/gerente/DataTablePage'
+import { Pencil, Trash2, Plus, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox, SearchInput } from '@/components/ui/forms'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Badge } from '@/components/ui/badge'
+import { EmptyState, Loading } from '@/components/ui/feedback'
+import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
@@ -66,7 +75,6 @@ export function FornecedoresListClient({
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  // —— Paginação ————————————————————————————
   const stateRef = useRef({ hasMore, loading })
   useEffect(() => {
     stateRef.current = { hasMore, loading }
@@ -108,7 +116,6 @@ export function FornecedoresListClient({
 
   const skipMountRefetch = useRef(true)
 
-  // Busca / filtro status — dispara após debounce
   useEffect(() => {
     if (skipMountRefetch.current) {
       skipMountRefetch.current = false
@@ -132,10 +139,11 @@ export function FornecedoresListClient({
       setSelecionados(new Set())
       setLoading(false)
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [termoDebounced, statusFDebounced])
 
-  // —— Handlers ————————————————————————————
   function abrirNovo() {
     setEmEdicao(null)
     setModalAberto(true)
@@ -163,7 +171,6 @@ export function FornecedoresListClient({
     emitGerenteToast({ kind: 'success', message: m.fornecedores.toast_excluido })
   }
 
-  // —— Seleção em lote ————————————————————
   function toggleOne(id: string) {
     setSelecionados((cur) => {
       const next = new Set(cur)
@@ -229,184 +236,213 @@ export function FornecedoresListClient({
     [algumNaPag, todosNaPag],
   )
 
+  const columns: Column<FornecedorListRow>[] = [
+    {
+      key: 'sel',
+      header: '',
+      width: '40px',
+      cell: (f) => (
+        <Checkbox
+          checked={selecionados.has(f.id)}
+          onChange={() => toggleOne(f.id)}
+          aria-label={`${m.fornecedores.aria_selecionar} ${f.nome}`}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+    },
+    {
+      key: 'nome',
+      header: m.fornecedores.col_nome,
+      priority: 'primary',
+      cell: (f) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-info-bg)] text-caption font-bold text-brand">
+            {initials(f.nome)}
+          </span>
+          <div className="min-w-0">
+            <strong
+              className={cn(
+                'block truncate text-fg',
+                !f.ativo && 'line-through decoration-[var(--color-fg-subtle)]',
+              )}
+            >
+              {f.nome}
+            </strong>
+            {(f.contato_pessoa || f.categoria) && (
+              <div className="truncate text-caption text-fg-subtle">
+                {[f.contato_pessoa, f.categoria].filter(Boolean).join(' · ')}
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'doc',
+      header: m.fornecedores.col_documento,
+      priority: 'contextual',
+      cell: (f) => (
+        <span className="font-mono text-caption text-fg-muted">{maskCNPJ(f.documento)}</span>
+      ),
+    },
+    {
+      key: 'tel',
+      header: m.fornecedores.col_telefone,
+      priority: 'contextual',
+      cell: (f) => <span className="tabular-nums text-caption">{maskTel(f.telefone)}</span>,
+    },
+    {
+      key: 'email',
+      header: m.fornecedores.col_email,
+      cell: (f) =>
+        f.email ? (
+          <a
+            href={`mailto:${f.email}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 text-caption text-fg-muted hover:text-brand"
+          >
+            <Mail className="h-3 w-3" aria-hidden />
+            <span className="truncate">{f.email}</span>
+          </a>
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        ),
+    },
+    {
+      key: 'status',
+      header: m.fornecedores.col_status,
+      width: '100px',
+      cell: (f) => (
+        <Badge
+          className={
+            f.ativo
+              ? 'border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-strong)]'
+              : 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-subtle'
+          }
+        >
+          {f.ativo ? m.fornecedores.status_ativo : m.fornecedores.status_inativo}
+        </Badge>
+      ),
+    },
+  ]
+
+  const statusOptions: StatusFiltro[] = ['todos', 'ativos', 'inativos']
+
   return (
     <>
-      <DataTablePage
-        filters={
+      <CrudListShell
+        title={`${fornecedores.length} ${m.fornecedores.contagem}`}
+        toolbar={
           <>
-            <div className="relative max-w-[420px] min-w-[240px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
-              <input
-                type="search"
-                value={termo}
-                onChange={(e) => setTermo(e.target.value)}
-                placeholder={m.fornecedores.placeholder_busca}
-                aria-label={m.fornecedores.placeholder_busca}
-                className="app-input h-9 w-full rounded-md pl-9 pr-3 text-sm shadow-inner"
-              />
-            </div>
-            {(['todos', 'ativos', 'inativos'] as StatusFiltro[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setStatusF(s)}
-                className={cn(
-                  'app-chip rounded-full px-3 py-1 text-xs font-medium',
-                  statusF === s ? 'app-chip-active' : '',
-                )}
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <div className="min-w-[240px] max-w-[420px] flex-1">
+                <SearchInput
+                  value={termo}
+                  onChange={(e) => setTermo(e.target.value)}
+                  placeholder={m.fornecedores.placeholder_busca}
+                  aria-label={m.fornecedores.placeholder_busca}
+                  controlSize="sm"
+                />
+              </div>
+              <div
+                className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
+                role="group"
               >
-                {m.fornecedores[`filtro_${s}` as const]}
-              </button>
-            ))}
+                {statusOptions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatusF(s)}
+                    aria-pressed={statusF === s}
+                    className={cn(
+                      'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium',
+                      statusF === s
+                        ? 'bg-[var(--color-info-bg)] text-brand'
+                        : 'text-fg-subtle hover:text-fg',
+                    )}
+                  >
+                    {m.fornecedores[`filtro_${s}` as const]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <PageActions>
+              <Button type="button" variant="primary" onClick={abrirNovo} className="gap-1.5">
+                <Plus className="h-4 w-4" aria-hidden />
+                {m.fornecedores.novo}
+              </Button>
+            </PageActions>
           </>
         }
-        meta={<>{fornecedores.length} {m.fornecedores.contagem}</>}
-        actions={
-          <Button type="button" className="app-btn-accent gap-1.5" onClick={abrirNovo}>
-            <Plus className="h-4 w-4" aria-hidden /> {m.fornecedores.novo}
-          </Button>
-        }
-        bulkBarLabel={selecionados.size > 0 ? `${selecionados.size} selecionados` : undefined}
         bulkBar={
           selecionados.size > 0 ? (
             <>
-              <span className="text-sm font-medium text-jl-fg-1">
-                <strong className="font-bold text-amber-400 tabular-nums">{selecionados.size}</strong>{' '}
+              <span className="text-body font-medium text-fg">
+                <strong className="font-bold tabular-nums text-brand">{selecionados.size}</strong>{' '}
                 {m.fornecedores.bulk_selecionados}
               </span>
               <div className="ml-auto flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => onBulkAtivar(true)} className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-medium">
+                <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(true)}>
                   {m.fornecedores.bulk_ativar}
-                </button>
-                <button type="button" onClick={() => onBulkAtivar(false)} className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-medium">
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(false)}>
                   {m.fornecedores.bulk_inativar}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void onBulkExcluir()}
-                  className="app-btn-danger rounded-md px-3 py-1.5 text-xs font-semibold"
-                >
+                </Button>
+                <Button type="button" size="sm" variant="danger" onClick={() => void onBulkExcluir()}>
                   {m.fornecedores.bulk_excluir}
-                </button>
-                <button type="button" onClick={() => setSelecionados(new Set())} className="text-xs text-jl-fg-3 hover:text-jl-fg-1">
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setSelecionados(new Set())}>
                   {m.fornecedores.bulk_limpar}
-                </button>
+                </Button>
               </div>
             </>
           ) : undefined
         }
-        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
+        footer={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
+        <div className="mb-2 flex items-center gap-2 px-1">
+          <Checkbox
+            ref={headerRef}
+            checked={todosNaPag}
+            onChange={togglePagina}
+            disabled={fornecedores.length === 0}
+            aria-label={m.fornecedores.aria_selecionar_pagina}
+          />
+          <span className="text-caption text-fg-subtle">{m.fornecedores.aria_selecionar_pagina}</span>
+        </div>
 
-      <GerenteTable
-        tone="dragon"
-        compact
-        loading={loading && fornecedores.length === 0}
-        columns={[
-          {
-            key: 'sel',
-            header: (
-              <input
-                ref={headerRef}
-                type="checkbox"
-                checked={todosNaPag}
-                onChange={togglePagina}
-                disabled={fornecedores.length === 0}
-                aria-label={m.fornecedores.aria_selecionar_pagina}
-                className="h-4 w-4 rounded app-border"
+        {loading && fornecedores.length === 0 ? (
+          <Loading label={m.comum.carregando} className="min-h-0 py-16" size="sm" />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={fornecedores}
+            rowKey={(f) => f.id}
+            loading={loading && fornecedores.length > 0}
+            emptyState={
+              <EmptyState
+                title={m.fornecedores.vazio_titulo}
+                description={m.fornecedores.vazio_sub}
+                actionLabel={m.fornecedores.novo}
+                onAction={abrirNovo}
               />
-            ),
-            width: 36,
-          },
-          { key: 'nome', header: m.fornecedores.col_nome, priority: 'primary' },
-          { key: 'doc', header: m.fornecedores.col_documento, priority: 'contextual' },
-          { key: 'tel', header: m.fornecedores.col_telefone, priority: 'contextual' },
-          { key: 'email', header: m.fornecedores.col_email },
-          { key: 'status', header: m.fornecedores.col_status, width: 100 },
-          { key: 'acoes', header: <span className="sr-only">{m.fornecedores.col_acoes}</span>, width: 90, priority: 'contextual' },
-        ]}
-      >
-        {fornecedores.map((f) => (
-          <tr
-            key={f.id}
-            className={cn(
-              'gerente-fin-row-hover transition-colors',
-              !f.ativo && 'opacity-60',
-            )}
-          >
-            <td className="px-3 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
-              <input
-                type="checkbox"
-                checked={selecionados.has(f.id)}
-                onChange={() => toggleOne(f.id)}
-                aria-label={`${m.fornecedores.aria_selecionar} ${f.nome}`}
-                className="h-4 w-4 rounded app-border"
-              />
-            </td>
-            <td className="px-3 py-2">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-700 text-xs font-bold text-slate-900">
-                  {initials(f.nome)}
-                </span>
-                <div className="min-w-0">
-                  <strong
-                    className={cn(
-                      'block truncate text-jl-fg-1',
-                      !f.ativo && 'line-through decoration-slate-500',
-                    )}
-                  >
-                    {f.nome}
-                  </strong>
-                  {(f.contato_pessoa || f.categoria) && (
-                    <div className="truncate text-[11px] text-jl-fg-3">
-                      {[f.contato_pessoa, f.categoria].filter(Boolean).join(' · ')}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </td>
-            <td className="gerente-fin-cell px-3 py-2 font-mono text-xs">{maskCNPJ(f.documento)}</td>
-            <td className="gerente-fin-cell px-3 py-2 tabular-nums">{maskTel(f.telefone)}</td>
-            <td className="px-3 py-2">
-              {f.email ? (
-                <a
-                  href={`mailto:${f.email}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1.5 text-xs text-jl-fg-3 hover:text-amber-400"
-                >
-                  <Mail className="h-3 w-3" aria-hidden />
-                  <span className="truncate">{f.email}</span>
-                </a>
-              ) : (
-                <span className="text-jl-fg-3">—</span>
-              )}
-            </td>
-            <td className="px-3 py-2">
-              {f.ativo ? (
-                <span className="app-badge-positive inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
-                  {m.fornecedores.status_ativo}
-                </span>
-              ) : (
-                <span className="app-badge-neutral inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
-                  {m.fornecedores.status_inativo}
-                </span>
-              )}
-            </td>
-            <td className="px-3 py-2">
+            }
+            rowActions={(f) => (
               <div className="flex items-center justify-end gap-1">
-                <button
+                <Button
                   type="button"
-                  className="app-btn-neutral inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+                  size="icon"
+                  variant="ghost"
                   onClick={() => abrirEditar(f)}
                   aria-label={`${m.fornecedores.editar} — ${f.nome}`}
                   title={m.fornecedores.editar}
                 >
                   <Pencil className="h-3.5 w-3.5" aria-hidden />
-                </button>
+                </Button>
                 <ConfirmActionButton
                   type="button"
                   confirmMessage={`${m.fornecedores.confirmar_exclusao} "${f.nome}"?`}
-                  className="app-btn-neutral inline-flex h-8 w-8 items-center justify-center rounded-md text-red-300 transition-colors hover:border-red-400/50 hover:text-red-200"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-control text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
                   onClick={() => void onExcluir(f)}
                   aria-label={`${m.fornecedores.excluir} — ${f.nome}`}
                   title={m.fornecedores.excluir}
@@ -414,23 +450,11 @@ export function FornecedoresListClient({
                   <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 </ConfirmActionButton>
               </div>
-            </td>
-          </tr>
-        ))}
-
-        {fornecedores.length === 0 && !loading && (
-          <tr>
-            <td colSpan={7} className="gerente-fin-empty px-4 py-12 text-center">
-              <div className="font-serif text-5xl text-amber-400/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
-                供
-              </div>
-              <div className="mt-3 text-sm font-semibold text-jl-fg-1">{m.fornecedores.vazio_titulo}</div>
-              <div className="mt-1 text-xs text-jl-fg-3">{m.fornecedores.vazio_sub}</div>
-            </td>
-          </tr>
+            )}
+            className="rounded-none border-x-0 border-b-0"
+          />
         )}
-      </GerenteTable>
-      </DataTablePage>
+      </CrudListShell>
 
       {modalAberto && (
         <FornecedorEditarModal

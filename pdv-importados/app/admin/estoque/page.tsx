@@ -1,16 +1,6 @@
 /**
- * FastProduct Admin — Estoque (Fase 5)
- *
- * Server Component. Reusa a query EXISTENTE de saldos do gerente
- * (`obterListaEstoqueGerente` → RPC `gerente_estoque_list_page`) — nenhuma query
- * nova para a listagem. Os searchParams da URL viram o input da RPC (filtros +
- * paginação server-side). As categorias do select vêm de
- * `listarOpcoesFiltrosProdutos` (cacheada), igual ao Catálogo (Fase 4).
- *
- * Estrutura espelhada do Catálogo (Fase 4): FilterBar + DataTable + chips
- * removíveis + paginação por ?page=. As novidades da fase são as interações da
- * tabela: AjusteSaldoModal (reusa `atualizarEstoqueProduto`) e KardexSheet
- * (única action nova, read-only).
+ * FastProduct Admin — Estoque (Onda 7 · DS).
+ * Server Component. Queries/RPC inalteradas. Chrome = CrudListShell + FilterBar + DataTable.
  */
 
 import { Suspense } from 'react'
@@ -18,16 +8,21 @@ import Link from 'next/link'
 import { Upload } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import {
+  PageHeader,
+  PageActions,
+  CrudListShell,
+} from '@/components/ui/admin-v2'
+import { Button } from '@/components/ui/button'
+import { ErrorState } from '@/components/ui/feedback'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { listarOpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { EstoqueTable, type EstoqueLinha } from './_components/EstoqueTable'
+import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
-
-// ─── Normalizadores de searchParams ─────────────────────────────────────────
 
 type Visao = 'geral' | 'critico'
 type OrigemFiltro = '' | 'china_manual' | 'brasil_nf' | 'brasil_sem_nf'
@@ -45,8 +40,6 @@ function clampPage(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? '1', 10)
   return Number.isFinite(n) && n >= 1 ? n : 1
 }
-
-
 
 type SearchParams = {
   q?: string
@@ -72,12 +65,11 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   const origem = oneOf<OrigemFiltro>(
     sp.origem,
     ['', 'china_manual', 'brasil_nf', 'brasil_sem_nf'],
-    ''
+    '',
   )
   const categoria = uuidOrUndef(sp.categoria)
   const page = clampPage(sp.page)
 
-  // ─── Dados (queries EXISTENTES — nenhuma nova) ───────────────────────────
   const [opcoesRes, listaRes] = await Promise.all([
     listarOpcoesFiltrosProdutos(),
     obterListaEstoqueGerente({
@@ -94,11 +86,13 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
       (err: unknown) => ({
         ok: false as const,
         error: err instanceof Error ? err.message : ui.estoque_erro_carregar,
-      })
+      }),
     ),
   ])
 
-  const opcoes = opcoesRes.success ? opcoesRes.data : { categorias: [], marcas: [], fornecedores: [] }
+  const opcoes = opcoesRes.success
+    ? opcoesRes.data
+    : { categorias: [], marcas: [], fornecedores: [] }
   const lista = listaRes.ok ? listaRes.data : { total: 0, rows: [] }
   const loadError = listaRes.ok ? null : listaRes.error
 
@@ -143,7 +137,13 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         { value: 'brasil_sem_nf', label: ui.estoque_origem_brasil },
       ],
     },
-    { type: 'select', key: 'categoria', label: m.produtos.categoria, defaultValue: '', options: catOptions },
+    {
+      type: 'select',
+      key: 'categoria',
+      label: m.produtos.categoria,
+      defaultValue: '',
+      options: catOptions,
+    },
   ]
 
   const activeParams: Record<string, string> = {}
@@ -168,123 +168,155 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
 
   const chips: Array<{ key: string; label: string }> = []
   if (visao !== 'geral') chips.push({ key: 'visao', label: m.estoque.filtro_estoque_baixo })
-  if (origem !== '') chips.push({ key: 'origem', label: `${m.produtos.origem_label}: ${origem === 'china_manual' ? ui.estoque_origem_china : origem === 'brasil_nf' ? ui.estoque_origem_brasil_nf : ui.estoque_origem_brasil}` })
-  if (categoria) chips.push({ key: 'categoria', label: `${m.produtos.categoria}: ${nomeCategoria(categoria)}` })
-
-  const countBadge = (
-    <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-[11px] text-jl-fg-3">
-      {totalCount} {totalCount === 1 ? m.estoque.col_produto.toLowerCase() : m.estoque.titulo.toLowerCase()}
-    </span>
-  )
+  if (origem !== '') {
+    chips.push({
+      key: 'origem',
+      label: `${m.produtos.origem_label}: ${
+        origem === 'china_manual'
+          ? ui.estoque_origem_china
+          : origem === 'brasil_nf'
+            ? ui.estoque_origem_brasil_nf
+            : ui.estoque_origem_brasil
+      }`,
+    })
+  }
+  if (categoria) {
+    chips.push({
+      key: 'categoria',
+      label: `${m.produtos.categoria}: ${nomeCategoria(categoria)}`,
+    })
+  }
 
   return (
     <div className="admin-v2-page">
       <PageHeader
         title={m.estoque.titulo}
         subtitle={m.estoque.subtitulo}
-        filters={
-          <Link href={ROUTES.admin.importNfe} className="admin-v2-btn-secondary">
-            <Upload size={14} aria-hidden />
-            {ui.catalogo_importar_nfe}
-          </Link>
+        actions={
+          <PageActions>
+            <Button asChild variant="secondary" size="sm" className="gap-1.5">
+              <Link href={ROUTES.admin.importNfe}>
+                <Upload className="h-4 w-4" aria-hidden />
+                {ui.catalogo_importar_nfe}
+              </Link>
+            </Button>
+          </PageActions>
         }
       />
 
-      <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-3">
-        <Suspense fallback={<div className="h-9" />}>
-          <FilterBar filters={filters} />
-        </Suspense>
-
-        {chips.length > 0 ? (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            {chips.map((chip) => (
-              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
-                {chip.label}
-                <span aria-hidden className="text-jl-fg-3">
-                  ✕
-                </span>
-              </Link>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      {loadError ? (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
-          {loadError}
-        </div>
-      ) : null}
-
-      <SectionCard title={ui.estoque_saldos_titulo} action={countBadge}>
-        <EstoqueTable linhas={linhas} labels={{
-          produto: m.estoque.col_produto,
-          saldo: ui.estoque_col_saldo,
-          minimo: ui.estoque_col_minimo,
-          deficit: m.estoque.col_deficit,
-          unidade: ui.estoque_col_unidade_abrev,
-          origem: m.produtos.origem_label,
-          origemChina: ui.estoque_origem_china,
-          origemBrasilNf: ui.estoque_origem_brasil_nf,
-          origemBrasil: ui.estoque_origem_brasil,
-          vazioTitulo: ui.estoque_vazio_titulo,
-          vazioSub: ui.estoque_vazio_sub,
-          ajusteTitulo: ui.estoque_ajuste_titulo,
-          saldoAtual: ui.estoque_saldo_atual,
-          estoqueMinimo: m.estoque.col_estoque_minimo,
-          motivo: m.estoque.ajuste_motivo_label,
-          observacao: m.produtos.observacao,
-          cancelar: m.cadastro_comum.cancelar,
-          salvarAjuste: ui.estoque_salvar_ajuste,
-          salvando: m.cadastro_comum.salvando,
-          motivoAcertoInventario: m.estoque.motivo_acerto_inventario,
-          motivoEntradaCompra: m.estoque.motivo_entrada_compra,
-          motivoPerda: m.estoque.motivo_perda,
-          motivoQuebra: m.estoque.motivo_quebra_avaria,
-          motivoOutro: m.estoque.motivo_outro,
-          kardexTitulo: ui.estoque_kardex_titulo,
-          semMovimentos: ui.estoque_sem_movimentos,
-          semMovimentosSub: ui.estoque_sem_movimentos_sub,
-          tipoVenda: ui.estoque_tipo_venda,
-          tipoCompra: ui.estoque_tipo_compra,
-          tipoEntradaNf: ui.estoque_tipo_entrada_nf,
-          tipoEntrada: ui.estoque_tipo_entrada,
-          tipoSaida: ui.estoque_tipo_saida,
-          tipoAjuste: ui.estoque_tipo_ajuste,
-          tipoDevolucao: ui.estoque_tipo_devolucao,
-          tipoTransferencia: ui.estoque_tipo_transferencia,
-          tipoAcertoInventario: m.estoque.motivo_acerto_inventario,
-          tipoPerda: m.estoque.motivo_perda,
-          tipoQuebra: m.estoque.motivo_quebra_avaria,
-          tipoOutro: m.estoque.motivo_outro,
-        }} />
-      </SectionCard>
-
-      {totalPages > 1 ? (
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="text-[11px] text-jl-fg-3">
-            {m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', String(totalPages))}
+      <CrudListShell
+        title={ui.estoque_saldos_titulo}
+        meta={
+          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption text-fg-subtle">
+            {totalCount}{' '}
+            {totalCount === 1 ? m.estoque.col_produto.toLowerCase() : m.estoque.titulo.toLowerCase()}
           </span>
-          <div className="flex items-center gap-1">
-            <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-              {ui.paginacao_anterior}
-            </PageLink>
-            {pageWindow(page, totalPages).map((p, i) =>
-              p === 'gap' ? (
-                <span key={`gap-${i}`} className="px-1 text-[11px] text-jl-fg-3">
-                  …
-                </span>
-              ) : (
-                <PageNumber key={p} href={pageHref(p)} active={p === page}>
-                  {p}
-                </PageNumber>
-              )
-            )}
-            <PageLink href={pageHref(page + 1)} disabled={page >= totalPages}>
-              {ui.paginacao_proxima}
-            </PageLink>
+        }
+        toolbar={
+          <div className="flex w-full flex-col gap-2.5">
+            <Suspense fallback={<div className="h-9" />}>
+              <FilterBar filters={filters} />
+            </Suspense>
+            {chips.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {chips.map((chip) => (
+                  <Link
+                    key={chip.key}
+                    href={hrefWithout(chip.key)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption text-fg-muted hover:text-fg"
+                  >
+                    {chip.label}
+                    <span aria-hidden className="text-fg-subtle">
+                      ✕
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </div>
-        </div>
-      ) : null}
+        }
+        footer={
+          totalPages > 1 ? (
+            <div className="flex w-full items-center justify-between gap-3">
+              <span className="text-caption text-fg-subtle">
+                {m.produtos.pag_info
+                  .replace('{{atual}}', String(page))
+                  .replace('{{total}}', String(totalPages))}
+              </span>
+              <div className="flex items-center gap-1">
+                <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
+                  {ui.paginacao_anterior}
+                </PageLink>
+                {pageWindow(page, totalPages).map((p, i) =>
+                  p === 'gap' ? (
+                    <span key={`gap-${i}`} className="px-1 text-caption text-fg-subtle">
+                      …
+                    </span>
+                  ) : (
+                    <PageNumber key={p} href={pageHref(p)} active={p === page}>
+                      {p}
+                    </PageNumber>
+                  ),
+                )}
+                <PageLink href={pageHref(page + 1)} disabled={page >= totalPages}>
+                  {ui.paginacao_proxima}
+                </PageLink>
+              </div>
+            </div>
+          ) : undefined
+        }
+      >
+        {loadError ? (
+          <div className="p-4">
+            <ErrorState dense title={loadError} />
+          </div>
+        ) : (
+          <EstoqueTable
+            linhas={linhas}
+            labels={{
+              produto: m.estoque.col_produto,
+              saldo: ui.estoque_col_saldo,
+              minimo: ui.estoque_col_minimo,
+              deficit: m.estoque.col_deficit,
+              unidade: ui.estoque_col_unidade_abrev,
+              origem: m.produtos.origem_label,
+              origemChina: ui.estoque_origem_china,
+              origemBrasilNf: ui.estoque_origem_brasil_nf,
+              origemBrasil: ui.estoque_origem_brasil,
+              vazioTitulo: ui.estoque_vazio_titulo,
+              vazioSub: ui.estoque_vazio_sub,
+              ajusteTitulo: ui.estoque_ajuste_titulo,
+              saldoAtual: ui.estoque_saldo_atual,
+              estoqueMinimo: m.estoque.col_estoque_minimo,
+              motivo: m.estoque.ajuste_motivo_label,
+              observacao: m.produtos.observacao,
+              cancelar: m.cadastro_comum.cancelar,
+              salvarAjuste: ui.estoque_salvar_ajuste,
+              salvando: m.cadastro_comum.salvando,
+              motivoAcertoInventario: m.estoque.motivo_acerto_inventario,
+              motivoEntradaCompra: m.estoque.motivo_entrada_compra,
+              motivoPerda: m.estoque.motivo_perda,
+              motivoQuebra: m.estoque.motivo_quebra_avaria,
+              motivoOutro: m.estoque.motivo_outro,
+              kardexTitulo: ui.estoque_kardex_titulo,
+              semMovimentos: ui.estoque_sem_movimentos,
+              semMovimentosSub: ui.estoque_sem_movimentos_sub,
+              tipoVenda: ui.estoque_tipo_venda,
+              tipoCompra: ui.estoque_tipo_compra,
+              tipoEntradaNf: ui.estoque_tipo_entrada_nf,
+              tipoEntrada: ui.estoque_tipo_entrada,
+              tipoSaida: ui.estoque_tipo_saida,
+              tipoAjuste: ui.estoque_tipo_ajuste,
+              tipoDevolucao: ui.estoque_tipo_devolucao,
+              tipoTransferencia: ui.estoque_tipo_transferencia,
+              tipoAcertoInventario: m.estoque.motivo_acerto_inventario,
+              tipoPerda: m.estoque.motivo_perda,
+              tipoQuebra: m.estoque.motivo_quebra_avaria,
+              tipoOutro: m.estoque.motivo_outro,
+            }}
+          />
+        )}
+      </CrudListShell>
     </div>
   )
 }
@@ -313,7 +345,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
+      <span className="cursor-not-allowed rounded-control border border-[var(--color-border)] px-2.5 py-1 text-caption text-fg-subtle opacity-50">
         {children}
       </span>
     )
@@ -321,7 +353,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
+      className="rounded-control border border-[var(--color-border)] px-2.5 py-1 text-caption text-fg-muted transition-colors hover:bg-[var(--color-surface-soft)] hover:text-fg"
     >
       {children}
     </Link>
@@ -341,12 +373,12 @@ function PageNumber({
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      className={
-        'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-[11px] font-medium transition-colors ' +
-        (active
-          ? 'border border-jl-accent/35 bg-jl-accent/10 text-jl-accent'
-          : 'border border-[var(--color-border-secondary)] text-jl-fg-3 hover:bg-jl-surface-elev hover:text-jl-fg-1')
-      }
+      className={cn(
+        'flex h-7 min-w-[28px] items-center justify-center rounded-control px-1 text-caption font-medium transition-colors',
+        active
+          ? 'border border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-brand'
+          : 'border border-[var(--color-border)] text-fg-subtle hover:bg-[var(--color-surface-soft)] hover:text-fg',
+      )}
     >
       {children}
     </Link>

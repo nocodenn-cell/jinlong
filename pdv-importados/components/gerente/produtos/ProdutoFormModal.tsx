@@ -413,7 +413,7 @@ export function ProdutoFormModal({
         dismissable
         closeLabel={m.comum.fechar}
         footer={
-          <Button type="button" className="app-btn-accent" onClick={fechar}>
+          <Button type="button" variant="primary" onClick={fechar}>
             {m.comum.fechar}
           </Button>
         }
@@ -426,17 +426,17 @@ export function ProdutoFormModal({
               : p.criado_publicado}
         </p>
         {posSalvar.estoqueInicialFalhou && posSalvar.estoqueErroDetalhe ? (
-          <p className="mt-2 text-[11px] text-jl-fg-3">{posSalvar.estoqueErroDetalhe}</p>
+          <p className="mt-2 text-caption text-fg-subtle">{posSalvar.estoqueErroDetalhe}</p>
         ) : null}
         {posSalvar.estoqueInicialFalhou ? (
-          <p className="mt-2 rounded-md border border-destructive/35 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+          <p className="mt-2 rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-3 py-2 text-caption text-[var(--color-danger-strong)]">
             {p.pos_salvar_hint_estoque_falhou}
           </p>
         ) : null}
         {!posSalvar.rascunho &&
         !posSalvar.estoqueInicialFalhou &&
         posSalvar.estoqueZerado ? (
-          <p className="mt-2 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-800">
+          <p className="mt-2 rounded-md border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-caption text-[var(--color-warning-strong)]">
             {p.aviso_estoque_zero_publicado}
           </p>
         ) : null}
@@ -444,26 +444,23 @@ export function ProdutoFormModal({
           <p className="mt-2 text-xs text-jl-fg-3">{p.pos_salvar_hint}</p>
         ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            href={estoqueHref}
-            className={
-              posSalvar.estoqueInicialFalhou
-                ? 'app-btn-accent inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold'
-                : 'app-btn-neutral inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold'
-            }
-            onClick={fechar}
+          <Button
+            asChild
+            variant={posSalvar.estoqueInicialFalhou ? 'primary' : 'secondary'}
+            size="sm"
+            className="gap-1.5"
           >
-            <Warehouse size={14} aria-hidden />
-            {p.pos_salvar_ajustar_estoque}
-          </Link>
-          <Link
-            href={etiquetaHref}
-            className="app-btn-neutral inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
-            onClick={fechar}
-          >
-            <Printer size={14} aria-hidden />
-            {p.pos_salvar_imprimir_etiqueta}
-          </Link>
+            <Link href={estoqueHref} onClick={fechar}>
+              <Warehouse size={14} aria-hidden />
+              {p.pos_salvar_ajustar_estoque}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm" className="gap-1.5">
+            <Link href={etiquetaHref} onClick={fechar}>
+              <Printer size={14} aria-hidden />
+              {p.pos_salvar_imprimir_etiqueta}
+            </Link>
+          </Button>
         </div>
       </DragonModal>
     )
@@ -487,11 +484,11 @@ export function ProdutoFormModal({
       subtitle={
         <span className="flex flex-col gap-1">
           <span
-            className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${statusChipClassName(statusChip.tone)}`}
+            className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-caption font-semibold ${statusChipClassName(statusChip.tone)}`}
           >
             {statusChip.label}
           </span>
-          <span className="text-[11px] font-normal text-jl-fg-3">{statusChip.hint}</span>
+          <span className="text-caption font-normal text-fg-subtle">{statusChip.hint}</span>
         </span>
       }
       dismissable={!saving}
@@ -501,7 +498,6 @@ export function ProdutoFormModal({
           <Button
             type="button"
             variant="secondary"
-            className="app-btn-neutral"
             onClick={fechar}
             disabled={saving}
           >
@@ -511,7 +507,6 @@ export function ProdutoFormModal({
             <Button
               type="button"
               variant="secondary"
-              className="app-btn-neutral"
               disabled={saving}
               onClick={() => void salvar({ continuar: true })}
             >
@@ -522,7 +517,6 @@ export function ProdutoFormModal({
             <Button
               type="button"
               variant="secondary"
-              className="app-btn-neutral"
               disabled={saving}
               onClick={() => void salvar({ rascunho: true })}
             >
@@ -531,7 +525,7 @@ export function ProdutoFormModal({
           ) : null}
           <Button
             type="button"
-            className="app-btn-accent"
+            variant="primary"
             disabled={saving}
             onClick={() => void salvar()}
           >

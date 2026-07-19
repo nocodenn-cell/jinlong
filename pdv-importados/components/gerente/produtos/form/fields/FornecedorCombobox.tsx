@@ -60,7 +60,8 @@ export function FornecedorCombobox({
         <Button
           type="button"
           variant="secondary"
-          className="app-btn-neutral shrink-0 px-2"
+          size="sm"
+          className="shrink-0 px-2"
           disabled={disabled}
           title={p.novo_fornecedor}
           aria-label={p.novo_fornecedor}

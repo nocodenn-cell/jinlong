@@ -22,6 +22,7 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { ErrorState } from '@/components/ui/feedback'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import {
   buscarProdutosComFiltros,
@@ -251,7 +252,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   )
 
   const countBadge = (
-    <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+    <span className="rounded-full border border-[var(--color-border-secondary)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption text-fg-subtle">
       {totalCount} {totalCount === 1 ? ui.catalogo_produto_sg : ui.catalogo_produtos_pl}
     </span>
   )
@@ -274,7 +275,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
             {chips.map((chip) => (
               <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
                 {chip.label}
-                <span aria-hidden className="text-jl-fg-3">
+                <span aria-hidden className="text-fg-subtle">
                   ✕
                 </span>
               </Link>
@@ -284,9 +285,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
       </div>
 
       {loadError ? (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
-          {loadError}
-        </div>
+        <ErrorState dense description={loadError} className="mb-4 items-start text-left" />
       ) : null}
 
       <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
@@ -302,7 +301,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
 
       {totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="text-[11px] text-jl-fg-3">
+          <span className="text-caption text-fg-subtle">
             {m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', String(totalPages))}
           </span>
           <div className="flex items-center gap-1">
@@ -311,7 +310,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
             </PageLink>
             {pageWindow(page, totalPages).map((p, i) =>
               p === 'gap' ? (
-                <span key={`gap-${i}`} className="px-1 text-[11px] text-jl-fg-3">
+                <span key={`gap-${i}`} className="px-1 text-caption text-fg-subtle">
                   …
                 </span>
               ) : (
@@ -357,7 +356,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
+      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-fg-subtle opacity-50">
         {children}
       </span>
     )
@@ -365,7 +364,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
+      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-fg-muted transition-colors hover:bg-[var(--color-surface-elevated)] hover:text-fg"
     >
       {children}
     </Link>
@@ -386,10 +385,10 @@ function PageNumber({
       href={href}
       aria-current={active ? 'page' : undefined}
       className={
-        'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-[11px] font-medium transition-colors ' +
+        'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-caption font-medium transition-colors ' +
         (active
-          ? 'border border-jl-accent/35 bg-jl-accent/10 text-jl-accent'
-          : 'border border-[var(--color-border-secondary)] text-jl-fg-3 hover:bg-jl-surface-elev hover:text-jl-fg-1')
+          ? 'border border-brand/35 bg-[var(--color-info-bg)] text-brand'
+          : 'border border-[var(--color-border-secondary)] text-fg-subtle hover:bg-[var(--color-surface-elevated)] hover:text-fg')
       }
     >
       {children}

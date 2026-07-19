@@ -47,6 +47,10 @@ type MetricCardProps = {
   className?: string
 }
 
+/**
+ * MetricCard — KPI canônico Admin (Fase 2 · Onda 4).
+ * Substitui forks legados (ui/MetricCard, gerente/MetricCard, StatCard).
+ */
 export function MetricCard({
   label,
   value,
@@ -82,26 +86,28 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'admin-v2-metric-card grid min-h-32 h-full grid-rows-[auto,1fr,auto] gap-3 rounded-lg p-4',
+        'admin-v2-metric-card grid h-full min-h-32 grid-rows-[auto,1fr,auto] gap-3 rounded-card p-4',
         className,
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {Icon ? (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-jl-card-l1-accent text-jl-accent">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-[var(--color-info-bg)] text-brand">
               <Icon size={16} strokeWidth={2} aria-hidden />
             </span>
           ) : null}
-          <span className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-jl-fg-3">
+          <span className="truncate text-caption font-semibold uppercase tracking-[var(--letter-spacing-wide)] text-fg-subtle">
             {label}
           </span>
         </div>
         {delta ? (
           <span
             className={cn(
-              'shrink-0 text-xs font-semibold tabular-nums',
-              deltaGood ? 'text-emerald-400' : 'text-red-400',
+              'shrink-0 text-small font-semibold tabular-nums',
+              deltaGood
+                ? 'text-[var(--color-success-strong)]'
+                : 'text-[var(--color-danger-strong)]',
             )}
           >
             {delta.up ? '↑' : '↓'} {delta.value}
@@ -111,22 +117,25 @@ export function MetricCard({
 
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-3xl font-semibold leading-none tabular-nums text-jl-fg-1 md:text-4xl">
+          <div className="truncate text-h2 font-semibold leading-none tabular-nums text-fg md:text-h1">
             {value}
           </div>
         </div>
-        <div className="flex h-[44px] w-[100px] shrink-0 items-center justify-center">
+        <div className="flex h-11 w-24 shrink-0 items-center justify-center">
           {sparkData.length >= 2 ? (
-            <canvas ref={canvasRef} className="h-[44px] w-[100px] shrink-0" aria-hidden />
+            <canvas ref={canvasRef} className="h-11 w-24 shrink-0" aria-hidden />
           ) : (
-            <div className="h-[44px] w-[100px]" aria-hidden />
+            <div className="h-11 w-24" aria-hidden />
           )}
         </div>
       </div>
 
       <div className="min-h-6">
-        {hint ? <p className="text-[11px] text-jl-fg-3">{hint}</p> : null}
+        {hint ? <p className="text-caption text-fg-subtle">{hint}</p> : null}
       </div>
     </div>
   )
 }
+
+/** @deprecated Use MetricCard — alias de consolidação Onda 4. */
+export const StatCard = MetricCard

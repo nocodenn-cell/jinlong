@@ -3,6 +3,8 @@ import { Noto_Sans_SC } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import '@/styles/theme-oriental.css'
+/* DS Onda 2 — depois do oriental/jl para prevalecer (Button, focus, bridges) */
+import '@/styles/ds/index.css'
 import { AppThemeProvider } from '@/components/theme/AppThemeProvider'
 import { HydrationFix } from '@/components/ui/HydrationFix'
 import React from 'react'

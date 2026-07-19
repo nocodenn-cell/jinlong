@@ -4,6 +4,9 @@ import { Trash2, Plus, Minus } from 'lucide-react'
 import type { ItemCarrinho } from '@/lib/etiqueta/types'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { formatDecimalBRL } from '@/lib/format/money'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/feedback'
+import { SectionCard } from '@/components/ui/admin-v2'
 
 type Props = {
   itens: ItemCarrinho[]
@@ -13,13 +16,14 @@ type Props = {
   idioma: Idioma
 }
 
-const LABELS: Record<Idioma, { quantidade: string; remover: string; limpar: string; total: string; preco: string }> = {
+const LABELS: Record<Idioma, { quantidade: string; remover: string; limpar: string; total: string; preco: string; vazio: string }> = {
   pt: {
     quantidade: 'Qtd',
     remover: 'Remover',
     limpar: 'Limpar Carrinho',
     total: 'Total',
     preco: 'Preço',
+    vazio: 'Carrinho vazio',
   },
   zh: {
     quantidade: '数量',
@@ -27,6 +31,7 @@ const LABELS: Record<Idioma, { quantidade: string; remover: string; limpar: stri
     limpar: '清空购物车',
     total: '总计',
     preco: '价格',
+    vazio: '购物车为空',
   },
 }
 
@@ -42,75 +47,76 @@ export function EtiquetaCarrinho({
 
   if (itens.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
-        <p className="text-sm text-gray-500">
-          {idioma === 'zh' ? '购物车为空' : 'Carrinho vazio'}
-        </p>
-      </div>
+      <SectionCard className="border-dashed">
+        <EmptyState title={labels.vazio} />
+      </SectionCard>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">
-          {labels.total}: {totalEtiquetas}
-        </h3>
-        <button
-          type="button"
-          onClick={onLimpar}
-          className="rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
-        >
+    <SectionCard
+      title={`${labels.total}: ${totalEtiquetas}`}
+      action={
+        <Button type="button" variant="ghost" size="sm" onClick={onLimpar}>
           {labels.limpar}
-        </button>
-      </div>
-
+        </Button>
+      }
+    >
       <div className="space-y-2">
         {itens.map((item) => (
           <div
             key={item.produtoId}
-            className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-sm"
+            className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
           >
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium">{item.nome}</p>
-              <p className="text-xs text-gray-500">{item.codigoBarras}</p>
-              <p className="text-xs font-semibold text-gray-700">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-body font-medium">{item.nome}</p>
+              <p className="text-caption text-fg-muted">{item.codigoBarras}</p>
+              <p className="text-caption font-semibold text-fg">
                 {labels.preco}: R$ {formatDecimalBRL(item.precoVarejo)}
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
                 onClick={() => onAtualizarQuantidade(item.produtoId, Math.max(1, item.quantidade - 1))}
                 disabled={item.quantidade <= 1}
-                className="rounded-md p-1 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                aria-label={`${labels.quantidade} -1`}
               >
                 <Minus className="h-4 w-4" />
-              </button>
+              </Button>
 
-              <span className="w-8 text-center text-sm font-medium">{item.quantidade}</span>
+              <span className="w-8 text-center text-body font-medium">{item.quantidade}</span>
 
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
                 onClick={() => onAtualizarQuantidade(item.produtoId, item.quantidade + 1)}
-                className="rounded-md p-1 hover:bg-gray-100"
+                aria-label={`${labels.quantidade} +1`}
               >
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
 
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
               onClick={() => onRemover(item.produtoId)}
-              className="rounded-md p-2 text-destructive hover:bg-destructive/10"
               title={labels.remover}
+              aria-label={labels.remover}
             >
               <Trash2 className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         ))}
       </div>
-    </div>
+    </SectionCard>
   )
 }

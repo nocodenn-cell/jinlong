@@ -38,7 +38,13 @@ function textInputs(): HTMLInputElement[] {
 }
 
 function commitButton(): HTMLButtonElement {
-  return container.querySelector<HTMLButtonElement>('button.app-btn-accent')!
+  const btn = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+    (b.textContent ?? '').includes(m.produtos.bulk_commit_zero.split(' ')[0] ?? 'Salvar'),
+  )
+  if (!btn) {
+    throw new Error('Commit button not found')
+  }
+  return btn
 }
 
 // Colunas visíveis (sem atualização por id): nome, codigo, preco_varejo, atacado, gatilho, unidade, obs, origem, tem_nf, ativo

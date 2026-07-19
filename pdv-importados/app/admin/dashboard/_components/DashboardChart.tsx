@@ -120,15 +120,15 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
   }, [labels, data])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--color-border-secondary)]">
+    <div className="overflow-hidden rounded-card border border-[var(--color-border)]">
       <div className="flex items-start justify-between px-5 py-4">
         <div>
-          <p className="text-[13px] font-medium text-jl-fg-1">{titleLabel}</p>
-          <p className="mt-0.5 text-[11px] text-jl-fg-3">{subtitleLabel}</p>
+          <p className="text-small font-medium text-fg">{titleLabel}</p>
+          <p className="mt-0.5 text-caption text-fg-subtle">{subtitleLabel}</p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] text-jl-fg-3">{peakLabel}</p>
-          <p className="text-[13px] font-medium text-jl-fg-1">
+          <p className="text-caption text-fg-subtle">{peakLabel}</p>
+          <p className="text-small font-medium text-fg">
             {peakValue} às {peakHour}
           </p>
         </div>

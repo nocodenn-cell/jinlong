@@ -68,6 +68,10 @@ const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin/dashboard': ALL_ADMIN_PROFILES,
   'route:/admin/catalogo': ALL_ADMIN_PROFILES,
   'route:/admin/clientes': ALL_ADMIN_PROFILES,
+  'route:/admin/funcionarios': ALL_ADMIN_PROFILES,
+  'route:/admin/implantacao': ALL_ADMIN_PROFILES,
+  /** Wizard interno FastProduct — somente perfil ADMIN. */
+  'route:/admin/provisionamento': ['ADMIN'] as const,
   'route:/admin/fornecedores': ALL_ADMIN_PROFILES,
   'route:/admin/financeiro': ALL_ADMIN_PROFILES,
   'route:/admin/vendas': ALL_ADMIN_PROFILES,

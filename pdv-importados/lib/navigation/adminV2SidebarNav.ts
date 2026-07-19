@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   ClipboardCheck,
   ClipboardList,
+  Rocket,
   FileBarChart2,
   Inbox,
   LayoutDashboard,
@@ -14,8 +15,10 @@ import {
   Settings,
   ShieldOff,
   ShoppingCart,
+  Store,
   Tag,
   Truck,
+  UserCog,
   Users,
 } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -30,6 +33,8 @@ export type AdminV2NavItem = {
   labelPt?: string
   labelCn?: string
   hint?: string
+  /** Exibir só para perfil ADMIN (equipe interna FastProduct). */
+  adminOnly?: boolean
 }
 
 export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
@@ -37,6 +42,15 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'vendas', href: ROUTES.admin.vendas, icon: ShoppingCart, labelOverridePt: 'Vendas e caixa', dictKey: 'vendas' },
   { id: 'produtos', href: ROUTES.admin.catalogo, icon: Tag, labelOverridePt: 'Catálogo', dictKey: 'produtos' },
   { id: 'clientes', href: ROUTES.admin.clientes, icon: Users, labelOverridePt: 'Clientes', dictKey: 'clientes' },
+  {
+    id: 'funcionarios',
+    href: ROUTES.admin.funcionarios,
+    icon: UserCog,
+    labelOverridePt: 'Funcionários',
+    labelCn: '员工',
+    dictKey: 'funcionarios',
+    hint: 'Cadastro de operadores e gerentes da loja.',
+  },
   { id: 'estoque', href: ROUTES.admin.estoque, icon: Package, labelOverridePt: 'Estoque', dictKey: 'estoque' },
   {
     id: 'auditoria',
@@ -60,6 +74,25 @@ export const ADMIN_V2_EXPANDED_ITEMS: readonly AdminV2NavItem[] = [
 
 export const ADMIN_V2_SISTEMA_ITEMS: readonly AdminV2NavItem[] = [
   { id: 'configuracoes', href: ROUTES.admin.configuracoes, icon: Settings, labelOverridePt: 'Configurações', dictKey: 'configuracoes' },
+  {
+    id: 'provisionamento',
+    href: ROUTES.admin.provisionamento,
+    icon: Store,
+    labelOverridePt: 'Provisionamento',
+    labelCn: '开通店铺',
+    dictKey: 'provisionamento',
+    hint: 'Wizard interno: criar loja + DONO sem SQL.',
+    adminOnly: true,
+  },
+  {
+    id: 'implantacao',
+    href: ROUTES.admin.implantacao,
+    icon: Rocket,
+    labelOverridePt: 'Implantação / GO-LIVE',
+    labelCn: '上线清单',
+    dictKey: 'implantacao',
+    hint: 'Gate oficial de GO-LIVE com checklist persistido.',
+  },
   {
     id: 'diagnostico-caixa',
     href: ROUTES.admin.diagnosticoCaixa,
