@@ -34,6 +34,7 @@ function stubModel(storeId: string): DecisionIntelligenceReadModel {
     decisionHistory: { storeId, items: [] },
     decisionPerformance: { storeId, samples: [], sampleCount: 0 },
     pendingReviews: { storeId, items: [] },
+    governedMemory: { storeId, items: [], entryCount: 0 },
   }
 }
 

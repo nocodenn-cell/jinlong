@@ -3,6 +3,7 @@ import {
   createDecisionReadModelAdapter,
   createSupabaseDecisionRecordRepository,
   createSupabaseDecisionSnapshotRepository,
+  createSupabaseGovernedMemoryRepository,
   type DecisionIntelligenceReadModel,
   type DecisionReadModelPort,
 } from '@/lib/decision-intelligence'
@@ -23,6 +24,7 @@ export async function loadIntelligenceReadModel(
   const readModel = createDecisionReadModelAdapter({
     snapshots: createSupabaseDecisionSnapshotRepository(supabase),
     decisions: createSupabaseDecisionRecordRepository(supabase),
+    governedMemory: createSupabaseGovernedMemoryRepository(supabase),
   })
   return readModel.getForLoja(lojaId)
 }

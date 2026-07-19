@@ -1,5 +1,6 @@
 import type { DecisionSnapshot } from '@shared-core/src/intelligence'
 import type { DecisionRecord } from '../models/decision-record'
+import type { GovernedMemoryEntry } from '../models/governed-memory'
 import type {
   CriticalAlertsProjection,
   DailyActionPlanProjection,
@@ -7,6 +8,7 @@ import type {
   DecisionIntelligenceReadModel,
   DecisionPerformanceProjection,
   ExecutiveDashboardProjection,
+  GovernedMemoryProjection,
   PendingReviewsProjection,
   RecommendationQueueProjection,
 } from './models'
@@ -14,6 +16,7 @@ import type {
 export type BuildReadModelInput = {
   snapshot: DecisionSnapshot | null
   records: readonly DecisionRecord[]
+  governedMemory?: readonly GovernedMemoryEntry[]
   /** Versão do snapshot persistido (meta), se houver. */
   snapshotVersion?: string | null
   projectedAt?: string
@@ -246,8 +249,28 @@ function projectPendingReviews(
   return { storeId, items }
 }
 
+function projectGovernedMemory(
+  storeId: string,
+  entries: readonly GovernedMemoryEntry[],
+): GovernedMemoryProjection {
+  const items = entries.map((e) => ({
+    entryId: e.id,
+    decisionId: e.decisionId,
+    recommendationId: e.recommendationId,
+    eventKind: e.eventKind,
+    decisionStatus: e.decisionStatus,
+    decisionReason: e.decisionReason,
+    noteCodes: e.noteCodes,
+    metricCode: e.metricCode,
+    expectedValue: e.expectedValue,
+    actualValue: e.actualValue,
+    recordedAt: e.recordedAt,
+  }))
+  return { storeId, items, entryCount: items.length }
+}
+
 /**
- * Builder puro: Snapshot + Records → projeções.
+ * Builder puro: Snapshot + Records (+ Memory governada) → projeções.
  * Sem I/O. Sem recalcular regras do Core.
  */
 export function buildDecisionIntelligenceReadModel(
@@ -257,6 +280,7 @@ export function buildDecisionIntelligenceReadModel(
   const storeId = snapshot?.storeId ?? records[0]?.lojaId ?? ''
   const projectedAt = input.projectedAt ?? new Date().toISOString()
   const snapshotVersion = input.snapshotVersion ?? null
+  const governed = input.governedMemory ?? []
 
   return {
     storeId,
@@ -269,5 +293,6 @@ export function buildDecisionIntelligenceReadModel(
     decisionHistory: projectDecisionHistory(storeId, records),
     decisionPerformance: projectDecisionPerformance(storeId, records),
     pendingReviews: projectPendingReviews(snapshot, records),
+    governedMemory: projectGovernedMemory(storeId, governed),
   }
 }

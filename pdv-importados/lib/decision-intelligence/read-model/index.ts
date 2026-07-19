@@ -11,6 +11,8 @@ export type {
   DecisionPerformanceItem,
   DecisionPerformanceProjection,
   ExecutiveDashboardProjection,
+  GovernedMemoryItem,
+  GovernedMemoryProjection,
   PendingReviewItem,
   PendingReviewsProjection,
   RecommendationQueueItem,

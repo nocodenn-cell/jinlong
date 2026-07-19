@@ -1,4 +1,5 @@
 import type { DecisionReasonCode, DecisionRecordStatus, MeasurableOutcome } from '../models/decision-record'
+import type { GovernedMemoryEventKind } from '../models/governed-memory'
 
 /**
  * Projeções de leitura — apenas campos derivados por mapeamento/filtro.
@@ -156,6 +157,27 @@ export type PendingReviewsProjection = {
   items: readonly PendingReviewItem[]
 }
 
+/** Memory governada — outcomes humanos (sem alterar regras). */
+export type GovernedMemoryItem = {
+  entryId: string
+  decisionId: string
+  recommendationId: string
+  eventKind: GovernedMemoryEventKind
+  decisionStatus: DecisionRecordStatus
+  decisionReason: DecisionReasonCode
+  noteCodes: readonly string[]
+  metricCode: string | null
+  expectedValue: number | null
+  actualValue: number | null
+  recordedAt: string
+}
+
+export type GovernedMemoryProjection = {
+  storeId: string
+  items: readonly GovernedMemoryItem[]
+  entryCount: number
+}
+
 export type DecisionIntelligenceReadModel = {
   storeId: string
   projectedAt: string
@@ -167,4 +189,5 @@ export type DecisionIntelligenceReadModel = {
   decisionHistory: DecisionHistoryProjection
   decisionPerformance: DecisionPerformanceProjection
   pendingReviews: PendingReviewsProjection
+  governedMemory: GovernedMemoryProjection
 }

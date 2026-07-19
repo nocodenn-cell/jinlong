@@ -4,6 +4,7 @@ import { DailyActionPlanPanel } from './DailyActionPlanPanel'
 import { DecisionHistoryPanel } from './DecisionHistoryPanel'
 import { DecisionPerformancePanel } from './DecisionPerformancePanel'
 import { ExecutiveDashboardPanel } from './ExecutiveDashboardPanel'
+import { GovernedMemoryPanel } from './GovernedMemoryPanel'
 import { PendingReviewsPanel } from './PendingReviewsPanel'
 import { RecommendationQueuePanel } from './RecommendationQueuePanel'
 
@@ -33,6 +34,7 @@ export function IntelligenceCockpit({ model }: Props) {
         <DecisionHistoryPanel data={model.decisionHistory} />
         <DecisionPerformancePanel data={model.decisionPerformance} />
       </div>
+      <GovernedMemoryPanel data={model.governedMemory} />
     </div>
   )
 }

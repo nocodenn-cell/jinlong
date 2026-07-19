@@ -40,6 +40,19 @@ export type {
 export { createInMemoryDecisionRecordRepository } from './adapters/in-memory-decision-record-repository'
 export { createSupabaseDecisionRecordRepository } from './adapters/supabase-decision-record-repository'
 
+export type {
+  GovernedMemoryCreateInput,
+  GovernedMemoryEntry,
+  GovernedMemoryEventKind,
+} from './models/governed-memory'
+export type {
+  GovernedMemoryRepositoryPort,
+  GovernedMemorySaveResult,
+} from './ports/governed-memory-repository'
+export { createInMemoryGovernedMemoryRepository } from './adapters/in-memory-governed-memory-repository'
+export { createSupabaseGovernedMemoryRepository } from './adapters/supabase-governed-memory-repository'
+export { recordGovernedMemoryFromDecision } from './governed-feedback'
+
 export {
   buildDecisionIntelligenceReadModel,
   type BuildReadModelInput,
@@ -49,6 +62,7 @@ export {
   type DecisionIntelligenceReadModel,
   type DecisionPerformanceProjection,
   type ExecutiveDashboardProjection,
+  type GovernedMemoryProjection,
   type PendingReviewsProjection,
   type RecommendationQueueProjection,
 } from './read-model'
