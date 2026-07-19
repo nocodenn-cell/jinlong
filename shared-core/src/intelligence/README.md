@@ -6,7 +6,8 @@ Cycle 0 = fundação (contratos, registry, gates, ports).
 Cycle 1 = Engine Loop (`runEngineLoop` → Snapshot).  
 Cycle 2 = KPI Derivation (`deriveKpis`) — weakest-link confidence.  
 Cycle 3 = Analysis Engine (`runAnalysisEngine`) — Findings; **não** recomenda ações.  
-Cycle 4 = **Recommendation Engine** (`runRecommendationEngine`) — opções de revisão a partir de Findings. Sem Alert / SQL / `/admin` DI.
+Cycle 4 = Recommendation Engine (`runRecommendationEngine`) — opções de revisão.  
+Cycle 5 = **Alert Engine** (`runAlertEngine`) — atenção priorizada a partir de Recommendations. Sem Action / SQL / `/admin` DI.
 
 ## Propósito
 
@@ -122,10 +123,10 @@ Separação: `analysis/` identifica · `recommendation/` sugere opções · `pol
 
 ## Como adicionar um novo Alert
 
-1. Contrato = tipo `Alert`.  
-2. Cycle 5: detector em `alerts/` com `detectorId` + `detectorVersion`.  
-3. Correlacionar auditoria por refs — não duplicar `venda_eventos` / liquidações.  
-4. Opcional: ligar a `recommendationId`.
+1. Contrato = `Alert` / `DecisionAlert` (`sourceRecommendationIds`, urgency, confidence).  
+2. Regra em `alerts/rules/` com `detectorId` + `detectorVersion`.  
+3. Sempre a partir de Recommendation; urgency ≠ inflar confidence.  
+4. Passar `assertAlertDeterminism`. Sem Action / sem mutar Rec.
 
 ## Pastas reservadas (cycle lock)
 
@@ -135,7 +136,7 @@ Separação: `analysis/` identifica · `recommendation/` sugere opções · `pol
 | `analyzers/` | 3+ | só README lock |
 | `recommendation/` · `policy/` | 4 | engine + limites (implementado) |
 | `recommendations/` (legado lock) | — | preferir `recommendation/` |
-| `alerts/` | 5+ | só README lock |
+| `alerts/` | 5 | Alert Engine (implementado) |
 | `memory/` | 7+ | só README lock |
 
 Action Plan = Cycle 6 (contratos já em `contracts/action-plan.ts`).  

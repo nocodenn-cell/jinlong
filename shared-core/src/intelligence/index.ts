@@ -1,6 +1,6 @@
 /**
  * Decision Intelligence — barrel público (ADR-011).
- * Cycle 4: Recommendation Engine (Findings → opções de revisão). Sem Alert/UI.
+ * Cycle 5: Alert Engine (Recommendations → atenção priorizada). Sem Action/UI.
  */
 
 export type { IntelligenceErrorCode } from './errorCodes'
@@ -30,6 +30,9 @@ export type {
   AlertSeverity,
   AlertStatus,
   AlertSuggestedAction,
+  AlertUrgency,
+  DecisionAlert,
+  DecisionAlertCore,
   AnalysisDomain,
   AnalysisEngineInput,
   AnalysisEvidence,
@@ -170,3 +173,20 @@ export {
   MIN_RECOMMENDATION_OPERATIONAL_CONFIDENCE,
 } from './policy'
 export type { ForbiddenOperationalActionCode } from './policy'
+
+export type {
+  AlertEngineInput,
+  AlertRule,
+  AlertRuleContext,
+  AlertSnapshot,
+  SeverityPlan,
+} from './alerts'
+export {
+  ALERT_RULES,
+  assertAlertDeterminism,
+  buildAlertFromRecommendation,
+  computeAlertUrgency,
+  listAlertDetectorIds,
+  planSeverityFromRecommendation,
+  runAlertEngine,
+} from './alerts'

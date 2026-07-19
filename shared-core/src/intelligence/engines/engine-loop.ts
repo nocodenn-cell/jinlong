@@ -7,6 +7,7 @@ import {
   type ProviderLoadBatch,
 } from './fact-aggregator'
 import { deriveKpis } from './kpi-derivation-engine'
+import { runAlertEngine } from '../alerts/alert-engine'
 import { createRecommendationEngine } from '../recommendation/recommendation-engine'
 import { assertRecommendationInputPurity } from './recommendation-engine-stub'
 
@@ -82,7 +83,7 @@ function buildMetrics(
 
 /**
  * Engine Loop — pipeline puro.
- * Providers → Aggregate → KPIs → Analysis → Recommendation → Snapshot.
+ * Providers → Aggregate → KPIs → Analysis → Recommendation → Alert → Snapshot.
  */
 export async function runEngineLoop(options: EngineLoopOptions): Promise<DecisionSnapshot> {
   const started = Date.now()
@@ -125,6 +126,12 @@ export async function runEngineLoop(options: EngineLoopOptions): Promise<Decisio
     options.recommendationEngine ?? createRecommendationEngine()
   const recommendations = await recommendationEngine.evaluate(recInput)
 
+  const alertSnapshot = runAlertEngine({
+    storeId: options.storeId,
+    requestedAt,
+    recommendations,
+  })
+
   return {
     timestamp: requestedAt,
     storeId: options.storeId,
@@ -140,7 +147,7 @@ export async function runEngineLoop(options: EngineLoopOptions): Promise<Decisio
     confidenceSummary: aggregate.confidenceSummary,
     gatesEncountered: aggregate.gatesEncountered,
     recommendations,
-    alerts: [],
+    alerts: alertSnapshot.alerts,
     metrics: buildMetrics(aggregate, kpi, analysis, Date.now() - started),
   }
 }

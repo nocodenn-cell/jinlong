@@ -5,6 +5,9 @@ export type {
   AlertSeverity,
   AlertStatus,
   AlertSuggestedAction,
+  AlertUrgency,
+  DecisionAlert,
+  DecisionAlertCore,
 } from './alert'
 
 export type {

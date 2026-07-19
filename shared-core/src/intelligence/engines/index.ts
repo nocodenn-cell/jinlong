@@ -21,3 +21,4 @@ export {
   createRecommendationEngine,
   runRecommendationEngine,
 } from '../recommendation/recommendation-engine'
+export { runAlertEngine } from '../alerts/alert-engine'

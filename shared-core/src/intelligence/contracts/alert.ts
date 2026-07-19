@@ -2,14 +2,15 @@ import type {
   EntityRef,
   IntelligenceSlice,
   MoneyAmount,
+  OperationalConfidence,
   TimeWindow,
 } from '../types/common'
 import type { Evidence } from '../types/evidence'
 import type { KpiId } from './kpi'
 
 /**
- * Alert Contract — ADR-011.
- * Cycle 0: contrato apenas. Sem detectors.
+ * Alert Contract — ADR-011 + Cycle 5 DecisionAlert fields.
+ * Alert ≠ Recommendation; não executa Action.
  */
 
 export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
@@ -34,17 +35,36 @@ export type AlertScope = {
   entityRef?: EntityRef
 }
 
+/** Urgência temporal — ortogonal à confidence. */
+export type AlertUrgency = {
+  score: number
+  reason: string
+}
+
 /**
- * Alerta derivado. Integração com Auditoria = correlação por refs,
- * sem duplicar fatos operacionais (ADR-011).
+ * Campos Cycle 5 (DecisionAlert).
+ * evidence no doc de missão = `evidences` no contrato ADR.
  */
-export type Alert = {
+export type DecisionAlertCore = {
   id: string
-  /** Origem */
+  severity: AlertSeverity
+  sourceRecommendationIds: readonly string[]
+  titleCode: string
+  operationalConfidence: OperationalConfidence
+  urgency: AlertUrgency
+  /** Justificativa da severity (não confundir com confidence). */
+  severityJustificationCode: string
+  createdAt?: string
+}
+
+/**
+ * Alerta derivado de Recommendation + urgency + context.
+ * Integração com Auditoria = correlação por refs (ADR-011).
+ */
+export type Alert = DecisionAlertCore & {
   detectorId: string
   detectorVersion: string
   sourceSlice: IntelligenceSlice
-  severity: AlertSeverity
   impact: AlertImpact
   evidences: readonly Evidence[]
   suggestedAction?: AlertSuggestedAction
@@ -54,9 +74,11 @@ export type Alert = {
   status: AlertStatus
   dedupeKey: string
   detectedAt: string
-  /** Refs a timeline operacional — não substituem /admin/auditoria */
   operationalEventRefs?: readonly {
     source: string
     id: string
   }[]
 }
+
+/** Alias Cycle 5 — mesma entidade persistida no snapshot. */
+export type DecisionAlert = Alert
