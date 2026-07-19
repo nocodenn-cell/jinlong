@@ -21,3 +21,21 @@ export {
   persistDecisionSnapshotAsync,
 } from './persist-decision-snapshot'
 export type { PersistDecisionSnapshotOptions } from './persist-decision-snapshot'
+
+export {
+  EMPTY_TIMED_OUTCOMES,
+  type DecisionReasonCode,
+  type DecisionRecord,
+  type DecisionRecordCreateInput,
+  type DecisionRecordOutcomePatch,
+  type DecisionRecordStatus,
+  type DecisionTimedOutcomes,
+  type MeasurableOutcome,
+  type TimedOutcomeSlot,
+} from './models/decision-record'
+export type {
+  DecisionRecordRepositoryPort,
+  DecisionRecordSaveResult,
+} from './ports/decision-record-repository'
+export { createInMemoryDecisionRecordRepository } from './adapters/in-memory-decision-record-repository'
+export { createSupabaseDecisionRecordRepository } from './adapters/supabase-decision-record-repository'

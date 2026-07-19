@@ -48,6 +48,7 @@ public.decision_snapshots
 
 ## Ordem
 
-1. Este documento + migration + porta + adapters + testes  
-2. Checkpoint  
-3. Fase 2 DecisionRecord  
+1. ✅ Este documento + migration + porta + adapters + testes  
+2. ✅ Checkpoint `di-persist-phase-1`  
+3. ✅ Fase 2 DecisionRecord (`DECISION_INTELLIGENCE_DECISION_RECORD.md`)  
+4. Fase 3 Read Model  
