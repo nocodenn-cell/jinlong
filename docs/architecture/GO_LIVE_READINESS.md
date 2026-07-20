@@ -5,6 +5,7 @@
 | **Data** | 2026-07-19 |
 | **Modo** | **War Room** — só bugs P0 da homologação (sem features) |
 | **Aceite mensurável** | [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) |
+| **Backlog pós-War Room** | [GO_LIVE_BACKLOG_PRIORIDADES.md](./GO_LIVE_BACKLOG_PRIORIDADES.md) |
 | **PR** | [#220](https://github.com/nocodenn-cell/fastproduct/pull/220) |
 | **Branch** | `loop/1-p0-dados-homologacao` |
 | **DI** | Congelada — não bloqueia ERP operacional deste PR |
