@@ -3,6 +3,8 @@
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-07-19 |
+| **Modo** | **War Room** — só bugs P0 da homologação (sem features) |
+| **Aceite mensurável** | [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) |
 | **PR** | [#220](https://github.com/nocodenn-cell/fastproduct/pull/220) |
 | **Branch** | `loop/1-p0-dados-homologacao` |
 | **DI** | Congelada — não bloqueia ERP operacional deste PR |
@@ -22,7 +24,7 @@
 | Migrations / RLS / Guards | **GO** (legado main + `check:entity-ssot`) | — | **GO técnico** |
 | CI GitHub Actions | **NO-GO infra** | spending limit | **human gate** |
 
-**Critério de GO final do módulo:** técnico GO **e** roteiro humano Onda 2 PASS.
+**Critério de GO final do módulo:** técnico GO **e** todos os cenários obrigatórios em [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) = **PASS**.
 
 ## Pendências P0 restantes
 

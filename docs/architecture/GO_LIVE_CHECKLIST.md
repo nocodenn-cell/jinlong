@@ -62,6 +62,8 @@ Na UI `/admin/implantacao` → **Validar dados de homologação**:
 
 ### Operação (sem SQL / sem Studio)
 
+**SSoT de aceite mensurável (War Room):** [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) — marcar PASS/FAIL por cenário.
+
 - [ ] Login
 - [ ] Abrir caixa
 - [ ] Cadastrar cliente (`/admin/clientes`)

@@ -2,10 +2,11 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Status** | Em execução (Engine Loop Go-Live) |
+| **Status** | **War Room** — homologação; só correção P0 |
 | **Gate** | APROVADO COM RESSALVAS (2026-07-19) |
+| **Aceite** | [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) |
 | **DI** | Core v1.0 / Wave A congelados — sem Wave B |
-| **Branch ciclo 1** | `loop/1-p0-dados-homologacao` |
+| **Branch** | `loop/1-p0-dados-homologacao` (PR #220) |
 
 ## Ordem
 
