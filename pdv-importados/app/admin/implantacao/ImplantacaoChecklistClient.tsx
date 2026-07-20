@@ -20,6 +20,8 @@ import {
   type ImplantacaoSecao,
   type ItemStatus,
 } from './implantacaoCatalog'
+import { montarTimeline } from './evidenciaImplantacao'
+import { ImplantacaoTimeline } from './ImplantacaoTimeline'
 
 export type ImplantacaoLabels = {
   gateNaoPronto: string
@@ -49,6 +51,9 @@ export type ImplantacaoLabels = {
   validandoDados: string
   dadosOk: string
   dadosFalha: string
+  timelineTitulo: string
+  timelineVazio: string
+  evidenciaHint: string
   secoes: Record<ImplantacaoSecao, string>
   itens: Record<string, string>
 }
@@ -191,6 +196,7 @@ export function ImplantacaoChecklistClient({
   }
 
   const locked = snap.goAutorizado
+  const timeline = useMemo(() => montarTimeline(snap.itens), [snap.itens])
 
   return (
     <div className="space-y-6">
@@ -209,8 +215,16 @@ export function ImplantacaoChecklistClient({
         ) : null}
       </div>
 
+      <ImplantacaoTimeline
+        titulo={L.timelineTitulo}
+        vazio={L.timelineVazio}
+        eventos={timeline}
+        locale={locale}
+        labelItem={(key) => L.itens[key] ?? key}
+      />
+
       {!locked ? (
-        <div className="rounded-xl border border-jl-border-1 bg-jl-surface-soft p-4">
+        <div className="rounded-xl border border-jl-border-1 bg-jl-surface-soft p-4 space-y-2">
           <Button
             type="button"
             variant="outline"
@@ -220,6 +234,7 @@ export function ImplantacaoChecklistClient({
           >
             {busyDados ? L.validandoDados : L.validarDados}
           </Button>
+          <p className="text-[11px] text-jl-fg-3">{L.evidenciaHint}</p>
         </div>
       ) : null}
 

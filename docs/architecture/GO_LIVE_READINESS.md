@@ -20,7 +20,7 @@
 | Financeiro | **GO** (AR liquidar + AP pagar/cancel + NF-e only) | pendente amostra real | **NO-GO** até P0-HOM |
 | Fiscal Stub | **GO** (enqueue Stub + fila + aviso UI) | pendente smoke pós-venda | **NO-GO** até P0-HOM |
 | Auditoria | **GO** (`/admin/auditoria`) | pendente eventos na prova | **NO-GO** até P0-HOM |
-| Implantação | **GO** (checklist + P0-DADOS) | pendente autorizar GO | **NO-GO** até P0-HOM |
+| Implantação | **GO** (checklist + evidência + timeline + execuções 1/2) | pendente autorizar GO | **NO-GO** até P0-HOM |
 | Decision Intelligence | **GO** (branch própria, read-only) | fora deste PR | **N/A ERP** |
 | Migrations / RLS / Guards | **GO** (legado main + `check:entity-ssot`) | — | **GO técnico** |
 | CI GitHub Actions | **NO-GO infra** | spending limit | **human gate** |

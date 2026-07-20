@@ -20,6 +20,7 @@ import {
   type DadosHomologacaoGap,
   type DadosHomologacaoSnapshot,
 } from './homologacaoDados'
+import { erroEvidenciaConcluido } from './evidenciaImplantacao'
 
 export type ChecklistItemRow = {
   key: string
@@ -221,6 +222,12 @@ export async function atualizarItemImplantacaoAction(input: {
   const parsed = UpdateItemSchema.safeParse(input)
   if (!parsed.success) return fail('Dados inválidos.')
   if (!itemDefByKey(parsed.data.itemKey)) return fail('Item desconhecido.')
+
+  const evidenciaErr = erroEvidenciaConcluido(
+    parsed.data.status,
+    parsed.data.observacoes,
+  )
+  if (evidenciaErr) return fail(evidenciaErr)
 
   try {
     const supabase = await createClient()

@@ -1,5 +1,6 @@
 /**
  * Coleta contagens da loja para P0-DADOS (I/O Supabase).
+ * Falhas de query propagam — não mascarar como zero (falso gap).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -15,7 +16,9 @@ async function countEq(
     q = q.eq(k, v)
   }
   const { count, error } = await q
-  if (error) return 0
+  if (error) {
+    throw new Error(`P0-DADOS: falha ao contar ${table}: ${error.message}`)
+  }
   return count ?? 0
 }
 
@@ -44,23 +47,35 @@ export async function coletarDadosHomologacao(
     countEq(supabase, 'fornecedores', { loja_id: lojaId }),
   ])
 
-  const { count: estoqueCount } = await supabase
+  const { count: estoqueCount, error: estoqueErr } = await supabase
     .from('estoque')
     .select('id', { count: 'exact', head: true })
     .eq('loja_id', lojaId)
     .gt('quantidade_atual', 0)
 
-  const { data: pdv } = await supabase
+  if (estoqueErr) {
+    throw new Error(`P0-DADOS: falha ao contar estoque: ${estoqueErr.message}`)
+  }
+
+  const { data: pdv, error: pdvErr } = await supabase
     .from('pdv_config')
     .select('loja_id')
     .eq('loja_id', lojaId)
     .maybeSingle()
 
-  const { data: loja } = await supabase
+  if (pdvErr) {
+    throw new Error(`P0-DADOS: falha ao ler pdv_config: ${pdvErr.message}`)
+  }
+
+  const { data: loja, error: lojaErr } = await supabase
     .from('lojas')
     .select('id, nome')
     .eq('id', lojaId)
     .maybeSingle()
+
+  if (lojaErr) {
+    throw new Error(`P0-DADOS: falha ao ler loja: ${lojaErr.message}`)
+  }
 
   return {
     donosAtivos,

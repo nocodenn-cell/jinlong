@@ -31,12 +31,12 @@
 | Revogar GO | **EXISTS** | `revogarGoLiveAction` |
 | Observações por item | **EXISTS** | `observacoes` |
 | Validar dados (P0-DADOS) | **EXISTS** | botão + `homologacao.dados` |
-| Evidências (print/log/anexo) | **GAP** | só em markdown ACEITE — sem storage na UI |
-| Timeline de validações | **GAP** | sem evento/`concluido_em` agregado em UI timeline |
-| Histórico de homologações | **GAP** | sem log de execuções #1/#2 do roteiro |
+| Evidências (texto/ID/log) | **EXISTS** | coluna Evidência = `observacoes`; CONCLUIDO bloqueado sem evidência |
+| Timeline de validações | **EXISTS** | `ImplantacaoTimeline` a partir de `concluido_em` |
+| Histórico execuções #1/#2 | **EXISTS** | itens obrigatórios `homologacao.execucao_1` / `_2` |
+| Upload de arquivo (blob) | **PARK** | pós-Go-Live se necessário |
 
-**Fatia mínima alinhada ao War Room (se autorizada):**  
-persistir evidência textual + link/ID por item + painel “histórico de execuções” (2× consecutivas) — **sem** upload de arquivo se isso exigir migration/storage nova sob pressão.
+**P1 gaps técnicos de Implantação: fechados** (sem migration nova; evidência textual auditável).
 
 ---
 

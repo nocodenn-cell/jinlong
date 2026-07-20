@@ -76,6 +76,9 @@ export const IMPLANTACAO_ITENS: readonly ImplantacaoItemDef[] = [
 
   /** P0-DADOS — gate antes das provas de venda / homologação integrada. */
   { key: 'homologacao.dados', secao: 'homologacao', obrigatorio: true },
+  /** War Room: duas execuções consecutivas do roteiro (evidência no campo obs). */
+  { key: 'homologacao.execucao_1', secao: 'homologacao', obrigatorio: true },
+  { key: 'homologacao.execucao_2', secao: 'homologacao', obrigatorio: true },
   { key: 'homologacao.fluxo_completo', secao: 'homologacao', obrigatorio: true },
   { key: 'homologacao.cliente_treinado', secao: 'homologacao', obrigatorio: true },
   { key: 'homologacao.aceite', secao: 'homologacao', obrigatorio: true },

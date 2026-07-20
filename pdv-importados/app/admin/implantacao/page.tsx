@@ -80,6 +80,9 @@ export default async function AdminImplantacaoPage({ searchParams }: PageProps) 
             validandoDados: ui.validando_dados,
             dadosOk: ui.dados_ok,
             dadosFalha: ui.dados_falha,
+            timelineTitulo: ui.timeline_titulo,
+            timelineVazio: ui.timeline_vazio,
+            evidenciaHint: ui.evidencia_hint,
             secoes,
             itens,
           }}

@@ -101,5 +101,14 @@ describe('Onda 2 — Auditoria + gate', () => {
     expect(cat).toContain('operacao.venda')
     expect(cat).toContain('operacao.cancelamento')
     expect(cat).toContain('homologacao.fluxo_completo')
+    expect(cat).toContain('homologacao.execucao_1')
+    expect(cat).toContain('homologacao.execucao_2')
+  })
+
+  it('implantação exige evidência e tem timeline', () => {
+    expect(exists('app/admin/implantacao/evidenciaImplantacao.ts')).toBe(true)
+    expect(exists('app/admin/implantacao/ImplantacaoTimeline.tsx')).toBe(true)
+    const actions = read('app/admin/implantacao/actions.ts')
+    expect(actions).toContain('erroEvidenciaConcluido')
   })
 })

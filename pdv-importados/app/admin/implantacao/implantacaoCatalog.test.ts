@@ -54,5 +54,14 @@ describe('implantacaoCatalog GO gate', () => {
     expect(item?.obrigatorio).toBe(true)
     expect(item?.secao).toBe('homologacao')
   })
+
+  it('War Room: execucao_1 e execucao_2 bloqueiam GO se pendentes', () => {
+    const map = allConcluido()
+    map['homologacao.execucao_1'] = 'PENDENTE'
+    expect(avaliarBloqueiosGo(map)).toContain('homologacao.execucao_1')
+    map['homologacao.execucao_1'] = 'CONCLUIDO'
+    map['homologacao.execucao_2'] = 'PENDENTE'
+    expect(avaliarBloqueiosGo(map)).toContain('homologacao.execucao_2')
+  })
 })
 

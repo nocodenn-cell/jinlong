@@ -1801,7 +1801,7 @@
     "col_status": "Status",
     "col_responsavel": "Responsável",
     "col_data": "Data/hora",
-    "col_obs": "Observações",
+    "col_obs": "Evidência",
     "status_pendente": "Pendente",
     "status_concluido": "Concluído",
     "status_na": "N/A",
@@ -1814,6 +1814,9 @@
     "validando_dados": "Validando dados…",
     "dados_ok": "Dados mínimos OK — item homologacao.dados concluído.",
     "dados_falha": "Dados insuficientes",
+    "timeline_titulo": "Timeline de validações",
+    "timeline_vazio": "Nenhum item concluído ainda — marque com evidência para aparecer aqui.",
+    "evidencia_hint": "Regra de ouro: CONCLUIDO exige evidência (ID venda, print, log). Execuções #1 e #2 do roteiro são obrigatórias.",
     "secoes": {
       "ambiente": "1. Ambiente",
       "loja": "2. Loja",
@@ -1856,6 +1859,8 @@
       "fiscal.stub": "Stub fiscal validado",
       "fiscal.nfce": "NFC-e homologada",
       "homologacao.dados": "Dados mínimos para homologação (P0-DADOS)",
+      "homologacao.execucao_1": "Roteiro execução #1 (completa, com evidência)",
+      "homologacao.execucao_2": "Roteiro execução #2 (consecutiva, sem intervenção)",
       "homologacao.fluxo_completo": "Fluxo completo executado",
       "homologacao.cliente_treinado": "Cliente treinado",
       "homologacao.aceite": "Aceite assinado"

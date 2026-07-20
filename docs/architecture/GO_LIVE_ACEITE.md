@@ -6,6 +6,7 @@
 | **PR base** | [#220](https://github.com/nocodenn-cell/fastproduct/pull/220) |
 | **Gate UI** | `/admin/implantacao` |
 | **Regra de ouro** | Nenhum item pode ser marcado **PASS** sem evidência operacional |
+| **UI** | `/admin/implantacao` — evidência obrigatória em CONCLUIDO; timeline; itens `execucao_1` / `execucao_2` |
 
 ## Modo War Room (obrigatório)
 
