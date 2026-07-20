@@ -1,0 +1,59 @@
+# Go-Live Readiness — fechamento ERP (1º cliente)
+
+| Campo | Valor |
+|--------|--------|
+| **Data** | 2026-07-19 |
+| **PR** | [#220](https://github.com/nocodenn-cell/fastproduct/pull/220) |
+| **Branch** | `loop/1-p0-dados-homologacao` |
+| **DI** | Congelada — não bloqueia ERP operacional deste PR |
+
+## Matriz GO / NO-GO
+
+| Módulo | Técnico | Homologação humana | Declaração |
+|--------|---------|--------------------|------------|
+| Cadastro | **GO** (telas + SSoT + P0-DADOS) | pendente loja real | **NO-GO** até P0-HOM |
+| Venda / Caixa | **GO** (RPC finalize/cancel + desconto + sangria/suprimento) | pendente P0-VEN-PROOF | **NO-GO** até P0-HOM |
+| Estoque | **GO** (admin estoque + NF-e + SSoT) | pendente prova pós-venda | **NO-GO** até P0-HOM |
+| Financeiro | **GO** (AR liquidar + AP pagar/cancel + NF-e only) | pendente amostra real | **NO-GO** até P0-HOM |
+| Fiscal Stub | **GO** (enqueue Stub + fila + aviso UI) | pendente smoke pós-venda | **NO-GO** até P0-HOM |
+| Auditoria | **GO** (`/admin/auditoria`) | pendente eventos na prova | **NO-GO** até P0-HOM |
+| Implantação | **GO** (checklist + P0-DADOS) | pendente autorizar GO | **NO-GO** até P0-HOM |
+| Decision Intelligence | **GO** (branch própria, read-only) | fora deste PR | **N/A ERP** |
+| Migrations / RLS / Guards | **GO** (legado main + `check:entity-ssot`) | — | **GO técnico** |
+| CI GitHub Actions | **NO-GO infra** | spending limit | **human gate** |
+
+**Critério de GO final do módulo:** técnico GO **e** roteiro humano Onda 2 PASS.
+
+## Pendências P0 restantes
+
+| ID | Item | Tipo | Dono |
+|----|------|------|------|
+| P0-HOM-UI | Executar roteiro Onda 2 em loja homologada e marcar checklist `/admin/implantacao` | Humano | Ops / cliente |
+| P0-VEN-PROOF | Venda DINHEIRO + PIX com baixa estoque + rastros financeiros/auditoria | Humano | Ops |
+| P0-VEN-REV | Cancelamento + devolução revertem saldos | Humano | Ops |
+| P0-CI | Reexecutar Actions após billing | Infra | Dono conta GitHub |
+
+Nenhum P0 de **código de tela/RPC ausente** identificado no inventário atual.
+
+## Evidências técnicas (locais)
+
+```bash
+cd pdv-importados
+npm run check:entity-ssot
+npx vitest run \
+  app/admin/implantacao/homologacaoDados.test.ts \
+  app/admin/implantacao/implantacaoCatalog.test.ts \
+  tests/p0-venda-homologacao.matrix.test.ts \
+  tests/p0-roteiro-operacional.matrix.test.ts
+```
+
+## Estimativa objetiva para Go-Live
+
+| Fase | Estimativa | Dependência |
+|------|------------|-------------|
+| Merge PR #220 (aceite gate CI) | 0,5 dia | Aceite humano do billing OU Actions verde |
+| Homologação Onda 2 (loja dedicada) | **1–2 dias úteis** | Credenciais + dados P0-DADOS OK |
+| Estabilização (só bugs da prova) | 0–1 dia | Achados da homologação |
+| Autorizar GO na UI | mesmo dia do P0-HOM | Checklist completo |
+
+**Janela típica até primeiro cliente operacional:** **2–4 dias úteis** após merge, limitada pela homologação humana (não por gaps de tela).

@@ -79,11 +79,9 @@ Evidência: adapters + shared-core + testes unitários desta missão + audits de
 | Financeiro AR/AP + Fiscal embutido | **GO** |
 | Caixa operacional | **GO** |
 | Comissões / Relatórios / Auditoria | **GO** |
-| **Funcionários (CRUD em tela)** | **NO-GO** (processo manual canônico) |
-| Sistema completo “zero intervenção humana no provisionamento” | **NO-GO** até existir UI/domínio Users **ou** aceite explícito do runbook |
+| **Funcionários (CRUD em tela)** | **GO** (`/admin/funcionarios` + `/admin/provisionamento`) |
+| Sistema completo “zero intervenção humana no provisionamento” | **GO** para piloto (wizard ADMIN + UI funcionários) |
 
 ### Veredito consolidado de telas críticas operacionais
 
-**GO operacional** para o primeiro cliente **desde que** usuários (DONO/GERENTE/OPERADOR) sejam provisionados pelo runbook.
-
-**NO-GO** se a exigência for “cadastrar funcionário só pela UI do app” sem decisão de novo domínio.
+**GO operacional** para o primeiro cliente com provisionamento pela UI (`/admin/provisionamento` + `/admin/funcionarios`). Homologação humana (P0-HOM) permanece obrigatória — ver [GO_LIVE_READINESS.md](./GO_LIVE_READINESS.md).

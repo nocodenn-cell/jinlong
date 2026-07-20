@@ -21,20 +21,24 @@
 
 ```bash
 cd pdv-importados
-npm run check:entity-ssot
-npx vitest run app/admin/implantacao/homologacaoDados.test.ts app/admin/implantacao/implantacaoCatalog.test.ts tests/p0-venda-homologacao.matrix.test.ts
+npm run check:golive
 ```
+
+(`check:entity-ssot` + matrizes P0-DADOS / venda / roteiro operacional Onda 2)
 
 ## Matriz GO / NO-GO (módulos críticos)
 
-| Módulo | Técnico (paths/guards) | Homologação humana (UI) | Declaração |
-|--------|------------------------|-------------------------|------------|
-| Cadastro | PASS (P0-DADOS + SSoT) | pendente loja real | **NO-GO** |
-| Venda | PASS (matriz caminhos) | pendente P0-VEN-PROOF | **NO-GO** |
-| Estoque | PASS (guard SSoT) | pendente prova pós-venda | **NO-GO** |
-| Financeiro | PASS (caminhos + readers) | pendente AR/AP na prova | **NO-GO** |
+SSoT atualizado: [GO_LIVE_READINESS.md](./GO_LIVE_READINESS.md).
 
-**Critério de GO por módulo:** técnico PASS **e** cenário humano do roteiro aprovado (P0-HOM).
+| Módulo | Técnico | Homologação humana | Declaração |
+|--------|---------|--------------------|------------|
+| Cadastro | **GO** | pendente | **NO-GO** até P0-HOM |
+| Venda | **GO** | pendente P0-VEN-PROOF | **NO-GO** até P0-HOM |
+| Estoque | **GO** | pendente | **NO-GO** até P0-HOM |
+| Financeiro | **GO** | pendente | **NO-GO** até P0-HOM |
+| Fiscal Stub | **GO** | pendente | **NO-GO** até P0-HOM |
+
+**Critério de GO por módulo:** técnico GO **e** cenário humano do roteiro aprovado (P0-HOM).
 
 ## Engine Loop — Ciclo 1 (2026-07-19)
 
@@ -50,6 +54,15 @@ npx vitest run app/admin/implantacao/homologacaoDados.test.ts app/admin/implanta
 | **Vercel preview** | **READY** — `pdv-importados-git-loop-1-p0-dados-homologacao-jinlong.vercel.app` |
 | **PR** | https://github.com/nocodenn-cell/fastproduct/pull/220 |
 | **Próximo ciclo** | P0-VEN-PROOF em loja homologada (abrir caixa → venda DINHEIRO/PIX → estoque → financeiro → auditoria) — só após desbloquear Actions ou merge com aceite explícito do gate CI |
+
+## Engine Loop — Ciclo fechamento Onda 1 (2026-07-19)
+
+| Campo | Valor |
+|--------|--------|
+| **Missão** | Fechar P0s de código: roteiro Onda 2 automatizado + readiness |
+| **Resultado** | **PASS** técnico — sem tela/RPC crítica ausente |
+| **P0 restantes** | Homologação humana + CI billing (ver GO_LIVE_READINESS) |
+| **Evidência** | `npm run check:golive` |
 
 ## Inventário Financeiro / Fiscal
 
