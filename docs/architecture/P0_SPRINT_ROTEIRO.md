@@ -71,6 +71,6 @@ Ver [GO_LIVE_FINANCEIRO_FISCAL.md](./GO_LIVE_FINANCEIRO_FISCAL.md) — telas can
 
 ## Declaração GO dos módulos
 
-Somente após **P0-HOM** bem-sucedido: Venda, Estoque, Financeiro e Cadastro = GO.
+Somente após War Room encerrado ([GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md): PASS+evidência, zero P0, roteiro 2× consecutivas): Venda, Estoque, Financeiro e Cadastro = GO.
 
 Decision Intelligence permanece fora deste PR (branch `feat/first-customer-go-live`); homologar cockpit somente leitura após deploy que a contenha.

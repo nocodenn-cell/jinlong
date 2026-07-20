@@ -24,7 +24,7 @@
 | Migrations / RLS / Guards | **GO** (legado main + `check:entity-ssot`) | — | **GO técnico** |
 | CI GitHub Actions | **NO-GO infra** | spending limit | **human gate** |
 
-**Critério de GO final do módulo:** técnico GO **e** todos os cenários obrigatórios em [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) = **PASS**.
+**Critério de GO final:** técnico GO **e** War Room encerrado per [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) — obrigatórios PASS com evidência, zero P0 abertos, roteiro **2× consecutivas** sem intervenção.
 
 ## Pendências P0 restantes
 
