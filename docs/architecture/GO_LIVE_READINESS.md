@@ -31,12 +31,10 @@
 
 | ID | Item | Tipo | Dono |
 |----|------|------|------|
-| P0-HOM-UI | Executar roteiro Onda 2 em loja homologada e marcar checklist `/admin/implantacao` | Humano | Ops / cliente |
-| P0-VEN-PROOF | Venda DINHEIRO + PIX com baixa estoque + rastros financeiros/auditoria | Humano | Ops |
-| P0-VEN-REV | Cancelamento + devolução revertem saldos | Humano | Ops |
+| P0-HOM-UI | Executar ACEITE (2×) com evidência na UI `/admin/implantacao` | Humano | Ops / cliente |
 | P0-CI | Reexecutar Actions após billing | Infra | Dono conta GitHub |
 
-Nenhum P0 de **código de tela/RPC ausente** identificado no inventário atual.
+**Código / telas críticas:** sem P0 técnico aberto após fechamento P1 Implantação (evidência + timeline + execuções).
 
 ## Evidências técnicas (locais)
 
