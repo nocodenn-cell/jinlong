@@ -74,7 +74,7 @@ export async function sugerirDadosCadastroPorGtinImpl(
   let marca: string | null = null
   let categoriaExterna: string | null = null
   let precoVarejo: number | null = null
-  let precoCusto: number | null = null
+  const precoCusto: number | null = null
 
   const cached = await readGtinCache(supabase, gtin)
   if (cached) {

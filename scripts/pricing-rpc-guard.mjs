@@ -20,6 +20,7 @@
  * Callers autorizados do RPC calcular_preco_produto:
  *   - pdv-importados/app/caixa/server/caixaPrecoProduto.impl.ts
  *   - pdv-importados/app/caixa/server/caixaPrecoAutoritativoServer.ts
+ *   - pdv-importados/app/admin/produtos/productPriceReader.ts (adapter ADR-007, PR #219)
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -31,6 +32,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const AUTHORIZED_RPC_CALLERS = new Set([
   path.join(root, 'pdv-importados/app/caixa/server/caixaPrecoProduto.impl.ts'),
   path.join(root, 'pdv-importados/app/caixa/server/caixaPrecoAutoritativoServer.ts'),
+  // Adapter ProductPriceReader (ADR-007 / Missão Products 4, PR #219): leitura de
+  // preço efetivo no admin delega ao RPC — a autoridade continua no Postgres.
+  path.join(root, 'pdv-importados/app/admin/produtos/productPriceReader.ts'),
 ])
 
 // ─── Zonas ────────────────────────────────────────────────────────────────────
@@ -134,7 +138,7 @@ for (const file of files) {
   // Regra 2: .rpc('calcular_preco_produto') só em callers autorizados
   if (!AUTHORIZED_RPC_CALLERS.has(file) && RPC_CALL_RE.test(text)) {
     violations.push(
-      `[PRICING-CALLER] ${rel}\n  → Chama .rpc('calcular_preco_produto') diretamente.\n  → Callers autorizados: caixaPrecoProduto.impl.ts | caixaPrecoAutoritativoServer.ts`,
+      `[PRICING-CALLER] ${rel}\n  → Chama .rpc('calcular_preco_produto') diretamente.\n  → Callers autorizados: caixaPrecoProduto.impl.ts | caixaPrecoAutoritativoServer.ts | productPriceReader.ts`,
     )
   }
 }

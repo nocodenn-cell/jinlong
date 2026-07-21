@@ -1,3 +1,4 @@
+import { isInativo, isRascunho } from '@/core/catalog/statusPublicacao'
 import type { StatusPublicacao } from '@/core/ports/produto'
 import type { Mensagens } from '@/i18n/getMessages'
 
@@ -19,10 +20,10 @@ export function resolveProdutoFormStatusChip(
       tone: 'novo',
     }
   }
-  if (status === 'DRAFT') {
+  if (isRascunho(status)) {
     return { label: p.rascunho, hint: p.status_chip_hint_rascunho, tone: 'rascunho' }
   }
-  if (status === 'INATIVO') {
+  if (isInativo(status)) {
     return { label: p.inativo, hint: p.status_chip_hint_inativo, tone: 'inativo' }
   }
   return { label: p.status_chip_no_pdv, hint: p.status_chip_hint_publica, tone: 'pdv' }
