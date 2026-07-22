@@ -12,6 +12,7 @@ import {
   PDV_CONFIG_DEFAULTS,
   slugCodigoLoja,
 } from './provisionamentoDefaults'
+import { getDonoReuseError } from './provisionamentoPolicies'
 
 export type ActionOk<T> = { ok: true; data: T }
 export type ActionErr = { ok: false; error: string }
@@ -174,9 +175,8 @@ async function ensureDono(input: {
       if (rowLoja && rowLoja !== lojaId) {
         throw new Error('Este e-mail já está vinculado a outra loja.')
       }
-      if (rowPerfil !== 'DONO' && rowPerfil !== 'ADMIN') {
-        throw new Error(`Este e-mail já existe com perfil ${rowPerfil}. Use outro e-mail para o DONO.`)
-      }
+      const reuseError = getDonoReuseError(rowPerfil)
+      if (reuseError) throw new Error(reuseError)
       if (rowLoja !== lojaId || rowPerfil !== 'DONO') {
         const { error: updErr } = await fromLoose(admin, 'usuarios')
           .update({
