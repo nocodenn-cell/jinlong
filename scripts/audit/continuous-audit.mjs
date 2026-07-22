@@ -2,13 +2,19 @@
 /**
  * Pipeline de auditoria contínua — roda em sequência: lint, guard:core,
  * stress:pdv, gate:pdv. Reporta APENAS falhas NOVAS: as pré-existentes ficam
- * em scripts/audit-baseline.json e são ignoradas.
+ * em scripts/audit/audit-baseline.json e são ignoradas.
  *
  * Uso:
- *   node scripts/continuous-audit.mjs
- *   npm run audit:continuous
+ *   node scripts/audit/continuous-audit.mjs        # da raiz do repo
+ *   npm run audit:continuous -w pdv-importados      # via npm (registrado no frontend)
+ *
+ * Fica FORA de package.json da raiz de propósito: editar o package.json da raiz
+ * acorda os pipelines de backend/Rust (path filter), então o registro do comando
+ * vive em pdv-importados/package.json. Isto NÃO esconde falhas reais — só evita
+ * que mudanças de frontend disparem CI não relacionada.
  *
  * Saída: exit 0 se nenhuma falha nova; exit 1 se houver ao menos uma.
+ * Sempre grava um relatório em scripts/audit/last-report.md (+ .json).
  * Steps que exigem ambiente vivo (Supabase/seed) são marcados SKIPPED quando a
  * env não está configurada — não contam como falha.
  */
@@ -17,9 +23,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const auditDir = path.dirname(fileURLToPath(import.meta.url))
+const root = path.resolve(auditDir, '..', '..')
 const pdv = path.join(root, 'pdv-importados')
-const baseline = JSON.parse(fs.readFileSync(path.join(root, 'scripts', 'audit-baseline.json'), 'utf8'))
+const baseline = JSON.parse(fs.readFileSync(path.join(auditDir, 'audit-baseline.json'), 'utf8'))
 
 const C = {
   reset: '\x1b[0m', red: '\x1b[31m', green: '\x1b[32m', yellow: '\x1b[33m',
@@ -110,8 +117,34 @@ for (const r of results) {
   for (const i of r.newIssues) console.log(c('red', `      ↳ ${i}`))
 }
 
+// ── Relatório sempre gravado (item "sempre gerar relatório") ──────────────────
+const geradoEm = new Date().toISOString()
+const tagTxt = { PASS: 'PASS', SKIPPED: 'SKIP', NEW_FAIL: 'NOVA FALHA', ERROR: 'ERRO' }
+const md = [
+  `# Relatório — Auditoria contínua`,
+  ``,
+  `Gerado em: ${geradoEm}`,
+  `Resultado: ${novas.length === 0 ? 'SEM REGRESSÕES NOVAS ✅' : `${novas.length} STEP(S) COM FALHA NOVA ❌`}`,
+  ``,
+  `| Step | Status | Detalhe |`,
+  `|---|---|---|`,
+  ...results.map((r) => `| ${r.step} | ${tagTxt[r.status]} | ${r.detail || (r.newIssues.length ? `${r.newIssues.length} item(ns)` : '—')} |`),
+  ``,
+  ...(novas.length
+    ? ['## Falhas novas', ...novas.flatMap((r) => [`### ${r.step}`, ...r.newIssues.map((i) => `- ${i}`)])]
+    : ['_Falhas pré-existentes ignoradas via baseline (scripts/audit/audit-baseline.json)._']),
+  ``,
+].join('\n')
+try {
+  fs.writeFileSync(path.join(auditDir, 'last-report.md'), md)
+  fs.writeFileSync(path.join(auditDir, 'last-report.json'), JSON.stringify({ geradoEm, novas: novas.length, results }, null, 2))
+  console.log(c('gray', `\nRelatório: scripts/audit/last-report.md`))
+} catch (e) {
+  console.log(c('yellow', `\n(aviso) não foi possível gravar o relatório: ${e.message}`))
+}
+
 if (novas.length > 0) {
-  console.log(c('red', `\n✗ ${novas.length} step(s) com falha NOVA. Corrija ou, se intencional, atualize scripts/audit-baseline.json.\n`))
+  console.log(c('red', `\n✗ ${novas.length} step(s) com falha NOVA. Corrija ou, se intencional, atualize scripts/audit/audit-baseline.json.\n`))
   process.exit(1)
 }
 console.log(c('green', '\n✓ Nenhuma regressão nova. (Falhas pré-existentes ignoradas via baseline.)\n'))

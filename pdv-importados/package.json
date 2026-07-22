@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "clean-cache": "rimraf .next/cache",
+    "audit:continuous": "node ../scripts/audit/continuous-audit.mjs",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
