@@ -95,17 +95,17 @@
 
 ---
 
-## 5. Funcionários (Prioridade 2) — GATE ARQUITETURAL
+## 5. Funcionários — UI ADMIN (atualizado 2026-07-19)
 
 | Rota / capacidade | Status | UI | Backend | Shared-core | Integração | Testes | GO / NO-GO |
 |-------------------|--------|----|---------|-------------|------------|--------|------------|
-| Cadastro / edição / exclusão de funcionários | **Não iniciada** | **Não existe** | Runbook Auth + SQL `usuarios` | **sem domínio** | fora do app | — | **NO-GO UI** |
-| Permissões (perfil) | Parcial | Login/middleware | `usuarios.perfil` | — | enforcement | e2e auth | **GO enforcement** |
+| Cadastro / edição funcionários | **EXISTS** | `/admin/funcionarios` | actions + Auth | satélite | UI | unit policies | **GO** |
+| Provisionamento loja+DONO | **EXISTS** | `/admin/provisionamento` | wizard ADMIN | — | UI | — | **GO** |
+| Permissões (perfil) | 100% | Login/middleware | `usuarios.perfil` | — | enforcement | e2e auth | **GO** |
 | Comissão | Parcial | `/admin/comissoes` + config % | RPC/actions | satélite | UI comissões | parcial | **GO satélite** |
-| Histórico de operador | Parcial | vendas/auditoria | SELECT | — | leitura | parcial | **GO leitura** |
 | Integração com vendas | 100% | PDV usa `operador_id` | sales RPC | — | Canônica | e2e | **GO** |
 
-**Decisão (interrupção autorizada):** fechar Funcionários “no padrão Customers” exigiria **novo domínio + nova tela + Auth Admin API**. Isso viola as restrições da missão (*não criar funcionalidades novas / não iniciar novos domínios*). Processo canônico vigente: [`docs/RUNBOOK_PRIMEIRO_CLIENTE.md`](../RUNBOOK_PRIMEIRO_CLIENTE.md) (Auth + `public.usuarios`).
+**Nota:** inventário antigo (NO-GO UI) está **obsoleto** — UI de funcionários e provisionamento já no Admin V2.
 
 ---
 
@@ -143,7 +143,7 @@
 | Financeiro AR/AP + Fiscal embutido | 100% | **GO** com D-F1 |
 | Caixa operacional | 100% | **GO** com D-C1 |
 | Comissões / Relatórios / Auditoria | 100% UI operacional | **GO** |
-| **Funcionários (CRUD UI)** | **Não iniciada** | **NO-GO** — gate humano/arquitetural |
+| **Funcionários (CRUD UI)** | `/admin/funcionarios` | **GO** |
 | Fluxo E2E autenticado completo | Parcial (env) | Homologação humana |
 
 ### Critérios de interrupção acionados

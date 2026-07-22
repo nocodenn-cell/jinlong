@@ -45,21 +45,40 @@
 - [ ] Conta `ativo=false` bloqueia login
 - [ ] Checklist `/admin/implantacao` reconhece a loja provisionada
 
+### P0-DADOS (antes das provas de venda)
+
+Na UI `/admin/implantacao` → **Validar dados de homologação**:
+
+- [ ] DONO + GERENTE + OPERADOR ativos
+- [ ] ≥1 categoria, ≥3 produtos PUBLICADO com estoque positivo
+- [ ] ≥1 cliente, ≥1 fornecedor
+- [ ] `pdv_config` presente; formas DINHEIRO/PIX no PDV
+- [ ] Item `homologacao.dados` = CONCLUIDO
+
+### Decisões de produto (1º Go-Live)
+
+- [x] Fiscal: **Stub** (`fiscal.stub`)
+- [x] Contas a pagar: **somente originadas por NF-e** (sem UI criar AP)
+
 ### Operação (sem SQL / sem Studio)
+
+**SSoT de aceite mensurável (War Room):** [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) — marcar PASS/FAIL por cenário.
 
 - [ ] Login
 - [ ] Abrir caixa
 - [ ] Cadastrar cliente (`/admin/clientes`)
 - [ ] Cadastrar produto (`/admin/catalogo`) com estoque inicial se necessário
 - [ ] Entrada/ajuste estoque
-- [ ] Venda (DINHEIRO e PIX)
+- [ ] Venda (DINHEIRO e PIX) — P0-VEN-PROOF
+- [ ] Cancelamento + devolução — P0-VEN-REV
 - [ ] Recebimento / liquidação AR (se título gerado)
-- [ ] Contas a pagar — pagar e cancelar (amostra)
+- [ ] Contas a pagar — pagar e cancelar amostra **de NF-e**
 - [ ] Comissão — visualizar / marcar paga (se aplicável)
 - [ ] Fechar caixa com conferência \(E(c)\)
 - [ ] Relatórios + auditoria mostram eventos
-- [ ] Fila fiscal consulta status sem erro de UI
+- [ ] Fila fiscal Stub sem erro de UI
 - [ ] i18n pt/zh nas telas críticas
+- [ ] Homologação integrada + autorizar GO — **P0-HOM (marco final)**
 
 ### Proibido no go-live
 
@@ -94,5 +113,6 @@
 | Provisionamento loja+DONO pela UI (ADMIN) | **GO** (`/admin/provisionamento`) |
 | Funcionários OPERADOR/GERENTE pela UI | **GO** (`/admin/funcionarios`) |
 | Go-live piloto com checklist `/admin/implantacao` | **GO condicional** |
+| Módulos Venda / Estoque / Financeiro / Cadastro (1º cliente) | **NO-GO** até P0-HOM — ver [P0_SPRINT_ROTEIRO.md](./P0_SPRINT_ROTEIRO.md) |
 
-**Decisão recomendada:** **GO** para Fase 1 (provisionamento + checklist). Liberar primeiro cliente após checklist humano §3 e autorização GO-LIVE na UI.
+**Decisão recomendada:** **GO** para Fase 1 (provisionamento + checklist). Liberar primeiro cliente após checklist humano §3, Engine Loop P0-VEN-PROOF/REV e autorização GO-LIVE na UI.

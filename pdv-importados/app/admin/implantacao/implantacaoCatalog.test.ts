@@ -41,4 +41,27 @@ describe('implantacaoCatalog GO gate', () => {
     map['loja.impressora'] = 'PENDENTE'
     expect(avaliarBloqueiosGo(map)).toHaveLength(0)
   })
+
+  it('P0-DADOS: homologacao.dados bloqueia GO se pendente', () => {
+    const map = allConcluido()
+    map['homologacao.dados'] = 'PENDENTE'
+    expect(avaliarBloqueiosGo(map)).toContain('homologacao.dados')
+    expect(calcularGateStatus(false, map)).toBe('NAO_PRONTO')
+  })
+
+  it('catálogo inclui homologacao.dados como obrigatório', () => {
+    const item = IMPLANTACAO_ITENS.find((i) => i.key === 'homologacao.dados')
+    expect(item?.obrigatorio).toBe(true)
+    expect(item?.secao).toBe('homologacao')
+  })
+
+  it('War Room: execucao_1 e execucao_2 bloqueiam GO se pendentes', () => {
+    const map = allConcluido()
+    map['homologacao.execucao_1'] = 'PENDENTE'
+    expect(avaliarBloqueiosGo(map)).toContain('homologacao.execucao_1')
+    map['homologacao.execucao_1'] = 'CONCLUIDO'
+    map['homologacao.execucao_2'] = 'PENDENTE'
+    expect(avaliarBloqueiosGo(map)).toContain('homologacao.execucao_2')
+  })
 })
+

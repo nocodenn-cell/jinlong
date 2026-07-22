@@ -45,6 +45,15 @@ const ALLOWED_UI = {
   ],
 }
 
+/**
+ * Match de identificador (evita falso positivo em
+ * `criarProdutoComEstoqueInicialRpc` / `criarProdutoRelampagoPdv`).
+ */
+function referencesSymbol(content, symbol) {
+  const escaped = symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(?<![A-Za-z0-9_])${escaped}(?![A-Za-z0-9_])`).test(content)
+}
+
 /** Arquivos legados órfãos — warn, não fail. Evidência de migração; remover após 1–2 releases. */
 const LEGACY_ORPHAN_WARN = [
   '/app/gerente/financeiro/FinanceiroGerentePageClient.tsx',
@@ -113,8 +122,8 @@ for (const file of files) {
   if (isActionDefinition(rel)) continue
 
   for (const [symbol, allowed] of Object.entries(ALLOWED_UI)) {
-    if (!content.includes(symbol)) continue
-    if (allowed.length === 0 && content.includes(symbol)) {
+    if (!referencesSymbol(content, symbol)) continue
+    if (allowed.length === 0) {
       if (rel.includes('/app/gerente/financeiro/') && symbol === 'criarCliente') {
         console.error(`[ssot] ${rel} referencia ${symbol} — use /admin/clientes`)
         failed = true
