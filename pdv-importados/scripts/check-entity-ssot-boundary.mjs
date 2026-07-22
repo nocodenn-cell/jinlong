@@ -21,9 +21,10 @@ const ALLOWED_UI = {
     '/components/gerente/produtos/',
     '/app/admin/estoque/importar-nfe/',
     '/app/gerente/estoque/importar-nfe/',
-    /** Adapters / writers do domínio produto (não são UI). */
-    '/app/admin/produtos/',
-    /** Exceção SSoT documentada: PDV relâmpago (entity-ssot.mdc). */
+    // Porta canônica de criação (hexagonal): ProductWriter → RPC 270 (PR #219).
+    '/app/admin/produtos/productWriter.ts',
+    // Exceção documentada em .cursor/rules/entity-ssot.mdc: PDV relâmpago
+    // (criarProdutoRelampagoPdv, OPERADOR+) delega ao ProductWriter/RPC 270.
     '/app/caixa/server/caixaCadastroRelampago.impl.ts',
   ],
   salvarClienteAction: [

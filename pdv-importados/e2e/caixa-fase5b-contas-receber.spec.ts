@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test'
-import { createClient } from '@/lib/supabase/server'
 
 // Teste E2E para Fase 5b: Criação automática de contas_receber com validações ACID
 // Cenários: cliente inválido, RLS violation, retry idempotência, saldo divergente, happy path
@@ -53,7 +52,6 @@ test.describe('Fase 5b: Contas Receber Automático', () => {
     // Cenário: Cliente existe mas pertence a loja diferente
     // RPC deve rejeitar em V8 (RLS validation)
 
-    const outraLoja = 'different-loja-uuid'
     const vendaComClienteOutraLoja = {
       p_venda_id: vendaId,
       p_caixa_id: caixaId,
