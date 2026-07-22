@@ -69,6 +69,16 @@ export function isRascunho(status: StatusPublicacao | null | undefined): boolean
 }
 
 /**
+ * Leitura de negócio: o produto está explicitamente inativo? A UI consome o
+ * predicado em vez de comparar status_publicacao por literal (enforçado por
+ * scripts/core-rule-guard.mjs). Estrito (ausente → false): status desconhecido
+ * de um produto em edição é apresentado como publicado, não como inativo.
+ */
+export function isInativo(status: StatusPublicacao | null | undefined): boolean {
+  return status === 'INATIVO'
+}
+
+/**
  * Intenção de salvar como rascunho → payload canônico. Mantém o literal 'DRAFT'
  * dentro do core; a UI apenas envia a intenção (opts.rascunho) e espalha isto.
  */

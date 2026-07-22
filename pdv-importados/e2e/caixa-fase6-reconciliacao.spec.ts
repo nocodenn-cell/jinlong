@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
 // - totalAReceber: soma de contas_receber.valor_aberto (crédito)
 
 test.describe('Fase 6: Reconciliação de Caixa com Pagamento Parcial', () => {
-  test('Resumo do turno reflete pagamentos reais, não total_liquido', async ({ page }) => {
+  test('Resumo do turno reflete pagamentos reais, não total_liquido', async () => {
     // Cenário: 3 vendas com mix de pagamentos:
     // V1: R$100 total, R$40 pago (60% em crédito)
     // V2: R$200 total, R$200 pago (100%)
@@ -96,11 +96,6 @@ test.describe('Fase 6: Reconciliação de Caixa com Pagamento Parcial', () => {
     // o novo código deve retornar os mesmos valores que antes
 
     // Cenário: 2 vendas, ambas 100% pagas
-    const mockVendas = [
-      { id: 'v1', total_liquido: 100 },
-      { id: 'v2', total_liquido: 200 },
-    ]
-
     const mockPagamentos = [
       { venda_id: 'v1', valor: 100 },
       { venda_id: 'v2', valor: 200 },

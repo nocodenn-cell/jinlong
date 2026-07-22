@@ -3,6 +3,7 @@ import {
   ativoFromStatusPublicacao,
   dualWriteFromStatus,
   defaultStatusNovoProduto,
+  isInativo,
   isIntencaoRascunho,
   isRascunho,
   lifecycleAoEditarProduto,
@@ -46,6 +47,14 @@ describe('statusPublicacao — fonte única da verdade do lifecycle', () => {
     expect(isRascunho(undefined)).toBe(false)
     expect(podePublicarProduto('DRAFT')).toBe(true)
     expect(podePublicarProduto('PUBLICADO')).toBe(false)
+  })
+
+  it('isInativo: estrito — só INATIVO explícito (ausente não é inativo na UI de edição)', () => {
+    expect(isInativo('INATIVO')).toBe(true)
+    expect(isInativo('PUBLICADO')).toBe(false)
+    expect(isInativo('DRAFT')).toBe(false)
+    expect(isInativo(null)).toBe(false)
+    expect(isInativo(undefined)).toBe(false)
   })
 
   it('payloadStatusRascunho: devolve o payload canônico de rascunho', () => {
