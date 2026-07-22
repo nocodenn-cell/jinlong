@@ -52,6 +52,30 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.test-helpers.ts",
+    "**/*.test-helpers.tsx",
+    "**/*.mock.ts",
+    "**/*.mock.tsx",
+    "**/*.fixture.ts",
+    "**/*.fixture.tsx",
+    "**/*.factory.ts",
+    "**/*.factory.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    "**/__tests__/**",
+    "**/__mocks__/**",
+    "e2e",
+    "e2e/**",
+    "stories/**",
+    "tests/**",
+    ".storybook/**",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "vitest.integration.config.ts"
   ]
 }
