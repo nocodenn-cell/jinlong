@@ -11,7 +11,45 @@ cruzado com os 216 arquivos locais em `backend/supabase/migrations/`.
   pelas migrations 001–271. Ou seja: as migrations antigas **foram aplicadas**, apenas
   **não constam no tracking**.
 
-## Buckets
+## Classificação A/B/C/D (evidência: inventário real de objetos de prod + pg_proc/pg_trigger/to_regclass)
+
+### A) Aplicadas em produção E presentes no repositório  (~194)
+Todas as migrations cujos objetos criados existem em prod. Inclui as 16 recuperadas
+(bucket B, agora restauradas ao repo). Aplicadas via baseline antes do tracking.
+
+### B) Aplicadas em produção E ausentes do repositório  (16 → RESTAURADAS)
+As 16 recuperadas nesta tarefa (estavam em `schema_migrations` sem arquivo). B agora vazio.
+
+### C) Presentes no repositório E NÃO aplicadas em produção  (confirmadas por objeto ausente)
+Migrations cujo objeto criado **não existe** em prod (verificado via to_regclass/pg_proc):
+- `236_system_alerts_log_leve` → tabela `system_alerts` **ausente** (sem migration de drop no repo).
+- `237_system_alerts_remove_triggers` → companion da 236 (triggers ausentes; idempotente).
+- `252_venda_finance_context_mirror` → tabela `venda_finance_context` + fn `sincronizar_finance_context_venda` **ausentes**.
+- `24702_finalizar_venda_v4_contas_receber_automatico` → depende de `venda_finance_context` (cluster 252, não rastreado).
+
+Ou seja: cluster **system_alerts (236/237)** e cluster **finance_context (252/24702)** existem só no repo.
+São a informação a preservar (SSOT), mas **não** devem ser marcadas como applied no repair.
+
+### D) Duplicadas / Obsoletas / Substituídas
+**Substituídas (aplicadas e depois trocadas por versão mais nova — manter por histórico):**
+- `091_fiscal_correlation_id`, `092_fiscal_state_machine` → triggers substituídos pelos
+  `tg_documentos_fiscais_eventos_ai/au` (presentes em prod; ver `066_fiscal_documento_timeline`).
+- `240_relatorio_previsao_estoque` → substituída por `242_relatorio_cobertura_estoque_reclassificacao`
+  (prod tem `relatorio_cobertura_estoque`; `relatorio_previsao_estoque` ausente).
+- Cadeia `finalizar_venda` v2→v3→v4 e migrations block/stub/disabled/drop (ver lista abaixo).
+
+**Duplicadas (mesmo conteúdo, dois prefixos):**
+
+| Repo (não rastreada) | Prod (rastreada = canônica) | Origem / Motivo |
+|---|---|---|
+| `253_clientes_tipo_endereco_e_view_gerente` | `20260620200253_244_clientes_tipo_endereco_e_view_gerente` | Renumeração ao adotar tracking timestamp; cópia numérica pré-tracking |
+| `246_remover_venda_fiado` | `20260620222629_245_remover_venda_fiado` | idem |
+| `24703_vendas_em_espera_e_consulta_rapida` | `20260710163032_255_vendas_em_espera_e_consulta_rapida` | idem (255 recuperada nesta tarefa) |
+
+**Canônico = sempre a versão TIMESTAMP** (é a efetivamente aplicada e rastreada em prod).
+Nenhuma exclusão será feita agora.
+
+## Buckets (detalhe original)
 
 ### 1. Já aplicadas em produção — RASTREADAS (32)
 As 32 do `schema_migrations`. Inclui as **16 recuperadas** nesta tarefa (estavam em prod
