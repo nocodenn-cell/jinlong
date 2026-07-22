@@ -1,0 +1,198 @@
+# R-INFRA-03 — Grupo A: ~184 migrations aplicadas em prod mas SEM tracking
+
+Contexto: `schema_migrations` remoto só passou a registrar a partir de 2026-07-07.
+As migrations abaixo têm seus objetos presentes em produção (inventário verificado),
+mas **não constam** na tabela de tracking. **Nenhuma alteração feita.** Este é o
+insumo para uma futura decisão de `migration repair --status applied` (NÃO autorizada).
+
+Total: 184 migrations.
+
+> Observação: 4 destes arquivos pertencem ao Grupo C (repo-only não aplicadas: 236, 237, 252, 24702)
+> e NÃO devem entrar em um repair. Ver R-INFRA-03_GRUPO_C_investigacao.md.
+
+## Lista
+
+  1. 001_schema_inicial.sql
+  2. 002_mvp_desconto_gerente.sql
+  3. 003_mvp_idioma_usuario_update.sql
+  4. 004_mvp_idioma_preferido_zh_hk.sql
+  5. 005_mvp_pdv_config.sql
+  6. 006_pdv_caixa_sync.sql
+  7. 007_estoque_baixa_idempotente.sql
+  8. 008_descontos_venda_rls.sql
+  9. 009_web_caixa_rpc_estoque_grant.sql
+ 10. 010_estoque_baixas_rls_gerente.sql
+ 11. 011_relatorios_periodo_rpc.sql
+ 12. 012_relatorios_fuso_brasilia.sql
+ 13. 013_relatorios_timezone_configuravel.sql
+ 14. 014_rpc_registrar_venda_com_itens.sql
+ 15. 015_security_rpc_hardening.sql
+ 16. 016_estoque_atomic_lock.sql
+ 17. 017_decrementar_estoque_seguro_auth.sql
+ 18. 018_tokens_desconto_gerente.sql
+ 19. 019_rls_hardening_insert_policies.sql
+ 20. 020_rpc_finalizar_venda_transacional.sql
+ 21. 021_validar_gerente_rate_limit.sql
+ 22. 022_validar_gerente_rate_limit_scopes.sql
+ 23. 023_finalizar_venda_transacional_desconto_gerente_token.sql
+ 24. 024_sync_outbox_hmac_nonce_replay.sql
+ 25. 025_finalizar_venda_transacional_canonica_v2.sql
+ 26. 026_pdv_config_retire_default_gerente_hash.sql
+ 27. 027_seed_produtos_demo_importados_zh.sql
+ 28. 028_finalizar_venda_canonica_v2_ordem_fk.sql
+ 29. 029_decrementar_estoque_seguro_system_context.sql
+ 30. 030_decrementar_estoque_seguro_sem_coluna_id.sql
+ 31. 031_finalizar_venda_canonica_v2_desconto_sem_token.sql
+ 32. 032_lojas_estoque_por_loja.sql
+ 33. 033_preco_atacado_catalogo.sql
+ 34. 034_remessas_movimentos_transferencias.sql
+ 35. 035_fiado_fiscal_stub.sql
+ 36. 036_loja_filial_demo.sql
+ 37. 037_fiscal_emissao_real_worker.sql
+ 38. 038_fix_decrementar_estoque_seguro_estoque_baixas_schema.sql
+ 39. 039_caixa_fechamento_diferenca_observacao.sql
+ 40. 040_v_estoque_baixo_security_invoker.sql
+ 41. 041_vendas_rls_consolidate_authenticated.sql
+ 42. 042_estoque_vendas_rls_por_loja.sql
+ 43. 043_caixas_loja_id_index_dono_visao_macro_rls.sql
+ 44. 044_usuario_perfil_admin_rls.sql
+ 45. 045_caixa_movimentacoes_transacionais.sql
+ 46. 046_aprovar_movimentacao_por_token_gerente.sql
+ 47. 047_obter_limite_sangria_sem_gerente.sql
+ 48. 048_devolucoes.sql
+ 49. 049_calcular_valor_sistema_dinheiro_caixa.sql
+ 50. 050_cancelar_venda_transacional.sql
+ 51. 051_split_payment_vendas_pagamentos.sql
+ 52. 052_split_payment_finalize_venda_rpc.sql
+ 53. 053_split_payment_valor_sistema_dinheiro.sql
+ 54. 054_pdv_config_blind_closure.sql
+ 55. 055_round_abnt_finalize_v2.sql
+ 56. 056_enable_rls_vendas_pagamentos_reconcile.sql
+ 57. 057_caixas_rls_consolidate_permissive.sql
+ 58. 058_pdv_config_rls_e_rpc_caixa_web.sql
+ 59. 059_cancelar_venda_split_e_auditoria_nao_dinheiro.sql
+ 60. 060_v_kardex_unificado.sql
+ 61. 061_finalizar_venda_canonica_v2_idempotencia.sql
+ 62. 062_fiscal_enqueue_on_sale_rpc.sql
+ 63. 063_ajuste_manual_estoque_kardex.sql
+ 64. 064_relatorio_resumo_executivo_periodo.sql
+ 65. 065_fiscal_error_normalization.sql
+ 66. 066_fiscal_documento_timeline.sql
+ 67. 067_pdv_config_bcrypt_gerente.sql
+ 68. 068_usuarios_rls_dono_sem_recursao.sql
+ 69. 069_fiscal_enqueue_service_role_sync_outbox.sql
+ 70. 070_decrementar_estoque_idempotente_delega_seguro.sql
+ 71. 071_revoke_execute_decrementar_estoque_idempotente_authenticated.sql
+ 72. 072_remove_zh_hk_idioma.sql
+ 73. 073_feature_flags.sql
+ 74. 074_remove_zhHK.sql
+ 75. 075_importacao_nfe_compra.sql
+ 76. 076_seed_preco_atacado_demo.sql
+ 77. 077_precos_atacado_tiers_e_rpc.sql
+ 78. 078_dashboard_gerente_resumo.sql
+ 79. 079_dashboard_gerente_resumo_v2.sql
+ 80. 080_dashboard_gerente_resumo_structured.sql
+ 81. 081_gerente_estoque_list_page_rpc.sql
+ 82. 082_transferencia_segura_idempotente.sql
+ 83. 083_tabela_marcas.sql
+ 84. 084_adicionar_marca_imagem_tags_produtos.sql
+ 85. 085_indices_filtros_produtos.sql
+ 86. 086_rpc_list_produtos_gerente_filtrados.sql
+ 87. 087_configuracoes_gerais.sql
+ 88. 089_finalizar_venda_canonica_v3.sql
+ 89. 090_fiscal_enqueue_on_conflict_and_erro_enqueue_evento.sql
+ 90. 091_fiscal_correlation_id.sql
+ 91. 092_fiscal_state_machine.sql
+ 92. 093_fiscal_marcar_erro_backoff_quadratico.sql
+ 93. 094_fiscal_rls_loja_scope_transferencias_idempotencia.sql
+ 94. 095_caixa_scan_telemetry_events.sql
+ 95. 096_caixa_scan_telemetry_schema_version.sql
+ 96. 097_caixa_scan_telemetry_indexes_correlation.sql
+ 97. 098_documentos_fiscais_dlq.sql
+ 98. 099_fiscal_enqueue_valida_tipo_venda.sql
+ 99. 100_dashboard_gerente_top_produto.sql
+100. 101_fix_dashboard_atividades_limit.sql
+101. 102_produtos_unique_codigo_loja.sql
+102. 103_comissoes.sql
+103. 104_contas_pagar_nfe.sql
+104. 105_suspensao_vendas.sql
+105. 106_categorias_ativo.sql
+106. 107_categorias_financeiras.sql
+107. 108_contas_pagar_schema_e_rpc_pagamento.sql
+108. 109_ordens_compra.sql
+109. 110_receber_ordem_compra.sql
+110. 111_lgpd_clientes_compliance.sql
+111. 112_clientes_contas_receber_loja_isolamento.sql
+112. 113_descontos_venda_auditoria_operador.sql
+113. 114_fiscal_enqueue_loja_validation.sql
+114. 115_security_hardening_search_path_rls_permissions.sql
+115. 116_drop_calcular_valor_sistema_dinheiro_caixa_overloads.sql
+116. 117_fix_oc_rls_usuarios_pattern.sql
+117. 118_fix_vendas_pagamentos_concurrency.sql
+118. 119_realtime_movimentacoes_caixa.sql
+119. 122_limite_desconto_manual_itens.sql
+120. 123_revalidar_preco_commit_v3_e_revoke_v2.sql
+121. 124_guard_margem_negativa_cadastro_precos.sql
+122. 125_guard_margem_produtos_catalogo.sql
+123. 126_ajuste_triggers_when_update.sql
+124. 127_kardex_vendas_imutavel.sql
+125. 20260419013345_fix_venda_idempotency_key.sql
+126. 20260515000000_fiscal_worker_cron.sql
+127. 20260618011821_113_rls_audit_fixes.sql
+128. 20260618011922_114_pdv_config_loja_backfill.sql
+129. 20260618161315_264_dashboard_venda_eventos_kpis.sql
+130. 20260619174508_fix_finalizar_venda_v2_stub_quebrado.sql
+131. 20260619234314_block_v2_legacy_overloads_and_create_flags_visuais.sql
+132. 20260620004913_stub_v3_full_overload_legacy_disabled.sql
+133. 20260620020436_complete_v2_block_all_overloads_legacy_disabled.sql
+134. 20260620200253_244_clientes_tipo_endereco_e_view_gerente.sql
+135. 20260620222629_245_remover_venda_fiado.sql
+136. 205_force_com_nf.sql
+137. 206_vendas_caixa_imutabilidade_trigger.sql
+138. 207_fechar_caixa_atomico_rpc.sql
+139. 208_indices_busca_produto_trgm.sql
+140. 209_fiscal_campos_loja_pdvconfig.sql
+141. 210_fiscal_campos_produto.sql
+142. 211_vinculos_fornecedor_produto_depara.sql
+143. 212_restaura_movimentos_caixa_legado.sql
+144. 213_restaura_configuracoes_gerais_drift.sql
+145. 214_restaura_comissoes_loja_via_caixa.sql
+146. 215_backfill_comissoes_vendas_concluidas.sql
+147. 216_fix_marcas_drift_ativo_rls_usuarios.sql
+148. 217_feature_flags_rls_perfil_uppercase.sql
+149. 218_revoke_anon_execute_security_definer.sql
+150. 219_revoke_anon_dml_grants.sql
+151. 220_finalizar_venda_v2_search_path.sql
+152. 221_revoke_public_execute_security_definer.sql
+153. 222_drop_indices_duplicados.sql
+154. 223_indices_fks_sem_cobertura.sql
+155. 224_rls_initplan_wrap_auth_select.sql
+156. 225_dashboard_serie_horaria_semana_anterior.sql
+157. 226_rls_movimentos_caixa_insert_amarra_loja.sql
+158. 227_fechar_caixa_pdv_atomico.sql
+159. 228_venda_eventos_ledger.sql
+160. 229_venda_eventos_rpc_hooks.sql
+161. 230_caixa_status_fechamento.sql
+162. 231_gerente_venda_eventos_rpcs.sql
+163. 232_produtos_status_publicacao.sql
+164. 233_import_nfe_status_draft.sql
+165. 234_calcular_preco_produto_security_definer.sql
+166. 235_observabilidade_pdv_visual.sql
+167. 236_system_alerts_log_leve.sql
+168. 237_system_alerts_remove_triggers.sql
+169. 238_relatorio_margem_por_venda.sql
+170. 239_relatorio_curva_abc.sql
+171. 240_relatorio_previsao_estoque.sql
+172. 241_relatorio_margem_por_venda_snapshot_only.sql
+173. 242_relatorio_cobertura_estoque_reclassificacao.sql
+174. 243_finalizar_venda_canonica_v4_captura.sql
+175. 244_consistencia_vendas_auditoria.sql
+176. 245_calcular_preco_produto_precedence_comment.sql
+177. 246_remover_venda_fiado.sql
+178. 24702_finalizar_venda_v4_contas_receber_automatico.sql
+179. 24703_vendas_em_espera_e_consulta_rapida.sql
+180. 250_calcular_preco_produto_decision_fields.sql
+181. 251_rls_admin_alinha_painel_gerente.sql
+182. 252_venda_finance_context_mirror.sql
+183. 253_clientes_tipo_endereco_e_view_gerente.sql
+184. 255_grant_baseline_tabelas_authenticated.sql
