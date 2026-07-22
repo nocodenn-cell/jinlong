@@ -194,6 +194,8 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
             filaFiscal: ui.financeiro_section_fila,
             filaFiscalVazioTitulo: ui.financeiro_fila_fiscal_vazio_titulo,
             filaFiscalVazioSub: ui.financeiro_fila_fiscal_vazio_sub,
+            fiscalStubTitulo: ui.financeiro_fiscal_stub_titulo,
+            fiscalStubSub: ui.financeiro_fiscal_stub_sub,
             locale,
           }}
           contasLabels={{
