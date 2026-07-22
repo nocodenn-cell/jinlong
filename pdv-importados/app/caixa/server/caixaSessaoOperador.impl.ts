@@ -10,24 +10,11 @@ import { LIMITE_DIVERGENCIA_FECHAMENTO, parseMoneyInput } from '@/app/caixa/serv
 import { PDVContext, runPdvEvaluation } from '@/lib/pdv'
 import { logJson } from '@/shared/unified-logger'
 import { CAIXA_MSG, caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
-
-type RpcStatusRow = {
-  status: string
-  caixa_id: string | null
-  data_abertura: string | null
-  valor_inicial: number | null
-  valor_sistema_dinheiro: number | null
-  blind_closure_enabled: boolean | null
-  mensagem_operador: string | null
-}
-
-type RpcFecharRow = {
-  o_caixa_id: string
-  o_valor_sistema: number
-  o_valor_contado: number
-  o_diferenca: number
-  o_ja_fechado: boolean
-}
+import {
+  createCashSessionReader,
+  createCashSessionWriter,
+} from '@/app/caixa/server/cashSession'
+import { CASH_ERROR_CODES } from '@shared-core/src/cash'
 
 export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperadorResult> {
   try {
@@ -37,41 +24,33 @@ export async function obterStatusCaixaOperadorImpl(): Promise<CaixaStatusOperado
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, status: 'ERRO', error: 'Sessão expirada. Faça login novamente.' }
 
-    const { data, error } = await supabase.rpc('obter_status_caixa_operador', {
-      p_operador_id: user.id,
-    })
+    const reader = createCashSessionReader(supabase)
+    const result = await reader.getStatus(user.id)
 
-    if (error) {
-      return { ok: false, status: 'ERRO', error: caixaErroOperador(error.message) }
-    }
-
-    const row = (Array.isArray(data) ? data[0] : data) as RpcStatusRow | undefined
-    if (!row?.status) {
-      return { ok: false, status: 'ERRO', error: CAIXA_MSG.caixaIndisponivel }
-    }
-
-    if (row.status === 'ERRO') {
+    if (!result.ok) {
       return {
         ok: false,
         status: 'ERRO',
-        error: row.mensagem_operador?.trim() || CAIXA_MSG.caixaIndisponivel,
+        error: caixaErroOperador(result.error),
       }
     }
-
-    if (row.status === 'FECHADO') {
+    if (result.status === 'FECHADO') {
       return { ok: true, status: 'FECHADO' }
     }
-
     return {
       ok: true,
       status: 'ABERTO',
-      caixaId: String(row.caixa_id),
-      dataAbertura: String(row.data_abertura),
-      valorInicial: Number(row.valor_inicial ?? 0),
-      valorSistemaDinheiro: Number(row.valor_sistema_dinheiro ?? 0),
-      blindClosureEnabled: Boolean(row.blind_closure_enabled),
+      caixaId: result.session.caixaId,
+      dataAbertura: result.session.dataAbertura,
+      valorInicial: result.session.valorInicial,
+      valorSistemaDinheiro: result.session.valorSistemaDinheiro,
+      blindClosureEnabled: result.session.blindClosureEnabled,
     }
   } catch (e) {
+    logJson('caixa.status.excecao', {
+      message: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+    })
     return {
       ok: false,
       status: 'ERRO',
@@ -93,28 +72,25 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
-    const status = await obterStatusCaixaOperadorImpl()
-    if (status.ok && status.status === 'ABERTO') {
-      return { ok: false, error: 'Já existe um caixa aberto para este operador.' }
-    }
-
     const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
-    const { data: novo, error: insertErr } = await supabase
-      .from('caixas')
-      .insert({
-        operador_id: user.id,
-        loja_id: lojaId,
-        valor_inicial: valorInicialSanitizado,
-        status: 'ABERTO',
-      })
-      .select('id')
-      .single()
-
-    if (insertErr) return { ok: false, error: caixaErroOperador(insertErr.message) }
+    const writer = createCashSessionWriter(supabase)
+    const opened = await writer.open({
+      operadorId: user.id,
+      lojaId,
+      valorInicial: valorInicialSanitizado,
+    })
+    if (!opened.ok) {
+      return { ok: false, error: caixaErroOperador(opened.error) }
+    }
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
-    return { ok: true, caixaId: novo.id }
+    return { ok: true, caixaId: opened.caixaId }
   } catch (e) {
+    logJson('caixa.abrir.excecao', {
+      message: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+      valorInicial: valorInicialSanitizado,
+    })
     return {
       ok: false,
       error: caixaErroOperador(e instanceof Error ? e.message : null),
@@ -129,9 +105,6 @@ export async function fecharCaixaOperadorImpl(input: {
   const valorContado = parseMoneyInput(input.valorContado)
   if (valorContado === null) return { ok: false, error: 'Valor contado inválido.' }
   const motivo = (input.motivo ?? '').trim()
-  if (motivo.length > 500) {
-    return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
-  }
 
   try {
     const supabase = await createClient()
@@ -140,37 +113,33 @@ export async function fecharCaixaOperadorImpl(input: {
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
-    const { data, error: rpcErr } = await supabase.rpc('fechar_caixa_atomico', {
-      p_operador_id: user.id,
-      p_valor_contado: valorContado,
-      p_motivo: motivo,
+    const writer = createCashSessionWriter(supabase)
+    const closed = await writer.close({
+      operadorId: user.id,
+      valorContado,
+      motivo,
     })
-
-    if (rpcErr) {
-      const msg = rpcErr.message ?? ''
-      if (msg.includes('FECHAR_CAIXA_DIVERGENCIA_SEM_MOTIVO')) {
+    if (!closed.ok) {
+      if (closed.code === CASH_ERROR_CODES.DIVERGENCE_NEEDS_MOTIVO) {
         return {
           ok: false,
           error: `Diferença acima de R$ ${LIMITE_DIVERGENCIA_FECHAMENTO.toFixed(2)} exige motivo (mín. 5 caracteres).`,
         }
       }
-      if (msg.includes('FECHAR_CAIXA_MOVIMENTACOES_PENDENTES')) {
+      if (closed.code === CASH_ERROR_CODES.PENDING_MOVEMENTS) {
         return { ok: false, error: CAIXA_MSG.movimentacoesPendentes }
       }
-      if (msg.includes('FECHAR_CAIXA_CAIXA_NAO_ENCONTRADO')) {
+      if (closed.code === CASH_ERROR_CODES.SESSION_NOT_FOUND) {
         return { ok: false, error: 'Não há caixa aberto para fechar.' }
       }
-      return { ok: false, error: caixaErroOperador(msg) }
+      if (closed.code === CASH_ERROR_CODES.MOTIVO_TOO_LONG) {
+        return { ok: false, error: 'Motivo muito longo (máx. 500 caracteres).' }
+      }
+      return { ok: false, error: caixaErroOperador(closed.error) }
     }
 
-    const rows = Array.isArray(data) ? data : []
-    const row = rows[0] as RpcFecharRow | undefined
-    if (!row) return { ok: false, error: CAIXA_MSG.padrao }
-
-    const caixaIdFechado = String(row.o_caixa_id)
-    const alreadyClosed = Boolean(row.o_ja_fechado)
-
-    if (!alreadyClosed) {
+    const caixaIdFechado = closed.caixaId
+    if (!closed.alreadyClosed) {
       const evaluationOutcome = await runPdvEvaluation(caixaIdFechado, PDVContext.CAIXA_CLOSE)
       if (evaluationOutcome.kind === 'fetch_failed') {
         logJson('pdv.evaluation.fetch_failed', {
@@ -196,10 +165,10 @@ export async function fecharCaixaOperadorImpl(input: {
     return {
       ok: true,
       caixaId: caixaIdFechado,
-      valorSistemaDinheiro: Number(row.o_valor_sistema),
-      valorContado: Number(row.o_valor_contado),
-      diferenca: Number(row.o_diferenca),
-      alreadyClosed,
+      valorSistemaDinheiro: closed.valorSistemaDinheiro,
+      valorContado: closed.valorContado,
+      diferenca: closed.diferenca,
+      alreadyClosed: closed.alreadyClosed,
     }
   } catch (e) {
     return {

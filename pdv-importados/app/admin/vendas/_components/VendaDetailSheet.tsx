@@ -10,6 +10,11 @@ import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { cn } from '@/lib/utils'
 import { obterDetalheVenda, type VendaDetalhe } from '../actions'
 import { toPayment, toVendaStatus, toFiscal } from './vendaMaps'
+import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
+import { VendaDevolucaoModal } from '@/app/gerente/vendas/VendaDevolucaoModal'
+import type { VendaListRow } from '@/app/gerente/vendas/actions'
+import type { Mensagens } from '@/i18n/getMessages'
+import { useRouter } from 'next/navigation'
 
 export type VendaAlvo = Readonly<{ id: string }>
 
@@ -26,20 +31,45 @@ type DetalheLabels = {
   liquido: string
   itens: string
   nenhumItem: string
+  cancelar?: string
+  devolver?: string
+}
+
+function toVendaListRow(v: VendaDetalhe): VendaListRow {
+  return {
+    id: v.id,
+    data: v.data,
+    total_liquido: v.total_liquido,
+    total_bruto: v.total_bruto,
+    forma_pagamento: v.forma_pagamento,
+    status: v.status,
+    caixa_id: null,
+    operador_id: null,
+    qtd_itens_total: v.itens.reduce((s, i) => s + i.quantidade, 0),
+    qtd_itens_distintos: v.itens.length,
+    primeiro_produto: v.itens[0]?.nome ?? null,
+  }
 }
 
 export function VendaDetailSheet({
   alvo,
   onClose,
   labels,
+  m,
+  locale,
 }: {
   alvo: VendaAlvo | null
   onClose: () => void
   labels: DetalheLabels
+  m?: Mensagens
+  locale?: string
 }) {
+  const router = useRouter()
   const [venda, setVenda] = useState<VendaDetalhe | null>(null)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState(false)
+  const [cancelarAberto, setCancelarAberto] = useState(false)
+  const [devolverAberto, setDevolverAberto] = useState(false)
 
   useEffect(() => {
     if (!alvo) return
@@ -176,6 +206,9 @@ export function VendaDetailSheet({
                         </p>
                         <p className="font-mono text-[10px] text-jl-fg-3">
                           {it.codigo_barras ?? '—'} · {it.quantidade} × {formatBRL(it.preco_unitario)}
+                          {it.quantidade_devolvida > 0
+                            ? ` · devolvido ${it.quantidade_devolvida}`
+                            : ''}
                           {it.desconto_unitario > 0 ? ` · desc. ${formatBRL(it.desconto_unitario)}` : ''}
                         </p>
                         {venda.showMargemVisual ? (
@@ -197,7 +230,56 @@ export function VendaDetailSheet({
             </>
           )}
         </div>
+
+        {venda && status === 'CONCLUIDA' && m && locale ? (
+          <div className="flex flex-col gap-2 border-t border-[var(--color-border-secondary)] px-5 py-3">
+            <button
+              type="button"
+              onClick={() => setDevolverAberto(true)}
+              className="w-full rounded-lg border border-jl-border-1 bg-jl-surface-base px-3 py-2 text-sm font-semibold text-jl-fg-1 transition hover:bg-jl-surface-raised"
+            >
+              {labels.devolver ?? 'Devolver / trocar itens'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCancelarAberto(true)}
+              className="w-full rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive transition hover:bg-destructive/20"
+            >
+              {labels.cancelar ?? 'Cancelar venda'}
+            </button>
+          </div>
+        ) : null}
       </aside>
+
+      {m && locale && venda && devolverAberto ? (
+        <VendaDevolucaoModal
+          venda={venda}
+          locale={locale}
+          m={m}
+          onClose={() => setDevolverAberto(false)}
+          onConcluido={() => {
+            setDevolverAberto(false)
+            obterDetalheVenda(venda.id).then((d) => {
+              if (d) setVenda(d)
+            })
+            router.refresh()
+          }}
+        />
+      ) : null}
+
+      {m && locale && venda && cancelarAberto ? (
+        <VendaCancelarModal
+          venda={toVendaListRow(venda)}
+          locale={locale}
+          m={m}
+          onClose={() => setCancelarAberto(false)}
+          onCancelado={() => {
+            setCancelarAberto(false)
+            onClose()
+            router.refresh()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

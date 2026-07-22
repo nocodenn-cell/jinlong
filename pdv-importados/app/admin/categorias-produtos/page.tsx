@@ -10,6 +10,9 @@
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
 import { listarCategoriasProdutos } from '@/app/gerente/categorias-produtos/actions'
+import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages } from '@/i18n/getMessages'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { CategoriasProdutosContent } from './_components/CategoriasProdutosContent'
 
 type SearchParams = {
@@ -21,6 +24,12 @@ type SearchParams = {
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminCategoriasProdutosPage({ searchParams }: PageProps) {
+  const { session } = await loadAdminContext({
+    pathname: ROUTES.admin.categoriasProdutos,
+    resource: `route:${ROUTES.admin.categoriasProdutos}`,
+  })
+  const m = getMessages(session.idioma)
+
   const sp = (await searchParams) ?? {}
   const page = parseInt(sp.page ?? '1', 10)
   const busca = sp.q ?? ''
@@ -37,13 +46,16 @@ export default async function AdminCategoriasProdutosPage({ searchParams }: Page
 
   return (
     <div className="admin-v2-page">
-      <PageHeader
-        title="Categorias de Produtos"
-        subtitle="Gerenciar categorias e agrupamentos"
-      />
+      <PageHeader title={m.categorias_produtos.titulo} subtitle={m.categorias_produtos.cadastro_rapido_hint} />
 
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
-        <CategoriasProdutosContent dados={dados} />
+        <CategoriasProdutosContent
+          idioma={session.idioma}
+          dados={dados}
+          buscaInicial={busca}
+          situacaoInicial={situacao}
+          page={page}
+        />
       </Suspense>
     </div>
   )

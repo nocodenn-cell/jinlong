@@ -151,4 +151,19 @@ describe("CaixaCartList — stepper de quantidade", () => {
     expect(onRemover).toHaveBeenCalledWith(item.id)
     expect(onAlterarQuantidade).not.toHaveBeenCalled()
   })
+
+  it("campo de quantidade permite casas decimais (min/step 0.001)", () => {
+    const onAlterarQuantidade = vi.fn()
+    const onRemover = vi.fn()
+    const item = buildItem({ quantidade: 0.125 })
+
+    renderList(root, [item], onAlterarQuantidade, onRemover)
+
+    const input = container.querySelector('input[type="number"]') as HTMLInputElement | null
+    expect(input).not.toBeNull()
+    expect(input!.getAttribute("min")).toBe("0.001")
+    expect(input!.getAttribute("step")).toBe("0.001")
+    expect(input!.getAttribute("inputmode")).toBe("decimal")
+    expect(input!.value).toBe("0.125")
+  })
 })

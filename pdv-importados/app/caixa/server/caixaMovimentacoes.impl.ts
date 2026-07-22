@@ -5,16 +5,15 @@ import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensag
 import type {
   AcaoMovimentacaoCaixaResult,
   AutorizarMovimentacaoGerenteResult,
-  FormaMovimentacaoCaixa,
-  MovimentacaoCaixaDTO,
   ObterMovimentacoesCaixaResult,
   RegistrarMovimentacaoInput,
   RegistrarMovimentacaoResult,
   StatusMovimentacaoCaixa,
-  TipoMovimentacaoCaixa,
 } from '@/app/caixa/caixaMovimentacaoTypes'
 import { coletarAuditoriaRequest, parseMoneyInput } from '@/app/caixa/server/caixaActionsInternals'
 import { validarGerenteDescontoImpl } from '@/app/caixa/server/caixaGerenteDesconto.impl'
+import { createCashMovementWriter } from '@/app/caixa/server/cashMovementWriter'
+import { listMovimentacoesCaixaDto } from '@/app/caixa/server/cashMovementReader'
 
 type RpcMovimentacaoResultRow = {
   movimentacao_id?: unknown
@@ -32,11 +31,6 @@ export async function registrarMovimentacaoImpl(
 ): Promise<RegistrarMovimentacaoResult> {
   const valor = parseMoneyInput(dados.valor)
   if (valor === null || valor <= 0) return { ok: false, error: 'Valor inválido.' }
-  const motivo = dados.motivo.trim()
-  if (motivo.length < 2) return { ok: false, error: 'Motivo obrigatório (mín. 2 caracteres).' }
-  if (!dados.idempotencyKey?.trim()) {
-    return { ok: false, error: 'idempotencyKey é obrigatório.' }
-  }
 
   try {
     const supabase = await createClient()
@@ -46,37 +40,39 @@ export async function registrarMovimentacaoImpl(
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
     const { ipAddress, userAgent } = await coletarAuditoriaRequest()
-    const { data, error } = await supabase.rpc('registrar_movimentacao', {
-      p_caixa_id: dados.caixaId,
-      p_tipo: dados.tipo,
-      p_forma_pagamento: dados.formaPagamento,
-      p_valor: valor,
-      p_motivo: motivo,
-      p_motivo_codigo: (dados.motivoCodigo ?? 'OUTRO').trim() || 'OUTRO',
-      p_status: dados.status ?? null,
-      p_movimentacao_origem_id: dados.movimentacaoOrigemId ?? null,
-      p_idempotency_key: dados.idempotencyKey.trim(),
-      p_ip_address: ipAddress,
-      p_user_agent: userAgent,
-      p_device_id: dados.deviceId?.trim() || null,
-      p_terminal_id: dados.terminalId?.trim() || null,
-      p_operador_id: user.id,
-      p_gerente_id: dados.gerenteId ?? null,
+    const writer = createCashMovementWriter(supabase)
+    const result = await writer.register({
+      caixaId: dados.caixaId,
+      tipo: dados.tipo,
+      formaPagamento: dados.formaPagamento,
+      valor,
+      motivo: dados.motivo,
+      motivoCodigo: dados.motivoCodigo,
+      status: dados.status ?? null,
+      movimentacaoOrigemId: dados.movimentacaoOrigemId ?? null,
+      idempotencyKey: dados.idempotencyKey,
+      ipAddress,
+      userAgent,
+      deviceId: dados.deviceId,
+      terminalId: dados.terminalId,
+      operadorId: user.id,
+      gerenteId: dados.gerenteId ?? null,
     })
 
-    if (error) return { ok: false, error: mensagemErroComSecao('Movimentação de caixa', error.message) }
-    const row = firstRpcMovimentacaoRow(data)
-    if (!row?.movimentacao_id) {
-      return { ok: false, error: 'A movimentação não retornou identificador.' }
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: mensagemErroComSecao('Movimentação de caixa', result.error),
+      }
     }
 
     revalidatePath('/caixa')
     revalidatePath('/gerente/caixas')
     return {
       ok: true,
-      movimentacaoId: String(row.movimentacao_id),
-      status: String(row.status_movimentacao) as StatusMovimentacaoCaixa,
-      saldoAtual: Number(row.saldo_atual ?? 0),
+      movimentacaoId: result.movimentacaoId,
+      status: result.status as StatusMovimentacaoCaixa,
+      saldoAtual: result.saldoAtual,
     }
   } catch (e) {
     return {
@@ -160,37 +156,11 @@ export async function obterMovimentacoesCaixaImpl(caixaId: string): Promise<Obte
     } = await supabase.auth.getUser()
     if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
 
-    const { data, error } = await supabase
-      .from('movimentacoes_caixa')
-      .select(
-        'id, numero_sequencial, caixa_id, operador_id, gerente_id, tipo, forma_pagamento, valor, motivo_codigo, motivo, status, movimentacao_origem_id, saldo_antes, saldo_depois, created_at',
-      )
-      .eq('caixa_id', caixaId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(200)
-
-    if (error) return { ok: false, error: mensagemErroComSecao('Movimentações', error.message) }
-
-    const itens: MovimentacaoCaixaDTO[] = (data ?? []).map((row) => ({
-      id: row.id,
-      numeroSequencial: row.numero_sequencial ? Number(row.numero_sequencial) : null,
-      caixaId: row.caixa_id,
-      operadorId: row.operador_id,
-      gerenteId: row.gerente_id,
-      tipo: row.tipo as TipoMovimentacaoCaixa,
-      formaPagamento: row.forma_pagamento as FormaMovimentacaoCaixa,
-      valor: Number(row.valor ?? 0),
-      motivoCodigo: String(row.motivo_codigo ?? 'OUTRO'),
-      motivo: String(row.motivo ?? ''),
-      status: row.status as StatusMovimentacaoCaixa,
-      movimentacaoOrigemId: row.movimentacao_origem_id,
-      saldoAntes: Number(row.saldo_antes ?? 0),
-      saldoDepois: Number(row.saldo_depois ?? 0),
-      createdAt: row.created_at,
-    }))
-
-    return { ok: true, itens }
+    const listed = await listMovimentacoesCaixaDto(supabase, caixaId)
+    if (!listed.ok) {
+      return { ok: false, error: mensagemErroComSecao('Movimentações', listed.error) }
+    }
+    return { ok: true, itens: listed.itens }
   } catch (e) {
     return {
       ok: false,

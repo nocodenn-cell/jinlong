@@ -32,7 +32,8 @@ cd pdv-importados
 npm run seed:dev-users
 ```
 
-O script é **idempotente**: se o e-mail já existir no Auth, apenas faz **upsert** em `usuarios`.
+O script é **idempotente**: se o e-mail já existir no Auth, **atualiza a senha** (`updateUserById`) e faz **upsert** em `usuarios`.  
+`SEED_DEV_PASSWORD`, `PLAYWRIGHT_CAIXA_TEST_PASSWORD` e `PLAYWRIGHT_TEST_PASSWORD` devem ser a **mesma** senha quando definidas juntas.
 
 ### 3. Playwright
 

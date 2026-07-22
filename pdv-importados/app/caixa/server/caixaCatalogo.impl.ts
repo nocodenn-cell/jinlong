@@ -13,6 +13,7 @@ import {
   primeiroProdutoVendavel,
 } from '@/lib/catalog/aplicarFiltroProdutoVendavel'
 import { calcularPrecoProdutoCaixaImpl } from '@/app/caixa/server/caixaPrecoProduto.impl'
+import { quantidadeParaRpcPreco } from '@/lib/format/quantidadeCaixa'
 import type {
   BuscarProdutoResult,
   BuscarProdutoComPrecoResult,
@@ -203,8 +204,7 @@ export async function buscarProdutoComPrecoCaixaImpl(
   quantidade: number = 1,
 ): Promise<BuscarProdutoComPrecoResult> {
   try {
-    const q = Math.max(1, Math.floor(Number(quantidade)))
-    if (!Number.isFinite(q)) {
+    if (quantidadeParaRpcPreco(quantidade) < 1) {
       return { ok: false, error: 'Quantidade inválida.' }
     }
 
@@ -220,7 +220,7 @@ export async function buscarProdutoComPrecoCaixaImpl(
 
     const precoRes = await calcularPrecoProdutoCaixaImpl({
       produtoId: produto.id,
-      quantidade: q,
+      quantidade,
     })
 
     const precoCalculado = precoRes.ok ? precoRes.preco : produto.preco_varejo

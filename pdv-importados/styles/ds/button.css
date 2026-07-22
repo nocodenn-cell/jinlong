@@ -1,0 +1,217 @@
+/**
+ * Design System — Button (canônico)
+ * Fase 2 · Onda 2
+ *
+ * Classes usadas por components/ui/button.tsx.
+ * .app-btn-* abaixo são aliases deprecados (mesma aparência).
+ */
+
+.fp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  transition: var(--transition-colors);
+  cursor: pointer;
+  user-select: none;
+}
+
+.fp-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.fp-btn:disabled,
+.fp-btn[aria-disabled='true'] {
+  opacity: var(--control-disabled-opacity);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.fp-btn[data-loading='true'] {
+  cursor: wait;
+  pointer-events: none;
+}
+
+.fp-btn--sm {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-small);
+}
+
+.fp-btn--lg {
+  min-height: 2.75rem;
+  padding: 0 var(--space-6);
+}
+
+.fp-btn--icon {
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  padding: 0;
+}
+
+.fp-btn--primary {
+  background: var(--color-brand);
+  color: var(--color-fg-on-brand);
+  border-color: var(--color-brand-strong);
+}
+
+.fp-btn--primary:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--color-brand-strong);
+}
+
+.fp-btn--primary:active:not(:disabled):not([aria-disabled='true']) {
+  background: var(--color-brand-strong);
+  filter: brightness(0.95);
+}
+
+.fp-btn--secondary {
+  background: var(--color-surface-soft);
+  color: var(--color-fg);
+  border-color: var(--color-border);
+}
+
+.fp-btn--secondary:hover:not(:disabled):not([aria-disabled='true']) {
+  border-color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-surface) 85%, var(--color-brand) 15%);
+}
+
+.fp-btn--outline {
+  background: var(--color-surface);
+  color: var(--color-fg);
+  border-color: var(--color-border);
+}
+
+.fp-btn--outline:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--color-surface-soft);
+  border-color: var(--color-brand);
+}
+
+.fp-btn--ghost {
+  background: transparent;
+  color: var(--color-fg-muted);
+  border-color: transparent;
+}
+
+.fp-btn--ghost:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--color-surface-soft);
+  color: var(--color-fg);
+}
+
+.fp-btn--danger {
+  background: var(--color-danger);
+  color: var(--color-fg-on-danger);
+  border-color: var(--color-danger-strong);
+}
+
+.fp-btn--danger:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--color-danger-strong);
+}
+
+.fp-btn--success {
+  background: var(--color-success);
+  color: var(--color-fg-on-success);
+  border-color: var(--color-success-strong);
+}
+
+.fp-btn--success:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--color-success-strong);
+}
+
+/* ── Deprecated class aliases (mesma aparência; migrar para <Button>) ── */
+.app-btn-accent,
+.app-btn-neutral,
+.app-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  transition: var(--transition-colors);
+  cursor: pointer;
+  user-select: none;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+.app-btn-accent:focus-visible,
+.app-btn-neutral:focus-visible,
+.app-btn-danger:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.app-btn-accent:disabled,
+.app-btn-neutral:disabled,
+.app-btn-danger:disabled {
+  opacity: var(--control-disabled-opacity);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.app-btn-accent {
+  background: var(--color-brand);
+  color: var(--color-fg-on-brand);
+  border: 1px solid var(--color-brand-strong);
+}
+
+.app-btn-accent:hover:not(:disabled) {
+  background: var(--color-brand-strong);
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.app-btn-accent:active:not(:disabled) {
+  filter: brightness(0.95);
+  transform: none;
+  box-shadow: none;
+}
+
+.app-btn-neutral {
+  background: var(--color-surface-soft);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
+}
+
+.app-btn-neutral:hover:not(:disabled) {
+  border-color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-surface) 85%, var(--color-brand) 15%);
+  transform: none;
+  box-shadow: none;
+}
+
+.app-btn-danger {
+  background: var(--color-danger);
+  color: var(--color-fg-on-danger);
+  border: 1px solid var(--color-danger-strong);
+}
+
+.app-btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-strong);
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.app-btn-danger:active:not(:disabled) {
+  filter: brightness(0.95);
+  transform: none;
+  box-shadow: none;
+}

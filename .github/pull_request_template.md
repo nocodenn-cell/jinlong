@@ -8,6 +8,20 @@
 - [ ] **Supabase:** migrations e Edge revisadas se o PR tocar `backend/supabase/`.
 - [ ] **Testes:** `npm test` / `npm run lint` nos pacotes alterados quando fizer sentido.
 
+### Design System (obrigatório se tocar UI)
+
+Ref: `docs/architecture/DS_MIGRATION_GOVERNANCE.md`
+
+- [ ] Usa apenas componentes do DS
+- [ ] Não adiciona CSS novo em telas
+- [ ] Não adiciona cores hardcoded
+- [ ] Não altera regras de negócio / auth / fluxos
+- [ ] Antes/depois (screenshot) anexado — telas migradas
+- [ ] `tsc --noEmit` / `npm run typecheck` OK
+- [ ] Smoke da tela OK
+- [ ] `npm run check:ds-burndown` **passou** (dívida visual ≤ baseline — nunca sobe)
+- [ ] `npm run check:ds-coverage` executado (telas % / imports DS / exclusivos por módulo → 0)
+
 ### Pipeline operacional / caixa
 
 Marque e cumpra **se** o PR alterar retry, replay, ACK visual, `flush`/`shutdown`, timeout, `stale_cupom`, telemetria de scan ou ownership de cupom:

@@ -1,29 +1,40 @@
 'use server'
 
-import type { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { revalidatePath, unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
-import { createProdutoRepository } from '@/lib/adapters/supabase/produtoRepository'
 import {
-  criarProdutoComEstoque,
-  alternarAtivoProduto as alternarAtivoNoDominio,
-  publicarProdutoCatalogo,
-  inativarProdutoCatalogo,
-} from '@/core/services/produtoService'
+  atualizarProdutoAction,
+  buscarProdutosComFiltrosAction,
+  buscarProdutoPorIdAction,
+  criarProdutoAction,
+  excluirProdutoAction,
+  setProductStatusAction,
+  setProductStatusLoteAction,
+  updateCategoriaLoteAction,
+} from '@/app/admin/produtos/actions'
+import {
+  mapFormToCreateProductInput,
+  mapFormToUpdateProductInput,
+  mapImportRowToCreateProductInput,
+} from '@/app/admin/produtos/productFormMappers'
+import { mapListRowToGerente } from '@/app/admin/produtos/productListMappers'
 import {
   dualWriteFromStatus,
-  resolveStatusPublicacaoLeitura,
+  isIntencaoRascunho,
+  lifecycleAoEditarProduto,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
 import { statusInicialProduto } from '@/core/systemRules'
-import type { NovoProdutoInput, StatusPublicacao } from '@/core/ports/produto'
-import { PRODUTO_IMPORT_MAX_FILE_BYTES } from '@/lib/gerente/produtosCsvContract'
-import { validateProdutoImportCsvDocument } from '@/lib/gerente/parseProdutoImportCsv'
+import type { StatusPublicacao } from '@/core/ports/produto'
+import { PRODUTO_IMPORT_MAX_FILE_BYTES, PRODUTO_IMPORT_MAX_ROWS } from '@/lib/gerente/produtosCsvContract'
+import {
+  parseAndValidateImportRow,
+  validateProdutoImportCsvDocument,
+  type ProdutoImportRowParsed,
+} from '@/lib/gerente/parseProdutoImportCsv'
 import {
   importCsvFatalToString,
   importCsvRowFailToString,
@@ -42,7 +53,6 @@ import {
   extensaoPorMime,
   storagePathFromProdutoImagemPublicUrl,
 } from '@/lib/gerente/produtoImagemStorage'
-import { motivoBloqueioExclusaoFisica } from '@/lib/gerente/produtoExclusaoLote'
 import type { ProdutoGerenteRow } from './produtoGerenteTypes'
 import {
   EditarProdutoCatalogoSchema,
@@ -55,20 +65,86 @@ type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string }
 
-function revalidateCatalogoPaths() {
-  revalidatePath('/gerente/produtos')
-  revalidatePath('/gerente/estoque')
-  revalidatePath('/admin/catalogo')
+const IMPORT_MERGE_COLS =
+  'id, nome, codigo_barras, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_varejo, preco_atacado, preco_custo, permitir_abaixo_custo, quantidade_gatilho_atacado, origem, tem_nf, unidade_medida, observacao, categoria_id, marca_id, fornecedor_id, ncm, cfop_produto, csosn, cest, cst_pis, cst_cofins'
+
+/** CSV/lote update → ProductUpdater (merge para não apagar campos omitidos). */
+async function atualizarProdutoViaImportRow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  row: ProdutoImportRowParsed,
+  idioma: string,
+  m: ReturnType<typeof getMessages>['produtos'],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: prev, error: exErr } = await supabase
+    .from('produtos')
+    .select(IMPORT_MERGE_COLS)
+    .eq('id', row.id)
+    .maybeSingle()
+  if (exErr) {
+    return {
+      ok: false,
+      error: mensagemErroComSecao(m.import_row_atualizar_secao, exErr.message, idioma),
+    }
+  }
+  if (!prev) {
+    return {
+      ok: false,
+      error: interpolateTemplate(m.import_row_id_nao_encontrado, { id: row.id }),
+    }
+  }
+  const p = prev as Record<string, unknown>
+  const csvLifecycle = row.ativo
+    ? dualWriteFromStatus('PUBLICADO')
+    : dualWriteFromStatus('INATIVO')
+  const result = await atualizarProdutoAction(
+    row.id as string,
+    mapFormToUpdateProductInput(
+      {
+        produto_id: row.id as string,
+        nome: row.nome,
+        codigo_barras: row.codigo_barras,
+        codigo_interno: (p.codigo_interno as string | null) ?? null,
+        referencia_fornecedor: (p.referencia_fornecedor as string | null) ?? null,
+        nome_reduzido_pdv: (p.nome_reduzido_pdv as string | null) ?? null,
+        localizacao_prateleira: (p.localizacao_prateleira as string | null) ?? null,
+        preco_varejo: row.preco_varejo,
+        preco_atacado: row.preco_atacado ?? null,
+        preco_custo: p.preco_custo != null ? Number(p.preco_custo) : null,
+        permitir_abaixo_custo: Boolean(p.permitir_abaixo_custo),
+        quantidade_gatilho_atacado: row.quantidade_gatilho_atacado ?? null,
+        origem: row.origem,
+        tem_nf: row.tem_nf,
+        unidade_medida: row.unidade_medida ?? 'UN',
+        observacao: row.observacao ?? null,
+        categoria_id: (p.categoria_id as string | null) ?? null,
+        marca_id: (p.marca_id as string | null) ?? null,
+        fornecedor_id: (p.fornecedor_id as string | null) ?? null,
+        ncm: (p.ncm as string | null) ?? null,
+        cfop_produto: (p.cfop_produto as string | null) ?? null,
+        csosn: (p.csosn as string | null) ?? null,
+        cest: (p.cest as string | null) ?? null,
+        cst_pis: (p.cst_pis as string | null) ?? null,
+        cst_cofins: (p.cst_cofins as string | null) ?? null,
+      },
+      csvLifecycle,
+    ),
+  )
+  if (!result.ok) return { ok: false, error: result.error }
+  return { ok: true }
 }
 
+/**
+ * Facade UI — Zod na borda + create via ProductWriter (admin/produtos).
+ * Contrato UI: `{ success, data: { id } | error }`.
+ */
 export async function criarProduto(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const raw = input as { status_publicacao?: string }
-  const asDraft = raw.status_publicacao === 'DRAFT'
+  const raw = input as { status_publicacao?: unknown }
+  const asDraft = isIntencaoRascunho(raw.status_publicacao)
   const parsed = asDraft
     ? NovoProdutoRascunhoSchema.safeParse(input)
     : NovoProdutoSchema.safeParse(input)
@@ -78,20 +154,12 @@ export async function criarProduto(
     return { success: false, error: mensagemErroValidacaoZod(msg, idioma) }
   }
 
-  const lifecycle = asDraft
-    ? { status_publicacao: 'DRAFT' as const, ativo: false }
-    : statusInicialProduto('human')
-  const supabase = await createClient()
-  const repo = createProdutoRepository(supabase)
-  const result = await criarProdutoComEstoque(
-    { ...parsed.data, ...lifecycle },
-    repo,
+  const lifecycle = asDraft ? dualWriteFromStatus('DRAFT') : statusInicialProduto('human')
+  const result = await criarProdutoAction(
+    mapFormToCreateProductInput(parsed.data, lifecycle),
   )
-
-  if (result.success) {
-    revalidateCatalogoPaths()
-  }
-  return result
+  if (!result.ok) return { success: false, error: result.error }
+  return { success: true, data: { id: result.product.id } }
 }
 
 const AtualizarPrecoSchema = z.object({
@@ -187,7 +255,6 @@ export async function importarProdutosCsv(
   }
 
   const supabase = await createClient()
-  const repo = createProdutoRepository(supabase)
 
   let criados = 0
   let atualizados = 0
@@ -205,81 +272,204 @@ export async function importarProdutosCsv(
     const idPreenchido = typeof row.id === 'string' && row.id.length > 0
 
     if (atualizarPorId && idPreenchido) {
-      const { data: existente, error: exErr } = await supabase
-        .from('produtos')
-        .select('id')
-        .eq('id', row.id)
-        .maybeSingle()
-      if (exErr) {
-        falhas.push({
-          linha: o.lineNo,
-          motivo: mensagemErroComSecao(m.import_row_atualizar_secao, exErr.message, idioma),
-        })
-        continue
-      }
-      if (!existente) {
-        falhas.push({
-          linha: o.lineNo,
-          motivo: interpolateTemplate(m.import_row_id_nao_encontrado, { id: row.id }),
-        })
-        continue
-      }
-      const csvLifecycle = row.ativo
-        ? dualWriteFromStatus('PUBLICADO')
-        : dualWriteFromStatus('INATIVO')
-      const { error: upErr } = await supabase
-        .from('produtos')
-        .update({
-          nome: row.nome,
-          codigo_barras: row.codigo_barras,
-          preco_varejo: row.preco_varejo,
-          preco_atacado: row.preco_atacado ?? null,
-          quantidade_gatilho_atacado: row.quantidade_gatilho_atacado ?? null,
-          unidade_medida: row.unidade_medida ?? 'UN',
-          observacao: row.observacao ?? null,
-          origem: row.origem,
-          tem_nf: row.tem_nf,
-          ativo: csvLifecycle.ativo,
-          status_publicacao: csvLifecycle.status_publicacao,
-        })
-        .eq('id', row.id)
-
-      if (upErr) {
-        falhas.push({
-          linha: o.lineNo,
-          motivo: mensagemErroComSecao(m.import_row_atualizar_secao, upErr.message, idioma),
-        })
+      const up = await atualizarProdutoViaImportRow(supabase, row, idioma, m)
+      if (!up.ok) {
+        falhas.push({ linha: o.lineNo, motivo: up.error })
       } else {
         atualizados++
       }
       continue
     }
 
-    const input: NovoProdutoInput = {
-      nome: row.nome,
-      codigo_barras: row.codigo_barras,
-      preco_varejo: row.preco_varejo,
-      preco_atacado: row.preco_atacado ?? null,
-      quantidade_gatilho_atacado: row.quantidade_gatilho_atacado ?? null,
-      unidade_medida: row.unidade_medida ?? 'UN',
-      observacao: row.observacao ?? null,
-      origem: row.origem,
-      tem_nf: row.tem_nf,
-      ativo: row.ativo,
-    }
-    const result = await criarProdutoComEstoque(input, repo)
-    if (!result.success) {
+    const result = await criarProdutoAction(mapImportRowToCreateProductInput(row))
+    if (!result.ok) {
       falhas.push({ linha: o.lineNo, motivo: result.error })
     } else {
       criados++
     }
   }
 
-  if (criados > 0 || atualizados > 0) {
-    revalidateCatalogoPaths()
+  return { success: true, criados, atualizados, falhas }
+}
+
+/**
+ * Commit em lote da grade editável (Bulk Import).
+ *
+ * Diferente da importação CSV linha-a-linha, este caminho é **tudo-ou-nada**:
+ *  1. Revalida cada linha no servidor (fonte única da verdade). Se **qualquer** linha
+ *     for inválida, nada é gravado e todos os erros são devolvidos por linha.
+ *  2. Pré-checa códigos de barras duplicados (dentro do lote e contra a base) antes de
+ *     escrever — o conflito mais comum é reportado com precisão, sem gravar nada.
+ *  3. Grava com **rollback seguro**: em qualquer falha inesperada no meio do lote, as
+ *     criações são apagadas e as atualizações são revertidas a partir do snapshot.
+ */
+export async function importarProdutosLote(
+  linhasRaw: ReadonlyArray<Record<string, string>>,
+  atualizarPorId: boolean,
+): Promise<ImportarProdutosCsvResult> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const { idioma } = await getUsuarioIdioma()
+  const m = getMessages(idioma).produtos
+
+  if (!Array.isArray(linhasRaw) || linhasRaw.length === 0) {
+    return { success: false, error: m.import_lote_vazio }
+  }
+  if (linhasRaw.length > PRODUTO_IMPORT_MAX_ROWS) {
+    return {
+      success: false,
+      error: interpolateTemplate(m.import_fatal_too_many_rows, {
+        count: String(linhasRaw.length),
+        max: String(PRODUTO_IMPORT_MAX_ROWS),
+      }),
+    }
   }
 
-  return { success: true, criados, atualizados, falhas }
+  // 1. Revalidação (SSoT) — tudo-ou-nada.
+  const falhas: ImportarProdutosCsvLinhaFalha[] = []
+  const validas: Array<{ linha: number; data: ProdutoImportRowParsed }> = []
+  for (let i = 0; i < linhasRaw.length; i++) {
+    const linha = i + 1
+    const v = parseAndValidateImportRow(linhasRaw[i] ?? {}, {
+      permiteAtualizacaoPorId: atualizarPorId,
+    })
+    if (!v.ok) {
+      falhas.push({ linha, motivo: importCsvRowFailToString(v.reason, m) })
+    } else {
+      validas.push({ linha, data: v.data })
+    }
+  }
+  if (falhas.length > 0) {
+    return { success: true, criados: 0, atualizados: 0, falhas }
+  }
+
+  // 2. Pré-checagem de código de barras duplicado (só para linhas de criação).
+  const criacao = validas.filter(({ data }) => !(typeof data.id === 'string' && data.id.length > 0))
+  const barcodePorLinha = new Map<string, number[]>()
+  for (const { linha, data } of criacao) {
+    const cb = data.codigo_barras
+    if (!cb) continue
+    const arr = barcodePorLinha.get(cb) ?? []
+    arr.push(linha)
+    barcodePorLinha.set(cb, arr)
+  }
+  const dupFalhas: ImportarProdutosCsvLinhaFalha[] = []
+  for (const [, linhas] of barcodePorLinha) {
+    if (linhas.length > 1) {
+      for (const linha of linhas) {
+        dupFalhas.push({ linha, motivo: m.import_row_barcode_dup_lote })
+      }
+    }
+  }
+
+  const supabase = await createClient()
+
+  const barcodesUnicos = [...barcodePorLinha.entries()]
+    .filter(([, linhas]) => linhas.length === 1)
+    .map(([cb]) => cb)
+  if (barcodesUnicos.length > 0) {
+    const { data: existentes, error: cbErr } = await supabase
+      .from('produtos')
+      .select('codigo_barras')
+      .in('codigo_barras', barcodesUnicos)
+    if (cbErr) {
+      return {
+        success: false,
+        error: mensagemErroComSecao(m.import_lote_rollback_secao, cbErr.message, idioma),
+      }
+    }
+    const existentesSet = new Set(
+      (existentes ?? []).map((r) => (r as { codigo_barras: string | null }).codigo_barras),
+    )
+    for (const [cb, linhas] of barcodePorLinha) {
+      if (linhas.length === 1 && existentesSet.has(cb)) {
+        dupFalhas.push({ linha: linhas[0], motivo: m.import_row_barcode_exists })
+      }
+    }
+  }
+  if (dupFalhas.length > 0) {
+    dupFalhas.sort((a, b) => a.linha - b.linha)
+    return { success: true, criados: 0, atualizados: 0, falhas: dupFalhas }
+  }
+
+  // 3. Gravação com rollback seguro (create via ProductWriter).
+  const criadosIds: string[] = []
+  const snapshotsUpdate: Array<{ id: string; prev: Record<string, unknown> }> = []
+
+  async function reverter(): Promise<void> {
+    for (let i = snapshotsUpdate.length - 1; i >= 0; i--) {
+      const s = snapshotsUpdate[i]
+      await supabase.from('produtos').update(s.prev).eq('id', s.id)
+    }
+    if (criadosIds.length > 0) {
+      await supabase.from('estoque').delete().in('produto_id', criadosIds)
+      await supabase.from('produtos').delete().in('id', criadosIds)
+    }
+  }
+
+  let criados = 0
+  let atualizados = 0
+
+  for (const { linha, data } of validas) {
+    const idPreenchido = typeof data.id === 'string' && data.id.length > 0
+
+    if (atualizarPorId && idPreenchido) {
+      const { data: existente, error: exErr } = await supabase
+        .from('produtos')
+        .select(IMPORT_MERGE_COLS)
+        .eq('id', data.id)
+        .maybeSingle()
+      if (exErr || !existente) {
+        await reverter()
+        return {
+          success: true,
+          criados: 0,
+          atualizados: 0,
+          falhas: [
+            {
+              linha,
+              motivo: exErr
+                ? mensagemErroComSecao(m.import_row_atualizar_secao, exErr.message, idioma)
+                : interpolateTemplate(m.import_row_id_nao_encontrado, { id: data.id }),
+            },
+          ],
+        }
+      }
+      snapshotsUpdate.push({
+        id: data.id,
+        prev: existente as unknown as Record<string, unknown>,
+      })
+
+      const up = await atualizarProdutoViaImportRow(supabase, data, idioma, m)
+      if (!up.ok) {
+        await reverter()
+        return {
+          success: true,
+          criados: 0,
+          atualizados: 0,
+          falhas: [{ linha, motivo: up.error }],
+        }
+      }
+      atualizados++
+      continue
+    }
+
+    const result = await criarProdutoAction(mapImportRowToCreateProductInput(data))
+    if (!result.ok) {
+      await reverter()
+      return {
+        success: true,
+        criados: 0,
+        atualizados: 0,
+        falhas: [{ linha, motivo: result.error }],
+      }
+    }
+    criadosIds.push(result.product.id)
+    criados++
+  }
+
+  return { success: true, criados, atualizados, falhas: [] }
 }
 
 export async function uploadImagemProduto(
@@ -412,6 +602,9 @@ export async function removerImagemProduto(produtoId: string): Promise<ActionRes
   return { success: true, data: null }
 }
 
+const ProdutoIdSchema = z.string().uuid('ID do produto inválido.')
+
+/** Facade — lifecycle via ProductLifecycleService. */
 export async function alternarAtivoProduto(
   produtoId: string,
   ativo: boolean,
@@ -419,18 +612,11 @@ export async function alternarAtivoProduto(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const supabase = await createClient()
-  const repo = createProdutoRepository(supabase)
-  const result = await alternarAtivoNoDominio(produtoId, ativo, repo)
-
-  if (!result.success) {
-    return { success: false, error: result.error }
-  }
-  revalidateCatalogoPaths()
+  const status = statusFromAtivoLegacy(ativo)
+  const result = await setProductStatusAction(produtoId, status)
+  if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: null }
 }
-
-const ProdutoIdSchema = z.string().uuid('ID do produto inválido.')
 
 export async function publicarProduto(produtoId: string): Promise<ActionResult<null>> {
   const auth = await assertGerenteSession()
@@ -445,12 +631,8 @@ export async function publicarProduto(produtoId: string): Promise<ActionResult<n
     }
   }
 
-  const supabase = await createClient()
-  const repo = createProdutoRepository(supabase)
-  const result = await publicarProdutoCatalogo(parsed.data, repo)
-  if (!result.success) return { success: false, error: result.error }
-
-  revalidateCatalogoPaths()
+  const result = await setProductStatusAction(parsed.data, 'PUBLICADO')
+  if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: null }
 }
 
@@ -467,12 +649,8 @@ export async function inativarProduto(produtoId: string): Promise<ActionResult<n
     }
   }
 
-  const supabase = await createClient()
-  const repo = createProdutoRepository(supabase)
-  const result = await inativarProdutoCatalogo(parsed.data, repo)
-  if (!result.success) return { success: false, error: result.error }
-
-  revalidateCatalogoPaths()
+  const result = await setProductStatusAction(parsed.data, 'INATIVO')
+  if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: null }
 }
 
@@ -495,24 +673,9 @@ export async function publicarProdutosLote(
     }
   }
 
-  const supabase = await createClient()
-  const lojaId = await lojaIdParaListagemProdutos()
-  const lifecycle = dualWriteFromStatus('PUBLICADO')
-  const { error, count } = await supabase
-    .from('produtos')
-    .update({
-      status_publicacao: lifecycle.status_publicacao,
-      ativo: lifecycle.ativo,
-    })
-    .in('id', parsed.data.produto_ids)
-    .eq('loja_id', lojaId)
-
-  if (error) {
-    return { success: false, error: mensagemErroComSecao('Publicar produtos', error.message) }
-  }
-
-  revalidateCatalogoPaths()
-  return { success: true, data: { publicados: count ?? parsed.data.produto_ids.length } }
+  const result = await setProductStatusLoteAction(parsed.data.produto_ids, 'PUBLICADO')
+  if (!result.ok) return { success: false, error: result.error }
+  return { success: true, data: { publicados: result.atualizados } }
 }
 
 const LoteExclusaoSchema = z.object({
@@ -526,45 +689,10 @@ export type ResultadoExclusaoLote = Readonly<{
   falhas: ReadonlyArray<{ produto_id: string; motivo: string }>
 }>
 
-async function excluirProdutoFisicamenteSeLimpo(
-  supabase: SupabaseClient,
-  produtoId: string,
-  idioma: string,
-  p: ReturnType<typeof getMessages>['produtos'],
-): Promise<{ ok: true } | { ok: false; message: string }> {
-  const { error: eRegras } = await supabase.from('regras_preco').delete().eq('produto_id', produtoId)
-  if (eRegras) {
-    return {
-      ok: false,
-      message: mensagemErroComSecao(p.exclusao_secao_regras_preco, eRegras.message, idioma),
-    }
-  }
-
-  const { error: eEst } = await supabase.from('estoque').delete().eq('produto_id', produtoId)
-  if (eEst) {
-    return {
-      ok: false,
-      message: mensagemErroComSecao(p.exclusao_secao_estoque, eEst.message, idioma),
-    }
-  }
-
-  const { data: row } = await supabase.from('produtos').select('imagem_url').eq('id', produtoId).maybeSingle()
-  const url = (row as { imagem_url?: string | null } | null)?.imagem_url
-  const path = url ? storagePathFromProdutoImagemPublicUrl(url) : null
-  if (path) {
-    await supabase.storage.from(PRODUTO_IMAGEM_BUCKET).remove([path])
-  }
-
-  const { error: eDel } = await supabase.from('produtos').delete().eq('id', produtoId)
-  if (eDel) {
-    return {
-      ok: false,
-      message: mensagemErroComSecao(p.exclusao_secao_produto, eDel.message, idioma),
-    }
-  }
-  return { ok: true }
-}
-
+/**
+ * Facade UI — lote via ProductExclusionService (admin/produtos).
+ * Contrato UI: contadores removidos/inativados/ja_inativos + falhas.
+ */
 export async function aplicarExclusaoOuInativacaoEmLote(
   rawIds: unknown,
 ): Promise<{ success: true; data: ResultadoExclusaoLote } | { success: false; error: string }> {
@@ -572,7 +700,6 @@ export async function aplicarExclusaoOuInativacaoEmLote(
   if (!auth.ok) return { success: false, error: auth.error }
 
   const { idioma } = await getUsuarioIdioma()
-  const m = getMessages(idioma).produtos
 
   const parsed = LoteExclusaoSchema.safeParse(rawIds)
   if (!parsed.success) {
@@ -581,80 +708,20 @@ export async function aplicarExclusaoOuInativacaoEmLote(
   }
 
   const ids = [...new Set(parsed.data.produto_ids)]
-  const supabase = await createClient()
-  const repo = createProdutoRepository(supabase)
-
   const falhas: { produto_id: string; motivo: string }[] = []
   let removidos = 0
   let inativados = 0
   let ja_inativos = 0
 
   for (const id of ids) {
-    const { data: prod, error: gErr } = await supabase
-      .from('produtos')
-      .select('id, ativo')
-      .eq('id', id)
-      .maybeSingle()
-
-    if (gErr) {
-      falhas.push({
-        produto_id: id,
-        motivo: mensagemErroComSecao(m.exclusao_secao_leitura, gErr.message, idioma),
-      })
+    const result = await excluirProdutoAction(id)
+    if (!result.ok) {
+      falhas.push({ produto_id: id, motivo: result.error })
       continue
     }
-    if (!prod) {
-      falhas.push({ produto_id: id, motivo: m.exclusao_produto_nao_encontrado })
-      continue
-    }
-
-    const ativo = Boolean((prod as { ativo?: boolean }).ativo)
-
-    let bloqueio: Awaited<ReturnType<typeof motivoBloqueioExclusaoFisica>> | null
-    try {
-      bloqueio = await motivoBloqueioExclusaoFisica(supabase, id)
-    } catch (e) {
-      falhas.push({
-        produto_id: id,
-        motivo: e instanceof Error ? e.message : String(e),
-      })
-      continue
-    }
-
-    if (bloqueio) {
-      if (ativo) {
-        const r = await alternarAtivoNoDominio(id, false, repo)
-        if (!r.success) {
-          falhas.push({ produto_id: id, motivo: r.error })
-        } else {
-          inativados++
-        }
-      } else {
-        ja_inativos++
-      }
-      continue
-    }
-
-    const del = await excluirProdutoFisicamenteSeLimpo(supabase, id, idioma, m)
-    if (del.ok) {
-      removidos++
-      continue
-    }
-
-    if (ativo) {
-      const r = await alternarAtivoNoDominio(id, false, repo)
-      if (!r.success) {
-        falhas.push({ produto_id: id, motivo: `${del.message} · ${r.error}` })
-      } else {
-        inativados++
-      }
-    } else {
-      ja_inativos++
-    }
-  }
-
-  if (removidos > 0 || inativados > 0) {
-    revalidatePath('/gerente/produtos')
+    if (result.outcome === 'deleted') removidos++
+    else if (result.outcome === 'inactivated') inativados++
+    else ja_inativos++
   }
 
   return {
@@ -663,13 +730,17 @@ export async function aplicarExclusaoOuInativacaoEmLote(
   }
 }
 
+/**
+ * Facade UI — Zod + lifecycle + update via ProductUpdater (admin/produtos).
+ * Contrato UI: `{ success, data: null | error }`.
+ */
 export async function atualizarDadosProdutoGerente(
   input: unknown,
 ): Promise<ActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const asDraft = (input as { status_publicacao?: string }).status_publicacao === 'DRAFT'
+  const asDraft = isIntencaoRascunho((input as { status_publicacao?: unknown }).status_publicacao)
   const parsed = asDraft
     ? EditarProdutoRascunhoSchema.safeParse(input)
     : EditarProdutoCatalogoSchema.safeParse(input)
@@ -680,69 +751,19 @@ export async function atualizarDadosProdutoGerente(
   }
 
   const supabase = await createClient()
-
-  // Preserva INATIVO ao editar/salvar; só muda status em rascunho explícito
-  // ou ao publicar um DRAFT via "Salvar" (ação explícita de publicação).
   const { data: atualRow } = await supabase
     .from('produtos')
     .select('status_publicacao')
     .eq('id', parsed.data.produto_id)
     .maybeSingle()
   const statusAtual = (atualRow?.status_publicacao ?? null) as StatusPublicacao | null
+  const lifecycle = lifecycleAoEditarProduto(asDraft, statusAtual)
 
-  let lifecycle: { status_publicacao: StatusPublicacao; ativo: boolean } | null = null
-  if (asDraft) {
-    lifecycle = dualWriteFromStatus('DRAFT')
-  } else if (statusAtual === 'DRAFT') {
-    lifecycle = dualWriteFromStatus('PUBLICADO')
-  } else if (statusAtual === 'INATIVO') {
-    lifecycle = null
-  } else {
-    lifecycle = dualWriteFromStatus('PUBLICADO')
-  }
-
-  const { error } = await supabase
-    .from('produtos')
-    .update({
-      nome: parsed.data.nome,
-      codigo_barras: parsed.data.codigo_barras,
-      codigo_interno: parsed.data.codigo_interno,
-      referencia_fornecedor: parsed.data.referencia_fornecedor,
-      nome_reduzido_pdv: parsed.data.nome_reduzido_pdv,
-      localizacao_prateleira: parsed.data.localizacao_prateleira,
-      origem: parsed.data.origem,
-      tem_nf: parsed.data.tem_nf,
-      preco_varejo: parsed.data.preco_varejo,
-      preco_atacado: parsed.data.preco_atacado,
-      preco_custo: parsed.data.preco_custo,
-      permitir_abaixo_custo: parsed.data.permitir_abaixo_custo,
-      quantidade_gatilho_atacado: parsed.data.quantidade_gatilho_atacado,
-      categoria_id: parsed.data.categoria_id,
-      marca_id: parsed.data.marca_id,
-      fornecedor_id: parsed.data.fornecedor_id,
-      unidade_medida: parsed.data.unidade_medida,
-      observacao: parsed.data.observacao,
-      ...(lifecycle
-        ? { ativo: lifecycle.ativo, status_publicacao: lifecycle.status_publicacao }
-        : {}),
-      ncm: parsed.data.ncm,
-      cfop_produto: parsed.data.cfop_produto,
-      csosn: parsed.data.csosn,
-      cest: parsed.data.cest,
-      cst_pis: parsed.data.cst_pis,
-      cst_cofins: parsed.data.cst_cofins,
-    })
-    .eq('id', parsed.data.produto_id)
-
-  if (error) {
-    const { idioma } = await getUsuarioIdioma()
-    return {
-      success: false,
-      error: mensagemErroComSecao('Produto', error.message, idioma),
-    }
-  }
-
-  revalidateCatalogoPaths()
+  const result = await atualizarProdutoAction(
+    parsed.data.produto_id,
+    mapFormToUpdateProductInput(parsed.data, lifecycle),
+  )
+  if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: null }
 }
 
@@ -769,13 +790,6 @@ export type OpcoesFiltrosProdutos = {
   fornecedores: { id: string; nome: string }[]
 }
 
-async function lojaIdParaListagemProdutos(): Promise<string> {
-  return (await getGerenteLojaId()) ?? LOJA_MATRIZ_ID
-}
-
-/**
- * Opções para selects de filtros (categorias, marcas, fornecedores).
- */
 /**
  * Busca as opções de filtro do lado servidor, cacheada com TTL de 120 s.
  * Categorias/marcas/fornecedores raramente mudam — não faz sentido buscá-los
@@ -816,35 +830,9 @@ export async function listarOpcoesFiltrosProdutos(): Promise<ActionResult<Opcoes
   }
 }
 
-type RpcProdutoRow = {
-  id: string
-  nome: string
-  codigo_barras: string | null
-  preco_varejo: number
-  preco_atacado: number | null
-  quantidade_gatilho_atacado: number | null
-  origem: string
-  tem_nf: boolean
-  ativo: boolean
-  categoria_id: string | null
-  fornecedor_id: string | null
-  marca_id: string | null
-  unidade_medida: string | null
-  observacao: string | null
-  imagem_url: string | null
-  tags: string[] | null
-  total_count: number
-  // Campos fiscais (retornados pelo RPC quando disponíveis)
-  ncm: string | null
-  cfop_produto: string | null
-  csosn: string | null
-  cest: string | null
-  cst_pis: string | null
-  cst_cofins: string | null
-}
-
 /**
- * Lista produtos com filtros e paginação (server-side via RPC).
+ * Facade UI — listagem filtrada via ProductReader.listComFiltros.
+ * Contrato UI: `{ success, data: { rows: ProdutoGerenteRow[], total } }`.
  */
 export async function buscarProdutosComFiltros(
   input: unknown,
@@ -860,159 +848,28 @@ export async function buscarProdutosComFiltros(
   }
 
   const p = parsed.data
-  const supabase = await createClient()
-  const lojaId = await lojaIdParaListagemProdutos()
-
-  const { data, error } = await supabase.rpc('list_produtos_gerente_filtrados', {
-    p_loja_id: lojaId,
-    p_situacao: p.situacao,
-    p_origem_filtro: p.origem,
-    p_nf_filtro: p.nf,
-    p_estoque_filtro: p.estoque,
-    p_imagens_filtro: p.imagens,
-    p_tags_filtro: p.tags.length ? p.tags : null,
-    p_categoria_id: p.categoriaId ?? null,
-    p_marca_id: p.marcaId ?? null,
-    p_fornecedor_id: p.fornecedorId ?? null,
-    p_busca: p.busca?.trim() || null,
-    p_page: p.page,
-    p_page_size: p.pageSize,
+  const result = await buscarProdutosComFiltrosAction({
+    situacao: p.situacao,
+    origem: p.origem,
+    nf: p.nf,
+    estoque: p.estoque,
+    imagens: p.imagens,
+    tags: p.tags,
+    categoriaId: p.categoriaId,
+    marcaId: p.marcaId,
+    fornecedorId: p.fornecedorId,
+    busca: p.busca,
+    page: p.page,
+    pageSize: p.pageSize,
   })
-
-  if (error) {
-    return {
-      success: false,
-      error: mensagemErroComSecao('Produtos', error.message),
-    }
+  if (!result.ok) return { success: false, error: result.error }
+  return {
+    success: true,
+    data: {
+      rows: result.rows.map(mapListRowToGerente),
+      total: result.total,
+    },
   }
-
-  const list = (data ?? []) as RpcProdutoRow[]
-  const total = list.length > 0 ? Number(list[0].total_count) : 0
-
-  // Queries suplementares: SKU/localização (produtos) + estoque atual
-  const productIds = list.map((r) => r.id)
-  const [estoqueRes, extraRes] = productIds.length > 0
-    ? await Promise.all([
-        supabase
-          .from('estoque')
-          .select('produto_id, quantidade_atual, estoque_minimo')
-          .in('produto_id', productIds),
-        supabase
-          .from('produtos')
-          .select(
-            'id, codigo_interno, referencia_fornecedor, nome_reduzido_pdv, localizacao_prateleira, preco_custo, preco_custo_medio, permitir_abaixo_custo, status_publicacao',
-          )
-          .in('id', productIds),
-      ])
-    : [
-        { data: [] as { produto_id: string; quantidade_atual: number; estoque_minimo: number }[] },
-        {
-          data: [] as {
-            id: string
-            codigo_interno: string | null
-            referencia_fornecedor?: string | null
-            nome_reduzido_pdv?: string | null
-            localizacao_prateleira?: string | null
-            preco_custo?: number | null
-            preco_custo_medio?: number | null
-            permitir_abaixo_custo?: boolean
-            status_publicacao?: StatusPublicacao | null
-          }[],
-        },
-      ]
-
-  const estoqueMap = new Map<string, { quantidade_atual: number; estoque_minimo: number }>()
-  for (const e of ((estoqueRes.data ?? []) as {
-    produto_id: string
-    quantidade_atual: number
-    estoque_minimo: number
-  }[])) {
-    estoqueMap.set(e.produto_id, {
-      quantidade_atual: e.quantidade_atual,
-      estoque_minimo: e.estoque_minimo,
-    })
-  }
-
-  const extraMap = new Map<
-    string,
-    {
-      codigo_interno: string | null
-      referencia_fornecedor: string | null
-      nome_reduzido_pdv: string | null
-      localizacao_prateleira: string | null
-      preco_custo: number | null
-      preco_custo_medio: number
-      permitir_abaixo_custo: boolean
-      status_publicacao: StatusPublicacao | null
-    }
-  >()
-  for (const p of ((extraRes.data ?? []) as {
-    id: string
-    codigo_interno?: string | null
-    referencia_fornecedor?: string | null
-    nome_reduzido_pdv?: string | null
-    localizacao_prateleira?: string | null
-    preco_custo?: number | null
-    preco_custo_medio?: number | null
-    permitir_abaixo_custo?: boolean
-    status_publicacao?: StatusPublicacao | null
-  }[])) {
-    extraMap.set(p.id, {
-      codigo_interno: p.codigo_interno ?? null,
-      referencia_fornecedor: p.referencia_fornecedor ?? null,
-      nome_reduzido_pdv: p.nome_reduzido_pdv ?? null,
-      localizacao_prateleira: p.localizacao_prateleira ?? null,
-      preco_custo: p.preco_custo != null ? Number(p.preco_custo) : null,
-      preco_custo_medio: p.preco_custo_medio != null ? Number(p.preco_custo_medio) : 0,
-      permitir_abaixo_custo: p.permitir_abaixo_custo ?? false,
-      status_publicacao: p.status_publicacao ?? null,
-    })
-  }
-
-  const rows: ProdutoGerenteRow[] = list.map((r) => {
-    const extra = extraMap.get(r.id)
-    const estoque = estoqueMap.get(r.id)
-    const statusPublicacao = resolveStatusPublicacaoLeitura(
-      extra?.status_publicacao ?? statusFromAtivoLegacy(r.ativo),
-      r.ativo,
-    )
-    return {
-      id: r.id,
-      nome: r.nome,
-      codigo_barras: r.codigo_barras,
-      codigo_interno: extra?.codigo_interno ?? null,
-      referencia_fornecedor: extra?.referencia_fornecedor ?? null,
-      nome_reduzido_pdv: extra?.nome_reduzido_pdv ?? null,
-      localizacao_prateleira: extra?.localizacao_prateleira ?? null,
-      preco_varejo: Number(r.preco_varejo),
-      preco_atacado: r.preco_atacado != null ? Number(r.preco_atacado) : null,
-      preco_custo: extra?.preco_custo ?? null,
-      preco_custo_medio: extra?.preco_custo_medio ?? 0,
-      permitir_abaixo_custo: extra?.permitir_abaixo_custo ?? false,
-      quantidade_gatilho_atacado: r.quantidade_gatilho_atacado != null ? Number(r.quantidade_gatilho_atacado) : null,
-      quantidade_atual: estoque?.quantidade_atual ?? null,
-      estoque_minimo: estoque?.estoque_minimo ?? null,
-      origem: r.origem,
-      tem_nf: r.tem_nf,
-      ativo: r.ativo,
-      status_publicacao: statusPublicacao,
-      imagem_url: r.imagem_url ?? null,
-      categoria_id: r.categoria_id ?? null,
-      marca_id: r.marca_id ?? null,
-      fornecedor_id: r.fornecedor_id ?? null,
-      unidade_medida: r.unidade_medida ?? 'UN',
-      observacao: r.observacao ?? null,
-      tags: r.tags ?? null,
-      ncm: r.ncm ?? null,
-      cfop_produto: r.cfop_produto ?? null,
-      csosn: r.csosn ?? null,
-      cest: r.cest ?? null,
-      cst_pis: r.cst_pis ?? null,
-      cst_cofins: r.cst_cofins ?? null,
-    }
-  })
-
-  return { success: true, data: { rows, total } }
 }
 
 // ─── Bulk: ativar / inativar em lote ─────────────────────────────────────────
@@ -1032,27 +889,16 @@ export async function alterarAtivoLoteProdutos(
   const parsed = LoteAtivoSchema.safeParse({ produto_ids: rawIds, ativo })
   if (!parsed.success) {
     const { idioma } = await getUsuarioIdioma()
-    return { success: false, error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'Erro', idioma) }
+    return {
+      success: false,
+      error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'Erro', idioma),
+    }
   }
 
-  const supabase = await createClient()
-  const lojaId = await lojaIdParaListagemProdutos()
-  const lifecycle = dualWriteFromStatus(statusFromAtivoLegacy(parsed.data.ativo))
-  const { error, count } = await supabase
-    .from('produtos')
-    .update({
-      ativo: lifecycle.ativo,
-      status_publicacao: lifecycle.status_publicacao,
-    })
-    .in('id', parsed.data.produto_ids)
-    .eq('loja_id', lojaId)
-
-  if (error) {
-    return { success: false, error: mensagemErroComSecao('Bulk ativo', error.message) }
-  }
-
-  revalidateCatalogoPaths()
-  return { success: true, data: { atualizados: count ?? parsed.data.produto_ids.length } }
+  const status = statusFromAtivoLegacy(parsed.data.ativo)
+  const result = await setProductStatusLoteAction(parsed.data.produto_ids, status)
+  if (!result.ok) return { success: false, error: result.error }
+  return { success: true, data: { atualizados: result.atualizados } }
 }
 
 // ─── Bulk: alterar categoria em lote ─────────────────────────────────────────
@@ -1069,26 +915,24 @@ export async function alterarCategoriaLoteProdutos(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const parsed = LoteCategoriaSchema.safeParse({ produto_ids: rawIds, categoria_id: categoriaId })
+  const parsed = LoteCategoriaSchema.safeParse({
+    produto_ids: rawIds,
+    categoria_id: categoriaId,
+  })
   if (!parsed.success) {
     const { idioma } = await getUsuarioIdioma()
-    return { success: false, error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'Erro', idioma) }
+    return {
+      success: false,
+      error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'Erro', idioma),
+    }
   }
 
-  const supabase = await createClient()
-  const lojaId = await lojaIdParaListagemProdutos()
-  const { error, count } = await supabase
-    .from('produtos')
-    .update({ categoria_id: parsed.data.categoria_id })
-    .in('id', parsed.data.produto_ids)
-    .eq('loja_id', lojaId)
-
-  if (error) {
-    return { success: false, error: mensagemErroComSecao('Bulk categoria', error.message) }
-  }
-
-  revalidatePath('/gerente/produtos')
-  return { success: true, data: { atualizados: count ?? parsed.data.produto_ids.length } }
+  const result = await updateCategoriaLoteAction(
+    parsed.data.produto_ids,
+    parsed.data.categoria_id,
+  )
+  if (!result.ok) return { success: false, error: result.error }
+  return { success: true, data: { atualizados: result.atualizados } }
 }
 
 /**
@@ -1133,24 +977,9 @@ export type ProdutoDetalhe = {
   status_publicacao: StatusPublicacao
 }
 
-type ProdutoDetalheRow = {
-  id: string
-  nome: string
-  codigo_interno: string | null
-  codigo_barras: string | null
-  categoria_id: string | null
-  marca_id: string | null
-  unidade_medida: string
-  preco_varejo: number
-  preco_atacado: number | null
-  quantidade_gatilho_atacado: number | null
-  localizacao_prateleira: string | null
-  ativo: boolean
-  status_publicacao: StatusPublicacao | null
-}
-
-type EstoqueDetalheRow = { quantidade_atual: number; estoque_minimo: number }
-
+/**
+ * Facade — catálogo via ProductReader; saldo = snapshot inventory (read-through).
+ */
 export async function buscarProdutoDetalhe(produtoId: string): Promise<ActionResult<ProdutoDetalhe>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -1161,56 +990,36 @@ export async function buscarProdutoDetalhe(produtoId: string): Promise<ActionRes
     return { success: false, error: mensagemErroValidacaoZod('ID do produto inválido.', idioma) }
   }
 
+  const catalog = await buscarProdutoPorIdAction(produtoId)
+  if (!catalog.ok) return { success: false, error: catalog.error }
+
   const supabase = await createClient()
-  const [produtoRes, estoqueRes] = await Promise.all([
-    supabase
-      .from('produtos')
-      .select(
-        'id, nome, codigo_interno, codigo_barras, categoria_id, marca_id, unidade_medida, preco_varejo, preco_atacado, quantidade_gatilho_atacado, localizacao_prateleira, ativo, status_publicacao',
-      )
-      .eq('id', produtoId)
-      .maybeSingle(),
-    supabase
-      .from('estoque')
-      .select('quantidade_atual, estoque_minimo')
-      .eq('produto_id', produtoId)
-      .maybeSingle(),
-  ])
+  const { data: estoque } = await supabase
+    .from('estoque')
+    .select('quantidade_atual, estoque_minimo')
+    .eq('produto_id', produtoId)
+    .maybeSingle()
 
-  if (produtoRes.error) {
-    const { idioma } = await getUsuarioIdioma()
-    return { success: false, error: mensagemErroComSecao('Produto', produtoRes.error.message, idioma) }
-  }
-  if (!produtoRes.data) {
-    const { idioma } = await getUsuarioIdioma()
-    return { success: false, error: mensagemErroComSecao('Produto', 'Produto não encontrado.', idioma) }
-  }
-
-  const row = produtoRes.data as ProdutoDetalheRow
-  const estoque = estoqueRes.data as EstoqueDetalheRow | null
-
+  const p = catalog.product
+  const e = estoque as { quantidade_atual?: number; estoque_minimo?: number } | null
   return {
     success: true,
     data: {
-      id: row.id,
-      nome: row.nome,
-      codigo_interno: row.codigo_interno ?? null,
-      codigo_barras: row.codigo_barras ?? null,
-      categoria_id: row.categoria_id ?? null,
-      marca_id: row.marca_id ?? null,
-      unidade_medida: row.unidade_medida,
-      preco_varejo: Number(row.preco_varejo),
-      preco_atacado: row.preco_atacado != null ? Number(row.preco_atacado) : null,
-      quantidade_gatilho_atacado:
-        row.quantidade_gatilho_atacado != null ? Number(row.quantidade_gatilho_atacado) : null,
-      quantidade_atual: estoque?.quantidade_atual ?? null,
-      estoque_minimo: estoque?.estoque_minimo ?? null,
-      localizacao_prateleira: row.localizacao_prateleira ?? null,
-      ativo: row.ativo,
-      status_publicacao: resolveStatusPublicacaoLeitura(
-        row.status_publicacao ?? statusFromAtivoLegacy(row.ativo),
-        row.ativo,
-      ),
+      id: p.id,
+      nome: p.nome,
+      codigo_interno: p.codigoInterno,
+      codigo_barras: p.codigoBarras,
+      categoria_id: p.categoriaId,
+      marca_id: p.marcaId,
+      unidade_medida: 'UN',
+      preco_varejo: p.precoVarejo,
+      preco_atacado: p.precoAtacado,
+      quantidade_gatilho_atacado: null,
+      quantidade_atual: e?.quantidade_atual ?? null,
+      estoque_minimo: e?.estoque_minimo ?? null,
+      localizacao_prateleira: null,
+      ativo: p.ativo,
+      status_publicacao: p.statusPublicacao,
     },
   }
 }

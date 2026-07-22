@@ -20,6 +20,8 @@ type SidebarNavProps = {
   chineseLanguage: boolean
   /** Observabilidade visual (flag `pdv_config.show_stock_alerts`): contagem de itens em estoque baixo. */
   stockAlertCount?: number
+  /** Exibe itens `adminOnly` (wizard de provisionamento, etc.). */
+  showAdminOnlyItems?: boolean
 }
 
 function isRouteActive(pathname: string, href: string): boolean {
@@ -32,9 +34,17 @@ function isRouteActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarNavProps) {
+export function SidebarNav({
+  admin,
+  chineseLanguage,
+  stockAlertCount,
+  showAdminOnlyItems = false,
+}: SidebarNavProps) {
   const pathname = usePathname()
   const [showMore, setShowMore] = useState(false)
+  const sistemaItems = ADMIN_V2_SISTEMA_ITEMS.filter(
+    (item) => !item.adminOnly || showAdminOnlyItems,
+  )
 
   function renderItem(item: AdminV2NavItem) {
     const badgeCount = item.id === 'estoque' ? stockAlertCount : undefined
@@ -106,7 +116,7 @@ export function SidebarNav({ admin, chineseLanguage, stockAlertCount }: SidebarN
       <div>
         <div className="admin-v2-nav-group-label mb-2 px-3">SISTEMA</div>
         <ul className="flex flex-col gap-1">
-          {ADMIN_V2_SISTEMA_ITEMS.map((item) => renderItem(item))}
+          {sistemaItems.map((item) => renderItem(item))}
         </ul>
       </div>
     </nav>

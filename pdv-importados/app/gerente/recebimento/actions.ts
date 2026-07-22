@@ -6,6 +6,7 @@ import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { validarRemessaInput } from './actions.validation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -66,10 +67,14 @@ export async function criarRemessaConferencia(input: {
   const { error: e2 } = await supabase.from('remessa_itens').insert(rows)
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da remessa', e2.message) }
 
-  const { error: e3 } = await supabase.rpc('confirmar_remessa_entrada', {
-    p_remessa_id: rem.id,
-  })
-  if (e3) return { success: false, error: mensagemErroComSecao('Confirmação da remessa', e3.message) }
+  const writer = createInventoryMovementWriter(supabase, lojaId)
+  const confirmed = await writer.confirmRemessaEntrada({ remessaId: rem.id })
+  if (!confirmed.ok) {
+    return {
+      success: false,
+      error: mensagemErroComSecao('Confirmação da remessa', confirmed.error),
+    }
+  }
 
   revalidatePath('/gerente/recebimento')
   revalidatePath('/gerente/estoque')

@@ -1,23 +1,32 @@
-import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { ROUTES } from '@shared-core/navigation/routes'
+import { PageHeader } from '@/components/ui/admin-v2'
 import { buscarFornecedoresPaginadosAction } from '@/app/gerente/fornecedores/actions'
 import { FornecedoresListClient } from '@/app/gerente/fornecedores/FornecedoresListClient'
+import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { getMessages } from '@/i18n/getMessages'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 export default async function AdminFornecedoresPage() {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.fornecedores,
     resource: `route:${ROUTES.admin.fornecedores}`,
   })
+  const m = getMessages(session.idioma)
 
-  const resultado = await buscarFornecedoresPaginadosAction(1)
-  const fornecedoresIniciais = resultado.ok ? resultado.fornecedores : []
-  const hasMoreInicial = resultado.ok ? resultado.hasMore : false
+  const inicial = await buscarFornecedoresPaginadosAction(1, { status: 'todos' })
+  const fornecedoresIniciais = inicial.ok ? inicial.fornecedores : []
+  const hasMoreInicial = inicial.ok ? inicial.hasMore : false
 
   return (
-    <FornecedoresListClient
-      idioma={session.idioma}
-      fornecedoresIniciais={fornecedoresIniciais}
-      hasMoreInicial={hasMoreInicial}
-    />
+    <div className="admin-v2-page">
+      <PageHeader
+        title={m.fornecedores.titulo}
+        subtitle="Cadastro e gestão de fornecedores"
+      />
+      <FornecedoresListClient
+        idioma={session.idioma}
+        fornecedoresIniciais={fornecedoresIniciais}
+        hasMoreInicial={hasMoreInicial}
+      />
+    </div>
   )
 }

@@ -6,6 +6,7 @@ import {
   FORMAS_PAGAMENTO_CAIXA,
   type FinalizarVendaInput,
 } from "@/app/caixa/finalizarVendaValidation"
+import { calcularResumoParcelas } from "@/app/caixa/caixaPagamentoSaldo"
 
 export type FormaPagamento = FinalizarVendaInput["formaPagamento"]
 
@@ -111,9 +112,10 @@ export function useCaixaPagamentos(
     setParcelas(parcelaInicial(formaPagamento ?? "DINHEIRO", totalLiquidoComGerente))
   }, [totalLiquidoComGerente, formaPagamento])
 
-  const somaParcelas = roundMoney2(parcelas.reduce((s, p) => s + p.valor, 0))
-  const diferenca = roundMoney2(somaParcelas - totalLiquidoComGerente)
-  const saldoPendente = roundMoney2(totalLiquidoComGerente - somaParcelas)
+  const { somaParcelas, diferenca, saldoPendente } = calcularResumoParcelas(
+    totalLiquidoComGerente,
+    parcelas.reduce((s, p) => s + p.valor, 0),
+  )
 
   return {
     pagamentos: parcelas,

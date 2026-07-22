@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { DragonModal } from "@/components/ui/DragonModal"
 import { Input } from "@/components/ui/input"
 import type { Mensagens } from "@/i18n/getMessages"
 import { consultarProdutoRapidoCaixa } from "@/app/caixa/actions"
@@ -35,7 +36,6 @@ export function CaixaConsultaRapidaModal({ open, onOpenChange, m, termoInicial =
   const [erro, setErro] = useState<string | null>(null)
   const [resultado, setResultado] = useState<ConsultaRapidaProdutoDTO | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const tituloId = useId()
 
   const fechar = useCallback(() => onOpenChange(false), [onOpenChange])
 
@@ -49,18 +49,6 @@ export function CaixaConsultaRapidaModal({ open, onOpenChange, m, termoInicial =
       inputRef.current?.select()
     })
   }, [open, termoInicial])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        fechar()
-      }
-    }
-    globalThis.addEventListener("keydown", onKey)
-    return () => globalThis.removeEventListener("keydown", onKey)
-  }, [open, fechar])
 
   const consultar = useCallback(async () => {
     const t = termo.trim()
@@ -95,119 +83,93 @@ export function CaixaConsultaRapidaModal({ open, onOpenChange, m, termoInicial =
     }
   }, [termo, m])
 
-  if (!open) return null
-
   const moeda = m.caixa.moeda_prefixo
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4 dragon-glass-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) fechar()
-      }}
+    <DragonModal
+      open={open}
+      onClose={fechar}
+      title={m.caixa.consulta_rapida_titulo}
+      subtitle={m.caixa.consulta_rapida_subtitulo}
+      sheet
+      size="md"
+      closeLabel={m.comum.fechar}
+      data-testid="caixa-consulta-rapida-modal"
+      footer={
+        <Button type="button" variant="secondary" onClick={fechar}>
+          {m.comum.fechar}
+        </Button>
+      }
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={tituloId}
-        className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-none border border-jl-border-1 bg-jl-surface-elev text-jl-fg-1 shadow-lg sm:max-w-lg sm:rounded-lg"
-        onMouseDown={(e) => e.stopPropagation()}
-        data-caixa-atalho-bloqueado="true"
-      >
-        <header className="flex items-start justify-between gap-2 border-b border-jl-border-1 px-4 py-3">
-          <div>
-            <h2 id={tituloId} className="text-base font-semibold">
-              {m.caixa.consulta_rapida_titulo}
-            </h2>
-            <p className="mt-0.5 text-xs text-jl-fg-3">{m.caixa.consulta_rapida_subtitulo}</p>
-          </div>
-          <button
-            type="button"
-            className="rounded px-2 py-0.5 text-jl-fg-3 hover:bg-white/10 hover:text-jl-fg-1"
-            aria-label={m.comum.fechar}
-            onClick={fechar}
-          >
-            ×
-          </button>
-        </header>
-
-        <div className="space-y-3 overflow-y-auto px-4 py-3">
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault()
-              void consultar()
-            }}
-          >
-            <Input
-              ref={inputRef}
-              value={termo}
-              onChange={(e) => setTermo(e.target.value)}
-              placeholder={m.caixa.consulta_rapida_placeholder}
-              className="jl-modal-field flex-1"
-              autoComplete="off"
-            />
-            <Button type="submit" disabled={loading} className="min-h-10 shrink-0">
-              {loading ? m.caixa.consulta_rapida_buscando : m.caixa.consulta_rapida_buscar}
-            </Button>
-          </form>
-
-          {erro ? (
-            <p className="text-sm text-destructive" role="alert">
-              {erro}
-            </p>
-          ) : null}
-
-          {resultado ? (
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-              <div className="col-span-2">
-                <dt className="text-[11px] uppercase tracking-wide text-jl-fg-3">
-                  {m.caixa.consulta_rapida_produto}
-                </dt>
-                <dd className="font-semibold leading-snug">{resultado.nome}</dd>
-                {resultado.codigo_barras ? (
-                  <dd className="mt-0.5 font-mono text-xs text-jl-fg-3">{resultado.codigo_barras}</dd>
-                ) : null}
-              </div>
-              <Campo
-                label={m.caixa.consulta_rapida_preco}
-                value={`${moeda} ${formatDecimalBRL(resultado.precoCalculado)} (${resultado.tipoPreco})`}
-              />
-              <Campo
-                label={m.caixa.consulta_rapida_estoque}
-                value={
-                  resultado.quantidade_estoque == null
-                    ? "—"
-                    : formatDecimalBRL(resultado.quantidade_estoque)
-                }
-              />
-              <Campo
-                label={m.caixa.consulta_rapida_ultima_venda}
-                value={fmtData(resultado.ultimaVendaEm, "pt-BR")}
-              />
-              <Campo
-                label={m.caixa.consulta_rapida_ultima_compra}
-                value={fmtData(resultado.ultimaCompraEm, "pt-BR")}
-              />
-              {resultado.mostrarMargem && resultado.margemPercentual != null ? (
-                <Campo
-                  label={m.caixa.consulta_rapida_margem}
-                  value={`${formatDecimalBRL(resultado.margemPercentual)}%`}
-                  className="col-span-2"
-                />
-              ) : null}
-            </dl>
-          ) : null}
-        </div>
-
-        <footer className="flex justify-end gap-2 border-t border-jl-border-1 px-4 py-3">
-          <Button type="button" variant="secondary" onClick={fechar}>
-            {m.comum.fechar}
+      <div className="space-y-3" data-caixa-atalho-bloqueado="true">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void consultar()
+          }}
+        >
+          <Input
+            ref={inputRef}
+            value={termo}
+            onChange={(e) => setTermo(e.target.value)}
+            placeholder={m.caixa.consulta_rapida_placeholder}
+            className="jl-modal-field flex-1"
+            autoComplete="off"
+          />
+          <Button type="submit" disabled={loading} className="min-h-10 shrink-0">
+            {loading ? m.caixa.consulta_rapida_buscando : m.caixa.consulta_rapida_buscar}
           </Button>
-        </footer>
+        </form>
+
+        {erro ? (
+          <p className="text-sm text-destructive" role="alert">
+            {erro}
+          </p>
+        ) : null}
+
+        {resultado ? (
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <div className="col-span-2">
+              <dt className="text-[11px] uppercase tracking-wide text-jl-fg-3">
+                {m.caixa.consulta_rapida_produto}
+              </dt>
+              <dd className="font-semibold leading-snug">{resultado.nome}</dd>
+              {resultado.codigo_barras ? (
+                <dd className="mt-0.5 font-mono text-xs text-jl-fg-3">{resultado.codigo_barras}</dd>
+              ) : null}
+            </div>
+            <Campo
+              label={m.caixa.consulta_rapida_preco}
+              value={`${moeda} ${formatDecimalBRL(resultado.precoCalculado)} (${resultado.tipoPreco})`}
+            />
+            <Campo
+              label={m.caixa.consulta_rapida_estoque}
+              value={
+                resultado.quantidade_estoque == null
+                  ? "—"
+                  : formatDecimalBRL(resultado.quantidade_estoque)
+              }
+            />
+            <Campo
+              label={m.caixa.consulta_rapida_ultima_venda}
+              value={fmtData(resultado.ultimaVendaEm, "pt-BR")}
+            />
+            <Campo
+              label={m.caixa.consulta_rapida_ultima_compra}
+              value={fmtData(resultado.ultimaCompraEm, "pt-BR")}
+            />
+            {resultado.mostrarMargem && resultado.margemPercentual != null ? (
+              <Campo
+                label={m.caixa.consulta_rapida_margem}
+                value={`${formatDecimalBRL(resultado.margemPercentual)}%`}
+                className="col-span-2"
+              />
+            ) : null}
+          </dl>
+        ) : null}
       </div>
-    </div>
+    </DragonModal>
   )
 }
 

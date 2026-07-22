@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser, e2eProdutoCodigoBarras } from './helpers/env'
 import { loginCaixaOperador } from './helpers/login'
+import { expectCaixaShellVisible } from './helpers/caixaShell'
 import { gotoApp } from './helpers/url'
 import {
   abrirCaixaSeNecessario,
@@ -24,9 +25,7 @@ test.describe('Caixa — venda em espera (park → refresh → resume → finali
 
   test('coloca em espera, persiste após refresh, retoma e finaliza', async ({ page }) => {
     await gotoApp(page, '/caixa')
-    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({
-      timeout: 15_000,
-    })
+    await expectCaixaShellVisible(page)
 
     await abrirCaixaSeNecessario(page)
     await adicionarProdutoDemo(page, e2eProdutoCodigoBarras())
@@ -53,9 +52,7 @@ test.describe('Caixa — venda em espera (park → refresh → resume → finali
     await expect(page.getByText(/Pedido #1|订单 #1|訂單 #1/i)).toBeVisible({ timeout: 10_000 })
 
     await page.reload()
-    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({
-      timeout: 15_000,
-    })
+    await expectCaixaShellVisible(page)
     await expect(page.getByText(/Pedido #1|订单 #1|訂單 #1/i)).toBeVisible({ timeout: 15_000 })
 
     await page.getByText(/Pedido #1|订单 #1|訂單 #1/i).click()

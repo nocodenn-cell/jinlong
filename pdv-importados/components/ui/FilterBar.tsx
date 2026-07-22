@@ -1,13 +1,15 @@
 'use client'
 
 /**
- * FastProduct Admin — FilterBar (Admin V2)
+ * FilterBar — filtros URL-driven Admin (Fase 2 · Onda 4, consolidado no DS).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/forms'
 
 export type FilterOption = { value: string; label: string }
 
@@ -122,15 +124,17 @@ export function FilterBar({
       })}
 
       {clearable && hasActive ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={clearAll}
           aria-label="Limpar todos os filtros"
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium text-jl-fg-3 transition-colors hover:text-jl-fg-1"
+          className="gap-1 text-caption text-fg-subtle"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
           {clearLabel}
-        </button>
+        </Button>
       ) : null}
     </section>
   )
@@ -147,7 +151,7 @@ function PillsControl({
 }) {
   return (
     <div
-      className="inline-flex items-center gap-0.5 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] p-[3px]"
+      className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
       role="group"
       aria-label={filter.label}
     >
@@ -161,10 +165,10 @@ function PillsControl({
             aria-pressed={active}
             aria-label={`${opt.label}${active ? ' (ativo)' : ''}`}
             className={cn(
-              'rounded-[5px] px-2.5 py-1 text-[11px] font-medium leading-none transition-colors',
+              'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium leading-none transition-colors',
               active
-                ? 'bg-jl-card-l1-accent text-jl-accent'
-                : 'text-jl-fg-3 hover:text-jl-fg-1',
+                ? 'bg-[var(--color-info-bg)] text-brand'
+                : 'text-fg-subtle hover:text-fg',
             )}
           >
             {opt.label}
@@ -185,18 +189,19 @@ function SelectControl({
   onChange: (value: string) => void
 }) {
   return (
-    <select
+    <Select
       aria-label={filter.label}
       value={current}
       onChange={(e) => onChange(e.target.value)}
-      className="admin-v2-input rounded-md px-2.5 py-[7px] text-[12px] outline-none transition-colors"
+      controlSize="sm"
+      className="w-auto min-w-[8rem]"
     >
       {filter.options.map((opt) => (
         <option key={opt.value} value={opt.value}>
           {opt.label}
         </option>
       ))}
-    </select>
+    </Select>
   )
 }
 
@@ -243,8 +248,8 @@ function SearchControl({
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-2.5 py-[7px]">
-      <Search size={13} strokeWidth={2} aria-hidden className="text-jl-fg-3" />
+    <div className="inline-flex items-center gap-1.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-1.5">
+      <Search size={14} strokeWidth={2} aria-hidden className="text-fg-subtle" />
       <input
         type="text"
         value={value}
@@ -254,14 +259,14 @@ function SearchControl({
         onKeyDown={(e) => {
           if (e.key === 'Enter') flush(value)
         }}
-        className="w-44 bg-transparent text-[12px] text-jl-fg-1 outline-none placeholder:text-jl-fg-3"
+        className="fp-focus-ring w-44 bg-transparent text-caption text-fg outline-none placeholder:text-fg-subtle"
       />
       {value ? (
         <button
           type="button"
           onClick={() => flush('')}
           aria-label="Limpar busca"
-          className="shrink-0 text-jl-fg-3 hover:text-jl-fg-1"
+          className="fp-focus-ring shrink-0 text-fg-subtle hover:text-fg"
         >
           <X size={12} strokeWidth={2.5} aria-hidden />
         </button>

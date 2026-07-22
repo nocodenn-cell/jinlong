@@ -1,10 +1,10 @@
 import { useEffect } from "react"
 
-/** Atalhos extras do layout PDV clássico (Fase E). Só passar quando `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic`. */
+/** Atalhos extras do layout PDV clássico (Fase E). Layout único desde a Fase 6.1 (Onda 3). */
 export type CaixaPdvClassicAtalhos = {
   onExcluirVenda: () => void
   onFinalizarVenda: () => void
-  /** Só registra Alt+Z/C/B quando `abas` for passado (layout PDV clássico). */
+  /** Só registra Alt+Z/C/B quando `abas` for passado. */
   abas?: {
     produto?: () => void
     cliente?: () => void
@@ -26,7 +26,24 @@ type Params = {
   onConsultaRapida?: () => void
   /** Ctrl+Z: repõe o último item removido do carrinho (achado #13). */
   onDesfazerRemocao?: () => void
+  /**
+   * Teclas 1–4: seleciona a forma de pagamento (Dinheiro/PIX/Débito/Crédito),
+   * na mesma ordem do seletor. Segue a semântica dos demais atalhos: só dispara
+   * FORA de campo de texto (não interfere na digitação de código de barras).
+   */
+  onSelecionarMetodo?: (indice: 1 | 2 | 3 | 4) => void
   pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
+}
+
+const CODE_TO_METODO_INDICE: Record<string, 1 | 2 | 3 | 4> = {
+  Digit1: 1,
+  Numpad1: 1,
+  Digit2: 2,
+  Numpad2: 2,
+  Digit3: 3,
+  Numpad3: 3,
+  Digit4: 4,
+  Numpad4: 4,
 }
 
 function alvoEhCampoTexto(target: EventTarget | null): boolean {
@@ -50,6 +67,7 @@ export function useCaixaKeyboardShortcuts({
   onReimprimir,
   onConsultaRapida,
   onDesfazerRemocao,
+  onSelecionarMetodo,
   pdvClassicAtalhos = null,
 }: Params) {
   useEffect(() => {
@@ -101,6 +119,21 @@ export function useCaixaKeyboardShortcuts({
       if (e.code === "F12") {
         e.preventDefault()
         onReimprimir?.()
+        return
+      }
+      // 1–4: forma de pagamento (sem modificadores). Mesma semântica dos F:
+      // já barrado em campo de texto pelo guard no topo, então não conflita
+      // com a digitação de código de barras.
+      if (
+        onSelecionarMetodo &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.shiftKey &&
+        !e.metaKey &&
+        CODE_TO_METODO_INDICE[e.code]
+      ) {
+        e.preventDefault()
+        onSelecionarMetodo(CODE_TO_METODO_INDICE[e.code])
         return
       }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === "KeyB") {
@@ -160,6 +193,7 @@ export function useCaixaKeyboardShortcuts({
     onReimprimir,
     onConsultaRapida,
     onDesfazerRemocao,
+    onSelecionarMetodo,
     pdvClassicAtalhos,
   ])
 }

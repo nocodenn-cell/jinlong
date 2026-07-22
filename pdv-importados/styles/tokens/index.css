@@ -1,17 +1,15 @@
 /**
- * Design Tokens Index - Import centralizado
- * Importa todos os tokens na ordem correta
+ * Design Tokens — porta única (Fase 2 · Onda 2)
+ *
+ * Ordem: primitivos/escalas → focus → aliases de compatibilidade.
  */
 
-/* 1. Base tokens (primitivos) */
-@import './base.css';
-
-/* 2. Component tokens (específicos) */
-@import './component.css';
-
-/* 3. Theme tokens (variações) */
-@import './theme.css';
-
-/* DEPRECATED: semantic.css removido em Fase 1 (consolidação de paleta clara única).
-   Todos os tokens semânticos foram movidos para theme.css com prefixo --fp-*.
-   Referência: styles/tokens/theme.css linhas 34-74 */
+@import './colors.css';
+@import './spacing.css';
+@import './radius.css';
+@import './shadows.css';
+@import './typography.css';
+@import './motion.css';
+@import './z-index.css';
+@import './focus.css';
+@import './aliases.css';

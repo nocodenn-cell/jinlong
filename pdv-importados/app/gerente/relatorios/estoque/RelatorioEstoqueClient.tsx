@@ -1,9 +1,18 @@
 'use client'
 
+/**
+ * Relatório de estoque — chrome DS (Onda 7).
+ * Mesmas actions/RPCs; UI alinhada à lista Admin de Estoque.
+ */
+
 import { useCallback, useEffect, useState } from 'react'
 import { Download, FilterX } from 'lucide-react'
-import { GerenteTable } from '@/components/gerente/GerenteTable'
-import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Button } from '@/components/ui/button'
+import { SearchInput, Select } from '@/components/ui/forms'
+import { EmptyState, Loading } from '@/components/ui/feedback'
+import { MetricCard, SectionCard } from '@/components/ui/admin-v2'
+import { QuantityCell } from '@/components/ui/QuantityCell'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
@@ -141,11 +150,6 @@ export function RelatorioEstoqueClient({ idioma, kpisIniciais, inicial, categori
     }
   }
 
-  const chipBase =
-    'rounded-full px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400'
-  const chipActive = 'bg-amber-400 text-black'
-  const chipInactive = 'bg-white/[0.09] text-jl-fg-2 hover:bg-white/[0.14]'
-
   const origensOpcoes = [
     { value: '', label: re.origem_todas },
     { value: 'china_manual', label: m.produtos.origem_china },
@@ -153,68 +157,128 @@ export function RelatorioEstoqueClient({ idioma, kpisIniciais, inicial, categori
     { value: 'brasil_sem_nf', label: m.produtos.origem_brasil_sem_nf },
   ]
 
+  const pill = (active: boolean) =>
+    cn(
+      'rounded-full px-3 py-1 text-caption font-medium transition-colors',
+      active
+        ? 'bg-[var(--color-info-bg)] text-brand'
+        : 'bg-[var(--color-surface-soft)] text-fg-subtle hover:text-fg',
+    )
+
+  const columns: Column<EstoqueGerenteLinhaDTO>[] = [
+    {
+      key: 'nome',
+      header: re.col_produto,
+      priority: 'primary',
+      cell: (row) => <span className="font-medium text-fg">{row.nome}</span>,
+    },
+    {
+      key: 'cod',
+      header: re.col_codigo,
+      priority: 'contextual',
+      cell: (row) => (
+        <span className="font-mono text-caption text-fg-subtle">{row.codigo_barras ?? '—'}</span>
+      ),
+    },
+    {
+      key: 'un',
+      header: re.col_unidade,
+      cell: (row) => <span className="text-caption">{row.unidade_medida}</span>,
+    },
+    {
+      key: 'orig',
+      header: re.col_origem,
+      cell: (row) => <span className="text-caption">{origemLabel(row.origem)}</span>,
+    },
+    {
+      key: 'qtd',
+      header: re.col_qtd_atual,
+      align: 'right',
+      cell: (row) => (
+        <QuantityCell value={row.quantidade_atual} threshold={row.estoque_minimo} />
+      ),
+    },
+    {
+      key: 'min',
+      header: re.col_minimo,
+      align: 'right',
+      cell: (row) => (
+        <span className="tabular-nums text-caption text-fg-subtle">{fmtQtd(row.estoque_minimo)}</span>
+      ),
+    },
+    {
+      key: 'def',
+      header: re.col_deficit,
+      align: 'right',
+      cell: (row) =>
+        row.deficit !== null ? (
+          <span
+            className={cn(
+              'font-semibold tabular-nums',
+              row.deficit < 0
+                ? 'text-[var(--color-warning-strong)]'
+                : 'text-fg-muted',
+            )}
+          >
+            {fmtQtd(row.deficit)}
+          </span>
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        ),
+    },
+  ]
+
   return (
     <>
-      {/* KPIs */}
-      <div className="mb-5 grid grid-cols-3 gap-3">
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{re.kpi_total}</div>
-          <div className="mt-1 text-xl font-bold leading-tight tabular-nums text-jl-fg-1">{kpisIniciais.total_geral}</div>
-        </div>
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{re.kpi_critico}</div>
-          <div className={cn('mt-1 text-xl font-bold leading-tight tabular-nums', kpisIniciais.total_critico > 0 ? 'text-red-300' : 'text-jl-fg-1')}>
-            {kpisIniciais.total_critico}
-          </div>
-        </div>
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{re.kpi_zerado}</div>
-          <div className={cn('mt-1 text-xl font-bold leading-tight tabular-nums', kpisIniciais.total_zerado > 0 ? 'text-amber-400' : 'text-jl-fg-1')}>
-            {kpisIniciais.total_zerado}
-          </div>
-        </div>
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <MetricCard label={re.kpi_total} value={String(kpisIniciais.total_geral)} />
+        <MetricCard
+          label={re.kpi_critico}
+          value={String(kpisIniciais.total_critico)}
+          tone={kpisIniciais.total_critico > 0 ? 'danger' : 'gold'}
+          icon="alert-circle"
+        />
+        <MetricCard
+          label={re.kpi_zerado}
+          value={String(kpisIniciais.total_zerado)}
+          tone={kpisIniciais.total_zerado > 0 ? 'warning' : 'gold'}
+          icon="package"
+        />
       </div>
 
-      {/* Filtros */}
-      <GerenteStickyToolbar className="mb-4">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Visão chips */}
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => setVisao('geral')}
-              className={cn(chipBase, visao === 'geral' ? chipActive : chipInactive)}
-            >
+      <SectionCard className="mb-4">
+        <div className="flex flex-wrap items-center gap-3 p-3">
+          <div className="flex gap-1.5" role="group">
+            <button type="button" onClick={() => setVisao('geral')} className={pill(visao === 'geral')}>
               {re.visao_geral}
             </button>
             <button
               type="button"
               onClick={() => setVisao('critico')}
-              className={cn(chipBase, visao === 'critico' ? chipActive : chipInactive)}
+              className={pill(visao === 'critico')}
             >
               {re.visao_critico}
             </button>
           </div>
 
-          {/* Origem chips */}
           <div className="flex flex-wrap gap-1.5">
             {origensOpcoes.map((op) => (
               <button
-                key={op.value}
+                key={op.value || 'all'}
                 type="button"
                 onClick={() => setOrigem(op.value)}
-                className={cn(chipBase, origem === op.value ? chipActive : chipInactive)}
+                className={pill(origem === op.value)}
               >
                 {op.label}
               </button>
             ))}
           </div>
 
-          {/* Categoria select */}
-          <select
+          <Select
             value={categoriaId}
             onChange={(e) => setCategoriaId(e.target.value)}
-            className="app-select h-8 rounded-md px-2.5 text-xs"
+            controlSize="sm"
+            className="min-w-[10rem]"
           >
             <option value="">{re.filtro_categoria_todas}</option>
             {categorias.map((c) => (
@@ -222,116 +286,79 @@ export function RelatorioEstoqueClient({ idioma, kpisIniciais, inicial, categori
                 {c.nome}
               </option>
             ))}
-          </select>
+          </Select>
 
-          {/* Busca */}
-          <input
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder={re.busca_placeholder}
-            className="app-input h-8 w-48 rounded-md px-2.5 text-xs sm:w-56"
-          />
+          <div className="min-w-[12rem] max-w-xs flex-1">
+            <SearchInput
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder={re.busca_placeholder}
+              controlSize="sm"
+            />
+          </div>
 
-          <button
-            type="button"
-            onClick={limparFiltros}
-            className="inline-flex items-center gap-1 text-xs text-jl-fg-3 hover:text-jl-fg-1"
-          >
-            <FilterX className="h-3 w-3" aria-hidden />
+          <Button type="button" variant="ghost" size="sm" onClick={limparFiltros} className="gap-1">
+            <FilterX className="h-3.5 w-3.5" aria-hidden />
             {m.comum.limpar_filtros}
-          </button>
+          </Button>
 
           <div className="flex-1" />
 
-          {/* Export */}
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => void exportarCSV()}
             disabled={exportando || dados.total === 0}
-            className="app-btn-neutral inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+            loading={exportando}
+            className="gap-1.5"
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
             {exportando ? re.exportando : re.exportar_csv}
-          </button>
+          </Button>
         </div>
-      </GerenteStickyToolbar>
+      </SectionCard>
 
-      {/* Tabela */}
-      <GerenteTable
-        tone="dragon"
-        compact
-        columns={[
-          { key: 'nome', header: re.col_produto, priority: 'primary' },
-          { key: 'cod', header: re.col_codigo, priority: 'contextual' },
-          { key: 'un', header: re.col_unidade, priority: 'contextual' },
-          { key: 'orig', header: re.col_origem, priority: 'contextual' },
-          { key: 'qtd', header: re.col_qtd_atual, priority: 'primary', numeric: true },
-          { key: 'min', header: re.col_minimo, numeric: true },
-          { key: 'def', header: re.col_deficit, numeric: true },
-        ]}
-      >
-        {dados.rows.map((row) => (
-          <tr key={row.id} className="gerente-fin-row-hover">
-            <td className="gerente-fin-cell px-3 py-2 font-medium">{row.nome}</td>
-            <td className="gerente-fin-cell px-3 py-2 font-mono text-xs text-jl-fg-3">
-              {row.codigo_barras ?? '—'}
-            </td>
-            <td className="gerente-fin-cell px-3 py-2 text-xs">{row.unidade_medida}</td>
-            <td className="gerente-fin-cell px-3 py-2 text-xs">{origemLabel(row.origem)}</td>
-            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">{fmtQtd(row.quantidade_atual)}</td>
-            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums text-jl-fg-3">{fmtQtd(row.estoque_minimo)}</td>
-            <td
-              className={cn(
-                'px-3 py-2 text-right font-semibold tabular-nums',
-                row.deficit !== null && row.deficit < 0 ? 'gerente-caixa-diff-warn' : 'gerente-fin-cell',
-              )}
-            >
-              {row.deficit !== null ? fmtQtd(row.deficit) : '—'}
-            </td>
-          </tr>
-        ))}
-        {dados.rows.length === 0 && !loading && (
-          <tr>
-            <td colSpan={7} className="gerente-fin-empty px-4 py-12 text-center">
-              <div className="text-5xl text-amber-400/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
-                存
-              </div>
-              <div className="mt-3 text-sm font-semibold text-jl-fg-1">{re.vazio_titulo}</div>
-              <div className="mt-1 text-xs text-jl-fg-3">{re.vazio_sub}</div>
-            </td>
-          </tr>
+      <SectionCard>
+        {loading && dados.rows.length === 0 ? (
+          <Loading label={m.comum.carregando} className="min-h-0 py-16" size="sm" />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={dados.rows}
+            rowKey={(r) => r.id}
+            loading={loading && dados.rows.length > 0}
+            emptyState={<EmptyState title={re.vazio_titulo} description={re.vazio_sub} />}
+            className="rounded-none border-x-0 border-b-0"
+          />
         )}
-      </GerenteTable>
+      </SectionCard>
 
-      {loading && (
-        <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando}</p>
-      )}
-
-      {/* Paginação */}
-      {totalPages > 1 && (
+      {totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-center gap-3">
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             disabled={pagina === 0}
             onClick={() => mudarPagina(pagina - 1)}
-            className="app-btn-neutral rounded-md px-3 py-1.5 text-xs disabled:opacity-40"
           >
             {m.produtos.pag_prev}
-          </button>
-          <span className="text-xs text-jl-fg-3">
+          </Button>
+          <span className="text-caption text-fg-subtle">
             {pagina + 1} / {totalPages}
           </span>
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             disabled={pagina >= totalPages - 1}
             onClick={() => mudarPagina(pagina + 1)}
-            className="app-btn-neutral rounded-md px-3 py-1.5 text-xs disabled:opacity-40"
           >
             {m.produtos.pag_next}
-          </button>
+          </Button>
         </div>
-      )}
+      ) : null}
     </>
   )
 }

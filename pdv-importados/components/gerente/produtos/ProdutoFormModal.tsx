@@ -13,17 +13,36 @@ import {
   type OpcoesFiltrosProdutos,
 } from '@/app/gerente/produtos/actions'
 import { criarFaixaAtacado } from '@/app/gerente/produtos/precosAtacadoActions'
-import { atualizarEstoqueProduto } from '@/app/gerente/estoque/actions'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import {
+  parseEstoqueInicialIntent,
+  resolverFeedbackCadastroEstoque,
+} from '@/lib/gerente/estoqueInicialCadastro'
+import {
+  isRascunho,
+  payloadStatusRascunho,
+  podeSalvarComoRascunho,
+} from '@/core/catalog/statusPublicacao'
 import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
 import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
 import { ProdutoForm } from './form/ProdutoForm'
 import { useProdutoForm } from './form/useProdutoForm'
+import { acaoTecladoProduto } from './form/produtoFormKeyboard'
+import {
+  resolveProdutoFormStatusChip,
+  statusChipClassName,
+} from './produtoFormStatusChip'
+import {
+  emitCadastroDuration,
+  fetchSugestaoCadastro,
+  fontesLabel,
+} from '@/lib/gerente/cadastroSugestaoClient'
+import { isGtinLookupCandidate, normalizeGtinDigits } from '@/core/catalog/sugestaoCadastro'
 
 export type ProdutoFormModalProps = Readonly<{
   open: boolean
@@ -31,50 +50,45 @@ export type ProdutoFormModalProps = Readonly<{
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
   produto: ProdutoGerenteRow | null
+  /** Duplicar para criar: semeia um NOVO cadastro a partir deste produto
+   *  (limpa código de barras/interno). Ignorado quando `produto` está definido. */
+  duplicarDe?: ProdutoGerenteRow | null
   onSaved: () => void
   idioma?: Idioma
+  codigoBarrasInicial?: string | null
 }>
 
 type PosSalvarState = Readonly<{
   produtoId: string
   rascunho: boolean
   codigoBarras: string
+  /** Qty pedida era 0 (ou vazia) — aviso preventivo. */
   estoqueZerado: boolean
+  /** Pediu estoque inicial e a RPC falhou. */
+  estoqueInicialFalhou: boolean
+  estoqueErroDetalhe: string | null
 }>
 
-async function aplicarEstoqueInicial(
-  produtoId: string,
-  qtyRaw: string,
-  minRaw: string,
-): Promise<boolean> {
-  const qty = Number.parseInt(qtyRaw || '0', 10)
-  const min = Number.parseInt(minRaw || '0', 10)
-  if ((!Number.isFinite(qty) || qty <= 0) && (!Number.isFinite(min) || min <= 0)) {
-    return true
-  }
-  const r = await atualizarEstoqueProduto({
-    produto_id: produtoId,
-    quantidade_atual: Number.isFinite(qty) && qty > 0 ? qty : 0,
-    estoque_minimo: Number.isFinite(min) && min > 0 ? min : 0,
-    motivo: 'ACERTO_INVENTARIO',
-    observacao: 'Estoque inicial no cadastro de produto',
-  })
-  return r.ok === true
-}
+/**
+ * EXCEÇÃO SSoT (entity-ssot.mdc): estoque inicial só no create — agora via RPC
+ * `criar_produto_com_estoque_inicial` (mesma TX). Pós-criação → `/admin/estoque`.
+ */
 
 async function sincronizarFaixaAtacado(
   produtoId: string,
   precoAtacado: number | null,
   gatilhoRaw: string,
-): Promise<void> {
-  if (precoAtacado == null || precoAtacado <= 0) return
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (precoAtacado == null || precoAtacado <= 0) return { ok: true }
   const gatilho = parseGatilhoSubmit(gatilhoRaw)
-  if (gatilho == null) return
-  await criarFaixaAtacado({
+  if (gatilho == null) return { ok: true }
+  const r = await criarFaixaAtacado({
     produto_id: produtoId,
     quantidade_minima: gatilho,
     preco_unitario: precoAtacado,
   })
+  if (r.success) return { ok: true }
+  return { ok: false, error: r.error }
 }
 
 export function ProdutoFormModal({
@@ -83,32 +97,102 @@ export function ProdutoFormModal({
   m,
   opcoes: opcoesIniciais,
   produto,
+  duplicarDe = null,
   onSaved,
   idioma = 'pt',
+  codigoBarrasInicial = null,
 }: ProdutoFormModalProps) {
   const p = m.produtos
   const editando = produto !== null
-  const podeSalvarRascunho = !editando || produto?.status_publicacao === 'DRAFT'
+  const podeSalvarRascunho = podeSalvarComoRascunho(editando, produto?.status_publicacao)
+  const statusChip = resolveProdutoFormStatusChip(
+    editando,
+    produto?.status_publicacao,
+    p,
+  )
   const nomeRef = useRef<HTMLInputElement>(null)
+  const codigoBarrasRef = useRef<HTMLInputElement>(null)
+  const precoVarejoRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
   const [modoCompleto, setModoCompleto] = useState(editando)
+  const [sugestaoHint, setSugestaoHint] = useState<string | null>(null)
+  const [knownSuggestion, setKnownSuggestion] = useState(false)
+  const [fonteSugestao, setFonteSugestao] = useState<string | null>(null)
+  const openedAtRef = useRef(0)
+  const lastLookupGtinRef = useRef('')
 
-  const form = useProdutoForm(open, produto)
+  const form = useProdutoForm(open, produto, duplicarDe, { codigoBarrasInicial })
 
   useEffect(() => {
     if (open) {
       setOpcoes(opcoesIniciais)
       setPosSalvar(null)
       setModoCompleto(editando)
+      setSugestaoHint(null)
+      setKnownSuggestion(false)
+      setFonteSugestao(null)
+      lastLookupGtinRef.current = ''
+      openedAtRef.current = Date.now()
     }
   }, [open, opcoesIniciais, editando])
 
+  const aplicarSugestaoBarcode = useCallback(
+    async (codigoOverride?: string) => {
+      if (editando) return
+      const codigo = (codigoOverride ?? form.codigoBarras).trim()
+      const digits = normalizeGtinDigits(codigo)
+      if (!isGtinLookupCandidate(digits)) return
+      if (digits === lastLookupGtinRef.current) return
+      lastLookupGtinRef.current = digits
+      setSugestaoHint(p.sugestao_buscando)
+      const s = await fetchSugestaoCadastro(codigo)
+      if (!s || s.jaCadastrado) {
+        setSugestaoHint(
+          s?.jaCadastrado ? m.caixa.cadastro_rapido_ja_cadastrado : null,
+        )
+        return
+      }
+      const fonte = fontesLabel(s.fontes)
+      setFonteSugestao(fonte)
+      setKnownSuggestion(s.knownSuggestion)
+      if (!form.nome.trim() && s.nome) form.setNome(s.nome)
+      if (form.precoVarejoInput.parse() == null && s.precoVarejo != null) {
+        form.precoVarejoInput.reset(s.precoVarejo)
+      }
+      if (!form.categoriaId && s.categoriaId) form.setCategoriaId(s.categoriaId)
+      if (!form.ncm.trim() && s.ncm) form.setNcm(s.ncm)
+      if (form.precoCustoInput.parse() == null && s.precoCusto != null) {
+        form.precoCustoInput.reset(s.precoCusto)
+      }
+      setSugestaoHint(
+        s.fontes[0] === 'nenhuma'
+          ? null
+          : p.sugestao_aplicada.replace('{{fonte}}', fonte),
+      )
+    },
+    [editando, form, p.sugestao_buscando, p.sugestao_aplicada, m.caixa.cadastro_rapido_ja_cadastrado],
+  )
+
   useEffect(() => {
     if (!open || posSalvar) return
-    requestAnimationFrame(() => nomeRef.current?.focus())
-  }, [open, produto?.id, posSalvar])
+    requestAnimationFrame(() => {
+      if (!editando) {
+        codigoBarrasRef.current?.focus()
+        codigoBarrasRef.current?.select()
+        return
+      }
+      nomeRef.current?.focus()
+    })
+  }, [open, produto?.id, posSalvar, editando])
+
+  useEffect(() => {
+    if (!open || editando || posSalvar) return
+    const inicial = (codigoBarrasInicial ?? '').trim()
+    if (!inicial || !isGtinLookupCandidate(normalizeGtinDigits(inicial))) return
+    void aplicarSugestaoBarcode(inicial)
+  }, [open, editando, posSalvar, codigoBarrasInicial, aplicarSugestaoBarcode])
 
   const fechar = useCallback(() => {
     if (saving) return
@@ -141,6 +225,15 @@ export function ProdutoFormModal({
         return
       }
 
+      const estoqueIntent = parseEstoqueInicialIntent(
+        form.estoqueInicialQty,
+        form.estoqueInicialMin,
+      )
+      const clientRequestId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : null
+
       const payload = {
         ...buildSubmitPayload({
           nome: form.nome,
@@ -167,7 +260,10 @@ export function ProdutoFormModal({
           precoAtacado,
           precoCusto: form.precoCustoInput.parse(),
         }),
-        ...(comoRascunho ? { status_publicacao: 'DRAFT' as const } : {}),
+        ...(comoRascunho ? payloadStatusRascunho() : {}),
+        estoque_inicial_quantidade: estoqueIntent.quantidade,
+        estoque_inicial_minimo: estoqueIntent.minimo,
+        client_request_id: clientRequestId,
       }
 
       setSaving(true)
@@ -177,49 +273,95 @@ export function ProdutoFormModal({
           : await criarProduto(payload)
         if (!r.success) {
           emitGerenteToast({ kind: 'error', message: r.error })
+          if (!editando) {
+            emitCadastroDuration({
+              surface: 'catalogo_form',
+              openedAt: openedAtRef.current,
+              knownSuggestion,
+              fonteSugestao,
+              gtin: normalizeGtinDigits(form.codigoBarras) || null,
+              sucesso: false,
+            })
+          }
           return
         }
+        if (!editando) {
+          emitCadastroDuration({
+            surface: 'catalogo_form',
+            openedAt: openedAtRef.current,
+            knownSuggestion,
+            fonteSugestao,
+            gtin: normalizeGtinDigits(form.codigoBarras) || null,
+            sucesso: true,
+          })
+        }
 
-        let estoqueOk = true
+        const estoqueOk = true
+        const estoqueErro: string | null = null
+        let faixaOk = true
+        let faixaErro: string | null = null
         const createdId = !editando && r.data && 'id' in r.data ? r.data.id : null
         if (createdId) {
-          estoqueOk = await aplicarEstoqueInicial(
-            createdId,
-            form.estoqueInicialQty,
-            form.estoqueInicialMin,
-          )
-          await sincronizarFaixaAtacado(
+          const faixaRes = await sincronizarFaixaAtacado(
             createdId,
             precoAtacado,
             form.quantidadeGatilho,
           )
+          faixaOk = faixaRes.ok
+          if (!faixaRes.ok) faixaErro = faixaRes.error
         }
 
-        const msg = (() => {
-          if (comoRascunho) return p.criado_rascunho
-          if (!editando) return p.criado_publicado
-          if (produto.status_publicacao === 'DRAFT') return p.criado_publicado
-          return m.comum.sucesso
-        })()
-        emitGerenteToast({ kind: 'success', message: msg })
-        if (!estoqueOk) {
-          emitGerenteToast({ kind: 'error', message: p.erro_estoque_inicial })
+        const feedbackEstoque = resolverFeedbackCadastroEstoque({
+          estoquePedido: Boolean(createdId) && estoqueIntent.deveAplicar,
+          estoqueOk,
+          estoqueErro,
+        })
+
+        if (feedbackEstoque.kind === 'produto_ok_estoque_falhou') {
+          const detalhe = feedbackEstoque.errorDetail
+          emitGerenteToast({
+            kind: 'error',
+            message: detalhe
+              ? `${p.erro_estoque_inicial} (${detalhe})`
+              : p.erro_estoque_inicial,
+          })
+        } else {
+          const msg = (() => {
+            if (comoRascunho) return p.criado_rascunho
+            if (!editando) return p.criado_publicado
+            if (isRascunho(produto.status_publicacao)) return p.criado_publicado
+            return m.comum.sucesso
+          })()
+          emitGerenteToast({ kind: 'success', message: msg })
+        }
+        if (!faixaOk) {
+          emitGerenteToast({
+            kind: 'error',
+            message: faixaErro
+              ? `${p.erro_faixa_inicial} (${faixaErro})`
+              : p.erro_faixa_inicial,
+          })
         }
         onSaved()
 
-        if (opts?.continuar && !editando) {
+        const estoqueFalhou = feedbackEstoque.kind === 'produto_ok_estoque_falhou'
+        if (opts?.continuar && !editando && !estoqueFalhou) {
           form.limparParaNovoCadastro()
-          requestAnimationFrame(() => nomeRef.current?.focus())
+          requestAnimationFrame(() => {
+            codigoBarrasRef.current?.focus()
+            codigoBarrasRef.current?.select()
+          })
           return
         }
 
         if (createdId) {
-          const qty = Number.parseInt(form.estoqueInicialQty || '0', 10)
           setPosSalvar({
             produtoId: createdId,
             rascunho: comoRascunho,
             codigoBarras: form.codigoBarras.trim(),
-            estoqueZerado: !Number.isFinite(qty) || qty <= 0,
+            estoqueZerado: !estoqueIntent.deveAplicar || estoqueIntent.quantidade <= 0,
+            estoqueInicialFalhou: estoqueFalhou,
+            estoqueErroDetalhe: estoqueErro,
           })
           return
         }
@@ -229,7 +371,17 @@ export function ProdutoFormModal({
         setSaving(false)
       }
     },
-    [editando, produto, form, p, m.comum.sucesso, onSaved, onOpenChange],
+    [
+      editando,
+      produto,
+      form,
+      p,
+      m.comum.sucesso,
+      onSaved,
+      onOpenChange,
+      knownSuggestion,
+      fonteSugestao,
+    ],
   )
 
   if (!open) return null
@@ -252,46 +404,74 @@ export function ProdutoFormModal({
         size="md"
         icon={Package}
         title={
-          posSalvar.rascunho ? p.pos_salvar_titulo_rascunho : p.pos_salvar_titulo_publicado
+          posSalvar.estoqueInicialFalhou
+            ? p.pos_salvar_titulo_estoque_pendente
+            : posSalvar.rascunho
+              ? p.pos_salvar_titulo_rascunho
+              : p.pos_salvar_titulo_publicado
         }
         dismissable
         closeLabel={m.comum.fechar}
         footer={
-          <Button type="button" className="app-btn-accent" onClick={fechar}>
+          <Button type="button" variant="primary" onClick={fechar}>
             {m.comum.fechar}
           </Button>
         }
       >
         <p className="text-sm text-jl-fg-2">
-          {posSalvar.rascunho ? p.criado_rascunho : p.criado_publicado}
+          {posSalvar.estoqueInicialFalhou
+            ? p.erro_estoque_inicial
+            : posSalvar.rascunho
+              ? p.criado_rascunho
+              : p.criado_publicado}
         </p>
-        {!posSalvar.rascunho && posSalvar.estoqueZerado ? (
-          <p className="mt-2 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-800">
+        {posSalvar.estoqueInicialFalhou && posSalvar.estoqueErroDetalhe ? (
+          <p className="mt-2 text-caption text-fg-subtle">{posSalvar.estoqueErroDetalhe}</p>
+        ) : null}
+        {posSalvar.estoqueInicialFalhou ? (
+          <p className="mt-2 rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-3 py-2 text-caption text-[var(--color-danger-strong)]">
+            {p.pos_salvar_hint_estoque_falhou}
+          </p>
+        ) : null}
+        {!posSalvar.rascunho &&
+        !posSalvar.estoqueInicialFalhou &&
+        posSalvar.estoqueZerado ? (
+          <p className="mt-2 rounded-md border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-caption text-[var(--color-warning-strong)]">
             {p.aviso_estoque_zero_publicado}
           </p>
         ) : null}
-        <p className="mt-2 text-xs text-jl-fg-3">{p.pos_salvar_hint}</p>
+        {!posSalvar.estoqueInicialFalhou ? (
+          <p className="mt-2 text-xs text-jl-fg-3">{p.pos_salvar_hint}</p>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            href={estoqueHref}
-            className="app-btn-neutral inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
-            onClick={fechar}
+          <Button
+            asChild
+            variant={posSalvar.estoqueInicialFalhou ? 'primary' : 'secondary'}
+            size="sm"
+            className="gap-1.5"
           >
-            <Warehouse size={14} aria-hidden />
-            {p.pos_salvar_ajustar_estoque}
-          </Link>
-          <Link
-            href={etiquetaHref}
-            className="app-btn-neutral inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
-            onClick={fechar}
-          >
-            <Printer size={14} aria-hidden />
-            {p.pos_salvar_imprimir_etiqueta}
-          </Link>
+            <Link href={estoqueHref} onClick={fechar}>
+              <Warehouse size={14} aria-hidden />
+              {p.pos_salvar_ajustar_estoque}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm" className="gap-1.5">
+            <Link href={etiquetaHref} onClick={fechar}>
+              <Printer size={14} aria-hidden />
+              {p.pos_salvar_imprimir_etiqueta}
+            </Link>
+          </Button>
         </div>
       </DragonModal>
     )
   }
+
+  // Create (Missão 1): "Salvar produto". Edit: rótulos de publicação do main.
+  const ctaPrincipalLabel = !editando
+    ? p.salvar_produto
+    : produto && !isRascunho(produto.status_publicacao)
+      ? p.editar_modal_salvar
+      : p.publicar_no_pdv
 
   return (
     <DragonModal
@@ -301,6 +481,16 @@ export function ProdutoFormModal({
       size="lg"
       icon={editando ? Pencil : Package}
       title={editando ? p.editar_modal_titulo : p.cadastro_produto}
+      subtitle={
+        <span className="flex flex-col gap-1">
+          <span
+            className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-caption font-semibold ${statusChipClassName(statusChip.tone)}`}
+          >
+            {statusChip.label}
+          </span>
+          <span className="text-caption font-normal text-fg-subtle">{statusChip.hint}</span>
+        </span>
+      }
       dismissable={!saving}
       closeLabel={m.comum.cancelar}
       footer={
@@ -308,7 +498,6 @@ export function ProdutoFormModal({
           <Button
             type="button"
             variant="secondary"
-            className="app-btn-neutral"
             onClick={fechar}
             disabled={saving}
           >
@@ -318,18 +507,16 @@ export function ProdutoFormModal({
             <Button
               type="button"
               variant="secondary"
-              className="app-btn-neutral"
               disabled={saving}
               onClick={() => void salvar({ continuar: true })}
             >
-              {saving ? '…' : p.salvar_e_continuar}
+              {saving ? '…' : p.salvar_e_novo}
             </Button>
           ) : null}
           {podeSalvarRascunho ? (
             <Button
               type="button"
               variant="secondary"
-              className="app-btn-neutral"
               disabled={saving}
               onClick={() => void salvar({ rascunho: true })}
             >
@@ -338,39 +525,49 @@ export function ProdutoFormModal({
           ) : null}
           <Button
             type="button"
-            className="app-btn-accent"
+            variant="primary"
             disabled={saving}
             onClick={() => void salvar()}
           >
-            {saving
-              ? '…'
-              : editando && produto.status_publicacao !== 'DRAFT'
-                ? p.editar_modal_salvar
-                : p.publicar_no_pdv}
+            {saving ? '…' : ctaPrincipalLabel}
           </Button>
         </>
       }
     >
-      <ProdutoForm
-        m={m}
-        opcoes={opcoes}
-        produto={produto}
-        disabled={saving}
-        modoCompleto={modoCompleto}
-        onToggleModoCompleto={() => setModoCompleto((v) => !v)}
-        onFornecedoresChange={(fornecedores) =>
-          setOpcoes((prev) => ({ ...prev, fornecedores }))
-        }
-        onCategoriasChange={(categorias) =>
-          setOpcoes((prev) => ({ ...prev, categorias }))
-        }
-        onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
-        onImagemChange={onSaved}
-        idioma={idioma}
-        nomeRef={nomeRef}
-        onEnterSubmit={() => void salvar()}
-        {...form}
-      />
+      <div
+        onKeyDown={(e) => {
+          const acao = acaoTecladoProduto(e, { editando })
+          if (!acao || saving) return
+          e.preventDefault()
+          if (acao === 'publicar') void salvar()
+          else void salvar({ continuar: true })
+        }}
+      >
+        <ProdutoForm
+          m={m}
+          opcoes={opcoes}
+          produto={produto}
+          disabled={saving}
+          modoCompleto={modoCompleto}
+          onToggleModoCompleto={() => setModoCompleto((v) => !v)}
+          onFornecedoresChange={(fornecedores) =>
+            setOpcoes((prev) => ({ ...prev, fornecedores }))
+          }
+          onCategoriasChange={(categorias) =>
+            setOpcoes((prev) => ({ ...prev, categorias }))
+          }
+          onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
+          onImagemChange={onSaved}
+          idioma={idioma}
+          nomeRef={nomeRef}
+          codigoBarrasRef={codigoBarrasRef}
+          precoVarejoRef={precoVarejoRef}
+          onEnterSubmit={() => void salvar()}
+          onCodigoBarrasBlur={() => void aplicarSugestaoBarcode()}
+          sugestaoHint={sugestaoHint}
+          {...form}
+        />
+      </div>
     </DragonModal>
   )
 }

@@ -11,8 +11,9 @@ import {
   normalizeAdminSession,
   normalizeSession,
 } from './sessionConsistency'
+import { mockSupabaseUser } from '../../../tests/helpers/mockSupabaseUser'
 
-const gerenteUser = { id: 'mgr-1', email: 'gerente@test.local' }
+const gerenteUser = mockSupabaseUser('mgr-1', 'gerente@test.local')
 const gerenteRow = { perfil: 'GERENTE', idioma_preferido: 'pt', loja_id: 'loja-1' }
 
 function buildSupabaseMock(overrides: {

@@ -1,0 +1,102 @@
+/**
+ * Design System — Colors (SSOT)
+ * Fase 2 · Onda 2
+ *
+ * Componentes e telas devem consumir APENAS tokens semânticos (--color-*).
+ * Primitivos (--palette-*) são internos a este arquivo.
+ */
+
+:root {
+  /* ── Palette (interna) ── */
+  --palette-blue-500: #3b82f6;
+  --palette-blue-600: #2563eb;
+  --palette-blue-700: #1d4ed8;
+  --palette-jade-50: #ecfdf5;
+  --palette-jade-500: #10b981;
+  --palette-jade-700: #047857;
+  --palette-red-50: #fef2f2;
+  --palette-red-500: #ef4444;
+  --palette-red-700: #b91c1c;
+  --palette-amber-50: #fffbeb;
+  --palette-amber-500: #f59e0b;
+  --palette-amber-700: #b45309;
+  --palette-purple-500: #8b5cf6;
+  --palette-white: #ffffff;
+  --palette-slate-50: #f8fafc;
+  --palette-slate-100: #f1f5f9;
+  --palette-slate-200: #e2e8f0;
+  --palette-slate-400: #94a3b8;
+  --palette-slate-500: #64748b;
+  --palette-slate-600: #475569;
+  --palette-slate-700: #334155;
+  --palette-slate-900: #0f172a;
+  --palette-gold-luxury: #d4af37;
+  --palette-gold-cinzel: #bfa76a;
+  --palette-gold-warm: #c9a227;
+
+  /* ── Semantic surfaces ── */
+  --color-surface: var(--palette-white);
+  --color-surface-soft: var(--palette-slate-50);
+  --color-surface-muted: var(--palette-slate-100);
+  --color-surface-inverse: var(--palette-slate-900);
+  --color-overlay: rgb(15 23 42 / 0.45);
+
+  /* ── Semantic text (contraste AA em superfície clara) ── */
+  --color-fg: var(--palette-slate-900);
+  --color-fg-muted: var(--palette-slate-600);
+  --color-fg-subtle: var(--palette-slate-500);
+  --color-fg-disabled: var(--palette-slate-400);
+  --color-fg-inverse: var(--palette-white);
+  --color-fg-on-brand: var(--palette-white);
+  --color-fg-on-danger: var(--palette-white);
+  --color-fg-on-success: var(--palette-white);
+
+  /* ── Borders ── */
+  --color-border: var(--palette-slate-200);
+  --color-border-strong: var(--palette-slate-400);
+  --color-border-disabled: var(--palette-slate-100);
+
+  /* ── Brand ── */
+  --color-brand: var(--palette-blue-600);
+  --color-brand-strong: var(--palette-blue-700);
+  --color-brand-soft: var(--palette-blue-500);
+
+  /* ── Status ── */
+  --color-success: var(--palette-jade-500);
+  --color-success-strong: var(--palette-jade-700);
+  --color-success-bg: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --color-success-border: color-mix(in srgb, var(--color-success) 35%, transparent);
+
+  --color-danger: var(--palette-red-500);
+  --color-danger-strong: var(--palette-red-700);
+  --color-danger-bg: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  --color-danger-border: color-mix(in srgb, var(--color-danger) 35%, transparent);
+
+  --color-warning: var(--palette-amber-500);
+  --color-warning-strong: var(--palette-amber-700);
+  --color-warning-bg: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  --color-warning-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
+
+  /* Warning text on light surfaces — never amber-400 */
+  --color-warning-fg: var(--palette-amber-700);
+
+  --color-info: var(--palette-blue-500);
+  --color-info-bg: color-mix(in srgb, var(--color-info) 12%, transparent);
+  --color-info-border: color-mix(in srgb, var(--color-info) 35%, transparent);
+
+  --color-accent-purple: var(--palette-purple-500);
+  --color-accent-purple-bg: color-mix(in srgb, var(--color-accent-purple) 12%, transparent);
+  --color-accent-purple-border: color-mix(in srgb, var(--color-accent-purple) 35%, transparent);
+
+  /* ── Control states ── */
+  --color-control-bg: var(--color-surface);
+  --color-control-bg-soft: var(--color-surface-soft);
+  --color-control-border: var(--color-border);
+  --color-control-placeholder: var(--color-fg-subtle);
+  --control-disabled-opacity: 0.5;
+
+  /* ── Login ceremonial (scoped exception) ── */
+  --color-login-gold: var(--palette-gold-luxury);
+  --color-login-gold-wordmark: var(--palette-gold-cinzel);
+  --color-chart-warm: var(--palette-gold-warm);
+}

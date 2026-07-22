@@ -6,12 +6,12 @@ import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { cn } from "@/lib/utils"
+import { EmptyState, Loading } from "@/components/ui/feedback"
 
 type Props = {
   m: Mensagens
   vendas: VendaEmEsperaCard[]
   carregando?: boolean
-  layoutVariant?: "classic" | "default"
   onRetomar: (id: string) => void
   onDescartar: (id: string) => void
 }
@@ -20,22 +20,18 @@ function CaixaEmAbertoListImpl({
   m,
   vendas,
   carregando,
-  layoutVariant = "classic",
   onRetomar,
   onDescartar,
 }: Props) {
-  const classic = layoutVariant === "classic"
-  const muted = classic ? "text-muted-foreground" : "text-jl-fg-3"
-  const card = classic
-    ? "border border-dashed border-border bg-card hover:border-primary/50"
-    : "border border-dashed border-jl-border-1 bg-jl-surface-soft hover:border-amber-400/50"
+  const muted = "text-muted-foreground"
+  const card = "border border-dashed border-border bg-card hover:border-primary/50"
 
   if (carregando) {
-    return <p className={cn("text-xs", muted)}>{m.comum.carregando}</p>
+    return <Loading label={m.comum.carregando} className="min-h-0 py-4" size="sm" />
   }
 
   if (vendas.length === 0) {
-    return <p className={cn("text-xs italic", muted)}>{m.caixa.em_aberto_vazio}</p>
+    return <EmptyState title={m.caixa.em_aberto_vazio} className="py-4" />
   }
 
   return (
@@ -63,10 +59,7 @@ function CaixaEmAbertoListImpl({
             </button>
             <button
               type="button"
-              className={cn(
-                "mt-1 text-[11px] underline-offset-2 hover:underline",
-                classic ? "text-destructive" : "text-red-400",
-              )}
+              className="mt-1 text-[11px] underline-offset-2 hover:underline text-destructive"
               onClick={() => onDescartar(v.id)}
             >
               {m.caixa.em_aberto_descartar}

@@ -140,6 +140,18 @@ function CaixaFooterImpl({
                 </div>
               </div>
             )}
+            <div className="text-right min-w-[7rem]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
+                {m.caixa.total_pagar}
+              </div>
+              <div
+                data-testid="caixa-total-liquido"
+                data-total-liquido={totalLiquidoComGerente.toFixed(2)}
+                className="text-2xl font-extrabold leading-none tabular-nums text-amber-400"
+              >
+                {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
+              </div>
+            </div>
           </div>
         </div>
       </footer>
@@ -236,7 +248,7 @@ function CaixaFooterImpl({
             <div
               data-testid="caixa-total-liquido"
               data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-              className="text-3xl sm:text-4xl font-extrabold leading-none tabular-nums text-amber-400"
+              className="text-3xl sm:text-4xl font-extrabold leading-none tabular-nums text-[var(--color-warning-fg)]"
             >
               {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
             </div>
@@ -244,12 +256,13 @@ function CaixaFooterImpl({
           <div className="pl-1">
             <Button
               type="button"
-              className="app-btn-accent h-11 min-w-[11rem] text-base font-bold"
+              variant="primary"
+              className="h-11 min-w-[11rem] text-subtitle font-bold"
               onClick={onFinalizar}
               disabled={
                 finalizando || itensLength === 0 || buscando || carregandoRegras
               }
-              aria-busy={finalizando}
+              loading={finalizando}
               aria-keyshortcuts="F9 F4"
             >
               {finalizando ? m.caixa.finalizando : m.caixa.finalizar_venda}

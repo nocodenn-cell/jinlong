@@ -6,13 +6,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { PageHeader } from '@/components/ui/admin-v2'
+import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { DragonModal } from '@/components/ui/DragonModal'
+import { Field, Input, Select } from '@/components/ui/forms'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { transferenciaActionResultToLegacy } from '@/lib/observability/actionResultAdapters'
 import { executarTransferencia, obterEstoqueDisponivelTransferencia } from './actions'
 import { caixaFmt } from '@/app/caixa/caixaI18n'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 export type TransferenciaLojaRow = { id: string; nome: string; codigo: string }
 export type TransferenciaProdutoOpt = {
@@ -108,9 +110,6 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
     },
   )
 
-  const inputClass = 'rounded-lg px-3 py-2 text-sm app-input'
-  const selectClass = 'rounded-lg px-3 py-2 text-sm app-select'
-
   const origemIgualDestino = podeTransferir && origemId !== '' && origemId === destinoId
   const qtd = Number(quantidadeStr.replace(',', '.'))
   const qtdValida = Number.isFinite(qtd) && qtd > 0
@@ -185,288 +184,241 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
     setConfirmacaoPendente({ tipo: 'transferir', quantidade: qtd })
   }
 
+  const modalTitulo =
+    confirmacaoPendente?.tipo === 'trocar' ? t.modal_trocar_titulo : t.modal_confirmar_titulo
+  const modalDescricao =
+    confirmacaoPendente?.tipo === 'trocar'
+      ? t.modal_trocar_descricao
+      : caixaFmt(t.modal_confirmar_descricao, {
+          quantidade: String(confirmacaoPendente?.quantidade ?? '—'),
+          unidade: unidadeMedida,
+          produto: nomeProduto,
+          origem: nomeLoja(origemId),
+          destino: nomeLoja(destinoId),
+        })
+
   return (
     <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
       <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />
 
-      <Link href="/gerente" className="gerente-nav-back text-sm font-medium hover:underline">
+      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
         ← {m.gerente.inicio}
       </Link>
 
       {!podeTransferir ? (
-        <div className="mt-6 rounded-xl border p-4 text-sm leading-relaxed app-badge-warn" role="status">
+        <div
+          className="mt-6 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-4 text-body leading-relaxed text-[var(--color-warning-strong)]"
+          role="status"
+        >
           <strong>{t.uma_loja_aviso_titulo}</strong> {t.uma_loja_aviso_texto}
         </div>
       ) : null}
 
       {podeTransferir ? (
-        <form onSubmit={onSubmit} className="dragon-glass-card mt-6 grid grid-cols-1 gap-3 rounded-xl p-5 md:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-sm font-medium">{t.resumo_origem}</span>
-            <select
-              name="origem"
-              required
-              value={origemId}
-              onChange={(e) => setOrigemId(e.target.value)}
-              className={selectClass}
+        <SectionCard className="mt-6">
+          <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field id="transferencia-origem" label={t.resumo_origem} required>
+              <Select
+                name="origem"
+                required
+                value={origemId}
+                onChange={(e) => setOrigemId(e.target.value)}
+              >
+                {lojas.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nome} ({l.codigo})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="transferencia-destino" label={t.resumo_destino} required>
+              <Select
+                name="destino"
+                required
+                value={destinoId}
+                onChange={(e) => setDestinoId(e.target.value)}
+              >
+                {lojas.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nome} ({l.codigo})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <div className="flex flex-wrap gap-2 md:col-span-2">
+              <span className="inline-flex w-fit rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-caption font-semibold text-fg-muted">
+                {t.resumo_origem}: {nomeLoja(origemId)}
+              </span>
+              <span className="inline-flex w-fit rounded-md border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-2 py-0.5 text-caption font-semibold text-[var(--color-warning-strong)]">
+                {t.resumo_destino}: {nomeLoja(destinoId)}
+              </span>
+            </div>
+            <div className="md:col-span-2 -mt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto px-0 text-caption underline-offset-4 hover:underline"
+                onClick={() => {
+                  if (produtoId) {
+                    setConfirmacaoPendente({ tipo: 'trocar' })
+                    return
+                  }
+                  setOrigemId(destinoId)
+                  setDestinoId(origemId)
+                }}
+              >
+                {t.btn_trocar_origem_destino}
+              </Button>
+            </div>
+            {origemIgualDestino ? (
+              <p
+                className="rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-3 py-2 text-body text-[var(--color-danger-strong)] md:col-span-2"
+                role="alert"
+              >
+                {t.bloqueio_origem_destino}
+              </p>
+            ) : null}
+            <Field id="transferencia-produto" label={t.resumo_produto} required>
+              <Select
+                name="produto_id"
+                required
+                value={produtoId}
+                onChange={(e) => setProdutoId(e.target.value)}
+              >
+                {produtos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="transferencia-quantidade" label={t.resumo_quantidade} required>
+              <Input
+                name="quantidade"
+                type="number"
+                min={0.001}
+                step="0.001"
+                required
+                value={quantidadeStr}
+                onChange={(e) => setQuantidadeStr(e.target.value)}
+              />
+            </Field>
+            <div
+              className={`rounded-lg border px-3 py-2 text-body md:col-span-2 ${
+                estoqueInsuficiente
+                  ? 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-strong)]'
+                  : 'border-[var(--color-border)] bg-[var(--color-surface-soft)] text-fg'
+              }`}
+              role="status"
             >
-              {lojas.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.nome} ({l.codigo})
-                </option>
-              ))}
-            </select>
-            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-jl-surface-elev text-jl-fg-2 border border-jl-border-1">
-              {t.resumo_origem}: {nomeLoja(origemId)}
-            </span>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-sm font-medium">{t.resumo_destino}</span>
-            <select
-              name="destino"
-              required
-              value={destinoId}
-              onChange={(e) => setDestinoId(e.target.value)}
-              className={selectClass}
+              <span className="font-medium">{t.estoque_disponivel}: </span>
+              {carregandoEstoque ? (
+                <span className="text-fg-muted">{t.estoque_carregando}</span>
+              ) : estoqueOrigem !== null ? (
+                <span className="tabular-nums font-semibold">
+                  {estoqueOrigem.toLocaleString(idioma === 'pt' ? 'pt-BR' : 'zh-CN')}
+                </span>
+              ) : (
+                <span className="text-fg-muted">—</span>
+              )}
+              <span className="ml-2 text-caption text-fg-muted">({unidadeMedida})</span>
+              {estoqueInsuficiente ? (
+                <span className="mt-1 block text-caption font-medium">{t.estoque_insuficiente}</span>
+              ) : null}
+            </div>
+            <Field
+              id="transferencia-obs"
+              label={t.resumo_obs}
+              className="md:col-span-2"
+              error={observacaoObrigatoria ? t.obs_obrigatoria_limite : undefined}
             >
-              {lojas.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.nome} ({l.codigo})
-                </option>
-              ))}
-            </select>
-            <span className="inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-semibold bg-amber-400/10 text-amber-400 border border-amber-400/25">
-              {t.resumo_destino}: {nomeLoja(destinoId)}
-            </span>
-          </label>
-          <div className="md:col-span-2 -mt-1">
-            <button
+              <Input value={observacao} onChange={(e) => setObservacao(e.target.value)} />
+            </Field>
+
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-3 md:col-span-2">
+              <div className="text-caption font-semibold uppercase tracking-wide text-fg-muted">
+                {t.resumo_titulo}
+              </div>
+              <ul className="mt-2 space-y-1 text-body">
+                <li>
+                  <span className="text-fg-muted">{t.resumo_origem}:</span> {nomeLoja(origemId)}
+                </li>
+                <li>
+                  <span className="text-fg-muted">{t.resumo_destino}:</span> {nomeLoja(destinoId)}
+                </li>
+                <li>
+                  <span className="text-fg-muted">{t.resumo_produto}:</span> {nomeProduto}
+                </li>
+                <li>
+                  <span className="text-fg-muted">{t.resumo_quantidade}:</span>{' '}
+                  <span className="tabular-nums font-medium">
+                    {qtdValida ? qtd : '—'} {unidadeMedida}
+                  </span>
+                </li>
+                <li>
+                  <span className="text-fg-muted">{t.saldo_atual_origem}:</span>{' '}
+                  <span className="tabular-nums font-medium">
+                    {estoqueOrigem !== null ? estoqueOrigem : '—'} {unidadeMedida}
+                  </span>
+                </li>
+                <li>
+                  <span className="text-fg-muted">{t.saldo_projetado_origem}:</span>{' '}
+                  <span className="tabular-nums font-medium">
+                    {saldoProjetado !== null ? saldoProjetado : '—'} {unidadeMedida}
+                  </span>
+                </li>
+                <li>
+                  <span className="text-fg-muted">{t.resumo_obs}:</span>{' '}
+                  {observacao.trim() ? observacao.trim() : t.resumo_nenhuma_obs}
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-2 flex justify-end md:col-span-2">
+              <Button type="submit" variant="primary" loading={loading} disabled={!podeEnviar}>
+                {loading ? t.btn_processando : t.btn_transferir}
+              </Button>
+            </div>
+          </form>
+        </SectionCard>
+      ) : null}
+
+      <DragonModal
+        open={confirmacaoPendente !== null}
+        onClose={() => setConfirmacaoPendente(null)}
+        title={modalTitulo}
+        dismissable={!loading}
+        footer={
+          <>
+            <Button
               type="button"
-              className="text-xs font-medium app-link-accent underline-offset-4 hover:underline"
+              variant="ghost"
+              onClick={() => setConfirmacaoPendente(null)}
+              disabled={loading}
+            >
+              {m.comum.cancelar}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              loading={loading}
               onClick={() => {
-                if (produtoId) {
-                  setConfirmacaoPendente({ tipo: 'trocar' })
+                if (!confirmacaoPendente) return
+                if (confirmacaoPendente.tipo === 'trocar') {
+                  executarTrocaOrigemDestino()
                   return
                 }
-                setOrigemId(destinoId)
-                setDestinoId(origemId)
+                executarTransferenciaConfirmada(confirmacaoPendente.quantidade)
               }}
             >
-              {t.btn_trocar_origem_destino}
-            </button>
-          </div>
-          {origemIgualDestino ? (
-            <p className="rounded-lg border px-3 py-2 text-sm app-badge-danger md:col-span-2" role="alert">
-              {t.bloqueio_origem_destino}
-            </p>
-          ) : null}
-          <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-sm font-medium">{t.resumo_produto}</span>
-            <select
-              name="produto_id"
-              required
-              value={produtoId}
-              onChange={(e) => setProdutoId(e.target.value)}
-              className={selectClass}
-            >
-              {produtos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="gerente-fin-label text-sm font-medium">{t.resumo_quantidade}</span>
-            <input
-              name="quantidade"
-              type="number"
-              min={0.001}
-              step="0.001"
-              required
-              value={quantidadeStr}
-              onChange={(e) => setQuantidadeStr(e.target.value)}
-              className={inputClass}
-            />
-          </label>
-          <div
-            className={`rounded-lg border px-3 py-2 text-sm md:col-span-2 ${
-              estoqueInsuficiente ? 'app-badge-danger' : 'app-surface-soft app-border'
-            }`}
-            role="status"
-          >
-            <span className="font-medium">{t.estoque_disponivel}: </span>
-            {carregandoEstoque ? (
-              <span className="app-muted">{t.estoque_carregando}</span>
-            ) : estoqueOrigem !== null ? (
-              <span className="tabular-nums font-semibold">
-                {(() => {
-                  const localeString = idioma === 'pt' ? 'pt-BR' : 'zh-CN'
-                    return estoqueOrigem.toLocaleString(localeString)
-                })()}
-              </span>
-            ) : (
-              <span className="app-muted">—</span>
-            )}
-            <span className="ml-2 text-xs app-muted">({unidadeMedida})</span>
-            {estoqueInsuficiente ? (
-              <span className="mt-1 block text-xs font-medium">{t.estoque_insuficiente}</span>
-            ) : null}
-          </div>
-          <label className="flex flex-col gap-1 md:col-span-2">
-            <span className="gerente-fin-label text-sm font-medium">{t.resumo_obs}</span>
-            <input value={observacao} onChange={(e) => setObservacao(e.target.value)} className={inputClass} />
-            {observacaoObrigatoria ? (
-              <span className="text-xs app-badge-warn rounded-md border px-2 py-1 mt-1">
-                {t.obs_obrigatoria_limite}
-              </span>
-            ) : null}
-          </label>
-
-          <div className="rounded-lg border p-3 md:col-span-2 app-surface-soft app-border">
-            <div className="text-xs font-semibold uppercase tracking-wide app-muted">{t.resumo_titulo}</div>
-            <ul className="mt-2 space-y-1 text-sm">
-              <li>
-                <span className="app-muted">{t.resumo_origem}:</span> {nomeLoja(origemId)}
-              </li>
-              <li>
-                <span className="app-muted">{t.resumo_destino}:</span> {nomeLoja(destinoId)}
-              </li>
-              <li>
-                <span className="app-muted">{t.resumo_produto}:</span> {nomeProduto}
-              </li>
-              <li>
-                <span className="app-muted">{t.resumo_quantidade}:</span>{' '}
-                <span className="tabular-nums font-medium">{qtdValida ? qtd : '—'} {unidadeMedida}</span>
-              </li>
-              <li>
-                <span className="app-muted">{t.saldo_atual_origem}:</span>{' '}
-                <span className="tabular-nums font-medium">
-                  {estoqueOrigem !== null ? estoqueOrigem : '—'} {unidadeMedida}
-                </span>
-              </li>
-              <li>
-                <span className="app-muted">{t.saldo_projetado_origem}:</span>{' '}
-                <span className="tabular-nums font-medium">
-                  {saldoProjetado !== null ? saldoProjetado : '—'} {unidadeMedida}
-                </span>
-              </li>
-              <li>
-                <span className="app-muted">{t.resumo_obs}:</span>{' '}
-                {observacao.trim() ? observacao.trim() : t.resumo_nenhuma_obs}
-              </li>
-            </ul>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !podeEnviar}
-            className="mt-2 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-70 md:col-span-2 md:w-auto md:justify-self-end md:min-w-[160px] app-btn-accent"
-          >
-            {loading ? t.btn_processando : t.btn_transferir}
-          </button>
-        </form>
-      ) : null}
-      <TransferenciaConfirmModal
-        open={confirmacaoPendente !== null}
-        title={
-          confirmacaoPendente?.tipo === 'trocar'
-            ? t.modal_trocar_titulo
-            : t.modal_confirmar_titulo
+              {loading ? t.btn_processando : m.comum.confirmar}
+            </Button>
+          </>
         }
-        description={
-          confirmacaoPendente?.tipo === 'trocar'
-            ? t.modal_trocar_descricao
-            : caixaFmt(t.modal_confirmar_descricao, {
-                quantidade: String(confirmacaoPendente?.quantidade ?? '—'),
-                unidade: unidadeMedida,
-                produto: nomeProduto,
-                origem: nomeLoja(origemId),
-                destino: nomeLoja(destinoId),
-              })
-        }
-        processing={loading}
-        processandoLabel={t.btn_processando}
-        confirmarLabel={m.comum.confirmar}
-        cancelarLabel={m.comum.cancelar}
-        onOpenChange={(open) => {
-          if (!open) setConfirmacaoPendente(null)
-        }}
-        onConfirm={() => {
-          if (!confirmacaoPendente) return
-          if (confirmacaoPendente.tipo === 'trocar') {
-            executarTrocaOrigemDestino()
-            return
-          }
-          executarTransferenciaConfirmada(confirmacaoPendente.quantidade)
-        }}
-      />
-    </div>
-  )
-}
-
-function TransferenciaConfirmModal({
-  open,
-  title,
-  description,
-  processing,
-  processandoLabel,
-  confirmarLabel,
-  cancelarLabel,
-  onOpenChange,
-  onConfirm,
-}: {
-  open: boolean
-  title: string
-  description: string
-  processing: boolean
-  processandoLabel: string
-  confirmarLabel: string
-  cancelarLabel: string
-  onOpenChange: (open: boolean) => void
-  onConfirm: () => void
-}) {
-  if (!open) return null
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 dragon-glass-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onOpenChange(false)
-      }}
-    >
-      <Card
-        role="dialog"
-        aria-modal="true"
-        className="dragon-elev-2 w-full sm:max-w-md rounded-none sm:rounded-lg max-h-[90vh] flex flex-col"
-        onMouseDown={(e) => e.stopPropagation()}
       >
-        <CardHeader className="pb-2 pt-4 px-4 sm:px-6 sm:pt-6">
-          <CardTitle className="text-lg app-surface-text">{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6">
-          <p className="text-sm app-muted">{description}</p>
-        </CardContent>
-        <CardFooter className="flex flex-wrap gap-2 justify-end px-4 sm:px-6 pb-4 sm:pb-6 pt-0 border-t app-divider mt-3 pt-3">
-          <Button
-            type="button"
-            variant="ghost"
-            className="app-btn-neutral"
-            onClick={() => onOpenChange(false)}
-            disabled={processing}
-          >
-            {cancelarLabel}
-          </Button>
-          <Button
-            type="button"
-            className="app-btn-accent"
-            onClick={onConfirm}
-            disabled={processing}
-          >
-            {processing ? processandoLabel : confirmarLabel}
-          </Button>
-        </CardFooter>
-      </Card>
+        <p className="text-body text-fg-muted">{modalDescricao}</p>
+      </DragonModal>
     </div>
   )
 }

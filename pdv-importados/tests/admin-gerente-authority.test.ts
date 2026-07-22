@@ -7,6 +7,7 @@ import type { AdminSession } from '@/lib/admin/auth/types'
 import { actionAdminDecision } from '@/lib/admin/policy/adminPolicy'
 import { gerenteAdminDecision } from '@/lib/gerente/auth/gerenteAdapter'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
+import { mockSupabaseUser } from './helpers/mockSupabaseUser'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const GERENTE_ROOT = path.join(ROOT, 'app', 'gerente')
@@ -36,7 +37,7 @@ describe('gerente authority convergence', () => {
   it('gerenteAdminDecision delega a actionAdminDecision com scope gerente', () => {
     const session: AdminSession = {
       userId: 'mgr-1',
-      user: { id: 'mgr-1', email: 'g@test.local' },
+      user: mockSupabaseUser('mgr-1', 'g@test.local'),
       perfil: 'GERENTE',
       idioma: 'pt',
       lojaId: 'loja-1',
@@ -53,7 +54,7 @@ describe('gerente authority convergence', () => {
   it('operador autenticado recebe deny via pipeline adminPolicy', () => {
     const raw: RawSession = {
       status: 'authenticated',
-      user: { id: 'op-1', email: 'op@test.local' },
+      user: mockSupabaseUser('op-1', 'op@test.local'),
       usuario: { perfil: 'OPERADOR', idioma_preferido: 'pt', loja_id: null },
     }
     const session = normalizeSession(raw)
@@ -95,6 +96,8 @@ describe('gerente authority convergence', () => {
     const allowedWithoutGuard = new Set([
       'app/gerente/relatorios/actions.ts',
       'app/gerente/relatorios/vendas/actions.ts',
+      // Facade re-export → auth nas actions admin delegadas
+      'app/gerente/clientes/actions.ts',
     ])
     const filtered = missing.filter((f) => !allowedWithoutGuard.has(f))
     expect(filtered, `actions sem assertGerenteSession: ${filtered.join(', ')}`).toEqual([])

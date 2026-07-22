@@ -22,3 +22,18 @@ Thumbs.db
 
 # Relatórios locais jscpd (`npx jscpd ... --output`)
 report-jscpd*/
+
+# Artefatos de testes e smoke
+backend/artifacts/
+*.txt
+
+# Patches temporários
+backend/supabase/scripts/homolog_pdv_web_fluxo_completo.sql
+backend/artifacts/patch_*.sql
+
+# Diretórios de quarentena e planos
+docs/quarantine/
+.cursor/
+
+# Helpers gerados em e2e (se não forem parte oficial)
+pdv-importados/e2e/helpers/caixaShell.ts

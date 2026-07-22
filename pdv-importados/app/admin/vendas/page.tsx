@@ -345,6 +345,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           detalheItens: m.gerente.sec_itens_venda,
           detalheNenhumItem: ui.vendas_detalhe_nenhum_item,
           cancelarAcao: ui.vendas_acao_cancelar,
+          devolverAcao: ui.vendas_acao_devolver,
         }} />
 
         {page > 1 || hasMore ? (

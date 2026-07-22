@@ -23,6 +23,7 @@ export type VendaItemDetalhe = Readonly<{
   nome: string
   codigo_barras: string | null
   quantidade: number
+  quantidade_devolvida: number
   preco_unitario: number
   preco_unitario_original: number
   desconto_unitario: number
@@ -44,6 +45,8 @@ export type VendaDetalhe = Readonly<{
   status: string | null
   numero_nf: string | null
   operador_nome: string | null
+  tem_conta_receber: boolean
+  valor_aberto_cr: number
   itens: VendaItemDetalhe[]
   showMargemVisual: boolean
   showPrecoFonte: boolean
@@ -104,14 +107,42 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
 
   if (itensError) return null
 
+  const itemIds = (itensRaw ?? []).map((r) => String(r.id))
+  const devolvidoPorItem = new Map<string, number>()
+
+  if (itemIds.length > 0) {
+    const { data: devolvidos } = await supabase
+      .from('venda_pos_venda_itens')
+      .select('item_venda_id, quantidade')
+      .in('item_venda_id', itemIds)
+
+    for (const row of devolvidos ?? []) {
+      const id = String(row.item_venda_id)
+      const atual = devolvidoPorItem.get(id) ?? 0
+      devolvidoPorItem.set(id, atual + Number(row.quantidade ?? 0))
+    }
+  }
+
+  const { data: crRow } = await supabase
+    .from('contas_receber')
+    .select('valor_aberto, status')
+    .eq('venda_id', vendaId)
+    .in('status', ['ABERTO', 'PARCIAL'])
+    .maybeSingle()
+
+  const temContaReceber = !!crRow
+  const valorAbertoCr = Number(crRow?.valor_aberto ?? 0)
+
   const itens: VendaItemDetalhe[] = (itensRaw ?? []).map((r) => {
     const q = Number(r.quantidade ?? 0)
     const pu = Number(r.preco_unitario ?? 0)
+    const itemId = String(r.id)
     return {
-      id: String(r.id),
+      id: itemId,
       nome: nomeRelacao(r.produto, 'nome') ?? '—',
       codigo_barras: nomeRelacao(r.produto, 'codigo_barras'),
       quantidade: q,
+      quantidade_devolvida: devolvidoPorItem.get(itemId) ?? 0,
       preco_unitario: pu,
       preco_unitario_original: Number(r.preco_unitario_original ?? pu),
       desconto_unitario: Number(r.desconto_unitario ?? 0),
@@ -134,6 +165,8 @@ export async function obterDetalheVenda(vendaId: string): Promise<VendaDetalhe |
     status: venda.status == null ? null : String(venda.status),
     numero_nf: venda.numero_nf == null ? null : String(venda.numero_nf),
     operador_nome: nomeRelacao(venda.operador, 'nome'),
+    tem_conta_receber: temContaReceber,
+    valor_aberto_cr: valorAbertoCr,
     itens,
     showMargemVisual: false,
     showPrecoFonte: false,

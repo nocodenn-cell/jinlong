@@ -1,7 +1,6 @@
 // Instrumentação de cliente do Sentry (Next 15). Substitui `sentry.client.config.js`.
 // O Next carrega este arquivo automaticamente no bundle do navegador.
 import * as Sentry from '@sentry/nextjs'
-import { replayIntegration } from '@sentry/browser'
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -19,7 +18,7 @@ Sentry.init({
     Boolean(process.env.NEXT_PUBLIC_SENTRY_FORCE_ENABLE),
 
   integrations: [
-    replayIntegration({
+    Sentry.replayIntegration({
       maskAllText: true,
       blockAllMedia: true,
     }),

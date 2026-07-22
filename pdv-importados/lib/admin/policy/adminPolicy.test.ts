@@ -6,10 +6,11 @@ import {
   canExecuteAction,
   middlewareAdminDecision,
 } from './adminPolicy'
+import { mockSupabaseUser } from '../../../tests/helpers/mockSupabaseUser'
 
 const session: AdminSession = {
   userId: 'mgr-1',
-  user: { id: 'mgr-1', email: 'g@test.local' },
+  user: mockSupabaseUser('mgr-1', 'g@test.local'),
   perfil: 'GERENTE',
   idioma: 'pt',
   lojaId: 'loja-1',

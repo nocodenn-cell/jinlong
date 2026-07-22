@@ -10,10 +10,14 @@ const base = (process.env.SMOKE_BASE_URL || 'http://localhost:3000').replace(/\/
 const cases = [
   { path: '/', expectRedirect: true, name: 'raiz -> login' },
   { path: '/login', ok: [200], name: 'login' },
-  { path: '/gerente/produtos', expectRedirect: true, name: 'gerente sem auth' },
-  { path: '/gerente/estoque', expectRedirect: true, name: 'estoque gerente sem auth' },
-  { path: '/gerente', expectRedirect: true, name: 'gerente inicio sem auth' },
-  { path: '/gerente/vendas', expectRedirect: true, name: 'gerente vendas sem auth' },
+  { path: '/gerente/produtos', expectRedirect: true, name: 'gerente produtos -> catalogo' },
+  { path: '/gerente/estoque', expectRedirect: true, name: 'estoque gerente -> admin estoque' },
+  { path: '/gerente', expectRedirect: true, name: 'gerente inicio -> dashboard' },
+  { path: '/gerente/vendas', expectRedirect: true, name: 'gerente vendas -> admin vendas' },
+  { path: '/gerente/clientes', expectRedirect: true, name: 'gerente clientes -> admin clientes' },
+  { path: '/gerente/fornecedores', expectRedirect: true, name: 'gerente fornecedores -> admin' },
+  { path: '/gerente/financeiro/contas-pagar', expectRedirect: true, name: 'contas-pagar -> financeiro tab' },
+  { path: '/admin/catalogo/novo', expectRedirect: true, name: 'catalogo novo -> modal deep-link' },
   { path: '/caixa', expectRedirect: true, name: 'caixa sem auth' },
 ]
 

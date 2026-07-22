@@ -17,6 +17,13 @@ import {
 import { AtualizarEstoqueSchema, EstoqueListagemInputSchema, ProdutoIdSchema } from './actions.validation'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
+import { createInventoryAdjustmentService } from '@/app/admin/estoque/inventoryAdjustment'
+import { createInventoryQueryService } from '@/app/admin/estoque/inventoryQueryService'
+import { localizeInventoryFailure } from '@/app/admin/estoque/inventoryMessages'
+import {
+  INVENTORY_ERROR_CODES,
+  type InventoryStockListRow,
+} from '@shared-core/src/inventory'
 
 type LegacyEstoqueMutationResult<T = null> =
   | { success: true; data: T }
@@ -45,20 +52,39 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
   }
 
   const observacao = parsed.data.observacao?.trim() || null
+  const { idioma } = await getUsuarioIdioma()
   return runServerActionWithObservability(
     'gerente/estoque/atualizar',
     async () => {
-      const admin = createAdminClient()
-      const { error } = await admin.rpc('ajustar_estoque_manual', {
-        p_produto_id: parsed.data.produto_id,
-        p_loja_id: lojaId,
-        p_quantidade_atual: parsed.data.quantidade_atual,
-        p_estoque_minimo: parsed.data.estoque_minimo,
-        p_motivo_codigo: parsed.data.motivo,
-        p_observacao: observacao ?? undefined,
+      let admin: ReturnType<typeof createAdminClient>
+      try {
+        admin = createAdminClient()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Falha na configuração do servidor de estoque.'
+        throw new Error(mensagemErroComSecao('Estoque', msg))
+      }
+      // service_role → auth.uid() nulo; RPC exige p_ator_id (mig 269).
+      const atorId = auth.session.userId
+      if (!atorId) {
+        const localized = localizeInventoryFailure(idioma, {
+          error: 'AJUSTE_ESTOQUE_AUTH',
+          code: INVENTORY_ERROR_CODES.AUTH_REQUIRED,
+        })
+        throw new Error(mensagemErroComSecao('Estoque', localized.error))
+      }
+      const adjustment = createInventoryAdjustmentService(admin, lojaId)
+      const result = await adjustment.adjustInventory({
+        productId: parsed.data.produto_id,
+        lojaId,
+        quantity: parsed.data.quantidade_atual,
+        estoqueMinimo: parsed.data.estoque_minimo,
+        reason: parsed.data.motivo,
+        observacao,
+        atorId,
       })
-      if (error) {
-        throw new Error(mensagemErroComSecao('Estoque', error.message))
+      if (!result.ok) {
+        const localized = localizeInventoryFailure(idioma, result)
+        throw new Error(mensagemErroComSecao('Estoque', localized.error))
       }
       revalidatePath('/gerente/estoque')
       revalidatePath('/admin/estoque')
@@ -138,42 +164,22 @@ async function lojaIdResolvidaGestao(): Promise<string> {
   return (await getGerenteLojaId()) ?? LOJA_MATRIZ_ID
 }
 
-function mapRpcRow(raw: Record<string, unknown>): EstoqueGerenteLinhaDTO {
-  const num = (v: unknown): number | null => {
-    if (v === null || v === undefined) return null
-    const n = Number(v)
-    return Number.isFinite(n) ? n : null
-  }
-  const str = (v: unknown): string | null => (typeof v === 'string' ? v : v == null ? null : String(v))
+function mapDomainRowToDto(row: InventoryStockListRow): EstoqueGerenteLinhaDTO {
   return {
-    id: String(raw.id),
-    nome: String(raw.nome ?? ''),
-    codigo_barras: str(raw.codigo_barras),
-    unidade_medida: String(raw.unidade_medida ?? 'UN'),
-    origem: String(raw.origem ?? ''),
-    categoria_id: str(raw.categoria_id),
-    estoque_id: str(raw.estoque_id),
-    quantidade_atual: num(raw.quantidade_atual),
-    estoque_minimo: num(raw.estoque_minimo),
-    deficit: num(raw.deficit),
+    id: row.productId,
+    nome: row.nome,
+    codigo_barras: row.codigoBarras,
+    unidade_medida: row.unidadeMedida,
+    origem: row.origem,
+    categoria_id: row.categoriaId,
+    estoque_id: row.estoqueId,
+    quantidade_atual: row.quantity,
+    estoque_minimo: row.minimum,
+    deficit: row.deficit,
   }
 }
 
-function parseListaPayload(raw: unknown): EstoqueGerenteListaResult {
-  if (!raw || typeof raw !== 'object') {
-    return { total: 0, rows: [] }
-  }
-  const o = raw as Record<string, unknown>
-  const total = typeof o.total === 'number' ? o.total : Number(o.total) || 0
-  const rowsRaw = o.rows
-  if (!Array.isArray(rowsRaw)) return { total, rows: [] }
-  return {
-    total,
-    rows: rowsRaw.map((r) => mapRpcRow(r as Record<string, unknown>)),
-  }
-}
-
-/** Lista paginada (RPC `gerente_estoque_list_page`). */
+/** Lista paginada — canônico: InventoryQueryService → RPC `gerente_estoque_list_page`. */
 export async function obterListaEstoqueGerente(input: unknown): Promise<EstoqueGerenteListaResult> {
   const parsed = EstoqueListagemInputSchema.safeParse(input)
   if (!parsed.success) {
@@ -182,21 +188,25 @@ export async function obterListaEstoqueGerente(input: unknown): Promise<EstoqueG
   const supabase = await createClient()
   const lojaId = await lojaIdResolvidaGestao()
   const p = parsed.data
-  const { data, error } = await supabase.rpc('gerente_estoque_list_page', {
-    p_loja_id: lojaId,
-    p_visao: p.visao,
-    p_busca: p.busca ?? '',
-    p_categoria_id: p.categoria_id ?? null,
-    p_origem: p.origem ?? '',
-    p_ordem: p.ordem,
-    p_dir_asc: p.dir_asc,
-    p_limite: p.limite,
-    p_offset: p.offset,
+  const query = createInventoryQueryService(supabase)
+  const result = await query.listStockPage({
+    lojaId,
+    visao: p.visao,
+    busca: p.busca ?? '',
+    categoriaId: p.categoria_id ?? null,
+    origem: p.origem ?? '',
+    ordem: p.ordem,
+    dirAsc: p.dir_asc,
+    limite: p.limite,
+    offset: p.offset,
   })
-  if (error) {
-    throw new Error(mensagemErroComSecao('Estoque', error.message))
+  if (!result.ok) {
+    throw new Error(mensagemErroComSecao('Estoque', result.error))
   }
-  return parseListaPayload(data)
+  return {
+    total: result.total,
+    rows: result.rows.map(mapDomainRowToDto),
+  }
 }
 
 const EXPORT_PAGE = 400

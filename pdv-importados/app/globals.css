@@ -14,31 +14,24 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    /* Azul Bling — alinhado a --color-brand-primary / --accent */
+    /*
+     * shadcn HSL bridge → SSOT em styles/tokens/colors.css.
+     * --accent/--border em hex vêm de aliases (--color-brand/--color-border).
+     */
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96%;
-    /* ~5:1 em fundo branco — texto secundário legível (WCAG AA corpo) */
     --muted-foreground: 215.4 18% 38%;
-    /* Formato hex (não HSL) propositalmente: mapeado sem wrapper hsl() em
-       tailwind.config.js porque styles/theme-oriental.css sempre sobrescreve
-       este token com o mesmo valor em hex — ver --accent ali. */
-    --accent: #2563eb;
     --accent-foreground: 222.2 47.4% 11.2%;
-    /** Par destino: mesmo “peso” perceptivo em chips/toasts (sat + L similares). */
     --destructive: 0 72% 50%;
     --destructive-foreground: 210 40% 98%;
-    /** Estado OK / tendência positiva / confirmações. */
     --success: 142 64% 42%;
     --success-foreground: 210 40% 98%;
-    /* Formato hex (não HSL) propositalmente — ver comentário em --accent acima;
-       mesmo padrão de sobrescrita por styles/theme-oriental.css. */
-    --border: #e2e8f0;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    /* ring alinhado ao anel único (--focus-ring-color) */
+    --ring: 221 83% 53%;
     /* canvas/overscroll default do browser segue o tema → mata flash branco */
     color-scheme: light;
 
@@ -47,9 +40,10 @@
   }
 
   body {
-    font-family: var(--font-noto-sc), 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui,
-      sans-serif;
-    font-size: 0.9375rem; /* 15px — base operacional entre 14–16px */
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-body);
+    color: var(--color-fg);
+    background-color: var(--color-surface);
   }
 
   /* Regras específicas para textos em chinês */

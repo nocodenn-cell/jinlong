@@ -16,10 +16,11 @@ import {
   apiAdminDecision,
   middlewareAdminDecision,
 } from '@/lib/admin/policy/adminPolicy'
+import { mockSupabaseUser } from './helpers/mockSupabaseUser'
 
-const gerenteUser = { id: 'mgr-1', email: 'gerente@test.local' }
+const gerenteUser = mockSupabaseUser('mgr-1', 'gerente@test.local')
 const gerenteRow = { perfil: 'GERENTE', idioma_preferido: 'pt', loja_id: 'loja-1' }
-const operadorUser = { id: 'op-1', email: 'op@test.local' }
+const operadorUser = mockSupabaseUser('op-1', 'op@test.local')
 
 function buildSupabaseMock(overrides: {
   getUser?: () => Promise<{ data: { user: unknown }; error: unknown }>

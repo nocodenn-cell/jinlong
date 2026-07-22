@@ -32,6 +32,7 @@ import {
   cancelarVendaImpl,
   finalizarVendaCaixaImpl,
 } from '@/app/caixa/server/caixaVendas.impl'
+import { buscarClientesCaixaImpl } from '@/app/caixa/server/caixaClientesSearch.impl'
 import {
   abrirCaixaOperadorImpl,
   fecharCaixaOperadorImpl,
@@ -257,4 +258,17 @@ export async function cancelarVenda(
  */
 export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaCaixaResult> {
   return finalizarVendaCaixaImpl(raw)
+}
+
+/** Cadastro relâmpago no PDV (OPERADOR+). Catálogo completo permanece em assertGerenteSession. */
+export async function criarProdutoRelampagoPdv(input: unknown) {
+  const { criarProdutoRelampagoPdvImpl } = await import(
+    '@/app/caixa/server/caixaCadastroRelampago.impl'
+  )
+  return criarProdutoRelampagoPdvImpl(input)
+}
+
+/** Selecao de cliente no PDV (Fase 5b). */
+export async function buscarClientesCaixa(termo: string) {
+  return buscarClientesCaixaImpl(termo)
 }

@@ -100,7 +100,6 @@ Marque **apenas um** caminho principal.
 |---|-------------|-----|------|-------------|-----------|
 | 5.1 | `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` do **mesmo** ref staging | [ ] | | | |
 | 5.2 | Deploy/preview apontando para staging | [ ] | | | |
-| 5.3 | (Opcional) Vercel staging/preview: `NEXT_PUBLIC_CAIXA_PDV_LAYOUT=classic` para validação do novo layout do `/caixa` com aviso de pré-visualização no ecrã; remover ou não definir em prod até GO | [ ] | | | |
 
 ---
 

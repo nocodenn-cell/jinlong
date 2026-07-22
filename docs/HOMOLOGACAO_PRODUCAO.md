@@ -17,7 +17,7 @@ Referências: [CHECKLIST_DEPLOY_SUPABASE.md](./CHECKLIST_DEPLOY_SUPABASE.md), [C
 ## Funcionalidades obrigatórias
 
 - [ ] Caixa: abrir, vender (dinheiro, cartão, PIX, split), fechar com diferença acima do limite exigindo motivo (regra de negócio atual).
-- [ ] Quantidades fracionadas (até 3 decimais) no carrinho web, coerentes com `numeric(10,3)` no banco.
+- [x] Quantidades fracionadas (até 3 decimais) no carrinho web, coerentes com `numeric(10,3)` no banco.
 - [ ] Sangria/suprimento: valores abaixo do limite automático; acima do limite com autorização de gerente (token/senha conforme configuração).
 - [ ] Estoque: concorrência e bloqueio de venda sem estoque (fluxo canônico / RPC).
 - [ ] Cancelamento de venda: estoque reposto; **split** — devoluções por forma; saldo em espécie debitado só para parcelas em DINHEIRO; formas não-dinheiro apenas auditoria em `devolucoes` (migration 059).

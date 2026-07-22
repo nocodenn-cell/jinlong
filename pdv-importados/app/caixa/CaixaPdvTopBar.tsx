@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -13,13 +14,11 @@ import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortcutsReference"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
-
-export type CaixaPdvLayoutVariant = "default" | "classic"
+import { ROUTES } from "@shared-core/navigation/routes"
 
 type Props = {
   m: Mensagens
   idioma: Idioma
-  layoutVariant: CaixaPdvLayoutVariant
   operadorLabel: string
   caixaStatus: CaixaStatusUi | null
   carregandoStatus?: boolean
@@ -33,7 +32,6 @@ type Props = {
 export function CaixaPdvTopBar({
   m,
   idioma,
-  layoutVariant,
   operadorLabel,
   caixaStatus,
   carregandoStatus = false,
@@ -62,25 +60,16 @@ export function CaixaPdvTopBar({
           valor: `${m.caixa.moeda_prefixo} ${formatDecimalBRL(caixaStatus.valorSistemaDinheiro)}`,
         })
 
-  const classic = layoutVariant === "classic"
-
   return (
     <header
       className={cn(
         "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5",
-        classic
-          ? "border-border bg-jl-surface-elev text-jl-fg-1 shadow-sm"
-          : "border-jl-border-1 bg-jl-surface-elev text-jl-fg-1",
+        "border-border bg-jl-surface-elev text-jl-fg-1 shadow-sm",
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-        <span
-          className={cn(
-            "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
-            classic ? "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1" : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-1",
-          )}
-        >
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1">
           <DragonEmblemIcon className="h-5 w-5" />
         </span>
         <h1 className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg text-jl-fg-1">
@@ -91,28 +80,19 @@ export function CaixaPdvTopBar({
       <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:w-auto sm:flex-nowrap">
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-xs sm:text-sm">
           <span
-            className={cn(
-              "max-w-[11rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-jl-border-1 bg-jl-surface-soft" : "border-jl-border-1 bg-jl-surface-base",
-            )}
+            className="max-w-44 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
             title={turnoText}
           >
             {turnoText}
           </span>
           <span
-            className={cn(
-              "max-w-[14rem] truncate rounded-md border px-2 py-1 font-medium",
-              classic ? "border-jl-border-1 bg-jl-surface-soft" : "border-jl-border-1 bg-jl-surface-base",
-            )}
+            className="max-w-56 truncate rounded-md border px-2 py-1 font-medium border-jl-border-1 bg-jl-surface-soft"
             title={operadorText}
           >
             {operadorText}
           </span>
           <span
-            className={cn(
-              "max-w-[12rem] truncate rounded-md border px-2 py-1 font-medium tabular-nums",
-              classic ? "border-jl-border-1 bg-jl-surface-soft" : "border-jl-border-1 bg-jl-surface-base",
-            )}
+            className="max-w-48 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
             title={fundoText}
           >
             {fundoText}
@@ -121,7 +101,7 @@ export function CaixaPdvTopBar({
             <span
               title={printerDeviceName ?? "Impressora"}
               className={cn(
-                "max-w-[10rem] truncate rounded-md border px-2 py-1 text-xs font-medium",
+                "max-w-40 truncate rounded-md border px-2 py-1 text-xs font-medium",
                 printerStatus === "connected"
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
                   : printerStatus === "error"
@@ -134,12 +114,7 @@ export function CaixaPdvTopBar({
           )}
         </div>
 
-        <div
-          className={cn(
-            "flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3",
-            classic ? "border-jl-border-1" : "border-white/[0.12]",
-          )}
-        >
+        <div className="flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3 border-jl-border-1">
           {aberto ? (
             <Button
               type="button"
@@ -157,10 +132,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className={cn(
-                "text-xs font-semibold sm:text-sm",
-                classic && "border-jl-border-1",
-              )}
+              className="text-xs font-semibold sm:text-sm border-jl-border-1"
               onClick={onAbrirCaixa}
               disabled={carregandoStatus}
             >
@@ -171,10 +143,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className={cn(
-                "text-xs font-semibold sm:text-sm",
-                classic && "border-jl-border-1",
-              )}
+              className="text-xs font-semibold sm:text-sm border-jl-border-1"
               onClick={onAbrirCaixa}
               disabled={processandoCaixa || carregandoStatus}
               aria-busy={processandoCaixa}
@@ -182,7 +151,16 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
-          <CaixaKeyboardShortcutsReference m={m} variant={classic ? "classic" : "default"} />
+          <CaixaKeyboardShortcutsReference m={m} variant="classic" />
+          <Link
+            href={ROUTES.auth.changePassword}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
+              "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
+            )}
+          >
+            {m.login.link_trocar_senha}
+          </Link>
           <SignOutButton
             label={m.comum.sair}
             className={cn(

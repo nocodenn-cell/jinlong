@@ -13,6 +13,7 @@ import {
   totalsMatchDeclared,
 } from '@/app/caixa/finalizarVendaValidation'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
+import { pagamentoParcialExigeCliente } from '@/app/caixa/caixaPagamentoSaldo'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { mensagemErroDeExcecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
 import { caixaErroOperador } from '@/app/caixa/server/caixaErroOperador'
@@ -26,10 +27,13 @@ import { getDeviceFingerprint } from '@/lib/security/deviceFingerprint'
 import { getCaixaSalesRuntimeConfig } from '@/lib/config/caixaSalesRuntimeConfig'
 import {
   obterMapaConfiguracoesParaCaixaWeb,
-  parseMoneyConfig,
   parsePercentConfig,
 } from '@/lib/caixa/configuracoesGeraisCaixa'
 import { registrarAlertasLevesVenda } from '@/app/caixa/server/registrarAlertasLevesVenda'
+import {
+  MSG_CANCELAR_VENDA_PERFIL,
+  perfilPodeCancelarVenda,
+} from '@/app/caixa/server/cancelarVendaPerfil'
 import {
   captureVendaError,
   captureRpcVendaError,
@@ -88,21 +92,9 @@ export async function cancelarVendaImpl(
       .eq('id', user.id)
       .maybeSingle()
 
-    if (urow?.perfil === 'OPERADOR') {
-      const [{ data: vrow }, cfgMap] = await Promise.all([
-        supabase.from('vendas').select('total_liquido').eq('id', vendaIdTrim).maybeSingle(),
-        obterMapaConfiguracoesParaCaixaWeb(supabase),
-      ])
-
-      const totalLiq = Number(vrow?.total_liquido ?? 0)
-      const maxCancel = parseMoneyConfig(cfgMap.cancelamento_maximo_valor_sem_gerente, 500)
-
-      if (Number.isFinite(totalLiq) && totalLiq > maxCancel + 0.01) {
-        return {
-          ok: false,
-          error: `Cancelamento não permitido: valor da venda (R$ ${totalLiq.toFixed(2)}) ultrapassa o limite do operador (R$ ${maxCancel.toFixed(2)}).`,
-        }
-      }
+    if (!perfilPodeCancelarVenda(urow?.perfil)) {
+      // BA-013: SSoT = RPC cancelar_venda_transacional (GERENTE/DONO/ADMIN).
+      return { ok: false, error: MSG_CANCELAR_VENDA_PERFIL }
     }
 
     const { data, error } = await supabase.rpc('cancelar_venda_transacional', {
@@ -117,6 +109,7 @@ export async function cancelarVendaImpl(
     if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
 
     revalidatePath('/caixa')
+    revalidatePath('/admin/vendas')
     revalidatePath('/gerente/vendas')
     revalidatePath(`/gerente/vendas/${vendaIdTrim}`)
     revalidatePath('/gerente/caixas')
@@ -254,7 +247,7 @@ export async function finalizarVendaCaixaImpl(
     const somaPagamentos = roundMoney2(input.pagamentos.reduce((acc, p) => acc + p.valor, 0))
     const saldoPendente = roundMoney2(computedFinal.totalLiquido - somaPagamentos)
 
-    if (saldoPendente > 0.009 && !input.clienteId) {
+    if (pagamentoParcialExigeCliente(saldoPendente, input.clienteId)) {
       return {
         ok: false,
         error: 'Pagamento parcial requer seleção de cliente para gerar crédito. Selecione o cliente antes de finalizar.',
@@ -396,6 +389,7 @@ export async function finalizarVendaCaixaImpl(
     await registrarAlertasLevesVenda(supabase, String(row.venda_id), lojaId, itensAut)
 
     revalidatePath('/caixa')
+    revalidatePath('/admin/vendas')
     revalidatePath('/gerente/vendas')
     revalidatePath('/gerente/caixas')
     revalidatePath('/gerente/financeiro')

@@ -1,4 +1,7 @@
+import Link from 'next/link'
 import type { AdminSession } from '@/lib/admin/auth/types'
+import { getMessages } from '@/i18n/getMessages'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 type SidebarUserFooterProps = {
   session: AdminSession
@@ -34,6 +37,7 @@ export function SidebarUserFooter({ session }: SidebarUserFooterProps) {
   const name = resolveUserName(session)
   const cargo = resolveCargo(session)
   const initials = initialsFromName(name)
+  const trocarSenha = getMessages(session.idioma).login.link_trocar_senha
 
   return (
     <footer className="mt-auto border-t border-[var(--admin-v2-border)] p-4">
@@ -41,9 +45,15 @@ export function SidebarUserFooter({ session }: SidebarUserFooterProps) {
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(251,191,36,0.35)] bg-[rgba(251,191,36,0.12)] text-xs font-semibold text-[var(--color-brand-primary)]">
           {initials}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-jl-fg-1">{name}</p>
           <p className="truncate text-xs text-jl-fg-3">{cargo}</p>
+          <Link
+            href={ROUTES.auth.changePassword}
+            className="mt-1 inline-block text-xs text-[var(--color-brand-primary)] underline underline-offset-2 hover:opacity-90"
+          >
+            {trocarSenha}
+          </Link>
         </div>
       </div>
     </footer>

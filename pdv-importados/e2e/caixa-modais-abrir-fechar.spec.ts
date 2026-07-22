@@ -5,10 +5,11 @@ import { gotoApp } from './helpers/url'
 import {
   confirmarModalValorNumerico,
   confirmarModalMotivoMin,
-  MODAL_TITULO_ABRIR,
   MODAL_TITULO_FECHAR,
   MODAL_TITULO_MOTIVO_DIF,
 } from './helpers/caixaModais'
+import { ensureCaixaAberto } from './helpers/ensureCaixaAberto'
+import { expectCaixaShellVisible } from './helpers/caixaShell'
 
 test.describe('Caixa — modais abertura e fechamento (sem prompt)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
@@ -26,14 +27,8 @@ test.describe('Caixa — modais abertura e fechamento (sem prompt)', () => {
     page,
   }) => {
     await gotoApp(page, '/caixa')
-    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
-
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '77,25')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
-    }
+    await expectCaixaShellVisible(page)
+    await ensureCaixaAberto(page, '77,25')
 
     await page.getByRole('button', { name: /Novo cupom|新小票|新單/i }).click()
 

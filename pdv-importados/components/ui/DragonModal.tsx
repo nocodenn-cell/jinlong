@@ -5,7 +5,7 @@ import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type DragonModalVariant = 'default' | 'danger'
-export type DragonModalSize = 'sm' | 'md' | 'lg'
+export type DragonModalSize = 'sm' | 'md' | 'lg' | 'xl'
 
 type Props = Readonly<{
   open: boolean
@@ -29,12 +29,19 @@ type Props = Readonly<{
   dismissable?: boolean
   /** rótulo acessível do botão fechar (i18n). */
   closeLabel?: string
+  /**
+   * `data-testid` aplicado à raiz do diálogo (envolve header, corpo e footer).
+   * Permite que testes escopem o modal inteiro — inclusive botões do `footer` —
+   * sem depender de wrapper interno. Capacidade genérica de primitivo.
+   */
+  'data-testid'?: string
 }>
 
 const sizeClass: Record<DragonModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-2xl',
+  xl: 'max-w-6xl',
 }
 
 // Strings literais (não `sm:${...}`) p/ o Tailwind JIT enxergar e gerar a classe.
@@ -42,6 +49,7 @@ const sheetSizeClass: Record<DragonModalSize, string> = {
   sm: 'sm:max-w-sm',
   md: 'sm:max-w-md',
   lg: 'sm:max-w-2xl',
+  xl: 'sm:max-w-6xl',
 }
 
 function isFocusable(el: Element): el is HTMLElement {
@@ -68,6 +76,7 @@ export function DragonModal({
   children,
   dismissable = true,
   closeLabel = 'Fechar',
+  'data-testid': dataTestId,
 }: Props) {
   const titleId = useId()
   const subtitleId = useId()
@@ -101,10 +110,16 @@ export function DragonModal({
         }
         const first = focusables[0]
         const last = focusables[focusables.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
+        const active = document.activeElement
+        const activeDentro = active instanceof HTMLElement && focusables.includes(active)
+        // Se o foco está FORA do ciclo (ex.: no próprio cartão tabIndex=-1 após
+        // abrir, ou escapou para trás do modal), puxa de volta para dentro:
+        // Tab → primeiro, Shift+Tab → último. Sem isso, Shift+Tab a partir do
+        // cartão vazaria o foco para fora do diálogo.
+        if (e.shiftKey && (active === first || !activeDentro)) {
           e.preventDefault()
           last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
+        } else if (!e.shiftKey && (active === last || !activeDentro)) {
           e.preventDefault()
           first.focus()
         }
@@ -146,6 +161,7 @@ export function DragonModal({
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={subtitle ? subtitleId : undefined}
+      data-testid={dataTestId}
     >
       <div
         className="dragon-glass-backdrop absolute inset-0"

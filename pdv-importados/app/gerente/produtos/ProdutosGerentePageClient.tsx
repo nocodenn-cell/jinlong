@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * @legacy Gerente shell — migrado para Admin V2 (`/admin/catalogo`).
+ * Evidência de migração; remover após 1–2 releases estáveis.
+ * NÃO reutilizar em fluxos novos.
+ */
+
 import { useRouter } from 'next/navigation'
 import {
   ChevronLeft,

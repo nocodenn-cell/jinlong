@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { DragonModal } from '@/components/ui/DragonModal'
+import { Button } from '@/components/ui/button'
+import { Field, Input } from '@/components/ui/forms'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 
 type Props = Readonly<{
@@ -68,28 +70,24 @@ export function CadastroRapidoNomeModal({
       closeLabel={cancelarLabel}
       footer={
         <>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-lg px-4 py-2 text-sm font-medium app-muted transition hover:underline"
-          >
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             {cancelarLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="primary"
             onClick={() => void salvar()}
             disabled={saving || nome.trim().length < 2}
-            className="app-btn-accent inline-flex min-w-[100px] items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            className="min-w-[100px]"
           >
             {saving ? salvandoLabel : salvarLabel}
-          </button>
+          </Button>
         </>
       }
     >
-      <label className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium app-muted">{nomeLabel}</span>
-        <input
+      <Field id="cadastro-rapido-nome" label={nomeLabel}>
+        <Input
+          id="cadastro-rapido-nome"
           ref={inputRef}
           type="text"
           value={nome}
@@ -99,9 +97,8 @@ export function CadastroRapidoNomeModal({
             if (e.key === 'Enter') void salvar()
           }}
           placeholder={nomePlaceholder}
-          className="h-10 rounded-lg border px-3 text-sm app-input app-border focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
         />
-      </label>
+      </Field>
     </DragonModal>
   )
 }

@@ -1,16 +1,18 @@
 /**
- * Layout Compiler — Theme Contract (Fase 0)
+ * Layout Compiler — Theme Contract
  * --------------------------------------------------------------------------
- * O tema NÃO é uma escolha do dev em runtime: é contrato.
- * O sistema é travado em um único tema claro ("clássico" / "cara de Bling").
- * O modo escuro (noturno / dragon-dark) foi aposentado na Fase 0.
+ * Fase 0: tema claro único ("clássico").
+ * Fase 2 · Onda 2: SSOT em styles/tokens/* (colors, spacing, radius, …).
  *
- * Tokens canônicos (definidos em styles/theme-oriental.css :root):
- *   --surface       superfície base (branco)
- *   --surface-soft  superfície secundária (slate-50)
- *   --surface-text  texto primário (slate-900)
- *   --border        divisores (slate-200)
- *   --accent        destaque (azul Bling #2563eb)
+ * Tokens canônicos (consumo em componentes novos):
+ *   --color-surface / --color-surface-soft
+ *   --color-fg / --color-fg-muted / --color-fg-subtle
+ *   --color-border
+ *   --color-brand / --color-brand-strong
+ *   --radius-control / --radius-card / --radius-panel
+ *   --focus-ring-shadow
+ *
+ * Aliases legado (--accent, --jl-*, --fp-*) apontam para o SSOT via aliases.css.
  */
 
 export const themes = {

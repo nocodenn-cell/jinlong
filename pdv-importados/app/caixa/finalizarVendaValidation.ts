@@ -1,4 +1,8 @@
 import { z } from 'zod'
+import {
+  EXCESSO_PAGAMENTO_EPS,
+  SALDO_PENDENTE_EPS,
+} from '@/app/caixa/caixaPagamentoSaldo'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { roundAbnt } from '@/core/money/roundAbnt'
 
@@ -73,7 +77,7 @@ export const finalizarVendaInputSchema = z.object({
 
   const somaPagamentos = roundMoney2(value.pagamentos.reduce((acc, p) => acc + p.valor, 0))
 
-  if (somaPagamentos > value.totalLiquido + 0.01) {
+  if (somaPagamentos > value.totalLiquido + EXCESSO_PAGAMENTO_EPS) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['pagamentos'],
@@ -81,7 +85,7 @@ export const finalizarVendaInputSchema = z.object({
     })
   }
 
-  if (somaPagamentos <= 0.009) {
+  if (somaPagamentos <= SALDO_PENDENTE_EPS) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['pagamentos'],

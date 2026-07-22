@@ -3,16 +3,19 @@
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { inativarProduto, publicarProduto } from '@/app/gerente/produtos/actions'
+import { ativoFromStatusPublicacao } from '@/core/catalog/statusPublicacao'
 import type { StatusPublicacao } from '@/core/ports/produto'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { emitGerenteToast } from '@/lib/gerente/toast'
 
 type Props = Readonly<{
   produtoId: string
   status: StatusPublicacao
   labels: { publicar: string; inativar: string }
+  erroGenerico: string
 }>
 
-export function CatalogoPublicacaoActions({ produtoId, status, labels }: Props) {
+export function CatalogoPublicacaoActions({ produtoId, status, labels, erroGenerico }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
@@ -22,36 +25,37 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels }: Props) 
         action === 'publicar'
           ? await publicarProduto(produtoId)
           : await inativarProduto(produtoId)
-      if (result.success) router.refresh()
+      if (result.success) {
+        router.refresh()
+        return
+      }
+      emitGerenteToast({ kind: 'error', message: result.error || erroGenerico })
     })
   }
 
-  const btnClass = cn(
-    'rounded-md px-2 py-1 text-[10px] font-medium transition-colors disabled:opacity-50',
-    pending && 'pointer-events-none opacity-50',
-  )
-
-  if (status === 'PUBLICADO') {
+  if (ativoFromStatusPublicacao(status)) {
     return (
-      <button
+      <Button
         type="button"
+        size="sm"
+        variant="danger"
         disabled={pending}
         onClick={() => run('inativar')}
-        className={cn(btnClass, 'border border-destructive/35 text-destructive hover:bg-destructive/10')}
       >
         {labels.inativar}
-      </button>
+      </Button>
     )
   }
 
   return (
-    <button
+    <Button
       type="button"
+      size="sm"
+      variant="primary"
       disabled={pending}
       onClick={() => run('publicar')}
-      className={cn(btnClass, 'border border-jl-accent/35 text-jl-accent hover:bg-jl-accent/10')}
     >
       {labels.publicar}
-    </button>
+    </Button>
   )
 }

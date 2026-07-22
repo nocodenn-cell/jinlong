@@ -14,6 +14,7 @@ import type { UseProdutoFormReturn } from './useProdutoForm'
 import type { ProdutoFormShellProps } from './produtoForm.types'
 import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
+import { CategoriaQuickField } from './sections/CategoriaQuickField'
 import { ComercialSection } from './sections/ComercialSection'
 import { CompraSection } from './sections/CompraSection'
 import { EstoqueSection } from './sections/EstoqueSection'
@@ -23,7 +24,11 @@ type Props = ProdutoFormShellProps &
   UseProdutoFormReturn &
   Readonly<{
     nomeRef?: RefObject<HTMLInputElement | null>
+    codigoBarrasRef?: RefObject<HTMLInputElement | null>
+    precoVarejoRef?: RefObject<HTMLInputElement | null>
     onEnterSubmit?: () => void
+    onCodigoBarrasBlur?: () => void
+    sugestaoHint?: string | null
     idioma: Idioma
     modoCompleto: boolean
     onToggleModoCompleto: () => void
@@ -120,10 +125,21 @@ export function ProdutoForm(props: Props) {
 
         <EssencialSection
           nomeRef={props.nomeRef}
+          codigoBarrasRef={props.codigoBarrasRef}
+          precoVarejoRef={props.precoVarejoRef}
+          onCodigoBarrasBlur={props.onCodigoBarrasBlur}
+          sugestaoHint={props.sugestaoHint}
+        />
+        <PrecosSection
+          modoCompleto={props.modoCompleto}
+          precoVarejoRef={props.precoVarejoRef}
           onEnterSubmit={props.onEnterSubmit}
         />
-        <PrecosSection />
-        <EstoqueSection />
+        {/* Categoria sempre visível (modo simples e completo) — campo primário. */}
+        <div className="mt-1">
+          <CategoriaQuickField />
+        </div>
+        <EstoqueSection modoCompleto={props.modoCompleto} />
 
         <button
           type="button"

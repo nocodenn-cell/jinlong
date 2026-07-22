@@ -20,6 +20,11 @@ vi.mock('@/lib/gerente/toast', () => ({
   emitGerenteToast: vi.fn(),
 }))
 
+vi.mock('@/app/gerente/produtos/sugestaoCadastroActions', () => ({
+  sugerirDadosCadastroPorGtin: vi.fn().mockResolvedValue({ ok: false, error: 'skip' }),
+  registrarCadastroProdutoTelemetry: vi.fn().mockResolvedValue({ ok: true }),
+}))
+
 import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 
 const m = getMessages('pt')
@@ -78,7 +83,9 @@ describe('NovoProdutoModal — ProdutoForm unificado', () => {
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)
 
     expectPayloadComGatilho(criarProdutoMock)
-    expect(onCriado).toHaveBeenCalled()
-    expect(onOpenChange).toHaveBeenCalledWith(false)
+    await vi.waitFor(() => expect(onCriado).toHaveBeenCalled())
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain(m.produtos.pos_salvar_hint)
+    })
   })
 })

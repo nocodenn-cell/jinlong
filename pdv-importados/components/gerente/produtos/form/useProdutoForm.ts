@@ -98,7 +98,13 @@ function resetFormState(
   setters.setEstoqueInicialMin('')
 }
 
-export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null) {
+export function useProdutoForm(
+  open: boolean,
+  produto: ProdutoGerenteRow | null,
+  duplicarDe: ProdutoGerenteRow | null = null,
+  opts?: { codigoBarrasInicial?: string | null },
+) {
+  const codigoBarrasInicial = opts?.codigoBarrasInicial?.trim() || ''
   const [nome, setNome] = useState('')
   const [codigoInterno, setCodigoInterno] = useState('')
   const [codigoBarras, setCodigoBarras] = useState('')
@@ -128,7 +134,7 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
 
   useEffect(() => {
     if (!open) return
-    resetFormState(produto, {
+    const setters = {
       setNome,
       setCodigoInterno,
       setCodigoBarras,
@@ -154,13 +160,34 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       precoCustoInput,
       setEstoqueInicialQty,
       setEstoqueInicialMin,
-    })
+    }
+    if (produto) {
+      // Edição: hidrata do produto existente.
+      resetFormState(produto, setters)
+    } else if (duplicarDe) {
+      // Duplicar para criar: hidrata do produto base como um NOVO cadastro
+      // (editando=false) e limpa só o que precisa ser único por item.
+      resetFormState(duplicarDe, setters)
+      setCodigoBarras('')
+      setCodigoInterno('')
+    } else {
+      // Cadastro em branco.
+      resetFormState(null, setters)
+      if (codigoBarrasInicial) {
+        setCodigoBarras(codigoBarrasInicial)
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, produto])
+  }, [open, produto, duplicarDe, codigoBarrasInicial])
 
   const readOnly = useMemo(() => readOnlyFromProduto(produto), [produto])
 
   const limparParaNovoCadastro = useCallback(() => {
+    // Cadastro em volume: ao "Salvar e continuar", preserva o CONTEXTO que
+    // costuma se repetir entre itens (categoria, marca, fornecedor, origem) e
+    // limpa só o que é específico do item. Antes resetava tudo, forçando o
+    // operador a re-selecionar a categoria a cada produto.
+    const contexto = { categoriaId, marcaId, fornecedorId, origem }
     resetFormState(null, {
       setNome,
       setCodigoInterno,
@@ -188,7 +215,20 @@ export function useProdutoForm(open: boolean, produto: ProdutoGerenteRow | null)
       setEstoqueInicialQty,
       setEstoqueInicialMin,
     })
-  }, [precoAtacadoInput, precoCustoInput, precoVarejoInput])
+    // Reaplica o contexto após o reset (o set posterior vence no batch do React).
+    setCategoriaId(contexto.categoriaId)
+    setMarcaId(contexto.marcaId)
+    setFornecedorId(contexto.fornecedorId)
+    setOrigem(contexto.origem)
+  }, [
+    categoriaId,
+    marcaId,
+    fornecedorId,
+    origem,
+    precoAtacadoInput,
+    precoCustoInput,
+    precoVarejoInput,
+  ])
 
   return {
     nome,

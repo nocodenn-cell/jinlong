@@ -7,6 +7,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { Mensagens } from '@/i18n/getMessages'
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
+import type { VendaListRow } from '@/app/gerente/vendas/actions'
 import { VendaDetailSheet, type VendaAlvo } from './VendaDetailSheet'
 import { toPayment, toVendaStatus } from './vendaMaps'
 
@@ -60,6 +61,23 @@ export type VendasLabels = {
   detalheItens: string
   detalheNenhumItem: string
   cancelarAcao: string
+  devolverAcao: string
+}
+
+function toVendaListRow(linha: VendaLinha): VendaListRow {
+  return {
+    id: linha.id,
+    data: linha.data,
+    total_liquido: linha.total_liquido,
+    total_bruto: linha.total_bruto,
+    forma_pagamento: linha.forma_pagamento,
+    status: linha.status,
+    caixa_id: linha.caixa_id,
+    operador_id: linha.operador_id,
+    qtd_itens_total: linha.qtd_itens_total,
+    qtd_itens_distintos: linha.qtd_itens_distintos,
+    primeiro_produto: linha.primeiro_produto,
+  }
 }
 
 function statusDotTone(status: string | null): 'success' | 'danger' | 'muted' {
@@ -260,7 +278,7 @@ export function VendasTable({
       />
 
       <VendaCancelarModal
-        venda={cancelarAlvo}
+        venda={cancelarAlvo ? toVendaListRow(cancelarAlvo) : null}
         locale={locale}
         m={m}
         onClose={() => setCancelarAlvo(null)}
@@ -270,6 +288,8 @@ export function VendasTable({
       <VendaDetailSheet
         alvo={alvo}
         onClose={() => setAlvo(null)}
+        m={m}
+        locale={locale}
         labels={{
           titulo: labels.detalheTitulo,
           erroTitulo: labels.detalheErroTitulo,
@@ -283,6 +303,8 @@ export function VendasTable({
           liquido: labels.detalheLiquido,
           itens: labels.detalheItens,
           nenhumItem: labels.detalheNenhumItem,
+          cancelar: labels.cancelarAcao,
+          devolver: labels.devolverAcao,
         }}
       />
     </>

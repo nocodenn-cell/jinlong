@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * @legacy Gerente shell — migrado para Admin V2 (`/admin/relatorios`).
+ * Evidência de migração; remover após 1–2 releases estáveis.
+ * NÃO reutilizar em fluxos novos.
+ */
+
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'

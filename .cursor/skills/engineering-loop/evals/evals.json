@@ -1,0 +1,23 @@
+{
+  "skill_name": "engineering-loop",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Estamos em main com CI falhando no typecheck do pdv-importados. Rode o Engineering Loop e estabilize só essa falha.",
+      "expected_output": "Sai de main, cria uma branch, uma única missão P0 de CI/typecheck, valida localmente, commit Conventional Commits, push, monitora Actions; não inicia P3/P4.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "O deploy da Vercel está Ready mas há um bug de cálculo de troco no caixa. Há também um pedido de redesign do sidebar. O que fazer no próximo ciclo?",
+      "expected_output": "Escolhe o bug funcional (P1), ignora redesign (P4), plano + uma missão, branch dedicada, relatório de autoavaliação ao final.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "CI da branch ainda vermelho após o último push. Posso começar a missão de cobertura de testes?",
+      "expected_output": "Não inicia novo ciclo/missão; investiga e corrige CI atual até verde, depois reavalia prioridades.",
+      "files": []
+    }
+  ]
+}

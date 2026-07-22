@@ -1,0 +1,10 @@
+/**
+ * Design System layer — carregar DEPOIS de theme-oriental / jl
+ * para que o contrato Onda 2 prevaleça sobre estilos legado.
+ */
+
+@import './button.css';
+@import './controls.css';
+@import './login-theme.css';
+@import './focus-override.css';
+@import './jl-bridge.css';

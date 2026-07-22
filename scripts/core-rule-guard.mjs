@@ -34,6 +34,9 @@ const ALLOWLIST = new Set(
     // Mapeia status atual → qual botão (Publicar/Inativar) mostrar. A regra de
     // publicar/inativar vive nas server actions (publicarProduto/inativarProduto).
     'pdv-importados/app/admin/catalogo/_components/CatalogoPublicacaoActions.tsx',
+    // Mapeia status → chip visual (label/hint/tom de cor) do formulário de produto.
+    // Pura apresentação: a regra de publicação vive nas server actions.
+    'pdv-importados/components/gerente/produtos/produtoFormStatusChip.ts',
   ].map((p) => path.normalize(path.join(root, p))),
 )
 

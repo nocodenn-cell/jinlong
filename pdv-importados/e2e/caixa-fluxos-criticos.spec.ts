@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { hasCaixaOperadorUser } from './helpers/env'
+import { expectCaixaShellVisible } from './helpers/caixaShell'
 import { loginCaixaOperador } from './helpers/login'
 import { gotoApp } from './helpers/url'
 import {
   confirmarModalValorNumerico,
-  MODAL_TITULO_ABRIR,
   MODAL_TITULO_FECHAR,
 } from './helpers/caixaModais'
+import { ensureCaixaAberto } from './helpers/ensureCaixaAberto'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -26,16 +27,21 @@ test.describe('Caixa — fluxos críticos (abrir → sangria → fechar)', () =>
     page,
   }) => {
     await gotoApp(page, '/caixa')
-    await expect(page.getByText(/PDV · Caixa|POS · 收银|POS · 收銀/)).toBeVisible({ timeout: 15_000 })
+    await expectCaixaShellVisible(page)
 
-    const abrir = page.getByRole('button', { name: /Abrir caixa|开启收银台/ })
-    if (await abrir.isVisible().catch(() => false)) {
-      await abrir.click()
-      await confirmarModalValorNumerico(page, MODAL_TITULO_ABRIR, '120')
-      await expect(page.getByRole('status')).toContainText(/Caixa aberto|aberto/i, { timeout: 25_000 })
+    await ensureCaixaAberto(page, '120')
+
+    // Layout clássico: sangria fica no menu Operações (não há mais botão "Sangria (-)").
+    await page.getByRole('button', { name: /^Operações$/i }).click()
+    // Nome acessível inclui atalho: "Sangria Ctrl+Shift+R"
+    await page.getByRole('menuitem', { name: /Sangria/i }).click()
+    await expect(page.getByRole('dialog')).toContainText(/Registrar sangria|Confirmar sangria/i, {
+      timeout: 10_000,
+    })
+    const confirmarAbertura = page.getByRole('button', { name: /^Confirmar$/i })
+    if (await confirmarAbertura.isVisible().catch(() => false)) {
+      await confirmarAbertura.click()
     }
-
-    await page.getByRole('button', { name: /Sangria (-)/ }).click()
     await expect(page.getByRole('dialog')).toContainText(/Registrar sangria/i, { timeout: 10_000 })
     await page.getByRole('button', { name: /R\$\s*50\.00/ }).click()
     await page.getByRole('button', { name: /^Confirmar$/ }).click()

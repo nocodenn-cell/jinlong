@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { EmptyState, ErrorState, Loading } from "@/components/ui/feedback"
 import type { Mensagens } from "@/i18n/getMessages"
 import {
   listarHistoricoOperadorCaixa,
@@ -398,6 +399,7 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
       role="dialog"
       aria-modal="true"
       aria-labelledby={tituloId}
+      data-testid="caixa-historico-sheet"
     >
       <div className="absolute inset-0 bg-black/60" onClick={fechar} aria-hidden />
       <div
@@ -424,15 +426,11 @@ export function CaixaHistoricoSheet({ open, onOpenChange, m, onImprimirCupom }: 
         <div className="flex min-h-0 flex-1">
           <section className="flex w-[38%] min-w-0 flex-col border-r border-jl-border-1">
             {loading ? (
-              <p className="px-3 py-4 text-sm text-jl-fg-3">{m.comum.carregando}</p>
+              <Loading label={m.comum.carregando} className="min-h-0 py-8" size="sm" />
             ) : null}
-            {erro ? (
-              <p className="px-3 py-4 text-sm text-destructive" role="alert">
-                {erro}
-              </p>
-            ) : null}
+            {erro ? <ErrorState dense description={erro} className="m-3" /> : null}
             {!loading && !erro && vendas.length === 0 ? (
-              <p className="px-3 py-4 text-sm italic text-jl-fg-3">{m.caixa.historico_vazio}</p>
+              <EmptyState title={m.caixa.historico_vazio} className="py-8" />
             ) : null}
             {!loading && !erro && vendas.length > 0 ? (
               <HistoricoLista

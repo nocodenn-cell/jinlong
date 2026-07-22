@@ -1,10 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ROUTES } from '@shared-core/navigation/routes'
-import { Eye, ImageIcon, Pencil } from 'lucide-react'
+import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
+import { Copy, Eye, ImageIcon, Package, Pencil } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/feedback'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatBRL } from '@/lib/format/money'
 import type { StatusPublicacao } from '@/core/ports/produto'
@@ -64,14 +68,9 @@ function ActionBtn({
   children: React.ReactNode
 }) {
   return (
-    <Link
-      href={href}
-      aria-label={label}
-      title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
-    >
-      {children}
-    </Link>
+    <Button asChild type="button" size="icon" variant="ghost" aria-label={label} title={label}>
+      <Link href={href}>{children}</Link>
+    </Button>
   )
 }
 
@@ -87,8 +86,16 @@ export function CatalogoTable({
   opcoes: OpcoesFiltrosProdutos
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [editando, setEditando] = useState<CatalogoProduto | null>(null)
   const [novoOpen, setNovoOpen] = useState(false)
+  const [duplicando, setDuplicando] = useState<CatalogoProduto | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('modal') === 'novo') {
+      setNovoOpen(true)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -116,17 +123,17 @@ export function CatalogoTable({
       sortValue: (r) => r.nome,
       cell: (row) => (
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-soft">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-soft)]">
             {row.imagem_url ? (
               // eslint-disable-next-line @next/next/no-img-element -- dynamic catalog URLs; dimensions unknown at build
               <img src={row.imagem_url} alt="" className="h-full w-full object-cover" />
             ) : (
-              <ImageIcon size={12} className="text-jl-fg-3" aria-hidden />
+              <ImageIcon size={12} className="text-fg-subtle" aria-hidden />
             )}
           </div>
           <div className="min-w-0">
-            <p className="max-w-[200px] truncate text-[12px] font-medium text-jl-fg-1">{row.nome}</p>
-            <p className="font-mono text-[10px] text-jl-fg-3">{row.sku}</p>
+            <p className="max-w-[200px] truncate text-body font-medium text-fg">{row.nome}</p>
+            <p className="font-mono text-mono text-caption text-fg-subtle">{row.sku}</p>
           </div>
         </div>
       ),
@@ -137,7 +144,7 @@ export function CatalogoTable({
       align: 'right',
       sortValue: (r) => r.preco_varejo,
       cell: (r) => (
-        <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.preco_varejo)}</span>
+        <span className="text-body font-medium text-fg">{formatBRL(r.preco_varejo)}</span>
       ),
     },
     {
@@ -146,9 +153,9 @@ export function CatalogoTable({
       align: 'right',
       cell: (r) =>
         r.preco_atacado != null ? (
-          <span className="text-[11px] text-jl-fg-2">{formatBRL(r.preco_atacado)}</span>
+          <span className="text-caption text-fg-muted">{formatBRL(r.preco_atacado)}</span>
         ) : (
-          <span className="text-jl-fg-3">—</span>
+          <span className="text-fg-subtle">—</span>
         ),
     },
     {
@@ -157,10 +164,20 @@ export function CatalogoTable({
       align: 'right',
       sortValue: (r) => r.quantidade_atual ?? Number.NEGATIVE_INFINITY,
       cell: (r) => {
-        if (r.quantidade_atual === null) return <span className="text-jl-fg-3">—</span>
+        if (r.quantidade_atual === null) return <span className="text-fg-subtle">—</span>
         const v = r.quantidade_atual
+        const estoqueHref = adminEstoqueProdutoQuery(r.nome)
         return (
-          <span className={v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400'}>{v}</span>
+          <Link
+            href={estoqueHref}
+            title="Ver e ajustar no estoque"
+            className={cn(
+              'tabular-nums underline-offset-2 hover:underline',
+              v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400',
+            )}
+          >
+            {v}
+          </Link>
         )
       },
     },
@@ -169,19 +186,14 @@ export function CatalogoTable({
       header: labels.origem,
       cell: (r) => {
         const meta = ORIGEM_MAP[r.origem]
-        if (!meta) return <span className="text-jl-fg-3">—</span>
+        if (!meta) return <span className="text-fg-subtle">—</span>
         const origemLabel = r.origem === 'china_manual' ? labels.origemChina
           : r.origem === 'brasil_nf' ? labels.origemBrasilNf
           : labels.origemBrasil
         return (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
-              meta.badgeClass,
-            )}
-          >
+          <Badge className={cn('px-2 py-[2px] text-caption font-medium leading-none', meta.badgeClass)}>
             {origemLabel}
-          </span>
+          </Badge>
         )
       },
     },
@@ -190,14 +202,14 @@ export function CatalogoTable({
       header: labels.status,
       align: 'center',
       cell: (r) => (
-        <span
+        <Badge
           className={cn(
-            'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
+            'px-2 py-[2px] text-caption font-medium leading-none',
             STATUS_BADGE_CLASS[r.status_publicacao],
           )}
         >
           {statusLabel[r.status_publicacao]}
-        </span>
+        </Badge>
       ),
     },
   ]
@@ -205,11 +217,18 @@ export function CatalogoTable({
   return (
     <>
       <NovoProdutoModal
-        open={novoOpen}
-        onOpenChange={setNovoOpen}
+        open={novoOpen || duplicando !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setNovoOpen(false)
+            setDuplicando(null)
+          }
+        }}
         m={m}
         opcoes={opcoes}
+        duplicarDe={duplicando}
         onCriado={() => {
+          setDuplicando(null)
           router.refresh()
         }}
       />
@@ -219,18 +238,13 @@ export function CatalogoTable({
         columns={columns}
         rowKey={(r) => r.id}
         emptyState={
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <span className="text-4xl text-jl-fg-3" aria-hidden>📦</span>
-            <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
-            <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
-            <button
-              type="button"
-              onClick={() => setNovoOpen(true)}
-              className="admin-v2-btn-primary mt-2"
-            >
-              {labels.cadastroRapido}
-            </button>
-          </div>
+          <EmptyState
+            icon={<Package className="h-6 w-6" aria-hidden />}
+            title={labels.vazioTitulo}
+            description={labels.vazioSub}
+            actionLabel={labels.cadastroRapido}
+            onAction={() => setNovoOpen(true)}
+          />
         }
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
@@ -239,16 +253,28 @@ export function CatalogoTable({
               produtoId={row.id}
               status={row.status_publicacao}
               labels={{ publicar: labels.publicar, inativar: labels.inativar }}
+              erroGenerico={m.comum.erro}
             />
-            <button
+            <Button
               type="button"
+              size="icon"
+              variant="ghost"
               aria-label={`Editar ${row.nome}`}
               title={`Editar ${row.nome}`}
               onClick={() => setEditando(row)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-jl-fg-3 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
             >
               <Pencil size={13} aria-hidden />
-            </button>
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={`Duplicar ${row.nome}`}
+              title={`Duplicar ${row.nome}`}
+              onClick={() => setDuplicando(row)}
+            >
+              <Copy size={13} aria-hidden />
+            </Button>
             <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
               <Eye size={13} aria-hidden />
             </ActionBtn>

@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * @legacy Gerente shell — migrado para Admin V2 (`/admin/financeiro`).
+ * Evidência de migração; remover após 1–2 releases estáveis.
+ * NÃO reutilizar em fluxos novos.
+ */
+
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Calendar, Plus, Search } from 'lucide-react'

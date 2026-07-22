@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import type { UseThermalPrinterReturn } from "@/hooks/useThermalPrinter"
 import type { Mensagens } from "@/i18n/getMessages"
+import { Button } from "@/components/ui/button"
+import { ErrorState } from "@/components/ui/feedback"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
 
@@ -167,60 +169,62 @@ export function CaixaReciboModal({
       role="dialog"
       aria-modal="true"
       aria-label="Recibo da venda"
+      data-testid="caixa-recibo-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <span className="text-sm font-semibold text-foreground">Recibo da venda</span>
+          <span className="text-body font-semibold text-fg">Recibo da venda</span>
           <div className="flex gap-2">
             {supportsWebUSB ? (
-              <button
+              <Button
                 type="button"
+                size="sm"
+                variant={
+                  thermal.status === "connected" || thermal.status === "printing"
+                    ? "primary"
+                    : "secondary"
+                }
                 onClick={() => { void handleThermalPrint().catch(() => { }) }}
                 disabled={thermal.status === "connecting" || thermal.status === "printing"}
+                loading={thermal.status === "connecting" || thermal.status === "printing"}
                 aria-label="Imprimir (térmica direta)"
                 title="Imprime diretamente na impressora térmica (sem confirmação)"
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-semibold",
-                  thermal.status === "connected" || thermal.status === "printing"
-                    ? "app-btn-accent"
-                    : "app-btn-neutral",
-                )}
               >
                 {thermal.status === "connecting" ? "Conectando…" :
                  thermal.status === "printing"   ? "Imprimindo…" :
-                 "🖨️ Imprimir (térmica direta)"}
-              </button>
+                 "Imprimir (térmica)"}
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
+                size="sm"
+                variant="primary"
                 onClick={handlePrint}
                 aria-label="Imprimir (janela)"
                 title="Imprime usando a janela do navegador (clique em OK)"
-                className="app-btn-accent rounded-md px-3 py-1.5 text-xs font-semibold"
               >
-                🖨️ Imprimir (janela)
-              </button>
+                Imprimir
+              </Button>
             )}
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="secondary"
               onClick={onClose}
               aria-label="Fechar recibo"
-              className="app-btn-neutral rounded-md px-3 py-1.5 text-xs font-semibold"
+              data-testid="caixa-recibo-fechar"
             >
-              ✕
-            </button>
+              Fechar
+            </Button>
           </div>
         </div>
 
-        {/* Erro térmica */}
-        {thermal.errorMsg && (
-          <div className="border-b border-border bg-destructive/10 px-4 py-2 text-xs text-destructive">
-            {thermal.errorMsg}
-          </div>
-        )}
+        {thermal.errorMsg ? (
+          <ErrorState dense description={thermal.errorMsg} className="rounded-none border-x-0" />
+        ) : null}
 
         {/* Conteúdo rolável */}
         <div className="flex-1 overflow-y-auto p-4">
@@ -300,28 +304,32 @@ export function CaixaReciboModal({
             </div>
 
             {/* Rodapé */}
-            <div className="recibo-footer border-t border-dashed border-border pt-3 text-center text-[10px] text-muted-foreground">
+            <div className="recibo-footer border-t border-dashed border-border pt-3 text-center text-caption text-fg-muted">
               <p>{labels.rodapeObrigado}</p>
               <p className="opacity-60">{labels.rodapeNaoFiscal}</p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-border bg-muted/30 p-4">
-          <button
+        <div className="flex flex-col gap-2 border-t border-border bg-surface-muted p-4">
+          <Button
             type="button"
+            variant="primary"
+            className="w-full"
             onClick={onNovaVenda}
-            className="app-btn-accent w-full rounded-md px-4 py-2.5 text-sm font-semibold"
+            data-testid="caixa-recibo-nova-venda"
+            aria-label={m.caixa.btn_adicionar_nova_venda}
           >
             {m.caixa.btn_adicionar_nova_venda}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            className="w-full"
             onClick={onFinalizarCaixa}
-            className="app-btn-neutral w-full rounded-md px-4 py-2.5 text-sm font-semibold"
           >
             {m.caixa.btn_finalizar_caixa}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

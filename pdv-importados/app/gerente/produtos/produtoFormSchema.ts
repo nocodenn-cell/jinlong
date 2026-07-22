@@ -96,6 +96,20 @@ const produtoFormBaseObject = z.object({
 /** SSOT — campos compartilhados entre criar e editar produto. */
 export const ProdutoFormBaseSchema = produtoFormBaseObject.superRefine(precoAtacadoRefine)
 
+const estoqueInicialCadastroFields = {
+  estoque_inicial_quantidade: z.coerce
+    .number()
+    .min(0, 'Estoque inicial não pode ser negativo.')
+    .optional()
+    .default(0),
+  estoque_inicial_minimo: z.coerce
+    .number()
+    .min(0, 'Estoque mínimo não pode ser negativo.')
+    .optional()
+    .default(0),
+  client_request_id: z.string().uuid().nullable().optional(),
+}
+
 export const NovoProdutoRascunhoSchema = produtoFormBaseObject
   .extend({
     preco_varejo: z.coerce
@@ -103,6 +117,7 @@ export const NovoProdutoRascunhoSchema = produtoFormBaseObject
       .nonnegative('O preço de varejo não pode ser negativo.')
       .default(0),
     status_publicacao: z.literal('DRAFT'),
+    ...estoqueInicialCadastroFields,
   })
   .superRefine(precoAtacadoRefine)
 
@@ -110,6 +125,7 @@ export const NovoProdutoSchema = produtoFormBaseObject
   .extend({
     ativo: z.boolean().optional(),
     status_publicacao: z.enum(['DRAFT', 'PUBLICADO', 'INATIVO']).optional(),
+    ...estoqueInicialCadastroFields,
   })
   .superRefine(precoAtacadoRefine)
 

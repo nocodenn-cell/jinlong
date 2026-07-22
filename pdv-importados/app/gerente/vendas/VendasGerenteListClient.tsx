@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * @legacy Gerente shell — migrado para Admin V2 (`/admin/vendas`).
+ * Evidência de migração; remover após 1–2 releases estáveis.
+ * NÃO reutilizar em fluxos novos.
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { DataTablePage } from '@/components/gerente/DataTablePage'

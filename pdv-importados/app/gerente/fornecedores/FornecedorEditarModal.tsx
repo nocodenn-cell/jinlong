@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Field, Input, Select } from '@/components/ui/forms'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -65,11 +66,8 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
 
-  const nomeRef = useRef<HTMLInputElement>(null)
-
-  // DragonModal cuida de Escape, scroll-lock e foco-trap; aqui só o foco inicial.
   useEffect(() => {
-    const t = setTimeout(() => nomeRef.current?.focus(), 30)
+    const t = setTimeout(() => document.getElementById('forn-nome')?.focus(), 30)
     return () => clearTimeout(t)
   }, [])
 
@@ -171,8 +169,6 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
     }
   }
 
-  const finIn = 'h-10 w-full rounded-md px-3 text-sm app-input'
-
   return (
     <DragonModal
       open
@@ -182,7 +178,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
       icon={Building2}
       title={
         <>
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-jl-fg-3">
+          <span className="mb-1 block text-caption font-bold uppercase tracking-[0.14em] text-fg-subtle">
             {editando ? m.fornecedores.modal_editar_titulo : m.fornecedores.modal_novo_titulo} · 供应商
           </span>
           <span className="block truncate">
@@ -194,197 +190,176 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
       closeLabel={m.comum.fechar ?? 'Fechar'}
       footer={
         <>
-          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={salvando}>
+          <Button type="button" variant="secondary" onClick={fechar} disabled={salvando}>
             {m.comum.cancelar}
           </Button>
-          <Button type="submit" form="forn-form" className="app-btn-accent" disabled={salvando}>
+          <Button type="submit" form="forn-form" variant="primary" disabled={salvando}>
             {salvando ? m.comum.carregando ?? '…' : editando ? m.fornecedores.modal_salvar : m.fornecedores.modal_cadastrar}
           </Button>
         </>
       }
     >
-        <form id="forn-form" onSubmit={submeter} className="space-y-4 pb-1">
-            {/* PF/PJ */}
-            <div>
-              <span className="mb-1.5 block text-xs font-medium text-jl-fg-3">{m.fornecedores.tipo_label}</span>
-              <div role="radiogroup" aria-label={m.fornecedores.tipo_label} className="grid grid-cols-2 gap-1 rounded-lg app-border border bg-jl-surface-soft p-1">
-                {(['PJ', 'PF'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    role="radio"
-                    aria-checked={tipo === t}
-                    onClick={() => handleTipo(t)}
-                    disabled={salvando}
-                    className={cn(
-                      'h-8 rounded-md text-xs font-medium transition-colors',
-                      tipo === t
-                        ? 'bg-gradient-to-b from-amber-300 to-amber-600 font-semibold text-slate-900'
-                        : 'text-jl-fg-3 hover:text-jl-fg-1',
-                    )}
-                  >
-                    {t === 'PJ' ? m.fornecedores.tipo_pj : m.fornecedores.tipo_pf}
-                  </button>
+      <form id="forn-form" onSubmit={submeter} className="space-y-4 pb-1">
+        <div>
+          <span className="mb-1.5 block text-small font-medium text-fg-subtle">{m.fornecedores.tipo_label}</span>
+          <div
+            role="radiogroup"
+            aria-label={m.fornecedores.tipo_label}
+            className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-1"
+          >
+            {(['PJ', 'PF'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={tipo === t}
+                onClick={() => handleTipo(t)}
+                disabled={salvando}
+                className={cn(
+                  'h-8 rounded-md text-caption font-medium transition-colors',
+                  tipo === t
+                    ? 'bg-[var(--color-info-bg)] font-semibold text-brand'
+                    : 'text-fg-subtle hover:text-fg',
+                )}
+              >
+                {t === 'PJ' ? m.fornecedores.tipo_pj : m.fornecedores.tipo_pf}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Field
+          id="forn-nome"
+          label={tipo === 'PJ' ? m.fornecedores.field_razao_social : m.fornecedores.field_nome}
+          required
+          error={erros.nome ?? undefined}
+        >
+          <Input
+            value={nome}
+            onChange={(e) => {
+              setNome(e.target.value)
+              if (erros.nome) setErros((x) => ({ ...x, nome: null }))
+            }}
+            disabled={salvando}
+            required
+            maxLength={120}
+          />
+        </Field>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field
+            id="forn-doc"
+            label={tipo === 'PF' ? m.fornecedores.field_cpf : m.fornecedores.field_cnpj}
+            required
+            error={erros.documento ?? undefined}
+          >
+            <Input
+              inputMode="numeric"
+              value={documento}
+              onChange={handleDoc}
+              disabled={salvando}
+              required
+              placeholder={tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
+              className="font-mono"
+            />
+          </Field>
+          <Field id="forn-tel" label={m.fornecedores.field_telefone}>
+            <Input
+              type="tel"
+              inputMode="tel"
+              value={telefone}
+              onChange={handleTel}
+              disabled={salvando}
+              placeholder="(11) 9 0000-0000"
+              className="tabular-nums"
+            />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field id="forn-email" label={m.fornecedores.field_email} error={erros.email ?? undefined}>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (erros.email) setErros((x) => ({ ...x, email: null }))
+              }}
+              disabled={salvando}
+              placeholder="compras@fornecedor.com.br"
+            />
+          </Field>
+          <Field id="forn-contato" label={m.fornecedores.field_contato}>
+            <Input
+              value={contato}
+              onChange={(e) => setContato(e.target.value)}
+              disabled={salvando}
+              placeholder={m.fornecedores.placeholder_contato}
+            />
+          </Field>
+        </div>
+
+        <Field id="forn-categoria" label={m.fornecedores.field_categoria}>
+          <Input
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            disabled={salvando}
+            placeholder={m.fornecedores.placeholder_categoria}
+          />
+        </Field>
+
+        <div className="mt-2 border-t border-dashed border-[var(--color-border)] pt-4">
+          <div className="mb-3 flex items-center gap-2.5 text-caption font-bold uppercase tracking-[0.12em] text-fg-subtle">
+            {m.fornecedores.section_endereco}
+            <span className="text-small font-medium tracking-[0.08em] text-brand" style={{ fontFamily: 'var(--font-serif-han)' }}>
+              地址
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_100px]">
+            <Field id="forn-cep" label={m.fornecedores.field_cep} error={erros.cep ?? undefined}>
+              <Input
+                inputMode="numeric"
+                value={cep}
+                onChange={handleCep}
+                disabled={salvando}
+                placeholder="00000-000"
+                className="font-mono tabular-nums"
+              />
+            </Field>
+            <Field id="forn-logradouro" label={m.fornecedores.field_logradouro}>
+              <Input value={logradouro} onChange={(e) => setLogradouro(e.target.value)} disabled={salvando} />
+            </Field>
+            <Field id="forn-numero" label={m.fornecedores.field_numero}>
+              <Input value={numero} onChange={(e) => setNumero(e.target.value)} disabled={salvando} />
+            </Field>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field id="forn-complemento" label={m.fornecedores.field_complemento}>
+              <Input value={complemento} onChange={(e) => setComplemento(e.target.value)} disabled={salvando} />
+            </Field>
+            <Field id="forn-bairro" label={m.fornecedores.field_bairro}>
+              <Input value={bairro} onChange={(e) => setBairro(e.target.value)} disabled={salvando} />
+            </Field>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
+            <Field id="forn-cidade" label={m.fornecedores.field_cidade}>
+              <Input value={cidade} onChange={(e) => setCidade(e.target.value)} disabled={salvando} />
+            </Field>
+            <Field id="forn-uf" label={m.fornecedores.field_uf}>
+              <Select value={uf} onChange={(e) => setUf(e.target.value)} disabled={salvando}>
+                {UFs.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
                 ))}
-              </div>
-            </div>
-
-            {/* Nome */}
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {tipo === 'PJ' ? m.fornecedores.field_razao_social : m.fornecedores.field_nome}
-              <span className="ml-0.5 text-[color:var(--accent)]">*</span>
-              <input
-                ref={nomeRef}
-                value={nome}
-                onChange={(e) => {
-                  setNome(e.target.value)
-                  if (erros.nome) setErros((x) => ({ ...x, nome: null }))
-                }}
-                disabled={salvando}
-                required
-                maxLength={120}
-                aria-invalid={!!erros.nome}
-                aria-describedby={erros.nome ? 'err-nome' : undefined}
-                className={cn(`${finIn} mt-1`, erros.nome && 'border-red-400/60')}
-              />
-              {erros.nome && <span id="err-nome" className="mt-1 block text-xs text-red-300">{erros.nome}</span>}
-            </label>
-
-            {/* Doc + Tel */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-jl-fg-3">
-                {tipo === 'PF' ? m.fornecedores.field_cpf : m.fornecedores.field_cnpj}
-                <span className="ml-0.5 text-[color:var(--accent)]">*</span>
-                <input
-                  inputMode="numeric"
-                  value={documento}
-                  onChange={handleDoc}
-                  disabled={salvando}
-                  required
-                  placeholder={tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
-                  className={cn(`${finIn} mt-1 font-mono`, erros.documento && 'border-red-400/60')}
-                  aria-invalid={!!erros.documento}
-                />
-                {erros.documento && <span className="mt-1 block text-xs text-red-300">{erros.documento}</span>}
-              </label>
-              <label className="block text-xs font-medium text-jl-fg-3">
-                {m.fornecedores.field_telefone}
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={telefone}
-                  onChange={handleTel}
-                  disabled={salvando}
-                  placeholder="(11) 9 0000-0000"
-                  className={`${finIn} mt-1 tabular-nums`}
-                />
-              </label>
-            </div>
-
-            {/* Email + Contato */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-jl-fg-3">
-                {m.fornecedores.field_email}
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    if (erros.email) setErros((x) => ({ ...x, email: null }))
-                  }}
-                  disabled={salvando}
-                  placeholder="compras@fornecedor.com.br"
-                  className={cn(`${finIn} mt-1`, erros.email && 'border-red-400/60')}
-                  aria-invalid={!!erros.email}
-                />
-                {erros.email && <span className="mt-1 block text-xs text-red-300">{erros.email}</span>}
-              </label>
-              <label className="block text-xs font-medium text-jl-fg-3">
-                {m.fornecedores.field_contato}
-                <input
-                  value={contato}
-                  onChange={(e) => setContato(e.target.value)}
-                  disabled={salvando}
-                  placeholder={m.fornecedores.placeholder_contato}
-                  className={`${finIn} mt-1`}
-                />
-              </label>
-            </div>
-
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {m.fornecedores.field_categoria}
-              <input
-                value={categoria}
-                onChange={(e) => setCategoria(e.target.value)}
-                disabled={salvando}
-                placeholder={m.fornecedores.placeholder_categoria}
-                className={`${finIn} mt-1`}
-              />
-            </label>
-
-            {/* Endereço */}
-            <div className="mt-2 border-t border-dashed border-jl-border-1 pt-4">
-              <div className="mb-3 flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
-                {m.fornecedores.section_endereco}
-                <span className="text-xs font-medium tracking-[0.08em] text-[color:var(--accent)]" style={{ fontFamily: 'var(--font-serif-han)' }}>
-                  地址
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_100px]">
-                <label className="block text-xs font-medium text-jl-fg-3">
-                  {m.fornecedores.field_cep}
-                  <input
-                    inputMode="numeric"
-                    value={cep}
-                    onChange={handleCep}
-                    disabled={salvando}
-                    placeholder="00000-000"
-                    className={cn(`${finIn} mt-1 font-mono tabular-nums`, erros.cep && 'border-red-400/60')}
-                  />
-                  {erros.cep && <span className="mt-1 block text-xs text-red-300">{erros.cep}</span>}
-                </label>
-                <label className="block text-xs font-medium text-jl-fg-3">
-                  {m.fornecedores.field_logradouro}
-                  <input value={logradouro} onChange={(e) => setLogradouro(e.target.value)} disabled={salvando}
-                    className={`${finIn} mt-1`} />
-                </label>
-                <label className="block text-xs font-medium text-jl-fg-3">
-                  {m.fornecedores.field_numero}
-                  <input value={numero} onChange={(e) => setNumero(e.target.value)} disabled={salvando}
-                    className={`${finIn} mt-1`} />
-                </label>
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block text-xs font-medium text-jl-fg-3">
-                  {m.fornecedores.field_complemento}
-                  <input value={complemento} onChange={(e) => setComplemento(e.target.value)} disabled={salvando}
-                    className={`${finIn} mt-1`} />
-                </label>
-                <label className="block text-xs font-medium text-jl-fg-3">
-                  {m.fornecedores.field_bairro}
-                  <input value={bairro} onChange={(e) => setBairro(e.target.value)} disabled={salvando}
-                    className={`${finIn} mt-1`} />
-                </label>
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
-                <label className="block text-xs font-medium text-jl-fg-3">
-                  {m.fornecedores.field_cidade}
-                  <input value={cidade} onChange={(e) => setCidade(e.target.value)} disabled={salvando}
-                    className={`${finIn} mt-1`} />
-                </label>
-                <label className="block text-xs font-medium text-jl-fg-3">
-                  {m.fornecedores.field_uf}
-                  <select value={uf} onChange={(e) => setUf(e.target.value)} disabled={salvando}
-                    className="app-select mt-1 h-10 w-full rounded-md px-3 text-sm">
-                    {UFs.map((u) => <option key={u}>{u}</option>)}
-                  </select>
-                </label>
-              </div>
-            </div>
-        </form>
+              </Select>
+            </Field>
+          </div>
+        </div>
+      </form>
     </DragonModal>
   )
 }

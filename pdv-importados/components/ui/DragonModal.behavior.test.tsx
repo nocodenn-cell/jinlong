@@ -112,6 +112,72 @@ describe('DragonModal', () => {
     expect(card.className).not.toContain('items-end')
   })
 
+  it('Shift+Tab a partir do cartão NÃO vaza — foca o último focável', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const card = document.querySelector('.dragon-elev-2') as HTMLElement
+    card.focus()
+    expect(document.activeElement).toBe(card)
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }))
+
+    const salvar = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Salvar',
+    )
+    expect(document.activeElement).toBe(salvar)
+  })
+
+  it('Tab a partir do último focável cicla para o primeiro', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const salvar = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Salvar',
+    ) as HTMLElement
+    salvar.focus()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }))
+
+    expect(document.activeElement).toBe(document.querySelector('[aria-label="Fechar"]'))
+  })
+
+  it('Shift+Tab a partir do primeiro focável cicla para o último', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const x = document.querySelector('[aria-label="Fechar"]') as HTMLElement
+    x.focus()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }))
+
+    const salvar = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Salvar',
+    )
+    expect(document.activeElement).toBe(salvar)
+  })
+
+  it('data-testid é aplicado à raiz e escopa footer + corpo', () => {
+    render(
+      <DragonModal open onClose={() => {}} title="T" data-testid="meu-modal" footer={<button>Salvar</button>}>
+        <input aria-label="campo" />
+      </DragonModal>,
+    )
+    const root = document.querySelector('[data-testid="meu-modal"]') as HTMLElement
+    expect(root).not.toBeNull()
+    // raiz == diálogo (envolve corpo e footer)
+    expect(root.getAttribute('role')).toBe('dialog')
+    expect(root.querySelector('input[aria-label="campo"]')).not.toBeNull()
+    const salvar = Array.from(root.querySelectorAll('button')).find((b) => b.textContent === 'Salvar')
+    expect(salvar).toBeTruthy()
+  })
+
   it('restaura o overflow do body ao fechar', () => {
     render(
       <DragonModal open onClose={() => {}} title="T">

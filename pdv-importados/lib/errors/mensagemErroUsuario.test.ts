@@ -25,6 +25,10 @@ describe('mensagemErroParaUsuario', () => {
       'Este registro já existe ou há conflito com outro cadastro (dados duplicados).',
     ],
     [
+      'duplicate key value violates unique constraint "produtos_codigo_barras_loja_unique"',
+      'Código de barras já cadastrado nesta loja. Busque o produto existente no catálogo.',
+    ],
+    [
       'violates foreign key constraint "vendas_caixa_id_fkey"',
       'Dados inconsistentes: existe referência a um registro que não existe ou não pode ser usado.',
     ],

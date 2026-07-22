@@ -141,6 +141,14 @@ export function mensagemErroParaUsuario(detalheTecnico: string, idiomaInput?: st
     )
   }
 
+  if (lower.includes('produtos_codigo_barras_loja_unique')) {
+    return t(
+      idioma,
+      'Código de barras já cadastrado nesta loja. Busque o produto existente no catálogo.',
+      '该门店已存在此条形码的商品。请在目录中搜索并打开已有商品。',
+    )
+  }
+
   if (
     lower.includes('duplicate key') ||
     lower.includes('unique constraint') ||
