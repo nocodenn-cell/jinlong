@@ -17,13 +17,3 @@ b45b84a9aa88d3c944457146a935527059aa96f0:pdv-local/.env.example:jwt:9
 # CI workflow hardcoded anon key in old commits (before secret migration) — rotated
 53ecb5dbdf61d4a8570d81cb184c55424945d244:.github/workflows/ci-pdv-importados.yml:jwt:46
 30f7bf5624b35f461724bcd4fb9507bc70157407:.github/workflows/ci-pdv-importados.yml:jwt:44
-# Pre-production audit documents: Contain security research examples and educational code
-# All patterns (jwt, generic-api-key, etc) are from documentation, not production secrets
-# Files: RELATORIO_GO_LIVE_VALIDATION.md, SECURITY_AUDIT_REPORT.md, DATABASE_HEALTH_REPORT.md,
-#        PERFORMANCE_REPORT.md, BUSINESS_ACCEPTANCE.md, PRE_PRODUCTION_AUDIT_SUMMARY.md
-7d4b808ae5318074dfc644f841d51f8db3e74d36:SECURITY_AUDIT_REPORT.md
-7d4b808ae5318074dfc644f841d51f8db3e74d36:RELATORIO_GO_LIVE_VALIDATION.md
-7d4b808ae5318074dfc644f841d51f8db3e74d36:DATABASE_HEALTH_REPORT.md
-7d4b808ae5318074dfc644f841d51f8db3e74d36:PERFORMANCE_REPORT.md
-7d4b808ae5318074dfc644f841d51f8db3e74d36:BUSINESS_ACCEPTANCE.md
-7d4b808ae5318074dfc644f841d51f8db3e74d36:PRE_PRODUCTION_AUDIT_SUMMARY.md
