@@ -8,14 +8,14 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { Select } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import {
   EXCESSO_PAGAMENTO_EPS,
   SALDO_PENDENTE_EPS,
   calcularTroco,
 } from "@/app/caixa/caixaPagamentoSaldo"
 
-/** Mantido por compatibilidade com atalhos legados — fluxo linear sem abas. */
-export type CaixaPdvOperadorTabId = "produto"
+export type CaixaPdvOperadorTabId = "produto" | "cliente" | "pgto"
 
 type PagamentoLinha = {
   formaPagamento: FinalizarVendaInput["formaPagamento"]
@@ -24,6 +24,10 @@ type PagamentoLinha = {
 
 type Props = {
   m: Mensagens
+  activeTab: CaixaPdvOperadorTabId
+  onActiveTabChange: (tab: CaixaPdvOperadorTabId) => void
+  /** Nome do cliente vinculado à venda atual; `null` = Consumidor Final (padrão). */
+  clienteNome: string | null
   pagamentos: PagamentoLinha[]
   totalLiquidoComGerente: number
   somaParcelas: number
@@ -37,6 +41,23 @@ type Props = {
   onAutoCompletar: () => void
   moedaPrefixo: string
   produtoPanel: ReactNode
+  metodoPagamentoPanel?: ReactNode
+}
+
+type PagamentoPanelProps = {
+  m: Mensagens
+  pagamentos: PagamentoLinha[]
+  totalLiquidoComGerente: number
+  somaParcelas: number
+  diferenca: number
+  podeAdicionarParcela: boolean
+  formasDisponiveis: readonly FormaPagamento[]
+  onAdicionarParcela: (forma?: FormaPagamento) => void
+  onRemoverParcela: (index: number) => void
+  onAtualizarForma: (index: number, forma: FormaPagamento) => void
+  onAtualizarValor: (index: number, valor: number) => void
+  onAutoCompletar: () => void
+  moedaPrefixo: string
   metodoPagamentoPanel?: ReactNode
 }
 
@@ -55,12 +76,13 @@ function PagamentoPanel({
   onAutoCompletar,
   moedaPrefixo,
   metodoPagamentoPanel,
-}: Omit<Props, "produtoPanel">) {
+}: PagamentoPanelProps) {
   const somaOk = Math.abs(diferenca) <= SALDO_PENDENTE_EPS
   const temTroco = diferenca > EXCESSO_PAGAMENTO_EPS
 
   return (
     <section
+      role="tabpanel"
       aria-label={m.caixa.pdv_tab_aria_pgto}
       className="flex shrink-0 flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
     >
@@ -206,8 +228,32 @@ function PagamentoPanel({
   )
 }
 
+function ClienteTabPlaceholder({ m, clienteNome }: { m: Mensagens; clienteNome: string | null }) {
+  return (
+    <section
+      role="tabpanel"
+      aria-label={m.caixa.pdv_tab_aria_cliente}
+      className="flex shrink-0 flex-col gap-2 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
+    >
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {m.caixa.pdv_cliente_cupom_titulo}
+      </span>
+      {clienteNome ? (
+        <span className="text-sm font-medium text-foreground">{clienteNome}</span>
+      ) : (
+        <p className="text-xs text-muted-foreground">{m.caixa.pdv_cliente_sem_cadastro_desc}</p>
+      )}
+    </section>
+  )
+}
+
+const TAB_ORDER: readonly CaixaPdvOperadorTabId[] = ["produto", "cliente", "pgto"]
+
 export function CaixaPdvOperadorTabs({
   m,
+  activeTab,
+  onActiveTabChange,
+  clienteNome,
   pagamentos,
   totalLiquidoComGerente,
   somaParcelas,
@@ -223,25 +269,68 @@ export function CaixaPdvOperadorTabs({
   produtoPanel,
   metodoPagamentoPanel,
 }: Props) {
+  const tabLabel: Record<CaixaPdvOperadorTabId, string> = {
+    produto: m.caixa.pdv_tab_produto,
+    cliente: m.caixa.pdv_tab_cliente,
+    pgto: m.caixa.pdv_tab_pgto,
+  }
+  const tabShortcut: Record<CaixaPdvOperadorTabId, string> = {
+    produto: "Alt+Z",
+    cliente: "Alt+C",
+    pgto: "Alt+B",
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">{produtoPanel}</div>
-      <PagamentoPanel
-        m={m}
-        pagamentos={pagamentos}
-        totalLiquidoComGerente={totalLiquidoComGerente}
-        somaParcelas={somaParcelas}
-        diferenca={diferenca}
-        podeAdicionarParcela={podeAdicionarParcela}
-        formasDisponiveis={formasDisponiveis}
-        onAdicionarParcela={onAdicionarParcela}
-        onRemoverParcela={onRemoverParcela}
-        onAtualizarForma={onAtualizarForma}
-        onAtualizarValor={onAtualizarValor}
-        onAutoCompletar={onAutoCompletar}
-        moedaPrefixo={moedaPrefixo}
-        metodoPagamentoPanel={metodoPagamentoPanel}
-      />
+      <div role="tablist" aria-label={m.caixa.pdv_tabs_lista_aria} className="flex shrink-0 gap-1 rounded-lg border border-border bg-muted/40 p-1">
+        {TAB_ORDER.map((tab) => {
+          const selected = activeTab === tab
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => onActiveTabChange(tab)}
+              title={`${tabLabel[tab]} (${tabShortcut[tab]})`}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors",
+                selected
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tabLabel[tab]}
+            </button>
+          )
+        })}
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        {activeTab === "produto" && (
+          <div role="tabpanel" aria-label={m.caixa.pdv_tab_aria_produto} className="flex min-h-0 flex-1 flex-col gap-2">
+            {produtoPanel}
+          </div>
+        )}
+        {activeTab === "cliente" && <ClienteTabPlaceholder m={m} clienteNome={clienteNome} />}
+        {activeTab === "pgto" && (
+          <PagamentoPanel
+            m={m}
+            pagamentos={pagamentos}
+            totalLiquidoComGerente={totalLiquidoComGerente}
+            somaParcelas={somaParcelas}
+            diferenca={diferenca}
+            podeAdicionarParcela={podeAdicionarParcela}
+            formasDisponiveis={formasDisponiveis}
+            onAdicionarParcela={onAdicionarParcela}
+            onRemoverParcela={onRemoverParcela}
+            onAtualizarForma={onAtualizarForma}
+            onAtualizarValor={onAtualizarValor}
+            onAutoCompletar={onAutoCompletar}
+            moedaPrefixo={moedaPrefixo}
+            metodoPagamentoPanel={metodoPagamentoPanel}
+          />
+        )}
+      </div>
     </div>
   )
 }

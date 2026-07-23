@@ -77,7 +77,7 @@ import {
   metodoPagamentoToForma,
   type MetodoPagamentoUi,
 } from "@/app/caixa/caixaMetodoPagamento"
-import { CaixaPdvOperadorTabs } from "@/app/caixa/CaixaPdvOperadorTabs"
+import { CaixaPdvOperadorTabs, type CaixaPdvOperadorTabId } from "@/app/caixa/CaixaPdvOperadorTabs"
 import { CaixaSelecionarClienteModal } from "@/app/caixa/CaixaSelecionarClienteModal"  // ✅ NOVO (Fase 5b)
 
 function newCupomSessionId(): string {
@@ -137,6 +137,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     dismissCaixaToast,
   } = useCaixaMensagens()
 
+  const [activeProdutoTab, setActiveProdutoTab] = useState<CaixaPdvOperadorTabId>("produto")
   const [codigo, setCodigo] = useState("")
   const [checkoutHint, setCheckoutHint] = useState<string | null>(null)
   const [carregandoRegras, setCarregandoRegras] = useState(true)
@@ -1066,10 +1067,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       onExcluirVenda: handleNovoCupom,
       onFinalizarVenda: () => void handleFinalizar(),
       abas: {
-        produto: () => focarCampoBusca(),
+        produto: () => {
+          setActiveProdutoTab("produto")
+          focarCampoBusca()
+        },
+        cliente: () => setActiveProdutoTab("cliente"),
+        pgto: () => setActiveProdutoTab("pgto"),
       },
     }),
-    [handleNovoCupom, handleFinalizar, focarCampoBusca],
+    [handleNovoCupom, handleFinalizar, focarCampoBusca, setActiveProdutoTab],
   )
 
   useCaixaKeyboardShortcuts({
@@ -1207,9 +1213,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
-            <div className="min-h-0 flex flex-col md:min-h-0">
+            <div className="min-h-0 flex flex-col gap-2 md:min-h-0">
               <CaixaPdvOperadorTabs
                 m={m}
+                activeTab={activeProdutoTab}
+                onActiveTabChange={setActiveProdutoTab}
+                clienteNome={null}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}
@@ -1242,12 +1251,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         compact={codigo.trim().length > 0}
                       />
                     </div>
-                    <div className="shrink-0">
-                      <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
-                    </div>
                   </div>
                 }
               />
+              {/* Fora do conteúdo condicional das abas: mensagens de erro/sucesso/hint de
+                  checkout continuam visíveis independentemente de qual aba está ativa. */}
+              <div className="shrink-0">
+                <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
+              </div>
             </div>
             <section className="flex min-h-[12rem] flex-1 flex-col overflow-hidden rounded-xl md:min-h-0 border border-border bg-card">
               <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">

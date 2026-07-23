@@ -9,7 +9,15 @@ import type { Mensagens } from "@/i18n/getMessages"
 
 const mockMensagens = {
   caixa: {
+    pdv_tabs_lista_aria: "Abas do operador",
+    pdv_tab_produto: "Produto",
+    pdv_tab_cliente: "Cliente",
+    pdv_tab_pgto: "Pgto",
+    pdv_tab_aria_produto: "Produto",
+    pdv_tab_aria_cliente: "Cliente",
     pdv_tab_aria_pgto: "Pagamento",
+    pdv_cliente_cupom_titulo: "Cliente no cupom",
+    pdv_cliente_sem_cadastro_desc: "Sem cliente vinculado.",
     pdv_pgto_parcelas_titulo: "Formas de pagamento",
     pdv_pgto_auto_completar: "Auto-completar",
     aria_parcela_forma: "Forma da parcela {{n}}",
@@ -56,6 +64,9 @@ function renderPanel(props: {
     root.render(
       <CaixaPdvOperadorTabs
         m={mockMensagens}
+        activeTab="pgto"
+        onActiveTabChange={noop}
+        clienteNome={null}
         pagamentos={[{ formaPagamento: forma, valor }]}
         totalLiquidoComGerente={total}
         somaParcelas={soma}
