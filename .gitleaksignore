@@ -17,9 +17,3 @@ b45b84a9aa88d3c944457146a935527059aa96f0:pdv-local/.env.example:jwt:9
 # CI workflow hardcoded anon key in old commits (before secret migration) — rotated
 53ecb5dbdf61d4a8570d81cb184c55424945d244:.github/workflows/ci-pdv-importados.yml:jwt:46
 30f7bf5624b35f461724bcd4fb9507bc70157407:.github/workflows/ci-pdv-importados.yml:jwt:44
-# Sentry credential removal — commit messages describe secrets being removed from code
-# (bc27163) references real Sentry DSN (auth token + org ID) to explain the fix
-# (8dde858) references real Sentry project ID to explain the fix
-# These are false positives: secrets were intentionally removed; messages document the removal.
-bc27163:::::sentry-token
-8dde858:::::sentry-token
