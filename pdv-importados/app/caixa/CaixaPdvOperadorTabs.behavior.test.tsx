@@ -67,6 +67,7 @@ function renderPanel(props: {
         activeTab="pgto"
         onActiveTabChange={noop}
         clienteNome={null}
+        onClienteCriado={noop}
         pagamentos={[{ formaPagamento: forma, valor }]}
         totalLiquidoComGerente={total}
         somaParcelas={soma}

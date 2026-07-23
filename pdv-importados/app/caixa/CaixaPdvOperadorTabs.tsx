@@ -14,6 +14,7 @@ import {
   SALDO_PENDENTE_EPS,
   calcularTroco,
 } from "@/app/caixa/caixaPagamentoSaldo"
+import { CaixaClienteTab } from "@/app/caixa/CaixaClienteTab"
 
 export type CaixaPdvOperadorTabId = "produto" | "cliente" | "pgto"
 
@@ -28,6 +29,7 @@ type Props = {
   onActiveTabChange: (tab: CaixaPdvOperadorTabId) => void
   /** Nome do cliente vinculado à venda atual; `null` = Consumidor Final (padrão). */
   clienteNome: string | null
+  onClienteCriado: (payload: { id: string; nome: string }) => void
   pagamentos: PagamentoLinha[]
   totalLiquidoComGerente: number
   somaParcelas: number
@@ -228,25 +230,6 @@ function PagamentoPanel({
   )
 }
 
-function ClienteTabPlaceholder({ m, clienteNome }: { m: Mensagens; clienteNome: string | null }) {
-  return (
-    <section
-      role="tabpanel"
-      aria-label={m.caixa.pdv_tab_aria_cliente}
-      className="flex shrink-0 flex-col gap-2 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
-    >
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {m.caixa.pdv_cliente_cupom_titulo}
-      </span>
-      {clienteNome ? (
-        <span className="text-sm font-medium text-foreground">{clienteNome}</span>
-      ) : (
-        <p className="text-xs text-muted-foreground">{m.caixa.pdv_cliente_sem_cadastro_desc}</p>
-      )}
-    </section>
-  )
-}
-
 const TAB_ORDER: readonly CaixaPdvOperadorTabId[] = ["produto", "cliente", "pgto"]
 
 export function CaixaPdvOperadorTabs({
@@ -254,6 +237,7 @@ export function CaixaPdvOperadorTabs({
   activeTab,
   onActiveTabChange,
   clienteNome,
+  onClienteCriado,
   pagamentos,
   totalLiquidoComGerente,
   somaParcelas,
@@ -311,7 +295,9 @@ export function CaixaPdvOperadorTabs({
             {produtoPanel}
           </div>
         )}
-        {activeTab === "cliente" && <ClienteTabPlaceholder m={m} clienteNome={clienteNome} />}
+        {activeTab === "cliente" && (
+          <CaixaClienteTab m={m} clienteNome={clienteNome} onClienteCriado={onClienteCriado} />
+        )}
         {activeTab === "pgto" && (
           <PagamentoPanel
             m={m}

@@ -285,6 +285,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const lastReciboRef = useRef<ReciboVenda | null>(null)
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
+  const [clienteNome, setClienteNome] = useState<string | null>(null)
+  const handleClienteCriado = useCallback((payload: { id: string; nome: string }) => {
+    setClienteId(payload.id)
+    setClienteNome(payload.nome)
+  }, [])
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
 
   const thermal = useThermalPrinter()
@@ -989,6 +994,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         limparEstadoDescontoGerente()
         resetPagamentos()
         setClienteId(null)  // ✅ NOVO (Fase 5b) - reset após venda bem-sucedida
+        setClienteNome(null)
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
@@ -1218,7 +1224,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 m={m}
                 activeTab={activeProdutoTab}
                 onActiveTabChange={setActiveProdutoTab}
-                clienteNome={null}
+                clienteNome={clienteNome}
+                onClienteCriado={handleClienteCriado}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 somaParcelas={somaParcelas}

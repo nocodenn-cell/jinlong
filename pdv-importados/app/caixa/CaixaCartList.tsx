@@ -339,18 +339,18 @@ function CaixaCartListInner({
       return (
         <div className="flex h-full min-h-[10rem] flex-col justify-between px-4 py-3">
           {/* Mensagem discreta — sem ícone grande */}
-          <p className="text-sm text-jl-fg-2">
+          <p className="text-sm text-muted-foreground">
             {m.caixa.cart_empty_sem_pedido} · {m.caixa.empty_cta_scan}
           </p>
           {/* Atalhos de teclado: rodapé, linha única, opacidade reduzida */}
           <div className="flex flex-wrap items-center gap-1.5 opacity-60">
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            <span className="inline-flex shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] leading-tight text-muted-foreground">
               Enter · {m.caixa.adicionar_enter}
             </span>
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            <span className="inline-flex shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] leading-tight text-muted-foreground">
               Ctrl+B · {m.caixa.empty_shortcut_focus}
             </span>
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            <span className="inline-flex shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] leading-tight text-muted-foreground">
               F4 · {m.caixa.finalizar_venda}
             </span>
           </div>
@@ -483,7 +483,7 @@ function TipoPrecoBadge({
       : tipo === "MANUAL"
         ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
         : tipo === "PROMOCAO"
-          ? "bg-blue-900/30 text-blue-400 border border-blue-700"
+          ? "border-primary/40 bg-primary/15 text-primary"
           : "border border-border text-muted-foreground bg-muted"
   const badge = (
     <Badge

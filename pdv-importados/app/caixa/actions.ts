@@ -268,6 +268,18 @@ export async function criarProdutoRelampagoPdv(input: unknown) {
   return criarProdutoRelampagoPdvImpl(input)
 }
 
+/** Cadastro relâmpago de cliente no PDV (OPERADOR+). CRUD completo permanece em assertGerenteSession. */
+export async function criarClienteRelampagoPdv(input: {
+  nome: string
+  documento: string
+  celular?: string
+}) {
+  const { criarClienteRelampagoPdvImpl } = await import(
+    '@/app/caixa/server/caixaCadastroClienteRelampago.impl'
+  )
+  return criarClienteRelampagoPdvImpl(input)
+}
+
 /** Selecao de cliente no PDV (Fase 5b). */
 export async function buscarClientesCaixa(termo: string) {
   return buscarClientesCaixaImpl(termo)
