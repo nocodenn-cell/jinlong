@@ -137,100 +137,125 @@ function PagamentoPanel({
       {/* 2. Forma de pagamento */}
       {metodoPagamentoPanel ? <div>{metodoPagamentoPanel}</div> : null}
 
-      {/* 3. Valor recebido (parcelas — split de pagamento preservado) */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">
-          {pagamentos.length > 1 ? m.caixa.pdv_pgto_parcelas_titulo : m.caixa.pdv_pgto_valor_recebido}
-        </h3>
-        {pagamentos.length > 1 ? (
-          <button
-            type="button"
-            onClick={onAutoCompletar}
-            className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[10px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
-          >
-            {m.caixa.pdv_pgto_auto_completar}
-          </button>
-        ) : null}
-      </div>
-      <div className="space-y-3">
-        {pagamentos.map((p, idx) => (
-          <div
-            key={`parcela-${idx}`}
-            className="flex flex-col gap-1.5 rounded-lg border p-2.5 border-border/60 bg-muted/20"
-          >
-            <div className="flex items-center gap-2">
-              <Select
-                value={p.formaPagamento}
-                onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
-                aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
-                className="h-auto focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-              >
-                {formasDisponiveis.map((f) => (
-                  <option key={f} value={f}>
-                    {labelFormaPagamentoVenda(f, m)}
-                  </option>
-                ))}
-              </Select>
-              {pagamentos.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => onRemoverParcela(idx)}
-                  aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
-                  className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[10px] font-semibold text-destructive transition hover:bg-destructive/20"
-                >
-                  ✕
-                </button>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                {moedaPrefixo}
-              </span>
+      {/* 3. Valor recebido — pagamento único ganha bloco grande (mockup); split
+          mantém a lista de parcelas existente, só com o título renomeado. */}
+      {pagamentos.length === 1 ? (
+        <div className="flex flex-col gap-2">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {m.caixa.pdv_pgto_valor_recebido}
+            </span>
+            <div className="flex items-center gap-2 rounded-lg border-2 border-border bg-background px-3 py-2 focus-within:border-primary">
+              <span className="shrink-0 text-lg font-semibold text-muted-foreground">{moedaPrefixo}</span>
               <input
                 type="number"
                 inputMode="decimal"
                 step="0.01"
                 min="0"
-                value={p.valor === 0 ? "" : p.valor.toFixed(2)}
+                value={pagamentos[0].valor === 0 ? "" : pagamentos[0].valor.toFixed(2)}
                 onChange={(e) => {
                   const v = parseFloat(e.target.value)
-                  onAtualizarValor(idx, Number.isFinite(v) ? v : 0)
+                  onAtualizarValor(0, Number.isFinite(v) ? v : 0)
                 }}
-                aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
+                aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: 1 })}
                 data-caixa-atalho-bloqueado="true"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="w-full border-0 bg-transparent text-right text-3xl font-black tabular-nums text-foreground focus:outline-none focus:ring-0"
               />
             </div>
+          </label>
+          {pagamentos[0].formaPagamento === "DINHEIRO"
+            ? (() => {
+                // Leitura de troco para dinheiro em pagamento único: cálculo
+                // canônico (SSoT), mesmo de antes — só ganhou destaque visual.
+                const t = calcularTroco(totalLiquidoComGerente, pagamentos[0].valor)
+                return (
+                  <div
+                    data-testid="caixa-troco-inline"
+                    className={cn(
+                      "flex items-center justify-between rounded-lg px-3 py-2.5",
+                      t.troco > 0 ? "bg-success/10" : "bg-muted/30",
+                    )}
+                  >
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {m.caixa.pdv_pgto_troco_cliente}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-2xl font-black tabular-nums",
+                        t.troco > 0 ? "text-success" : "text-foreground",
+                      )}
+                    >
+                      {moedaPrefixo} {formatDecimalBRL(t.troco)}
+                    </span>
+                  </div>
+                )
+              })()
+            : null}
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">{m.caixa.pdv_pgto_parcelas_titulo}</h3>
+            <button
+              type="button"
+              onClick={onAutoCompletar}
+              className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[10px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
+            >
+              {m.caixa.pdv_pgto_auto_completar}
+            </button>
           </div>
-        ))}
-      </div>
-      {pagamentos.length === 1 && pagamentos[0].formaPagamento === "DINHEIRO"
-        ? (() => {
-            // Leitura inline de troco para dinheiro em pagamento único: o operador
-            // vê o troco vivo ao lado do valor recebido, via cálculo canônico
-            // (SSoT), sem precisar ler o resumo lá embaixo.
-            const t = calcularTroco(totalLiquidoComGerente, pagamentos[0].valor)
-            return (
+          <div className="space-y-3">
+            {pagamentos.map((p, idx) => (
               <div
-                data-testid="caixa-troco-inline"
-                className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs ${
-                  t.troco > 0 ? "bg-success/10" : "bg-muted/30"
-                }`}
+                key={`parcela-${idx}`}
+                className="flex flex-col gap-1.5 rounded-lg border p-2.5 border-border/60 bg-muted/20"
               >
-                <span className="font-medium text-muted-foreground">
-                  {m.caixa.pdv_pgto_troco_cliente}
-                </span>
-                <span
-                  className={`tabular-nums font-bold ${
-                    t.troco > 0 ? "text-success" : "text-foreground"
-                  }`}
-                >
-                  {moedaPrefixo} {formatDecimalBRL(t.troco)}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={p.formaPagamento}
+                    onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
+                    aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
+                    className="h-auto focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  >
+                    {formasDisponiveis.map((f) => (
+                      <option key={f} value={f}>
+                        {labelFormaPagamentoVenda(f, m)}
+                      </option>
+                    ))}
+                  </Select>
+                  <button
+                    type="button"
+                    onClick={() => onRemoverParcela(idx)}
+                    aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
+                    className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[10px] font-semibold text-destructive transition hover:bg-destructive/20"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                    {moedaPrefixo}
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={p.valor === 0 ? "" : p.valor.toFixed(2)}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value)
+                      onAtualizarValor(idx, Number.isFinite(v) ? v : 0)
+                    }}
+                    aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
+                    data-caixa-atalho-bloqueado="true"
+                    className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  />
+                </div>
               </div>
-            )
-          })()
-        : null}
+            ))}
+          </div>
+        </>
+      )}
       {podeAdicionarParcela ? (
         <button
           type="button"

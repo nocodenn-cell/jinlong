@@ -15,13 +15,14 @@ type Props = Readonly<{
 }>
 
 // Mapeamento usando as chaves corretas de m.caixa
-// Ordem preservada igual ao array de atalhos 1-4 em CaixaPageClient (onSelecionarMetodo) —
-// reordenar aqui sem sincronizar lá quebraria a correspondência tecla ↔ card.
+// Ordem visual igual ao mockup: Dinheiro/PIX/Crédito/Débito. O array de atalhos
+// 1-4 em CaixaPageClient (onSelecionarMetodo) foi sincronizado com esta mesma
+// ordem — a tecla sempre aciona o card que está na posição correspondente.
 const OPCOES: ReadonlyArray<{ id: MetodoPagamentoUi; labelKey: keyof Mensagens["caixa"]; icon: LucideIcon }> = [
   { id: "dinheiro", labelKey: "pdv_metodo_pagamento_dinheiro", icon: Banknote },
   { id: "pix", labelKey: "pdv_metodo_pagamento_pix", icon: QrCode },
-  { id: "debito", labelKey: "pdv_metodo_pagamento_debito", icon: WalletCards },
   { id: "credito", labelKey: "pdv_metodo_pagamento_credito", icon: CreditCard },
+  { id: "debito", labelKey: "pdv_metodo_pagamento_debito", icon: WalletCards },
 ]
 
 function CaixaPdvMetodoPagamentoSelectorImpl({
@@ -40,7 +41,7 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
       <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {m.caixa.pdv_metodo_pagamento_titulo}
       </span>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2">
         {OPCOES.map((op, i) => {
           const selected = value === op.id
           // Obtém o texto da chave correta em m.caixa (como string)
