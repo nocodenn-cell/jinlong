@@ -9,6 +9,11 @@ description = "False positives: placeholder test credentials and Claude session 
 regexTarget = "line"
 regexes = [
   '''https://claude\.ai/code/session_[A-Za-z0-9]+''',
+  # Sentry DSN patterns with environment variables or placeholders (not real secrets)
+  '''process\.env\.SENTRY_DSN''',
+  '''process\.env\.NEXT_PUBLIC_SENTRY_DSN''',
+  '''YOUR_SENTRY_ORG_ID''',
+  '''YOUR_PROJECT_ID''',
 ]
 paths = [
   '''pdv-importados/\.env\.test''',
