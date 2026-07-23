@@ -1,7 +1,6 @@
 /** @vitest-environment jsdom */
-import { createElement } from 'react'
+import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { act } from 'react-dom/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePolling, type PollFn } from '@/lib/hooks/usePolling'
 
