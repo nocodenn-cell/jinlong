@@ -42,7 +42,7 @@ export function CaixaPdvCartSaleBar({
 
   return (
     <div
-      className="shrink-0 border-t border-jl-border-1 bg-jl-surface-elev px-3 py-3 shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] sm:px-4"
+      className="shrink-0 border-t border-border bg-card px-3 py-3 shadow-[0_2px_3px_0px_rgba(0,0,0,0.2)] sm:px-4"
       data-caixa-cart-sale-bar
     >
       <div className="flex flex-col gap-3">
@@ -51,7 +51,7 @@ export function CaixaPdvCartSaleBar({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 border-jl-border-1 bg-jl-surface-soft text-jl-fg-2 hover:bg-jl-surface-soft/80 hover:text-jl-fg-1"
+              className="min-h-11"
               onClick={onExcluirVenda}
               disabled={excluirDisabled}
             >
@@ -61,22 +61,20 @@ export function CaixaPdvCartSaleBar({
 
           <div className="flex flex-1 flex-col gap-2 min-w-0 sm:flex-row sm:items-end sm:justify-end sm:gap-6">
             <div className="text-right sm:min-w-[9rem]">
-              <div className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {m.caixa.cart_bar_total_label}
               </div>
 
-              <div
-                className="text-3xl font-black tabular-nums leading-tight text-jl-fg-1"
-              >
+              <div className="text-3xl font-black tabular-nums leading-tight text-foreground">
                 {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </div>
 
               {hasDesconto && (
-                <div className="mt-0.5 flex justify-end gap-3 text-xs text-jl-fg-3">
+                <div className="mt-0.5 flex justify-end gap-3 text-xs text-muted-foreground">
                   <span>
                     {moedaPrefixo} {formatDecimalBRL(totalBruto)}
                   </span>
-                  <span className="text-amber-400/80">
+                  <span className="text-warning">
                     -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
                   </span>
                 </div>
@@ -85,7 +83,8 @@ export function CaixaPdvCartSaleBar({
 
             <Button
               type="button"
-              className="h-14 min-w-[11rem] shrink-0 bg-jl-accent px-8 text-base font-bold text-white shadow-sm hover:bg-jl-accent/90 disabled:opacity-60"
+              variant="success"
+              className="h-14 min-w-[11rem] shrink-0 px-8 text-base font-bold"
               onClick={onFinalizar}
               disabled={
                 finalizando || itensLength === 0 || buscando || carregandoRegras

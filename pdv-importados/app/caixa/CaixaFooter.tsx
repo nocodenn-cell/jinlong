@@ -89,16 +89,16 @@ function CaixaFooterImpl({
       <footer
         className={cn(
           "shrink-0 border-t backdrop-blur-sm px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10",
-          "border-border bg-jl-surface-elev text-jl-fg-1 shadow-sm",
+          "border-border bg-card text-foreground shadow-sm",
         )}
       >
         <div className="flex flex-col gap-3 text-sm md:flex-row md:flex-wrap md:items-end md:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-            <span className="text-sm text-jl-fg-2">{resumoItens}</span>
+            <span className="text-sm text-muted-foreground">{resumoItens}</span>
             {gerenteLinha && (
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-jl-fg-1">
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
                 <ImperialSealIcon
-                  className="h-5 w-5 shrink-0 text-jl-fg-2"
+                  className="h-5 w-5 shrink-0 text-muted-foreground"
                   title={m.caixa.aria_selo_gerente}
                 />
                 {gerenteLinha}
@@ -106,22 +106,22 @@ function CaixaFooterImpl({
             )}
           </div>
           <div className="flex flex-wrap items-end justify-start gap-4 sm:gap-6 md:justify-end">
-            <div className="text-left text-xs font-semibold uppercase tracking-wide text-jl-fg-3 md:hidden w-full">
+            <div className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground md:hidden w-full">
               {m.caixa.bloco_resumo_financeiro}
             </div>
-            <div className="text-right text-sm text-jl-fg-2">
+            <div className="text-right text-sm text-muted-foreground">
               <div>{m.caixa.bruto}</div>
-              <div className="text-lg font-semibold tabular-nums text-jl-fg-1">
+              <div className="text-lg font-semibold tabular-nums text-foreground">
                 {moedaPrefixo} {formatDecimalBRL(totalBruto)}
               </div>
             </div>
-            <div className="text-right text-sm text-jl-fg-2">
+            <div className="text-right text-sm text-muted-foreground">
               <div>{m.caixa.descontos_regras}</div>
-              <div className="text-lg font-bold tabular-nums text-jl-fg-1">
+              <div className="text-lg font-bold tabular-nums text-foreground">
                 - {moedaPrefixo} {formatDecimalBRL(totalDesconto)}
               </div>
               {economiaPrecoAtacadoAuto > 0.005 && (
-                <div className="text-xs font-normal text-jl-fg-3 mt-0.5 max-w-[14rem] ml-auto">
+                <div className="text-xs font-normal text-muted-foreground mt-0.5 max-w-[14rem] ml-auto">
                   {caixaFmt(m.caixa.economia_atacado_por_quantidade, {
                     valor: formatDecimalBRL(economiaPrecoAtacadoAuto),
                   })}
@@ -129,25 +129,25 @@ function CaixaFooterImpl({
               )}
             </div>
             {descontoGerentePercentual > 0 && (
-              <div className="text-right text-sm text-jl-fg-2">
+              <div className="text-right text-sm text-muted-foreground">
                 <div>
                   {caixaFmt(m.caixa.desconto_gerente_label, {
                     pct: descontoGerentePercentual.toFixed(2),
                   })}
                 </div>
-                <div className="text-lg font-bold tabular-nums text-jl-fg-1">
+                <div className="text-lg font-bold tabular-nums text-foreground">
                   - {moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
                 </div>
               </div>
             )}
             <div className="text-right min-w-[7rem]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {m.caixa.total_pagar}
               </div>
               <div
                 data-testid="caixa-total-liquido"
                 data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-                className="text-2xl font-extrabold leading-none tabular-nums text-amber-400"
+                className="text-2xl font-extrabold leading-none tabular-nums text-primary"
               >
                 {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </div>

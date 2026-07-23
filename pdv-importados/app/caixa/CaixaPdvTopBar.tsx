@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { Monitor } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -10,7 +11,6 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
-import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortcutsReference"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
@@ -64,49 +64,49 @@ export function CaixaPdvTopBar({
     <header
       className={cn(
         "shrink-0 px-3 sm:px-5 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1.5",
-        "border-border bg-jl-surface-elev text-jl-fg-1 shadow-sm",
+        "border-border bg-card text-foreground shadow-sm",
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1">
-          <DragonEmblemIcon className="h-5 w-5" />
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-primary/10 text-primary">
+          <Monitor className="h-5 w-5" aria-hidden />
         </span>
-        <h1 className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg text-jl-fg-1">
+        <h1 className="min-w-0 truncate text-base font-bold tracking-tight sm:text-lg text-primary">
           {m.caixa.topbar_titulo}
         </h1>
       </div>
 
       <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:w-auto sm:flex-nowrap">
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-xs sm:text-sm">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2.5 text-xs sm:text-sm">
           <span
-            className="max-w-44 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
+            className={cn(
+              "inline-flex max-w-44 items-center gap-1.5 truncate rounded-full border px-2.5 py-1 font-semibold tabular-nums",
+              aberto
+                ? "border-success/30 bg-success/10 text-success"
+                : "border-border bg-muted text-muted-foreground",
+            )}
             title={turnoText}
           >
+            {aberto && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden />}
             {turnoText}
           </span>
-          <span
-            className="max-w-56 truncate rounded-md border px-2 py-1 font-medium border-jl-border-1 bg-jl-surface-soft"
-            title={operadorText}
-          >
+          <span className="max-w-56 truncate font-medium text-muted-foreground" title={operadorText}>
             {operadorText}
           </span>
-          <span
-            className="max-w-48 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
-            title={fundoText}
-          >
+          <span className="max-w-48 truncate font-medium tabular-nums text-muted-foreground" title={fundoText}>
             {fundoText}
           </span>
           {printerStatus && printerStatus !== "idle" && (
             <span
               title={printerDeviceName ?? "Impressora"}
               className={cn(
-                "max-w-40 truncate rounded-md border px-2 py-1 text-xs font-medium",
+                "max-w-40 truncate rounded-full border px-2.5 py-1 text-xs font-medium",
                 printerStatus === "connected"
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                  ? "border-success/30 bg-success/10 text-success"
                   : printerStatus === "error"
                     ? "border-destructive/40 bg-destructive/10 text-destructive"
-                    : "border-jl-border-1 bg-jl-surface-soft",
+                    : "border-border bg-muted text-muted-foreground",
               )}
             >
               {printerStatus === "connected" ? "🖨 OK" : printerStatus === "error" ? "🖨 Erro" : "🖨 …"}
@@ -114,7 +114,7 @@ export function CaixaPdvTopBar({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3 border-jl-border-1">
+        <div className="flex shrink-0 items-center gap-1.5 border-l pl-2 sm:pl-3 border-border">
           {aberto ? (
             <Button
               type="button"
@@ -132,7 +132,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className="text-xs font-semibold sm:text-sm border-jl-border-1"
+              className="text-xs font-semibold sm:text-sm"
               onClick={onAbrirCaixa}
               disabled={carregandoStatus}
             >
@@ -143,7 +143,7 @@ export function CaixaPdvTopBar({
               type="button"
               size="sm"
               variant="outline"
-              className="text-xs font-semibold sm:text-sm border-jl-border-1"
+              className="text-xs font-semibold sm:text-sm"
               onClick={onAbrirCaixa}
               disabled={processandoCaixa || carregandoStatus}
               aria-busy={processandoCaixa}
@@ -154,19 +154,13 @@ export function CaixaPdvTopBar({
           <CaixaKeyboardShortcutsReference m={m} variant="classic" />
           <Link
             href={ROUTES.auth.changePassword}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
-              "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
-            )}
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:text-sm"
           >
             {m.login.link_trocar_senha}
           </Link>
           <SignOutButton
             label={m.comum.sair}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
-              "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
-            )}
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:text-sm"
           />
         </div>
       </div>
