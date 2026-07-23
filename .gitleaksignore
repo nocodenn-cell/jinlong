@@ -17,3 +17,7 @@ b45b84a9aa88d3c944457146a935527059aa96f0:pdv-local/.env.example:jwt:9
 # CI workflow hardcoded anon key in old commits (before secret migration) — rotated
 53ecb5dbdf61d4a8570d81cb184c55424945d244:.github/workflows/ci-pdv-importados.yml:jwt:46
 30f7bf5624b35f461724bcd4fb9507bc70157407:.github/workflows/ci-pdv-importados.yml:jwt:44
+# Pre-production audit documents: Security examples and educational code snippets
+# (no real secrets; UUIDs, HMAC examples, pseudocode for attack scenarios)
+dc883254a695a3c8d2974aef0da2739f55c6341d:SECURITY_AUDIT_REPORT.md:generic-api-key
+dc883254a695a3c8d2974aef0da2739f55c6341d:SECURITY_AUDIT_REPORT.md:jwt
