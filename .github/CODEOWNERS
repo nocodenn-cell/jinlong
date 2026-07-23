@@ -1,0 +1,113 @@
+# CODEOWNERS — Automatic code review assignments for fastproduct
+#
+# GitHub automatically requests review from appropriate owners when PRs touch these paths.
+# Format: `path @owner1 @owner2`
+#
+# Use GitHub team aliases for scalability: @nocodenn-cell/team-backend
+# Update as team structure evolves.
+
+# ==================== ROOT & BUILD ====================
+# Root configuration & CI/CD
+/.github/                           @nocodenn-cell/tech-lead
+/scripts/                           @nocodenn-cell/tech-lead
+/package.json                       @nocodenn-cell/tech-lead
+
+# ==================== SHARED CORE (Business Logic) ====================
+# Pricing, inventory, sales validation — used by multiple apps
+/shared-core/src/pricing/          @nocodenn-cell/backend-lead @nocodenn-cell/architecture
+/shared-core/src/inventory/        @nocodenn-cell/backend-lead
+/shared-core/src/pdv/              @nocodenn-cell/backend-lead
+/shared-core/src/financial/        @nocodenn-cell/backend-lead @nocodenn-cell/fiscal
+/shared-core/src/customers/        @nocodenn-cell/backend-lead
+
+# ==================== PDV-IMPORTADOS (Next.js Web App) ====================
+# Core cash register flows
+/pdv-importados/app/caixa/         @nocodenn-cell/frontend-lead @nocodenn-cell/tech-lead
+/pdv-importados/app/caixa/server/  @nocodenn-cell/backend-lead @nocodenn-cell/frontend-lead
+
+# Manager dashboard & business operations
+/pdv-importados/app/gerente/       @nocodenn-cell/product @nocodenn-cell/frontend-lead
+/pdv-importados/app/admin/         @nocodenn-cell/product @nocodenn-cell/tech-lead
+
+# Authentication & security
+/pdv-importados/src/lib/auth/      @nocodenn-cell/security @nocodenn-cell/backend-lead
+/pdv-importados/app/auth/          @nocodenn-cell/security @nocodenn-cell/frontend-lead
+
+# E2E tests
+/pdv-importados/e2e/               @nocodenn-cell/qa @nocodenn-cell/tech-lead
+
+# Configuration
+/pdv-importados/next.config.js     @nocodenn-cell/tech-lead
+/pdv-importados/vitest.config.ts   @nocodenn-cell/tech-lead
+/pdv-importados/playwright.config.ts @nocodenn-cell/qa
+
+# ==================== PDV-LOCAL (Tauri Desktop App) ====================
+# Core desktop app
+/pdv-local/src/                    @nocodenn-cell/desktop-lead @nocodenn-cell/backend-lead
+
+# Rust/Tauri specific
+/pdv-local/src-tauri/              @nocodenn-cell/desktop-lead
+/pdv-local/Cargo.toml              @nocodenn-cell/desktop-lead
+
+# ==================== BACKEND (Supabase Edge Functions) ====================
+# Sync service (critical for data consistency)
+/backend/supabase/functions/sync-outbox/ @nocodenn-cell/backend-lead @nocodenn-cell/security
+
+# Fiscal service (compliance-critical)
+/backend/supabase/functions/fiscal-worker/ @nocodenn-cell/fiscal @nocodenn-cell/backend-lead
+
+# Manager authentication
+/backend/supabase/functions/validar-gerente/ @nocodenn-cell/security @nocodenn-cell/backend-lead
+
+# Migrations (schema changes)
+/backend/supabase/migrations/      @nocodenn-cell/backend-lead @nocodenn-cell/tech-lead
+
+# Database policies (RLS security)
+/backend/supabase/migrations/*rls* @nocodenn-cell/security @nocodenn-cell/backend-lead
+
+# ==================== DOCUMENTATION ====================
+# Operational runbooks
+/docs/GO-LIVE-RUNBOOK.md           @nocodenn-cell/ops @nocodenn-cell/tech-lead
+/docs/POST-DEPLOY-MONITORING.md    @nocodenn-cell/ops @nocodenn-cell/tech-lead
+/docs/ARCHITECTURE.md              @nocodenn-cell/architecture @nocodenn-cell/tech-lead
+/docs/DECISION-LOG.md              @nocodenn-cell/architecture
+
+# Contributing guidelines
+/CONTRIBUTING.md                    @nocodenn-cell/tech-lead
+/README.md                          @nocodenn-cell/product @nocodenn-cell/tech-lead
+
+# ==================== CONFIGURATION FILES ====================
+# Environment & secrets management
+/.env.example                       @nocodenn-cell/ops @nocodenn-cell/security
+/.gitignore                         @nocodenn-cell/tech-lead
+/.nvmrc                             @nocodenn-cell/tech-lead
+
+# Linting & formatting
+/.eslintrc.json                     @nocodenn-cell/tech-lead
+/tsconfig.json                      @nocodenn-cell/tech-lead
+
+# Dependencies & security
+/package-lock.json                  @nocodenn-cell/tech-lead
+/npm-audit.log                      @nocodenn-cell/security @nocodenn-cell/tech-lead
+
+# ==================== DEFAULT ====================
+# Fallback for files not matched above
+*                                   @nocodenn-cell/tech-lead
+
+# ==================== NOTES ====================
+# Team aliases format: @org/team-name
+# Update teams in GitHub → Settings → Teams
+#
+# Team assignments:
+# - @nocodenn-cell/tech-lead — Overall technical direction
+# - @nocodenn-cell/backend-lead — API, sync, database
+# - @nocodenn-cell/frontend-lead — UI, UX, web app
+# - @nocodenn-cell/desktop-lead — Tauri desktop app
+# - @nocodenn-cell/security — Auth, RLS, secrets
+# - @nocodenn-cell/fiscal — Fiscal compliance, NF-e
+# - @nocodenn-cell/qa — Testing, E2E, test automation
+# - @nocodenn-cell/ops — Deployment, monitoring, runbooks
+# - @nocodenn-cell/architecture — System design decisions
+# - @nocodenn-cell/product — Product requirements, UX
+#
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
