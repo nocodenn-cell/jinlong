@@ -22,9 +22,8 @@ commits = [
   "3f623524886a0d454d535e4f07a5243fe7f9e1a0",
   "c101d045cda89a5239a5df7315759797031aedc1",
   # Sentry credential removal commits — commit messages reference secrets being removed
-  # (bc27163) mentions Sentry auth token (823bfa...) and org ID (o4511...) in commit message
-  # (8dde858) mentions Sentry project ID (4511247033237504) in commit message
-  # These are false positives: the actual secrets were removed from code files.
-  "bc27163",
-  "8dde858",
+  # These commits document the removal of hardcoded Sentry DSNs and project IDs.
+  # The commit messages mention the secrets being removed (false positive).
+  "bc2716350b163d3a6e9342f208a406a1e44e9dde",
+  "8dde8586d5e0dd0e787e7178a0b83f806a269014",
 ]
