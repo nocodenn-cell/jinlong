@@ -17,3 +17,12 @@ b45b84a9aa88d3c944457146a935527059aa96f0:pdv-local/.env.example:jwt:9
 # CI workflow hardcoded anon key in old commits (before secret migration) — rotated
 53ecb5dbdf61d4a8570d81cb184c55424945d244:.github/workflows/ci-pdv-importados.yml:jwt:46
 30f7bf5624b35f461724bcd4fb9507bc70157407:.github/workflows/ci-pdv-importados.yml:jwt:44
+# Sentry credentials found in RC1 audit commits (fixed in later commits in same PR)
+# dc88325: Original audit commit - hardcoded DSNs in 3 config files
+dc88325a695a3c8d2974aef0da2739f55c6341d:sentry.server.config.js:sentry-token
+dc88325a695a3c8d2974aef0da2739f55c6341d:sentry.edge.config.js:sentry-token
+dc88325a695a3c8d2974aef0da2739f55c6341d:instrumentation-client.js:sentry-token
+# bc27163: Removed Sentry DSNs - commit message mentions values being removed
+bc2716350b163d3a6e9342f208a406a1e44e9dde:sentry-token
+# 8dde858: Removed Sentry project ID - commit message mentions value being removed
+8dde8586d5e0dd0e787e7178a0b83f806a269014:sentry-token
