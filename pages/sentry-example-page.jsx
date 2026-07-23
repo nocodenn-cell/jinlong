@@ -51,7 +51,8 @@ export default function Page() {
           <a
             target="_blank"
             rel="noopener"
-            href="https://damatta.sentry.io/issues/?project=4511247033237504"
+            href="https://YOUR_ORG.sentry.io/issues/?project=YOUR_PROJECT_ID"
+            title="Replace YOUR_ORG and YOUR_PROJECT_ID with your Sentry organization and project"
           >
             Issues Page
           </a>
