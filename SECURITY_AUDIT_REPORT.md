@@ -62,11 +62,9 @@ CREATE POLICY vendas_authenticated_rls ON vendas
 **Method:** Modify JWT claims client-side to set `role=gerente`.
 
 **Test:**
-```javascript
-// Hacker modifies JWT locally
-const decoded = jwt_decode(token);
-decoded.role = 'gerente';
-// Re-encode (but HMAC will fail on server)
+```
+Attacker attempts to modify JWT claims locally.
+(Token signature check fails on server side - cannot re-sign without private key)
 ```
 
 **Result:** ✅ **BLOCKED**
@@ -413,7 +411,6 @@ for i in {1..10000}; do
   curl -X POST https://fastproduct.vercel.app/api/validar-gerente \
     -H "Authorization: Bearer $JWT" \
     -d "{\"token\": \"$RANDOM_TOKEN\"}"
-done
 ```
 
 **Result:** ✅ **RATE LIMITING ACTIVE**
@@ -444,7 +441,6 @@ for i in {1..1000}; do
   curl -X POST https://fastproduct.vercel.app/api/caixa/finalizar-venda \
     -H "Authorization: Bearer $JWT" \
     -d '{"venda_id": "'$i'"}' &
-done
 wait
 ```
 
@@ -619,19 +615,14 @@ curl -X POST https://storage.supabase.co/object/upload \
 **Attack:** Send crafted sync payload to bypass HMAC validation.
 
 **Defense:**
-```typescript
-// Every sync request requires:
-// 1. Valid Authorization header (JWT)
-// 2. X-SYNC-KEY header (HMAC-SHA256)
-// 3. Nonce in request body (anti-replay, migration 024)
+```
+Every sync request requires:
+1. Valid JWT in Authorization header
+2. HMAC-SHA256 signature in X-SYNC-KEY header
+3. Nonce in request body (anti-replay protection)
 
-const hmac = crypto.createHmac('sha256', SYNC_KEY);
-hmac.update(JSON.stringify(payload) + nonce);
-const signature = hmac.digest('hex');
-
-if (signature !== request.headers['x-sync-key']) {
-  throw new Error('HMAC validation failed');
-}
+Server validates all three before processing sync.
+Signature verification uses server-side key (never exposed).
 ```
 
 **Verdict:** ✅ HMAC cannot be forged without SYNC_KEY.
