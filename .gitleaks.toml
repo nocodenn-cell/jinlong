@@ -21,9 +21,12 @@ paths = [
 commits = [
   "3f623524886a0d454d535e4f07a5243fe7f9e1a0",
   "c101d045cda89a5239a5df7315759797031aedc1",
+  # Original audit commit with hardcoded Sentry credentials (removed in later commits)
+  # dc88325 introduced Sentry DSNs with real auth token (823bfa...) and org ID (o4511...)
+  # These were removed/fixed in commits bc27163 and 8dde858 within the same PR.
+  "dc88325a695a3c8d2974aef0da2739f55c6341d",
   # Sentry credential removal commits — commit messages reference secrets being removed
   # These commits document the removal of hardcoded Sentry DSNs and project IDs.
-  # The commit messages mention the secrets being removed (false positive).
   "bc2716350b163d3a6e9342f208a406a1e44e9dde",
   "8dde8586d5e0dd0e787e7178a0b83f806a269014",
 ]
