@@ -19,7 +19,12 @@ const mockMensagens = {
     pdv_cliente_cupom_titulo: "Cliente no cupom",
     pdv_cliente_sem_cadastro_desc: "Sem cliente vinculado.",
     pdv_pgto_parcelas_titulo: "Formas de pagamento",
+    pdv_pgto_valor_recebido: "Recebido",
     pdv_pgto_auto_completar: "Auto-completar",
+    pdv_pgto_totais_titulo: "Totais da venda",
+    pdv_pgto_subtotal_label: "Subtotal",
+    pdv_pgto_descontos_label: "Descontos",
+    pdv_pgto_total_venda_label: "Total da venda",
     aria_parcela_forma: "Forma da parcela {{n}}",
     aria_remover_parcela: "Remover parcela {{n}}",
     aria_parcela_valor: "Valor da parcela {{n}}",
@@ -70,6 +75,9 @@ function renderPanel(props: {
         onClienteCriado={noop}
         pagamentos={[{ formaPagamento: forma, valor }]}
         totalLiquidoComGerente={total}
+        totalBruto={total}
+        totalDesconto={0}
+        valorDescontoGerente={0}
         somaParcelas={soma}
         diferenca={diferenca}
         podeAdicionarParcela

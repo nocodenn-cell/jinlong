@@ -1,7 +1,7 @@
 "use client"
 
 import React, { memo } from "react"
-import { Minus, Plus } from "lucide-react"
+import { Minus, Plus, Store } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -337,13 +337,13 @@ function CaixaCartListInner({
   if (itens.length === 0) {
     if (listEmptyVariant === "pdv_classic") {
       return (
-        <div className="flex h-full min-h-[10rem] flex-col justify-between px-4 py-3">
-          {/* Mensagem discreta — sem ícone grande */}
+        <div className="flex h-full min-h-[10rem] flex-col items-center justify-center gap-3 px-4 py-3 text-center">
+          <Store className="h-10 w-10 shrink-0 text-muted-foreground/50" aria-hidden />
           <p className="text-sm text-muted-foreground">
             {m.caixa.cart_empty_sem_pedido} · {m.caixa.empty_cta_scan}
           </p>
-          {/* Atalhos de teclado: rodapé, linha única, opacidade reduzida */}
-          <div className="flex flex-wrap items-center gap-1.5 opacity-60">
+          {/* Atalhos de teclado: opacidade reduzida */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 opacity-60">
             <span className="inline-flex shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] leading-tight text-muted-foreground">
               Enter · {m.caixa.adicionar_enter}
             </span>

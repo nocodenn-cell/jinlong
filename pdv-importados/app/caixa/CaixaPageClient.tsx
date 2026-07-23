@@ -1228,6 +1228,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onClienteCriado={handleClienteCriado}
                 pagamentos={pagamentos}
                 totalLiquidoComGerente={totalLiquidoComGerente}
+                totalBruto={totalBruto}
+                totalDesconto={totalDesconto}
+                valorDescontoGerente={valorDescontoGerente}
                 somaParcelas={somaParcelas}
                 diferenca={diferencaPagamento}
                 podeAdicionarParcela={podeAdicionarParcela}

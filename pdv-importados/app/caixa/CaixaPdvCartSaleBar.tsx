@@ -55,7 +55,7 @@ export function CaixaPdvCartSaleBar({
               onClick={onExcluirVenda}
               disabled={excluirDisabled}
             >
-              {m.caixa.cart_bar_excluir_venda}
+              {m.caixa.cart_bar_excluir_venda} <span className="ml-1 text-xs opacity-60">(Alt+Q)</span>
             </Button>
           </div>
 
@@ -91,7 +91,7 @@ export function CaixaPdvCartSaleBar({
               }
               aria-busy={finalizando}
             >
-              {m.caixa.finalizar_venda}
+              {m.caixa.finalizar_venda} <span className="ml-1 text-sm opacity-70">(Alt+S)</span>
             </Button>
           </div>
         </div>

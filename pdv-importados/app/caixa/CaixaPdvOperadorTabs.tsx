@@ -32,6 +32,9 @@ type Props = {
   onClienteCriado: (payload: { id: string; nome: string }) => void
   pagamentos: PagamentoLinha[]
   totalLiquidoComGerente: number
+  totalBruto: number
+  totalDesconto: number
+  valorDescontoGerente: number
   somaParcelas: number
   diferenca: number
   podeAdicionarParcela: boolean
@@ -50,6 +53,9 @@ type PagamentoPanelProps = {
   m: Mensagens
   pagamentos: PagamentoLinha[]
   totalLiquidoComGerente: number
+  totalBruto: number
+  totalDesconto: number
+  valorDescontoGerente: number
   somaParcelas: number
   diferenca: number
   podeAdicionarParcela: boolean
@@ -67,6 +73,9 @@ function PagamentoPanel({
   m,
   pagamentos,
   totalLiquidoComGerente,
+  totalBruto,
+  totalDesconto,
+  valorDescontoGerente,
   somaParcelas,
   diferenca,
   podeAdicionarParcela,
@@ -81,6 +90,10 @@ function PagamentoPanel({
 }: PagamentoPanelProps) {
   const somaOk = Math.abs(diferenca) <= SALDO_PENDENTE_EPS
   const temTroco = diferenca > EXCESSO_PAGAMENTO_EPS
+  // Espelha o total já líquido (totalLiquidoComGerente = bruto - descontos), só
+  // soma as duas fontes de desconto já calculadas em outro lugar para exibição —
+  // nenhum cálculo novo, mesmos valores que CaixaFooter/CaixaPdvCartSaleBar usam.
+  const descontoTotalExibido = totalDesconto + valorDescontoGerente
 
   return (
     <section
@@ -88,9 +101,46 @@ function PagamentoPanel({
       aria-label={m.caixa.pdv_tab_aria_pgto}
       className="flex shrink-0 flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
     >
+      {/* 1. Totais da venda */}
+      <div className="flex flex-col gap-1.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {m.caixa.pdv_pgto_totais_titulo}
+        </h3>
+        <dl className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-md border border-border bg-background px-2 py-1.5">
+            <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {m.caixa.pdv_pgto_subtotal_label}
+            </dt>
+            <dd className="tabular-nums text-sm font-semibold text-foreground">
+              {moedaPrefixo} {formatDecimalBRL(totalBruto)}
+            </dd>
+          </div>
+          <div className="rounded-md border border-border bg-background px-2 py-1.5">
+            <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {m.caixa.pdv_pgto_descontos_label}
+            </dt>
+            <dd className="tabular-nums text-sm font-semibold text-foreground">
+              {moedaPrefixo} {formatDecimalBRL(descontoTotalExibido)}
+            </dd>
+          </div>
+          <div className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
+            <dt className="text-[10px] font-medium uppercase tracking-wide text-primary">
+              {m.caixa.pdv_pgto_total_venda_label}
+            </dt>
+            <dd className="tabular-nums text-sm font-bold text-primary">
+              {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      {/* 2. Forma de pagamento */}
+      {metodoPagamentoPanel ? <div>{metodoPagamentoPanel}</div> : null}
+
+      {/* 3. Valor recebido (parcelas — split de pagamento preservado) */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
-          {m.caixa.pdv_pgto_parcelas_titulo}
+          {pagamentos.length > 1 ? m.caixa.pdv_pgto_parcelas_titulo : m.caixa.pdv_pgto_valor_recebido}
         </h3>
         {pagamentos.length > 1 ? (
           <button
@@ -102,7 +152,6 @@ function PagamentoPanel({
           </button>
         ) : null}
       </div>
-      {metodoPagamentoPanel ? <div className="mb-1">{metodoPagamentoPanel}</div> : null}
       <div className="space-y-3">
         {pagamentos.map((p, idx) => (
           <div
@@ -240,6 +289,9 @@ export function CaixaPdvOperadorTabs({
   onClienteCriado,
   pagamentos,
   totalLiquidoComGerente,
+  totalBruto,
+  totalDesconto,
+  valorDescontoGerente,
   somaParcelas,
   diferenca,
   podeAdicionarParcela,
@@ -266,7 +318,7 @@ export function CaixaPdvOperadorTabs({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div role="tablist" aria-label={m.caixa.pdv_tabs_lista_aria} className="flex shrink-0 gap-1 rounded-lg border border-border bg-muted/40 p-1">
+      <div role="tablist" aria-label={m.caixa.pdv_tabs_lista_aria} className="flex shrink-0 border-b border-border">
         {TAB_ORDER.map((tab) => {
           const selected = activeTab === tab
           return (
@@ -278,10 +330,10 @@ export function CaixaPdvOperadorTabs({
               onClick={() => onActiveTabChange(tab)}
               title={`${tabLabel[tab]} (${tabShortcut[tab]})`}
               className={cn(
-                "flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors",
+                "-mb-px flex-1 border-b-2 px-3 py-2 text-sm font-semibold transition-colors",
                 selected
-                  ? "bg-card text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
               )}
             >
               {tabLabel[tab]}
@@ -303,6 +355,9 @@ export function CaixaPdvOperadorTabs({
             m={m}
             pagamentos={pagamentos}
             totalLiquidoComGerente={totalLiquidoComGerente}
+            totalBruto={totalBruto}
+            totalDesconto={totalDesconto}
+            valorDescontoGerente={valorDescontoGerente}
             somaParcelas={somaParcelas}
             diferenca={diferenca}
             podeAdicionarParcela={podeAdicionarParcela}

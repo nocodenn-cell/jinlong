@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/forms"
 import { ErrorState } from "@/components/ui/feedback"
@@ -69,13 +70,14 @@ export function CaixaClienteTab({ m, clienteNome, onClienteCriado }: Props) {
         <button
           type="button"
           onClick={() => setFormAberto(true)}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
         >
           {m.caixa.pdv_cliente_cadastrar_novo_btn}
         </button>
       ) : (
         <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-3" data-caixa-atalho-bloqueado="true">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <UserPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {m.caixa.pdv_cliente_cadastro_rapido_titulo}
           </span>
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
