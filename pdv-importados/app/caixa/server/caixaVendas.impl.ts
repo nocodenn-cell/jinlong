@@ -304,6 +304,8 @@ export async function finalizarVendaCaixaImpl(
       p_device_id: getDeviceFingerprint(),
       p_terminal_id: 'web-caixa',
       p_cliente_id: input.clienteId ?? null,  // ✅ NOVO (Fase 5b)
+      p_motivo_desconto: input.motivoDesconto ?? 'NAO_ESPECIFICADO',  // ✅ NOVO (BL-1)
+      p_motivo_descricao: input.motivoDescontoDescricao ?? null,  // ✅ NOVO (BL-1)
     })
 
     if (txErr) {
