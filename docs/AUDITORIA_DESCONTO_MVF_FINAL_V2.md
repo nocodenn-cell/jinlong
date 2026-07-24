@@ -7,6 +7,22 @@
 
 ---
 
+# ⚠️ ADENDO DE IMPLEMENTAÇÃO (2026-07-24)
+
+> Este documento é o **blueprint congelado** (intenção de design). O estado **real do código** ao fim da sprint difere em pontos de assinatura/campo — registrado aqui para precisão. Fonte de verdade do estado atual: `docs/SPRINT_DESCONTOS_RELATORIO_FINAL.md`.
+
+| MVF | Estado real | Divergência vs blueprint |
+|---|---|---|
+| **#1** — limite de desconto (frontend) | ✅ **Implementado** em `shared-core/src/stores/unifiedCartStore.ts` (compartilhado Web + Local) | A função real é `aplicarDescontoManual(id, descontoValor, motivo?)` — recebe **valor** (não percentual) e calcula o % internamente; o limite (15%) é constante inline; o tipo é lido de `item.resultado?.tipoPreco` (não `item.tipo_preco`). O pseudocódigo do BLOCKER #1 abaixo é conceitual. |
+| **#2** — motivo de desconto | 🟡 **Frontend implementado**; backend **pendente** (BL-1) | Modal de 3 passos + ENUM + validação Zod OK. O motivo é capturado e validado na UI, mas **ainda não é persistido**: a RPC alvo real é `finalizar_venda_transacional_canonica_v4` (não `v3`), e a persistência depende da reconciliação (BL-1). |
+| **#3** — promoções | ❌ **Não implementado** (BL-2) | `calcular_preco_produto` vivo não lê `regras_preco` nem trata `PROMOCAO` (verificado no banco). Requer alteração estrutural de RPC + equivalência offline + sync. |
+
+**Invariantes**: os itens implementados (MVF #1 e MVF #2-frontend) **preservam C1–C6** — não alteram a RPC de preço (C1/C5), mantêm o piso de custo via `applyItemDiscount` (C2), reforçam a exigência de gerente acima do limite (C3), e vivem em `shared-core` compartilhado Web/Local (C4), de forma determinística (C6).
+
+**RPC transacional**: o blueprint referencia `v3`; a RPC real em produção é `v4`. A reconciliação (BL-1) está planejada em `docs/BL1_PLANO_RECONCILIACAO_V4.md` — **não implementada nesta sprint**.
+
+---
+
 # PREFÁCIO ARQUITETURAL
 
 Este documento define 3 Minimum Viable Fixes que resolvem bloqueadores sem refatoração ampla. **Mais importante**: estabelece contratos, invariantes e matriz de compatibilidade que guiarão futuras evoluções do sistema por anos.

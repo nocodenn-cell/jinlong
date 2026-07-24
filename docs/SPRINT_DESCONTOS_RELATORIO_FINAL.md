@@ -1,9 +1,22 @@
 # RELATÓRIO FINAL DA SPRINT — Regras de Desconto FastProduct
 
-**Data**: 2026-07-24
+**Data**: 2026-07-24 (atualizado no fechamento)
 **Branch**: `claude/auditoria-final-desconto-7o1vy9`
 **PR**: #231 (draft)
 **Objetivo da sprint**: Fechar os 3 Minimum Viable Fixes + congelar a arquitetura canônica de descontos, com o menor número de pendências.
+
+---
+
+## 0. Checklist de objetivos da sprint
+
+| # | Objetivo de fechamento | Atendido | Evidência |
+|---|---|:---:|---|
+| 1 | Revisão final implementação × documentação | ✅ | Adendo de implementação em `AUDITORIA_DESCONTO_MVF_FINAL_V2.md`; divergências (assinatura MVF #1, RPC v4≠v3, motivo não persistido) registradas |
+| 2 | Eliminar TODO/FIXME/código morto/duplicação da sprint | ✅ | `grep` limpo nos 5 arquivos de código; sem refs órfãs; 1 correção pequena (motivo obrigatório real) |
+| 3 | MVFs preservam invariantes C1–C6 | ✅ | Ver §11 — MVF #1/#2-frontend não tocam RPC de preço; piso de custo, gerente, shared-core Web/Local, determinismo mantidos |
+| 4 | Sem divergência Web / Local / Offline | ✅ | Ver §12 — `aplicarDescontoManual` único em `shared-core`, importado por ambos PDVs; offline (`recalcularPrecoItemLocal`) pula MANUAL/PROMOCAO |
+| 5 | Documentação reflete o estado atual do código | ✅ | Adendo no canônico + este relatório + `BL1_PLANO_RECONCILIACAO_V4.md` |
+| 6 | BL-1 apenas planejado (sem alteração estrutural) | ✅ | `docs/BL1_PLANO_RECONCILIACAO_V4.md` — nenhuma migration criada/aplicada |
 
 ---
 
@@ -141,3 +154,53 @@ Justificativa: dois P0 abertos (token reutilizável + descontos sem auditoria) p
 ---
 
 **Status da sprint**: 70% concluída · Frontend/Docs prontos para merge · Backend estrutural remetido a backlog com plano · Go-Live do domínio condicionado a BL-1.
+
+---
+
+## 11. Preservação de invariantes (C1–C6) pelos MVFs implementados
+
+| Invariante | MVF #1 | MVF #2 (frontend) | Veredito |
+|---|---|---|---|
+| **C1** SSOT de preço (uma RPC) | Não toca RPC de preço (é Pipeline B) | Não toca RPC de preço | ✅ Preservado |
+| **C2** Nunca abaixo do custo | `applyItemDiscount` mantém piso `precoMinimo` | N/A | ✅ Preservado |
+| **C3** Nunca bypassar gerente | **Reforça**: rejeita >15% não-ATACADO exigindo gerente | Motivo exige token gerente já validado | ✅ Reforçado |
+| **C4** Mesmo preço online/offline | Regra em `shared-core` (Web+Local idênticos) | UI só de Web (não afeta preço) | ✅ Preservado |
+| **C5** Preço não depende da interface | Valida desconto comercial, não calcula preço | Idem | ✅ Preservado |
+| **C6** Determinístico | Mesmo valor → mesmo resultado | N/A | ✅ Preservado |
+
+> Nenhum MVF implementado altera precedência de preço nem introduz acúmulo — política de não acúmulo intacta.
+
+---
+
+## 12. Consistência Web / Local / Offline
+
+- `aplicarDescontoManual` tem **definição única** em `shared-core/src/stores/unifiedCartStore.ts`, importada por `pdv-importados` (Web) e `pdv-local` (Local/Offline) via `@core/stores/unifiedCartStore`. Não há caminho de desconto paralelo/divergente.
+- O recálculo de preço offline (`pdv-local/src/lib/recalcularPrecoItemLocal.ts`) **pula linhas `MANUAL`/`PROMOCAO`**, deixando o desconto manual sob a regra compartilhada — coerente com a separação Pipeline A (preço) × Pipeline B (comercial).
+- **Conclusão**: a regra de limite (MVF #1) é aplicada igualmente em Web e Local. Sem divergência.
+- **Ressalva conhecida**: promoções (MVF #3/BL-2) ainda não existem em nenhum dos lados — logo, não há divergência, mas há ausência de recurso.
+
+---
+
+## 13. Impacto arquitetural
+
+- **Nesta sprint**: zero mudança estrutural. Nenhuma migration criada/aplicada; nenhuma alteração de RPC; arquitetura congelada respeitada. Alterações limitadas a Pipeline B (frontend comercial) + documentação.
+- **Diferido (BL-1)**: a reconciliação da v4 é a única mudança estrutural pendente — plano completo em `docs/BL1_PLANO_RECONCILIACAO_V4.md` (estratégia, impacto, riscos, rollback, testes, ordem de execução). Decisão arquitetural aguardando aprovação.
+
+---
+
+## 14. Migrations adicionadas
+
+**Nenhuma.** O rascunho incorreto (`123_desconto_motivo_enum.sql`, apontava para v3) foi removido antes de qualquer commit. A migration de reconciliação está apenas **planejada** (BL-1), não escrita.
+
+---
+
+## 15. Parecer final
+
+**✅ Pronto para Merge** (frontend + documentação) · **✅ Pronto para Homologação** (itens de UI, com ressalva de auditoria end-to-end pós-BL-1) · **❌ Não pronto para Go-Live** do domínio de desconto.
+
+**Justificativa técnica**:
+- *Merge*: mudanças aditivas, seguras, isoladas em Pipeline B; invariantes preservados; sem migration; campos extras ignorados sem erro pelo servidor atual; código limpo (sem TODO/dead code).
+- *Homologação*: fluxo de limite e de motivo são exercitáveis na UI; a persistência do motivo e a auditoria só fecham com BL-1.
+- *Go-Live NÃO*: dois P0 abertos (token reutilizável + descontos sem auditoria) por regressão histórica da v4, mais MVF #3 ausente. Condicionado a BL-1 (+BL-2 para promoções).
+
+**Sprint fechada de forma limpa**: única pendência estrutural = BL-1, isolada como decisão arquitetural para a próxima sprint.
