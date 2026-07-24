@@ -61,6 +61,7 @@ function PagamentoPanel({
 
   return (
     <section
+      id="caixa-pdv-panel-pgto"
       aria-label={m.caixa.pdv_tab_aria_pgto}
       className="flex shrink-0 flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
     >

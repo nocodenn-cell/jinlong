@@ -16,7 +16,7 @@ type Props = {
   clientesIniciais: ClienteOpt[]
 }
 
-const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO', 'OUTROS'] as const
+const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const
 
 export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
   const router = useRouter()
@@ -101,7 +101,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
                     className="admin-v2-input w-24 text-right text-xs"
                     aria-label="Valor a liquidar"
                   />
-                  <select name="forma" className="admin-v2-input text-xs" defaultValue="DINHEIRO">
+                  <select name="forma" className="admin-v2-input text-xs" defaultValue="DINHEIRO" aria-label="Forma de pagamento">
                     {FORMAS.map((f) => (
                       <option key={f} value={f}>
                         {f}
