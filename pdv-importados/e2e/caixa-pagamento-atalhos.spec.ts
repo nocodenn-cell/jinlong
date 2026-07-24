@@ -12,7 +12,7 @@ import { gotoApp } from './helpers/url'
 
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
+test.describe('Caixa — atalhos de teclado e clique do mouse para método de pagamento', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.setTimeout(180_000)
     if (!hasCaixaOperadorUser()) {
@@ -61,6 +61,22 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
     expect(atalhoNumero?.trim()).toBe('2')
   })
 
+  test('clique do mouse em Crédito (tecla 3) seleciona corretamente', async ({ page }) => {
+    await setupPagamento(page)
+
+    const radios = page.locator('[role="radio"]')
+    const botaoCredito = radios.nth(2)
+
+    await botaoCredito.click()
+
+    await expect(botaoCredito).toHaveAttribute('aria-checked', 'true')
+    await expect(botaoCredito).toHaveAttribute('value', 'credito')
+
+    const atalhoDisplay = botaoCredito.locator('[aria-hidden="true"]').first()
+    const atalhoNumero = await atalhoDisplay.textContent()
+    expect(atalhoNumero?.trim()).toBe('3')
+  })
+
   test('tecla 3 seleciona Crédito e reflete no RadioGroup', async ({ page }) => {
     await setupPagamento(page)
 
@@ -74,6 +90,22 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
     expect(atalhoNumero?.trim()).toBe('3')
   })
 
+  test('clique do mouse em Débito (tecla 4) seleciona corretamente', async ({ page }) => {
+    await setupPagamento(page)
+
+    const radios = page.locator('[role="radio"]')
+    const botaoDebito = radios.nth(3)
+
+    await botaoDebito.click()
+
+    await expect(botaoDebito).toHaveAttribute('aria-checked', 'true')
+    await expect(botaoDebito).toHaveAttribute('value', 'debito')
+
+    const atalhoDisplay = botaoDebito.locator('[aria-hidden="true"]').first()
+    const atalhoNumero = await atalhoDisplay.textContent()
+    expect(atalhoNumero?.trim()).toBe('4')
+  })
+
   test('tecla 4 seleciona Débito e reflete no RadioGroup', async ({ page }) => {
     await setupPagamento(page)
 
@@ -85,6 +117,39 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
     const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
     const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('4')
+  })
+
+  test('alternância entre clique do mouse e teclado: Crédito (clique) → Débito (tecla)', async ({ page }) => {
+    await setupPagamento(page)
+
+    const radios = page.locator('[role="radio"]')
+    const botaoCredito = radios.nth(2)
+
+    await botaoCredito.click()
+    await expect(botaoCredito).toHaveAttribute('aria-checked', 'true')
+    await expect(botaoCredito).toHaveAttribute('value', 'credito')
+
+    await page.keyboard.press('4')
+
+    const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
+    await expect(metodoAtivo).toHaveAttribute('value', 'debito')
+  })
+
+  test('alternância entre teclado e clique do mouse: Débito (tecla) → Crédito (clique)', async ({ page }) => {
+    await setupPagamento(page)
+
+    await page.keyboard.press('4')
+
+    let metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
+    await expect(metodoAtivo).toHaveAttribute('value', 'debito')
+
+    const radios = page.locator('[role="radio"]')
+    const botaoCredito = radios.nth(2)
+
+    await botaoCredito.click()
+
+    metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
+    await expect(metodoAtivo).toHaveAttribute('value', 'credito')
   })
 
   test('método visual selecionado corresponde ao valor da forma na primeira parcela', async ({ page }) => {
