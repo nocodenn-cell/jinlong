@@ -56,6 +56,7 @@ import { CaixaAbrirTurnoModal } from "@/app/caixa/CaixaAbrirTurnoModal"
 import {
   CaixaGerenteModal,
   type ValidarSenhaGerenteResult,
+  type MotivoDescontoEnum,
 } from "@/app/caixa/CaixaGerenteModal"
 import { CaixaMovimentacaoModal } from "@/app/caixa/CaixaMovimentacaoModal"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
@@ -167,6 +168,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     useState<number>(0)
   const [descontoGerentePercentual, setDescontoGerentePercentual] =
     useState<number>(0)
+  const [motivoDesconto, setMotivoDesconto] =
+    useState<MotivoDescontoEnum>('NAO_ESPECIFICADO')
+  const [motivoDescontoDescricao, setMotivoDescontoDescricao] =
+    useState<string | null>(null)
   const [configCaixaWeb, setConfigCaixaWeb] = useState<Record<string, string>>({})
   const [somFeedbackAtivo, setSomFeedbackAtivo] = useState(false)
   const [confirmacaoPendente, setConfirmacaoPendente] = useState<
@@ -395,6 +400,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setGerenteToken(null)
     setMaxDescontoGerentePercentual(0)
     setDescontoGerentePercentual(0)
+    setMotivoDesconto('NAO_ESPECIFICADO')
+    setMotivoDescontoDescricao(null)
   }, [])
 
   useCaixaBootstrapData({
@@ -941,6 +948,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           descontoGerentePercentualEfetivo > 0 ? gerenteToken ?? undefined : undefined,
         descontoGerentePercentual:
           descontoGerentePercentualEfetivo > 0 ? descontoGerentePercentualEfetivo : undefined,
+        motivoDesconto:
+          descontoGerentePercentualEfetivo > 0 ? motivoDesconto : undefined,
+        motivoDescontoDescricao:
+          descontoGerentePercentualEfetivo > 0 ? motivoDescontoDescricao : undefined,
         pagamentos: parcelasParaEnviar,
         // Itens derivados do snapshot imutável já validado — não do store mutável.
         itens: checkoutSnapshot.itens.map((i) => ({
@@ -1159,11 +1170,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       expiraEm: string
       maxDescontoPercentual: number
       percentual: number
+      motivo: MotivoDescontoEnum
+      motivoDescricao: string | null
     }) => {
       setGerenteValidadoAte(payload.expiraEm)
       setGerenteToken(payload.token)
       setMaxDescontoGerentePercentual(payload.maxDescontoPercentual)
       setDescontoGerentePercentual(payload.percentual)
+      setMotivoDesconto(payload.motivo)
+      setMotivoDescontoDescricao(payload.motivoDescricao)
       setCaixaMensagem(
         caixaFmt(m.caixa.msg_gerente_ok, {
           pct: payload.percentual.toFixed(2),

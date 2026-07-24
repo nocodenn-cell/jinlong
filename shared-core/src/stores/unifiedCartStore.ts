@@ -315,8 +315,23 @@ export const useCartStore = create<CarrinhoState>()(
 
       aplicarDescontoManual: (id, descontoValor) =>
         set((state) => {
-          const novosItens = state.itens.map((item) =>
-            item.id === id ? applyItemDiscount(item, descontoValor) : item,
+          const item = state.itens.find((i) => i.id === id)
+          if (!item) return {}
+
+          // ✅ VALIDAÇÃO ADICIONADA: Rejeita desconto > limite permitido antes de aplicar
+          const precoOriginal = item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
+          const descontoPercentual = precoOriginal > 0 ? (descontoValor / precoOriginal) * 100 : 0
+          const maxPermitido = 15 // Default limit for non-ATACADO
+
+          if (descontoPercentual > maxPermitido && item.resultado?.tipoPreco !== 'ATACADO') {
+            throw new Error(
+              `Desconto acima do limite permitido (${maxPermitido}%). ` +
+              `Desconto: ${descontoPercentual.toFixed(1)}%. Solicite autorização de gerente.`
+            )
+          }
+
+          const novosItens = state.itens.map((itemMapada) =>
+            itemMapada.id === id ? applyItemDiscount(itemMapada, descontoValor) : itemMapada,
           )
           return commitItensComTotais(state, novosItens)
         }),

@@ -272,5 +272,83 @@ describe('useCarrinhoStore behavior', () => {
     expect(state.itens[0]?.quantidade).toBe(1)
     expect(state.ultimoRemovido).toBeNull()
   })
+
+  // MVF #1: Validação de limite de desconto
+  it('desconto manual acima do limite em VAREJO rejeita', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoUnitario: 100,
+      precoOriginal: 100,
+      resultado: {
+        precoUnitario: 100,
+        precoOriginal: 100,
+        descontoUnitario: 0,
+        tipoPreco: 'VAREJO',
+      },
+    })
+
+    // 25% discount (limit is 15%) should throw
+    expect(() => {
+      useCarrinhoStore.getState().aplicarDescontoManual('linha-1', 25)
+    }).toThrow(/acima do limite permitido/)
+
+    // Venda não foi modificada
+    const state = useCarrinhoStore.getState()
+    expect(state.itens[0]?.resultado?.precoUnitario).toBe(100)
+    expect(state.itens[0]?.resultado?.tipoPreco).toBe('VAREJO')
+  })
+
+  it('desconto manual até o limite em VAREJO aceita', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 1,
+      precoUnitario: 100,
+      precoOriginal: 100,
+      resultado: {
+        precoUnitario: 100,
+        precoOriginal: 100,
+        descontoUnitario: 0,
+        tipoPreco: 'VAREJO',
+      },
+    })
+
+    // 15% discount (at limit) should succeed
+    useCarrinhoStore.getState().aplicarDescontoManual('linha-1', 15)
+
+    const state = useCarrinhoStore.getState()
+    expect(state.itens[0]?.resultado?.precoUnitario).toBe(85)
+    expect(state.itens[0]?.resultado?.tipoPreco).toBe('MANUAL')
+  })
+
+  it('desconto manual acima do limite em ATACADO aceita', () => {
+    useCarrinhoStore.getState().adicionarItem({
+      id: 'linha-1',
+      produtoId: 'p-1',
+      nome: 'Produto A',
+      quantidade: 6,
+      precoUnitario: 80,
+      precoOriginal: 100,
+      resultado: {
+        precoUnitario: 80,
+        precoOriginal: 100,
+        descontoUnitario: 20,
+        tipoPreco: 'ATACADO',
+      },
+    })
+
+    // 30% discount (above limit) should succeed for ATACADO
+    expect(() => {
+      useCarrinhoStore.getState().aplicarDescontoManual('linha-1', 24) // 30% of 80
+    }).not.toThrow()
+
+    const state = useCarrinhoStore.getState()
+    expect(state.itens[0]?.resultado?.precoUnitario).toBe(56)
+    expect(state.itens[0]?.resultado?.tipoPreco).toBe('MANUAL')
+  })
 })
 

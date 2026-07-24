@@ -10,6 +10,15 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import { validarPercentualPermitido } from "@/stores/managerDiscount"
 
+export type MotivoDescontoEnum =
+  | 'NAO_ESPECIFICADO'
+  | 'ERRO_DIGITACAO'
+  | 'NEGOCIACAO'
+  | 'CLIENTE_PREFERENCIAL'
+  | 'DANO_PRODUTO'
+  | 'AUTORIZACAO_COMERCIAL'
+  | 'OUTROS'
+
 export type ValidarSenhaGerenteResult =
   | {
       ok: true
@@ -30,6 +39,8 @@ type Props = {
     expiraEm: string
     maxDescontoPercentual: number
     percentual: number
+    motivo: MotivoDescontoEnum
+    motivoDescricao: string | null
   }) => void
 }
 
@@ -41,8 +52,10 @@ export function CaixaGerenteModal({
   onValidateSenha,
   onApply,
 }: Props) {
-  const [passo, setPasso] = useState<"senha" | "percent">("senha")
+  const [passo, setPasso] = useState<"senha" | "motivo" | "percent">("senha")
   const [senha, setSenha] = useState("")
+  const [motivo, setMotivo] = useState<MotivoDescontoEnum>('NAO_ESPECIFICADO')
+  const [motivoDescricao, setMotivoDescricao] = useState("")
   const [percentStr, setPercentStr] = useState("5")
   const [erroLocal, setErroLocal] = useState<string | null>(null)
   const [ctx, setCtx] = useState<{
@@ -52,6 +65,7 @@ export function CaixaGerenteModal({
   } | null>(null)
 
   const senhaRef = useRef<HTMLInputElement>(null)
+  const motivoRef = useRef<HTMLSelectElement>(null)
   const pctRef = useRef<HTMLInputElement>(null)
 
   const fechar = useCallback(() => {
@@ -62,6 +76,8 @@ export function CaixaGerenteModal({
     if (!open) return
     setPasso("senha")
     setSenha("")
+    setMotivo('NAO_ESPECIFICADO')
+    setMotivoDescricao("")
     setPercentStr("5")
     setErroLocal(null)
     setCtx(null)
@@ -69,8 +85,9 @@ export function CaixaGerenteModal({
   }, [open])
 
   useEffect(() => {
-    if (!open || passo !== "percent") return
-    queueMicrotask(() => pctRef.current?.focus())
+    if (!open) return
+    if (passo === "motivo") queueMicrotask(() => motivoRef.current?.focus())
+    if (passo === "percent") queueMicrotask(() => pctRef.current?.focus())
   }, [open, passo])
 
   const handleContinuarSenha = useCallback(async () => {
@@ -91,8 +108,24 @@ export function CaixaGerenteModal({
       expiraEm: res.expiraEm,
       maxDescontoPercentual: res.maxDescontoPercentual,
     })
-    setPasso("percent")
+    setMotivo('NAO_ESPECIFICADO')
+    setMotivoDescricao("")
+    setPasso("motivo")
   }, [validando, senha, onValidateSenha, m.caixa.msg_senha_obrigatoria])
+
+  const handleContinuarMotivo = useCallback(() => {
+    setErroLocal(null)
+    // NAO_ESPECIFICADO é o placeholder ("Selecione um motivo...") — exige escolha real (auditabilidade).
+    if (!motivo || motivo === 'NAO_ESPECIFICADO') {
+      setErroLocal("Motivo é obrigatório")
+      return
+    }
+    if (motivo === 'OUTROS' && !motivoDescricao.trim()) {
+      setErroLocal("Descrição é obrigatória quando motivo é 'Outros'")
+      return
+    }
+    setPasso("percent")
+  }, [motivo, motivoDescricao])
 
   const handleAplicarPercent = useCallback(() => {
     setErroLocal(null)
@@ -106,15 +139,23 @@ export function CaixaGerenteModal({
     onApply({
       ...ctx,
       percentual: Math.round(percentual * 100) / 100,
+      motivo,
+      motivoDescricao: motivo === 'OUTROS' ? motivoDescricao : null,
     })
     fechar()
-  }, [ctx, percentStr, m.caixa.msg_percentual_invalido, onApply, fechar])
+  }, [ctx, percentStr, motivo, motivoDescricao, m.caixa.msg_percentual_invalido, onApply, fechar])
 
-  const handleVoltar = useCallback(() => {
+  const handleVoltarDeMotivo = useCallback(() => {
     setPasso("senha")
     setCtx(null)
     setErroLocal(null)
     queueMicrotask(() => senhaRef.current?.focus())
+  }, [])
+
+  const handleVoltarDePercent = useCallback(() => {
+    setPasso("motivo")
+    setErroLocal(null)
+    queueMicrotask(() => motivoRef.current?.focus())
   }, [])
 
   return (
@@ -141,7 +182,7 @@ export function CaixaGerenteModal({
             <Button
               type="button"
               variant="outline"
-              onClick={handleVoltar}
+              onClick={handleVoltarDePercent}
               disabled={validando}
             >
               {m.caixa.modal_gerente_voltar}
@@ -159,6 +200,31 @@ export function CaixaGerenteModal({
                 pulse
               />
               {m.caixa.modal_gerente_aplicar}
+            </Button>
+          </>
+        ) : passo === "motivo" ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleVoltarDeMotivo}
+              disabled={validando}
+            >
+              {m.caixa.modal_gerente_voltar}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              data-testid="motivo-next"
+              onClick={handleContinuarMotivo}
+              disabled={
+                validando ||
+                !motivo ||
+                motivo === 'NAO_ESPECIFICADO' ||
+                (motivo === 'OUTROS' && !motivoDescricao.trim())
+              }
+            >
+              {m.caixa.modal_gerente_seguinte}
             </Button>
           </>
         ) : (
@@ -202,6 +268,43 @@ export function CaixaGerenteModal({
               }}
             />
           </label>
+        ) : passo === "motivo" ? (
+          <div className="space-y-3">
+            <label className="block text-caption text-fg-muted">
+              Motivo do desconto
+              <select
+                ref={motivoRef}
+                data-testid="motivo-select"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value as MotivoDescontoEnum)}
+                disabled={validando}
+                className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 text-body"
+              >
+                <option value="NAO_ESPECIFICADO">Selecione um motivo...</option>
+                <option value="ERRO_DIGITACAO">Erro de digitação</option>
+                <option value="NEGOCIACAO">Negociação com cliente</option>
+                <option value="CLIENTE_PREFERENCIAL">Cliente preferencial</option>
+                <option value="DANO_PRODUTO">Produto com dano</option>
+                <option value="AUTORIZACAO_COMERCIAL">Autorização comercial</option>
+                <option value="OUTROS">Outros (especificar)</option>
+              </select>
+            </label>
+            {motivo === 'OUTROS' && (
+              <label className="block text-caption text-fg-muted">
+                Descrição do motivo
+                <textarea
+                  data-testid="motivo-descricao"
+                  value={motivoDescricao}
+                  onChange={(e) => setMotivoDescricao(e.target.value)}
+                  placeholder="Descreva o motivo específico (obrigatório)..."
+                  disabled={validando}
+                  maxLength={500}
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 text-body"
+                />
+              </label>
+            )}
+          </div>
         ) : (
           ctx && (
             <>
