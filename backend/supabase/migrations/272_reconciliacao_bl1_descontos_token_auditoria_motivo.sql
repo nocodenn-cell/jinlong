@@ -438,9 +438,13 @@ END;
 $function$;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- PARTE D: Grants para nova assinatura (idênticos aos do corpo 268)
+-- PARTE D: Grants para nova assinatura + ENUM type
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+-- Grant USAGE em ENUM type
+GRANT USAGE ON TYPE public.motivo_desconto_enum_tipo TO authenticated, anon;
+
+-- Grant EXECUTE em function
 GRANT EXECUTE ON FUNCTION public.finalizar_venda_transacional_canonica_v4(
   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
   jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid,
