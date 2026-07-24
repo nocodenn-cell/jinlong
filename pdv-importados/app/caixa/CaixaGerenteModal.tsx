@@ -115,7 +115,8 @@ export function CaixaGerenteModal({
 
   const handleContinuarMotivo = useCallback(() => {
     setErroLocal(null)
-    if (!motivo) {
+    // NAO_ESPECIFICADO é o placeholder ("Selecione um motivo...") — exige escolha real (auditabilidade).
+    if (!motivo || motivo === 'NAO_ESPECIFICADO') {
       setErroLocal("Motivo é obrigatório")
       return
     }
@@ -219,6 +220,7 @@ export function CaixaGerenteModal({
               disabled={
                 validando ||
                 !motivo ||
+                motivo === 'NAO_ESPECIFICADO' ||
                 (motivo === 'OUTROS' && !motivoDescricao.trim())
               }
             >
