@@ -72,4 +72,26 @@ A v4 viva (a) **não consome** o token de gerente (`usado` nunca vira `true` →
 
 ---
 
+---
+
+## 7. Impacto em produção (detalhado)
+- **Janela de deploy coordenado**: banco antes do app. Como os 2 params novos têm DEFAULT, o app atual continua funcionando durante a janela (compatibilidade para frente).
+- **Dados**: colunas aditivas; nenhuma reescrita de linhas existentes. Descontos legados ficam com `motivo='NAO_ESPECIFICADO'`.
+- **Comportamento observável**: a partir do deploy, todo desconto de gerente consome o token (uso único) e gera linha em `descontos_venda`. Vendas sem desconto — inalteradas.
+- **Superfície de risco**: uma única função transacional + uma tabela de auditoria. `contas_receber`, estoque, fiscal e pagamentos permanecem intactos (corpo `268` preservado no restante).
+- **Reversível**: rollback restaura o corpo `268` e a assinatura de 19 args sem perda de vendas.
+
+## 8. Critérios de aceite
+- [ ] `pg_get_functiondef('finalizar_venda_transacional_canonica_v4')` contém `tokens_desconto_gerente SET usado = true` **e** `INSERT INTO public.descontos_venda`.
+- [ ] Reuso do mesmo token em 2ª venda → exceção `FINALIZAR_VENDA_CANONICA_TOKEN_GERENTE_JA_USADO`.
+- [ ] Venda com desconto de gerente cria exatamente 1 linha em `descontos_venda` com `operador_id`, `aplicado_em`, `desconto_percentual`, `desconto_valor` e `motivo_desconto` corretos.
+- [ ] `motivo='OUTROS'` sem descrição → rejeitado pelo CHECK; com descrição → aceito.
+- [ ] `caixaVendas.impl.ts` envia `p_motivo_desconto`/`p_motivo_descricao`; motivo escolhido na UI aparece persistido.
+- [ ] Regressão verde: venda sem desconto, split payment e `contas_receber` (Fase 5b) inalterados.
+- [ ] E2E de auditoria (S1.12): desconto aparece na timeline `/admin/auditoria`.
+- [ ] Overload único da v4 (sem ambiguidade PostgREST); `NOTIFY pgrst` executado.
+- [ ] Ambiente-alvo confirmado formalmente antes da aplicação.
+
+---
+
 **Decisão pendente**: aprovar esta estratégia (migration única, corpo `268` + PASSO 5 + motivo) antes de qualquer implementação na próxima sprint.
