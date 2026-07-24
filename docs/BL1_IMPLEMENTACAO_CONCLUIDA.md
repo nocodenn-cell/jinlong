@@ -254,4 +254,41 @@ Date:   2026-07-24
 
 ---
 
-**Status Final**: 🟢 **PRONTO PARA REVISÃO E MERGE**
+---
+
+## ⚠️ PARECER HONESTO SOBRE STATUS
+
+### O que foi Validado (Comprovado)
+✅ **Migration aplicada ao banco** — `mcp__Supabase__apply_migration` retornou sucesso  
+✅ **Schema validado** — 5 queries SQL executadas contra banco real confirmam:
+   - 4 colunas novas presentes
+   - ENUM com 7 valores criado
+   - CHECK constraint ativo
+   - Índice criado
+
+✅ **RPC corpo verificado** — `pg_get_functiondef()` confirma:
+   - PASSO 5 presente (`UPDATE tokens_desconto_gerente SET usado=true`)
+   - Exceção `TOKEN_GERENTE_JA_USADO` presente
+   - `INSERT INTO descontos_venda` presente
+   - Parâmetros `motivo_desconto` e `motivo_descricao` presentes
+
+✅ **App atualizado** — TypeScript enviando novos parâmetros ao RPC
+
+### O que NÃO foi Testado (Limitação)
+❌ **Testes de fluxo completo**: Nenhuma transação de venda executada ponta-a-ponta  
+❌ **Validação de exceção**: Nunca tentamos reusar token (validação programática)  
+❌ **E2E em staging**: Nunca foi testado em ambiente de staging  
+❌ **Regressão**: Vendas sem desconto, split payment, contas_receber não foram validadas  
+
+### Status Real
+- **Implementação**: 100% concluída e aplicada ao banco
+- **Validação estática**: 100% (SQL + schema + corpo)
+- **Validação dinâmica**: 0% (sem transações executadas)
+
+### Recomendação
+🟡 **PRONTO PARA REVISÃO DE CÓDIGO** (PR #232 Draft)  
+🟡 **MAS OBRIGATÓRIO**: E2E + testes de regressão em staging antes do Go-Live
+
+---
+
+**Status Final**: 🟡 **IMPLEMENTAÇÃO CONCLUÍDA, VALIDAÇÃO ESTÁTICA COMPLETA, DINÂMICA PENDENTE**
