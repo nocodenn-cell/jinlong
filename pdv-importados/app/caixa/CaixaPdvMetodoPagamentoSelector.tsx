@@ -14,11 +14,12 @@ type Props = Readonly<{
 }>
 
 // Mapeamento usando as chaves corretas de m.caixa
+// Ordem: Dinheiro(1), PIX(2), Crédito(3), Débito(4)
 const OPCOES: ReadonlyArray<{ id: MetodoPagamentoUi; labelKey: keyof Mensagens["caixa"] }> = [
   { id: "dinheiro", labelKey: "pdv_metodo_pagamento_dinheiro" },
   { id: "pix", labelKey: "pdv_metodo_pagamento_pix" },
-  { id: "debito", labelKey: "pdv_metodo_pagamento_debito" },
   { id: "credito", labelKey: "pdv_metodo_pagamento_credito" },
+  { id: "debito", labelKey: "pdv_metodo_pagamento_debito" },
 ]
 
 function CaixaPdvMetodoPagamentoSelectorImpl({

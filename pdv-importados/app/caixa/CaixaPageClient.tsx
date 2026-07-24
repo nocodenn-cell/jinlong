@@ -1089,7 +1089,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onSelecionarMetodo: useCallback(
       (indice: 1 | 2 | 3 | 4) => {
         if (pagamentoControlesDesabilitados) return
-        const metodos: MetodoPagamentoUi[] = ["dinheiro", "pix", "debito", "credito"]
+        const metodos: MetodoPagamentoUi[] = ["dinheiro", "pix", "credito", "debito"]
         setMetodoPagamento(metodos[indice - 1])
       },
       [pagamentoControlesDesabilitados],
