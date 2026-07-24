@@ -23,6 +23,16 @@ function quantidadeAte3CasasDecimais(n: number): boolean {
 
 export const TIPO_PRECO_ITEM_FINALIZAR = ['VAREJO', 'ATACADO', 'MANUAL', 'PROMOCAO'] as const
 
+export const MOTIVO_DESCONTO_ENUM = [
+  'NAO_ESPECIFICADO',
+  'ERRO_DIGITACAO',
+  'NEGOCIACAO',
+  'CLIENTE_PREFERENCIAL',
+  'DANO_PRODUTO',
+  'AUTORIZACAO_COMERCIAL',
+  'OUTROS',
+] as const
+
 export const itemFinalizarVendaSchema = z.object({
   produtoId: z.string().uuid('Identificador do produto inválido.'),
   quantidade: z
@@ -61,6 +71,8 @@ export const finalizarVendaInputSchema = z.object({
     .positive('O desconto do gerente deve ser maior que zero.')
     .max(100, 'O desconto do gerente não pode passar de 100%.')
     .optional(),
+  motivoDesconto: z.enum(MOTIVO_DESCONTO_ENUM).optional(),
+  motivoDescontoDescricao: z.string().max(500).nullish(),
   pagamentos: z.array(pagamentoParcelaSchema).min(1, 'Informe ao menos uma parcela de pagamento.'),
   itens: z.array(itemFinalizarVendaSchema).min(1, 'Inclua pelo menos um item na venda.'),
   clienteId: z.string().uuid('ID do cliente inválido.').optional(), // ✅ NOVO (Fase 5b)
@@ -72,6 +84,21 @@ export const finalizarVendaInputSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['descontoGerenteToken'],
       message: 'Token e percentual de desconto de gerente devem ser enviados juntos.',
+    })
+  }
+
+  if (value.motivoDesconto === 'OUTROS' && !value.motivoDescontoDescricao?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['motivoDescontoDescricao'],
+      message: 'Descrição é obrigatória quando o motivo é "Outros".',
+    })
+  }
+  if (value.motivoDesconto && value.motivoDesconto !== 'OUTROS' && value.motivoDescontoDescricao) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['motivoDescontoDescricao'],
+      message: 'Descrição livre só é permitida quando o motivo é "Outros".',
     })
   }
 
