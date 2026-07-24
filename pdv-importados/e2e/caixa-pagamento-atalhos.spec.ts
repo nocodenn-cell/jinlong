@@ -38,14 +38,13 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
 
     await page.keyboard.press('1')
 
-    const botaoDinheiro = page.getByRole('radio', { name: /Dinheiro|现金|現金/i }).first()
-    await expect(botaoDinheiro).toHaveAttribute('aria-checked', 'true')
+    const metodosRadio = page.locator('[role="radio"]')
+    const primeiroRadio = metodosRadio.first()
+    await expect(primeiroRadio).toHaveAttribute('aria-checked', 'true')
+    await expect(primeiroRadio).toHaveAttribute('value', 'dinheiro')
 
-    const inputValor = page.locator('input[type="number"]').first()
-    const parcelasContainer = inputValor.locator('.., .., .., ..').filter({ has: page.locator('select, [role="radio"]') })
-
-    const metodoVisual = page.locator('[role="radio"][aria-checked="true"]').locator('[aria-hidden="true"]').first()
-    const atalhoNumero = await metodoVisual.textContent()
+    const atalhoDisplay = primeiroRadio.locator('[aria-hidden="true"]').first()
+    const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('1')
   })
 
@@ -54,11 +53,11 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
 
     await page.keyboard.press('2')
 
-    const botaoPix = page.getByRole('radio', { name: /PIX|Pix/i }).first()
-    await expect(botaoPix).toHaveAttribute('aria-checked', 'true')
+    const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
+    await expect(metodoAtivo).toHaveAttribute('value', 'pix')
 
-    const metodoVisual = page.locator('[role="radio"][aria-checked="true"]').locator('[aria-hidden="true"]').first()
-    const atalhoNumero = await metodoVisual.textContent()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('2')
   })
 
@@ -67,11 +66,11 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
 
     await page.keyboard.press('3')
 
-    const botaoCredito = page.getByRole('radio', { name: /Crédito|信用|信用卡/i }).first()
-    await expect(botaoCredito).toHaveAttribute('aria-checked', 'true')
+    const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
+    await expect(metodoAtivo).toHaveAttribute('value', 'credito')
 
-    const metodoVisual = page.locator('[role="radio"][aria-checked="true"]').locator('[aria-hidden="true"]').first()
-    const atalhoNumero = await metodoVisual.textContent()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('3')
   })
 
@@ -80,15 +79,15 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
 
     await page.keyboard.press('4')
 
-    const botaoDebito = page.getByRole('radio', { name: /Débito|借记|借記|Debit/i }).first()
-    await expect(botaoDebito).toHaveAttribute('aria-checked', 'true')
+    const metodoAtivo = page.locator('[role="radio"][aria-checked="true"]').first()
+    await expect(metodoAtivo).toHaveAttribute('value', 'debito')
 
-    const metodoVisual = page.locator('[role="radio"][aria-checked="true"]').locator('[aria-hidden="true"]').first()
-    const atalhoNumero = await metodoVisual.textContent()
+    const atalhoDisplay = metodoAtivo.locator('[aria-hidden="true"]').first()
+    const atalhoNumero = await atalhoDisplay.textContent()
     expect(atalhoNumero?.trim()).toBe('4')
   })
 
-  test('método visual selecionado corresponde ao valor preenchido na primeira parcela', async ({ page }) => {
+  test('método visual selecionado corresponde ao valor da forma na primeira parcela', async ({ page }) => {
     await setupPagamento(page)
 
     await page.keyboard.press('2')
@@ -96,9 +95,6 @@ test.describe('Caixa — atalhos de teclado para método de pagamento', () => {
     const total = await readTotalLiquidoFooter(page)
     const inputValor = page.locator('input[type="number"]').first()
     await inputValor.fill(String(total))
-
-    const botaoPix = page.getByRole('radio', { name: /PIX|Pix/i }).first()
-    await expect(botaoPix).toHaveAttribute('aria-checked', 'true')
 
     const metodoNoRadio = page.locator('[role="radio"][aria-checked="true"]').first()
     const valor = await metodoNoRadio.getAttribute('value')
