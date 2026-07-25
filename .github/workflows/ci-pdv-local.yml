@@ -1,9 +1,15 @@
 # CI do app desktop em pdv-local (testes unitários front + build Vite).
+#
+# `rust-tauri-checks` roda em windows-latest (multiplicador 2x de minutos) e
+# levava 8min06s medidos = ~17 min faturados por execução. O desktop está fora
+# do escopo D0 (Jinlong/02_ESTADO_ATUAL.md), então validá-lo em todo PR é o pior
+# custo/benefício do pipeline. Passou a rodar semanalmente, sob demanda
+# (workflow_dispatch) ou em PR que receba a label `run-tauri`.
 name: CI pdv-local
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'pdv-local/**'
       - 'package.json'
@@ -11,16 +17,23 @@ on:
       - 'turbo.json'
       - '.github/workflows/ci-pdv-local.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'pdv-local/**'
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
       - '.github/workflows/ci-pdv-local.yml'
+  schedule:
+    # Segunda-feira, 06:00 UTC — cobertura semanal do toolchain Rust/Tauri.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 jobs:
   build-and-test:
+    # Não roda no agendamento semanal: lá o alvo é só o toolchain Rust.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     steps:
@@ -43,6 +56,13 @@ jobs:
         run: npm run test:coverage -w pdv-local
 
   rust-tauri-checks:
+    # windows-latest custa 2x. Só no cron semanal, sob demanda, ou em PR
+    # explicitamente marcado com a label `run-tauri`.
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'run-tauri'))
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
