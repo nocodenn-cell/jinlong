@@ -30,7 +30,10 @@ Scripts úteis: `smoke:http`, `test:e2e:critical`, `test:e2e:post-deploy-smoke`,
 - `.github/workflows/ci-backend-supabase.yml`
 - `.github/workflows/e2e-playwright-only.yml`
 - `.github/workflows/secret-scan.yml`
-- `.github/workflows/fiscal-cron.yml`
+- `.github/workflows/release-validate.yml` (SSRA, dispara em `deployment_status`)
+
+O disparo do worker fiscal **não** vive no CI: é `pg_cron` no Supabase
+(job `fiscal-worker-every-minute` → `internal.fiscal_worker_invoke()`).
 
 Use `gh run list` / `gh run view <id> --log-failed` para diagnosticar.
 
