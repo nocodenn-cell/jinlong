@@ -169,6 +169,19 @@ A lógica de BL-2 (migrations 273/274) está **correta e validada** — todos os
 
 ---
 
+## Adendo (2026-07-25) — Confirmação de aplicação da migration 276
+
+Migration **276** (`hardening_tipo_preco_remove_promocao_residual`) — não coberta pelo escopo original deste relatório (§1) — foi confirmada como **aplicada** neste mesmo ambiente (`kbabmewnahysfvlybiak`), fechando a ressalva registrada na auditoria de separação dos PRs #233/#234.
+
+**Evidência objetiva**:
+- Presente em `supabase_migrations.schema_migrations`: `version = 20260725095949`, `name = 276_hardening_tipo_preco_remove_promocao_residual`.
+- **Timestamp**: 2026-07-25 09:59:49 UTC (derivado da própria version string).
+- **Efeito real confirmado** (não apenas registro): `pg_get_constraintdef` de `itens_venda_tipo_preco_check` retorna `CHECK (tipo_preco = ANY (ARRAY['VAREJO'::text, 'ATACADO'::text, 'MANUAL'::text]))` — sem `'PROMOCAO'`, exatamente o efeito pretendido pela migration.
+
+Com isso, as 4 migrations do BL-2 (273, 274, 275, 276) estão confirmadas como aplicadas e com efeito verificado neste ambiente.
+
+---
+
 **Data**: 2026-07-25
 **Autor**: Claude (claude-sonnet-5)
 **Próxima ação**: aguardando decisão de go/no-go para produção
