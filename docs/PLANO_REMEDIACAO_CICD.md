@@ -4,6 +4,19 @@
 **Natureza:** investigação e planejamento. **Nenhuma alteração de código, workflow, schema ou configuração foi executada. Nenhum commit, nenhum PR.**
 **Base:** `docs/AUDITORIA_CICD_DEPLOY_TRAVADO.md` (auditoria anterior) + investigação nova desta rodada.
 
+> ## ⚠️ DOCUMENTO PARCIALMENTE SUPERADO
+>
+> **Canônico desta frente: [`docs/CICD_FINAL_STATE.md`](./CICD_FINAL_STATE.md).** Em qualquer divergência, ele prevalece.
+>
+> Este plano permanece útil por dois motivos: guarda o **backlog vivo de desenvolvimento** (P0-3 migration `092`, P0-4 overload sem authz, P1-5 reaper) e registra o raciocínio que levou às decisões. Duas passagens dele foram **refutadas por evidência posterior** e não devem ser usadas:
+>
+> | Passagem | Correção |
+> |---|---|
+> | §2.4/§2.5 — *"remover o job `deploy` perde release tracking e sourcemaps no Sentry; precisa de substituto"* | **Falso.** `next.config.js` usa `withSentryConfig` (`@sentry/nextjs` 10.x), que sobe sourcemaps e cria release no próprio `next build`, inclusive o da Vercel. E o job era 100% `skipped`, logo não enviava nada. Ver `REMEDIACAO_ETAPA1_VALIDACAO.md` §2.3 |
+> | §2.2 — `EXPECTED_VERCEL_PROJECT_ID` listado como vantagem do job `deploy` | Obsoleto: o step que a variable protegia não existe mais. Pendência G5 |
+> | §4.9/P2-1 — *"migrar o disparo fiscal para `pg_cron`"* | **Já estava feito** antes desta frente: job `fiscal-worker-every-minute` ativo desde 20/05. A causa real da inatividade é o **Vault vazio**. Ver `REMEDIACAO_FASE_B_FISCAL.md` |
+
+
 ---
 
 ## 0. Sumário executivo
