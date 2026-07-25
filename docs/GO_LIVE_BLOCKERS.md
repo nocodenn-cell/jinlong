@@ -23,6 +23,8 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 
 > **Ordem obrigatória do fiscal:** D-1 → D-2 → D-3 → B-6 → B-5. Inverter causa dano irreversível (documento fiscal emitido com chave inválida).
 
+> **Nota de fechamento (2026-07-25) — merge dos PRs #233 (BL-2) e #234 (CI/CD):** ambos mergeados em `main` via `rebase merge` (25 commits preservados individualmente, auditoria de checksum confirmando zero divergência de migrations/workflows/docs canônicos em relação ao histórico pré-split). **B-1 permanece ativo, sem qualquer evidência de regressão causada por este merge** — os checks falharam no mesmo padrão (`runner_id: 0`, 2-4s, sem log) antes e depois, em ambos os PRs. Confirmação de aplicação da migration 276 em staging (ressalva pendente da auditoria de separação) registrada em `docs/BL2_RELATORIO_STAGING.md` (Adendo).
+
 ---
 
 ## 2. Pendências que **não** bloqueiam Go-Live
