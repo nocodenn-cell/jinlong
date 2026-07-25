@@ -13,17 +13,12 @@
 # - Forks: o gate de secrets não exige SYNC_* no PR de fork (head.repo != github.repository); o passo de diagnóstico só roda se os secrets existirem no repo base (geralmente não expostos a forks).
 name: CI backend Supabase
 
+# Gate de merge: roda em pull_request, que já testa o resultado do merge.
+# Sem push para `main` — seria revalidar o mesmo código. workflow_dispatch
+# permanece para execução sob demanda.
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'backend/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
-      - '.github/workflows/ci-backend-supabase.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'backend/**'
       - 'package.json'
