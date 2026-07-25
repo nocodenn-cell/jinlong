@@ -1,13 +1,10 @@
-# CI pdv-importados — SSRA: release authority = Vercel Deployment ID (validate-production).
-# E2E = sistema de risco, não sistema de decisão (e2e-critical não bloqueia deploy).
+# CI pdv-importados — apenas verificação. NÃO faz deploy.
+# Deploy de produção: integração nativa da Vercel (GitHub App), acionada por push.
+# Gate SSRA: .github/workflows/release-validate.yml (dispara em deployment_status).
+# E2E = sistema de risco, não sistema de decisão (e2e-critical não bloqueia nada).
 # Produção canônica: https://pdv-importados.vercel.app (projeto Vercel pdv-importados).
-# Secrets: CI_NEXT_PUBLIC_*, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID,
-#   SENTRY_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
-# Variable opcional: EXPECTED_VERCEL_PROJECT_ID (fail-fast se secret divergir).
+# Secrets: CI_NEXT_PUBLIC_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
 name: CI pdv-importados
-
-env:
-  PRODUCTION_HOST: pdv-importados.vercel.app
 
 on:
   push:
@@ -18,7 +15,6 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
-      - 'scripts/validate-production.mjs'
       - '.github/workflows/ci-pdv-importados.yml'
   pull_request:
     branches: [main, develop]
@@ -28,7 +24,6 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'turbo.json'
-      - 'scripts/validate-production.mjs'
       - '.github/workflows/ci-pdv-importados.yml'
 
 jobs:
@@ -149,95 +144,16 @@ jobs:
           AUTO_ENQUEUE_FISCAL_ON_SALE: 'true'
         run: npm run test:e2e:critical -w pdv-importados
 
-  deploy:
-    needs: [build-and-test]
-    if: github.ref == 'refs/heads/main' && needs.build-and-test.result == 'success'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install (workspaces na raiz)
-        run: npm ci
-
-      - name: Verificar VERCEL_PROJECT_ID (fail-fast)
-        env:
-          EXPECTED: ${{ vars.EXPECTED_VERCEL_PROJECT_ID }}
-          ACTUAL: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          if [ -n "${EXPECTED:-}" ] && [ "${EXPECTED}" != "${ACTUAL}" ]; then
-            echo "::error::VERCEL_PROJECT_ID não corresponde a EXPECTED_VERCEL_PROJECT_ID (projeto pdv-importados)."
-            exit 1
-          fi
-
-      - name: Build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_RELEASE: ${{ github.sha }}
-        run: |
-          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
-            echo "::error::Defina o secret CI_NEXT_PUBLIC_SUPABASE_URL em Settings → Secrets and variables → Actions."
-            exit 1
-          fi
-          npx turbo run build --filter=pdv-importados
-
-      - name: Upload sourcemaps to Sentry
-        uses: getsentry/action-sourcemaps@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        with:
-          release: ${{ github.sha }}
-          sourcemap-paths: pdv-importados/.next/static/chunks
-
-      - name: Deploy to Vercel (production)
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: pdv-importados
-          vercel-args: '--prod'
-
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        with:
-          environment: production
-          version: ${{ github.sha }}
-
-  validate-production:
-    name: validate-production (SSRA)
-    needs: deploy
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '20'
-
-      - name: SSRA — platform deploymentId === /api/health
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
-          PRODUCTION_HOST: ${{ env.PRODUCTION_HOST }}
-        run: node scripts/validate-production.mjs
+  # Deploy de produção: responsabilidade exclusiva da integração nativa da Vercel
+  # (GitHub App). O job `deploy` com amondnet/vercel-action foi removido — ver
+  # docs/REMEDIACAO_ETAPA1_VALIDACAO.md §2 e docs/PLANO_REMEDIACAO_CICD.md §2.
+  # Sourcemaps e release do Sentry continuam sendo enviados pelo próprio
+  # `next build` via withSentryConfig (pdv-importados/next.config.js), inclusive
+  # no build da Vercel.
+  #
+  # O gate SSRA saiu daqui para .github/workflows/release-validate.yml, que
+  # dispara em `deployment_status` e portanto valida o deploy real,
+  # independentemente de qual mecanismo o produziu.
 
   e2e-playwright:
     needs: build-and-test
