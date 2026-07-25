@@ -1,0 +1,36 @@
+# SSRA — Single Source Release Authority.
+#
+# Autoridade de release = Deployment ID que a Vercel associa ao host de produção.
+# O gate compara plataforma ↔ runtime (`/api/health`), nunca Git ↔ runtime.
+# Ver docs/SSRA_RELEASE.md.
+#
+# Dispara em `deployment_status` em vez de depender de um job de deploy: assim
+# valida o deploy real seja qual for o mecanismo que o produziu (hoje, a
+# integração nativa da Vercel), e roda depois que a plataforma já declarou
+# `success`, sem corrida com a promoção do alias.
+name: Release validate (SSRA)
+
+on:
+  deployment_status:
+
+jobs:
+  ssra:
+    name: validate-production (SSRA)
+    # Só para deploy de produção que terminou com sucesso.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: SSRA — platform deploymentId === /api/health
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+          PRODUCTION_HOST: pdv-importados.vercel.app
+        run: node scripts/validate-production.mjs
