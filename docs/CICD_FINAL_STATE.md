@@ -45,7 +45,7 @@ PR ──► CI (gate de merge) ──► merge em main
 
 **Mecanismo único automatizado.** Nenhum workflow deploya. `VERCEL_PROJECT_ID` não é mais consumido por nenhum workflow; `VERCEL_TOKEN` e `VERCEL_ORG_ID` sobrevivem apenas para **leitura** na API da Vercel pelo SSRA.
 
-> **Ressalva (auditoria de encerramento, 2026-07-25):** existe um caminho de **deploy manual local** — `scripts/deploy-gates-v2.ps1` executa `npx vercel deploy --prod` quando `-Environment prod`. Não é chamado por nenhum workflow nem por script de `package.json`; é ferramenta de operador. Portanto **não** gera deploy duplicado automático, mas é um segundo caminho capaz de promover produção fora do fluxo canônico. Registrado como pendência D1 em `docs/GO_LIVE_BLOCKERS.md`.
+> **Ressalva (auditoria de encerramento, 2026-07-25):** existe um caminho de **deploy manual local** — `scripts/deploy-gates-v2.ps1` executa `npx vercel deploy --prod` quando `-Environment prod`. Não é chamado por nenhum workflow nem por script de `package.json`; é ferramenta de operador. Portanto **não** gera deploy duplicado automático, mas é um segundo caminho capaz de promover produção fora do fluxo canônico. A documentação inline do script foi sincronizada com esta arquitetura no fechamento da frente; sua guarda de projeto Vercel permanece ativa e é a única proteção desse caminho. Registro permanente em `docs/GO_LIVE_BLOCKERS.md` §3.
 
 Sourcemaps e release do Sentry são enviados pelo próprio `next build` via `withSentryConfig` (`pdv-importados/next.config.js`), inclusive no build da Vercel — **não** dependem do CI.
 
