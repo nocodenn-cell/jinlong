@@ -118,7 +118,28 @@ SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'itens_venda
 
 **Risco residual**: enquanto o CHECK permitir `'PROMOCAO'`, qualquer código futuro (ou os 4 arquivos TypeScript com o literal morto) que venha a enviar esse valor seria **aceito silenciosamente pelo banco**, sem passar pela lógica de revalidação de preço que a migration 272/274 aplica ao ramo `IN ('MANUAL', ...)` — isso reabriria, na prática, exatamente o risco de SSOT que a decisão arquitetural de BL-2 fechou deliberadamente.
 
-**Recomendação**: criar uma migration de *hardening* que restrinja o CHECK de volta a `('VAREJO', 'ATACADO', 'MANUAL')`, fechando definitivamente essa porta residual, e remover os literais mortos `'PROMOCAO'` do TypeScript (já recomendado em `BL2_MODELO_FINAL_APROVADO.md` §6.3). **Não executada nesta auditoria** — é uma mudança de schema, fora do escopo de "auditar", e deve passar pelo mesmo fluxo de aprovação já usado para 273/274/275.
+**Recomendação**: criar uma migration de *hardening* que restrinja o CHECK de volta a `('VAREJO', 'ATACADO', 'MANUAL')`, fechando definitivamente essa porta residual, e remover os literais mortos `'PROMOCAO'` do TypeScript (já recomendado em `BL2_MODELO_FINAL_APROVADO.md` §6.3).
+
+### ✅ 2.3.1 — Resolvido (Migration 276, 2026-07-25)
+
+Aprovado e aplicado após esta auditoria. Investigação adicional antes de aplicar confirmou:
+- **0 linhas** em `itens_venda` usam `'PROMOCAO'` (56 linhas totais, todas `'VAREJO'`) — fechamento não invalida nenhum dado existente.
+- `shared-core/src/caixa/mapRegrasPreco.ts` (único ponto que converte `regras_preco` real para o tipo consumido por `PricingService`) **nunca produz** `tipo:'PROMOCAO'` — mapeia só para `VAREJO`/`ATACADO`. O caminho que produziria esse valor a partir de dado real está morto, inclusive no PDV local.
+- **Achado adicional que reforçou a urgência**: as RPCs legadas `finalizar_venda_transacional_canonica_v2`/`v3` ainda têm `EXECUTE` concedido a `anon`/`authenticated`/`PUBLIC` e tratam `tipo_preco IN ('MANUAL','PROMOCAO')` com a mesma validação frouxa (bypassa revalidação de preço) — um bypass real e hoje tecnicamente alcançável, não apenas teórico.
+
+Migration `276_hardening_tipo_preco_remove_promocao_residual.sql` aplicada e validada:
+```sql
+-- Dry-run (BEGIN...ROLLBACK) confirmou execução sem erro antes de aplicar de verdade.
+ALTER TABLE public.itens_venda DROP CONSTRAINT itens_venda_tipo_preco_check;
+ALTER TABLE public.itens_venda ADD CONSTRAINT itens_venda_tipo_preco_check
+  CHECK (tipo_preco = ANY (ARRAY['VAREJO'::text, 'ATACADO'::text, 'MANUAL'::text]));
+```
+
+**Validação pós-aplicação**:
+1. Venda real com promoção via BL-2 (`regra_aplicada_id`) — `CONCLUIDA` normalmente, sem regressão.
+2. `INSERT` direto com `tipo_preco='PROMOCAO'` (preço sem desconto, isolando do trigger de limite manual) — rejeitado com `violates check constraint "itens_venda_tipo_preco_check"`, confirmando a defesa na camada de tabela, independente de qual RPC tente escrever.
+
+**Status atualizado**: 🔴 Alta → ✅ **Fechado**. Item removido da lista de ressalvas em §7.
 
 ---
 
@@ -218,7 +239,7 @@ A única ferramenta de backup/restore disponível neste ambiente de execução �
 | # | Achado | Severidade | Bloqueia BL-2? |
 |---|--------|-----------|-----------------|
 | 1 | Tabela de tracking de migrations incompleta (36 vs. 220) | 🟡 Média (processo) | Não — mas exige inspeção direta em vez de confiar na lista |
-| 2 | `itens_venda.tipo_preco` já permite `'PROMOCAO'` no CHECK, sem migration correspondente | 🔴 Alta (segurança/SSOT residual) | Não bloqueia (BL-2 não usa esse valor), mas deve ser fechado |
+| 2 | `itens_venda.tipo_preco` já permite `'PROMOCAO'` no CHECK, sem migration correspondente | ✅ Fechado (migration 276, ver §2.3.1) | Não |
 | 3 | `system_alerts`/migration 236 totalmente ausente | 🟡 Média (observabilidade) | Não |
 | 4 | `venda_finance_context`/migration 252 totalmente ausente | 🟡 Média (observabilidade financeira) | Não |
 | 5 | Objetos órfãos sem migration: `perfis`, `venda_engine_shadow_runs`, `baixar_estoque_venda`, `caixa_integridade_gate_check`, `listar_valores_sistema_dinheiro_caixas`, `shadow_validar_venda_engine_v4` | 🟢 Baixa (higiene) | Não |
@@ -240,7 +261,7 @@ A única ferramenta de backup/restore disponível neste ambiente de execução �
 - O plano de rollback de BL-2 foi validado com evidência real (dry-run transacional).
 
 **Ressalvas antes de produção**:
-- [ ] Fechar o achado #2 (CHECK de `tipo_preco` residual permitindo `'PROMOCAO'`) — recomendado como próxima migration de hardening.
+- [x] ~~Fechar o achado #2 (CHECK de `tipo_preco` residual permitindo `'PROMOCAO'`)~~ — **Resolvido**: migration 276 aplicada e validada em 2026-07-25 (§2.3.1).
 - [ ] Decidir sobre `system_alerts`/236 e `venda_finance_context`/252: aplicar neste ambiente ou aceitar formalmente a ausência.
 - [ ] Investigar objetos órfãos (`venda_engine_shadow_runs` e função associada) — confirmar com a equipe se é experimento ativo ou resíduo a remover.
 - [ ] Auditoria dedicada ao módulo fiscal (achado #6), fora do escopo desta rodada.
