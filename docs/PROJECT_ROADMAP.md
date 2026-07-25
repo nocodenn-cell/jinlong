@@ -158,14 +158,12 @@ claude/design-system-audit-9m8s0z (fc4009e1)
 
 ## Bloqueadores Conhecidos
 
-### GitHub Actions CI (Não bloqueador)
+### GitHub Actions CI — investigação encerrada
 
-- **Problema:** Falhas de infraestrutura (runner allocation)
-- **Padrão:** `build-and-test` e `gitleaks` falham em ~2 segundos
-- **Causa suspeita:** Billing/minute exhaustion em private repo
-- **Impacto:** CI gates bypassadas, mas Vercel deployments bem-sucedidos
-- **Status:** ⏳ Requer investigação em Settings > Billing > Actions
-- **Ação:** Ignorar por enquanto, código está validado por Vercel
+- **Status:** ✅ **Frente CI/CD concluída em 2026-07-25.** Ver `docs/CICD_FINAL_STATE.md` (documento canônico).
+- **Causa confirmada:** esgotamento de billing/spending limit. `runner_id: 0` e `runner_name` vazio em 100% dos jobs, sem log baixável. Sem runners desde ~2026-05-11.
+- **Não é mais item de desenvolvimento.** Restou como pendência **[INFRA]** (restaurar limite em Settings → Billing → Actions) e **[GOV]** (required checks `build`/`lint`/`test`/`typecheck` não existem — nunca foram publicados por nada).
+- **Correção da avaliação anterior:** o rótulo "não bloqueador" não se sustenta. Sem CI não há gate entre commit e produção, e `main` deploya sozinha pela integração nativa da Vercel. É **bloqueador de Go-Live**, não de desenvolvimento.
 
 ### PR #202 Merging
 
@@ -261,7 +259,7 @@ Oct 01+:    Onda 6 (remoção de componentes antigos, post-deprecation)
 - [ ] Storybook com todas as variações
 - [ ] Testes unitários + E2E for each component
 - [ ] Vercel deployments green (post-PR #202)
-- [ ] GitHub Actions CI fixed (ou integração alternativa)
+- [x] ~~GitHub Actions CI fixed (ou integração alternativa)~~ → **frente concluída**; pendências migraram para `docs/CICD_FINAL_STATE.md` §4 como itens **[INFRA]**/**[GOV]**/**[OPS]**, fora do backlog técnico
 
 ---
 

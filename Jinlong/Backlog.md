@@ -139,6 +139,11 @@
 - [x] CI: Lint + Vitest + build Next no PR
 - [x] E2E: venda, multi-pagamento, sangria, fechamento, sync gerente
 - [x] SSRA pós-deploy com validação de produção
+- [x] **Frente CI/CD e Deploy — CONCLUÍDA (2026-07-25).** Mecanismo único de deploy (Vercel nativa), SSRA desacoplado em `deployment_status`, `fiscal-cron.yml` e `e2e-playwright-only.yml` removidos, duplicação push+PR eliminada. Canônico: `docs/CICD_FINAL_STATE.md`
+
+> **Pendências desta frente NÃO retornam ao backlog técnico.** São **[INFRA]** (billing de Actions), **[GOV]** (required checks e bypass) e **[OPS]** (Vault fiscal, alias de produção da Vercel, env vars do Sentry) — ações de console, sem código. Ver `docs/CICD_FINAL_STATE.md` §5.
+>
+> Permanecem como desenvolvimento apenas: migration `092`, remoção do overload `fiscal_reprocessar_documento(uuid,text)` e reaper de `EM_PROCESSAMENTO` — rastreados em `docs/PLANO_REMEDIACAO_CICD.md`.
 - [x] Acessibilidade ARIA Fase 3.1 (FormField, landmarks, sr-only, skip-link)
 - [x] i18n PT/ZH manual sem next-intl
 
