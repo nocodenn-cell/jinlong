@@ -21,7 +21,7 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 ¹ Não bloqueia escrever código, mas bloqueia **validar** qualquer coisa em runtime.
 ² Bloqueia o Go-Live **do módulo fiscal**. O núcleo PDV pode operar sem emissão fiscal, se essa for a decisão de produto.
 
-> **Ordem obrigatória do fiscal:** D-2 → D-3 → D-4 → B-6 → B-5. Inverter causa dano irreversível (documento fiscal emitido com chave inválida).
+> **Ordem obrigatória do fiscal:** D-1 → D-2 → D-3 → B-6 → B-5. Inverter causa dano irreversível (documento fiscal emitido com chave inválida).
 
 ---
 
@@ -44,12 +44,15 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 
 | # | Classe | Pendência | Bloqueia Go-Live | Bloqueia dev | Responsável | Onde se resolve |
 |---|---|---|:---:|:---:|---|---|
-| **D-1** | DEV | **Caminho de deploy manual fora do fluxo canônico.** `scripts/deploy-gates-v2.ps1` executa `npx vercel deploy --prod` quando `-Environment prod`. Não é chamado por workflow nem por `package.json` — é ferramenta de operador, então **não** gera deploy duplicado automático. Mas o comentário interno ainda cita *"espelha o step 'Verificar VERCEL_PROJECT_ID' do CI"*, step que foi removido | Não | Não | Dev | Código (`scripts/deploy-gates-v2.ps1`) |
-| **D-2** | DEV | Overload `fiscal_reprocessar_documento(uuid, text)` **sem verificação de perfil**, com `GRANT EXECUTE` a `authenticated`, referenciando 5 colunas inexistentes. Hoje falha fechada (erro de parse), mas é escalada latente | **Sim**² | Não | Dev | Supabase (migration) |
-| **D-3** | DEV | Migration `092` (máquina de estados fiscal) **não aplicada**: colunas `ultima_transicao_em`/`transicao_origem` e triggers `tr_documentos_fiscais_estado_bi/bu` ausentes. Sem ela, `EMITIDO → PENDENTE` é aceita — reemissão de documento autorizado | **Sim**² | Não | Dev | Supabase (migration) |
-| **D-4** | DEV | Sem *reaper* de `EM_PROCESSAMENTO`, sem limite de tentativas, sem movimentação automática para DLQ. Worker que morra após o claim deixa documento órfão que nem o retry nem o reprocesso manual resgatam | **Sim**² | Não | Dev | Supabase (migration) |
-| **D-5** | DEV | **`build-and-test` provavelmente vermelho** ao voltar: em 11/05, último run com runner real, falhou em *"Lint, typecheck e unit tests"*. Falha real, anterior ao apagão, nunca corrigida | Não³ | Não | Dev | Código (`pdv-importados/`) |
-| **D-6** | DEV | SSRA valida **coerência**, não **atualidade** — não detecta B-4. Evolução proposta: comparar também `deployment.meta.githubCommitSha` com o SHA liberado | Não | Não | Dev | Código (`scripts/validate-production.mjs`) |
+| **D-1** | DEV | Overload `fiscal_reprocessar_documento(uuid, text)` **sem verificação de perfil**, com `GRANT EXECUTE` a `authenticated`, referenciando 5 colunas inexistentes. Hoje falha fechada (erro de parse), mas é escalada latente | **Sim**² | Não | Dev | Supabase (migration) |
+| **D-2** | DEV | Migration `092` (máquina de estados fiscal) **não aplicada**: colunas `ultima_transicao_em`/`transicao_origem` e triggers `tr_documentos_fiscais_estado_bi/bu` ausentes. Sem ela, `EMITIDO → PENDENTE` é aceita — reemissão de documento autorizado | **Sim**² | Não | Dev | Supabase (migration) |
+| **D-3** | DEV | Sem *reaper* de `EM_PROCESSAMENTO`, sem limite de tentativas, sem movimentação automática para DLQ. Worker que morra após o claim deixa documento órfão que nem o retry nem o reprocesso manual resgatam | **Sim**² | Não | Dev | Supabase (migration) |
+| **D-4** | DEV | **`build-and-test` provavelmente vermelho** ao voltar: em 11/05, último run com runner real, falhou em *"Lint, typecheck e unit tests"*. Falha real, anterior ao apagão, nunca corrigida | Não³ | Não | Dev | Código (`pdv-importados/`) |
+| **D-5** | DEV | SSRA valida **coerência**, não **atualidade** — não detecta B-4. Evolução proposta: comparar também `deployment.meta.githubCommitSha` com o SHA liberado | Não | Não | Dev | Código (`scripts/validate-production.mjs`) |
+
+> **Resolvido em 2026-07-25 (commit de fechamento):** o antigo **D-1** — comentário obsoleto em `scripts/deploy-gates-v2.ps1` citando o step de CI `EXPECTED_VERCEL_PROJECT_ID`, removido na Fase A — foi corrigido. Só comentários mudaram; o comportamento do script é idêntico. Com isso, **a dívida técnica originada pela remediação CI/CD é zero**: os itens DEV restantes (D-1 a D-5) são anteriores a esta frente, que apenas os descobriu.
+>
+> Registro permanente: `scripts/deploy-gates-v2.ps1` continua sendo um caminho de deploy **manual** (`npx vercel deploy --prod` com `-Environment prod`). Não é chamado por workflow nem por `package.json`, logo não gera deploy duplicado automático — mas é o único caminho fora do fluxo canônico da Vercel, e sua guarda de projeto é a única proteção que resta ali.
 
 ³ Não bloqueia o Go-Live por si, mas bloqueia a **aprovação de B-2**: não faz sentido tornar `build-and-test` um required check enquanto ele estiver vermelho.
 
@@ -62,8 +65,8 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 | **INFRA** | 1 (B-1) | 1 (P-6) | 2 |
 | **GOV** | 2 (B-2, B-3) | 1 (P-1) | 3 |
 | **OPS** | 3 (B-4, B-5, B-6) | 4 (P-2…P-5) | 7 |
-| **DEV** | 3 (D-2, D-3, D-4 — fiscal) | 3 (D-1, D-5, D-6) | 6 |
-| **Total** | **9** | **9** | **18** |
+| **DEV** | 3 (D-1, D-2, D-3 — fiscal) | 2 (D-4, D-5) | 5 |
+| **Total** | **9** | **8** | **17** |
 
 **Nenhuma pendência bloqueia o desenvolvimento.** B-1 impede *validar*, não *escrever*.
 
@@ -76,7 +79,7 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 ```
 B-4  restaurar produção        ← único que afeta o cliente agora
 B-1  restaurar runners         ← desbloqueia validação
-D-5  corrigir build-and-test   ← pré-requisito de B-2
+D-4  corrigir build-and-test   ← pré-requisito de B-2
 B-2  corrigir required checks
 B-3  esvaziar bypass
 ```
@@ -84,5 +87,5 @@ B-3  esvaziar bypass
 **Módulo fiscal (adicional):**
 
 ```
-D-2 → D-3 → D-4 → B-6 → B-5     ← ordem obrigatória, não inverter
+D-1 → D-2 → D-3 → B-6 → B-5     ← ordem obrigatória, não inverter
 ```

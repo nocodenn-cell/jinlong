@@ -302,10 +302,21 @@ if ($SkipWebDeploy) {
     try {
         Set-Location pdv-importados
 
-        # Guarda fail-fast (espelha o step "Verificar VERCEL_PROJECT_ID" do CI):
-        # produção só pode deployar no projeto Vercel canônico pdv-importados.
-        # Evita que um link Vercel local errado (ex.: fastproduct-pdv-importados)
-        # promova um deploy para o projeto errado.
+        # Guarda fail-fast local: produção só pode deployar no projeto Vercel
+        # canônico pdv-importados. Evita que um link Vercel local errado
+        # (ex.: fastproduct-pdv-importados) promova um deploy para o projeto errado.
+        #
+        # NOTA (2026-07-25): este script é uma ferramenta MANUAL de operador; não é
+        # chamado por nenhum workflow nem por package.json. O caminho canônico de
+        # deploy de produção é a integração nativa da Vercel (GitHub App) — o CI não
+        # deploya mais, e o antigo step de CI que validava VERCEL_PROJECT_ID foi
+        # removido junto com o job `deploy`. Portanto esta guarda não "espelha" nada
+        # do CI: é a única proteção existente neste caminho manual, e por isso
+        # permanece. Ver docs/CICD_FINAL_STATE.md.
+        #
+        # A variável de ambiente EXPECTED_VERCEL_PROJECT_ID continua sendo aceita
+        # como override local. A variable homônima no GitHub está obsoleta (pendência
+        # P-5 em docs/GO_LIVE_BLOCKERS.md) e não alimenta mais nada — não confundir.
         if ($Environment -eq "prod") {
             $expectedProjectId = if ($env:EXPECTED_VERCEL_PROJECT_ID) {
                 $env:EXPECTED_VERCEL_PROJECT_ID
