@@ -464,7 +464,7 @@ preview
 |---|---|---|---|---|---|
 | **P2-1** | `fiscal-cron` no Actions (288 runs/dia) acopla operação fiscal ao billing de CI | `fiscal-cron.yml:5` | 🟡 Reincidência do incidente | **M** (pg_cron + pg_net) | P0-2 |
 | **P2-2** | 6 workflows com redundância; 3 caminhos de Playwright | §1.1 | 🟡 Custo e manutenção | **M** | P1-3, P1-4 |
-| **P2-3** | `/vercel.json` da raiz é config morta | `regions: gru1` só existe em `pdv-importados/vercel.json` | 🟡 Documentação enganosa | **S** | Confirmar Root Directory |
+| **P2-3** | `/vercel.json` da raiz é config morta | `rootDirectory: "pdv-importados"` no payload do `vercel[bot]` (PR #233, 25/07) — **confirmado**; `regions: gru1` só existe em `pdv-importados/vercel.json` | 🟡 Documentação enganosa | **S** | — (dependência de confirmação **resolvida**) |
 | **P2-4** | 4 aliases de produção sem host canônico declarado | `alias[]` do `dpl_7DPH…`; `domains` do projeto | 🟡 Ambiguidade de "o que é produção" | **S** | P0-1 |
 | **P2-5** | `amondnet/vercel-action@v25` em tag móvel | `ci-pdv-importados.yml:205` | 🟡 Supply chain | **S** | Some com P1-1 |
 | **P2-6** | Emissão fiscal desligada ponta a ponta (`AUTO_ENQUEUE=false`, provider `mock`) | `caixaSalesRuntimeConfig.ts:21`; `index.ts:36`; 2 docs / 56 vendas | 🟡 Decisão de produto, não bug — mas o go-live fiscal depende disso | **L** | P0-2..4, P1-5 |
@@ -522,7 +522,7 @@ FASE 5 — Consolidação (semana 2)
 |---|---|---|
 | Branch Protection / rulesets / environments / webhooks | ❌ Não legíveis (proxy + 403) | §5 é recomendação, não diff. Confirmar com print de Settings |
 | Causa do pin de `pdv-importados.vercel.app` | ❌ Não determinada | P0-1 exige investigação no dashboard antes da correção |
-| Root Directory do projeto Vercel | ⚠️ Inferido (`regions`, `outputDirectory`) | P2-3 exige confirmação antes de remover o arquivo |
+| Root Directory do projeto Vercel | ✅ **Confirmado** = `pdv-importados` (payload do `vercel[bot]`, PR #233, 25/07) | P2-3 liberado — não exige mais verificação manual |
 | Distribuição real de minutos de Actions | ❌ Sem acesso a billing | Priorização do §1 é por natureza do workload, não por fatura |
 | Logs da Edge Function `fiscal-worker` | ⚠️ Janela curta, retornou vazio | Conclusão de N3 apoia-se em código + estado do banco, que são suficientes |
 | Ambiente auditado | `kbabmewnahysfvlybiak` | O mesmo confirmado pelo usuário como alvo; se houver outro ambiente de produção, os números do §4 mudam |

@@ -15,7 +15,7 @@ A hipótese levantada no pedido — *"Required Check depende de workflow que nã
 | A | **GitHub Actions não consegue alocar runner nenhum** (qualquer SO). 100% dos jobs morrem em 2–4s com `runner_id: 0`, sem log. Ativo **hoje**. | 🟢 **Muito alta** (evidência direta e reprodutível) |
 | B | **O deploy de produção via GitHub Actions nunca executa** — o job `deploy` (`amondnet/vercel-action --prod`) depende de `build-and-test`, que sempre falha. Consequência: o gate `validate-production (SSRA)` **também nunca executa**. | 🟢 **Muito alta** |
 | C | **A Vercel deploya normalmente** — via GitHub App nativa, independente do Actions. Todos os deployments recentes estão `READY`, incluindo o de produção. **Não há deployment travado.** | 🟢 **Muito alta** |
-| D | **`/vercel.json` (raiz) é configuração morta** — a Vercel usa `pdv-importados/vercel.json`. `github.silent` e `github.autoJobCancelation` declarados na raiz **não têm efeito nenhum**. | 🟡 **Alta** (inferência forte, ver §4) |
+| D | **`/vercel.json` (raiz) é configuração morta** — a Vercel usa `pdv-importados/vercel.json`. `github.silent` e `github.autoJobCancelation` declarados na raiz **não têm efeito nenhum**. | 🟢 **Muito alta** — confirmado, ver §4.3 |
 | E | **Armadilha estrutural de Required Check** confirmada: `ci-pdv-importados.yml` tem *path filters*. Em PR que não toca esses caminhos, `build-and-test` / `deploy` / `validate-production (SSRA)` **não produzem check algum** — se qualquer um for Required Check, o PR trava para sempre em *"Expected — Waiting for status to be reported"*. | 🟡 **Alta** (mecanismo comprovado; ativação depende de branch protection, que não pude ler) |
 | F | **`fiscal-cron` nunca executa** desde o início do apagão — o worker fiscal não está sendo drenado por agendamento. | 🟢 **Muito alta** |
 | G | Zero runs em `queued`/`in_progress`. **Nada está "preso" no GitHub Actions** — está falhando rápido, o que é diferente. | 🟢 **Muito alta** |
@@ -160,7 +160,20 @@ Existem **dois** arquivos:
 { "$schema":"https://openapi.vercel.sh/vercel.json", "regions":["gru1"] }
 ```
 
-A Vercel lê o `vercel.json` do **Root Directory** do projeto. Duas evidências de que o Root Directory é `pdv-importados`:
+A Vercel lê o `vercel.json` do **Root Directory** do projeto.
+
+**Confirmação direta (2026-07-25):** o comentário automático do `vercel[bot]` no PR #233 carrega um payload base64 que, decodificado, declara explicitamente a configuração do projeto:
+
+```json
+{ "isMonorepo": true, "type": "github",
+  "projects": [{ "name": "pdv-importados",
+                 "projectId": "prj_UPGWQN4TmzDQRYm5IB80a8ZxOslO",
+                 "rootDirectory": "pdv-importados" }] }
+```
+
+`rootDirectory: "pdv-importados"` — não é mais inferência. Isso encerra a questão: **o `/vercel.json` da raiz nunca é lido pela Vercel.**
+
+As duas evidências indiretas originais, que já apontavam nessa direção:
 
 1. O deployment de produção reporta `regions: ["gru1"]` — declarado **só** em `pdv-importados/vercel.json`.
 2. Se a raiz fosse o Root Directory, `outputDirectory: ".next"` apontaria para `/.next`, que não existe: o `build` da raiz é `turbo run build --filter=pdv-importados`, cuja saída é `pdv-importados/.next`. O build **não falharia silenciosamente — falharia**. Ele passa.
