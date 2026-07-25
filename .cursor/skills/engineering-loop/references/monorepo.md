@@ -28,7 +28,6 @@ Scripts úteis: `smoke:http`, `test:e2e:critical`, `test:e2e:post-deploy-smoke`,
 - `.github/workflows/ci-pdv-importados.yml`
 - `.github/workflows/ci-pdv-local.yml`
 - `.github/workflows/ci-backend-supabase.yml`
-- `.github/workflows/e2e-playwright-only.yml`
 - `.github/workflows/secret-scan.yml`
 - `.github/workflows/release-validate.yml` (SSRA, dispara em `deployment_status`)
 
