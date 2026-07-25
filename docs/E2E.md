@@ -143,9 +143,11 @@ Opcionais: `PLAYWRIGHT_BASE_URL` (testar contra deploy em vez de subir `next dev
 
 O job **Playwright suíte completa** (`npm run test:e2e`) continua **opcional**: variável de repositório **`ENABLE_PLAYWRIGHT_E2E`** = `true` e os mesmos secrets acima. No CI o Playwright sobe o Next com **`PLAYWRIGHT_E2E_WITH_DEV=1`** (ver `playwright.config.ts`), salvo se **`PLAYWRIGHT_BASE_URL`** estiver definido.
 
-### Workflow só E2E (sem lint/build)
+### Workflow só E2E (sem lint/build) — **REMOVIDO em 2026-07-25**
 
-[`.github/workflows/e2e-playwright-only.yml`](../.github/workflows/e2e-playwright-only.yml) executa apenas **`npm run test:e2e:critical`** em **push** na branch **`staging`** ou **`workflow_dispatch`**, com os mesmos secrets obrigatórios da tabela acima (o workflow grava `pdv-importados/.env.local` e `pdv-local/.env` antes do pipeline).
+`.github/workflows/e2e-playwright-only.yml` foi removido (commit `c66fe89`). Justificativa: **0 execuções em todo o histórico** — disparava só em push na branch `staging`, que nunca existiu no repositório, e duplicava o job `e2e-critical` de `ci-pdv-importados.yml`.
+
+Para rodar apenas o E2E crítico, use o job `E2E crítico (sistema de risco)` em [`ci-pdv-importados.yml`](../.github/workflows/ci-pdv-importados.yml), acionável por `workflow_dispatch`.
 
 Se o secret **`PLAYWRIGHT_BASE_URL`** apontar para o deploy de staging (ex.: Vercel preview estável), o job define **`PLAYWRIGHT_E2E_WITH_DEV=0`** e os testes batem na URL remota; caso contrário, sobe **`next dev`** na porta de teste.
 

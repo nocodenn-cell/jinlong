@@ -75,7 +75,7 @@ Legenda: ✅ Implementado · 🟡 Parcial · 🔴 Não iniciado.
 
 | Requisito | Status | Evidência |
 |---|---|---|
-| Fila fiscal + worker (claim, state machine, backoff, DLQ, timeline, correlation id) | ✅ | `035`, `037`, `062`, `065`, `066`, `090`–`093`, `098`, `099`; Edge `fiscal-worker`; cron `20260515000000_fiscal_worker_cron.sql` + `.github/workflows/fiscal-cron.yml` |
+| Fila fiscal + worker (claim, state machine, backoff, DLQ, timeline, correlation id) | ✅ | `035`, `037`, `062`, `065`, `066`, `090`–`093`, `098`, `099`; Edge `fiscal-worker`; cron `20260515000000_fiscal_worker_cron.sql` (pg_cron — **único agendador**; `.github/workflows/fiscal-cron.yml` removido em 2026-07-25). ⚠️ Worker **inativo**: Vault sem `fiscal_worker_url`/`fiscal_worker_key` — ver `docs/REMEDIACAO_FASE_B_FISCAL.md` |
 | Enfileiramento pós-venda (web e pós-sync desktop, por flag) | ✅ | `docs/ROADMAP.md` (“Fiscal — base técnica”); `AUTO_ENQUEUE_FISCAL_ON_SALE`, `069_fiscal_enqueue_service_role_sync_outbox.sql` |
 | Cadastro fiscal de loja/PDV e campos fiscais de produto | ✅ | `209_fiscal_campos_loja_pdvconfig.sql`, `210_fiscal_campos_produto.sql`, `205_force_com_nf.sql` |
 | Painel gerencial da fila fiscal | ✅ | `/gerente/financeiro` + `/gerente/financeiro/documento` (`docs/ROADMAP.md`) |

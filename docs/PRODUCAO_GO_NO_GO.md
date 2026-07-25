@@ -18,7 +18,9 @@ Workflow: [`.github/workflows/ci-pdv-importados.yml`](../.github/workflows/ci-pd
 
 **Autoridade de release:** apenas o Deployment ID da Vercel no host de produção — não comparar `origin/main` nem `github.sha` com runtime. Ver [SSRA_RELEASE.md](./SSRA_RELEASE.md).
 
-Secrets mínimos para deploy + SSRA: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `CI_NEXT_PUBLIC_*`. Opcional: variable `EXPECTED_VERCEL_PROJECT_ID` (fail-fast se secret divergir).
+Secrets mínimos **para o SSRA** (leitura na API da Vercel): `VERCEL_TOKEN`, `VERCEL_ORG_ID`. Para o build no CI: `CI_NEXT_PUBLIC_*`.
+
+> Desde 2026-07-25 o CI **não deploya** — o deploy é da integração nativa da Vercel. `VERCEL_PROJECT_ID` e a variable `EXPECTED_VERCEL_PROJECT_ID` deixaram de ser consumidos por qualquer workflow. Ver `docs/CICD_FINAL_STATE.md`.
 
 ### Sistemas de risco (observação — não bloqueiam deploy)
 
