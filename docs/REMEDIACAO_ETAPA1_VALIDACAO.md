@@ -189,3 +189,52 @@ Não há tool de branch protection no MCP disponível.
 - **Fase B continua justificada** (achados 1 e 2), com a ressalva do achado 3.
 - **Fase C está bloqueada** pelo achado 7 até haver visibilidade dos Required Checks.
 - **Achado novo fora do escopo:** `main` não produz CI verde desde ~11/05 por falha real de lint/typecheck/teste, anterior ao apagão. Quando os runners voltarem, `build-and-test` provavelmente **continuará vermelho** — o apagão está mascarando uma quebra real que ninguém corrigiu.
+
+---
+
+## 5. ADENDO (pós-desbloqueio) — Required Checks são contextos órfãos
+
+O usuário informou que os Required Status Checks de `main` são: **`build`, `lint`, `test`, `typecheck`**.
+
+**Divergência material: nenhum desses quatro contextos é publicado por coisa alguma neste repositório.**
+
+### Evidência
+
+Varredura de todos os `job_id` e `name:` dos 6 workflows:
+
+| Workflow | Contextos publicados |
+|---|---|
+| `ci-backend-supabase.yml` | `Supabase local RLS smoke`, `Test RLS scope by profile`, `edge-functions-typecheck`, `outbox-contract`, `rls-rest-gate`, `migration-remote-drift`, `anti-replay-diagnostic-gate` |
+| `ci-pdv-importados.yml` | `build-and-test`, `E2E crítico (sistema de risco)`, `deploy`, `validate-production (SSRA)`, `e2e-playwright` |
+| `ci-pdv-local.yml` | `build-and-test`, `rust-tauri-checks` |
+| `e2e-playwright-only.yml` | `e2e-critical` |
+| `fiscal-cron.yml` | `call-worker` |
+| `secret-scan.yml` | `gitleaks` |
+
+```
+grep -rnE "^\s+(name:\s*)?(build|lint|test|typecheck):\s*$" .github/workflows/
+→ NENHUM job com esses nomes
+```
+
+Não há outro sistema de CI (`.circleci`, `.gitlab-ci.yml`, `Jenkinsfile`, etc. — nenhum existe). Os check-runs observados nos PRs #225, #229 e #233 confirmam: além dos jobs do Actions, só aparecem `Vercel Preview Comments` e `Supabase Preview`. **Nenhum `build`/`lint`/`test`/`typecheck`.**
+
+### Consequências
+
+1. **Os quatro Required Checks nunca podem ser satisfeitos.** Todo PR para `main` deveria ficar preso em *"Expected — Waiting for status to be reported"*. É a armadilha descrita na auditoria — só que pior: os contextos não estão path-filtered, estão simplesmente ausentes.
+2. **Isso explica o merge do PR #232** com todos os checks vermelhos: só foi possível por bypass do owner.
+3. **A governança de `main` é hoje decorativa** — existe uma regra que nada satisfaz, contornada manualmente.
+
+### Efeito sobre as Fases A/B/C — libera, não bloqueia
+
+A instrução *"preserve os quatro contexts, não altere nem remova"* fica automaticamente satisfeita: **nenhuma mudança planejada toca em `build`/`lint`/`test`/`typecheck`, porque eles não existem em lugar nenhum.** Remover `deploy`, remover `e2e-playwright-only`, mover `rust-tauri-checks` e desduplicar push/PR **não podem** piorar o estado dos required checks.
+
+Já a instrução *"mantenha esses mesmos status sendo publicados"* **não pode ser cumprida literalmente**, porque eles nunca foram publicados. Fica registrada como recomendação para a Fase D.
+
+### Verificação de referências antes de remover (exigida)
+
+| Workflow a remover | Referências externas | Veredito |
+|---|---|---|
+| `e2e-playwright-only.yml` | Apenas `.cursor/skills/engineering-loop/references/monorepo.md:31` (lista documental) | ✅ Seguro — atualizar a doc junto |
+| `fiscal-cron.yml` | Apenas `.cursor/skills/engineering-loop/references/monorepo.md:33` (lista documental) | ✅ Seguro — atualizar a doc junto |
+
+Sem `workflow_call`, sem `workflow_run`, sem `uses: ./.github/workflows/...` — **não há acoplamento entre workflows**. E a branch `staging`, único gatilho de push do `e2e-playwright-only.yml`, **não existe** (nem local nem remota), o que confirma seus 0 runs.
