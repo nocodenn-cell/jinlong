@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_SC } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import '@/styles/theme-oriental.css'
 /* DS Onda 2 — depois do oriental/jl para prevalecer (Button, focus, bridges) */
@@ -61,6 +62,7 @@ export default function RootLayout({
         <AppThemeProvider>
           {children}
           <Analytics />
+          <SpeedInsights />
         </AppThemeProvider>
       </body>
     </html>
