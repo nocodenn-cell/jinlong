@@ -51,10 +51,13 @@ describe('P0 venda — caminhos canônicos (matriz)', () => {
 describe('P0 Financeiro + Fiscal Stub — telas canônicas', () => {
   it('financeiro unificado tem abas receber/pagar/fiscal', () => {
     expect(exists('app/admin/financeiro/page.tsx')).toBe(true)
-    const nav = read('app/admin/financeiro/_components/FinanceiroTabNav.tsx')
-    expect(nav).toContain("'receber'")
-    expect(nav).toContain("'pagar'")
-    expect(nav).toContain("'fiscal'")
+    expect(exists('app/admin/financeiro/_components/FinanceiroTabNav.tsx')).toBe(true)
+    // Fonte de verdade das abas vive em financeiroTabs.ts (módulo neutro),
+    // não em FinanceiroTabNav.tsx ('use client') — ver comentário no arquivo.
+    const tabs = read('app/admin/financeiro/_components/financeiroTabs.ts')
+    expect(tabs).toContain("'receber'")
+    expect(tabs).toContain("'pagar'")
+    expect(tabs).toContain("'fiscal'")
   })
 
   it('AP não cria título manual — CTA aponta para import NF-e', () => {
