@@ -18,8 +18,23 @@ import { DragonIcon } from "@/components/icons/DragonIcon"
 import { labelOrigemCaixa } from "@/lib/caixa/metaProdutoUi"
 import type { OrigemProdutoCaixa } from "@/app/caixa/caixaActionTypes"
 
-/** Chip “positivo” no caixa (atacado, NF, origem BR com NF) — alinhado aos tokens `success`. */
-const CAIXA_CHIP_SUCCESS = 'border-success/40 bg-success/15 text-success'
+/**
+ * Chips do carrinho — superfície CLARA (`.caixa-oriental-root`, #f8fafc).
+ *
+ * Estes chips carregam significado operacional: sinalizam que o preço da linha
+ * NÃO é o de tabela (MANUAL / PROMOÇÃO / ATACADO) ou que a origem é sem NF. Se
+ * o operador não os lê, sai venda com preço errado — por isso o texto usa a
+ * escala `-strong` (700), não a `-500`: em 10px semibold sobre tint 12%, a
+ * escala 500 fica em ~2.4:1 (abaixo de AA) e some sob luz de loja.
+ */
+const CAIXA_CHIP_SUCCESS =
+  'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-strong)]'
+/** Atenção: preço digitado à mão pelo operador / origem sem NF. */
+const CAIXA_CHIP_WARNING =
+  'border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)]'
+/** Informativo: preço vindo de promoção cadastrada. */
+const CAIXA_CHIP_INFO =
+  'border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-brand-strong)]'
 
 export type CaixaCartListEmptyVariant = "default" | "pdv_classic"
 
@@ -446,7 +461,7 @@ function MetaPdvBloco({
 
   const origemClass =
     origem === "china_manual"
-      ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
+      ? CAIXA_CHIP_WARNING
       : CAIXA_CHIP_SUCCESS
 
   return (
@@ -481,9 +496,9 @@ function TipoPrecoBadge({
     tipo === 'ATACADO'
       ? CAIXA_CHIP_SUCCESS
       : tipo === "MANUAL"
-        ? "bg-yellow-900/30 text-yellow-400 border border-yellow-700"
+        ? CAIXA_CHIP_WARNING
         : tipo === "PROMOCAO"
-          ? "bg-blue-900/30 text-blue-400 border border-blue-700"
+          ? CAIXA_CHIP_INFO
           : "border border-border text-muted-foreground bg-muted"
   const badge = (
     <Badge

@@ -82,9 +82,9 @@ export function CaixaValorNumericoModal({
     >
       <div data-testid="caixa-valor-numerico-modal" className="space-y-2">
         {description ? (
-          <p className="text-xs text-slate-400">{description}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         ) : null}
-        <label className="block text-xs text-slate-400">
+        <label className="block text-xs font-medium text-foreground">
           {campoLabel}
           <Input
             ref={inputRef}
