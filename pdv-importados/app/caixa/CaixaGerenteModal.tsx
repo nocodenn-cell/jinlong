@@ -275,7 +275,7 @@ export function CaixaGerenteModal({
             <Field
               id="gerente-motivo"
               label="Motivo do desconto"
-              error={!motivo || motivo === 'NAO_ESPECIFICADO' ? m.caixa.modal_gerente_motivo_obrigatorio : erroLocal || undefined}
+              error={!motivo || motivo === 'NAO_ESPECIFICADO' ? "Selecione um motivo para o desconto" : erroLocal || undefined}
               required
             >
               <select
