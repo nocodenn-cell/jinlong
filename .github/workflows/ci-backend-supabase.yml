@@ -13,6 +13,14 @@
 # - Forks: o gate de secrets não exige SYNC_* no PR de fork (head.repo != github.repository); o passo de diagnóstico só roda se os secrets existirem no repo base (geralmente não expostos a forks).
 name: CI backend Supabase
 
+# Cancela execuções obsoletas do mesmo ref. Sem isto, cada commit intermediário
+# de uma PR deixa um run completo rodando até o fim mesmo já estando superado —
+# principal driver do consumo de minutos que estourou a cota (ver P0-1).
+# Em `main` NÃO cancela: um commit que já entrou precisa ser validado até o fim.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # Least privilege explícito. O default do repo hoje já é `read`, mas isso é uma
 # configuração de UI que pode mudar sem revisão de código; declarar aqui trava o
 # escopo do GITHUB_TOKEN junto do workflow. Este workflow só lê o repositório.
@@ -171,6 +179,7 @@ jobs:
 
   edge-functions-typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -188,6 +197,7 @@ jobs:
 
   outbox-contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -198,6 +208,7 @@ jobs:
   rls-rest-gate:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
@@ -232,6 +243,7 @@ jobs:
   migration-remote-drift:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # Ações fixadas por SHA completo (Sonar githubactions:S7637). Tag de referência: v4
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -264,6 +276,7 @@ jobs:
 
   anti-replay-diagnostic-gate:
     runs-on: windows-latest
+    timeout-minutes: 15
     # dorny/paths-filter usa a API de PR; sem pull-requests:read o token falha com
     # "Resource not accessible by integration" em PRs internos.
     permissions:
