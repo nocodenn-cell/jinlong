@@ -193,8 +193,13 @@ function updateItemQuantity(itens: ItemCarrinho[], id: string, quantidade: numbe
 
 function applyItemDiscount(item: ItemCarrinho, descontoValor: number): ItemCarrinho {
   const precoOriginal = item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
+  // Contrato canônico (AUDITORIA_DESCONTO_MVF_FINAL_V2.md §5): "Desconto Item
+  // aplicado SOBRE" o preço já resolvido pelo pipeline (ATACADO/PROMOCAO/VAREJO),
+  // não sobre o preço de tabela original — senão um item em ATACADO recebe menos
+  // desconto do que o operador vê na tela.
+  const precoBaseDesconto = item.resultado?.precoUnitario ?? precoOriginal
   const floor = typeof item.precoMinimo === 'number' && item.precoMinimo > 0 ? item.precoMinimo : 0
-  const precoComDesconto = Math.max(floor, roundMoney(precoOriginal - descontoValor))
+  const precoComDesconto = Math.max(floor, roundMoney(precoBaseDesconto - descontoValor))
   return normalizarItemCarrinho({
     ...item,
     precoOriginal,
