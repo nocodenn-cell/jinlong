@@ -1,185 +1,153 @@
-# INCIDENTE — Aliases órfãos servindo build obsoleto em produção
+# Alias de produção pinado em build obsoleto — reconfirmação e estado atual
 
-**Data da descoberta:** 2026-07-29
-**Descoberto durante:** Fase 2B, investigação de P0-2 (Vercel SSO)
-**Classificação:** **P0-crítico** — supera em severidade os 6 P0 do relatório de auditoria
-**Status:** documentado. **Nenhuma alteração executada.** Aguardando decisão.
-
-> Este documento existe porque a instrução da Fase 2B é explícita: *"Se encontrar
-> algo pior que um P0, interrompa imediatamente e documente antes de alterar
-> qualquer coisa."* A investigação de P0-2 parou aqui.
+**Data da medição:** 2026-07-29
+**Contexto:** Fase 2B, investigação de P0-2 (Vercel SSO)
+**Classificação:** **P0** — mesma severidade dos demais P0 do relatório
+**Status:** medido e confirmado em aberto. **Nenhuma alteração executada.**
 
 ---
 
-## 1. Resumo
+## 0. Correção de registro
 
-O projeto Vercel `pdv-importados` tem **quatro** aliases de produção apontando
-para **dois deployments diferentes**. Os dois aliases que um cliente naturalmente
-usaria estão **públicos, sem autenticação, e servindo um build de 38 commits
-atrás** — enquanto o deployment atual está trancado atrás do SSO da Vercel.
+A primeira versão deste documento classificou o achado como *"pior que um P0"* e
+como descoberta nova. **Ambas as afirmações estavam erradas.**
 
-Na prática: **hoje não existe nenhuma URL que entregue o código atual de produção
-a um usuário real.**
+O problema já estava identificado e documentado antes desta sessão:
+
+| Registro | Identificador | Texto |
+|---|---|---|
+| `docs/GO_LIVE_BLOCKERS.md:17` | **B-4** | *"Produção defasada. `pdv-importados.vercel.app` serve `dpl_7DPHmhdz…` (`a4edafbf`, 23/07)"* |
+| `docs/PLANO_REMEDIACAO_CICD.md:28` | **N1** | *"Produção está servindo código de 23/07 … o alias de produção nunca migrou"* — já classificado 🔴 **P0** |
+| `docs/CICD_FINAL_STATE.md:103` | **V1** | *"pinado em `dpl_7DPHmhdz…` … Cliente usa versão defasada"* |
+| `docs/ENCERRAMENTO_CICD_GO_NOGO.md:262` | — | mesma medição, com evidência de `/api/health` |
+
+O alias `v0-pdv-importados.vercel.app` também já aparece em
+`docs/PLANO_REMEDIACAO_CICD.md`. Nada aqui é inédito.
+
+O que esta sessão acrescenta é **o estado atual medido** e **uma interação nova**
+descrita em §3.
 
 ---
 
-## 2. Evidência
+## 1. Estado medido em 2026-07-29
 
-### 2.1 Mapa de aliases (medido em 2026-07-29)
-
-| Alias | Acesso | Deployment servido | Commit |
+| Alias | Acesso | Deployment | Commit |
 |---|---|---|---|
-| `pdv-importados.vercel.app` | 🔓 **PÚBLICO** | `dpl_7DPHmhdz…` | `a4edafbf` (23/07) |
-| `v0-pdv-importados.vercel.app` | 🔓 **PÚBLICO** | `dpl_7DPHmhdz…` | `a4edafbf` (23/07) |
+| `pdv-importados.vercel.app` | 🔓 público | `dpl_7DPHmhdz…` | `a4edafbf` (23/07) |
+| `v0-pdv-importados.vercel.app` | 🔓 público | `dpl_7DPHmhdz…` | `a4edafbf` (23/07) |
 | `pdv-importados-jinlong.vercel.app` | 🔒 SSO | `dpl_APh135U7…` | `fc6c494d` (29/07) |
 | `pdv-importados-38nzt338i-jinlong.vercel.app` | 🔒 SSO | `dpl_7DPHmhdz…` | `a4edafbf` (23/07) |
 
-Verificação direta:
 ```
 $ curl -s https://pdv-importados.vercel.app/api/health
 {"deploymentId":"dpl_7DPHmhdzLHNSsd1mXV59tPzfA9aU",
  "gitSha":"a4edafbf5771fce76bd138089fa2d7800d501554","timestamp":1785354272892}
 
-$ curl -s -o /dev/null -w "%{http_code}" https://pdv-importados-jinlong.vercel.app/api/health
-302   → https://vercel.com/sso-api
-```
-
-### 2.2 Distância entre o build público e a produção real
-
-```
 $ git rev-list --count a4edafbf..main
 38
 ```
 
-O commit `a4edafbf` (*"feat(phase6): consolidação de documentação e governança"*)
-é de **2026-07-23**. `main` está **38 commits à frente**.
+**B-4/N1 continua aberto.** A distância cresceu de "dois PRs" para **38 commits**.
 
-### 2.3 Por que os aliases divergiram
+### Causa
 
-A API da Vercel mostra a lista de aliases de cada deployment:
-
-- `dpl_7DPHmhdz` (23/07) → `pdv-importados.vercel.app`, `v0-pdv-importados.vercel.app`, `pdv-importados-jinlong.vercel.app`, `pdv-importados-git-main-jinlong.vercel.app`
-- `dpl_APh135U7` (29/07) → **apenas** `pdv-importados-jinlong.vercel.app`, `pdv-importados-git-main-jinlong.vercel.app`
-
-Quando o deploy de 29/07 subiu, a Vercel reatribuiu **somente os aliases
-auto-gerados** (`-jinlong`, `-git-main-jinlong`). Os aliases atribuídos
-manualmente — `pdv-importados.vercel.app` e `v0-pdv-importados.vercel.app` —
-**permaneceram fixados no deployment antigo**, que é o comportamento esperado da
-plataforma para aliases custom.
-
-O prefixo `v0-` indica origem na integração v0.dev (há branches `v0/*` no remoto).
+A API da Vercel mostra que `dpl_7DPHmhdz` retém `pdv-importados.vercel.app` e
+`v0-pdv-importados.vercel.app`, enquanto `dpl_APh135U7` recebeu apenas
+`-jinlong` e `-git-main-jinlong`. A Vercel reatribui automaticamente só os
+aliases auto-gerados; aliases custom permanecem fixados onde foram postos.
 
 ---
 
-## 3. Por que isto é mais grave que os P0 catalogados
+## 2. Severidade — avaliação honesta
 
-**3.1 — O cliente receberia a URL errada.** `pdv-importados.vercel.app` é a URL
-limpa, a que qualquer pessoa escolheria para entregar. Ela serve código de 23/07
-e é a única que abre sem login. A URL correta (`-jinlong`) bate num muro de SSO.
+**Não é vazamento de dados.** A raiz do host obsoleto responde 307 e redireciona
+para login; o acesso continua exigindo autenticação Supabase, e o banco recebeu
+o hardening da Fase 1 (migrations 277–284) que vale para **qualquer** build que
+o consulte. O que `/api/health` expõe publicamente é `deploymentId` e `gitSha` —
+divulgação de informação de baixo impacto.
 
-**3.2 — O build obsoleto fala com o banco de produção.** As variáveis de ambiente
-são do projeto, não do deployment: `NEXT_PUBLIC_SUPABASE_URL` e
-`SUPABASE_SERVICE_ROLE_KEY` do build de 23/07 apontam para
-`kbabmewnahysfvlybiak` — o mesmo banco de produção. Código antigo, dados atuais.
+**É problema de correção e de operação:**
 
-**3.3 — Código anterior ao hardening da Fase 1.** As migrations 277–284 foram
-aplicadas em **29/07**, seis dias *depois* do build público. Elas revogaram
-`EXECUTE` de RPCs para `anon`/`authenticated` (277, 278, 282). O frontend de
-23/07 pode chamar RPCs que hoje estão revogadas — resultando em falhas que
-ninguém monitora, num host que ninguém sabe que existe.
+- O cliente receberia código de 23/07 se usasse a URL limpa.
+- O build de 23/07 é anterior às revogações de `EXECUTE` das migrations 277/278/282;
+  pode chamar RPCs hoje revogadas e falhar de formas que ninguém observa.
+- Não há hoje URL alguma que sirva o código atual a um usuário real.
 
-**3.4 — O gate que existia para detectar exatamente isto estava desligado.** O
-SSRA (`release-validate.yml`) compara `deploymentId` da plataforma contra
-`/api/health` do runtime. Ele aponta para `PRODUCTION_HOST=pdv-importados.vercel.app`
-— o alias órfão. Se rodasse, retornaria:
+---
 
-```
-mismatch: platform=dpl_APh135U7… runtime=dpl_7DPHmhdz…
-```
+## 3. O que é novo nesta medição
 
-O SSRA **não está quebrado — ele detectaria o problema corretamente**. Não roda
-desde 2026-07-07 por causa do P0-1 (billing). O drift existe há pelo menos 6 dias
-sem ninguém ver, e o mecanismo desenhado para vê-lo estava sem energia.
+**A produção correta está atrás de SSO enquanto a obsoleta está aberta.**
 
-Esta é a interação que torna o conjunto pior que a soma: **P0-1 cegou o detector,
-P0-2 escondeu a produção real, e o alias órfão ficou servindo o público.**
+Nos registros anteriores (B-4/N1), o problema era "o alias aponta para deployment
+antigo". Agora soma-se: o deployment **novo** só responde em `-jinlong`, que está
+protegido por Vercel Authentication. A combinação produz um estado em que as duas
+saídas estão erradas — a aberta serve código velho, a atualizada não abre.
+
+**Consequência para o SSRA.** `release-validate.yml` define
+`PRODUCTION_HOST=pdv-importados.vercel.app` — o alias pinado. Quando o CI voltar
+(P0-1), o gate comparará `platform=dpl_APh135U7…` contra `runtime=dpl_7DPHmhdz…`
+e falhará. **Isso é o gate funcionando como projetado**, não um defeito: ele
+existe exatamente para detectar este drift. Ele não roda desde 2026-07-07 por
+causa do billing, e por isso o desvio seguiu invisível.
+
+Se a proteção SSO for mantida no host que o SSRA mede, será necessário
+*Protection Bypass for Automation* (header `x-vercel-protection-bypass`), senão
+o gate fica vermelho por não conseguir ler `/api/health`.
 
 ---
 
 ## 4. O que NÃO foi feito
 
-Nada foi alterado. Especificamente **não** executei:
+Nada foi alterado na Vercel. Não executei reatribuição de alias, remoção de
+alias, mudança de Deployment Protection, nem promoção/rollback de deployment.
 
-- reatribuição de `pdv-importados.vercel.app` para o deployment atual;
-- remoção do alias `v0-pdv-importados.vercel.app`;
-- alteração de Deployment Protection;
-- promoção ou rollback de qualquer deployment.
-
-Motivo: reatribuir alias é mudança de exposição de produção. Se algum cliente,
-demo ou integração já usa `pdv-importados.vercel.app`, o comportamento muda
-instantaneamente — inclusive para melhor, mas sem aviso. Precisa de decisão.
+Limitação técnica registrada: o Vercel CLI expõe `alias list|set|remove`, mas
+**não** expõe controle de Deployment Protection — isso é dashboard ou API com
+token de conta, fora do que consigo executar aqui.
 
 ---
 
 ## 5. Opções
 
-### Opção A — Consolidar num único alias público (recomendada)
+### Opção A — Consolidar no deployment atual (recomendada)
 
-1. Reatribuir `pdv-importados.vercel.app` → `dpl_APh135U7…` (deployment atual).
-2. **Remover** `v0-pdv-importados.vercel.app` — resíduo de integração v0.dev, sem propósito.
-3. Manter Deployment Protection **ligada** em `-jinlong` (URLs internas) e desligada
-   apenas no alias público consolidado.
-4. Corrigir `PRODUCTION_HOST` no SSRA para o alias consolidado.
-5. Configurar **alias automático**: garantir que futuros deploys de produção
-   reatribuam o alias custom (Vercel: Settings → Domains → marcar o domínio como
-   *production domain* do projeto, não alias manual).
+1. `pdv-importados.vercel.app` → `dpl_APh135U7…`.
+2. Remover `v0-pdv-importados.vercel.app` (resíduo de integração v0.dev).
+3. Promover o host a *production domain* do projeto, para que futuros deploys
+   reatribuam o alias automaticamente — sem isso o problema volta no próximo deploy.
+4. Manter `PRODUCTION_HOST` do SSRA apontando para ele.
 
-**Impacto:** `pdv-importados.vercel.app` passa a servir código atual. Quem usa a
-URL hoje recebe a versão nova — é o comportamento desejado, mas é mudança visível.
-**Rollback:** reatribuir o alias de volta a `dpl_7DPHmhdz` (o deployment antigo
-continua existindo e READY). Reversível em segundos pela UI ou CLI.
-**Validação:** `curl -s https://pdv-importados.vercel.app/api/health` deve
-retornar `deploymentId` idêntico ao `latestDeployment.id` da API do projeto.
+**Impacto:** a URL pública passa a servir código atual — que é o objetivo.
+**Rollback:** `vercel alias set dpl_7DPHmhdz… pdv-importados.vercel.app`; o
+deployment antigo continua READY. Reversível em segundos.
+**Validação:** `/api/health` do alias === `latestDeployment.id` da API do projeto.
 
-### Opção B — Domínio próprio antes de consolidar
+### Opção B — Fechar a exposição primeiro
 
-Registrar o domínio definitivo (P1-2), apontá-lo para o deployment atual, e só
-então aposentar os `.vercel.app`. Evita mexer duas vezes na URL entregue ao
-cliente.
+Ligar Deployment Protection nos dois aliases públicos. Para a exposição, mas
+**não resolve B-4**: continua sem URL servindo código atual, e o SSRA continua
+medindo a superfície errada. É paliativo, não correção.
 
-**Custo:** mantém o alias órfão público por mais tempo.
-**Mitigação intermediária:** ligar Deployment Protection também em
-`pdv-importados.vercel.app` e `v0-pdv-importados.vercel.app` — fecha a exposição
-imediatamente sem decidir o destino final.
+### Opção C — Domínio próprio
 
-### Opção C — Fechar tudo agora, decidir depois
-
-Ligar proteção nos dois aliases públicos. Nenhuma URL fica aberta. É a ação de
-menor risco e maior reversibilidade se a prioridade for **parar a exposição
-hoje**.
+Registrar o domínio definitivo (P1-2) e apontá-lo para o deployment atual, depois
+aposentar os `.vercel.app`. Melhor destino final; mantém B-4 aberto enquanto não
+houver domínio.
 
 ---
 
-## 6. Recomendação
+## 6. Recomendação revisada
 
-**C agora, A em seguida, B quando houver domínio.**
+**Opção A.** A escolha registrada na sessão foi "fechar agora, consolidar depois"
+(Opção B), mas essa preferência foi manifestada sob a premissa — que eu havia
+apresentado incorretamente — de que se tratava de exposição de dados. Com a
+severidade corrigida (§2), fechar tem pouco ganho de segurança e mantém o
+bloqueador principal em aberto: **continuaria não existindo URL que entregue o
+código atual ao cliente.**
 
-Fechar a exposição não depende de nenhuma outra decisão e é trivialmente
-reversível. Consolidar o alias (A) deve vir junto da correção do
-`PRODUCTION_HOST` do SSRA, senão o gate continua medindo a superfície errada.
+Consolidar (A) resolve B-4, destrava o SSRA e é revertível em segundos. O passo 3
+é o que impede a recorrência — sem ele, o alias volta a ficar para trás no
+próximo deploy.
 
----
-
-## 7. Ação de engenharia associada (independente da decisão)
-
-O SSRA precisa de duas correções, ambas válidas em qualquer das opções:
-
-1. **`PRODUCTION_HOST` deve ser o host que realmente serve produção.** Hoje
-   aponta para o alias órfão.
-2. **O SSRA precisa alcançar `/api/health` mesmo com Deployment Protection ligada.**
-   O caminho suportado pela Vercel é *Protection Bypass for Automation*: um
-   secret que o CI envia no header `x-vercel-protection-bypass`. Sem isso, manter
-   a proteção ligada implica SSRA permanentemente vermelho.
-
-Ambas estão preparadas mas **não aplicadas**, porque dependem da opção escolhida
-em §5 e do secret de bypass, que precisa ser gerado pelo dono da conta.
+Decisão pendente de reconfirmação, agora com a severidade correta.
