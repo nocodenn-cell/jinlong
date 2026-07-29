@@ -73,9 +73,9 @@ export function CaixaMotivoMinModal({
     >
       <div data-testid="caixa-motivo-min-modal" className="space-y-2">
         {description ? (
-          <p className="text-xs text-slate-400 whitespace-pre-wrap">{description}</p>
+          <p className="text-xs text-muted-foreground whitespace-pre-wrap">{description}</p>
         ) : null}
-        <label className="block text-xs text-slate-400">
+        <label className="block text-xs font-medium text-foreground">
           {m.caixa.modal_motivo_label}
           <Input
             ref={inputRef}
@@ -87,7 +87,7 @@ export function CaixaMotivoMinModal({
               setErro(null)
             }}
             placeholder={m.caixa.modal_motivo_placeholder}
-            className="mt-1 bg-slate-800 border-slate-600 text-slate-100"
+            className="mt-1"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault()

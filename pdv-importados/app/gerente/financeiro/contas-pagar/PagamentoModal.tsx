@@ -156,13 +156,13 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
               </div>
               <div className="rounded-lg app-border border bg-jl-surface-soft px-3 py-2.5">
                 <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{m.contas_pagar.modal_pago}</div>
-                <div className={cn('mt-1 text-sm font-bold tabular-nums', conta.valor_pago > 0 ? 'text-emerald-300' : 'text-jl-fg-3')}>
+                <div className={cn('mt-1 text-sm font-bold tabular-nums', conta.valor_pago > 0 ? 'text-[var(--color-success-strong)]' : 'text-jl-fg-3')}>
                   {fmtGerenteBRL(conta.valor_pago, locale)}
                 </div>
               </div>
-              <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2.5">
+              <div className="rounded-lg border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2.5">
                 <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{m.contas_pagar.modal_aberto}</div>
-                <div className="mt-1 text-sm font-bold tabular-nums text-amber-400">{fmtGerenteBRL(aberto, locale)}</div>
+                <div className="mt-1 text-sm font-bold tabular-nums text-[var(--color-warning-strong)]">{fmtGerenteBRL(aberto, locale)}</div>
               </div>
             </div>
 
@@ -171,7 +171,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
               <label htmlFor="pg-valor" className="mb-1 block text-xs font-medium text-jl-fg-3">
                 {m.contas_pagar.modal_valor}<span className="ml-0.5 text-[color:var(--accent)]">*</span>
               </label>
-              <div className="flex items-center rounded-xl border-2 border-amber-400 bg-jl-surface-soft px-4 py-3">
+              <div className="flex items-center rounded-xl border-2 border-[var(--color-warning-strong)] bg-jl-surface-soft px-4 py-3">
                 <span className="mr-2 text-base text-jl-fg-3">R$</span>
                 <input
                   ref={valorRef}
@@ -181,21 +181,21 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                   onChange={handleValor}
                   aria-invalid={!!erros.valor}
                   aria-describedby={erros.valor ? 'err-valor' : 'hint-valor'}
-                  className="w-full bg-transparent text-right text-2xl font-extrabold tabular-nums text-amber-400 outline-none"
+                  className="w-full bg-transparent text-right text-2xl font-extrabold tabular-nums text-[var(--color-fg)] outline-none"
                 />
               </div>
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={m.contas_pagar.valores_sugeridos}>
                 <button
                   type="button"
                   onClick={() => setValor(formatDecimalBRL(aberto))}
-                  className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
+                  className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-[var(--color-warning-strong)] hover:text-[var(--color-warning-strong)]"
                 >
                   {m.contas_pagar.quitar} · {fmtGerenteBRL(aberto, locale)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setValor(formatDecimalBRL(aberto / 2))}
-                  className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
+                  className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-[var(--color-warning-strong)] hover:text-[var(--color-warning-strong)]"
                 >
                   {m.contas_pagar.metade}
                 </button>
@@ -206,7 +206,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                         key={v}
                         type="button"
                         onClick={() => setValor(formatDecimalBRL(v))}
-                        className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-amber-400 hover:text-amber-400"
+                        className="rounded-full app-border border bg-jl-surface-soft px-2.5 py-1 text-[11px] font-semibold text-jl-fg-3 hover:border-[var(--color-warning-strong)] hover:text-[var(--color-warning-strong)]"
                       >
                         {fmtGerenteBRL(v, locale)}
                       </button>
@@ -214,15 +214,15 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                 )}
               </div>
               {erros.valor ? (
-                <span id="err-valor" className="mt-2 block text-xs text-red-300">{erros.valor}</span>
+                <span id="err-valor" className="mt-2 block text-xs text-[var(--color-danger-strong)]">{erros.valor}</span>
               ) : (
                 <span id="hint-valor" className="mt-2 block text-[11px] text-jl-fg-3">
                   {quita ? (
-                    <strong className="text-emerald-300">{m.contas_pagar.sera_quitada}</strong>
+                    <strong className="text-[var(--color-success-strong)]">{m.contas_pagar.sera_quitada}</strong>
                   ) : valorNum > 0 ? (
                     <>
                       {m.contas_pagar.restara}{' '}
-                      <strong className="text-amber-400">{fmtGerenteBRL(novoAberto, locale)}</strong>{' '}
+                      <strong className="text-[var(--color-warning-strong)]">{fmtGerenteBRL(novoAberto, locale)}</strong>{' '}
                       {m.contas_pagar.em_aberto}.
                     </>
                   ) : (
@@ -249,7 +249,7 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-lg app-border border bg-jl-surface-soft px-2 py-2.5 text-xs font-semibold transition-colors',
                       forma === f.id
-                        ? 'border-amber-400 bg-amber-400/15 text-amber-400'
+                        ? 'border-[var(--color-warning-strong)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)]'
                         : 'text-jl-fg-3 hover:text-jl-fg-1',
                     )}
                   >
@@ -273,10 +273,10 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
                   }}
                   disabled={salvando}
                   max={new Date().toISOString().slice(0, 10)}
-                  className={cn('app-input mt-1 h-10 w-full rounded-md px-3 text-sm tabular-nums', erros.data && 'border-red-400/60')}
+                  className={cn('app-input mt-1 h-10 w-full rounded-md px-3 text-sm tabular-nums', erros.data && 'border-[var(--color-danger-strong)]')}
                   aria-invalid={!!erros.data}
                 />
-                {erros.data && <span className="mt-1 block text-xs text-red-300">{erros.data}</span>}
+                {erros.data && <span className="mt-1 block text-xs text-[var(--color-danger-strong)]">{erros.data}</span>}
               </label>
               <label className="block text-xs font-medium text-jl-fg-3">
                 {m.contas_pagar.modal_observacao}

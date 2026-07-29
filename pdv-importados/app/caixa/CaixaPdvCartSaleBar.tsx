@@ -76,7 +76,7 @@ export function CaixaPdvCartSaleBar({
                   <span>
                     {moedaPrefixo} {formatDecimalBRL(totalBruto)}
                   </span>
-                  <span className="text-amber-400/80">
+                  <span className="text-[var(--color-warning-strong)]">
                     -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
                   </span>
                 </div>

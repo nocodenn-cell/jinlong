@@ -130,8 +130,8 @@ function HistoricoLista({ vendas, selecionadoId, m, onSelect }: ListaProps) {
                     className={cn(
                       "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
                       cancelada
-                        ? "bg-red-500/15 text-red-400"
-                        : "bg-emerald-500/15 text-emerald-400",
+                        ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-strong)]"
+                        : "bg-[var(--color-success-bg)] text-[var(--color-success-strong)]",
                     )}
                   >
                     {labelStatusVenda(v.status, m)}
@@ -180,7 +180,9 @@ function HistoricoDetalhe({ detalhe, carregando, m }: DetalheProps) {
           <span
             className={cn(
               "rounded-full px-1.5 py-0.5 font-semibold",
-              cancelada ? "bg-red-500/15 text-red-400" : "bg-emerald-500/15 text-emerald-400",
+              cancelada
+                ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-strong)]"
+                : "bg-[var(--color-success-bg)] text-[var(--color-success-strong)]",
             )}
           >
             {labelStatusVenda(detalhe.status, m)}
