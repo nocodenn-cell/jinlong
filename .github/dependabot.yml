@@ -1,0 +1,66 @@
+# Dependabot — Jinlong ERP/PDV
+#
+# Objetivo: manter dependências e GitHub Actions atualizadas sem inundar o repo
+# de PRs. Agrupamos por ecossistema e limitamos PRs abertos simultaneamente.
+#
+# NOTA OPERACIONAL: Dependabot *alerts* (aviso de CVE) são um recurso separado e
+# precisam ser habilitados na UI — Settings > Code security. Este arquivo cobre
+# apenas os *version updates* (PRs de atualização).
+#
+# Rollback: remover este arquivo. Nenhum efeito em runtime ou build.
+
+version: 2
+
+updates:
+  # ── GitHub Actions ────────────────────────────────────────────────────────
+  # Prioridade alta: hoje há actions de terceiros presas em tag mutável.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(ci)'
+    labels:
+      - dependencies
+      - github-actions
+
+  # ── npm (monorepo raiz — cobre os workspaces) ─────────────────────────────
+  # O lockfile é único na raiz (workspaces: pdv-importados, pdv-local, backend,
+  # shared-core), então um só ecossistema cobre todos os pacotes.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    commit-message:
+      prefix: 'chore(deps)'
+    labels:
+      - dependencies
+    groups:
+      # Agrupa patches/minors de dev para reduzir ruído de PR.
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+      # Ecossistema Sentry sobe junto — versões precisam ser coerentes entre si.
+      sentry:
+        patterns:
+          - '@sentry/*'
+    ignore:
+      # Next 16 / React 20 são upgrades de plataforma: entram por decisão
+      # explícita, com janela e teste, nunca por PR automático.
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]

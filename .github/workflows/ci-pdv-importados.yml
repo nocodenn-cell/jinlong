@@ -6,6 +6,10 @@
 # Secrets: CI_NEXT_PUBLIC_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
 name: CI pdv-importados
 
+# Least privilege explícito — ver nota em ci-backend-supabase.yml.
+permissions:
+  contents: read
+
 # Gate de merge: roda em pull_request, que já testa o resultado do merge.
 # Não roda em push para `main` — seria revalidar o mesmo código uma segunda vez,
 # e o deploy da Vercel não depende deste workflow. O piso de segurança em push
