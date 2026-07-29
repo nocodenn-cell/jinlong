@@ -10,6 +10,12 @@
 # `success`, sem corrida com a promoção do alias.
 name: Release validate (SSRA)
 
+# `deployments: read` é necessário para ler o payload de deployment_status;
+# o gate só compara plataforma ↔ runtime, não escreve status de volta.
+permissions:
+  contents: read
+  deployments: read
+
 on:
   deployment_status:
 
