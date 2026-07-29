@@ -1046,6 +1046,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     pagamentos,
     gerenteValidadoAte,
     gerenteToken,
+    motivoDesconto,
+    motivoDescontoDescricao,
     itens,
     limparEstadoDescontoGerente,
     limparCarrinho,
