@@ -282,7 +282,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
-  const produtoPanelRef = useRef<HTMLDivElement>(null)
   /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». */
   const vendaIdempotenciaRef = useRef<string | null>(null)
 
@@ -306,10 +305,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (typeof document !== "undefined" && document.querySelector('[role="dialog"]')) return
       buscaInputRef.current?.focus()
     })
-  }, [])
-
-  const focarAbaProduto = useCallback(() => {
-    produtoPanelRef.current?.focus()
   }, [])
 
   const focarAbaPagamento = useCallback(() => {
@@ -1129,7 +1124,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       onExcluirVenda: handleExcluirVendaConfirmado,
       onFinalizarVenda: () => void handleFinalizar(),
       abas: {
-        produto: focarAbaProduto,
+        // Alt+Z leva o foco ao campo de leitura, não ao contêiner: o operador
+        // aperta Alt+Z justamente para voltar a bipar/digitar.
+        produto: focarCampoBusca,
         cliente: abrirSelecionarCliente,
         pgto: focarAbaPagamento,
       },
@@ -1137,7 +1134,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     [
       handleExcluirVendaConfirmado,
       handleFinalizar,
-      focarAbaProduto,
+      focarCampoBusca,
       focarAbaPagamento,
       abrirSelecionarCliente,
     ],
@@ -1302,7 +1299,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
-                  <div ref={produtoPanelRef} tabIndex={-1} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                     <CaixaOperadorContextBar
                       m={m}
                       idioma={idioma}
