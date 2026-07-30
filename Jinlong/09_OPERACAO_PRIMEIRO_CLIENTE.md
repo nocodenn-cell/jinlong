@@ -39,7 +39,7 @@
 - [ ] `.env.local` / Vercel com `NEXT_PUBLIC_SUPABASE_URL` e `ANON_KEY` corretos
 - [ ] Deploy Vercel (branch `main` ou promoção staging → prod)
 - [ ] Validar `/api/health` pós-deploy (SSRA)
-- [ ] Acessar `/admin/diagnostico-caixa` — checklist OK
+- [ ] Acessar `/admin/diagnostico-caixa` — checklist OK — **só perfil ADMIN** (fora do menu do cliente desde 2026-07-30; acessível por URL)
 - [ ] `npm run check:caixa-pre-producao` — sem falhas críticas
 
 ### Fase 3 — Onboarding Cliente
@@ -105,11 +105,17 @@ Seguir `docs/RUNBOOK_PRIMEIRO_CLIENTE.md`:
 
 ### Gerente/Dono (GERENTE/DONO)
 1. Login → `/admin/dashboard`
-2. Cadastrar produtos em `/admin/catalogo`
-3. Gerenciar estoque em `/admin/estoque`
-4. Ver vendas e cancelar em `/admin/vendas`
-5. Financeiro em `/admin/financeiro`
-6. Trocar idioma PT ↔ 中文 na sidebar
+2. Criar categorias em `/admin/categorias-produtos` (**pré-requisito** do cadastro)
+3. Cadastrar produtos em `/admin/catalogo`
+4. Gerenciar estoque em `/admin/estoque` e receber mercadoria em `/admin/estoque/recebimento`
+5. Ver vendas e cancelar em `/admin/vendas`
+6. Financeiro em `/admin/financeiro`
+7. Trocar idioma PT ↔ 中文 na sidebar
+
+> **Menu (desde 2026-07-30):** o cliente não enxerga `Implantação / GO-LIVE`,
+> `Diagnóstico do Caixa` nem `Provisionamento` — são `adminOnly`. O item de
+> suspensão chama-se **"Suspensão de vendas"** (era "de licença").
+> Detalhe e mapa antes/depois: `AUDITORIA_MENU_EXPOSICAO_CLIENTE.md` §8.
 
 ---
 

@@ -6,6 +6,28 @@
 
 ---
 
+## 2026-07-30 — Limpeza de navegação: produto × ferramenta interna ✅ CONCLUÍDA
+
+| Campo | Valor |
+|---|---|
+| **Mudança** | Auditoria de exposição do menu lateral + execução das ondas 1–3 |
+| **Motivo** | Menu do cliente misturava produto real com ferramentas de implantação/diagnóstico do fornecedor — e, ao mesmo tempo, escondia cadastros essenciais |
+| **Arquivos** | `lib/navigation/adminV2SidebarNav.ts` (único de produção) + 2 arquivos de teste + `AUDITORIA_MENU_EXPOSICAO_CLIENTE.md` |
+| **Commit** | `4d12438d` · PR [#239](https://github.com/nocodenn-cell/fastproduct/pull/239) |
+| **Impacto** | Cliente deixa de ver 2 ferramentas internas e passa a alcançar 2 cadastros que estavam inacessíveis |
+
+**Quatro correções:**
+1. **Fluxo quebrado destravado** — `/admin/categorias-produtos` e `/admin/categorias-financeiras` eram rotas completas com CRUD **sem nenhum link na UI**. O cliente não conseguia criar categoria de produto pela interface. Produtos entrou no CORE, financeiras em "Mais".
+2. **Ferramentas internas escondidas** — `Implantação / GO-LIVE` e `Diagnóstico do Caixa` passam a `adminOnly` (mesmo mecanismo já usado por `Provisionamento`). Expunham `service_role`, storage, nomes de migration/RPC e GRANTs a qualquer GERENTE.
+3. **Nomenclatura** — "Suspensão de licença" → "Suspensão de vendas" (o dicionário i18n já estava certo; o `labelOverridePt` é que introduzia o termo errado).
+4. **Tarefas diárias** — `Recebimento` e `Relatórios` subiram da gaveta "Mais" (recolhida por padrão) para o CORE.
+
+**Escopo deliberadamente limitado:** rotas e policies **não** foram alteradas — mudança de *exposição*, não de *autorização*. As rotas internas continuam acessíveis por URL a DONO/GERENTE. Fechar isso é a onda 4 (ver §8.7 da auditoria).
+
+**Verificação:** typecheck limpo · 155 arquivos / 815 testes verdes · eslint limpo · `check:golive` verde · build de produção OK · 18 testes novos, incluindo render do `SidebarNav` em jsdom por perfil.
+
+---
+
 ## 2026-07-10 — Reestruturação Home MD como Central Obsidian
 
 | Campo | Valor |
