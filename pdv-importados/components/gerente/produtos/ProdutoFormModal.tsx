@@ -221,7 +221,7 @@ export function ProdutoFormModal({
         },
       })
       if (erro) {
-        emitGerenteToast({ kind: 'error', message: erro })
+        emitGerenteToast({ kind: 'error', message: erro.mensagem })
         return
       }
 
