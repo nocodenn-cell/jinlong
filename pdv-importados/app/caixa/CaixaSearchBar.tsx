@@ -1,7 +1,7 @@
 "use client"
 
 import { forwardRef, useCallback, useEffect, useRef, type FormEvent, type MutableRefObject } from "react"
-import { Barcode } from "lucide-react"
+import { Barcode, Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/forms"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -61,23 +61,17 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
 
   return (
     <div className={cn("space-y-2", compact && "space-y-1")}>
-      <div className="flex items-center justify-between gap-2">
-        <label
-          className={cn(
-            "font-semibold text-fg",
-            compact ? "text-caption" : "text-body",
-          )}
-        >
-          {m.caixa.busca_label_principal}
-        </label>
+      <div className="flex items-center justify-end">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={onToggleSom}
-          className={cn(compact ? "px-1.5 py-0.5 text-caption" : "px-2 py-1 text-small")}
+          aria-label={somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
+          title={somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
+          className="px-1.5 py-0.5 text-fg-subtle hover:text-fg"
         >
-          {somAtivo ? m.caixa.som_feedback_ligado : m.caixa.som_feedback_desligado}
+          {somAtivo ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}
         </Button>
       </div>
       <form

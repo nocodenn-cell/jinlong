@@ -188,16 +188,6 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
         </div>
       ) : null}
 
-      {/* Linha única de leitura: o total é o número que o operador fala em voz
-          alta; troco/falta só aparecem quando existem. "Soma das parcelas"
-          repetia o total no caso de pagamento único e foi removida daí. */}
-      <div className="flex items-baseline justify-between gap-3 border-t border-border pt-2">
-        <span className="text-xs text-muted-foreground">{m.caixa.total_pagar}</span>
-        <span className="text-lg font-bold tabular-nums text-foreground">
-          {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
-        </span>
-      </div>
-
       {troco && pagamentos[0].valor > 0 ? (
         <div
           data-testid="caixa-troco-inline"
