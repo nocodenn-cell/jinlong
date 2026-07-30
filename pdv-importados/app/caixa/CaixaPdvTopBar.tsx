@@ -27,6 +27,9 @@ type Props = {
   onFecharCaixa: () => void
   printerStatus?: ThermalStatus
   printerDeviceName?: string | null
+  /** Referência de atalhos — estado no CaixaPageClient para o F1 poder alternar. */
+  atalhosAbertos: boolean
+  onAtalhosOpenChange: (open: boolean) => void
 }
 
 export function CaixaPdvTopBar({
@@ -40,6 +43,8 @@ export function CaixaPdvTopBar({
   onFecharCaixa,
   printerStatus,
   printerDeviceName,
+  atalhosAbertos,
+  onAtalhosOpenChange,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -151,7 +156,12 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
-          <CaixaKeyboardShortcutsReference m={m} variant="classic" />
+          <CaixaKeyboardShortcutsReference
+            m={m}
+            variant="classic"
+            open={atalhosAbertos}
+            onOpenChange={onAtalhosOpenChange}
+          />
           <Link
             href={ROUTES.auth.changePassword}
             className={cn(

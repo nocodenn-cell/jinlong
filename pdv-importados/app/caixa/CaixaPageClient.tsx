@@ -292,6 +292,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
   const [clienteNome, setClienteNome] = useState<string | null>(null)  // ✅ NOVO (Fase 5b) - para exibição
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
+  /** F1 alterna a referência de atalhos (renderizada no topbar). */
+  const [atalhosReferenciaAberta, setAtalhosReferenciaAberta] = useState(false)
 
   const thermal = useThermalPrinter()
 
@@ -1135,6 +1137,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }, []),
     onConsultaRapida: () => setConsultaRapidaAberta(true),
     onDesfazerRemocao: handleDesfazerRemocao,
+    onAbrirReferencia: useCallback(() => setAtalhosReferenciaAberta((v) => !v), []),
     onSelecionarMetodo: useCallback(
       (indice: 1 | 2 | 3 | 4) => {
         if (pagamentoControlesDesabilitados) return
@@ -1257,6 +1260,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           onTentarStatusNovamente={() => void recarregarStatusCaixa()}
           printerStatus={thermal.status}
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
+          atalhosAbertos={atalhosReferenciaAberta}
+          onAtalhosOpenChange={setAtalhosReferenciaAberta}
         />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">

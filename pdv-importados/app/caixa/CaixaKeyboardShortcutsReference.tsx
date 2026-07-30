@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DragonModal } from "@/components/ui/DragonModal"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -11,6 +10,9 @@ type Props = {
   m: Mensagens
   variant?: "default" | "classic"
   className?: string
+  /** Estado do modal — controlado pelo dono (CaixaPageClient), para o atalho F1 alternar. */
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 interface ShortcutGroup {
@@ -43,8 +45,23 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Navegação",
       shortcuts: [
         {
+          keys: "F1",
+          label: m.caixa.atalho_ajuda,
+          context: "Sempre disponível",
+        },
+        {
           keys: "F2 / Ctrl+B",
           label: "Buscar Produto",
+          context: "Sempre disponível",
+        },
+        {
+          keys: "Alt+Z",
+          label: m.caixa.pdv_tab_produto,
+          context: "Sempre disponível",
+        },
+        {
+          keys: "Alt+B / Alt+C",
+          label: m.caixa.pdv_tab_pgto,
           context: "Sempre disponível",
         },
         {
@@ -102,18 +119,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
           label: m.caixa.finalizar_venda,
           context: "Apenas PDV clássico",
         },
-        {
-          keys: "Alt+Z",
-          label: m.caixa.pdv_tab_produto || "Focar busca",
-          context: "Apenas PDV clássico",
-        },
       ],
     },
   ]
 }
 
-export function CaixaKeyboardShortcutsReference({ m, variant = "default", className }: Props) {
-  const [open, setOpen] = useState(false)
+export function CaixaKeyboardShortcutsReference({ m, variant = "default", className, open, onOpenChange }: Props) {
   const classic = variant === "classic"
   const shortcutsData = buildShortcutsData(m)
 
@@ -130,16 +141,16 @@ export function CaixaKeyboardShortcutsReference({ m, variant = "default", classN
             : "text-jl-fg-2 hover:bg-white/[0.06]",
           className,
         )}
-        onClick={() => setOpen(true)}
-        title={m.caixa.atalho_ajuda || "Atalhos de Teclado (?)"}
-        aria-label={m.caixa.atalho_ajuda || "Atalhos de Teclado"}
+        onClick={() => onOpenChange(true)}
+        title={m.caixa.atalho_ajuda}
+        aria-label={m.caixa.atalho_ajuda}
       >
         <HelpCircle className="h-4 w-4" />
       </Button>
 
       <DragonModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => onOpenChange(false)}
         title="Atalhos de Teclado"
         subtitle="Lista completa de atalhos disponíveis no PDV"
         size="lg"

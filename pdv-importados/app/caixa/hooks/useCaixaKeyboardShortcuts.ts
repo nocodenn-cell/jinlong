@@ -32,6 +32,8 @@ type Params = {
    * FORA de campo de texto (não interfere na digitação de código de barras).
    */
   onSelecionarMetodo?: (indice: 1 | 2 | 3 | 4) => void
+  /** F1: abre referência de atalhos (Fase 3). */
+  onAbrirReferencia?: () => void
   pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
 }
 
@@ -68,6 +70,7 @@ export function useCaixaKeyboardShortcuts({
   onConsultaRapida,
   onDesfazerRemocao,
   onSelecionarMetodo,
+  onAbrirReferencia,
   pdvClassicAtalhos = null,
 }: Params) {
   useEffect(() => {
@@ -94,6 +97,11 @@ export function useCaixaKeyboardShortcuts({
       if (e.code === "F4" || e.code === "F9") {
         e.preventDefault()
         onFinalizar()
+        return
+      }
+      if (e.code === "F1") {
+        e.preventDefault()
+        onAbrirReferencia?.()
         return
       }
       if (e.code === "F2") {
@@ -186,6 +194,7 @@ export function useCaixaKeyboardShortcuts({
     globalThis.addEventListener("keydown", onKey)
     return () => globalThis.removeEventListener("keydown", onKey)
   }, [
+    onAbrirReferencia,
     onFecharCaixa,
     onFinalizar,
     onFocarBusca,
