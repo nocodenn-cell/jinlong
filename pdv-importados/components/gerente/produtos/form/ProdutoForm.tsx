@@ -12,6 +12,7 @@ import {
 } from './ProdutoFormContext'
 import type { UseProdutoFormReturn } from './useProdutoForm'
 import type { ProdutoFormShellProps } from './produtoForm.types'
+import type { ProdutoFormErro } from './produtoForm.clientValidation'
 import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
 import { CategoriaQuickField } from './sections/CategoriaQuickField'
@@ -26,7 +27,10 @@ type Props = ProdutoFormShellProps &
   Readonly<{
     nomeRef?: RefObject<HTMLInputElement | null>
     codigoBarrasRef?: RefObject<HTMLInputElement | null>
+    precoCustoRef?: RefObject<HTMLInputElement | null>
     precoVarejoRef?: RefObject<HTMLInputElement | null>
+    estoqueInicialRef?: RefObject<HTMLInputElement | null>
+    erro?: ProdutoFormErro | null
     onEnterSubmit?: () => void
     onCodigoBarrasBlur?: () => void
     sugestaoHint?: string | null
@@ -46,6 +50,7 @@ export function ProdutoForm(props: Props) {
     onFornecedoresChange: props.onFornecedoresChange,
     onCategoriasChange: props.onCategoriasChange,
     onMarcasChange: props.onMarcasChange,
+    erro: props.erro,
     ...fields,
     nome: props.nome,
     setNome: props.setNome,
@@ -124,16 +129,20 @@ export function ProdutoForm(props: Props) {
           </div>
         ) : null}
 
+        {/* Cadeia do Enter no cadastro rápido, na mesma ordem visual:
+            código → nome → custo → venda → estoque inicial → salvar. */}
         <EssencialSection
           nomeRef={props.nomeRef}
           codigoBarrasRef={props.codigoBarrasRef}
-          precoVarejoRef={props.precoVarejoRef}
+          proximoAposNomeRef={props.precoCustoRef}
           onCodigoBarrasBlur={props.onCodigoBarrasBlur}
           sugestaoHint={props.sugestaoHint}
         />
         <PrecosSection
           modoCompleto={props.modoCompleto}
+          precoCustoRef={props.precoCustoRef}
           precoVarejoRef={props.precoVarejoRef}
+          proximoAposVarejoRef={props.estoqueInicialRef}
           onEnterSubmit={props.onEnterSubmit}
         />
         {/* Categoria e fornecedor sempre visíveis (modo simples e completo) —
@@ -143,7 +152,11 @@ export function ProdutoForm(props: Props) {
           <CategoriaQuickField />
           <FornecedorQuickField idioma={props.idioma} />
         </div>
-        <EstoqueSection modoCompleto={props.modoCompleto} />
+        <EstoqueSection
+          modoCompleto={props.modoCompleto}
+          estoqueInicialRef={props.estoqueInicialRef}
+          onEnterSubmit={props.onEnterSubmit}
+        />
 
         <button
           type="button"
