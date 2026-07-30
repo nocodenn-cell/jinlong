@@ -86,8 +86,13 @@ embora nenhuma UI ofereça isso. Não é exploração trivial (a criação exige
 `service_role`, e a action foi removida), mas é permissão mais larga do que o
 sistema precisa.
 
-**Migração escrita e validada, aguardando aplicação:**
+**Migração escrita e validada, NÃO APLICADA — sem urgência.**
 `backend/supabase/migrations/20260730093000_revoga_operador_cadastro_produto_pdv.sql`
+
+Governança, impacto e rollback: [../P2_GOVERNANCA_RLS_E_PENTEST.md](../P2_GOVERNANCA_RLS_E_PENTEST.md)
+§5. Aplicar em janela de manutenção do Supabase, pelo pipeline normal —
+prioridade atual é fluxo comercial e estabilidade do piloto. Registrado também
+no [../BACKLOG_TECNICO.md](../BACKLOG_TECNICO.md) (item 6).
 
 Auditoria que a embasou (contra o banco vivo, não contra os arquivos):
 
