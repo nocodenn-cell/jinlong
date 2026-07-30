@@ -6,6 +6,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
 import type { FormaPagamento } from "@/app/caixa/hooks/useCaixaPagamentos"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { Select } from "@/components/ui/select"
@@ -133,6 +134,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                   const v = parseFloat(e.target.value)
                   onAtualizarValor(idx, Number.isFinite(v) ? v : 0)
                 }}
+                onKeyDown={enterVoltaParaBusca}
                 aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
                 data-caixa-atalho-bloqueado="true"
                 className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
