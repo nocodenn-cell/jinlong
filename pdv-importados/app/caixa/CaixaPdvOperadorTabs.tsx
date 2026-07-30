@@ -50,7 +50,6 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
     m,
     pagamentos,
     totalLiquidoComGerente,
-    somaParcelas,
     diferenca,
     podeAdicionarParcela,
     formasDisponiveis,
@@ -64,8 +63,19 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
   }: PagamentoPanelProps,
   ref: React.ForwardedRef<HTMLElement>,
 ) {
-  const somaOk = Math.abs(diferenca) <= SALDO_PENDENTE_EPS
   const temTroco = diferenca > EXCESSO_PAGAMENTO_EPS
+  const faltando = diferenca < -SALDO_PENDENTE_EPS
+
+  // Pagamento único é o caso de 99% das vendas. Enquanto houver uma só parcela o
+  // painel mostra APENAS o que aquela forma exige: dinheiro pede valor recebido
+  // (para o troco), cartão e PIX não pedem nada — o valor é o total. Dividir o
+  // cupom continua possível, mas fora do caminho padrão.
+  const dividido = pagamentos.length > 1
+  const formaUnica = pagamentos[0]?.formaPagamento
+  const pedeValorRecebido = !dividido && formaUnica === "DINHEIRO"
+  const troco = pedeValorRecebido
+    ? calcularTroco(totalLiquidoComGerente, pagamentos[0].valor)
+    : null
 
   return (
     <section
@@ -73,35 +83,53 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
       id="caixa-pdv-panel-pgto"
       tabIndex={-1}
       aria-label={m.caixa.pdv_tab_aria_pgto}
-      className="flex shrink-0 flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
+      className="flex shrink-0 flex-col gap-2 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
     >
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">
-          {m.caixa.pdv_pgto_parcelas_titulo}
-        </h3>
-        {pagamentos.length > 1 ? (
-          <button
-            type="button"
-            onClick={onAutoCompletar}
-            className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[10px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
+      {metodoPagamentoPanel}
+
+      {pedeValorRecebido ? (
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="caixa-valor-recebido"
+            className="shrink-0 text-xs font-medium text-muted-foreground"
           >
-            {m.caixa.pdv_pgto_auto_completar}
-          </button>
-        ) : null}
-      </div>
-      {metodoPagamentoPanel ? <div className="mb-1">{metodoPagamentoPanel}</div> : null}
-      <div className="space-y-3">
-        {pagamentos.map((p, idx) => (
-          <div
-            key={`parcela-${idx}`}
-            className="flex flex-col gap-1.5 rounded-lg border p-2.5 border-border/60 bg-muted/20"
-          >
-            <div className="flex items-center gap-2">
+            {m.caixa.pdv_pgto_valor_recebido}
+          </label>
+          <div className="flex flex-1 items-center gap-1.5">
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">
+              {moedaPrefixo}
+            </span>
+            <input
+              id="caixa-valor-recebido"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={pagamentos[0].valor === 0 ? "" : pagamentos[0].valor.toFixed(2)}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value)
+                onAtualizarValor(0, Number.isFinite(v) ? v : 0)
+              }}
+              onKeyDown={enterVoltaParaBusca}
+              data-caixa-atalho-bloqueado="true"
+              className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-base font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {dividido ? (
+        <div className="space-y-2">
+          {pagamentos.map((p, idx) => (
+            <div
+              key={`parcela-${idx}`}
+              className="flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/20 p-2"
+            >
               <Select
                 value={p.formaPagamento}
                 onChange={(e) => onAtualizarForma(idx, e.target.value as FormaPagamento)}
                 aria-label={caixaFmt(m.caixa.aria_parcela_forma, { n: idx + 1 })}
-                className="h-auto focus-visible:ring-0 focus-visible:ring-offset-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="h-auto flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0"
               >
                 {formasDisponiveis.map((f) => (
                   <option key={f} value={f}>
@@ -109,21 +137,6 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                   </option>
                 ))}
               </Select>
-              {pagamentos.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => onRemoverParcela(idx)}
-                  aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
-                  className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[10px] font-semibold text-destructive transition hover:bg-destructive/20"
-                >
-                  ✕
-                </button>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                {moedaPrefixo}
-              </span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -137,83 +150,102 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                 onKeyDown={enterVoltaParaBusca}
                 aria-label={caixaFmt(m.caixa.aria_parcela_valor, { n: idx + 1 })}
                 data-caixa-atalho-bloqueado="true"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="w-28 rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
               />
-            </div>
-          </div>
-        ))}
-      </div>
-      {pagamentos.length === 1 && pagamentos[0].formaPagamento === "DINHEIRO"
-        ? (() => {
-            // Leitura inline de troco para dinheiro em pagamento único: o operador
-            // vê o troco vivo ao lado do valor recebido, via cálculo canônico
-            // (SSoT), sem precisar ler o resumo lá embaixo.
-            const t = calcularTroco(totalLiquidoComGerente, pagamentos[0].valor)
-            return (
-              <div
-                data-testid="caixa-troco-inline"
-                className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs ${
-                  t.troco > 0 ? "bg-success/10" : "bg-muted/30"
-                }`}
+              <button
+                type="button"
+                onClick={() => onRemoverParcela(idx)}
+                aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
+                className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[10px] font-semibold text-destructive transition hover:bg-destructive/20"
               >
-                <span className="font-medium text-muted-foreground">
-                  {m.caixa.pdv_pgto_troco_cliente}
-                </span>
-                <span
-                  className={`tabular-nums font-bold ${
-                    t.troco > 0 ? "text-success" : "text-foreground"
-                  }`}
-                >
-                  {moedaPrefixo} {formatDecimalBRL(t.troco)}
-                </span>
-              </div>
-            )
-          })()
-        : null}
-      {podeAdicionarParcela ? (
+                ✕
+              </button>
+            </div>
+          ))}
+          <div className="flex items-center justify-between gap-2">
+            {podeAdicionarParcela ? (
+              <button
+                type="button"
+                onClick={() => onAdicionarParcela()}
+                aria-label={m.caixa.aria_adicionar_parcela}
+                className="rounded-md border border-dashed border-border px-2 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              >
+                + {m.caixa.pdv_pgto_adicionar_forma}
+              </button>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">
+                {m.caixa.pdv_pgto_max_parcelas}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={onAutoCompletar}
+              className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[11px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
+            >
+              {m.caixa.pdv_pgto_auto_completar}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Linha única de leitura: o total é o número que o operador fala em voz
+          alta; troco/falta só aparecem quando existem. "Soma das parcelas"
+          repetia o total no caso de pagamento único e foi removida daí. */}
+      <div className="flex items-baseline justify-between gap-3 border-t border-border pt-2">
+        <span className="text-xs text-muted-foreground">{m.caixa.total_pagar}</span>
+        <span className="text-lg font-bold tabular-nums text-foreground">
+          {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
+        </span>
+      </div>
+
+      {troco && pagamentos[0].valor > 0 ? (
+        <div
+          data-testid="caixa-troco-inline"
+          className={`flex items-baseline justify-between gap-3 rounded-md px-2.5 py-1.5 ${
+            troco.troco > 0 ? "bg-success/10" : "bg-muted/30"
+          }`}
+        >
+          <span className="text-xs font-medium text-muted-foreground">
+            {m.caixa.pdv_pgto_troco_cliente}
+          </span>
+          <span
+            className={`text-lg font-bold tabular-nums ${
+              troco.troco > 0 ? "text-success" : "text-foreground"
+            }`}
+          >
+            {moedaPrefixo} {formatDecimalBRL(troco.troco)}
+          </span>
+        </div>
+      ) : null}
+
+      {dividido && temTroco ? (
+        <div className="flex justify-between gap-3 text-xs">
+          <span className="font-medium text-success">{m.caixa.pdv_pgto_troco_cliente}</span>
+          <span className="tabular-nums font-bold text-success">
+            {moedaPrefixo} {formatDecimalBRL(diferenca)}
+          </span>
+        </div>
+      ) : null}
+
+      {faltando ? (
+        <div className="flex justify-between gap-3 text-xs">
+          <span className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</span>
+          <span className="tabular-nums font-bold text-destructive">
+            {moedaPrefixo} {formatDecimalBRL(Math.abs(diferenca))}
+          </span>
+        </div>
+      ) : null}
+
+      {!dividido && podeAdicionarParcela ? (
         <button
           type="button"
           onClick={() => onAdicionarParcela()}
           aria-label={m.caixa.aria_adicionar_parcela}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+          className="self-start text-[11px] font-medium text-muted-foreground underline underline-offset-2 transition hover:text-foreground"
         >
-          + {m.caixa.pdv_pgto_adicionar_forma}
+          {m.caixa.pdv_pgto_dividir}
         </button>
-      ) : (
-        <p className="text-center text-[10px] text-muted-foreground">
-          {m.caixa.pdv_pgto_max_parcelas}
-        </p>
-      )}
-      <dl className="space-y-2 border-t pt-3 text-sm border-border">
-        <div className="flex justify-between gap-3">
-          <dt className="text-muted-foreground">{m.caixa.total_pagar}</dt>
-          <dd className="font-semibold tabular-nums text-foreground">
-            {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-3 text-xs">
-          <dt className="text-muted-foreground">{m.caixa.pdv_pgto_soma_parcelas}</dt>
-          <dd className={`tabular-nums font-semibold ${somaOk ? "text-success" : "text-destructive"}`}>
-            {moedaPrefixo} {formatDecimalBRL(somaParcelas)}
-          </dd>
-        </div>
-        {temTroco ? (
-          <div className="flex justify-between gap-3 text-xs">
-            <dt className="font-medium text-success">{m.caixa.pdv_pgto_troco_cliente}</dt>
-            <dd className="tabular-nums font-bold text-success">
-              {moedaPrefixo} {formatDecimalBRL(diferenca)}
-            </dd>
-          </div>
-        ) : null}
-        {diferenca < -SALDO_PENDENTE_EPS ? (
-          <div className="flex justify-between gap-3 text-xs">
-            <dt className="font-medium text-destructive">{m.caixa.pdv_pgto_diferenca}</dt>
-            <dd className="tabular-nums font-bold text-destructive">
-              {moedaPrefixo} {formatDecimalBRL(Math.abs(diferenca))}
-            </dd>
-          </div>
-        ) : null}
-      </dl>
+      ) : null}
     </section>
   )
 })

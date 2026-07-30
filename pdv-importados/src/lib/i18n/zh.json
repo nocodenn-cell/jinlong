@@ -1026,6 +1026,8 @@
     "pdv_pgto_parcelas_titulo": "本单付款笔数",
     "pdv_pgto_um_meio_dinheiro": "所选付款方式的一笔金额将付清本单应付合计（本版未开放手动拆单）。",
     "pdv_pgto_adicionar_forma": "添加方式",
+    "pdv_pgto_dividir": "拆分付款",
+    "pdv_pgto_valor_recebido": "收款金额",
     "pdv_pgto_remover": "删除",
     "pdv_pgto_auto_completar": "自动补全",
     "pdv_pgto_valor_recebido": "已收",
