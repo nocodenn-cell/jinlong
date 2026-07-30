@@ -19,6 +19,8 @@ type Props = {
   onTentarStatusNovamente: () => void
   printerStatus?: ThermalStatus
   printerDeviceName?: string | null
+  atalhosAbertos: boolean
+  onAtalhosOpenChange: (open: boolean) => void
 }
 
 function CaixaHeaderImpl({
@@ -33,6 +35,8 @@ function CaixaHeaderImpl({
   onTentarStatusNovamente,
   printerStatus,
   printerDeviceName,
+  atalhosAbertos,
+  onAtalhosOpenChange,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -52,6 +56,8 @@ function CaixaHeaderImpl({
         onFecharCaixa={onFecharCaixa}
         printerStatus={printerStatus}
         printerDeviceName={printerDeviceName}
+        atalhosAbertos={atalhosAbertos}
+        onAtalhosOpenChange={onAtalhosOpenChange}
       />
     </div>
   )
