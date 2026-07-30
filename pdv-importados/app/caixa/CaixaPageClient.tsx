@@ -542,6 +542,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
   ])
 
+  /**
+   * "Excluir venda" / F8 (gatilhos do operador): confirma antes de descartar
+   * o cupom quando há itens — evita perder uma venda em andamento com um
+   * clique/atalho sem querer. Reset interno pós-espera (handleNovoCupom
+   * chamado depois de colocarVendaEmEsperaCaixa) não passa por aqui: os
+   * itens já foram salvos, não há o que confirmar.
+   */
+  const handleExcluirVendaConfirmado = useCallback(() => {
+    if (itens.length > 0 && !globalThis.confirm(m.caixa.cart_bar_excluir_confirmar)) {
+      return
+    }
+    handleNovoCupom()
+  }, [itens.length, handleNovoCupom, m.caixa.cart_bar_excluir_confirmar])
+
   const recarregarEmEspera = useCallback(async () => {
     setCarregandoEmEspera(true)
     try {
@@ -1076,13 +1090,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const pdvClassicAtalhos = useMemo(
     () => ({
-      onExcluirVenda: handleNovoCupom,
+      onExcluirVenda: handleExcluirVendaConfirmado,
       onFinalizarVenda: () => void handleFinalizar(),
       abas: {
         produto: () => focarCampoBusca(),
       },
     }),
-    [handleNovoCupom, handleFinalizar, focarCampoBusca],
+    [handleExcluirVendaConfirmado, handleFinalizar, focarCampoBusca],
   )
 
   useCaixaKeyboardShortcuts({
@@ -1093,7 +1107,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onFinalizar: () => void handleFinalizar(),
     onFecharCaixa: () => void handleFecharCaixa(),
     onFocarBusca: focarCampoBusca,
-    onNovoCupom: handleNovoCupom,
+    onNovoCupom: handleExcluirVendaConfirmado,
     onReimprimir: useCallback(() => {
       if (lastReciboRef.current) setReimprimirModalAberto(true)
     }, []),
@@ -1250,7 +1264,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         codigo={codigo}
                         onCodigoChange={setCodigo}
                         onSubmit={handleAdicionar}
-                        onNovoCupom={handleNovoCupom}
+                        onNovoCupom={handleExcluirVendaConfirmado}
                         buscando={buscandoPipeline}
                         carregandoRegras={carregandoRegras}
                         somAtivo={somFeedbackAtivo}
@@ -1280,7 +1294,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               </div>
               <CaixaPdvCartSaleBar
                 m={m}
-                onExcluirVenda={handleNovoCupom}
+                onExcluirVenda={handleExcluirVendaConfirmado}
                 onFinalizar={handleFinalizarClick}
                 finalizando={finalizando}
                 movimentandoCaixa={movimentandoCaixa}
