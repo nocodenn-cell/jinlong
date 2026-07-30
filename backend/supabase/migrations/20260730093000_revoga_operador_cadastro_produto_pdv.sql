@@ -1,3 +1,14 @@
+-- STATUS: NÃO APLICADA. Limpeza de permissão SEM URGÊNCIA — aplicar em janela
+-- de manutenção do Supabase, pelo pipeline normal (§1 de
+-- docs/CHECKLIST_DEPLOY_SUPABASE.md). Prioridade atual é fluxo comercial e
+-- estabilidade do piloto.
+--
+-- NÃO CORRIGE EXPOSIÇÃO: as funções tocadas têm EXECUTE apenas para postgres e
+-- service_role, nunca para authenticated/anon — a permissão órfã nunca foi
+-- alcançável por cliente algum. É redução de superfície, não incidente.
+--
+-- Escopo, impacto em testes e ROLLBACK: docs/P2_GOVERNANCA_RLS_E_PENTEST.md §5.
+--
 -- Revoga as permissões de OPERADOR que existiam APENAS para o cadastro
 -- relâmpago no PDV, removido em 2026-07-30 (o PDV não cadastra produto; isso
 -- pertence ao módulo Produtos). Ver docs/architecture/pdv_cadastro_removido.md.
