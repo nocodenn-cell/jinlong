@@ -14,6 +14,7 @@ import {
   QUANTIDADE_CAIXA_MIN,
 } from "@/lib/format/quantidadeCaixa"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { enterVoltaParaBusca } from "@/app/caixa/caixaFocoBusca"
 import { DragonIcon } from "@/components/icons/DragonIcon"
 import { labelOrigemCaixa } from "@/lib/caixa/metaProdutoUi"
 import type { OrigemProdutoCaixa } from "@/app/caixa/caixaActionTypes"
@@ -132,14 +133,7 @@ const QuantidadeStepper = memo(function QuantidadeStepper({
         onChange={(e) =>
           onAlterarQuantidade(item.id, parseQuantidadeInput(e.target.value))
         }
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            ;(e.currentTarget as HTMLInputElement).blur()
-            const busca = document.querySelector<HTMLElement>('[data-caixa-busca="true"]')
-            busca?.focus()
-          }
-        }}
+        onKeyDown={enterVoltaParaBusca}
         className={`${inputSizeClass} rounded-none border-0 text-center text-sm tabular-nums px-1 bg-background focus-visible:ring-1 focus-visible:ring-primary/40`}
       />
       <Button
