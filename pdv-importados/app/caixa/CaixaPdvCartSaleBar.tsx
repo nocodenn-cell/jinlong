@@ -17,6 +17,7 @@ type Props = {
   totalLiquidoComGerente: number
   totalBruto?: number
   totalDesconto?: number
+  valorDescontoGerente?: number
   moedaPrefixo: string
 }
 
@@ -33,12 +34,14 @@ export function CaixaPdvCartSaleBar({
   totalLiquidoComGerente,
   totalBruto = 0,
   totalDesconto = 0,
+  valorDescontoGerente = 0,
   moedaPrefixo,
 }: Props) {
   const excluirDisabled =
     !caixaAberto || movimentandoCaixa || finalizando || carregandoRegras
 
   const hasDesconto = totalDesconto > 0
+  const hasDescontoGerente = valorDescontoGerente > 0.005
 
   return (
     <div
@@ -71,14 +74,25 @@ export function CaixaPdvCartSaleBar({
                 {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </div>
 
-              {hasDesconto && (
-                <div className="mt-0.5 flex justify-end gap-3 text-xs text-jl-fg-3">
-                  <span>
-                    {moedaPrefixo} {formatDecimalBRL(totalBruto)}
-                  </span>
-                  <span className="text-[var(--color-warning-strong)]">
-                    -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
-                  </span>
+              {(hasDesconto || hasDescontoGerente) && (
+                <div className="mt-0.5 flex flex-col items-end gap-1 text-xs text-jl-fg-3">
+                  <div className="flex justify-end gap-3">
+                    <span>
+                      {moedaPrefixo} {formatDecimalBRL(totalBruto)}
+                    </span>
+                    {hasDesconto && (
+                      <span className="text-[var(--color-warning-strong)]">
+                        -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
+                      </span>
+                    )}
+                  </div>
+                  {hasDescontoGerente && (
+                    <div className="flex justify-end gap-3">
+                      <span className="text-[var(--color-warning-strong)]">
+                         -{moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

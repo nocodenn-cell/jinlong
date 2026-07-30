@@ -289,6 +289,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const lastReciboRef = useRef<ReciboVenda | null>(null)
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
+  const [clienteNome, setClienteNome] = useState<string | null>(null)  // ✅ NOVO (Fase 5b) - para exibição
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
 
   const thermal = useThermalPrinter()
@@ -532,6 +533,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem(null)
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
+    setClienteId(null)  // Reset cliente selecionado para evitar vazar entre cupons
+    setClienteNome(null)
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
@@ -870,10 +873,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     // Sem cliente, abre modal (SSoT alinhada a caixaPagamentoSaldo + RPC v4).
     if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
       setSelecionarClienteModalAberto(true)
-      setCaixaMensagem(
-        "Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.",
-        { kind: "warning" },
-      )
+      setCaixaMensagem(m.caixa.msg_pagamento_parcial_requer_cliente, { kind: "warning" })
       return
     }
     // Normalizar parcelas: desconta troco da última parcela DINHEIRO
@@ -942,10 +942,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
         setSelecionarClienteModalAberto(true)
         setFinalizando(false)
-        setCaixaMensagem(
-          "Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.",
-          { kind: "warning" },
-        )
+        setCaixaMensagem(m.caixa.msg_pagamento_parcial_requer_cliente, { kind: "warning" })
         return
       }
 
@@ -1013,6 +1010,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         limparEstadoDescontoGerente()
         resetPagamentos()
         setClienteId(null)  // ✅ NOVO (Fase 5b) - reset após venda bem-sucedida
+        setClienteNome(null)
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
@@ -1256,7 +1254,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                    <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                    <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} clienteNome={clienteNome} />
                     <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
@@ -1305,6 +1303,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 totalBruto={totalBruto}
                 totalDesconto={totalDesconto}
+                valorDescontoGerente={valorDescontoGerente}
                 moedaPrefixo={m.caixa.moeda_prefixo}
               />
             </section>
@@ -1590,8 +1589,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       <CaixaSelecionarClienteModal
         aberto={selecionarClienteModalAberto}
         m={m}
-        onSelecionado={(id) => {
+        onSelecionado={(id, nome) => {
           setClienteId(id)
+          setClienteNome(nome)
           setSelecionarClienteModalAberto(false)
         }}
         onCancelado={() => setSelecionarClienteModalAberto(false)}
