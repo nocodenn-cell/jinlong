@@ -1,6 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { forwardRef } from "react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { labelFormaPagamentoVenda } from "@/lib/format/vendaLabels"
@@ -22,7 +23,7 @@ type PagamentoLinha = {
   valor: number
 }
 
-type Props = {
+type PagamentoPanelProps = {
   m: Mensagens
   pagamentos: PagamentoLinha[]
   totalLiquidoComGerente: number
@@ -36,32 +37,40 @@ type Props = {
   onAtualizarValor: (index: number, valor: number) => void
   onAutoCompletar: () => void
   moedaPrefixo: string
-  produtoPanel: ReactNode
   metodoPagamentoPanel?: ReactNode
 }
 
-function PagamentoPanel({
-  m,
-  pagamentos,
-  totalLiquidoComGerente,
-  somaParcelas,
-  diferenca,
-  podeAdicionarParcela,
-  formasDisponiveis,
-  onAdicionarParcela,
-  onRemoverParcela,
-  onAtualizarForma,
-  onAtualizarValor,
-  onAutoCompletar,
-  moedaPrefixo,
-  metodoPagamentoPanel,
-}: Omit<Props, "produtoPanel">) {
+type Props = PagamentoPanelProps & {
+  produtoPanel: ReactNode
+}
+
+const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
+  {
+    m,
+    pagamentos,
+    totalLiquidoComGerente,
+    somaParcelas,
+    diferenca,
+    podeAdicionarParcela,
+    formasDisponiveis,
+    onAdicionarParcela,
+    onRemoverParcela,
+    onAtualizarForma,
+    onAtualizarValor,
+    onAutoCompletar,
+    moedaPrefixo,
+    metodoPagamentoPanel,
+  }: PagamentoPanelProps,
+  ref: React.ForwardedRef<HTMLElement>,
+) {
   const somaOk = Math.abs(diferenca) <= SALDO_PENDENTE_EPS
   const temTroco = diferenca > EXCESSO_PAGAMENTO_EPS
 
   return (
     <section
+      ref={ref}
       id="caixa-pdv-panel-pgto"
+      tabIndex={-1}
       aria-label={m.caixa.pdv_tab_aria_pgto}
       className="flex shrink-0 flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3 shadow-sm"
     >
@@ -205,7 +214,9 @@ function PagamentoPanel({
       </dl>
     </section>
   )
-}
+})
+
+PagamentoPanelImpl.displayName = "PagamentoPanel"
 
 export function CaixaPdvOperadorTabs({
   m,
@@ -227,7 +238,7 @@ export function CaixaPdvOperadorTabs({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">{produtoPanel}</div>
-      <PagamentoPanel
+      <PagamentoPanelImpl
         m={m}
         pagamentos={pagamentos}
         totalLiquidoComGerente={totalLiquidoComGerente}

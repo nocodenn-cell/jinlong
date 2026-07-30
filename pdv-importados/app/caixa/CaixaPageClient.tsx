@@ -281,6 +281,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
+  const produtoPanelRef = useRef<HTMLDivElement>(null)
   /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». */
   const vendaIdempotenciaRef = useRef<string | null>(null)
 
@@ -302,6 +303,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (typeof document !== "undefined" && document.querySelector('[role="dialog"]')) return
       buscaInputRef.current?.focus()
     })
+  }, [])
+
+  const focarAbaProduto = useCallback(() => {
+    produtoPanelRef.current?.focus()
+  }, [])
+
+  const focarAbaPagamento = useCallback(() => {
+    // Focar o painel de pagamento por ID (renderizado em CaixaPdvOperadorTabs)
+    const pgtoPanel = document.getElementById('caixa-pdv-panel-pgto')
+    pgtoPanel?.focus()
   }, [])
 
   // Idle focus magnet: after 3s of no keyboard/pointer activity, refocus the search field
@@ -588,6 +599,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       caixaId,
       descontoGerentePercentual:
         descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
+      clienteId: clienteId ?? undefined,
+      clienteNome: clienteNome ?? undefined,
     })
     if (!res.ok) {
       setCaixaMensagem(res.error, { kind: "error" })
@@ -604,6 +617,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   }, [
     itens,
     caixaStatus,
+    clienteId,
+    clienteNome,
     totalBruto,
     totalDesconto,
     totalLiquidoComGerente,
@@ -627,6 +642,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           caixaId: isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null,
           descontoGerentePercentual:
             descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
+          clienteId: clienteId ?? undefined,
+          clienteNome: clienteNome ?? undefined,
         })
         if (!parked.ok) {
           setCaixaMensagem(parked.error, { kind: "error" })
@@ -644,6 +661,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       // Token de gerente não é restaurado: exige nova autorização se precisar desconto.
       limparEstadoDescontoGerente()
       substituirCarrinho(res.itens)
+      // Restaura cliente vinculado à venda (Fase 5c)
+      setClienteId(res.clienteId ?? null)
+      setClienteNome(res.clienteNome ?? null)
       // Recalcula VAREJO/ATACADO com a quantidade retomada (spec Fase 2).
       for (const item of res.itens) {
         const tipo = item.resultado?.tipoPreco ?? "VAREJO"
@@ -668,6 +688,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       totalDesconto,
       totalLiquidoComGerente,
       caixaStatus,
+      clienteId,
+      clienteNome,
       descontoGerentePercentual,
       handleNovoCupom,
       limparEstadoDescontoGerente,
@@ -1091,10 +1113,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       onExcluirVenda: handleExcluirVendaConfirmado,
       onFinalizarVenda: () => void handleFinalizar(),
       abas: {
-        produto: () => focarCampoBusca(),
+        produto: focarAbaProduto,
+        cliente: focarAbaPagamento,
+        pgto: focarAbaPagamento,
       },
     }),
-    [handleExcluirVendaConfirmado, handleFinalizar, focarCampoBusca],
+    [handleExcluirVendaConfirmado, handleFinalizar, focarAbaProduto, focarAbaPagamento],
   )
 
   useCaixaKeyboardShortcuts({
@@ -1253,7 +1277,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 moedaPrefixo={m.caixa.moeda_prefixo}
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
-                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                  <div ref={produtoPanelRef} tabIndex={-1} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                     <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} clienteNome={clienteNome} />
                     <div className="shrink-0">
                       <CaixaSearchBar
