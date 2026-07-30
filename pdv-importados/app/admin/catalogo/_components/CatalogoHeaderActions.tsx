@@ -15,15 +15,17 @@ import { toCatalogoExportInput, type CatalogoExportFiltros } from './catalogoFil
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import type { Mensagens } from '@/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = Readonly<{
   m: Mensagens
   ui: Mensagens['admin_ui']
   opcoes: OpcoesFiltrosProdutos
   filtrosExport: CatalogoExportFiltros
+  idioma: Idioma
 }>
 
-export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport }: Props) {
+export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: Props) {
   const router = useRouter()
   const [importOpen, setImportOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -87,7 +89,12 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport }: Props) {
           <Download size={14} aria-hidden />
           {exporting ? m.comum.carregando : m.gerente.exportar_csv}
         </Button>
-        <CatalogoNovoButton label={m.produtos.cadastro_rapido} m={m} opcoes={opcoes} />
+        <CatalogoNovoButton
+          label={m.produtos.cadastro_rapido}
+          m={m}
+          opcoes={opcoes}
+          idioma={idioma}
+        />
       </PageActions>
 
       <ProdutosImportarModal

@@ -15,6 +15,7 @@ import {
   type ActionResult,
 } from '@/lib/observability/runServerAction'
 import { AtualizarEstoqueSchema, EstoqueListagemInputSchema, ProdutoIdSchema } from './actions.validation'
+import { ajustarComLinhaGarantida } from './ajusteComLinhaGarantida'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { createInventoryAdjustmentService } from '@/app/admin/estoque/inventoryAdjustment'
@@ -31,6 +32,25 @@ type LegacyEstoqueMutationResult<T = null> =
 
 async function lojaIdDoUsuarioLogado(): Promise<string | null> {
   return getGerenteLojaId()
+}
+
+/**
+ * Cria a linha `estoque` zerada de um produto que ainda não tem uma (legado).
+ * Mesma regra de `garantirLinhaEstoque`; corrida concorrente (23505) conta como
+ * sucesso, porque o objetivo é apenas garantir que a linha exista.
+ */
+async function criarLinhaEstoqueZerada(
+  admin: ReturnType<typeof createAdminClient>,
+  produtoId: string,
+  lojaId: string,
+): Promise<boolean> {
+  const { error } = await admin.from('estoque').insert({
+    produto_id: produtoId,
+    loja_id: lojaId,
+    quantidade_atual: 0,
+    estoque_minimo: 0,
+  })
+  return !error || error.code === '23505'
 }
 
 export async function atualizarEstoqueProduto(input: unknown): Promise<ActionResult<null>> {
@@ -73,7 +93,7 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         throw new Error(mensagemErroComSecao('Estoque', localized.error))
       }
       const adjustment = createInventoryAdjustmentService(admin, lojaId)
-      const result = await adjustment.adjustInventory({
+      const comando = {
         productId: parsed.data.produto_id,
         lojaId,
         quantity: parsed.data.quantidade_atual,
@@ -81,7 +101,13 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         reason: parsed.data.motivo,
         observacao,
         atorId,
+      }
+
+      const result = await ajustarComLinhaGarantida(comando, {
+        ajustar: (cmd) => adjustment.adjustInventory(cmd),
+        garantirLinha: (cmd) => criarLinhaEstoqueZerada(admin, cmd.productId, cmd.lojaId),
       })
+
       if (!result.ok) {
         const localized = localizeInventoryFailure(idioma, result)
         throw new Error(mensagemErroComSecao('Estoque', localized.error))
@@ -181,6 +207,12 @@ function mapDomainRowToDto(row: InventoryStockListRow): EstoqueGerenteLinhaDTO {
 
 /** Lista paginada — canônico: InventoryQueryService → RPC `gerente_estoque_list_page`. */
 export async function obterListaEstoqueGerente(input: unknown): Promise<EstoqueGerenteListaResult> {
+  // Server Action é endpoint público: sem este guard a listagem de estoque
+  // dependia só do RLS e, sem sessão, `lojaIdResolvidaGestao` ainda caía na
+  // matriz. As demais actions do módulo já barram aqui.
+  const auth = await assertGerenteSession()
+  if (!auth.ok) throw new Error(mensagemErroComSecao('Estoque', auth.error))
+
   const parsed = EstoqueListagemInputSchema.safeParse(input)
   if (!parsed.success) {
     return { total: 0, rows: [] }
@@ -214,6 +246,9 @@ const EXPORT_MAX_ROWS = 12_000
 
 /** Todas as linhas que batem nos filtros (paginação servidor em blocos); teto por segurança. */
 export async function obterListaEstoqueGerenteCompletaParaExport(input: unknown): Promise<EstoqueGerenteLinhaDTO[]> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) throw new Error(mensagemErroComSecao('Estoque', auth.error))
+
   const parsed = EstoqueListagemInputSchema.omit({ limite: true, offset: true }).safeParse(input)
   if (!parsed.success) return []
   const base = parsed.data
@@ -249,6 +284,9 @@ export type EstoqueKpisDTO = Readonly<{
 }>
 
 export async function obterKpisEstoque(): Promise<EstoqueKpisDTO> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) throw new Error(mensagemErroComSecao('Estoque', auth.error))
+
   const supabase = await createClient()
   const lojaId = await lojaIdResolvidaGestao()
 

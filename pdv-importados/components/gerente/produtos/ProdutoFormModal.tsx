@@ -58,6 +58,13 @@ export type ProdutoFormModalProps = Readonly<{
    *  (limpa código de barras/interno). Ignorado quando `produto` está definido. */
   duplicarDe?: ProdutoGerenteRow | null
   onSaved: () => void
+  /**
+   * Foto trocada/removida — evento independente de "produto salvo". O consumidor
+   * deve só recarregar a lista: fechar o modal aqui descartaria os campos que o
+   * operador ainda não salvou. Sem handler, a troca de foto não recarrega nada
+   * (o formulário continua aberto, que é o comportamento seguro).
+   */
+  onImagemAtualizada?: () => void
   idioma?: Idioma
   codigoBarrasInicial?: string | null
 }>
@@ -103,6 +110,7 @@ export function ProdutoFormModal({
   produto,
   duplicarDe = null,
   onSaved,
+  onImagemAtualizada,
   idioma = 'pt',
   codigoBarrasInicial = null,
 }: ProdutoFormModalProps) {
@@ -125,6 +133,7 @@ export function ProdutoFormModal({
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
   const [modoCompleto, setModoCompleto] = useState(editando)
+  const [imagemUrl, setImagemUrl] = useState<string | null>(produto?.imagem_url ?? null)
   const [sugestaoHint, setSugestaoHint] = useState<string | null>(null)
   const [knownSuggestion, setKnownSuggestion] = useState(false)
   const [fonteSugestao, setFonteSugestao] = useState<string | null>(null)
@@ -139,13 +148,14 @@ export function ProdutoFormModal({
       setPosSalvar(null)
       setErroCampo(null)
       setModoCompleto(editando)
+      setImagemUrl(produto?.imagem_url ?? null)
       setSugestaoHint(null)
       setKnownSuggestion(false)
       setFonteSugestao(null)
       lastLookupGtinRef.current = ''
       openedAtRef.current = Date.now()
     }
-  }, [open, opcoesIniciais, editando])
+  }, [open, opcoesIniciais, editando, produto?.imagem_url])
 
   const aplicarSugestaoBarcode = useCallback(
     async (codigoOverride?: string) => {
@@ -621,7 +631,14 @@ export function ProdutoFormModal({
             setOpcoes((prev) => ({ ...prev, categorias }))
           }
           onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
-          onImagemChange={onSaved}
+          imagemUrl={imagemUrl}
+          onImagemChange={(url) => {
+            // Só reflete a foto nova e avisa quem lista. Trocar foto NÃO é salvar:
+            // encaminhar isto para `onSaved` fechava o modal e derrubava os campos
+            // ainda não gravados (preço, categoria, fiscal…).
+            setImagemUrl(url)
+            onImagemAtualizada?.()
+          }}
           idioma={idioma}
           nomeRef={nomeRef}
           codigoBarrasRef={codigoBarrasRef}

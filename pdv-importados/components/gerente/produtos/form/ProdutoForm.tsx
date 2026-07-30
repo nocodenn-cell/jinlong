@@ -31,6 +31,8 @@ type Props = ProdutoFormShellProps &
     precoVarejoRef?: RefObject<HTMLInputElement | null>
     estoqueInicialRef?: RefObject<HTMLInputElement | null>
     erro?: ProdutoFormErro | null
+    /** URL corrente da foto (controlada pelo modal para refletir upload/remoção na hora). */
+    imagemUrl?: string | null
     onEnterSubmit?: () => void
     onCodigoBarrasBlur?: () => void
     sugestaoHint?: string | null
@@ -117,10 +119,12 @@ export function ProdutoForm(props: Props) {
             <ProdutoImagemCell
               produtoId={props.produto.id}
               nome={props.produto.nome}
-              imagemUrl={props.produto.imagem_url}
+              imagemUrl={
+                props.imagemUrl !== undefined ? props.imagemUrl : props.produto.imagem_url
+              }
               disabled={props.disabled}
               m={props.m}
-              onDone={() => props.onImagemChange?.()}
+              onDone={(url) => props.onImagemChange?.(url)}
             />
             <div>
               <p className="text-xs font-medium text-jl-fg-2">{p.foto_form_label}</p>

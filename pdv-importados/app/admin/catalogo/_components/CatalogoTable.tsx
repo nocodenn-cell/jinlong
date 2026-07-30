@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
-import { Copy, Eye, ImageIcon, Package, Pencil } from 'lucide-react'
+import { adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
+import { Copy, ImageIcon, Package, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import type { Mensagens } from '@/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
 import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
@@ -44,6 +45,14 @@ export type CatalogoLabels = {
   origemChina: string
   origemBrasilNf: string
   origemBrasil: string
+  acaoEditar: string
+  acaoDuplicar: string
+  acaoVerEstoque: string
+}
+
+/** `{{nome}}` → nome do produto; mantém o rótulo traduzível. */
+function acaoLabel(template: string, nome: string): string {
+  return template.replace('{{nome}}', nome)
 }
 
 const ORIGEM_MAP: Record<string, { badgeClass: string }> = {
@@ -58,32 +67,18 @@ const STATUS_BADGE_CLASS: Record<StatusPublicacao, string> = {
   INATIVO: 'admin-v2-badge-muted',
 }
 
-function ActionBtn({
-  href,
-  label,
-  children,
-}: {
-  href: string
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <Button asChild type="button" size="icon" variant="ghost" aria-label={label} title={label}>
-      <Link href={href}>{children}</Link>
-    </Button>
-  )
-}
-
 export function CatalogoTable({
   produtos,
   labels,
   m,
   opcoes,
+  idioma,
 }: {
   produtos: CatalogoProduto[]
   labels: CatalogoLabels
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
+  idioma: Idioma
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -166,11 +161,13 @@ export function CatalogoTable({
       cell: (r) => {
         if (r.quantidade_atual === null) return <span className="text-fg-subtle">—</span>
         const v = r.quantidade_atual
-        const estoqueHref = adminEstoqueProdutoQuery(r.nome)
+        // Código de barras primeiro: buscar por nome traz vários homônimos e o
+        // operador cai numa lista ambígua em vez do produto que clicou.
+        const estoqueHref = adminEstoqueProdutoQuery(r.codigo_barras || r.nome)
         return (
           <Link
             href={estoqueHref}
-            title="Ver e ajustar no estoque"
+            title={labels.acaoVerEstoque}
             className={cn(
               'tabular-nums underline-offset-2 hover:underline',
               v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400',
@@ -226,6 +223,7 @@ export function CatalogoTable({
         }}
         m={m}
         opcoes={opcoes}
+        idioma={idioma}
         duplicarDe={duplicando}
         onCriado={() => {
           setDuplicando(null)
@@ -259,8 +257,8 @@ export function CatalogoTable({
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Editar ${row.nome}`}
-              title={`Editar ${row.nome}`}
+              aria-label={acaoLabel(labels.acaoEditar, row.nome)}
+              title={acaoLabel(labels.acaoEditar, row.nome)}
               onClick={() => setEditando(row)}
             >
               <Pencil size={13} aria-hidden />
@@ -269,15 +267,15 @@ export function CatalogoTable({
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Duplicar ${row.nome}`}
-              title={`Duplicar ${row.nome}`}
+              aria-label={acaoLabel(labels.acaoDuplicar, row.nome)}
+              title={acaoLabel(labels.acaoDuplicar, row.nome)}
               onClick={() => setDuplicando(row)}
             >
               <Copy size={13} aria-hidden />
             </Button>
-            <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
-              <Eye size={13} aria-hidden />
-            </ActionBtn>
+            {/* Não existe tela de detalhe do produto (`/admin/catalogo/[id]` nunca
+                foi criada). O antigo botão "Ver" apontava para a própria lista —
+                clicar não fazia nada. Editar já mostra todos os campos. */}
           </div>
         )}
       />
@@ -288,10 +286,13 @@ export function CatalogoTable({
         produto={editando}
         m={m}
         opcoes={opcoes}
+        idioma={idioma}
         onSalvo={() => {
           setEditando(null)
           router.refresh()
         }}
+        // Trocar a foto não fecha a edição — só atualiza a lista por baixo.
+        onImagemAtualizada={() => router.refresh()}
       />
     </>
   )

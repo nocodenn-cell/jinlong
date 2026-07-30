@@ -58,6 +58,11 @@ export async function buscarFornecedoresPaginadosAction(
 ): Promise<
   { ok: true; fornecedores: FornecedorListRow[]; hasMore: boolean } | { ok: false; error: string }
 > {
+  // Sem este guard a tela mostrava "nenhum fornecedor" para quem não tem
+  // permissão (o RLS devolve lista vazia) em vez de dizer que falta acesso.
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { ok: false, error: auth.error }
+
   try {
     const supabase = await createClient()
     const from = (page - 1) * PAGE_SIZE
