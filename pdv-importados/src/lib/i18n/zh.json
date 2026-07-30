@@ -87,6 +87,8 @@
     "hint_cadastro_scanner": "先扫条码 — 若识别到 GTIN，将自动建议名称/价格。",
     "sugestao_aplicada": "已填入建议资料（{{fonte}}）。请核对后保存。",
     "sugestao_buscando": "正在查询条码建议…",
+    "criado_publicado_sem_estoque": "商品已发布。还需录入库存才能在收银台销售。",
+    "pos_salvar_hint_estoque_obrigatorio": "库存为 0 时收银台会拒绝销售。请调整库存以放行该商品。",
     "margem_label": "利润率",
     "margem_alerta_negativa": "售价低于成本 — 该商品将产生亏损。",
     "margem_alerta_zero": "售价等于成本 — 该商品没有利润。",
