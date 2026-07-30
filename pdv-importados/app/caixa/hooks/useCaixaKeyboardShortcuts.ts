@@ -57,6 +57,18 @@ function alvoEhCampoTexto(target: EventTarget | null): boolean {
   return false
 }
 
+/**
+ * Com um diálogo aberto o foco costuma estar num botão (Confirmar/Cancelar), não
+ * num campo de texto — então `alvoEhCampoTexto` não basta e os atalhos globais
+ * agiriam por baixo do modal (F4/F9 finalizava a venda atrás da confirmação de
+ * estorno; 1–4 trocava a forma de pagamento). Todo overlay do PDV expõe
+ * `role="dialog"` (DragonModal, recibo, histórico), então um seletor cobre todos.
+ */
+function existeDialogAberto(): boolean {
+  if (typeof document === "undefined") return false
+  return document.querySelector('[role="dialog"]') !== null
+}
+
 export function useCaixaKeyboardShortcuts({
   caixaAberto,
   movimentandoCaixa,
@@ -78,6 +90,7 @@ export function useCaixaKeyboardShortcuts({
       if (!(e.ctrlKey && e.shiftKey)) return
       if (e.repeat) return
       if (!caixaAberto || movimentandoCaixa) return
+      if (alvoEhCampoTexto(e.target) || existeDialogAberto()) return
       if (e.code === "KeyS") {
         e.preventDefault()
         onAbrirSuprimento()
@@ -94,14 +107,17 @@ export function useCaixaKeyboardShortcuts({
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return
       if (alvoEhCampoTexto(e.target)) return
-      if (e.code === "F4" || e.code === "F9") {
-        e.preventDefault()
-        onFinalizar()
-        return
-      }
+      // F1 alterna a própria referência de atalhos, por isso passa antes do
+      // guard de diálogo (é o único atalho que deve agir com ela aberta).
       if (e.code === "F1") {
         e.preventDefault()
         onAbrirReferencia?.()
+        return
+      }
+      if (existeDialogAberto()) return
+      if (e.code === "F4" || e.code === "F9") {
+        e.preventDefault()
+        onFinalizar()
         return
       }
       if (e.code === "F2") {
