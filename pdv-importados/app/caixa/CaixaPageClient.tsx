@@ -324,12 +324,38 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     focarCampoBusca()
   }, [focarCampoBusca, m.caixa.msg_cliente_desvinculado, setCaixaMensagem])
 
+  /**
+   * Ímã de foco: só recupera o campo de leitura quando o foco está solto
+   * (body/contêiner). Se o operador está num input, select ou botão — digitando o
+   * valor de uma parcela, por exemplo — roubar o foco jogaria os próximos dígitos
+   * no campo de código de barras. Não prejudica a leitura por scanner:
+   * `useScannerDetector` escuta a rajada em `window`, sem depender do foco.
+   */
+  const focarBuscaSeOcioso = useCallback(() => {
+    if (typeof document === "undefined") return
+    const ativo = document.activeElement
+    if (ativo instanceof HTMLElement && ativo !== buscaInputRef.current) {
+      const tag = ativo.tagName
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        tag === "BUTTON" ||
+        tag === "A" ||
+        ativo.isContentEditable
+      ) {
+        return
+      }
+    }
+    focarCampoBusca()
+  }, [focarCampoBusca])
+
   // Idle focus magnet: after 3s of no keyboard/pointer activity, refocus the search field
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
     const reset = () => {
       if (timer !== null) clearTimeout(timer)
-      timer = setTimeout(focarCampoBusca, 3000)
+      timer = setTimeout(focarBuscaSeOcioso, 3000)
     }
     const clear = () => { if (timer !== null) { clearTimeout(timer); timer = null } }
     window.addEventListener('keydown', reset)
@@ -340,7 +366,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       window.removeEventListener('keydown', reset)
       window.removeEventListener('pointerdown', reset)
     }
-  }, [focarCampoBusca])
+  }, [focarBuscaSeOcioso])
 
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
