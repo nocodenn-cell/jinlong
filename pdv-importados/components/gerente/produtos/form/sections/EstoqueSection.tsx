@@ -1,5 +1,6 @@
 'use client'
 
+import type { RefObject } from 'react'
 import Link from 'next/link'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
@@ -17,9 +18,15 @@ function LeituraCampo({ label, value, hint }: { label: string; value: string; hi
 
 type Props = Readonly<{
   modoCompleto?: boolean
+  estoqueInicialRef?: RefObject<HTMLInputElement | null>
+  onEnterSubmit?: () => void
 }>
 
-export function EstoqueSection({ modoCompleto = false }: Props) {
+export function EstoqueSection({
+  modoCompleto = false,
+  estoqueInicialRef,
+  onEnterSubmit,
+}: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const { disabled, inputClassName, inputMonoClassName, readOnly } = ctx
@@ -48,8 +55,14 @@ export function EstoqueSection({ modoCompleto = false }: Props) {
         {isCreate ? (
           <div className={modoCompleto ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3 sm:max-w-xs'}>
             <label className="block text-xs font-medium text-jl-fg-3">
-              {p.estoque_inicial_label}
+              {/* Unidade no rótulo: sem ela o operador digita "10" sem saber se
+                  são 10 unidades, 10 caixas ou 10 quilos. */}
+              {p.estoque_inicial_label}{' '}
+              <span className="font-mono text-[10px] text-jl-fg-2">
+                ({ctx.unidadeMedida})
+              </span>
               <input
+                ref={estoqueInicialRef}
                 type="text"
                 inputMode="numeric"
                 className={`${inputMonoClassName} mt-1`}
@@ -59,6 +72,16 @@ export function EstoqueSection({ modoCompleto = false }: Props) {
                 }
                 disabled={disabled}
                 placeholder="0"
+                data-field="estoque_inicial"
+                onKeyDown={
+                  onEnterSubmit
+                    ? (e) => {
+                        if (e.key !== 'Enter') return
+                        e.preventDefault()
+                        onEnterSubmit()
+                      }
+                    : undefined
+                }
               />
               <span className="mt-0.5 block text-[10px] text-jl-fg-3">
                 {p.hint_estoque_inicial}

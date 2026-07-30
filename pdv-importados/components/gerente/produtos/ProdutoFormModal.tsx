@@ -29,7 +29,11 @@ import {
   podeSalvarComoRascunho,
 } from '@/core/catalog/statusPublicacao'
 import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
-import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
+import {
+  validarProdutoFormClient,
+  type ProdutoFormErro,
+} from './form/produtoForm.clientValidation'
+import { campoExigeModoCompleto, localizarCampo } from './form/produtoForm.campoFoco'
 import { ProdutoForm } from './form/ProdutoForm'
 import { useProdutoForm } from './form/useProdutoForm'
 import { acaoTecladoProduto } from './form/produtoFormKeyboard'
@@ -112,7 +116,11 @@ export function ProdutoFormModal({
   )
   const nomeRef = useRef<HTMLInputElement>(null)
   const codigoBarrasRef = useRef<HTMLInputElement>(null)
+  const precoCustoRef = useRef<HTMLInputElement>(null)
   const precoVarejoRef = useRef<HTMLInputElement>(null)
+  const estoqueInicialRef = useRef<HTMLInputElement>(null)
+  const formWrapRef = useRef<HTMLDivElement>(null)
+  const [erroCampo, setErroCampo] = useState<ProdutoFormErro | null>(null)
   const [saving, setSaving] = useState(false)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
@@ -129,6 +137,7 @@ export function ProdutoFormModal({
     if (open) {
       setOpcoes(opcoesIniciais)
       setPosSalvar(null)
+      setErroCampo(null)
       setModoCompleto(editando)
       setSugestaoHint(null)
       setKnownSuggestion(false)
@@ -194,9 +203,37 @@ export function ProdutoFormModal({
     void aplicarSugestaoBarcode(inicial)
   }, [open, editando, posSalvar, codigoBarrasInicial, aplicarSugestaoBarcode])
 
+  /**
+   * Leva o operador até o campo reprovado. Roda como efeito (não no handler)
+   * porque o campo pode estar dentro de "Mais detalhes": o `setModoCompleto`
+   * do handler só virou DOM depois do commit, e é aqui que ele já existe.
+   */
+  useEffect(() => {
+    if (!erroCampo) return
+    const el = localizarCampo(formWrapRef.current, erroCampo.campo)
+    if (!el) return
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    el.focus()
+    if (el instanceof HTMLInputElement) el.select()
+  }, [erroCampo])
+
+  /**
+   * Limpa a reprovação quando o operador mexe em qualquer campo validado —
+   * borda vermelha em campo já corrigido é ruído.
+   */
+  useEffect(() => {
+    setErroCampo(null)
+  }, [
+    form.nome,
+    form.codigoBarras,
+    form.precoVarejoInput.display,
+    form.precoAtacadoInput.display,
+  ])
+
   const fechar = useCallback(() => {
     if (saving) return
     setPosSalvar(null)
+    setErroCampo(null)
     onOpenChange(false)
   }, [saving, onOpenChange])
 
@@ -221,9 +258,14 @@ export function ProdutoFormModal({
         },
       })
       if (erro) {
+        // Abre a seção antes de marcar o erro — o efeito de foco depende do
+        // campo estar montado para conseguir rolar até ele.
+        if (campoExigeModoCompleto(erro.campo)) setModoCompleto(true)
+        setErroCampo(erro)
         emitGerenteToast({ kind: 'error', message: erro.mensagem })
         return
       }
+      setErroCampo(null)
 
       const estoqueIntent = parseEstoqueInicialIntent(
         form.estoqueInicialQty,
@@ -535,6 +577,7 @@ export function ProdutoFormModal({
       }
     >
       <div
+        ref={formWrapRef}
         onKeyDown={(e) => {
           const acao = acaoTecladoProduto(e, { editando })
           if (!acao || saving) return
@@ -548,6 +591,7 @@ export function ProdutoFormModal({
           opcoes={opcoes}
           produto={produto}
           disabled={saving}
+          erro={erroCampo}
           modoCompleto={modoCompleto}
           onToggleModoCompleto={() => setModoCompleto((v) => !v)}
           onFornecedoresChange={(fornecedores) =>
@@ -561,7 +605,9 @@ export function ProdutoFormModal({
           idioma={idioma}
           nomeRef={nomeRef}
           codigoBarrasRef={codigoBarrasRef}
+          precoCustoRef={precoCustoRef}
           precoVarejoRef={precoVarejoRef}
+          estoqueInicialRef={estoqueInicialRef}
           onEnterSubmit={() => void salvar()}
           onCodigoBarrasBlur={() => void aplicarSugestaoBarcode()}
           sugestaoHint={sugestaoHint}

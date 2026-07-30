@@ -5,6 +5,8 @@ import { AlertTriangle } from 'lucide-react'
 import { formatBRL } from '@/lib/format/money'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
+import { focusOnEnter } from '../focusOnEnter'
+import { CAMPO_INVALIDO_CLASS, CampoErroMsg, erroDoCampo } from '../CampoErro'
 import {
   avaliarMargem,
   formatMargemPercentual,
@@ -13,18 +15,26 @@ import {
 
 type Props = Readonly<{
   modoCompleto?: boolean
+  precoCustoRef?: RefObject<HTMLInputElement | null>
   precoVarejoRef?: RefObject<HTMLInputElement | null>
+  /** Próximo campo da cadeia do Enter depois do varejo (estoque inicial). */
+  proximoAposVarejoRef?: RefObject<HTMLInputElement | null>
   onEnterSubmit?: () => void
 }>
 
 export function PrecosSection({
   modoCompleto = false,
+  precoCustoRef,
   precoVarejoRef,
+  proximoAposVarejoRef,
   onEnterSubmit,
 }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const { disabled, inputMonoClassName } = ctx
+
+  const erroVarejo = erroDoCampo(ctx.erro, 'preco_varejo')
+  const erroAtacado = erroDoCampo(ctx.erro, 'preco_atacado')
 
   const varejo = ctx.precoVarejoInput.parse()
   const custo = ctx.precoCustoInput.parse()
@@ -54,6 +64,7 @@ export function PrecosSection({
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.preco_custo}
             <input
+              ref={precoCustoRef}
               type="text"
               inputMode="decimal"
               className={`${inputMonoClassName} mt-1`}
@@ -62,6 +73,7 @@ export function PrecosSection({
               disabled={disabled}
               placeholder="0,00"
               data-field="preco_custo"
+              onKeyDown={(e) => focusOnEnter(e, precoVarejoRef?.current)}
             />
           </label>
           <label className="block text-xs font-medium text-jl-fg-3">
@@ -70,23 +82,27 @@ export function PrecosSection({
               ref={precoVarejoRef}
               type="text"
               inputMode="decimal"
-              className={`${inputMonoClassName} mt-1`}
+              className={`${inputMonoClassName} mt-1 ${erroVarejo ? CAMPO_INVALIDO_CLASS : ''}`}
               value={ctx.precoVarejoInput.display}
               onChange={ctx.precoVarejoInput.onChange}
               disabled={disabled}
               placeholder="0,00"
               data-field="preco_varejo"
-              onKeyDown={
-                onEnterSubmit
-                  ? (e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        onEnterSubmit()
-                      }
-                    }
-                  : undefined
-              }
+              aria-invalid={erroVarejo ? true : undefined}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                // Passa pelo estoque inicial antes de salvar; sem ele o campo
+                // só era alcançável com mouse/Tab. Ctrl+Enter continua salvando
+                // de qualquer campo.
+                if (proximoAposVarejoRef?.current) {
+                  focusOnEnter(e, proximoAposVarejoRef.current)
+                  return
+                }
+                e.preventDefault()
+                onEnterSubmit?.()
+              }}
             />
+            <CampoErroMsg mensagem={erroVarejo} />
           </label>
           {modoCompleto ? (
             <label className="block text-xs font-medium text-jl-fg-3">
@@ -94,13 +110,15 @@ export function PrecosSection({
               <input
                 type="text"
                 inputMode="decimal"
-                className={`${inputMonoClassName} mt-1`}
+                className={`${inputMonoClassName} mt-1 ${erroAtacado ? CAMPO_INVALIDO_CLASS : ''}`}
                 value={ctx.precoAtacadoInput.display}
                 onChange={ctx.precoAtacadoInput.onChange}
                 disabled={disabled}
                 placeholder="—"
                 data-field="preco_atacado"
+                aria-invalid={erroAtacado ? true : undefined}
               />
+              <CampoErroMsg mensagem={erroAtacado} />
             </label>
           ) : null}
         </div>
