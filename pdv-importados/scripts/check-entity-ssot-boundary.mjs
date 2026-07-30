@@ -23,9 +23,8 @@ const ALLOWED_UI = {
     '/app/gerente/estoque/importar-nfe/',
     // Porta canônica de criação (hexagonal): ProductWriter → RPC 270 (PR #219).
     '/app/admin/produtos/productWriter.ts',
-    // Exceção documentada em .cursor/rules/entity-ssot.mdc: PDV relâmpago
-    // (criarProdutoRelampagoPdv, OPERADOR+) delega ao ProductWriter/RPC 270.
-    '/app/caixa/server/caixaCadastroRelampago.impl.ts',
+    // A exceção do PDV relâmpago saiu daqui junto com o código: o caixa não
+    // cria produto. Não reintroduzir /app/caixa/ nesta lista.
   ],
   salvarClienteAction: [
     '/app/admin/clientes/',
@@ -46,8 +45,8 @@ const ALLOWED_UI = {
 }
 
 /**
- * Match de identificador (evita falso positivo em
- * `criarProdutoComEstoqueInicialRpc` / `criarProdutoRelampagoPdv`).
+ * Match de identificador (evita falso positivo em nomes que contêm o símbolo,
+ * ex.: `criarProdutoComEstoqueInicialRpc` vs. `criarProduto`).
  */
 function referencesSymbol(content, symbol) {
   const escaped = symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

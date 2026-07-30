@@ -10,7 +10,7 @@
  * como código morto, aguardando limpeza — ver
  * `docs/architecture/pdv_cadastro_removido.md`.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { getMessages } from '@/i18n/getMessages'
@@ -19,6 +19,10 @@ const RAIZ = join(__dirname, '..', '..')
 
 function ler(caminhoRelativo: string): string {
   return readFileSync(join(RAIZ, caminhoRelativo), 'utf8')
+}
+
+function existe(caminhoRelativo: string): boolean {
+  return existsSync(join(RAIZ, caminhoRelativo))
 }
 
 describe('PDV não cadastra produto', () => {
@@ -48,6 +52,27 @@ describe('PDV não cadastra produto', () => {
     ]) {
       expect(ler(arquivo), arquivo).not.toContain('CadastroProdutoRelampagoModal')
     }
+  })
+})
+
+describe('a API de cadastro no PDV foi removida, não só escondida', () => {
+  it('a Server Action não existe mais em app/caixa/actions.ts', () => {
+    // `actions.ts` é 'use server': export = endpoint POST endereçável mesmo sem
+    // UI. Esconder o botão não bastava; a export tinha de sair.
+    const actions = ler('app/caixa/actions.ts')
+    expect(actions).not.toMatch(/export\s+async\s+function\s+criarProdutoRelampagoPdv/)
+  })
+
+  it('os arquivos do cadastro relâmpago foram apagados', () => {
+    expect(existe('app/caixa/server/caixaCadastroRelampago.impl.ts')).toBe(false)
+    expect(
+      existe('components/gerente/produtos/CadastroProdutoRelampagoModal.tsx'),
+    ).toBe(false)
+  })
+
+  it('o guard de SSoT não abre exceção para /app/caixa/ criar produto', () => {
+    const guard = ler('scripts/check-entity-ssot-boundary.mjs')
+    expect(guard).not.toContain('caixaCadastroRelampago')
   })
 })
 

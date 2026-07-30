@@ -26,44 +26,74 @@ Removido de `app/caixa/CaixaPageClient.tsx`:
 
 Trava de regressão: `app/caixa/caixaSemCadastroProduto.test.ts`.
 
-## Código morto — inventário para limpeza posterior
+## Código morto — CONCLUÍDO (2ª etapa)
 
-Nada foi apagado. Todos os itens abaixo estão marcados `@deprecated` no próprio
-arquivo e **não têm mais nenhum call site**.
+Auditoria de consumidores antes de apagar: o ciclo era fechado — só o modal
+chamava a action, e o modal não tinha nenhum consumidor. Confirmado ausente de
+integração externa e de fluxo oculto:
 
-| # | Alvo | Arquivo | Observação para a limpeza |
-|---|---|---|---|
-| 1 | `CadastroProdutoRelampagoModal` | `components/gerente/produtos/CadastroProdutoRelampagoModal.tsx` | Componente inteiro. Não tem outro consumidor. |
-| 2 | `criarProdutoRelampagoPdv` | `app/caixa/actions.ts` | **Server Action ainda exportada — segue acessível por rede.** Remover de fato, não só o componente. |
-| 3 | `criarProdutoRelampagoPdvImpl` | `app/caixa/server/caixaCadastroRelampago.impl.ts` | Só alcançado por (2). |
-| 4 | `onProdutoNaoEncontrado` (dep opcional) | `app/caixa/scan-pipeline/webCaixaScanProcess.ts` | Dep opcional sem consumidor. Tem teste próprio (`webCaixaScanProcess.test.ts`) que passa a cobrir um gancho sem uso. |
+- nenhuma rota em `app/api/` cria produto;
+- `pdv-local` (Tauri) não tem caminho de criação — só consome catálogo;
+- a Edge Function `sync-outbox` só **lê** catálogo (`GET catalogo`) e processa
+  vendas; não faz replay de criação de produto;
+- nenhuma fila offline de cadastro em `pdv-importados`;
+- os dois e2e que citam "cadastro rápido" usam `/admin/catalogo`.
 
-O item **2** é o único com superfície de segurança: enquanto a action existir e
-estiver exportada, ela continua invocável por rede por quem tiver sessão, mesmo
-sem UI. Priorizar.
+| # | Alvo | Situação |
+|---|---|---|
+| 1 | `CadastroProdutoRelampagoModal.tsx` | **apagado** |
+| 2 | `criarProdutoRelampagoPdv` (`app/caixa/actions.ts`) | **removida** — era o item de segurança: `actions.ts` é `'use server'`, então a export era endpoint POST endereçável mesmo sem UI |
+| 3 | `caixaCadastroRelampago.impl.ts` | **apagado** |
+| 4 | `onProdutoNaoEncontrado` (dep do pipeline) | **removida**, junto com o call site; o teste dela virou cobertura do comportamento novo (avisa e para) |
+| 5 | Exceção `/app/caixa/…` no guard de SSoT | **removida** de `scripts/check-entity-ssot-boundary.mjs` |
 
-## Divergência de permissão que este código carregava
+Telemetria: o valor `surface: 'pdv_relampago'` foi **mantido** no enum de
+`sugestaoCadastroActions.ts` e em `cadastroSugestaoClient.ts`. É valor histórico
+já gravado; remover do enum de validação não traria ganho e arriscaria rejeitar
+requisição em vôo. Nenhuma escrita nova usa esse valor.
 
-Registrado para quem for limpar ou reaproveitar. O caminho relâmpago **nunca
-funcionou para OPERADOR**:
+## Permissões: o que foi removido FUNCIONAVA
 
-- `caixaCadastroRelampago.impl.ts` autorizava `OPERADOR, GERENTE, DONO, ADMIN`;
-- a RPC `criar_produto_com_estoque_inicial` (mig. 270) exige `GERENTE/DONO/ADMIN`
-  e levanta `CRIAR_PRODUTO_PERFIL`;
-- `ajustar_estoque_manual` (mig. 269) exige o mesmo, resolvendo o ator como
-  `COALESCE(auth.uid(), p_ator_id)`.
+**Correção de um registro anterior errado neste mesmo documento.** Uma auditoria
+intermediária afirmou que o caminho relâmpago "nunca funcionou para OPERADOR",
+com base nas migrações `269` e `270`. Isso estava **errado**: duas migrações
+posteriores substituem essas funções (`CREATE OR REPLACE`) e já liberavam
+OPERADOR, de forma estreita e bem desenhada:
 
-O efeito era: operador bipava código desconhecido, preenchia tudo e travava no
-salvar. A remoção da superfície resolve o sintoma — o operador não é mais
-convidado a um fluxo que terminaria em erro.
+| Migração | Efeito |
+|---|---|
+| `20260718135138_criar_produto_permite_operador_pdv.sql` | `criar_produto_com_estoque_inicial` passa a aceitar `OPERADOR` além de GERENTE/DONO/ADMIN. |
+| `20260718135500_ajuste_estoque_inicial_operador_pdv.sql` | `ajustar_estoque_manual` aceita `OPERADOR` **somente** no caso canônico de estoque inicial (`ACERTO_INVENTARIO` + observação canônica). Qualquer outro ajuste segue GERENTE+. |
 
-**Não "consertar" isso afrouxando o portão de estoque.** `ajustar_estoque_manual`
-é o único lugar que decide movimento de saldo; liberar OPERADOR lá vale para
-qualquer produto de qualquer tela, e é cobertura de quebra. Se a necessidade de
-cadastrar no caixa voltar, a opção discutida foi autorização pontual de gerente
-reusando o padrão de `validar-gerente` / `tokens_desconto_gerente` (token
-persistido, uso único, com `criado_por`), rodando a criação com o gerente como
-ator — sem criar permissão nova.
+O smoke de homologação registrou o caminho funcionando
+(`backend/artifacts/missao1_go_nogo_fluxo_venda_20260718_rehomolog.md`:
+`estoque_aplicado=true`).
+
+Como os arquivos de migração numérica (`269`, `270`) ordenam antes dos de
+timestamp (`2026…`), é fácil ler o arquivo antigo e concluir o estado errado.
+**Ao auditar uma função Postgres, procurar todos os `CREATE OR REPLACE` dela,
+não o arquivo de menor número.**
+
+Portanto: a remoção do cadastro do PDV foi uma **decisão de produto** (separar
+vender de cadastrar), não a correção de um bug. O que saiu era uma feature
+funcional com uma exceção de permissão estreita e auditável.
+
+## Pendência de permissão gerada por esta remoção
+
+As duas migrações acima agora concedem permissão **sem nenhum consumidor**:
+`OPERADOR` continua podendo criar produto e aplicar estoque inicial via RPC,
+embora nenhuma UI ofereça isso. Não é exploração trivial (a criação exige
+`service_role`, e a action foi removida), mas é permissão mais larga do que o
+sistema precisa.
+
+**Decisão pendente do dono do produto:** emitir migração revertendo os dois
+gates para GERENTE+, ou manter a concessão caso o cadastro no caixa possa voltar.
+Não foi feito aqui porque é mudança de fronteira de permissão em banco, fora do
+escopo de uma limpeza de código morto.
+
+Se a necessidade de cadastrar no caixa voltar, a exceção estreita de
+`20260718135500` é o modelo a seguir — ela restringe pelo *motivo* do ajuste, não
+pelo perfil apenas.
 
 ## Não alterado
 

@@ -31,7 +31,7 @@ Antes de criar `InventoryMovementWriter` / `InventoryAdjustmentService` em produ
 | W2 | `gerente/estoque/actions.ts` · `garantirLinhaEstoque` | saldo (0/0), **sem** kardex | INSERT `estoque` | legado (D-I3) |
 | W3 | `lib/adapters/.../criarProdutoComEstoqueInicialRpc.ts` | saldo (+ kardex se qty>0) | RPC `criar_produto_com_estoque_inicial` | products-led (ADR-007) |
 | W4 | `admin/produtos/productWriter.ts` · `create` | mesmo W3 | via W3 | products-led |
-| W5 | `caixa/.../caixaCadastroRelampago.impl.ts` | mesmo W3 | ProductWriter | products-led |
+| ~~W5~~ | ~~`caixa/.../caixaCadastroRelampago.impl.ts`~~ | **REMOVIDO (2026-07-30)** — o PDV não cadastra produto; ver `pdv_cadastro_removido.md` | — | — |
 | W6 | `caixa/.../caixaVendas.impl.ts` · `finalizarVendaCaixaImpl` | saldo + `SAIDA_VENDA` | RPC `finalizar_venda_transacional_canonica_v4` → `decrementar_estoque_seguro` | **sales-led** |
 | W7 | `caixa/.../caixaVendas.impl.ts` · `cancelarVendaImpl` | reposição saldo | RPC `cancelar_venda_transacional` | **sales-led** |
 | W8 | `gerente/vendas/devolverOuTrocarVenda.impl.ts` | reposição saldo | RPC `devolver_ou_trocar_venda` | **sales-led** |

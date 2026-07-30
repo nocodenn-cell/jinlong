@@ -264,21 +264,11 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
   return finalizarVendaCaixaImpl(raw)
 }
 
-/**
- * @deprecated CÓDIGO MORTO — sem call site desde a remoção do cadastro de
- * produto do PDV (decisão de produto: cadastrar pertence ao módulo Produtos).
- * Server Action ainda EXPORTADA, portanto ainda acessível por rede: a limpeza
- * posterior deve removê-la, não apenas o componente que a chamava.
- * Ver `docs/architecture/pdv_cadastro_removido.md`.
- *
- * Cadastro relâmpago no PDV (OPERADOR+). Catálogo completo permanece em assertGerenteSession.
- */
-export async function criarProdutoRelampagoPdv(input: unknown) {
-  const { criarProdutoRelampagoPdvImpl } = await import(
-    '@/app/caixa/server/caixaCadastroRelampago.impl'
-  )
-  return criarProdutoRelampagoPdvImpl(input)
-}
+/* `criarProdutoRelampagoPdv` foi REMOVIDA: o PDV não cadastra produto — isso
+ * pertence ao módulo Produtos (gerente/admin). Este arquivo é `'use server'`,
+ * então toda export virava endpoint POST endereçável mesmo sem UI; deixar a
+ * action aqui manteria a criação de produto acessível por rede a partir do
+ * caixa. Ver `docs/architecture/pdv_cadastro_removido.md`. */
 
 /** Selecao de cliente no PDV (Fase 5b). */
 export async function buscarClientesCaixa(termo: string) {

@@ -58,13 +58,9 @@ export type WebCaixaScanDeps = {
   telemetry?: ScanPipelineSink
   /** Chamado após scan bem-sucedido — usado para dedupe (500ms) no nível do scanner. */
   onItemAdded?: (info: { codigo: string; itemId: string; produtoId: string }) => void
-  /** Código sem match — abre cadastro relâmpago no PDV (opcional). */
-  /**
-   * @deprecated Sem consumidor: era o gancho que abria o cadastro no PDV.
-   * O aviso ao operador já é dado por `msg_produto_nao_encontrado_acao` acima
-   * deste callback, então o pipeline segue correto sem ninguém o passar.
-   */
-  onProdutoNaoEncontrado?: (codigo: string) => void
+  /* Não existe gancho de "código sem match" aqui de propósito: o PDV não
+   * cadastra produto. O ramo `nao_encontrado` abaixo informa e orienta via
+   * `msg_produto_nao_encontrado_acao`, e para aí. */
 }
 
 /**
@@ -133,7 +129,6 @@ export async function runWebCaixaScanProcess(
     if (res.status === 'nao_encontrado') {
       setCaixaMensagem(m.caixa.msg_produto_nao_encontrado_acao, { kind: 'warning' })
       tocarFeedback('erro')
-      deps.onProdutoNaoEncontrado?.(trimmed)
       return { ok: false, reason: 'not_found' }
     }
 

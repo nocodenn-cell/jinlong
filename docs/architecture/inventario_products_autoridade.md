@@ -98,7 +98,7 @@ Legenda de **autoridade:** quem é SSoT da mutação / regra (não só quem cham
 |------|--------|--------|------------|-----------|
 | Create produto + estoque inicial | `produtos` + `estoque` (+ ajuste opcional) | RPC `criar_produto_com_estoque_inicial` | **Postgres RPC** | `270_criar_produto_com_estoque_inicial.sql`; OPERADOR PDV: `20260718135138_*` |
 | App entry create | — | `criarProduto` → `criarProdutoComEstoque` → adapter RPC | Adapter TS (não reimplementa TX) | `app/gerente/produtos/actions.ts`; `lib/adapters/supabase/criarProdutoComEstoqueInicialRpc.ts`; `core/services/produtoService.ts` |
-| PDV relâmpago | idem | `criarProdutoRelampagoPdv` → mesma RPC | RPC + action caixa | `app/caixa/actions.ts`; `caixaCadastroRelampago.impl.ts` |
+| ~~PDV relâmpago~~ | — | **REMOVIDO (2026-07-30)** — o PDV não cadastra produto | — | Ver `pdv_cadastro_removido.md`. Gates de OPERADOR nas RPCs seguem no banco sem consumidor (pendência registrada no doc). |
 | Update catálogo | `produtos` | `atualizarDadosProdutoGerente` | **TS action** + triggers margem | `actions.ts` (~899+) |
 | Preço varejo rápido | `produtos.preco_varejo` | `atualizarPrecoVarejoProduto` | TS action | `actions.ts` (~107) |
 | Faixas atacado | `precos_atacado` | `criarFaixaAtacado` / update / soft-delete | TS action (RLS GERENTE+) | `precosAtacadoActions.ts` |
