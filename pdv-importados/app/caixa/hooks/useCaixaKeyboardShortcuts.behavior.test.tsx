@@ -23,21 +23,37 @@ const noop = () => {}
 
 function Harness({
   onSelecionarMetodo,
+  onFinalizar = noop,
+  onAbrirReferencia = noop,
 }: {
   onSelecionarMetodo: (i: 1 | 2 | 3 | 4) => void
+  onFinalizar?: () => void
+  onAbrirReferencia?: () => void
 }) {
   useCaixaKeyboardShortcuts({
     caixaAberto: true,
     movimentandoCaixa: false,
     onAbrirSuprimento: noop,
     onAbrirSangria: noop,
-    onFinalizar: noop,
+    onFinalizar,
     onFecharCaixa: noop,
     onFocarBusca: noop,
     onNovoCupom: noop,
     onSelecionarMetodo,
+    onAbrirReferencia,
   })
   return <input data-testid="campo" />
+}
+
+/** Simula um overlay do PDV (DragonModal/recibo/histórico expõem role="dialog"). */
+function abrirDialogFake(): HTMLElement {
+  const dialog = document.createElement('div')
+  dialog.setAttribute('role', 'dialog')
+  const botao = document.createElement('button')
+  dialog.appendChild(botao)
+  document.body.appendChild(dialog)
+  botao.focus()
+  return dialog
 }
 
 function mount(el: React.ReactElement) {
@@ -68,5 +84,42 @@ describe('useCaixaKeyboardShortcuts — teclas de método 1-4', () => {
     mount(<Harness onSelecionarMetodo={cb} />)
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', ctrlKey: true }))
     expect(cb).not.toHaveBeenCalled()
+  })
+})
+
+describe('useCaixaKeyboardShortcuts — guard de diálogo aberto', () => {
+  it('NÃO dispara atalhos globais por baixo de um diálogo aberto', () => {
+    const metodo = vi.fn()
+    const finalizar = vi.fn()
+    mount(<Harness onSelecionarMetodo={metodo} onFinalizar={finalizar} />)
+    const dialog = abrirDialogFake()
+    try {
+      // Foco num botão do modal: não é campo de texto, então só o guard de
+      // diálogo impede que a venda seja finalizada atrás da confirmação.
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'F4', bubbles: true }),
+      )
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'Digit2', bubbles: true }),
+      )
+      expect(finalizar).not.toHaveBeenCalled()
+      expect(metodo).not.toHaveBeenCalled()
+    } finally {
+      dialog.remove()
+    }
+  })
+
+  it('F1 continua alternando a referência com um diálogo aberto', () => {
+    const referencia = vi.fn()
+    mount(<Harness onSelecionarMetodo={noop} onAbrirReferencia={referencia} />)
+    const dialog = abrirDialogFake()
+    try {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'F1', bubbles: true }),
+      )
+      expect(referencia).toHaveBeenCalledTimes(1)
+    } finally {
+      dialog.remove()
+    }
   })
 })
