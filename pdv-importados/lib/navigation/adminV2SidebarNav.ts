@@ -51,6 +51,14 @@ export const ADMIN_V2_CORE_ITEMS: readonly AdminV2NavItem[] = [
     labelCn: '产品分类',
     hint: 'Criar e organizar as categorias usadas no catálogo.',
   },
+  {
+    id: 'marcas-produtos',
+    href: ROUTES.admin.marcasProdutos,
+    icon: Tag,
+    labelOverridePt: 'Marcas de produtos',
+    labelCn: '产品品牌',
+    hint: 'Renomear ou aposentar as marcas usadas no catálogo.',
+  },
   { id: 'clientes', href: ROUTES.admin.clientes, icon: Users, labelOverridePt: 'Clientes', dictKey: 'clientes' },
   {
     id: 'funcionarios',

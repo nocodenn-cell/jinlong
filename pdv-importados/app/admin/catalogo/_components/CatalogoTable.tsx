@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
-import { Copy, ImageIcon, Package, Pencil } from 'lucide-react'
+import { Copy, ImageIcon, Package, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -18,8 +18,10 @@ import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
+import { ProdutosExcluirLoteModal } from '@/components/gerente/produtos/ProdutosExcluirLoteModal'
 import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
+import { CatalogoLoteToolbar } from './CatalogoLoteToolbar'
 
 // CatalogoProduto é ProdutoGerenteRow com o campo sku computado adicionado.
 // Sendo superconjunto de ProdutoGerenteRow, pode ser passado diretamente ao modal de edição.
@@ -48,6 +50,8 @@ export type CatalogoLabels = {
   acaoEditar: string
   acaoDuplicar: string
   acaoVerEstoque: string
+  acaoSelecionarLinha: string
+  reativar: string
 }
 
 /** `{{nome}}` → nome do produto; mantém o rótulo traduzível. */
@@ -85,6 +89,31 @@ export function CatalogoTable({
   const [editando, setEditando] = useState<CatalogoProduto | null>(null)
   const [novoOpen, setNovoOpen] = useState(false)
   const [duplicando, setDuplicando] = useState<CatalogoProduto | null>(null)
+  const [selecionados, setSelecionados] = useState<ReadonlySet<string>>(() => new Set())
+  const [excluirOpen, setExcluirOpen] = useState(false)
+
+  const idsPagina = produtos.map((p) => p.id)
+  const todosSelecionados = idsPagina.length > 0 && idsPagina.every((id) => selecionados.has(id))
+
+  const alternarLinha = (id: string) => {
+    setSelecionados((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const alternarPagina = () => {
+    setSelecionados((prev) => {
+      const next = new Set(prev)
+      if (todosSelecionados) idsPagina.forEach((id) => next.delete(id))
+      else idsPagina.forEach((id) => next.add(id))
+      return next
+    })
+  }
+
+  const limparSelecao = () => setSelecionados(new Set())
 
   useEffect(() => {
     if (searchParams.get('modal') === 'novo') {
@@ -112,6 +141,30 @@ export function CatalogoTable({
   }
 
   const columns: Column<CatalogoProduto>[] = [
+    {
+      key: 'sel',
+      header: m.produtos.coluna_selecionar,
+      width: '2.25rem',
+      headerCell: () => (
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 cursor-pointer align-middle accent-[var(--color-brand)]"
+          checked={todosSelecionados}
+          onChange={alternarPagina}
+          aria-label={m.produtos.coluna_selecionar_aria}
+        />
+      ),
+      cell: (row) => (
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 cursor-pointer align-middle accent-[var(--color-brand)]"
+          checked={selecionados.has(row.id)}
+          onChange={() => alternarLinha(row.id)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={acaoLabel(labels.acaoSelecionarLinha, row.nome)}
+        />
+      ),
+    },
     {
       key: 'produto',
       header: labels.produto,
@@ -231,6 +284,29 @@ export function CatalogoTable({
         }}
       />
 
+      <CatalogoLoteToolbar
+        ids={[...selecionados]}
+        m={m}
+        ui={m.admin_ui}
+        opcoes={opcoes}
+        onLimpar={limparSelecao}
+        onExcluir={() => setExcluirOpen(true)}
+      />
+
+      <ProdutosExcluirLoteModal
+        open={excluirOpen}
+        onOpenChange={(open) => {
+          setExcluirOpen(open)
+          if (!open) limparSelecao()
+        }}
+        produtoIds={[...selecionados]}
+        m={m}
+        onLoteAplicadoComSucesso={() => {
+          limparSelecao()
+          router.refresh()
+        }}
+      />
+
       <DataTable
         data={produtos}
         columns={columns}
@@ -250,7 +326,11 @@ export function CatalogoTable({
             <CatalogoPublicacaoActions
               produtoId={row.id}
               status={row.status_publicacao}
-              labels={{ publicar: labels.publicar, inativar: labels.inativar }}
+              labels={{
+                publicar: labels.publicar,
+                inativar: labels.inativar,
+                reativar: labels.reativar,
+              }}
               erroGenerico={m.comum.erro}
             />
             <Button
@@ -276,6 +356,19 @@ export function CatalogoTable({
             {/* Não existe tela de detalhe do produto (`/admin/catalogo/[id]` nunca
                 foi criada). O antigo botão "Ver" apontava para a própria lista —
                 clicar não fazia nada. Editar já mostra todos os campos. */}
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={m.produtos.exclusao_linha_aria}
+              title={m.produtos.exclusao_linha_title}
+              onClick={() => {
+                setSelecionados(new Set([row.id]))
+                setExcluirOpen(true)
+              }}
+            >
+              <Trash2 size={13} aria-hidden />
+            </Button>
           </div>
         )}
       />

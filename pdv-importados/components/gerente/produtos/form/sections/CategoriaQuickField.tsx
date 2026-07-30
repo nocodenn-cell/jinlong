@@ -1,6 +1,10 @@
 'use client'
 
 import { criarCategoriaProduto } from '@/app/gerente/categorias-produtos/actions'
+import {
+  opcoesSelecionaveis,
+  selecionadaEstaInativa,
+} from '@/core/catalog/opcoesCadastro'
 import { SelectComCadastroRapido } from '../fields/SelectComCadastroRapido'
 import { useProdutoFormContext } from '../ProdutoFormContext'
 
@@ -16,12 +20,21 @@ export function CategoriaQuickField() {
   const c = ctx.m.comum
   const { disabled, selectClassName, opcoes } = ctx
 
+  // Categoria inativa sai das escolhas novas, mas continua listada se for a do
+  // produto aberto — esconder faria o select cair no vazio e salvar apagaria o
+  // vínculo. Ver Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md.
+  const categorias = opcoesSelecionaveis(opcoes.categorias, ctx.categoriaId)
+  const avisoInativa = selecionadaEstaInativa(opcoes.categorias, ctx.categoriaId)
+    ? p.categoria_inativa_aviso
+    : null
+
   return (
     <SelectComCadastroRapido
       label={p.categoria_label}
       value={ctx.categoriaId}
       onChange={ctx.setCategoriaId}
-      opcoes={opcoes.categorias}
+      opcoes={categorias}
+      hint={avisoInativa}
       vazioLabel={p.nenhuma_categoria}
       disabled={disabled}
       selectClassName={selectClassName}

@@ -14,6 +14,53 @@ async function lojaDoUsuario(): Promise<string | null> {
   return getGerenteLojaId()
 }
 
+export type RecebimentoProdutoBusca = Readonly<{
+  id: string
+  nome: string
+  codigo_barras: string | null
+}>
+
+/**
+ * Busca produtos para o recebimento (autocomplete).
+ *
+ * Substitui o `<select>` que carregava 500 produtos de uma vez: acima desse teto
+ * o produto simplesmente não aparecia, sem erro nem aviso
+ * (AUDITORIA_CATALOGO_PRODUTO.md §5.5). Busca por nome, código de barras ou
+ * código interno, com teto pequeno e escopo de loja.
+ */
+export async function buscarProdutosRecebimento(
+  termo: string,
+): Promise<R<RecebimentoProdutoBusca[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaDoUsuario()
+  if (!lojaId) {
+    return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
+  }
+
+  const t = (termo ?? '').trim().slice(0, 120)
+  if (t.length < 2) return { success: true, data: [] }
+
+  const supabase = await createClient()
+  const digitos = t.replace(/\D/g, '')
+  const ors = [`nome.ilike.%${t}%`, `codigo_interno.ilike.%${t}%`]
+  if (digitos) ors.push(`codigo_barras.like.%${digitos}%`)
+
+  const { data, error } = await supabase
+    .from('produtos')
+    .select('id, nome, codigo_barras')
+    .eq('loja_id', lojaId)
+    .or(ors.join(','))
+    .order('nome', { ascending: true })
+    .limit(20)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
+  }
+  return { success: true, data: (data ?? []) as RecebimentoProdutoBusca[] }
+}
+
 export async function criarRemessaConferencia(input: {
   origem: string
   observacao?: string

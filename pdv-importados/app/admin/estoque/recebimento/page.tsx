@@ -16,12 +16,15 @@ export default async function AdminEstoqueRecebimentoPage() {
   const supabase = await createClient()
 
   const [{ data: produtosRaw }, { data: remessasRaw }] = await Promise.all([
+    // Só precisamos saber SE existe produto — a escolha agora é por busca
+    // server-side (ProdutoRecebimentoAutocomplete). Antes vinham 500 linhas
+    // para popular um `<select>` que escondia todo o resto do catálogo.
     supabase
       .from('produtos')
       .select('id, nome, codigo_barras')
       .eq('ativo', true)
       .order('nome')
-      .limit(500),
+      .limit(1),
     lojaId
       ? supabase
           .from('remessas')

@@ -25,6 +25,7 @@ import {
   dualWriteFromStatus,
   isIntencaoRascunho,
   lifecycleAoEditarProduto,
+  podePublicarProduto,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
 import { statusInicialProduto } from '@/core/systemRules'
@@ -604,6 +605,17 @@ export async function removerImagemProduto(produtoId: string): Promise<ActionRes
 
 const ProdutoIdSchema = z.string().uuid('ID do produto inválido.')
 
+/** Status atual gravado — leitura pessimista (ausente → null, ninguém publica por engano). */
+async function lerStatusPublicacao(produtoId: string): Promise<StatusPublicacao | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('produtos')
+    .select('status_publicacao')
+    .eq('id', produtoId)
+    .maybeSingle()
+  return (data?.status_publicacao ?? null) as StatusPublicacao | null
+}
+
 /** Facade — lifecycle via ProductLifecycleService. */
 export async function alternarAtivoProduto(
   produtoId: string,
@@ -618,7 +630,40 @@ export async function alternarAtivoProduto(
   return { success: true, data: null }
 }
 
+/**
+ * Estreia de um rascunho (DRAFT → PUBLICADO).
+ *
+ * A regra `podePublicarProduto` é imposta AQUI, não só na UI: Server Action é
+ * endpoint público, e regra que só a tela respeita não é regra. Para trazer de
+ * volta um produto aposentado use `reativarProduto` — transição diferente, nome
+ * diferente. Ver Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md.
+ */
 export async function publicarProduto(produtoId: string): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = ProdutoIdSchema.safeParse(produtoId)
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return {
+      success: false,
+      error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'ID inválido.', idioma),
+    }
+  }
+
+  const atual = await lerStatusPublicacao(parsed.data)
+  if (!podePublicarProduto(atual)) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+  }
+
+  const result = await setProductStatusAction(parsed.data, 'PUBLICADO')
+  if (!result.ok) return { success: false, error: result.error }
+  return { success: true, data: null }
+}
+
+/** Retorno de um produto aposentado (INATIVO → PUBLICADO). Transição explícita. */
+export async function reativarProduto(produtoId: string): Promise<ActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -785,7 +830,13 @@ const BuscarProdutosComFiltrosInputSchema = z.object({
 export type BuscarProdutosComFiltrosInput = z.infer<typeof BuscarProdutosComFiltrosInputSchema>
 
 export type OpcoesFiltrosProdutos = {
-  categorias: { id: string; nome: string }[]
+  /**
+   * `ativo` acompanha a categoria porque o formulário precisa distinguir "não
+   * ofereço mais" de "não existe": a categoria inativa some das escolhas novas,
+   * mas continua visível no produto que já a usa (senão salvar apagaria o
+   * vínculo). Ver `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`.
+   */
+  categorias: { id: string; nome: string; ativo?: boolean }[]
   marcas: { id: string; nome: string }[]
   fornecedores: { id: string; nome: string }[]
 }
@@ -803,12 +854,12 @@ const buscarOpcoesFiltrosCached = unstable_cache(
   async (): Promise<OpcoesFiltrosProdutos> => {
     const supabase = await createClient()
     const [cat, mar, forn] = await Promise.all([
-      supabase.from('categorias').select('id, nome').order('nome', { ascending: true }),
+      supabase.from('categorias').select('id, nome, ativo').order('nome', { ascending: true }),
       supabase.from('marcas').select('id, nome').eq('ativo', true).order('nome', { ascending: true }),
       supabase.from('fornecedores').select('id, nome').order('nome', { ascending: true }),
     ])
     return {
-      categorias: ((cat.data ?? []) as { id: string; nome: string }[]),
+      categorias: ((cat.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
       marcas: ((mar.data ?? []) as { id: string; nome: string }[]),
       fornecedores: ((forn.data ?? []) as { id: string; nome: string }[]),
     }

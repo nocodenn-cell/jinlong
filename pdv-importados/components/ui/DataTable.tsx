@@ -16,6 +16,11 @@ export type SortDirection = 'asc' | 'desc'
 export type Column<T> = {
   key: string
   header: string
+  /**
+   * Cabeçalho interativo (ex.: caixa "selecionar todos"). Quando presente,
+   * substitui o texto de `header`, que segue obrigatório como rótulo acessível.
+   */
+  headerCell?: () => React.ReactNode
   cell?: (row: T) => React.ReactNode
   sortValue?: (row: T) => string | number
   align?: 'left' | 'right' | 'center'
@@ -178,7 +183,7 @@ export function DataTable<T>({
                       col.align === 'right' && 'flex-row-reverse',
                     )}
                   >
-                    {col.header}
+                    {col.headerCell ? col.headerCell() : col.header}
                     {sortable ? (
                       <SortIcon active={isActive} direction={isActive ? activeSort.direction : undefined} />
                     ) : null}
