@@ -17,7 +17,7 @@ type Cliente = {
 type Props = {
   aberto: boolean
   m: Mensagens
-  onSelecionado: (clienteId: string) => void
+  onSelecionado: (clienteId: string, clienteNome: string) => void
   onCancelado: () => void
 }
 
@@ -115,7 +115,7 @@ export function CaixaSelecionarClienteModal({ aberto, m, onSelecionado, onCancel
                 key={cliente.id}
                 type="button"
                 onClick={() => {
-                  onSelecionado(cliente.id)
+                  onSelecionado(cliente.id, cliente.nome)
                   setBusca("")
                   setClientes([])
                 }}

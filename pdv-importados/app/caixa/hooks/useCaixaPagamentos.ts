@@ -50,6 +50,7 @@ export function useCaixaPagamentos(
     if (Math.abs(prev - totalLiquidoComGerente) < 0.005) return
 
     setParcelas((old) => {
+      // Parcela única: atualizar valor se for vazio/zerado
       if (old.length === 1) {
         const currentValor = old[0].valor
         if (currentValor <= 0.009) {
@@ -57,7 +58,13 @@ export function useCaixaPagamentos(
         }
         return old
       }
-      return old
+      // Múltiplas parcelas: ajustar a última quando o total mudar
+      // (ex: desconto gerente aplicado/removido, carrinho alterado)
+      const somaOutras = old.slice(0, -1).reduce((s, p) => s + p.valor, 0)
+      const novoRestante = roundMoney2(Math.max(0, totalLiquidoComGerente - somaOutras))
+      const copy = [...old]
+      copy[copy.length - 1] = { ...copy[copy.length - 1], valor: novoRestante }
+      return copy
     })
   }, [totalLiquidoComGerente])
 

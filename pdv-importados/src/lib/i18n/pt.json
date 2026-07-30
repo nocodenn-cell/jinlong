@@ -1236,6 +1236,8 @@
     "msg_caixa_ja_fechado": "Caixa fechado com sucesso.",
     "msg_vendas_suspensas_motivo": "Vendas suspensas: {{motivo}}",
     "msg_vendas_suspensas": "Vendas suspensas pelo gerente.",
+    "cliente": "Cliente",
+    "msg_pagamento_parcial_requer_cliente": "Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.",
     "atalho_ajuda": "Atalhos de teclado",
     "atalho_titulo": "Atalhos de teclado",
     "atalho_descricao": "Lista completa de atalhos disponíveis no PDV",
