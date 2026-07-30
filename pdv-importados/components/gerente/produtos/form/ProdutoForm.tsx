@@ -15,6 +15,7 @@ import type { ProdutoFormShellProps } from './produtoForm.types'
 import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
 import { CategoriaQuickField } from './sections/CategoriaQuickField'
+import { FornecedorQuickField } from './sections/FornecedorQuickField'
 import { ComercialSection } from './sections/ComercialSection'
 import { CompraSection } from './sections/CompraSection'
 import { EstoqueSection } from './sections/EstoqueSection'
@@ -135,9 +136,12 @@ export function ProdutoForm(props: Props) {
           precoVarejoRef={props.precoVarejoRef}
           onEnterSubmit={props.onEnterSubmit}
         />
-        {/* Categoria sempre visível (modo simples e completo) — campo primário. */}
-        <div className="mt-1">
+        {/* Categoria e fornecedor sempre visíveis (modo simples e completo) —
+            campos primários: categoria organiza o catálogo, fornecedor mantém a
+            rastreabilidade da compra. */}
+        <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <CategoriaQuickField />
+          <FornecedorQuickField idioma={props.idioma} />
         </div>
         <EstoqueSection modoCompleto={props.modoCompleto} />
 
@@ -161,7 +165,7 @@ export function ProdutoForm(props: Props) {
 
         {props.modoCompleto ? (
           <>
-            <ComercialSection faixasSlot={faixasSlot} idioma={props.idioma} />
+            <ComercialSection faixasSlot={faixasSlot} />
             <CompraSection />
             <FiscalSection />
           </>
