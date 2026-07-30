@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
+import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 
 type Props = {
@@ -18,6 +19,8 @@ type Props = {
   totalBruto?: number
   totalDesconto?: number
   valorDescontoGerente?: number
+  /** Percentual efetivo do desconto de gerente — só rotula a linha do resumo. */
+  descontoGerentePercentual?: number
   moedaPrefixo: string
 }
 
@@ -35,6 +38,7 @@ export function CaixaPdvCartSaleBar({
   totalBruto = 0,
   totalDesconto = 0,
   valorDescontoGerente = 0,
+  descontoGerentePercentual = 0,
   moedaPrefixo,
 }: Props) {
   const excluirDisabled =
@@ -75,21 +79,30 @@ export function CaixaPdvCartSaleBar({
               </div>
 
               {(hasDesconto || hasDescontoGerente) && (
-                <div className="mt-0.5 flex flex-col items-end gap-1 text-xs text-jl-fg-3">
-                  <div className="flex justify-end gap-3">
-                    <span>
+                <div className="mt-0.5 flex flex-col items-end gap-0.5 text-xs text-jl-fg-3">
+                  <div className="flex justify-end gap-2">
+                    <span>{m.caixa.bruto}</span>
+                    <span className="tabular-nums">
                       {moedaPrefixo} {formatDecimalBRL(totalBruto)}
                     </span>
-                    {hasDesconto && (
-                      <span className="text-[var(--color-warning-strong)]">
+                  </div>
+                  {hasDesconto && (
+                    <div className="flex justify-end gap-2">
+                      <span>{m.caixa.descontos_regras}</span>
+                      <span className="tabular-nums text-[var(--color-warning-strong)]">
                         -{moedaPrefixo} {formatDecimalBRL(totalDesconto)}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {hasDescontoGerente && (
-                    <div className="flex justify-end gap-3">
-                      <span className="text-[var(--color-warning-strong)]">
-                         -{moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
+                    <div className="flex justify-end gap-2">
+                      <span>
+                        {caixaFmt(m.caixa.desconto_gerente_label, {
+                          pct: descontoGerentePercentual.toFixed(2),
+                        })}
+                      </span>
+                      <span className="tabular-nums text-[var(--color-warning-strong)]">
+                        -{moedaPrefixo} {formatDecimalBRL(valorDescontoGerente)}
                       </span>
                     </div>
                   )}

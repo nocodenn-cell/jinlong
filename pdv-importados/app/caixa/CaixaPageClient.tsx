@@ -1359,6 +1359,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 totalBruto={totalBruto}
                 totalDesconto={totalDesconto}
                 valorDescontoGerente={valorDescontoGerente}
+                descontoGerentePercentual={descontoGerentePercentualEfetivo}
                 moedaPrefixo={m.caixa.moeda_prefixo}
               />
             </section>
