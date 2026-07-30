@@ -1082,7 +1082,7 @@
     "empty_cta_type_enter": "Ou digite nome/SKU e pressione Enter.",
     "empty_shortcut_focus": "Focar busca",
     "produto_nao_encontrado": "Produto não encontrado (código ou nome).",
-    "msg_produto_nao_encontrado_acao": "Código não encontrado. Cadastre agora ou busque por nome/SKU.",
+    "msg_produto_nao_encontrado_acao": "Código não encontrado. Busque por nome/SKU. Se o produto não existe, peça o cadastro em Produtos (gerente).",
     "cadastro_rapido_titulo": "Cadastro rápido",
     "cadastro_rapido_subtitulo": "Produto novo — salva e já adiciona ao cupom.",
     "cadastro_rapido_nome": "Nome",

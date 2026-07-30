@@ -17,6 +17,15 @@ type ActionResult<T> =
 const PERFIS_OK = new Set(['OPERADOR', 'GERENTE', 'DONO', 'ADMIN'])
 
 /**
+ * @deprecated CÓDIGO MORTO — alcançado apenas por `criarProdutoRelampagoPdv`,
+ * que perdeu seu call site quando o cadastro de produto saiu do PDV.
+ * Ver `docs/architecture/pdv_cadastro_removido.md`.
+ *
+ * ATENÇÃO para quem for limpar: o `PERFIS_OK` abaixo autoriza OPERADOR, mas a
+ * RPC 270 exige GERENTE+ (`CRIAR_PRODUTO_PERFIL`) e `ajustar_estoque_manual`
+ * também. Essa divergência nunca funcionou para OPERADOR — não "consertar"
+ * afrouxando o portão de estoque sem decisão de negócio.
+ *
  * Cadastro mínimo no PDV (produto não encontrado no bip).
  * Autoriza OPERADOR+ — distinto do CRUD completo do catálogo (GERENTE+).
  * Create via ProductWriter → RPC 270 (única porta de criação).

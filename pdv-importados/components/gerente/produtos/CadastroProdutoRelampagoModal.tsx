@@ -26,6 +26,16 @@ export type CadastroProdutoRelampagoModalProps = Readonly<{
 }>
 
 /**
+ * @deprecated CÓDIGO MORTO — sem nenhum call site desde a decisão de produto
+ * de que o PDV não cadastra produto (o cadastro pertence ao módulo Produtos).
+ * A superfície foi removida de `CaixaPageClient`; ao bipar código inexistente o
+ * caixa agora só informa e orienta (`msg_produto_nao_encontrado_acao`).
+ *
+ * Mantido temporariamente, sem uso, para a limpeza posterior decidir entre
+ * remover ou reaproveitar. Ver `docs/architecture/pdv_cadastro_removido.md`.
+ * NÃO reintroduzir no PDV: reabriria a confusão entre vender e cadastrar, e
+ * esbarraria no bloqueio de perfil da RPC 270 para OPERADOR.
+ *
  * Cadastro mínimo no momento operacional (PDV) + sugestão GTIN (Fase 3).
  * SSoT: mutação via `criarProduto`; UI em components/gerente/produtos.
  */
