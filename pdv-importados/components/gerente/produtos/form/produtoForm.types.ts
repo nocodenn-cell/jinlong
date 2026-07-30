@@ -83,5 +83,10 @@ export type ProdutoFormShellProps = Readonly<{
   onFornecedoresChange?: (fornecedores: OpcoesFiltrosProdutos['fornecedores']) => void
   onCategoriasChange?: (categorias: OpcoesFiltrosProdutos['categorias']) => void
   onMarcasChange?: (marcas: OpcoesFiltrosProdutos['marcas']) => void
-  onImagemChange?: () => void
+  /**
+   * Foto trocada/removida. Recebe a nova URL (ou `null`). NÃO significa "produto
+   * salvo": quem consome deve apenas recarregar a lista, nunca fechar o formulário
+   * — fechar aqui descartaria os campos ainda não salvos.
+   */
+  onImagemChange?: (imagemUrl: string | null) => void
 }>

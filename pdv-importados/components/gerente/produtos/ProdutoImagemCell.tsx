@@ -14,7 +14,8 @@ export type ProdutoImagemCellProps = Readonly<{
   imagemUrl: string | null
   disabled?: boolean
   m: Mensagens
-  onDone: () => void
+  /** Recebe a nova URL (upload) ou `null` (remoção) — quem chama decide se recarrega. */
+  onDone: (imagemUrl: string | null) => void
 }>
 
 function interpolate(template: string, vars: Record<string, string>) {
@@ -57,7 +58,7 @@ export function ProdutoImagemCell({
           return
         }
         emitGerenteToast({ kind: 'success', message: p.foto_atualizada })
-        onDone()
+        onDone(r.data.imagem_url)
       })
     },
     [produtoId, p.foto_atualizada, onDone],
@@ -74,7 +75,7 @@ export function ProdutoImagemCell({
           return
         }
         emitGerenteToast({ kind: 'success', message: p.foto_removida })
-        onDone()
+        onDone(null)
       })
     },
     [pending, disabled, imagemUrl, produtoId, p.foto_removida, onDone],
