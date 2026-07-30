@@ -59,6 +59,11 @@ export type WebCaixaScanDeps = {
   /** Chamado após scan bem-sucedido — usado para dedupe (500ms) no nível do scanner. */
   onItemAdded?: (info: { codigo: string; itemId: string; produtoId: string }) => void
   /** Código sem match — abre cadastro relâmpago no PDV (opcional). */
+  /**
+   * @deprecated Sem consumidor: era o gancho que abria o cadastro no PDV.
+   * O aviso ao operador já é dado por `msg_produto_nao_encontrado_acao` acima
+   * deste callback, então o pipeline segue correto sem ninguém o passar.
+   */
   onProdutoNaoEncontrado?: (codigo: string) => void
 }
 

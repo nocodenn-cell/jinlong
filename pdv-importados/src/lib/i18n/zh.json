@@ -1082,7 +1082,7 @@
     "empty_cta_type_enter": "或输入名称/SKU 后按回车。",
     "empty_shortcut_focus": "聚焦搜索",
     "produto_nao_encontrado": "未找到商品（条码或名称）。",
-    "msg_produto_nao_encontrado_acao": "未找到该编码。可立即登记，或改用名称/SKU 搜索。",
+    "msg_produto_nao_encontrado_acao": "未找到该编码。请改用名称/SKU 搜索。若商品尚未建档，请在「商品」模块由店长登记。",
     "cadastro_rapido_titulo": "快速登记",
     "cadastro_rapido_subtitulo": "新商品 — 保存后直接加入本单。",
     "cadastro_rapido_nome": "名称",
