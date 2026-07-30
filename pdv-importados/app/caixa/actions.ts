@@ -218,6 +218,8 @@ export async function colocarVendaEmEsperaCaixa(input: {
   totalLiquido: number
   caixaId?: string | null
   descontoGerentePercentual?: number | null
+  clienteId?: string | null
+  clienteNome?: string | null
 }) {
   return colocarVendaEmEsperaImpl(input)
 }
