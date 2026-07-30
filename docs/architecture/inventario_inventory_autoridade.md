@@ -170,7 +170,7 @@ Para cada conceito: quem **cria**, quem **altera**, quem **apenas lê**.
 | **Entrada remessa** | `confirmar_remessa_entrada` | `app/gerente/recebimento/actions.ts` | Insert remessa+itens depois RPC |
 | **Entrada NF-e** | `importar_nfe_transacao` | `app/gerente/estoque/importar-nfe/actions.ts` | Pode criar/atualizar `produtos` + custo; `ENTRADA_NFE` |
 | **Transferência** | `transferir_estoque_seguro` (+ `obter_estoque_disponivel_transferencia`) | `app/gerente/transferencias/actions.ts` | Idempotência `082`; contratos JSON em `docs/contracts/v1/` |
-| **Estoque inicial (create)** | `criar_produto_com_estoque_inicial` | Adapter `criarProdutoComEstoqueInicialRpc.ts`; PDV relâmpago `caixaCadastroRelampago.impl.ts` | products-led; efeito inventory |
+| **Estoque inicial (create)** | `criar_produto_com_estoque_inicial` | Adapter `criarProdutoComEstoqueInicialRpc.ts` (PDV relâmpago REMOVIDO em 2026-07-30 — ver `pdv_cadastro_removido.md`) | products-led; efeito inventory |
 | **Inventário** | *mesmo* ajuste com `ACERTO_INVENTARIO` | Modal ajuste admin | Sem sessão de contagem |
 | **Linha zero legada** | INSERT direto `estoque` | `garantirLinhaEstoque` | Bypass kardex — dívida |
 | **Listagem** | `gerente_estoque_list_page` | `obterListaEstoqueGerente` | Read |
