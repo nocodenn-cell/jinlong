@@ -30,6 +30,7 @@ type Props = {
   onFecharCaixa: () => void
   onAbrirCaixa: () => void
   onConsultaRapida: () => void
+  onSelecionarCliente: () => void
   variant?: "default" | "classic"
 }
 
@@ -61,6 +62,7 @@ function CaixaPdvOperacoesMenuImpl({
   onFecharCaixa,
   onAbrirCaixa,
   onConsultaRapida,
+  onSelecionarCliente,
   variant = "default",
 }: Props) {
   const classic = variant === "classic"
@@ -117,6 +119,13 @@ function CaixaPdvOperacoesMenuImpl({
       label: m.caixa.operacoes_consulta_rapida,
       shortcut: "F3",
       onClick: () => runAndClose(onConsultaRapida),
+    },
+    {
+      id: "cliente",
+      label: m.caixa.selecionar_cliente_titulo,
+      shortcut: "Alt+C",
+      disabled: busy,
+      onClick: () => runAndClose(onSelecionarCliente),
     },
     {
       id: "suprimento",

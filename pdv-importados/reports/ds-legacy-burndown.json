@@ -1,5 +1,5 @@
 {
-  "asOf": "2026-07-19",
+  "asOf": "2026-07-30",
   "results": [
     {
       "id": "app_btn",
@@ -44,7 +44,7 @@
       "id": "text_arbitrary_px",
       "label": "text-[Npx] arbitrário",
       "files": 69,
-      "hits": 326,
+      "hits": 328,
       "samples": [
         "app/admin/auditoria/page.tsx (4)",
         "app/admin/auditoria/_components/AuditoriaTimeline.tsx (15)",
