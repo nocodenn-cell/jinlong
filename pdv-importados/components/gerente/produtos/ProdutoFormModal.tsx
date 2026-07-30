@@ -370,7 +370,15 @@ export function ProdutoFormModal({
         } else {
           const msg = (() => {
             if (comoRascunho) return p.criado_rascunho
-            if (!editando) return p.criado_publicado
+            // "liberado no PDV" seria mentira com saldo 0: a RPC de venda
+            // aborta com ESTOQUE_INSUFICIENTE. Não existe venda com estoque
+            // negativo neste sistema.
+            const semEstoque =
+              Boolean(createdId) &&
+              (!estoqueIntent.deveAplicar || estoqueIntent.quantidade <= 0)
+            if (!editando) {
+              return semEstoque ? p.criado_publicado_sem_estoque : p.criado_publicado
+            }
             if (isRascunho(produto.status_publicacao)) return p.criado_publicado
             return m.comum.sucesso
           })()
@@ -437,6 +445,9 @@ export function ProdutoFormModal({
       codigo: posSalvar.codigoBarras || null,
       produtoId: posSalvar.codigoBarras ? null : posSalvar.produtoId,
     })
+    /** Publicado mas com saldo 0 — o caixa vai recusar até ajustar o estoque. */
+    const estoquePendenteParaVender =
+      !posSalvar.rascunho && !posSalvar.estoqueInicialFalhou && posSalvar.estoqueZerado
 
     return (
       <DragonModal
@@ -475,20 +486,29 @@ export function ProdutoFormModal({
             {p.pos_salvar_hint_estoque_falhou}
           </p>
         ) : null}
-        {!posSalvar.rascunho &&
-        !posSalvar.estoqueInicialFalhou &&
-        posSalvar.estoqueZerado ? (
+        {estoquePendenteParaVender ? (
           <p className="mt-2 rounded-md border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-caption text-[var(--color-warning-strong)]">
             {p.aviso_estoque_zero_publicado}
           </p>
         ) : null}
+        {/* Com saldo 0 o ajuste de estoque NÃO é passo opcional: sem ele o
+            caixa recusa a venda. Chamar de "opcional" mandava o operador
+            embora achando que o produto já vendia. */}
         {!posSalvar.estoqueInicialFalhou ? (
-          <p className="mt-2 text-xs text-jl-fg-3">{p.pos_salvar_hint}</p>
+          <p className="mt-2 text-xs text-jl-fg-3">
+            {estoquePendenteParaVender
+              ? p.pos_salvar_hint_estoque_obrigatorio
+              : p.pos_salvar_hint}
+          </p>
         ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Button
             asChild
-            variant={posSalvar.estoqueInicialFalhou ? 'primary' : 'secondary'}
+            variant={
+              posSalvar.estoqueInicialFalhou || estoquePendenteParaVender
+                ? 'primary'
+                : 'secondary'
+            }
             size="sm"
             className="gap-1.5"
           >
