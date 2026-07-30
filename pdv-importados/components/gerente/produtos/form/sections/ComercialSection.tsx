@@ -2,19 +2,16 @@
 
 import type { ReactNode } from 'react'
 import { criarMarcaProduto } from '@/app/gerente/marcas-produtos/actions'
-import { FornecedorCombobox } from '../fields/FornecedorCombobox'
 import { SelectComCadastroRapido } from '../fields/SelectComCadastroRapido'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
-import type { Idioma } from '@/idioma/normalizeIdioma'
 import type { OrigemCode } from '../produtoForm.types'
 
 type Props = Readonly<{
   faixasSlot: ReactNode
-  idioma: Idioma
 }>
 
-export function ComercialSection({ faixasSlot, idioma }: Props) {
+export function ComercialSection({ faixasSlot }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const c = ctx.m.comum
@@ -25,9 +22,9 @@ export function ComercialSection({ faixasSlot, idioma }: Props) {
       <ProdutoFormSectionHeading title={p.secao_classificacao} />
       <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_classificacao_recomendados}</p>
       <div id="produto-secao-comercial" className="mt-3 space-y-3">
-        {/* Categoria saiu daqui para a área sempre visível (CategoriaQuickField).
-            Marca segue no modo completo. */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Categoria e fornecedor saíram daqui para a área sempre visível
+            (CategoriaQuickField / FornecedorQuickField). Marca segue aqui. */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <SelectComCadastroRapido
             label={p.marca_label}
             value={ctx.marcaId}
@@ -50,24 +47,6 @@ export function ComercialSection({ faixasSlot, idioma }: Props) {
             }}
             onOpcaoCriada={(opcao) => ctx.onMarcasChange?.([...opcoes.marcas, opcao])}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-xs font-medium text-jl-fg-3">{p.fornecedor_principal_label}</p>
-            <div className="mt-1">
-              <FornecedorCombobox
-                p={p}
-                fornecedores={opcoes.fornecedores}
-                value={ctx.fornecedorId}
-                onChange={ctx.setFornecedorId}
-                onFornecedoresChange={ctx.onFornecedoresChange}
-                disabled={disabled}
-                selectClassName={selectClassName}
-                idioma={idioma}
-              />
-            </div>
-          </div>
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.origem_label}
             <select
@@ -84,7 +63,7 @@ export function ComercialSection({ faixasSlot, idioma }: Props) {
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.referencia_fornecedor_label}
             <input
