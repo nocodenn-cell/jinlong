@@ -86,10 +86,37 @@ embora nenhuma UI ofereça isso. Não é exploração trivial (a criação exige
 `service_role`, e a action foi removida), mas é permissão mais larga do que o
 sistema precisa.
 
-**Decisão pendente do dono do produto:** emitir migração revertendo os dois
-gates para GERENTE+, ou manter a concessão caso o cadastro no caixa possa voltar.
-Não foi feito aqui porque é mudança de fronteira de permissão em banco, fora do
-escopo de uma limpeza de código morto.
+**Migração escrita e validada, aguardando aplicação:**
+`backend/supabase/migrations/20260730093000_revoga_operador_cadastro_produto_pdv.sql`
+
+Auditoria que a embasou (contra o banco vivo, não contra os arquivos):
+
+- **Nenhum role Postgres perde EXECUTE.** As três funções têm grant só para
+  `postgres` e `service_role` — nunca para `authenticated`/`anon`. Logo a
+  concessão órfã **não era alcançável por cliente algum**: era um `IF` de perfil
+  dentro de função que só código servidor confiável invoca. Removê-la é higiene,
+  não correção de exposição.
+- O que muda é o gate de `usuarios.perfil`: `OPERADOR` deixa de poder ser o
+  `p_ator_id` de criação de produto e de ajuste de estoque inicial. Todos os
+  chamadores restantes (`criarProduto`, `criarProdutoAction`, import CSV,
+  `/admin/estoque`, `/gerente/estoque`) passam por `assertGerenteSession`, e
+  `adminPolicy.ALL_ADMIN_PROFILES` é `['GERENTE','DONO','ADMIN']` — OPERADOR já
+  não chega lá.
+- **Testes/homologação:** nenhum teste afirma que OPERADOR *pode* criar. As
+  únicas referências a `CRIAR_PRODUTO_PERFIL`/`AJUSTE_ESTOQUE_PERFIL` em teste
+  checam o texto da mensagem PT, não o gate. O smoke de 2026-07-18 no artifact
+  de go/no-go deixa de ser reproduzível — é registro histórico datado, não
+  suíte ativa.
+
+Descobertas laterais registradas, **fora do escopo desta migração**:
+
+- Existem **dois overloads** de `ajustar_estoque_manual`. O de 6 args é um
+  wrapper que delega ao de 7 com ator `NULL`; como só `service_role` executa e
+  `auth.uid()` é nulo nesse contexto, ele levanta `AJUSTE_ESTOQUE_AUTH` sempre —
+  provavelmente morto. A migração **não o toca**.
+- A exceção estreita era ainda mais apertada do que descrito antes: exigia
+  `ACERTO_INVENTARIO` **e** a observação exata `'Estoque inicial no cadastro de
+  produto'`. Bom modelo a reaproveitar se o cadastro no caixa voltar.
 
 Se a necessidade de cadastrar no caixa voltar, a exceção estreita de
 `20260718135500` é o modelo a seguir — ela restringe pelo *motivo* do ajuste, não
