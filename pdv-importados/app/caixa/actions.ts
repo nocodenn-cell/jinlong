@@ -32,7 +32,10 @@ import {
   cancelarVendaImpl,
   finalizarVendaCaixaImpl,
 } from '@/app/caixa/server/caixaVendas.impl'
-import { buscarClientesCaixaImpl } from '@/app/caixa/server/caixaClientesSearch.impl'
+import {
+  buscarClientesCaixaImpl,
+  obterClienteCaixaImpl,
+} from '@/app/caixa/server/caixaClientesSearch.impl'
 import {
   abrirCaixaOperadorImpl,
   fecharCaixaOperadorImpl,
@@ -219,7 +222,6 @@ export async function colocarVendaEmEsperaCaixa(input: {
   caixaId?: string | null
   descontoGerentePercentual?: number | null
   clienteId?: string | null
-  clienteNome?: string | null
 }) {
   return colocarVendaEmEsperaImpl(input)
 }
@@ -273,4 +275,9 @@ export async function criarProdutoRelampagoPdv(input: unknown) {
 /** Selecao de cliente no PDV (Fase 5b). */
 export async function buscarClientesCaixa(termo: string) {
   return buscarClientesCaixaImpl(termo)
+}
+
+/** Nome do cliente vinculado a uma venda retomada (guarda so o id). */
+export async function obterClienteCaixa(clienteId: string) {
+  return obterClienteCaixaImpl(clienteId)
 }

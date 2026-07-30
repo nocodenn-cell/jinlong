@@ -27,8 +27,8 @@ export type RetomarEmEsperaResult =
       id: string
       numeroLocal: number
       itens: ItemCarrinho[]
-      clienteId?: string | null
-      clienteNome?: string | null
+      /** Vínculo autoritativo; o nome é resolvido à parte (não existe na tabela). */
+      clienteId: string | null
     }
   | { ok: false; error: string }
 
@@ -94,7 +94,6 @@ export async function colocarVendaEmEsperaImpl(input: {
   caixaId?: string | null
   descontoGerentePercentual?: number | null
   clienteId?: string | null
-  clienteNome?: string | null
 }): Promise<ColocarEmEsperaResult> {
   try {
     const { userId } = await getUsuarioAtual()
@@ -113,7 +112,6 @@ export async function colocarVendaEmEsperaImpl(input: {
       },
       p_caixa_id: input.caixaId ?? null,
       p_cliente_id: input.clienteId ?? null,
-      p_cliente_nome: input.clienteNome ?? null,
       p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
       p_desconto_gerente_token: null,
     })
@@ -164,7 +162,6 @@ export async function retomarVendaEmEsperaImpl(id: string): Promise<RetomarEmEsp
       numeroLocal: Number(row.numero_local ?? 0),
       itens: mapItens(row.itens),
       clienteId: row.cliente_id ? String(row.cliente_id) : null,
-      clienteNome: row.cliente_nome ? String(row.cliente_nome) : null,
     }
   } catch (e) {
     return {
