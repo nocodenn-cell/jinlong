@@ -14,6 +14,7 @@ import {
   retomarVendaEmEsperaCaixa,
   descartarVendaEmEsperaCaixa,
   obterDetalheHistoricoVendaCaixa,
+  obterClienteCaixa,
 } from "@/app/caixa/actions"
 import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
@@ -613,7 +614,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       descontoGerentePercentual:
         descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
       clienteId: clienteId ?? undefined,
-      clienteNome: clienteNome ?? undefined,
     })
     if (!res.ok) {
       setCaixaMensagem(res.error, { kind: "error" })
@@ -631,7 +631,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     itens,
     caixaStatus,
     clienteId,
-    clienteNome,
     totalBruto,
     totalDesconto,
     totalLiquidoComGerente,
@@ -656,7 +655,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           descontoGerentePercentual:
             descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
           clienteId: clienteId ?? undefined,
-          clienteNome: clienteNome ?? undefined,
         })
         if (!parked.ok) {
           setCaixaMensagem(parked.error, { kind: "error" })
@@ -674,9 +672,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       // Token de gerente não é restaurado: exige nova autorização se precisar desconto.
       limparEstadoDescontoGerente()
       substituirCarrinho(res.itens)
-      // Restaura cliente vinculado à venda (Fase 5c)
-      setClienteId(res.clienteId ?? null)
-      setClienteNome(res.clienteNome ?? null)
+      // Restaura o cliente vinculado. `vendas_em_espera` guarda só o id, então o
+      // nome do chip é resolvido depois — sem bloquear a retomada do cupom.
+      setClienteId(res.clienteId)
+      setClienteNome(null)
+      if (res.clienteId) {
+        void obterClienteCaixa(res.clienteId).then((r) => {
+          if (r.ok && r.cliente) setClienteNome(r.cliente.nome)
+        })
+      }
       // Recalcula VAREJO/ATACADO com a quantidade retomada (spec Fase 2).
       for (const item of res.itens) {
         const tipo = item.resultado?.tipoPreco ?? "VAREJO"
@@ -702,7 +706,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       totalLiquidoComGerente,
       caixaStatus,
       clienteId,
-      clienteNome,
       descontoGerentePercentual,
       handleNovoCupom,
       limparEstadoDescontoGerente,

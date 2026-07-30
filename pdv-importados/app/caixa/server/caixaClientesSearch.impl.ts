@@ -57,3 +57,48 @@ export async function buscarClientesCaixaImpl(
     }
   }
 }
+
+/**
+ * Resolve um cliente por id na loja do operador. `vendas_em_espera` guarda só
+ * `cliente_id` (o vínculo autoritativo), então ao retomar uma venda o PDV precisa
+ * disto para exibir o nome — sem duplicar o nome no banco.
+ */
+export async function obterClienteCaixaImpl(
+  clienteId: string,
+): Promise<
+  | { ok: true; cliente: ClienteCaixaRow | null }
+  | { ok: false; error: string }
+> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+
+    const lojaId = (await getLojaIdUsuario(supabase, user.id)) ?? LOJA_MATRIZ_ID
+
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('id,nome,documento')
+      .eq('loja_id', lojaId)
+      .eq('id', clienteId)
+      .maybeSingle()
+
+    if (error) return { ok: false, error: error.message }
+    if (!data) return { ok: true, cliente: null }
+    return {
+      ok: true,
+      cliente: {
+        id: String(data.id),
+        nome: String(data.nome),
+        documento: data.documento ? String(data.documento) : null,
+      },
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : 'Falha ao carregar cliente.',
+    }
+  }
+}
