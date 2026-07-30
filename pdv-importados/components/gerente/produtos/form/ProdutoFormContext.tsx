@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from 'react'
 import type { ProdutoFormShellProps, ProdutoFormState } from './produtoForm.types'
+import type { ProdutoFormErro } from './produtoForm.clientValidation'
 import { FIN_IN, FIN_IN_MONO, FIN_SELECT } from './produtoFormStyles'
 
 export type ProdutoFormContextValue = ProdutoFormShellProps &
@@ -9,6 +10,8 @@ export type ProdutoFormContextValue = ProdutoFormShellProps &
     inputClassName: string
     inputMonoClassName: string
     selectClassName: string
+    /** Campo reprovado na validação — a seção o marca e mostra a mensagem. */
+    erro?: ProdutoFormErro | null
   }
 
 const ProdutoFormContext = createContext<ProdutoFormContextValue | null>(null)
