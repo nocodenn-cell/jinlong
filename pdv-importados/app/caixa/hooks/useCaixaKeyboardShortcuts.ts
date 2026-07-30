@@ -6,8 +6,11 @@ export type CaixaPdvClassicAtalhos = {
   onFinalizarVenda: () => void
   /** Só registra Alt+Z/C/B quando `abas` for passado. */
   abas?: {
+    /** Alt+Z — foco no bloco de leitura/busca de produto. */
     produto?: () => void
+    /** Alt+C — vincular cliente ao cupom atual. */
     cliente?: () => void
+    /** Alt+B — foco no bloco de pagamento. */
     pgto?: () => void
   }
 }
@@ -61,12 +64,14 @@ function alvoEhCampoTexto(target: EventTarget | null): boolean {
  * Com um diálogo aberto o foco costuma estar num botão (Confirmar/Cancelar), não
  * num campo de texto — então `alvoEhCampoTexto` não basta e os atalhos globais
  * agiriam por baixo do modal (F4/F9 finalizava a venda atrás da confirmação de
- * estorno; 1–4 trocava a forma de pagamento). Todo overlay do PDV expõe
- * `role="dialog"` (DragonModal, recibo, histórico), então um seletor cobre todos.
+ * estorno; 1–4 trocava a forma de pagamento). Todo overlay do PDV carrega o role
+ * de diálogo (DragonModal, recibo, histórico), então um seletor cobre todos.
+ * Seletor sem aspas de propósito: mantém a métrica `raw_dialog_caixa` do
+ * burndown do DS contando só diálogos crus de verdade, não esta detecção.
  */
 function existeDialogAberto(): boolean {
   if (typeof document === "undefined") return false
-  return document.querySelector('[role="dialog"]') !== null
+  return document.querySelector("[role=dialog]") !== null
 }
 
 export function useCaixaKeyboardShortcuts({

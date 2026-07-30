@@ -317,6 +317,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     pgtoPanel?.focus()
   }, [])
 
+  const abrirSelecionarCliente = useCallback(() => {
+    setSelecionarClienteModalAberto(true)
+  }, [])
+
+  const handleRemoverCliente = useCallback(() => {
+    setClienteId(null)
+    setClienteNome(null)
+    setCaixaMensagem(m.caixa.msg_cliente_desvinculado, { kind: "info" })
+    focarCampoBusca()
+  }, [focarCampoBusca, m.caixa.msg_cliente_desvinculado, setCaixaMensagem])
+
   // Idle focus magnet: after 3s of no keyboard/pointer activity, refocus the search field
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
@@ -1116,11 +1127,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       onFinalizarVenda: () => void handleFinalizar(),
       abas: {
         produto: focarAbaProduto,
-        cliente: focarAbaPagamento,
+        cliente: abrirSelecionarCliente,
         pgto: focarAbaPagamento,
       },
     }),
-    [handleExcluirVendaConfirmado, handleFinalizar, focarAbaProduto, focarAbaPagamento],
+    [
+      handleExcluirVendaConfirmado,
+      handleFinalizar,
+      focarAbaProduto,
+      focarAbaPagamento,
+      abrirSelecionarCliente,
+    ],
   )
 
   useCaixaKeyboardShortcuts({
@@ -1283,7 +1300,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
                   <div ref={produtoPanelRef} tabIndex={-1} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                    <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} clienteNome={clienteNome} />
+                    <CaixaOperadorContextBar
+                      m={m}
+                      idioma={idioma}
+                      configCaixaWeb={configCaixaWeb}
+                      clienteNome={clienteNome}
+                      onRemoverCliente={handleRemoverCliente}
+                    />
                     <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
@@ -1368,6 +1391,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onFecharCaixa={handleFecharCaixaClick}
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
+                onSelecionarCliente={abrirSelecionarCliente}
               />
               <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
@@ -1414,6 +1438,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onFecharCaixa={handleFecharCaixaClick}
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
+                onSelecionarCliente={abrirSelecionarCliente}
               />
             </div>
           </div>
@@ -1622,6 +1647,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           setClienteId(id)
           setClienteNome(nome)
           setSelecionarClienteModalAberto(false)
+          setCaixaMensagem(caixaFmt(m.caixa.msg_cliente_vinculado, { nome }), { kind: "success" })
+          focarCampoBusca()
         }}
         onCancelado={() => setSelecionarClienteModalAberto(false)}
       />
