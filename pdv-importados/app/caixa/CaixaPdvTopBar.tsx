@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -14,7 +13,6 @@ import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortcutsReference"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
-import { ROUTES } from "@shared-core/navigation/routes"
 
 type Props = {
   m: Mensagens
@@ -162,15 +160,9 @@ export function CaixaPdvTopBar({
             open={atalhosAbertos}
             onOpenChange={onAtalhosOpenChange}
           />
-          <Link
-            href={ROUTES.auth.changePassword}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
-              "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
-            )}
-          >
-            {m.login.link_trocar_senha}
-          </Link>
+          {/* "Trocar senha" saiu da barra do PDV: é tarefa de conta, feita uma vez
+              na vida, ocupando espaço permanente na tela de venda. Continua
+              acessível em /auth/alterar-senha e pelo rodapé do admin. */}
           <SignOutButton
             label={m.comum.sair}
             className={cn(

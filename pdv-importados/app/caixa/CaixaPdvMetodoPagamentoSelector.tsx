@@ -1,6 +1,8 @@
 "use client"
 
 import { memo } from "react"
+import { Banknote, CreditCard, QrCode } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import type { Mensagens } from "@/i18n/getMessages"
 import type { MetodoPagamentoUi } from "@/app/caixa/caixaMetodoPagamento"
 import { cn } from "@/lib/utils"
@@ -13,13 +15,20 @@ type Props = Readonly<{
   disabled?: boolean
 }>
 
-// Mapeamento usando as chaves corretas de m.caixa
-// Ordem: Dinheiro(1), PIX(2), Crédito(3), Débito(4)
-const OPCOES: ReadonlyArray<{ id: MetodoPagamentoUi; labelKey: keyof Mensagens["caixa"] }> = [
-  { id: "dinheiro", labelKey: "pdv_metodo_pagamento_dinheiro" },
-  { id: "pix", labelKey: "pdv_metodo_pagamento_pix" },
-  { id: "credito", labelKey: "pdv_metodo_pagamento_credito" },
-  { id: "debito", labelKey: "pdv_metodo_pagamento_debito" },
+/**
+ * Ícone grande + rótulo curto. O operador reconhece a forma pelo DESENHO, não
+ * pela leitura — é o que permite bater o olho e finalizar em segundos. Ordem
+ * fixa (1..4) porque o atalho de teclado é posicional.
+ */
+const OPCOES: ReadonlyArray<{
+  id: MetodoPagamentoUi
+  labelKey: keyof Mensagens["caixa"]
+  Icon: LucideIcon
+}> = [
+  { id: "dinheiro", labelKey: "pdv_metodo_pagamento_dinheiro", Icon: Banknote },
+  { id: "pix", labelKey: "pdv_metodo_pagamento_pix", Icon: QrCode },
+  { id: "credito", labelKey: "pdv_metodo_pagamento_credito", Icon: CreditCard },
+  { id: "debito", labelKey: "pdv_metodo_pagamento_debito", Icon: CreditCard },
 ]
 
 function CaixaPdvMetodoPagamentoSelectorImpl({
@@ -33,47 +42,44 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
       value={value}
       onValueChange={(v) => onChange(v as MetodoPagamentoUi)}
       aria-label={m.caixa.pdv_metodo_pagamento_aria}
-      className="flex flex-col gap-1.5"
+      // Sem título visível: quatro ícones de pagamento não precisam de um rótulo
+      // dizendo que são formas de pagamento. O aria-label cobre leitor de tela.
+      className="grid grid-cols-4 gap-1.5"
     >
-      <span className="text-xs font-semibold uppercase tracking-wide text-jl-fg-2">
-        {m.caixa.pdv_metodo_pagamento_titulo}
-      </span>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-        {OPCOES.map((op, i) => {
-          const selected = value === op.id
-          // Obtém o texto da chave correta em m.caixa (como string)
-          const label = m.caixa[op.labelKey] as string
-          const atalho = i + 1
-          return (
-            <RadioGroupItem
-              key={op.id}
-              value={op.id}
-              aria-keyshortcuts={`${atalho}`}
-              disabled={disabled}
-              title={`${label} (tecla ${atalho})`}
+      {OPCOES.map((op, i) => {
+        const selected = value === op.id
+        const label = m.caixa[op.labelKey] as string
+        const atalho = i + 1
+        const Icon = op.Icon
+        return (
+          <RadioGroupItem
+            key={op.id}
+            value={op.id}
+            aria-keyshortcuts={`${atalho}`}
+            disabled={disabled}
+            title={`${label} (${atalho})`}
+            className={cn(
+              "relative flex min-h-[4.25rem] flex-col items-center justify-center gap-1 rounded-lg px-1 py-2",
+              "text-xs font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-50",
+              selected
+                ? "border-2 border-primary bg-primary/10 text-primary shadow-sm"
+                : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
+            )}
+          >
+            <Icon className="h-7 w-7" strokeWidth={selected ? 2.4 : 1.9} aria-hidden />
+            <span>{label}</span>
+            <span
+              aria-hidden
               className={cn(
-                // #32 hit-target de toque (tablet/touch): 44px (antes 36px) p/ os
-                // botões mais tocados do PDV — PIX/Cartão/Dinheiro/Débito.
-                "relative min-h-11 rounded-md px-2 py-1.5 text-center text-xs font-semibold leading-tight disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
-                selected
-                  ? "border border-primary bg-primary/10 text-primary shadow-sm"
-                  : "border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-jl-surface-elev",
+                "absolute right-1 top-1 text-[10px] font-bold tabular-nums",
+                selected ? "text-primary/70" : "text-jl-fg-3",
               )}
             >
-              <span
-                aria-hidden
-                className={cn(
-                  "absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded text-[10px] font-bold tabular-nums",
-                  selected ? "bg-black/15 text-current" : "bg-black/10 text-jl-fg-3",
-                )}
-              >
-                {atalho}
-              </span>
-              {label}
-            </RadioGroupItem>
-          )
-        })}
-      </div>
+              {atalho}
+            </span>
+          </RadioGroupItem>
+        )
+      })}
     </RadioGroup>
   )
 }
