@@ -120,6 +120,7 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
             operador_id: command.operadorId,
             loja_id: command.lojaId,
             valor_inicial: command.valorInicial,
+            saldo_atual: command.valorInicial,
             status: 'ABERTO',
           })
           .select('id')

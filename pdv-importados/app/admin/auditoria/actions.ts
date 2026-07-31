@@ -44,6 +44,7 @@ export type AuditoriaTipo =
   | 'AJUSTE_ESTOQUE'
   | 'ALERTA'
   | 'DESCONTO'
+  | 'DEVOLUCAO'
 
 export type AuditoriaEvento = Readonly<{
   /** Chave única (prefixada pela fonte para evitar colisão entre tabelas). */
@@ -88,6 +89,14 @@ const TIPO_ALERTA_LABEL: Record<string, string> = {
   margem_negativa: 'Margem negativa',
   preco_fora_padrao: 'Preço fora do padrão',
   estoque_inconsistente: 'Estoque inconsistente',
+}
+
+const FORMA_ESTORNO_LABEL: Record<string, string> = {
+  DINHEIRO: 'Dinheiro',
+  PIX: 'PIX',
+  CARTAO_DEBITO: 'Cartão de débito',
+  CARTAO_CREDITO: 'Cartão de crédito',
+  CREDITO_CLIENTE: 'Crédito do cliente',
 }
 
 function wantsTipo(filtro: AuditoriaFiltro, tipo: AuditoriaTipo): boolean {
@@ -328,6 +337,51 @@ export async function listarEventosAuditoria(
           gerente_id: str(r.gerente_id),
           desconto_percentual: pct,
           desconto_valor: num(r.desconto_valor),
+        },
+      })
+    }
+  }
+
+  // ── 6. Devoluções/Trocas (venda_pos_venda_operacoes) ──────────────────────
+  // FIN-001: fonte somente-leitura, sem tabela/RPC nova. `venda_pos_venda_operacoes`
+  // não tem coluna loja_id própria — o isolamento por loja vem da RLS existente
+  // (policy `venda_pos_venda_operacoes_select_loja`, migration 248), que já
+  // restringe exatamente à loja do usuário via join com `caixas`.
+  if (wantsTipo(filtro, 'DEVOLUCAO')) {
+    let q = supabase
+      .from('venda_pos_venda_operacoes')
+      .select(
+        'id, venda_id, tipo, motivo, valor_estornado, valor_caixa_estornado, forma_estorno, operador_id, created_at'
+      )
+      .order('created_at', { ascending: false })
+      .limit(LIMITE_POR_FONTE)
+    if (filtro.inicio) q = q.gte('created_at', filtro.inicio)
+    if (filtro.fim) q = q.lte('created_at', filtro.fim)
+    if (operadorFiltro) q = q.eq('operador_id', operadorFiltro)
+
+    const { data, error } = await q
+    const rows = error ? [] : (data ?? [])
+    for (const r of rows) {
+      const opId = str(r.operador_id)
+      if (opId) operadorIds.add(opId)
+      const tipoOperacao = String(r.tipo ?? '')
+      const forma = String(r.forma_estorno ?? '')
+      const formaLabel = FORMA_ESTORNO_LABEL[forma] ?? forma
+      eventos.push({
+        id: `devolucao:${r.id}`,
+        tipo: 'DEVOLUCAO',
+        ocorridoEm: String(r.created_at),
+        operadorId: opId,
+        operadorNome: null,
+        resumo: `${tipoOperacao === 'TROCA' ? 'Troca' : 'Devolução'} • ${formaLabel}`,
+        valor: num(r.valor_estornado),
+        detalhe: {
+          venda_id: str(r.venda_id),
+          tipo_operacao: tipoOperacao,
+          motivo: str(r.motivo),
+          forma_estorno: formaLabel,
+          valor_estornado: num(r.valor_estornado),
+          valor_caixa_estornado: num(r.valor_caixa_estornado),
         },
       })
     }
