@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
-import { Copy, Eye, ImageIcon, Package, Pencil } from 'lucide-react'
+import { adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
+import { Copy, ImageIcon, Package, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -16,9 +16,12 @@ import { cn } from '@/lib/utils'
 import type { ProdutoGerenteRow } from '@/app/gerente/produtos/produtoGerenteTypes'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import type { Mensagens } from '@/i18n/getMessages'
+import type { Idioma } from '@/idioma/normalizeIdioma'
 import { ProdutosEditarCatalogoModal } from '@/components/gerente/produtos/ProdutosEditarCatalogoModal'
+import { ProdutosExcluirLoteModal } from '@/components/gerente/produtos/ProdutosExcluirLoteModal'
 import { NovoProdutoModal } from '@/components/gerente/produtos/NovoProdutoModal'
 import { CatalogoPublicacaoActions } from './CatalogoPublicacaoActions'
+import { CatalogoLoteToolbar } from './CatalogoLoteToolbar'
 
 // CatalogoProduto é ProdutoGerenteRow com o campo sku computado adicionado.
 // Sendo superconjunto de ProdutoGerenteRow, pode ser passado diretamente ao modal de edição.
@@ -44,6 +47,16 @@ export type CatalogoLabels = {
   origemChina: string
   origemBrasilNf: string
   origemBrasil: string
+  acaoEditar: string
+  acaoDuplicar: string
+  acaoVerEstoque: string
+  acaoSelecionarLinha: string
+  reativar: string
+}
+
+/** `{{nome}}` → nome do produto; mantém o rótulo traduzível. */
+function acaoLabel(template: string, nome: string): string {
+  return template.replace('{{nome}}', nome)
 }
 
 const ORIGEM_MAP: Record<string, { badgeClass: string }> = {
@@ -58,38 +71,59 @@ const STATUS_BADGE_CLASS: Record<StatusPublicacao, string> = {
   INATIVO: 'admin-v2-badge-muted',
 }
 
-function ActionBtn({
-  href,
-  label,
-  children,
-}: {
-  href: string
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <Button asChild type="button" size="icon" variant="ghost" aria-label={label} title={label}>
-      <Link href={href}>{children}</Link>
-    </Button>
-  )
-}
-
 export function CatalogoTable({
   produtos,
   labels,
   m,
   opcoes,
+  idioma,
 }: {
   produtos: CatalogoProduto[]
   labels: CatalogoLabels
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
+  idioma: Idioma
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [editando, setEditando] = useState<CatalogoProduto | null>(null)
   const [novoOpen, setNovoOpen] = useState(false)
   const [duplicando, setDuplicando] = useState<CatalogoProduto | null>(null)
+  const [selecionados, setSelecionados] = useState<ReadonlySet<string>>(() => new Set())
+  const [excluirOpen, setExcluirOpen] = useState(false)
+  // Alvo da exclusão, separado da seleção: a lixeira de uma linha exclui só
+  // aquela linha sem descartar uma seleção múltipla já feita pelo operador.
+  const [excluirIds, setExcluirIds] = useState<readonly string[]>([])
+
+  const idsPagina = produtos.map((p) => p.id)
+  const todosSelecionados = idsPagina.length > 0 && idsPagina.every((id) => selecionados.has(id))
+  const chavePagina = idsPagina.join(',')
+
+  const alternarLinha = (id: string) => {
+    setSelecionados((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const alternarPagina = () => {
+    setSelecionados((prev) => {
+      const next = new Set(prev)
+      if (todosSelecionados) idsPagina.forEach((id) => next.delete(id))
+      else idsPagina.forEach((id) => next.add(id))
+      return next
+    })
+  }
+
+  const limparSelecao = () => setSelecionados(new Set())
+
+  // Trocar de página ou de filtro troca o conjunto visível: manter a seleção
+  // faria a barra de lote agir sobre produtos que não estão mais na tela.
+  useEffect(() => {
+    setSelecionados(new Set())
+  }, [chavePagina])
 
   useEffect(() => {
     if (searchParams.get('modal') === 'novo') {
@@ -117,6 +151,30 @@ export function CatalogoTable({
   }
 
   const columns: Column<CatalogoProduto>[] = [
+    {
+      key: 'sel',
+      header: m.produtos.coluna_selecionar,
+      width: '2.25rem',
+      headerCell: () => (
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 cursor-pointer align-middle accent-[var(--color-brand)]"
+          checked={todosSelecionados}
+          onChange={alternarPagina}
+          aria-label={m.produtos.coluna_selecionar_aria}
+        />
+      ),
+      cell: (row) => (
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 cursor-pointer align-middle accent-[var(--color-brand)]"
+          checked={selecionados.has(row.id)}
+          onChange={() => alternarLinha(row.id)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={acaoLabel(labels.acaoSelecionarLinha, row.nome)}
+        />
+      ),
+    },
     {
       key: 'produto',
       header: labels.produto,
@@ -166,11 +224,13 @@ export function CatalogoTable({
       cell: (r) => {
         if (r.quantidade_atual === null) return <span className="text-fg-subtle">—</span>
         const v = r.quantidade_atual
-        const estoqueHref = adminEstoqueProdutoQuery(r.nome)
+        // Código de barras primeiro: buscar por nome traz vários homônimos e o
+        // operador cai numa lista ambígua em vez do produto que clicou.
+        const estoqueHref = adminEstoqueProdutoQuery(r.codigo_barras || r.nome)
         return (
           <Link
             href={estoqueHref}
-            title="Ver e ajustar no estoque"
+            title={labels.acaoVerEstoque}
             className={cn(
               'tabular-nums underline-offset-2 hover:underline',
               v <= 0 ? 'font-medium text-red-400' : 'text-emerald-400',
@@ -226,9 +286,38 @@ export function CatalogoTable({
         }}
         m={m}
         opcoes={opcoes}
+        idioma={idioma}
         duplicarDe={duplicando}
         onCriado={() => {
           setDuplicando(null)
+          router.refresh()
+        }}
+      />
+
+      <CatalogoLoteToolbar
+        ids={[...selecionados]}
+        m={m}
+        ui={m.admin_ui}
+        opcoes={opcoes}
+        onLimpar={limparSelecao}
+        onExcluir={() => {
+          setExcluirIds([...selecionados])
+          setExcluirOpen(true)
+        }}
+      />
+
+      <ProdutosExcluirLoteModal
+        open={excluirOpen}
+        onOpenChange={(open) => {
+          setExcluirOpen(open)
+          if (!open) setExcluirIds([])
+        }}
+        produtoIds={[...excluirIds]}
+        m={m}
+        onLoteAplicadoComSucesso={() => {
+          // Só sai da seleção quem foi realmente excluído.
+          setSelecionados((prev) => new Set([...prev].filter((id) => !excluirIds.includes(id))))
+          setExcluirIds([])
           router.refresh()
         }}
       />
@@ -252,15 +341,19 @@ export function CatalogoTable({
             <CatalogoPublicacaoActions
               produtoId={row.id}
               status={row.status_publicacao}
-              labels={{ publicar: labels.publicar, inativar: labels.inativar }}
+              labels={{
+                publicar: labels.publicar,
+                inativar: labels.inativar,
+                reativar: labels.reativar,
+              }}
               erroGenerico={m.comum.erro}
             />
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Editar ${row.nome}`}
-              title={`Editar ${row.nome}`}
+              aria-label={acaoLabel(labels.acaoEditar, row.nome)}
+              title={acaoLabel(labels.acaoEditar, row.nome)}
               onClick={() => setEditando(row)}
             >
               <Pencil size={13} aria-hidden />
@@ -269,15 +362,28 @@ export function CatalogoTable({
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Duplicar ${row.nome}`}
-              title={`Duplicar ${row.nome}`}
+              aria-label={acaoLabel(labels.acaoDuplicar, row.nome)}
+              title={acaoLabel(labels.acaoDuplicar, row.nome)}
               onClick={() => setDuplicando(row)}
             >
               <Copy size={13} aria-hidden />
             </Button>
-            <ActionBtn href={ROUTES.admin.catalogo} label={`Ver ${row.nome}`}>
-              <Eye size={13} aria-hidden />
-            </ActionBtn>
+            {/* Não existe tela de detalhe do produto (`/admin/catalogo/[id]` nunca
+                foi criada). O antigo botão "Ver" apontava para a própria lista —
+                clicar não fazia nada. Editar já mostra todos os campos. */}
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={m.produtos.exclusao_linha_aria}
+              title={m.produtos.exclusao_linha_title}
+              onClick={() => {
+                setExcluirIds([row.id])
+                setExcluirOpen(true)
+              }}
+            >
+              <Trash2 size={13} aria-hidden />
+            </Button>
           </div>
         )}
       />
@@ -288,10 +394,13 @@ export function CatalogoTable({
         produto={editando}
         m={m}
         opcoes={opcoes}
+        idioma={idioma}
         onSalvo={() => {
           setEditando(null)
           router.refresh()
         }}
+        // Trocar a foto não fecha a edição — só atualiza a lista por baixo.
+        onImagemAtualizada={() => router.refresh()}
       />
     </>
   )

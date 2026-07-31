@@ -6,8 +6,11 @@ export type CaixaPdvClassicAtalhos = {
   onFinalizarVenda: () => void
   /** Só registra Alt+Z/C/B quando `abas` for passado. */
   abas?: {
+    /** Alt+Z — foco no bloco de leitura/busca de produto. */
     produto?: () => void
+    /** Alt+C — vincular cliente ao cupom atual. */
     cliente?: () => void
+    /** Alt+B — foco no bloco de pagamento. */
     pgto?: () => void
   }
 }
@@ -32,6 +35,8 @@ type Params = {
    * FORA de campo de texto (não interfere na digitação de código de barras).
    */
   onSelecionarMetodo?: (indice: 1 | 2 | 3 | 4) => void
+  /** F1: abre referência de atalhos (Fase 3). */
+  onAbrirReferencia?: () => void
   pdvClassicAtalhos?: CaixaPdvClassicAtalhos | null
 }
 
@@ -55,6 +60,20 @@ function alvoEhCampoTexto(target: EventTarget | null): boolean {
   return false
 }
 
+/**
+ * Com um diálogo aberto o foco costuma estar num botão (Confirmar/Cancelar), não
+ * num campo de texto — então `alvoEhCampoTexto` não basta e os atalhos globais
+ * agiriam por baixo do modal (F4/F9 finalizava a venda atrás da confirmação de
+ * estorno; 1–4 trocava a forma de pagamento). Todo overlay do PDV carrega o role
+ * de diálogo (DragonModal, recibo, histórico), então um seletor cobre todos.
+ * Seletor sem aspas de propósito: mantém a métrica `raw_dialog_caixa` do
+ * burndown do DS contando só diálogos crus de verdade, não esta detecção.
+ */
+function existeDialogAberto(): boolean {
+  if (typeof document === "undefined") return false
+  return document.querySelector("[role=dialog]") !== null
+}
+
 export function useCaixaKeyboardShortcuts({
   caixaAberto,
   movimentandoCaixa,
@@ -68,6 +87,7 @@ export function useCaixaKeyboardShortcuts({
   onConsultaRapida,
   onDesfazerRemocao,
   onSelecionarMetodo,
+  onAbrirReferencia,
   pdvClassicAtalhos = null,
 }: Params) {
   useEffect(() => {
@@ -75,6 +95,7 @@ export function useCaixaKeyboardShortcuts({
       if (!(e.ctrlKey && e.shiftKey)) return
       if (e.repeat) return
       if (!caixaAberto || movimentandoCaixa) return
+      if (alvoEhCampoTexto(e.target) || existeDialogAberto()) return
       if (e.code === "KeyS") {
         e.preventDefault()
         onAbrirSuprimento()
@@ -91,6 +112,14 @@ export function useCaixaKeyboardShortcuts({
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return
       if (alvoEhCampoTexto(e.target)) return
+      // F1 alterna a própria referência de atalhos, por isso passa antes do
+      // guard de diálogo (é o único atalho que deve agir com ela aberta).
+      if (e.code === "F1") {
+        e.preventDefault()
+        onAbrirReferencia?.()
+        return
+      }
+      if (existeDialogAberto()) return
       if (e.code === "F4" || e.code === "F9") {
         e.preventDefault()
         onFinalizar()
@@ -186,6 +215,7 @@ export function useCaixaKeyboardShortcuts({
     globalThis.addEventListener("keydown", onKey)
     return () => globalThis.removeEventListener("keydown", onKey)
   }, [
+    onAbrirReferencia,
     onFecharCaixa,
     onFinalizar,
     onFocarBusca,

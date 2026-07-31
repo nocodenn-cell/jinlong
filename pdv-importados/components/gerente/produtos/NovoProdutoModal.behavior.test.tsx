@@ -85,7 +85,10 @@ describe('NovoProdutoModal — ProdutoForm unificado', () => {
     expectPayloadComGatilho(criarProdutoMock)
     await vi.waitFor(() => expect(onCriado).toHaveBeenCalled())
     await vi.waitFor(() => {
-      expect(container.textContent).toContain(m.produtos.pos_salvar_hint)
+      // Ancora na CTA da tela pós-salvar, não no texto da dica: este fluxo
+      // salva sem estoque, e nesse caso a dica é a de estoque obrigatório
+      // (ver ProdutoFormModal.posSalvarEstoque.behavior.test.tsx).
+      expect(container.textContent).toContain(m.produtos.pos_salvar_ajustar_estoque)
     })
   })
 })

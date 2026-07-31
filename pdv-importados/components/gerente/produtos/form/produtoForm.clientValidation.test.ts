@@ -20,7 +20,7 @@ describe('validarProdutoFormClient', () => {
         comoRascunho: false,
         messages,
       }),
-    ).toBe(messages.nome_obrigatorio)
+    ).toEqual({ campo: 'nome', mensagem: messages.nome_obrigatorio })
   })
 
   it('exige nome com pelo menos 2 caracteres', () => {
@@ -33,7 +33,7 @@ describe('validarProdutoFormClient', () => {
         comoRascunho: false,
         messages,
       }),
-    ).toBe(messages.nome_minimo)
+    ).toEqual({ campo: 'nome', mensagem: messages.nome_minimo })
   })
 
   it('exige barcode vazio ou >= 3', () => {
@@ -46,7 +46,7 @@ describe('validarProdutoFormClient', () => {
         comoRascunho: false,
         messages,
       }),
-    ).toBe(messages.codigo_barras_minimo)
+    ).toEqual({ campo: 'codigo_barras', mensagem: messages.codigo_barras_minimo })
   })
 
   it('permite rascunho sem preco', () => {
@@ -72,7 +72,7 @@ describe('validarProdutoFormClient', () => {
         comoRascunho: false,
         messages,
       }),
-    ).toBe(messages.preco_invalido)
+    ).toEqual({ campo: 'preco_varejo', mensagem: messages.preco_invalido })
   })
 
   it('bloqueia atacado >= varejo', () => {
@@ -85,6 +85,6 @@ describe('validarProdutoFormClient', () => {
         comoRascunho: false,
         messages,
       }),
-    ).toBe(messages.atacado_maior_varejo)
+    ).toEqual({ campo: 'preco_atacado', mensagem: messages.atacado_maior_varejo })
   })
 })

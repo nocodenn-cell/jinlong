@@ -45,7 +45,7 @@ Saldo inicial no create: RPC `criar_produto_com_estoque_inicial` (mig 270) — p
 | **Durante criação** | Payload `estoque_inicial_*` → RPC atômica (actions/repo) | 2º round-trip parcial de estoque no modal |
 | **Após criação** | — | Qualquer alteração de saldo fora de `/admin/estoque/*` |
 
-**PDV relâmpago:** `criarProdutoRelampagoPdv` em `/caixa` permite OPERADOR+ criar produto mínimo + estoque inicial (RPC). CRUD completo permanece GERENTE+ em `/admin/catalogo`.
+**PDV não cadastra produto (2026-07-30):** o cadastro relâmpago foi REMOVIDO de `/caixa` — decisão de produto para separar vender de cadastrar. Criar produto acontece só no módulo Produtos (`/admin/catalogo`, GERENTE+). Ao bipar código inexistente o caixa informa e orienta, sem abrir formulário. Não reintroduzir criação de produto em `/app/caixa/`. Ver `docs/architecture/pdv_cadastro_removido.md`.
 
 **Regra para código novo:** não reabrir ajuste de estoque no form de produto. Pós-criação → sempre `/admin/estoque`.
 

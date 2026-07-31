@@ -13,6 +13,8 @@ export type ProdutosEditarCatalogoModalProps = Readonly<{
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
   onSalvo: () => void
+  /** Foto trocada/removida — recarregue a lista, mas mantenha o modal aberto. */
+  onImagemAtualizada?: () => void
   idioma?: Idioma
 }>
 
@@ -24,6 +26,7 @@ export function ProdutosEditarCatalogoModal({
   m,
   opcoes,
   onSalvo,
+  onImagemAtualizada,
   idioma,
 }: ProdutosEditarCatalogoModalProps) {
   if (!open || !produto) return null
@@ -36,6 +39,7 @@ export function ProdutosEditarCatalogoModal({
       opcoes={opcoes}
       produto={produto}
       onSaved={onSalvo}
+      onImagemAtualizada={onImagemAtualizada}
       idioma={idioma}
     />
   )

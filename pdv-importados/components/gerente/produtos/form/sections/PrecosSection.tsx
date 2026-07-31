@@ -1,110 +1,149 @@
 'use client'
 
 import { useMemo, type RefObject } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { formatBRL } from '@/lib/format/money'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
-
-function formatMargem(varejo: number | null, custo: number | null): string {
-  if (varejo == null || varejo <= 0 || custo == null) return '—'
-  const pct = ((varejo - custo) / varejo) * 100
-  return `${pct.toFixed(1)}%`
-}
+import { focusOnEnter } from '../focusOnEnter'
+import { CAMPO_INVALIDO_CLASS, CampoErroMsg, erroDoCampo } from '../CampoErro'
+import {
+  avaliarMargem,
+  formatMargemPercentual,
+  margemToneClassName,
+} from '../produtoForm.margem'
 
 type Props = Readonly<{
   modoCompleto?: boolean
+  precoCustoRef?: RefObject<HTMLInputElement | null>
   precoVarejoRef?: RefObject<HTMLInputElement | null>
+  /** Próximo campo da cadeia do Enter depois do varejo (estoque inicial). */
+  proximoAposVarejoRef?: RefObject<HTMLInputElement | null>
   onEnterSubmit?: () => void
 }>
 
 export function PrecosSection({
   modoCompleto = false,
+  precoCustoRef,
   precoVarejoRef,
+  proximoAposVarejoRef,
   onEnterSubmit,
 }: Props) {
   const ctx = useProdutoFormContext()
   const p = ctx.m.produtos
   const { disabled, inputMonoClassName } = ctx
 
+  const erroVarejo = erroDoCampo(ctx.erro, 'preco_varejo')
+  const erroAtacado = erroDoCampo(ctx.erro, 'preco_atacado')
+
   const varejo = ctx.precoVarejoInput.parse()
   const custo = ctx.precoCustoInput.parse()
-  const margem = useMemo(() => formatMargem(varejo, custo), [varejo, custo])
-  const margemValor =
-    varejo != null && varejo > 0 && custo != null ? formatBRL(varejo - custo) : '—'
+  const margem = useMemo(() => avaliarMargem(varejo, custo), [varejo, custo])
+
+  const alerta =
+    margem.tom === 'negativa'
+      ? p.margem_alerta_negativa
+      : margem.tom === 'zero'
+        ? p.margem_alerta_zero
+        : null
 
   return (
     <section aria-labelledby="produto-secao-precos">
       <ProdutoFormSectionHeading title={p.secao_precificacao} />
       <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_precos_publicar}</p>
       <div id="produto-secao-precos" className="mt-3 space-y-3">
+        {/* Custo e venda SEMPRE lado a lado — a margem precisa estar visível no
+            momento em que o preço é digitado, não atrás de "Mais detalhes". */}
         <div
           className={
             modoCompleto
-              ? 'grid grid-cols-2 gap-3 sm:grid-cols-4'
-              : 'grid grid-cols-1 gap-3 sm:max-w-xs'
+              ? 'grid grid-cols-2 gap-3 sm:grid-cols-3'
+              : 'grid grid-cols-2 gap-3'
           }
         >
-          {modoCompleto ? (
-            <label className="block text-xs font-medium text-jl-fg-3">
-              {p.preco_custo}
-              <input
-                type="text"
-                inputMode="decimal"
-                className={`${inputMonoClassName} mt-1`}
-                value={ctx.precoCustoInput.display}
-                onChange={ctx.precoCustoInput.onChange}
-                disabled={disabled}
-                placeholder="—"
-              />
-              <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_preco_custo}</span>
-            </label>
-          ) : null}
+          <label className="block text-xs font-medium text-jl-fg-3">
+            {p.preco_custo}
+            <input
+              ref={precoCustoRef}
+              type="text"
+              inputMode="decimal"
+              className={`${inputMonoClassName} mt-1`}
+              value={ctx.precoCustoInput.display}
+              onChange={ctx.precoCustoInput.onChange}
+              disabled={disabled}
+              placeholder="0,00"
+              data-field="preco_custo"
+              onKeyDown={(e) => focusOnEnter(e, precoVarejoRef?.current)}
+            />
+          </label>
           <label className="block text-xs font-medium text-jl-fg-3">
             {p.preco_varejo} *
             <input
               ref={precoVarejoRef}
               type="text"
               inputMode="decimal"
-              className={`${inputMonoClassName} mt-1`}
+              className={`${inputMonoClassName} mt-1 ${erroVarejo ? CAMPO_INVALIDO_CLASS : ''}`}
               value={ctx.precoVarejoInput.display}
               onChange={ctx.precoVarejoInput.onChange}
               disabled={disabled}
               placeholder="0,00"
               data-field="preco_varejo"
-              onKeyDown={
-                onEnterSubmit
-                  ? (e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        onEnterSubmit()
-                      }
-                    }
-                  : undefined
-              }
+              aria-invalid={erroVarejo ? true : undefined}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                // Passa pelo estoque inicial antes de salvar; sem ele o campo
+                // só era alcançável com mouse/Tab. Ctrl+Enter continua salvando
+                // de qualquer campo.
+                if (proximoAposVarejoRef?.current) {
+                  focusOnEnter(e, proximoAposVarejoRef.current)
+                  return
+                }
+                e.preventDefault()
+                onEnterSubmit?.()
+              }}
             />
-            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_preco_varejo}</span>
+            <CampoErroMsg mensagem={erroVarejo} />
           </label>
           {modoCompleto ? (
-            <>
-              <label className="block text-xs font-medium text-jl-fg-3">
-                {p.preco_atacado}
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className={`${inputMonoClassName} mt-1`}
-                  value={ctx.precoAtacadoInput.display}
-                  onChange={ctx.precoAtacadoInput.onChange}
-                  disabled={disabled}
-                  placeholder="—"
-                />
-              </label>
-              <label className="block text-xs font-medium text-jl-fg-3">
-                {p.margem_label}
-                <div className="mt-1 flex h-9 items-center rounded-md border border-jl-border-1 bg-jl-surface-soft px-3 font-mono text-sm text-jl-fg-1">
-                  {margemValor} ({margem})
-                </div>
-              </label>
-            </>
+            <label className="block text-xs font-medium text-jl-fg-3">
+              {p.preco_atacado}
+              <input
+                type="text"
+                inputMode="decimal"
+                className={`${inputMonoClassName} mt-1 ${erroAtacado ? CAMPO_INVALIDO_CLASS : ''}`}
+                value={ctx.precoAtacadoInput.display}
+                onChange={ctx.precoAtacadoInput.onChange}
+                disabled={disabled}
+                placeholder="—"
+                data-field="preco_atacado"
+                aria-invalid={erroAtacado ? true : undefined}
+              />
+              <CampoErroMsg mensagem={erroAtacado} />
+            </label>
+          ) : null}
+        </div>
+
+        {/* Leitura da margem — muda de tom quando o preço dá prejuízo. */}
+        <div
+          className={`rounded-md border px-3 py-2 ${margemToneClassName(margem.tom)}`}
+          data-field="margem"
+          data-tom={margem.tom}
+        >
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-xs font-medium">{p.margem_label}</span>
+            <span className="font-mono text-sm font-semibold">
+              {margem.valor != null && margem.percentual != null
+                ? `${formatBRL(margem.valor)} (${formatMargemPercentual(margem.percentual)}%)`
+                : '—'}
+            </span>
+          </div>
+          {alerta ? (
+            <p className="mt-1 flex items-start gap-1.5 text-[11px] font-semibold">
+              <AlertTriangle size={13} className="mt-px shrink-0" aria-hidden />
+              {alerta}
+            </p>
+          ) : margem.tom === 'indefinida' ? (
+            <p className="mt-1 text-[10px] text-jl-fg-3">{p.margem_sem_custo}</p>
           ) : null}
         </div>
 

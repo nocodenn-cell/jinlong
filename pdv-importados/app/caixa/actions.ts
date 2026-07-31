@@ -32,7 +32,10 @@ import {
   cancelarVendaImpl,
   finalizarVendaCaixaImpl,
 } from '@/app/caixa/server/caixaVendas.impl'
-import { buscarClientesCaixaImpl } from '@/app/caixa/server/caixaClientesSearch.impl'
+import {
+  buscarClientesCaixaImpl,
+  obterClienteCaixaImpl,
+} from '@/app/caixa/server/caixaClientesSearch.impl'
 import {
   abrirCaixaOperadorImpl,
   fecharCaixaOperadorImpl,
@@ -54,6 +57,7 @@ import { obterResumoVendasTurnoImpl } from '@/app/caixa/server/caixaTurnoResumo.
 import { consultarProdutoRapidoCaixaImpl } from '@/app/caixa/server/caixaConsultaRapida.impl'
 import {
   colocarVendaEmEsperaImpl,
+  converterVendaEmEsperaImpl,
   descartarVendaEmEsperaImpl,
   listarHistoricoOperadorImpl,
   listarVendasEmEsperaImpl,
@@ -218,6 +222,7 @@ export async function colocarVendaEmEsperaCaixa(input: {
   totalLiquido: number
   caixaId?: string | null
   descontoGerentePercentual?: number | null
+  clienteId?: string | null
 }) {
   return colocarVendaEmEsperaImpl(input)
 }
@@ -232,6 +237,11 @@ export async function retomarVendaEmEsperaCaixa(id: string) {
 
 export async function descartarVendaEmEsperaCaixa(id: string, motivo?: string) {
   return descartarVendaEmEsperaImpl(id, motivo)
+}
+
+/** Baixa o pedido em espera só depois que a venda foi de fato finalizada. */
+export async function converterVendaEmEsperaCaixa(id: string) {
+  return converterVendaEmEsperaImpl(id)
 }
 
 export async function listarHistoricoOperadorCaixa(input?: {
@@ -260,15 +270,18 @@ export async function finalizarVendaCaixa(raw: unknown): Promise<FinalizarVendaC
   return finalizarVendaCaixaImpl(raw)
 }
 
-/** Cadastro relâmpago no PDV (OPERADOR+). Catálogo completo permanece em assertGerenteSession. */
-export async function criarProdutoRelampagoPdv(input: unknown) {
-  const { criarProdutoRelampagoPdvImpl } = await import(
-    '@/app/caixa/server/caixaCadastroRelampago.impl'
-  )
-  return criarProdutoRelampagoPdvImpl(input)
-}
+/* `criarProdutoRelampagoPdv` foi REMOVIDA: o PDV não cadastra produto — isso
+ * pertence ao módulo Produtos (gerente/admin). Este arquivo é `'use server'`,
+ * então toda export virava endpoint POST endereçável mesmo sem UI; deixar a
+ * action aqui manteria a criação de produto acessível por rede a partir do
+ * caixa. Ver `docs/architecture/pdv_cadastro_removido.md`. */
 
 /** Selecao de cliente no PDV (Fase 5b). */
 export async function buscarClientesCaixa(termo: string) {
   return buscarClientesCaixaImpl(termo)
+}
+
+/** Nome do cliente vinculado a uma venda retomada (guarda so o id). */
+export async function obterClienteCaixa(clienteId: string) {
+  return obterClienteCaixaImpl(clienteId)
 }

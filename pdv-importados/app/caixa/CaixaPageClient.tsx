@@ -9,13 +9,9 @@ import {
   abrirCaixaOperador,
   fecharCaixaOperador,
   validarGerenteDesconto,
-  colocarVendaEmEsperaCaixa,
-  listarVendasEmEsperaCaixa,
-  retomarVendaEmEsperaCaixa,
-  descartarVendaEmEsperaCaixa,
   obterDetalheHistoricoVendaCaixa,
+  converterVendaEmEsperaCaixa,
 } from "@/app/caixa/actions"
-import type { VendaEmEsperaCard } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
@@ -37,6 +33,7 @@ import {
 import { useCaixaBootstrapData } from "@/app/caixa/hooks/useCaixaBootstrapData"
 import { useCaixaKeyboardShortcuts } from "@/app/caixa/hooks/useCaixaKeyboardShortcuts"
 import { useCaixaGerenteTokenExpiry } from "@/app/caixa/hooks/useCaixaGerenteTokenExpiry"
+import { useCaixaVendasEmEspera } from "@/app/caixa/hooks/useCaixaVendasEmEspera"
 import { useReprecificarQuantidadeCaixa } from "@/app/caixa/hooks/useReprecificarQuantidadeCaixa"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
@@ -44,13 +41,11 @@ import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
-import { CaixaFooter } from "@/app/caixa/CaixaFooter"
 import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
 import { CaixaPdvOperacoesMenu } from "@/app/caixa/CaixaPdvOperacoesMenu"
 import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
 import { CaixaEmAbertoList } from "@/app/caixa/CaixaEmAbertoList"
 import { CaixaConsultaRapidaModal } from "@/app/caixa/CaixaConsultaRapidaModal"
-import { CadastroProdutoRelampagoModal } from "@/components/gerente/produtos/CadastroProdutoRelampagoModal"
 import { CaixaHistoricoSheet } from "@/app/caixa/CaixaHistoricoSheet"
 import { CaixaAbrirTurnoModal } from "@/app/caixa/CaixaAbrirTurnoModal"
 import {
@@ -62,7 +57,6 @@ import { CaixaMovimentacaoModal } from "@/app/caixa/CaixaMovimentacaoModal"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import { CaixaMovimentacaoAcaoModal } from "@/app/caixa/CaixaMovimentacaoAcaoModal"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
-import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeline"
 import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
 import { CaixaToastViewport } from "@/components/caixa/CaixaToastViewport"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
@@ -182,17 +176,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   >(null)
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoUi>("dinheiro")
   const [consultaRapidaAberta, setConsultaRapidaAberta] = useState(false)
-  const [cadastroRapidoCodigo, setCadastroRapidoCodigo] = useState<string | null>(null)
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [abrirTurnoAberto, setAbrirTurnoAberto] = useState(false)
-  const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>([])
-  const [carregandoEmEspera, setCarregandoEmEspera] = useState(false)
 
   const {
     caixaStatus,
     carregandoStatus,
-    movimentacoes,
-    carregandoMovimentacoes,
     movimentandoCaixa,
     processandoAcaoMovimentacao,
     recarregarStatusCaixa,
@@ -207,16 +196,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     totalBruto: totalBrutoStore,
     totalDesconto: totalDescontoStore,
     totalLiquido: totalLiquidoStore,
-    totalItens: totalItensStore,
-    totalUnidades: totalUnidadesStore,
   } = useCarrinhoStore(
     useShallow((s) => ({
       itens: s.itens,
       totalBruto: s.totalBruto,
       totalDesconto: s.totalDesconto,
       totalLiquido: s.totalLiquido,
-      totalItens: s.totalItens,
-      totalUnidades: s.totalUnidades,
     })),
   )
   // STATE READY GATE (React #418): o store persistido (zustand/persist + localStorage
@@ -228,8 +213,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const totalBruto = cartMounted ? totalBrutoStore : 0
   const totalDesconto = cartMounted ? totalDescontoStore : 0
   const totalLiquido = cartMounted ? totalLiquidoStore : 0
-  const totalItens = cartMounted ? totalItensStore : 0
-  const totalUnidades = cartMounted ? totalUnidadesStore : 0
   // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
   const setRegras = useCarrinhoStore((s) => s.setRegras)
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
@@ -240,16 +223,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const restaurarUltimoRemovido = useCarrinhoStore((s) => s.restaurarUltimoRemovido)
   const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
   const substituirCarrinho = useCarrinhoStore((s) => s.substituirCarrinho)
-
-  const economiaPrecoAtacadoAuto = useMemo(() => {
-    return itens.reduce((acc, it) => {
-      if (it.resultado?.tipoPreco !== "ATACADO") return acc
-      const o = it.resultado.precoOriginal
-      const u = it.resultado.precoUnitario
-      if (!Number.isFinite(o) || !Number.isFinite(u) || o <= u) return acc
-      return acc + (o - u) * it.quantidade
-    }, 0)
-  }, [itens])
+  const garantirVendaIdempotencyKey = useCarrinhoStore((s) => s.garantirVendaIdempotencyKey)
+  const marcarFinalizacaoPendente = useCarrinhoStore((s) => s.marcarFinalizacaoPendente)
+  const resolverFinalizacaoPendente = useCarrinhoStore((s) => s.resolverFinalizacaoPendente)
+  const concluirVendaIdempotencyKey = useCarrinhoStore((s) => s.concluirVendaIdempotencyKey)
+  const vendaFinalizacaoPendenteStore = useCarrinhoStore((s) => s.vendaFinalizacaoPendente)
+  const vendaFinalizacaoPendente = cartMounted ? vendaFinalizacaoPendenteStore : false
 
   const descontoGerenteAplicado = aplicarDescontoGerenteSobreTotal({
     totalLiquido,
@@ -281,15 +260,25 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
-  /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». */
-  const vendaIdempotenciaRef = useRef<string | null>(null)
+  /**
+   * Recuperação de venda pendente: aberto quando a finalização terminou sem
+   * desfecho conhecido (timeout ou queda de rede) e ao remontar a página com
+   * `vendaFinalizacaoPendente` persistido (F5 / queda de energia).
+   */
+  const [vendaPendenteModalAberto, setVendaPendenteModalAberto] = useState(false)
+  const [verificandoVendaPendente, setVerificandoVendaPendente] = useState(false)
+  /** Pedido em espera que originou o cupom atual; baixado só quando a venda conclui. */
+  const [vendaEmEsperaOrigemId, setVendaEmEsperaOrigemId] = useState<string | null>(null)
 
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
   const lastReciboRef = useRef<ReciboVenda | null>(null)
   const [reimprimirModalAberto, setReimprimirModalAberto] = useState(false)
   const [clienteId, setClienteId] = useState<string | null>(null)  // ✅ NOVO (Fase 5b)
+  const [clienteNome, setClienteNome] = useState<string | null>(null)  // ✅ NOVO (Fase 5b) - para exibição
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
+  /** F1 alterna a referência de atalhos (renderizada no topbar). */
+  const [atalhosReferenciaAberta, setAtalhosReferenciaAberta] = useState(false)
 
   const thermal = useThermalPrinter()
 
@@ -303,12 +292,55 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     })
   }, [])
 
+  const focarAbaPagamento = useCallback(() => {
+    // Focar o painel de pagamento por ID (renderizado em CaixaPdvOperadorTabs)
+    const pgtoPanel = document.getElementById('caixa-pdv-panel-pgto')
+    pgtoPanel?.focus()
+  }, [])
+
+  const abrirSelecionarCliente = useCallback(() => {
+    setSelecionarClienteModalAberto(true)
+  }, [])
+
+  const handleRemoverCliente = useCallback(() => {
+    setClienteId(null)
+    setClienteNome(null)
+    setCaixaMensagem(m.caixa.msg_cliente_desvinculado, { kind: "info" })
+    focarCampoBusca()
+  }, [focarCampoBusca, m.caixa.msg_cliente_desvinculado, setCaixaMensagem])
+
+  /**
+   * Ímã de foco: só recupera o campo de leitura quando o foco está solto
+   * (body/contêiner). Se o operador está num input, select ou botão — digitando o
+   * valor de uma parcela, por exemplo — roubar o foco jogaria os próximos dígitos
+   * no campo de código de barras. Não prejudica a leitura por scanner:
+   * `useScannerDetector` escuta a rajada em `window`, sem depender do foco.
+   */
+  const focarBuscaSeOcioso = useCallback(() => {
+    if (typeof document === "undefined") return
+    const ativo = document.activeElement
+    if (ativo instanceof HTMLElement && ativo !== buscaInputRef.current) {
+      const tag = ativo.tagName
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        tag === "BUTTON" ||
+        tag === "A" ||
+        ativo.isContentEditable
+      ) {
+        return
+      }
+    }
+    focarCampoBusca()
+  }, [focarCampoBusca])
+
   // Idle focus magnet: after 3s of no keyboard/pointer activity, refocus the search field
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
     const reset = () => {
       if (timer !== null) clearTimeout(timer)
-      timer = setTimeout(focarCampoBusca, 3000)
+      timer = setTimeout(focarBuscaSeOcioso, 3000)
     }
     const clear = () => { if (timer !== null) { clearTimeout(timer); timer = null } }
     window.addEventListener('keydown', reset)
@@ -319,7 +351,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       window.removeEventListener('keydown', reset)
       window.removeEventListener('pointerdown', reset)
     }
-  }, [focarCampoBusca])
+  }, [focarBuscaSeOcioso])
 
   const tocarFeedback = useCallback(
     (kind: "ok" | "erro") => {
@@ -358,27 +390,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       },
       [],
     ),
-    onProdutoNaoEncontrado: useCallback((codigo: string) => {
-      setCadastroRapidoCodigo(codigo)
-    }, []),
+    // Decisão de produto: o PDV não cadastra produto. Código inexistente só
+    // informa e orienta (mensagem do próprio pipeline de leitura) — cadastrar
+    // pertence ao módulo Produtos (gerente/admin). Por isso nenhum
+    // `onProdutoNaoEncontrado` é passado aqui.
   })
-
-  const handleSalvoCadastroRapido = useCallback(
-    (codigo: string) => {
-      setCadastroRapidoCodigo(null)
-      setCodigo(codigo)
-      const sid = cupomSessionIdRef.current
-      const r = enqueueLeitura(codigo, {
-        source: "form_submit",
-        cupomSessionId: sid,
-        correlationId: sid,
-      })
-      if (r && !r.ok && r.reason === "queue_full") {
-        setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
-      }
-    },
-    [enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem, setCodigo],
-  )
 
   const pagamentoControlesDesabilitados =
     finalizando || buscandoPipeline || carregandoRegras
@@ -522,7 +538,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   }, [restaurarUltimoRemovido, setCaixaMensagem, m.caixa.msg_item_restaurado])
 
   const handleNovoCupom = useCallback(() => {
-    vendaIdempotenciaRef.current = null
+    // Ponto de estrangulamento do retorno a «novo cupom»: enquanto a venda
+    // anterior puder ter sido gravada, abrir um cupom novo permitiria re-digitar
+    // e cobrar a mesma venda duas vezes. Só libera após consultar o desfecho.
+    if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
+      setVendaPendenteModalAberto(true)
+      setCaixaMensagem(m.caixa.msg_venda_pendente_bloqueio, { kind: "warning" })
+      return
+    }
     flushLeiturasPendentes({ reason: "new_cupom" })
     cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
@@ -532,150 +555,70 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem(null)
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
+    setClienteId(null)  // Reset cliente selecionado para evitar vazar entre cupons
+    setClienteNome(null)
+    // Cupom abandonado: solta o vínculo, mas NÃO baixa o pedido em espera — ele
+    // volta a ficar disponível na lista, que é justamente o ponto do P2.
+    setVendaEmEsperaOrigemId(null)
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
     focarCampoBusca,
     limparCarrinho,
     limparEstadoDescontoGerente,
+    m.caixa.msg_venda_pendente_bloqueio,
     resetPagamentos,
     setCaixaMensagem,
   ])
 
-  const recarregarEmEspera = useCallback(async () => {
-    setCarregandoEmEspera(true)
-    try {
-      const res = await listarVendasEmEsperaCaixa()
-      if (res.ok) setVendasEmEspera(res.vendas)
-    } finally {
-      setCarregandoEmEspera(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void recarregarEmEspera()
-  }, [recarregarEmEspera, turnoRefreshToken])
-
-  /** Nova Venda (+): se há itens, coloca em espera; senão limpa cupom. */
-  const handleNovaVendaOuEspera = useCallback(async () => {
-    if (itens.length === 0) {
+  /**
+   * "Excluir venda" / F8 (gatilhos do operador): confirma antes de descartar
+   * o cupom quando há itens — evita perder uma venda em andamento com um
+   * clique/atalho sem querer. Reset interno pós-espera (handleNovoCupom
+   * chamado depois de colocarVendaEmEsperaCaixa) não passa por aqui: os
+   * itens já foram salvos, não há o que confirmar.
+   */
+  const handleExcluirVendaConfirmado = useCallback(() => {
+    // Antes do confirm: com venda pendente não há o que descartar — o cupom pode
+    // já ter virado venda. Vai direto para a recuperação.
+    if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
       handleNovoCupom()
       return
     }
-    const caixaId = isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null
-    const res = await colocarVendaEmEsperaCaixa({
-      itens,
-      totalBruto,
-      totalDesconto,
-      totalLiquido: totalLiquidoComGerente,
-      caixaId,
-      descontoGerentePercentual:
-        descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
-    })
-    if (!res.ok) {
-      setCaixaMensagem(res.error, { kind: "error" })
-      tocarFeedback("erro")
+    if (itens.length > 0 && !globalThis.confirm(m.caixa.cart_bar_excluir_confirmar)) {
       return
     }
-    setCaixaMensagem(
-      caixaFmt(m.caixa.em_aberto_colocada, { n: String(res.numeroLocal) }),
-      { kind: "success" },
-    )
-    tocarFeedback("ok")
     handleNovoCupom()
-    await recarregarEmEspera()
-  }, [
+  }, [itens.length, handleNovoCupom, m.caixa.cart_bar_excluir_confirmar])
+
+  const {
+    vendasEmEspera,
+    carregandoEmEspera,
+    handleNovaVendaOuEspera,
+    handleRetomarEmEspera,
+    handleDescartarEmEspera,
+  } = useCaixaVendasEmEspera({
+    m,
     itens,
-    caixaStatus,
     totalBruto,
     totalDesconto,
     totalLiquidoComGerente,
     descontoGerentePercentual,
-    handleNovoCupom,
-    m.caixa.em_aberto_colocada,
-    recarregarEmEspera,
+    caixaStatus,
+    clienteId,
+    turnoRefreshToken,
+    novoCupom: handleNovoCupom,
+    limparEstadoDescontoGerente,
+    substituirCarrinho,
+    reprecificar,
     setCaixaMensagem,
     tocarFeedback,
-  ])
-
-  const handleRetomarEmEspera = useCallback(
-    async (id: string) => {
-      if (itens.length > 0) {
-        setCaixaMensagem(m.caixa.em_aberto_finalize_antes, { kind: "warning" })
-        const parked = await colocarVendaEmEsperaCaixa({
-          itens,
-          totalBruto,
-          totalDesconto,
-          totalLiquido: totalLiquidoComGerente,
-          caixaId: isCaixaAberto(caixaStatus) ? caixaStatus.caixaId : null,
-          descontoGerentePercentual:
-            descontoGerentePercentual > 0 ? descontoGerentePercentual : null,
-        })
-        if (!parked.ok) {
-          setCaixaMensagem(parked.error, { kind: "error" })
-          tocarFeedback("erro")
-          return
-        }
-        handleNovoCupom()
-      }
-      const res = await retomarVendaEmEsperaCaixa(id)
-      if (!res.ok) {
-        setCaixaMensagem(res.error, { kind: "error" })
-        tocarFeedback("erro")
-        return
-      }
-      // Token de gerente não é restaurado: exige nova autorização se precisar desconto.
-      limparEstadoDescontoGerente()
-      substituirCarrinho(res.itens)
-      // Recalcula VAREJO/ATACADO com a quantidade retomada (spec Fase 2).
-      for (const item of res.itens) {
-        const tipo = item.resultado?.tipoPreco ?? "VAREJO"
-        reprecificar({
-          itemId: item.id,
-          produtoId: item.produtoId,
-          quantidade: item.quantidade,
-          tipoPrecoAtual: tipo,
-        })
-      }
-      setCaixaMensagem(
-        caixaFmt(m.caixa.em_aberto_retomada, { n: String(res.numeroLocal) }),
-        { kind: "success" },
-      )
-      tocarFeedback("ok")
-      await recarregarEmEspera()
-      focarCampoBusca()
-    },
-    [
-      itens,
-      totalBruto,
-      totalDesconto,
-      totalLiquidoComGerente,
-      caixaStatus,
-      descontoGerentePercentual,
-      handleNovoCupom,
-      limparEstadoDescontoGerente,
-      substituirCarrinho,
-      reprecificar,
-      m.caixa.em_aberto_retomada,
-      m.caixa.em_aberto_finalize_antes,
-      recarregarEmEspera,
-      setCaixaMensagem,
-      tocarFeedback,
-      focarCampoBusca,
-    ],
-  )
-
-  const handleDescartarEmEspera = useCallback(
-    async (id: string) => {
-      const res = await descartarVendaEmEsperaCaixa(id)
-      if (!res.ok) {
-        setCaixaMensagem(res.error, { kind: "error" })
-        return
-      }
-      await recarregarEmEspera()
-    },
-    [recarregarEmEspera, setCaixaMensagem],
-  )
+    focarCampoBusca,
+    setClienteId,
+    setClienteNome,
+    vendaEmEsperaOrigemId,
+    setVendaEmEsperaOrigemId,
+  })
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
     if (raw == null) return null
@@ -856,10 +799,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     // Sem cliente, abre modal (SSoT alinhada a caixaPagamentoSaldo + RPC v4).
     if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
       setSelecionarClienteModalAberto(true)
-      setCaixaMensagem(
-        "Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.",
-        { kind: "warning" },
-      )
+      setCaixaMensagem(m.caixa.msg_pagamento_parcial_requer_cliente, { kind: "warning" })
       return
     }
     // Normalizar parcelas: desconta troco da última parcela DINHEIRO
@@ -921,22 +861,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem(null)
     setCheckoutHint(null)
     try {
-      if (!vendaIdempotenciaRef.current) {
-        vendaIdempotenciaRef.current = crypto.randomUUID()
-      }
+      // Chave criada uma única vez por cupom e persistida: sobrevive a F5, queda
+      // de energia e fechamento da aplicação. Reenvios reusam exatamente esta
+      // chave, então o RPC reconhece a venda já gravada em vez de criar outra.
+      const idempotencyKey = garantirVendaIdempotencyKey()
       // Defense-in-depth Fase 5b (já checado no início de handleFinalizar)
       if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
         setSelecionarClienteModalAberto(true)
         setFinalizando(false)
-        setCaixaMensagem(
-          "Pagamento parcial requer seleção de cliente. Selecione o cliente antes de finalizar.",
-          { kind: "warning" },
-        )
+        setCaixaMensagem(m.caixa.msg_pagamento_parcial_requer_cliente, { kind: "warning" })
         return
       }
 
       const payload: FinalizarVendaInput = {
-        idempotencyKey: vendaIdempotenciaRef.current,
+        idempotencyKey,
         formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
         totalBruto,
         totalDesconto:
@@ -967,6 +905,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         ok: false,
         error: m.caixa.msg_checkout_timeout,
       }
+      // A partir daqui a venda pode existir no servidor. O flag é persistido
+      // ANTES do disparo para cobrir queda de energia no meio da chamada.
+      marcarFinalizacaoPendente()
       const res = await Promise.race([
         finalizarVendaCaixa(payload),
         new Promise<typeof timeoutResult>((resolve) =>
@@ -994,11 +935,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         }
         setCheckoutHint(null)
         setReimprimirModalAberto(true)
-        vendaIdempotenciaRef.current = null
+        concluirVendaIdempotencyKey()
         limparCarrinho()
         limparEstadoDescontoGerente()
         resetPagamentos()
         setClienteId(null)  // ✅ NOVO (Fase 5b) - reset após venda bem-sucedida
+        setClienteNome(null)
+        // Agora sim o pedido em espera saiu: virou venda. Escrituração acessória —
+        // nunca pode derrubar o caminho de sucesso e cair no catch de "pendente"
+        // com a venda já concluída e a chave já descartada (isso reabriria a
+        // porta da venda duplicada). Falhando, o pedido só fica na lista.
+        if (vendaEmEsperaOrigemId) {
+          void converterVendaEmEsperaCaixa(vendaEmEsperaOrigemId).catch(() => {})
+          setVendaEmEsperaOrigemId(null)
+        }
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
@@ -1006,7 +956,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         )
         tocarFeedback("ok")
         await recarregarStatusCaixa()
+      } else if (res === timeoutResult) {
+        // Desfecho DESCONHECIDO: o servidor pode ter concluído a venda depois do
+        // timeout. Preserva o estado pendente e a chave; a saída é a verificação.
+        setCaixaMensagem(m.caixa.msg_venda_pendente_titulo, { kind: "warning" })
+        setCheckoutHint(m.caixa.msg_venda_pendente_descricao)
+        setVendaPendenteModalAberto(true)
+        tocarFeedback("erro")
       } else {
+        // Erro devolvido pelo servidor: a resposta chegou, logo a transação não
+        // foi confirmada. Libera o fluxo mantendo a chave para o próximo envio.
+        resolverFinalizacaoPendente()
         const hint = inferirHintCheckout(res.error, {
           padrao: m.caixa.msg_checkout_hint_padrao,
           cupom: m.caixa.msg_checkout_hint_cupom,
@@ -1018,22 +978,31 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         tocarFeedback("erro")
       }
     } catch (e) {
+      // Exceção (rede caiu, aba suspensa, action abortada): igual ao timeout, o
+      // desfecho é desconhecido — nunca assumir que a venda falhou.
       const errMsg = e instanceof Error ? e.message : String(e)
       console.error('[caixa/finalizar-venda]', {
-        idempotencyKey: vendaIdempotenciaRef.current,
+        idempotencyKey: useCarrinhoStore.getState().vendaIdempotencyKey,
         error: errMsg,
       })
-      setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
-      // Diagnóstico concreto também na exceção: deriva causa provável (rede /
-      // sessão / cupom / preço) do erro real em vez do hint genérico "tente de novo".
-      setCheckoutHint(
-        inferirHintCheckout(errMsg, {
-          padrao: m.caixa.msg_checkout_hint_padrao,
-          cupom: m.caixa.msg_checkout_hint_cupom,
-          sessao: m.caixa.msg_checkout_hint_sessao,
-          rede: m.caixa.msg_checkout_hint_rede,
-        }),
-      )
+      // Só é recuperação se a finalização continua pendente. Uma exceção depois
+      // da venda já confirmada (ex.: recarga de status falhou) não pode exibir
+      // «venda pendente» para uma venda que deu certo.
+      if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
+        setCaixaMensagem(m.caixa.msg_venda_pendente_titulo, { kind: "warning" })
+        setCheckoutHint(m.caixa.msg_venda_pendente_descricao)
+        setVendaPendenteModalAberto(true)
+      } else {
+        setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+        setCheckoutHint(
+          inferirHintCheckout(errMsg, {
+            padrao: m.caixa.msg_checkout_hint_padrao,
+            cupom: m.caixa.msg_checkout_hint_cupom,
+            sessao: m.caixa.msg_checkout_hint_sessao,
+            rede: m.caixa.msg_checkout_hint_rede,
+          }),
+        )
+      }
       tocarFeedback("erro")
     } finally {
       setFinalizando(false)
@@ -1046,6 +1015,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     pagamentos,
     gerenteValidadoAte,
     gerenteToken,
+    motivoDesconto,
+    motivoDescontoDescricao,
     itens,
     limparEstadoDescontoGerente,
     limparCarrinho,
@@ -1062,7 +1033,91 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     perfil,
     clienteId,
     saldoPendente,
+    garantirVendaIdempotencyKey,
+    marcarFinalizacaoPendente,
+    resolverFinalizacaoPendente,
+    concluirVendaIdempotencyKey,
+    vendaEmEsperaOrigemId,
   ])
+
+  /**
+   * Recuperação da venda pendente: consulta o desfecho real pela chave de
+   * idempotência (que é o `venda_id`). Só existem dois desfechos possíveis —
+   * a venda está gravada (encerra o cupom) ou não existe (libera o reenvio com
+   * a MESMA chave). Falha de rede na consulta não conclui nada.
+   */
+  const handleVerificarVendaPendente = useCallback(async () => {
+    const chave = useCarrinhoStore.getState().vendaIdempotencyKey
+    if (!chave) {
+      resolverFinalizacaoPendente()
+      setVendaPendenteModalAberto(false)
+      return
+    }
+    setVerificandoVendaPendente(true)
+    try {
+      const res = await obterDetalheHistoricoVendaCaixa(chave)
+      if (res.ok) {
+        // Venda gravada: encerra o cupom exatamente como no caminho de sucesso.
+        lastReciboRef.current = historicoDetalheParaRecibo(res.detalhe, m.caixa.moeda_prefixo)
+        concluirVendaIdempotencyKey()
+        limparCarrinho()
+        limparEstadoDescontoGerente()
+        resetPagamentos()
+        setClienteId(null)
+        setClienteNome(null)
+        // Acessório, como no caminho de sucesso: não pode derrubar a recuperação.
+        if (vendaEmEsperaOrigemId) {
+          void converterVendaEmEsperaCaixa(vendaEmEsperaOrigemId).catch(() => {})
+          setVendaEmEsperaOrigemId(null)
+        }
+        setVendaPendenteModalAberto(false)
+        setCheckoutHint(null)
+        setTurnoRefreshToken((t) => t + 1)
+        setCaixaMensagemVendaOk(
+          caixaFmt(m.caixa.msg_venda_ok, { id: res.detalhe.id.slice(0, 8) }),
+          { kind: "success" },
+        )
+        tocarFeedback("ok")
+        await recarregarStatusCaixa()
+        return
+      }
+      if (res.code === 'VENDA_NAO_ENCONTRADA') {
+        // Confirmado: nada foi gravado. Libera o fluxo preservando a chave.
+        resolverFinalizacaoPendente()
+        setVendaPendenteModalAberto(false)
+        setCaixaMensagem(m.caixa.msg_venda_pendente_nao_gravada, { kind: "warning" })
+        setCheckoutHint(m.caixa.msg_checkout_hint_padrao)
+        return
+      }
+      // Consulta falhou (rede/sessão): permanece pendente, nada foi decidido.
+      setCaixaMensagem(res.error, { kind: "error" })
+      setCheckoutHint(m.caixa.msg_venda_pendente_descricao)
+    } finally {
+      setVerificandoVendaPendente(false)
+    }
+  }, [
+    concluirVendaIdempotencyKey,
+    resolverFinalizacaoPendente,
+    limparCarrinho,
+    limparEstadoDescontoGerente,
+    resetPagamentos,
+    recarregarStatusCaixa,
+    setCaixaMensagem,
+    setCaixaMensagemVendaOk,
+    tocarFeedback,
+    vendaEmEsperaOrigemId,
+    m,
+  ])
+
+  /**
+   * Reabre a recuperação quando a página remonta com finalização pendente
+   * persistida (F5, queda de energia, fechamento inesperado da aplicação).
+   */
+  useEffect(() => {
+    if (cartMounted && vendaFinalizacaoPendente) {
+      setVendaPendenteModalAberto(true)
+    }
+  }, [cartMounted, vendaFinalizacaoPendente])
 
   useCaixaGerenteTokenExpiry({
     gerenteValidadoAte,
@@ -1074,13 +1129,23 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const pdvClassicAtalhos = useMemo(
     () => ({
-      onExcluirVenda: handleNovoCupom,
+      onExcluirVenda: handleExcluirVendaConfirmado,
       onFinalizarVenda: () => void handleFinalizar(),
       abas: {
-        produto: () => focarCampoBusca(),
+        // Alt+Z leva o foco ao campo de leitura, não ao contêiner: o operador
+        // aperta Alt+Z justamente para voltar a bipar/digitar.
+        produto: focarCampoBusca,
+        cliente: abrirSelecionarCliente,
+        pgto: focarAbaPagamento,
       },
     }),
-    [handleNovoCupom, handleFinalizar, focarCampoBusca],
+    [
+      handleExcluirVendaConfirmado,
+      handleFinalizar,
+      focarCampoBusca,
+      focarAbaPagamento,
+      abrirSelecionarCliente,
+    ],
   )
 
   useCaixaKeyboardShortcuts({
@@ -1091,12 +1156,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     onFinalizar: () => void handleFinalizar(),
     onFecharCaixa: () => void handleFecharCaixa(),
     onFocarBusca: focarCampoBusca,
-    onNovoCupom: handleNovoCupom,
+    onNovoCupom: handleExcluirVendaConfirmado,
     onReimprimir: useCallback(() => {
       if (lastReciboRef.current) setReimprimirModalAberto(true)
     }, []),
     onConsultaRapida: () => setConsultaRapidaAberta(true),
     onDesfazerRemocao: handleDesfazerRemocao,
+    onAbrirReferencia: useCallback(() => setAtalhosReferenciaAberta((v) => !v), []),
     onSelecionarMetodo: useCallback(
       (indice: 1 | 2 | 3 | 4) => {
         if (pagamentoControlesDesabilitados) return
@@ -1195,15 +1261,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
   const handleFinalizarClick = useCallback(() => void handleFinalizar(), [handleFinalizar])
   const abrirGerenteModal = useCallback(() => setGerenteModalAberto(true), [])
-  const handleCancelarMovimentacao = useCallback(
-    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "cancelar", item }),
-    [],
-  )
-  const handleEstornarMovimentacao = useCallback(
-    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "estornar", item }),
-    [],
-  )
-
   return (
     <>
       <div className="caixa-oriental-root h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5 bg-background text-foreground">
@@ -1219,6 +1276,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           onTentarStatusNovamente={() => void recarregarStatusCaixa()}
           printerStatus={thermal.status}
           printerDeviceName={thermal.deviceInfo?.name ?? thermal.savedInfo?.name}
+          atalhosAbertos={atalhosReferenciaAberta}
+          onAtalhosOpenChange={setAtalhosReferenciaAberta}
         />
         <div className="flex-1 flex flex-col min-h-0">
           <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 px-4 sm:px-6 pt-4 pb-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(11.5rem,15rem)] md:grid-rows-[minmax(0,1fr)]">
@@ -1240,7 +1299,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 metodoPagamentoPanel={metodoPagamentoSelector}
                 produtoPanel={
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-                    <CaixaOperadorContextBar m={m} idioma={idioma} configCaixaWeb={configCaixaWeb} />
+                    <CaixaOperadorContextBar
+                      m={m}
+                      idioma={idioma}
+                      configCaixaWeb={configCaixaWeb}
+                      clienteNome={clienteNome}
+                      onRemoverCliente={handleRemoverCliente}
+                    />
                     <div className="shrink-0">
                       <CaixaSearchBar
                         ref={buscaInputRef}
@@ -1248,7 +1313,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         codigo={codigo}
                         onCodigoChange={setCodigo}
                         onSubmit={handleAdicionar}
-                        onNovoCupom={handleNovoCupom}
+                        onNovoCupom={handleExcluirVendaConfirmado}
                         buscando={buscandoPipeline}
                         carregandoRegras={carregandoRegras}
                         somAtivo={somFeedbackAtivo}
@@ -1278,7 +1343,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               </div>
               <CaixaPdvCartSaleBar
                 m={m}
-                onExcluirVenda={handleNovoCupom}
+                onExcluirVenda={handleExcluirVendaConfirmado}
                 onFinalizar={handleFinalizarClick}
                 finalizando={finalizando}
                 movimentandoCaixa={movimentandoCaixa}
@@ -1289,6 +1354,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 totalLiquidoComGerente={totalLiquidoComGerente}
                 totalBruto={totalBruto}
                 totalDesconto={totalDesconto}
+                valorDescontoGerente={valorDescontoGerente}
+                descontoGerentePercentual={descontoGerentePercentualEfetivo}
                 moedaPrefixo={m.caixa.moeda_prefixo}
               />
             </section>
@@ -1324,6 +1391,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onFecharCaixa={handleFecharCaixaClick}
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
+                onSelecionarCliente={abrirSelecionarCliente}
               />
               <div className="border-t pt-2 text-xs font-semibold uppercase tracking-wide border-border text-muted-foreground">
                 {m.caixa.rail_titulo_em_aberto}
@@ -1370,41 +1438,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                 onFecharCaixa={handleFecharCaixaClick}
                 onAbrirCaixa={handleAbrirCaixaClick}
                 onConsultaRapida={() => setConsultaRapidaAberta(true)}
+                onSelecionarCliente={abrirSelecionarCliente}
               />
             </div>
           </div>
-          {isCaixaAberto(caixaStatus) && (
-            <CaixaMovimentacoesTimeline
-              m={m}
-              idioma={idioma}
-              itens={movimentacoes}
-              carregando={carregandoMovimentacoes}
-              processandoAcao={processandoAcaoMovimentacao}
-              onCancelar={handleCancelarMovimentacao}
-              onEstornar={handleEstornarMovimentacao}
-            />
-          )}
-          <CaixaFooter
-            m={m}
-            idioma={idioma}
-            layout="classic_summary"
-            onFinalizar={handleFinalizarClick}
-            finalizando={finalizando}
-            itensLength={itens.length}
-            buscando={buscandoPipeline}
-            carregandoRegras={carregandoRegras}
-            totalItens={totalItens}
-            totalUnidades={totalUnidades}
-            gerenteValidadoAte={gerenteValidadoAte}
-            descontoGerentePercentual={descontoGerentePercentual}
-            maxDescontoGerentePercentual={maxDescontoGerentePercentual}
-            totalBruto={totalBruto}
-            totalDesconto={totalDesconto}
-            economiaPrecoAtacadoAuto={economiaPrecoAtacadoAuto}
-            valorDescontoGerente={valorDescontoGerente}
-            totalLiquidoComGerente={totalLiquidoComGerente}
-            moedaPrefixo={m.caixa.moeda_prefixo}
-          />
+          {/* Rodapé de resumo removido: repetia total, bruto, descontos e o botão
+              Finalizar logo abaixo da barra do carrinho — duas faixas empilhadas
+              dizendo a mesma coisa. O total único e sempre visível é o da barra. */}
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
@@ -1540,20 +1580,27 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         }}
         onConfirm={handleConfirmarAcaoSensivel}
       />
+      {/* Recuperação de venda pendente (desfecho desconhecido após timeout,
+          queda de rede ou reinício da aplicação). */}
+      <CaixaConfirmModal
+        open={vendaPendenteModalAberto}
+        title={m.caixa.msg_venda_pendente_titulo}
+        description={m.caixa.msg_venda_pendente_descricao}
+        m={m}
+        processing={verificandoVendaPendente}
+        initialFocus="confirm"
+        confirmLabel={m.caixa.msg_venda_pendente_verificar}
+        confirmVariant="primary"
+        onOpenChange={(open) => {
+          if (!open) setVendaPendenteModalAberto(false)
+        }}
+        onConfirm={() => void handleVerificarVendaPendente()}
+      />
       <CaixaConsultaRapidaModal
         open={consultaRapidaAberta}
         onOpenChange={setConsultaRapidaAberta}
         m={m}
         termoInicial={codigo}
-      />
-      <CadastroProdutoRelampagoModal
-        open={cadastroRapidoCodigo != null}
-        onOpenChange={(open) => {
-          if (!open) setCadastroRapidoCodigo(null)
-        }}
-        codigoBarras={cadastroRapidoCodigo ?? ""}
-        m={m}
-        onSalvoEVender={handleSalvoCadastroRapido}
       />
       <CaixaHistoricoSheet
         open={historicoAberto}
@@ -1574,9 +1621,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       <CaixaSelecionarClienteModal
         aberto={selecionarClienteModalAberto}
         m={m}
-        onSelecionado={(id) => {
+        onSelecionado={(id, nome) => {
           setClienteId(id)
+          setClienteNome(nome)
           setSelecionarClienteModalAberto(false)
+          setCaixaMensagem(caixaFmt(m.caixa.msg_cliente_vinculado, { nome }), { kind: "success" })
+          focarCampoBusca()
         }}
         onCancelado={() => setSelecionarClienteModalAberto(false)}
       />

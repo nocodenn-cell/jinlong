@@ -12,9 +12,11 @@ import {
 } from './ProdutoFormContext'
 import type { UseProdutoFormReturn } from './useProdutoForm'
 import type { ProdutoFormShellProps } from './produtoForm.types'
+import type { ProdutoFormErro } from './produtoForm.clientValidation'
 import { EssencialSection } from './sections/EssencialSection'
 import { PrecosSection } from './sections/PrecosSection'
 import { CategoriaQuickField } from './sections/CategoriaQuickField'
+import { FornecedorQuickField } from './sections/FornecedorQuickField'
 import { ComercialSection } from './sections/ComercialSection'
 import { CompraSection } from './sections/CompraSection'
 import { EstoqueSection } from './sections/EstoqueSection'
@@ -25,7 +27,12 @@ type Props = ProdutoFormShellProps &
   Readonly<{
     nomeRef?: RefObject<HTMLInputElement | null>
     codigoBarrasRef?: RefObject<HTMLInputElement | null>
+    precoCustoRef?: RefObject<HTMLInputElement | null>
     precoVarejoRef?: RefObject<HTMLInputElement | null>
+    estoqueInicialRef?: RefObject<HTMLInputElement | null>
+    erro?: ProdutoFormErro | null
+    /** URL corrente da foto (controlada pelo modal para refletir upload/remoção na hora). */
+    imagemUrl?: string | null
     onEnterSubmit?: () => void
     onCodigoBarrasBlur?: () => void
     sugestaoHint?: string | null
@@ -45,6 +52,7 @@ export function ProdutoForm(props: Props) {
     onFornecedoresChange: props.onFornecedoresChange,
     onCategoriasChange: props.onCategoriasChange,
     onMarcasChange: props.onMarcasChange,
+    erro: props.erro,
     ...fields,
     nome: props.nome,
     setNome: props.setNome,
@@ -111,10 +119,12 @@ export function ProdutoForm(props: Props) {
             <ProdutoImagemCell
               produtoId={props.produto.id}
               nome={props.produto.nome}
-              imagemUrl={props.produto.imagem_url}
+              imagemUrl={
+                props.imagemUrl !== undefined ? props.imagemUrl : props.produto.imagem_url
+              }
               disabled={props.disabled}
               m={props.m}
-              onDone={() => props.onImagemChange?.()}
+              onDone={(url) => props.onImagemChange?.(url)}
             />
             <div>
               <p className="text-xs font-medium text-jl-fg-2">{p.foto_form_label}</p>
@@ -123,23 +133,34 @@ export function ProdutoForm(props: Props) {
           </div>
         ) : null}
 
+        {/* Cadeia do Enter no cadastro rápido, na mesma ordem visual:
+            código → nome → custo → venda → estoque inicial → salvar. */}
         <EssencialSection
           nomeRef={props.nomeRef}
           codigoBarrasRef={props.codigoBarrasRef}
-          precoVarejoRef={props.precoVarejoRef}
+          proximoAposNomeRef={props.precoCustoRef}
           onCodigoBarrasBlur={props.onCodigoBarrasBlur}
           sugestaoHint={props.sugestaoHint}
         />
         <PrecosSection
           modoCompleto={props.modoCompleto}
+          precoCustoRef={props.precoCustoRef}
           precoVarejoRef={props.precoVarejoRef}
+          proximoAposVarejoRef={props.estoqueInicialRef}
           onEnterSubmit={props.onEnterSubmit}
         />
-        {/* Categoria sempre visível (modo simples e completo) — campo primário. */}
-        <div className="mt-1">
+        {/* Categoria e fornecedor sempre visíveis (modo simples e completo) —
+            campos primários: categoria organiza o catálogo, fornecedor mantém a
+            rastreabilidade da compra. */}
+        <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <CategoriaQuickField />
+          <FornecedorQuickField idioma={props.idioma} />
         </div>
-        <EstoqueSection modoCompleto={props.modoCompleto} />
+        <EstoqueSection
+          modoCompleto={props.modoCompleto}
+          estoqueInicialRef={props.estoqueInicialRef}
+          onEnterSubmit={props.onEnterSubmit}
+        />
 
         <button
           type="button"
@@ -161,7 +182,7 @@ export function ProdutoForm(props: Props) {
 
         {props.modoCompleto ? (
           <>
-            <ComercialSection faixasSlot={faixasSlot} idioma={props.idioma} />
+            <ComercialSection faixasSlot={faixasSlot} />
             <CompraSection />
             <FiscalSection />
           </>

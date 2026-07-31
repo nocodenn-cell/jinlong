@@ -16,7 +16,7 @@ export function FiscalSection() {
           {p.secao_fiscal_resumo}
         </summary>
         <div id="produto-secao-fiscal" className="mt-3 space-y-3">
-          <div className="grid grid-cols-[1fr_100px] gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_100px]">
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.field_ncm}
               <input
@@ -43,7 +43,7 @@ export function FiscalSection() {
               />
             </label>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.field_csosn}
               <select

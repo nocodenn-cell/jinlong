@@ -12,7 +12,8 @@ import type {
 } from '@shared-core/src/financial'
 import { FINANCIAL_ERROR_CODES } from '@shared-core/src/financial'
 
-function escapeIlike(s: string): string {
+/** Neutraliza os curingas de LIKE (`%`, `_`) num termo digitado pelo usuário. */
+export function escapeIlike(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
 }
 

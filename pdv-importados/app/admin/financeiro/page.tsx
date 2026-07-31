@@ -22,7 +22,7 @@ import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import Link from 'next/link'
 import { type ContaLinha } from './_components/ContasReceberTable'
 import { FinanceiroContent } from './_components/FinanceiroContent'
-import { parseFinanceiroTab } from './_components/FinanceiroTabNav'
+import { parseFinanceiroTab } from './_components/financeiroTabs'
 
 type SearchParams = {
   tab?: string

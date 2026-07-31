@@ -1,4 +1,3 @@
-import { timingSafeEqualStr } from "./crypto.ts";
 // @types/bcryptjs usa `export =` (sem default export), entao import default falha
 // no type-check (TS1192). Namespace import e a forma canonica e mantem o runtime
 // identico (esm.sh expoe compareSync como named export do modulo CJS).
@@ -84,11 +83,6 @@ function extractDeviceFingerprint(req: Request): string {
 function isBcryptHash(hash: unknown): hash is string {
   if (typeof hash !== "string") return false;
   return /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(hash);
-}
-
-function allowLegacySha256Fallback(): boolean {
-  const v = (Deno.env.get("ALLOW_LEGACY_SHA256_GERENTE_PASSWORD") ?? "").trim().toLowerCase();
-  return v === "true" || v === "1" || v === "yes";
 }
 
 function generateToken(): string {
@@ -197,7 +191,6 @@ async function precheckRateLimitLocks(
 type GerenteConfigBundle = {
   config: {
     gerente_id: string;
-    gerente_senha_sha256: string | null;
     gerente_senha_bcrypt: string | null;
     max_desconto_gerente_percentual: unknown;
   };
@@ -211,7 +204,7 @@ async function loadGerenteConfigBundle(
 ): Promise<GerenteConfigBundle | ValidateResult> {
   const { data: config, error: configError } = await supabase
     .from("pdv_config")
-    .select("gerente_id, gerente_senha_sha256, gerente_senha_bcrypt, max_desconto_gerente_percentual")
+    .select("gerente_id, gerente_senha_bcrypt, max_desconto_gerente_percentual")
     .eq("id", 1)
     .maybeSingle();
 
@@ -220,8 +213,7 @@ async function loadGerenteConfigBundle(
     return { ok: false, status: 500, body: { ok: false, error: "ERRO_DB_CONFIG" } };
   }
   const hasBcrypt = isBcryptHash(config?.gerente_senha_bcrypt);
-  const hasLegacy = typeof config?.gerente_senha_sha256 === "string" && config.gerente_senha_sha256.length > 0;
-  if (!config || (!hasBcrypt && !hasLegacy)) {
+  if (!config || !hasBcrypt) {
     log({ level: "error", stage: logStage, error: "CONFIG_NAO_ENCONTRADA" });
     return { ok: false, status: 500, body: { ok: false, error: "CONFIG_NAO_ENCONTRADA" } };
   }
@@ -400,10 +392,6 @@ export async function validateGerenteAndIssueToken(
     const bcryptHash = typeof config.gerente_senha_bcrypt === "string" ? config.gerente_senha_bcrypt : "";
     if (isBcryptHash(bcryptHash)) {
       senhaValida = bcrypt.compareSync(senha, bcryptHash);
-    } else if (allowLegacySha256Fallback() && typeof config.gerente_senha_sha256 === "string") {
-      const senhaHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(senha));
-      const senhaSha256 = Array.from(new Uint8Array(senhaHash)).map((b) => b.toString(16).padStart(2, "0")).join("");
-      senhaValida = timingSafeEqualStr(senhaSha256, config.gerente_senha_sha256);
     } else {
       log({
         level: "error",

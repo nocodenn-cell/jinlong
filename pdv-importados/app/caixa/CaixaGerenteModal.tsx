@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DragonModal } from "@/components/ui/DragonModal"
-import { Input } from "@/components/ui/forms"
-import { ErrorState } from "@/components/ui/feedback"
+import { Input, Field } from "@/components/ui/forms"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
@@ -250,10 +249,14 @@ export function CaixaGerenteModal({
         )
       }
     >
-      <div data-testid="caixa-gerente-modal" className="space-y-3">
+      <div data-testid="caixa-gerente-modal" className="space-y-4">
         {passo === "senha" ? (
-          <label className="block text-caption text-fg-muted">
-            {m.caixa.modal_gerente_passo_senha}
+          <Field
+            id="gerente-senha"
+            label={m.caixa.modal_gerente_passo_senha}
+            error={erroLocal || undefined}
+            required
+          >
             <Input
               ref={senhaRef}
               type="password"
@@ -262,23 +265,26 @@ export function CaixaGerenteModal({
               onChange={(e) => setSenha(e.target.value)}
               placeholder={m.caixa.modal_gerente_senha_placeholder}
               disabled={validando}
-              className="mt-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleContinuarSenha()
               }}
             />
-          </label>
+          </Field>
         ) : passo === "motivo" ? (
-          <div className="space-y-3">
-            <label className="block text-caption text-fg-muted">
-              Motivo do desconto
+          <div className="space-y-4">
+            <Field
+              id="gerente-motivo"
+              label="Motivo do desconto"
+              error={!motivo || motivo === 'NAO_ESPECIFICADO' ? "Selecione um motivo para o desconto" : erroLocal || undefined}
+              required
+            >
               <select
                 ref={motivoRef}
                 data-testid="motivo-select"
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value as MotivoDescontoEnum)}
                 disabled={validando}
-                className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 text-body"
+                className="fp-control"
               >
                 <option value="NAO_ESPECIFICADO">Selecione um motivo...</option>
                 <option value="ERRO_DIGITACAO">Erro de digitação</option>
@@ -288,46 +294,56 @@ export function CaixaGerenteModal({
                 <option value="AUTORIZACAO_COMERCIAL">Autorização comercial</option>
                 <option value="OUTROS">Outros (especificar)</option>
               </select>
-            </label>
+            </Field>
             {motivo === 'OUTROS' && (
-              <label className="block text-caption text-fg-muted">
-                Descrição do motivo
+              <Field
+                id="gerente-motivo-desc"
+                label="Descrição do motivo"
+                error={motivo === 'OUTROS' && !motivoDescricao.trim() ? "Descrição obrigatória quando motivo é 'Outros'" : undefined}
+                required={motivo === 'OUTROS'}
+              >
                 <textarea
                   data-testid="motivo-descricao"
                   value={motivoDescricao}
                   onChange={(e) => setMotivoDescricao(e.target.value)}
-                  placeholder="Descreva o motivo específico (obrigatório)..."
+                  placeholder="Descreva o motivo específico..."
                   disabled={validando}
                   maxLength={500}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border border-border bg-bg px-3 py-2 text-body"
+                  className="fp-control"
                 />
-              </label>
+              </Field>
             )}
           </div>
         ) : (
           ctx && (
-            <>
-              <p className="text-caption text-fg-muted">
+            <div className="space-y-4">
+              <p className="text-caption text-[var(--color-fg-subtle)]">
                 {caixaFmt(m.caixa.modal_gerente_passo_percentual, {
                   max: ctx.maxDescontoPercentual.toFixed(1),
                 })}
               </p>
-              <Input
-                ref={pctRef}
-                inputMode="decimal"
-                value={percentStr}
-                onChange={(e) => setPercentStr(e.target.value)}
-                placeholder={m.caixa.modal_gerente_percent_placeholder}
-                disabled={validando}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAplicarPercent()
-                }}
-              />
-            </>
+              <Field
+                id="gerente-percent"
+                label="Percentual"
+                error={erroLocal || undefined}
+                required
+              >
+                <Input
+                  ref={pctRef}
+                  inputMode="decimal"
+                  value={percentStr}
+                  onChange={(e) => setPercentStr(e.target.value)}
+                  placeholder={m.caixa.modal_gerente_percent_placeholder}
+                  disabled={validando}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAplicarPercent()
+                  }}
+                />
+              </Field>
+            </div>
           )
         )}
-        {erroLocal ? <ErrorState dense description={erroLocal} /> : null}
       </div>
     </DragonModal>
   )

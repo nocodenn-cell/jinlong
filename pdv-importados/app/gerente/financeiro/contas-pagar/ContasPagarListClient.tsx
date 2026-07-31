@@ -254,22 +254,22 @@ export function ContasPagarListClient({
       <DataTablePage
         kpis={
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="dragon-glass-card rounded-xl border border-amber-400/40 p-4">
+        <div className="dragon-glass-card rounded-xl border border-[var(--color-warning-border)] p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.contas_pagar.kpi_em_aberto}
           </div>
-          <div className="mt-1 text-xl font-bold leading-tight text-amber-400 tabular-nums">
+          <div className="mt-1 text-xl font-bold leading-tight text-[var(--color-warning-strong)] tabular-nums">
             {fmtGerenteBRL(kpis.totalAbertos, locale)}
           </div>
           <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
             {kpis.qtdAbertos} {kpis.qtdAbertos === 1 ? m.contas_pagar.conta_sg : m.contas_pagar.conta_pl}
           </div>
         </div>
-        <div className="rounded-xl border border-red-400/45 bg-red-950/25 p-4">
+        <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
             {m.contas_pagar.kpi_atrasadas}
           </div>
-          <div className="mt-1 text-xl font-bold leading-tight text-red-300 tabular-nums">
+          <div className="mt-1 text-xl font-bold leading-tight text-[var(--color-danger-strong)] tabular-nums">
             {fmtGerenteBRL(kpis.totalAtrasados, locale)}
           </div>
           <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
@@ -403,9 +403,9 @@ export function ContasPagarListClient({
           const vencCls = !podePagar
             ? ''
             : dias < 0
-              ? 'text-red-300 font-semibold'
+              ? 'text-[var(--color-danger-strong)] font-semibold'
               : dias <= 7
-                ? 'text-amber-200'
+                ? 'text-[var(--color-warning)]'
                 : 'text-jl-fg-1/80'
 
           return (
@@ -422,7 +422,7 @@ export function ContasPagarListClient({
                   <Link
                     href={c.nfe_importacao_id ? `/gerente/estoque/importar-nfe?id=${c.nfe_importacao_id}` : '#'}
                     onClick={(e) => !c.nfe_importacao_id && e.preventDefault()}
-                    className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] text-amber-400 hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] text-[var(--color-warning-strong)] hover:underline"
                   >
                     <FileText className="h-3 w-3" aria-hidden />
                     NF-e #{c.nfe_numero}
@@ -449,7 +449,7 @@ export function ContasPagarListClient({
                         <>
                           {' · '}
                           {m.contas_pagar.aberto_label}{' '}
-                          <strong className="text-amber-400">{fmtGerenteBRL(aberto, locale)}</strong>
+                          <strong className="text-[var(--color-warning-strong)]">{fmtGerenteBRL(aberto, locale)}</strong>
                         </>
                       )}
                     </div>
@@ -491,7 +491,7 @@ export function ContasPagarListClient({
                       onClick={() => void onCancelar(c)}
                       aria-label={`${m.contas_pagar.cancelar} — ${c.descricao}`}
                       title={m.contas_pagar.cancelar}
-                      className="app-btn-neutral inline-flex h-8 w-8 items-center justify-center rounded-md text-red-300 transition-colors hover:border-red-400/50 hover:text-red-200"
+                      className="app-btn-neutral inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-danger-strong)] transition-colors hover:border-[var(--color-danger-strong)]/50 hover:text-[var(--color-danger-strong)]"
                     >
                       <XCircle className="h-3.5 w-3.5" aria-hidden />
                     </button>
@@ -505,7 +505,7 @@ export function ContasPagarListClient({
         {contas.length === 0 && !loading && (
           <tr>
             <td colSpan={6} className="gerente-fin-empty px-4 py-12 text-center">
-              <div className="font-serif text-5xl text-amber-400/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
+              <div className="font-serif text-5xl text-[var(--color-warning-strong)]/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
                 应
               </div>
               <div className="mt-3 text-sm font-semibold text-jl-fg-1">{m.contas_pagar.vazio_titulo}</div>

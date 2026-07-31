@@ -30,6 +30,7 @@ type Props = {
   onFecharCaixa: () => void
   onAbrirCaixa: () => void
   onConsultaRapida: () => void
+  onSelecionarCliente: () => void
   variant?: "default" | "classic"
 }
 
@@ -61,6 +62,7 @@ function CaixaPdvOperacoesMenuImpl({
   onFecharCaixa,
   onAbrirCaixa,
   onConsultaRapida,
+  onSelecionarCliente,
   variant = "default",
 }: Props) {
   const classic = variant === "classic"
@@ -117,6 +119,13 @@ function CaixaPdvOperacoesMenuImpl({
       label: m.caixa.operacoes_consulta_rapida,
       shortcut: "F3",
       onClick: () => runAndClose(onConsultaRapida),
+    },
+    {
+      id: "cliente",
+      label: m.caixa.selecionar_cliente_titulo,
+      shortcut: "Alt+C",
+      disabled: busy,
+      onClick: () => runAndClose(onSelecionarCliente),
     },
     {
       id: "suprimento",
@@ -177,7 +186,7 @@ function CaixaPdvOperacoesMenuImpl({
       item.destructive
         ? classic
           ? "text-destructive hover:bg-destructive/10"
-          : "text-red-400 hover:bg-red-500/10"
+          : "text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
         : classic
           ? "text-foreground hover:bg-muted"
           : "text-jl-fg-1 hover:bg-white/[0.06]",
@@ -286,7 +295,7 @@ function CaixaPdvOperacoesMenuImpl({
           "inline-flex min-h-11 w-full items-center justify-center gap-2",
           classic
             ? "border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
-            : "border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
+            : "border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)] hover:bg-[var(--color-warning)]/20",
         )}
         onClick={onValidarGerente}
         disabled={validandoGerente || movimentandoCaixa}

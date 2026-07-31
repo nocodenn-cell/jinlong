@@ -12,6 +12,10 @@ type Props = {
   m: Mensagens
   processing?: boolean
   initialFocus?: "confirm" | "cancel"
+  /** Rótulo do botão de confirmação; padrão `m.comum.confirmar`. */
+  confirmLabel?: string
+  /** `danger` (padrão) para ações destrutivas; `primary` para ações de recuperação. */
+  confirmVariant?: "danger" | "primary"
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }
@@ -23,6 +27,8 @@ export function CaixaConfirmModal({
   m,
   processing = false,
   initialFocus = "cancel",
+  confirmLabel,
+  confirmVariant = "danger",
   onOpenChange,
   onConfirm,
 }: Props) {
@@ -60,11 +66,11 @@ export function CaixaConfirmModal({
           <Button
             ref={confirmRef}
             type="button"
-            variant="danger"
+            variant={confirmVariant}
             onClick={onConfirm}
             disabled={processing}
           >
-            {m.comum.confirmar}
+            {confirmLabel ?? m.comum.confirmar}
           </Button>
         </>
       }

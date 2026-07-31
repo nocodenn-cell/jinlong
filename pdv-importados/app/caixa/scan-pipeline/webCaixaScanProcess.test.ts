@@ -216,15 +216,22 @@ describe('runWebCaixaScanProcess — golden / stale_cupom', () => {
     expect(scanStoreTest.removerItem).toHaveBeenCalled()
   })
 
-  it('nao_encontrado: dispara onProdutoNaoEncontrado com o código lido', async () => {
+  it('nao_encontrado: avisa o operador e para — o PDV não cadastra produto', async () => {
     vi.mocked(buscarProdutoComPrecoCaixa).mockResolvedValue({
       ok: true,
       status: 'nao_encontrado',
     } as Awaited<ReturnType<typeof buscarProdutoComPrecoCaixa>>)
-    const onProdutoNaoEncontrado = vi.fn()
-    const deps = minimalDeps({ onProdutoNaoEncontrado })
+    const deps = minimalDeps()
     const r = await runWebCaixaScanProcess(baseCtx(), deps)
+
     expect(r).toEqual({ ok: false, reason: 'not_found' })
-    expect(onProdutoNaoEncontrado).toHaveBeenCalledWith('789')
+    // Informa e orienta; nada de abrir cadastro (removido do caixa).
+    expect(deps.setCaixaMensagem).toHaveBeenCalledWith('não encontrado', {
+      kind: 'warning',
+    })
+    expect(deps.tocarFeedback).toHaveBeenCalledWith('erro')
+    // Não adiciona item nem mexe no cupom.
+    expect(deps.adicionarItem).not.toHaveBeenCalled()
+    expect(scanStoreTest.itens).toHaveLength(0)
   })
 })

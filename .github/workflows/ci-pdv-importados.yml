@@ -6,6 +6,18 @@
 # Secrets: CI_NEXT_PUBLIC_*, PLAYWRIGHT_* (e2e-critical assíncrono), SYNC_*, FISCAL_WORKER_KEY.
 name: CI pdv-importados
 
+# Cancela execuções obsoletas do mesmo ref. Sem isto, cada commit intermediário
+# de uma PR deixa um run completo rodando até o fim mesmo já estando superado —
+# principal driver do consumo de minutos que estourou a cota (ver P0-1).
+# Em `main` NÃO cancela: um commit que já entrou precisa ser validado até o fim.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Least privilege explícito — ver nota em ci-backend-supabase.yml.
+permissions:
+  contents: read
+
 # Gate de merge: roda em pull_request, que já testa o resultado do merge.
 # Não roda em push para `main` — seria revalidar o mesmo código uma segunda vez,
 # e o deploy da Vercel não depende deste workflow. O piso de segurança em push
@@ -25,6 +37,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -61,6 +74,7 @@ jobs:
     needs: build-and-test
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -155,6 +169,7 @@ jobs:
     needs: build-and-test
     if: ${{ vars.ENABLE_PLAYWRIGHT_E2E == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

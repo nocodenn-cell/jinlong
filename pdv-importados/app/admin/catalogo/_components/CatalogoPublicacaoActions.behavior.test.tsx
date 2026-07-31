@@ -8,12 +8,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const publicarProdutoMock = vi.fn()
 const inativarProdutoMock = vi.fn()
+const reativarProdutoMock = vi.fn()
 const routerRefreshMock = vi.fn()
 const emitGerenteToastMock = vi.fn()
 
 vi.mock('@/app/gerente/produtos/actions', () => ({
   publicarProduto: (...args: unknown[]) => publicarProdutoMock(...args),
   inativarProduto: (...args: unknown[]) => inativarProdutoMock(...args),
+  reativarProduto: (...args: unknown[]) => reativarProdutoMock(...args),
 }))
 
 vi.mock('@/lib/gerente/toast', () => ({
@@ -26,7 +28,7 @@ vi.mock('next/navigation', () => ({
 
 import { CatalogoPublicacaoActions } from '@/app/admin/catalogo/_components/CatalogoPublicacaoActions'
 
-const LABELS = { publicar: 'Publicar', inativar: 'Inativar' }
+const LABELS = { publicar: 'Publicar', inativar: 'Inativar', reativar: 'Reativar' }
 const ERRO_GENERICO = 'Ocorreu um erro'
 
 let container: HTMLDivElement
@@ -41,6 +43,7 @@ function render(ui: React.ReactElement) {
 beforeEach(() => {
   publicarProdutoMock.mockReset()
   inativarProdutoMock.mockReset()
+  reativarProdutoMock.mockReset()
   routerRefreshMock.mockReset()
   emitGerenteToastMock.mockReset()
   container = document.createElement('div')
@@ -74,6 +77,31 @@ describe('CatalogoPublicacaoActions', () => {
       />,
     )
     expect(container.textContent).toContain('Inativar')
+  })
+
+  it('INATIVO oferece Reativar, nunca Publicar (podePublicarProduto só libera rascunho)', async () => {
+    // Regressão da decisão registrada em
+    // Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md: a UI decidia por
+    // `ativoFromStatusPublicacao`, então oferecia "Publicar" para produto inativo
+    // — contra a regra declarada no core.
+    reativarProdutoMock.mockResolvedValue({ success: true, data: null })
+    render(
+      <CatalogoPublicacaoActions
+        produtoId="p1"
+        status="INATIVO"
+        labels={LABELS}
+        erroGenerico={ERRO_GENERICO}
+      />,
+    )
+    expect(container.textContent).toContain('Reativar')
+    expect(container.textContent).not.toContain('Publicar')
+
+    const btn = container.querySelector('button') as HTMLButtonElement
+    await act(async () => {
+      btn.click()
+    })
+    expect(reativarProdutoMock).toHaveBeenCalledWith('p1')
+    expect(publicarProdutoMock).not.toHaveBeenCalled()
   })
 
   it('sucesso: chama router.refresh() e não emite toast de erro', async () => {

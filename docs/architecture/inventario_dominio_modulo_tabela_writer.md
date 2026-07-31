@@ -75,7 +75,7 @@
 | Tabela / conceito | Writer canônico | App entry | Orquestrador | Cross-cut | Notas |
 |---|---|---|---|---|---|
 | `produtos` CRUD | actions gerente/admin + RPC create | `app/gerente/produtos/actions.ts`; UI SSoT `/admin/catalogo` | — | Não | entity-ssot |
-| `produtos` + estoque inicial | `criar_produto_com_estoque_inicial` | `criarProdutoComEstoqueInicialRpc.ts`; PDV relâmpago `caixaCadastroRelampago.impl.ts` | **products**+**inventory** | Sim | TX atômica |
+| `produtos` + estoque inicial | `criar_produto_com_estoque_inicial` | `criarProdutoComEstoqueInicialRpc.ts` (PDV relâmpago REMOVIDO em 2026-07-30) | **products**+**inventory** | Sim | TX atômica |
 | `gtin_lookup_cache` | upsert app | `lib/adapters/gtin/gtinCacheRepository.ts` | — | Não | Cache auxiliar |
 | status publicação | actions catálogo | admin catalogo / produtos actions | — | Não | Regra de decisão em core (`guard:core`) |
 

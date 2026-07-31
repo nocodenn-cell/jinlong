@@ -27,6 +27,8 @@ export type RetomarEmEsperaResult =
       id: string
       numeroLocal: number
       itens: ItemCarrinho[]
+      /** Vínculo autoritativo; o nome é resolvido à parte (não existe na tabela). */
+      clienteId: string | null
     }
   | { ok: false; error: string }
 
@@ -91,6 +93,7 @@ export async function colocarVendaEmEsperaImpl(input: {
   totalLiquido: number
   caixaId?: string | null
   descontoGerentePercentual?: number | null
+  clienteId?: string | null
 }): Promise<ColocarEmEsperaResult> {
   try {
     const { userId } = await getUsuarioAtual()
@@ -108,7 +111,7 @@ export async function colocarVendaEmEsperaImpl(input: {
         totalLiquido: input.totalLiquido,
       },
       p_caixa_id: input.caixaId ?? null,
-      p_cliente_id: null,
+      p_cliente_id: input.clienteId ?? null,
       p_desconto_gerente_percentual: input.descontoGerentePercentual ?? null,
       p_desconto_gerente_token: null,
     })
@@ -158,11 +161,35 @@ export async function retomarVendaEmEsperaImpl(id: string): Promise<RetomarEmEsp
       id: String(row.id),
       numeroLocal: Number(row.numero_local ?? 0),
       itens: mapItens(row.itens),
+      clienteId: row.cliente_id ? String(row.cliente_id) : null,
     }
   } catch (e) {
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível retomar a venda em espera.'),
+    }
+  }
+}
+
+/**
+ * Consome o pedido em espera DEPOIS que a venda foi realmente finalizada.
+ * Separado da retomada de propósito: se o operador retomar o cupom errado e
+ * desistir, o pedido continua na lista em vez de sumir (migration 288).
+ */
+export async function converterVendaEmEsperaImpl(
+  id: string,
+): Promise<DescartarEmEsperaResult> {
+  try {
+    const { userId } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    const supabase = await createClient()
+    const { error } = await supabase.rpc('converter_venda_em_espera', { p_id: id })
+    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
+    return { ok: true }
+  } catch (e) {
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível baixar a venda em espera.'),
     }
   }
 }
@@ -235,7 +262,12 @@ export type HistoricoOperadorResult =
 
 export type HistoricoVendaDetalheResult =
   | { ok: true; detalhe: HistoricoVendaDetalhe }
-  | { ok: false; error: string }
+  /**
+   * `code` distingue "a venda não existe" de "não deu para consultar". A
+   * recuperação de venda pendente no PDV depende dessa diferença: só o primeiro
+   * caso prova que nada foi gravado e libera o reenvio.
+   */
+  | { ok: false; error: string; code?: 'VENDA_NAO_ENCONTRADA' }
 
 function mapEventoItens(raw: unknown): HistoricoVendaItemDetalhe[] {
   const parsed = parseJsonbRpc(raw)
@@ -357,7 +389,7 @@ export async function obterDetalheHistoricoVendaImpl(
       .maybeSingle()
 
     if (vendaError) return { ok: false, error: mensagemErroParaUsuario(vendaError.message) }
-    if (!venda) return { ok: false, error: 'Venda não encontrada.' }
+    if (!venda) return { ok: false, error: 'Venda não encontrada.', code: 'VENDA_NAO_ENCONTRADA' }
 
     const [eventoRes, pagamentosRes] = await Promise.all([
       supabase

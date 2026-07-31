@@ -147,7 +147,7 @@ function CaixaFooterImpl({
               <div
                 data-testid="caixa-total-liquido"
                 data-total-liquido={totalLiquidoComGerente.toFixed(2)}
-                className="text-2xl font-extrabold leading-none tabular-nums text-amber-400"
+                className="text-2xl font-extrabold leading-none tabular-nums text-[var(--color-fg)]"
               >
                 {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </div>
@@ -187,9 +187,9 @@ function CaixaFooterImpl({
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <span className="text-sm text-jl-fg-2">{resumoItens}</span>
           {gerenteLinha && (
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-amber-400">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-warning-strong)]">
               <ImperialSealIcon
-                className="h-5 w-5 shrink-0 text-amber-400"
+                className="h-5 w-5 shrink-0 text-[var(--color-warning-strong)]"
                 title={m.caixa.aria_selo_gerente}
               />
               {gerenteLinha}
@@ -214,7 +214,7 @@ function CaixaFooterImpl({
               {moedaPrefixo} {formatDecimalBRL(totalBruto)}
             </div>
           </div>
-          <div className="text-right text-sm text-amber-400">
+          <div className="text-right text-sm text-[var(--color-warning-strong)]">
             <div>{m.caixa.descontos_regras}</div>
             <div className="text-lg font-bold tabular-nums">
               - {moedaPrefixo} {formatDecimalBRL(totalDesconto)}
@@ -228,7 +228,7 @@ function CaixaFooterImpl({
             )}
           </div>
           {descontoGerentePercentual > 0 && (
-            <div className="text-right text-sm text-amber-400">
+            <div className="text-right text-sm text-[var(--color-warning-strong)]">
               <div>
                 {caixaFmt(m.caixa.desconto_gerente_label, {
                   pct: descontoGerentePercentual.toFixed(2),

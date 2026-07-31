@@ -129,7 +129,12 @@
       "Bash(git commit -m 'fix\\(nav\\): revert compras to /gerente fallback *)",
       "Bash(npx eslint *)",
       "Bash(npm install *)",
-      "Bash(git commit -m 'deps: install chart.js for admin dashboard *)"
+      "Bash(git commit -m 'deps: install chart.js for admin dashboard *)",
+      "Bash(git commit *)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(grep -E \"\\\\.\\(md|txt\\)$\")"
     ]
   }
 }

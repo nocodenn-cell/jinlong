@@ -4,14 +4,10 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { cn } from '@/lib/utils'
+import { FINANCEIRO_TABS as TABS, type FinanceiroTabId } from './financeiroTabs'
 
-export type FinanceiroTabId = 'receber' | 'pagar' | 'fiscal'
-
-const TABS: ReadonlyArray<{ id: FinanceiroTabId; label: string }> = [
-  { id: 'receber', label: 'A receber' },
-  { id: 'pagar', label: 'A pagar' },
-  { id: 'fiscal', label: 'Fila fiscal' },
-]
+// Reexport do tipo para não quebrar quem já importa daqui.
+export type { FinanceiroTabId }
 
 export function FinanceiroTabNav({ activeTab }: { activeTab: FinanceiroTabId }) {
   const pathname = usePathname()
@@ -44,7 +40,5 @@ export function FinanceiroTabNav({ activeTab }: { activeTab: FinanceiroTabId }) 
   )
 }
 
-export function parseFinanceiroTab(raw: string | undefined): FinanceiroTabId {
-  if (raw === 'pagar' || raw === 'fiscal') return raw
-  return 'receber'
-}
+// parseFinanceiroTab saiu deste arquivo: é consumida pelo Server Component
+// (page.tsx) e não pode viver num módulo 'use client'. Ver ./financeiroTabs.ts.

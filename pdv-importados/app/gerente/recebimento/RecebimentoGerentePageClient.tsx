@@ -17,9 +17,10 @@ import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import { StatusChip } from '@/components/ui/StatusChip'
-import { Field, Input, Select } from '@/components/ui/forms'
+import { Field, Input } from '@/components/ui/forms'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { criarRemessaConferencia } from './actions'
+import { ProdutoRecebimentoAutocomplete } from './ProdutoRecebimentoAutocomplete'
 
 export type RecebimentoProdutoOpt = { id: string; nome: string; codigo_barras: string | null }
 
@@ -202,22 +203,15 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
               />
             </Field>
             <Field id="rec-prod" label={r.label_produto} required>
-              <Select
-                name="produto_id"
-                required
+              {/* Busca server-side: o `<select>` anterior carregava só os 500
+                  primeiros produtos e o resto ficava inalcançável, sem aviso. */}
+              <ProdutoRecebimentoAutocomplete
                 disabled={semProdutos}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  {r.opt_produto_placeholder}
-                </option>
-                {produtos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                    {p.codigo_barras ? ` · ${p.codigo_barras}` : ''}
-                  </option>
-                ))}
-              </Select>
+                placeholder={r.ph_produto_busca}
+                semResultadosLabel={r.produto_sem_resultados}
+                minimoLabel={r.produto_busca_minimo}
+                limparLabel={r.produto_limpar}
+              />
             </Field>
             <Field id="rec-obs" label={r.label_observacao} className="md:col-span-2">
               <Input

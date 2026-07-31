@@ -1019,7 +1019,7 @@ export function ProdutosGerentePageClient({ idioma, opcoes, inicial }: Props) {
                     imagemUrl={p.imagem_url}
                     disabled={toggleLoading}
                     m={m}
-                    onDone={refetch}
+                    onDone={() => refetch()}
                   />
                 </td>
                 {/* Nome + SKU + Código de barras */}

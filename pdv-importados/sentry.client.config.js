@@ -1,34 +1,21 @@
-import * as Sentry from '@sentry/nextjs'
+/**
+ * OBSOLETO — conteúdo migrado para `instrumentation-client.ts`.
+ *
+ * Este arquivo ficou intencionalmente SEM `Sentry.init` em vez de ser apagado de
+ * imediato. Motivo: o webpack plugin do @sentry/nextjs casa tanto
+ * `sentry.client.config.js` quanto `instrumentation-client.ts`:
+ *
+ *   /(?:sentry\.client\.config\.(jsx?|tsx?)|(?:src[\/])?instrumentation-client\.(js|ts))$/
+ *
+ * Se os dois tivessem `Sentry.init`, o SDK inicializaria duas vezes no browser e
+ * geraria eventos duplicados. Sem init aqui, a coexistência é inofensiva.
+ *
+ * REMOVER no próximo passo de limpeza:
+ *   git rm pdv-importados/sentry.client.config.js
+ *
+ * Não reintroduzir `Sentry.init` neste arquivo: o nome deixa de funcionar sob
+ * Turbopack (DEPRECATION WARNING do próprio SDK). Ver o cabeçalho de
+ * instrumentation-client.ts.
+ */
 
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  environment: process.env.NODE_ENV || 'development',
-
-  // 10% das transações em produção
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-
-  // Replays: apenas nas sessões com erro (sem custo de storage desnecessário)
-  replaysOnErrorSampleRate: 1.0,
-  replaysSessionSampleRate: 0.0,
-
-  enabled: process.env.NODE_ENV !== 'development' || Boolean(process.env.NEXT_PUBLIC_SENTRY_FORCE_ENABLE),
-
-  integrations: [
-    Sentry.replayIntegration({
-      maskAllText: true,
-      blockAllMedia: true,
-    }),
-  ],
-
-  beforeSend(event) {
-    // Ignora erros de extensões de browser (não são do app)
-    if (event.exception?.values) {
-      for (const ex of event.exception.values) {
-        if (ex.stacktrace?.frames?.every((f) => f.filename?.startsWith('chrome-extension://'))) {
-          return null
-        }
-      }
-    }
-    return event
-  },
-})
+export {}

@@ -29,7 +29,11 @@ import {
   podeSalvarComoRascunho,
 } from '@/core/catalog/statusPublicacao'
 import { buildSubmitPayload, parseGatilhoSubmit } from './form/produtoForm.mappers'
-import { validarProdutoFormClient } from './form/produtoForm.clientValidation'
+import {
+  validarProdutoFormClient,
+  type ProdutoFormErro,
+} from './form/produtoForm.clientValidation'
+import { campoExigeModoCompleto, localizarCampo } from './form/produtoForm.campoFoco'
 import { ProdutoForm } from './form/ProdutoForm'
 import { useProdutoForm } from './form/useProdutoForm'
 import { acaoTecladoProduto } from './form/produtoFormKeyboard'
@@ -54,6 +58,13 @@ export type ProdutoFormModalProps = Readonly<{
    *  (limpa código de barras/interno). Ignorado quando `produto` está definido. */
   duplicarDe?: ProdutoGerenteRow | null
   onSaved: () => void
+  /**
+   * Foto trocada/removida — evento independente de "produto salvo". O consumidor
+   * deve só recarregar a lista: fechar o modal aqui descartaria os campos que o
+   * operador ainda não salvou. Sem handler, a troca de foto não recarrega nada
+   * (o formulário continua aberto, que é o comportamento seguro).
+   */
+  onImagemAtualizada?: () => void
   idioma?: Idioma
   codigoBarrasInicial?: string | null
 }>
@@ -99,6 +110,7 @@ export function ProdutoFormModal({
   produto,
   duplicarDe = null,
   onSaved,
+  onImagemAtualizada,
   idioma = 'pt',
   codigoBarrasInicial = null,
 }: ProdutoFormModalProps) {
@@ -112,11 +124,16 @@ export function ProdutoFormModal({
   )
   const nomeRef = useRef<HTMLInputElement>(null)
   const codigoBarrasRef = useRef<HTMLInputElement>(null)
+  const precoCustoRef = useRef<HTMLInputElement>(null)
   const precoVarejoRef = useRef<HTMLInputElement>(null)
+  const estoqueInicialRef = useRef<HTMLInputElement>(null)
+  const formWrapRef = useRef<HTMLDivElement>(null)
+  const [erroCampo, setErroCampo] = useState<ProdutoFormErro | null>(null)
   const [saving, setSaving] = useState(false)
   const [opcoes, setOpcoes] = useState(opcoesIniciais)
   const [posSalvar, setPosSalvar] = useState<PosSalvarState | null>(null)
   const [modoCompleto, setModoCompleto] = useState(editando)
+  const [imagemUrl, setImagemUrl] = useState<string | null>(produto?.imagem_url ?? null)
   const [sugestaoHint, setSugestaoHint] = useState<string | null>(null)
   const [knownSuggestion, setKnownSuggestion] = useState(false)
   const [fonteSugestao, setFonteSugestao] = useState<string | null>(null)
@@ -129,14 +146,16 @@ export function ProdutoFormModal({
     if (open) {
       setOpcoes(opcoesIniciais)
       setPosSalvar(null)
+      setErroCampo(null)
       setModoCompleto(editando)
+      setImagemUrl(produto?.imagem_url ?? null)
       setSugestaoHint(null)
       setKnownSuggestion(false)
       setFonteSugestao(null)
       lastLookupGtinRef.current = ''
       openedAtRef.current = Date.now()
     }
-  }, [open, opcoesIniciais, editando])
+  }, [open, opcoesIniciais, editando, produto?.imagem_url])
 
   const aplicarSugestaoBarcode = useCallback(
     async (codigoOverride?: string) => {
@@ -194,9 +213,37 @@ export function ProdutoFormModal({
     void aplicarSugestaoBarcode(inicial)
   }, [open, editando, posSalvar, codigoBarrasInicial, aplicarSugestaoBarcode])
 
+  /**
+   * Leva o operador até o campo reprovado. Roda como efeito (não no handler)
+   * porque o campo pode estar dentro de "Mais detalhes": o `setModoCompleto`
+   * do handler só virou DOM depois do commit, e é aqui que ele já existe.
+   */
+  useEffect(() => {
+    if (!erroCampo) return
+    const el = localizarCampo(formWrapRef.current, erroCampo.campo)
+    if (!el) return
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    el.focus()
+    if (el instanceof HTMLInputElement) el.select()
+  }, [erroCampo])
+
+  /**
+   * Limpa a reprovação quando o operador mexe em qualquer campo validado —
+   * borda vermelha em campo já corrigido é ruído.
+   */
+  useEffect(() => {
+    setErroCampo(null)
+  }, [
+    form.nome,
+    form.codigoBarras,
+    form.precoVarejoInput.display,
+    form.precoAtacadoInput.display,
+  ])
+
   const fechar = useCallback(() => {
     if (saving) return
     setPosSalvar(null)
+    setErroCampo(null)
     onOpenChange(false)
   }, [saving, onOpenChange])
 
@@ -221,9 +268,14 @@ export function ProdutoFormModal({
         },
       })
       if (erro) {
-        emitGerenteToast({ kind: 'error', message: erro })
+        // Abre a seção antes de marcar o erro — o efeito de foco depende do
+        // campo estar montado para conseguir rolar até ele.
+        if (campoExigeModoCompleto(erro.campo)) setModoCompleto(true)
+        setErroCampo(erro)
+        emitGerenteToast({ kind: 'error', message: erro.mensagem })
         return
       }
+      setErroCampo(null)
 
       const estoqueIntent = parseEstoqueInicialIntent(
         form.estoqueInicialQty,
@@ -328,7 +380,15 @@ export function ProdutoFormModal({
         } else {
           const msg = (() => {
             if (comoRascunho) return p.criado_rascunho
-            if (!editando) return p.criado_publicado
+            // "liberado no PDV" seria mentira com saldo 0: a RPC de venda
+            // aborta com ESTOQUE_INSUFICIENTE. Não existe venda com estoque
+            // negativo neste sistema.
+            const semEstoque =
+              Boolean(createdId) &&
+              (!estoqueIntent.deveAplicar || estoqueIntent.quantidade <= 0)
+            if (!editando) {
+              return semEstoque ? p.criado_publicado_sem_estoque : p.criado_publicado
+            }
             if (isRascunho(produto.status_publicacao)) return p.criado_publicado
             return m.comum.sucesso
           })()
@@ -395,6 +455,9 @@ export function ProdutoFormModal({
       codigo: posSalvar.codigoBarras || null,
       produtoId: posSalvar.codigoBarras ? null : posSalvar.produtoId,
     })
+    /** Publicado mas com saldo 0 — o caixa vai recusar até ajustar o estoque. */
+    const estoquePendenteParaVender =
+      !posSalvar.rascunho && !posSalvar.estoqueInicialFalhou && posSalvar.estoqueZerado
 
     return (
       <DragonModal
@@ -433,20 +496,29 @@ export function ProdutoFormModal({
             {p.pos_salvar_hint_estoque_falhou}
           </p>
         ) : null}
-        {!posSalvar.rascunho &&
-        !posSalvar.estoqueInicialFalhou &&
-        posSalvar.estoqueZerado ? (
+        {estoquePendenteParaVender ? (
           <p className="mt-2 rounded-md border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-caption text-[var(--color-warning-strong)]">
             {p.aviso_estoque_zero_publicado}
           </p>
         ) : null}
+        {/* Com saldo 0 o ajuste de estoque NÃO é passo opcional: sem ele o
+            caixa recusa a venda. Chamar de "opcional" mandava o operador
+            embora achando que o produto já vendia. */}
         {!posSalvar.estoqueInicialFalhou ? (
-          <p className="mt-2 text-xs text-jl-fg-3">{p.pos_salvar_hint}</p>
+          <p className="mt-2 text-xs text-jl-fg-3">
+            {estoquePendenteParaVender
+              ? p.pos_salvar_hint_estoque_obrigatorio
+              : p.pos_salvar_hint}
+          </p>
         ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Button
             asChild
-            variant={posSalvar.estoqueInicialFalhou ? 'primary' : 'secondary'}
+            variant={
+              posSalvar.estoqueInicialFalhou || estoquePendenteParaVender
+                ? 'primary'
+                : 'secondary'
+            }
             size="sm"
             className="gap-1.5"
           >
@@ -535,6 +607,7 @@ export function ProdutoFormModal({
       }
     >
       <div
+        ref={formWrapRef}
         onKeyDown={(e) => {
           const acao = acaoTecladoProduto(e, { editando })
           if (!acao || saving) return
@@ -548,6 +621,7 @@ export function ProdutoFormModal({
           opcoes={opcoes}
           produto={produto}
           disabled={saving}
+          erro={erroCampo}
           modoCompleto={modoCompleto}
           onToggleModoCompleto={() => setModoCompleto((v) => !v)}
           onFornecedoresChange={(fornecedores) =>
@@ -557,11 +631,20 @@ export function ProdutoFormModal({
             setOpcoes((prev) => ({ ...prev, categorias }))
           }
           onMarcasChange={(marcas) => setOpcoes((prev) => ({ ...prev, marcas }))}
-          onImagemChange={onSaved}
+          imagemUrl={imagemUrl}
+          onImagemChange={(url) => {
+            // Só reflete a foto nova e avisa quem lista. Trocar foto NÃO é salvar:
+            // encaminhar isto para `onSaved` fechava o modal e derrubava os campos
+            // ainda não gravados (preço, categoria, fiscal…).
+            setImagemUrl(url)
+            onImagemAtualizada?.()
+          }}
           idioma={idioma}
           nomeRef={nomeRef}
           codigoBarrasRef={codigoBarrasRef}
+          precoCustoRef={precoCustoRef}
           precoVarejoRef={precoVarejoRef}
+          estoqueInicialRef={estoqueInicialRef}
           onEnterSubmit={() => void salvar()}
           onCodigoBarrasBlur={() => void aplicarSugestaoBarcode()}
           sugestaoHint={sugestaoHint}

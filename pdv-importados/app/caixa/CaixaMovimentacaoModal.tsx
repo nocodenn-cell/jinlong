@@ -24,6 +24,12 @@ type Props = {
     motivoCodigo: string
     motivo: string
     gerenteSenha?: string
+    /**
+     * Estável entre reenvios da MESMA tentativa do operador. Gerar uma chave
+     * nova a cada clique anula o índice único `uq_movimentacoes_caixa_idempotency`
+     * e permite registrar a mesma sangria duas vezes quando a resposta se perde.
+     */
+    idempotencyKey: string
   }) => Promise<{ ok: true } | { ok: false; error: string }>
 }
 
@@ -51,6 +57,11 @@ export function CaixaMovimentacaoModal({
   const [motivoOutro, setMotivoOutro] = useState("")
   const [gerenteSenha, setGerenteSenha] = useState("")
   const [erroLocal, setErroLocal] = useState<string | null>(null)
+  /**
+   * Uma chave por abertura do modal. Renovada só quando o operador cancela ou a
+   * operação conclui (ambos fecham o modal), nunca entre reenvios após erro.
+   */
+  const [idempotencyKey, setIdempotencyKey] = useState<string>("")
 
   const valorRef = useRef<HTMLInputElement>(null)
   const senhaRef = useRef<HTMLInputElement>(null)
@@ -80,6 +91,7 @@ export function CaixaMovimentacaoModal({
   useEffect(() => {
     if (!open) return
     limparEstado()
+    setIdempotencyKey(crypto.randomUUID())
     queueMicrotask(() => valorRef.current?.focus())
   }, [open, limparEstado])
 
@@ -119,9 +131,12 @@ export function CaixaMovimentacaoModal({
       motivoCodigo,
       motivo: motivoFinal,
       gerenteSenha: precisaSenhaGerente ? gerenteSenha.trim() : undefined,
+      idempotencyKey,
     })
 
     if (!res.ok) {
+      // Mantém `idempotencyKey`: o reenvio precisa ser reconhecido como a mesma
+      // operação caso a primeira tentativa tenha gravado antes de falhar.
       setErroLocal(res.error)
       return
     }
@@ -133,6 +148,7 @@ export function CaixaMovimentacaoModal({
     motivoFinal,
     precisaSenhaGerente,
     gerenteSenha,
+    idempotencyKey,
     onSubmit,
     motivoCodigo,
     m,

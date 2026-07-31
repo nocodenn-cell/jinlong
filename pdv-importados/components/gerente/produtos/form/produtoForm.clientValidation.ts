@@ -17,21 +17,36 @@ export type ProdutoFormClientValidation = Readonly<{
   }
 }>
 
+/**
+ * Identifica o campo inválido. Usa os mesmos valores do atributo `data-field`
+ * dos inputs, para o modal localizar e focar o campo sem um mapa de tradução.
+ */
+export type ProdutoFormCampoErro =
+  | 'nome'
+  | 'codigo_barras'
+  | 'preco_varejo'
+  | 'preco_atacado'
+
+export type ProdutoFormErro = Readonly<{
+  campo: ProdutoFormCampoErro
+  mensagem: string
+}>
+
 export function validarProdutoFormClient(
   input: ProdutoFormClientValidation,
-): string | null {
+): ProdutoFormErro | null {
   const nome = input.nome.trim()
-  if (!nome) return input.messages.nome_obrigatorio
-  if (nome.length < 2) return input.messages.nome_minimo
+  if (!nome) return { campo: 'nome', mensagem: input.messages.nome_obrigatorio }
+  if (nome.length < 2) return { campo: 'nome', mensagem: input.messages.nome_minimo }
 
   const barcode = input.codigoBarras.trim()
   if (barcode.length > 0 && barcode.length < 3) {
-    return input.messages.codigo_barras_minimo
+    return { campo: 'codigo_barras', mensagem: input.messages.codigo_barras_minimo }
   }
 
   if (!input.comoRascunho) {
     if (input.precoVarejo == null || input.precoVarejo <= 0) {
-      return input.messages.preco_invalido
+      return { campo: 'preco_varejo', mensagem: input.messages.preco_invalido }
     }
   }
 
@@ -40,7 +55,7 @@ export function validarProdutoFormClient(
     input.precoVarejo != null &&
     input.precoAtacado >= input.precoVarejo
   ) {
-    return input.messages.atacado_maior_varejo
+    return { campo: 'preco_atacado', mensagem: input.messages.atacado_maior_varejo }
   }
 
   return null

@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/auth/SignOutButton"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -10,11 +9,9 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { turnoNumeroDeCaixaId } from "@/app/caixa/caixaPdvTurnoDisplay"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
-import { DragonEmblemIcon } from "@/components/icons/DragonEmblemIcon"
 import { CaixaKeyboardShortcutsReference } from "@/app/caixa/CaixaKeyboardShortcutsReference"
 import { cn } from "@/lib/utils"
 import { formatDecimalBRL } from "@/lib/format/money"
-import { ROUTES } from "@shared-core/navigation/routes"
 
 type Props = {
   m: Mensagens
@@ -27,6 +24,9 @@ type Props = {
   onFecharCaixa: () => void
   printerStatus?: ThermalStatus
   printerDeviceName?: string | null
+  /** Referência de atalhos — estado no CaixaPageClient para o F1 poder alternar. */
+  atalhosAbertos: boolean
+  onAtalhosOpenChange: (open: boolean) => void
 }
 
 export function CaixaPdvTopBar({
@@ -40,6 +40,8 @@ export function CaixaPdvTopBar({
   onFecharCaixa,
   printerStatus,
   printerDeviceName,
+  atalhosAbertos,
+  onAtalhosOpenChange,
 }: Props) {
   const fontStack =
     idioma === "zh"
@@ -68,35 +70,45 @@ export function CaixaPdvTopBar({
       )}
       style={fontStack ? { fontFamily: fontStack } : undefined}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-jl-border-1 bg-jl-surface-soft text-jl-fg-1">
-          <DragonEmblemIcon className="h-5 w-5" />
+      {/* Identidade sem moldura: 金龍 é a marca, não um ícone dentro de caixa.
+          "Venda PDV" saiu — o operador sabe onde está; o rótulo só ocupava
+          espaço no canto mais nobre da tela. */}
+      <div className="flex min-w-0 flex-1 items-baseline gap-2">
+        <span
+          className="shrink-0 text-2xl leading-none tracking-[0.08em] sm:text-[1.75rem]"
+          style={{ color: "#D4AF37" }}
+        >
+          金龍
         </span>
-        <h1 className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg text-jl-fg-1">
-          {m.caixa.topbar_titulo}
-        </h1>
+        <span className="truncate text-[10px] font-medium uppercase tracking-[0.22em] text-jl-fg-3">
+          Jinlong
+        </span>
       </div>
 
       <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:w-auto sm:flex-nowrap">
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-xs sm:text-sm">
-          <span
-            className="max-w-44 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
-            title={turnoText}
-          >
-            {turnoText}
-          </span>
+          {aberto ? (
+            <span
+              className="max-w-44 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
+              title={turnoText}
+            >
+              {turnoText}
+            </span>
+          ) : null}
           <span
             className="max-w-56 truncate rounded-md border px-2 py-1 font-medium border-jl-border-1 bg-jl-surface-soft"
             title={operadorText}
           >
             {operadorText}
           </span>
-          <span
-            className="max-w-48 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
-            title={fundoText}
-          >
-            {fundoText}
-          </span>
+          {aberto && !caixaStatus.blindClosureEnabled ? (
+            <span
+              className="max-w-48 truncate rounded-md border px-2 py-1 font-medium tabular-nums border-jl-border-1 bg-jl-surface-soft"
+              title={fundoText}
+            >
+              {fundoText}
+            </span>
+          ) : null}
           {printerStatus && printerStatus !== "idle" && (
             <span
               title={printerDeviceName ?? "Impressora"}
@@ -151,16 +163,15 @@ export function CaixaPdvTopBar({
               {processandoCaixa ? `${m.caixa.abrir}…` : m.caixa.abrir}
             </Button>
           )}
-          <CaixaKeyboardShortcutsReference m={m} variant="classic" />
-          <Link
-            href={ROUTES.auth.changePassword}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium sm:text-sm",
-              "bg-jl-surface-soft text-jl-fg-1 border border-jl-border-1 hover:bg-jl-surface-elev",
-            )}
-          >
-            {m.login.link_trocar_senha}
-          </Link>
+          <CaixaKeyboardShortcutsReference
+            m={m}
+            variant="classic"
+            open={atalhosAbertos}
+            onOpenChange={onAtalhosOpenChange}
+          />
+          {/* "Trocar senha" saiu da barra do PDV: é tarefa de conta, feita uma vez
+              na vida, ocupando espaço permanente na tela de venda. Continua
+              acessível em /auth/alterar-senha e pelo rodapé do admin. */}
           <SignOutButton
             label={m.comum.sair}
             className={cn(

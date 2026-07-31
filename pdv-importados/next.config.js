@@ -64,4 +64,11 @@ module.exports = withSentryConfig(nextConfig, {
   disableLogger: true,
   // Não adiciona monitors automáticos do Vercel Cron
   automaticVercelMonitors: false,
+  // Release tracking (P1-7): sem isto os source maps enviados não são
+  // correlacionados a nenhuma release, e a stack de produção fica minificada
+  // no Sentry. VERCEL_GIT_COMMIT_SHA é injetado pela Vercel em todo build.
+  // O fallback undefined preserva o comportamento atual em build local.
+  release: {
+    name: process.env.VERCEL_GIT_COMMIT_SHA || undefined,
+  },
 });

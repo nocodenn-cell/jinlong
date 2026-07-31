@@ -7,6 +7,18 @@
 # (workflow_dispatch) ou em PR que receba a label `run-tauri`.
 name: CI pdv-local
 
+# Cancela execuções obsoletas do mesmo ref. Sem isto, cada commit intermediário
+# de uma PR deixa um run completo rodando até o fim mesmo já estando superado —
+# principal driver do consumo de minutos que estourou a cota (ver P0-1).
+# Em `main` NÃO cancela: um commit que já entrou precisa ser validado até o fim.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Least privilege explícito — ver nota em ci-backend-supabase.yml.
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -35,6 +47,7 @@ jobs:
     # Não roda no agendamento semanal: lá o alvo é só o toolchain Rust.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       # Sonar githubactions:S7637 — SHA do release da tag indicada
@@ -64,14 +77,17 @@ jobs:
       (github.event_name == 'pull_request' &&
        contains(github.event.pull_request.labels.*.name, 'run-tauri'))
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        # Pinado por SHA: `@stable` é uma branch mutável — quem controla o repo da
+        # action pode trocar o código executado no runner sem alterar a referência.
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
 
       - name: Cache Cargo registry/target
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
         with:
           workspaces: pdv-local/src-tauri
 

@@ -92,7 +92,9 @@ describe('useCarrinhoStore behavior', () => {
     expect(state.totalDesconto).toBe(0)
   })
 
-  it('desconto manual não permite preço negativo', () => {
+  it('desconto manual não permite preço negativo (ATACADO, isento do limite de 15%)', () => {
+    // VAREJO com desconto > 15% agora exige gerente (MVF #1, ver testes abaixo);
+    // o piso de preço é exercitado aqui via ATACADO, que é isento do limite.
     useCarrinhoStore.getState().adicionarItem({
       id: 'linha-1',
       produtoId: 'p-1',
@@ -100,6 +102,12 @@ describe('useCarrinhoStore behavior', () => {
       quantidade: 1,
       precoUnitario: 10,
       precoOriginal: 10,
+      resultado: {
+        precoUnitario: 10,
+        precoOriginal: 10,
+        descontoUnitario: 0,
+        tipoPreco: 'ATACADO',
+      },
     })
 
     useCarrinhoStore.getState().aplicarDescontoManual('linha-1', 50, 'teste')
