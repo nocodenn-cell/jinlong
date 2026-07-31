@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Package,
   Percent,
+  RotateCcw,
   ShoppingCart,
   X,
   XCircle,
@@ -61,6 +62,12 @@ const TIPO_VISUAL: Record<AuditoriaTipo, TipoVisual> = {
     chipClass: 'admin-v2-badge-gold',
     iconClass: 'admin-v2-alert-warning',
   },
+  DEVOLUCAO: {
+    label: 'Devolução/Troca',
+    icon: RotateCcw,
+    chipClass: 'admin-v2-badge-warning',
+    iconClass: 'admin-v2-alert-warning',
+  },
 }
 
 const DETALHE_LABELS: Record<string, string> = {
@@ -80,11 +87,20 @@ const DETALHE_LABELS: Record<string, string> = {
   gerente_id: 'Gerente',
   desconto_percentual: 'Desconto (%)',
   desconto_valor: 'Desconto (R$)',
+  tipo_operacao: 'Tipo de operação',
+  forma_estorno: 'Forma de estorno',
+  valor_caixa_estornado: 'Valor estornado em caixa',
 }
 
 function detalheValor(chave: string, valor: string | number | null): string {
   if (valor == null || valor === '') return '—'
-  if (chave === 'total_bruto' || chave === 'total_liquido' || chave === 'valor_estornado' || chave === 'desconto_valor') {
+  if (
+    chave === 'total_bruto' ||
+    chave === 'total_liquido' ||
+    chave === 'valor_estornado' ||
+    chave === 'desconto_valor' ||
+    chave === 'valor_caixa_estornado'
+  ) {
     return formatBRL(Number(valor))
   }
   return String(valor)

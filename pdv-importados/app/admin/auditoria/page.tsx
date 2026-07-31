@@ -79,6 +79,7 @@ const TIPO_OPTIONS: Array<{ id: TipoFiltro; label: string }> = [
   { id: 'AJUSTE_ESTOQUE', label: 'Estoque' },
   { id: 'ALERTA', label: 'Alertas' },
   { id: 'DESCONTO', label: 'Descontos' },
+  { id: 'DEVOLUCAO', label: 'Devoluções/Trocas' },
 ]
 
 type SearchParams = { periodo?: string; tipo?: string }
@@ -95,7 +96,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
   const periodo = oneOf<Periodo>(sp.periodo, ['tudo', 'hoje', 'ontem', '7d', 'mes'], '7d')
   const tipo = oneOf<TipoFiltro>(
     sp.tipo,
-    ['all', 'VENDA', 'CANCELAMENTO', 'AJUSTE_ESTOQUE', 'ALERTA', 'DESCONTO'],
+    ['all', 'VENDA', 'CANCELAMENTO', 'AJUSTE_ESTOQUE', 'ALERTA', 'DESCONTO', 'DEVOLUCAO'],
     'all'
   )
 
@@ -116,7 +117,7 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
       acc[e.tipo] += 1
       return acc
     },
-    { VENDA: 0, CANCELAMENTO: 0, AJUSTE_ESTOQUE: 0, ALERTA: 0, DESCONTO: 0 }
+    { VENDA: 0, CANCELAMENTO: 0, AJUSTE_ESTOQUE: 0, ALERTA: 0, DESCONTO: 0, DEVOLUCAO: 0 }
   )
 
   const metricCards: Array<{
