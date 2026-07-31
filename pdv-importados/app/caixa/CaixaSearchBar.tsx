@@ -1,7 +1,7 @@
 "use client"
 
 import { forwardRef, useCallback, useEffect, useRef, type FormEvent, type MutableRefObject } from "react"
-import { Barcode, Volume2, VolumeX } from "lucide-react"
+import { Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/forms"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -78,14 +78,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
         onSubmit={onSubmit}
         className={cn("flex flex-col sm:flex-row", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-3")}
       >
-        <div className="relative flex-1">
-          <Barcode
-            className={cn(
-              "pointer-events-none absolute top-1/2 -translate-y-1/2 text-fg-subtle",
-              compact ? "left-2.5 h-4 w-4" : "left-3 h-5 w-5",
-            )}
-            aria-hidden
-          />
+        <div className="flex-1">
           <Input
             ref={setRef}
             value={codigo}
@@ -95,8 +88,8 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             disabled={busy}
             data-caixa-busca="true"
             className={cn(
-              "w-full pl-10",
-              compact ? "py-1.5 pl-8 text-body" : "h-14 text-subtitle",
+              "w-full",
+              compact ? "py-1.5 text-body" : "h-14 text-subtitle",
             )}
             onKeyDown={(e) => {
               if (e.key === "Escape") {
