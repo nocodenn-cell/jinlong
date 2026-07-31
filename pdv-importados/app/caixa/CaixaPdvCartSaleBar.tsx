@@ -73,7 +73,9 @@ export function CaixaPdvCartSaleBar({
               </div>
 
               <div
-                className="text-3xl font-black tabular-nums leading-tight text-jl-fg-1"
+                data-testid="caixa-total-liquido"
+                data-total-liquido={totalLiquidoComGerente.toFixed(2)}
+                className="text-4xl font-black tabular-nums leading-tight text-jl-fg-1"
               >
                 {moedaPrefixo} {formatDecimalBRL(totalLiquidoComGerente)}
               </div>
