@@ -703,6 +703,31 @@ const LotePublicacaoSchema = z.object({
   produto_ids: z.array(z.string().uuid()).min(1).max(200),
 })
 
+/** Status gravados de vários produtos numa ida só — mesma leitura pessimista da via unitária. */
+async function lerStatusPublicacaoLote(
+  produtoIds: string[],
+): Promise<Map<string, StatusPublicacao | null>> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('produtos')
+    .select('id, status_publicacao')
+    .in('id', produtoIds)
+  const linhas = (data ?? []) as { id: string; status_publicacao: StatusPublicacao | null }[]
+  return new Map(linhas.map((l) => [l.id, l.status_publicacao ?? null]))
+}
+
+/**
+ * Estreia de rascunhos em lote (DRAFT → PUBLICADO).
+ *
+ * O gate `podePublicarProduto` vale AQUI pelo mesmo motivo da via unitária: é
+ * Server Action, endpoint público. Sem isto o lote seria o buraco por onde a
+ * regra vaza — bastaria selecionar um INATIVO na lista para republicá-lo sem
+ * passar por `reativarProduto`, que é a transição própria para isso.
+ *
+ * Produtos não publicáveis são descartados em silêncio, não derrubam o lote: o
+ * contrato de retorno é `publicados`, então publicar menos do que foi
+ * selecionado já é um resultado que a UI sabe exibir. Se nada sobrar, é erro.
+ */
 export async function publicarProdutosLote(
   rawIds: string[],
 ): Promise<ActionResult<{ publicados: number }>> {
@@ -718,7 +743,16 @@ export async function publicarProdutosLote(
     }
   }
 
-  const result = await setProductStatusLoteAction(parsed.data.produto_ids, 'PUBLICADO')
+  const statusAtuais = await lerStatusPublicacaoLote(parsed.data.produto_ids)
+  const publicaveis = parsed.data.produto_ids.filter((id) =>
+    podePublicarProduto(statusAtuais.get(id) ?? null),
+  )
+  if (publicaveis.length === 0) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+  }
+
+  const result = await setProductStatusLoteAction(publicaveis, 'PUBLICADO')
   if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: { publicados: result.atualizados } }
 }
