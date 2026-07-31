@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, FolderInput, ToggleLeft, ToggleRight, Trash2, X } from 'lucide-react'
+import { BadgeCheck, FolderInput, ToggleLeft, Trash2, X } from 'lucide-react'
 import {
   alterarAtivoLoteProdutos,
   alterarCategoriaLoteProdutos,
@@ -102,24 +102,9 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
           {p.publicar_lote}
         </Button>
 
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="gap-1.5"
-          disabled={pending}
-          title={p.lote_ativar_title}
-          aria-label={p.lote_ativar_aria}
-          onClick={() =>
-            run(async () => {
-              const r = await alterarAtivoLoteProdutos(alvo, true)
-              return r.success ? { success: true } : { success: false, error: r.error }
-            }, m.comum.sucesso)
-          }
-        >
-          <ToggleRight size={14} aria-hidden />
-          {p.lote_ativar}
-        </Button>
+        {/* Não há botão "Ativar": ativar é publicar (`statusFromAtivoLegacy(true)`
+            → PUBLICADO) e passaria pelo mesmo gate do botão "Publicar" ao lado.
+            Dois botões para a mesma transição só criam a dúvida de qual usar. */}
 
         <Button
           type="button"

@@ -97,3 +97,54 @@ describe('publicarProdutosLote — gate de rascunho no servidor', () => {
     expect(setProductStatusLoteActionMock).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * "Ativar" em lote é a outra porta para PUBLICADO (`statusFromAtivoLegacy(true)`).
+ * Sem o mesmo gate, bastava trocar de botão para estrear um DRAFT ou republicar
+ * um INATIVO sem passar por `reativarProduto` — o gate acima viraria decoração.
+ */
+describe('alterarAtivoLoteProdutos — ativar é publicar e usa o mesmo gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    assertGerenteSessionMock.mockResolvedValue({
+      ok: true,
+      session: { userId: 'mgr-1', lojaId: 'loja-1', idioma: 'pt' },
+    })
+    setProductStatusLoteActionMock.mockResolvedValue({ ok: true, atualizados: 1 })
+    inMock.mockResolvedValue({
+      data: [
+        { id: RASCUNHO, status_publicacao: 'DRAFT' },
+        { id: INATIVO, status_publicacao: 'INATIVO' },
+      ],
+    })
+  })
+
+  it('ativar publica só o rascunho e descarta o INATIVO', async () => {
+    const { alterarAtivoLoteProdutos } = await import('./actions')
+    const res = await alterarAtivoLoteProdutos([RASCUNHO, INATIVO], true)
+
+    expect(res.success).toBe(true)
+    expect(setProductStatusLoteActionMock).toHaveBeenCalledWith([RASCUNHO], 'PUBLICADO')
+  })
+
+  it('ativar só INATIVO falha — reativar é transição própria', async () => {
+    inMock.mockResolvedValue({ data: [{ id: INATIVO, status_publicacao: 'INATIVO' }] })
+
+    const { alterarAtivoLoteProdutos } = await import('./actions')
+    const res = await alterarAtivoLoteProdutos([INATIVO], true)
+
+    expect(res.success).toBe(false)
+    expect(setProductStatusLoteActionMock).not.toHaveBeenCalled()
+  })
+
+  it('inativar não tem gate: qualquer status pode ir para INATIVO', async () => {
+    const { alterarAtivoLoteProdutos } = await import('./actions')
+    const res = await alterarAtivoLoteProdutos([RASCUNHO, PUBLICADO, INATIVO], false)
+
+    expect(res.success).toBe(true)
+    expect(setProductStatusLoteActionMock).toHaveBeenCalledWith(
+      [RASCUNHO, PUBLICADO, INATIVO],
+      'INATIVO',
+    )
+  })
+})

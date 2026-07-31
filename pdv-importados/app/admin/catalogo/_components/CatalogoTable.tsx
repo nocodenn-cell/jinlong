@@ -91,9 +91,13 @@ export function CatalogoTable({
   const [duplicando, setDuplicando] = useState<CatalogoProduto | null>(null)
   const [selecionados, setSelecionados] = useState<ReadonlySet<string>>(() => new Set())
   const [excluirOpen, setExcluirOpen] = useState(false)
+  // Alvo da exclusão, separado da seleção: a lixeira de uma linha exclui só
+  // aquela linha sem descartar uma seleção múltipla já feita pelo operador.
+  const [excluirIds, setExcluirIds] = useState<readonly string[]>([])
 
   const idsPagina = produtos.map((p) => p.id)
   const todosSelecionados = idsPagina.length > 0 && idsPagina.every((id) => selecionados.has(id))
+  const chavePagina = idsPagina.join(',')
 
   const alternarLinha = (id: string) => {
     setSelecionados((prev) => {
@@ -114,6 +118,12 @@ export function CatalogoTable({
   }
 
   const limparSelecao = () => setSelecionados(new Set())
+
+  // Trocar de página ou de filtro troca o conjunto visível: manter a seleção
+  // faria a barra de lote agir sobre produtos que não estão mais na tela.
+  useEffect(() => {
+    setSelecionados(new Set())
+  }, [chavePagina])
 
   useEffect(() => {
     if (searchParams.get('modal') === 'novo') {
@@ -290,19 +300,24 @@ export function CatalogoTable({
         ui={m.admin_ui}
         opcoes={opcoes}
         onLimpar={limparSelecao}
-        onExcluir={() => setExcluirOpen(true)}
+        onExcluir={() => {
+          setExcluirIds([...selecionados])
+          setExcluirOpen(true)
+        }}
       />
 
       <ProdutosExcluirLoteModal
         open={excluirOpen}
         onOpenChange={(open) => {
           setExcluirOpen(open)
-          if (!open) limparSelecao()
+          if (!open) setExcluirIds([])
         }}
-        produtoIds={[...selecionados]}
+        produtoIds={[...excluirIds]}
         m={m}
         onLoteAplicadoComSucesso={() => {
-          limparSelecao()
+          // Só sai da seleção quem foi realmente excluído.
+          setSelecionados((prev) => new Set([...prev].filter((id) => !excluirIds.includes(id))))
+          setExcluirIds([])
           router.refresh()
         }}
       />
@@ -363,7 +378,7 @@ export function CatalogoTable({
               aria-label={m.produtos.exclusao_linha_aria}
               title={m.produtos.exclusao_linha_title}
               onClick={() => {
-                setSelecionados(new Set([row.id]))
+                setExcluirIds([row.id])
                 setExcluirOpen(true)
               }}
             >

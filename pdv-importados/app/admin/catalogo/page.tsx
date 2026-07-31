@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
+import { opcoesSelecionaveis } from '@/core/catalog/opcoesCadastro'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { ErrorState } from '@/components/ui/feedback'
@@ -131,13 +132,15 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     : null
 
   // ─── FilterBar (Fase 2) ──────────────────────────────────────────────────
+  // Opção inativa não é oferecida como filtro novo, mas continua listada se for
+  // a que está filtrando agora — senão o filtro ativo sumiria do seletor.
   const catOptions = [
     { value: '', label: m.estoque.filtro_todas_categorias },
-    ...opcoes.categorias.map((c) => ({ value: c.id, label: c.nome })),
+    ...opcoesSelecionaveis(opcoes.categorias, categoria ?? '').map((c) => ({ value: c.id, label: c.nome })),
   ]
   const marcaOptions = [
     { value: '', label: ui.catalogo_todas_marcas },
-    ...opcoes.marcas.map((m) => ({ value: m.id, label: m.nome })),
+    ...opcoesSelecionaveis(opcoes.marcas, marca ?? '').map((m) => ({ value: m.id, label: m.nome })),
   ]
   const fornOptions = [
     { value: '', label: ui.catalogo_todos_fornecedores },

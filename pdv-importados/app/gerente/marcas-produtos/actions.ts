@@ -3,8 +3,6 @@
 import { z } from 'zod'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
-import { createClient } from '@/lib/supabase/server'
-import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import {
   type CadastroActionResult,
   zodValidationError,
@@ -118,8 +116,14 @@ export async function atualizarMarcaProduto(input: unknown): Promise<ActionResul
 }
 
 /**
- * Inativar tira a marca das escolhas novas; produtos já vinculados mantêm o
- * vínculo (as opções do catálogo já filtram `ativo = true` para marcas).
+ * Inativar tira a marca das escolhas NOVAS; o produto que já a usa continua
+ * exibindo e gravando o vínculo, porque `opcoes.marcas` carrega a flag `ativo`
+ * e o formulário resolve por `opcoesSelecionaveis`. Mesma regra da categoria —
+ * ver Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md.
+ *
+ * Não existe exclusão de marca: com produtos vinculados ela seria recusada de
+ * qualquer forma, e sem vínculo inativar já resolve. Uma Server Action é
+ * endpoint público, então a que não tem tela não é criada.
  */
 export async function alternarAtivoMarcaProduto(
   id: string,
@@ -128,37 +132,4 @@ export async function alternarAtivoMarcaProduto(
   const result = await alternarAtivoCadastro(TABELA, id, ativo, [...REVALIDATE_PATHS])
   if (result.success) revalidateMarcaPaths()
   return result
-}
-
-/**
- * Exclusão física só quando não há produto vinculado — mesma proteção usada em
- * categorias. Com produtos vinculados o caminho é inativar.
- */
-export async function excluirMarcaProduto(id: string): Promise<ActionResult<null>> {
-  const auth = await assertGerenteSession()
-  if (!auth.ok) return { success: false, error: auth.error }
-
-  const idParsed = z.string().uuid().safeParse(id)
-  if (!idParsed.success) return { success: false, error: 'ID inválido.' }
-
-  const supabase = await createClient()
-  const { count } = await supabase
-    .from('produtos')
-    .select('id', { count: 'exact', head: true })
-    .eq('marca_id', idParsed.data)
-
-  if ((count ?? 0) > 0) {
-    return {
-      success: false,
-      error: `Não é possível excluir: marca possui ${count} produto(s) vinculado(s). Inative-a ou reatribua os produtos antes.`,
-    }
-  }
-
-  const { error } = await supabase.from('marcas').delete().eq('id', idParsed.data)
-  if (error) {
-    return { success: false, error: mensagemErroComSecao('Excluir marca', error.message) }
-  }
-
-  revalidateMarcaPaths()
-  return { success: true, data: null }
 }

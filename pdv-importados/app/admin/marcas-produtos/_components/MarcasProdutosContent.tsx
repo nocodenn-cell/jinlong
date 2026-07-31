@@ -163,7 +163,7 @@ export function MarcasProdutosContent({
     },
   ]
 
-  const countLabel = `${dados.total} ${dados.total === 1 ? m.categoria_singular : m.categorias_plural}`
+  const countLabel = `${dados.total} ${dados.total === 1 ? m.marca_singular : m.marcas_plural}`
 
   return (
     <CrudListShell
@@ -211,7 +211,7 @@ export function MarcasProdutosContent({
               onClick={() => setCreatingNew(true)}
             >
               <Plus className="h-4 w-4" aria-hidden />
-              {m.nova_categoria}
+              {m.nova_marca}
             </Button>
           </PageActions>
         </>
@@ -261,7 +261,7 @@ export function MarcasProdutosContent({
       {editingId ? (
         <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <Field id="marca-edit" label={m.editar_categoria} className="flex-1">
+            <Field id="marca-edit" label={m.editar_marca} className="flex-1">
               <Input
                 value={editingNome}
                 onChange={(e) => setEditingNome(e.target.value)}
@@ -302,9 +302,9 @@ export function MarcasProdutosContent({
         emptyState={
           <EmptyState
             icon={<Tag className="h-6 w-6" aria-hidden />}
-            title={m.sem_categorias}
+            title={m.sem_marcas}
             description={m.cadastro_rapido_hint}
-            actionLabel={m.nova_categoria}
+            actionLabel={m.nova_marca}
             onAction={() => setCreatingNew(true)}
           />
         }
@@ -315,8 +315,8 @@ export function MarcasProdutosContent({
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`${m.editar_categoria} ${row.nome}`}
-              title={m.editar_categoria}
+              aria-label={`${m.editar_marca} ${row.nome}`}
+              title={m.editar_marca}
               onClick={() => {
                 setEditingId(row.id)
                 setEditingNome(row.nome)
@@ -344,7 +344,7 @@ export function MarcasProdutosContent({
 
       {dados.total > 50 ? (
         <p className="mt-3 text-caption text-fg-subtle">
-          {`${page} / ${Math.ceil(dados.total / 50)} · ${dados.total} ${m.categorias_plural}`}
+          {`${page} / ${Math.ceil(dados.total / 50)} · ${dados.total} ${m.marcas_plural}`}
         </p>
       ) : null}
     </CrudListShell>

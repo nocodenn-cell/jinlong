@@ -107,6 +107,7 @@ export function ProdutoRecebimentoAutocomplete({
           role="combobox"
           aria-expanded={aberto}
           aria-controls={listId}
+          aria-autocomplete="list"
           className="pl-8"
           onChange={(e) => {
             setSelecionado(null)
@@ -142,19 +143,33 @@ export function ProdutoRecebimentoAutocomplete({
           role="listbox"
           className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-lg"
         >
+          {/* Estados de aviso não são escolhas: `role="presentation"` evita que
+              o leitor de tela os anuncie como opções da lista. */}
           {carregando ? (
-            <li className="flex items-center gap-2 px-3 py-2 text-caption text-fg-subtle">
+            <li
+              role="presentation"
+              className="flex items-center gap-2 px-3 py-2 text-caption text-fg-subtle"
+            >
               <Loader2 size={12} className="animate-spin" aria-hidden />
             </li>
           ) : termo.trim().length < 2 ? (
-            <li className="px-3 py-2 text-caption text-fg-subtle">{minimoLabel}</li>
+            <li role="presentation" className="px-3 py-2 text-caption text-fg-subtle">
+              {minimoLabel}
+            </li>
           ) : opcoes.length === 0 ? (
-            <li className="px-3 py-2 text-caption text-fg-subtle">{semResultadosLabel}</li>
+            <li role="presentation" className="px-3 py-2 text-caption text-fg-subtle">
+              {semResultadosLabel}
+            </li>
           ) : (
+            // `role="option"` fica no elemento focável (o botão) e o `<li>` sai do
+            // caminho com `role="none"`: uma `option` não pode conter controle
+            // interativo, e o listbox precisa das options como filhas diretas.
             opcoes.map((p) => (
-              <li key={p.id} role="option" aria-selected={false}>
+              <li key={p.id} role="none">
                 <button
                   type="button"
+                  role="option"
+                  aria-selected={false}
                   onClick={() => escolher(p)}
                   className="fp-focus-ring flex w-full flex-col items-start gap-0.5 px-3 py-1.5 text-left hover:bg-[var(--color-surface-soft)]"
                 >

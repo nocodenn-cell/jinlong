@@ -7,6 +7,8 @@ import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionCo
 import { validarRemessaInput } from './actions.validation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
+import { escapeIlike } from '@/app/admin/financeiro/receivableReader'
+import { isInativo, type StatusPublicacao } from '@/core/catalog/statusPublicacao'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -27,6 +29,14 @@ export type RecebimentoProdutoBusca = Readonly<{
  * o produto simplesmente não aparecia, sem erro nem aviso
  * (AUDITORIA_CATALOGO_PRODUTO.md §5.5). Busca por nome, código de barras ou
  * código interno, com teto pequeno e escopo de loja.
+ *
+ * DRAFT é aceito de propósito; INATIVO não. Receber é entrada física de
+ * mercadoria, que precede a venda: produto novo nasce DRAFT
+ * (`defaultStatusNovoProduto`), então exigir publicação antes de receber
+ * obrigaria a publicar no PDV um item que ainda não chegou. Já o INATIVO é item
+ * aposentado — receber estoque para ele é quase sempre engano de digitação, e o
+ * caminho certo é reativar antes. Decisão registrada em
+ * AUDITORIA_CATALOGO_PRODUTO.md §5.5.
  */
 export async function buscarProdutosRecebimento(
   termo: string,
@@ -39,22 +49,25 @@ export async function buscarProdutosRecebimento(
     return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
   }
 
-  // `.or()` do PostgREST é uma mini-linguagem: vírgula separa condições,
-  // parênteses agrupam e `%` é curinga do ilike. Termo cru com esses caracteres
-  // ("Caneca (300ml)", "copo, azul") quebrava a query e o autocomplete devolvia
-  // vazio sem erro visível. Trocamos por espaço em vez de escapar: busca é
-  // aproximada, e um espaço a mais não muda o resultado prático.
-  const t = (termo ?? '').replace(/[%,()]/g, ' ').trim().slice(0, 120)
+  // `.or()` do PostgREST é uma mini-linguagem: vírgula separa condições e
+  // parênteses agrupam. Termo cru com esses caracteres ("Caneca (300ml)",
+  // "copo, azul") quebrava a query e o autocomplete devolvia vazio sem erro
+  // visível — e permitia acrescentar condições à consulta. Viram espaço em vez
+  // de escape: busca é aproximada, e um espaço a mais não muda o resultado.
+  const t = (termo ?? '').replace(/[,()]/g, ' ').trim().slice(0, 120)
   if (t.length < 2) return { success: true, data: [] }
 
   const supabase = await createClient()
+  // Curingas de LIKE (`%`, `_`) pelo utilitário já usado no financeiro: sem
+  // isto um `%` digitado casaria com o catálogo inteiro.
+  const seguro = escapeIlike(t)
   const digitos = t.replace(/\D/g, '')
-  const ors = [`nome.ilike.%${t}%`, `codigo_interno.ilike.%${t}%`]
+  const ors = [`nome.ilike.%${seguro}%`, `codigo_interno.ilike.%${seguro}%`]
   if (digitos) ors.push(`codigo_barras.like.%${digitos}%`)
 
   const { data, error } = await supabase
     .from('produtos')
-    .select('id, nome, codigo_barras')
+    .select('id, nome, codigo_barras, status_publicacao')
     .eq('loja_id', lojaId)
     .or(ors.join(','))
     .order('nome', { ascending: true })
@@ -63,7 +76,15 @@ export async function buscarProdutosRecebimento(
   if (error) {
     return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
   }
-  return { success: true, data: (data ?? []) as RecebimentoProdutoBusca[] }
+  const linhas = (data ?? []) as (RecebimentoProdutoBusca & {
+    status_publicacao: StatusPublicacao | null
+  })[]
+  return {
+    success: true,
+    data: linhas
+      .filter((p) => !isInativo(p.status_publicacao))
+      .map(({ id, nome, codigo_barras }) => ({ id, nome, codigo_barras })),
+  }
 }
 
 export async function criarRemessaConferencia(input: {

@@ -19,12 +19,18 @@ export default async function AdminEstoqueRecebimentoPage() {
     // Só precisamos saber SE existe produto — a escolha agora é por busca
     // server-side (ProdutoRecebimentoAutocomplete). Antes vinham 500 linhas
     // para popular um `<select>` que escondia todo o resto do catálogo.
-    supabase
-      .from('produtos')
-      .select('id, nome, codigo_barras')
-      .eq('ativo', true)
-      .order('nome')
-      .limit(1),
+    //
+    // Escopo de loja igual ao da busca (`buscarProdutosRecebimento`): sem ele a
+    // presença era global e o formulário aparecia habilitado em loja cujo
+    // catálogo está vazio, com a busca não retornando nada.
+    lojaId
+      ? supabase
+          .from('produtos')
+          .select('id, nome, codigo_barras')
+          .eq('loja_id', lojaId)
+          .order('nome')
+          .limit(1)
+      : Promise.resolve({ data: [] }),
     lojaId
       ? supabase
           .from('remessas')

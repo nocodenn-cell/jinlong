@@ -300,3 +300,50 @@ da raiz, incluindo o preview do Autonoma na PR #251. Duplicatas removidas.
 
 **Nenhuma regra de negócio foi alterada sem decisão registrada.** As duas que mudaram
 estão em `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`.
+
+## 9. Rodada 3 — correções da auditoria arquitetural
+
+### ✅ Corrigido
+
+| Sev | Item | Correção |
+|---|---|---|
+| P0 | `alterarAtivoLoteProdutos(ids, true)` levava a `PUBLICADO` sem passar por `podePublicarProduto` — porta lateral para o gate criado na rodada 2 | Gate aplicado na própria action quando `ativo = true`; o botão "Ativar" saiu da barra de lote por ser a mesma transição do "Publicar" ao lado |
+| P2 | Toast do lote informava a quantidade **selecionada**, não a publicada | `run` da toolbar passou a receber a mensagem de dentro do callback, onde `r.data.publicados` é conhecido |
+| P2 | Termo do autocomplete de recebimento entrava cru no `or=` do PostgREST | Reuso de `escapeIlike` (exportado de `receivableReader.ts`) + neutralização de `,` `(` `)` |
+| P2 | Marca inativa sumia do formulário do produto que a usa (assimetria com categoria) | `opcoes.marcas` passou a carregar `ativo`; `ComercialSection` usa `opcoesSelecionaveis`/`selecionadaEstaInativa`, com o mesmo aviso da categoria |
+| P3 | `excluirMarcaProduto` exportada sem nenhuma tela | Removida — Server Action é endpoint público, e a que não tem consumidor não fica |
+| P3 | Seleção do catálogo sobrevivia à troca de página/filtro | Limpa quando o conjunto de ids da página muda |
+| P3 | Lixeira de uma linha descartava a seleção múltipla | Alvo da exclusão em estado próprio (`excluirIds`) |
+| P3 | `role="option"` com `<button>` dentro; estados de aviso anunciados como opções | `role` migrado para o elemento focável, `<li role="none">`; avisos como `presentation`; `aria-autocomplete="list"` |
+| P3 | Presença de produtos sem escopo de loja, busca com escopo | Checagem de presença passou a filtrar por `loja_id` |
+| — | Chaves i18n de marcas com vocabulário de categoria | `nova_marca`, `editar_marca`, `sem_marcas`, `marca_singular`, `marcas_plural` (pt e zh) |
+
+### Decisão: recebimento aceita DRAFT, não aceita INATIVO
+
+O `<select>` antigo filtrava `ativo = true`, o que excluía os dois. A busca nova
+aceita **DRAFT de propósito**: produto novo nasce DRAFT (`defaultStatusNovoProduto`)
+e receber é entrada física, anterior à venda — exigir publicação antes de receber
+obrigaria a publicar no PDV um item que ainda não chegou. **INATIVO fica de fora**:
+é item aposentado, e receber estoque para ele é quase sempre engano de digitação;
+o caminho correto é reativar antes. Imposto em `buscarProdutosRecebimento` via
+`isInativo` (o literal segue só no core).
+
+### 📌 Dívida técnica registrada (não corrigida nesta PR)
+
+**`MarcasProdutosContent.tsx` é clone de `CategoriasProdutosContent.tsx`** (352 e 315
+linhas; divergem em imports, um `try/catch` e formatação). O mesmo vale para o bloco
+`postProcess` de contagem de produtos nas duas actions, que faz N+1 (uma query
+`count` por linha, até 50 por página).
+
+Não foi unificado aqui de propósito: o merge `mergeCadastroComum` monta o namespace
+como `{...cadastro_comum, ...<cadastro>}`, e as chaves genéricas de `cadastro_comum`
+usam o substantivo "categoria" (`nova_categoria`, `sem_categorias`,
+`categorias_plural`). Extrair um componente único exige antes renomear essas chaves
+para vocabulário neutro em `cadastro_comum`, o que atinge também
+`categorias_financeiras` — refatoração maior do que a correção de auditoria comporta,
+e arriscada durante o feature freeze do piloto.
+
+**Ordem sugerida quando for feito:** (1) renomear as chaves genéricas de
+`cadastro_comum` para vocabulário neutro; (2) extrair o componente de listagem CRUD
+parametrizado por labels + actions; (3) trocar o N+1 de contagem por uma única
+agregação. Nada disso muda contrato de action nem schema.

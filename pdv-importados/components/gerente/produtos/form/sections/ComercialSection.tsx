@@ -2,6 +2,10 @@
 
 import type { ReactNode } from 'react'
 import { criarMarcaProduto } from '@/app/gerente/marcas-produtos/actions'
+import {
+  opcoesSelecionaveis,
+  selecionadaEstaInativa,
+} from '@/core/catalog/opcoesCadastro'
 import { SelectComCadastroRapido } from '../fields/SelectComCadastroRapido'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
@@ -17,6 +21,15 @@ export function ComercialSection({ faixasSlot }: Props) {
   const c = ctx.m.comum
   const { disabled, inputClassName, inputMonoClassName, selectClassName, opcoes } = ctx
 
+  // Mesma regra da categoria: marca inativa sai das escolhas novas mas continua
+  // listada se for a do produto aberto — esconder faria o campo aparecer vazio
+  // para um produto que tem marca. Ver
+  // Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md.
+  const marcas = opcoesSelecionaveis(opcoes.marcas, ctx.marcaId)
+  const marcaAvisoInativa = selecionadaEstaInativa(opcoes.marcas, ctx.marcaId)
+    ? p.marca_inativa_aviso
+    : null
+
   return (
     <section aria-labelledby="produto-secao-comercial">
       <ProdutoFormSectionHeading title={p.secao_classificacao} />
@@ -29,7 +42,8 @@ export function ComercialSection({ faixasSlot }: Props) {
             label={p.marca_label}
             value={ctx.marcaId}
             onChange={ctx.setMarcaId}
-            opcoes={opcoes.marcas}
+            opcoes={marcas}
+            hint={marcaAvisoInativa}
             vazioLabel={p.nenhuma_marca}
             disabled={disabled}
             selectClassName={selectClassName}

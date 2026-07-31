@@ -871,7 +871,8 @@ export type OpcoesFiltrosProdutos = {
    * vínculo). Ver `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`.
    */
   categorias: { id: string; nome: string; ativo?: boolean }[]
-  marcas: { id: string; nome: string }[]
+  /** `ativo` pelo mesmo motivo de `categorias` — ver nota acima. */
+  marcas: { id: string; nome: string; ativo?: boolean }[]
   fornecedores: { id: string; nome: string }[]
 }
 
@@ -889,12 +890,12 @@ const buscarOpcoesFiltrosCached = unstable_cache(
     const supabase = await createClient()
     const [cat, mar, forn] = await Promise.all([
       supabase.from('categorias').select('id, nome, ativo').order('nome', { ascending: true }),
-      supabase.from('marcas').select('id, nome').eq('ativo', true).order('nome', { ascending: true }),
+      supabase.from('marcas').select('id, nome, ativo').order('nome', { ascending: true }),
       supabase.from('fornecedores').select('id, nome').order('nome', { ascending: true }),
     ])
     return {
       categorias: ((cat.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
-      marcas: ((mar.data ?? []) as { id: string; nome: string }[]),
+      marcas: ((mar.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
       fornecedores: ((forn.data ?? []) as { id: string; nome: string }[]),
     }
   },
@@ -964,6 +965,18 @@ const LoteAtivoSchema = z.object({
   ativo: z.boolean(),
 })
 
+/**
+ * Ativar/inativar em lote (via legada `ativo`).
+ *
+ * Ativar significa `PUBLICADO`, então este caminho é publicação e passa pelo
+ * MESMO gate `podePublicarProduto` das vias `publicarProduto`/`publicarProdutosLote`.
+ * Sem isto ele seria uma porta lateral para o mesmo destino: bastava usar
+ * "Ativar" em vez de "Publicar" para estrear um DRAFT ou republicar um INATIVO
+ * sem passar por `reativarProduto`. Regra imposta em um só dos caminhos que
+ * levam a PUBLICADO não é regra em nenhum.
+ *
+ * Inativar não tem gate: qualquer status pode ir para INATIVO.
+ */
 export async function alterarAtivoLoteProdutos(
   rawIds: string[],
   ativo: boolean,
@@ -980,8 +993,18 @@ export async function alterarAtivoLoteProdutos(
     }
   }
 
+  let alvos = parsed.data.produto_ids
+  if (parsed.data.ativo) {
+    const statusAtuais = await lerStatusPublicacaoLote(alvos)
+    alvos = alvos.filter((id) => podePublicarProduto(statusAtuais.get(id) ?? null))
+    if (alvos.length === 0) {
+      const { idioma } = await getUsuarioIdioma()
+      return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+    }
+  }
+
   const status = statusFromAtivoLegacy(parsed.data.ativo)
-  const result = await setProductStatusLoteAction(parsed.data.produto_ids, status)
+  const result = await setProductStatusLoteAction(alvos, status)
   if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: { atualizados: result.atualizados } }
 }
