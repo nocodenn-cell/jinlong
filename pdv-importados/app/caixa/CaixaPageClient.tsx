@@ -57,7 +57,6 @@ import { CaixaMovimentacaoModal } from "@/app/caixa/CaixaMovimentacaoModal"
 import type { TipoMovimentacaoUi } from "@/app/caixa/caixaMovimentacaoTypes"
 import { CaixaMovimentacaoAcaoModal } from "@/app/caixa/CaixaMovimentacaoAcaoModal"
 import type { AcaoMovimentacaoTipo } from "@/app/caixa/caixaMovimentacaoTypes"
-import { CaixaMovimentacoesTimeline } from "@/app/caixa/CaixaMovimentacoesTimeline"
 import { CaixaMessageBanner } from "@/components/caixa/CaixaMessageBanner"
 import { CaixaToastViewport } from "@/components/caixa/CaixaToastViewport"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
@@ -183,8 +182,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const {
     caixaStatus,
     carregandoStatus,
-    movimentacoes,
-    carregandoMovimentacoes,
     movimentandoCaixa,
     processandoAcaoMovimentacao,
     recarregarStatusCaixa,
@@ -1264,15 +1261,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const handleFecharCaixaClick = useCallback(() => void handleFecharCaixa(), [handleFecharCaixa])
   const handleFinalizarClick = useCallback(() => void handleFinalizar(), [handleFinalizar])
   const abrirGerenteModal = useCallback(() => setGerenteModalAberto(true), [])
-  const handleCancelarMovimentacao = useCallback(
-    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "cancelar", item }),
-    [],
-  )
-  const handleEstornarMovimentacao = useCallback(
-    (item: MovimentacaoCaixaDTO) => setConfirmacaoPendente({ tipo: "estornar", item }),
-    [],
-  )
-
   return (
     <>
       <div className="caixa-oriental-root h-[100dvh] overflow-hidden flex flex-col text-[14px] leading-5 bg-background text-foreground">
@@ -1454,17 +1442,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               />
             </div>
           </div>
-          {isCaixaAberto(caixaStatus) && (
-            <CaixaMovimentacoesTimeline
-              m={m}
-              idioma={idioma}
-              itens={movimentacoes}
-              carregando={carregandoMovimentacoes}
-              processandoAcao={processandoAcaoMovimentacao}
-              onCancelar={handleCancelarMovimentacao}
-              onEstornar={handleEstornarMovimentacao}
-            />
-          )}
           {/* Rodapé de resumo removido: repetia total, bruto, descontos e o botão
               Finalizar logo abaixo da barra do carrinho — duas faixas empilhadas
               dizendo a mesma coisa. O total único e sempre visível é o da barra. */}
