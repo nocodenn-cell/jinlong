@@ -11,7 +11,7 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 
 | # | Classe | Pendência | Bloqueia Go-Live | Bloqueia dev | Responsável | Onde se resolve |
 |---|---|---|:---:|:---:|---|---|
-| **B-1** | INFRA | **Runners do GitHub Actions indisponíveis.** `runner_id: 0` e `runner_name` vazio em 100% dos jobs, sem log baixável, desde ~2026-05-11. Esgotamento de billing/spending limit | **Sim** | **Não**¹ | Admin da conta GitHub | GitHub → Settings → Billing → Actions |
+| ~~**B-1**~~ | INFRA | ~~Runners do GitHub Actions indisponíveis~~ — **RESOLVIDO em 2026-07-31.** GitHub Pro ativado (pagamento aprovado) + budget de Actions confirmado em US$ 10,00/mês com "Stop usage: No". Validado por reexecução de workflow: runner alocado normalmente (`runner_id` preenchido, steps executando) no PR #255, run [30649321448](https://github.com/nocodenn-cell/fastproduct/actions/runs/30649321448) | ~~**Sim**~~ | **Não**¹ | Admin da conta GitHub | — |
 | **B-2** | GOV | **Required Status Checks inexistentes.** `main` exige `build`, `lint`, `test`, `typecheck` — nenhum é publicado por nada, e nunca foi (0 commits em toda a história dos workflows). Merge só ocorre por bypass de owner | **Sim** | **Não** | Owner do repositório | GitHub → Settings → Branches (ou Rules → Rulesets) |
 | **B-3** | GOV | **Bypass list ativa.** Enquanto existir, qualquer regra de proteção é decorativa. Comprovado no PR #232, mergeado com todos os checks vermelhos | **Sim** | **Não** | Owner do repositório | GitHub → Settings → Branches |
 | **B-4** | OPS | **Produção defasada.** `pdv-importados.vercel.app` serve `dpl_7DPHmhdzLHNSsd1mXV59tPzfA9aU` (`a4edafbf`, 23/07). `main` está à frente; BL-1 (#231, #232) não está no ar e o schema (migrations 272–276) está à frente do código | **Sim** | **Não** | Admin da Vercel | Vercel → Project → Deployments / Domains |
@@ -49,7 +49,7 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 | **D-1** | DEV | Overload `fiscal_reprocessar_documento(uuid, text)` **sem verificação de perfil**, com `GRANT EXECUTE` a `authenticated`, referenciando 5 colunas inexistentes. Hoje falha fechada (erro de parse), mas é escalada latente | **Sim**² | Não | Dev | Supabase (migration) |
 | **D-2** | DEV | Migration `092` (máquina de estados fiscal) **não aplicada**: colunas `ultima_transicao_em`/`transicao_origem` e triggers `tr_documentos_fiscais_estado_bi/bu` ausentes. Sem ela, `EMITIDO → PENDENTE` é aceita — reemissão de documento autorizado | **Sim**² | Não | Dev | Supabase (migration) |
 | **D-3** | DEV | Sem *reaper* de `EM_PROCESSAMENTO`, sem limite de tentativas, sem movimentação automática para DLQ. Worker que morra após o claim deixa documento órfão que nem o retry nem o reprocesso manual resgatam | **Sim**² | Não | Dev | Supabase (migration) |
-| **D-4** | DEV | **`build-and-test` provavelmente vermelho** ao voltar: em 11/05, último run com runner real, falhou em *"Lint, typecheck e unit tests"*. Falha real, anterior ao apagão, nunca corrigida | Não³ | Não | Dev | Código (`pdv-importados/`) |
+| ~~**D-4**~~ | DEV | ~~`build-and-test` vermelho~~ — **RESOLVIDO em 2026-07-31.** Causa raiz real (após restauração de B-1): não era o teste antigo de 11/05, e sim `ci-pdv-importados.yml` usando `node-version: '20'` enquanto `@supabase/auth-js@2.110.5` exige `engines.node: ">=22.0.0"` — `npm ci` falhava com `EBADENGINE` antes de qualquer step de teste rodar. Corrigido via bump `'20'` → `'22'` nas 3 ocorrências do workflow (build-and-test, e2e-critical, e2e-playwright). Validado no PR #255, run [30650220924](https://github.com/nocodenn-cell/fastproduct/actions/runs/30650220924): install ✓, guard:all ✓, lint+typecheck+test ✓, build ✓ (9m15s) | ~~Não³~~ | Não | Dev | `.github/workflows/ci-pdv-importados.yml` |
 | **D-5** | DEV | SSRA valida **coerência**, não **atualidade** — não detecta B-4. Evolução proposta: comparar também `deployment.meta.githubCommitSha` com o SHA liberado | Não | Não | Dev | Código (`scripts/validate-production.mjs`) |
 
 > **Resolvido em 2026-07-25 (commit de fechamento):** o antigo **D-1** — comentário obsoleto em `scripts/deploy-gates-v2.ps1` citando o step de CI `EXPECTED_VERCEL_PROJECT_ID`, removido na Fase A — foi corrigido. Só comentários mudaram; o comportamento do script é idêntico. Com isso, **a dívida técnica originada pela remediação CI/CD é zero**: os itens DEV restantes (D-1 a D-5) são anteriores a esta frente, que apenas os descobriu.
@@ -80,8 +80,8 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 
 ```
 B-4  restaurar produção        ← único que afeta o cliente agora
-B-1  restaurar runners         ← desbloqueia validação
-D-4  corrigir build-and-test   ← pré-requisito de B-2
+B-1  restaurar runners         ← RESOLVIDO 2026-07-31 (spending limit/budget Actions liberado)
+D-4  corrigir build-and-test   ← RESOLVIDO 2026-07-31 (Node 20→22, PR #255)
 B-2  corrigir required checks
 B-3  esvaziar bypass
 ```
