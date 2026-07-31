@@ -7,7 +7,6 @@ import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionCo
 import { validarRemessaInput } from './actions.validation'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
 import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
-import { escapeIlike } from '@/app/admin/financeiro/receivableReader'
 import { isInativo, type StatusPublicacao } from '@/core/catalog/statusPublicacao'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
@@ -49,20 +48,22 @@ export async function buscarProdutosRecebimento(
     return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
   }
 
-  // `.or()` do PostgREST é uma mini-linguagem: vírgula separa condições e
-  // parênteses agrupam. Termo cru com esses caracteres ("Caneca (300ml)",
-  // "copo, azul") quebrava a query e o autocomplete devolvia vazio sem erro
-  // visível — e permitia acrescentar condições à consulta. Viram espaço em vez
-  // de escape: busca é aproximada, e um espaço a mais não muda o resultado.
-  const t = (termo ?? '').replace(/[,()]/g, ' ').trim().slice(0, 120)
+  // `.or()` do PostgREST é uma mini-linguagem: vírgula separa condições,
+  // parênteses agrupam e a barra invertida é o escape DELA. Termo cru quebrava
+  // a query ("Caneca (300ml)", "copo, azul") e permitia acrescentar condições.
+  //
+  // Os curingas de LIKE (`%`, `_`) entram na mesma limpeza, e não por escape:
+  // `escapeIlike` é seguro em `.ilike(col, valor)`, onde o valor viaja como
+  // parâmetro e o `\%` chega íntegro ao Postgres — mas NÃO aqui dentro, onde o
+  // parser do PostgREST consome a barra antes e devolve o `%` como curinga.
+  // Um `%` digitado casaria o catálogo inteiro. Vira espaço: a busca é
+  // aproximada e um espaço a mais não muda o resultado prático.
+  const t = (termo ?? '').replace(/[,()%_\\]/g, ' ').trim().slice(0, 120)
   if (t.length < 2) return { success: true, data: [] }
 
   const supabase = await createClient()
-  // Curingas de LIKE (`%`, `_`) pelo utilitário já usado no financeiro: sem
-  // isto um `%` digitado casaria com o catálogo inteiro.
-  const seguro = escapeIlike(t)
   const digitos = t.replace(/\D/g, '')
-  const ors = [`nome.ilike.%${seguro}%`, `codigo_interno.ilike.%${seguro}%`]
+  const ors = [`nome.ilike.%${t}%`, `codigo_interno.ilike.%${t}%`]
   if (digitos) ors.push(`codigo_barras.like.%${digitos}%`)
 
   const { data, error } = await supabase
