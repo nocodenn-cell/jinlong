@@ -39,7 +39,12 @@ export async function buscarProdutosRecebimento(
     return { success: false, error: 'Não foi possível identificar sua loja. Faça login novamente.' }
   }
 
-  const t = (termo ?? '').trim().slice(0, 120)
+  // `.or()` do PostgREST é uma mini-linguagem: vírgula separa condições,
+  // parênteses agrupam e `%` é curinga do ilike. Termo cru com esses caracteres
+  // ("Caneca (300ml)", "copo, azul") quebrava a query e o autocomplete devolvia
+  // vazio sem erro visível. Trocamos por espaço em vez de escapar: busca é
+  // aproximada, e um espaço a mais não muda o resultado prático.
+  const t = (termo ?? '').replace(/[%,()]/g, ' ').trim().slice(0, 120)
   if (t.length < 2) return { success: true, data: [] }
 
   const supabase = await createClient()

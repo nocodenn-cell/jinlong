@@ -42,14 +42,23 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
 
   if (ids.length === 0) return null
 
-  const run = (fn: () => Promise<{ success: boolean; error?: string }>, sucesso?: string) => {
+  /**
+   * `sucesso` pode vir do argumento (mensagem fixa) ou do próprio resultado —
+   * a publicação em lote só sabe quantos publicou depois da resposta, porque o
+   * gate no servidor descarta os que não são rascunho.
+   */
+  const run = (
+    fn: () => Promise<{ success: boolean; error?: string; sucesso?: string }>,
+    sucesso?: string,
+  ) => {
     startTransition(async () => {
       const r = await fn()
       if (!r.success) {
         emitGerenteToast({ kind: 'error', message: r.error || m.comum.erro })
         return
       }
-      if (sucesso) emitGerenteToast({ kind: 'success', message: sucesso })
+      const msg = r.sucesso ?? sucesso
+      if (msg) emitGerenteToast({ kind: 'success', message: msg })
       onLimpar()
       router.refresh()
     })
@@ -75,15 +84,18 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
           disabled={pending}
           title={p.publicar_lote}
           onClick={() =>
-            run(
-              async () => {
-                const r = await publicarProdutosLote(alvo)
-                return r.success
-                  ? { success: true }
-                  : { success: false, error: r.error }
-              },
-              interpolateTemplate(p.publicados_sucesso, { count: String(ids.length) }),
-            )
+            run(async () => {
+              const r = await publicarProdutosLote(alvo)
+              if (!r.success) return { success: false, error: r.error }
+              // Conta o que o servidor publicou, não o que foi selecionado: o
+              // gate descarta rascunhos-não-rascunho, então os números divergem.
+              return {
+                success: true,
+                sucesso: interpolateTemplate(p.publicados_sucesso, {
+                  count: String(r.data.publicados),
+                }),
+              }
+            })
           }
         >
           <BadgeCheck size={14} aria-hidden />
