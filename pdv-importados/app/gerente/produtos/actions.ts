@@ -616,13 +616,24 @@ async function lerStatusPublicacao(produtoId: string): Promise<StatusPublicacao 
   return (data?.status_publicacao ?? null) as StatusPublicacao | null
 }
 
-/** Facade — lifecycle via ProductLifecycleService. */
+/**
+ * Facade — lifecycle via ProductLifecycleService.
+ *
+ * Ativar é publicar, então passa pelo mesmo gate de `alterarAtivoLoteProdutos`
+ * e das vias `publicarProduto`/`publicarProdutosLote`: só rascunho estreia, e
+ * produto aposentado volta por `reativarProduto`. Inativar segue sem gate.
+ */
 export async function alternarAtivoProduto(
   produtoId: string,
   ativo: boolean,
 ): Promise<ActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
+
+  if (ativo && !podePublicarProduto(await lerStatusPublicacao(produtoId))) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+  }
 
   const status = statusFromAtivoLegacy(ativo)
   const result = await setProductStatusAction(produtoId, status)

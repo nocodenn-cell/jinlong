@@ -12,7 +12,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const assertGerenteSessionMock = vi.fn()
 const setProductStatusLoteActionMock = vi.fn()
+const setProductStatusActionMock = vi.fn()
 const inMock = vi.fn()
+const maybeSingleMock = vi.fn()
 
 vi.mock('@/lib/gerente/auth/assertGerenteSession', () => ({
   assertGerenteSession: assertGerenteSessionMock,
@@ -20,7 +22,10 @@ vi.mock('@/lib/gerente/auth/assertGerenteSession', () => ({
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
-    from: () => ({ select: () => ({ in: inMock }) }),
+    // `.in()` é a leitura do lote; `.eq().maybeSingle()`, a da via unitária.
+    from: () => ({
+      select: () => ({ in: inMock, eq: () => ({ maybeSingle: maybeSingleMock }) }),
+    }),
     // O caminho de erro resolve o idioma da mensagem, que passa por auth.getUser().
     auth: { getUser: async () => ({ data: { user: null }, error: null }) },
   }),
@@ -28,7 +33,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/app/admin/produtos/actions', () => ({
   setProductStatusLoteAction: setProductStatusLoteActionMock,
-  setProductStatusAction: vi.fn(),
+  setProductStatusAction: setProductStatusActionMock,
   atualizarProdutoAction: vi.fn(),
   buscarProdutosComFiltrosAction: vi.fn(),
   buscarProdutoPorIdAction: vi.fn(),
@@ -146,5 +151,60 @@ describe('alterarAtivoLoteProdutos — ativar é publicar e usa o mesmo gate', (
       [RASCUNHO, PUBLICADO, INATIVO],
       'INATIVO',
     )
+  })
+})
+
+/**
+ * Via unitária de "ativar" — o gêmeo de `alterarAtivoLoteProdutos`. Sem o mesmo
+ * gate, o lote ficava fechado e o produto a produto seguia aberto: gate imposto
+ * em um só dos caminhos que levam a PUBLICADO não é gate em nenhum.
+ */
+describe('alternarAtivoProduto — ativar é publicar e usa o mesmo gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    assertGerenteSessionMock.mockResolvedValue({
+      ok: true,
+      session: { userId: 'mgr-1', lojaId: 'loja-1', idioma: 'pt' },
+    })
+    setProductStatusActionMock.mockResolvedValue({ ok: true })
+  })
+
+  it('ativar rascunho publica', async () => {
+    maybeSingleMock.mockResolvedValue({ data: { status_publicacao: 'DRAFT' } })
+
+    const { alternarAtivoProduto } = await import('./actions')
+    const res = await alternarAtivoProduto(RASCUNHO, true)
+
+    expect(res.success).toBe(true)
+    expect(setProductStatusActionMock).toHaveBeenCalledWith(RASCUNHO, 'PUBLICADO')
+  })
+
+  it('ativar INATIVO é recusado — reativar é a transição própria', async () => {
+    maybeSingleMock.mockResolvedValue({ data: { status_publicacao: 'INATIVO' } })
+
+    const { alternarAtivoProduto } = await import('./actions')
+    const res = await alternarAtivoProduto(INATIVO, true)
+
+    expect(res.success).toBe(false)
+    expect(setProductStatusActionMock).not.toHaveBeenCalled()
+  })
+
+  it('status ausente é tratado como não publicável (leitura pessimista)', async () => {
+    maybeSingleMock.mockResolvedValue({ data: null })
+
+    const { alternarAtivoProduto } = await import('./actions')
+    const res = await alternarAtivoProduto(RASCUNHO, true)
+
+    expect(res.success).toBe(false)
+    expect(setProductStatusActionMock).not.toHaveBeenCalled()
+  })
+
+  it('inativar não lê status nem tem gate', async () => {
+    const { alternarAtivoProduto } = await import('./actions')
+    const res = await alternarAtivoProduto(PUBLICADO, false)
+
+    expect(res.success).toBe(true)
+    expect(maybeSingleMock).not.toHaveBeenCalled()
+    expect(setProductStatusActionMock).toHaveBeenCalledWith(PUBLICADO, 'INATIVO')
   })
 })
