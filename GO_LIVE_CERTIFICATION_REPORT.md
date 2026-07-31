@@ -144,6 +144,27 @@ Ajuste visual pontual no `CaixaSearchBar` (remoção do ícone `Barcode` de dent
 
 ---
 
+## 7.5 Encerramento da sprint de certificação (2026-07-31)
+
+| Item | Status |
+|---|---|
+| **D-4** (`build-and-test` vermelho por Node 20→22) | ✅ **Resolvido** — confirmado com runner real, `ci-pdv-importados.yml` e `ci-backend-supabase.yml` |
+| **FIN-001** (lacuna de auditoria de devolução/troca) | ✅ **Resolvido** — commit `2976aa8e` |
+| **GOV-001** (duplicidade de proteção de branch) | ✅ **Resolvido** — Ruleset `16298836` removido |
+| **Bypass de autorização gerencial + saldo_atual** | ✅ **Resolvido** — commit `92d42708`, aplicado em produção (`jinlong`) |
+| **P0 — SYNC_KEY mismatch** | 🔴 **Permanece único bloqueador real do Go-Live** — aguarda confirmação de fonte de verdade |
+
+**Itens documentados como fora de escopo desta sprint** (não corrigidos, não bloqueiam a 1ª loja):
+- `migration-remote-drift` — drift histórico de nomenclatura de migrations (achado sistêmico, §5).
+- `Supabase local RLS smoke` / `Test RLS scope by profile` — mesma causa raiz de ordenação de migrations.
+- `rls-rest-gate` — JWTs de smoke (`RLS_SMOKE_JWT_PAINEL`/`CAIXA`) expirados desde 2026-05-17.
+- `E2E crítico (sistema de risco)` — mesmo P0 (SYNC_KEY), não é achado novo.
+- `previewkit` / Autonoma — integração externa fora do fluxo oficial de CI/CD documentado; não investigada.
+
+**PR #255** — pronto tecnicamente para merge (`build-and-test` required ✅, Vercel deploy ✅), bloqueado apenas por aprovação humana obrigatória (`reviewDecision: REVIEW_REQUIRED`). Nenhum bypass de proteção foi tentado ou será tentado.
+
+---
+
 ## 8. Checklist de reativação — próximos passos na ordem certa
 
 ```
