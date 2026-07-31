@@ -46,6 +46,19 @@ export interface CarrinhoState {
   maxDescontoGerentePercentual: number
   /** Última linha removida (não persistida) — buffer para desfazer (Ctrl+Z). */
   ultimoRemovido: { item: ItemCarrinho; index: number } | null
+  /**
+   * Chave de idempotência do cupom atual. Persistida junto do carrinho: o
+   * carrinho sobrevive a F5 / queda de energia / fechamento da aplicação, então
+   * a chave precisa sobreviver junto — senão o reenvio gera `venda_id` novo e a
+   * mesma venda é gravada duas vezes (baixa de estoque e dinheiro em dobro).
+   */
+  vendaIdempotencyKey: string | null
+  /**
+   * `true` entre o disparo da finalização e um desfecho conhecido. Enquanto for
+   * `true` a venda PODE ter sido gravada no servidor, então o fluxo não pode
+   * voltar para «novo cupom» sem antes consultar o desfecho.
+   */
+  vendaFinalizacaoPendente: boolean
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (id: string) => void
   /** Repõe a última linha removida na posição original; no-op se buffer vazio. */
@@ -65,6 +78,14 @@ export interface CarrinhoState {
   aplicarDescontoManual: (id: string, descontoValor: number, motivo?: string) => void
   aplicarDescontoGerente: (percentual: number, token?: string | null, maxClamp?: number | null) => void
   setMaxDescontoGerentePercentual: (valor: number) => void
+  /** Devolve a chave do cupom, criando-a na primeira chamada. Nunca a troca. */
+  garantirVendaIdempotencyKey: () => string
+  /** Marca que a finalização foi disparada e o desfecho ainda é desconhecido. */
+  marcarFinalizacaoPendente: () => void
+  /** Desfecho negativo confirmado pelo servidor: libera o fluxo, preserva a chave. */
+  resolverFinalizacaoPendente: () => void
+  /** Venda confirmada como gravada: encerra o cupom e descarta a chave. */
+  concluirVendaIdempotencyKey: () => void
 }
 
 type CartDiscountSlice = Pick<
@@ -181,6 +202,8 @@ function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
     descontoGerenteValor: 0,
     descontoGerenteToken: null,
     ultimoRemovido: null,
+    vendaIdempotencyKey: null,
+    vendaFinalizacaoPendente: false,
   }
 }
 
@@ -237,7 +260,7 @@ function resolveMaxDescontoGerente(
 
 export const useCartStore = create<CarrinhoState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       itens: [],
       cartOwnerUserId: null,
       totalBruto: 0,
@@ -252,6 +275,23 @@ export const useCartStore = create<CarrinhoState>()(
       descontoGerenteToken: null,
       maxDescontoGerentePercentual: DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL,
       ultimoRemovido: null,
+      vendaIdempotencyKey: null,
+      vendaFinalizacaoPendente: false,
+
+      garantirVendaIdempotencyKey: () => {
+        const atual = get().vendaIdempotencyKey
+        if (atual) return atual
+        const nova = crypto.randomUUID()
+        set({ vendaIdempotencyKey: nova })
+        return nova
+      },
+
+      marcarFinalizacaoPendente: () => set({ vendaFinalizacaoPendente: true }),
+
+      resolverFinalizacaoPendente: () => set({ vendaFinalizacaoPendente: false }),
+
+      concluirVendaIdempotencyKey: () =>
+        set({ vendaIdempotencyKey: null, vendaFinalizacaoPendente: false }),
 
       adicionarItem: (item) =>
         set((state) => {
@@ -296,6 +336,9 @@ export const useCartStore = create<CarrinhoState>()(
             descontoGerenteValor: 0,
             descontoGerenteToken: null,
             ultimoRemovido: null,
+            // Cupom novo (venda em espera retomada) → chave nova.
+            vendaIdempotencyKey: null,
+            vendaFinalizacaoPendente: false,
           }
         }),
 
@@ -432,6 +475,10 @@ export const useCartStore = create<CarrinhoState>()(
         descontoGerenteValor: state.descontoGerenteValor,
         descontoGerenteToken: state.descontoGerenteToken,
         maxDescontoGerentePercentual: state.maxDescontoGerentePercentual,
+        // Persistidos junto do carrinho por serem a proteção contra venda
+        // duplicada após F5 / queda de energia / fechamento da aplicação.
+        vendaIdempotencyKey: state.vendaIdempotencyKey,
+        vendaFinalizacaoPendente: state.vendaFinalizacaoPendente,
       }),
     },
   ),

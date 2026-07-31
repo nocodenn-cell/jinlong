@@ -57,6 +57,7 @@ import { obterResumoVendasTurnoImpl } from '@/app/caixa/server/caixaTurnoResumo.
 import { consultarProdutoRapidoCaixaImpl } from '@/app/caixa/server/caixaConsultaRapida.impl'
 import {
   colocarVendaEmEsperaImpl,
+  converterVendaEmEsperaImpl,
   descartarVendaEmEsperaImpl,
   listarHistoricoOperadorImpl,
   listarVendasEmEsperaImpl,
@@ -236,6 +237,11 @@ export async function retomarVendaEmEsperaCaixa(id: string) {
 
 export async function descartarVendaEmEsperaCaixa(id: string, motivo?: string) {
   return descartarVendaEmEsperaImpl(id, motivo)
+}
+
+/** Baixa o pedido em espera só depois que a venda foi de fato finalizada. */
+export async function converterVendaEmEsperaCaixa(id: string) {
+  return converterVendaEmEsperaImpl(id)
 }
 
 export async function listarHistoricoOperadorCaixa(input?: {

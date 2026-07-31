@@ -146,6 +146,7 @@ export function useCaixaStatusMovimentacoes({
       motivoCodigo: string
       motivo: string
       gerenteSenha?: string
+      idempotencyKey: string
     }): Promise<{ ok: true } | { ok: false; error: string }> => {
       if (!isCaixaAberto(caixaStatus)) {
         return { ok: false, error: m.caixa.msg_caixa_fechado_movimentacao }
@@ -163,7 +164,9 @@ export function useCaixaStatusMovimentacoes({
           valor: payload.valor,
           motivo: payload.motivo,
           motivoCodigo: payload.motivoCodigo,
-          idempotencyKey: crypto.randomUUID(),
+          // Chave do modal, estável entre reenvios: é ela que faz o índice
+          // `uq_movimentacoes_caixa_idempotency` bloquear a sangria duplicada.
+          idempotencyKey: payload.idempotencyKey,
           terminalId: getDeviceFingerprint(),
         })
 

@@ -10,6 +10,7 @@ import {
   fecharCaixaOperador,
   validarGerenteDesconto,
   obterDetalheHistoricoVendaCaixa,
+  converterVendaEmEsperaCaixa,
 } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
@@ -225,6 +226,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const restaurarUltimoRemovido = useCarrinhoStore((s) => s.restaurarUltimoRemovido)
   const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
   const substituirCarrinho = useCarrinhoStore((s) => s.substituirCarrinho)
+  const garantirVendaIdempotencyKey = useCarrinhoStore((s) => s.garantirVendaIdempotencyKey)
+  const marcarFinalizacaoPendente = useCarrinhoStore((s) => s.marcarFinalizacaoPendente)
+  const resolverFinalizacaoPendente = useCarrinhoStore((s) => s.resolverFinalizacaoPendente)
+  const concluirVendaIdempotencyKey = useCarrinhoStore((s) => s.concluirVendaIdempotencyKey)
+  const vendaFinalizacaoPendenteStore = useCarrinhoStore((s) => s.vendaFinalizacaoPendente)
+  const vendaFinalizacaoPendente = cartMounted ? vendaFinalizacaoPendenteStore : false
 
   const descontoGerenteAplicado = aplicarDescontoGerenteSobreTotal({
     totalLiquido,
@@ -256,8 +263,15 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
 
   const loc = localeFromIdioma(idioma)
   const buscaInputRef = useRef<HTMLInputElement>(null)
-  /** UUID estável entre duplo clique / retry; zera após venda OK ou «Novo cupom». */
-  const vendaIdempotenciaRef = useRef<string | null>(null)
+  /**
+   * Recuperação de venda pendente: aberto quando a finalização terminou sem
+   * desfecho conhecido (timeout ou queda de rede) e ao remontar a página com
+   * `vendaFinalizacaoPendente` persistido (F5 / queda de energia).
+   */
+  const [vendaPendenteModalAberto, setVendaPendenteModalAberto] = useState(false)
+  const [verificandoVendaPendente, setVerificandoVendaPendente] = useState(false)
+  /** Pedido em espera que originou o cupom atual; baixado só quando a venda conclui. */
+  const [vendaEmEsperaOrigemId, setVendaEmEsperaOrigemId] = useState<string | null>(null)
 
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
@@ -527,7 +541,14 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   }, [restaurarUltimoRemovido, setCaixaMensagem, m.caixa.msg_item_restaurado])
 
   const handleNovoCupom = useCallback(() => {
-    vendaIdempotenciaRef.current = null
+    // Ponto de estrangulamento do retorno a «novo cupom»: enquanto a venda
+    // anterior puder ter sido gravada, abrir um cupom novo permitiria re-digitar
+    // e cobrar a mesma venda duas vezes. Só libera após consultar o desfecho.
+    if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
+      setVendaPendenteModalAberto(true)
+      setCaixaMensagem(m.caixa.msg_venda_pendente_bloqueio, { kind: "warning" })
+      return
+    }
     flushLeiturasPendentes({ reason: "new_cupom" })
     cupomSessionIdRef.current = newCupomSessionId()
     limparCarrinho()
@@ -539,12 +560,16 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     limparEstadoDescontoGerente()
     setClienteId(null)  // Reset cliente selecionado para evitar vazar entre cupons
     setClienteNome(null)
+    // Cupom abandonado: solta o vínculo, mas NÃO baixa o pedido em espera — ele
+    // volta a ficar disponível na lista, que é justamente o ponto do P2.
+    setVendaEmEsperaOrigemId(null)
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
     focarCampoBusca,
     limparCarrinho,
     limparEstadoDescontoGerente,
+    m.caixa.msg_venda_pendente_bloqueio,
     resetPagamentos,
     setCaixaMensagem,
   ])
@@ -557,6 +582,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
    * itens já foram salvos, não há o que confirmar.
    */
   const handleExcluirVendaConfirmado = useCallback(() => {
+    // Antes do confirm: com venda pendente não há o que descartar — o cupom pode
+    // já ter virado venda. Vai direto para a recuperação.
+    if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
+      handleNovoCupom()
+      return
+    }
     if (itens.length > 0 && !globalThis.confirm(m.caixa.cart_bar_excluir_confirmar)) {
       return
     }
@@ -588,6 +619,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     focarCampoBusca,
     setClienteId,
     setClienteNome,
+    vendaEmEsperaOrigemId,
+    setVendaEmEsperaOrigemId,
   })
 
   const parseValorMonetario = useCallback((raw: string | null): number | null => {
@@ -831,9 +864,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem(null)
     setCheckoutHint(null)
     try {
-      if (!vendaIdempotenciaRef.current) {
-        vendaIdempotenciaRef.current = crypto.randomUUID()
-      }
+      // Chave criada uma única vez por cupom e persistida: sobrevive a F5, queda
+      // de energia e fechamento da aplicação. Reenvios reusam exatamente esta
+      // chave, então o RPC reconhece a venda já gravada em vez de criar outra.
+      const idempotencyKey = garantirVendaIdempotencyKey()
       // Defense-in-depth Fase 5b (já checado no início de handleFinalizar)
       if (pagamentoParcialExigeCliente(saldoPendente, clienteId)) {
         setSelecionarClienteModalAberto(true)
@@ -843,7 +877,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       }
 
       const payload: FinalizarVendaInput = {
-        idempotencyKey: vendaIdempotenciaRef.current,
+        idempotencyKey,
         formaPagamento: pagamentos[0]?.formaPagamento ?? "DINHEIRO",
         totalBruto,
         totalDesconto:
@@ -874,6 +908,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         ok: false,
         error: m.caixa.msg_checkout_timeout,
       }
+      // A partir daqui a venda pode existir no servidor. O flag é persistido
+      // ANTES do disparo para cobrir queda de energia no meio da chamada.
+      marcarFinalizacaoPendente()
       const res = await Promise.race([
         finalizarVendaCaixa(payload),
         new Promise<typeof timeoutResult>((resolve) =>
@@ -901,12 +938,20 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         }
         setCheckoutHint(null)
         setReimprimirModalAberto(true)
-        vendaIdempotenciaRef.current = null
+        concluirVendaIdempotencyKey()
         limparCarrinho()
         limparEstadoDescontoGerente()
         resetPagamentos()
         setClienteId(null)  // ✅ NOVO (Fase 5b) - reset após venda bem-sucedida
         setClienteNome(null)
+        // Agora sim o pedido em espera saiu: virou venda. Escrituração acessória —
+        // nunca pode derrubar o caminho de sucesso e cair no catch de "pendente"
+        // com a venda já concluída e a chave já descartada (isso reabriria a
+        // porta da venda duplicada). Falhando, o pedido só fica na lista.
+        if (vendaEmEsperaOrigemId) {
+          void converterVendaEmEsperaCaixa(vendaEmEsperaOrigemId).catch(() => {})
+          setVendaEmEsperaOrigemId(null)
+        }
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
           caixaFmt(m.caixa.msg_venda_ok, { id: res.vendaId.slice(0, 8) }),
@@ -914,7 +959,17 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         )
         tocarFeedback("ok")
         await recarregarStatusCaixa()
+      } else if (res === timeoutResult) {
+        // Desfecho DESCONHECIDO: o servidor pode ter concluído a venda depois do
+        // timeout. Preserva o estado pendente e a chave; a saída é a verificação.
+        setCaixaMensagem(m.caixa.msg_venda_pendente_titulo, { kind: "warning" })
+        setCheckoutHint(m.caixa.msg_venda_pendente_descricao)
+        setVendaPendenteModalAberto(true)
+        tocarFeedback("erro")
       } else {
+        // Erro devolvido pelo servidor: a resposta chegou, logo a transação não
+        // foi confirmada. Libera o fluxo mantendo a chave para o próximo envio.
+        resolverFinalizacaoPendente()
         const hint = inferirHintCheckout(res.error, {
           padrao: m.caixa.msg_checkout_hint_padrao,
           cupom: m.caixa.msg_checkout_hint_cupom,
@@ -926,22 +981,31 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         tocarFeedback("erro")
       }
     } catch (e) {
+      // Exceção (rede caiu, aba suspensa, action abortada): igual ao timeout, o
+      // desfecho é desconhecido — nunca assumir que a venda falhou.
       const errMsg = e instanceof Error ? e.message : String(e)
       console.error('[caixa/finalizar-venda]', {
-        idempotencyKey: vendaIdempotenciaRef.current,
+        idempotencyKey: useCarrinhoStore.getState().vendaIdempotencyKey,
         error: errMsg,
       })
-      setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
-      // Diagnóstico concreto também na exceção: deriva causa provável (rede /
-      // sessão / cupom / preço) do erro real em vez do hint genérico "tente de novo".
-      setCheckoutHint(
-        inferirHintCheckout(errMsg, {
-          padrao: m.caixa.msg_checkout_hint_padrao,
-          cupom: m.caixa.msg_checkout_hint_cupom,
-          sessao: m.caixa.msg_checkout_hint_sessao,
-          rede: m.caixa.msg_checkout_hint_rede,
-        }),
-      )
+      // Só é recuperação se a finalização continua pendente. Uma exceção depois
+      // da venda já confirmada (ex.: recarga de status falhou) não pode exibir
+      // «venda pendente» para uma venda que deu certo.
+      if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
+        setCaixaMensagem(m.caixa.msg_venda_pendente_titulo, { kind: "warning" })
+        setCheckoutHint(m.caixa.msg_venda_pendente_descricao)
+        setVendaPendenteModalAberto(true)
+      } else {
+        setCaixaMensagem(m.caixa.msg_falha_finalizar, { kind: "error" })
+        setCheckoutHint(
+          inferirHintCheckout(errMsg, {
+            padrao: m.caixa.msg_checkout_hint_padrao,
+            cupom: m.caixa.msg_checkout_hint_cupom,
+            sessao: m.caixa.msg_checkout_hint_sessao,
+            rede: m.caixa.msg_checkout_hint_rede,
+          }),
+        )
+      }
       tocarFeedback("erro")
     } finally {
       setFinalizando(false)
@@ -972,7 +1036,91 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     perfil,
     clienteId,
     saldoPendente,
+    garantirVendaIdempotencyKey,
+    marcarFinalizacaoPendente,
+    resolverFinalizacaoPendente,
+    concluirVendaIdempotencyKey,
+    vendaEmEsperaOrigemId,
   ])
+
+  /**
+   * Recuperação da venda pendente: consulta o desfecho real pela chave de
+   * idempotência (que é o `venda_id`). Só existem dois desfechos possíveis —
+   * a venda está gravada (encerra o cupom) ou não existe (libera o reenvio com
+   * a MESMA chave). Falha de rede na consulta não conclui nada.
+   */
+  const handleVerificarVendaPendente = useCallback(async () => {
+    const chave = useCarrinhoStore.getState().vendaIdempotencyKey
+    if (!chave) {
+      resolverFinalizacaoPendente()
+      setVendaPendenteModalAberto(false)
+      return
+    }
+    setVerificandoVendaPendente(true)
+    try {
+      const res = await obterDetalheHistoricoVendaCaixa(chave)
+      if (res.ok) {
+        // Venda gravada: encerra o cupom exatamente como no caminho de sucesso.
+        lastReciboRef.current = historicoDetalheParaRecibo(res.detalhe, m.caixa.moeda_prefixo)
+        concluirVendaIdempotencyKey()
+        limparCarrinho()
+        limparEstadoDescontoGerente()
+        resetPagamentos()
+        setClienteId(null)
+        setClienteNome(null)
+        // Acessório, como no caminho de sucesso: não pode derrubar a recuperação.
+        if (vendaEmEsperaOrigemId) {
+          void converterVendaEmEsperaCaixa(vendaEmEsperaOrigemId).catch(() => {})
+          setVendaEmEsperaOrigemId(null)
+        }
+        setVendaPendenteModalAberto(false)
+        setCheckoutHint(null)
+        setTurnoRefreshToken((t) => t + 1)
+        setCaixaMensagemVendaOk(
+          caixaFmt(m.caixa.msg_venda_ok, { id: res.detalhe.id.slice(0, 8) }),
+          { kind: "success" },
+        )
+        tocarFeedback("ok")
+        await recarregarStatusCaixa()
+        return
+      }
+      if (res.code === 'VENDA_NAO_ENCONTRADA') {
+        // Confirmado: nada foi gravado. Libera o fluxo preservando a chave.
+        resolverFinalizacaoPendente()
+        setVendaPendenteModalAberto(false)
+        setCaixaMensagem(m.caixa.msg_venda_pendente_nao_gravada, { kind: "warning" })
+        setCheckoutHint(m.caixa.msg_checkout_hint_padrao)
+        return
+      }
+      // Consulta falhou (rede/sessão): permanece pendente, nada foi decidido.
+      setCaixaMensagem(res.error, { kind: "error" })
+      setCheckoutHint(m.caixa.msg_venda_pendente_descricao)
+    } finally {
+      setVerificandoVendaPendente(false)
+    }
+  }, [
+    concluirVendaIdempotencyKey,
+    resolverFinalizacaoPendente,
+    limparCarrinho,
+    limparEstadoDescontoGerente,
+    resetPagamentos,
+    recarregarStatusCaixa,
+    setCaixaMensagem,
+    setCaixaMensagemVendaOk,
+    tocarFeedback,
+    vendaEmEsperaOrigemId,
+    m,
+  ])
+
+  /**
+   * Reabre a recuperação quando a página remonta com finalização pendente
+   * persistida (F5, queda de energia, fechamento inesperado da aplicação).
+   */
+  useEffect(() => {
+    if (cartMounted && vendaFinalizacaoPendente) {
+      setVendaPendenteModalAberto(true)
+    }
+  }, [cartMounted, vendaFinalizacaoPendente])
 
   useCaixaGerenteTokenExpiry({
     gerenteValidadoAte,
@@ -1454,6 +1602,22 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
           if (!open) setConfirmacaoPendente(null)
         }}
         onConfirm={handleConfirmarAcaoSensivel}
+      />
+      {/* Recuperação de venda pendente (desfecho desconhecido após timeout,
+          queda de rede ou reinício da aplicação). */}
+      <CaixaConfirmModal
+        open={vendaPendenteModalAberto}
+        title={m.caixa.msg_venda_pendente_titulo}
+        description={m.caixa.msg_venda_pendente_descricao}
+        m={m}
+        processing={verificandoVendaPendente}
+        initialFocus="confirm"
+        confirmLabel={m.caixa.msg_venda_pendente_verificar}
+        confirmVariant="primary"
+        onOpenChange={(open) => {
+          if (!open) setVendaPendenteModalAberto(false)
+        }}
+        onConfirm={() => void handleVerificarVendaPendente()}
       />
       <CaixaConsultaRapidaModal
         open={consultaRapidaAberta}

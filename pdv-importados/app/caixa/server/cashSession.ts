@@ -125,6 +125,17 @@ export function createCashSessionWriter(supabase: SupabaseClient): CashSessionWr
           .select('id')
           .single()
         if (insertErr || !novo) {
+          // Índice parcial `uq_caixas_operador_aberto` (migration 288): a checagem
+          // acima é check-then-insert e não segura duas aberturas concorrentes
+          // (dois terminais, ou retry após resposta lenta). Quem perde a corrida
+          // recebe a mesma mensagem do caminho verificado, não um erro de banco.
+          if (insertErr?.message?.includes('uq_caixas_operador_aberto')) {
+            return {
+              ok: false,
+              error: 'Já existe um caixa aberto para este operador.',
+              code: CASH_ERROR_CODES.SESSION_ALREADY_OPEN,
+            }
+          }
           return {
             ok: false,
             error: insertErr?.message ?? 'Falha ao abrir caixa.',

@@ -41,6 +41,13 @@ export type UseCaixaVendasEmEsperaDeps = Readonly<{
   focarCampoBusca: () => void
   setClienteId: (id: string | null) => void
   setClienteNome: (nome: string | null) => void
+  /**
+   * De qual pedido em espera veio o cupom atual (null se digitado do zero). O
+   * pedido só é baixado quando a venda finaliza de fato — desistir da retomada
+   * não pode apagá-lo.
+   */
+  vendaEmEsperaOrigemId: string | null
+  setVendaEmEsperaOrigemId: (id: string | null) => void
 }>
 
 /**
@@ -70,7 +77,24 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     focarCampoBusca,
     setClienteId,
     setClienteNome,
+    vendaEmEsperaOrigemId,
+    setVendaEmEsperaOrigemId,
   } = deps
+
+  /**
+   * Colocar em espera cria uma linha nova. Se o cupom atual já tinha vindo de um
+   * pedido em espera (que agora permanece EM_ESPERA até a venda concluir), a
+   * linha de origem precisa sair da lista — senão o mesmo pedido apareceria duas
+   * vezes para o operador.
+   */
+  const baixarOrigemAposReparcar = useCallback(async () => {
+    if (!vendaEmEsperaOrigemId) return
+    await descartarVendaEmEsperaCaixa(
+      vendaEmEsperaOrigemId,
+      'Substituído por novo pedido em espera',
+    )
+    setVendaEmEsperaOrigemId(null)
+  }, [vendaEmEsperaOrigemId, setVendaEmEsperaOrigemId])
 
   const [vendasEmEspera, setVendasEmEspera] = useState<VendaEmEsperaCard[]>([])
   const [carregandoEmEspera, setCarregandoEmEspera] = useState(false)
@@ -124,6 +148,7 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
       tocarFeedback("erro")
       return
     }
+    await baixarOrigemAposReparcar()
     setCaixaMensagem(
       caixaFmt(m.caixa.em_aberto_colocada, { n: String(res.numeroLocal) }),
       { kind: "success" },
@@ -135,6 +160,7 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
     itens.length,
     snapshotCupomAtual,
     novoCupom,
+    baixarOrigemAposReparcar,
     m.caixa.em_aberto_colocada,
     recarregarEmEspera,
     setCaixaMensagem,
@@ -151,6 +177,7 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
           tocarFeedback("erro")
           return
         }
+        await baixarOrigemAposReparcar()
         novoCupom()
       }
       const res = await retomarVendaEmEsperaCaixa(id)
@@ -162,6 +189,8 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
       // Token de gerente não é restaurado: exige nova autorização se precisar desconto.
       limparEstadoDescontoGerente()
       substituirCarrinho(res.itens)
+      // O pedido continua EM_ESPERA no banco; a baixa acontece na finalização.
+      setVendaEmEsperaOrigemId(res.id)
       // Restaura o cliente vinculado. `vendas_em_espera` guarda só o id, então o
       // nome do chip é resolvido depois — sem bloquear a retomada do cupom.
       setClienteId(res.clienteId)
@@ -193,6 +222,7 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
       itens.length,
       snapshotCupomAtual,
       novoCupom,
+      baixarOrigemAposReparcar,
       limparEstadoDescontoGerente,
       substituirCarrinho,
       reprecificar,
@@ -204,6 +234,7 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
       focarCampoBusca,
       setClienteId,
       setClienteNome,
+      setVendaEmEsperaOrigemId,
     ],
   )
 
