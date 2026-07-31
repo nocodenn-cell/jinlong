@@ -8,6 +8,7 @@ function mergeCadastroComum<T extends typeof ptRaw>(raw: T) {
   return {
     ...raw,
     categorias_produtos: { ...c, ...raw.categorias_produtos },
+    marcas_produtos: { ...c, ...raw.marcas_produtos },
     categorias_financeiras: { ...c, ...raw.categorias_financeiras },
   }
 }

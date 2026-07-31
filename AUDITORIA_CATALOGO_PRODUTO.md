@@ -20,9 +20,9 @@ A auditoria começou pelo roteamento, e a primeira constatação muda a leitura 
 | Edição de produto | `/admin/catalogo` (modal, mesmo formulário do cadastro) | ✅ |
 | Categorias | `/admin/categorias-produtos` | ⚠️ sem excluir na UI |
 | Fornecedores | `/admin/fornecedores` | ✅ |
-| **Marcas** | **não existe rota** | ❌ só cadastro rápido dentro do formulário |
+| **Marcas** | ~~não existia rota~~ → `/admin/marcas-produtos` | ✅ criado na rodada 2 |
 | Estoque inicial | dentro do cadastro (só na criação) | ✅ |
-| Recebimento | `/admin/estoque/recebimento` | ⚠️ `<select>` limitado a 500 produtos |
+| Recebimento | `/admin/estoque/recebimento` | ~~`<select>` de 500~~ → ✅ busca server-side (rodada 2) |
 | Preços atacado/varejo | dentro do formulário (`FaixasAtacadoEditor`) | ✅ |
 | Dados fiscais | dentro do formulário (`FiscalSection`, modo completo) | ✅ |
 
@@ -124,9 +124,12 @@ A coluna "Estoque" linkava `adminEstoqueProdutoQuery(r.nome)`. Com nomes parecid
 
 ---
 
-## 5. ⚠️ Risco — reportado, não corrigido (decisão de produto)
+## 5. ⚠️ Risco — reportado na rodada 1
 
-Não mexi nestes porque exigem decisão de produto ou construção de tela nova — fora de "corrigir bug".
+> **Atualização (rodada 2):** os itens 5.1 a 5.6 foram endereçados. As duas mudanças
+> de regra (5.4 e 5.6) têm decisão registrada em
+> `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`. O que segue aberto
+> está consolidado na §8.
 
 ### 5.1 Não existe como excluir um produto na UI
 
@@ -235,3 +238,112 @@ Testes de regressão adicionados:
 
 **Não houve alteração de regra de negócio.** Vendabilidade, dual-write de lifecycle, precificação e
 kardex continuam exatamente onde estavam, com as mesmas RPCs como autoridade.
+
+---
+
+## 8. Rodada 2 — o que foi fechado e o que segue aberto
+
+### ✅ P0 — fluxo cadastro → estoque → PDV travado por teste
+
+`app/gerente/produtos/cadastroEstoquePdv.contrato.test.ts` percorre a cadeia inteira,
+sem I/O, elo por elo:
+
+```
+form (buildSubmitPayload)
+  → Zod (NovoProdutoSchema | NovoProdutoRascunhoSchema)
+  → lifecycle (statusInicialProduto | dualWriteFromStatus)
+  → mapFormToCreateProductInput      (UI snake → domínio camel)
+  → mapCreateProductInputToRpc       (domínio → payload da RPC 270)
+  → defaultStatusNovoProduto         (dual-write gravado na linha)
+  → isProdutoVendavel                (regra única do PDV)
+```
+
+O modo de falha que ele existe para pegar é silencioso: produto cadastrado com
+sucesso, visível no catálogo, que **nunca aparece no PDV** porque algum elo parou de
+propagar `status_publicacao`/`ativo`. Cobre também rascunho que não vaza, publicação
+posterior, inativação, e o caso "publicado com saldo 0" (vendável pela regra de
+catálogo; quem barra é `decrementar_estoque_seguro` na venda).
+
+### ✅ P1 entregue
+
+| Item | O que mudou |
+|---|---|
+| Excluir/inativar produto | Botão por linha + ação em lote no `/admin/catalogo`, reusando `ProdutosExcluirLoteModal` e a regra segura de `productExclusion` (sem dependências → remove; com dependências → inativa) |
+| Ações em lote | Seleção por linha e por página + barra com publicar / ativar / inativar / alterar categoria / excluir. `DataTable` ganhou `headerCell` opcional (aditivo) para o "selecionar todos" |
+| Gestão de marcas | Nova rota `/admin/marcas-produtos` + actions `listar`/`atualizar`/`alternarAtivo`/`excluir`, espelhando categorias. Entrou no menu lateral |
+| Categoria inativa | Sai das escolhas novas, **continua visível no produto que já a usa** com aviso — esconder faria salvar apagar o vínculo. Lógica pura em `core/catalog/opcoesCadastro.ts`, com teste |
+| Recebimento | `<select>` de 500 itens → autocomplete com busca server-side (nome, código de barras, código interno), teto de 20 e escopo de loja |
+| Regra "Publicar" | UI passa a consumir `podePublicarProduto` (só rascunho publica); INATIVO ganha ação própria "Reativar"; a regra é **imposta no servidor**, não só na tela |
+
+### ⚠️ Segue aberto (decisão de produto)
+
+- **Filtro por tags** — a server action aceita `tags`, mas não há UI. Nenhum consumidor hoje.
+- **Tela de detalhe do produto** — `/admin/catalogo/[id]` não existe; `buscarProdutoDetalhe` continua sem consumidor. "Editar" cobre a necessidade.
+- **Fornecedor inativo ainda aparece no seletor** — mesma questão que foi resolvida para categoria (§5.4) e marca. Não mexi porque fornecedor tem regra própria de bloqueio (contas a pagar em aberto) e merece decisão separada.
+- **`AjusteSaldoModal`** — a observação obrigatória para o motivo "Outro" só aparece no placeholder e não é validada no cliente: o operador preenche tudo, salva, e só então leva o erro do servidor.
+- **Código órfão** — `ProdutosGerentePageClient.tsx` (1187 linhas) e outros `@legacy` seguem sem importador; o `check-entity-ssot-boundary` já os lista como `[ssot:orphan]`. Server actions sem consumidor: `buscarProdutoDetalhe`, `obterKpisEstoque`, `atualizarPrecoVarejoProduto`, `garantirLinhaEstoque`.
+
+### 🧹 Fora do escopo, corrigido no caminho
+
+O `next.config.js` **da raiz do monorepo** declarava `withSentryConfig` três vezes (o
+wizard do Sentry injetou o bloco em duplicata) e não carregava — `SyntaxError`. Não
+afetava a Vercel, que builda `pdv-importados`, mas derrubava qualquer build disparado
+da raiz, incluindo o preview do Autonoma na PR #251. Duplicatas removidas.
+
+### Verificação da rodada 2
+
+- `npx tsc -p tsconfig.typecheck.json --noEmit` — sem erros
+- `npx vitest run` — **159 arquivos, 834 testes** (era 821)
+- `npx next lint` nas áreas alteradas — sem avisos
+- `npm run guard:all` — OK (route-guard agora com 27 rotas)
+- `npx next build` em `pdv-importados` — build completo
+
+**Nenhuma regra de negócio foi alterada sem decisão registrada.** As duas que mudaram
+estão em `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`.
+
+## 9. Rodada 3 — correções da auditoria arquitetural
+
+### ✅ Corrigido
+
+| Sev | Item | Correção |
+|---|---|---|
+| P0 | `alterarAtivoLoteProdutos(ids, true)` levava a `PUBLICADO` sem passar por `podePublicarProduto` — porta lateral para o gate criado na rodada 2 | Gate aplicado na própria action quando `ativo = true`; o botão "Ativar" saiu da barra de lote por ser a mesma transição do "Publicar" ao lado |
+| P2 | Toast do lote informava a quantidade **selecionada**, não a publicada | `run` da toolbar passou a receber a mensagem de dentro do callback, onde `r.data.publicados` é conhecido |
+| P2 | Termo do autocomplete de recebimento entrava cru no `or=` do PostgREST | Reuso de `escapeIlike` (exportado de `receivableReader.ts`) + neutralização de `,` `(` `)` |
+| P2 | Marca inativa sumia do formulário do produto que a usa (assimetria com categoria) | `opcoes.marcas` passou a carregar `ativo`; `ComercialSection` usa `opcoesSelecionaveis`/`selecionadaEstaInativa`, com o mesmo aviso da categoria |
+| P3 | `excluirMarcaProduto` exportada sem nenhuma tela | Removida — Server Action é endpoint público, e a que não tem consumidor não fica |
+| P3 | Seleção do catálogo sobrevivia à troca de página/filtro | Limpa quando o conjunto de ids da página muda |
+| P3 | Lixeira de uma linha descartava a seleção múltipla | Alvo da exclusão em estado próprio (`excluirIds`) |
+| P3 | `role="option"` com `<button>` dentro; estados de aviso anunciados como opções | `role` migrado para o elemento focável, `<li role="none">`; avisos como `presentation`; `aria-autocomplete="list"` |
+| P3 | Presença de produtos sem escopo de loja, busca com escopo | Checagem de presença passou a filtrar por `loja_id` |
+| — | Chaves i18n de marcas com vocabulário de categoria | `nova_marca`, `editar_marca`, `sem_marcas`, `marca_singular`, `marcas_plural` (pt e zh) |
+
+### Decisão: recebimento aceita DRAFT, não aceita INATIVO
+
+O `<select>` antigo filtrava `ativo = true`, o que excluía os dois. A busca nova
+aceita **DRAFT de propósito**: produto novo nasce DRAFT (`defaultStatusNovoProduto`)
+e receber é entrada física, anterior à venda — exigir publicação antes de receber
+obrigaria a publicar no PDV um item que ainda não chegou. **INATIVO fica de fora**:
+é item aposentado, e receber estoque para ele é quase sempre engano de digitação;
+o caminho correto é reativar antes. Imposto em `buscarProdutosRecebimento` via
+`isInativo` (o literal segue só no core).
+
+### 📌 Dívida técnica registrada (não corrigida nesta PR)
+
+**`MarcasProdutosContent.tsx` é clone de `CategoriasProdutosContent.tsx`** (352 e 315
+linhas; divergem em imports, um `try/catch` e formatação). O mesmo vale para o bloco
+`postProcess` de contagem de produtos nas duas actions, que faz N+1 (uma query
+`count` por linha, até 50 por página).
+
+Não foi unificado aqui de propósito: o merge `mergeCadastroComum` monta o namespace
+como `{...cadastro_comum, ...<cadastro>}`, e as chaves genéricas de `cadastro_comum`
+usam o substantivo "categoria" (`nova_categoria`, `sem_categorias`,
+`categorias_plural`). Extrair um componente único exige antes renomear essas chaves
+para vocabulário neutro em `cadastro_comum`, o que atinge também
+`categorias_financeiras` — refatoração maior do que a correção de auditoria comporta,
+e arriscada durante o feature freeze do piloto.
+
+**Ordem sugerida quando for feito:** (1) renomear as chaves genéricas de
+`cadastro_comum` para vocabulário neutro; (2) extrair o componente de listagem CRUD
+parametrizado por labels + actions; (3) trocar o N+1 de contagem por uma única
+agregação. Nada disso muda contrato de action nem schema.

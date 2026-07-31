@@ -13,6 +13,8 @@ type Props = Readonly<{
   onChange: (id: string) => void
   opcoes: Opcao[]
   vazioLabel: string
+  /** Nota abaixo do campo (ex.: aviso de opção inativa). */
+  hint?: string | null
   disabled?: boolean
   selectClassName: string
   modalTitulo: string
@@ -31,6 +33,7 @@ export function SelectComCadastroRapido({
   onChange,
   opcoes,
   vazioLabel,
+  hint,
   disabled,
   selectClassName,
   modalTitulo,
@@ -71,6 +74,11 @@ export function SelectComCadastroRapido({
             <Plus size={16} aria-hidden />
           </button>
         </div>
+        {hint ? (
+          <span className="mt-0.5 block text-[10px] text-[var(--color-warning-strong)]">
+            {hint}
+          </span>
+        ) : null}
       </div>
 
       <CadastroRapidoNomeModal

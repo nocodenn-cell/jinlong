@@ -106,6 +106,7 @@ Seguir `docs/RUNBOOK_PRIMEIRO_CLIENTE.md`:
 ### Gerente/Dono (GERENTE/DONO)
 1. Login → `/admin/dashboard`
 2. Criar categorias em `/admin/categorias-produtos` (**pré-requisito** do cadastro)
+   e marcas em `/admin/marcas-produtos` (opcional, mas evita marca digitada errada)
 3. Cadastrar produtos em `/admin/catalogo`
 4. Gerenciar estoque em `/admin/estoque` e receber mercadoria em `/admin/estoque/recebimento`
 5. Ver vendas e cancelar em `/admin/vendas`
@@ -130,6 +131,28 @@ Seguir `docs/RUNBOOK_PRIMEIRO_CLIENTE.md`:
 | Expectativa de NF-e | Média | Médio | Confirmar contrato: fiscal mock no D0 |
 | Conta em `public.perfis` | Baixa | Alto | Runbook proíbe; usar só `usuarios` |
 | Loja de teste reutilizada | Média | Alto | Criar loja nova sempre |
+| Produto publicado com saldo 0 não vende | Alta | Médio | A tela pós-salvar já avisa que o ajuste de estoque é obrigatório; incluir no treinamento |
+| Base legada sem linha em `estoque` | Média | Médio | Corrigido: o ajuste de saldo cria a linha faltante sozinho (auditoria do catálogo, rodada 1) |
+| CI do GitHub Actions sem runner (billing) | Alta | Médio | Validação local completa antes do merge; revisar spending limit da conta |
+
+### Catálogo — estado após a auditoria de 2026-07-30
+
+Relatório completo: `AUDITORIA_CATALOGO_PRODUTO.md`. Decisões de regra:
+`Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`.
+
+| Fluxo | Estado |
+|---|---|
+| Criar produto (com estoque inicial, na mesma transação) | ✅ coberto por teste de contrato |
+| Salvar rascunho · publicar no PDV · reativar | ✅ regra imposta no servidor |
+| Alterar preço · alterar estoque | ✅ |
+| Vincular categoria / marca / fornecedor | ✅ cadastro rápido + telas de gestão |
+| Excluir / inativar produto (linha e lote) | ✅ religado à UI |
+| Recebimento de mercadoria | ✅ busca server-side (sem teto de 500) |
+| Consultar no PDV | ✅ regra única `productEngine` |
+
+**Ainda aberto (decisão de produto, não bug):** filtro por tags sem UI; sem tela de
+detalhe do produto; fornecedor inativo ainda aparece no seletor (mesma questão já
+resolvida para categoria e marca). Ver §5 do relatório.
 
 ---
 

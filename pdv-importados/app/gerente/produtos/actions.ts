@@ -25,6 +25,7 @@ import {
   dualWriteFromStatus,
   isIntencaoRascunho,
   lifecycleAoEditarProduto,
+  podePublicarProduto,
   statusFromAtivoLegacy,
 } from '@/core/catalog/statusPublicacao'
 import { statusInicialProduto } from '@/core/systemRules'
@@ -604,7 +605,24 @@ export async function removerImagemProduto(produtoId: string): Promise<ActionRes
 
 const ProdutoIdSchema = z.string().uuid('ID do produto inválido.')
 
-/** Facade — lifecycle via ProductLifecycleService. */
+/** Status atual gravado — leitura pessimista (ausente → null, ninguém publica por engano). */
+async function lerStatusPublicacao(produtoId: string): Promise<StatusPublicacao | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('produtos')
+    .select('status_publicacao')
+    .eq('id', produtoId)
+    .maybeSingle()
+  return (data?.status_publicacao ?? null) as StatusPublicacao | null
+}
+
+/**
+ * Facade — lifecycle via ProductLifecycleService.
+ *
+ * Ativar é publicar, então passa pelo mesmo gate de `alterarAtivoLoteProdutos`
+ * e das vias `publicarProduto`/`publicarProdutosLote`: só rascunho estreia, e
+ * produto aposentado volta por `reativarProduto`. Inativar segue sem gate.
+ */
 export async function alternarAtivoProduto(
   produtoId: string,
   ativo: boolean,
@@ -612,13 +630,51 @@ export async function alternarAtivoProduto(
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
+  if (ativo && !podePublicarProduto(await lerStatusPublicacao(produtoId))) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+  }
+
   const status = statusFromAtivoLegacy(ativo)
   const result = await setProductStatusAction(produtoId, status)
   if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: null }
 }
 
+/**
+ * Estreia de um rascunho (DRAFT → PUBLICADO).
+ *
+ * A regra `podePublicarProduto` é imposta AQUI, não só na UI: Server Action é
+ * endpoint público, e regra que só a tela respeita não é regra. Para trazer de
+ * volta um produto aposentado use `reativarProduto` — transição diferente, nome
+ * diferente. Ver Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md.
+ */
 export async function publicarProduto(produtoId: string): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const parsed = ProdutoIdSchema.safeParse(produtoId)
+  if (!parsed.success) {
+    const { idioma } = await getUsuarioIdioma()
+    return {
+      success: false,
+      error: mensagemErroValidacaoZod(parsed.error.issues[0]?.message ?? 'ID inválido.', idioma),
+    }
+  }
+
+  const atual = await lerStatusPublicacao(parsed.data)
+  if (!podePublicarProduto(atual)) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+  }
+
+  const result = await setProductStatusAction(parsed.data, 'PUBLICADO')
+  if (!result.ok) return { success: false, error: result.error }
+  return { success: true, data: null }
+}
+
+/** Retorno de um produto aposentado (INATIVO → PUBLICADO). Transição explícita. */
+export async function reativarProduto(produtoId: string): Promise<ActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
@@ -658,6 +714,31 @@ const LotePublicacaoSchema = z.object({
   produto_ids: z.array(z.string().uuid()).min(1).max(200),
 })
 
+/** Status gravados de vários produtos numa ida só — mesma leitura pessimista da via unitária. */
+async function lerStatusPublicacaoLote(
+  produtoIds: string[],
+): Promise<Map<string, StatusPublicacao | null>> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('produtos')
+    .select('id, status_publicacao')
+    .in('id', produtoIds)
+  const linhas = (data ?? []) as { id: string; status_publicacao: StatusPublicacao | null }[]
+  return new Map(linhas.map((l) => [l.id, l.status_publicacao ?? null]))
+}
+
+/**
+ * Estreia de rascunhos em lote (DRAFT → PUBLICADO).
+ *
+ * O gate `podePublicarProduto` vale AQUI pelo mesmo motivo da via unitária: é
+ * Server Action, endpoint público. Sem isto o lote seria o buraco por onde a
+ * regra vaza — bastaria selecionar um INATIVO na lista para republicá-lo sem
+ * passar por `reativarProduto`, que é a transição própria para isso.
+ *
+ * Produtos não publicáveis são descartados em silêncio, não derrubam o lote: o
+ * contrato de retorno é `publicados`, então publicar menos do que foi
+ * selecionado já é um resultado que a UI sabe exibir. Se nada sobrar, é erro.
+ */
 export async function publicarProdutosLote(
   rawIds: string[],
 ): Promise<ActionResult<{ publicados: number }>> {
@@ -673,7 +754,16 @@ export async function publicarProdutosLote(
     }
   }
 
-  const result = await setProductStatusLoteAction(parsed.data.produto_ids, 'PUBLICADO')
+  const statusAtuais = await lerStatusPublicacaoLote(parsed.data.produto_ids)
+  const publicaveis = parsed.data.produto_ids.filter((id) =>
+    podePublicarProduto(statusAtuais.get(id) ?? null),
+  )
+  if (publicaveis.length === 0) {
+    const { idioma } = await getUsuarioIdioma()
+    return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+  }
+
+  const result = await setProductStatusLoteAction(publicaveis, 'PUBLICADO')
   if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: { publicados: result.atualizados } }
 }
@@ -785,8 +875,15 @@ const BuscarProdutosComFiltrosInputSchema = z.object({
 export type BuscarProdutosComFiltrosInput = z.infer<typeof BuscarProdutosComFiltrosInputSchema>
 
 export type OpcoesFiltrosProdutos = {
-  categorias: { id: string; nome: string }[]
-  marcas: { id: string; nome: string }[]
+  /**
+   * `ativo` acompanha a categoria porque o formulário precisa distinguir "não
+   * ofereço mais" de "não existe": a categoria inativa some das escolhas novas,
+   * mas continua visível no produto que já a usa (senão salvar apagaria o
+   * vínculo). Ver `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`.
+   */
+  categorias: { id: string; nome: string; ativo?: boolean }[]
+  /** `ativo` pelo mesmo motivo de `categorias` — ver nota acima. */
+  marcas: { id: string; nome: string; ativo?: boolean }[]
   fornecedores: { id: string; nome: string }[]
 }
 
@@ -803,13 +900,13 @@ const buscarOpcoesFiltrosCached = unstable_cache(
   async (): Promise<OpcoesFiltrosProdutos> => {
     const supabase = await createClient()
     const [cat, mar, forn] = await Promise.all([
-      supabase.from('categorias').select('id, nome').order('nome', { ascending: true }),
-      supabase.from('marcas').select('id, nome').eq('ativo', true).order('nome', { ascending: true }),
+      supabase.from('categorias').select('id, nome, ativo').order('nome', { ascending: true }),
+      supabase.from('marcas').select('id, nome, ativo').order('nome', { ascending: true }),
       supabase.from('fornecedores').select('id, nome').order('nome', { ascending: true }),
     ])
     return {
-      categorias: ((cat.data ?? []) as { id: string; nome: string }[]),
-      marcas: ((mar.data ?? []) as { id: string; nome: string }[]),
+      categorias: ((cat.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
+      marcas: ((mar.data ?? []) as { id: string; nome: string; ativo?: boolean }[]),
       fornecedores: ((forn.data ?? []) as { id: string; nome: string }[]),
     }
   },
@@ -879,6 +976,18 @@ const LoteAtivoSchema = z.object({
   ativo: z.boolean(),
 })
 
+/**
+ * Ativar/inativar em lote (via legada `ativo`).
+ *
+ * Ativar significa `PUBLICADO`, então este caminho é publicação e passa pelo
+ * MESMO gate `podePublicarProduto` das vias `publicarProduto`/`publicarProdutosLote`.
+ * Sem isto ele seria uma porta lateral para o mesmo destino: bastava usar
+ * "Ativar" em vez de "Publicar" para estrear um DRAFT ou republicar um INATIVO
+ * sem passar por `reativarProduto`. Regra imposta em um só dos caminhos que
+ * levam a PUBLICADO não é regra em nenhum.
+ *
+ * Inativar não tem gate: qualquer status pode ir para INATIVO.
+ */
 export async function alterarAtivoLoteProdutos(
   rawIds: string[],
   ativo: boolean,
@@ -895,8 +1004,18 @@ export async function alterarAtivoLoteProdutos(
     }
   }
 
+  let alvos = parsed.data.produto_ids
+  if (parsed.data.ativo) {
+    const statusAtuais = await lerStatusPublicacaoLote(alvos)
+    alvos = alvos.filter((id) => podePublicarProduto(statusAtuais.get(id) ?? null))
+    if (alvos.length === 0) {
+      const { idioma } = await getUsuarioIdioma()
+      return { success: false, error: getMessages(idioma).produtos.publicar_apenas_rascunho }
+    }
+  }
+
   const status = statusFromAtivoLegacy(parsed.data.ativo)
-  const result = await setProductStatusLoteAction(parsed.data.produto_ids, status)
+  const result = await setProductStatusLoteAction(alvos, status)
   if (!result.ok) return { success: false, error: result.error }
   return { success: true, data: { atualizados: result.atualizados } }
 }

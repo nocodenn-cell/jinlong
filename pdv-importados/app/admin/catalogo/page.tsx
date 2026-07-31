@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
+import { opcoesSelecionaveis } from '@/core/catalog/opcoesCadastro'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { ErrorState } from '@/components/ui/feedback'
@@ -131,13 +132,15 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
     : null
 
   // ─── FilterBar (Fase 2) ──────────────────────────────────────────────────
+  // Opção inativa não é oferecida como filtro novo, mas continua listada se for
+  // a que está filtrando agora — senão o filtro ativo sumiria do seletor.
   const catOptions = [
     { value: '', label: m.estoque.filtro_todas_categorias },
-    ...opcoes.categorias.map((c) => ({ value: c.id, label: c.nome })),
+    ...opcoesSelecionaveis(opcoes.categorias, categoria ?? '').map((c) => ({ value: c.id, label: c.nome })),
   ]
   const marcaOptions = [
     { value: '', label: ui.catalogo_todas_marcas },
-    ...opcoes.marcas.map((m) => ({ value: m.id, label: m.nome })),
+    ...opcoesSelecionaveis(opcoes.marcas, marca ?? '').map((m) => ({ value: m.id, label: m.nome })),
   ]
   const fornOptions = [
     { value: '', label: ui.catalogo_todos_fornecedores },
@@ -293,7 +296,7 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         <Suspense fallback={<div className="admin-v2-panel h-24 animate-pulse rounded-lg" />}>
           <CatalogoTable
             produtos={produtos}
-            labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_produto, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil, acaoEditar: ui.catalogo_acao_editar, acaoDuplicar: ui.catalogo_acao_duplicar, acaoVerEstoque: ui.catalogo_acao_ver_estoque }}
+            labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_produto, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil, acaoEditar: ui.catalogo_acao_editar, acaoDuplicar: ui.catalogo_acao_duplicar, acaoVerEstoque: ui.catalogo_acao_ver_estoque, acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha, reativar: ui.catalogo_acao_reativar }}
             m={m}
             opcoes={opcoes}
             idioma={idioma}
