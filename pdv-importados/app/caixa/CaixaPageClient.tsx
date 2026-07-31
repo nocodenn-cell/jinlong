@@ -40,7 +40,6 @@ import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
-import { CaixaFooter } from "@/app/caixa/CaixaFooter"
 import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
 import { CaixaPdvOperacoesMenu } from "@/app/caixa/CaixaPdvOperacoesMenu"
 import { CaixaRailTurnoSummary } from "@/app/caixa/CaixaRailTurnoSummary"
@@ -199,16 +198,12 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     totalBruto: totalBrutoStore,
     totalDesconto: totalDescontoStore,
     totalLiquido: totalLiquidoStore,
-    totalItens: totalItensStore,
-    totalUnidades: totalUnidadesStore,
   } = useCarrinhoStore(
     useShallow((s) => ({
       itens: s.itens,
       totalBruto: s.totalBruto,
       totalDesconto: s.totalDesconto,
       totalLiquido: s.totalLiquido,
-      totalItens: s.totalItens,
-      totalUnidades: s.totalUnidades,
     })),
   )
   // STATE READY GATE (React #418): o store persistido (zustand/persist + localStorage
@@ -220,8 +215,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const totalBruto = cartMounted ? totalBrutoStore : 0
   const totalDesconto = cartMounted ? totalDescontoStore : 0
   const totalLiquido = cartMounted ? totalLiquidoStore : 0
-  const totalItens = cartMounted ? totalItensStore : 0
-  const totalUnidades = cartMounted ? totalUnidadesStore : 0
   // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
   const setRegras = useCarrinhoStore((s) => s.setRegras)
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
@@ -232,16 +225,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const restaurarUltimoRemovido = useCarrinhoStore((s) => s.restaurarUltimoRemovido)
   const limparCarrinho = useCarrinhoStore((s) => s.limparCarrinho)
   const substituirCarrinho = useCarrinhoStore((s) => s.substituirCarrinho)
-
-  const economiaPrecoAtacadoAuto = useMemo(() => {
-    return itens.reduce((acc, it) => {
-      if (it.resultado?.tipoPreco !== "ATACADO") return acc
-      const o = it.resultado.precoOriginal
-      const u = it.resultado.precoUnitario
-      if (!Number.isFinite(o) || !Number.isFinite(u) || o <= u) return acc
-      return acc + (o - u) * it.quantidade
-    }, 0)
-  }, [itens])
 
   const descontoGerenteAplicado = aplicarDescontoGerenteSobreTotal({
     totalLiquido,
@@ -1334,27 +1317,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
               onEstornar={handleEstornarMovimentacao}
             />
           )}
-          <CaixaFooter
-            m={m}
-            idioma={idioma}
-            layout="classic_summary"
-            onFinalizar={handleFinalizarClick}
-            finalizando={finalizando}
-            itensLength={itens.length}
-            buscando={buscandoPipeline}
-            carregandoRegras={carregandoRegras}
-            totalItens={totalItens}
-            totalUnidades={totalUnidades}
-            gerenteValidadoAte={gerenteValidadoAte}
-            descontoGerentePercentual={descontoGerentePercentual}
-            maxDescontoGerentePercentual={maxDescontoGerentePercentual}
-            totalBruto={totalBruto}
-            totalDesconto={totalDesconto}
-            economiaPrecoAtacadoAuto={economiaPrecoAtacadoAuto}
-            valorDescontoGerente={valorDescontoGerente}
-            totalLiquidoComGerente={totalLiquidoComGerente}
-            moedaPrefixo={m.caixa.moeda_prefixo}
-          />
+          {/* Rodapé de resumo removido: repetia total, bruto, descontos e o botão
+              Finalizar logo abaixo da barra do carrinho — duas faixas empilhadas
+              dizendo a mesma coisa. O total único e sempre visível é o da barra. */}
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
