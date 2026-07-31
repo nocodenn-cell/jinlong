@@ -22,9 +22,10 @@ export default async function CaixaPage() {
   }
   const metaNome =
     typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name.trim() : ""
+  const emailLocalPart = user?.email?.trim()?.split("@")[0]?.trim() ?? ""
   const operadorLabel =
-    (user?.email?.trim() && user.email.trim()) ||
     (metaNome.length > 0 ? metaNome : null) ||
+    (emailLocalPart.length > 0 ? emailLocalPart : null) ||
     (user?.id ? user.id.slice(0, 8) : null) ||
     "—"
 
