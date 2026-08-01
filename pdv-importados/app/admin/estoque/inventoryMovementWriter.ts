@@ -15,6 +15,8 @@ import type {
   InventoryMovementWriter,
   ReceiveOrdemCompraCommand,
   ReceiveOrdemCompraResult,
+  RegistrarConferenciaRemessaCommand,
+  RegistrarConferenciaRemessaResult,
   RegisterMovementCommand,
   RegisterMovementResult,
   TransferStockCommand,
@@ -29,6 +31,9 @@ export type MovementWriterRpc = {
   confirmRemessa: (args: { p_remessa_id: string }) => Promise<{ error: { message: string } | null }>
   importNfe: (args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
   receiveOc: (args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
+  registrarConferencia: (
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>
 }
 
 export type InventoryMovementWriterDeps = {
@@ -44,6 +49,8 @@ function defaultRpc(supabase: SupabaseClient): MovementWriterRpc {
       return { error }
     },
     importNfe: async (args) => supabase.rpc('importar_nfe_transacao', args),
+    registrarConferencia: async (args) =>
+      supabase.rpc('registrar_conferencia_remessa', args),
     receiveOc: async (args) => {
       const { error } = await supabase.rpc('receber_ordem_compra', args)
       return { error }
@@ -153,6 +160,64 @@ export function createInventoryMovementWriter(
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Falha na transferência.',
+          code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+        }
+      }
+    },
+
+    async registrarConferenciaRemessa(
+      command: RegistrarConferenciaRemessaCommand,
+    ): Promise<RegistrarConferenciaRemessaResult> {
+      if (!command.remessaId?.trim()) {
+        return {
+          ok: false,
+          error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.REMESSA_ID_REQUIRED),
+          code: INVENTORY_ERROR_CODES.REMESSA_ID_REQUIRED,
+        }
+      }
+      // `0` é contagem válida ("contei, não veio"); negativo e não-finito não são.
+      const invalido = command.itens.some(
+        (i) =>
+          !i.produtoId?.trim() ||
+          !Number.isFinite(i.quantidadeConferida) ||
+          i.quantidadeConferida < 0,
+      )
+      if (command.itens.length === 0 || invalido) {
+        return {
+          ok: false,
+          error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.CONFERENCIA_QTD_INVALIDA),
+          code: INVENTORY_ERROR_CODES.CONFERENCIA_QTD_INVALIDA,
+        }
+      }
+      try {
+        const { data, error } = await rpc.registrarConferencia({
+          p_remessa_id: command.remessaId.trim(),
+          p_itens: command.itens.map((i) => ({
+            produto_id: i.produtoId.trim(),
+            quantidade_conferida: i.quantidadeConferida,
+          })),
+          p_divergencia_motivo: command.divergenciaMotivo?.trim() || null,
+        })
+        if (error) {
+          return {
+            ok: false,
+            error: error.message,
+            code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+          }
+        }
+        const row = (Array.isArray(data) ? data[0] : data) as
+          | { o_status?: unknown; o_itens_divergentes?: unknown }
+          | null
+        return {
+          ok: true,
+          remessaId: command.remessaId.trim(),
+          status: String(row?.o_status ?? 'EM_CONFERENCIA'),
+          itensDivergentes: Number(row?.o_itens_divergentes ?? 0),
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Falha ao registrar a conferência.',
           code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
         }
       }

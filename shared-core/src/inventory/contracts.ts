@@ -171,6 +171,16 @@ export type ConfirmRemessaResult =
   | { ok: true; remessaId: string }
   | { ok: false; error: string; code?: InventoryErrorCode }
 
+export type RegistrarConferenciaRemessaCommand = {
+  remessaId: string
+  itens: ReadonlyArray<{ produtoId: string; quantidadeConferida: number }>
+  divergenciaMotivo?: string | null
+}
+
+export type RegistrarConferenciaRemessaResult =
+  | { ok: true; remessaId: string; status: string; itensDivergentes: number }
+  | { ok: false; error: string; code?: InventoryErrorCode }
+
 export type ReceiveOrdemCompraCommand = {
   ocId: string
   itens: ReadonlyArray<{ itemId: string; quantidadeRecebida: number }>
@@ -218,6 +228,13 @@ export type InventoryMovementWriter = {
    */
   registerMovement(command: RegisterMovementCommand): Promise<RegisterMovementResult>
   transfer(command: TransferStockCommand): Promise<TransferStockResult>
+  /**
+   * Registra a contagem física (Onda B). Etapa obrigatória antes de
+   * `confirmRemessaEntrada` — sem ela a RPC recusa mover saldo.
+   */
+  registrarConferenciaRemessa(
+    command: RegistrarConferenciaRemessaCommand,
+  ): Promise<RegistrarConferenciaRemessaResult>
   confirmRemessaEntrada(command: ConfirmRemessaCommand): Promise<ConfirmRemessaResult>
   importNfe(command: ImportNfeCommand): Promise<ImportNfeResult>
   /**

@@ -129,12 +129,16 @@ describe('inventory — contracts (split de leitura)', () => {
       async receiveOrdemCompra() {
         return { ok: false, error: 'not wired' }
       },
+      async registrarConferenciaRemessa() {
+        return { ok: false, error: 'not wired' }
+      },
     }
     expect(Object.keys(writer).sort()).toEqual([
       'confirmRemessaEntrada',
       'importNfe',
       'receiveOrdemCompra',
       'registerMovement',
+      'registrarConferenciaRemessa',
       'transfer',
     ])
     await expect(writer.registerMovement(command)).resolves.toEqual({
@@ -182,7 +186,14 @@ describe('inventory — barrel exports', () => {
       (k) => typeof (mod as Record<string, unknown>)[k] === 'function',
     )
     expect(fns.sort()).toEqual([
+      'contarDivergencias',
+      'isRecebimentoFinalizado',
       'mapAjusteRpcMessageToCode',
+      'podeConferirRecebimento',
+      'podeConfirmarRecebimento',
+      'podeTransicionarRecebimento',
+      'statusAposConferencia',
+      'temItemNaoConferido',
       'validateAdjustInventoryCommand',
     ])
   })

@@ -51,9 +51,29 @@ export type {
   ReceiveOrdemCompraResult,
   RegisterMovementCommand,
   RegisterMovementResult,
+  RegistrarConferenciaRemessaCommand,
+  RegistrarConferenciaRemessaResult,
   TransferStockCommand,
   TransferStockResult,
 } from './contracts'
 
 export type { ValidateAdjustResult } from './policies/validateAdjustInventory'
 export { validateAdjustInventoryCommand } from './policies/validateAdjustInventory'
+
+export type {
+  ItemConferencia,
+  RecebimentoOrigem,
+  RecebimentoStatus,
+} from './policies/recebimentoStatus'
+export {
+  RECEBIMENTO_ORIGENS,
+  RECEBIMENTO_STATUS,
+  RECEBIMENTO_TRANSITIONS,
+  contarDivergencias,
+  isRecebimentoFinalizado,
+  podeConferirRecebimento,
+  podeConfirmarRecebimento,
+  podeTransicionarRecebimento,
+  statusAposConferencia,
+  temItemNaoConferido,
+} from './policies/recebimentoStatus'

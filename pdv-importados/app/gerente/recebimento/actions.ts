@@ -110,11 +110,18 @@ export async function criarRemessaConferencia(input: {
   if (erro) return { success: false, error: erro }
   const origem = input.origem.trim()
 
+  // Onda B — abrir · conferir · confirmar são três transições distintas, mesmo
+  // quando a tela dispara as três num clique só. O que muda não é a experiência
+  // do operador: é o rastro. Cada etapa fica registrada com ator e momento, e
+  // `confirmar_remessa_entrada` recusa mover saldo se a conferência não passou.
   const { data: rem, error: e1 } = await supabase
     .from('remessas')
     .insert({
       loja_id: lojaId,
       origem_descricao: origem,
+      // Origem sem documento: NF-e e ordem de compra têm fluxo próprio e não
+      // passam por `remessas` (ver docs/ONDA_B_RECEBIMENTO.md).
+      origem_tipo: 'SEM_DOCUMENTO',
       status: 'EM_CONFERENCIA',
       observacao: input.observacao?.trim() || null,
       created_by: userId,
@@ -131,17 +138,33 @@ export async function criarRemessaConferencia(input: {
     }
   }
 
+  // Itens nascem SEM contagem. O `quantidade_conferida` só é gravado pela RPC de
+  // conferência — a tabela nunca recebe o esperado disfarçado de conferido.
   const rows = input.itens.map((i) => ({
     remessa_id: rem.id,
     produto_id: i.produto_id,
     quantidade_esperada: i.quantidade_esperada,
-    quantidade_conferida: i.quantidade_conferida,
   }))
 
   const { error: e2 } = await supabase.from('remessa_itens').insert(rows)
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da remessa', e2.message) }
 
   const writer = createInventoryMovementWriter(supabase, lojaId)
+
+  const conferido = await writer.registrarConferenciaRemessa({
+    remessaId: rem.id,
+    itens: input.itens.map((i) => ({
+      produtoId: i.produto_id,
+      quantidadeConferida: i.quantidade_conferida,
+    })),
+  })
+  if (!conferido.ok) {
+    return {
+      success: false,
+      error: mensagemErroComSecao('Conferência da remessa', conferido.error),
+    }
+  }
+
   const confirmed = await writer.confirmRemessaEntrada({ remessaId: rem.id })
   if (!confirmed.ok) {
     return {
