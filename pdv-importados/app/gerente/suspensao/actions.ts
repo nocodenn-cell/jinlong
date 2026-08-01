@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 
@@ -57,6 +57,6 @@ export async function atualizarSuspensaoVendas(
     if (error) return { success: false, error: error.message }
   }
 
-  revalidatePath('/gerente')
+  revalidarDominio('suspensao.alterada')
   return { success: true, data: null }
 }

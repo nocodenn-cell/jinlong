@@ -1,7 +1,8 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
   type CadastroActionResult,
@@ -12,7 +13,6 @@ import {
   listarCadastro,
 } from '../shared/actionHelpers'
 
-const REVALIDATE_PATHS = ['/gerente/produtos', '/admin/catalogo', '/admin/marcas-produtos'] as const
 const TABELA = 'marcas'
 
 type ActionResult<T> = CadastroActionResult<T>
@@ -42,7 +42,7 @@ const ListarMarcasSchema = z.object({
 })
 
 function revalidateMarcaPaths() {
-  for (const p of REVALIDATE_PATHS) revalidatePath(p)
+  revalidarDominio('marca.alterada')
   revalidateTag('catalogo-opcoes-filtro')
 }
 
@@ -59,7 +59,7 @@ export async function criarMarcaProduto(
     TABELA,
     { nome: parsed.data.nome.trim(), ativo: true },
     'Criar marca',
-    [...REVALIDATE_PATHS],
+    ['marca.alterada'],
   )
   if (result.success) revalidateMarcaPaths()
   return result
@@ -109,7 +109,7 @@ export async function atualizarMarcaProduto(input: unknown): Promise<ActionResul
     parsed.data.id,
     { nome: parsed.data.nome.trim() },
     'Atualizar marca',
-    [...REVALIDATE_PATHS],
+    ['marca.alterada'],
   )
   if (result.success) revalidateMarcaPaths()
   return result
@@ -129,7 +129,7 @@ export async function alternarAtivoMarcaProduto(
   id: string,
   ativo: boolean,
 ): Promise<ActionResult<null>> {
-  const result = await alternarAtivoCadastro(TABELA, id, ativo, [...REVALIDATE_PATHS])
+  const result = await alternarAtivoCadastro(TABELA, id, ativo, ['marca.alterada'])
   if (result.success) revalidateMarcaPaths()
   return result
 }

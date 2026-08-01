@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
@@ -128,6 +128,6 @@ export async function marcarComissoesPagas(
 
   if (error) return { success: false, error: mensagemErroComSecao('Marcar pago', error.message) }
 
-  revalidatePath('/gerente/comissoes')
+  revalidarDominio('comissao.alterada')
   return { success: true, data: { marcadas: Number(data ?? 0) } }
 }

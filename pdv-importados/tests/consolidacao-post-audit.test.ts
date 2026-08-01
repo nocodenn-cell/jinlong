@@ -7,6 +7,7 @@ import {
   ROUTES,
   pathWithQuery,
 } from '@shared-core/navigation/routes'
+import { TELAS_POR_EVENTO } from '@/lib/navigation/revalidarDominio'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -63,8 +64,34 @@ describe('consolidação pós-audit — contratos de rota e código morto', () =
   })
 
   it('cancelamento e finalização revalidam /admin/vendas', () => {
+    // O caminho agora é declarativo: a action publica o evento de domínio e o
+    // mapa único resolve as telas. O contrato ("/admin/vendas cai") continua o
+    // mesmo — verificado nas duas pontas, não numa string literal.
     const src = read('app/caixa/server/caixaVendas.impl.ts')
-    expect(src).toContain("revalidatePath('/admin/vendas')")
+    expect(src).toContain("revalidarDominio('venda.cancelada')")
+    expect(src).toContain("revalidarDominio('venda.finalizada')")
+    expect(TELAS_POR_EVENTO['venda.cancelada']).toContain(ROUTES.admin.vendas)
+    expect(TELAS_POR_EVENTO['venda.finalizada']).toContain(ROUTES.admin.vendas)
+  })
+
+  it('sangria/suprimento e fechamento de turno revalidam /admin/vendas', () => {
+    // Regressão real: antes revalidavam só '/gerente/caixas', que é redirect —
+    // a tela de turnos do gerente ficava velha depois de toda sangria.
+    expect(TELAS_POR_EVENTO['caixa.movimentacao.alterada']).toContain(ROUTES.admin.vendas)
+    expect(TELAS_POR_EVENTO['caixa.turno.alterado']).toContain(ROUTES.admin.vendas)
+  })
+
+  it('recebimento de mercadoria revalida /admin/estoque', () => {
+    expect(TELAS_POR_EVENTO['estoque.recebido']).toContain(ROUTES.admin.estoque)
+    expect(TELAS_POR_EVENTO['estoque.recebido']).toContain(ROUTES.admin.estoqueRecebimento)
+  })
+
+  it('nenhuma tela do mapa aponta para rota legada /gerente', () => {
+    for (const [evento, telas] of Object.entries(TELAS_POR_EVENTO)) {
+      for (const tela of telas) {
+        expect(tela.startsWith('/gerente'), `${evento} → ${tela}`).toBe(false)
+      }
+    }
   })
 
   it('VendaDetailSheet integra cancelamento', () => {
@@ -126,15 +153,40 @@ describe('consolidação pós-audit — guarda SSoT', () => {
     expect(fs.existsSync(rulePath)).toBe(true)
   })
 
-  it('componentes gerente órfãos marcados @legacy (não apagar até validação)', () => {
-    const legacyFiles = [
+  it('telas órfãs do gerente foram removidas (validação concluída)', () => {
+    // Eram segundas implementações das mesmas telas que existem em
+    // /admin/*/_components. Nenhuma rota as renderizava — /gerente/* é redirect.
+    const removidas = [
       'app/gerente/financeiro/FinanceiroGerentePageClient.tsx',
       'app/gerente/produtos/ProdutosGerentePageClient.tsx',
       'app/gerente/vendas/VendasGerenteListClient.tsx',
+      'app/gerente/relatorios/RelatoriosGerentePageClient.tsx',
+      'app/gerente/comissoes/ComissoesPageClient.tsx',
+      'app/gerente/suspensao/SuspensaoPageClient.tsx',
+      'app/gerente/configuracoes/ConfiguracoesClient.tsx',
+      'app/gerente/configuracoes/ConfiguracoesGerentePageClient.tsx',
+      'lib/navigation/adminSidebarNav.ts',
     ]
-    for (const rel of legacyFiles) {
-      expect(read(rel)).toContain('@legacy')
+    for (const rel of removidas) {
+      expect(exists(rel), rel).toBe(false)
     }
+  })
+
+  it('entrada de mercadoria tem autoridade de escrita única', () => {
+    // NF-e, remessa e ordem de compra — as três portas de entrada passam pelo
+    // InventoryMovementWriter. A OC chamava a RPC direto.
+    const writer = read('app/admin/estoque/inventoryMovementWriter.ts')
+    for (const rpc of [
+      'importar_nfe_transacao',
+      'confirmar_remessa_entrada',
+      'receber_ordem_compra',
+      'transferir_estoque_seguro',
+    ]) {
+      expect(writer, rpc).toContain(rpc)
+    }
+    const compras = read('app/gerente/compras/actions.ts')
+    expect(compras).toContain('createInventoryMovementWriter')
+    expect(compras).not.toMatch(/\.rpc\(\s*['"]receber_ordem_compra['"]/)
   })
 
   it('estoque inicial no create é TX atômica (RPC 270), não 2º round-trip no modal', () => {
@@ -152,6 +204,7 @@ describe('consolidação pós-audit — guarda SSoT', () => {
   it('script check:entity-ssot registrado no package.json', () => {
     const pkg = JSON.parse(read('package.json')) as { scripts?: Record<string, string> }
     expect(pkg.scripts?.['check:entity-ssot']).toContain('check-entity-ssot-boundary')
+    expect(pkg.scripts?.['check:revalidate']).toContain('check-revalidate-boundary')
     expect(pkg.scripts?.['test:integration:cancelamento']).toContain('vitest.integration.config')
   })
 })

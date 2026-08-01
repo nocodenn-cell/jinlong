@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio, type EventoDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
@@ -60,7 +60,7 @@ export async function alternarAtivoCadastro(
   tabela: PublicTable,
   id: string,
   ativo: boolean,
-  revalidatePaths: string[],
+  eventos: readonly EventoDominio[],
 ): Promise<CadastroActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -81,7 +81,7 @@ export async function alternarAtivoCadastro(
     return { success: false, error: mensagemErroComSecao('Alterar situação', error.message) }
   }
 
-  for (const p of revalidatePaths) revalidatePath(p)
+  revalidarDominio(eventos)
   return { success: true, data: null }
 }
 
@@ -90,7 +90,7 @@ export async function excluirCadastro(
   tabela: PublicTable,
   id: string,
   secaoErro: string,
-  revalidatePaths: string[],
+  eventos: readonly EventoDominio[],
 ): Promise<CadastroActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -108,7 +108,7 @@ export async function excluirCadastro(
     return { success: false, error: mensagemErroComSecao(secaoErro, error.message) }
   }
 
-  for (const p of revalidatePaths) revalidatePath(p)
+  revalidarDominio(eventos)
   return { success: true, data: null }
 }
 
@@ -117,7 +117,7 @@ export async function criarCadastro(
   tabela: PublicTable,
   payload: Record<string, unknown>,
   secaoErro: string,
-  revalidatePaths: string[],
+  eventos: readonly EventoDominio[],
 ): Promise<CadastroActionResult<{ id: string }>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -135,7 +135,7 @@ export async function criarCadastro(
     return { success: false, error: mensagemErroComSecao(secaoErro, error.message) }
   }
 
-  for (const p of revalidatePaths) revalidatePath(p)
+  revalidarDominio(eventos)
   return { success: true, data: { id: (data as { id: string }).id } }
 }
 
@@ -145,7 +145,7 @@ export async function atualizarCadastro(
   id: string,
   payload: Record<string, unknown>,
   secaoErro: string,
-  revalidatePaths: string[],
+  eventos: readonly EventoDominio[],
 ): Promise<CadastroActionResult<null>> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
@@ -161,7 +161,7 @@ export async function atualizarCadastro(
     return { success: false, error: mensagemErroComSecao(secaoErro, error.message) }
   }
 
-  for (const p of revalidatePaths) revalidatePath(p)
+  revalidarDominio(eventos)
   return { success: true, data: null }
 }
 

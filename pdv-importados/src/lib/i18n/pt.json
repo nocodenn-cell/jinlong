@@ -807,6 +807,8 @@
     "err_transfer_mesma_loja": "Lojas origem e destino devem ser diferentes.",
     "err_transfer_chave": "Chave de idempotência ausente.",
     "err_remessa_id": "Identificador da remessa ausente.",
+    "err_oc_id": "Identificador da ordem de compra ausente.",
+    "err_oc_itens": "Informe ao menos um item recebido.",
     "err_nfe_payload": "Dados da NF-e inválidos para importação.",
     "err_ajuste_falhou": "Não foi possível ajustar o estoque.",
     "err_movimento_falhou": "Não foi possível registrar o movimento de estoque.",

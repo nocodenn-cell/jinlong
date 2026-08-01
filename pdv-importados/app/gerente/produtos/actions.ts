@@ -2,7 +2,8 @@
 
 import crypto from 'crypto'
 import { z } from 'zod'
-import { revalidatePath, unstable_cache } from 'next/cache'
+import { unstable_cache } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
@@ -194,7 +195,7 @@ export async function atualizarPrecoVarejoProduto(
     }
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidarDominio('produto.alterado')
   return { success: true, data: null }
 }
 
@@ -557,7 +558,7 @@ export async function uploadImagemProduto(
     await supabase.storage.from(PRODUTO_IMAGEM_BUCKET).remove([oldPath])
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidarDominio('produto.alterado')
   return { success: true, data: { imagem_url: publicUrl } }
 }
 
@@ -599,7 +600,7 @@ export async function removerImagemProduto(produtoId: string): Promise<ActionRes
     await supabase.storage.from(PRODUTO_IMAGEM_BUCKET).remove([path])
   }
 
-  revalidatePath('/gerente/produtos')
+  revalidarDominio('produto.alterado')
   return { success: true, data: null }
 }
 

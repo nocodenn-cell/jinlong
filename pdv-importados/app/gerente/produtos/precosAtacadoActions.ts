@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao, mensagemErroValidacaoZod } from '@/lib/errors/mensagemErroUsuario'
@@ -27,12 +27,6 @@ export type FaixaAtacado = {
 }
 
 const SECAO = 'Faixas de atacado'
-
-function revalidateFaixasPaths(produtoId: string) {
-  revalidatePath('/gerente/produtos')
-  revalidatePath('/admin/catalogo')
-  revalidatePath(`/admin/catalogo/${produtoId}`)
-}
 
 const FaixaInputSchema = z.object({
   produto_id: z.string().uuid('ID do produto inválido.'),
@@ -122,7 +116,7 @@ export async function criarFaixaAtacado(input: unknown): Promise<ActionResult<Fa
     return { success: false, error: mensagemErroComSecao(SECAO, error?.message ?? 'Erro ao salvar.', idioma) }
   }
 
-  revalidateFaixasPaths(parsed.data.produto_id)
+  revalidarDominio('preco.alterado')
   return { success: true, data: data as FaixaAtacado }
 }
 
@@ -163,7 +157,7 @@ export async function atualizarFaixaAtacado(input: unknown): Promise<ActionResul
     return { success: false, error: mensagemErroComSecao(SECAO, error.message, idioma) }
   }
 
-  revalidateFaixasPaths(parsed.data.produto_id)
+  revalidarDominio('preco.alterado')
   return { success: true, data: null }
 }
 
@@ -195,6 +189,6 @@ export async function inativarFaixaAtacado(input: unknown): Promise<ActionResult
     return { success: false, error: mensagemErroComSecao(SECAO, error.message, idioma) }
   }
 
-  revalidateFaixasPaths(parsed.data.produto_id)
+  revalidarDominio('preco.alterado')
   return { success: true, data: null }
 }

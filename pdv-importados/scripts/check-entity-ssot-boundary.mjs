@@ -53,14 +53,24 @@ function referencesSymbol(content, symbol) {
   return new RegExp(`(?<![A-Za-z0-9_])${escaped}(?![A-Za-z0-9_])`).test(content)
 }
 
-/** Arquivos legados órfãos — warn, não fail. Evidência de migração; remover após 1–2 releases. */
-const LEGACY_ORPHAN_WARN = [
-  '/app/gerente/financeiro/FinanceiroGerentePageClient.tsx',
-  '/app/gerente/produtos/ProdutosGerentePageClient.tsx',
-  '/app/gerente/vendas/VendasGerenteListClient.tsx',
-  '/app/gerente/compras/ComprasGerentePageClient.tsx',
-  '/app/gerente/relatorios/RelatoriosGerentePageClient.tsx',
-]
+/** Arquivos legados órfãos — warn, não fail. Vazio: telas órfãs removidas. */
+const LEGACY_ORPHAN_WARN = []
+
+/**
+ * Autoridade única de escrita por RPC de domínio.
+ *
+ * Cada RPC que muda saldo de estoque tem UM adapter autorizado a chamá-la. Sem
+ * isto, `receber_ordem_compra` era invocada direto pela action de compras e
+ * ficava fora de toda validação do InventoryMovementWriter — três portas de
+ * entrada de mercadoria, duas autoridades de escrita.
+ */
+const RPC_AUTHORITY = {
+  transferir_estoque_seguro: '/app/admin/estoque/inventoryMovementWriter.ts',
+  confirmar_remessa_entrada: '/app/admin/estoque/inventoryMovementWriter.ts',
+  importar_nfe_transacao: '/app/admin/estoque/inventoryMovementWriter.ts',
+  receber_ordem_compra: '/app/admin/estoque/inventoryMovementWriter.ts',
+  ajustar_estoque_manual: '/app/admin/estoque/inventoryAdjustment.ts',
+}
 
 /** Atalhos conhecidos — warn até redirecionar para tela oficial. */
 const KNOWN_SHORTCUT_WARN = [
@@ -116,6 +126,18 @@ for (const file of files) {
       console.warn(`[ssot:shortcut] ${rel} — ${reason}`)
       warned++
     }
+  }
+
+  for (const [rpc, autoridade] of Object.entries(RPC_AUTHORITY)) {
+    // Só a INVOCAÇÃO conta. O mesmo nome aparece como rótulo de observabilidade
+    // (`runServerActionWithObservability(..., 'ajustar_estoque_manual')`), e
+    // rótulo não é chamada.
+    if (!new RegExp(String.raw`\.rpc\(\s*['"\`]${rpc}['"\`]`).test(content)) continue
+    if (rel.endsWith(autoridade)) continue
+    console.error(
+      `[ssot:rpc] ${rel} chama a RPC ${rpc} — autoridade única é ${autoridade}`,
+    )
+    failed = true
   }
 
   if (isActionDefinition(rel)) continue

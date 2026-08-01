@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -25,8 +25,7 @@ export async function atualizarConfiguracao(
     .eq('chave', input.chave)
   if (error) return { success: false, error: mensagemErroComSecao('Configuração', error.message) }
 
-  revalidatePath('/gerente/configuracoes')
-  revalidatePath('/caixa')
+  revalidarDominio('configuracao.alterada')
   return { success: true }
 }
 
@@ -121,7 +120,7 @@ export async function atualizarDadosLojaAction(
     const { data, error } = await query
     if (error) return { ok: false, error: mensagemErroComSecao('Loja', error.message) }
 
-    revalidatePath('/gerente/configuracoes')
+    revalidarDominio('configuracao.alterada')
     return { ok: true, loja: data as LojaConfig }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar dados da loja.' }
@@ -166,7 +165,7 @@ export async function atualizarConfiguracoesPdvAction(
       .single()
     if (error) return { ok: false, error: mensagemErroComSecao('Configurações', error.message) }
 
-    revalidatePath('/gerente/configuracoes')
+    revalidarDominio('configuracao.alterada')
     return { ok: true, config: data as PdvConfig }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao salvar configurações.' }

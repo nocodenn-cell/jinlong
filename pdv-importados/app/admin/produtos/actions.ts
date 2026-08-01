@@ -5,7 +5,7 @@
  * Auth + adapters + productMessages + revalidate.
  */
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { createProductReader } from '@/app/admin/produtos/productReader'
@@ -21,7 +21,6 @@ import {
   type ExcludeProductResult,
   type ListProductsFilteredQuery,
   type ListProductsFilteredResult,
-  type ListProductsResult,
   type ProductByIdResult,
   type ProductCatalogBasics,
   type SetProductStatusLoteResult,
@@ -35,9 +34,7 @@ import {
 export type { CreateProductInput, UpdateProductInput, ProductCatalogBasics }
 
 function revalidateProdutosPaths(): void {
-  revalidatePath('/gerente/produtos')
-  revalidatePath('/gerente/estoque')
-  revalidatePath('/admin/catalogo')
+  revalidarDominio('produto.alterado')
 }
 
 async function requireLoja(
@@ -54,30 +51,6 @@ async function requireLoja(
   return { ok: true, lojaId }
 }
 
-/** Listagem simples via ProductReader. */
-export async function buscarProdutosPaginadosAction(
-  page: number,
-  termo?: string,
-): Promise<ListProductsResult> {
-  const authCheck = await assertGerenteSession()
-  if (!authCheck.ok) return { ok: false, error: authCheck.error }
-
-  const loja = await requireLoja(authCheck)
-  if (!loja.ok) return loja
-
-  const supabase = await createClient()
-  const result = await createProductReader(supabase).listPaginados({
-    lojaId: loja.lojaId,
-    page,
-    termo,
-  })
-  if (!result.ok) return localizeProductFailure(authCheck.session.idioma, result)
-  return result
-}
-
-/**
- * Listagem filtrada do catálogo (RPC existente + snapshot estoque read-through).
- */
 export async function buscarProdutosComFiltrosAction(
   query: Omit<ListProductsFilteredQuery, 'lojaId'>,
 ): Promise<ListProductsFilteredResult> {

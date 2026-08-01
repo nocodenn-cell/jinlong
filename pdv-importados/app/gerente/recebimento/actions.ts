@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
@@ -150,7 +150,6 @@ export async function criarRemessaConferencia(input: {
     }
   }
 
-  revalidatePath('/gerente/recebimento')
-  revalidatePath('/gerente/estoque')
+  revalidarDominio('estoque.recebido')
   return { success: true, data: rem.id }
 }

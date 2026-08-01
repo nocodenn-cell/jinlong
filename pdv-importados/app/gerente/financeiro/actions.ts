@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
+import { adminFinanceiroDocumentoHref } from '@shared-core/navigation/routes'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao, mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
@@ -9,7 +10,6 @@ import {
 } from '@/lib/observability/runServerAction'
 import { actionResultToLegacyData } from '@/lib/observability/actionResultAdapters'
 import {
-  validarCriarClienteInput,
   validarCriarTituloInput,
   validarLiquidarTituloInput,
 } from './actions.validation'
@@ -19,43 +19,6 @@ import {
 } from '@/app/admin/financeiro/receivableWriter'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
-
-export async function criarCliente(input: { nome: string; documento?: string; telefone?: string }): Promise<R<string>> {
-  const auth = await assertGerenteSession()
-  if (!auth.ok) return { success: false, error: auth.error }
-  const erro = validarCriarClienteInput({ nome: input.nome })
-  if (erro) return { success: false, error: erro }
-  const nome = input.nome.trim()
-
-  // clientes.loja_id é NOT NULL (migration 112): preenche com a loja do gerente.
-  const lojaId = auth.session.lojaId
-  if (!lojaId) {
-    return { success: false, error: 'Sua conta não está associada a uma loja. Contate o administrador.' }
-  }
-
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('clientes')
-    .insert({
-      nome,
-      documento: input.documento?.trim() || null,
-      telefone: input.telefone?.trim() || null,
-      loja_id: lojaId,
-    })
-    .select('id')
-    .single()
-  if (error || !data) {
-    return {
-      success: false,
-      error: error
-        ? mensagemErroComSecao('Cadastro de cliente', error.message)
-        : 'Não foi possível criar o cliente. Tente de novo.',
-    }
-  }
-  revalidatePath('/gerente/financeiro')
-  revalidatePath('/admin/financeiro')
-  return { success: true, data: data.id as string }
-}
 
 export async function criarTituloReceber(input: {
   cliente_id: string
@@ -84,8 +47,7 @@ export async function criarTituloReceber(input: {
       if (!created.ok) {
         throw new Error(mensagemErroComSecao('Conta a receber', created.error))
       }
-      revalidatePath('/gerente/financeiro')
-      revalidatePath('/admin/financeiro')
+      revalidarDominio('financeiro.titulo.alterado')
       return created.tituloId
     }),
   )
@@ -115,26 +77,7 @@ export async function liquidarTitulo(input: {
   if (!result.ok) {
     return { success: false, error: mensagemErroComSecao('Liquidação', result.error) }
   }
-  revalidatePath('/gerente/financeiro')
-  revalidatePath('/admin/financeiro')
-  return { success: true, data: null }
-}
-
-export async function enfileirarDocFiscalStub(venda_id: string): Promise<R> {
-  const auth = await assertGerenteSession()
-  if (!auth.ok) return { success: false, error: auth.error }
-  if (!venda_id?.trim()) return { success: false, error: 'Venda obrigatória' }
-  const supabase = await createClient()
-  const { error } = await supabase.from('documentos_fiscais_pendentes').insert({
-    venda_id,
-    tipo_doc: 'NFC_E_STUB',
-    status: 'PENDENTE',
-    payload: { origem: 'painel_gerente' },
-  })
-  if (error)
-    return { success: false, error: mensagemErroComSecao('Documento fiscal', error.message) }
-  revalidatePath('/gerente/financeiro', 'layout')
-  revalidatePath('/admin/financeiro', 'layout')
+  revalidarDominio('financeiro.titulo.alterado')
   return { success: true, data: null }
 }
 
@@ -148,12 +91,10 @@ export async function reprocessarDocumentoFiscal(documento_id: string): Promise<
   })
   if (error)
     return { success: false, error: mensagemErroComSecao('Reprocessar documento', error.message) }
-  revalidatePath('/gerente/financeiro', 'layout')
-  revalidatePath('/admin/financeiro', 'layout')
-  revalidatePath(`/gerente/financeiro/documento/${documento_id}`)
-  revalidatePath('/admin/financeiro')
-  revalidatePath('/admin/financeiro', 'layout')
-  revalidatePath(`/admin/financeiro/documento/${documento_id}`)
+  revalidarDominio('fiscal.documento.alterado', {
+    escopo: 'layout',
+    extras: [adminFinanceiroDocumentoHref(documento_id)],
+  })
   return { success: true, data: null }
 }
 
@@ -192,8 +133,7 @@ export async function processarFilaFiscalAgora(limit = 20): Promise<R<{ emitted:
           : `O servidor fiscal não respondeu como esperado (código ${res.status}). Verifique a configuração e a internet.`,
       }
     }
-    revalidatePath('/gerente/financeiro', 'layout')
-  revalidatePath('/admin/financeiro', 'layout')
+    revalidarDominio('fiscal.documento.alterado', { escopo: 'layout' })
     return {
       success: true,
       data: {

@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -67,8 +67,7 @@ export async function executarTransferencia(input: {
         throw new Error(mensagemErroComSecao('Transferência de estoque', result.error))
       }
 
-      revalidatePath('/gerente/transferencias')
-      revalidatePath('/gerente/estoque')
+      revalidarDominio('estoque.transferido')
       return { transferenciaId: result.transferenciaId }
     },
     'transferir_estoque_seguro',

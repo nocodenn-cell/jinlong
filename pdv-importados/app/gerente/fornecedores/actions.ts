@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -162,8 +163,7 @@ export async function salvarFornecedorAction(
       }
       return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
     }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
+    revalidarDominio('fornecedor.alterado')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, fornecedor: data as FornecedorListRow }
   } catch (e) {
@@ -196,8 +196,7 @@ export async function excluirFornecedorAction(
 
     const { error } = await supabase.from('fornecedores').delete().eq('id', id)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
+    revalidarDominio('fornecedor.alterado')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true }
   } catch (e) {
@@ -222,8 +221,7 @@ export async function bulkAtivarFornecedoresAction(
       .in('id', ids)
       .select('id')
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
+    revalidarDominio('fornecedor.alterado')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, afetados: data?.length ?? 0 }
   } catch (e) {
@@ -254,8 +252,7 @@ export async function bulkExcluirFornecedoresAction(
     }
     const { error } = await supabase.from('fornecedores').delete().in('id', liberados)
     if (error) return { ok: false, error: mensagemErroComSecao('Fornecedor', error.message) }
-    revalidatePath('/gerente/fornecedores')
-    revalidatePath('/admin/fornecedores')
+    revalidarDominio('fornecedor.alterado')
     revalidateTag('catalogo-opcoes-filtro')
     return { ok: true, excluidos: liberados.length, bloqueados: bloqueadosIds.size }
   } catch (e) {

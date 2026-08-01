@@ -41,14 +41,3 @@ export type ClienteInput = {
   termos_aceitos_em?: string | null
   consentimento_privacidade_em?: string | null
 }
-
-/**
- * Facade legado create/update → Writer/Updater admin (5.1g / 5.1h).
- * Preferir `criarClienteAction` / `atualizarClienteAction` em código novo.
- */
-export async function salvarClienteAction(
-  input: ClienteInput,
-): Promise<{ ok: true; cliente: ClienteListRow } | { ok: false; error: string }> {
-  if (!input.id) return criarClienteAction(input)
-  return atualizarClienteAction(input)
-}

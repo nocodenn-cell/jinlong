@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { createCustomerReader } from '@/app/admin/clientes/customerReader'
@@ -36,8 +36,7 @@ export async function buscarClientesPaginadosAction(
 }
 
 function revalidateClientesPaths(): void {
-  revalidatePath('/gerente/clientes')
-  revalidatePath('/admin/clientes')
+  revalidarDominio('cliente.alterado')
 }
 
 /**

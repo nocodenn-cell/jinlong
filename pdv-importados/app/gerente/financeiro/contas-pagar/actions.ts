@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -145,8 +145,7 @@ export async function registrarPagamentoAction(
       return { ok: false, error: error?.message ?? 'Conta não encontrada após o pagamento.' }
     }
 
-    revalidatePath('/gerente/financeiro/contas-pagar')
-    revalidatePath('/admin/financeiro')
+    revalidarDominio('financeiro.titulo.alterado')
     return { ok: true, conta: mapRow(data as Record<string, unknown>) }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao registrar pagamento.' }
@@ -171,8 +170,7 @@ export async function cancelarContaPagarAction(
     if (!cancelled.ok) {
       return { ok: false, error: mensagemErroComSecao('Conta a pagar', cancelled.error) }
     }
-    revalidatePath('/gerente/financeiro/contas-pagar')
-    revalidatePath('/admin/financeiro')
+    revalidarDominio('financeiro.titulo.alterado')
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erro ao cancelar.' }

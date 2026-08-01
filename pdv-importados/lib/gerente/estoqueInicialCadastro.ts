@@ -49,6 +49,8 @@ const CODE_TO_PT: Record<InventoryErrorCode, string> = {
     'Lojas origem e destino devem ser diferentes.',
   [INVENTORY_ERROR_CODES.TRANSFER_KEY_REQUIRED]: 'Chave de idempotência ausente.',
   [INVENTORY_ERROR_CODES.REMESSA_ID_REQUIRED]: 'Identificador da remessa ausente.',
+  [INVENTORY_ERROR_CODES.OC_ID_REQUIRED]: 'Identificador da ordem de compra ausente.',
+  [INVENTORY_ERROR_CODES.OC_ITENS_REQUIRED]: 'Informe ao menos um item recebido.',
   [INVENTORY_ERROR_CODES.NFE_PAYLOAD_INVALID]: 'Dados da NF-e inválidos para importação.',
   [INVENTORY_ERROR_CODES.ADJUST_FAILED]: 'Não foi possível ajustar o estoque.',
   [INVENTORY_ERROR_CODES.MOVEMENT_FAILED]: 'Não foi possível registrar o movimento de estoque.',

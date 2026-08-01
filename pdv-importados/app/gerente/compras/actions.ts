@@ -1,10 +1,13 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { getGerenteLojaId, getGerenteUserId } from '@/lib/gerente/auth/sessionContext'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
+import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
+import { localizeInventoryFailure } from '@/app/admin/estoque/inventoryMessages'
+import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 
 type R<T = null> = { success: true; data: T } | { success: false; error: string }
 
@@ -316,7 +319,7 @@ export async function criarOrdemCompra(input: CriarOcInput): Promise<R<string>> 
   const { error: e2 } = await supabase.from('ordens_compra_itens').insert(itensRows)
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da ordem', e2.message) }
 
-  revalidatePath('/gerente/compras')
+  revalidarDominio('compra.alterada')
   return { success: true, data: oc.id }
 }
 
@@ -371,7 +374,7 @@ export async function atualizarOrdemCompra(input: AtualizarOcInput): Promise<R<n
   const { error: e2 } = await supabase.from('ordens_compra_itens').insert(itensRows)
   if (e2) return { success: false, error: mensagemErroComSecao('Itens da ordem', e2.message) }
 
-  revalidatePath('/gerente/compras')
+  revalidarDominio('compra.alterada')
   return { success: true, data: null }
 }
 
@@ -406,7 +409,7 @@ export async function atualizarStatusOC(id: string, novoStatus: StatusOC): Promi
 
   if (error) return { success: false, error: mensagemErroComSecao('Status', error.message) }
 
-  revalidatePath('/gerente/compras')
+  revalidarDominio('compra.alterada')
   return { success: true, data: null }
 }
 
@@ -422,14 +425,24 @@ export async function registrarRecebimentoOC(
 
   const supabase = await createClient()
 
-  const { error } = await supabase.rpc('receber_ordem_compra', {
-    p_oc_id: ocId,
-    p_itens: itensRecebidos,
+  // Entrada de mercadoria tem autoridade de escrita única: NF-e, remessa e OC
+  // passam pelo InventoryMovementWriter. Antes esta action chamava
+  // `receber_ordem_compra` direto e ficava de fora de tudo que o writer garante.
+  const writer = createInventoryMovementWriter(supabase, lojaId)
+  const recebido = await writer.receiveOrdemCompra({
+    ocId,
+    itens: itensRecebidos.map((i) => ({
+      itemId: i.item_id,
+      quantidadeRecebida: i.quantidade_recebida,
+    })),
   })
 
-  if (error) return { success: false, error: mensagemErroComSecao('Recebimento', error.message) }
+  if (!recebido.ok) {
+    const { idioma } = await getUsuarioIdioma()
+    const localizado = localizeInventoryFailure(idioma, recebido)
+    return { success: false, error: mensagemErroComSecao('Recebimento', localizado.error) }
+  }
 
-  revalidatePath('/gerente/compras')
-  revalidatePath('/gerente/estoque')
+  revalidarDominio('estoque.recebido')
   return { success: true, data: null }
 }

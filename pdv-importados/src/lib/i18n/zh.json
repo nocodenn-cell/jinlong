@@ -804,6 +804,8 @@
     "err_transfer_mesma_loja": "调出与调入门店不能相同。",
     "err_transfer_chave": "缺少幂等键。",
     "err_remessa_id": "缺少发货单标识。",
+    "err_oc_id": "缺少采购单标识。",
+    "err_oc_itens": "请至少填写一项已收货商品。",
     "err_nfe_payload": "用于导入的 NF-e 数据无效。",
     "err_ajuste_falhou": "无法调整库存。",
     "err_movimento_falhou": "无法登记库存流水。",

@@ -47,6 +47,8 @@ export type {
   InventoryStockListResult,
   ListMovementsByProductQuery,
   ListMovementsByProductResult,
+  ReceiveOrdemCompraCommand,
+  ReceiveOrdemCompraResult,
   RegisterMovementCommand,
   RegisterMovementResult,
   TransferStockCommand,

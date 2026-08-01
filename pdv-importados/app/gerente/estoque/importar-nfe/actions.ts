@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import {
@@ -296,9 +296,7 @@ export async function executarImportacaoNfe(
     return { success: false, error: mapRpcImportNfe(result.error) }
   }
 
-  revalidatePath('/gerente/estoque')
-  revalidatePath('/gerente/produtos')
-  revalidatePath('/admin/catalogo')
+  revalidarDominio('estoque.recebido')
   return {
     success: true,
     data: {

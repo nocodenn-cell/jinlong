@@ -13,6 +13,8 @@ import type {
   ImportNfeResult,
   InventoryAdjustmentService,
   InventoryMovementWriter,
+  ReceiveOrdemCompraCommand,
+  ReceiveOrdemCompraResult,
   RegisterMovementCommand,
   RegisterMovementResult,
   TransferStockCommand,
@@ -26,6 +28,7 @@ export type MovementWriterRpc = {
   transfer: (args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
   confirmRemessa: (args: { p_remessa_id: string }) => Promise<{ error: { message: string } | null }>
   importNfe: (args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
+  receiveOc: (args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
 }
 
 export type InventoryMovementWriterDeps = {
@@ -41,6 +44,10 @@ function defaultRpc(supabase: SupabaseClient): MovementWriterRpc {
       return { error }
     },
     importNfe: async (args) => supabase.rpc('importar_nfe_transacao', args),
+    receiveOc: async (args) => {
+      const { error } = await supabase.rpc('receber_ordem_compra', args)
+      return { error }
+    },
   }
 }
 
@@ -175,6 +182,52 @@ export function createInventoryMovementWriter(
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Falha ao confirmar remessa.',
+          code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+        }
+      }
+    },
+
+    async receiveOrdemCompra(
+      command: ReceiveOrdemCompraCommand,
+    ): Promise<ReceiveOrdemCompraResult> {
+      if (!command.ocId?.trim()) {
+        return {
+          ok: false,
+          error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.OC_ID_REQUIRED),
+          code: INVENTORY_ERROR_CODES.OC_ID_REQUIRED,
+        }
+      }
+      const itens = command.itens.filter(
+        (i) => i.itemId?.trim() && Number.isFinite(i.quantidadeRecebida) && i.quantidadeRecebida > 0,
+      )
+      if (itens.length === 0) {
+        return {
+          ok: false,
+          error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.OC_ITENS_REQUIRED),
+          code: INVENTORY_ERROR_CODES.OC_ITENS_REQUIRED,
+        }
+      }
+      try {
+        const { error } = await rpc.receiveOc({
+          p_oc_id: command.ocId.trim(),
+          // Nomes das chaves espelham o contrato da RPC `receber_ordem_compra`.
+          p_itens: itens.map((i) => ({
+            item_id: i.itemId.trim(),
+            quantidade_recebida: i.quantidadeRecebida,
+          })),
+        })
+        if (error) {
+          return {
+            ok: false,
+            error: error.message,
+            code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+          }
+        }
+        return { ok: true, ocId: command.ocId.trim() }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Falha ao receber a ordem de compra.',
           code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
         }
       }

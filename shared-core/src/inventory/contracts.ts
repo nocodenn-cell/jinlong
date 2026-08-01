@@ -171,6 +171,15 @@ export type ConfirmRemessaResult =
   | { ok: true; remessaId: string }
   | { ok: false; error: string; code?: InventoryErrorCode }
 
+export type ReceiveOrdemCompraCommand = {
+  ocId: string
+  itens: ReadonlyArray<{ itemId: string; quantidadeRecebida: number }>
+}
+
+export type ReceiveOrdemCompraResult =
+  | { ok: true; ocId: string }
+  | { ok: false; error: string; code?: InventoryErrorCode }
+
 /**
  * Payload da RPC `importar_nfe_transacao` — tipagem de borda; sem regra nova.
  */
@@ -211,4 +220,15 @@ export type InventoryMovementWriter = {
   transfer(command: TransferStockCommand): Promise<TransferStockResult>
   confirmRemessaEntrada(command: ConfirmRemessaCommand): Promise<ConfirmRemessaResult>
   importNfe(command: ImportNfeCommand): Promise<ImportNfeResult>
+  /**
+   * Recebimento de ordem de compra — a terceira porta de ENTRADA de mercadoria.
+   *
+   * Estava fora do writer: `app/gerente/compras/actions.ts` chamava
+   * `receber_ordem_compra` direto, então toda validação/telemetria adicionada
+   * aqui não valia para a entrada por OC. Entrada de mercadoria tem uma única
+   * autoridade de escrita — NF-e, remessa e OC passam por este port.
+   */
+  receiveOrdemCompra(
+    command: ReceiveOrdemCompraCommand,
+  ): Promise<ReceiveOrdemCompraResult>
 }

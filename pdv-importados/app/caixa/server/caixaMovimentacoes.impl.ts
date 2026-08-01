@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mensagemErroComSecao, mensagemErroDeExcecao } from '@/lib/errors/mensagemErroUsuario'
@@ -66,8 +66,7 @@ export async function registrarMovimentacaoImpl(
       }
     }
 
-    revalidatePath('/caixa')
-    revalidatePath('/gerente/caixas')
+    revalidarDominio('caixa.movimentacao.alterada')
     return {
       ok: true,
       movimentacaoId: result.movimentacaoId,
@@ -131,8 +130,7 @@ export async function autorizarMovimentacaoGerenteImpl(
       return { ok: false, error: 'A aprovação não retornou identificador.' }
     }
 
-    revalidatePath('/caixa')
-    revalidatePath('/gerente/caixas')
+    revalidarDominio('caixa.movimentacao.alterada')
     return {
       ok: true,
       movimentacaoId: String(row.movimentacao_id),
@@ -190,8 +188,7 @@ export async function cancelarMovimentacaoCaixaImpl(
     const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) return { ok: false, error: 'Cancelamento não retornou identificador.' }
 
-    revalidatePath('/caixa')
-    revalidatePath('/gerente/caixas')
+    revalidarDominio('caixa.movimentacao.alterada')
     return {
       ok: true,
       movimentacaoId: String(row.movimentacao_id),
@@ -236,8 +233,7 @@ export async function estornarMovimentacaoCaixaImpl(
     const row = firstRpcMovimentacaoRow(data)
     if (!row?.movimentacao_id) return { ok: false, error: 'Estorno não retornou identificador.' }
 
-    revalidatePath('/caixa')
-    revalidatePath('/gerente/caixas')
+    revalidarDominio('caixa.movimentacao.alterada')
     return {
       ok: true,
       movimentacaoId: String(row.movimentacao_id),

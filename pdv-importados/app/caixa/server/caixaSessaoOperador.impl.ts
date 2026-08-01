@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { getLojaIdUsuario, LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import type {
@@ -82,8 +82,7 @@ export async function abrirCaixaOperadorImpl(valorInicial: number): Promise<Abri
     if (!opened.ok) {
       return { ok: false, error: caixaErroOperador(opened.error) }
     }
-    revalidatePath('/caixa')
-    revalidatePath('/gerente/caixas')
+    revalidarDominio('caixa.turno.alterado')
     return { ok: true, caixaId: opened.caixaId }
   } catch (e) {
     logJson('caixa.abrir.excecao', {
@@ -159,9 +158,7 @@ export async function fecharCaixaOperadorImpl(input: {
       }
     }
 
-    revalidatePath('/caixa')
-    revalidatePath('/gerente/caixas')
-    revalidatePath('/gerente/vendas')
+    revalidarDominio('caixa.turno.alterado')
     return {
       ok: true,
       caixaId: caixaIdFechado,

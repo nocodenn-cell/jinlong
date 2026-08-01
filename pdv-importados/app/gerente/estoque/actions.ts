@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
@@ -112,8 +112,7 @@ export async function atualizarEstoqueProduto(input: unknown): Promise<ActionRes
         const localized = localizeInventoryFailure(idioma, result)
         throw new Error(mensagemErroComSecao('Estoque', localized.error))
       }
-      revalidatePath('/gerente/estoque')
-      revalidatePath('/admin/estoque')
+      revalidarDominio('estoque.ajustado')
       return null
     },
     'ajustar_estoque_manual',
@@ -150,7 +149,7 @@ export async function garantirLinhaEstoque(input: unknown): Promise<LegacyEstoqu
     return { success: false, error: mensagemErroComSecao('Estoque', error.message) }
   }
 
-  revalidatePath('/gerente/estoque')
+  revalidarDominio('estoque.ajustado')
   return { success: true, data: null }
 }
 

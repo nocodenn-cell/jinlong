@@ -4,7 +4,7 @@ import type { FinalizarVendaCaixaResult } from '@/app/caixa/actions'
 // Não adicionar branches de execução, flags de feature ou caminhos alternativos aqui.
 // Ver docs/venda-golden-flow.md para o contrato oficial.
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import {
   finalizarVendaInputSchema,
@@ -108,12 +108,7 @@ export async function cancelarVendaImpl(
     const row = firstRpcVendaRow<RpcCancelarVendaRow>(data)
     if (!row?.venda_id) return { ok: false, error: 'Cancelamento não retornou identificador da venda.' }
 
-    revalidatePath('/caixa')
-    revalidatePath('/admin/vendas')
-    revalidatePath('/gerente/vendas')
-    revalidatePath(`/gerente/vendas/${vendaIdTrim}`)
-    revalidatePath('/gerente/caixas')
-    revalidatePath('/gerente/financeiro')
+    revalidarDominio('venda.cancelada')
 
     return {
       ok: true,
@@ -390,11 +385,7 @@ export async function finalizarVendaCaixaImpl(
 
     await registrarAlertasLevesVenda(supabase, String(row.venda_id), lojaId, itensAut)
 
-    revalidatePath('/caixa')
-    revalidatePath('/admin/vendas')
-    revalidatePath('/gerente/vendas')
-    revalidatePath('/gerente/caixas')
-    revalidatePath('/gerente/financeiro')
+    revalidarDominio('venda.finalizada')
 
     return {
       ok: true,

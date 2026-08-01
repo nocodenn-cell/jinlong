@@ -1,7 +1,8 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { assertGerenteSession } from '@/lib/gerente/auth/assertGerenteSession'
 import { mensagemErroComSecao } from '@/lib/errors/mensagemErroUsuario'
@@ -15,7 +16,6 @@ import {
 } from '../shared/actionHelpers'
 import type { CategoriaProdutoRow } from './categoriasProdutosTypes'
 
-const REVALIDATE_PATH = '/gerente/categorias-produtos'
 const TABELA = 'categorias'
 
 type ActionResult<T> = CadastroActionResult<T>
@@ -78,7 +78,7 @@ export async function criarCategoriaProduto(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = NovaCategoriaSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-  const result = await criarCadastro(TABELA, { nome: parsed.data.nome.trim(), ativo: true }, 'Criar categoria', [REVALIDATE_PATH, '/gerente/produtos'])
+  const result = await criarCadastro(TABELA, { nome: parsed.data.nome.trim(), ativo: true }, 'Criar categoria', ['categoria.alterada'])
   if (result.success) revalidateTag('catalogo-opcoes-filtro')
   return result
 }
@@ -88,7 +88,7 @@ export async function atualizarCategoriaProduto(
 ): Promise<ActionResult<null>> {
   const parsed = AtualizarCategoriaSchema.safeParse(input)
   if (!parsed.success) return zodValidationError(parsed.error.issues)
-  const result = await atualizarCadastro(TABELA, parsed.data.id, { nome: parsed.data.nome.trim() }, 'Atualizar categoria', [REVALIDATE_PATH, '/gerente/produtos'])
+  const result = await atualizarCadastro(TABELA, parsed.data.id, { nome: parsed.data.nome.trim() }, 'Atualizar categoria', ['categoria.alterada'])
   // Sem invalidar a tag, o nome antigo continuava nos seletores do cadastro de
   // produto e nos filtros do catálogo por até 120 s (TTL de `unstable_cache`).
   if (result.success) revalidateTag('catalogo-opcoes-filtro')
@@ -99,7 +99,7 @@ export async function alternarAtivoCategoriaProduto(
   id: string,
   ativo: boolean,
 ): Promise<ActionResult<null>> {
-  const result = await alternarAtivoCadastro(TABELA, id, ativo, [REVALIDATE_PATH, '/gerente/produtos'])
+  const result = await alternarAtivoCadastro(TABELA, id, ativo, ['categoria.alterada'])
   if (result.success) revalidateTag('catalogo-opcoes-filtro')
   return result
 }
@@ -142,8 +142,7 @@ export async function excluirCategoriaProduto(
     }
   }
 
-  revalidatePath(REVALIDATE_PATH)
-  revalidatePath('/gerente/produtos')
+  revalidarDominio('categoria.alterada')
   revalidateTag('catalogo-opcoes-filtro')
   return { success: true, data: null }
 }

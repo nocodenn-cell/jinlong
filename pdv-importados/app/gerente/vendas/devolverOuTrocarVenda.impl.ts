@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidarDominio } from '@/lib/navigation/revalidarDominio'
 import { createClient } from '@/lib/supabase/server'
 import { mensagemErroDevolverVenda } from '@/app/gerente/vendas/devolverVendaErro'
 import type { DevolverVendaInput } from '@/app/gerente/vendas/parseDevolverVendaForm'
@@ -65,12 +65,7 @@ export async function devolverOuTrocarVendaImpl(
       return { ok: false, error: 'Devolução não retornou identificador da operação.' }
     }
 
-    revalidatePath('/admin/vendas')
-    revalidatePath('/gerente/vendas')
-    revalidatePath(`/gerente/vendas/${input.vendaId}`)
-    revalidatePath('/gerente/financeiro')
-    revalidatePath('/admin/financeiro')
-    revalidatePath('/admin/estoque')
+    revalidarDominio('venda.devolvida')
 
     return {
       ok: true,
