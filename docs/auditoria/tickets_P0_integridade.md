@@ -3,6 +3,15 @@
 
 ## DAT-01
 
+> **STATUS (2026-08-05): FECHADO.** Migration 291 aplicada. Correção de diagnóstico: o COALESCE
+> defeituoso não estava em `v_estoque_ledger_divergencia` (essa view nem referencia
+> `estoque_baixas` — evidência do ticket original não correspondia ao corpo real) e sim em
+> `v_kardex_unificado`, branch `estoque_baixas`. `decrementar_estoque_seguro` agora grava
+> `quantidade`; view corrigida com `NULLIF(eb.quantidade,0)`. Achado extra: `v_estoque_ledger_divergencia`
+> constava aplicada (`20260801090000`) e não existia em produção — mesma classe de drift do SEC-02;
+> restaurada nesta migration.
+
+
 **Título:** `estoque_baixas.quantidade` nunca é gravada — fica sempre `0`, quebrando o `COALESCE` da view de divergência de estoque
 
 **Descrição do problema:**
@@ -40,6 +49,12 @@ A tabela `public.estoque_baixas` tem a coluna `quantidade numeric DEFAULT 0`. **
 ---
 
 ## FLX-01
+
+> **STATUS (2026-08-05): FECHADO.** Migration 291. FKs adicionadas (zero órfãos confirmados
+> antes, `ON DELETE RESTRICT`). `v_kardex_unificado` dependia da coluna — dropada e recriada
+> na mesma migration, grants originais (`anon`/`authenticated`/`service_role`) reaplicados e
+> verificados (view retorna 83 linhas pós-fix).
+
 
 **Título:** `estoque_baixas` não tem FOREIGN KEY para `vendas` nem `produtos` — órfãos permitidos no ledger de idempotência
 

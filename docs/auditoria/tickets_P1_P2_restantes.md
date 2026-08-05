@@ -31,6 +31,11 @@ A exigência de token do gerente para desconto é controlada por `p_strict_manag
 
 ## DAT-02
 
+> **STATUS (2026-08-05): PÓS GO-LIVE.** Tooling/CI (schema-diff automatizado vs. produção), não
+> migration de dado. `guard:migrations` já mitiga colisão de número (parte do escopo). Fora deste
+> pacote — não bloqueia Go-Live.
+
+
 **Título:** Numeração de migrations com três padrões conflitantes e colisões históricas — ordem de aplicação ambígua entre ambientes
 
 **Descrição do problema:**
@@ -61,6 +66,10 @@ Existem inclusive **pares duplicados** de mesmo conteúdo com prefixos diferente
 ---
 
 ## DAT-03
+
+> **STATUS (2026-08-05): FECHADO.** Migration 293. RLS habilitada + policy `doc_fiscal_dlq_loja_isolado`
+> espelhando `documentos_fiscais_pendentes`. Tabela vazia, zero regressão.
+
 
 **Título:** `documentos_fiscais_dlq` é a única tabela sem RLS, e a migration de habilitação referenciada não existe no repositório
 
@@ -117,6 +126,9 @@ Existe fechamento atômico (`207_fechar_caixa_atomico_rpc.sql`, `227_fechar_caix
 ---
 
 ## CA-01
+
+> **STATUS (2026-08-05): FECHADO.** Migration 291 — `estoque_baixas.quantidade` agora `numeric(10,3)`.
+
 
 **Título:** `estoque_baixas.quantidade` é `numeric` sem escala definida, divergindo do padrão `numeric(10,3)` do restante do módulo de estoque
 

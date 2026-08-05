@@ -227,7 +227,14 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 | **Documentação** | Atualizar Cap. 7 (RN-016 → `Vigente`) só após verificação em produção |
 | **Armadilha** | Não usar guarda `pg_get_functiondef` como condicional de aplicação — foi exatamente o que falhou. **`fallback = deny` é mudança de comportamento com risco de quebrar rota legítima**: mapear as 9 rotas **antes** de inverter o fallback, nunca na mesma etapa |
 
-### Pacote 2 — Integridade de dados (P0/P1)
+### Pacote 2 — Integridade de dados (P0/P1) — ✅ FECHADO (2026-08-05)
+
+> Migrations `291_estoque_baixas_integridade` e `293_documentos_fiscais_dlq_enable_rls` aplicadas
+> e verificadas em produção. **DAT-02 movido para pós Go-Live** (tooling de CI, não migration de
+> dado). Achado extra: o COALESCE defeituoso de DAT-01 estava em `v_kardex_unificado`, não na view
+> citada no ticket original; `v_estoque_ledger_divergencia` constava aplicada e não existia em
+> produção (drift classe SEC-02), restaurada. Detalhe: `docs/auditoria/tickets_P0_integridade.md`,
+> `docs/auditoria/tickets_P1_P2_restantes.md`.
 
 | Item | Conteúdo |
 |---|---|
