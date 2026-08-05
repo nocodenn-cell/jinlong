@@ -2,6 +2,8 @@ import {
   canAccessAdmin,
   canAccessResource,
   canExecuteAction,
+  KNOWN_ACTION_KEYS,
+  KNOWN_RESOURCE_KEYS,
 } from '@/lib/admin/policy/adminPolicy'
 import type { AdminSession } from '@/lib/admin/auth/types'
 
@@ -26,29 +28,15 @@ export type AdminContext = {
   isReadOnlyMode: boolean
 }
 
-const KNOWN_ACTIONS = ['estoque:kardex', 'vendas:detalhe', 'auditoria:listar'] as const
-const KNOWN_RESOURCES = [
-  'route:/admin',
-  'route:/admin/dashboard',
-  'route:/admin/catalogo',
-  'route:/admin/clientes',
-  'route:/admin/funcionarios',
-  'route:/admin/implantacao',
-  'route:/admin/provisionamento',
-  'route:/admin/fornecedores',
-  'route:/admin/financeiro',
-  'route:/admin/vendas',
-  'route:/admin/auditoria',
-  'route:/admin/estoque',
-  'route:/admin/diagnostico-caixa',
-  'api:gerente:health',
-  'api:gerente:atividades:recent',
-  'api:gerente:atividades:history',
-  'api:gerente:fila:status',
-  'api:gerente:notificacoes:count',
-  'sensitive:financeiro',
-  'sensitive:comissoes',
-] as const
+/**
+ * Fonte única: as chaves vêm de `adminPolicy` (RESOURCE_PROFILES / ACTION_PROFILES).
+ *
+ * Antes existia aqui uma segunda lista literal, que já divergia da política (20 chaves
+ * contra 35) — duas fontes de verdade para o mesmo fato, contra o Princípio 1 (Cap. 1).
+ * Derivar elimina a divergência por construção.
+ */
+const KNOWN_ACTIONS = KNOWN_ACTION_KEYS
+const KNOWN_RESOURCES = KNOWN_RESOURCE_KEYS
 
 function resolveRouteScope(pathname?: string): string | null {
   if (!pathname?.startsWith('/')) return null

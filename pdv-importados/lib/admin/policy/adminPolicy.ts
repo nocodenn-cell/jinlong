@@ -54,6 +54,17 @@ function isPainelWeb(pathname: string): boolean {
 
 const ALL_ADMIN_PROFILES: readonly PerfilUsuario[] = ['GERENTE', 'DONO', 'ADMIN']
 
+/**
+ * Recursos de governança do tenant — configuração, identidade fiscal, suspensão e
+ * remuneração. GERENTE opera a loja; não a administra.
+ *
+ * Critério (F1-07): restringir **apenas** onde `docs/AUTHORIZATION_MATRIX.md` não concede
+ * o acesso a GERENTE e o recurso é administrativo/tenant-level. Onde a matriz concede
+ * (financeiro, estoque, vendas, cadastros), GERENTE permanece — RN-016: a permissão
+ * efetiva é do banco e a UI apenas reflete; a UI não inventa restrição que o banco não tem.
+ */
+const DONO_ADMIN_PROFILES: readonly PerfilUsuario[] = ['DONO', 'ADMIN']
+
 /** Actions registradas no painel /admin (server actions). */
 const ACTION_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'estoque:kardex': ALL_ADMIN_PROFILES,
@@ -61,37 +72,117 @@ const ACTION_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'auditoria:listar': ALL_ADMIN_PROFILES,
 }
 
-/** Recursos: rotas UI, APIs e dados sensíveis. */
+/**
+ * Recursos: rotas UI, APIs e dados sensíveis.
+ *
+ * INVARIANTE (F1-08 / F6-PER-001): **toda** rota sob `app/admin/` tem entrada aqui.
+ * Verificado por `adminRouteCoverage.test.ts`, que enumera o filesystem e falha se
+ * alguma `page.tsx` não estiver declarada. Rota nova sem política = build vermelho.
+ *
+ * Segmentos dinâmicos usam a mesma grafia do filesystem (`[id]`); a normalização
+ * em `normalizeResourceKey` converte o valor real da URL antes da consulta.
+ */
 const RESOURCE_PROFILES: Readonly<Record<string, readonly PerfilUsuario[]>> = {
   'route:/admin': ALL_ADMIN_PROFILES,
   'route:/gerente': ALL_ADMIN_PROFILES,
   'route:/admin/dashboard': ALL_ADMIN_PROFILES,
   'route:/admin/catalogo': ALL_ADMIN_PROFILES,
+  'route:/admin/catalogo/novo': ALL_ADMIN_PROFILES,
+  'route:/admin/categorias-financeiras': ALL_ADMIN_PROFILES,
+  'route:/admin/categorias-produtos': ALL_ADMIN_PROFILES,
+  'route:/admin/marcas-produtos': ALL_ADMIN_PROFILES,
   'route:/admin/clientes': ALL_ADMIN_PROFILES,
   'route:/admin/funcionarios': ALL_ADMIN_PROFILES,
-  'route:/admin/implantacao': ALL_ADMIN_PROFILES,
+  /** Identidade fiscal da loja (CNPJ, razão social, IE) — governança do tenant. */
+  'route:/admin/implantacao': DONO_ADMIN_PROFILES,
   /** Wizard interno FastProduct — somente perfil ADMIN. */
   'route:/admin/provisionamento': ['ADMIN'] as const,
   'route:/admin/fornecedores': ALL_ADMIN_PROFILES,
+  'route:/admin/compras': ALL_ADMIN_PROFILES,
   'route:/admin/financeiro': ALL_ADMIN_PROFILES,
+  'route:/admin/financeiro/contas-pagar': ALL_ADMIN_PROFILES,
+  'route:/admin/financeiro/documento/[id]': ALL_ADMIN_PROFILES,
+  /** Remuneração de funcionário — dado sensível, fora da operação diária do gerente. */
+  'route:/admin/comissoes': DONO_ADMIN_PROFILES,
   'route:/admin/vendas': ALL_ADMIN_PROFILES,
+  'route:/admin/relatorios': ALL_ADMIN_PROFILES,
   'route:/admin/auditoria': ALL_ADMIN_PROFILES,
   'route:/admin/estoque': ALL_ADMIN_PROFILES,
+  'route:/admin/estoque/importar-nfe': ALL_ADMIN_PROFILES,
+  'route:/admin/estoque/imprimir-etiquetas': ALL_ADMIN_PROFILES,
+  'route:/admin/estoque/recebimento': ALL_ADMIN_PROFILES,
+  'route:/admin/estoque/transferencias': ALL_ADMIN_PROFILES,
+  /** Parametrização da loja (regime tributário, limites, chaves) — governança do tenant. */
+  'route:/admin/configuracoes': DONO_ADMIN_PROFILES,
+  /** Suspende a operação da loja — ação de nível tenant, nunca operacional. */
+  'route:/admin/suspensao': DONO_ADMIN_PROFILES,
   'route:/admin/diagnostico-caixa': ALL_ADMIN_PROFILES,
   'api:gerente:health': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:recent': ALL_ADMIN_PROFILES,
   'api:gerente:atividades:history': ALL_ADMIN_PROFILES,
   'api:gerente:fila:status': ALL_ADMIN_PROFILES,
   'api:gerente:notificacoes:count': ALL_ADMIN_PROFILES,
+  /**
+   * Mantido em ALL_ADMIN por decisão explícita: `docs/AUTHORIZATION_MATRIX.md` concede a
+   * GERENTE `contas_receber` SELECT ("todas da loja") e `registrar_liquidacao_receber`
+   * EXECUTE ("sim"). Negar na UI o que o banco concede violaria RN-016 e quebraria um
+   * requisito entregue do piloto (Contas a receber / a pagar). Ver nota em F1-07.
+   */
   'sensitive:financeiro': ALL_ADMIN_PROFILES,
-  'sensitive:comissoes': ALL_ADMIN_PROFILES,
+  'sensitive:comissoes': DONO_ADMIN_PROFILES,
 }
 
+/** Chaves de recurso declaradas — fonte única para consumidores (ex.: adminContext). */
+export const KNOWN_RESOURCE_KEYS: readonly string[] = Object.freeze(
+  Object.keys(RESOURCE_PROFILES)
+)
+
+/** Actions declaradas — fonte única para consumidores. */
+export const KNOWN_ACTION_KEYS: readonly string[] = Object.freeze(Object.keys(ACTION_PROFILES))
+
+/** Segmento de URL que corresponde a um parâmetro dinâmico (`[id]`) do App Router. */
+const DYNAMIC_SEGMENT = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d+)$/i
+
+/**
+ * Converte a chave de recurso vinda da URL real na chave declarada em RESOURCE_PROFILES.
+ *
+ * - Segmentos dinâmicos (UUID ou numérico) viram `[id]`, casando com a grafia do filesystem.
+ * - `/gerente/**` colapsa em `route:/gerente`: todas as rotas sob `/gerente` são shims de
+ *   redirect para `/admin` (`app/gerente/[...path]/page.tsx`), não superfícies próprias.
+ */
+export function normalizeResourceKey(resource: string): string {
+  if (!resource.startsWith('route:')) return resource
+  const raw = resource.slice('route:'.length)
+  // Barra final não muda a rota — `/admin/vendas/` é `/admin/vendas`.
+  const pathname = raw.length > 1 && raw.endsWith('/') ? raw.slice(0, -1) : raw
+
+  if (pathname === '/gerente' || pathname.startsWith('/gerente/')) return 'route:/gerente'
+
+  const normalized = pathname
+    .split('/')
+    .map((segment) => (DYNAMIC_SEGMENT.test(segment) ? '[id]' : segment))
+    .join('/')
+
+  return `route:${normalized}`
+}
+
+/**
+ * F1-08 — fallback é **deny**.
+ *
+ * Antes, recurso ou action não declarado caía em `canAccessAdmin(session)`, ou seja:
+ * qualquer perfil gerencial era liberado. Isso transformava esquecimento em permissão —
+ * uma rota nova nascia acessível a GERENTE sem ninguém decidir nada, e foi assim que
+ * `configuracoes` e `suspensao` ficaram abertas.
+ *
+ * Agora o desconhecido é negado. A contrapartida obrigatória é a cobertura completa,
+ * garantida por `adminRouteCoverage.test.ts`: rota sem política falha o build, em vez
+ * de falhar em produção.
+ */
 function hasAllowedPerfil(
   session: AdminSession,
   allowed: readonly PerfilUsuario[] | undefined
 ): boolean {
-  if (!allowed) return canAccessAdmin(session)
+  if (!allowed) return false
   return allowed.includes(session.perfil)
 }
 
@@ -110,7 +201,7 @@ export function canExecuteAction(session: AdminSession, action: string): boolean
 
 export function canAccessResource(session: AdminSession, resource: string): boolean {
   if (!canAccessAdmin(session)) return false
-  return hasAllowedPerfil(session, RESOURCE_PROFILES[resource])
+  return hasAllowedPerfil(session, RESOURCE_PROFILES[normalizeResourceKey(resource)])
 }
 
 export function canAccessRoute(session: AdminSession | null, route: string): boolean {
@@ -181,6 +272,18 @@ export function middlewareAdminDecision(
     const painelAllowed = session !== null && canAccessAdmin(session)
     if (isPainelWeb(pathname) && !painelAllowed) {
       return redirect('/caixa', 'perfil_nao_gerencial', 'edge')
+    }
+    // F1-07 / F1-08 — autorização **por recurso**, não apenas "é perfil gerencial".
+    //
+    // Sem isto, RESOURCE_PROFILES seria tabela inerte: `loadAdminContext` calcula as
+    // permissões mas nenhum consumidor as aplica, e `/admin/suspensao` sequer chama gate.
+    // O middleware é o único ponto por onde toda navegação /admin passa — é aqui que a
+    // política decide. Páginas e actions continuam responsáveis pelas suas próprias
+    // checagens de escrita; este é o piso, não o teto.
+    if (session !== null && pathname.startsWith('/admin')) {
+      if (!canAccessResource(session, `route:${pathname}`)) {
+        return redirect('/admin', 'perfil_sem_acesso_recurso', 'edge')
+      }
     }
     // GERENTE/DONO/ADMIN podem abrir o PDV (/caixa) — "Ir para PDV" sempre funciona.
     // Antes havia um redirect `gerente_em_caixa` para /gerente que bloqueava o acesso.
