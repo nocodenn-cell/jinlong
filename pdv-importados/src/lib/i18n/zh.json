@@ -810,6 +810,7 @@
     "err_conferencia_qtd": "清点数量无效。",
     "err_recebimento_status": "该发货单当前状态不允许此操作。",
     "err_nfe_payload": "用于导入的 NF-e 数据无效。",
+    "err_nfe_importacao_id": "缺少 NF-e 导入标识。",
     "err_ajuste_falhou": "无法调整库存。",
     "err_movimento_falhou": "无法登记库存流水。",
     "err_listagem_falhou": "无法列出库存。",
@@ -881,11 +882,20 @@
       "btn_preview": "加载预览",
       "btn_importar": "确认导入",
       "import_ok": "导入完成。",
+      "import_registrado": "NF-e 已登记。确认收到的数量后再入库。",
       "import_draft_aviso": "{{n}} 个新商品为草稿。请在目录中发布以在收银台启用。",
       "import_itens": "已处理 {{n}} 条明细。",
       "erro_preview": "无法读取 XML。",
       "sem_preview": "请先加载 XML 以核对明细。",
-      "limpar": "清除"
+      "limpar": "清除",
+      "conferencia_titulo": "实物清点",
+      "conferencia_hint": "数量默认按发票填写，请调整为实际清点的数量后再确认——只有清点数量会计入库存。",
+      "col_qtd_conferida": "清点数量",
+      "col_divergencia_obs": "差异原因",
+      "divergencia_obs_placeholder": "例如：3 件未到货",
+      "btn_confirmar_conferencia": "确认入库",
+      "conferencia_ok": "入库已确认，库存和应付账款已更新。",
+      "conferencia_concluida": "清点已完成——库存和应付账款已更新。"
     }
   },
   "compras": {

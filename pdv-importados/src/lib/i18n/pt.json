@@ -813,6 +813,7 @@
     "err_conferencia_qtd": "Quantidade conferida inválida.",
     "err_recebimento_status": "A situação desta remessa não permite esta operação.",
     "err_nfe_payload": "Dados da NF-e inválidos para importação.",
+    "err_nfe_importacao_id": "Identificador da importação de NF-e ausente.",
     "err_ajuste_falhou": "Não foi possível ajustar o estoque.",
     "err_movimento_falhou": "Não foi possível registrar o movimento de estoque.",
     "err_listagem_falhou": "Não foi possível listar o estoque.",
@@ -881,11 +882,20 @@
       "btn_preview": "Carregar pré-visualização",
       "btn_importar": "Confirmar importação",
       "import_ok": "Importação concluída.",
+      "import_registrado": "NF-e registrada. Confira a quantidade recebida antes de dar entrada.",
       "import_draft_aviso": "{{n}} produto(s) novo(s) em rascunho. Publique no catálogo para liberar no PDV.",
       "import_itens": "{{n}} itens processados.",
       "erro_preview": "Não foi possível ler o XML.",
       "sem_preview": "Carregue um XML para conferir os itens.",
-      "limpar": "Limpar"
+      "limpar": "Limpar",
+      "conferencia_titulo": "Conferência física",
+      "conferencia_hint": "A quantidade da nota vem pré-preenchida. Ajuste para o que foi efetivamente contado antes de confirmar — só a quantidade conferida entra no estoque.",
+      "col_qtd_conferida": "Qtd conferida",
+      "col_divergencia_obs": "Motivo da divergência",
+      "divergencia_obs_placeholder": "Ex.: 3 unidades não chegaram",
+      "btn_confirmar_conferencia": "Confirmar entrada",
+      "conferencia_ok": "Entrada confirmada. Estoque e contas a pagar atualizados.",
+      "conferencia_concluida": "Conferência concluída — estoque e contas a pagar já foram atualizados."
     }
   },
   "compras": {

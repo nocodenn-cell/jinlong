@@ -169,4 +169,167 @@ describe('createInventoryMovementWriter', () => {
       expect(receiveOc).not.toHaveBeenCalled()
     })
   })
+
+  // FLX-05: importar_nfe_transacao deixou de creditar estoque/gerar contas_pagar
+  // na mesma chamada — registra para conferência. registrarConferenciaNfe e
+  // confirmarImportacaoNfe são portas separadas (como remessa), não encadeadas
+  // automaticamente pelo writer — a action decide a ordem.
+  describe('importNfe (FLX-05)', () => {
+    it('expõe importacaoId a partir do retorno da RPC', async () => {
+      const importNfe = vi.fn(async () => ({
+        data: {
+          ok: true,
+          importacao_id: 'imp-1',
+          itens_processados: 2,
+          produtos_novos: 1,
+          produtos_vinculados: 1,
+        },
+        error: null,
+      }))
+      const writer = createInventoryMovementWriter(
+        { rpc: vi.fn() } as never,
+        'l1',
+        {
+          rpc: {
+            transfer: vi.fn(),
+            confirmRemessa: vi.fn(),
+            importNfe,
+          },
+          adjustment: { adjustInventory: vi.fn() },
+        },
+      )
+
+      await expect(
+        writer.importNfe({
+          chaveAcesso: '3'.repeat(44),
+          numeroNf: '1',
+          fornecedorCnpj: '11222333000181',
+          fornecedorNome: 'Fornecedor',
+          lojaId: 'l1',
+          itens: [],
+          atualizarCusto: true,
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        importacaoId: 'imp-1',
+        itensProcessados: 2,
+        produtosNovos: 1,
+        produtosVinculados: 1,
+      })
+    })
+  })
+
+  describe('registrarConferenciaNfe / confirmarImportacaoNfe (FLX-05)', () => {
+    it('registrarConferenciaNfe delega à RPC com os itens conferidos', async () => {
+      const conferirNfe = vi.fn(async () => ({
+        data: { ok: true, importacao_id: 'imp-1', itens_conferidos: 1, itens_divergentes: 1 },
+        error: null,
+      }))
+      const writer = createInventoryMovementWriter(
+        { rpc: vi.fn() } as never,
+        'l1',
+        {
+          rpc: {
+            transfer: vi.fn(),
+            confirmRemessa: vi.fn(),
+            importNfe: vi.fn(),
+            conferirNfe,
+            confirmarNfe: vi.fn(),
+          },
+          adjustment: { adjustInventory: vi.fn() },
+        },
+      )
+
+      await expect(
+        writer.registrarConferenciaNfe({
+          importacaoId: 'imp-1',
+          itens: [
+            { itemId: 'item-a', quantidadeConferida: 7, divergenciaObs: 'faltou' },
+            { itemId: 'item-b', quantidadeConferida: 20 },
+          ],
+        }),
+      ).resolves.toEqual({
+        ok: true,
+        importacaoId: 'imp-1',
+        itensConferidos: 1,
+        itensDivergentes: 1,
+      })
+
+      expect(conferirNfe).toHaveBeenCalledWith({
+        p_importacao_id: 'imp-1',
+        p_itens: [
+          { item_id: 'item-a', quantidade_conferida: 7, divergencia_obs: 'faltou' },
+          { item_id: 'item-b', quantidade_conferida: 20, divergencia_obs: null },
+        ],
+      })
+    })
+
+    it('confirmarImportacaoNfe delega à RPC só com o id da importação', async () => {
+      const confirmarNfe = vi.fn(async () => ({ error: null }))
+      const writer = createInventoryMovementWriter(
+        { rpc: vi.fn() } as never,
+        'l1',
+        {
+          rpc: {
+            transfer: vi.fn(),
+            confirmRemessa: vi.fn(),
+            importNfe: vi.fn(),
+            conferirNfe: vi.fn(),
+            confirmarNfe,
+          },
+          adjustment: { adjustInventory: vi.fn() },
+        },
+      )
+
+      await expect(
+        writer.confirmarImportacaoNfe({ importacaoId: 'imp-1' }),
+      ).resolves.toEqual({ ok: true, importacaoId: 'imp-1' })
+      expect(confirmarNfe).toHaveBeenCalledWith({ p_importacao_id: 'imp-1' })
+    })
+
+    it('confirmarImportacaoNfe propaga falha da RPC (ex.: conferência pendente)', async () => {
+      const confirmarNfe = vi.fn(async () => ({
+        error: { message: 'IMPORT_NFE_CONFERENCIA_PENDENTE' },
+      }))
+      const writer = createInventoryMovementWriter(
+        { rpc: vi.fn() } as never,
+        'l1',
+        {
+          rpc: {
+            transfer: vi.fn(),
+            confirmRemessa: vi.fn(),
+            importNfe: vi.fn(),
+            conferirNfe: vi.fn(),
+            confirmarNfe,
+          },
+          adjustment: { adjustInventory: vi.fn() },
+        },
+      )
+
+      const result = await writer.confirmarImportacaoNfe({ importacaoId: 'imp-1' })
+      expect(result.ok).toBe(false)
+    })
+
+    it('registrarConferenciaNfe rejeita lista vazia sem chamar a RPC', async () => {
+      const conferirNfe = vi.fn()
+      const writer = createInventoryMovementWriter(
+        { rpc: vi.fn() } as never,
+        'l1',
+        {
+          rpc: {
+            transfer: vi.fn(),
+            confirmRemessa: vi.fn(),
+            importNfe: vi.fn(),
+            conferirNfe,
+            confirmarNfe: vi.fn(),
+          },
+          adjustment: { adjustInventory: vi.fn() },
+        },
+      )
+
+      const result = await writer.registrarConferenciaNfe({ importacaoId: 'imp-1', itens: [] })
+      expect(result.ok).toBe(false)
+      expect(conferirNfe).not.toHaveBeenCalled()
+    })
+  })
 })

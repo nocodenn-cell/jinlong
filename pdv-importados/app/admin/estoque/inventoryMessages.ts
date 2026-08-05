@@ -31,6 +31,7 @@ const CODE_TO_KEY: Record<InventoryErrorCode, string> = {
   [INVENTORY_ERROR_CODES.OC_ID_REQUIRED]: 'estoque.err_oc_id',
   [INVENTORY_ERROR_CODES.OC_ITENS_REQUIRED]: 'estoque.err_oc_itens',
   [INVENTORY_ERROR_CODES.NFE_PAYLOAD_INVALID]: 'estoque.err_nfe_payload',
+  [INVENTORY_ERROR_CODES.NFE_IMPORTACAO_ID_REQUIRED]: 'estoque.err_nfe_importacao_id',
   [INVENTORY_ERROR_CODES.ADJUST_FAILED]: 'estoque.err_ajuste_falhou',
   [INVENTORY_ERROR_CODES.MOVEMENT_FAILED]: 'estoque.err_movimento_falhou',
   [INVENTORY_ERROR_CODES.LIST_FAILED]: 'estoque.err_listagem_falhou',

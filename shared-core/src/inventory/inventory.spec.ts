@@ -132,12 +132,20 @@ describe('inventory — contracts (split de leitura)', () => {
       async registrarConferenciaRemessa() {
         return { ok: false, error: 'not wired' }
       },
+      async registrarConferenciaNfe() {
+        return { ok: false, error: 'not wired' }
+      },
+      async confirmarImportacaoNfe() {
+        return { ok: false, error: 'not wired' }
+      },
     }
     expect(Object.keys(writer).sort()).toEqual([
       'confirmRemessaEntrada',
+      'confirmarImportacaoNfe',
       'importNfe',
       'receiveOrdemCompra',
       'registerMovement',
+      'registrarConferenciaNfe',
       'registrarConferenciaRemessa',
       'transfer',
     ])

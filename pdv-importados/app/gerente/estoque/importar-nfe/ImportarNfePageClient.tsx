@@ -15,10 +15,18 @@ import { getMessages } from '@/i18n/getMessages'
 import { Checkbox, Input, Textarea } from '@/components/ui/forms'
 import { ROUTES } from '@shared-core/navigation/routes'
 import type { NfeParsed } from '@/lib/nfe/nfeParser'
-import type { LinhaPreviewNfe, ProdutoVinculoOpcao, StatusItemNfe } from './actions'
+import type {
+  ConferenciaNfeItemInput,
+  LinhaConferenciaNfe,
+  LinhaPreviewNfe,
+  ProdutoVinculoOpcao,
+  StatusItemNfe,
+} from './actions'
 import {
   buscarProdutosParaVinculo,
+  confirmarConferenciaImportacaoNfe,
   executarImportacaoNfe,
+  obterItensConferenciaNfe,
   previewImportacaoNfe,
 } from './actions'
 
@@ -64,10 +72,19 @@ export function ImportarNfePageClient({ idioma }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const [draftNovos, setDraftNovos] = useState<number | null>(null)
 
+  // FLX-05: importar só registra para conferência — nada foi creditado ainda.
+  // A conferência (quantidade fisicamente contada) é uma etapa separada,
+  // pré-preenchida com o valor da nota mas editável pelo operador.
+  const [importacaoId, setImportacaoId] = useState<string | null>(null)
+  const [linhasConferencia, setLinhasConferencia] = useState<
+    Array<LinhaConferenciaNfe & { quantidadeConferida: number; divergenciaObs: string }>
+  >([])
+  const [conferenciaConcluida, setConferenciaConcluida] = useState(false)
+
   const previewOpts = useMemo(() => ({}), [])
   const importOpts = useMemo(
     () => ({
-      successMessage: mi.import_ok,
+      successMessage: mi.import_registrado,
       onSuccess: (data: { produtos_novos: number }) => {
         setDraftNovos(data.produtos_novos > 0 ? data.produtos_novos : null)
         if (data.produtos_novos > 0) {
@@ -78,7 +95,12 @@ export function ImportarNfePageClient({ idioma }: Props) {
         }
       },
     }),
-    [mi.import_ok, mi.import_draft_aviso],
+    [mi.import_registrado, mi.import_draft_aviso],
+  )
+
+  const confirmOpts = useMemo(
+    () => ({ successMessage: mi.conferencia_ok }),
+    [mi.conferencia_ok],
   )
 
   const { mutate: previewMut, loading: previewLoading } = useGerenteMutation(
@@ -96,6 +118,9 @@ export function ImportarNfePageClient({ idioma }: Props) {
           vinculo_nome: l.produto_nome,
         })),
       )
+      setImportacaoId(null)
+      setLinhasConferencia([])
+      setConferenciaConcluida(false)
       return null
     },
     previewOpts,
@@ -105,9 +130,42 @@ export function ImportarNfePageClient({ idioma }: Props) {
     async (payload: Parameters<typeof executarImportacaoNfe>[0]) => {
       const r = await executarImportacaoNfe(payload)
       if (!r.success) throw new Error(r.error)
+
+      const conf = await obterItensConferenciaNfe(r.data.importacao_id)
+      if (!conf.success) throw new Error(conf.error)
+
+      setImportacaoId(r.data.importacao_id)
+      setLinhasConferencia(
+        conf.data.map((l) => ({ ...l, quantidadeConferida: l.quantidadeNfe, divergenciaObs: '' })),
+      )
       return r.data
     },
     importOpts,
+  )
+
+  const { mutate: confirmMut, loading: confirmLoading } = useGerenteMutation(
+    async (_input: null) => {
+      if (!importacaoId) return null
+      const itens: ConferenciaNfeItemInput[] = linhasConferencia.map((l) => ({
+        itemId: l.itemId,
+        quantidadeConferida: l.quantidadeConferida,
+        divergenciaObs: l.divergenciaObs.trim() || null,
+      }))
+      const r = await confirmarConferenciaImportacaoNfe({ importacaoId, itens })
+      if (!r.success) throw new Error(r.error)
+      setConferenciaConcluida(true)
+      return null
+    },
+    confirmOpts,
+  )
+
+  const setLinhaConferencia = useCallback(
+    (itemId: string, patch: Partial<{ quantidadeConferida: number; divergenciaObs: string }>) => {
+      setLinhasConferencia((rows) =>
+        rows.map((row) => (row.itemId === itemId ? { ...row, ...patch } : row)),
+      )
+    },
+    [],
   )
 
   const onFile = useCallback(
@@ -161,7 +219,10 @@ export function ImportarNfePageClient({ idioma }: Props) {
   )
 
   const tudoResolvido = linhas.length > 0 && linhas.every(linhaResolvida)
-  const podeImportar = !!parsed && linhas.length > 0 && !previewLoading && tudoResolvido
+  const podeImportar =
+    !!parsed && linhas.length > 0 && !previewLoading && tudoResolvido && !importacaoId
+  const podeConfirmarConferencia =
+    !!importacaoId && linhasConferencia.length > 0 && !conferenciaConcluida
 
   const handleImportar = () => {
     if (!parsed || !tudoResolvido) return
@@ -539,6 +600,82 @@ export function ImportarNfePageClient({ idioma }: Props) {
             {mi.btn_importar}
           </Button>
         </div>
+      ) : null}
+
+      {linhasConferencia.length > 0 ? (
+        <SectionCard title={mi.conferencia_titulo} subtitle={mi.conferencia_hint}>
+          {conferenciaConcluida ? (
+            <p className="text-body font-medium text-[var(--color-success-strong)]">
+              {mi.conferencia_concluida}
+            </p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-caption">
+                  <thead>
+                    <tr className="text-left text-fg-muted">
+                      <th className="py-1 pr-2">{mi.col_item}</th>
+                      <th className="py-1 pr-2 text-right">{mi.col_q_xml}</th>
+                      <th className="py-1 pr-2 text-right">{mi.col_qtd_conferida}</th>
+                      <th className="py-1">{mi.col_divergencia_obs}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linhasConferencia.map((l) => {
+                      const divergente = l.quantidadeConferida !== l.quantidadeNfe
+                      return (
+                        <tr key={l.itemId} className="border-t border-[var(--color-border)]">
+                          <td className="py-1.5 pr-2 font-medium">{l.produtoNome}</td>
+                          <td className="py-1.5 pr-2 text-right tabular-nums">{l.quantidadeNfe}</td>
+                          <td className="py-1.5 pr-2 text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.001}
+                              controlSize="sm"
+                              value={l.quantidadeConferida}
+                              onChange={(e) => {
+                                const v = Number(e.target.value)
+                                setLinhaConferencia(l.itemId, {
+                                  quantidadeConferida: Number.isFinite(v) && v >= 0 ? v : 0,
+                                })
+                              }}
+                              className={`text-right ${divergente ? 'border-[var(--color-warning-border)]' : ''}`}
+                            />
+                          </td>
+                          <td className="py-1.5">
+                            {divergente ? (
+                              <Input
+                                type="text"
+                                controlSize="sm"
+                                placeholder={mi.divergencia_obs_placeholder}
+                                value={l.divergenciaObs}
+                                onChange={(e) =>
+                                  setLinhaConferencia(l.itemId, { divergenciaObs: e.target.value })
+                                }
+                              />
+                            ) : null}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <Button
+                  type="button"
+                  variant="primary"
+                  disabled={!podeConfirmarConferencia}
+                  loading={confirmLoading}
+                  onClick={() => void confirmMut(null)}
+                >
+                  {mi.btn_confirmar_conferencia}
+                </Button>
+              </div>
+            </>
+          )}
+        </SectionCard>
       ) : null}
     </div>
   )

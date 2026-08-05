@@ -55,6 +55,7 @@ const CODE_TO_PT: Record<InventoryErrorCode, string> = {
   [INVENTORY_ERROR_CODES.OC_ID_REQUIRED]: 'Identificador da ordem de compra ausente.',
   [INVENTORY_ERROR_CODES.OC_ITENS_REQUIRED]: 'Informe ao menos um item recebido.',
   [INVENTORY_ERROR_CODES.NFE_PAYLOAD_INVALID]: 'Dados da NF-e inválidos para importação.',
+  [INVENTORY_ERROR_CODES.NFE_IMPORTACAO_ID_REQUIRED]: 'Identificador da importação de NF-e ausente.',
   [INVENTORY_ERROR_CODES.ADJUST_FAILED]: 'Não foi possível ajustar o estoque.',
   [INVENTORY_ERROR_CODES.MOVEMENT_FAILED]: 'Não foi possível registrar o movimento de estoque.',
   [INVENTORY_ERROR_CODES.LIST_FAILED]: 'Não foi possível listar o estoque.',

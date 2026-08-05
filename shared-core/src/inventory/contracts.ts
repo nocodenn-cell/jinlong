@@ -192,6 +192,11 @@ export type ReceiveOrdemCompraResult =
 
 /**
  * Payload da RPC `importar_nfe_transacao` — tipagem de borda; sem regra nova.
+ *
+ * FLX-05: a RPC deixou de creditar estoque/gerar contas_pagar nesta chamada —
+ * só lê o XML, cadastra/vincula produto e grava os itens para conferência.
+ * `importacaoId` no resultado é o que alimenta `registrarConferenciaNfe` e
+ * `confirmarImportacaoNfe` a seguir.
  */
 export type ImportNfeCommand = {
   chaveAcesso: string
@@ -208,11 +213,43 @@ export type ImportNfeCommand = {
 export type ImportNfeResult =
   | {
       ok: true
+      importacaoId: string
       itensProcessados: number
       produtosNovos: number
       produtosVinculados: number
       raw: unknown
     }
+  | { ok: false; error: string; code?: InventoryErrorCode }
+
+/**
+ * FLX-05: registra a contagem física por item de uma importação de NF-e.
+ * Etapa obrigatória antes de `confirmarImportacaoNfe` — sem ela a RPC recusa
+ * mover saldo. Mesmo contrato de `registrarConferenciaRemessa`.
+ */
+export type RegistrarConferenciaNfeCommand = {
+  importacaoId: string
+  itens: ReadonlyArray<{
+    itemId: string
+    quantidadeConferida: number
+    divergenciaObs?: string | null
+  }>
+}
+
+export type RegistrarConferenciaNfeResult =
+  | { ok: true; importacaoId: string; itensConferidos: number; itensDivergentes: number }
+  | { ok: false; error: string; code?: InventoryErrorCode }
+
+/**
+ * FLX-05: credita estoque, atualiza custo e gera contas_pagar — só com base
+ * na quantidade CONFERIDA (nunca a declarada na NF-e). Exige todos os itens
+ * já conferidos; recusa se chamada de novo (importação já concluída).
+ */
+export type ConfirmarImportacaoNfeCommand = {
+  importacaoId: string
+}
+
+export type ConfirmarImportacaoNfeResult =
+  | { ok: true; importacaoId: string }
   | { ok: false; error: string; code?: InventoryErrorCode }
 
 /**
@@ -237,6 +274,17 @@ export type InventoryMovementWriter = {
   ): Promise<RegistrarConferenciaRemessaResult>
   confirmRemessaEntrada(command: ConfirmRemessaCommand): Promise<ConfirmRemessaResult>
   importNfe(command: ImportNfeCommand): Promise<ImportNfeResult>
+  /**
+   * FLX-05: registra a contagem física por item de importação de NF-e.
+   * Etapa obrigatória antes de `confirmarImportacaoNfe` — sem ela a RPC
+   * recusa mover saldo.
+   */
+  registrarConferenciaNfe(
+    command: RegistrarConferenciaNfeCommand,
+  ): Promise<RegistrarConferenciaNfeResult>
+  confirmarImportacaoNfe(
+    command: ConfirmarImportacaoNfeCommand,
+  ): Promise<ConfirmarImportacaoNfeResult>
   /**
    * Recebimento de ordem de compra — a terceira porta de ENTRADA de mercadoria.
    *

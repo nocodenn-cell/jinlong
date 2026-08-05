@@ -12,6 +12,7 @@ import { getUsuarioIdioma } from '@/idioma/usuarioIdioma'
 import { getGerenteLojaId } from '@/lib/gerente/auth/sessionContext'
 import { ImportNfePayloadSchema } from './actions.validation'
 import { createInventoryMovementWriter } from '@/app/admin/estoque/inventoryMovementWriter'
+import { localizeInventoryFailure } from '@/app/admin/estoque/inventoryMessages'
 
 type ActionResult<T = null> =
   | { success: true; data: T }
@@ -238,6 +239,7 @@ export async function executarImportacaoNfe(
   input: unknown,
 ): Promise<
   ActionResult<{
+    importacao_id: string
     itens_processados: number
     produtos_novos: number
     produtos_vinculados: number
@@ -296,13 +298,108 @@ export async function executarImportacaoNfe(
     return { success: false, error: mapRpcImportNfe(result.error) }
   }
 
-  revalidarDominio('estoque.recebido')
   return {
     success: true,
     data: {
+      importacao_id: result.importacaoId,
       itens_processados: result.itensProcessados,
       produtos_novos: result.produtosNovos,
       produtos_vinculados: result.produtosVinculados,
     },
   }
+}
+
+/** FLX-05: uma linha por item gravado por importar_nfe_transacao, aguardando conferência física. */
+export type LinhaConferenciaNfe = {
+  itemId: string
+  produtoId: string
+  produtoNome: string
+  quantidadeNfe: number
+}
+
+/**
+ * Lista os itens gravados para conferência (leitura direta, RLS garante o
+ * escopo de loja via join com importacoes_nfe — mesmo padrão de
+ * previewImportacaoNfe).
+ */
+export async function obterItensConferenciaNfe(
+  importacaoId: string,
+): Promise<ActionResult<LinhaConferenciaNfe[]>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  if (!importacaoId?.trim()) {
+    return { success: false, error: 'Importação de NF-e não identificada.' }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('importacoes_nfe_itens')
+    .select('id, produto_id, quantidade_nfe, produtos(nome)')
+    .eq('importacao_nfe_id', importacaoId.trim())
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Conferência NF-e', error.message) }
+  }
+
+  const linhas: LinhaConferenciaNfe[] = (data ?? []).map((r) => {
+    const produtoRel = (
+      r as { produtos: { nome: string } | { nome: string }[] | null }
+    ).produtos
+    const produtoNome = Array.isArray(produtoRel) ? produtoRel[0]?.nome : produtoRel?.nome
+
+    return {
+      itemId: r.id as string,
+      produtoId: r.produto_id as string,
+      produtoNome: produtoNome ?? '',
+      quantidadeNfe: Number(r.quantidade_nfe),
+    }
+  })
+
+  return { success: true, data: linhas }
+}
+
+export type ConferenciaNfeItemInput = {
+  itemId: string
+  quantidadeConferida: number
+  divergenciaObs?: string | null
+}
+
+/**
+ * FLX-05: registra a contagem física e, se completa, credita estoque/gera
+ * contas_pagar na mesma chamada — abre→confere→confirma em um clique, como
+ * `receiveOrdemCompra` já faz para OC. Curto-circuita se a conferência falhar.
+ */
+export async function confirmarConferenciaImportacaoNfe(input: {
+  importacaoId: string
+  itens: ConferenciaNfeItemInput[]
+}): Promise<ActionResult<null>> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const lojaId = await lojaIdDoUsuarioLogado()
+  if (!lojaId) return { success: false, error: 'Não foi possível identificar sua loja.' }
+
+  const supabase = await createClient()
+  const writer = createInventoryMovementWriter(supabase, lojaId)
+
+  const conferido = await writer.registrarConferenciaNfe({
+    importacaoId: input.importacaoId,
+    itens: input.itens,
+  })
+  if (!conferido.ok) {
+    const { idioma } = await getUsuarioIdioma()
+    const localizado = localizeInventoryFailure(idioma, conferido)
+    return { success: false, error: mensagemErroComSecao('Conferência NF-e', localizado.error) }
+  }
+
+  const confirmado = await writer.confirmarImportacaoNfe({ importacaoId: input.importacaoId })
+  if (!confirmado.ok) {
+    const { idioma } = await getUsuarioIdioma()
+    const localizado = localizeInventoryFailure(idioma, confirmado)
+    return { success: false, error: mensagemErroComSecao('Confirmação NF-e', localizado.error) }
+  }
+
+  revalidarDominio('estoque.recebido')
+  return { success: true, data: null }
 }

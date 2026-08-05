@@ -7,6 +7,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
+  ConfirmarImportacaoNfeCommand,
+  ConfirmarImportacaoNfeResult,
   ConfirmRemessaCommand,
   ConfirmRemessaResult,
   ImportNfeCommand,
@@ -15,6 +17,8 @@ import type {
   InventoryMovementWriter,
   ReceiveOrdemCompraCommand,
   ReceiveOrdemCompraResult,
+  RegistrarConferenciaNfeCommand,
+  RegistrarConferenciaNfeResult,
   RegistrarConferenciaRemessaCommand,
   RegistrarConferenciaRemessaResult,
   RegisterMovementCommand,
@@ -38,6 +42,12 @@ export type MovementWriterRpc = {
   registrarConferencia: (
     args: Record<string, unknown>,
   ) => Promise<{ data: unknown; error: { message: string } | null }>
+  /** FLX-05: registra a contagem física por item de importação de NF-e. */
+  conferirNfe: (
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>
+  /** FLX-05: credita estoque/gera contas_pagar — só após conferência completa. */
+  confirmarNfe: (args: { p_importacao_id: string }) => Promise<{ error: { message: string } | null }>
 }
 
 export type InventoryMovementWriterDeps = {
@@ -58,6 +68,11 @@ function defaultRpc(supabase: SupabaseClient): MovementWriterRpc {
     conferirOc: async (args) => supabase.rpc('registrar_conferencia_ordem_compra', args),
     receiveOc: async (args) => {
       const { error } = await supabase.rpc('receber_ordem_compra', args)
+      return { error }
+    },
+    conferirNfe: async (args) => supabase.rpc('registrar_conferencia_nfe', args),
+    confirmarNfe: async (args) => {
+      const { error } = await supabase.rpc('confirmar_importacao_nfe', args)
       return { error }
     },
   }
@@ -344,12 +359,14 @@ export function createInventoryMovementWriter(
           }
         }
         const row = data as {
+          importacao_id?: string
           itens_processados?: number
           produtos_novos?: number
           produtos_vinculados?: number
         } | null
         return {
           ok: true,
+          importacaoId: row?.importacao_id ?? '',
           itensProcessados: row?.itens_processados ?? 0,
           produtosNovos: row?.produtos_novos ?? 0,
           produtosVinculados: row?.produtos_vinculados ?? 0,
@@ -359,6 +376,93 @@ export function createInventoryMovementWriter(
         return {
           ok: false,
           error: e instanceof Error ? e.message : 'Falha na importação NF-e.',
+          code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+        }
+      }
+    },
+
+    async registrarConferenciaNfe(
+      command: RegistrarConferenciaNfeCommand,
+    ): Promise<RegistrarConferenciaNfeResult> {
+      if (!command.importacaoId?.trim()) {
+        return {
+          ok: false,
+          error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.NFE_IMPORTACAO_ID_REQUIRED),
+          code: INVENTORY_ERROR_CODES.NFE_IMPORTACAO_ID_REQUIRED,
+        }
+      }
+      // `0` é contagem válida ("contei, não veio"); negativo e não-finito não são.
+      const invalido = command.itens.some(
+        (i) =>
+          !i.itemId?.trim() ||
+          !Number.isFinite(i.quantidadeConferida) ||
+          i.quantidadeConferida < 0,
+      )
+      if (command.itens.length === 0 || invalido) {
+        return {
+          ok: false,
+          error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.CONFERENCIA_QTD_INVALIDA),
+          code: INVENTORY_ERROR_CODES.CONFERENCIA_QTD_INVALIDA,
+        }
+      }
+      try {
+        const { data, error } = await rpc.conferirNfe({
+          p_importacao_id: command.importacaoId.trim(),
+          p_itens: command.itens.map((i) => ({
+            item_id: i.itemId.trim(),
+            quantidade_conferida: i.quantidadeConferida,
+            divergencia_obs: i.divergenciaObs?.trim() || null,
+          })),
+        })
+        if (error) {
+          return {
+            ok: false,
+            error: error.message,
+            code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+          }
+        }
+        const row = (Array.isArray(data) ? data[0] : data) as
+          | { itens_conferidos?: unknown; itens_divergentes?: unknown }
+          | null
+        return {
+          ok: true,
+          importacaoId: command.importacaoId.trim(),
+          itensConferidos: Number(row?.itens_conferidos ?? 0),
+          itensDivergentes: Number(row?.itens_divergentes ?? 0),
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Falha ao registrar a conferência.',
+          code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+        }
+      }
+    },
+
+    async confirmarImportacaoNfe(
+      command: ConfirmarImportacaoNfeCommand,
+    ): Promise<ConfirmarImportacaoNfeResult> {
+      if (!command.importacaoId?.trim()) {
+        return {
+          ok: false,
+          error: resolveInventoryMessage('pt-BR', INVENTORY_ERROR_CODES.NFE_IMPORTACAO_ID_REQUIRED),
+          code: INVENTORY_ERROR_CODES.NFE_IMPORTACAO_ID_REQUIRED,
+        }
+      }
+      try {
+        const { error } = await rpc.confirmarNfe({ p_importacao_id: command.importacaoId.trim() })
+        if (error) {
+          return {
+            ok: false,
+            error: error.message,
+            code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+          }
+        }
+        return { ok: true, importacaoId: command.importacaoId.trim() }
+      } catch (e) {
+        return {
+          ok: false,
+          error: e instanceof Error ? e.message : 'Falha ao confirmar a importação de NF-e.',
           code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
         }
       }
