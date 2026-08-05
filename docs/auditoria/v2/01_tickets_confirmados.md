@@ -96,6 +96,44 @@ Três migrations aplicam correções via reescrita textual do corpo da função 
 
 ## FLX-04
 
+> **STATUS (2026-08-05): FECHADO.** Migration 295 aplicada e verificada em produção + prova
+> funcional (transação com `ROLLBACK`, sem dado residual). Decisão de arquitetura: **opção (a)**
+> — conferência nativa em `ordens_compra_itens`, sem tocar em `remessas`.
+>
+> **Correção de diagnóstico (achado desta auditoria).** *"a coluna `origem_tipo` foi criada
+> justamente para isso"* (linha abaixo, "Comportamento esperado") **está errada** — `remessas`
+> não tem `origem_tipo` nem `origem_id`, só um campo texto livre (`origem_descricao`), sem FK
+> para `ordens_compra`. E `registrar_conferencia_remessa`, citado como "fluxo existente" pelo
+> guia de implementação, **não existe** em produção — só `confirmar_remessa_entrada` (o passo
+> final) foi construído. "Estender o fluxo existente" não era mecanicamente possível; daí a
+> conferência nativa em vez de reusar `remessas`.
+>
+> **O que foi implementado:** colunas `quantidade_conferida`, `divergencia_obs`,
+> `status_conferencia` (`EM_CONFERENCIA/CONFERIDO/DIVERGENTE`), `conferido_por`, `conferido_em`
+> em `ordens_compra_itens`. RPC nova `registrar_conferencia_ordem_compra` (grava a contagem,
+> não move estoque). `receber_ordem_compra` reescrita: assinatura muda de `(uuid,jsonb)` para
+> `(uuid)` — **o payload de quantidade do cliente deixou de existir**; credita só
+> `quantidade_conferida`, e só se todos os itens da OC já tiverem sido conferidos
+> (`OC_CONFERENCIA_PENDENTE` caso contrário).
+>
+> **Prova funcional (produção, dados de teste com `ROLLBACK`):** recebimento sem conferência
+> foi recusado; conferência com quantidade divergente (8 de 10 esperados) gravou
+> `status_conferencia=DIVERGENTE` + auditoria completa; recebimento subsequente creditou
+> exatamente 8 no kardex (`movimentos_estoque_log`), não 10 — provando que o valor creditado
+> vem do que foi conferido, não do que era esperado nem de qualquer parâmetro externo.
+>
+> **Camada de aplicação:** `shared-core/src/inventory/contracts.ts` e
+> `inventoryMovementWriter.ts` atualizados — o writer agora chama
+> `registrar_conferencia_ordem_compra` e depois `receber_ordem_compra(uuid)` em sequência.
+> **Contrato externo preservado**: `ReceiveOrdemCompraCommand` (usado por
+> `app/gerente/compras/actions.ts`) não mudou — a quantidade que o operador já digitava agora é
+> gravada como conferência antes de creditar, sem exigir nova tela. Zero mudança de UI.
+> 2 testes novos provam a ordem de chamada e que `receiveOc` nunca é invocado se a conferência
+> falhar. 886 testes verdes, `guard:all` e `lint` limpos.
+>
+> Não mexe em `remessas`/`remessa_itens` (fora de escopo por decisão explícita) nem em cadastro,
+> publicação ou venda de produto (ADR-006 preservado).
+
 **Título:** `receber_ordem_compra` credita estoque sem etapa de conferência — a proteção da migration 20260801120000 não alcança o caminho real de entrada
 
 **Categoria:** Regra Ausente

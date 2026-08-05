@@ -90,4 +90,83 @@ describe('createInventoryMovementWriter', () => {
     ).resolves.toEqual({ ok: true, remessaId: 'rem-1' })
     expect(confirmRemessa).toHaveBeenCalledWith({ p_remessa_id: 'rem-1' })
   })
+
+  // FLX-04: receber_ordem_compra não pode mais creditar estoque sem conferência
+  // prévia gravada no servidor. O writer precisa registrar a conferência ANTES
+  // de chamar o recebimento — e nunca chamar o recebimento se a conferência falhar.
+  describe('receiveOrdemCompra (FLX-04)', () => {
+    it('registra conferência antes de receber, na ordem certa', async () => {
+      const chamadas: string[] = []
+      const conferirOc = vi.fn(async () => {
+        chamadas.push('conferir')
+        return { data: { ok: true }, error: null }
+      })
+      const receiveOc = vi.fn(async () => {
+        chamadas.push('receber')
+        return { error: null }
+      })
+      const writer = createInventoryMovementWriter(
+        { rpc: vi.fn() } as never,
+        'l1',
+        {
+          rpc: {
+            transfer: vi.fn(),
+            confirmRemessa: vi.fn(),
+            importNfe: vi.fn(),
+            conferirOc,
+            receiveOc,
+          },
+          adjustment: { adjustInventory: vi.fn() },
+        },
+      )
+
+      await expect(
+        writer.receiveOrdemCompra({
+          ocId: 'oc-1',
+          itens: [{ itemId: 'item-1', quantidadeRecebida: 8 }],
+        }),
+      ).resolves.toEqual({ ok: true, ocId: 'oc-1' })
+
+      expect(chamadas).toEqual(['conferir', 'receber'])
+      // A quantidade que o operador informa vira quantidade CONFERIDA, não um
+      // parâmetro de recebimento direto — é isso que fecha FLX-04.
+      expect(conferirOc).toHaveBeenCalledWith({
+        p_oc_id: 'oc-1',
+        p_itens: [{ item_id: 'item-1', quantidade_conferida: 8 }],
+      })
+      // receber_ordem_compra não aceita mais quantidade do cliente — só o id da OC.
+      expect(receiveOc).toHaveBeenCalledWith({ p_oc_id: 'oc-1' })
+    })
+
+    it('não chama receber_ordem_compra se a conferência falhar', async () => {
+      const conferirOc = vi.fn(async () => ({
+        data: null,
+        error: { message: 'OC_CONFERENCIA_QTD_INVALIDA' },
+      }))
+      const receiveOc = vi.fn(async () => ({ error: null }))
+      const writer = createInventoryMovementWriter(
+        { rpc: vi.fn() } as never,
+        'l1',
+        {
+          rpc: {
+            transfer: vi.fn(),
+            confirmRemessa: vi.fn(),
+            importNfe: vi.fn(),
+            conferirOc,
+            receiveOc,
+          },
+          adjustment: { adjustInventory: vi.fn() },
+        },
+      )
+
+      const result = await writer.receiveOrdemCompra({
+        ocId: 'oc-1',
+        itens: [{ itemId: 'item-1', quantidadeRecebida: 5 }],
+      })
+
+      expect(conferirOc).toHaveBeenCalled()
+      expect(result.ok).toBe(false)
+      expect(receiveOc).not.toHaveBeenCalled()
+    })
+  })
 })

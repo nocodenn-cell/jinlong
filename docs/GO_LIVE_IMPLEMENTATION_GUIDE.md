@@ -279,7 +279,16 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 | **Ordem interna** | `loja_id` **antes** do cadastro de fornecedor real (F2-FOR-001). Cadastrar primeiro cria registro sem tenant, que o backfill terá de adivinhar |
 | **Limite de escopo (ADR-006)** | F2-FOR-001 destrava **Compras**. É proibido introduzir exigência de fornecedor no cadastro, na publicação ou na venda de produto — ADR-006 permite explicitamente produto sem fornecedor. Teste de regressão obrigatório |
 
-### Pacote 4 — Compra e Recebimento (P1, ADR-004/006)
+### Pacote 4 — Compra e Recebimento (P1, ADR-004/006) — ✅ FECHADO (2026-08-05)
+
+> Migration `295_ordem_compra_conferencia` aplicada e verificada em produção, incluindo prova
+> funcional end-to-end (transação com `ROLLBACK`). Decisão de arquitetura: conferência nativa em
+> `ordens_compra_itens` — `remessas` não tinha ponte estrutural com `ordens_compra`
+> (`origem_tipo` citado no guia original não existe) nem a RPC de conferência que o guia mandava
+> "estender" (`registrar_conferencia_remessa` não existe em produção). `receber_ordem_compra`
+> muda de `(uuid,jsonb)` para `(uuid)` — credita só `quantidade_conferida`, nunca payload do
+> cliente. `shared-core`/writer atualizados; contrato externo (`ReceiveOrdemCompraCommand`)
+> preservado, zero mudança de UI. Detalhe: `docs/auditoria/v2/01_tickets_confirmados.md` (FLX-04).
 
 | Item | Conteúdo |
 |---|---|

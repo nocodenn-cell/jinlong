@@ -36,7 +36,7 @@ Os 7 pacotes (0–6) do `GO_LIVE_IMPLEMENTATION_GUIDE.md`. **Nenhum iniciado.** 
 | 1 — Segurança de execução | SEC-01, SEC-02, SSOT-01, TB-01, **F1-07, F1-08, F6-PER-001, FRN-03** | P0 | ✅ Fechado (2026-08-05) |
 | 2 — Integridade de dados | DAT-01, FLX-01, CA-01, DAT-03 | P0/P1 | ✅ Fechado (2026-08-05). DAT-02 → pós Go-Live |
 | 3 — Fornecedor multi-tenant | TB-05, **F2-FOR-001** | P0/P1 | 🟡 TB-05 fechado (2026-08-05); F2-FOR-001 bloqueado por schema da tela ≠ schema real — decisão de escopo pendente |
-| 4 — Compra e Recebimento | FLX-04 | P1 | Não iniciado |
+| 4 — Compra e Recebimento | FLX-04 | P1 | ✅ Fechado (2026-08-05) |
 | 5 — Financeiro e Crédito | TB-07, BR-01, BR-03, **F1-05** | P1 | Não iniciado |
 | 6 — Caixa, Cadastro, Auditoria e Coerência | BR-04, TB-04, TB-06, SSOT-04, FLX-03, SSOT-05, **F6-CMP-001, F6.1-VEN-001, F6-AUD-001, F6.1-VEN-002, F6-INF-001**, SSOT-02 | P1/P2 | Não iniciado |
 

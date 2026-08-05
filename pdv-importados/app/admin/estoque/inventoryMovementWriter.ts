@@ -30,7 +30,11 @@ export type MovementWriterRpc = {
   transfer: (args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
   confirmRemessa: (args: { p_remessa_id: string }) => Promise<{ error: { message: string } | null }>
   importNfe: (args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
-  receiveOc: (args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
+  receiveOc: (args: { p_oc_id: string }) => Promise<{ error: { message: string } | null }>
+  /** FLX-04: registra a contagem física por item de OC — pré-requisito de receiveOc. */
+  conferirOc: (
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>
   registrarConferencia: (
     args: Record<string, unknown>,
   ) => Promise<{ data: unknown; error: { message: string } | null }>
@@ -51,6 +55,7 @@ function defaultRpc(supabase: SupabaseClient): MovementWriterRpc {
     importNfe: async (args) => supabase.rpc('importar_nfe_transacao', args),
     registrarConferencia: async (args) =>
       supabase.rpc('registrar_conferencia_remessa', args),
+    conferirOc: async (args) => supabase.rpc('registrar_conferencia_ordem_compra', args),
     receiveOc: async (args) => {
       const { error } = await supabase.rpc('receber_ordem_compra', args)
       return { error }
@@ -273,14 +278,28 @@ export function createInventoryMovementWriter(
         }
       }
       try {
-        const { error } = await rpc.receiveOc({
+        // FLX-04: recebimento agora exige conferência prévia gravada no servidor.
+        // A quantidade que o operador digita aqui é a contagem física — grava-se
+        // primeiro como conferência (com auditoria: conferido_por/conferido_em);
+        // só então `receber_ordem_compra` credita, usando o valor conferido, não
+        // este payload. Contrato externo (ReceiveOrdemCompraCommand) inalterado —
+        // a mudança fica inteira dentro deste método.
+        const { error: erroConferencia } = await rpc.conferirOc({
           p_oc_id: command.ocId.trim(),
-          // Nomes das chaves espelham o contrato da RPC `receber_ordem_compra`.
           p_itens: itens.map((i) => ({
             item_id: i.itemId.trim(),
-            quantidade_recebida: i.quantidadeRecebida,
+            quantidade_conferida: i.quantidadeRecebida,
           })),
         })
+        if (erroConferencia) {
+          return {
+            ok: false,
+            error: erroConferencia.message,
+            code: INVENTORY_ERROR_CODES.MOVEMENT_FAILED,
+          }
+        }
+
+        const { error } = await rpc.receiveOc({ p_oc_id: command.ocId.trim() })
         if (error) {
           return {
             ok: false,
