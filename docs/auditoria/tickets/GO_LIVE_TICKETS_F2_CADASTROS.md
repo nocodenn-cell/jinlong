@@ -380,6 +380,26 @@ bloquear ou fundir; tela de clientes mostra aviso de duplicidade provável.
 ---
 
 ## TICKET F2-FOR-001
+
+> **STATUS (2026-08-05): PARCIALMENTE RESOLVIDO — reclassificado, não fechado.**
+> Pré-requisito TB-05 (multi-tenant) fechado — `loja_id` existe, cadastrar um fornecedor real
+> agora seria isolado corretamente. **Mas o cadastro continua impossível hoje** por um motivo
+> diferente do diagnosticado originalmente: `app/gerente/fornecedores/actions.ts` e
+> `app/admin/compras/page.tsx` consultam colunas que **nunca existiram** em `public.fornecedores`
+> (`documento`, `tipo`, `email`, `telefone`, `contato_pessoa`, `categoria`, `endereco_*`, `ativo`).
+> O schema real, confirmado em produção, é só `id, cnpj, nome, loja_id, created_at, updated_at`.
+> As telas `/admin/fornecedores` e `/admin/compras` (query de fornecedores ativos) falham em
+> runtime **hoje**, independente de TB-05.
+>
+> Reclassificado de "fornecedores vazia" para "tela de fornecedor incompatível com o schema real".
+> Não é bloqueio de venda (ADR-006 preservado — nada tocado em cadastro/publicação/venda de
+> produto). É bloqueio de **Compras**, como o próprio ADR-006 já previa.
+>
+> **Decisão de escopo necessária antes de corrigir** (fora do escopo de TB-05):
+> (a) simplificar a tela para o schema real (cnpj + nome), ou
+> (b) desenhar e migrar as colunas que a tela espera (documento/tipo PF-PJ/endereço/ativo).
+> Cada opção é uma decisão de produto, não uma correção técnica de 1 linha.
+
 **Título:** Fornecedores incompletos / inexistentes (0 cadastros)
 
 **Categoria:** Fornecedor

@@ -247,7 +247,24 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 | **Documentação** | — |
 | **Armadilha** | `estoque_baixas` é o **único** outlier sem FK num sistema que acerta no resto — correção pontual, não refatoração do módulo |
 
-### Pacote 3 — Fornecedor multi-tenant (P0/P1, ADR-001/ADR-006)
+### Pacote 3 — Fornecedor multi-tenant (P0/P1, ADR-001/ADR-006) — 🟡 PARCIAL (2026-08-05)
+
+> **TB-05 FECHADO.** Migration `294_fornecedores_multi_tenant` aplicada e verificada em produção:
+> `loja_id NOT NULL` + FK, `uq_fornecedores_loja_cnpj`, policy `fornecedores_loja_isolado`
+> (espelha `clientes_loja_isolado`). Zero backfill (tabela vazia). `importar_nfe_transacao`
+> corrigida no mesmo commit — teria quebrado em runtime (`ON CONFLICT (cnpj)` não bate mais com
+> a unique composta).
+>
+> **F2-FOR-001 NÃO FECHADO — bloqueador real é outro.** As telas de fornecedor
+> (`app/gerente/fornecedores/actions.ts`, `app/admin/compras/page.tsx`) consultam colunas que
+> nunca existiram no schema real (`documento`, `tipo`, `endereco_*`, `ativo`) — quebradas em
+> runtime hoje, independente de TB-05. Corrigir isso é decisão de escopo (simplificar a tela
+> para o schema real vs. desenhar as colunas que faltam), fora do que uma migration de
+> multi-tenant resolve. Detalhe: `docs/auditoria/tickets/GO_LIVE_TICKETS_F2_CADASTROS.md`.
+>
+> Nenhum bloqueio foi criado em cadastro, publicação ou venda de produto (ADR-006 preservado).
+
+
 
 | Item | Conteúdo |
 |---|---|

@@ -151,6 +151,13 @@ Agravante: `customerWriter.ts` faz `.from('clientes').insert(...)` — **INSERT 
 
 ## TB-05
 
+> **STATUS (2026-08-05): FECHADO.** Migration 294 aplicada e verificada em produção.
+> `loja_id NOT NULL` + FK `lojas`; `uq_fornecedores_loja_cnpj (loja_id, cnpj)` substitui o
+> índice global; policy `fornecedores_loja_isolado` (espelha `clientes_loja_isolado`: DONO/ADMIN
+> veem todas as lojas, GERENTE só a própria). Zero backfill — tabela tinha 0 linhas.
+> Achado que teria quebrado em runtime: `importar_nfe_transacao` fazia
+> `INSERT ... ON CONFLICT (cnpj)`; corrigido para `ON CONFLICT (loja_id, cnpj)` na mesma migration.
+
 **Título:** `fornecedores` não tem `loja_id` e o CNPJ é único global — quebra de isolamento multi-tenant
 
 **Categoria:** Segurança
