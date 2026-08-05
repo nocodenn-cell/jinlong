@@ -69,6 +69,28 @@ async function assertRpcDenied(client, name, args = {}) {
   }
 }
 
+/**
+ * Invariante: a RPC não é executável por role de cliente.
+ *
+ * Aceita dois desfechos, ambos satisfazendo a invariante:
+ *   - `permission denied` — existe e está revogada (caso de produção);
+ *   - função inexistente   — nada a expor (caso do banco local do CI, onde objetos
+ *     de drift como `baixar_estoque_venda` não existem por não terem migration).
+ *
+ * Qualquer outro desfecho — inclusive sucesso — é falha.
+ */
+async function assertRpcNaoExecutavelPorCliente(client, name, args = {}) {
+  const { error } = await client.rpc(name, args);
+  const msg = error?.message ?? "";
+  const revogada = /permission denied/i.test(msg);
+  const inexistente = /could not find the function|does not exist|schema cache/i.test(msg);
+  if (!revogada && !inexistente) {
+    throw new Error(
+      `Esperava 'permission denied' ou função inexistente em ${name}; obtido: ${msg || "(sem erro — RPC executou!)"}`
+    );
+  }
+}
+
 function monthDateRange() {
   const d = new Date();
   const y = d.getFullYear();
@@ -537,6 +559,49 @@ async function main() {
       p_motivo_codigo: "ACERTO_INVENTARIO",
     });
   });
+
+  // ── SEC-01 — baixar_estoque_venda não pode ser executável por role de cliente ──
+  // A função existe em produção sem migration de origem e sem chamador no repositório.
+  // Baixa estoque com UPDATE direto, sem kardex: qualquer execução por role de cliente
+  // corrompe o inventário sem deixar rastro. A migration 289 revoga anon/authenticated.
+  //
+  // Estes testes são o critério de aceite automatizado de SEC-01. Falham HOJE (antes da
+  // 289) e devem passar depois — é assim que se verifica efeito, não intenção.
+  const anonimo = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  for (const [rotulo, cliente] of [
+    ["ANON (sem sessão)", anonimo],
+    ["OPERADOR", operador],
+    ["GERENTE", gerente],
+    ["DONO", dono],
+    ["ADMIN", admin],
+  ]) {
+    await run(`SEC-01: RPC baixar_estoque_venda negado a ${rotulo}`, async () => {
+      await assertRpcNaoExecutavelPorCliente(cliente, "baixar_estoque_venda", {
+        p_loja_id: IDS.loja,
+        p_itens: [],
+      });
+    });
+  }
+
+  // ── SEC-02 / TB-01 — criar_produto_com_estoque_inicial é service_role-only ──
+  // O gate de perfil dentro da função é defesa em profundidade; a superfície de
+  // execução é o que importa. Nenhuma role JWT pode chamá-la direto.
+  for (const [rotulo, cliente] of [
+    ["OPERADOR", operador],
+    ["GERENTE", gerente],
+    ["DONO", dono],
+    ["ADMIN", admin],
+  ]) {
+    await run(`SEC-02: RPC criar_produto_com_estoque_inicial negado a ${rotulo}`, async () => {
+      await assertRpcDenied(cliente, "criar_produto_com_estoque_inicial", {
+        p_payload: { nome: "RLS_SCOPE_PROBE" },
+        p_ator_id: null,
+      });
+    });
+  }
 
   await run("RPC confirmar_remessa_entrada negado a OPERADOR", async () => {
     await assertRpcErrorContains(operador, "confirmar_remessa_entrada", {
