@@ -4,6 +4,54 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 
 ---
 
+## 🔒 Hierarquia oficial — Rodada de Implementação R1
+
+**Leia esta seção antes de qualquer outra coisa nesta pasta.** `docs/` tem ~105 arquivos na
+raiz e vários documentos de estado sobrepostos. Apenas os quatro abaixo têm autoridade.
+
+| Papel | Documento | Regra |
+|---|---|---|
+| 🥇 **Autoridade funcional** — *o que a regra é* | [ARQUITETURA_REGRAS_NEGOCIO.md](./ARQUITETURA_REGRAS_NEGOCIO.md) **v2.1, congelado** | 35 RNs + 7 ADRs. Em conflito com a implementação, **o documento vence** |
+| 🥈 **Fila única de execução** — *o que fazer, em que ordem* | [GO_LIVE_IMPLEMENTATION_GUIDE.md](./GO_LIVE_IMPLEMENTATION_GUIDE.md) **Pacotes 0–6** | **Nenhum outro arquivo do repositório define ordem de execução** |
+| 🥉 **Relatório de encerramento da fase** | [ENCERRAMENTO_FASE_ARQUITETURA.md](./ENCERRAMENTO_FASE_ARQUITETURA.md) | Congelado junto com os dois acima |
+| 📜 **Certificado de congelamento** | [ARQUITETURA_R1_FREEZE.md](./ARQUITETURA_R1_FREEZE.md) | Delimita o que o congelamento **não** declara |
+
+**Regras de leitura, sem exceção:**
+
+1. **Uma única fila.** Se outro documento parecer definir ordem de execução, ele está superado.
+2. **ADR vence auditoria.** As auditorias operacionais (série F1–F6.1) são de 2026-08-03 e
+   antecedem a aprovação das 7 ADRs (2026-08-04).
+3. **`RN-XXX` é namespace reservado** do Cap. 7 da arquitetura. Nunca usar esse prefixo para
+   nomear ticket, achado ou hipótese. Achados de regra da série F usam `FRN-XX`.
+4. **Regra de Evidência.** Sem evidência verificável, o status é *"Em Implementação"* — nunca
+   *"Concluído"*.
+
+### Apoio (não normativo, não é fila)
+
+| Documento | Papel |
+|---|---|
+| [MATRIZ_RASTREABILIDADE.md](./MATRIZ_RASTREABILIDADE.md) | RN → ADR → autoridade → arquivos → teste → estado |
+| [GO_LIVE_FINAL_CHECKLIST.md](./GO_LIVE_FINAL_CHECKLIST.md) | Decisões, implementações, testes e riscos pendentes |
+| [COBERTURA_REQUISITOS_CLIENTE.md](./COBERTURA_REQUISITOS_CLIENTE.md) | O que o cliente pediu × o que está coberto |
+| [CATALOGO_EVENTOS_NEGOCIO.md](./CATALOGO_EVENTOS_NEGOCIO.md) | Eventos de negócio por domínio |
+| [AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRIX.md) | Perfis e permissões |
+| [adr/](./adr/) | ADRs **técnicas** de fronteira de domínio (`ADR-005..010`) — série **disjunta** da série de regra de negócio do Cap. 8 |
+| [auditoria/](./auditoria/) | Evidência e detalhe por ticket ("como corrigir"). [README](./auditoria/README.md) |
+| [PLANO_MODULARIZACAO_DOCUMENTACAO.md](./PLANO_MODULARIZACAO_DOCUMENTACAO.md) | Plano de divisão do documento normativo — **não executar em R1** |
+
+### Histórico e propostas (não usar como instrução)
+
+| Documento | Estado |
+|---|---|
+| [ARQUITETURA_REGRAS_NEGOCIO_VALIDACAO.md](./ARQUITETURA_REGRAS_NEGOCIO_VALIDACAO.md) | 📎 Histórico — validou a v1.0; correções já aplicadas na v2.1 |
+| [auditoria/GO_LIVE_MASTER_FIX_PLAN.md](./auditoria/GO_LIVE_MASTER_FIX_PLAN.md) | 🔶 Catálogo de achados F1–F6.1. **§§2 e 5 revogadas** — não é fila |
+| [auditoria/AUDITORIA_HERMES_TICKETS_CLAUDE_CODE.md](./auditoria/AUDITORIA_HERMES_TICKETS_CLAUDE_CODE.md) | 📎 Histórico — rodada v1 de 3 |
+| [arquitetura/](./arquitetura/) | 🟡 Camada de instrução de **agentes de IA**. **Proposta não ratificada, fora da fila R1.** Não altera nem sobrepõe a autoridade funcional. Entrada: [AI_CONSTITUTION.md](./arquitetura/AI_CONSTITUTION.md) |
+| [arquitetura/MAPA_HIERARQUIA_SKILLS.md](./arquitetura/MAPA_HIERARQUIA_SKILLS.md) | 🗄️ **Arquivado/revogado** por `AI_CONSTITUTION.md` Art. 11 |
+| `CURSOR_PROMPT_SESSAO_*_V2/V3/COMPLETA.md` | ⚰️ Lápides declaradas — o canônico é `CURSOR_PROMPT_SESSAO_AUTONOMA_CANONICO.md` |
+
+---
+
 ## 🚀 Quick Start
 
 **New to fastproduct?**
@@ -26,8 +74,9 @@ Welcome to the fastproduct documentation hub. Find guides for development, opera
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Development standards, git workflow, code review | All engineers |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flows, security model | Architects, senior engineers |
-| [DECISION-LOG.md](./DECISION-LOG.md) | Architectural decisions (ADRs), rationale | Architects, leads |
+| [ARQUITETURA_REGRAS_NEGOCIO.md](./ARQUITETURA_REGRAS_NEGOCIO.md) | **Autoridade funcional das regras de negócio (v2.1)** | Todos |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flows, security model. ⚠️ Seção de stack **desatualizada** — a verdade é o `package.json` | Architects, senior engineers |
+| [adr/](./adr/) | Architectural decisions (ADRs) de fronteira de domínio, rationale | Architects, leads |
 
 ### **🚀 For Operations & Deployment**
 
