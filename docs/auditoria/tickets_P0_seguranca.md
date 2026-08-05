@@ -5,6 +5,12 @@
 
 ## SEC-01
 
+> **STATUS (2026-08-05): EXPOSIÇÃO FECHADA.** Migration `20260805151822_289_hardening_autorizacao_rpcs_p0`
+> aplicada em produção. `anon`/`authenticated` revogados de `baixar_estoque_venda` (ACL confirmada:
+> só `postgres`+`service_role`). `pg_stat_statements` (janela desde 2026-06-02) mostra zero invocações
+> reais. Restante: **DROP como limpeza P2, não-bloqueante.** Função comentada `DEPRECADA (SEC-01)`.
+
+
 **Título:** `baixar_estoque_venda` é executável por `anon` (usuário não autenticado) e não valida loja nem papel
 
 **Descrição do problema:**
@@ -33,6 +39,12 @@ A função `public.baixar_estoque_venda(p_loja_id uuid, p_itens jsonb)` está pr
 ---
 
 ## SEC-02
+
+> **STATUS (2026-08-05): FECHADO.** Migration 289 removeu `'OPERADOR'` do gate de
+> `criar_produto_com_estoque_inicial`. Verificado via `pg_get_functiondef` em produção: ausente.
+> Gate `NOT IN ('GERENTE','DONO','ADMIN')` confirmado presente. Zero regressão (Server Action já
+> gateava com `assertGerenteSession`).
+
 
 **Título:** Produção ainda permite OPERADOR criar produto — migration `20260730093000` consta aplicada mas seu efeito não está no banco
 

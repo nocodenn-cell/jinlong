@@ -144,6 +144,10 @@ A coluna é declarada como `numeric` puro (precisão arbitrária), enquanto todo
 
 ## TB-01
 
+> **STATUS (2026-08-05): FECHADO.** Paridade RPC × Server Action confirmada em produção: ambos
+> exigem GERENTE+. Mesma correção da 289 (SEC-02).
+
+
 **Título:** `criar_produto_com_estoque_inicial` — defesa de papel existe só na Server Action; RPC aceita OPERADOR
 
 **Descrição do problema:**

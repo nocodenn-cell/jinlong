@@ -205,7 +205,15 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 | **Armadilha** | **F3-001 é destrutivo e irreversível.** Rodar em staging primeiro, com backup verificado, na ordem de FK de `AUDITORIA_F3_DADOS_TESTE.md` §5. Nenhum `DELETE` em produção sem restore ensaiado (critério §8.2/7) |
 | **Nota de escopo** | `auto_enqueue_fiscal = true` (F1-02) só se aplica se **FLX-02** decidir "Go-Live com fiscal". Sem essa decisão, F1-02 fica pendente e não bloqueia o pacote |
 
-### Pacote 1 — Segurança de execução (P0)
+### Pacote 1 — Segurança de execução (P0) — ✅ FECHADO (2026-08-05)
+
+> SEC-02, SSOT-01, TB-01: fechados — migration `20260805151822_289` aplicada e verificada em
+> produção (`pg_get_functiondef`, ACL). SEC-01: exposição fechada (`anon`/`authenticated`
+> revogados); `DROP` fica como limpeza P2, não-bloqueante (zero uso em `pg_stat_statements`,
+> janela desde 2026-06-02). F1-07/F1-08/F6-PER-001/FRN-03: fechados em `abee0cc4`
+> (`adminPolicy.ts` — cobertura de rotas, diferenciação de perfil, fallback `deny`).
+> Evidência completa: `docs/auditoria/tickets_P0_seguranca.md`, `docs/auditoria/v2/01_tickets_confirmados.md`,
+> `docs/auditoria/tickets_P1_P2_restantes.md`.
 
 | Item | Conteúdo |
 |---|---|

@@ -2,6 +2,12 @@
 
 ## SSOT-01
 
+> **STATUS (2026-08-05): FECHADO.** Migration 289 removeu `v_estoque_inicial` e a string mágica de
+> `ajustar_estoque_manual`. Verificado em produção: ausentes. Gate agora deriva só de
+> `NOT IN ('GERENTE','DONO','ADMIN')`. Overload de 6 args (wrapper) inalterado, mesma ACL
+> (`service_role`-only), sem regressão.
+
+
 **Título:** `ajustar_estoque_manual` autoriza OPERADOR por comparação de string literal enviada pelo cliente
 
 **Categoria:** Segurança

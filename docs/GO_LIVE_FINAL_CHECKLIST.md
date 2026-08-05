@@ -33,7 +33,7 @@ Os 7 pacotes (0–6) do `GO_LIVE_IMPLEMENTATION_GUIDE.md`. **Nenhum iniciado.** 
 | Pacote | Tickets | P | Estado |
 |---|---|---|---|
 | **0 — Dados e Parametrização** | **F3-001, F1-01, F1-02, F1-04, F1-06, F1-14** | **P0** | Não iniciado |
-| 1 — Segurança de execução | SEC-01, SEC-02, SSOT-01, TB-01, **F1-07, F1-08, F6-PER-001, FRN-03** | P0 | Não iniciado |
+| 1 — Segurança de execução | SEC-01, SEC-02, SSOT-01, TB-01, **F1-07, F1-08, F6-PER-001, FRN-03** | P0 | ✅ Fechado (2026-08-05) |
 | 2 — Integridade de dados | DAT-01, FLX-01, CA-01, DAT-03, DAT-02 | P0/P1 | Não iniciado |
 | 3 — Fornecedor multi-tenant | TB-05, **F2-FOR-001** | P0/P1 | Não iniciado |
 | 4 — Compra e Recebimento | FLX-04 | P1 | Não iniciado |
