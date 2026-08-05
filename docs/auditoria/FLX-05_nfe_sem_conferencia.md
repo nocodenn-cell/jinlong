@@ -1,7 +1,7 @@
 # FLX-05 — `importar_nfe_transacao` credita estoque e gera contas a pagar sem etapa de conferência
 
 **Data:** 2026-08-05
-**Status:** **FECHADO.** Migration `296_nfe_conferencia.sql` aplicada em produção em **2026-08-05 21:33:57 UTC** (versão `20260805213357` em `supabase_migrations.schema_migrations`), verificada no efeito pelo próprio bloco `DO $verify$` da migration, e provada com smoke real pós-aplicação (sem rollback) — seção 11. Camada de app/UI implementada e testada localmente (typecheck, lint, 1082 testes verdes nos dois pacotes) antes da aplicação.
+**Status:** **FECHADO.** Migration `296_nfe_conferencia.sql` aplicada em produção em **2026-08-05 21:33:57 UTC** (versão `20260805213357` em `supabase_migrations.schema_migrations`), verificada no efeito pelo próprio bloco `DO $verify$` da migration, e provada com smoke real pós-aplicação (sem rollback) — seção 11. Camada de app/UI implementada e testada localmente (typecheck, lint, 1082 testes verdes nos dois pacotes) antes da aplicação. Resíduos do smoke real limpos na mesma sessão (seção 11.4) — banco de volta ao baseline, kardex original preservado. Código commitado (`3a114105`) + commit da documentação de fechamento.
 **Prioridade:** **P0** (bloqueio de integridade estoque/financeiro antes de qualquer uso real do caminho NF-e)
 **Relacionados:** FLX-04 (`docs/auditoria/v2/01_tickets_confirmados.md`), Onda B (`docs/ONDA_B_RECEBIMENTO.md`)
 **Pacote:** 4.5 — Integridade de Entrada de Mercadoria (continuação direta do FLX-04, deliberadamente à frente do Pacote 5/Financeiro — decisão de prioridade de 2026-08-05)
@@ -238,7 +238,45 @@ Diferente da prova da seção 6 (transação com `ROLLBACK`), esta rodada usa `i
 
 **Todos os cinco critérios pedidos (bloqueio, divergência, conferência com quantidade aceita ≠ nota, kardex, contas_pagar) mais auditoria e idempotência — confirmados com dados reais, não simulados.**
 
-**Nota de limpeza:** este smoke real deixou dados de teste visíveis no piloto — fornecedor "Fornecedor Smoke FLX-05 (pos-aplicacao)", produtos "Produto Smoke FLX05 Real A/B" (catálogo, com estoque 7 e 20), e uma conta a pagar de R$150,00. Mesma convenção já usada em `smoke_item4_integracao_recebimento_financeiro_fiscal.sql` (que também não faz cleanup). Diferente daquele caso, este piloto tem um cliente real operando — sinalizo aqui em vez de decidir sozinha: se quiser, eu removo essas linhas (produto, fornecedor, estoque, contas_pagar; o registro de kardex por convenção deste projeto é imutável — ver migration 127 — então esse ficaria mesmo com o resto limpo).
+### 11.4. Limpeza dos resíduos do smoke (2026-08-05, mesma sessão)
+
+**Inventário dos registros criados pelo smoke** (todos com os IDs exatos coletados):
+
+| Entidade | ID | Detalhe |
+|---|---|---|
+| Fornecedor | `b09a759d-db5d-48ca-bbf0-8c95fe6754a4` | "Fornecedor Smoke FLX-05 (pos-aplicacao)", CNPJ 11222333000181 |
+| Produto A | `f083926f-5657-4e2c-9787-84a82d20e30d` | ref `SMOKE-FLX05-REAL-A`, já nascia `ativo=false`/`DRAFT` (comportamento padrão de produto novo) |
+| Produto B | `ade396a0-d9ff-445e-973b-eeddde8d07c0` | ref `SMOKE-FLX05-REAL-B`, idem |
+| Estoque | 2 linhas (A=7, B=20) | loja `a0000001-…` |
+| Vínculos De-Para | `f2ecfa1d-…` (A), `ff6d46cb-…` (B) | `vinculos_fornecedor_produto` |
+| Kardex original | `7d7110cb-…` (A, +7), `f03ced0a-…` (B, +20) | `ENTRADA_NFE` — **imutável, não tocado** |
+| Importação NF-e | `43c2caac-7855-47c8-89dd-ec12fa6cd054` | status `CONCLUIDA` |
+| Itens da importação | 2 linhas | `importacoes_nfe_itens` |
+| Duplicata | 1 linha | `importacoes_nfe_duplicatas` |
+| Contas a pagar | `b5c575e0-e8cf-4cd6-bb0d-ff1001f3ac92` | R$150,00, `PENDENTE` |
+
+**Achado que decidiu a estratégia de limpeza:** `movimentos_estoque_log_produto_id_fkey` é `FOREIGN KEY (produto_id) REFERENCES produtos(id)` **sem `ON DELETE`** (= `RESTRICT` por padrão). Como o kardex é imutável e não pode ser apagado, o banco **estruturalmente impede** apagar `produtos` enquanto houver linha de kardex referenciando — e por consequência impede apagar `fornecedores` enquanto `produtos.fornecedor_id` ainda apontar para ele. Não é uma escolha de design desta limpeza; é a integridade referencial do banco reforçando exatamente a regra "não apagar kardex/auditoria" que foi pedida. Confirmado via `pg_constraint` antes de qualquer DELETE.
+
+**Limpeza executada** (real, commitada, na ordem abaixo):
+
+1. **Estorno de estoque via mecanismo de domínio** — `ajustar_estoque_manual(produto, loja, quantidade_atual:=0, estoque_minimo:=0, motivo:='ACERTO_INVENTARIO', observacao:='FLX-05: estorno do smoke real pos-aplicacao…')` para A e B. Isso não apaga o kardex anterior — grava **duas novas linhas** (`SAIDA_AJUSTE`, -7 e -20, com motivo e observação documentados) e zera `estoque.quantidade_atual`. Mesma técnica que um gerente real usaria para corrigir um erro de contagem — "conforme regra do domínio", não um `UPDATE` direto na tabela.
+2. **`DELETE FROM importacoes_nfe WHERE id = '43c2caac-…'`** — cascade (`ON DELETE CASCADE`) removeu automaticamente `importacoes_nfe_itens` (2), `importacoes_nfe_duplicatas` (1) e `contas_pagar` (1, `b5c575e0-…`).
+3. **`DELETE FROM vinculos_fornecedor_produto`** para os dois vínculos De-Para do smoke.
+4. **Produtos A/B: não puderam ser apagados** (bloqueio de FK explicado acima). Em vez disso: `fornecedor_id = NULL` (desvincula), `ativo = false` (já estava), `nome` prefixado com `[TESTE REMOVIDO]`, `observacao` recebeu nota explicando o motivo do registro continuar existindo e apontando para este documento.
+5. **`DELETE FROM fornecedores WHERE id = 'b09a759d-…'`** — agora sem nenhuma dependência viva (produtos desvinculados no passo 4, importação já apagada no passo 2), a exclusão real foi possível.
+
+**Validação pós-limpeza:**
+
+| Checagem | Resultado |
+|---|---|
+| `fornecedores`, `importacoes_nfe`, `importacoes_nfe_itens`, `importacoes_nfe_duplicatas`, `contas_pagar` | **0** — de volta ao baseline exato de antes do smoke |
+| `estoque.quantidade_atual` dos produtos A/B | **0/0** |
+| Produtos A/B | `ativo=false`, nome com prefixo `[TESTE REMOVIDO]`, sem `fornecedor_id` — não aparecem em nenhuma tela que filtra por ativo/fornecedor válido |
+| Órfãos: `produtos.fornecedor_id` apontando para fornecedor inexistente, `estoque`/`vinculos_fornecedor_produto` apontando para produto ou fornecedor inexistente | **0 em todas as checagens** |
+| `get_advisors(security)` | Nenhum novo alerta referenciando `importacoes_nfe*`, `registrar_conferencia_nfe` ou `confirmar_importacao_nfe` |
+| Kardex original (`7d7110cb-…`, `f03ced0a-…`) | **Preservado, intocado** — 2 linhas `ENTRADA_NFE` continuam existindo, mais 2 novas `SAIDA_AJUSTE` documentando o estorno. Trilha completa: entrou 7 e 20 (conferido), saiu 7 e 20 (estorno de teste, motivo registrado) |
+
+**Achado à parte, fora de escopo, não tocado:** ao filtrar produtos por nome `%smoke%` apareceram 8 outros registros pré-existentes (`SMOKE_F1/F2/F3_…`, `SMOKE_UI_G1_…` ×3, `[SMOKE:DONE] …` ×2, datados de 2026-07-08 e 2026-07-18 — muito antes desta sessão). Não são do FLX-05 e não foram tocados, conforme instrução de não abrir novo escopo — mas registro aqui porque é evidência de que este piloto já acumula resíduo de smoke de outras rodadas, caso a direção queira uma limpeza geral depois.
 
 ## 12. Arquivos tocados nesta investigação
 
