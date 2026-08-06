@@ -37,6 +37,18 @@
 > não é hoje mostrada como toast — `caixaVendas.impl.ts` só lê `mensagem` no caminho de erro
 > (linha 345-346); no sucesso ela é ignorada. RPC está correta e auditável de qualquer forma
 > (dado disponível); exibir é UX incremental, não a regra em si.
+>
+> **REGRESSÃO ENCONTRADA E CORRIGIDA (2026-08-05), durante validação integrada do Pacote 5:**
+> o `DROP FUNCTION` + `CREATE FUNCTION` desta migration (necessário para trocar a assinatura
+> sem criar overload — ver armadilha acima) fez a RPC nascer de novo com `EXECUTE` concedido a
+> `PUBLIC` por padrão do Postgres, o que reabriu exatamente o buraco que a migration **277**
+> (2026-07-29) já tinha fechado: `anon` executando `finalizar_venda_transacional_canonica_v4`
+> (SECURITY DEFINER, sem verificação de perfil) sem sessão. Confirmado via
+> `information_schema.role_routine_grants` e `get_advisors(security)`. Corrigido pela migration
+> `301_revoke_anon_execute_finalizar_venda_v4_pos_br01.sql`, mesmo padrão da 277. Verificado
+> pós-apply: apenas `authenticated`/`service_role`/`postgres` têm `EXECUTE`; advisory de `anon`
+> não aparece mais. `registrar_pagamento_contas_pagar` (TB-07, migration 299) não teve o mesmo
+> problema porque usou `CREATE OR REPLACE` (assinatura inalterada), que preserva grants.
 
 **Título:** `clientes.limite_credito` existe no schema mas nenhuma RPC o valida — limite de crédito é decorativo
 

@@ -337,10 +337,36 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 > produto com custo definido ignora payload mentiroso e grava o valor do cadastro; produto
 > sem custo grava `NULL` — nunca `0` (ADR-007).
 >
-> **F1-05 ainda aberto**, pausado por decisão explícita: antes de continuar, verificar em
-> venda real de ponta a ponta que BR-01 + TB-07 + BR-03 convergem sem regressão no fluxo de
-> caixa. Detalhe: `docs/auditoria/tickets_P1_regras_negocio.md` (BR-01, BR-03),
-> `docs/auditoria/v3/03_financeiro.md` (TB-07).
+> **VALIDAÇÃO INTEGRADA (2026-08-05):** antes de iniciar F1-05, rodada uma matriz de 7
+> cenários em uma única transação `ROLLBACK` contra produção, combinando os três achados no
+> fluxo real de `finalizar_venda_transacional_canonica_v4` e `registrar_pagamento_contas_pagar`:
+> (A) venda sem cliente/crédito com produto de custo real e payload de custo mentiroso — BR-01
+> não interfere, BR-03 grava o valor do cadastro; (B) venda com saldo pendente **dentro** do
+> limite e produto sem custo cadastrado — `contas_receber` criado sem aviso, snapshot `NULL`;
+> (C) venda excedendo limite em modo `AVISO` — permite e grava mensagem; (D) mesmo caso em modo
+> `BLOQUEIO` — recusa com `LIMITE_CREDITO_EXCEDIDO` **e** confirma que a tentativa bloqueada não
+> deixa `venda`/item/baixa de estoque residual (subtransação desfeita); (E) pagamento de conta a
+> pagar menor que o saldo — `PARCIAL`; (F) pagamento que fecha o saldo exato — `PAGO`; (G)
+> pagamento acima do saldo — recusado com `PAGAMENTO_EXCEDE_SALDO`, sem resíduo. Todos os 7
+> passaram; estado do banco (limite de crédito do cliente de teste, modo da loja, fornecedor
+> sintético) conferido idêntico ao anterior após o `ROLLBACK`. Overloads confirmados únicos para
+> as 3 RPCs tocadas (`finalizar_venda_transacional_canonica_v4`, `registrar_pagamento_contas_pagar`,
+> `registrar_liquidacao_receber`). Migrations 298/299/300 confirmadas em
+> `list_migrations`. Suítes locais sem regressão: `pdv-importados` (27 arquivos, 115 testes,
+> incluindo `finalizarVendaCaixa.integration.test.ts`) e `shared-core/src/financial` (2 arquivos,
+> 7 testes) — todos verdes.
+>
+> **Regressão de segurança encontrada e corrigida nesta validação:** `get_advisors(security)`
+> apontou `finalizar_venda_transacional_canonica_v4` executável por `anon` — reintroduzido pelo
+> `DROP FUNCTION`+`CREATE FUNCTION` da migration 298 (toda `CREATE FUNCTION` nasce com `EXECUTE`
+> para `PUBLIC` por padrão; a migration 277, de 2026-07-29, já tinha revogado isso uma vez, mas
+> sobre a assinatura de 21 args que deixou de existir). Corrigido pela migration `301` (mesmo
+> padrão da 277, sobre a assinatura de 22 args vigente). Detalhe em
+> `docs/auditoria/tickets_P1_regras_negocio.md` (bloco BR-01).
+>
+> **F1-05 ainda aberto**, agora liberado para início — a verificação de convergência exigida
+> antes de prosseguir foi concluída. Detalhe: `docs/auditoria/tickets_P1_regras_negocio.md`
+> (BR-01, BR-03), `docs/auditoria/v3/03_financeiro.md` (TB-07).
 
 | Item | Conteúdo |
 |---|---|
