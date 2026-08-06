@@ -18,8 +18,17 @@ Legenda de classe: **INFRA** (infraestrutura/conta) · **OPS** (operação/conso
 | **B-5** | OPS | **Worker fiscal inativo.** Vault sem `fiscal_worker_url` e `fiscal_worker_key`: `vault.secrets = 0`, `net._http_response = 0`, 120 execuções do `pg_cron` em 2h sem uma única requisição HTTP | **Sim**² | **Não** | Admin do Supabase | Supabase → SQL (`vault.create_secret`) |
 | **B-6** | OPS | **`FISCAL_PROVIDER_TYPE` em `mock`.** Ativar B-5 antes disto faz o worker marcar documentos como `EMITIDO` com chaves falsas `NFE-MOCK-…` | **Sim**² | **Não** | Admin do Supabase | Supabase → Edge Functions → Secrets |
 
+| **B-7** 🆕 | INFRA | **GitHub Actions parou de criar workflow runs em 2026-08-06 15:37 UTC.** Nenhum run foi criado para os commits `21e3ce9d` (18:43), `958f40cc` (18:43) e `ff5cc5be` (19:13). **Não é filtro de path:** `secret-scan.yml` não tem filtro algum (`on: push/pull_request` em `main`), rodou em todos os commits anteriores e também parou. Efeito: nenhuma alteração é validada por CI, e o `smoke:sync-edge` corrigido no `ff5cc5be` segue sem prova em produção. Provável regressão do B-1 (cota/budget de Actions) | **Sim** | **Sim** | Admin da conta GitHub | GitHub → Settings → Billing / Actions |
+
 ¹ Não bloqueia escrever código, mas bloqueia **validar** qualquer coisa em runtime.
 ² Bloqueia o Go-Live **do módulo fiscal**. O núcleo PDV pode operar sem emissão fiscal, se essa for a decisão de produto.
+
+> ⚠️ **P0 SYNC_KEY — não rotacione o secret.** O diagnóstico que apontava mismatch de chave foi
+> **refutado em 2026-08-06**: a `SYNC_KEY` do GitHub autentica com sucesso (gate
+> `anti-replay-diagnostic-gate` verde com os mesmos secrets; `POST 200` nos logs da Edge). O 401
+> vinha do cliente de teste fora do contrato HMAC, corrigido no commit `ff5cc5be`. Rotacionar o
+> secret seria a ação errada e pode derrubar dispositivos de loja em campo.
+> **Pendente:** confirmação em produção — o CI não executou o smoke desde 15:37 UTC (ver B-7).
 
 > **Ordem obrigatória do fiscal:** D-1 → D-2 → D-3 → B-6 → B-5. Inverter causa dano irreversível (documento fiscal emitido com chave inválida).
 

@@ -44,7 +44,7 @@ citada. Onde o documento diverge da realidade, a realidade prevalece e a diverg�
 
 | # | Achado | Status | Evidência |
 |---|---|:--:|---|
-| P0 | SYNC_KEY mismatch (`401 UNAUTHORIZED`) | ❌ | Job `92650197895`: `smoke:sync-edge` → `error: 'UNAUTHORIZED'`. **Único bloqueador funcional** |
+| P0 | ~~SYNC_KEY mismatch~~ → **causa real: cliente de teste fora do contrato HMAC** | 🟡 | **Diagnóstico refutado.** `authErrorForClientResponse` (`index.ts:298-308`) mascara `INVALID_NONCE` como `UNAUTHORIZED`; o gate `anti-replay-diagnostic-gate` autentica com os **mesmos secrets** e passa verde. Corrigido no `ff5cc5be` (nonce UUID + device no payload). **Não rotacionar o secret.** Falta prova em produção: CI parado desde 15:37 UTC (B-7) |
 | §2.5 | Bypass de autorização gerencial em sangria | ✅ | Migration `20260731195704`, commit `92d42708` |
 | §2.5 | `saldo_atual` nunca creditado | ✅ | Migration `20260731195933` + `cashSession.ts` |
 | FIN-001 | Auditoria de devolução/troca na timeline | ✅ | Commit `2976aa8e` |
