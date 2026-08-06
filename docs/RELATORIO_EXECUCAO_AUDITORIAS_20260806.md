@@ -162,12 +162,21 @@ código — os 6 restantes são Vercel, Supabase, GitHub e publicação de traba
 ### Destrava a reconstrução do banco e 2 gates de CI — correção já pronta
 
 ```
-▢  D-7   Abrir PR de origin/chore/node22-alignment                       [OWNER]
-         → superconjunto de main (8 commits, 0 atrás); contém o rename de
-           248_devolver_ou_trocar_venda.sql que resolve as 3 quebras, mais
-           2 migrations e 3 renames de nomenclatura, todos byte-idênticos
+▢  D-7   Cherry-pick do commit ec6f966c em PR próprio                    [OWNER]
+         → 4 renames puros; o do 248_devolver_ou_trocar_venda.sql resolve as
+           3 quebras (simulação: 5 ocorrências -> 0)
+         → conflito esperado em 20260730093000_*.sql, que este PR também
+           tocou; as duas versões concordam no diagnóstico, é só escolher
+           a redação
 ▢  —     Validar pelo gate "Supabase local RLS smoke", que deve voltar a subir
+▢  —     Revisar o refactor das Ondas 0/A/B separadamente               [OWNER]
 ```
+
+> ⚠️ **Não fazer merge do branch `node22-alignment` inteiro para isso.** Ele é superconjunto
+> de `main` (8 commits, 0 atrás, fast-forward possível), mas o diff é de **103 arquivos,
+> +4.120/−7.330**, dos quais só **7 são migrations** e **81 são código** — o refactor das
+> Ondas 0/A/B. Puxá-lo junto para destravar o rebuild arrastaria uma frente inteira sem
+> revisão. Medição e decomposição em `AUDITORIA_DRIFT_MIGRATIONS_20260806.md` §4.2.
 
 ### Bloqueia só o módulo fiscal — ordem obrigatória, não inverter
 
@@ -229,7 +238,36 @@ código — os 6 restantes são Vercel, Supabase, GitHub e publicação de traba
 
 **Nenhuma das 5 falhas foi introduzida por este branch**, e cada uma foi confirmada pelo log do
 próprio job, não por inferência. As migrations deste PR sequer chegam a ser alcançadas no job de
-rebuild: ele morre por volta da centésima de 241.
+rebuild: ele aplica 147 arquivos e morre em `20260717031639`, muito antes das `305`–`308`.
+
+### 7.1.1 Prova objetiva de anterioridade — PR #255
+
+A comparação decisiva não é com o log, é com o **PR anterior**. O PR #255 foi mergeado em
+`main` como `1b0dfdf` em 2026-07-31 — o commit-base deste branch, ou seja, **antes de qualquer
+alteração minha existir**. Seus check runs:
+
+| Check | PR #255 (31/07, vira `main`) | PR #258 (HEAD `1a29d09f`) |
+|---|---|---|
+| `build-and-test` | ✅ success (job `91273647782`) | ✅ success (job `92648357699`) |
+| `migration-remote-drift` | ❌ failure (job `91273602005`) | ❌ failure |
+| `rls-rest-gate` | ❌ failure (job `91273601964`) | ❌ failure |
+| `Supabase local RLS smoke` | ❌ failure (job `91273602009`) | ❌ failure |
+| `Test RLS scope by profile` | ❌ failure (job `91273602006`) | ❌ failure |
+| `E2E crítico (sistema de risco)` | ❌ failure (job `91274880831`) | ❌ failure |
+
+**Conjunto de falhas idêntico, no commit que virou `main`.** Runs
+[30666167278](https://github.com/nocodenn-cell/fastproduct/actions/runs/30666167278) e
+[30666167354](https://github.com/nocodenn-cell/fastproduct/actions/runs/30666167354).
+Isto encerra a questão: as 5 falhas são herdadas da base, não introduzidas por este PR.
+
+### 7.1.2 Confirmação em dois HEADs distintos
+
+`build-and-test` passou **duas vezes**, em commits diferentes deste branch:
+
+| HEAD | Conteúdo | Resultado |
+|---|---|---|
+| `44722ede` | migrations `305`–`308` + código + docs | ✅ success, 6m54s (job `92644271666`) |
+| `1a29d09f` | acréscimo de documentação | ✅ success, 6m23s (job `92648357699`) |
 
 ### 7.2 Validação local
 

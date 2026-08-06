@@ -26,8 +26,13 @@
 > **A conclusão mais acionável de toda a auditoria:** as 2.932 inversões de ordem soam
 > catastróficas, mas **um único rename destrava a reconstrução inteira** —
 > `248_devolver_ou_trocar_venda.sql` → `20260717031500_248_devolver_ou_trocar_venda.sql`.
-> Esse rename **já existe, pronto e com conteúdo byte-idêntico**, no branch
-> `origin/chore/node22-alignment`.
+> Esse rename **já existe, pronto e com conteúdo byte-idêntico**, no commit `ec6f966c` do
+> branch `origin/chore/node22-alignment`. Simulação em §4.4 comprova: **5 ocorrências → 0**.
+>
+> **A reconstrução cronológica ampla está definitivamente descartada** (§3.4). Renumerar os
+> ~76 arquivos `NNN_` não se justifica: a varredura completa de *todas* as formas de
+> referência que o Postgres valida em tempo de DDL encontrou **3 quebras reais**, e as três
+> têm a mesma raiz.
 
 ---
 
@@ -184,6 +189,40 @@ justificam, por si, uma renumeração completa do histórico.
 
 ---
 
+### 3.4 Descarte definitivo da reconstrução cronológica ampla
+
+A pergunta "há outra migration com risco funcional além do `248` e correlatas?" foi respondida
+por **duas evidências independentes**.
+
+**(a) Evidência empírica — o próprio CI.** No run que falha, o `supabase start` aplicou com
+sucesso **147 arquivos**, até `20260717031639` exclusive. Toda essa região está provada em
+execução real, não por análise estática.
+
+**(b) Varredura estática exaustiva** sobre os 241 arquivos, cobrindo **todas** as formas de
+referência que o Postgres valida no momento do DDL — e não só GRANT/REVOKE:
+
+```
+GRANT/REVOKE ON FUNCTION|TABLE|SEQUENCE   ALTER TABLE        ALTER TYPE
+CREATE POLICY / DROP POLICY               CREATE INDEX       CREATE/DROP TRIGGER
+INSERT INTO / UPDATE … SET / DELETE FROM  REFERENCES (FK)    COMMENT ON
+```
+
+Resultado: **9 ocorrências**, classificadas uma a uma:
+
+| Ocorrência | Classificação |
+|---|---|
+| 3× `2026071703*` → `devolver_ou_trocar_venda` / `quantidade_devolvida_item_venda` | 🔴 **Quebra real** — as únicas |
+| 2× `025_…v2.sql` → `INSERT INTO vendas_pagamentos` | 🟢 Dentro de corpo `$$…$$` — plpgsql não é validado em tempo de criação. **Confirmado empiricamente**: o CI aplicou este arquivo com sucesso |
+| 1× `20260718135138` → `INSERT INTO produto_create_requests` | 🟢 Mesmo caso — linha 158, dentro do corpo aberto em `AS $$` na linha 13 |
+| 1× `20260618011821` → `ALTER TABLE IF EXISTS venda_eventos` | 🟢 `IF EXISTS` = no-op, e o `228` já habilita a RLS sozinho |
+| 2× (duplicatas de regex no mesmo arquivo) | — |
+
+O caso `025 → vendas_pagamentos` funciona como **controle da metodologia**: mesmo padrão
+sintático dos casos que classifiquei como inofensivos, e o CI provou que aplica sem erro.
+
+**Conclusão:** não existe risco funcional além do `248`. A reconstrução cronológica ampla
+**sai do backlog** — o custo de renumerar ~76 arquivos não tem contrapartida.
+
 ## 4. Onde estão as migrations e como reintegrá-las
 
 ### 4.1 Branch de origem localizado
@@ -213,21 +252,79 @@ O procedimento documentado ali usou `supabase migration repair` e criou backup d
 `origin/chore/dominio-onda0-onda-a` (commit `416842a7`, 2026-08-02) contém apenas as 2
 migrations do Grupo B — é um subconjunto de `node22-alignment`.
 
-### 4.2 Procedimento recomendado
+### 4.2 ⚠️ Correção: o branch **não** é um diff pequeno
 
-1. **Publicar `origin/chore/node22-alignment` em PR próprio.** Fecha de uma vez o Grupo B
-   (2 migrations), o Grupo C (4 renames) e — por consequência do rename do `248` — **as 3
-   quebras críticas de reconstrução**. Como o branch é superconjunto de `main` e os renames
-   são byte-idênticos, o diff é pequeno e auditável.
-2. **Validar** com o gate que hoje falha: `Supabase local RLS smoke` deve passar a subir o
+Uma revisão anterior desta auditoria afirmou que "o diff é pequeno e auditável". **Estava
+errado.** A medição:
+
+```
+git diff --stat origin/main..origin/chore/node22-alignment
+→ 103 arquivos, +4.120 / −7.330
+
+Por área:  migrations ......... 7 arquivos
+           docs de auditoria .. 10
+           outros .md ......... 5
+           CÓDIGO/OUTROS ...... 81   ← não é correção de migration
+```
+
+Os 81 arquivos de código são o refactor das Ondas 0/A/B (commit `27e56c85`, "autoridade única
+de invalidação de cache e de escrita de estoque"): remove `VendasGerenteListClient.tsx`,
+`ExportCsvButton`, `Sparkline`, `ProdutosToolbar` e outros; adiciona o módulo
+`shared-core/src/inventory/`, o guard `check-revalidate-boundary.mjs` e chaves i18n.
+
+**Merge do branch inteiro ≠ correção de migrations.** É uma frente de refactor que ainda
+precisa de revisão própria, e arrastá-la junto para destravar o rebuild seria exatamente o
+tipo de escopo acidental que esta auditoria existe para evitar.
+
+### 4.3 Procedimento recomendado — cherry-pick, não merge
+
+O commit **`ec6f966c`** ("fix: align supabase migrations and revoke operator product
+creation") é praticamente auto-contido para o que interessa:
+
+```
+git show --stat ec6f966c
+  4 renames puros (detectados pelo git como rename, 0 linha alterada):
+    228_venda_eventos_ledger.sql          => 20260707000000_venda_eventos_ledger.sql
+    231_gerente_venda_eventos_rpcs.sql    => 20260707010000_gerente_venda_eventos_rpcs.sql
+    244_consistencia_vendas_auditoria.sql => 20260707020000_consistencia_vendas_auditoria.sql
+    248_devolver_ou_trocar_venda.sql      => 20260717031500_248_devolver_ou_trocar_venda.sql
+  1 arquivo reescrito:
+    20260730093000_revoga_operador_cadastro_produto_pdv.sql   +217 / −59
+```
+
+1. **Cherry-pick `ec6f966c`** (ou apenas os 4 renames dele) em PR próprio. Fecha o Grupo C e,
+   por consequência do rename do `248`, **as 3 quebras críticas de reconstrução**.
+2. ⚠️ **Conflito esperado em um arquivo.** `ec6f966c` reescreve
+   `20260730093000_revoga_operador_cadastro_produto_pdv.sql`, que o PR #258 também alterou
+   (commit `30d46832`). As duas mudanças **concordam no diagnóstico** — ambas trocam o
+   cabeçalho "NÃO APLICADA" por "APLICADA", de forma independente, o que é confirmação
+   cruzada. Resolver o conflito é escolher uma das duas redações; nenhum SQL executável diverge.
+3. **Trazer as 2 migrations do Grupo B** (`20260801090000`, `20260801120000`) junto, se o
+   código que as consome vier junto; senão, separar.
+4. **Validar** pelo gate que hoje falha: `Supabase local RLS smoke` deve voltar a subir o
    stack. É a prova objetiva de que a reconstrução voltou a funcionar.
-3. **Localizar o autor das 14 do Grupo A** (janela 2026-08-05 15:18 → 2026-08-06 09:05 UTC,
+5. **Localizar o autor das 14 do Grupo A** (janela 2026-08-05 15:18 → 2026-08-06 09:05 UTC,
    por `schema_migrations`) e publicar o branch com os `.sql` **e** o código de aplicação que
    os consome. Os números `289`–`304` estão livres no repositório e batem com os nomes já
    gravados no banco.
-4. **Só então** declarar o schema reconciliado.
+6. **Submeter o refactor das Ondas 0/A/B a revisão própria**, separado da correção de schema.
+7. **Só então** declarar o schema reconciliado.
 
-### 4.3 Por que o Grupo A não foi reconstruído por engenharia reversa
+### 4.4 Prova de que os 4 renames bastam
+
+Simulação aplicando os renames sobre o conjunto real de 241 arquivos e reexecutando a
+varredura de dependências validadas em tempo de DDL:
+
+```
+ANTES  dos renames: 5 ocorrências (3 arquivos distintos), todas apontando
+                    para 248_devolver_ou_trocar_venda.sql
+DEPOIS dos renames: 0 ocorrências
+```
+
+`20260717031500` < `031639` < `031919` < `031938` — o criador passa a preceder os três
+dependentes.
+
+### 4.5 Por que o Grupo A não foi reconstruído por engenharia reversa
 
 Extrair `statements` de `schema_migrations` e gravar como `.sql` é possível, e foi descartado:
 
