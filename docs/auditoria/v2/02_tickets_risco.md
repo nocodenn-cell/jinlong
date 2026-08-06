@@ -54,6 +54,51 @@ O dashboard não passa por `getRelatorioTimezone()` — busca por `timezone`/`p_
 
 ## SSOT-04
 
+> **STATUS (2026-08-06): CONFIRMADO E AMPLIADO — investigação fechada, correção pendente.**
+> O ticket registrava **um** desviante (`baixar_estoque_venda`). Varredura completa em produção
+> (`pg_get_functiondef` de toda função que faz `UPDATE ... estoque`) encontrou **três**, e dois
+> deles são caminhos **vivos** do produto:
+>
+> | Função | Grava kardex? | Situação |
+> |---|:--:|---|
+> | `decrementar_estoque_seguro` | ✅ | ok |
+> | `ajustar_estoque_manual` | ✅ | ok |
+> | `transferir_estoque_seguro` | ✅ | ok |
+> | `transferir_estoque_entre_lojas` | ✅ | ok |
+> | `baixar_estoque_venda` | ❌ | **órfã** — 0 grants de cliente (SEC-01 resolvido), 0 chamadores no banco, 0 no repositório |
+> | **`cancelar_venda_transacional`** | ❌ | **ativa e já usada em produção** |
+> | **`devolver_ou_trocar_venda`** | ❌ | **ativa**, ainda sem uso real |
+>
+> **Evidência do impacto real:** há **7 vendas canceladas** em produção. O estoque foi devolvido
+> por `UPDATE` direto e o kardex não tem **nenhum** lançamento correspondente — os tipos
+> existentes são apenas `ENTRADA_AJUSTE, ENTRADA_NFE, ENTRADA_REMessa_LOJA, SAIDA_AJUSTE,
+> SAIDA_VENDA`. A view `v_estoque_ledger_divergencia` acusa **22 linhas divergentes**.
+> Não há trigger em `public.estoque` (invariante é convenção, não estrutura), e
+> `cancelar_venda_transacional` não delega para nenhuma função que grave kardex.
+>
+> **O caminho da correção já está preparado no próprio schema:** o catálogo
+> `tipos_movimento_estoque` **já contém `ENTRADA_DEVOLUCAO_CLIENTE`** (hoje com zero uso) —
+> exatamente o tipo para estoque que retorna do cliente. Não é preciso criar tipo novo;
+> basta as duas RPCs passarem a lançar nele.
+>
+> **Correção mínima proposta (forward-only, não executada nesta rodada):**
+> 1. `cancelar_venda_transacional` e `devolver_ou_trocar_venda` inserem em
+>    `movimentos_estoque_log` com `tipo_codigo = 'ENTRADA_DEVOLUCAO_CLIENTE'`, no mesmo
+>    `UPDATE` de estoque e na mesma transação.
+> 2. `baixar_estoque_venda`: **DROP**. É drift sem migration de origem, sem grants de cliente e
+>    sem nenhum chamador. `backend/scripts/test-rls-scope.mjs` já trata "função inexistente"
+>    como aprovação (linhas 76-78), então remover não quebra o gate de SEC-01.
+>
+> **Descasado do critério de aceite original, de propósito:** "zero divergências" exigiria
+> **backfill das 22 linhas históricas**, que é mutação de dado passado — decisão de negócio,
+> não correção técnica, e não deve ser feita em silêncio. A correção acima **para de produzir
+> divergência nova**; reconciliar o passado é item separado.
+>
+> **Trigger em `public.estoque` foi descartado** como caminho: as quatro funções corretas já
+> gravam o kardex, então um trigger genérico duplicaria lançamentos, e distinguir "quem já
+> logou" dentro do trigger é frágil. O ticket sugeria trigger como ideal; a evidência mostra
+> que, neste schema, o custo/risco não compensa.
+
 **Título:** Múltiplos caminhos de escrita em estoque, nem todos gravando no kardex `movimentos_estoque_log`
 
 **Categoria:** Inconsistência
@@ -101,6 +146,33 @@ O caso confirmado (`baixar_estoque_venda`) já é o **SEC-01** da rodada 1 — e
 ---
 
 ## SSOT-05
+
+> **STATUS (2026-08-06): instâncias concretas FECHADAS; a classe permanece aberta como P2.**
+>
+> Medição em produção — para **toda** função com gate de perfil (corpo contendo `_PERFIL`),
+> verifiquei se ainda menciona `'OPERADOR'`:
+>
+> **14 RPCs com gate de perfil · `menciona OPERADOR` = false em 14/14.**
+> (`ajustar_estoque_manual`, `criar_produto_com_estoque_inicial`, `receber_ordem_compra`,
+> `importar_nfe_transacao`, `confirmar_importacao_nfe`, `confirmar_remessa_entrada`,
+> `registrar_conferencia_nfe`, `registrar_conferencia_ordem_compra`,
+> `registrar_liquidacao_receber`, `registrar_pagamento_contas_pagar`,
+> `transferir_estoque_seguro`, `transferir_estoque_entre_lojas`,
+> `obter_estoque_disponivel_transferencia`, `fiscal_reprocessar_documento`.)
+>
+> Ou seja: as **duas divergências que motivaram o ticket** (TB-01 e SSOT-01, ambas "backend mais
+> permissivo que a tela") estão corrigidas, e nenhuma RPC com gate de perfil reintroduziu
+> OPERADOR. As duas mais sensíveis (`ajustar_estoque_manual`,
+> `criar_produto_com_estoque_inicial`) sequer têm grant para `anon`/`authenticated`.
+>
+> **O que NÃO foi verificado, para não superestimar:** isto é uma checagem de uma dimensão
+> (menção a OPERADOR em função com gate), **não** a auditoria de paridade dos ~40 pares
+> tela/RPC que o ticket pede. A ausência de teste de paridade automatizado — o risco de
+> *classe*, que é o objeto real deste ticket — continua aberta.
+>
+> **Mantido como P2** conforme a própria classificação do ticket ("os casos concretos já têm
+> tickets P0 próprios; este cobre a classe"), portanto fora desta rodada, cuja regra é
+> P2 só depois de esgotados P0/P1. O script de paridade sugerido segue sendo o caminho certo.
 
 **Título:** Autorização de papel implementada em três camadas independentes, com a RPC divergindo da tela
 
