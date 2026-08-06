@@ -292,8 +292,14 @@ git show --stat ec6f966c
     20260730093000_revoga_operador_cadastro_produto_pdv.sql   +217 / −59
 ```
 
-1. **Cherry-pick `ec6f966c`** (ou apenas os 4 renames dele) em PR próprio. Fecha o Grupo C e,
-   por consequência do rename do `248`, **as 3 quebras críticas de reconstrução**.
+0. ⚠️ **O PR já existe: #257**, aberto desde 2026-08-02 (`mergeable_state: blocked`, 103
+   arquivos, 8 commits, 3 comentários). A ação não é "abrir", é **revisar e decidir**. O
+   título — *"chore(ci): align Node version to 22"* — e o corpo **não mencionam** que o PR
+   carrega os renames que destravam a reconstrução do banco nem o refactor das Ondas 0/A/B;
+   corrigir a descrição é pré-requisito para uma revisão honesta.
+1. **Cherry-pick `ec6f966c`** (ou apenas os 4 renames dele) em PR próprio, **se** a decisão
+   for não levar o #257 inteiro. Fecha o Grupo C e, por consequência do rename do `248`,
+   **as 3 quebras críticas de reconstrução**.
 2. ⚠️ **Conflito esperado em um arquivo.** `ec6f966c` reescreve
    `20260730093000_revoga_operador_cadastro_produto_pdv.sql`, que o PR #258 também alterou
    (commit `30d46832`). As duas mudanças **concordam no diagnóstico** — ambas trocam o
