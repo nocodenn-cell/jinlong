@@ -38,7 +38,8 @@ A ordem obrigatória **D-1 → D-2 → D-3** foi respeitada.
 
 | # | Item | Motivo de continuar pendente |
 |---|---|---|
-| **D-6** 🆕 | **16 migrations aplicadas em produção que não existem em nenhum ref do Git** | **Bloqueio real, fora do alcance de código.** Depende de quem as aplicou publicar o branch de origem. Reconstruí-las por engenharia reversa foi descartado de propósito — ver §4 |
+| **D-6** 🆕 | **14 migrations (`289`–`304`, ~178 KB) aplicadas em produção que não existem em nenhum dos 272 refs do Git** | **Bloqueio real, fora do alcance de código.** Depende de quem as aplicou publicar o branch de origem. Reconstruí-las por engenharia reversa foi descartado de propósito — ver §4 |
+| **D-7** 🆕 | **Reconstrução do banco quebrada por 3 dependências fora de ordem** (raiz única: `248_devolver_ou_trocar_venda.sql`) | Não bloqueia a 1ª loja, mas bloqueia disaster recovery e o staging (P0-3). **A correção já existe pronta** no branch `origin/chore/node22-alignment` — basta abrir PR. Não renomeei nada por instrução explícita de escopo |
 | **P0** | SYNC_KEY mismatch (`smoke:sync-edge` → 401) | Exige confirmar a fonte de verdade no console do Supabase e decidir qual lado rotacionar. Nenhum secret foi tocado |
 | **B-2** | Required status checks inexistentes em `main` | Console do GitHub, dono do repositório |
 | **B-3** | Bypass list ativa (torna a proteção decorativa) | Console do GitHub, dono do repositório |
@@ -75,13 +76,28 @@ então **nenhum P2 foi executado** — apenas retriados com evidência.
 | Risco | Severidade | Leitura |
 |---|---|---|
 | **Rebuild do banco entrega schema errado sem falhar** (D-6) | 🔴 Alta | Pior que o achado de ordenação: aquele **falha** e avisa; este **passa** e entrega um banco sem multi-tenant de fornecedor, conferência de NF-e/OC, limite de crédito, snapshot de custo e formas de pagamento. Em um incidente real, é o risco mais perigoso da lista |
-| **Trabalho em produção sem revisão** (D-6) | 🔴 Alta | ~190 KB de DDL que não passou por PR, CI ou guard. Enquanto B-2/B-3 estiverem abertos, a proteção de branch também não pegaria |
+| **Trabalho em produção sem revisão** (D-6) | 🔴 Alta | ~178 KB de DDL que não passou por PR, CI ou guard. Enquanto B-2/B-3 estiverem abertos, a proteção de branch também não pegaria |
+| **Rebuild do banco nem chega ao fim** (D-7) | 🟠 Média-alta | Erro duro em `SQLSTATE 42883`; hoje derruba 2 gates de CI. Mitigado por já existir correção pronta em branch — vira baixo assim que o PR for aberto |
 | **Sincronização `pdv-local ↔ Supabase` não comprovada** (SYNC_KEY) | 🔴 Alta | Se a loja usar o PDV local, o caminho de sync não tem prova de funcionamento |
 | **Reconciliação de caixa sem prova real** | 🟠 Média-alta | O artefato que deveria cobrir isso não abre página nem toca banco |
 | **RLS por loja sem execução confirmada** | 🟠 Média-alta | Agrava com `294_fornecedores_multi_tenant` em produção: multi-tenant começou a existir sem que o gate de RLS tenha rodado |
 | **Token de desconto cruzando lojas** | 🟠 Média | Inócuo com loja única; deixa de ser quando a segunda loja entrar |
 | **Ordenação lexicográfica de migrations** | 🟡 Média | Registrado na certificação §5, segue aberto. Independente de D-6 |
 | **Módulo fiscal ligado fora de ordem** | 🟡 Média | Mitigado: os três pré-requisitos de código estão cumpridos e a ordem está escrita no `GO_LIVE_BLOCKERS.md`. O risco agora é operacional (inverter B-6 e B-5) |
+
+---
+
+### 2.4 Divergência introduzida por esta própria sessão
+
+As migrations `305`–`308` foram aplicadas via `apply_migration`, que gravou versão por
+timestamp (`20260806134834`…), enquanto os arquivos no repositório seguiram a convenção `NNN_`
+vigente. É drift do mesmo tipo que este PR denuncia, criado por ele.
+
+**Impacto real: baixo** — as quatro são idempotentes (`DROP … IF EXISTS`, `ADD COLUMN IF NOT
+EXISTS`, `CREATE OR REPLACE`, `REVOKE`), então reaplicá-las num rebuild é seguro. A correção é
+renomear os quatro arquivos para o prefixo que produção gravou: quatro `git mv`, zero mudança
+de conteúdo. **Não feito por instrução explícita** desta tarefa ("não recrie, renomeie ou
+reescreva migrations"). Detalhe em `AUDITORIA_DRIFT_MIGRATIONS_20260806.md` §2.4.
 
 ---
 
@@ -133,14 +149,24 @@ código — os 6 restantes são Vercel, Supabase, GitHub e publicação de traba
 ### Bloqueia a abertura da primeira loja
 
 ```
-▢  D-6   Publicar as 16 migrations que estão em produção e fora do Git  [OWNER]
-         → localizar o branch de origem, abrir PR, usar os números 289–304
+▢  D-6   Publicar as 14 migrations 289–304 que estão em produção e fora do Git  [OWNER]
+         → janela 05/08 15:18 → 06/08 09:05 UTC em schema_migrations
 ▢  P0    Confirmar a fonte de verdade do SYNC_KEY e alinhar o secret     [OWNER]
 ▢  P0    Revalidar smoke:sync-edge após alinhar                          [DEV]
 ▢  B-4   Restaurar produção na Vercel (main está à frente)               [OWNER]
 ▢  B-2   Habilitar required status checks em main                        [OWNER]
 ▢  B-3   Esvaziar a bypass list                                          [OWNER]
 ▢  P0-4  Remover contas de teste da produção                             [OWNER]
+```
+
+### Destrava a reconstrução do banco e 2 gates de CI — correção já pronta
+
+```
+▢  D-7   Abrir PR de origin/chore/node22-alignment                       [OWNER]
+         → superconjunto de main (8 commits, 0 atrás); contém o rename de
+           248_devolver_ou_trocar_venda.sql que resolve as 3 quebras, mais
+           2 migrations e 3 renames de nomenclatura, todos byte-idênticos
+▢  —     Validar pelo gate "Supabase local RLS smoke", que deve voltar a subir
 ```
 
 ### Bloqueia só o módulo fiscal — ordem obrigatória, não inverter
@@ -171,16 +197,41 @@ código — os 6 restantes são Vercel, Supabase, GitHub e publicação de traba
 ### Pós-Go-Live
 
 ```
+▢  Renomear as migrations 305–308 para o prefixo que produção gravou (4 git mv)
 ▢  Token de desconto de gerente com escopo de loja (na ordem descrita em §2.3)
 ▢  BL-3  Persistir a auditoria de IP/UA/device/terminal
 ▢  Reclassificar calcularTotaisComGerente antes de decidir o fix
-▢  Reconstrução cronológica das migrations (ordenação lexicográfica)
 ▢  Gate de CI comparando schema_migrations com backend/supabase/migrations/
 ```
+
+> **Não entra mais na lista:** "reconstrução cronológica completa das migrations". A auditoria
+> mostrou que das 2.932 inversões só **3** quebram algo, todas da mesma raiz — renumerar os
+> ~76 arquivos `NNN_` seria trabalho grande sem ganho proporcional. Fica registrado como
+> decisão, não como pendência.
 
 ---
 
 ## 7. Validação executada
+
+### 7.1 CI do PR #258 (HEAD `44722ede`)
+
+| Check | Resultado | Leitura |
+|---|---|---|
+| **`build-and-test`** (único *required*) | ✅ **success** (6m54s) | [run 31109766289](https://github.com/nocodenn-cell/fastproduct/actions/runs/31109766289) |
+| `edge-functions-typecheck` | ✅ success | valida a alteração no `fiscal-worker` |
+| `gitleaks`, `outbox-contract`, `anti-replay-diagnostic-gate` | ✅ success | — |
+| Vercel preview | ✅ Ready | build do app passa |
+| `migration-remote-drift` | ❌ failure | **pré-existente** — compara contra o projeto de staging do secret `SUPABASE_MIGRATION_CHECK_PROJECT_REF`, que não existe (bloqueador **P0-3**). Já listava 41 migrations (`248`→`288`) como ausentes antes deste branch |
+| `rls-rest-gate` | ❌ failure | **pré-existente** — HTTP **401 em toda chamada**, ou seja credencial inválida, não negação de RLS: JWTs de smoke expirados desde 2026-05-17 (§7.5 da certificação) |
+| `Supabase local RLS smoke` | ❌ failure | **pré-existente** — é o **D-7**: o stack local não sobe por causa de `248_devolver_ou_trocar_venda.sql` fora de ordem |
+| `Test RLS scope by profile` | ❌ failure | **pré-existente** — mesma causa (`No such container: supabase_db_fastproduct`) |
+| `E2E crítico (sistema de risco)` | ❌ failure | **pré-existente** — falha em `smoke:sync-edge (pdv-local)` com `error: 'UNAUTHORIZED'`: é o **P0 do SYNC_KEY**, já registrado na certificação §2 |
+
+**Nenhuma das 5 falhas foi introduzida por este branch**, e cada uma foi confirmada pelo log do
+próprio job, não por inferência. As migrations deste PR sequer chegam a ser alcançadas no job de
+rebuild: ele morre por volta da centésima de 241.
+
+### 7.2 Validação local
 
 | Verificação | Resultado |
 |---|---|

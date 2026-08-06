@@ -17,8 +17,9 @@
 > Aplicado pela migration `272_reconciliacao_bl1_descontos_token_auditoria_motivo`. O texto
 > abaixo fica como registro do escopo original. **A fila real da próxima sprint é a de
 > `RELATORIO_CONSOLIDADO_POS_CERTIFICACAO_OPERACIONAL.md` §3**, com os bloqueadores de
-> infra/governança em primeiro lugar — hoje encabeçados por **D-6** (16 migrations em
-> produção fora do Git, ver `AUDITORIA_DRIFT_MIGRATIONS_20260806.md`).
+> infra/governança em primeiro lugar — hoje encabeçados por **D-6** (14 migrations em
+> produção fora do Git) e **D-7** (reconstrução do banco quebrada, com correção já pronta em
+> branch), ambos em `AUDITORIA_DRIFT_MIGRATIONS_20260806.md`.
 
 ---
 

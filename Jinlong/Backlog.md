@@ -145,7 +145,7 @@
 >
 > ~~Permanecem como desenvolvimento apenas: migration `092`, remoção do overload `fiscal_reprocessar_documento(uuid,text)` e reaper de `EM_PROCESSAMENTO`.~~ **Os três foram fechados em 2026-08-06**, na ordem obrigatória D-1 → D-2 → D-3, pelas migrations `305`, `306` e `307`. **Não resta pendência de código nesta frente** — o módulo fiscal agora depende só de console: B-6 (provider real) e depois B-5 (Vault + reagendar o cron do worker). Ver `docs/GO_LIVE_BLOCKERS.md` §3.
 >
-> **Aberto em 2026-08-06 (novo, GOV):** 16 migrations aplicadas em produção entre 01/08 e 06/08 **não existem em nenhum ref do Git** — `docs/AUDITORIA_DRIFT_MIGRATIONS_20260806.md`. Depende do dono do repositório publicar o branch de origem.
+> **Aberto em 2026-08-06 (novo, GOV):** **D-6** — 14 migrations (`289`-`304`, ~178 KB) aplicadas em produção em 05-06/08 **não existem em nenhum dos 272 refs do Git**. Depende do dono publicar o branch de origem. **D-7** — a reconstrução do banco quebra em 3 pontos de mesma raiz (`248_devolver_ou_trocar_venda.sql` fora de ordem); a correção **já existe pronta** em `origin/chore/node22-alignment`, basta abrir PR. Diagnóstico completo em `docs/AUDITORIA_DRIFT_MIGRATIONS_20260806.md`.
 - [x] Acessibilidade ARIA Fase 3.1 (FormField, landmarks, sr-only, skip-link)
 - [x] i18n PT/ZH manual sem next-intl
 
