@@ -19,7 +19,11 @@ import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
-import { buscarVendasPaginadasAction, type VendasFiltro } from '@/app/gerente/vendas/actions'
+import {
+  buscarVendasPaginadasAction,
+  obterKpisVendas,
+  type VendasFiltro,
+} from '@/app/gerente/vendas/actions'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
@@ -113,7 +117,13 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     formaPagamento: pagamento === 'all' ? [] : [pagamento],
   }
 
-  const res = await buscarVendasPaginadasAction(page, filtros)
+  // RC-001: os KPIs vêm da RPC agregada sobre o PERÍODO INTEIRO, não da página.
+  // Somar `vendas` aqui contava só as ~20 linhas visíveis — com dados reais da
+  // matriz isso exibia R$ 906,25 de um faturamento real de R$ 2.878,80 (-68,5%).
+  const [res, kpis] = await Promise.all([
+    buscarVendasPaginadasAction(page, filtros),
+    obterKpisVendas(filtros),
+  ])
   const vendasRes = res.ok ? res.vendas : []
 
   const operadorIds = Array.from(
@@ -143,22 +153,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   const hasMore = res.ok ? res.hasMore : false
   const loadError = res.ok ? null : res.error
 
-  const kpis = vendas.reduce(
-    (acc, row) => {
-      const valor = Number(row.total_liquido ?? 0)
-      const statusRow = String(row.status ?? '').toUpperCase()
-      if (statusRow === 'CONCLUIDA') {
-        acc.faturado += valor
-        acc.qtdConcluidas += 1
-      } else if (statusRow === 'CANCELADA') {
-        acc.qtdCanceladas += 1
-        acc.valorCanceladas += valor
-      }
-      return acc
-    },
-    { faturado: 0, qtdConcluidas: 0, qtdCanceladas: 0, valorCanceladas: 0 }
-  )
-  const ticketMedio = kpis.qtdConcluidas > 0 ? kpis.faturado / kpis.qtdConcluidas : 0
+  const ticketMedio = kpis.ticketMedio
 
   const activeParams: Record<string, string> = {}
   if (periodo !== 'hoje') activeParams.periodo = periodo

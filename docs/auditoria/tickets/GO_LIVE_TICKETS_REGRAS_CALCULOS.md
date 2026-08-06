@@ -17,6 +17,28 @@
 ---
 
 ## TICKET RC-001 🔴 (P0 — cálculo incorreto → info falsa)
+
+> **STATUS (2026-08-06): FECHADO.** `app/admin/vendas/page.tsx` passou a consumir
+> `obterKpisVendas` → `kpis_venda_eventos_gerente` (agregação sobre o período inteiro),
+> em paralelo com a listagem paginada; o `vendas.reduce(...)` local foi removido.
+>
+> **Evidência do defeito, medida em produção antes da correção** (loja matriz, sem filtro):
+> período real = **R$ 2.878,80 em 54 vendas**; a soma da página de 20 linhas exibia
+> **R$ 906,25** — **68,5% a menos**. Era exatamente a "informação falsa" do título.
+>
+> **Prova durável:** `backend/supabase/scripts/smoke_rc01_kpis_vendas_periodo.sql`
+> (somente leitura, seguro em produção), cobrindo os 4 pontos do critério de aceite:
+> C1 RPC == soma crua de `venda_eventos`; C2 a página é comprovadamente menor que o
+> período quando há >20 vendas; C3 o filtro de período recorta de fato e nunca excede o
+> total; C4 venda cancelada entra em `valor_canceladas` e **não** vaza para `faturado`.
+> Executado contra produção: todos os cenários aplicáveis passaram.
+>
+> Typecheck limpo e 202 testes de `app/admin` + `app/gerente` verdes.
+>
+> **Nota sobre a dependência declarada (F3-001):** não bloqueou. F3-001 era necessária
+> apenas para *validar com dados reais* — e a loja matriz já tem 54 vendas reais, volume
+> suficiente para provar o defeito e a correção sem tocar em dado nenhum.
+
 **Título:** KPI de Vendas Admin calcula sobre página parcial
 **Categoria:** Cálculos / Vendas Admin
 **Severidade:** 🔴 Bloqueante (informação falsa)
@@ -35,6 +57,27 @@ período, vendas canceladas e comparação com `sum(total_liquido)` no banco.
 ---
 
 ## TICKET RC-002 🔴 (P0 — cálculo incorreto → info falsa)
+
+> **STATUS (2026-08-06): OBSOLETO — fechado sem correção, por mudança de modelo.**
+> Não foi "corrigido": a premissa do ticket deixou de existir. Verificado no banco de
+> produção, não por leitura de documento:
+>
+> - **`usuarios.comissao_percentual` NÃO EXISTE** mais (`information_schema.columns` → falso).
+>   Nenhuma referência a esse campo sobrou em `app/`, `lib/` ou `components/`.
+> - `resumo_comissoes_por_operador` (definição vigente via `pg_get_functiondef`) lê
+>   `comissoes_vendedores.valor_comissao` — **não** um percentual em `usuarios`.
+> - O modelo foi substituído pelas migrations **260/261** por
+>   `comissoes_regras_funcionario` + `comissoes_regras_historico` + congelamento por venda
+>   (é o que RN-028 já registra: "congelamento de comissão").
+>
+> **O sintoma descrito também não reproduz:** das 25 linhas em `comissoes_vendedores`,
+> **25 têm `valor_comissao > 0` e nenhuma tem 0**. A comissão não está zerada para ninguém.
+>
+> Como consequência, **F6-CMP-001** ("campo % de comissão na tela de funcionários") também
+> não se aplica na forma escrita — não há coluna a preencher. Se houver necessidade de UI
+> para `comissoes_regras_funcionario` (hoje com 0 linhas cadastradas), isso é **escopo novo**
+> e precisa de ticket próprio; não foi criado aqui por decisão explícita de não inventar escopo.
+
 **Título:** Comissão calcula 0% por `comissao_percentual` sem preenchimento
 **Categoria:** Cálculos / Comissões
 **Severidade:** 🔴 Bloqueante (informação falsa)
