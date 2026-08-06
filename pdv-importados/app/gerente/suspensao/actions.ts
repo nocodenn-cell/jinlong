@@ -52,7 +52,7 @@ export async function atualizarSuspensaoVendas(
   for (const u of updates) {
     const { error } = await supabase
       .from('configuracoes_gerais')
-      .update({ valor: u.valor })
+      .update({ valor: u.valor, atualizado_por: auth.session.userId })
       .eq('chave', u.chave)
     if (error) return { success: false, error: error.message }
   }

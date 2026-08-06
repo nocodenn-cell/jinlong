@@ -43,6 +43,19 @@
 
 ## 1. Empresa / Loja
 
+> **STATUS (2026-08-05): INVESTIGADO, NÃO FECHADO — decisão pendente, não código.**
+> A "correção mínima" tem duas partes: preencher dado fiscal real (fora do meu alcance — não
+> existe CNPJ/razão/IE real do cliente para eu inserir; inventar dado violaria o próprio
+> objetivo de F3-001) e um "gate duro em `/admin/implantacao`". Investiguei esse gate
+> (`app/admin/implantacao/homologacaoDados.ts`, campo `impostosMinimosOk`) — hoje ele verifica
+> só `Boolean(loja?.id && loja.nome)`, não CNPJ/razão/IE de verdade. O comentário do arquivo
+> chama isso de *"Config mínima da loja para operar com **Stub fiscal**"* — ou seja, parece
+> deliberadamente relaxado para o modo sem emissão real. Endurecer esse gate para exigir CNPJ
+> completo, sem saber se **FLX-02** ("Go-Live com ou sem fiscal?") foi decidido como "com
+> fiscal", arrisca travar o fluxo de implantação do piloto por um requisito que só se aplica se
+> a direção escolher emitir nota fiscal de verdade. Mesma classe de bloqueio de F1-02: ambos
+> dependem de FLX-02. Não toquei o código. Registrado aqui em vez de decidir sozinha.
+
 ### 🔴 F1-01 — Nenhuma loja tem identificação fiscal
 
 **Evidência.** `GET /rest/v1/lojas?select=*` — as **7 lojas** retornam
@@ -105,6 +118,21 @@ declarado pelo contador.
 
 **Critério de aceite.** Nenhum produto `PUBLICADO` sem NCM em loja com `auto_enqueue_fiscal`,
 e CSOSN coerente com o regime tributário configurado.
+
+> **STATUS (2026-08-05): FECHADO (código) — 5 lojas sem config seguem sem config, e está correto.**
+> As 5 lojas sem `pdv_config` são `Filial demo` (seed da migration 036) + 4 lojas
+> `Probe_*`/`Smoke Homolog *` — 100% dado de teste, escopo de F3-001, não desta correção.
+> A única loja real (`Matriz`) já tinha `pdv_config`. O gap real não era dado, era código: o
+> wizard de provisionamento (`provisionarLojaAction`) cria loja e `pdv_config` em chamadas
+> sequenciais (não uma transação SQL real), sem compensação se `ensurePdvConfig` falhasse
+> depois da loja já criada — a loja recém-criada sobreviveria sem config, exatamente o defeito
+> que este ticket descreve. Corrigido: `catch` agora desativa (`ativo=false`) a loja
+> recém-criada nesta mesma requisição se qualquer passo posterior falhar — mesma lógica de
+> compensação já usada para o usuário de Auth. O gate de implantação (`temPdvConfig` em
+> `coletarDadosHomologacao.ts` → `gapBool('loja.pdv', ...)`) já existia e já bloqueia
+> corretamente; não precisou de mudança. 2 testes novos (`actions.test.ts`), suíte completa
+> (895 testes) e typecheck limpos. `COUNT(lojas ativas) = COUNT(pdv_config)` continua falso
+> hoje porque as 5 faltantes são teste — critério será satisfeito quando F3-001 rodar.
 
 ### 🔴 F1-04 — 5 de 7 lojas sem `pdv_config`
 
@@ -270,6 +298,23 @@ declarada na policy.
 ---
 
 ## 5. Defaults perigosos, hardcoded e config órfã
+
+> **STATUS (2026-08-05): PARCIAL — whitelist + `atualizado_por` fechados; `loja_id` sinalizado,
+> não implementado.** Migration `297_configuracoes_gerais_whitelist.sql` aplicada e verificada
+> em produção: `CHECK (chave IN (...8 chaves conhecidas...))` na própria tabela — vale para
+> `atualizarConfiguracao` **e** para `atualizarSuspensaoVendas`
+> (`app/gerente/suspensao/actions.ts`, que escreve direto em `configuracoes_gerais` e também
+> não tinha whitelist nem `atualizado_por`; corrigido no mesmo commit). Ambos os escritores
+> agora gravam `atualizado_por = auth.session.userId`. 4 testes novos (whitelist rejeitada sem
+> tocar o banco; `atualizado_por` gravado), suíte completa (895) e typecheck limpos.
+>
+> **`loja_id` não implementado — risco real, não preguiça.** `configuracoes_gerais` é lida por
+> `app/caixa/server/caixaConfiguracoes.impl.ts`, `caixaGerenteDesconto.impl.ts` e
+> `caixaConsultaRapida.impl.ts` — caminho de checkout **ativo em produção com cliente real**.
+> Isolar por loja exige mudar leitura (fallback global→loja) nesses três consumidores, não só
+> a escrita — não é uma migration isolada de baixo risco como a whitelist. Fazer isso na mesma
+> passada arriscaria regressão no caixa ao vivo sem o tipo de prova isolada que esse caminho
+> merece. Registrado como pendência explícita (ver F1-09, já P2/pós-R1 no guia de Go-Live).
 
 ### 🔴 F1-06 — `atualizarConfiguracao` sem whitelist nem escopo de loja
 

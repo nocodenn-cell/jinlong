@@ -12,16 +12,37 @@ export type ConfiguracaoGeralRow = {
   tipo_dado: 'text' | 'integer' | 'percent' | 'money' | 'boolean'
 }
 
+/**
+ * F1-06: chaves conhecidas de `configuracoes_gerais` — espelha as 8 linhas
+ * seed (migration 087) mais as usadas por suspensão (105). Fora daqui é
+ * rejeitado antes de chegar ao banco (a CHECK na tabela é a segunda linha de
+ * defesa, não a única).
+ */
+const CHAVES_CONFIGURACAO_PERMITIDAS = [
+  'cancelamento_maximo_valor_sem_gerente',
+  'comissao_padrao_percentual',
+  'desconto_maximo_operador_percentual',
+  'estoque_minimo_padrao',
+  'lead_time_max_dias',
+  'lead_time_min_dias',
+  'motivo_suspensao',
+  'vendas_suspensas',
+] as const
+
 export async function atualizarConfiguracao(
   input: { chave: string; valor: string },
 ): Promise<{ success: true } | { success: false; error: string }> {
   const auth = await assertGerenteSession()
   if (!auth.ok) return { success: false, error: auth.error }
 
+  if (!CHAVES_CONFIGURACAO_PERMITIDAS.includes(input.chave as (typeof CHAVES_CONFIGURACAO_PERMITIDAS)[number])) {
+    return { success: false, error: 'Configuração desconhecida.' }
+  }
+
   const supabase = await createClient()
   const { error } = await supabase
     .from('configuracoes_gerais')
-    .update({ valor: input.valor.trim() })
+    .update({ valor: input.valor.trim(), atualizado_por: auth.session.userId })
     .eq('chave', input.chave)
   if (error) return { success: false, error: mensagemErroComSecao('Configuração', error.message) }
 

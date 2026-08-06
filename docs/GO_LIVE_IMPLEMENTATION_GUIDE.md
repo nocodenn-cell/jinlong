@@ -187,7 +187,22 @@ F1-03 / F2B-03 / FRN-01 ──> FLX-02      CONDICIONADO: só entra se "Go-Live 
 
 ## 6. Checklist de implementação por pacote
 
-### Pacote 0 — Dados e Parametrização (P0, série F)
+### Pacote 0 — Dados e Parametrização (P0, série F) — 🟡 PARCIAL (2026-08-05)
+
+> **F1-04 FECHADO.** Gap real não era dado (as 5 lojas sem `pdv_config` são 100% teste/seed,
+> escopo de F3-001) — era o wizard de provisionamento não compensar loja órfã se `pdv_config`
+> falhasse depois. Corrigido: compensação (desativa a loja) no `catch`, mesma lógica já usada
+> para o usuário de Auth. **F1-06/F1-14 PARCIAL FECHADO.** Migration `297` — whitelist de
+> `chave` + `atualizado_por` gravado nos dois escritores de `configuracoes_gerais`; `loja_id`
+> explicitamente não implementado (risco: toca caminho de checkout ativo em produção, ver nota
+> em `AUDITORIA_F1_PARAMETRIZACAO.md`). **F3-001 e F1-02 NÃO EXECUTADOS** — F3-001 é destrutivo
+> e o pré-requisito operacional (backup + restore ensaiado, §8.2/11) não está evidenciado; F1-02
+> depende de **FLX-02** (decisão comercial ainda não tomada). **F1-01 investigado, não
+> corrigido** — depende dos dados reais que ninguém além do cliente pode fornecer, e o "gate
+> duro" citado como correção mínima parece deliberadamente relaxado para modo "Stub fiscal";
+> endurecê-lo sem saber se FLX-02 decidiu "com fiscal" arrisca travar a implantação por um
+> requisito que pode não se aplicar ainda. Detalhe: `docs/AUDITORIA_F1_PARAMETRIZACAO.md`
+> (notas F1-01, F1-04, F1-06/F1-14).
 
 Não é código de produto: é **dado e configuração**. Precede tudo porque os pacotes 1–6 são
 verificados por evidência, e evidência sobre base 100% de teste não prova nada.

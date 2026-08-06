@@ -395,11 +395,13 @@ export async function provisionarLojaAction(input: {
   }
 
   let createdAuthUserId: string | null = null
+  let createdLojaId: string | null = null
 
   try {
     const admin = createAdminClient()
 
     const loja = await ensureLoja(admin, parsed.data.lojaNome, parsed.data.lojaCodigo)
+    if (loja.nova) createdLojaId = loja.lojaId
 
     const beforeAuth = await findAuthUserByEmail(admin, email)
     const dono = await ensureDono({
@@ -445,6 +447,18 @@ export async function provisionarLojaAction(input: {
       },
     }
   } catch (e) {
+    // F1-04: sem transação real entre loja e pdv_config (chamadas sequenciais via
+    // admin client, não uma única RPC). Se um passo posterior falhar, a loja
+    // recém-criada não pode sobreviver sem config — mesma lógica de compensação
+    // já usada para o usuário de Auth.
+    if (createdLojaId) {
+      try {
+        const admin = createAdminClient()
+        await fromLoose(admin, 'lojas').update({ ativo: false }).eq('id', createdLojaId)
+      } catch {
+        // best-effort — loja permanece ativa; falha já é reportada abaixo
+      }
+    }
     if (createdAuthUserId) {
       try {
         const admin = createAdminClient()
