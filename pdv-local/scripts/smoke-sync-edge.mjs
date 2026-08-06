@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import fs from 'node:fs'
 import path from 'node:path'
-import crypto from 'node:crypto'
 import { parseEnv } from '../../shared/env-check-lib.mjs'
+import { buildSignedSyncHeaders } from '../../shared/sync-signature.mjs'
 
 const cwd = process.cwd()
 const envPath = path.join(cwd, '.env')
@@ -23,19 +23,13 @@ if (!endpoint || !syncKey) {
 
 async function executarSmoke() {
   const body = JSON.stringify({ events: [] })
-  const ts = Math.floor(Date.now() / 1000).toString()
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const payload = `${ts}.${nonce}.${body}`
-  const signature = crypto.createHmac('sha256', syncKey).update(payload).digest('hex')
-
-  const baseHeaders = {
-    'Content-Type': 'application/json',
-    'X-SYNC-KEY': syncKey,
-    'X-SYNC-TS': ts,
-    'X-SYNC-NONCE': nonce,
-    'X-SYNC-SIGNATURE': signature,
-    'x-device-fingerprint': 'smoke-local',
-  }
+  // Protocolo idêntico ao do cliente Rust (pdv-local/src-tauri/src/db.rs), que é a
+  // fonte única: nonce UUID e device fingerprint dentro do payload assinado.
+  const baseHeaders = buildSignedSyncHeaders({
+    syncKey,
+    body,
+    deviceFingerprint: 'smoke-local',
+  })
 
   let res = await fetch(endpoint, {
     method: 'POST',

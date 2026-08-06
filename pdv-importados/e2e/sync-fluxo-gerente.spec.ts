@@ -10,10 +10,8 @@ import {
 import { loginGerente } from './helpers/login'
 import { gotoApp } from './helpers/url'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
-
-function hmacSha256Hex(secret: string, content: string): string {
-  return crypto.createHmac('sha256', secret).update(content).digest('hex')
-}
+// Espelho JS do protocolo do cliente Rust — ver shared/sync-signature.mjs.
+import { buildSignedSyncHeaders } from '../../shared/sync-signature.mjs'
 
 async function garantirProdutoEEstoqueParaTeste() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
@@ -94,21 +92,15 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
     ],
   })
 
-  const ts = Math.floor(Date.now() / 1000).toString()
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const toSign = `${ts}.${nonce}.${reqBody}`
-  const signature = hmacSha256Hex(process.env.SYNC_KEY!.trim(), toSign)
-
+  // Protocolo idêntico ao do cliente Rust (pdv-local/src-tauri/src/db.rs), que é a
+  // fonte única: nonce UUID e device fingerprint dentro do payload assinado.
   const syncRes = await fetch(process.env.SYNC_ENDPOINT!.trim(), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-SYNC-KEY': process.env.SYNC_KEY!.trim(),
-      'X-SYNC-TS': ts,
-      'X-SYNC-NONCE': nonce,
-      'X-SYNC-SIGNATURE': signature,
-      'x-device-fingerprint': 'e2e-sync-fluxo',
-    },
+    headers: buildSignedSyncHeaders({
+      syncKey: process.env.SYNC_KEY!.trim(),
+      body: reqBody,
+      deviceFingerprint: 'e2e-sync-fluxo',
+    }),
     body: reqBody,
   })
   const syncJson = (await syncRes.json()) as {
