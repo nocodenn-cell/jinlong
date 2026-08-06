@@ -99,6 +99,18 @@ Existe `CHECK (ncm IS NULL OR ncm ~ '^\d{8}$')` em `210_fiscal_campos_produto.sq
 
 ## BR-03
 
+> **STATUS (2026-08-05): FECHADO.** Migration `300_br03_custo_unitario_snap_servidor.sql`
+> aplicada e verificada em produção (`pg_get_functiondef`, 1 overload confirmado). A linha
+> `v_custo_unitario_snap := (v_item->>'custo_unitario_snap')::numeric;` foi substituída por
+> `SELECT p.preco_custo INTO v_custo_unitario_snap FROM public.produtos p WHERE p.id =
+> v_produto_id;` dentro do PASSO 3 de `finalizar_venda_transacional_canonica_v4` — mesma
+> estratégia já usada para preço (PASSO 1, `calcular_preco_produto`). Assinatura da função
+> não mudou (`CREATE OR REPLACE` seguro, sem armadilha de overload). Provado com 2 cenários
+> em transação com `ROLLBACK` antes da aplicação real: produto com `preco_custo` definido
+> recebendo payload mentiroso (999.99) grava o valor do cadastro (3.80), ignorando o
+> payload; produto com `preco_custo` NULL recebendo payload mentiroso (50.00) grava NULL —
+> nunca 0, conforme ADR-007. Zero dado residual (prova em ROLLBACK).
+
 **Título:** `custo_unitario_snap` é enviado pelo cliente sem validação no servidor — margem e CMV manipuláveis pelo frontend
 
 **Descrição do problema:**

@@ -330,8 +330,17 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 > `registrar_pagamento_contas_pagar` (simétrica à de `registrar_liquidacao_receber`) + CHECK
 > `valor_pago <= valor_total`. Provado com 4 cenários em `ROLLBACK`.
 >
-> **BR-03 e F1-05 ainda abertos.** Detalhe: `docs/auditoria/tickets_P1_regras_negocio.md`
-> (BR-01), `docs/auditoria/v3/03_financeiro.md` (TB-07).
+> **BR-03 FECHADO.** Migration `300` — `custo_unitario_snap` passa a ser derivado de
+> `produtos.preco_custo` dentro do PASSO 3 de `finalizar_venda_transacional_canonica_v4`,
+> nunca aceito do payload do cliente (mesma estratégia já usada para preço no PASSO 1).
+> `CREATE OR REPLACE` seguro (assinatura inalterada). Provado com 2 cenários em `ROLLBACK`:
+> produto com custo definido ignora payload mentiroso e grava o valor do cadastro; produto
+> sem custo grava `NULL` — nunca `0` (ADR-007).
+>
+> **F1-05 ainda aberto**, pausado por decisão explícita: antes de continuar, verificar em
+> venda real de ponta a ponta que BR-01 + TB-07 + BR-03 convergem sem regressão no fluxo de
+> caixa. Detalhe: `docs/auditoria/tickets_P1_regras_negocio.md` (BR-01, BR-03),
+> `docs/auditoria/v3/03_financeiro.md` (TB-07).
 
 | Item | Conteúdo |
 |---|---|
