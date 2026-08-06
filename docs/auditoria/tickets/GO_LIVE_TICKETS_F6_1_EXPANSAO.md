@@ -8,6 +8,16 @@
 ---
 
 ## TICKET F6.1-VEN-001 🔴
+
+> **STATUS (2026-08-06): FECHADO — mesmo defeito de RC-001, mesma correção.**
+> É literalmente o mesmo achado (mesmo arquivo, mesmas linhas) descrito por duas frentes de
+> auditoria. `app/admin/vendas/page.tsx` passou a consumir `obterKpisVendas` →
+> `kpis_venda_eventos_gerente`. Medido em produção antes da correção: período real
+> R$ 2.878,80 em 54 vendas contra R$ 906,25 exibidos pela página (−68,5%).
+> Prova em `backend/supabase/scripts/smoke_rc01_kpis_vendas_periodo.sql`, incluindo o
+> cenário ">1 página" que este ticket pede explicitamente no critério de aceite.
+> Detalhe completo em `GO_LIVE_TICKETS_REGRAS_CALCULOS.md` (RC-001).
+
 **Título:** KPI de Vendas Admin calculado sobre página parcial (não período)
 **Categoria:** Vendas Admin / Relatórios
 **Severidade:** 🔴 Bloqueante (informação falsa)
@@ -25,6 +35,29 @@ página carregada (validar com >1 página de vendas).
 ---
 
 ## TICKET F6.1-VEN-002 🟡
+
+> **STATUS (2026-08-06): FECHADO — a trilha existe; a premissa do ticket estava desatualizada.**
+> O ticket foi escrito quando a devolução era ⚪ NÃO VALIDADO em F5. O guia manda
+> *"validar em runtime **antes** de assumir que a trilha não existe"* — foi o que se fez,
+> consultando o schema de produção, não documentos.
+>
+> A migration `20260717031500_248_devolver_ou_trocar_venda.sql` criou a trilha dedicada, e a
+> RPC `devolver_ou_trocar_venda` grava nela (confirmado via `pg_get_functiondef`).
+> Cobertura do critério de aceite — **todas as colunas são `NOT NULL`**:
+>
+> | Exigência do aceite | Onde está |
+> |---|---|
+> | quem | `venda_pos_venda_operacoes.operador_id` |
+> | quando | `venda_pos_venda_operacoes.created_at` |
+> | valor | `valor_estornado`, `valor_caixa_estornado`, `forma_estorno` |
+> | estoque revertido | `estoque_reposicoes_devolucao` (`produto_id`, `quantidade`) |
+>
+> Além do exigido: `motivo` obrigatório, `idempotency_key` (evita devolução dupla em retry),
+> `caixa_id`, `tipo` (devolução × troca), `venda_substituta_id`, `contas_receber_id`, e o
+> detalhe por item em `venda_pos_venda_itens`.
+>
+> Nenhuma correção foi necessária — fechado por verificação, não por implementação.
+
 **Título:** Devolução de venda sem trilha dedicada
 **Categoria:** Vendas / Auditoria (conecta F5)
 **Severidade:** 🟡 Alto risco
