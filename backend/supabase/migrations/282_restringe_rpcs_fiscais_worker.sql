@@ -82,8 +82,35 @@ REVOKE ALL ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,t
 GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,text,text,boolean,text,jsonb) TO service_role;
 
 -- Overload do D-1, sem chamador no código.
-REVOKE ALL ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) TO service_role;
+--
+-- ⚠️ CORREÇÃO 2026-08-06 (parte final do D-1). Este overload NUNCA foi criado por
+-- migration alguma — existia apenas como drift de produção, aplicado fora do
+-- versionamento. `REVOKE`/`GRANT` não aceitam `IF EXISTS`, então as duas linhas
+-- originais **falhavam em qualquer reconstrução do zero** com
+--     ERROR: function public.fiscal_reprocessar_documento(uuid, text) does not exist
+-- Em produção elas funcionaram porque lá a função existia (o drift).
+--
+-- A migration 305 removeu o overload definitivamente, inclusive de produção.
+-- O guard abaixo preserva a intenção original — restringir a função se ela
+-- existir, como num ambiente restaurado de dump anterior à 305 — e vira no-op
+-- silencioso onde ela nunca existiu, que é o caso de qualquer rebuild limpo.
+DO $restringe_overload_d1$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname = 'fiscal_reprocessar_documento'
+      AND pg_get_function_identity_arguments(p.oid) = 'uuid, text'
+  ) THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) TO service_role';
+    RAISE NOTICE '282 — overload (uuid,text) presente: acesso restrito a service_role';
+  ELSE
+    RAISE NOTICE '282 — overload (uuid,text) ausente (esperado pós-305): nada a restringir';
+  END IF;
+END
+$restringe_overload_d1$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Chamadas pela aplicação → authenticated PRESERVADO (reafirmado)

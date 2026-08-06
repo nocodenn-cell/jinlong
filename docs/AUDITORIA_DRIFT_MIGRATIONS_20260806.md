@@ -20,7 +20,7 @@
 | — destas, **divergência só de nomenclatura** (conteúdo existe em `main`) | **4** |
 | — destas, **introduzidas por esta própria sessão** | **4** |
 | Pares fora de ordem (repo aplica antes, produção aplicou depois) | **2.932** |
-| — destes, que **quebram de fato** a reconstrução | **3** |
+| — destes, que **quebram de fato** a reconstrução | **3** (+1 por assinatura, §3.1.1 — já corrigida) |
 | — destes, que são no-op silencioso sem divergência | **1** |
 
 > **A conclusão mais acionável de toda a auditoria:** as 2.932 inversões de ordem soam
@@ -167,6 +167,35 @@ cascata os jobs `Supabase local RLS smoke` e `Test RLS scope by profile`.
 > Isso explica por que a tentativa anterior (certificação §5) "corrigiu um ponto e outro
 > apareceu": os três pontos são o mesmo arquivo mal posicionado, e renomear os vizinhos
 > errados só move o sintoma.
+
+### 3.1.1 🆕 Quarta quebra — assinatura que nunca existiu no repositório (CORRIGIDA)
+
+A varredura de §3.1 casava por **nome** de função. Uma varredura complementar por
+**assinatura** revelou um quarto ponto, na região que o CI nunca alcança (o `282` ordena
+depois de todos os arquivos `2026*`):
+
+```
+282_restringe_rpcs_fiscais_worker.sql (linhas 85-86, versão original)
+  REVOKE ALL  ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) FROM ...
+  GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) TO service_role
+```
+
+**Nenhuma migration do repositório cria esse overload.** Verificado: as três criações de
+`fiscal_reprocessar_documento` no repo — `037`, `044` e `066` — são todas da versão de
+**1 argumento**. O overload `(uuid,text)` era drift puro de produção, aplicado fora do
+versionamento. Em produção o `282` funcionou porque lá a função existia; em qualquer
+**rebuild limpo ele falharia** com `function … does not exist`.
+
+`REVOKE`/`GRANT` não aceitam `IF EXISTS`. **Corrigido nesta rodada** envolvendo as duas
+instruções num bloco `DO` com checagem por `pg_get_function_identity_arguments`: restringe se
+a função existir (ambiente restaurado de dump anterior à `305`), vira no-op onde ela nunca
+existiu. Nenhuma mudança de comportamento em produção, onde o `282` já está aplicado.
+
+**Falsos positivos descartados** na mesma varredura, todos confirmados contra o corpo vivo de
+produção — eram artefatos do regex em declarações `CREATE FUNCTION` multilinha:
+`registrar_pagamento_contas_pagar` (`timestamptz` = `timestamp with time zone`),
+`receber_ordem_compra(uuid,jsonb)` (criado pelo próprio `110`, linhas 28-31),
+`fiscal_marcar_erro`/`fiscal_marcar_erro_normalizado` de 6 args (criados pelo `065`).
 
 ### 3.2 Divergência que **não** impede a reconstrução 🟢 **BAIXO** (1)
 
