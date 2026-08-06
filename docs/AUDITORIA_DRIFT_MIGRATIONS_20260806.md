@@ -18,7 +18,7 @@
 | — destas, **realmente ausentes de todo o Git** | **14** |
 | — destas, presentes em **branch não mergeado** | **2** |
 | — destas, **divergência só de nomenclatura** (conteúdo existe em `main`) | **4** |
-| — destas, **introduzidas por esta própria sessão** | **4** |
+| — destas, **introduzidas por esta própria sessão** | **4** — ✅ resolvidas (§2.4) |
 | Pares fora de ordem (repo aplica antes, produção aplicou depois) | **2.932** |
 | — destes, que **quebram de fato** a reconstrução | **3** (+1 por assinatura, §3.1.1 — já corrigida) |
 | — destes, que são no-op silencioso sem divergência | **1** |
@@ -105,21 +105,29 @@ Divergência que **este PR criou** e que precisa ser registrada com honestidade:
 D-1/D-2/D-3 e o hardening foram aplicadas via `apply_migration`, que atribuiu versão por
 timestamp, enquanto os arquivos no repositório seguiram a convenção `NNN_` vigente.
 
-| Produção registrou | Arquivo no repositório |
+### ✅ RESOLVIDO em 2026-08-06
+
+| Produção registrou | Arquivo no repositório (após o rename) |
 |---|---|
-| `20260806134834` `305_d1_drop_fiscal_reprocessar_documento_overload` | `305_d1_drop_fiscal_reprocessar_documento_overload.sql` |
-| `20260806135106` `306_d2_maquina_estados_fiscal` | `306_d2_maquina_estados_fiscal.sql` |
-| `20260806135429` `307_d3_reaper_fiscal_em_processamento` | `307_d3_reaper_fiscal_em_processamento.sql` |
-| `20260806140528` `308_hardening_tg_documentos_fiscais_estado` | `308_hardening_tg_documentos_fiscais_estado.sql` |
+| `20260806134834` `305_d1_drop_fiscal_reprocessar_documento_overload` | `20260806134834_305_d1_drop_fiscal_reprocessar_documento_overload.sql` |
+| `20260806135106` `306_d2_maquina_estados_fiscal` | `20260806135106_306_d2_maquina_estados_fiscal.sql` |
+| `20260806135429` `307_d3_reaper_fiscal_em_processamento` | `20260806135429_307_d3_reaper_fiscal_em_processamento.sql` |
+| `20260806140528` `308_hardening_tg_documentos_fiscais_estado` | `20260806140528_308_hardening_tg_documentos_fiscais_estado.sql` |
 
-**Impacto real: baixo.** As quatro são idempotentes (`DROP … IF EXISTS`, `ADD COLUMN IF NOT
-EXISTS`, `CREATE OR REPLACE`, `REVOKE`), então uma reaplicação em rebuild é segura. Mas é drift
-do mesmo tipo que esta auditoria denuncia, e o correto é renomear os quatro arquivos para o
-prefixo que produção gravou.
+Quatro `git mv`, **zero mudança de conteúdo** (`4 files changed, 0 insertions(+), 0 deletions(-)`).
+Repositório e produção passam a coincidir para as migrations desta sessão.
 
-> **Não renomeados aqui por instrução explícita** desta tarefa ("não recrie, renomeie ou
-> reescreva migrations"). Fica como o item de menor esforço e menor risco da lista — quatro
-> `git mv`, zero mudança de conteúdo.
+**Verificação da mudança de ordem.** O rename move os quatro arquivos do fim da lista
+(`NNN_ ≥ 205` ordena por último) para os índices 161–164, **antes** do `282` (índice 234).
+Isso foi validado antes de executar:
+
+- a asserção da `305` — `has_function_privilege('authenticated', 'fiscal_reprocessar_documento(uuid)')`
+  — continua verdadeira: `037` e `066` fazem `GRANT … TO authenticated` e ambos ordenam antes
+  dos índices 161–164; nenhum arquivo do intervalo revoga;
+- reexecução da varredura de dependências após o rename: **nenhuma quebra nova** — seguem
+  apenas as 5 ocorrências da raiz `248`, que são do PR #257;
+- as quatro são idempotentes (`DROP … IF EXISTS`, `ADD COLUMN IF NOT EXISTS`,
+  `CREATE OR REPLACE`, `REVOKE`), então reaplicação em rebuild é segura.
 
 ---
 
