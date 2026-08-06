@@ -41,6 +41,17 @@ Deno.serve(async (req) => {
     ? Math.floor(timeoutMsRaw)
     : 10000;
 
+  // D-3: janela para considerar um EM_PROCESSAMENTO órfão e teto de tentativas
+  // antes da DLQ. Default conservador (15 min / 5 tentativas), sobrescrevível por env.
+  const reaperTimeoutRaw = Number(Deno.env.get("FISCAL_REAPER_TIMEOUT_MINUTOS") ?? "15");
+  const reaperTimeoutMin = Number.isFinite(reaperTimeoutRaw) && reaperTimeoutRaw > 0
+    ? Math.min(1440, Math.floor(reaperTimeoutRaw))
+    : 15;
+  const reaperMaxRaw = Number(Deno.env.get("FISCAL_REAPER_MAX_TENTATIVAS") ?? "5");
+  const reaperMaxTentativas = Number.isFinite(reaperMaxRaw) && reaperMaxRaw > 0
+    ? Math.min(20, Math.floor(reaperMaxRaw))
+    : 5;
+
   const providerConfig: ProviderConfig = {
     type: providerType,
     url: providerUrl || undefined,
@@ -50,6 +61,39 @@ Deno.serve(async (req) => {
 
   if ((providerType === "http" || providerType === "focus") && !providerUrl.trim()) {
     return json(500, { ok: false, error: "MISSING_PROVIDER_URL" });
+  }
+
+  // D-3: antes de reivindicar novos documentos, resgata os que ficaram presos em
+  // EM_PROCESSAMENTO por morte do worker (timeout de Edge Function, deploy, crash).
+  // Sem isto nem o retry automático nem o reprocesso manual alcançam esses órfãos.
+  // O reaper é o único ponto de agendamento: roda junto com o worker, não em cron próprio.
+  let reaped: { reenfileirados: number; enviados_dlq: number } | null = null;
+  const { data: reaperData, error: reaperErr } = await supabase.rpc("fiscal_reaper_documentos", {
+    p_timeout_minutos: reaperTimeoutMin,
+    p_max_tentativas: reaperMaxTentativas,
+  });
+  if (reaperErr) {
+    // Falha do reaper não derruba a emissão: apenas fica registrada.
+    console.error(
+      JSON.stringify({
+        scope: "fiscal-worker",
+        event: "fiscal_reaper_failed",
+        message: reaperErr.message,
+      }),
+    );
+  } else {
+    const row = Array.isArray(reaperData) ? reaperData[0] : reaperData;
+    if (isRecord(row)) {
+      reaped = {
+        reenfileirados: Number(row.reenfileirados ?? 0),
+        enviados_dlq: Number(row.enviados_dlq ?? 0),
+      };
+      if (reaped.reenfileirados > 0 || reaped.enviados_dlq > 0) {
+        console.log(
+          JSON.stringify({ scope: "fiscal-worker", event: "fiscal_reaper_ran", ...reaped }),
+        );
+      }
+    }
   }
 
   const { data: docs, error: claimErr } = await supabase.rpc("fiscal_claim_documentos", {
@@ -172,6 +216,7 @@ Deno.serve(async (req) => {
   return json(200, {
     ok: true,
     provider_type: providerType,
+    reaped,
     claimed: (docs ?? []).length,
     processed,
     emitted,

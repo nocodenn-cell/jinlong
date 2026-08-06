@@ -614,7 +614,9 @@ export type Database = {
           status: string
           tentativas: number
           tipo_doc: string
+          transicao_origem: string | null
           ultima_tentativa_em: string | null
+          ultima_transicao_em: string | null
           ultimo_erro: string | null
           updated_at: string
           venda_id: string
@@ -639,7 +641,9 @@ export type Database = {
           status?: string
           tentativas?: number
           tipo_doc?: string
+          transicao_origem?: string | null
           ultima_tentativa_em?: string | null
+          ultima_transicao_em?: string | null
           ultimo_erro?: string | null
           updated_at?: string
           venda_id: string
@@ -664,7 +668,9 @@ export type Database = {
           status?: string
           tentativas?: number
           tipo_doc?: string
+          transicao_origem?: string | null
           ultima_tentativa_em?: string | null
+          ultima_transicao_em?: string | null
           ultimo_erro?: string | null
           updated_at?: string
           venda_id?: string
@@ -2841,7 +2847,9 @@ export type Database = {
           status: string
           tentativas: number
           tipo_doc: string
+          transicao_origem: string | null
           ultima_tentativa_em: string | null
+          ultima_transicao_em: string | null
           ultimo_erro: string | null
           updated_at: string
           venda_id: string
@@ -2913,12 +2921,14 @@ export type Database = {
             }
             Returns: undefined
           }
-      fiscal_reprocessar_documento:
-        | { Args: { p_documento_id: string }; Returns: undefined }
-        | {
-            Args: { p_documento_id: string; p_observacao?: string }
-            Returns: undefined
-          }
+      fiscal_reaper_documentos: {
+        Args: { p_max_tentativas?: number; p_timeout_minutos?: number }
+        Returns: { enviados_dlq: number; reenfileirados: number }[]
+      }
+      fiscal_reprocessar_documento: {
+        Args: { p_documento_id: string }
+        Returns: undefined
+      }
       gerente_estoque_list_page: {
         Args: {
           p_busca?: string
