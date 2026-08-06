@@ -35,11 +35,22 @@ describe('historicoDetalheParaRecibo', () => {
     expect(recibo.totalLiquidoComGerente).toBe(100)
   })
 
-  it('normaliza forma de pagamento desconhecida para DINHEIRO', () => {
+  it('preserva forma de pagamento fora dos 4 valores originais (F1-05: cadastro por loja, não enum fixo)', () => {
     const recibo = historicoDetalheParaRecibo(
       {
         ...detalheBase,
-        pagamentos: [{ formaPagamento: 'OUTRO', valor: 50 }],
+        pagamentos: [{ formaPagamento: 'vale_alimentacao', valor: 50 }],
+      },
+      'R$',
+    )
+    expect(recibo.pagamentos[0]?.formaPagamento).toBe('VALE_ALIMENTACAO')
+  })
+
+  it('cai para DINHEIRO apenas quando o valor vier vazio', () => {
+    const recibo = historicoDetalheParaRecibo(
+      {
+        ...detalheBase,
+        pagamentos: [{ formaPagamento: '  ', valor: 50 }],
       },
       'R$',
     )

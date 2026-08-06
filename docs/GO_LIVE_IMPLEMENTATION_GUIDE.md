@@ -316,7 +316,7 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 | **Documentação** | Cap. 3 (estados de recebimento já transcritos) |
 | **Armadilha** | A migration `20260801120000` **já implementou** conferência em `remessas`. Não recriar — estender `receber_ordem_compra` para usar o fluxo existente |
 
-### Pacote 5 — Financeiro e Crédito (P1, ADR-003/007) — 🟡 PARCIAL (2026-08-05)
+### Pacote 5 — Financeiro e Crédito (P1, ADR-003/007) — 🟢 FECHADO, 1 pendência residual documentada (2026-08-05)
 
 > **BR-01 FECHADO.** Migration `298` — `pdv_config.modo_limite_credito`
 > (AVISO/BLOQUEIO/AUTORIZACAO_GERENTE, default AVISO) + gate em
@@ -364,17 +364,36 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 > padrão da 277, sobre a assinatura de 22 args vigente). Detalhe em
 > `docs/auditoria/tickets_P1_regras_negocio.md` (bloco BR-01).
 >
-> **F1-05 ainda aberto**, agora liberado para início — a verificação de convergência exigida
-> antes de prosseguir foi concluída. Detalhe: `docs/auditoria/tickets_P1_regras_negocio.md`
-> (BR-01, BR-03), `docs/auditoria/v3/03_financeiro.md` (TB-07).
+> **F1-05 FECHADO para o fluxo web (o único com tela).** Migration `302` — tabela
+> `formas_pagamento` por loja (nome/taxa/prazo/ativo), RLS por loja, seed dos 4 valores atuais
+> para as 7 lojas ativas; `finalizar_venda_transacional_canonica_v4` valida `forma_pagamento`
+> contra o cadastro (`ativo = true`), não mais contra `IN-list`; frontend
+> (`finalizarVendaValidation.ts`, `useCaixaPagamentos.ts`) busca a lista ativa via nova action
+> `listarFormasPagamentoCaixa`, com fallback estático; `provisionarLojaAction` semeia as 4
+> formas para toda loja nova. Provado com 6 cenários em `ROLLBACK`: forma seedada funciona,
+> forma não cadastrada recusada pelo gate da RPC, desativar/reativar muda o comportamento sem
+> deploy, FIADO bloqueado em duas camadas (guarda + CHECK da tabela).
+>
+> **Pendência residual explícita (não bloqueia o piloto — os 4 métodos atuais cobrem D0):**
+> `vendas.forma_pagamento`/`vendas_pagamentos.forma_pagamento` têm CHECK próprio restrito aos
+> 4 valores originais, e são escritos também por `registrar_venda_com_itens` (RPC do
+> sync-outbox do PDV offline, sem validação própria, fora do escopo desta investigação).
+> Introduzir um 5º código de pagamento genuinamente novo (além dos 4 atuais) ainda exige
+> migration — tocar os dois CHECKs e adicionar validação a `registrar_venda_com_itens`. O
+> critério de aceite original está satisfeito para ativar/desativar os 4 códigos existentes
+> sem deploy, que é o cenário real do piloto. Detalhe:
+> `docs/AUDITORIA_F1_PARAMETRIZACAO.md` (bloco F1-05).
+>
+> Detalhe adicional: `docs/auditoria/tickets_P1_regras_negocio.md` (BR-01, BR-03),
+> `docs/auditoria/v3/03_financeiro.md` (TB-07).
 
 | Item | Conteúdo |
 |---|---|
-| **Tickets** | TB-07, BR-01, BR-03, **F1-05** |
+| **Tickets** | TB-07 ✅, BR-01 ✅, BR-03 ✅, F1-05 ✅ (pendência residual: 5º código novo) |
 | **RN** | RN-003, RN-032, RN-031, RN-035 |
-| **Arquivos** | `shared-core/src/financial/*`; RPC de venda; configuração da loja; `app/caixa/finalizarVendaValidation.ts` (F1-05) |
+| **Arquivos** | `shared-core/src/financial/*`; RPC de venda; configuração da loja; `app/caixa/finalizarVendaValidation.ts`, `useCaixaPagamentos.ts`, `caixaFormasPagamento.impl.ts`, `caixaHistoricoRecibo.ts` (F1-05) |
 | **RPCs** | `registrar_pagamento_contas_pagar`, `registrar_liquidacao_receber`, `finalizar_venda_transacional_canonica_v4` |
-| **Migrations** | CHECK `valor_pago <= valor_total` em `contas_pagar` (TB-07); parâmetro de modo de crédito por loja (`AVISO`/`BLOQUEIO`/`AUTORIZACAO_GERENTE`); `custo_unitario_snap` derivado no servidor; tabela `formas_pagamento` por loja (F1-05) |
+| **Migrations** | `298` modo de crédito por loja; `299` CHECK `valor_pago <= valor_total`; `300` `custo_unitario_snap` derivado no servidor; `301` correção de grant anon/PUBLIC; `302` tabela `formas_pagamento` por loja + validação dinâmica (F1-05) |
 | **Testes** | `financial.spec.ts`; teste de pagamento acima do saldo rejeitado; teste dos 3 modos de crédito; teste de que custo ausente → margem `NULL`, **nunca** `0`; teste de que nova forma de pagamento entra sem alterar código |
 | **Documentação** | Cap. 7: RN-003, RN-031, RN-032, RN-035 |
 | **Restrição de contrato (F1-05)** | **Fiado permanece OUT do piloto D0** — requisito negativo do contrato, removido pelas migrations `246_remover_venda_fiado` e `284_devolucoes_remove_fiado`. A parametrização de formas de pagamento **não** pode reintroduzi-lo |

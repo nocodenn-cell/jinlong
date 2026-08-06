@@ -7,6 +7,7 @@ import {
   type FinalizarVendaInput,
 } from "@/app/caixa/finalizarVendaValidation"
 import { calcularResumoParcelas } from "@/app/caixa/caixaPagamentoSaldo"
+import { listarFormasPagamentoCaixa } from "@/app/caixa/actions"
 
 export type FormaPagamento = FinalizarVendaInput["formaPagamento"]
 
@@ -28,6 +29,26 @@ export function useCaixaPagamentos(
   const [parcelas, setParcelas] = useState<ParcelaPagamento[]>(() =>
     parcelaInicial(formaPagamento ?? "DINHEIRO", totalLiquidoComGerente),
   )
+  // F1-05: lista vem do cadastro da loja (formas_pagamento), não mais de um
+  // enum fixo. Mantém o fallback estático de 4 valores enquanto carrega ou
+  // se a busca falhar — nunca deixa o seletor vazio.
+  const [formasDisponiveis, setFormasDisponiveis] =
+    useState<readonly FormaPagamento[]>(FORMAS_PAGAMENTO_CAIXA)
+
+  useEffect(() => {
+    let cancelado = false
+    listarFormasPagamentoCaixa()
+      .then((result) => {
+        if (cancelado || !result.ok || result.formas.length === 0) return
+        setFormasDisponiveis(result.formas.map((f) => f.codigo))
+      })
+      .catch(() => {
+        // mantém o fallback estático — nunca bloqueia o caixa por isso
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [])
 
   const prevTotalRef = useRef(totalLiquidoComGerente)
   const prevFormaRef = useRef(formaPagamento)
@@ -130,7 +151,7 @@ export function useCaixaPagamentos(
     diferenca,
     saldoPendente,
     podeAdicionarParcela: parcelas.length < MAX_PARCELAS,
-    formasDisponiveis: FORMAS_PAGAMENTO_CAIXA,
+    formasDisponiveis,
     adicionarParcela,
     removerParcela,
     atualizarForma,

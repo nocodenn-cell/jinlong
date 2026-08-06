@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   finalizarVendaInputSchema,
+  pagamentoParcelaSchema,
   roundMoney2,
   totaisFromItens,
   totalsMatchDeclared,
@@ -129,5 +130,32 @@ describe('finalizarVendaValidation', () => {
       itens: [itemBase],
     })
     expect(r.success).toBe(false)
+  })
+})
+
+describe('pagamentoParcelaSchema.formaPagamento (F1-05)', () => {
+  it('aceita os 4 valores originais', () => {
+    for (const forma of ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO']) {
+      const parsed = pagamentoParcelaSchema.safeParse({ formaPagamento: forma, valor: 10 })
+      expect(parsed.success).toBe(true)
+    }
+  })
+
+  it('aceita forma nova (cadastro por loja, não enum fixo) e normaliza para maiúsculas', () => {
+    const parsed = pagamentoParcelaSchema.safeParse({ formaPagamento: 'vale_alimentacao', valor: 10 })
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data.formaPagamento).toBe('VALE_ALIMENTACAO')
+    }
+  })
+
+  it('rejeita string vazia', () => {
+    const parsed = pagamentoParcelaSchema.safeParse({ formaPagamento: '', valor: 10 })
+    expect(parsed.success).toBe(false)
+  })
+
+  it('rejeita caracteres fora de letras/dígitos/underscore', () => {
+    const parsed = pagamentoParcelaSchema.safeParse({ formaPagamento: 'vale-refeição!', valor: 10 })
+    expect(parsed.success).toBe(false)
   })
 })

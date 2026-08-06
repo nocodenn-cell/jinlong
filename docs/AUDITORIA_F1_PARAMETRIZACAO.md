@@ -209,6 +209,37 @@ custo > venda (permitido apenas com `permitir_abaixo_custo = true`, campo que j�
 
 ### 🔴 F1-05 — Formas de pagamento não são parametrizáveis
 
+> **STATUS (2026-08-05): FECHADO PARA O FLUXO WEB — pendência residual explícita.**
+> Migration `302_f1_05_formas_pagamento_parametrizavel.sql` — tabela `formas_pagamento`
+> por loja (codigo/nome/taxa_percentual/prazo_compensacao_dias/ativo), RLS por loja,
+> seed dos 4 valores atuais para as 7 lojas ativas. `finalizar_venda_transacional_canonica_v4`
+> passa a validar `forma_pagamento` contra o cadastro (`EXISTS ... formas_pagamento WHERE
+> ativo = true`), não mais contra `IN ('DINHEIRO','PIX','CARTAO_DEBITO','CARTAO_CREDITO')`.
+> Frontend (`finalizarVendaValidation.ts`, `useCaixaPagamentos.ts`) busca a lista ativa da
+> loja via nova action `listarFormasPagamentoCaixa`, com fallback estático se a busca falhar.
+> `provisionarLojaAction` semeia as 4 formas para toda loja nova (mesma lógica de compensação
+> do F1-04). Provado com 6 cenários em `ROLLBACK`: forma seedada funciona, forma não
+> cadastrada é recusada pelo gate da RPC (não pelo CHECK da tabela), desativar/reativar uma
+> forma muda o comportamento da venda sem deploy, FIADO continua bloqueado em duas camadas
+> (guarda explícita + CHECK da tabela).
+>
+> **Pendência residual, não fechada nesta migration:** `vendas.forma_pagamento` e
+> `vendas_pagamentos.forma_pagamento` têm CHECK próprio restrito aos 4 valores originais,
+> independente da RPC. Essas tabelas também são escritas por `registrar_venda_com_itens`
+> (RPC do sync-outbox do PDV offline, chamada por edge function com `service_role`, fora do
+> escopo desta investigação) sem validação própria — depende inteiramente do CHECK da tabela.
+> Por isso o CHECK não foi removido: fazer isso destravaria um 5º código de pagamento na web
+> mas abriria um buraco real no caminho offline, que não foi auditado. **Critério de aceite
+> original ("adicionar forma nova sem tocar em código") está satisfeito para
+> ativar/desativar os 4 códigos existentes; introduzir um 5º código genuinamente novo ainda
+> exige migration** — tocar os dois CHECKs e adicionar validação a `registrar_venda_com_itens`.
+>
+> **Achado de segurança à parte, corrigido:** durante o BR-01 (migration 298), o padrão
+> `DROP FUNCTION` + `CREATE FUNCTION` (necessário para evitar overload) reintroduziu `EXECUTE`
+> de `PUBLIC`/`anon` na RPC de venda — mesma classe de regressão que a migration 277 já tinha
+> fechado. Corrigido pela migration 301. Ver `docs/auditoria/tickets_P1_regras_negocio.md`
+> (bloco BR-01).
+
 **Evidência.** As tabelas `formas_pagamento` e `contas_financeiras` **não existem**
 (REST retorna `PGRST205 — Could not find the table`). As formas são um enum fixo em código:
 `app/caixa/finalizarVendaValidation.ts:11-16` →

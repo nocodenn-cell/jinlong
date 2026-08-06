@@ -290,6 +290,34 @@ async function ensurePdvConfig(admin: AdminClient, lojaId: string, donoId: strin
   }
 }
 
+const FORMAS_PAGAMENTO_SEED = [
+  { codigo: 'DINHEIRO', nome: 'Dinheiro' },
+  { codigo: 'PIX', nome: 'Pix' },
+  { codigo: 'CARTAO_DEBITO', nome: 'Cartão de Débito' },
+  { codigo: 'CARTAO_CREDITO', nome: 'Cartão de Crédito' },
+] as const
+
+/** F1-05: sem isto, uma loja nova nasce sem nenhuma forma de pagamento cadastrada
+ * e toda venda falha com FORMA_PAGAMENTO_INVALIDA (a RPC valida contra este cadastro,
+ * não mais contra um enum fixo). Mesma lógica idempotente de ensurePdvConfig. */
+async function ensureFormasPagamento(admin: AdminClient, lojaId: string) {
+  const { data: existentes, error: listErr } = await fromLoose(admin, 'formas_pagamento')
+    .select('codigo')
+    .eq('loja_id', lojaId)
+  if (listErr) throw new Error(listErr.message)
+
+  const have = new Set((existentes ?? []).map((r) => String(r.codigo)))
+  const missing = FORMAS_PAGAMENTO_SEED.filter((f) => !have.has(f.codigo)).map((f) => ({
+    loja_id: lojaId,
+    codigo: f.codigo,
+    nome: f.nome,
+  }))
+  if (missing.length > 0) {
+    const { error } = await fromLoose(admin, 'formas_pagamento').insert(missing)
+    if (error) throw new Error(error.message)
+  }
+}
+
 async function ensureChecklistBootstrap(admin: AdminClient, lojaId: string, atorId: string) {
   const now = new Date().toISOString()
 
@@ -415,6 +443,7 @@ export async function provisionarLojaAction(input: {
     if (dono.novo && !beforeAuth) createdAuthUserId = dono.donoId
 
     await ensurePdvConfig(admin, loja.lojaId, dono.donoId, parsed.data.idiomaPreferido)
+    await ensureFormasPagamento(admin, loja.lojaId)
     const itensMarcados = await ensureChecklistBootstrap(admin, loja.lojaId, gate.session.userId)
     const validacao = await validarProvisionamento(admin, loja.lojaId, dono.donoId)
 

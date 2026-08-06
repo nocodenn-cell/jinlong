@@ -36,6 +36,7 @@ import {
   buscarClientesCaixaImpl,
   obterClienteCaixaImpl,
 } from '@/app/caixa/server/caixaClientesSearch.impl'
+import { listarFormasPagamentoCaixaImpl } from '@/app/caixa/server/caixaFormasPagamento.impl'
 import {
   abrirCaixaOperadorImpl,
   fecharCaixaOperadorImpl,
@@ -284,4 +285,9 @@ export async function buscarClientesCaixa(termo: string) {
 /** Nome do cliente vinculado a uma venda retomada (guarda so o id). */
 export async function obterClienteCaixa(clienteId: string) {
   return obterClienteCaixaImpl(clienteId)
+}
+
+/** F1-05: formas de pagamento ativas da loja, direto do cadastro. */
+export async function listarFormasPagamentoCaixa() {
+  return listarFormasPagamentoCaixaImpl()
 }

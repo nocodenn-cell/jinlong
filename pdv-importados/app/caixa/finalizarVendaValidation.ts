@@ -8,12 +8,20 @@ import { roundAbnt } from '@/core/money/roundAbnt'
 
 export { roundMoney2 }
 
+/**
+ * F1-05: valores de fallback/seed, não mais o enum autoritativo — a validação
+ * real agora é o cadastro `formas_pagamento` (por loja), consultado em
+ * `listarFormasPagamentoCaixa` e aplicado pela RPC no servidor. Mantido aqui
+ * como fallback enquanto a lista dinâmica carrega ou se a busca falhar.
+ */
 export const FORMAS_PAGAMENTO_CAIXA = [
   'DINHEIRO',
   'PIX',
   'CARTAO_DEBITO',
   'CARTAO_CREDITO',
 ] as const
+
+const CODIGO_FORMA_PAGAMENTO_REGEX = /^[A-Z0-9_]+$/
 
 function quantidadeAte3CasasDecimais(n: number): boolean {
   if (!Number.isFinite(n)) return false
@@ -49,19 +57,30 @@ export const itemFinalizarVendaSchema = z.object({
   }),
 })
 
+/**
+ * F1-05: não é mais um enum fixo — o servidor valida contra o cadastro
+ * `formas_pagamento` da loja (mesma estratégia já usada para preço/custo:
+ * cliente propõe, RPC é a autoridade). Aqui só garante formato (letras
+ * maiúsculas/dígitos/underscore), para pegar erro de digitação óbvio cedo.
+ */
+const formaPagamentoSchema = z
+  .string()
+  .trim()
+  .min(1, 'Forma de pagamento inválida.')
+  .transform((v) => v.toUpperCase())
+  .refine((v) => CODIGO_FORMA_PAGAMENTO_REGEX.test(v), {
+    message: 'Forma de pagamento inválida.',
+  })
+
 export const pagamentoParcelaSchema = z.object({
-  formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
-    errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
-  }),
+  formaPagamento: formaPagamentoSchema,
   valor: z.number().positive('O valor da parcela deve ser maior que zero.'),
 })
 
 export const finalizarVendaInputSchema = z.object({
   /** Opcional: UUID estável por tentativa de finalização (fluxo unificado); vira `p_venda_id` e evita duplicar venda em retry/duplo clique. */
   idempotencyKey: z.string().uuid().optional(),
-  formaPagamento: z.enum(FORMAS_PAGAMENTO_CAIXA, {
-    errorMap: () => ({ message: 'Forma de pagamento inválida.' }),
-  }),
+  formaPagamento: formaPagamentoSchema,
   totalBruto: z.number().nonnegative('O total bruto não pode ser negativo.'),
   totalDesconto: z.number().nonnegative('O total de desconto não pode ser negativo.'),
   totalLiquido: z.number().positive('O total líquido deve ser maior que zero.'),

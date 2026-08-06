@@ -2,18 +2,16 @@ import type { HistoricoVendaDetalhe } from '@/app/caixa/actions'
 import type { ReciboVenda } from '@/app/caixa/CaixaReciboModal'
 import type { FinalizarVendaInput } from '@/app/caixa/finalizarVendaValidation'
 
-const FORMAS_VALIDAS = new Set<FinalizarVendaInput['formaPagamento']>([
-  'DINHEIRO',
-  'PIX',
-  'CARTAO_DEBITO',
-  'CARTAO_CREDITO',
-])
-
+/**
+ * F1-05: a forma de pagamento gravada na venda é o que veio do cadastro da
+ * loja, não mais um dos 4 valores fixos — não há como "validar" aqui sem
+ * consultar o banco de novo, e reprint de recibo é leitura, não escrita.
+ * Antes isso coagia qualquer valor desconhecido para 'DINHEIRO', o que
+ * reimprimia o recibo com a forma errada. Agora só normaliza maiúsculas.
+ */
 function asFormaPagamento(valor: string): FinalizarVendaInput['formaPagamento'] {
-  const up = valor.toUpperCase()
-  return FORMAS_VALIDAS.has(up as FinalizarVendaInput['formaPagamento'])
-    ? (up as FinalizarVendaInput['formaPagamento'])
-    : 'DINHEIRO'
+  const up = valor.trim().toUpperCase()
+  return up.length > 0 ? up : 'DINHEIRO'
 }
 
 /** Monta ReciboVenda a partir do detalhe do histórico (reimpressão). */
