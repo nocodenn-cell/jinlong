@@ -2,6 +2,36 @@
 
 ## FLX-03
 
+> **STATUS (2026-08-06): RECLASSIFICADO P1 → P2 (endurecimento), com prova.** O defeito
+> descrito existe, mas o **impacto declarado não reproduz**. Medido em produção, em transação
+> com `ROLLBACK`:
+>
+> Chamada direta à RPC **omitindo** `p_strict_manager_discount_auth` (portanto caindo no
+> default fail-open do SQL) com `p_desconto_gerente_percentual := 10` e **sem token**:
+>
+> | Resultado | Valor |
+> |---|---|
+> | status | `CONCLUIDA` |
+> | `vendas.total_desconto` gravado | **0.00** |
+> | linhas em `descontos_venda` | 0 |
+>
+> Ou seja: **o desconto não é aplicado**, logo não há "desconto sem registro de quem
+> autorizou". A razão está no próprio corpo da RPC — `v_desconto_gerente_valor` só é
+> calculado dentro de `IF p_desconto_gerente_token IS NOT NULL THEN`. Sem token, o valor
+> permanece 0 e não há o que auditar. Se o cliente ainda assim declarar um total já
+> descontado, a conferência de totais (tolerância 0,02) derruba a venda com
+> `FINALIZAR_VENDA_CANONICA_TOTAIS_DIVERGENTES`.
+>
+> **O que permanece válido:** o default do SQL é fail-open (`DEFAULT false`) e a postura
+> segura vive só no TypeScript. Isso é risco latente — qualquer mudança futura que passe a
+> aplicar desconto sem token herdaria um default inseguro. Vale inverter para `true`
+> (*fail-closed*), mas como **endurecimento de defesa em profundidade**, não como correção de
+> vulnerabilidade explorável hoje.
+>
+> **Não executado nesta rodada** por ordem de prioridade explícita: P2 só entra quando não
+> restar P0/P1. Único chamador real (`app/caixa/server/caixaVendas.impl.ts:295`) já passa a
+> flag explicitamente, então a inversão do default não muda o comportamento do PDV.
+
 **Título:** Autorização de desconto de gerente pode ser desligada por variável de ambiente, sem trilha de que foi desligada
 
 **Descrição do problema:**
@@ -34,6 +64,18 @@ A exigência de token do gerente para desconto é controlada por `p_strict_manag
 > **STATUS (2026-08-05): PÓS GO-LIVE.** Tooling/CI (schema-diff automatizado vs. produção), não
 > migration de dado. `guard:migrations` já mitiga colisão de número (parte do escopo). Fora deste
 > pacote — não bloqueia Go-Live.
+>
+> **REVISÃO (2026-08-06) — a classificação "não bloqueia Go-Live" está desatualizada.**
+> Reproduzido localmente (`supabase start` do zero): a cadeia **não reconstrói**. A ordenação
+> lexicográfica coloca todo timestamp `2026…` **entre** os legados `1xx` e `2xx`, então a ordem
+> de aplicação ≠ ordem de autoria. Consequências medidas, não hipotéticas:
+> `20260730093000` abortava a cadeia inteira (corrigido, commit `b2f27f5f`) e `224` ainda falha
+> ao fazer `ALTER POLICY` numa policy que `265` já removeu.
+> **Isso invalida todo job de CI que sobe Supabase local** — hoje 4 checks vermelhos no PR #257.
+> Detalhe completo, incluindo por que não se deve "consertar" com `IF EXISTS` (produz CI verde
+> validando policies diferentes das de produção): `docs/auditoria/MIG-ORDEM_rebuild_do_zero.md`.
+> Tratar junto com **SSOT-02** — não faz sentido um CI que verifica efeito de migration sobre
+> uma cadeia que não reconstrói.
 
 
 **Título:** Numeração de migrations com três padrões conflitantes e colisões históricas — ordem de aplicação ambígua entre ambientes
