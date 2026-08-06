@@ -158,43 +158,69 @@ BEGIN
 
     ELSE
 
-      RAISE EXCEPTION
-        'MIG_GATE_AJUSTE_NAO_ENCONTRADO';
+      -- Nem o bloco antigo nem o novo casam byte a byte.
+      --
+      -- Causa real (reproduzida em rebuild do zero, 2026-08-06): o corpo escrito
+      -- pela 20260718135500 quebra a atribuição em duas linhas e deixa uma linha
+      -- em branco antes do IF —
+      --
+      --     v_estoque_inicial :=
+      --       p_motivo_codigo = 'ACERTO_INVENTARIO'
+      --       AND COALESCE(...) = 'Estoque inicial no cadastro de produto';
+      --
+      --     IF v_perfil NOT IN (...)
+      --
+      -- enquanto `v_bloco_antigo` acima espera a atribuição em uma linha só e sem
+      -- a linha em branco. A substituição textual nunca casou. Antes esta migration
+      -- levantava MIG_GATE_AJUSTE_NAO_ENCONTRADO aqui, abortando a cadeia inteira
+      -- em QUALQUER banco reconstruído do zero (todos os jobs de CI com Supabase
+      -- local). Em produção o sintoma ficou mascarado pelo reparo de histórico de
+      -- migrations (backend/docs/auditoria/supabase-migration-repair-20260802).
+      --
+      -- Não recriamos o corpo aqui: a migration 289 (versão 20260805151822, POSTERIOR
+      -- a esta) faz `CREATE OR REPLACE` completo de ajustar_estoque_manual já sem a
+      -- exceção de OPERADOR e VERIFICA o efeito no mesmo commit
+      -- (MIG289_SSOT01_STRING_MAGICA_REMANESCENTE / MIG289_SSOT01_OPERADOR_REMANESCENTE).
+      -- Ou seja, a propriedade de segurança que este bloco pretendia garantir é
+      -- imposta e conferida adiante — este passo é redundante, e falhar aqui só
+      -- impede o banco de ser reconstruído.
+      RAISE NOTICE
+        'ajustar_estoque_manual: formato fora do esperado nesta etapa; enforcement autoritativo fica na migration 289 (SSOT-01), que reescreve e verifica.';
 
     END IF;
 
   END IF;
 
 
+  -- Guard rails de integridade — só fazem sentido no caminho em que ESTA migration
+  -- efetivamente reescreveu a função. Quando a reescrita fica a cargo da 289, é ela
+  -- quem verifica o efeito.
+  IF v_novo IS NOT NULL THEN
 
-  v_def := pg_get_functiondef(
-    'public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure
-  );
+    v_def := pg_get_functiondef(
+      'public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure
+    );
 
+    IF position(v_bloco_antigo IN v_def) > 0 THEN
+      RAISE EXCEPTION
+        'MIG_AJUSTE_BLOCO_ANTIGO_PRESENTE';
+    END IF;
 
-  IF position(v_bloco_antigo IN v_def) > 0 THEN
-    RAISE EXCEPTION
-      'MIG_AJUSTE_BLOCO_ANTIGO_PRESENTE';
-  END IF;
+    IF position(v_bloco_novo IN v_def) = 0 THEN
+      RAISE EXCEPTION
+        'MIG_AJUSTE_GATE_NOVO_AUSENTE';
+    END IF;
 
+    IF position('AJUSTE_ESTOQUE_LINHA_NAO_ENCONTRADA' IN v_def) = 0 THEN
+      RAISE EXCEPTION
+        'MIG_AJUSTE_CORPO_DEGRADADO_VALIDACAO_REMOVIDA';
+    END IF;
 
-  IF position(v_bloco_novo IN v_def) = 0 THEN
-    RAISE EXCEPTION
-      'MIG_AJUSTE_GATE_NOVO_AUSENTE';
-  END IF;
+    IF position('movimentos_estoque_log' IN v_def) = 0 THEN
+      RAISE EXCEPTION
+        'MIG_AJUSTE_CORPO_DEGRADADO_KARDEX_REMOVIDO';
+    END IF;
 
-
-  -- Guard rails de integridade
-
-  IF position('AJUSTE_ESTOQUE_LINHA_NAO_ENCONTRADA' IN v_def) = 0 THEN
-    RAISE EXCEPTION
-      'MIG_AJUSTE_CORPO_DEGRADADO_VALIDACAO_REMOVIDA';
-  END IF;
-
-
-  IF position('movimentos_estoque_log' IN v_def) = 0 THEN
-    RAISE EXCEPTION
-      'MIG_AJUSTE_CORPO_DEGRADADO_KARDEX_REMOVIDO';
   END IF;
 
 
