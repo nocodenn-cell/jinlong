@@ -317,7 +317,7 @@ Auditorias futuras devem citar `RN-XXX`, não descrever o problema em prosa.
 |---|---|---|---|---|
 | RN-001 | Produto publicado deve possuir preço válido | Banco (CHECK) + `calcular_preco_produto` | Venda | Divergente (TB-02/TB-03) |
 | RN-002 | **NCM não é obrigatório no cadastro**; é obrigatório para emissão fiscal | RPC fiscal + `chk_produto_ncm_formato` | Fiscal | Vigente (ADR-002) |
-| RN-003 | Pagamento nunca pode exceder o saldo aberto | Banco (CHECK) + `registrar_pagamento_contas_pagar` | Financeiro | Divergente (TB-07) |
+| RN-003 | Pagamento nunca pode exceder o saldo aberto | Banco (CHECK) + `registrar_pagamento_contas_pagar` | Financeiro | **Vigente** (TB-07, migration 299, 2026-08-05) |
 | RN-004 | Venda só pode ser registrada com caixa aberto | `trg_fn_vendas_caixa_aberto` | Caixa/Venda | Vigente |
 | RN-005 | Estoque não pode ficar negativo sem autorização explícita | Triggers + `decrementar_estoque_seguro` | Estoque | Vigente |
 | RN-006 | Desconto acima do limite exige autorização de gerente | `managerDiscount/policy.ts` + `trg_fn_itens_venda_limite_desconto` | Venda | Vigente |

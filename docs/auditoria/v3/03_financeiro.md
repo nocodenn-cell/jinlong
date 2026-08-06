@@ -2,6 +2,17 @@
 
 ## TB-07
 
+> **STATUS (2026-08-05): FECHADO.** Migration `299_tb07_pagamento_contas_pagar_limite_saldo.sql`
+> aplicada e verificada em produção (`pg_get_functiondef`, `pg_constraint`). Guarda
+> `PAGAMENTO_EXCEDE_SALDO` adicionada em `registrar_pagamento_contas_pagar`, simétrica a
+> `LIQUIDACAO_EXCEDE_ABERTO` de `registrar_liquidacao_receber` — mesma posição no fluxo
+> (depois de validar valor positivo, antes de gravar). CHECK `valor_pago <= valor_total`
+> adicionada em `contas_pagar` como rede de segurança (tabela vazia em produção, sem
+> necessidade de `NOT VALID`). Provado com 4 cenários em transação com `ROLLBACK`: pagamento
+> acima do saldo total recusado; pagamento parcial válido aplica e marca `PARCIAL`; segundo
+> pagamento que estouraria o saldo (60+50 sobre limite de 100) recusado; pagamento final até o
+> limite exato fecha como `PAGO`. Zero dado residual.
+
 **Título:** `registrar_pagamento_contas_pagar` aceita pagamento acima do saldo devedor; a contraparte de contas a receber bloqueia
 
 **Categoria:** Bug

@@ -316,7 +316,22 @@ verificados por evidência, e evidência sobre base 100% de teste não prova nad
 | **Documentação** | Cap. 3 (estados de recebimento já transcritos) |
 | **Armadilha** | A migration `20260801120000` **já implementou** conferência em `remessas`. Não recriar — estender `receber_ordem_compra` para usar o fluxo existente |
 
-### Pacote 5 — Financeiro e Crédito (P1, ADR-003/007)
+### Pacote 5 — Financeiro e Crédito (P1, ADR-003/007) — 🟡 PARCIAL (2026-08-05)
+
+> **BR-01 FECHADO.** Migration `298` — `pdv_config.modo_limite_credito`
+> (AVISO/BLOQUEIO/AUTORIZACAO_GERENTE, default AVISO) + gate em
+> `finalizar_venda_transacional_canonica_v4` antes de criar `contas_receber`.
+> `AUTORIZACAO_GERENTE` reutiliza `tokens_desconto_gerente`. Provado com 6 cenários em
+> `ROLLBACK` contra produção. Pendência sinalizada (não bloqueia — modo default é AVISO,
+> nenhuma loja usa AUTORIZACAO_GERENTE): tela do caixa não tem fluxo de UI para pedir o token
+> de gerente especificamente para override de crédito.
+>
+> **TB-07 FECHADO.** Migration `299` — guarda `PAGAMENTO_EXCEDE_SALDO` em
+> `registrar_pagamento_contas_pagar` (simétrica à de `registrar_liquidacao_receber`) + CHECK
+> `valor_pago <= valor_total`. Provado com 4 cenários em `ROLLBACK`.
+>
+> **BR-03 e F1-05 ainda abertos.** Detalhe: `docs/auditoria/tickets_P1_regras_negocio.md`
+> (BR-01), `docs/auditoria/v3/03_financeiro.md` (TB-07).
 
 | Item | Conteúdo |
 |---|---|
