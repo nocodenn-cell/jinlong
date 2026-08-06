@@ -1,7 +1,8 @@
--- STATUS: NÃO APLICADA. Limpeza de permissão SEM URGÊNCIA — aplicar em janela
--- de manutenção do Supabase, pelo pipeline normal (§1 de
--- docs/CHECKLIST_DEPLOY_SUPABASE.md). Prioridade atual é fluxo comercial e
--- estabilidade do piloto.
+-- STATUS: APLICADA em produção (`jinlong`). Registrada em
+-- supabase_migrations.schema_migrations como versão 20260730093000, e o efeito
+-- foi conferido no corpo vivo em 2026-08-06: o gate com 'OPERADOR' não existe
+-- mais em criar_produto_com_estoque_inicial. O cabeçalho anterior dizia
+-- "NÃO APLICADA" e ficou desatualizado quando a migration subiu.
 --
 -- NÃO CORRIGE EXPOSIÇÃO: as funções tocadas têm EXECUTE apenas para postgres e
 -- service_role, nunca para authenticated/anon — a permissão órfã nunca foi

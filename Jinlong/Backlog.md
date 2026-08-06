@@ -143,7 +143,9 @@
 
 > **Pendências desta frente NÃO retornam ao backlog técnico.** São **[INFRA]** (billing de Actions), **[GOV]** (required checks e bypass) e **[OPS]** (Vault fiscal, alias de produção da Vercel, env vars do Sentry) — ações de console, sem código. Ver `docs/CICD_FINAL_STATE.md` §5.
 >
-> Permanecem como desenvolvimento apenas: migration `092`, remoção do overload `fiscal_reprocessar_documento(uuid,text)` e reaper de `EM_PROCESSAMENTO` — rastreados em `docs/PLANO_REMEDIACAO_CICD.md`.
+> ~~Permanecem como desenvolvimento apenas: migration `092`, remoção do overload `fiscal_reprocessar_documento(uuid,text)` e reaper de `EM_PROCESSAMENTO`.~~ **Os três foram fechados em 2026-08-06**, na ordem obrigatória D-1 → D-2 → D-3, pelas migrations `305`, `306` e `307`. **Não resta pendência de código nesta frente** — o módulo fiscal agora depende só de console: B-6 (provider real) e depois B-5 (Vault + reagendar o cron do worker). Ver `docs/GO_LIVE_BLOCKERS.md` §3.
+>
+> **Aberto em 2026-08-06 (novo, GOV):** 16 migrations aplicadas em produção entre 01/08 e 06/08 **não existem em nenhum ref do Git** — `docs/AUDITORIA_DRIFT_MIGRATIONS_20260806.md`. Depende do dono do repositório publicar o branch de origem.
 - [x] Acessibilidade ARIA Fase 3.1 (FormField, landmarks, sr-only, skip-link)
 - [x] i18n PT/ZH manual sem next-intl
 

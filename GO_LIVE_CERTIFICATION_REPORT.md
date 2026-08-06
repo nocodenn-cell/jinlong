@@ -62,14 +62,20 @@ Abertura de turno nunca setava `saldo_atual = valor_inicial`; vendas em dinheiro
 
 **Validação técnica:** typecheck limpo, lint limpo, 846/847 testes unitários verdes (1 falha isolada e não relacionada, confirmada flaky ao rodar sozinha — 3/3 verde). Confirmado ao vivo no banco via `pg_get_functiondef`/`has_function_privilege` que as correções estão ativas em produção.
 
-### Achados de severidade média — registrados, aguardando decisão de fix
-Não corrigidos nesta rodada (fora do escopo aprovado até aqui):
-- Migration que revogaria acesso de OPERADOR a cadastro de produto nunca foi aplicada em produção (hoje não explorável, nenhuma tela chama esse caminho como operador).
-- Token de desconto de gerente não valida `loja_id` (sem impacto hoje, loja única).
-- Fechamento via PDV local/Tauri não exige motivo para divergência de caixa (o web exige acima de R$5).
-- Isenção do teto de desconto manual por item (15%) com token de gerente foi removida silenciosamente nas reescritas da RPC de venda — hoje inalcançável pela UI, mas contrato quebrado no banco.
-- Campos de auditoria (IP, user-agent, device, terminal) coletados na finalização de venda nunca são persistidos em tabela alguma.
-- `calcularTotaisComGerente` (client) usa base de cálculo errada — código morto hoje, não usado no checkout real.
+### Achados de severidade média — retriagem com evidência (2026-08-06)
+
+Cada item abaixo foi reconferido contra o banco vivo e o código, e não contra o registro
+anterior. Nenhum foi corrigido nesta rodada: são todos **P2**, e a regra de priorização
+manda fechar P0/P1 antes — e ainda há P0 aberto (**D-6**, drift de migrations).
+
+| Achado | Situação verificada | Evidência |
+|---|---|---|
+| Migration que revoga OPERADOR do cadastro de produto nunca aplicada | ✅ **Resolvido** — estava aplicada; o cabeçalho do arquivo é que estava desatualizado | `schema_migrations` tem `20260730093000`; `position('…NOT IN (''OPERADOR''…' in pg_get_functiondef(criar_produto_com_estoque_inicial)) = 0` |
+| Token de desconto de gerente não valida `loja_id` | 🟡 **Aberto — e mais fundo do que o registro sugeria.** A correção **não** é uma linha na RPC: hoje **nenhum chamador envia `loja_id`** ao emitir o token, então os 2 tokens existentes têm `loja_id NULL`. Exigir `t.loja_id = p_loja_id` na RPC agora **quebraria o desconto de gerente em produção**. A ordem correta é: (1) `validar-gerente` derivar a loja do próprio gerente autenticado, em vez de confiar num campo opcional do body; (2) **deploy** da edge function; (3) confirmar que os tokens novos carregam `loja_id`; (4) só então a RPC passar a exigir igualdade | RPC: `PERFORM 1 FROM tokens_desconto_gerente t WHERE t.token = … AND t.usado = false AND t.expira_em > now()` — sem `loja_id`. Chamadores: `CaixaPageClient.tsx:1199` e `caixaMovimentacoes.impl.ts:100` não passam `lojaId`. Banco: `count(loja_id) = 0` de 2 linhas |
+| Fechamento via PDV local/Tauri não exige motivo para divergência | 🟡 **Aberto** — não reverificado nesta rodada (exige o app Tauri) | — |
+| Isenção do teto de desconto manual por item (15%) com token de gerente | 🟡 **Aberto, confirmado** — a v4 viva não menciona o teto por item em lugar nenhum | `position('max_desconto_manual_item' in pg_get_functiondef(v4)) = 0` |
+| Campos de auditoria (IP, user-agent, device, terminal) nunca persistidos | 🟡 **Aberto, confirmado** — cada parâmetro aparece **exatamente 1 vez** no `functiondef`: a própria declaração da assinatura, nenhum uso no corpo. É o BL-3 do backlog | `regexp_matches(def,'p_ip_address','g')` → 1 ocorrência (idem `p_user_agent`, `p_device_id`, `p_terminal_id`) |
+| `calcularTotaisComGerente` usa base de cálculo errada — "código morto" | ⚠️ **A classificação de "código morto" não se sustenta e precisa ser refeita.** A função é exportada por `shared-core/src/stores/unifiedCartStore.ts:491` e reexportada por `pdv-local/src/stores/cartStore.ts:6` e `pdv-importados/stores/carrinhoStore.ts`. Se a base de cálculo estiver mesmo errada, o alcance é maior do que o registrado — **reclassificar antes de decidir o fix** | `grep -rn calcularTotaisComGerente` → 10 ocorrências, incluindo reexports em ambos os apps |
 
 ---
 
@@ -167,10 +173,18 @@ Ajuste visual pontual no `CaixaSearchBar` (remoção do ícone `Barcode` de dent
 
 ## 8. Checklist de reativação — próximos passos na ordem certa
 
+Atualizado em **2026-08-06**. Os itens de código do módulo fiscal saíram da lista: D-1, D-2 e
+D-3 foram fechados na ordem obrigatória pelas migrations `305`, `306` e `307`, cada uma com
+verificação no efeito dentro da própria transação (detalhe em `docs/GO_LIVE_BLOCKERS.md` §3).
+
 ```
-1. P0   Confirmar fonte de verdade do SYNC_KEY (Supabase Dashboard)
-2. P0   Alinhar o secret desatualizado; revalidar smoke:sync-edge
-3. P1   Obter credencial de teste (ou concluir reconstrução de migrations)
-4. P1   Executar de verdade os 5 itens, priorizando #3 (reconciliação) e #5 (permissões)
-5. —    Backlog separado: reconstrução cronológica completa das migrations (§5)
+1. P0   Publicar as 16 migrations que estão em produção e fora do Git (D-6)
+        → docs/AUDITORIA_DRIFT_MIGRATIONS_20260806.md
+2. P0   Confirmar fonte de verdade do SYNC_KEY (Supabase Dashboard)
+3. P0   Alinhar o secret desatualizado; revalidar smoke:sync-edge
+4. P1   Obter credencial de teste (ou concluir reconstrução de migrations)
+5. P1   Executar de verdade os 5 itens, priorizando #3 (reconciliação) e #5 (permissões)
+6. —    Módulo fiscal: B-6 (provider real) → B-5 (Vault + reagendar cron do worker).
+        Código já pronto; nada de dev pendente antes disso.
+7. —    Backlog separado: reconstrução cronológica completa das migrations (§5)
 ```

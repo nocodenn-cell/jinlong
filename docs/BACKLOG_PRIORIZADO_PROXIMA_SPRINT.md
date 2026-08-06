@@ -4,13 +4,27 @@
 **Origem**: fechamento da sprint `claude/auditoria-final-desconto-7o1vy9` (PR #231)
 **Regra de priorização**: P0 bloqueia Go-Live · P1 alta prioridade · P2 melhoria importante · P3 evolução futura.
 
-> **BL-1 é o primeiro item da fila (P0).**
+> **Atualização 2026-08-06 — BL-1 saiu da fila: está concluído e verificado em produção.**
+>
+> Evidência colhida no banco vivo (`jinlong`), não em documento:
+> - `finalizar_venda_transacional_canonica_v4` tem **uma única** assinatura (22 args) e seu
+>   `pg_get_functiondef` contém `SET usado`, `INSERT descontos_venda` e `motivo_desconto`;
+> - `descontos_venda` tem as colunas `operador_id`, `aplicado_em`, `motivo_desconto` e
+>   `motivo_descricao_livre`;
+> - o app encaminha os parâmetros — `caixaVendas.impl.ts:307-308` passa `p_motivo_desconto`
+>   e `p_motivo_descricao`.
+>
+> Aplicado pela migration `272_reconciliacao_bl1_descontos_token_auditoria_motivo`. O texto
+> abaixo fica como registro do escopo original. **A fila real da próxima sprint é a de
+> `RELATORIO_CONSOLIDADO_POS_CERTIFICACAO_OPERACIONAL.md` §3**, com os bloqueadores de
+> infra/governança em primeiro lugar — hoje encabeçados por **D-6** (16 migrations em
+> produção fora do Git, ver `AUDITORIA_DRIFT_MIGRATIONS_20260806.md`).
 
 ---
 
-## P0 — Bloqueia Go-Live
+## ~~P0~~ — Concluído em 2026-08-06
 
-### BL-1 — Reconciliação da RPC `finalizar_venda_transacional_canonica_v4`
+### ✅ BL-1 — Reconciliação da RPC `finalizar_venda_transacional_canonica_v4`
 - **Descrição**: Restaurar o PASSO 5 (consumo de token `usado=true` + `INSERT descontos_venda`) e adicionar auditoria de motivo (ENUM + colunas `operador_id`/`aplicado_em`/`motivo_desconto`/`motivo_descricao_livre`), via migration única contra o estado real do banco. Encaminhar `p_motivo_*` em `caixaVendas.impl.ts`.
 - **Impacto**: Fecha 2 P0 (token reutilizável + descontos sem auditoria) e conclui o MVF #2 end-to-end.
 - **Estimativa**: 1–1,5 dia (migration + app + testes SQL/integração/E2E).
