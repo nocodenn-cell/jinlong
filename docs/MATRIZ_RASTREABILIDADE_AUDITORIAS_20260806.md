@@ -182,16 +182,22 @@ do catálogo e o backlog técnico pós-piloto.
 
 | Ordem | Item |
 |:--:|---|
-| 14 | Renomear as migrations `305`–`308` para o prefixo gravado em produção (4 `git mv`) |
-| 15 | Token de desconto com escopo de loja (edge function primeiro, RPC depois) |
-| 16 | BL-3 — persistir auditoria de IP/UA/device/terminal |
-| 17 | BL-2 — promoções (schema pronto, regra ausente) |
-| 18 | BL-4 — guard de drift por corpo de função |
-| 19 | BL-5 — limite de item por `pdv_config` (hoje `15` fixo) |
-| 20 | Reclassificar `calcularTotaisComGerente` antes de decidir o fix |
-| 21 | Isenção do teto de 15% com token — contrato quebrado no banco |
+| 14 | Token de desconto com escopo de loja (edge function primeiro, RPC depois) |
+| 15 | BL-3 — persistir auditoria de IP/UA/device/terminal |
+| 16 | BL-2 — promoções (schema pronto, regra ausente) |
+| 17 | BL-4 — guard de drift por corpo de função |
+| 18 | BL-5 — limite de item por `pdv_config` (hoje `15` fixo) |
+| 19 | Reclassificar `calcularTotaisComGerente` antes de decidir o fix |
+| 20 | Isenção do teto de 15% com token — contrato quebrado no banco |
 
 ---
 
 **Nenhum item das listas P0 e P1 depende de código deste PR.** Os únicos itens de código
-restantes (10, 11, 15–21) são pós-Go-Live ou dependem de credencial de execução.
+restantes (10, 11, 14–20) são pós-Go-Live ou dependem de credencial de execução.
+
+### Fechados após a primeira versão desta matriz (2026-08-06)
+
+| Item | Evidência |
+|---|---|
+| `282` falhava em qualquer rebuild — `REVOKE`/`GRANT` sobre `fiscal_reprocessar_documento(uuid,text)`, assinatura que **nenhuma** migration do repo cria | Commit `ce262315`; guard por `pg_get_function_identity_arguments` |
+| Grupo D — nomes das migrations `305`–`308` divergiam de produção | Commit `21e3ce9d`; 4 renames puros, 0 linha alterada |

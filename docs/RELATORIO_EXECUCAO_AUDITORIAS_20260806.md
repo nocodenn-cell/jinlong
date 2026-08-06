@@ -206,7 +206,6 @@ código — os 6 restantes são Vercel, Supabase, GitHub e publicação de traba
 ### Pós-Go-Live
 
 ```
-▢  Renomear as migrations 305–308 para o prefixo que produção gravou (4 git mv)
 ▢  Token de desconto de gerente com escopo de loja (na ordem descrita em §2.3)
 ▢  BL-3  Persistir a auditoria de IP/UA/device/terminal
 ▢  Reclassificar calcularTotaisComGerente antes de decidir o fix
