@@ -346,7 +346,7 @@ Auditorias futuras devem citar `RN-XXX`, não descrever o problema em prosa.
 | RN-029 | Precedência de preço: promoção → atacado → varejo | `calcular_promocao_aplicavel` (mig 274) | Preço | Vigente |
 | RN-030 | **Produto pode existir sem fornecedor**; compra exige fornecedor | ADR-006 + `ordens_compra.fornecedor_id` | Produto/Compra | Vigente (ADR-006) |
 | RN-031 | **Produto pode existir sem custo**; margem é indisponível sem custo válido. Nunca assumir custo zero | ADR-007 + triggers `trg_fn_*_margem` | Preço/BI | Divergente (BR-03) |
-| RN-032 | **Limite de crédito é parametrizável por loja**: `AVISO` \| `BLOQUEIO` \| `AUTORIZACAO_GERENTE` | ADR-003 + configuração da loja | Financeiro | Divergente (BR-01) |
+| RN-032 | **Limite de crédito é parametrizável por loja**: `AVISO` \| `BLOQUEIO` \| `AUTORIZACAO_GERENTE` | ADR-003 + configuração da loja | Financeiro | **Vigente** (BR-01, migration 298, 2026-08-05) |
 | RN-033 | **Recebimento exige conferência** antes de creditar estoque (total/parcial/sobra/falta/avaria) | ADR-004 + `registrar_conferencia_remessa` | Compra/Estoque | Divergente (FLX-04) |
 | RN-034 | **Reabertura de caixa** exige GERENTE+, motivo obrigatório e trilha; histórico nunca apagado | ADR-005 | Caixa | Divergente (BR-04) |
 | RN-035 | `custo_unitario_snap` é definido pelo servidor, nunca aceito do cliente | RPC de venda | Venda/BI | Divergente (BR-03) |

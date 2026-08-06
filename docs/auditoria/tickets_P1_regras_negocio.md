@@ -2,6 +2,42 @@
 
 ## BR-01
 
+> **STATUS (2026-08-05): FECHADO.** Migration `298_br01_limite_credito_por_modo_loja.sql`
+> aplicada e verificada em produção (`pg_get_functiondef`). Decisão (b) do ticket — implementar
+> o enforcement, não remover o campo — já estava tomada pela ADR-003 antes desta investigação,
+> não decidida aqui.
+>
+> `pdv_config.modo_limite_credito` (novo, `CHECK IN ('AVISO','BLOQUEIO','AUTORIZACAO_GERENTE')`,
+> default `AVISO`). Gate entra em `finalizar_venda_transacional_canonica_v4`, único ponto onde
+> `contas_receber` é criado — imediatamente antes do `INSERT`, comparando
+> `SUM(contas_receber.valor_aberto WHERE status IN ('ABERTO','PARCIAL')) + saldo_pendente_desta_venda`
+> contra `clientes.limite_credito`. `AUTORIZACAO_GERENTE` reutiliza `tokens_desconto_gerente`
+> (mesma tabela/mecanismo do desconto, token novo e independente — `p_limite_credito_gerente_token`)
+> — não criou mecanismo paralelo, conforme a ADR exige.
+>
+> **Armadilha pega em `ROLLBACK` antes de aplicar:** `CREATE OR REPLACE` com um parâmetro
+> trailing novo não substitui a função — Postgres identifica por nome+tipos, não nome+defaults.
+> Ficaria com dois overloads (21 e 22 args) e qualquer chamada nomeada ambígua quebraria com
+> "is not unique". Corrigido com `DROP FUNCTION` explícito da assinatura de 21 args antes do
+> `CREATE` — mesma armadilha que o FLX-04 já tinha documentado para `receber_ordem_compra`.
+>
+> **Prova:** 6 cenários em transação com `ROLLBACK` contra produção — venda normal sem cliente
+> (regressão, comportamento idêntico); pagamento parcial com cliente dentro do limite (sem gate,
+> como antes); pagamento parcial excedendo limite em modo `AVISO` (permite, grava mensagem);
+> mesmo caso em `BLOQUEIO` (recusa com `LIMITE_CREDITO_EXCEDIDO`); `AUTORIZACAO_GERENTE` sem
+> token (recusa `TOKEN_OBRIGATORIO`); `AUTORIZACAO_GERENTE` com token válido (aceita, consome o
+> token). Todos passaram; zero dado residual após o `ROLLBACK`.
+>
+> **Não fechado nesta migration, sinalizado:** a tela do caixa não tem um fluxo de UI para
+> pedir o token de gerente especificamente para override de crédito (o mecanismo de PIN de
+> gerente existe e é reutilizado no banco, mas o gatilho "pedir autorização por limite
+> excedido" na tela não foi construído). Não bloqueia o piloto porque o modo default é
+> `AVISO` — nenhuma loja usa `AUTORIZACAO_GERENTE` hoje, então não há tela que precise disso
+> ainda. Vira P1 de UI quando/se alguma loja configurar esse modo. Mensagem de `AVISO` também
+> não é hoje mostrada como toast — `caixaVendas.impl.ts` só lê `mensagem` no caminho de erro
+> (linha 345-346); no sucesso ela é ignorada. RPC está correta e auditável de qualquer forma
+> (dado disponível); exibir é UX incremental, não a regra em si.
+
 **Título:** `clientes.limite_credito` existe no schema mas nenhuma RPC o valida — limite de crédito é decorativo
 
 **Descrição do problema:**
