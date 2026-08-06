@@ -54,7 +54,41 @@ O dashboard não passa por `getRelatorioTimezone()` — busca por `timezone`/`p_
 
 ## SSOT-04
 
-> **STATUS (2026-08-06): CONFIRMADO E AMPLIADO — investigação fechada, correção pendente.**
+> **STATUS (2026-08-06): FECHADO.** Migrations `303` (kardex nos dois caminhos de retorno) e
+> `304` (remoção da função órfã), ambas aplicadas e verificadas no efeito.
+>
+> **Estado final medido em produção:**
+> `ainda_sem_kardex = NENHUMA` — nenhuma função altera `estoque` sem lançar em
+> `movimentos_estoque_log`. `baixar_estoque_venda = REMOVIDA`.
+> Catálogo `tipos_movimento_estoque` intacto em 10 entradas — **nenhum tipo novo criado**,
+> reaproveitado o `ENTRADA_DEVOLUCAO_CLIENTE` que já existia sem uso.
+> Grants preservados (`CREATE OR REPLACE`, sem a armadilha de DROP+CREATE da 298).
+>
+> **Prova em `ROLLBACK` antes de aplicar — 5 cenários, todos verdes:**
+>
+> | Cenário | Resultado |
+> |---|---|
+> | C1 cancelamento | 1 lançamento `ENTRADA_DEVOLUCAO_CLIENTE`; estoque 247 → venda → 247 |
+> | C2 idempotência do cancelamento | barrado por `JA_CANCELADA`; kardex continua 1 |
+> | C3 devolução parcial | 1 lançamento (1 de 2 un) |
+> | C4 idempotência da devolução | mesma `idempotency_key` → mesma operação; kardex continua 1 |
+> | C5 consistência do ledger | `247 + (-1) = 246` — kardex explica 100% da variação |
+>
+> O `DROP` da 304 rodou **sem `CASCADE`** de propósito (Postgres recusaria se houvesse
+> dependência) e foi precedido de evidência de dependência zero: sem grants de cliente,
+> 0 chamadores no banco, 0 em `pg_depend`, 0 no repositório.
+>
+> **Guarda de regressão:** `backend/supabase/scripts/smoke_ssot04_kardex_invariante.sql`
+> (somente leitura) — verifica a invariante, que a órfã não ressuscitou, que o tipo do
+> catálogo não foi trocado e que todo retorno aponta para a venda de origem via `venda_id`.
+>
+> **Backfill NÃO executado, por instrução explícita:** as 22 divergências históricas seguem
+> intactas (reconferido após aplicar). São anteriores à correção; reconciliá-las é mutação de
+> dado pretérito e decisão de negócio. Esta correção é forward-only — para de produzir
+> divergência nova.
+>
+> ---
+> **Investigação original (2026-08-06), mantida para rastreabilidade:**
 > O ticket registrava **um** desviante (`baixar_estoque_venda`). Varredura completa em produção
 > (`pg_get_functiondef` de toda função que faz `UPDATE ... estoque`) encontrou **três**, e dois
 > deles são caminhos **vivos** do produto:
