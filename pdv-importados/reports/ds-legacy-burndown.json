@@ -5,10 +5,10 @@
       "id": "app_btn",
       "label": ".app-btn-* (classes)",
       "files": 7,
-      "hits": 15,
+      "hits": 14,
       "samples": [
         "app/gerente/compras/ComprasGerentePageClient.tsx (2)",
-        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (4)",
+        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (3)",
         "app/gerente/financeiro/contas-pagar/PagamentoModal.tsx (2)",
         "app/gerente/financeiro/documento/[id]/DocumentoFiscalDetalheClient.tsx (1)",
         "app/gerente/idioma/LanguageToggle.tsx (2)",
@@ -39,10 +39,10 @@
     {
       "id": "text_arbitrary_px",
       "label": "text-[Npx] arbitrário",
-      "files": 66,
-      "hits": 281,
+      "files": 65,
+      "hits": 276,
       "samples": [
-        "app/admin/auditoria/_components/AuditoriaTimeline.tsx (15)",
+        "app/admin/auditoria/_components/AuditoriaTimeline.tsx (13)",
         "app/admin/auditoria/page.tsx (4)",
         "app/admin/categorias-financeiras/_components/CategoriasFinanceirasContent.tsx (8)",
         "app/admin/comissoes/_components/ComissoesContent.tsx (13)",

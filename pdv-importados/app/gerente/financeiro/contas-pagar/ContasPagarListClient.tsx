@@ -3,10 +3,13 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { Search, Download, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-react'
+import { Search, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { Button } from '@/components/ui/button'
+import { DragonModal } from '@/components/ui/DragonModal'
+import { ExportAction } from '@/components/ui/ExportAction'
+import { Field, Input } from '@/components/ui/forms'
 import { emitToast } from '@/lib/gerente/toast'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { fmtGerenteBRL, fmtGerenteDateTime } from '@/lib/format/gerenteValues'
@@ -85,8 +88,11 @@ export function ContasPagarListClient({
   const [fornecedorId, setFornecedorId] = useState('')
   const [periodo, setPeriodo] = useState(periodoInicial)
 
-  // Modal
+  // Modais
   const [emPagamento, setEmPagamento] = useState<ContaPagarRow | null>(null)
+  const [cancelando, setCancelando] = useState<ContaPagarRow | null>(null)
+  const [motivoCancel, setMotivoCancel] = useState('')
+  const [cancelPending, setCancelPending] = useState(false)
 
   const pageRef = useRef(1)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -168,20 +174,33 @@ export function ContasPagarListClient({
     setContas((cur) => cur.map((x) => (x.id === c.id ? c : x)))
   }
 
-  async function onCancelar(c: ContaPagarRow) {
-    const motivo = window.prompt(`Motivo do cancelamento de "${c.descricao}":`, '')
-    if (motivo == null) return
-    if (motivo.trim().length < 2) {
+  function onCancelar(c: ContaPagarRow) {
+    setMotivoCancel('')
+    setCancelando(c)
+  }
+
+  async function confirmarCancelamento() {
+    if (!cancelando) return
+    const motivo = motivoCancel.trim()
+    if (motivo.length < 2) {
       emitToast({ kind: 'error', message: 'Motivo deve ter ao menos 2 caracteres.' })
       return
     }
-    const r = await cancelarContaPagarAction(c.id, motivo)
-    if (!r.ok) {
-      emitToast({ kind: 'error', message: r.error })
-      return
+    setCancelPending(true)
+    try {
+      const r = await cancelarContaPagarAction(cancelando.id, motivo)
+      if (!r.ok) {
+        emitToast({ kind: 'error', message: r.error })
+        return
+      }
+      setContas((cur) =>
+        cur.map((x) => (x.id === cancelando.id ? { ...x, status: 'CANCELADO' } : x)),
+      )
+      emitToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
+      setCancelando(null)
+    } finally {
+      setCancelPending(false)
     }
-    setContas((cur) => cur.map((x) => (x.id === c.id ? { ...x, status: 'CANCELADO' } : x)))
-    emitToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
   }
 
   async function onExportar() {
@@ -363,18 +382,13 @@ export function ContasPagarListClient({
               {m.contas_pagar.limpar_filtros}
             </button>
           )}
-          <button
-            type="button"
+          <ExportAction
+            format="csv"
+            label={exporting ? m.comum.carregando : m.gerente.exportar_csv}
+            loading={exporting}
             disabled={exporting || contas.length === 0}
-            onClick={() => void onExportar()}
-            className={cn(
-              'app-btn-neutral inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-              (exporting || contas.length === 0) && 'cursor-not-allowed opacity-45',
-            )}
-          >
-            <Download className="h-3.5 w-3.5" aria-hidden />
-            {exporting ? m.comum.carregando : m.gerente.exportar_csv}
-          </button>
+            onExport={() => void onExportar()}
+          />
         </div>
           </div>
         }
@@ -529,6 +543,51 @@ export function ContasPagarListClient({
           }}
         />
       )}
+
+      <DragonModal
+        open={cancelando != null}
+        onClose={() => {
+          if (!cancelPending) setCancelando(null)
+        }}
+        dismissable={!cancelPending}
+        title="Cancelar conta"
+        size="sm"
+        variant="danger"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={cancelPending}
+              onClick={() => setCancelando(null)}
+            >
+              {m.comum.cancelar}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              loading={cancelPending}
+              onClick={() => void confirmarCancelamento()}
+            >
+              Confirmar
+            </Button>
+          </>
+        }
+      >
+        <Field
+          id="motivo-cancel-ap"
+          label={`Motivo do cancelamento de "${cancelando?.descricao ?? ''}"`}
+          required
+        >
+          <Input
+            id="motivo-cancel-ap"
+            value={motivoCancel}
+            onChange={(e) => setMotivoCancel(e.target.value)}
+            autoFocus
+            disabled={cancelPending}
+          />
+        </Field>
+      </DragonModal>
     </>
   )
 }

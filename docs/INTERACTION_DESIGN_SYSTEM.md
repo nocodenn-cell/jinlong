@@ -3,11 +3,11 @@
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-08-07 |
-| **Status** | **Vigente** — Sprint 0 **implementada** (0 Divergentes); aguarda aceite sponsor para liberar S1 |
+| **Status** | **Vigente** — Sprint 0 **pronta para aceite** (0 Divergentes; Engineering Loop) |
 | **Escopo** | Comportamento de interação em `pdv-importados` |
-| **Irmãos** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) |
+| **Irmãos** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md) |
 | **Princípio** | Duas telas diferentes devem ter **o mesmo comportamento** para o mesmo padrão |
-| **Última validação código** | 2026-08-07 (pós-implementação S0) |
+| **Última validação código** | 2026-08-07 (Engineering Loop ciclos 1–5) |
 
 Este documento é um **ativo arquitetural**. Componentes SSOT implementam estes contratos; PRs não podem inventar um 2º comportamento sem atualizar este arquivo.
 

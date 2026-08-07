@@ -4,7 +4,8 @@
 |--------|--------|
 | **Data** | 2026-08-07 (Sprint 0 = base definitiva) |
 | **Docs** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
-| **Estado** | **Sprint 0 IMPLEMENTADA — aguardando aceite do sponsor** · Sprint 1 **bloqueada até aceite** |
+| **Estado** | **Sprint 0 PRONTA PARA ACEITE** (Engineering Loop 2026-08-07) · Sprint 1 **bloqueada até aceite** |
+| **Validação** | [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md) |
 | **Princípio** | S0 consolida SSOT → S1+ só aplica → zero novos paradigmas |
 
 ---
@@ -182,9 +183,9 @@ Aceite do sponsor no DoD §3.3. Em seguida abrir Sprint 1 (aplicação em telas)
 
 ### 4.5 Decisão
 
-# **Sprint 0 IMPLEMENTADA — aguardando aceite do sponsor**
+# **Sprint 0 PRONTA PARA ACEITE** (Engineering Loop)
 
-**Evidência de código:** primitivos SSOT exportados; `ConfirmActionButton` → `ConfirmDialog`; `emitToast`; FilterBar `daterange` + reset `page`; PaginationBar `infinite`; EntityLookup async; órfãos removidos; `npm run check:ds-sprint0` no CI; burndown asOf 2026-08-07; typecheck + testes de primitivos verdes; **zero** Divergente IX. Sprint 1 permanece **bloqueada** até o sponsor assinar o DoD.
+**Evidência de código (loops 1–5):** IX-CONFIRM 100% (`askConfirm`/ConfirmDialog/CaixaConfirmModal); IX-SHEET entidade em DetailSheet; EntityLookup em recebimento+transferências; emitToast canônico; ExportAction/downloadTextFile; BulkActionBar catálogo+fornecedores; OC em DragonModal; zero `window.prompt`/`confirm` nativo; gate `check:ds-sprint0` reforçado. Detalhe: [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md). Sprint 1 permanece **bloqueada** até o sponsor assinar o DoD.
 
 ---
 
@@ -288,7 +289,7 @@ Sem alteração de regra de negócio, RPC ou entity-SSoT.
 | Documentação | ✅ | Não |
 | Aceite sponsor DoD | ⬜ | **Sim** |
 
-**Decisão: Sprint 0 IMPLEMENTADA — aguardando aceite do sponsor** (§4.5).
+**Decisão: Sprint 0 PRONTA PARA ACEITE** (§4.5 + Engineering Loop).
 
 ---
 

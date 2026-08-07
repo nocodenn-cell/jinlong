@@ -3,12 +3,13 @@
 import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Download, FileUp, Upload } from 'lucide-react'
+import { FileUp, Upload } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { buscarProdutosParaExportacao } from '@/app/gerente/produtos/actions'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { Button } from '@/components/ui/button'
 import { PageActions } from '@/components/ui/admin-v2'
+import { ExportAction } from '@/components/ui/ExportAction'
 import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImportarModal'
 import { CatalogoNovoButton } from './CatalogoNovoButton'
 import { toCatalogoExportInput, type CatalogoExportFiltros } from './catalogoFiltrosExport'
@@ -79,16 +80,13 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
           <FileUp size={14} aria-hidden />
           {m.produtos.import_modal_titulo}
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="gap-1.5"
+        <ExportAction
+          format="csv"
+          label={exporting ? m.comum.carregando : m.gerente.exportar_csv}
+          loading={exporting}
           disabled={exporting}
-          onClick={() => void exportarCsv()}
-        >
-          <Download size={14} aria-hidden />
-          {exporting ? m.comum.carregando : m.gerente.exportar_csv}
-        </Button>
+          onExport={() => void exportarCsv()}
+        />
         <CatalogoNovoButton
           label={m.produtos.cadastro_rapido}
           m={m}

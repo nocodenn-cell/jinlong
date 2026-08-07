@@ -136,6 +136,9 @@ for (const file of files) {
   if (confirmCallRe.test(text) && !CONFIRM_ALLOWLIST.has(rel)) {
     violations.push(`${rel}: confirm nativo fora da allowlist (use ConfirmDialog)`)
   }
+  if (/(?:window|globalThis)\.prompt\s*\(/.test(text)) {
+    violations.push(`${rel}: window.prompt proibido (use DragonModal + Field)`)
+  }
 
   const isFixedDialog =
     /fixed inset-0/.test(text) && /role=["']dialog["']|aria-modal/.test(text)
