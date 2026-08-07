@@ -8,7 +8,7 @@ import { StatusChip } from '@/components/ui/StatusChip'
 import { Button } from '@/components/ui/button'
 import { formatBRL } from '@/lib/format/money'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
@@ -88,7 +88,7 @@ export function ImportarNfePageClient({ idioma }: Props) {
       onSuccess: (data: { produtos_novos: number }) => {
         setDraftNovos(data.produtos_novos > 0 ? data.produtos_novos : null)
         if (data.produtos_novos > 0) {
-          emitGerenteToast({
+          emitToast({
             kind: 'info',
             message: mi.import_draft_aviso.replace('{{n}}', String(data.produtos_novos)),
           })

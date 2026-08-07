@@ -1,7 +1,8 @@
 'use client'
 
-import { Download } from 'lucide-react'
 import { useMemo } from 'react'
+import { downloadTextFile } from '@/lib/ui/downloadTextFile'
+import { ExportAction } from '@/components/ui/ExportAction'
 
 export type RelatoriosFiltrosLabels = {
   de: string
@@ -26,20 +27,13 @@ function escapeCsv(value: string | number): string {
   return str
 }
 
-function downloadCsv(filename: string, rows: Array<Record<string, string | number>>) {
-  if (rows.length === 0) return
+function buildCsv(rows: Array<Record<string, string | number>>): string {
+  if (rows.length === 0) return ''
   const headers = Object.keys(rows[0] ?? {})
-  const csv = [
+  return [
     headers.join(','),
     ...rows.map((row) => headers.map((h) => escapeCsv(row[h] ?? '')).join(',')),
   ].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
 }
 
 export function RelatoriosPeriodFilters({ de, ate, csvRows, labels }: RelatoriosPeriodFiltersProps) {
@@ -59,15 +53,15 @@ export function RelatoriosPeriodFilters({ de, ate, csvRows, labels }: Relatorios
       <button type="submit" className="admin-v2-btn-primary">
         {labels.aplicar}
       </button>
-      <button
-        type="button"
-        className="admin-v2-btn-secondary"
-        onClick={() => downloadCsv(labels.csvFilename, csvRows)}
+      <ExportAction
+        format="csv"
+        label={labels.exportarCsv}
         disabled={csvRows.length === 0}
-      >
-        <Download size={14} aria-hidden />
-        {labels.exportarCsv}
-      </button>
+        onExport={() => {
+          const csv = buildCsv(csvRows)
+          if (csv) downloadTextFile(labels.csvFilename, csv)
+        }}
+      />
       {/* Botão XLSX removido: era permanentemente `disabled` e prometia uma
           exportação que não existe. Controle que nunca habilita não é estado de
           carregamento — é promessa falsa. Reintroduzir quando a exportação

@@ -10,7 +10,7 @@ import {
   type FaixaAtacado,
 } from '@/app/gerente/produtos/precosAtacadoActions'
 import type { Mensagens } from '@/i18n/getMessages'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { formatBRL } from '@/lib/format/money'
 import { useMoneyInput } from '@/hooks/useMoneyInput'
 
@@ -65,7 +65,7 @@ function FaixaFormRow({
     const preco = precoInput.parse()
     const erro = validarFaixa(quantidade, preco, faixasExistentes, ignorarId, p)
     if (erro) {
-      emitGerenteToast({ kind: 'error', message: erro })
+      emitToast({ kind: 'error', message: erro })
       return
     }
     setSalvando(true)
@@ -138,7 +138,7 @@ export function FaixasAtacadoEditor({ produtoId, p }: Props) {
     try {
       const r = await listarFaixasAtacado(produtoId)
       if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       setFaixas(r.data)
@@ -154,7 +154,7 @@ export function FaixasAtacadoEditor({ produtoId, p }: Props) {
   const salvarNova = useCallback(async (quantidade: number, preco: number) => {
     const r = await criarFaixaAtacado({ produto_id: produtoId, quantidade_minima: quantidade, preco_unitario: preco })
     if (!r.success) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       return
     }
     setMostrandoNova(false)
@@ -164,7 +164,7 @@ export function FaixasAtacadoEditor({ produtoId, p }: Props) {
   const salvarEdicao = useCallback(async (id: string, quantidade: number, preco: number) => {
     const r = await atualizarFaixaAtacado({ id, produto_id: produtoId, quantidade_minima: quantidade, preco_unitario: preco })
     if (!r.success) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       return
     }
     setEditandoId(null)
@@ -176,7 +176,7 @@ export function FaixasAtacadoEditor({ produtoId, p }: Props) {
     try {
       const r = await inativarFaixaAtacado({ id, produto_id: produtoId })
       if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       await carregar()

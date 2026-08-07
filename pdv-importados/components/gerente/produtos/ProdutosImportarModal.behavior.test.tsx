@@ -14,7 +14,7 @@ vi.mock('@/app/gerente/produtos/actions', () => ({
 }))
 
 vi.mock('@/lib/gerente/toast', () => ({
-  emitGerenteToast: vi.fn(),
+  emitToast: vi.fn(),
 }))
 
 import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImportarModal'

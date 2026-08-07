@@ -10,7 +10,7 @@ import {
 import { isInativo, podePublicarProduto } from '@/core/catalog/statusPublicacao'
 import type { StatusPublicacao } from '@/core/ports/produto'
 import { Button } from '@/components/ui/button'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 
 type Props = Readonly<{
   produtoId: string
@@ -45,7 +45,7 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels, erroGener
         router.refresh()
         return
       }
-      emitGerenteToast({ kind: 'error', message: result.error || erroGenerico })
+      emitToast({ kind: 'error', message: result.error || erroGenerico })
     })
   }
 

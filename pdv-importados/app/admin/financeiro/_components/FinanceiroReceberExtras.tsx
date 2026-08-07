@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { criarTituloReceber, liquidarTitulo } from '@/app/gerente/financeiro/actions'
 import type { ContaLinha } from './ContasReceberTable'
 
@@ -31,16 +31,16 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
     const valor = Number(fd.get('valor'))
     const forma = String(fd.get('forma') ?? 'DINHEIRO') as (typeof FORMAS)[number]
     if (!Number.isFinite(valor) || valor <= 0) {
-      emitGerenteToast({ kind: 'error', message: 'Informe um valor válido.' })
+      emitToast({ kind: 'error', message: 'Informe um valor válido.' })
       return
     }
     startTransition(async () => {
       const r = await liquidarTitulo({ titulo_id: tituloId, valor, forma_pagamento: forma })
       if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: 'Liquidação registrada.' })
+      emitToast({ kind: 'success', message: 'Liquidação registrada.' })
       refresh()
     })
   }
@@ -57,10 +57,10 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
         vencimento: String(fd.get('vencimento') ?? '') || undefined,
       })
       if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: 'Título criado.' })
+      emitToast({ kind: 'success', message: 'Título criado.' })
       e.currentTarget.reset()
       refresh()
     })

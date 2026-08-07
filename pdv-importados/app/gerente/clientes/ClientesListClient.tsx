@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { EmptyState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
@@ -85,7 +85,7 @@ export function ClientesListClient({
     try {
       const r = await buscarClientesPaginadosAction(prox, termoDebounced || undefined)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       pageRef.current = prox
@@ -122,7 +122,7 @@ export function ClientesListClient({
     buscarClientesPaginadosAction(1, termoDebounced || undefined).then((r) => {
       if (cancelled) return
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         setLoading(false)
         return
       }
@@ -149,17 +149,17 @@ export function ClientesListClient({
       if (i >= 0) return cur.map((x) => (x.id === c.id ? c : x))
       return [c, ...cur]
     })
-    emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+    emitToast({ kind: 'success', message: m.comum.sucesso })
     setModalAberto(false)
   }
   async function onExcluir(c: ClienteListRow) {
     const r = await excluirClienteAction(c.id)
     if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       return
     }
     setClientes((cur) => cur.filter((x) => x.id !== c.id))
-    emitGerenteToast({ kind: 'success', message: m.clientes.toast_excluido })
+    emitToast({ kind: 'success', message: m.clientes.toast_excluido })
   }
 
   const totalCrediario = clientes.reduce((s, c) => s + Number(c.saldo_crediario), 0)

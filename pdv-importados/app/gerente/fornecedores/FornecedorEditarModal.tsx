@@ -7,7 +7,7 @@ import { Field, Input, Select } from '@/components/ui/forms'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { askConfirm } from '@/lib/ui/askConfirm'
 import { cn } from '@/lib/utils'
 import { salvarFornecedorAction, type FornecedorInput, type FornecedorListRow } from './actions'
@@ -170,7 +170,7 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
     try {
       const r = await salvarFornecedorAction(input)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       onSalvo(r.fornecedor)

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, FolderInput, ToggleLeft, Trash2, X } from 'lucide-react'
+import { BadgeCheck, FolderInput, ToggleLeft, Trash2 } from 'lucide-react'
 import {
   alterarAtivoLoteProdutos,
   alterarCategoriaLoteProdutos,
@@ -11,9 +11,10 @@ import {
 } from '@/app/gerente/produtos/actions'
 import { opcoesSelecionaveis } from '@/core/catalog/opcoesCadastro'
 import { Button } from '@/components/ui/button'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { interpolateTemplate } from '@/lib/gerente/gerenteCadastroUi'
 
 type Props = Readonly<{
@@ -54,11 +55,11 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
     startTransition(async () => {
       const r = await fn()
       if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error || m.comum.erro })
+        emitToast({ kind: 'error', message: r.error || m.comum.erro })
         return
       }
       const msg = r.sucesso ?? sucesso
-      if (msg) emitGerenteToast({ kind: 'success', message: msg })
+      if (msg) emitToast({ kind: 'success', message: msg })
       onLimpar()
       router.refresh()
     })
@@ -71,11 +72,13 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
 
   return (
     <>
-      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-brand/35 bg-[var(--color-info-bg)] px-3 py-2">
-        <span className="text-caption font-semibold text-fg">
-          {interpolateTemplate(ui.catalogo_lote_selecionados, { n: String(ids.length) })}
-        </span>
-
+      <BulkActionBar
+        className="mb-3 border-brand/35 bg-[var(--color-info-bg)]"
+        selectedCount={ids.length}
+        selectedLabel={interpolateTemplate(ui.catalogo_lote_selecionados, { n: String(ids.length) })}
+        clearLabel={ui.catalogo_lote_limpar}
+        onClear={onLimpar}
+      >
         <Button
           type="button"
           size="sm"
@@ -87,8 +90,6 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
             run(async () => {
               const r = await publicarProdutosLote(alvo)
               if (!r.success) return { success: false, error: r.error }
-              // Conta o que o servidor publicou, não o que foi selecionado: o
-              // gate descarta rascunhos-não-rascunho, então os números divergem.
               return {
                 success: true,
                 sucesso: interpolateTemplate(p.publicados_sucesso, {
@@ -101,10 +102,6 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
           <BadgeCheck size={14} aria-hidden />
           {p.publicar_lote}
         </Button>
-
-        {/* Não há botão "Ativar": ativar é publicar (`statusFromAtivoLegacy(true)`
-            → PUBLICADO) e passaria pelo mesmo gate do botão "Publicar" ao lado.
-            Dois botões para a mesma transição só criam a dúvida de qual usar. */}
 
         <Button
           type="button"
@@ -152,19 +149,7 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
           <Trash2 size={14} aria-hidden />
           {p.toolbar_excluir}
         </Button>
-
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="ml-auto gap-1.5"
-          disabled={pending}
-          onClick={onLimpar}
-        >
-          <X size={14} aria-hidden />
-          {ui.catalogo_lote_limpar}
-        </Button>
-      </div>
+      </BulkActionBar>
 
       <DragonModal
         open={categoriaModal}

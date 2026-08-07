@@ -6,7 +6,7 @@ import { aplicarExclusaoOuInativacaoEmLote } from '@/app/gerente/produtos/action
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 
 function interpolate(template: string, vars: Record<string, string | number>) {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => String(vars[key] ?? ''))
@@ -48,17 +48,17 @@ export function ProdutosExcluirLoteModal({
 
   const confirmar = useCallback(async () => {
     if (produtoIds.length === 0) {
-      emitGerenteToast({ kind: 'error', message: p.exclusao_sem_selecao })
+      emitToast({ kind: 'error', message: p.exclusao_sem_selecao })
       return
     }
     if (produtoIds.length > 100) {
-      emitGerenteToast({ kind: 'error', message: p.exclusao_max_selecao })
+      emitToast({ kind: 'error', message: p.exclusao_max_selecao })
       return
     }
     setPhase('loading')
     const r = await aplicarExclusaoOuInativacaoEmLote({ produto_ids: [...produtoIds] })
     if (!r.success) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       setPhase('confirm')
       return
     }
@@ -77,9 +77,9 @@ export function ProdutosExcluirLoteModal({
       partes.push(interpolate(p.exclusao_resumo_ja_inativos, { n: r.data.ja_inativos }))
     }
     if (partes.length > 0) {
-      emitGerenteToast({ kind: 'success', message: partes.join(' ') })
+      emitToast({ kind: 'success', message: partes.join(' ') })
     } else if (r.data.falhas.length > 0) {
-      emitGerenteToast({ kind: 'info', message: p.exclusao_resumo_somente_falhas })
+      emitToast({ kind: 'info', message: p.exclusao_resumo_somente_falhas })
     }
   }, [produtoIds, p, onLoteAplicadoComSucesso])
 

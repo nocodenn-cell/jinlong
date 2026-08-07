@@ -6,7 +6,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { CadastroRapidoBlock } from '@/components/gerente/cadastro'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { readFormDataString } from '@/lib/forms/readFormDataString'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { formatDecimalPlaces } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -93,7 +93,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
     {
       onSuccess: (id) => {
         if (id) {
-          emitGerenteToast({ kind: 'success', message: interRecebimento(r.toast_ok, { id }) })
+          emitToast({ kind: 'success', message: interRecebimento(r.toast_ok, { id }) })
         }
       },
     },
@@ -181,7 +181,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
             const qEsp = Number(fd.get('qtd_esperada'))
             const qConf = Number(fd.get('qtd_conferida'))
             if (!pid || Number.isNaN(qEsp) || Number.isNaN(qConf) || qEsp < 0 || qConf < 0) {
-              emitGerenteToast({ kind: 'error', message: r.toast_dados_invalidos })
+              emitToast({ kind: 'error', message: r.toast_dados_invalidos })
               return
             }
             void mutate({

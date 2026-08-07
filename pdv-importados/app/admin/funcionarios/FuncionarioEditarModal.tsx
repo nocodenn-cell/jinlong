@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
 import { capacidadesDoPerfil } from '@/lib/auth/capacidadesPerfil'
 import { cn } from '@/lib/utils'
@@ -127,7 +127,7 @@ export function FuncionarioEditarModal({
           senhaNova: senha.trim() || undefined,
         })
         if (!r.ok) {
-          emitGerenteToast({ kind: 'error', message: r.error })
+          emitToast({ kind: 'error', message: r.error })
           return
         }
         onSalvo(r.data)
@@ -143,7 +143,7 @@ export function FuncionarioEditarModal({
         senha,
       })
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       onSalvo(r.data)

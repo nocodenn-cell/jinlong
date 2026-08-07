@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Plus, FilterX } from 'lucide-react'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { cn } from '@/lib/utils'
@@ -79,7 +79,7 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
         })
         setDados(r)
       } catch {
-        emitGerenteToast({ kind: 'error', message: m.comum.erro })
+        emitToast({ kind: 'error', message: m.comum.erro })
       } finally {
         setLoading(false)
       }

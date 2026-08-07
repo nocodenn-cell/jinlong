@@ -6,7 +6,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import type { Mensagens } from '@/i18n/getMessages'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { cancelarVendaGerenteAction, type VendaListRow } from './actions'
 
 type Props = Readonly<{
@@ -45,11 +45,11 @@ export function VendaCancelarModal({ venda, locale, m, onClose, onCancelado }: P
     startTransition(async () => {
       try {
         await cancelarVendaGerenteAction(fd)
-        emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+        emitToast({ kind: 'success', message: m.comum.sucesso })
         onCancelado()
         onClose()
       } catch (err) {
-        emitGerenteToast({
+        emitToast({
           kind: 'error',
           message: err instanceof Error ? err.message : m.comum.erro,
         })

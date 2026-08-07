@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { X, Edit2, AlertTriangle } from 'lucide-react'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
 import {
@@ -88,14 +88,14 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
       try {
         const r = await atualizarStatusOC(oc.id, novoStatus)
         if (!r.success) {
-          emitGerenteToast({ kind: 'error', message: r.error })
+          emitToast({ kind: 'error', message: r.error })
           return
         }
-        emitGerenteToast({ kind: 'success', message: c.toast_status })
+        emitToast({ kind: 'success', message: c.toast_status })
         onStatusChanged()
         onClose()
       } catch {
-        emitGerenteToast({ kind: 'error', message: m.comum.erro })
+        emitToast({ kind: 'error', message: m.comum.erro })
       }
     })
   }
@@ -115,14 +115,14 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
       try {
         const r = await registrarRecebimentoOC(oc.id, itensRecebidos)
         if (!r.success) {
-          emitGerenteToast({ kind: 'error', message: r.error })
+          emitToast({ kind: 'error', message: r.error })
           return
         }
-        emitGerenteToast({ kind: 'success', message: c.toast_recebimento })
+        emitToast({ kind: 'success', message: c.toast_recebimento })
         onStatusChanged()
         onClose()
       } catch {
-        emitGerenteToast({ kind: 'error', message: m.comum.erro })
+        emitToast({ kind: 'error', message: m.comum.erro })
       }
     })
   }

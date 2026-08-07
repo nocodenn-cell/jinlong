@@ -13,7 +13,7 @@ import { ProdutosImportarModal } from '@/components/gerente/produtos/ProdutosImp
 import { CatalogoNovoButton } from './CatalogoNovoButton'
 import { toCatalogoExportInput, type CatalogoExportFiltros } from './catalogoFiltrosExport'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 
@@ -35,7 +35,7 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
     try {
       const r = await buscarProdutosParaExportacao(toCatalogoExportInput(filtrosExport), 500)
       if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       downloadCsvBrowser(
@@ -57,7 +57,7 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
           ativo: p.ativo ? '1' : '0',
         })),
       )
-      emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      emitToast({ kind: 'success', message: m.comum.sucesso })
     } finally {
       setExporting(false)
     }

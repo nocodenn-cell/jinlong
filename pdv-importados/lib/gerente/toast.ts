@@ -1,37 +1,38 @@
 'use client'
 
-export type GerenteToastKind = 'info' | 'success' | 'error'
-
-export type GerenteToastPayload = {
-  kind: GerenteToastKind
+export type ToastKind = 'info' | 'success' | 'error'
+export type ToastPayload = {
+  kind: ToastKind
   message: string
 }
 
+/** @deprecated Preferir `ToastKind`. */
+export type GerenteToastKind = ToastKind
+/** @deprecated Preferir `ToastPayload`. */
+export type GerenteToastPayload = ToastPayload
+
 const EVENT_NAME = 'gerente:toast'
 
-/** Evento global para o viewport de toasts montado no layout do gerente/admin. */
-export function emitGerenteToast(payload: GerenteToastPayload) {
+/**
+ * emitToast — único ponto de entrada do toast do painel (Sprint 0 / IX-SUCCESS).
+ * PDV permanece EXC-02 (`CaixaToastViewport`).
+ */
+export function emitToast(payload: ToastPayload) {
   if (typeof globalThis === 'undefined') return
-  globalThis.dispatchEvent(new CustomEvent<GerenteToastPayload>(EVENT_NAME, { detail: payload }))
+  globalThis.dispatchEvent(new CustomEvent<ToastPayload>(EVENT_NAME, { detail: payload }))
 }
 
-/**
- * Alias canônico do Design System (Sprint 0 / IX-SUCCESS).
- * Painel admin = este canal; PDV permanece EXC-02 (toast próprio).
- */
-export const emitToast = emitGerenteToast
+/** @deprecated Preferir `emitToast`. */
+export const emitGerenteToast = emitToast
 
-/** @deprecated Preferir `emitToast`. Mantido por compatibilidade. */
-export type ToastKind = GerenteToastKind
-export type ToastPayload = GerenteToastPayload
-
-
-export function onGerenteToast(listener: (payload: GerenteToastPayload) => void) {
+export function onGerenteToast(listener: (payload: ToastPayload) => void) {
   if (typeof globalThis === 'undefined') return () => {}
   const handler = (event: Event) => {
-    const customEvent = event as CustomEvent<GerenteToastPayload>
-    listener(customEvent.detail)
+    listener((event as CustomEvent<ToastPayload>).detail)
   }
   globalThis.addEventListener(EVENT_NAME, handler)
   return () => globalThis.removeEventListener(EVENT_NAME, handler)
 }
+
+/** Alias canônico do listener (nome DS). */
+export const onToast = onGerenteToast

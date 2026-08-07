@@ -9,7 +9,7 @@ import type { Idioma } from '@/idioma/normalizeIdioma'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { roundMoney2 } from '@/shared/cart/totals'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { askConfirm } from '@/lib/ui/askConfirm'
 import { cn } from '@/lib/utils'
 import {
@@ -109,10 +109,10 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
         observacao: observacao.trim() || null,
       })
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
-      emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+      emitToast({ kind: 'success', message: m.comum.sucesso })
       onPagamentoRegistrado(r.conta)
     } finally {
       setSalvando(false)

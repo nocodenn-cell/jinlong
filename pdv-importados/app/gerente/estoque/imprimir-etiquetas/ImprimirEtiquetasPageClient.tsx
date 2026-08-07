@@ -10,7 +10,7 @@ import { EtiquetaCarrinho } from './EtiquetaCarrinho'
 import { buscarProdutoPorCodigo, buscarEstoqueAtual, buscarProdutosPorCategoria } from './actions'
 import { listarCategoriasProdutos } from '@/app/gerente/categorias-produtos/actions'
 import type { CategoriaProdutoRow } from '@/app/gerente/categorias-produtos/categoriasProdutosTypes'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { baixarPdfEtiquetas } from '@/lib/etiqueta/gerarPdf'
 import { getEtiquetaConfig } from '@/lib/etiqueta/EtiquetaConfig'
 import type { ItemCarrinho } from '@/lib/etiqueta/types'
@@ -143,7 +143,7 @@ export function ImprimirEtiquetasPageClient({
         setCategorias(r.data.rows)
         setCategoriasCarregadas(true)
       } else {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
       }
     } finally {
       setCarregandoCategorias(false)
@@ -156,13 +156,13 @@ export function ImprimirEtiquetasPageClient({
     if (!resultado || !resultado.success) return
 
     if (resultado.data.length === 0) {
-      emitGerenteToast({ kind: 'info', message: t.toastSemProduto })
+      emitToast({ kind: 'info', message: t.toastSemProduto })
       return
     }
 
     adicionarVariosAoCarrinho(resultado.data)
     setSeletorCategoriaAberto(false)
-    emitGerenteToast({
+    emitToast({
       kind: 'success',
       message: t.toastAdicionados(resultado.data.length),
     })

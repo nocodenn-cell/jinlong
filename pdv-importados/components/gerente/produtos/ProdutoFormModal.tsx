@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import {
   parseEstoqueInicialIntent,
   resolverFeedbackCadastroEstoque,
@@ -272,7 +272,7 @@ export function ProdutoFormModal({
         // campo estar montado para conseguir rolar até ele.
         if (campoExigeModoCompleto(erro.campo)) setModoCompleto(true)
         setErroCampo(erro)
-        emitGerenteToast({ kind: 'error', message: erro.mensagem })
+        emitToast({ kind: 'error', message: erro.mensagem })
         return
       }
       setErroCampo(null)
@@ -324,7 +324,7 @@ export function ProdutoFormModal({
           ? await atualizarDadosProdutoGerente({ ...payload, produto_id: produto.id })
           : await criarProduto(payload)
         if (!r.success) {
-          emitGerenteToast({ kind: 'error', message: r.error })
+          emitToast({ kind: 'error', message: r.error })
           if (!editando) {
             emitCadastroDuration({
               surface: 'catalogo_form',
@@ -371,7 +371,7 @@ export function ProdutoFormModal({
 
         if (feedbackEstoque.kind === 'produto_ok_estoque_falhou') {
           const detalhe = feedbackEstoque.errorDetail
-          emitGerenteToast({
+          emitToast({
             kind: 'error',
             message: detalhe
               ? `${p.erro_estoque_inicial} (${detalhe})`
@@ -392,10 +392,10 @@ export function ProdutoFormModal({
             if (isRascunho(produto.status_publicacao)) return p.criado_publicado
             return m.comum.sucesso
           })()
-          emitGerenteToast({ kind: 'success', message: msg })
+          emitToast({ kind: 'success', message: msg })
         }
         if (!faixaOk) {
-          emitGerenteToast({
+          emitToast({
             kind: 'error',
             message: faixaErro
               ? `${p.erro_faixa_inicial} (${faixaErro})`

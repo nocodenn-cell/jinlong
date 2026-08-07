@@ -7,7 +7,7 @@ import { Search, Download, Plus, FileText, XCircle, DollarSign, FilterX } from '
 import { GerenteTable } from '@/components/gerente/GerenteTable'
 import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { Button } from '@/components/ui/button'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { fmtGerenteBRL, fmtGerenteDateTime } from '@/lib/format/gerenteValues'
 import { getMessages } from '@/i18n/getMessages'
@@ -115,7 +115,7 @@ export function ContasPagarListClient({
     try {
       const r = await buscarContasPagarAction(prox, filtersDebounced)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       pageRef.current = prox
@@ -153,7 +153,7 @@ export function ContasPagarListClient({
     buscarContasPagarAction(1, filtersDebounced).then((r) => {
       if (cancelled) return
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         setLoading(false)
         return
       }
@@ -172,16 +172,16 @@ export function ContasPagarListClient({
     const motivo = window.prompt(`Motivo do cancelamento de "${c.descricao}":`, '')
     if (motivo == null) return
     if (motivo.trim().length < 2) {
-      emitGerenteToast({ kind: 'error', message: 'Motivo deve ter ao menos 2 caracteres.' })
+      emitToast({ kind: 'error', message: 'Motivo deve ter ao menos 2 caracteres.' })
       return
     }
     const r = await cancelarContaPagarAction(c.id, motivo)
     if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       return
     }
     setContas((cur) => cur.map((x) => (x.id === c.id ? { ...x, status: 'CANCELADO' } : x)))
-    emitGerenteToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
+    emitToast({ kind: 'success', message: m.contas_pagar.toast_cancelada })
   }
 
   async function onExportar() {
@@ -189,7 +189,7 @@ export function ContasPagarListClient({
     try {
       const r = await exportarContasPagarParaCSVAction(filters)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       downloadCsvBrowser(

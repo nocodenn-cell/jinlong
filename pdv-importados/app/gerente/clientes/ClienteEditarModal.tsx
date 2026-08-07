@@ -13,7 +13,7 @@ import { Field, Input, Checkbox } from '@/components/ui/forms'
 import { DragonModal } from '@/components/ui/DragonModal'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { askConfirm } from '@/lib/ui/askConfirm'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
@@ -170,7 +170,7 @@ export function ClienteEditarModal({
     try {
       const r = editando ? await atualizarClienteAction(input) : await criarClienteAction(input)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       onSalvo(r.cliente)

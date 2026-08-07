@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { EmptyState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { askConfirm } from '@/lib/ui/askConfirm'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -91,7 +91,7 @@ export function FornecedoresListClient({
         status: statusFDebounced,
       })
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       pageRef.current = prox
@@ -131,7 +131,7 @@ export function FornecedoresListClient({
     }).then((r) => {
       if (cancelled) return
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         setLoading(false)
         return
       }
@@ -159,17 +159,17 @@ export function FornecedoresListClient({
       if (i >= 0) return cur.map((x) => (x.id === f.id ? f : x))
       return [f, ...cur]
     })
-    emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+    emitToast({ kind: 'success', message: m.comum.sucesso })
     setModalAberto(false)
   }
   async function onExcluir(f: FornecedorListRow) {
     const r = await excluirFornecedorAction(f.id)
     if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       return
     }
     setFornecedores((cur) => cur.filter((x) => x.id !== f.id))
-    emitGerenteToast({ kind: 'success', message: m.fornecedores.toast_excluido })
+    emitToast({ kind: 'success', message: m.fornecedores.toast_excluido })
   }
 
   function toggleOne(id: string) {
@@ -194,11 +194,11 @@ export function FornecedoresListClient({
     const ids = [...selecionados]
     const r = await bulkAtivarFornecedoresAction(ids, ativo)
     if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       return
     }
     setFornecedores((cur) => cur.map((f) => (ids.includes(f.id) ? { ...f, ativo } : f)))
-    emitGerenteToast({
+    emitToast({
       kind: 'success',
       message: ativo ? m.fornecedores.toast_bulk_ativados : m.fornecedores.toast_bulk_inativados,
     })
@@ -214,18 +214,18 @@ export function FornecedoresListClient({
     if (!ok) return
     const r = await bulkExcluirFornecedoresAction(ids)
     if (!r.ok) {
-      emitGerenteToast({ kind: 'error', message: r.error })
+      emitToast({ kind: 'error', message: r.error })
       return
     }
     if (r.bloqueados > 0) {
-      emitGerenteToast({
+      emitToast({
         kind: 'info',
         message: m.fornecedores.toast_bulk_excluidos_parcial
           .replace('{excluidos}', String(r.excluidos))
           .replace('{bloqueados}', String(r.bloqueados)),
       })
     } else {
-      emitGerenteToast({ kind: 'success', message: m.fornecedores.toast_bulk_excluidos })
+      emitToast({ kind: 'success', message: m.fornecedores.toast_bulk_excluidos })
     }
     setFornecedores((cur) => cur.filter((f) => !ids.includes(f.id)))
     setSelecionados(new Set())

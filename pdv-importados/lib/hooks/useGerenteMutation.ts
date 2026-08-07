@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 
 type UseGerenteMutationOptions<TResult> = {
   loadingMessage?: string
@@ -30,19 +30,19 @@ export function useGerenteMutation<TPayload, TResult>(
       setLoading(true)
       setError(null)
       if (options?.loadingMessage) {
-        emitGerenteToast({ kind: 'info', message: options.loadingMessage })
+        emitToast({ kind: 'info', message: options.loadingMessage })
       }
       try {
         const result = await mutationFn(payload)
         options?.onSuccess?.(result)
         if (options?.successMessage) {
-          emitGerenteToast({ kind: 'success', message: options.successMessage })
+          emitToast({ kind: 'success', message: options.successMessage })
         }
         return result
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Falha ao salvar alterações.'
         setError(message)
-        emitGerenteToast({ kind: 'error', message })
+        emitToast({ kind: 'error', message })
         return null
       } finally {
         setLoading(false)

@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import { formatBRL, formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import {
@@ -125,7 +125,7 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
     })
 
     if (!itensValidos.length) {
-      emitGerenteToast({ kind: 'error', message: c.erro_sem_itens })
+      emitToast({ kind: 'error', message: c.erro_sem_itens })
       return
     }
 
@@ -151,13 +151,13 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
           : await criarOrdemCompra(payload)
 
         if (!result.success) {
-          emitGerenteToast({ kind: 'error', message: result.error })
+          emitToast({ kind: 'error', message: result.error })
           return
         }
-        emitGerenteToast({ kind: 'success', message: editando ? c.toast_atualizada : c.toast_criada })
+        emitToast({ kind: 'success', message: editando ? c.toast_atualizada : c.toast_criada })
         onSaved()
       } catch {
-        emitGerenteToast({ kind: 'error', message: m.comum.erro })
+        emitToast({ kind: 'error', message: m.comum.erro })
       }
     })
   }

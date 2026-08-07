@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 
 type ListResult<R> = { success: true; data: { rows: R[]; total: number } } | { success: false; error: string }
@@ -39,7 +39,7 @@ export function useCadastroListState<R extends { id: string; ativo: boolean }, F
     try {
       const r = await config.listarAction(config.toInput(f))
       if (!r.success) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       setRows(r.data.rows)

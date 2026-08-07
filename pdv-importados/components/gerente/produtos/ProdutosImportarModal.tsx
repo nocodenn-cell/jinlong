@@ -16,7 +16,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import type { Mensagens } from '@/i18n/getMessages'
 import { downloadProdutoImportTemplateCsv } from '@/lib/gerente/produtosCsvContract'
 import { interpolateTemplate } from '@/lib/gerente/formatDashboardAtividade'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { askConfirm } from '@/lib/ui/askConfirm'
 import { importCsvRowFailToString } from '@/lib/gerente/produtosImportRowMessages'
 import {
@@ -177,7 +177,7 @@ export function ProdutosImportarModal({
     const parsed = parsePastedTable(text)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (parsed.length === 0) {
-      emitGerenteToast({ kind: 'error', message: p.import_fatal_no_data_rows })
+      emitToast({ kind: 'error', message: p.import_fatal_no_data_rows })
       return
     }
     setServerFalhas({})
@@ -194,7 +194,7 @@ export function ProdutosImportarModal({
     const naoVazias = rows.filter((r) => !isRowBlank(r.cells))
     const raw = bulkRowsToRawObjects(naoVazias.map((r) => r.cells))
     if (raw.length === 0) {
-      emitGerenteToast({ kind: 'error', message: p.import_lote_vazio })
+      emitToast({ kind: 'error', message: p.import_lote_vazio })
       return
     }
     setProgresso({ done: 0, total: raw.length })
@@ -202,7 +202,7 @@ export function ProdutosImportarModal({
       const r = await importarProdutosLote(raw, atualizarPorId)
       if (!r.success) {
         setProgresso(null)
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       // Mapeia falhas do servidor (1-based, na ordem das linhas não-vazias) → rowId.
@@ -215,7 +215,7 @@ export function ProdutosImportarModal({
         }
         setServerFalhas(mapa)
         setSomenteErros(true)
-        emitGerenteToast({
+        emitToast({
           kind: 'error',
           message: interpolateTemplate(p.import_resumo_falhas, { count: String(r.falhas.length) }),
         })
@@ -229,7 +229,7 @@ export function ProdutosImportarModal({
       if (r.atualizados > 0) {
         partes.push(interpolateTemplate(p.import_resumo_atualizados, { count: String(r.atualizados) }))
       }
-      emitGerenteToast({
+      emitToast({
         kind: 'success',
         message: partes.length > 0 ? partes.join(p.import_resumo_separador_ok) : m.comum.sucesso,
       })

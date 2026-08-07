@@ -2,6 +2,9 @@
 
 import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { downloadTextFile } from '@/lib/ui/downloadTextFile'
+
+export { downloadTextFile }
 
 export type ExportFormat = 'csv' | 'pdf'
 
@@ -43,13 +46,3 @@ export function ExportAction({
   )
 }
 
-/** Helper de download de texto (CSV). */
-export function downloadTextFile(filename: string, content: string, mime = 'text/csv;charset=utf-8') {
-  const blob = new Blob([content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}

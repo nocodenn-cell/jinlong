@@ -34,7 +34,9 @@ const REQUIRED_EXPORTS = [
   ['components/ui/InlineAlert.tsx', 'export function InlineAlert'],
   ['components/ui/PaginationBar.tsx', "mode: 'infinite'"],
   ['components/ui/FilterBar.tsx', "type: 'daterange'"],
-  ['lib/gerente/toast.ts', 'export const emitToast'],
+  ['lib/gerente/toast.ts', 'export function emitToast'],
+  ['lib/ui/askConfirm.ts', 'export function askConfirm'],
+  ['lib/ui/downloadTextFile.ts', 'export function downloadTextFile'],
 ]
 
 /** Confirm nativo deve ser zero. Allowlist vazia = IX-CONFIRM 100%. */
@@ -101,6 +103,22 @@ if (existsSync(join(ROOT, 'components/forms/PendingSubmitButton.tsx'))) {
 if (existsSync(join(ROOT, 'components/ui/card.tsx'))) {
   violations.push('órfão card.tsx ainda presente (UX-S0-02)')
 }
+if (existsSync(join(ROOT, 'components/gerente/GerenteFilterBar.tsx'))) {
+  violations.push('órfão GerenteFilterBar.tsx ainda presente')
+}
+
+const recebimentoLookup = readFileSync(
+  join(ROOT, 'app/gerente/recebimento/ProdutoRecebimentoAutocomplete.tsx'),
+  'utf8',
+)
+if (!recebimentoLookup.includes('EntityLookup')) {
+  violations.push('ProdutoRecebimentoAutocomplete deve usar EntityLookup (IX-LOOKUP)')
+}
+
+const toastSrc = readFileSync(join(ROOT, 'lib/gerente/toast.ts'), 'utf8')
+if (!/export function emitToast/.test(toastSrc)) {
+  violations.push('emitToast deve ser a função canônica em toast.ts')
+}
 
 const files = [...walk(join(ROOT, 'app')), ...walk(join(ROOT, 'components')), ...walk(join(ROOT, 'lib'))]
 
@@ -116,6 +134,10 @@ for (const file of files) {
     /fixed inset-0/.test(text) && /role=["']dialog["']|aria-modal/.test(text)
   if (isFixedDialog && !FIXED_DIALOG_ALLOWLIST.has(rel) && !rel.startsWith('components/ui/')) {
     violations.push(`${rel}: fixed inset-0 dialog fora SSOT/allowlist (use DetailSheet/DragonModal)`)
+  }
+
+  if (rel !== 'lib/gerente/toast.ts' && /import\s*\{[^}]*emitGerenteToast/.test(text)) {
+    violations.push(`${rel}: importar emitToast, não emitGerenteToast`)
   }
 
   // Empty emoji em código de lista/admin novo — bloqueia padrões tipo "📭 Nenhum"

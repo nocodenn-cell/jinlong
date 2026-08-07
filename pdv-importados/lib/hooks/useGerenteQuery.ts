@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 
 type UseGerenteQueryOptions<TData> = {
   enabled?: boolean
@@ -34,7 +34,7 @@ export function useGerenteQuery<TData>(
     if (dataRef.current === null) setLoading(true)
     setError(null)
     if (options?.loadingMessage) {
-      emitGerenteToast({ kind: 'info', message: options.loadingMessage })
+      emitToast({ kind: 'info', message: options.loadingMessage })
     }
     try {
       const result = await queryFn()
@@ -43,7 +43,7 @@ export function useGerenteQuery<TData>(
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao carregar dados.'
       setError(message)
-      emitGerenteToast({ kind: 'error', message })
+      emitToast({ kind: 'error', message })
     } finally {
       setLoading(false)
     }

@@ -5,7 +5,7 @@ import { Plus, Pencil, UserX, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DataTablePage } from '@/components/gerente/DataTablePage'
 import { GerenteTable } from '@/components/gerente/GerenteTable'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
   definirAtivoFuncionarioAction,
@@ -81,7 +81,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
 
   async function toggleAtivo(row: FuncionarioListRow) {
     if (!podeDesativarAlvo(ator, row)) {
-      emitGerenteToast({
+      emitToast({
         kind: 'error',
         message: row.ativo ? 'Não é possível desativar esta conta.' : 'Não é possível reativar esta conta.',
       })
@@ -91,7 +91,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     try {
       const r = await definirAtivoFuncionarioAction(row.id, !row.ativo)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       setRows((cur) => cur.map((x) => (x.id === row.id ? { ...x, ativo: r.data.ativo } : x)))

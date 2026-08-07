@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
   autorizarGoLiveAction,
@@ -138,11 +138,11 @@ export function ImplantacaoChecklistClient({
         lojaId: snap.lojaId,
       })
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       syncFromSnapshot(r.data)
-      emitGerenteToast({ kind: 'success', message: L.itemSalvo })
+      emitToast({ kind: 'success', message: L.itemSalvo })
     } finally {
       setBusyKey(null)
     }
@@ -153,7 +153,7 @@ export function ImplantacaoChecklistClient({
     try {
       const r = await autorizarGoLiveAction(goObs, snap.lojaId)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       syncFromSnapshot(r.data)
@@ -167,7 +167,7 @@ export function ImplantacaoChecklistClient({
     try {
       const r = await revogarGoLiveAction(revogarMotivo, snap.lojaId)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       syncFromSnapshot(r.data)
@@ -182,11 +182,11 @@ export function ImplantacaoChecklistClient({
     try {
       const r = await validarDadosHomologacaoAction(snap.lojaId)
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       syncFromSnapshot(r.data.snapshot)
-      emitGerenteToast({
+      emitToast({
         kind: r.data.ok ? 'success' : 'error',
         message: r.data.ok ? L.dadosOk : `${L.dadosFalha}: ${r.data.resumo}`,
       })

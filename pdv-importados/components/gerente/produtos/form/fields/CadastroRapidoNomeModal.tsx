@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/forms'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 
 type Props = Readonly<{
   open: boolean
@@ -48,7 +48,7 @@ export function CadastroRapidoNomeModal({
     try {
       const r = await onSubmit(trimmed)
       if (!r.success || !r.id) {
-        emitGerenteToast({ kind: 'error', message: r.error ?? 'Erro ao salvar.' })
+        emitToast({ kind: 'error', message: r.error ?? 'Erro ao salvar.' })
         return
       }
       onCriado(r.id, trimmed)

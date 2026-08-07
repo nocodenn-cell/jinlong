@@ -30,7 +30,7 @@ vi.mock('@/app/gerente/produtos/precosAtacadoActions', () => ({
   inativarFaixaAtacado: vi.fn().mockResolvedValue({ success: true, data: null }),
 }))
 
-vi.mock('@/lib/gerente/toast', () => ({ emitGerenteToast: vi.fn() }))
+vi.mock('@/lib/gerente/toast', () => ({ emitToast: vi.fn() }))
 
 vi.mock('@/app/gerente/produtos/sugestaoCadastroActions', () => ({
   sugerirDadosCadastroPorGtin: vi.fn().mockResolvedValue({ ok: false, error: 'skip' }),

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { Button } from '@/components/ui/button'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
@@ -72,7 +72,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
         setEstoqueOrigem(null)
         setUnidadeMedida('UN')
         setLimiteObs(50)
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
       }
     })()
     return () => {
@@ -104,7 +104,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
     },
     {
       onSuccess: (result) => {
-        emitGerenteToast({ kind: 'success', message: `Transferência concluída. ID: ${result.transferenciaId}` })
+        emitToast({ kind: 'success', message: `Transferência concluída. ID: ${result.transferenciaId}` })
         idempotencyRef.current = crypto.randomUUID()
       },
     },
@@ -160,22 +160,22 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
     e.preventDefault()
     if (!podeTransferir) return
     if (origemIgualDestino) {
-      emitGerenteToast({ kind: 'error', message: t.bloqueio_origem_destino })
+      emitToast({ kind: 'error', message: t.bloqueio_origem_destino })
       return
     }
     if (!qtdValida) {
-      emitGerenteToast({ kind: 'error', message: t.qtd_invalida })
+      emitToast({ kind: 'error', message: t.qtd_invalida })
       return
     }
     if (estoqueInsuficiente) {
-      emitGerenteToast({
+      emitToast({
         kind: 'error',
         message: `Saldo insuficiente na origem. Disponível: ${Number(estoqueOrigem ?? 0).toFixed(3)}, solicitado: ${qtd.toFixed(3)}.`,
       })
       return
     }
     if (observacaoObrigatoria) {
-      emitGerenteToast({
+      emitToast({
         kind: 'error',
         message: `Observação obrigatória para transferências acima de ${limiteObs.toFixed(3)} ${unidadeMedida}.`,
       })

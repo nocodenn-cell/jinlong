@@ -23,7 +23,7 @@ vi.mock('@/app/gerente/produtos/actions', () => ({
 }))
 
 vi.mock('@/lib/gerente/toast', () => ({
-  emitGerenteToast: (...args: unknown[]) => toastMock(...args),
+  emitToast: (...args: unknown[]) => toastMock(...args),
 }))
 
 vi.mock('@/app/gerente/produtos/sugestaoCadastroActions', () => ({

@@ -2,22 +2,22 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useState } from 'react'
-import { onGerenteToast, type GerenteToastKind } from '@/lib/gerente/toast'
+import { onToast, type ToastKind } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 
 type ToastItem = {
   id: number
-  kind: GerenteToastKind
+  kind: ToastKind
   message: string
 }
 
-const TOAST_KIND_CLASS: Record<GerenteToastKind, string> = {
+const TOAST_KIND_CLASS: Record<ToastKind, string> = {
   info: 'border-blue-200/90 bg-blue-50 text-blue-950',
   success: 'border-emerald-300/90 bg-emerald-50 text-emerald-950',
   error: 'border-red-200/90 bg-red-50 text-red-950',
 }
 
-function createToastItem(kind: GerenteToastKind, message: string): ToastItem {
+function createToastItem(kind: ToastKind, message: string): ToastItem {
   return {
     id: Date.now() + Math.floor(Math.random() * 1000),
     kind,
@@ -52,7 +52,7 @@ export function GerenteToastViewport() {
   const [items, setItems] = useState<ToastItem[]>([])
 
   useEffect(() => {
-    return onGerenteToast((payload) => {
+    return onToast((payload) => {
       const item = createToastItem(payload.kind, payload.message)
       setItems((prev) => [...prev, item])
       scheduleToastRemoval(setItems, item.id)

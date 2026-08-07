@@ -6,7 +6,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { fmtGerenteBRL, fmtGerenteDateTime, fmtGerenteIdCurto } from '@/lib/format/gerenteValues'
 import { labelFormaPagamentoVenda } from '@/lib/format/vendaLabels'
 import type { Mensagens } from '@/i18n/getMessages'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { devolverOuTrocarVendaAction } from './actions'
 import {
   FORMAS_ESTORNO_DEVOLUCAO,
@@ -115,11 +115,11 @@ export function VendaDevolucaoModal({ venda, locale, m, onClose, onConcluido }: 
     startTransition(async () => {
       try {
         await devolverOuTrocarVendaAction(fd)
-        emitGerenteToast({ kind: 'success', message: m.comum.sucesso })
+        emitToast({ kind: 'success', message: m.comum.sucesso })
         onConcluido()
         onClose()
       } catch (err) {
-        emitGerenteToast({
+        emitToast({
           kind: 'error',
           message: err instanceof Error ? err.message : m.comum.erro,
         })

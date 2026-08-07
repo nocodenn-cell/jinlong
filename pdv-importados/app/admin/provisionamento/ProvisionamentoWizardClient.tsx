@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
 import { provisionarLojaAction, type ProvisionamentoResult } from './actions'
 
@@ -80,12 +80,12 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
         idiomaPreferido: idioma,
       })
       if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
+        emitToast({ kind: 'error', message: r.error })
         return
       }
       setResult(r.data)
       setStep(3)
-      emitGerenteToast({ kind: 'success', message: L.okLoja })
+      emitToast({ kind: 'success', message: L.okLoja })
     } finally {
       setBusy(false)
     }

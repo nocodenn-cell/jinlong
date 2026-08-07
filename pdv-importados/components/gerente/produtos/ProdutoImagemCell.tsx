@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { ImageIcon, Loader2, X } from 'lucide-react'
 import { removerImagemProduto, uploadImagemProduto } from '@/app/gerente/produtos/actions'
 import type { Mensagens } from '@/i18n/getMessages'
-import { emitGerenteToast } from '@/lib/gerente/toast'
+import { emitToast } from '@/lib/gerente/toast'
 
 export type ProdutoImagemCellProps = Readonly<{
   produtoId: string
@@ -54,10 +54,10 @@ export function ProdutoImagemCell({
         fd.append('file', f)
         const r = await uploadImagemProduto(fd)
         if (!r.success) {
-          emitGerenteToast({ kind: 'error', message: r.error })
+          emitToast({ kind: 'error', message: r.error })
           return
         }
-        emitGerenteToast({ kind: 'success', message: p.foto_atualizada })
+        emitToast({ kind: 'success', message: p.foto_atualizada })
         onDone(r.data.imagem_url)
       })
     },
@@ -71,10 +71,10 @@ export function ProdutoImagemCell({
       startTransition(async () => {
         const r = await removerImagemProduto(produtoId)
         if (!r.success) {
-          emitGerenteToast({ kind: 'error', message: r.error })
+          emitToast({ kind: 'error', message: r.error })
           return
         }
-        emitGerenteToast({ kind: 'success', message: p.foto_removida })
+        emitToast({ kind: 'success', message: p.foto_removida })
         onDone(null)
       })
     },

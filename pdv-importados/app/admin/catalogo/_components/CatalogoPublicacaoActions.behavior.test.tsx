@@ -10,7 +10,7 @@ const publicarProdutoMock = vi.fn()
 const inativarProdutoMock = vi.fn()
 const reativarProdutoMock = vi.fn()
 const routerRefreshMock = vi.fn()
-const emitGerenteToastMock = vi.fn()
+const emitToastMock = vi.fn()
 
 vi.mock('@/app/gerente/produtos/actions', () => ({
   publicarProduto: (...args: unknown[]) => publicarProdutoMock(...args),
@@ -19,7 +19,7 @@ vi.mock('@/app/gerente/produtos/actions', () => ({
 }))
 
 vi.mock('@/lib/gerente/toast', () => ({
-  emitGerenteToast: (...args: unknown[]) => emitGerenteToastMock(...args),
+  emitToast: (...args: unknown[]) => emitToastMock(...args),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -45,7 +45,7 @@ beforeEach(() => {
   inativarProdutoMock.mockReset()
   reativarProdutoMock.mockReset()
   routerRefreshMock.mockReset()
-  emitGerenteToastMock.mockReset()
+  emitToastMock.mockReset()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -119,7 +119,7 @@ describe('CatalogoPublicacaoActions', () => {
       btn.click()
     })
     expect(routerRefreshMock).toHaveBeenCalledTimes(1)
-    expect(emitGerenteToastMock).not.toHaveBeenCalled()
+    expect(emitToastMock).not.toHaveBeenCalled()
   })
 
   it('falha do servidor: mostra toast de erro em vez de falhar silenciosamente (regressão)', async () => {
@@ -137,7 +137,7 @@ describe('CatalogoPublicacaoActions', () => {
       btn.click()
     })
     expect(routerRefreshMock).not.toHaveBeenCalled()
-    expect(emitGerenteToastMock).toHaveBeenCalledWith({
+    expect(emitToastMock).toHaveBeenCalledWith({
       kind: 'error',
       message: 'RLS negou a operação.',
     })
@@ -157,7 +157,7 @@ describe('CatalogoPublicacaoActions', () => {
     await act(async () => {
       btn.click()
     })
-    expect(emitGerenteToastMock).toHaveBeenCalledWith({
+    expect(emitToastMock).toHaveBeenCalledWith({
       kind: 'error',
       message: ERRO_GENERICO,
     })
