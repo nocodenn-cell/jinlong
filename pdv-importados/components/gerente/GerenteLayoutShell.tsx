@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { GerenteHeaderNav } from '@/components/gerente/GerenteHeaderNav'
 import { GerenteTopProgress } from '@/components/gerente/GerenteTopProgress'
 import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
+import { ConfirmDialogHost } from '@/components/ui/ConfirmDialogHost'
 import { SessionIdleLogout } from '@/components/security/SessionIdleLogout'
 import { performClientLogout } from '@/lib/auth/clientLogout'
 import { resetCarrinhoPersistido } from '@/lib/caixa/resetCarrinhoPersistido'
@@ -59,6 +60,7 @@ function GerenteLayoutInner({ children, idioma, perfil, m, logoSubtitle }: Props
       <SessionIdleLogout />
       <GerenteTopProgress />
       <GerenteToastViewport />
+      <ConfirmDialogHost />
 
       <GerenteHeaderNav
         logoSubtitle={logoSubtitle}

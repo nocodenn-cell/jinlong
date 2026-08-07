@@ -37,11 +37,8 @@ const REQUIRED_EXPORTS = [
   ['lib/gerente/toast.ts', 'export const emitToast'],
 ]
 
-/** Legado conhecido — migrar em S1+; não expandir esta lista sem atualizar IDS. */
-const CONFIRM_ALLOWLIST = new Set([
-  'app/caixa/CaixaPageClient.tsx',
-  'components/gerente/produtos/ProdutosImportarModal.tsx',
-])
+/** Confirm nativo deve ser zero. Allowlist vazia = IX-CONFIRM 100%. */
+const CONFIRM_ALLOWLIST = new Set()
 
 const FIXED_DIALOG_ALLOWLIST = new Set([
   'components/ui/DetailSheet.tsx',
@@ -87,7 +84,8 @@ for (const [rel, needle] of REQUIRED_EXPORTS) {
   }
 }
 
-const confirmCallRe = /(?:window|globalThis)\.confirm\s*\(/
+// Cobre window.confirm, globalThis.confirm e confirm( bare.
+const confirmCallRe = /(?:(?:window|globalThis)\.)?confirm\s*\(/
 const confirmBtn = readFileSync(join(ROOT, 'components/gerente/ConfirmActionButton.tsx'), 'utf8')
 if (confirmCallRe.test(confirmBtn)) {
   violations.push('ConfirmActionButton ainda usa confirm nativo (IX-CONFIRM)')

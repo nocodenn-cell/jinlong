@@ -68,6 +68,8 @@ import { CaixaToastViewport } from "@/components/caixa/CaixaToastViewport"
 import { CaixaValorNumericoModal } from "@/components/caixa/CaixaValorNumericoModal"
 import { CaixaMotivoMinModal } from "@/components/caixa/CaixaMotivoMinModal"
 import { CaixaConfirmModal } from "@/app/caixa/CaixaConfirmModal"
+import { ConfirmDialogHost } from "@/components/ui/ConfirmDialogHost"
+import { askConfirm } from "@/lib/ui/askConfirm"
 import { useScannerDetector } from "@/hooks/useScannerDetector"
 import { useCaixaScanPipeline } from "@/app/caixa/scan-pipeline/useCaixaScanPipeline"
 import { useThermalPrinter } from "@/hooks/useThermalPrinter"
@@ -644,17 +646,25 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
    * itens já foram salvos, não há o que confirmar.
    */
   const handleExcluirVendaConfirmado = useCallback(() => {
-    // Antes do confirm: com venda pendente não há o que descartar — o cupom pode
-    // já ter virado venda. Vai direto para a recuperação.
+    // Com venda pendente não há o que descartar — o cupom pode já ter virado venda.
     if (useCarrinhoStore.getState().vendaFinalizacaoPendente) {
       handleNovoCupom()
       return
     }
-    if (itens.length > 0 && !globalThis.confirm(m.caixa.cart_bar_excluir_confirmar)) {
-      return
-    }
-    handleNovoCupom()
-  }, [itens.length, handleNovoCupom, m.caixa.cart_bar_excluir_confirmar])
+    void (async () => {
+      if (itens.length > 0) {
+        const ok = await askConfirm({
+          title: m.caixa.cart_bar_excluir_confirmar,
+          description: m.caixa.cart_bar_excluir_confirmar,
+          variant: 'danger',
+          confirmLabel: m.comum.confirmar,
+          cancelLabel: m.comum.cancelar,
+        })
+        if (!ok) return
+      }
+      handleNovoCupom()
+    })()
+  }, [itens.length, handleNovoCupom, m.caixa.cart_bar_excluir_confirmar, m.comum.confirmar, m.comum.cancelar])
 
   const {
     vendasEmEspera,
@@ -1528,6 +1538,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         </div>
       </div>
       <CaixaToastViewport items={toasts} onDismiss={dismissCaixaToast} />
+      <ConfirmDialogHost />
       {reimprimirModalAberto && lastReciboRef.current && (
         <CaixaReciboModal
           venda={lastReciboRef.current}

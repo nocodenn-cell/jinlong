@@ -14,6 +14,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages, type Mensagens } from '@/i18n/getMessages'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { askConfirm } from '@/lib/ui/askConfirm'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { cn } from '@/lib/utils'
@@ -95,8 +96,17 @@ export function ClienteEditarModal({
   }
 
   const fechar = useCallback(() => {
-    if (sujo() && !confirm(m.clientes.confirmar_descartar)) return
-    onClose()
+    void (async () => {
+      if (sujo()) {
+        const ok = await askConfirm({
+          title: m.clientes.confirmar_descartar,
+          description: m.clientes.confirmar_descartar,
+          variant: 'neutral',
+        })
+        if (!ok) return
+      }
+      onClose()
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nome, documento, email, telefone, endereco, limite, tipo, cliente, onClose, m])
 

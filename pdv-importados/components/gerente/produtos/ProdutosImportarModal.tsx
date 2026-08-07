@@ -17,6 +17,7 @@ import type { Mensagens } from '@/i18n/getMessages'
 import { downloadProdutoImportTemplateCsv } from '@/lib/gerente/produtosCsvContract'
 import { interpolateTemplate } from '@/lib/gerente/formatDashboardAtividade'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { askConfirm } from '@/lib/ui/askConfirm'
 import { importCsvRowFailToString } from '@/lib/gerente/produtosImportRowMessages'
 import {
   BULK_GRID_COLUMNS,
@@ -140,9 +141,18 @@ export function ProdutosImportarModal({
   }, [])
 
   const limparTudo = useCallback(() => {
-    if (resumo.total > 0 && !window.confirm(p.bulk_limpar_confirmar)) return
-    setRows([makeRow()])
-    setServerFalhas({})
+    void (async () => {
+      if (resumo.total > 0) {
+        const ok = await askConfirm({
+          title: p.bulk_limpar_confirmar,
+          description: p.bulk_limpar_confirmar,
+          variant: 'danger',
+        })
+        if (!ok) return
+      }
+      setRows([makeRow()])
+      setServerFalhas({})
+    })()
   }, [resumo.total, p.bulk_limpar_confirmar])
 
   // Colar do Excel/Sheets (TSV) ou conteúdo CSV → substitui linhas vazias e anexa.

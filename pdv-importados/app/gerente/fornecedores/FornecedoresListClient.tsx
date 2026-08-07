@@ -17,6 +17,7 @@ import { EmptyState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { askConfirm } from '@/lib/ui/askConfirm'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { cn } from '@/lib/utils'
@@ -205,7 +206,12 @@ export function FornecedoresListClient({
   }
   async function onBulkExcluir() {
     const ids = [...selecionados]
-    if (!confirm(m.fornecedores.confirmar_bulk_exclusao.replace('{n}', String(ids.length)))) return
+    const ok = await askConfirm({
+      title: m.fornecedores.confirmar_bulk_exclusao.replace('{n}', String(ids.length)),
+      description: m.fornecedores.confirmar_bulk_exclusao.replace('{n}', String(ids.length)),
+      variant: 'danger',
+    })
+    if (!ok) return
     const r = await bulkExcluirFornecedoresAction(ids)
     if (!r.ok) {
       emitGerenteToast({ kind: 'error', message: r.error })

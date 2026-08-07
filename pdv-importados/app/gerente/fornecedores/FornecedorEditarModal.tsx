@@ -8,6 +8,7 @@ import { DragonModal } from '@/components/ui/DragonModal'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { askConfirm } from '@/lib/ui/askConfirm'
 import { cn } from '@/lib/utils'
 import { salvarFornecedorAction, type FornecedorInput, type FornecedorListRow } from './actions'
 
@@ -97,8 +98,17 @@ export function FornecedorEditarModal({ idioma, fornecedor, onClose, onSalvo }: 
   }
 
   const fechar = useCallback(() => {
-    if (sujo() && !confirm(m.fornecedores.confirmar_descartar)) return
-    onClose()
+    void (async () => {
+      if (sujo()) {
+        const ok = await askConfirm({
+          title: m.fornecedores.confirmar_descartar,
+          description: m.fornecedores.confirmar_descartar,
+          variant: 'neutral',
+        })
+        if (!ok) return
+      }
+      onClose()
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     nome, documento, email, telefone, contato, categoria,

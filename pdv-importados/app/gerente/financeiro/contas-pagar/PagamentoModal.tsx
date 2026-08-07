@@ -10,6 +10,7 @@ import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import { formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import { roundMoney2 } from '@/shared/cart/totals'
 import { emitGerenteToast } from '@/lib/gerente/toast'
+import { askConfirm } from '@/lib/ui/askConfirm'
 import { cn } from '@/lib/utils'
 import {
   registrarPagamentoAction,
@@ -61,8 +62,17 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
   }
 
   const fechar = useCallback(() => {
-    if (sujo() && !confirm(m.contas_pagar.confirmar_descartar)) return
-    onClose()
+    void (async () => {
+      if (sujo()) {
+        const ok = await askConfirm({
+          title: m.contas_pagar.confirmar_descartar,
+          description: m.contas_pagar.confirmar_descartar,
+          variant: 'neutral',
+        })
+        if (!ok) return
+      }
+      onClose()
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valor, onClose, m])
 
