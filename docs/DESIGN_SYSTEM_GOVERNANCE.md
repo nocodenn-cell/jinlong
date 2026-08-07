@@ -32,17 +32,23 @@ Todo PR que toque `app/**/*.tsx`, `components/**/*.tsx` ou `styles/**` deve marc
 - [ ] Verifiquei no código o estado atual (não só a auditoria).
 - [ ] Reutilizei SSOT de [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) § matriz SSOT.
 - [ ] Comportamento segue [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) (IX-CRUD, IX-FILTER, IX-CONFIRM, IX-FORM, IX-SUCCESS, etc.).
-- [ ] Não introduzi segundo Button / DataTable / FilterBar / Toast / Modal genérico.
-- [ ] Não introduzi segundo padrão de interação (ex.: confirm nativo, sheet `fixed inset-0`, filtro só-URL, select 500).
+- [ ] Não introduzi segundo **Button** (só `@/components/ui/button` / `PageActions`).
+- [ ] Não introduzi segunda **tabela** (só `DataTable` / `EntityTable` — proibido `GerenteTable` / raw table genérica nova).
+- [ ] Não introduzi segundo **modal** genérico (só `DragonModal`).
+- [ ] Não introduzi segundo **confirm** (só `ConfirmDialog` — proibido `window.confirm` / `globalThis.confirm` / novo ConfirmActionButton nativo).
+- [ ] Não introduzi segundo **toast** painel (só `emitToast` / viewport admin; PDV = EXC-02).
+- [ ] Não introduzi segundo **lookup** (só `EntityLookup` async — proibido `<select>` massivo / autocomplete paralelo).
+- [ ] Não introduzi segundo **sheet** (só `DetailSheet` — proibido novo `fixed inset-0` role=dialog para detalhe).
+- [ ] Não introduzi segundo **padrão de formulário** (só `FormSection` + `Field` + `forms/*`).
+- [ ] Não introduzi segundo **padrão de interação** sem update do IDS (filtro, bulk, export, wizard, empty, etc.).
 - [ ] Não usei `GerenteTable`, `DataTablePage`, `CadastroPageShell`, `.app-btn-*`, `dragon-glass-*` em código **novo**.
-- [ ] Não usei `window.confirm` / `alert()` em hot-path.
 - [ ] Não adicionei `text-[Npx]` arbitrário nem hex em `className` (exceto brand auth já existente).
 - [ ] Empty/erro usam `EmptyState` / `ErrorState` (sem emoji como empty state).
-- [ ] Listagens admin usam `PageShell` + (`CrudListShell` \| slots equivalentes) quando aplicável.
-- [ ] Overlays usam `DragonModal` / `ConfirmDialog` / `DetailSheet` (contrato S0).
-- [ ] Lookups longos usam `Autocomplete` / EntityLookup (não `<select>` massivo).
+- [ ] Listagens admin usam `PageShell` + (`CrudListShell` \| slots equivalentes) quando PageShell existir (pós-S0).
+- [ ] Filtros de listagem usam `FilterBar` (não pills/date locais novos).
+- [ ] Bulk usa `BulkActionBar`; export usa `ExportAction`.
 - [ ] i18n de superfície: sem hardcode PT em strings de UI novas (exceto demo/interno documentado).
-- [ ] A11y: rótulo em ação por ícone; foco/Esc em modal novo; `aria-*` em combobox/tabela quando aplicável.
+- [ ] A11y: rótulo em ação por ícone; foco/Esc em modal/sheet/confirm; `aria-*` em combobox/tabela.
 
 ### 2.2 Se o PR cria componente em `components/ui/**` **ou** novo padrão de interação
 
@@ -66,6 +72,11 @@ Todo PR que toque `app/**/*.tsx`, `components/**/*.tsx` ou `styles/**` deve marc
 - [ ] `npm run check:ds-burndown` (ou script equivalente) — hits legado **não sobem**.
 - [ ] Lint/typecheck/testes do pacote tocado verdes.
 - [ ] Sem `--no-verify`.
+- [ ] (Pós UX-S0-26) lint bloqueia: `window.confirm`, empty emoji em listas novas, `fixed inset-0` dialog fora de DragonModal/DetailSheet/ConfirmDialog.
+
+### 2.5 Gate Sprint 1
+
+Nenhum PR de aplicação de tela (Sprint 1+) pode mergear enquanto a matriz de prontidão S0 em [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) estiver **REPROVADA**.
 
 ---
 

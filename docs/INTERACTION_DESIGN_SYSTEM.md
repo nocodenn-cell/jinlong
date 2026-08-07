@@ -3,12 +3,60 @@
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-08-07 |
-| **Status** | Contrato vigente com a aceitação da Sprint 0 |
+| **Status** | **Contrato alvo** — validado contra código; Sprint 0 **REPROVADA** até DoD (primitivos inexistentes) |
 | **Escopo** | Comportamento de interação em `pdv-importados` |
 | **Irmãos** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) |
 | **Princípio** | Duas telas diferentes devem ter **o mesmo comportamento** para o mesmo padrão |
+| **Última validação código** | 2026-08-07 — sem assumir docs anteriores |
 
 Este documento é um **ativo arquitetural**. Componentes SSOT implementam estes contratos; PRs não podem inventar um 2º comportamento sem atualizar este arquivo.
+
+**Atenção:** regras §1 descrevem o **comportamento obrigatório pós-S0**. A §0.1 registra o estado **real** do repositório na validação.
+
+---
+
+## 0.1 Validação IX × código (evidência)
+
+Legenda: **Confirmado** · **Parcial** · **Divergente** · **Não encontrado**.
+
+| Contrato | Status | Evidência no repo | Correção S0 | Bloqueia S1? |
+|----------|--------|-------------------|-------------|--------------|
+| **IX-CRUD** | Parcial | `CrudListShell`+`DataTable`+`DragonModal` em catálogo/estoque; compras/funcionários/`ContasPagar` usam `GerenteTable`/`DataTablePage` | PageShell + EntityTable (código ainda inexistente) | Não se S0 entregar shells |
+| **IX-SEARCH** | Parcial | `FilterBar` debounce 350ms+Enter (`components/ui/FilterBar.tsx`); cadastros com busca local | Doc URL vs local (ok); adotar FilterBar nas listas | Não |
+| **IX-FILTER** | Parcial | FilterBar URL existe; **sem** `daterange` em `FilterDef`; `setParam` **não reseta `page`**; vendas/comissões/relatórios fora do FilterBar | UX-S0-06 + **UX-S0-25** (reset page) | **Sim** se S1 inventar date filter |
+| **IX-TABLE** / sort | Parcial | `DataTable` com `aria-sort`; `EntityTable`/`MoneyText` **não existem**; `GerenteTable` vivo | EntityTable + MoneyText | Não |
+| **IX-PAGE** | Parcial | `PaginationBar` só `numbered`\|`cursor` (`PaginationBar.tsx`); infinite local em clientes/fornecedores/AP | UX-S0-21 | **Sim** se S1 copiar sentinel |
+| **IX-SELECT** | Parcial | Selection local catálogo/fornecedores/comissões | Selection na EntityTable | Não |
+| **IX-BULK** | Parcial | `CatalogoLoteToolbar`; sem `BulkActionBar` | UX-S0-19 | **Sim** |
+| **IX-WIZARD** | Parcial | `ProvisionamentoWizardClient` ad hoc; NF-e sem Stepper | UX-S0-14 Stepper | **Sim** |
+| **IX-UPLOAD** | Parcial | Dropzones/inputs em NF-e, CSV, foto — sem `FileDropzone` | UX-S0-18 | **Sim** |
+| **IX-IMPORT-CSV** | Parcial | `ProdutosImportarModal` + parse domínio OK | Compor FileDropzone+preview+Confirm | Não se FileDropzone+Confirm |
+| **IX-EXPORT** | Parcial | CSV locais; PDF etiquetas; sem `ExportAction` | UX-S0-20 | **Sim** |
+| **IX-CONFIRM** | **Divergente** | `ConfirmDialog` **inexistente**; `ConfirmActionButton` → `globalThis.confirm` (`ConfirmActionButton.tsx`); `window.confirm` em import CSV, clientes, fornecedores, pagamento, PDV | UX-S0-05 ConfirmDialog; banir confirm nativo | **Sim** |
+| **IX-DELETE** | Parcial | Soft/hard no catálogo; copy não unificada | ConfirmDialog + copy | Não |
+| **IX-DRILL** | Confirmado | `MetricCard` com `href`; dashboard→vendas | — | Não |
+| **IX-DRAWER** | Confirmado | Drawers = nav/PDV; detalhe = sheets (ainda ad hoc) | DetailSheet para entidade | Não |
+| **IX-SHEET** | **Divergente** | `DetailSheet` **inexistente**; `fixed inset-0` em `VendaDetailSheet.tsx`, `DocumentoFiscalDetailSheet.tsx`, `AuditoriaTimeline.tsx`, OC modals | UX-S0-15 | **Sim** |
+| **IX-LOOKUP** | **Divergente** | `forms/Autocomplete.tsx` = **filtro client-only** sobre `options[]`; recebimento usa `ProdutoRecebimentoAutocomplete` **async** paralelo; transferências = `<select>` 500 (`TransferenciasGerentePageClient.tsx`) | **UX-S0-24** EntityLookup **async** (não thin-wrap) | **Sim** |
+| **IX-FORM** | Parcial | `Field` existe; `FormSection` não; config com labels raw | UX-S0-17 | **Sim** (Config) |
+| **IX-ERROR** | Parcial | `ErrorState` existe; `InlineAlert` não | UX-S0-16 | Parcial |
+| **IX-SUCCESS** | Parcial | Só `emitGerenteToast`; sem alias `emitToast` | UX-S0-09 | Não |
+| **IX-LOAD** | Parcial | `ListPageSkeleton` em vários `loading.tsx` | Manter | Não |
+| **IX-EMPTY** | Parcial | `EmptyState` existe; emoji empty ainda em vendas/comissões/AR | UX-S0-26 lint | Não inventa paradigma |
+| **IX-KEYS** | Parcial | PDV forte; Esc em DragonModal | Focus trap Confirm/Sheet | Não |
+| **IX-SHORTCUT** | Parcial | `caixaAtalhos` + `KbdAtalho` local em `CaixaPdvCartSaleBar.tsx` | UX-S0-08 KeyHint | Não (EXC PDV) |
+| **IX-AUTHZ** | Confirmado | `loadAdminContext` / policy server-first; sidebar `adminOnly` | — | Não |
+
+**Resumo IX:** Confirmado **3/25** · Parcial **19/25** · Divergente **3/25** · Não encontrado **0/25**.  
+**Cobertura IX útil (Confirmado+Parcial) ≈ 88%** — **não** implica Sprint 0 DONE (primitivos ausentes).
+
+### Divergências que bloqueiam Sprint 1
+
+| # | Arquivo(s) | Motivo | Correção S0 |
+|---|------------|--------|-------------|
+| 1 | `components/gerente/ConfirmActionButton.tsx` + usos `confirm(` | IDS exige ConfirmDialog; código usa nativo | Criar ConfirmDialog; migrar ConfirmActionButton para ele (sem redesenhar telas de negócio) |
+| 2 | `VendaDetailSheet.tsx`, `DocumentoFiscalDetailSheet.tsx`, `AuditoriaTimeline.tsx` | Detalhe entidade = overlay ad hoc | Criar DetailSheet SSOT |
+| 3 | `Autocomplete.tsx` + `ProdutoRecebimentoAutocomplete.tsx` + `TransferenciasGerentePageClient.tsx` | Três paradigmas de lookup; SSOT atual insuficiente (sem async) | EntityLookup async (UX-S0-24) |
 
 ---
 
@@ -149,10 +197,12 @@ Proibido `fixed inset-0` ad hoc para detalhe de entidade.
 
 ### 1.13 Lookup / Autocomplete — IX-LOOKUP
 
-1. Qualquer escolha de **produto / cliente / fornecedor / entidade longa** = `Autocomplete` (ou wrapper domínio fino sobre ele).
-2. Proibido `<select>` com centenas de options em código novo.
-3. Teclado: ↑↓ Enter Esc; empty state “nenhum resultado”.
-4. `FornecedorCombobox` = dívida; não expandir (EXC-06).
+1. Qualquer escolha de **produto / cliente / fornecedor / entidade longa** = **`EntityLookup`** (S0) com busca **async** (`onSearch` / debounce / loading / empty).
+2. `forms/Autocomplete` atual (**só filtro client** sobre `options[]` — evidência `Autocomplete.tsx`) **não** satisfaz lookup de catálogo remoto sozinho.
+3. Proibido `<select>` com centenas de options em código novo.
+4. Teclado: ↑↓ Enter Esc; empty “nenhum resultado”; loading visível.
+5. `FornecedorCombobox` = dívida; não expandir (EXC-06).
+6. `ProdutoRecebimentoAutocomplete` deve ser **substituído/envolvido** por EntityLookup na aplicação (S1+), não copiado.
 
 ### 1.14 Formulário e validação — IX-FORM
 
@@ -211,34 +261,39 @@ Uma ação → **um** canal primário de sucesso (não toast + inline + banner j
 
 ## 2. Auditoria de fluxos — composição só com S0 (+ EXC)
 
-| Fluxo | Compostos S0 / SSOT | Padrões IX | Cabe sem novo paradigma? | Gap a incluir na S0 |
-|-------|---------------------|------------|--------------------------|---------------------|
-| **Venda PDV** | KeyHint, Confirm (Caixa), Autocomplete/combobox, MoneyText, toast/banner PDV | SHORTCUT, LOOKUP, CONFIRM, SUCCESS, KEYS | **Sim** (EXC-01/02) | — |
-| **Cadastro produto** | PageShell, CrudListShell, DragonModal, FormSection, Field, FileDropzone (foto), ConfirmDialog, BulkActionBar, ExportAction, toast | CRUD, FORM, UPLOAD, IMPORT-CSV, BULK, EXPORT, DELETE | **Sim** com Bulk+Export S0 | UX-S0-19, UX-S0-20 |
-| **Entrada estoque** | PageShell, Autocomplete, FormSection, Button, toast | LOOKUP, FORM, SUCCESS | **Sim** | — |
-| **Transferência** | PageShell, Autocomplete, ConfirmDialog, toast | LOOKUP, CONFIRM, FORM | **Sim** | — |
-| **Compra** | PageShell, EntityTable, FilterBar, MetricCard, DragonModal, ConfirmDialog | CRUD, FILTER, TABLE, CONFIRM | **Sim** | — |
-| **Venda (admin)** | PageShell, FilterBar, EntityTable, PaginationBar, DetailSheet, EmptyState, MetricCard | FILTER, TABLE, PAGE, SHEET, DRILL, EMPTY | **Sim** | — |
-| **Financeiro** | PageShell, TabNav, FilterBar, EntityTable, InlineAlert, ConfirmDialog, ExportAction | FILTER, TABLE, CONFIRM, EXPORT | **Sim** com TabNav+Export | — |
-| **Fechamento caixa** | ConfirmDialog/CaixaConfirm, KeyHint, toast/banner | CONFIRM, SHORTCUT, SUCCESS | **Sim** (EXC PDV) | — |
-| **Fiscal** | TabNav, DetailSheet, InlineAlert, StatusChip, ConfirmDialog | SHEET, CONFIRM, ERROR | **Sim** | — |
-| **Configurações** | PageShell, TabNav, FormSection, Field, InlineAlert, success inline | FORM, SUCCESS, ERROR | **Sim** | — |
+| Fluxo | SSOT componentes suficientes **hoje**? | IX suficientes **hoje**? | Exceção inevitável? | S1 sem novo paradigma **se DoD S0 completo**? |
+|-------|----------------------------------------|--------------------------|---------------------|-----------------------------------------------|
+| **PDV** | Parcial (Kbd local, sem KeyHint export) | Parcial | **Sim** EXC-01/02 | **Sim** |
+| **Cadastro produto** | Parcial (bulk/export/upload ad hoc) | Parcial | FornecedorCombobox (não expandir) | **Sim** se S0-18/19/20/05 |
+| **Compras** | **Não** (GerenteTable/dark) | Divergente overlay | Não | **Sim** se PageShell+EntityTable+Confirm |
+| **Estoque** | Quase (PageHeader+CrudListShell+DataTable) | Parcial | Etiquetas 2-col OK | **Sim** |
+| **Transferências** | **Não** (select 500) | **IX-LOOKUP divergente** | Não | **Só com UX-S0-24 async** |
+| **Vendas** | Parcial (sheet/empty/filtros locais) | SHEET/EMPTY/FILTER parciais | Não | **Sim** com DetailSheet+FilterBar |
+| **Financeiro** | **Não** (TabNav local, GerenteTable AP) | Parcial | Infinite AP = EXC-04 | **Sim** com TabNav+EntityTable+S0-21 |
+| **Fiscal** | **Não** (sheet ad hoc) | SHEET divergente | Timeline domínio OK | **Sim** com DetailSheet |
+| **Configurações** | Parcial (tabs/labels raw) | FORM parcial | Não | **Sim** com TabNav+FormSection |
+| **Administração** | Parcial (wizard/banners ad hoc) | WIZARD/CONFIRM | EXC-07 diagnóstico | **Sim** com Stepper+Confirm+InlineAlert |
 
-**Conclusão:** com primitivos S0 já planejados **+** BulkActionBar + ExportAction + PaginationBar infinite + contratos IX deste doc, **nenhum fluxo mínimo exige um 3º paradigma**. Import CSV/NF-e = composição Stepper + FileDropzone + EntityTable + ConfirmDialog.
+**Conclusão pós-DoD S0 (incl. S0-24..26):** fluxos cabem sem 3º paradigma.  
+**Conclusão no código atual:** Sprint 0 **não** está implementada — veredicto em `ROADMAP_UI_UX.md`.
 
 ---
 
 ## 3. Itens Sprint 0 derivados desta auditoria
 
-| ID | Entrega | Tipo |
-|----|---------|------|
-| **UX-S0-19** | **BulkActionBar** (+ contrato selection na EntityTable) | Componente |
-| **UX-S0-20** | **ExportAction** (csv\|pdf) + helpers download | Componente |
-| **UX-S0-21** | PaginationBar modo `infinite` | Extensão |
-| **UX-S0-22** | Publicar este IDS + checklist IX no DoD S0 | Documento |
-| **UX-S0-23** | Helper/doc **EntityLookup** (Autocomplete tipado) | Contrato + thin helper opcional |
+| ID | Entrega | Tipo | Estado 2026-08-07 |
+|----|---------|------|-------------------|
+| **UX-S0-19** | **BulkActionBar** (+ selection EntityTable) | Componente | ❌ não existe no código |
+| **UX-S0-20** | **ExportAction** (csv\|pdf) | Componente | ❌ não existe |
+| **UX-S0-21** | PaginationBar modo `infinite` | Extensão | ❌ só numbered/cursor |
+| **UX-S0-22** | Publicar IDS + DoD IX | Documento | ✅ doc; ⚠️ contratos não implementados |
+| **UX-S0-23** | EntityLookup (doc) | Contrato | ⚠️ insuficiente sozinho → **S0-24** |
+| **UX-S0-24** | **EntityLookup async** (`onSearch`, debounce, loading) | Componente | ❌ obrigatório — Autocomplete client-only não basta |
+| **UX-S0-25** | FilterBar: reset `page`→1 + `daterange` alinhado ao IDS | Extensão | ❌ `setParam` não deleta `page` |
+| **UX-S0-26** | Lint/CI: ban empty emoji, `window.confirm`, novo `fixed inset-0` dialog fora SSOT | Tooling | ❌ |
+| **UX-S0-27** | Kill-switch StatusChip vs `GerenteStatusBadge` (fiscal ainda usa) | Higiene | ⚠️ |
 
-Contratos IX-CRUD…IX-AUTHZ são **obrigatórios** no DoD S0 mesmo quando só documentação (sem React novo).
+Contratos IX-CRUD…IX-AUTHZ + primitivos acima são **obrigatórios** no DoD S0.
 
 ---
 

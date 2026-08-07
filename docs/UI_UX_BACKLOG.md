@@ -64,14 +64,21 @@
 | **UX-S0-20** | **ExportAction** (csv \| pdf) | S | Export único | Baixo | — | API + helper download; XLSX fora |
 | **UX-S0-21** | PaginationBar modo **`infinite`** | S | Cadastros/AP | Médio | PaginationBar | Modo documentado + teste |
 | **UX-S0-22** | Publicar **INTERACTION_DESIGN_SYSTEM** + DoD IX | S | Comportamento único | Baixo | — | Doc + governança §2.2 |
-| **UX-S0-23** | **EntityLookup** (contrato/helper sobre Autocomplete) | S | Mata select 500 | Baixo | Autocomplete | Doc IX-LOOKUP + helper opcional |
+| **UX-S0-23** | Doc EntityLookup (superseded por S0-24 para implementação) | S | Contrato | Baixo | — | Aponta para S0-24 |
+| **UX-S0-24** | **EntityLookup async** (`onSearch`, debounce, loading, empty) | M | Mata 3º paradigma lookup | Médio | — | API async; **não** thin-wrap de Autocomplete client-only |
+| **UX-S0-25** | FilterBar: reset `page`→1 + `daterange` alinhado IX-FILTER | M | Contrato filtro | Baixo | FilterBar | `setParam` deleta `page`; tipo daterange + teste |
+| **UX-S0-26** | Lint/CI: ban `window.confirm`, empty emoji, `fixed inset-0` dialog fora SSOT | M | Governança | Médio | — | Falha CI em arquivo novo/tocado |
+| **UX-S0-27** | Deprecate `GerenteStatusBadge` → StatusChip | S | Badge único | Baixo | — | Fiscal não importa shim |
 
 | Antigo | Novo |
 |--------|------|
 | UX-P1-DS-01..05, UX-P2-13 | Absorvidos em UX-S0-* |
 | UX-S0-12 “contrato Sheet” | **UX-S0-15 DetailSheet** |
+| UX-S0-23 thin helper | **UX-S0-24** EntityLookup async |
 
-**DoD Sprint 0:** [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) §3.3 + conformidade IX em [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md).
+**Validação 2026-08-07:** quase todos UX-S0-04..21 **ainda não existem no código** → Sprint 0 **REPROVADA** (ver roadmap).
+
+**DoD Sprint 0:** [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) §3.3 + IX sem Divergente + S0-24..26.
 
 ---
 
@@ -167,7 +174,7 @@
 
 | Sprint | IDs |
 |--------|-----|
-| **S0** | UX-S0-01..11, 13..23 |
+| **S0** | UX-S0-01..11, 13..27 (**bloqueia S1 até DONE**) |
 | **S1** | P0-01..03, P1-02..07, P1-10, P1-21 |
 | **S2** | P0-04..05, P1-11 |
 | **S3** | P0-06..07, P1-09, P1-12 |

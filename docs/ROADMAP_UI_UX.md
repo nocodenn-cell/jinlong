@@ -4,7 +4,7 @@
 |--------|--------|
 | **Data** | 2026-08-07 (Sprint 0 = base definitiva) |
 | **Docs** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) |
-| **Estado** | **Não iniciar Sprint 1** até Sprint 0 aceita |
+| **Estado** | **Sprint 0 REPROVADA** (validação código 2026-08-07) · Sprint 1 **bloqueada** |
 | **Princípio** | S0 consolida SSOT → S1+ só aplica → zero novos paradigmas |
 
 ---
@@ -93,11 +93,13 @@ Base definitiva: toda evolução UI posterior é **aplicação** de um padrão �
 | Núcleo lista/página | UX-S0-04, 06, 07 |
 | Overlay/feedback | UX-S0-05, 09, 15, 16 |
 | Form/nav/fluxo | UX-S0-13, 14, 17, 18 |
-| Lote/export/page/lookup | UX-S0-19, 20, 21, 23 |
-| Interaction Design System | UX-S0-22 → [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
+| Lote/export/page/lookup | UX-S0-19, 20, 21, **24** (async) |
+| Filter/lint/badge | UX-S0-25, 26, 27 |
+| Interaction Design System | UX-S0-22 → [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) §0.1 validado |
 | PDV/tokens helpers | UX-S0-08 |
 
-**Proibido na S0:** redesign de rota; migrar Compras/GerenteTable em tela; alterar RPC.
+**Proibido na S0:** redesign de rota; migrar Compras/GerenteTable *como feature de tela*; alterar RPC.  
+**Permitido na S0:** criar primitivos em `components/ui/**`, lint, remover órfãos, alias toast, testes dos primitivos.
 
 ### 3.3 Critérios objetivos de conclusão (Definition of Done)
 
@@ -142,10 +144,50 @@ A Sprint 0 só é **DONE** se **todos** os itens abaixo forem verdadeiros:
 
 - [ ] DS owner (ou sponsor UX) assina DoD S0.
 - [ ] Nenhum PR de tela S1 mergeado antes desse aceite.
+- [ ] Matriz §10 = todos ✅ (ou ⚠️ só burndown/métricas com plano).
 
 ---
 
-## 4. Sprints de aplicação (resumo)
+## 4. Validação código 2026-08-07 — veredicto
+
+### 4.1 Cobertura
+
+| Dimensão | Valor | Base |
+|----------|------:|------|
+| Design System (fórmula GOVERNANCE, PageShell=0) | **~55%** | Contagens reais admin |
+| Design System (proxy PageHeader) | **~69%** | 20/28 pages |
+| Interaction Design (Confirmado+Parcial / 25 IX) | **~88%** | IDS §0.1 |
+| IX Divergentes | **3** | CONFIRM, SHEET, LOOKUP |
+| Primitivos S0 documentados existentes no código | **~0 dos “criar”** | Grep export PageShell/EntityTable/… |
+
+### 4.2 Divergências (bloqueiam S1)
+
+1. **IX-CONFIRM** — `ConfirmActionButton.tsx` usa `globalThis.confirm`; ConfirmDialog inexistente.  
+2. **IX-SHEET** — sheets admin `fixed inset-0` sem DetailSheet.  
+3. **IX-LOOKUP** — Autocomplete client-only; recebimento async paralelo; transferências `<select>` 500.
+
+### 4.3 Riscos remanescentes
+
+| Risco | Mitigação |
+|-------|-----------|
+| Docs à frente do código (falso “S0 done”) | Esta validação + gate REPROVADA |
+| Thin-wrap Autocomplete como EntityLookup | UX-S0-24 async obrigatório |
+| S1 sob pressão ignora lint | UX-S0-26 no DoD |
+| Burndown stale | UX-S0-11 |
+
+### 4.4 Obrigatório antes da Sprint 1
+
+Implementar (código em `components/ui`, **sem** redesign de telas de negócio): UX-S0-04, 05, 06+25, 07, 08, 09, 13–21, **24**, **26** (+ 02/03/10/11 higiene). Assinar DoD §3.3. Atualizar matriz §10 para ✅.
+
+### 4.5 Decisão
+
+# **Sprint 0 REPROVADA**
+
+**Justificativa (somente evidência de código):** a documentação define a base definitiva, mas os primitivos SSOT da Sprint 0 (**PageShell, ConfirmDialog, DetailSheet, TabNav, Stepper, FileDropzone, BulkActionBar, ExportAction, EntityLookup async, FilterBar daterange/page-reset, PaginationBar infinite, emitToast, MoneyText, KeyHint, FormSection, InlineAlert, EntityTable**) **não existem** como exports no repositório. Três contratos IX estão **Divergentes** frente ao código dominante (`ConfirmActionButton`/`window.confirm`, sheets `fixed inset-0`, lookup triplo). Liberar Sprint 1 agora forçaria novos paradigmas ou retrabalho. Sprint 1 permanece **bloqueada**.
+
+---
+
+## 5. Sprints de aplicação (resumo)
 
 ### Sprint 1 — Hot-path
 
@@ -177,10 +219,10 @@ Detalhe IDs: [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md).
 
 ---
 
-## 5. Métricas (atualizar fim de cada sprint)
+## 6. Métricas (atualizar fim de cada sprint)
 
-| Indicador | Baseline | Pós-S0 | Pós-S1 | Pós-S2 | Pós-S3 | Pós-S4 | Pós-S5 | Meta |
-|-----------|---------:|-------:|-------:|-------:|-------:|-------:|-------:|-----:|
+| Indicador | Baseline (2026-08-07 medido) | Pós-S0 | Pós-S1 | Pós-S2 | Pós-S3 | Pós-S4 | Pós-S5 | Meta |
+|-----------|-----------------------------:|-------:|-------:|-------:|-------:|-------:|-------:|-----:|
 | Páginas auditadas | 41 | | | | | | | 41 |
 | Páginas P0 | 6 | 6 | ≤4 | ≤2 | ≤1 | 0 | 0 | 0 |
 | Páginas P1 | 12 | 12 | ≤10 | ≤8 | ≤5 | ≤3 | ≤2 | ≤3 |
@@ -190,7 +232,8 @@ Detalhe IDs: [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md).
 | Padrões modal | 2 | 1+PDV† | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV |
 | Padrões toast | 2 canais | 2 / 1 API | 2 | 2 | 2 | 2 | 2 | 2 |
 | Padrões FilterBar | 1+N | 1+daterange | 1 | 1 | 1 | 1 | 1 | 1 |
-| Aderência DS (%) | ~42 | ~55 | ~62 | ~70 | ~78 | ~85 | ≥85 | ≥85 |
+| Aderência DS (%) | **~55** (estrita) | ≥70 | ~75 | ~80 | ~85 | ≥85 | ≥85 | ≥85 |
+| Cobertura IX (%) | **~88** (3 Divergentes) | 100 sem Divergente | 100 | 100 | 100 | 100 | 100 | 100 |
 
 \* EntityTable criado; GerenteTable pode existir até S3.  
 † ConfirmDialog + DetailSheet no SSOT; sheets legados ainda vivos até migração.
@@ -199,7 +242,7 @@ Fórmula: `DESIGN_SYSTEM_GOVERNANCE.md` §7.2.
 
 ---
 
-## 6. Cinco maiores riscos da migração DS
+## 7. Cinco maiores riscos da migração DS
 
 | # | Risco | Prob. | Impacto | Mitigação |
 |---|-------|-------|---------|-----------|
@@ -213,13 +256,13 @@ Riscos secundários: rename toast quebrando imports (mitigar alias); FileDropzon
 
 ---
 
-## 7. Governança (ponte)
+## 8. Governança (ponte)
 
 Processo completo de PR, criação de componente, exceção e medição: **[`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md)**.
 
 ---
 
-## 8. Freeze e arquitetura
+## 9. Freeze e arquitetura
 
 | Pode | Sponsor |
 |------|---------|
@@ -231,10 +274,27 @@ Sem alteração de regra de negócio, RPC ou entity-SSoT.
 
 ---
 
-## 9. Próxima ação
+## 10. Matriz final de prontidão (validação 2026-08-07)
 
-1. Aceitar escopo S0 **expandido** (S0-13..18 inclusos).  
-2. Executar backlog `UX-S0-*` até DoD §3.3.  
-3. Assinar gate → só então Sprint 1.
+| Item | Status | Bloqueia Sprint 1? |
+|------|--------|--------------------|
+| Componentes SSOT | ❌ | **Sim** |
+| Contratos IX | ⚠️ (3 Divergentes) | **Sim** |
+| Governança | ⚠️ (lint S0-26 pendente) | **Sim** |
+| Cobertura de módulos | ⚠️ | **Sim** |
+| Burndown legado | ⚠️ (stale) | Não |
+| Métricas | ⚠️ (recalculadas; meta S0 não atingida) | Não |
+| Documentação | ✅ | Não |
 
-**Nenhuma implementação de tela nesta missão.**
+**Decisão: Sprint 0 REPROVADA** (§4.5).
+
+---
+
+## 11. Próxima ação
+
+1. **Implementar** primitivos S0 em `components/ui/**` (UX-S0-04..21, 24..26) — ainda **sem** redesign de telas.  
+2. Revalidar IDS §0.1 até zero Divergente.  
+3. Atualizar §10 para ✅ e assinar DoD.  
+4. Só então abrir Sprint 1.
+
+**Nenhuma implementação de UI de tela nesta missão de validação.**
