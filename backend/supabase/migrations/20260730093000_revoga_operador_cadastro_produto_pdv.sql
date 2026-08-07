@@ -54,9 +54,34 @@ BEGIN
   v_novo := replace(v_def, v_de, v_para);
   EXECUTE v_novo;
 
-  IF position('OPERADOR' IN pg_get_functiondef(
-       'public.criar_produto_com_estoque_inicial(jsonb,uuid,uuid)'::regprocedure)) > 0 THEN
-    RAISE EXCEPTION 'MIG_CRIAR_PRODUTO_AINDA_CITA_OPERADOR: replace não surtiu efeito.';
+  -- ⚠️ CORREÇÃO 2026-08-07: esta verificação procurava a palavra 'OPERADOR' no
+  -- corpo INTEIRO da função. Isso é largo demais — o corpo criado por
+  -- `20260718135138_criar_produto_permite_operador_pdv.sql` traz um comentário
+  -- explicativo que contém a palavra:
+  --
+  --     -- OPERADOR: só cadastro relâmpago no PDV (action dedicada). ...
+  --
+  -- Depois do replace o GATE já estava correto, mas o comentário continuava lá e
+  -- a checagem disparava assim mesmo. Em produção passava porque lá o corpo vivo
+  -- (vindo da 270) não menciona OPERADOR em lugar nenhum; numa reconstrução limpa
+  -- o corpo é o da 20260718135138 e a migration abortava com
+  --
+  --     ERROR: MIG_CRIAR_PRODUTO_AINDA_CITA_OPERADOR (SQLSTATE P0001)
+  --
+  -- Comprovado pelo job "Supabase local RLS smoke" (run 31134427007).
+  --
+  -- A asserção certa é sobre o GATE, não sobre a palavra: confirmar que a lista
+  -- antiga de perfis sumiu e que a nova está no lugar.
+  v_def := pg_get_functiondef(
+    'public.criar_produto_com_estoque_inicial(jsonb,uuid,uuid)'::regprocedure
+  );
+
+  IF position(v_de IN v_def) > 0 THEN
+    RAISE EXCEPTION 'MIG_CRIAR_PRODUTO_AINDA_CITA_OPERADOR: gate antigo permanece após o replace.';
+  END IF;
+
+  IF position(v_para IN v_def) = 0 THEN
+    RAISE EXCEPTION 'MIG_CRIAR_PRODUTO_GATE_NOVO_AUSENTE: o gate sem OPERADOR não foi gravado.';
   END IF;
 END
 $mig$;
