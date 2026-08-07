@@ -5,6 +5,7 @@ import { DragonModal } from "@/components/ui/DragonModal"
 import type { Mensagens } from "@/i18n/getMessages"
 import { HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { CAIXA_ATALHOS } from "@/app/caixa/caixaAtalhos"
 
 type Props = {
   m: Mensagens
@@ -30,12 +31,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Venda",
       shortcuts: [
         {
-          keys: "F4 / F9",
+          keys: CAIXA_ATALHOS.finalizarVenda,
           label: m.caixa.finalizar_venda,
           context: "Sempre disponível",
         },
         {
-          keys: "F8",
+          keys: CAIXA_ATALHOS.novoCupom,
           label: m.caixa.novo_cupom || "Novo Cupom",
           context: "Caixa aberto",
         },
@@ -45,12 +46,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Navegação",
       shortcuts: [
         {
-          keys: "F1",
+          keys: CAIXA_ATALHOS.ajuda,
           label: m.caixa.atalho_ajuda,
           context: "Sempre disponível",
         },
         {
-          keys: "F2 / Ctrl+B",
+          keys: CAIXA_ATALHOS.focarBusca,
           label: "Buscar Produto",
           context: "Sempre disponível",
         },
@@ -65,12 +66,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
           context: "Sempre disponível",
         },
         {
-          keys: "F3",
+          keys: CAIXA_ATALHOS.consultaRapida,
           label: m.caixa.operacoes_consulta_rapida,
           context: "Sempre disponível",
         },
         {
-          keys: "F6",
+          keys: CAIXA_ATALHOS.fecharCaixa,
           label: m.caixa.fechar,
           context: "Caixa aberto",
         },
@@ -80,12 +81,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Operações",
       shortcuts: [
         {
-          keys: "Ctrl+Shift+S",
+          keys: CAIXA_ATALHOS.suprimento,
           label: m.caixa.suprimento,
           context: "Caixa aberto",
         },
         {
-          keys: "Ctrl+Shift+R",
+          keys: CAIXA_ATALHOS.sangria,
           label: m.caixa.sangria,
           context: "Caixa aberto",
         },
@@ -95,12 +96,12 @@ function buildShortcutsData(m: Mensagens): ShortcutGroup[] {
       category: "Edição",
       shortcuts: [
         {
-          keys: "Ctrl+Z",
+          keys: CAIXA_ATALHOS.desfazerRemocao,
           label: "Desfazer Remoção",
           context: "Item removido",
         },
         {
-          keys: "F12",
+          keys: CAIXA_ATALHOS.reimprimir,
           label: m.caixa.reimprimir_cupom || "Reimprimir Recibo",
           context: "Após finalizar venda",
         },

@@ -3,7 +3,30 @@
 import { Button } from "@/components/ui/button"
 import type { Mensagens } from "@/i18n/getMessages"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { CAIXA_ATALHOS } from "@/app/caixa/caixaAtalhos"
 import { formatDecimalBRL } from "@/lib/format/money"
+
+/**
+ * Tecla exibida dentro do próprio botão.
+ *
+ * `aria-hidden` de propósito: o leitor de tela já anuncia a ação pelo rótulo, e
+ * ler "F4 barra F9" junto atrapalharia mais do que ajuda. Quem navega por
+ * teclado descobre os atalhos pela referência (F1), que é acessível.
+ */
+function KbdAtalho({ children, onBrand }: { children: string; onBrand?: boolean }) {
+  return (
+    <kbd
+      aria-hidden
+      className={`ml-2 hidden rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none sm:inline-block ${
+        onBrand
+          ? "border-white/30 bg-white/15 text-white/90"
+          : "border-jl-border-1 bg-jl-surface-soft text-jl-fg-3"
+      }`}
+    >
+      {children}
+    </kbd>
+  )
+}
 
 type Props = {
   m: Mensagens
@@ -63,6 +86,7 @@ export function CaixaPdvCartSaleBar({
               disabled={excluirDisabled}
             >
               {m.caixa.cart_bar_excluir_venda}
+              <KbdAtalho>{CAIXA_ATALHOS.excluirVenda}</KbdAtalho>
             </Button>
           </div>
 
@@ -122,6 +146,7 @@ export function CaixaPdvCartSaleBar({
               aria-busy={finalizando}
             >
               {m.caixa.finalizar_venda}
+              <KbdAtalho onBrand>{CAIXA_ATALHOS.finalizarVenda}</KbdAtalho>
             </Button>
           </div>
         </div>

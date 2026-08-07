@@ -6,6 +6,7 @@ import type { Mensagens } from "@/i18n/getMessages"
 import type { Idioma } from "@/idioma/normalizeIdioma"
 import { ImperialSealIcon } from "@/components/icons/ImperialSealIcon"
 import { caixaFmt } from "@/app/caixa/caixaI18n"
+import { CAIXA_ATALHOS } from "@/app/caixa/caixaAtalhos"
 import type { CaixaStatusUi } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { isCaixaAberto } from "@/app/caixa/hooks/useCaixaStatusMovimentacoes"
 import { cn } from "@/lib/utils"
@@ -117,27 +118,27 @@ function CaixaPdvOperacoesMenuImpl({
     {
       id: "consulta",
       label: m.caixa.operacoes_consulta_rapida,
-      shortcut: "F3",
+      shortcut: CAIXA_ATALHOS.consultaRapida,
       onClick: () => runAndClose(onConsultaRapida),
     },
     {
       id: "cliente",
       label: m.caixa.selecionar_cliente_titulo,
-      shortcut: "Alt+C",
+      shortcut: CAIXA_ATALHOS.selecionarCliente,
       disabled: busy,
       onClick: () => runAndClose(onSelecionarCliente),
     },
     {
       id: "suprimento",
       label: m.caixa.suprimento,
-      shortcut: "Ctrl+Shift+S",
+      shortcut: CAIXA_ATALHOS.suprimento,
       disabled: !caixaAberto || busy,
       onClick: () => runAndClose(onAbrirSuprimento),
     },
     {
       id: "sangria",
       label: m.caixa.sangria,
-      shortcut: "Ctrl+Shift+R",
+      shortcut: CAIXA_ATALHOS.sangria,
       disabled: !caixaAberto || busy,
       onClick: () => runAndClose(onAbrirSangria),
     },
@@ -149,7 +150,7 @@ function CaixaPdvOperacoesMenuImpl({
     {
       id: "imprimir",
       label: m.caixa.operacoes_imprimir_ultima,
-      shortcut: "F12",
+      shortcut: CAIXA_ATALHOS.reimprimir,
       disabled: !podeReimprimir,
       onClick: () => runAndClose(onImprimirUltima),
     },
@@ -159,7 +160,7 @@ function CaixaPdvOperacoesMenuImpl({
     itens.push({
       id: "fechar",
       label: m.caixa.fechar,
-      shortcut: "F6",
+      shortcut: CAIXA_ATALHOS.fecharCaixa,
       destructive: true,
       disabled: busy,
       onClick: () => runAndClose(onFecharCaixa),
