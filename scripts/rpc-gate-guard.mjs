@@ -70,13 +70,28 @@ function collectProdFiles(dirs) {
   return result
 }
 
+/**
+ * Remove comentários antes da checagem de nome de RPC.
+ *
+ * Sem isto, citar uma RPC num docblock conta como chamada. Foi o que manteve
+ * este guard vermelho: `caixaFormasPagamento.impl.ts` apenas *menciona*
+ * `finalizar_venda_transacional_canonica_v4` num comentário explicando que a
+ * validação de forma de pagamento migrou para lá — a função não chama nada.
+ * Guard que acusa falso positivo deixa de ser lido, e aí não protege mais.
+ */
+function stripComments(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, ' ') // blocos /* … */
+    .replace(/(^|[^:])\/\/.*$/gm, '$1') // linha // … (preserva "https://")
+}
+
 const violations = []
 const prodFiles = collectProdFiles(PROD_DIRS)
 
 // Regra 1: nenhum arquivo de produção pode chamar RPCs bloqueadas
 for (const file of prodFiles) {
   const rel = path.relative(root, file)
-  const text = fs.readFileSync(file, 'utf8')
+  const text = stripComments(fs.readFileSync(file, 'utf8'))
   for (const rpc of BLOCKED_RPCS) {
     if (text.includes(rpc)) {
       violations.push(
@@ -92,7 +107,7 @@ for (const [rpc, authorizedRelPath] of Object.entries(SINGLE_CALLER)) {
   for (const file of prodFiles) {
     const rel = path.relative(root, file)
     if (file === authorizedAbs) continue // caller autorizado — OK
-    const text = fs.readFileSync(file, 'utf8')
+    const text = stripComments(fs.readFileSync(file, 'utf8'))
     if (text.includes(rpc)) {
       violations.push(
         `[CALLER DUPLICADO] ${rel}\n  → Contém "${rpc}" mas o único caller autorizado é ${authorizedRelPath}.\n  → Centralizar em um único ponto de entrada elimina execução dupla.`,

@@ -343,6 +343,7 @@ export async function listarHistoricoOperadorImpl(input?: {
     }
 
     // TODO(auditoria-255): filtrar explicitamente por lojaId quando necessário
+    // Registro completo: docs/auditoria/TODO_AUDITORIA_255_VENDAS_EM_ESPERA.md
     // TODO(fase-7): vendas.cliente_id → join clientes para clienteNome na lista
     void lojaId
     void LOJA_MATRIZ_ID

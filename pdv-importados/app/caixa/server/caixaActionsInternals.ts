@@ -4,7 +4,10 @@ export {
   mapProdutoRow,
   PRODUTO_COLS,
 } from '@/app/caixa/server/caixaProdutoSql'
-export { estoqueResumoParaCaixa } from '@/app/caixa/server/caixaEstoqueServer'
+export {
+  estoqueResumoParaCaixa,
+  estoqueResumoLoteParaCaixa,
+} from '@/app/caixa/server/caixaEstoqueServer'
 export { fetchPdvConfigParaCaixaWeb } from '@/app/caixa/server/caixaPdvConfigRpc'
 export { enfileirarDocumentoFiscalPosVenda } from '@/app/caixa/server/caixaFiscalEnqueueServer'
 export {

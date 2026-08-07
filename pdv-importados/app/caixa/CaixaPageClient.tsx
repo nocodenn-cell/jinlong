@@ -14,6 +14,7 @@ import {
 } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
+import type { ProdutoCaixaResumoDTO } from "@/app/caixa/caixaActionTypes"
 import { roundMoney2, type FinalizarVendaInput } from "@/app/caixa/finalizarVendaValidation"
 import { pagamentoParcialExigeCliente, EXCESSO_PAGAMENTO_EPS } from "@/app/caixa/caixaPagamentoSaldo"
 import {
@@ -39,6 +40,11 @@ import { caixaFmt } from "@/app/caixa/caixaI18n"
 import { formatDecimalBRL } from "@/lib/format/money"
 import { CaixaHeader } from "@/app/caixa/CaixaHeader"
 import { CaixaSearchBar } from "@/app/caixa/CaixaSearchBar"
+import {
+  CaixaResultadosBusca,
+  CAIXA_RESULTADOS_LISTBOX_ID,
+  caixaResultadoOptionId,
+} from "@/app/caixa/CaixaResultadosBusca"
 import { CaixaOperadorContextBar } from "@/app/caixa/CaixaOperadorContextBar"
 import { CaixaCartList } from "@/app/caixa/CaixaCartList"
 import { CaixaPdvCartSaleBar } from "@/app/caixa/CaixaPdvCartSaleBar"
@@ -279,6 +285,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const [selecionarClienteModalAberto, setSelecionarClienteModalAberto] = useState(false)  // ✅ NOVO (Fase 5b)
   /** F1 alterna a referência de atalhos (renderizada no topbar). */
   const [atalhosReferenciaAberta, setAtalhosReferenciaAberta] = useState(false)
+  /** Candidatos da busca aguardando escolha do operador (`status: 'multiplos'`). */
+  const [resultadosBusca, setResultadosBusca] = useState<ProdutoCaixaResumoDTO[]>([])
+  const [resultadoAtivo, setResultadoAtivo] = useState(0)
 
   const thermal = useThermalPrinter()
 
@@ -390,6 +399,13 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       },
       [],
     ),
+    onMultiplosResultados: useCallback((produtos: ProdutoCaixaResumoDTO[]) => {
+      setResultadosBusca(produtos)
+      setResultadoAtivo(0)
+    }, []),
+    onLimparResultados: useCallback(() => {
+      setResultadosBusca([])
+    }, []),
     // Decisão de produto: o PDV não cadastra produto. Código inexistente só
     // informa e orienta (mensagem do próprio pipeline de leitura) — cadastrar
     // pertence ao módulo Produtos (gerente/admin). Por isso nenhum
@@ -446,6 +462,54 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     },
     [codigo, enqueueLeitura, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
   )
+
+  /**
+   * Escolha na lista de candidatos. Reenfileira a leitura usando o **id** do
+   * produto como chave — assim a inclusão no carrinho continua passando pelo
+   * único caminho de escrita (`runWebCaixaScanProcess`), com preço autoritativo,
+   * rollback e guard de `cupomSessionId` preservados. Nada é decidido aqui.
+   */
+  const handleEscolherResultado = useCallback(
+    (produto: ProdutoCaixaResumoDTO) => {
+      setResultadosBusca([])
+      setCodigo("")
+      const sid = cupomSessionIdRef.current
+      const r = enqueueLeitura(produto.id, {
+        source: "form_submit",
+        cupomSessionId: sid,
+        correlationId: sid,
+      })
+      if (r && !r.ok && r.reason === "queue_full") {
+        setCaixaMensagem(m.caixa.msg_fila_leituras_cheia, { kind: "warning" })
+      }
+      focarCampoBusca()
+    },
+    [enqueueLeitura, focarCampoBusca, m.caixa.msg_fila_leituras_cheia, setCaixaMensagem],
+  )
+
+  const handleFecharResultados = useCallback(() => {
+    setResultadosBusca([])
+    focarCampoBusca()
+  }, [focarCampoBusca])
+
+  const navegacaoResultados = useMemo(() => {
+    if (resultadosBusca.length === 0) return null
+    return {
+      total: resultadosBusca.length,
+      ativo: resultadoAtivo,
+      listboxId: CAIXA_RESULTADOS_LISTBOX_ID,
+      optionId: caixaResultadoOptionId,
+      onMover: (delta: 1 | -1) =>
+        setResultadoAtivo(
+          (i) => (i + delta + resultadosBusca.length) % resultadosBusca.length,
+        ),
+      onConfirmar: () => {
+        const escolhido = resultadosBusca[resultadoAtivo]
+        if (escolhido) handleEscolherResultado(escolhido)
+      },
+      onFechar: handleFecharResultados,
+    }
+  }, [resultadosBusca, resultadoAtivo, handleEscolherResultado, handleFecharResultados])
 
   useScannerDetector(
     useCallback(
@@ -552,6 +616,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     resetPagamentos()
     setMetodoPagamento("dinheiro")
     setCodigo("")
+    setResultadosBusca([])
     setCaixaMensagem(null)
     setCheckoutHint(null)
     limparEstadoDescontoGerente()
@@ -1320,8 +1385,23 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
                         onToggleSom={() => setSomFeedbackAtivo((prev) => !prev)}
                         hideNovoCupom
                         compact={codigo.trim().length > 0}
+                        navegacaoResultados={navegacaoResultados}
                       />
                     </div>
+                    {resultadosBusca.length > 0 ? (
+                      <div className="shrink-0">
+                        <CaixaResultadosBusca
+                          m={m}
+                          idioma={idioma}
+                          produtos={resultadosBusca}
+                          ativo={resultadoAtivo}
+                          moeda={m.caixa.moeda_prefixo}
+                          onEscolher={handleEscolherResultado}
+                          onAtivoChange={setResultadoAtivo}
+                          onFechar={handleFecharResultados}
+                        />
+                      </div>
+                    ) : null}
                     <div className="shrink-0">
                       <CaixaMessageBanner mensagem={mensagem} msgVendaOk={msgVendaOk} kind={checkoutHint ? 'error' : undefined} hint={checkoutHint} />
                     </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import Link from 'next/link'
 import {
   AlertCircle,
   DollarSign,
@@ -45,6 +46,15 @@ type MetricCardProps = {
   icon?: MetricCardIconKey
   hint?: string
   className?: string
+  /**
+   * Torna o card um atalho para a listagem que origina o número (drill-down).
+   * O destino deve ser a MESMA tela já filtrada por querystring — as listagens
+   * do admin leem filtro da URL —, para que o KPI seja ponto de partida, não de
+   * chegada. Sem `href`, o card segue estático (comportamento anterior).
+   */
+  href?: string
+  /** Rótulo acessível do link; sem ele o leitor de tela anuncia só o número. */
+  hrefLabel?: string
 }
 
 /**
@@ -61,6 +71,8 @@ export function MetricCard({
   icon,
   hint,
   className,
+  href,
+  hrefLabel,
 }: MetricCardProps) {
   const Icon = icon ? METRIC_ICONS[icon] : null
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -83,10 +95,12 @@ export function MetricCard({
       : !delta.up
     : false
 
-  return (
+  const conteudo = (
     <div
       className={cn(
         'admin-v2-metric-card grid h-full min-h-32 grid-rows-[auto,1fr,auto] gap-3 rounded-card p-4',
+        href &&
+          'transition-colors hover:border-[var(--color-info-border)] hover:bg-[var(--color-surface-soft)]',
         className,
       )}
     >
@@ -134,6 +148,18 @@ export function MetricCard({
         {hint ? <p className="text-caption text-fg-subtle">{hint}</p> : null}
       </div>
     </div>
+  )
+
+  if (!href) return conteudo
+
+  return (
+    <Link
+      href={href}
+      aria-label={hrefLabel ?? `${label}: ${value}`}
+      className="block h-full rounded-card outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-info-border)]"
+    >
+      {conteudo}
+    </Link>
   )
 }
 

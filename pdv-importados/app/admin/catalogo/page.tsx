@@ -23,6 +23,7 @@ import { getMessages } from '@/i18n/getMessages'
 import { opcoesSelecionaveis } from '@/core/catalog/opcoesCadastro'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { PaginationBar, clampPage } from '@/components/ui/PaginationBar'
 import { ErrorState } from '@/components/ui/feedback'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import {
@@ -50,10 +51,6 @@ function uuidOrUndef(raw: string | undefined): string | undefined {
   return raw && UUID_RE.test(raw) ? raw : undefined
 }
 
-function clampPage(raw: string | undefined): number {
-  const n = Number.parseInt(raw ?? '1', 10)
-  return Number.isFinite(n) && n >= 1 ? n : 1
-}
 
 
 
@@ -304,99 +301,17 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         </Suspense>
       </SectionCard>
 
-      {totalPages > 1 ? (
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="text-caption text-fg-subtle">
-            {m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', String(totalPages))}
-          </span>
-          <div className="flex items-center gap-1">
-            <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-              {ui.paginacao_anterior}
-            </PageLink>
-            {pageWindow(page, totalPages).map((p, i) =>
-              p === 'gap' ? (
-                <span key={`gap-${i}`} className="px-1 text-caption text-fg-subtle">
-                  …
-                </span>
-              ) : (
-                <PageNumber key={p} href={pageHref(p)} active={p === page}>
-                  {p}
-                </PageNumber>
-              )
-            )}
-            <PageLink href={pageHref(page + 1)} disabled={page >= totalPages}>
-              {ui.paginacao_proxima}
-            </PageLink>
-          </div>
-        </div>
-      ) : null}
+      <PaginationBar
+        className="mt-4"
+        page={page}
+        totalPages={totalPages}
+        pageHref={pageHref}
+        label={m.produtos.pag_info
+          .replace('{{atual}}', String(page))
+          .replace('{{total}}', String(totalPages))}
+        anteriorLabel={ui.paginacao_anterior}
+        proximaLabel={ui.paginacao_proxima}
+      />
     </div>
-  )
-}
-
-// ─── Paginação: helpers ─────────────────────────────────────────────────────
-
-function pageWindow(current: number, total: number): Array<number | 'gap'> {
-  const out: Array<number | 'gap'> = []
-  const push = (n: number) => out.push(n)
-  const win = new Set<number>([1, total, current - 1, current, current + 1])
-  const sorted = [...win].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b)
-  let prev = 0
-  for (const n of sorted) {
-    if (prev && n - prev > 1) out.push('gap')
-    push(n)
-    prev = n
-  }
-  return out
-}
-
-function PageLink({
-  href,
-  disabled,
-  children,
-}: {
-  href: string
-  disabled: boolean
-  children: React.ReactNode
-}) {
-  if (disabled) {
-    return (
-      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-fg-subtle opacity-50">
-        {children}
-      </span>
-    )
-  }
-  return (
-    <Link
-      href={href}
-      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-fg-muted transition-colors hover:bg-[var(--color-surface-elevated)] hover:text-fg"
-    >
-      {children}
-    </Link>
-  )
-}
-
-function PageNumber({
-  href,
-  active,
-  children,
-}: {
-  href: string
-  active: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'page' : undefined}
-      className={
-        'flex h-7 min-w-[28px] items-center justify-center rounded-lg px-1 text-caption font-medium transition-colors ' +
-        (active
-          ? 'border border-brand/35 bg-[var(--color-info-bg)] text-brand'
-          : 'border border-[var(--color-border-secondary)] text-fg-subtle hover:bg-[var(--color-surface-elevated)] hover:text-fg')
-      }
-    >
-      {children}
-    </Link>
   )
 }

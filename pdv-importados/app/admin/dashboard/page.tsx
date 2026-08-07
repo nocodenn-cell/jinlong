@@ -22,11 +22,13 @@ import {
   getPeriodRange,
   normalizePeriod,
   normalizeStatus,
+  periodoVendasEquivalente,
   type DashboardPeriod,
 } from './dashboardUtils'
 import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { formatDateTimeLocaleDefault, formatDayMonthInLocale } from '@/lib/format/datetime'
 import { formatBRL, formatNumberLocale } from '@/lib/format/money'
+import Link from 'next/link'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
@@ -47,7 +49,9 @@ type Metric = {
   tone?: SparkTone
   deltaPositiveIsGood?: boolean
   hint?: string
+  href?: string
 }
+
 
 type VendaStatus = 'CONCLUIDA' | 'CANCELADA'
 
@@ -363,6 +367,20 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
   const stockValue = estoqueBaixoRes.error ? dash.emDash : formatNumberLocale(estoqueBaixoCount, locale)
 
+  // Drill-down só quando o destino consegue reproduzir exatamente o número:
+  // KPI que falhou não vira link (levaria a uma lista que não explica um "—"), e
+  // período sem equivalente na tela de vendas também não.
+  const periodoVendas = periodoVendasEquivalente(period)
+  const hrefVendas =
+    periodSalesFailed || !periodoVendas
+      ? undefined
+      : `${ROUTES.admin.vendas}?periodo=${periodoVendas}`
+  // Estoque baixo é instantâneo atual, não recorte de período — o link vale
+  // independentemente do filtro do dashboard.
+  const hrefEstoqueBaixo = estoqueBaixoRes.error
+    ? undefined
+    : `${ROUTES.admin.estoque}?visao=critico`
+
   const metrics: Metric[] = [
     {
       label: L.metricTotalSales[lk],
@@ -371,6 +389,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       icon: 'dollar-sign',
       sparkData: periodSalesFailed ? undefined : salesSpark,
       tone: 'gold',
+      href: hrefVendas,
     },
     {
       label: L.metricOrders[lk],
@@ -379,6 +398,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       icon: 'package',
       sparkData: periodSalesFailed ? undefined : ordersSpark,
       tone: 'success',
+      href: hrefVendas,
     },
     {
       label: L.metricTicket[lk],
@@ -387,6 +407,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       icon: 'shopping-bag',
       sparkData: periodSalesFailed ? undefined : ticketSpark,
       tone: 'gold',
+      href: hrefVendas,
     },
     {
       label: L.metricStock[lk],
@@ -395,6 +416,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       icon: 'alert-circle',
       tone: estoqueBaixoCount > 0 ? 'warning' : 'success',
       deltaPositiveIsGood: true,
+      href: hrefEstoqueBaixo,
     },
   ]
 
@@ -509,7 +531,20 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       />
 
       <div className="admin-v2-grid-2">
-        <SectionCard title={L.lowStockTitle[lk]} subtitle={L.lowStockSubtitle[lk]}>
+        <SectionCard
+          title={L.lowStockTitle[lk]}
+          subtitle={L.lowStockSubtitle[lk]}
+          action={
+            hrefEstoqueBaixo ? (
+              <Link
+                href={hrefEstoqueBaixo}
+                className="text-caption font-medium text-brand underline-offset-2 hover:underline"
+              >
+                {m.gerente.dashboard_inicio.estoque_critico_ver_todos}
+              </Link>
+            ) : undefined
+          }
+        >
           <div className="flex items-end gap-2">
             <span className="text-h1 font-bold tabular-nums text-[var(--color-chart-warm)]">
               {formatNumberLocale(estoqueBaixoCount, locale)}

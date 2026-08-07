@@ -24,9 +24,20 @@ export async function consultarProdutoRapidoCaixaImpl(
     const busca = await buscarProdutoComPrecoCaixaImpl(termo, 1)
     if (!busca.ok) return { ok: false, error: busca.error }
     if (busca.status !== 'encontrado') {
-      return busca.status === 'ambiguo'
-        ? { ok: true, status: 'ambiguo', mensagem: busca.mensagem }
-        : { ok: true, status: 'nao_encontrado' }
+      if (busca.status === 'ambiguo') {
+        return { ok: true, status: 'ambiguo', mensagem: busca.mensagem }
+      }
+      // A consulta rápida ainda não tem seletor próprio (previsto para a Onda 3).
+      // Até lá, vários acertos mantêm o comportamento anterior: orienta a refinar.
+      // Sem este ramo, `multiplos` cairia em `nao_encontrado` — mentira para o operador.
+      if (busca.status === 'multiplos') {
+        return {
+          ok: true,
+          status: 'ambiguo',
+          mensagem: `${busca.produtos.length} produtos batem com a busca. Refine o termo ou use o código de barras.`,
+        }
+      }
+      return { ok: true, status: 'nao_encontrado' }
     }
 
     const lojaId = lojaUsuario ?? LOJA_MATRIZ_ID

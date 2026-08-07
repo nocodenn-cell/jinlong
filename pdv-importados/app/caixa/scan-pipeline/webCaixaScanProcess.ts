@@ -7,6 +7,7 @@ import {
 } from '../../../../shared-core/src/pdv/scan-pipeline'
 import type { CarrinhoState } from '../../../../shared-core/src/stores/unifiedCartStore'
 import { buscarProdutoComPrecoCaixa } from '@/app/caixa/actions'
+import type { ProdutoCaixaResumoDTO } from '@/app/caixa/caixaActionTypes'
 import { createClient } from '@/lib/supabase/client'
 import type { Mensagens } from '@/i18n/getMessages'
 import type { CaixaToastKind } from '@/app/caixa/hooks/useCaixaMensagens'
@@ -58,6 +59,14 @@ export type WebCaixaScanDeps = {
   telemetry?: ScanPipelineSink
   /** Chamado após scan bem-sucedido — usado para dedupe (500ms) no nível do scanner. */
   onItemAdded?: (info: { codigo: string; itemId: string; produtoId: string }) => void
+  /**
+   * Busca por nome/categoria com vários acertos: entrega os candidatos para a UI
+   * exibir o seletor. O carrinho NÃO é mutado aqui — a escolha do operador
+   * reentra pelo mesmo pipeline (enqueue do `id` do produto escolhido).
+   */
+  onMultiplosResultados?: (produtos: ProdutoCaixaResumoDTO[]) => void
+  /** Limpa o seletor quando a leitura seguinte resolve para um único produto. */
+  onLimparResultados?: () => void
   /* Não existe gancho de "código sem match" aqui de propósito: o PDV não
    * cadastra produto. O ramo `nao_encontrado` abaixo informa e orienta via
    * `msg_produto_nao_encontrado_acao`, e para aí. */
@@ -137,6 +146,17 @@ export async function runWebCaixaScanProcess(
       tocarFeedback('erro')
       return { ok: false, reason: 'ambiguous' }
     }
+
+    if (res.status === 'multiplos') {
+      // Não é falha de leitura: é uma escolha pendente do operador. O carrinho
+      // fica intocado e o campo de busca preserva o termo digitado, para que
+      // refinar continue possível sem redigitar.
+      deps.onMultiplosResultados?.(res.produtos)
+      setCaixaMensagem(null)
+      return { ok: false, reason: 'ambiguous' }
+    }
+
+    deps.onLimparResultados?.()
 
     if (signal?.aborted) {
       return { ok: false, reason: 'aborted' }

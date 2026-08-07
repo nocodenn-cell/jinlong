@@ -19,13 +19,20 @@ import type {
   BuscarProdutoComPrecoResult,
   CarregarRegrasResult,
   OrigemProdutoCaixa,
+  ProdutoCaixaResumoDTO,
 } from '@/app/caixa/caixaActionTypes'
 import {
+  estoqueResumoLoteParaCaixa,
   estoqueResumoParaCaixa,
   fetchPdvConfigParaCaixaWeb,
   mapProdutoRow,
   sanitizeIlikeFragment,
 } from '@/app/caixa/server/caixaActionsInternals'
+
+/** Teto de candidatos devolvidos ao operador para escolha manual. */
+const MAX_CANDIDATOS_BUSCA = 8
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 type ProdutoRowCaixa = {
   id: string
@@ -45,6 +52,34 @@ function rowVendavel(row: ProdutoRowCaixa): boolean {
   return isProdutoVendavel({
     ativo: row.ativo,
     status_publicacao: row.status_publicacao,
+  })
+}
+
+/**
+ * Monta a lista de candidatos para escolha do operador, com estoque resolvido
+ * em 1 query (`estoqueResumoLoteParaCaixa`) em vez de uma por produto.
+ */
+async function montarCandidatos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: readonly ProdutoRowCaixa[],
+  lojaId: string,
+): Promise<ProdutoCaixaResumoDTO[]> {
+  const limitadas = rows.slice(0, MAX_CANDIDATOS_BUSCA)
+  const estoquePorProduto = await estoqueResumoLoteParaCaixa(
+    supabase,
+    limitadas.map((r) => r.id),
+    lojaId,
+  )
+  return limitadas.map((r) => {
+    const est = estoquePorProduto.get(r.id)
+    return {
+      id: r.id,
+      nome: r.nome,
+      codigo_barras: r.codigo_barras,
+      preco_varejo: Number(r.preco_varejo),
+      quantidade_estoque: est?.quantidade_atual ?? null,
+      estoque_minimo: est?.estoque_minimo ?? null,
+    }
   })
 }
 
@@ -101,6 +136,35 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
     const t = termo.trim()
     if (!t) return { ok: true, status: 'nao_encontrado' }
 
+    /**
+     * Chave de leitura por id: é assim que o operador confirma a escolha feita
+     * na lista de candidatos (`status: 'multiplos'`). Mantém UM caminho de
+     * entrada no carrinho — a escolha reentra pelo mesmo pipeline de leitura,
+     * preservando rollback, guard de cupom e telemetria.
+     *
+     * Seguro por construção: um `codigo_barras` (EAN/UPC/GTIN) nunca tem o
+     * formato UUID, então este ramo não sequestra leitura de scanner.
+     */
+    if (UUID_RE.test(t)) {
+      const { data: porId, error: errId } = await aplicarFiltroProdutoVendavel(
+        supabase.from('produtos').select('*'),
+      )
+        .eq('id', t)
+        .limit(1)
+
+      if (errId) return { ok: false, error: mensagemErroParaUsuario(errId.message) }
+      const row = ((porId ?? []) as ProdutoRowCaixa[])[0]
+      if (!row || !rowVendavel(row)) {
+        return { ok: true, status: 'nao_encontrado' }
+      }
+      const est = await estoqueResumoParaCaixa(supabase, row.id, lojaId)
+      return {
+        ok: true,
+        status: 'encontrado',
+        produto: mapProdutoRow(row, est.quantidade_atual, est.estoque_minimo),
+      }
+    }
+
     const variantes = variantesChaveLeitura(t)
     if (variantes.length > 0) {
       const { data: porCodigoLista, error: errCodigo } = await aplicarFiltroProdutoVendavel(
@@ -143,7 +207,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
       supabase.from('produtos').select('*'),
     )
       .ilike('nome', `%${frag}%`)
-      .limit(3)
+      .limit(MAX_CANDIDATOS_BUSCA)
 
     if (errNome) return { ok: false, error: mensagemErroParaUsuario(errNome.message) }
     let lista = filtrarSomenteProdutosVendaveis((porNome ?? []) as ProdutoRowCaixa[])
@@ -161,7 +225,7 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
           supabase.from('produtos').select('*'),
         )
           .in('categoria_id', catIds)
-          .limit(3)
+          .limit(MAX_CANDIDATOS_BUSCA)
         if (errPorCat) return { ok: false, error: mensagemErroParaUsuario(errPorCat.message) }
         lista = filtrarSomenteProdutosVendaveis((porCat ?? []) as ProdutoRowCaixa[])
       }
@@ -169,10 +233,12 @@ export async function buscarProdutoParaCaixaImpl(termo: string): Promise<BuscarP
 
     if (lista.length === 0) return { ok: true, status: 'nao_encontrado' }
     if (lista.length > 1) {
+      // Busca por nome/categoria com vários acertos é operação normal de balcão,
+      // não erro: devolve os candidatos para o operador escolher.
       return {
         ok: true,
-        status: 'ambiguo',
-        mensagem: `Vários produtos batem com “${frag}” (nome ou categoria). Use o código de barras ou refine a busca.`,
+        status: 'multiplos',
+        produtos: await montarCandidatos(supabase, lista, lojaId),
       }
     }
 

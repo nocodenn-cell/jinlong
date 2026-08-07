@@ -36,6 +36,9 @@ const CAIXA_CHIP_WARNING =
 /** Informativo: preço vindo de promoção cadastrada. */
 const CAIXA_CHIP_INFO =
   'border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-brand-strong)]'
+/** Bloqueio previsível: a quantidade da linha excede o estoque da loja. */
+const CAIXA_CHIP_DANGER =
+  'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-strong)]'
 
 export type CaixaCartListEmptyVariant = "default" | "pdv_classic"
 
@@ -435,6 +438,59 @@ function CaixaCartListInner({
 
 export const CaixaCartList = memo(CaixaCartListInner)
 
+/** Lê um número de `metaPdv` (tipado como `Record<string, unknown>` no store). */
+function metaNumero(meta: Record<string, unknown> | undefined, chave: string): number | null {
+  const v = meta?.[chave]
+  return typeof v === "number" && Number.isFinite(v) ? v : null
+}
+
+/**
+ * Estoque da linha — o dado já vem do servidor em `metaPdv` no momento da
+ * leitura (`webCaixaScanProcess`), mas antes só existia como toast passageiro.
+ * Aqui ele fica permanente, porque a decisão que ele apoia (aumentar a
+ * quantidade) acontece depois do toast sumir.
+ *
+ * Não bloqueia nada e não recalcula nada: a validação de estoque continua sendo
+ * do servidor, na finalização. Isto é antecipação de informação, não regra.
+ */
+function EstoqueLinha({ item, m }: { item: ItemCarrinhoComPreco; m: Mensagens }) {
+  const estoque = metaNumero(item.metaPdv, "estoque_atual")
+  if (estoque === null) return null
+
+  const minimo = metaNumero(item.metaPdv, "estoque_minimo")
+  const insuficiente = item.quantidade > estoque
+
+  if (insuficiente) {
+    return (
+      <Badge
+        variant="outline"
+        className={`text-xs font-semibold px-1.5 py-0 ${CAIXA_CHIP_DANGER}`}
+      >
+        {caixaFmt(m.caixa.cart_estoque_insuficiente, { disponivel: estoque })}
+      </Badge>
+    )
+  }
+
+  if (minimo !== null && estoque <= minimo) {
+    return (
+      <Badge
+        variant="outline"
+        className={`text-xs font-semibold px-1.5 py-0 ${CAIXA_CHIP_WARNING}`}
+      >
+        {m.caixa.cart_estoque_label} {estoque}
+      </Badge>
+    )
+  }
+
+  // Estoque folgado não é alerta: texto discreto, sem peso de chip, para não
+  // competir com os chips que sinalizam preço fora da tabela.
+  return (
+    <span className="text-xs text-foreground/70">
+      {m.caixa.cart_estoque_label} {estoque}
+    </span>
+  )
+}
+
 function MetaPdvBloco({
   item,
   m,
@@ -464,6 +520,7 @@ function MetaPdvBloco({
         <Badge variant="outline" className={`text-xs font-medium px-1.5 py-0 ${origemClass}`}>
           {labelOrigemCaixa(origem, m)}
         </Badge>
+        <EstoqueLinha item={item} m={m} />
       </div>
     </div>
   )

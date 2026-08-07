@@ -21,6 +21,21 @@ type Props = {
   hideNovoCupom?: boolean
   /** PDV clássico: reduz altura quando há texto na busca (prepara área de staging). */
   compact?: boolean
+  /**
+   * Navegação do seletor de candidatos (`status: 'multiplos'`). Presente só
+   * enquanto há lista aberta. O foco **permanece neste input** — é o popup do
+   * combobox que se move, para que o operador possa refinar o termo digitado
+   * sem precisar clicar de volta no campo.
+   */
+  navegacaoResultados?: {
+    total: number
+    ativo: number
+    listboxId: string
+    optionId: (indice: number) => string
+    onMover: (delta: 1 | -1) => void
+    onConfirmar: () => void
+    onFechar: () => void
+  } | null
 }
 
 export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function CaixaSearchBar(
@@ -36,6 +51,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
     onToggleSom,
     hideNovoCupom = false,
     compact = false,
+    navegacaoResultados = null,
   },
   forwardedRef,
 ) {
@@ -91,7 +107,43 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
               "w-full",
               compact ? "py-1.5 text-body" : "h-14 text-subtitle",
             )}
+            role={navegacaoResultados ? "combobox" : undefined}
+            aria-expanded={navegacaoResultados ? true : undefined}
+            aria-controls={navegacaoResultados?.listboxId}
+            aria-autocomplete={navegacaoResultados ? "list" : undefined}
+            aria-activedescendant={
+              navegacaoResultados
+                ? navegacaoResultados.optionId(navegacaoResultados.ativo)
+                : undefined
+            }
             onKeyDown={(e) => {
+              // Com lista aberta, as setas movem a seleção e Enter confirma o
+              // candidato destacado — sem isso o Enter reenviaria o mesmo termo
+              // ambíguo e a busca voltaria à estaca zero.
+              if (navegacaoResultados && navegacaoResultados.total > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault()
+                  navegacaoResultados.onMover(1)
+                  return
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault()
+                  navegacaoResultados.onMover(-1)
+                  return
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  navegacaoResultados.onConfirmar()
+                  return
+                }
+                if (e.key === "Escape") {
+                  // Primeiro Esc fecha a lista e preserva o termo; só o segundo
+                  // limpa o campo (comportamento original).
+                  e.preventDefault()
+                  navegacaoResultados.onFechar()
+                  return
+                }
+              }
               if (e.key === "Escape") {
                 e.preventDefault()
                 onCodigoChange("")

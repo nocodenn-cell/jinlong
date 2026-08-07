@@ -151,7 +151,14 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
         value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
         icon="list-filter"
         tone="gold"
-        hint={listaRes.capped ? ui.financeiro_kpi_truncado : undefined}
+        // Truncagem já era detectada e sinalizada com "N+". O que faltava era
+        // dizer o que fazer: os filtros de busca/cliente/vencimento acima já
+        // estreitam o conjunto. Paginação real depende de revisão da ADR-010.
+        hint={
+          listaRes.capped
+            ? ui.financeiro_kpi_truncado.replace('{{n}}', String(contas.length))
+            : undefined
+        }
       />
       <MetricCard label={ui.financeiro_kpi_docs_fiscais} value={String(fiscal.length)} icon="file-check-2" tone="warning" />
     </div>

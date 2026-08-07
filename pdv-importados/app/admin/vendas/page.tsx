@@ -18,6 +18,7 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'
 import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { PaginationBar, clampPage } from '@/components/ui/PaginationBar'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import {
   buscarVendasPaginadasAction,
@@ -38,10 +39,6 @@ function oneOf<T extends string>(raw: string | undefined, allowed: readonly T[],
   return allowed.includes(raw as T) ? (raw as T) : fallback
 }
 
-function clampPage(raw: string | undefined): number {
-  const n = Number.parseInt(raw ?? '1', 10)
-  return Number.isFinite(n) && n >= 1 ? n : 1
-}
 
 const DIA_MS = 86_400_000
 
@@ -97,7 +94,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   })
   const m = getMessages(session.idioma)
   const ui = m.admin_ui
-  const lk = session.idioma === 'zh' ? 'cn' : 'pt'
   const locale = localeFromIdioma(session.idioma)
   const sp = (searchParams ? await searchParams : {}) ?? {}
 
@@ -197,8 +193,11 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   const periodOptions: Array<{ id: Periodo; label: string }> = [
     { id: 'hoje', label: ui.vendas_periodo_label_hoje },
     { id: 'ontem', label: ui.vendas_periodo_label_ontem },
-    { id: '7d', label: '7d' },
-    { id: 'mes', label: m.admin.dashboard.period30d[lk] },
+    { id: '7d', label: ui.vendas_periodo_label_7d },
+    // Rotulava com `dashboard.period30d` ("30 dias"), mas `periodoInicio('mes')`
+    // calcula o MÊS CORRENTE (do dia 1) — no dia 3 isso são 3 dias, não 30. O
+    // chip da mesma tela já usava o rótulo certo, então a tela se contradizia.
+    { id: 'mes', label: ui.vendas_periodo_label_mes },
     { id: 'tudo', label: ui.filtro_todos },
   ]
 
@@ -343,46 +342,21 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           devolverAcao: ui.vendas_acao_devolver,
         }} />
 
-        {page > 1 || hasMore ? (
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-jl-fg-3">{m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', '…')}</span>
-            <div className="flex items-center gap-1">
-              <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-                {ui.paginacao_anterior}
-              </PageLink>
-              <PageLink href={pageHref(page + 1)} disabled={!hasMore}>
-                {ui.paginacao_proxima}
-              </PageLink>
-            </div>
-          </div>
-        ) : null}
+        {/* Modo cursor: a action devolve `hasMore`, não a contagem total — por
+            isso não há janela de páginas nem "de N". */}
+        <PaginationBar
+          className="mt-4"
+          mode="cursor"
+          page={page}
+          hasMore={hasMore}
+          pageHref={pageHref}
+          label={m.produtos.pag_info
+            .replace('{{atual}}', String(page))
+            .replace('{{total}}', '…')}
+          anteriorLabel={ui.paginacao_anterior}
+          proximaLabel={ui.paginacao_proxima}
+        />
       </SectionCard>
     </div>
-  )
-}
-
-function PageLink({
-  href,
-  disabled,
-  children,
-}: {
-  href: string
-  disabled: boolean
-  children: React.ReactNode
-}) {
-  if (disabled) {
-    return (
-      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
-        {children}
-      </span>
-    )
-  }
-  return (
-    <Link
-      href={href}
-      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
-    >
-      {children}
-    </Link>
   )
 }

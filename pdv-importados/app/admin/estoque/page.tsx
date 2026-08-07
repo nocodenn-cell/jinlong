@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { Upload } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { PaginationBar, clampPage } from '@/components/ui/PaginationBar'
 import {
   PageHeader,
   PageActions,
@@ -20,7 +21,6 @@ import { getMessages } from '@/i18n/getMessages'
 import { obterListaEstoqueGerente } from '@/app/gerente/estoque/actions'
 import { listarOpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
 import { EstoqueTable, type EstoqueLinha } from './_components/EstoqueTable'
-import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
 
@@ -36,10 +36,6 @@ function uuidOrUndef(raw: string | undefined): string | undefined {
   return raw && UUID_RE.test(raw) ? raw : undefined
 }
 
-function clampPage(raw: string | undefined): number {
-  const n = Number.parseInt(raw ?? '1', 10)
-  return Number.isFinite(n) && n >= 1 ? n : 1
-}
 
 type SearchParams = {
   q?: string
@@ -236,34 +232,16 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           </div>
         }
         footer={
-          totalPages > 1 ? (
-            <div className="flex w-full items-center justify-between gap-3">
-              <span className="text-caption text-fg-subtle">
-                {m.produtos.pag_info
-                  .replace('{{atual}}', String(page))
-                  .replace('{{total}}', String(totalPages))}
-              </span>
-              <div className="flex items-center gap-1">
-                <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
-                  {ui.paginacao_anterior}
-                </PageLink>
-                {pageWindow(page, totalPages).map((p, i) =>
-                  p === 'gap' ? (
-                    <span key={`gap-${i}`} className="px-1 text-caption text-fg-subtle">
-                      …
-                    </span>
-                  ) : (
-                    <PageNumber key={p} href={pageHref(p)} active={p === page}>
-                      {p}
-                    </PageNumber>
-                  ),
-                )}
-                <PageLink href={pageHref(page + 1)} disabled={page >= totalPages}>
-                  {ui.paginacao_proxima}
-                </PageLink>
-              </div>
-            </div>
-          ) : undefined
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            pageHref={pageHref}
+            label={m.produtos.pag_info
+              .replace('{{atual}}', String(page))
+              .replace('{{total}}', String(totalPages))}
+            anteriorLabel={ui.paginacao_anterior}
+            proximaLabel={ui.paginacao_proxima}
+          />
         }
       >
         {loadError ? (
@@ -318,69 +296,5 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
         )}
       </CrudListShell>
     </div>
-  )
-}
-
-function pageWindow(current: number, total: number): Array<number | 'gap'> {
-  const out: Array<number | 'gap'> = []
-  const win = new Set<number>([1, total, current - 1, current, current + 1])
-  const sorted = [...win].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b)
-  let prev = 0
-  for (const n of sorted) {
-    if (prev && n - prev > 1) out.push('gap')
-    out.push(n)
-    prev = n
-  }
-  return out
-}
-
-function PageLink({
-  href,
-  disabled,
-  children,
-}: {
-  href: string
-  disabled: boolean
-  children: React.ReactNode
-}) {
-  if (disabled) {
-    return (
-      <span className="cursor-not-allowed rounded-control border border-[var(--color-border)] px-2.5 py-1 text-caption text-fg-subtle opacity-50">
-        {children}
-      </span>
-    )
-  }
-  return (
-    <Link
-      href={href}
-      className="rounded-control border border-[var(--color-border)] px-2.5 py-1 text-caption text-fg-muted transition-colors hover:bg-[var(--color-surface-soft)] hover:text-fg"
-    >
-      {children}
-    </Link>
-  )
-}
-
-function PageNumber({
-  href,
-  active,
-  children,
-}: {
-  href: string
-  active: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'flex h-7 min-w-[28px] items-center justify-center rounded-control px-1 text-caption font-medium transition-colors',
-        active
-          ? 'border border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-brand'
-          : 'border border-[var(--color-border)] text-fg-subtle hover:bg-[var(--color-surface-soft)] hover:text-fg',
-      )}
-    >
-      {children}
-    </Link>
   )
 }

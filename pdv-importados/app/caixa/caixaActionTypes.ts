@@ -19,6 +19,21 @@ export type ProdutoCaixaDTO = {
   estoque_minimo: number | null
 }
 
+/**
+ * Candidato de busca — payload mínimo para o operador escolher entre vários
+ * produtos que casam com o mesmo termo. NÃO carrega preço calculado: o preço
+ * autoritativo só é resolvido depois da escolha, pelo caminho normal de leitura
+ * (`buscarProdutoComPrecoCaixa`). `preco_varejo` aqui é referência de vitrine.
+ */
+export type ProdutoCaixaResumoDTO = {
+  id: string
+  nome: string
+  codigo_barras: string | null
+  preco_varejo: number
+  quantidade_estoque: number | null
+  estoque_minimo: number | null
+}
+
 export type CotacaoUsdBrlResult =
   | { ok: true; brlPorUsd: number; fonte: 'api' | 'fallback'; dataReferencia: string }
   | { ok: false }
@@ -27,10 +42,20 @@ export type CarregarRegrasResult =
   | { ok: true; regras: RegraPreco[]; pricingContext: PricingContext }
   | { ok: false; error: string }
 
+/**
+ * `ambiguo` vs `multiplos` — a distinção é intencional:
+ *
+ * - `ambiguo`: o **código de barras** lido bate com mais de um produto. Isso é
+ *   erro de cadastro (código duplicado), não escolha do operador. Continua
+ *   sendo um beco com orientação para corrigir o cadastro.
+ * - `multiplos`: o **nome/categoria** digitado bate com vários produtos. Isso é
+ *   busca normal; o operador escolhe na lista.
+ */
 export type BuscarProdutoResult =
   | { ok: true; status: 'encontrado'; produto: ProdutoCaixaDTO }
   | { ok: true; status: 'nao_encontrado' }
   | { ok: true; status: 'ambiguo'; mensagem: string }
+  | { ok: true; status: 'multiplos'; produtos: ProdutoCaixaResumoDTO[] }
   | { ok: false; error: string }
 
 export type BuscarProdutoComPrecoResult =
@@ -43,6 +68,7 @@ export type BuscarProdutoComPrecoResult =
     }
   | { ok: true; status: 'nao_encontrado' }
   | { ok: true; status: 'ambiguo'; mensagem: string }
+  | { ok: true; status: 'multiplos'; produtos: ProdutoCaixaResumoDTO[] }
   | { ok: false; error: string }
 
 export type CalcularPrecoProdutoCaixaResult =

@@ -97,7 +97,6 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
           ate: ui.relatorios_filtro_ate,
           aplicar: ui.relatorios_filtro_aplicar,
           exportarCsv: ui.relatorios_filtro_exportar_csv,
-          xlsx: ui.relatorios_filtro_xlsx,
           csvFilename: ui.relatorios_csv_filename,
         },
         locale,

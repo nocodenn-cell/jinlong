@@ -121,6 +121,20 @@ async function avaliarProdutoTesteApp(codigo: string): Promise<DiagnosticoCheck[
       },
     ]
   }
+  if (res.status === 'multiplos') {
+    // O diagnóstico espera um código que identifique UM produto. Vários acertos
+    // significam que `PDV_DIAGNOSTICO_PRODUTO_CODIGO` está apontando para um
+    // termo genérico — não é falha do PDV, é configuração do diagnóstico.
+    return [
+      {
+        id: 'app_produto_busca',
+        categoria: 'estoque',
+        titulo: 'Busca produto teste (app)',
+        status: 'aviso',
+        detalhe: `Código ${codigo} casa com ${res.produtos.length} produtos. Use um código de barras único em PDV_DIAGNOSTICO_PRODUTO_CODIGO.`,
+      },
+    ]
+  }
   const q = res.produto.quantidade_estoque
   const saldoOk = q !== null && q > 0
   return [
