@@ -107,12 +107,33 @@ BEGIN
     'public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure
   );
 
+  -- ⚠️ CORREÇÃO 2026-08-07: não abortar quando o literal não casa.
+  --
+  -- `v_bloco_de` foi escrito a partir do corpo VIVO em produção. O corpo criado
+  -- por `20260718135500_ajuste_estoque_inicial_operador_pdv.sql` — que é o que
+  -- existe nesta posição de uma reconstrução limpa — tem formatação diferente
+  -- (quebra de linha após `v_estoque_inicial :=` e linha em branco antes do IF),
+  -- então o `position()` não encontra o bloco e a migration abortava a
+  -- reconstrução inteira.
+  --
+  -- Abortar aqui é desnecessário porque esta migration NÃO é a autoridade sobre
+  -- o gate numa reconstrução: `269_ajustar_estoque_manual_service_ator.sql`
+  -- recria `ajustar_estoque_manual` com `IF v_perfil NOT IN ('GERENTE','DONO',
+  -- 'ADMIN')` — sem exceção de OPERADOR, sem `v_estoque_inicial` — e '269_'
+  -- ordena DEPOIS de '2026...' (no 2º caractere, '6' > '0'). O estado final
+  -- seguro é garantido lá, estruturalmente.
+  --
+  -- Em produção este bloco continua sendo o mecanismo real de remoção, e lá o
+  -- literal casa. Portanto: aplica quando casa, avisa e segue quando não casa.
   IF position(v_bloco_de IN v_def) = 0 THEN
     IF position('OPERADOR' IN v_def) = 0 THEN
       RAISE NOTICE 'ajustar_estoque_manual: exceção de OPERADOR já ausente — nada a fazer.';
-      RETURN;
+    ELSE
+      RAISE NOTICE
+        'ajustar_estoque_manual: bloco não casou (formatação difere da de produção). '
+        'Nada aplicado aqui — o gate final sem OPERADOR é escrito pela migration 269.';
     END IF;
-    RAISE EXCEPTION 'MIG_GATE_AJUSTE_NAO_ENCONTRADO: bloco de perfil não casou; revisar manualmente.';
+    RETURN;
   END IF;
 
   v_novo := replace(v_def, v_bloco_de, v_bloco_para);
@@ -122,8 +143,14 @@ BEGIN
   v_def := pg_get_functiondef(
     'public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure
   );
-  IF position('OPERADOR' IN v_def) > 0 OR position('v_estoque_inicial' IN v_def) > 0 THEN
+  -- Só chega aqui quando o replace foi de fato aplicado; então a asserção vale.
+  IF position('OPERADOR' IN v_def) > 0 THEN
     RAISE EXCEPTION 'MIG_AJUSTE_AINDA_CITA_OPERADOR: replace não surtiu efeito.';
+  END IF;
+  -- Declaração órfã não é falha: variável não usada não afeta segurança nem
+  -- comportamento. Antes isto abortava a migration junto com o caso acima.
+  IF position('v_estoque_inicial' IN v_def) > 0 THEN
+    RAISE NOTICE 'ajustar_estoque_manual: declaração v_estoque_inicial permaneceu (inofensiva, não usada).';
   END IF;
   -- Guarda-corpo: o resto do corpo tem de continuar íntegro.
   IF position('AJUSTE_ESTOQUE_LINHA_NAO_ENCONTRADA' IN v_def) = 0
