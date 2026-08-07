@@ -266,3 +266,63 @@ Estado real:
 **Só a #257 está pronta.** As outras três são todas de backend/RLS/fiscal — exatamente a frente que a próxima sprint não vai tocar. Elas não bloqueiam a sprint de UI/UX, mas **bloqueiam o Go-Live** e precisam de dono na frente de backend.
 
 Ordem recomendada: **#257 → fechar #256 → (frente backend assume #187 → #131 → #258)**.
+
+---
+
+## 12. Conclusão da #257 e triagem de PRs (2026-08-07)
+
+### 12.1 Review: não posso obter
+
+A #257 tem `reviewDecision = REVIEW_REQUIRED` e **0 reviews**. Review exige um revisor humano — não é algo que eu possa produzir, e auto-aprovar a própria PR não seria review, seria contorno de controle. Todas as 48 PRs abertas estão nesse estado; é sintoma do B-2/B-3 (governança sem revisor designado), não desta PR.
+
+### 12.2 Merge: `BLOCKED`, e mergear exigiria o bypass que documentamos como risco
+
+`mergeStateStatus = BLOCKED`. Mergear hoje exigiria `gh pr merge --admin`, ou seja, **usar exatamente a bypass list que o B-3 classifica como P1** — a mesma que permitiu o PR #232 entrar com todos os checks vermelhos.
+
+Não executei. É decisão de governança do owner, não ação técnica.
+
+### 12.3 CI da #257 — triagem por origem
+
+| Check | Resultado | É meu? |
+|---|---|---|
+| `build-and-test` (pdv-importados) | ✅ pass | — |
+| `gitleaks` · `edge-functions-typecheck` | ✅ pass | — |
+| `migration-remote-drift` · `rls-rest-gate` · `previewkit` | ❌ fail | **Não** — falham igual na #256 e na #258 |
+| `Supabase local RLS smoke` | ❌ fail | **Não** — é a reconstrução do zero que a #258 remedia |
+| `Vercel` | ❌ fail | **Não** — ver abaixo |
+
+**Vercel — investigado a fundo porque era o único check que passava na #256 e falha na #257.**
+
+| Evidência | Valor |
+|---|---|
+| `errorCode` | `BUILD_FAILED` · `errorMessage`: **"Resource provisioning failed"** |
+| Duração do build | **659 ms** (`buildingAt` → `ready`) |
+| Linhas de log de build | **zero** — `get_deployment_build_logs` retorna vazio |
+| `next build` local no mesmo commit | ✅ passa |
+| Deploy anterior da mesma branch (`8b490a7c`) | ✅ READY, build real de **164 s** |
+| Outros deploys no período | READY/CANCELED; os **únicos dois ERROR são meus dois pushes**, com 164 s de intervalo |
+
+Erro de código produz log de build. Este não produziu nenhum, e falhou antes do contêiner existir. **É falha de provisionamento da Vercel — plataforma ou limite de concorrência —, não regressão de código.** Basta um novo deploy para confirmar; não requer mudança no repositório.
+
+### 12.4 Destino das PRs
+
+| PR | Decisão | Executado |
+|---|---|---|
+| **#256** | **Fechada sem merge** — contenção provada por `git merge-base`; nada se perde, o trabalho entra por #257 | ✅ fechada |
+| **#187** | **Manter aberta, bloqueada pela #258** | ✅ triagem comentada |
+| **#131** | **Manter aberta, bloqueada pela #258** | ✅ triagem comentada |
+
+**Motivo técnico comum a #187 e #131** — as duas são **exclusivamente migration**, sem uma linha de código de aplicação, e ambas usam **prefixo de timestamp**:
+
+```
+20260702000000_254_...   ordena 1º   (#131)
+20260714110959_...       ordena 2º   (#187)
+248_fix_anon_grant_drift ordena 3º
+289_reafirma_grants      ordena 4º
+```
+
+No 2º caractere `0 < 4`: arquivo escrito depois roda antes. É a mesma família de defeito que a #258 está remediando commit a commit. Mergear qualquer uma antes da #258 reintroduziria a inversão numa reconstrução do zero — exatamente o que o job `Supabase local RLS smoke` exercita e que já falha hoje.
+
+Ordem correta: **#257 → #258 → rebase de #187 e #131 com renomeação para `NNN_`**.
+
+Nenhuma das duas é obsoleta — ambas carregam trabalho real de segurança (escopo da RPC canônica de venda; isolamento tenant-only por JWT). Fechá-las perderia conteúdo. Elas precisam de **dono na frente de backend**, que não é a sprint corrente.
