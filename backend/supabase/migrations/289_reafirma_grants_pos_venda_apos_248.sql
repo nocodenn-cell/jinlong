@@ -1,6 +1,18 @@
--- Migration 314 — Reafirma o estado final de grants das RPCs criadas pela
--- `248_devolver_ou_trocar_venda.sql`, numa posição que roda DEPOIS dela em
--- qualquer ordenação.
+-- Migration 289 (era 314) — Reafirma o estado final de grants das RPCs criadas
+-- pela `248_devolver_ou_trocar_venda.sql`, numa posição que roda DEPOIS dela.
+--
+-- ⚠️ RENOMEADA EM 2026-08-07. Nasceu como `20260807002147_314_...` e caiu no
+-- MESMO defeito que existe para corrigir: prefixo de timestamp ordena ANTES de
+-- '248_' ('2026' < '248' no 2º caractere), então ela rodava antes das funções
+-- existirem e abortava a reconstrução na própria guarda:
+--
+--     MIGRATION_314: devolver_ou_trocar_venda ausente — a 248 deveria ter
+--     rodado antes desta migration
+--
+-- Renomeada para o prefixo numérico 289, que ordena depois de 248, 269, 270,
+-- 288 E de qualquer timestamp '2026...'. O ledger de produção foi atualizado
+-- na mesma operação (version '20260807002147' → '289'); o conteúdo é idêntico e
+-- idempotente, e já estava aplicado.
 --
 -- POR QUE ESTA MIGRATION EXISTE
 --
