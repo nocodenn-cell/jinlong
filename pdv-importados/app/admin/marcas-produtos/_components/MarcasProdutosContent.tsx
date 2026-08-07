@@ -1,28 +1,20 @@
 'use client'
 
 /**
- * FastProduct Admin — Marcas de Produtos.
- *
- * Até aqui só existia o cadastro rápido dentro do formulário de produto: marca
- * digitada errada era permanente e poluía o seletor de todo cadastro futuro
- * (AUDITORIA_CATALOGO_PRODUTO.md §5.3). Mesmo contrato CRUD de
- * `/admin/categorias-produtos`: toolbar · DataTable · ações inline.
+ * Marcas de Produtos — lista/CRUD (filtros no PageShell/FilterBar — Sprint 5).
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Edit2, Plus, Tag, ToggleLeft, ToggleRight, X } from 'lucide-react'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
-import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Field, Input, SearchInput } from '@/components/ui/forms'
+import { Field, Input } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { cn } from '@/lib/utils'
 import {
   alternarAtivoMarcaProduto,
   atualizarMarcaProduto,
@@ -30,23 +22,13 @@ import {
   type MarcaProdutoRow,
 } from '@/app/gerente/marcas-produtos/actions'
 
-type SituacaoFiltro = 'todos' | 'ativos' | 'inativos'
-
 type Props = {
   idioma: Idioma
   dados: { rows: MarcaProdutoRow[]; total: number }
-  buscaInicial: string
-  situacaoInicial: SituacaoFiltro
   page: number
 }
 
-export function MarcasProdutosContent({
-  idioma,
-  dados,
-  buscaInicial,
-  situacaoInicial,
-  page,
-}: Props) {
+export function MarcasProdutosContent({ idioma, dados, page }: Props) {
   const router = useRouter()
   const labels = getMessages(idioma)
   const m = labels.marcas_produtos
@@ -57,33 +39,12 @@ export function MarcasProdutosContent({
   const [newNome, setNewNome] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [termo, setTermo] = useState(buscaInicial)
-  const [situacao, setSituacao] = useState<SituacaoFiltro>(situacaoInicial)
-
-  const termoDebounced = useDebounce(termo, 280)
-  const skipMountRef = useRef(true)
 
   useEffect(() => {
     setRows(dados.rows)
   }, [dados.rows])
 
-  useEffect(() => {
-    setTermo(buscaInicial)
-    setSituacao(situacaoInicial)
-  }, [buscaInicial, situacaoInicial])
-
-  useEffect(() => {
-    if (skipMountRef.current) {
-      skipMountRef.current = false
-      return
-    }
-    const p = new URLSearchParams()
-    if (termoDebounced) p.set('q', termoDebounced)
-    if (situacao !== 'todos') p.set('situacao', situacao)
-    router.push(pathWithQuery(ROUTES.admin.marcasProdutos, p))
-  }, [termoDebounced, situacao, router])
-
-  const handleCreate = async () => {
+  async function handleCreate() {
     if (!newNome.trim()) return
     setLoading(true)
     setError(null)
@@ -101,7 +62,7 @@ export function MarcasProdutosContent({
     }
   }
 
-  const handleUpdate = async (id: string) => {
+  async function handleUpdate(id: string) {
     if (!editingNome.trim()) return
     setLoading(true)
     setError(null)
@@ -118,7 +79,7 @@ export function MarcasProdutosContent({
     }
   }
 
-  const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
+  async function handleToggleAtivo(id: string, ativoAtual: boolean) {
     setError(null)
     const res = await alternarAtivoMarcaProduto(id, !ativoAtual)
     if (!res.success) {
@@ -127,8 +88,6 @@ export function MarcasProdutosContent({
     }
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ativo: !r.ativo } : r)))
   }
-
-  const situacaoOptions: SituacaoFiltro[] = ['todos', 'ativos', 'inativos']
 
   const columns: Column<MarcaProdutoRow>[] = [
     {
@@ -142,9 +101,7 @@ export function MarcasProdutosContent({
       header: m.col_qtd_produtos,
       align: 'right',
       sortValue: (r) => r.qtd_produtos,
-      cell: (r) => (
-        <span className="tabular-nums text-caption text-fg-muted">{r.qtd_produtos}</span>
-      ),
+      cell: (r) => <span className="tabular-nums text-caption text-fg-muted">{r.qtd_produtos}</span>,
     },
     {
       key: 'ativo',
@@ -170,56 +127,22 @@ export function MarcasProdutosContent({
       title={m.lista_titulo}
       meta={<span className="text-caption text-fg-subtle">{countLabel}</span>}
       toolbar={
-        <>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <div className="min-w-[240px] max-w-[420px] flex-1">
-              <SearchInput
-                value={termo}
-                onChange={(e) => setTermo(e.target.value)}
-                placeholder={m.filtro_busca_placeholder}
-                aria-label={m.filtro_busca}
-                controlSize="sm"
-              />
-            </div>
-            <div
-              className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
-              role="group"
-            >
-              {situacaoOptions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSituacao(s)}
-                  aria-pressed={situacao === s}
-                  className={cn(
-                    'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium',
-                    situacao === s
-                      ? 'bg-[var(--color-info-bg)] text-brand'
-                      : 'text-fg-subtle hover:text-fg',
-                  )}
-                >
-                  {m[`filtro_${s}` as keyof typeof m] as string}
-                </button>
-              ))}
-            </div>
-          </div>
-          <PageActions>
-            <Button
-              type="button"
-              variant="primary"
-              className="gap-1.5"
-              onClick={() => setCreatingNew(true)}
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              {m.nova_marca}
-            </Button>
-          </PageActions>
-        </>
+        <PageActions>
+          <Button type="button" variant="primary" className="gap-1.5" onClick={() => setCreatingNew(true)}>
+            <Plus className="h-4 w-4" aria-hidden />
+            {m.nova_marca}
+          </Button>
+        </PageActions>
+      }
+      footer={
+        dados.total > 50 ? (
+          <span className="text-caption text-fg-subtle">
+            {`${page} / ${Math.ceil(dados.total / 50)} · ${dados.total} ${m.marcas_plural}`}
+          </span>
+        ) : undefined
       }
     >
-      {error ? (
-        <ErrorState dense description={error} className="mb-4 items-start text-left" />
-      ) : null}
+      {error ? <ErrorState dense description={error} className="mb-4 items-start text-left" /> : null}
 
       {creatingNew ? (
         <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-4">
@@ -236,21 +159,10 @@ export function MarcasProdutosContent({
               />
             </Field>
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="primary"
-                size="icon"
-                disabled={loading || !newNome.trim()}
-                onClick={() => void handleCreate()}
-              >
+              <Button type="button" variant="primary" size="icon" disabled={loading || !newNome.trim()} onClick={() => void handleCreate()}>
                 <Check className="h-4 w-4" aria-hidden />
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => setCreatingNew(false)}
-              >
+              <Button type="button" variant="secondary" size="icon" onClick={() => setCreatingNew(false)}>
                 <X className="h-4 w-4" aria-hidden />
               </Button>
             </div>
@@ -273,21 +185,10 @@ export function MarcasProdutosContent({
               />
             </Field>
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="primary"
-                size="icon"
-                disabled={loading || !editingNome.trim()}
-                onClick={() => void handleUpdate(editingId)}
-              >
+              <Button type="button" variant="primary" size="icon" disabled={loading || !editingNome.trim()} onClick={() => void handleUpdate(editingId)}>
                 <Check className="h-4 w-4" aria-hidden />
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => setEditingId(null)}
-              >
+              <Button type="button" variant="secondary" size="icon" onClick={() => setEditingId(null)}>
                 <X className="h-4 w-4" aria-hidden />
               </Button>
             </div>
@@ -341,12 +242,6 @@ export function MarcasProdutosContent({
           </div>
         )}
       />
-
-      {dados.total > 50 ? (
-        <p className="mt-3 text-caption text-fg-subtle">
-          {`${page} / ${Math.ceil(dados.total / 50)} · ${dados.total} ${m.marcas_plural}`}
-        </p>
-      ) : null}
     </CrudListShell>
   )
 }

@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/ui/admin-v2'
+import { PageShell } from '@/components/ui/admin-v2'
 import { buscarClientesPaginadosAction } from '@/app/admin/clientes/actions'
 import { ClientesListClient } from '@/app/gerente/clientes/ClientesListClient'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
@@ -6,8 +6,7 @@ import { getMessagesForLocaleInput } from '@/i18n/catalogAdapter'
 import { ROUTES } from '@shared-core/navigation/routes'
 
 /**
- * Admin clientes — primeiro domínio com i18n na borda (Missão 5.3).
- * Labels via catalogAdapter; erros de policy resolvidos nas Server Actions.
+ * Admin clientes — PageShell (Sprint 5 / RFC-UX-023).
  */
 export default async function AdminClientesPage() {
   const { session } = await loadAdminContext({
@@ -21,15 +20,16 @@ export default async function AdminClientesPage() {
   const hasMoreInicial = inicial.ok ? inicial.hasMore : false
 
   return (
-    <div className="admin-v2-page" data-locale={locale}>
-      <PageHeader title={messages.clientes.titulo} subtitle={messages.clientes.subtitulo} />
-      <ClientesListClient
-        idioma={legacyIdioma}
-        locale={locale}
-        messages={messages}
-        clientesIniciais={clientesIniciais}
-        hasMoreInicial={hasMoreInicial}
-      />
+    <div data-locale={locale}>
+      <PageShell title={messages.clientes.titulo} subtitle={messages.clientes.subtitulo}>
+        <ClientesListClient
+          idioma={legacyIdioma}
+          locale={locale}
+          messages={messages}
+          clientesIniciais={clientesIniciais}
+          hasMoreInicial={hasMoreInicial}
+        />
+      </PageShell>
     </div>
   )
 }

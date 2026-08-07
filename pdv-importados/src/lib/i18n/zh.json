@@ -1814,6 +1814,7 @@
   },
   "fornecedores": {
     "titulo": "供应商",
+    "subtitulo": "供应商档案与管理",
     "contagem": "供应商",
     "novo": "新建供应商",
     "editar": "编辑",

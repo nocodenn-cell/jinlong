@@ -9,11 +9,14 @@
  * + SectionCard com chips de tipo + timeline (client) com Sheet de detalhe.
  */
 
-import Link from 'next/link'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
+import { Suspense } from 'react'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
-import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { MetricCard, PageShell, SectionCard } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
+import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { InlineAlert } from '@/components/ui/InlineAlert'
+import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { formatNumberLocale } from '@/lib/format/money'
 import {
@@ -154,92 +157,71 @@ export default async function AdminAuditoriaPage({ searchParams }: PageProps) {
     },
   ]
 
-  const activeParams: Record<string, string> = {}
-  if (periodo !== '7d') activeParams.periodo = periodo
-  if (tipo !== 'all') activeParams.tipo = tipo
-
-  const periodHref = (next: Periodo) => {
-    const p = new URLSearchParams(activeParams)
-    if (next === '7d') p.delete('periodo')
-    else p.set('periodo', next)
-    return pathWithQuery(ROUTES.admin.auditoria, p)
-  }
-  const tipoHref = (next: TipoFiltro) => {
-    const p = new URLSearchParams(activeParams)
-    if (next === 'all') p.delete('tipo')
-    else p.set('tipo', next)
-    return pathWithQuery(ROUTES.admin.auditoria, p)
-  }
+  const m = getMessages(session.idioma)
+  const filters: FilterDef[] = [
+    {
+      type: 'pills',
+      key: 'periodo',
+      defaultValue: '7d',
+      options: (['hoje', 'ontem', '7d', 'mes', 'tudo'] as Periodo[]).map((p) => ({
+        value: p,
+        label: PERIODO_LABEL[p],
+      })),
+    },
+    {
+      type: 'select',
+      key: 'tipo',
+      defaultValue: 'all',
+      options: TIPO_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
+    },
+  ]
 
   return (
-    <div className="admin-v2-page admin-v2-stack">
-      <PageHeader
-        title="Auditoria"
-        subtitle="Linha do tempo de eventos operacionais — vendas, cancelamentos, estoque, alertas e descontos."
-        filters={(
-          <div className="admin-v2-segmented">
-            {(['hoje', 'ontem', '7d', 'mes', 'tudo'] as Periodo[]).map((option) => (
-              <Link
-                key={option}
-                href={periodHref(option)}
-                data-active={periodo === option}
-                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                {PERIODO_LABEL[option]}
-              </Link>
-            ))}
-          </div>
-        )}
-      />
-
-      <div className="admin-v2-grid-kpi">
-        {metricCards.map((card) => (
-          <MetricCard
-            key={card.label}
-            label={card.label}
-            value={card.value}
-            icon={card.icon}
-            tone={card.tone}
-            hint={card.hint}
-          />
-        ))}
-      </div>
-
+    <PageShell
+      title="Auditoria"
+      subtitle="Linha do tempo de eventos operacionais — vendas, cancelamentos, estoque, alertas e descontos."
+      filters={
+        <Suspense fallback={<div className="h-9" />}>
+          <FilterBar filters={filters} clearLabel={m.comum.limpar_filtros} />
+        </Suspense>
+      }
+      kpi={
+        <>
+          {metricCards.map((card) => (
+            <MetricCard
+              key={card.label}
+              label={card.label}
+              value={card.value}
+              icon={card.icon}
+              tone={card.tone}
+              hint={card.hint}
+            />
+          ))}
+        </>
+      }
+    >
       <SectionCard
         title="Trilha de eventos"
         action={
-          <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption text-fg-subtle">
             {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
           </span>
         }
       >
-        <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          {TIPO_OPTIONS.map((option) => (
-            <Link
-              key={option.id}
-              href={tipoHref(option.id)}
-              data-active={tipo === option.id}
-              className="admin-v2-filter-pill rounded-full px-3 py-1 text-[11px] font-medium transition-colors"
-            >
-              {option.label}
-            </Link>
-          ))}
-        </div>
-
         {loadError ? (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
+          <InlineAlert tone="danger" className="mb-3">
             {loadError}
-          </div>
+          </InlineAlert>
         ) : null}
 
         <AuditoriaTimeline eventos={eventos} />
 
         {truncado ? (
-          <p className="mt-4 text-[11px] text-jl-fg-3">
+          <p className="mt-4 text-caption text-fg-subtle">
             Exibindo os 150 eventos mais recentes do período. Use um período menor ou filtre por tipo para refinar.
           </p>
         ) : null}
       </SectionCard>
-    </div>
+    </PageShell>
   )
 }

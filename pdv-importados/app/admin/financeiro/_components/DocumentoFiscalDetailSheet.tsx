@@ -104,7 +104,7 @@ export function DocumentoFiscalDetailSheet({ documentoId, onClose, locale }: Pro
               disabled={pending}
               confirmMessage="Confirma reprocessar este documento?"
               onClick={handleReprocessar}
-              className="admin-v2-btn-secondary mt-4 text-sm"
+              className="mt-4"
             >
               Reprocessar
             </ConfirmActionButton>

@@ -1631,6 +1631,7 @@
   },
   "fornecedores": {
     "titulo": "Fornecedores",
+    "subtitulo": "Cadastro e gestão de fornecedores",
     "contagem": "fornecedores",
     "novo": "Novo fornecedor",
     "editar": "Editar",

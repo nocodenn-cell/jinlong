@@ -74,11 +74,8 @@ Revisão pós-gates (não só “verde”):
 - [x] Segunda passagem + correções
 - [x] Gates verdes
 - [x] Relatório + métricas roadmap
-- [x] **Sprint 5 bloqueada** até aceite explícito
+- [x] **Sprint 5** — autorizada e **FECHADA** (ver [`SPRINT_5_ENGINEERING_LOOP.md`](./SPRINT_5_ENGINEERING_LOOP.md))
 
-## Fora de escopo (S5+)
+## Sucesso em S5
 
-- UX-P1-22 Provisionamento Stepper
-- UX-P1-08 Atacado pós-salvar
-- UX-P1-21 Vendas DetailSheet residual
-- Burndown a zero / polish P2
+- Provisionamento Stepper, burndown GerenteTable=0, polish Admin — entregues na S5.

@@ -1,16 +1,12 @@
 'use client'
 
 import { setIdiomaAction } from './actions'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 
 type Props = {
   idiomaAtual: Idioma
-  /**
-   * `dragon`: cabeçalho escuro · `dragon-light`: cabeçalho claro Jīn Lóng.
-   * Aceito na API (GerenteHeaderNav passa `dragon`) mas ainda não altera o
-   * estilo — o botão usa tokens `app-btn-neutral` que já adaptam ao tema.
-   */
+  /** Mantido por compat API (AdminV2UtilityBar). */
   variant?: 'default' | 'dragon' | 'dragon-light'
 }
 
@@ -20,26 +16,23 @@ const LANGS: { value: Idioma; label: string; title: string; font?: string }[] = 
 ]
 
 export default function LanguageToggle({ idiomaAtual }: Props) {
-  const baseBtn = cn(
-    'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
-    'app-btn-neutral disabled:cursor-default disabled:opacity-55',
-  )
-
   return (
     <form className="flex gap-1" action={setIdiomaAction}>
       {LANGS.map(({ value, label, title, font }) => (
-        <button
+        <Button
           key={value}
           type="submit"
           name="idioma"
           value={value}
           title={title}
           disabled={idiomaAtual === value}
-          className={baseBtn}
+          variant="secondary"
+          size="sm"
+          className="rounded-full px-2.5 py-1 text-xs font-semibold"
           style={font ? { fontFamily: font } : undefined}
         >
           {label}
-        </button>
+        </Button>
       ))}
     </form>
   )

@@ -46,11 +46,9 @@ const FIXED_DIALOG_ALLOWLIST = new Set([
   // SSOT overlays
   'components/ui/DetailSheet.tsx',
   'components/ui/DragonModal.tsx',
-  // PDV / nav (EXC drawer) — não são DetailSheet de entidade
+  // PDV (EXC-01/02) — não são DetailSheet de entidade admin
   'app/caixa/CaixaReciboModal.tsx',
   'app/caixa/CaixaHistoricoSheet.tsx',
-  'components/gerente/ActivityRailDrawer.tsx',
-  'components/gerente/GerenteMobileNavDrawer.tsx',
 ])
 
 const violations = []

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Printer, Search, Package, Layers } from 'lucide-react'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { PageShell, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/forms'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
@@ -259,7 +259,7 @@ export function ImprimirEtiquetasPageClient({
         nomeArquivo: `etiquetas-${Date.now()}.pdf`,
       })
     } catch {
-      alert(t.erroPdf)
+      emitToast({ kind: 'error', message: t.erroPdf })
     } finally {
       setGerandoPdf(false)
     }
@@ -268,8 +268,7 @@ export function ImprimirEtiquetasPageClient({
   const totalEtiquetas = carrinho.reduce((sum, item) => sum + item.quantidade, 0)
 
   return (
-    <div className="admin-v2-page mx-auto max-w-[1100px]">
-      <PageHeader title={t.titulo} />
+    <PageShell title={t.titulo} className="mx-auto max-w-[1100px]">
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
@@ -404,6 +403,6 @@ export function ImprimirEtiquetasPageClient({
           </SectionCard>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

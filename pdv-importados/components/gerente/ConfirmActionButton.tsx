@@ -2,21 +2,24 @@
 
 import { useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from 'react'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Button } from '@/components/ui/button'
 
 type Props = Readonly<
-  ButtonHTMLAttributes<HTMLButtonElement> & {
+  Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
     confirmMessage: string
     confirmTitle?: string
     confirmLabel?: string
     cancelLabel?: string
     variant?: 'danger' | 'neutral'
+    buttonVariant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
+    onClick?: (event: MouseEvent<HTMLButtonElement>) => void
     children?: ReactNode
   }
 >
 
 /**
- * Botão com confirmação via ConfirmDialog (IX-CONFIRM / Sprint 0).
- * Substitui `window.confirm` / `globalThis.confirm`.
+ * Botão com confirmação via ConfirmDialog (IX-CONFIRM).
+ * Usa `Button` SSOT — sem `<button>` cru nem `admin-v2-btn-*`.
  */
 export function ConfirmActionButton({
   confirmMessage,
@@ -24,9 +27,12 @@ export function ConfirmActionButton({
   confirmLabel = 'Confirmar',
   cancelLabel = 'Cancelar',
   variant = 'danger',
+  buttonVariant = 'secondary',
   onClick,
   children,
   type = 'button',
+  className,
+  disabled,
   ...props
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -40,7 +46,6 @@ export function ConfirmActionButton({
   const handleConfirm = () => {
     setOpen(false)
     if (!onClick) return
-    // Consumidores atuais ignoram o evento; sintetizamos para manter a tipagem.
     onClick({
       preventDefault() {},
       stopPropagation() {},
@@ -49,9 +54,17 @@ export function ConfirmActionButton({
 
   return (
     <>
-      <button {...props} type={type} onClick={handleClick}>
+      <Button
+        {...props}
+        type={type}
+        disabled={disabled}
+        className={className}
+        variant={buttonVariant}
+        size="sm"
+        onClick={handleClick}
+      >
         {children}
-      </button>
+      </Button>
       <ConfirmDialog
         open={open}
         onClose={() => setOpen(false)}

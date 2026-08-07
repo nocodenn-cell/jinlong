@@ -4,8 +4,8 @@
 |--------|--------|
 | **Data** | 2026-08-07 (Sprint 0 = base definitiva) |
 | **Docs** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
-| **Estado** | **S0–S4 ENCERRADAS** · Sprint 5 bloqueada até aceite |
-| **Validação** | S0–S4 Engineering Loop docs · RFCs: [`UI_UX_RFC.md`](./UI_UX_RFC.md) |
+| **Estado** | **S0–S5 ENCERRADAS** (2026-08-07) |
+| **Validação** | S0–S5 Engineering Loop docs · RFCs: [`UI_UX_RFC.md`](./UI_UX_RFC.md) |
 | **Princípio** | S0 consolida SSOT → S1+ só aplica → zero novos paradigmas |
 
 ---
@@ -223,11 +223,13 @@ Funcionários EntityTable · Cat. financeiras taxonomia · Relatórios TabNav/Fi
 
 **Depende de:** EntityTable, FilterBar, TabNav, ConfirmDialog, InlineAlert, FormSection, emitToast — **satisfeito**.  
 **Evidência:** [`SPRINT_4_ENGINEERING_LOOP.md`](./SPRINT_4_ENGINEERING_LOOP.md) · RFCs 015–020.  
-**Gate S5:** não abrir Sprint 5 sem aceite explícito do sponsor.
+**Gate S5:** ~~bloqueada~~ — **autorizada e FECHADA** 2026-08-07 (auditoria final S0–S4 + polish).
 
-### Sprint 5 — Polish
+### Sprint 5 — Polish + eliminação de entropia · **FECHADA**
 
-Lint CI · badges/chips · auth Field · dashboard densidade · drawer sidebar se tablet · provisionamento Stepper · meta aderência ≥85% consolidada.
+Remoção stack morta GerenteTable/DataTablePage/shell gerente · FilterBar cadastros · EntityLookup financeiro · Auditoria/Diagnóstico/Provisionamento/Etiquetas DS · burndown GerenteTable=0 · aderência ~92% (não 100%: EXC-01..07).
+
+**Evidência:** [`SPRINT_5_ENGINEERING_LOOP.md`](./SPRINT_5_ENGINEERING_LOOP.md) · RFCs 021–025.
 
 Detalhe IDs: [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md).
 
@@ -237,16 +239,16 @@ Detalhe IDs: [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md).
 
 | Indicador | Baseline (2026-08-07 medido) | Pós-S0 | Pós-S1 | Pós-S2 | Pós-S3 | Pós-S4 | Pós-S5 | Meta |
 |-----------|-----------------------------:|-------:|-------:|-------:|-------:|-------:|-------:|-----:|
-| Páginas auditadas | 41 | 41 | 41 | 41 | 41 | 41 | | 41 |
-| Páginas P0 | 6 | 6 | ≤4 | **≤2** | **≤1** | **0** | 0 | 0 |
-| Páginas P1 | 12 | 12 | ≤10 | **≤8** | **≤5** | **≤3** | ≤2 | ≤3 |
-| Famílias duplicadas vivas | 8 | ≤5 | ≤5 | **≤4** | **≤3** | **≤2** | ≤2 | ≤2 |
-| Padrões formulário | 2 | 2 | 2 | 2 | 1–2 | **1** (FormSection Config) | 1 | 1 |
-| Padrões tabela | 3 | 3* | ≤3 | **≤2** | **≤2** | **1+raw** (Funcionários migrado) | 1+raw | 1+raw |
+| Páginas auditadas | 41 | 41 | 41 | 41 | 41 | 41 | 41 | 41 |
+| Páginas P0 | 6 | 6 | ≤4 | **≤2** | **≤1** | **0** | **0** | 0 |
+| Páginas P1 | 12 | 12 | ≤10 | **≤8** | **≤5** | **≤3** | **≤2** | ≤3 |
+| Famílias duplicadas vivas | 8 | ≤5 | ≤5 | **≤4** | **≤3** | **≤2** | **≤2** (EXC PDV/Auth) | ≤2 |
+| Padrões formulário | 2 | 2 | 2 | 2 | 1–2 | **1** | **1** | 1 |
+| Padrões tabela | 3 | 3* | ≤3 | **≤2** | **≤2** | **1+raw** | **1+raw** (GerenteTable=0) | 1+raw |
 | Padrões modal | 2 | 1+PDV† | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV |
-| Padrões toast | 2 canais | 2 / 1 API (`emitToast`) | 2 | 2 | 2 | **2 / 1 viewport admin** (`AdminToastViewport`) | 2 | 2 |
+| Padrões toast | 2 canais | 2 / 1 API (`emitToast`) | 2 | 2 | 2 | **2 / 1 viewport admin** | **2 / 1 API admin** | 2 |
 | Padrões FilterBar | 1+N | 1+daterange+page reset | 1 | 1 | 1 | 1 | 1 | 1 |
-| Aderência DS (%) | **~55** (estrita) | ~55* (primitivos prontos) | ~75 | **~80** | **~85** | **~88** | ≥85 | ≥85 |
+| Aderência DS (%) | **~55** (estrita) | ~55* (primitivos prontos) | ~75 | **~80** | **~85** | **~88** | **~92** (não 100%) | ≥85 |
 | Cobertura IX (%) | **~88** (3 Divergentes) | **100 sem Divergente** | 100 | 100 | 100 | 100 | 100 | 100 |
 
 \* EntityTable criado; GerenteTable pode existir até S3.  
@@ -307,8 +309,8 @@ Sem alteração de regra de negócio, RPC ou entity-SSoT.
 
 ## 11. Próxima ação
 
-1. Sprint 4 **FECHADA** — evidência [`SPRINT_4_ENGINEERING_LOOP.md`](./SPRINT_4_ENGINEERING_LOOP.md).  
-2. **Não abrir Sprint 5** sem aceite explícito do sponsor.  
+1. Sprint 5 **FECHADA** — evidência [`SPRINT_5_ENGINEERING_LOOP.md`](./SPRINT_5_ENGINEERING_LOOP.md).  
+2. Dívida C residual (form produto selects, text-[Npx], EXC-06) só com mandato explícito.  
 3. Manter `npm run check:ds-sprint0` verde em todo PR.
 
 **Sprint 1 permanece bloqueada até o aceite explícito.**

@@ -2,7 +2,9 @@
 
 import { useCallback, useState, useTransition } from 'react'
 import { AlertCircle, CheckCircle2, ClipboardList, RefreshCw } from 'lucide-react'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { PageShell, SectionCard } from '@/components/ui/admin-v2'
+import { Button } from '@/components/ui/button'
+import { InlineAlert, type InlineAlertTone } from '@/components/ui/InlineAlert'
 import { executarDiagnosticoCaixaAction } from '@/app/admin/diagnostico-caixa/actions'
 import type {
   DiagnosticoCaixaResult,
@@ -32,16 +34,16 @@ function statusIcon(status: DiagnosticoCheck['status']) {
   return <AlertCircle className="h-4 w-4 text-red-500" />
 }
 
-function statusBadgeClass(status: DiagnosticoCheck['status']): string {
-  if (status === 'ok') return 'admin-v2-alert-success'
-  if (status === 'aviso') return 'admin-v2-alert-warning'
-  return 'admin-v2-alert-danger'
+function vereditoTone(veredito: DiagnosticoCaixaResult['veredito']): InlineAlertTone {
+  if (veredito === 'PRONTO_PILOTO') return 'success'
+  if (veredito === 'BLOQUEADO') return 'danger'
+  return 'warning'
 }
 
-function vereditoClass(veredito: DiagnosticoCaixaResult['veredito']): string {
-  if (veredito === 'PRONTO_PILOTO') return 'admin-v2-alert-success'
-  if (veredito === 'BLOQUEADO') return 'admin-v2-alert-danger'
-  return 'admin-v2-alert-warning'
+function checkRowTone(status: DiagnosticoCheck['status']): string {
+  if (status === 'ok') return 'border-[var(--color-success-border)] bg-[var(--color-success-bg)]'
+  if (status === 'aviso') return 'border-[var(--color-warning-border)] bg-[var(--fp-warning-bg,var(--color-surface-soft))]'
+  return 'border-destructive/40 bg-destructive/10'
 }
 
 function agruparChecks(checks: DiagnosticoCheck[]): Map<DiagnosticoCheckCategoria, DiagnosticoCheck[]> {
@@ -75,37 +77,34 @@ export function DiagnosticoCaixaContent({ inicial }: Props) {
   const grupos = agruparChecks(resultado.checks)
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title="Diagnóstico do Caixa"
-        subtitle="Checklist pré-produção — fluxo normal de venda (sem alterar o PDV)."
-        filters={
-          <button
-            type="button"
-            onClick={recarregar}
-            disabled={pending}
-            className="admin-v2-btn-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12px] font-semibold"
-          >
-            <RefreshCw className={cn('h-4 w-4', pending && 'animate-spin')} />
-            {pending ? 'Verificando…' : 'Executar novamente'}
-          </button>
-        }
-      />
-
-      <div className={cn('mb-5 rounded-lg px-4 py-3 text-[13px] font-medium', vereditoClass(resultado.veredito))}>
+    <PageShell
+      title="Diagnóstico do Caixa"
+      subtitle="Checklist pré-produção — fluxo normal de venda (sem alterar o PDV)."
+      actions={
+        <Button type="button" size="sm" onClick={recarregar} disabled={pending}>
+          <RefreshCw className={cn('mr-1.5 h-4 w-4', pending && 'animate-spin')} />
+          {pending ? 'Verificando…' : 'Executar novamente'}
+        </Button>
+      }
+    >
+      <InlineAlert
+        tone={vereditoTone(resultado.veredito)}
+        title={`Veredito: ${resultado.veredito}`}
+        className="mb-5"
+      >
         <p>
-          Veredito: <strong>{resultado.veredito}</strong>
-          {' · '}
           {resultado.totalFalhas} falha(s), {resultado.totalAvisos} aviso(s)
         </p>
-        <p className="mt-1 text-[11px] font-normal opacity-90">
+        <p className="text-caption">
           Produto teste: {resultado.produtoCodigo} · Verificado em{' '}
           {new Date(resultado.verificadoEm).toLocaleString('pt-BR')}
         </p>
-      </div>
+      </InlineAlert>
 
       {erro ? (
-        <div className="admin-v2-alert-danger mb-4 rounded-lg px-3 py-2 text-[12px]">{erro}</div>
+        <InlineAlert tone="danger" className="mb-4">
+          {erro}
+        </InlineAlert>
       ) : null}
 
       <SectionCard title="Checklist operacional">
@@ -121,7 +120,7 @@ export function DiagnosticoCaixaContent({ inicial }: Props) {
                     key={item.id}
                     className={cn(
                       'flex items-start gap-3 rounded-lg border border-[var(--admin-v2-border)] px-3 py-2',
-                      statusBadgeClass(item.status),
+                      checkRowTone(item.status),
                     )}
                   >
                     <span className="mt-0.5 shrink-0">{statusIcon(item.status)}</span>
@@ -171,6 +170,6 @@ export function DiagnosticoCaixaContent({ inicial }: Props) {
           </li>
         </ul>
       </SectionCard>
-    </div>
+    </PageShell>
   )
 }

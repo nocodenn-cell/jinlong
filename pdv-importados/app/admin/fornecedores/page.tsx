@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/ui/admin-v2'
+import { PageShell } from '@/components/ui/admin-v2'
 import { buscarFornecedoresPaginadosAction } from '@/app/gerente/fornecedores/actions'
 import { FornecedoresListClient } from '@/app/gerente/fornecedores/FornecedoresListClient'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
@@ -17,16 +17,12 @@ export default async function AdminFornecedoresPage() {
   const hasMoreInicial = inicial.ok ? inicial.hasMore : false
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={m.fornecedores.titulo}
-        subtitle="Cadastro e gestão de fornecedores"
-      />
+    <PageShell title={m.fornecedores.titulo} subtitle={m.fornecedores.subtitulo}>
       <FornecedoresListClient
         idioma={session.idioma}
         fornecedoresIniciais={fornecedoresIniciais}
         hasMoreInicial={hasMoreInicial}
       />
-    </div>
+    </PageShell>
   )
 }

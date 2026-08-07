@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Stepper } from '@/components/ui/Stepper'
+import { InlineAlert } from '@/components/ui/InlineAlert'
 import { emitToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
 import { provisionarLojaAction, type ProvisionamentoResult } from './actions'
@@ -91,29 +93,20 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
     }
   }
 
-  const steps = [L.stepLoja, L.stepDono, L.stepConfirmar, L.stepResultado]
+  const stepIds = ['loja', 'dono', 'confirmar', 'resultado'] as const
+  const steps = [
+    { id: 'loja', label: L.stepLoja },
+    { id: 'dono', label: L.stepDono },
+    { id: 'confirmar', label: L.stepConfirmar },
+    { id: 'resultado', label: L.stepResultado },
+  ]
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <p className="rounded-md border border-jl-border-1 bg-jl-surface-soft px-3 py-2 text-sm text-jl-fg-2">
-        {L.avisoInterno}
-      </p>
-      <p className="text-xs text-jl-fg-3">{L.avisoNfce}</p>
+      <InlineAlert tone="info">{L.avisoInterno}</InlineAlert>
+      <p className="text-caption text-fg-subtle">{L.avisoNfce}</p>
 
-      <ol className="flex flex-wrap gap-2 text-xs font-medium uppercase tracking-wide">
-        {steps.map((label, i) => (
-          <li
-            key={label}
-            className={
-              i === step
-                ? 'rounded-full bg-[rgba(251,191,36,0.15)] px-3 py-1 text-[var(--color-brand-primary)]'
-                : 'rounded-full px-3 py-1 text-jl-fg-3'
-            }
-          >
-            {i + 1}. {label}
-          </li>
-        ))}
-      </ol>
+      <Stepper steps={steps} current={stepIds[step]} />
 
       {step === 0 ? (
         <div className="space-y-4 rounded-xl border border-jl-border-1 p-4">

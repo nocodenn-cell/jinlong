@@ -265,3 +265,60 @@
 | **Risco** | Médio-baixo no middleware — cobrir com mapa LEGACY existente. |
 | **Ganho operacional** | Config compartilhável por aba; bookmarks `/gerente` caem direto no admin. |
 | **IDs** | UX-P1-20, UX-P1-18 |
+
+---
+
+## RFC-UX-021 — Sprint 5: aceitar S4 e abrir polish/entropia
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 5 |
+| **Problema** | S0–S4 migraram hot-path, mas resíduos mortos (GerenteTable/DataTablePage/shell gerente) e padrões locais ainda poluem burndown e confusão. |
+| **Custo atual** | Dual-track mental; allowlist de overlays fantasmas; métrica de aderência esconde órfãos. |
+| **Proposta** | Sprint 5 = inventário A/B/C + eliminação de A + polish de densidade/a11y/nav. Sem abrir “S6”. |
+| **Não-fazer** | Declarar 100% artificial; tocar EXC-01..07 sem RFC. |
+
+---
+
+## RFC-UX-022 — Remover stack morta GerenteTable / DataTablePage / GerenteLayoutShell
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 5 |
+| **Problema** | `GerenteTable`, `DataTablePage`, `TabelaCadastroPadrao`, `FiltroLateralCadastro`, `CadastroFormModal`, `GerenteLayoutShell`+nav/drawers **sem consumidores de rota** após S4 (`/gerente` → redirect edge). |
+| **Custo atual** | Burndown mentiroso; allowlist `fixed inset-0` para drawers mortos; risco de alguém reintroduzir. |
+| **Proposta** | Apagar arquivos + testes órfãos; atualizar `check:ds-sprint0` allowlist; manter `CadastroRapidoBlock` (ainda usado em Recebimento) sem `dragon-glass-card`. |
+| **Risco** | Baixo — zero imports de app. |
+| **Ganho** | `GerenteTable` hits → 0; menos entropia. |
+
+---
+
+## RFC-UX-023 — Cadastros auxiliares: FilterBar + PageShell (categorias/marcas/clientes/fornecedores)
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 5 |
+| **Problema** | Categorias/marcas usam SearchInput+pills locais; clientes/fornecedores usam `PageHeader` sem `PageShell`. |
+| **Proposta** | `PageShell` + `FilterBar` URL (busca/situação) nas 4 superfícies; conteúdo só lista/CTA. |
+| **Risco** | Baixo. |
+
+---
+
+## RFC-UX-024 — Financeiro receber: EntityLookup de cliente (fim do `<select>` truncado)
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 5 |
+| **Problema** | `FinanceiroReceberExtras` usa `<select>` com página 1 de clientes — esconde o restante do cadastro. |
+| **Proposta** | `EntityLookup` async via `buscarClientesPaginadosAction`; botões `Button` SSOT. |
+| **Risco** | Baixo — entity-SSoT: não cria cliente inline. |
+
+---
+
+## RFC-UX-025 — Diagnóstico / Etiquetas / Auditoria empty: InlineAlert + EmptyState + emitToast
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 5 |
+| **Problema** | Diagnóstico com `admin-v2-btn/alert`; etiquetas com `alert()`; auditoria empty com emoji. |
+| **Proposta** | Tokens DS; `emitToast` no PDF; `EmptyState` na timeline. EXC-07 permanece para densidade utilitária, mas com primitivos. |

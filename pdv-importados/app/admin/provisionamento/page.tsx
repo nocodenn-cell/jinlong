@@ -1,4 +1,5 @@
-import { PageHeader } from '@/components/ui/admin-v2'
+import { PageShell } from '@/components/ui/admin-v2'
+import { InlineAlert } from '@/components/ui/InlineAlert'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -14,18 +15,14 @@ export default async function AdminProvisionamentoPage() {
 
   if (session.perfil !== 'ADMIN') {
     return (
-      <div className="admin-v2-page">
-        <PageHeader title={ui.titulo} subtitle={ui.subtitulo} />
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {ui.apenas_admin}
-        </p>
-      </div>
+      <PageShell title={ui.titulo} subtitle={ui.subtitulo}>
+        <InlineAlert tone="danger">{ui.apenas_admin}</InlineAlert>
+      </PageShell>
     )
   }
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader title={ui.titulo} subtitle={ui.subtitulo} />
+    <PageShell title={ui.titulo} subtitle={ui.subtitulo}>
       <ProvisionamentoWizardClient
         labels={{
           stepLoja: ui.step_loja,
@@ -59,6 +56,6 @@ export default async function AdminProvisionamentoPage() {
           criado: ui.criado,
         }}
       />
-    </div>
+    </PageShell>
   )
 }

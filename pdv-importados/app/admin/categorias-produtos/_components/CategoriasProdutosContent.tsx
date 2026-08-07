@@ -1,24 +1,20 @@
 'use client'
 
 /**
- * FastProduct Admin — Categorias de Produtos (Catálogo Onda 5).
- * Contrato CRUD: toolbar · DataTable · empty/loading · ações inline.
+ * Categorias de Produtos — lista/CRUD (filtros no PageShell/FilterBar — Sprint 5).
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Edit2, Check, X, FolderOpen } from 'lucide-react'
-import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
-import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Field, Input, SearchInput } from '@/components/ui/forms'
+import { Field, Input } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import { cn } from '@/lib/utils'
 import type { CategoriaProdutoRow } from '@/app/gerente/categorias-produtos/categoriasProdutosTypes'
 import {
   criarCategoriaProduto,
@@ -26,23 +22,13 @@ import {
   alternarAtivoCategoriaProduto,
 } from '@/app/gerente/categorias-produtos/actions'
 
-type SituacaoFiltro = 'todos' | 'ativos' | 'inativos'
-
 type Props = {
   idioma: Idioma
   dados: { rows: CategoriaProdutoRow[]; total: number }
-  buscaInicial: string
-  situacaoInicial: SituacaoFiltro
   page: number
 }
 
-export function CategoriasProdutosContent({
-  idioma,
-  dados,
-  buscaInicial,
-  situacaoInicial,
-  page,
-}: Props) {
+export function CategoriasProdutosContent({ idioma, dados, page }: Props) {
   const router = useRouter()
   const labels = getMessages(idioma)
   const m = labels.categorias_produtos
@@ -53,33 +39,12 @@ export function CategoriasProdutosContent({
   const [newNome, setNewNome] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [termo, setTermo] = useState(buscaInicial)
-  const [situacao, setSituacao] = useState<SituacaoFiltro>(situacaoInicial)
-
-  const termoDebounced = useDebounce(termo, 280)
-  const skipMountRef = useRef(true)
 
   useEffect(() => {
     setRows(dados.rows)
   }, [dados.rows])
 
-  useEffect(() => {
-    setTermo(buscaInicial)
-    setSituacao(situacaoInicial)
-  }, [buscaInicial, situacaoInicial])
-
-  useEffect(() => {
-    if (skipMountRef.current) {
-      skipMountRef.current = false
-      return
-    }
-    const p = new URLSearchParams()
-    if (termoDebounced) p.set('q', termoDebounced)
-    if (situacao !== 'todos') p.set('situacao', situacao)
-    router.push(pathWithQuery(ROUTES.admin.categoriasProdutos, p))
-  }, [termoDebounced, situacao, router])
-
-  const handleCreate = async () => {
+  async function handleCreate() {
     if (!newNome.trim()) return
     setLoading(true)
     setError(null)
@@ -97,7 +62,7 @@ export function CategoriasProdutosContent({
     }
   }
 
-  const handleUpdate = async (id: string) => {
+  async function handleUpdate(id: string) {
     if (!editingNome.trim()) return
     setLoading(true)
     setError(null)
@@ -114,7 +79,7 @@ export function CategoriasProdutosContent({
     }
   }
 
-  const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
+  async function handleToggleAtivo(id: string, ativoAtual: boolean) {
     setError(null)
     try {
       const res = await alternarAtivoCategoriaProduto(id, !ativoAtual)
@@ -124,11 +89,9 @@ export function CategoriasProdutosContent({
       }
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ativo: !r.ativo } : r)))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar')
+      setError(err instanceof Error ? err.message : labels.comum.erro)
     }
   }
-
-  const situacaoOptions: SituacaoFiltro[] = ['todos', 'ativos', 'inativos']
 
   const columns: Column<CategoriaProdutoRow>[] = [
     {
@@ -168,46 +131,12 @@ export function CategoriasProdutosContent({
       title={m.lista_titulo}
       meta={<span className="text-caption text-fg-subtle">{countLabel}</span>}
       toolbar={
-        <>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <div className="min-w-[240px] max-w-[420px] flex-1">
-              <SearchInput
-                value={termo}
-                onChange={(e) => setTermo(e.target.value)}
-                placeholder={m.filtro_busca_placeholder}
-                aria-label={m.filtro_busca}
-                controlSize="sm"
-              />
-            </div>
-            <div
-              className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
-              role="group"
-            >
-              {situacaoOptions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSituacao(s)}
-                  aria-pressed={situacao === s}
-                  className={cn(
-                    'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium',
-                    situacao === s
-                      ? 'bg-[var(--color-info-bg)] text-brand'
-                      : 'text-fg-subtle hover:text-fg',
-                  )}
-                >
-                  {m[`filtro_${s}` as keyof typeof m] as string}
-                </button>
-              ))}
-            </div>
-          </div>
-          <PageActions>
-            <Button type="button" variant="primary" className="gap-1.5" onClick={() => setCreatingNew(true)}>
-              <Plus className="h-4 w-4" aria-hidden />
-              {m.nova_categoria}
-            </Button>
-          </PageActions>
-        </>
+        <PageActions>
+          <Button type="button" variant="primary" className="gap-1.5" onClick={() => setCreatingNew(true)}>
+            <Plus className="h-4 w-4" aria-hidden />
+            {m.nova_categoria}
+          </Button>
+        </PageActions>
       }
       footer={
         dados.total > 50 ? (
@@ -286,12 +215,7 @@ export function CategoriasProdutosContent({
         }
         rowActions={(r) => (
           <div className="flex items-center justify-end gap-1">
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => void handleToggleAtivo(r.id, r.ativo)}
-            >
+            <Button type="button" size="sm" variant="secondary" onClick={() => void handleToggleAtivo(r.id, r.ativo)}>
               {r.ativo ? m.inativar : m.ativar}
             </Button>
             <Button

@@ -121,7 +121,7 @@
 | **UX-P1-19** | Toast | Rename viewport admin | S | S0-09 | ✅ S4 |
 | **UX-P1-20** | Config | TabNav + FormSection | M | S0-13,17 | ✅ S4 |
 | **UX-P1-21** | Vendas detalhe | Migrar sheet → DetailSheet | S | S0-15 | S1/S2 |
-| **UX-P1-22** | Provisionamento | Stepper SSOT | S | S0-14 | S4 |
+| **UX-P1-22** | Provisionamento | Stepper SSOT | S | S0-14 | ✅ S5 |
 
 ---
 
@@ -130,11 +130,11 @@
 | ID | Item | Esforço |
 |----|------|---------|
 | UX-P2-01 | Auth → Field/Button | S |
-| UX-P2-02 | Fornecedores i18n subtítulo | S |
-| UX-P2-03 | Auditoria i18n + DetailSheet | S |
+| UX-P2-02 | Fornecedores i18n subtítulo | S | ✅ S5 |
+| UX-P2-03 | Auditoria i18n + DetailSheet | S | DetailSheet ✅ S5; i18n parcial |
 | UX-P2-04 | Config mobile stack | S |
-| UX-P2-06 | Diagnóstico colapsar OK | S |
-| UX-P2-07 | Etiquetas toast | S |
+| UX-P2-06 | Diagnóstico colapsar OK | S | InlineAlert gate ✅ S5 |
+| UX-P2-07 | Etiquetas toast | S | ✅ S5 |
 | UX-P2-08 | Dashboard densidade | M |
 | UX-P2-09 | Legal TOC | S |
 | UX-P2-11 | PDV token brand | S |

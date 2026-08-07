@@ -2,7 +2,7 @@
 
 /**
  * DataTable — única API de tabela do Design System (Fase 2 · Onda 2).
- * GerenteTable e tabelas manuais devem migrar para este componente.
+ * Tabelas manuais e listagens Admin devem usar este componente / EntityTable.
  */
 
 import { useMemo, useState } from 'react'

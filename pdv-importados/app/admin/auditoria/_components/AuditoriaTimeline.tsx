@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
 import { DetailSheet } from '@/components/ui/DetailSheet'
+import { EmptyState } from '@/components/ui/feedback'
 import type { AuditoriaEvento, AuditoriaTipo } from '../actions'
 
 const dtFmt = new Intl.DateTimeFormat('pt-BR', {
@@ -111,15 +112,10 @@ export function AuditoriaTimeline({ eventos }: { eventos: AuditoriaEvento[] }) {
 
   if (eventos.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-16 text-center">
-        <span className="text-3xl text-jl-fg-3" aria-hidden>
-          🗒️
-        </span>
-        <p className="text-[13px] font-medium text-jl-fg-2">Nenhum evento no período</p>
-        <p className="text-[11px] text-jl-fg-3">
-          Ajuste o período ou o tipo de evento para ver a trilha de auditoria.
-        </p>
-      </div>
+      <EmptyState
+        title="Nenhum evento no período"
+        description="Ajuste o período ou o tipo de evento para ver a trilha de auditoria."
+      />
     )
   }
 

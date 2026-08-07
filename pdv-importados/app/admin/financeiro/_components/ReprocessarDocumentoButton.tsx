@@ -38,7 +38,7 @@ export function ReprocessarDocumentoButton({
       disabled={loading}
       confirmMessage={confirmMessage}
       onClick={() => void mutate(null)}
-      className="admin-v2-btn-secondary shrink-0 text-[11px]"
+      className="shrink-0 text-caption"
     >
       {loading ? loadingLabel : label}
     </ConfirmActionButton>
