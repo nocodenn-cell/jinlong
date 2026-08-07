@@ -119,3 +119,71 @@ Inverter continua causando dano irreversível — documento emitido com chave `N
 > de D-3 **não precisa de agendamento próprio**: roda dentro do `fiscal-worker`, antes do
 > claim. Janela e teto por env: `FISCAL_REAPER_TIMEOUT_MINUTOS` (default 15) e
 > `FISCAL_REAPER_MAX_TENTATIVAS` (default 5).
+
+---
+
+## D-9 — Migrations marcadas como aplicadas sem terem sido executadas (RESOLVIDO)
+
+**Data:** 2026-08-07 · **Commit:** `ec4e3fad`
+
+Auditoria de integridade sobre **todas as 257** entradas de
+`supabase_migrations.schema_migrations` (não só as 137 do `repair` de
+2026-08-02): extração de todo objeto declarado pelos 237 arquivos
+correspondentes e verificação de existência em produção.
+
+**12 objetos ausentes**, em 4 migrations que constam como aplicadas:
+
+| Migration | Objetos ausentes | Impacto |
+|---|---|---|
+| `091_fiscal_correlation_id` | 2 colunas, 2 índices, trigger + função | Observabilidade: `correlation_id` sempre nulo nos logs fiscais |
+| `288_pdv_certificacao_operacional` | `converter_venda_em_espera`, `uq_caixas_operador_aberto`, `retomar` na versão antiga | **Falha visível ao operador** — PGRST202 após finalizar venda em espera |
+| `235_observabilidade_pdv_visual` | 3 colunas de flag em `pdv_config` | Flags visuais travadas em `false` |
+| `236/237_system_alerts` | tabela, RPC, kill switch | Seção ALERTA da trilha de auditoria sempre vazia |
+
+Corrigidas pelas migrations **309, 310, 311**, cada uma com bloco `DO` de prova
+viva. Nada foi apagado em produção.
+
+**Achado colateral:** `pdv_config_flags_visuais()` em produção não era a
+definição de migration nenhuma — era um stub manual (`SELECT false, false,
+false, false`) que não lia `pdv_config`. Restaurada pela 311.
+
+**Regra que fica:** `schema_migrations` não é evidência de execução. Verificação
+de Go-Live tem de ser por objeto, não por ledger.
+
+## D-10 — Exposição de `_backup_schema_migrations_20260802` (RESOLVIDO)
+
+Única tabela de `public` legível por `anon` sem RLS. Migration **312** habilita
+RLS e revoga os GRANTs, preservando as 100 linhas (evidência forense do D-9).
+
+## SSOT-01 — Teto de desconto manual duplicado no cliente (RESOLVIDO)
+
+`unifiedCartStore.ts:373` tinha `const maxPermitido = 15`, enquanto a autoridade
+é `pdv_config.max_desconto_manual_item_percentual` (trigger da 122). Mudar o
+limite no banco não mudava o PDV. Migration **313** expõe o valor via
+`pdv_config_para_caixa_web()`; o store passa a lê-lo. 4 testes de regressão em
+`unifiedCartStore.spec.ts`.
+
+## B-7 — GitHub Actions (RESOLVIDO, transitório)
+
+O Actions voltou a criar runs em 2026-08-07 00:11 UTC. A parada às 15:37 UTC de
+2026-08-06 foi indisponibilidade do lado do GitHub, não configuração.
+
+### Falhas de CI remanescentes em `ec4e3fad` — todas pré-existentes
+
+| Check | Causa | Onde se resolve |
+|---|---|---|
+| `build-and-test` | `npm ci` → `EBADENGINE`: `@supabase/auth-js@2.110.5` exige node >=22, runner usa 20.20.2 | **PR #257** (alinhamento de Node para 22) |
+| `rls-rest-gate` | 401 em **todas** as requisições, inclusive as que deveriam dar 200 (`PAINEL/vendas_select`) — token de CI inválido, não regressão de RLS | Credencial do workflow |
+| `migration-remote-drift` | `228, 231, 244, 248` ausentes no remote — migrations do repositório anteriores a este trabalho | D-6 / DB-03 |
+
+Nenhuma das três é causada pelas migrations 309–313: o próprio gate de drift
+confirma `Maior versão no disco: 20260807000525` sem apontá-las.
+
+## Pendência aceita — `venda_finance_context` (migration 252)
+
+Tabela + 3 funções de trigger ausentes em produção, apesar da 252 constar no
+ledger. **Deliberadamente não reaplicada:** nenhuma função de produção a
+referencia (`pg_proc.prosrc` sem ocorrências) e nenhum código da aplicação a lê
+(só aparece em `database.types.ts`). Aplicá-la agora acrescentaria triggers no
+caminho de escrita financeiro às vésperas do Go-Live sem benefício algum.
+Registrada como drift conhecido, a decidir depois do Go-Live.
