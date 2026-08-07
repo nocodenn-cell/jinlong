@@ -8,7 +8,7 @@ import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { Button } from '@/components/ui/button'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
 import { DragonModal } from '@/components/ui/DragonModal'
-import { Field, Input, Select } from '@/components/ui/forms'
+import { EntityLookup, Field, Input, Select } from '@/components/ui/forms'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { transferenciaActionResultToLegacy } from '@/lib/observability/actionResultAdapters'
@@ -280,18 +280,29 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
               </p>
             ) : null}
             <Field id="transferencia-produto" label={t.resumo_produto} required>
-              <Select
-                name="produto_id"
-                required
-                value={produtoId}
-                onChange={(e) => setProdutoId(e.target.value)}
-              >
-                {produtos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </Select>
+              <div>
+                <input type="hidden" name="produto_id" value={produtoId} readOnly />
+                <EntityLookup
+                  value={produtoId || null}
+                  selectedLabel={produtoSelecionado?.nome}
+                  aria-label={t.resumo_produto}
+                  onSelect={(opt) => setProdutoId(opt?.value ?? '')}
+                  onSearch={async (query) => {
+                    const q = query.trim().toLowerCase()
+                    return produtos
+                      .filter((p) => p.nome.toLowerCase().includes(q))
+                      .slice(0, 40)
+                      .map((p) => ({
+                        value: p.id,
+                        label: p.nome,
+                        description: p.unidade_medida,
+                      }))
+                  }}
+                  minChars={1}
+                  debounceMs={200}
+                  emptyLabel="Nenhum produto"
+                />
+              </div>
             </Field>
             <Field id="transferencia-quantidade" label={t.resumo_quantidade} required>
               <Input

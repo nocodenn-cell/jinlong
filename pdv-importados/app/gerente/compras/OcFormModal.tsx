@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitToast } from '@/lib/gerente/toast'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { cn } from '@/lib/utils'
 import { formatBRL, formatDecimalBRL, parseBRL } from '@/lib/format/money'
 import {
@@ -163,34 +164,15 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
-      role="dialog"
-      aria-modal="true"
+    <DragonModal
+      open
+      onClose={onClose}
+      dismissable={!isPending}
+      title={editando ? c.modal_editar_titulo : c.modal_nova_titulo}
+      size="lg"
+      sheet
     >
-      <div
-        className="fixed inset-0 bg-black/60"
-        onClick={isPending ? undefined : onClose}
-        aria-hidden
-      />
-      <div className="dragon-elev-2 relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-3.5">
-          <h2 className="text-base font-semibold app-surface-text">
-            {editando ? c.modal_editar_titulo : c.modal_nova_titulo}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isPending}
-            aria-label="Fechar"
-            className="rounded-md p-1 text-jl-fg-3 transition hover:bg-white/[0.06] hover:text-jl-fg-1 disabled:opacity-40"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Cabeçalho da OC */}
           <div className="grid grid-cols-2 gap-4">
             {/* Fornecedor */}
@@ -383,7 +365,6 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
             </button>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-2 border-t border-jl-border-1 pt-4">
             <button
               type="button"
@@ -402,7 +383,6 @@ export function OcFormModal({ idioma, ocInicial, fornecedores, produtos, onClose
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </DragonModal>
   )
 }

@@ -46,9 +46,6 @@ const FIXED_DIALOG_ALLOWLIST = new Set([
   // SSOT overlays
   'components/ui/DetailSheet.tsx',
   'components/ui/DragonModal.tsx',
-  // Modais OC ainda ad hoc (→ DragonModal em ciclo seguinte)
-  'app/gerente/compras/OcFormModal.tsx',
-  'app/gerente/compras/OcDetalheModal.tsx',
   // PDV / nav (EXC drawer) — não são DetailSheet de entidade
   'app/caixa/CaixaReciboModal.tsx',
   'app/caixa/CaixaHistoricoSheet.tsx',
@@ -113,6 +110,16 @@ const recebimentoLookup = readFileSync(
 )
 if (!recebimentoLookup.includes('EntityLookup')) {
   violations.push('ProdutoRecebimentoAutocomplete deve usar EntityLookup (IX-LOOKUP)')
+}
+const transferenciasSrc = readFileSync(
+  join(ROOT, 'app/gerente/transferencias/TransferenciasGerentePageClient.tsx'),
+  'utf8',
+)
+if (!transferenciasSrc.includes('EntityLookup')) {
+  violations.push('Transferências deve usar EntityLookup (IX-LOOKUP)')
+}
+if (/<select[\s>]/.test(transferenciasSrc) && /produto_id/.test(transferenciasSrc)) {
+  violations.push('Transferências: select massivo de produto proibido')
 }
 
 const toastSrc = readFileSync(join(ROOT, 'lib/gerente/toast.ts'), 'utf8')

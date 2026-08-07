@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { X, Edit2, AlertTriangle } from 'lucide-react'
+import { Edit2, AlertTriangle } from 'lucide-react'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { emitToast } from '@/lib/gerente/toast'
+import { DragonModal } from '@/components/ui/DragonModal'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
 import {
@@ -131,45 +133,30 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
   const podeCancelar = oc && ['RASCUNHO', 'CONFIRMADA', 'EM_TRANSITO'].includes(oc.status)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
-      role="dialog"
-      aria-modal="true"
+    <DragonModal
+      open
+      onClose={onClose}
+      dismissable={!isPending}
+      title={c.modal_detalhe_titulo}
+      size="lg"
+      sheet
+      footer={
+        podeEditar ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isPending}
+            onClick={() => oc && onEditar(oc)}
+            className="gap-1"
+          >
+            <Edit2 className="h-3.5 w-3.5" aria-hidden />
+            {c.btn_editar}
+          </Button>
+        ) : undefined
+      }
     >
-      <div
-        className="fixed inset-0 bg-black/60"
-        onClick={isPending ? undefined : onClose}
-        aria-hidden
-      />
-      <div className="dragon-elev-2 relative z-10 w-full max-w-xl overflow-hidden rounded-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-jl-border-1 px-5 py-3.5">
-          <h2 className="text-base font-semibold app-surface-text">{c.modal_detalhe_titulo}</h2>
-          <div className="flex items-center gap-2">
-            {podeEditar && (
-              <button
-                type="button"
-                onClick={() => oc && onEditar(oc)}
-                disabled={isPending}
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-jl-fg-3 transition hover:bg-white/[0.06] hover:text-jl-fg-1 disabled:opacity-40"
-              >
-                <Edit2 className="h-3.5 w-3.5" aria-hidden />
-                {c.btn_editar}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isPending}
-              aria-label="Fechar"
-              className="rounded-md p-1 text-jl-fg-3 transition hover:bg-white/[0.06] hover:text-jl-fg-1 disabled:opacity-40"
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-4 px-5 py-5">
+        <div className="space-y-4">
           {carregando && (
             <div className="py-12 text-center text-sm text-jl-fg-3">{m.comum.carregando}</div>
           )}
@@ -342,7 +329,6 @@ export function OcDetalheModal({ idioma, ocId, onClose, onEditar, onStatusChange
             </>
           )}
         </div>
-      </div>
-    </div>
+    </DragonModal>
   )
 }

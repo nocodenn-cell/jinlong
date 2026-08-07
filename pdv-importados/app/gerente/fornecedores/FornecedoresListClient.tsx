@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { EmptyState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
 import { emitToast } from '@/lib/gerente/toast'
 import { askConfirm } from '@/lib/ui/askConfirm'
 import { getMessages } from '@/i18n/getMessages'
@@ -381,28 +382,22 @@ export function FornecedoresListClient({
           </>
         }
         bulkBar={
-          selecionados.size > 0 ? (
-            <>
-              <span className="text-body font-medium text-fg">
-                <strong className="font-bold tabular-nums text-brand">{selecionados.size}</strong>{' '}
-                {m.fornecedores.bulk_selecionados}
-              </span>
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(true)}>
-                  {m.fornecedores.bulk_ativar}
-                </Button>
-                <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(false)}>
-                  {m.fornecedores.bulk_inativar}
-                </Button>
-                <Button type="button" size="sm" variant="danger" onClick={() => void onBulkExcluir()}>
-                  {m.fornecedores.bulk_excluir}
-                </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setSelecionados(new Set())}>
-                  {m.fornecedores.bulk_limpar}
-                </Button>
-              </div>
-            </>
-          ) : undefined
+          <BulkActionBar
+            selectedCount={selecionados.size}
+            selectedLabel={`${selecionados.size} ${m.fornecedores.bulk_selecionados}`}
+            clearLabel={m.fornecedores.bulk_limpar}
+            onClear={() => setSelecionados(new Set())}
+          >
+            <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(true)}>
+              {m.fornecedores.bulk_ativar}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => onBulkAtivar(false)}>
+              {m.fornecedores.bulk_inativar}
+            </Button>
+            <Button type="button" size="sm" variant="danger" onClick={() => void onBulkExcluir()}>
+              {m.fornecedores.bulk_excluir}
+            </Button>
+          </BulkActionBar>
         }
         footer={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
