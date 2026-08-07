@@ -91,8 +91,10 @@ Base definitiva: toda evolução UI posterior é **aplicação** de um padrão �
 |-------|-----|
 | Higiene | UX-S0-01..03, 10, 11 |
 | Núcleo lista/página | UX-S0-04, 06, 07 |
-| Overlay/feedback | UX-S0-05, 09, 12→15, 16 |
+| Overlay/feedback | UX-S0-05, 09, 15, 16 |
 | Form/nav/fluxo | UX-S0-13, 14, 17, 18 |
+| Lote/export/page/lookup | UX-S0-19, 20, 21, 23 |
+| Interaction Design System | UX-S0-22 → [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
 | PDV/tokens helpers | UX-S0-08 |
 
 **Proibido na S0:** redesign de rota; migrar Compras/GerenteTable em tela; alterar RPC.
@@ -103,10 +105,11 @@ A Sprint 0 só é **DONE** se **todos** os itens abaixo forem verdadeiros:
 
 #### Contratos e documentação
 
-- [ ] 100% dos componentes SSOT da matriz (§1 de `DESIGN_SYSTEM_GAPS`) **existem, exportados e documentados** (JSDoc + exemplo mínimo).
+- [ ] 100% dos componentes SSOT da matriz (§1 de `DESIGN_SYSTEM_GAPS`) **existem, exportados e documentados** (JSDoc + exemplo mínimo), incl. BulkActionBar, ExportAction, PaginationBar infinite.
 - [ ] Matriz de cobertura por módulo sem GAP aberto.
+- [ ] [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) publicado; fluxos mínimos §2 marcados “cabe”.
 - [ ] Exceções aprovadas listadas (EXC-01..07).
-- [ ] [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) vigente e linkado no fluxo de PR.
+- [ ] [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) vigente (checklist inclui IX) e linkado no fluxo de PR.
 
 #### Um paradigma por família (para **código novo**)
 
@@ -120,6 +123,10 @@ A Sprint 0 só é **DONE** se **todos** os itens abaixo forem verdadeiros:
 - [ ] Apenas um padrão de **empty/erro**: `EmptyState` / `ErrorState`.
 - [ ] Apenas um padrão de **alert inline**: `InlineAlert`.
 - [ ] Apenas um padrão de **upload**: `FileDropzone`.
+- [ ] Apenas um padrão de **bulk**: `BulkActionBar`.
+- [ ] Apenas um padrão de **export**: `ExportAction` (csv\|pdf).
+- [ ] Apenas um padrão de **lookup** longo: Autocomplete / EntityLookup.
+- [ ] Contratos IX-* do IDS são a referência de comportamento (duas telas = mesmo IX).
 
 #### Legado e qualidade
 

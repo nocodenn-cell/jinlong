@@ -2,13 +2,14 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Data** | 2026-08-07 (cobertura + SSOT definitivo Sprint 0) |
+| **Data** | 2026-08-07 (componentes + **padrões de interação**) |
 | **App** | `pdv-importados` |
 | **Governança** | [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) |
+| **Interação** | [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
 | **Roadmap / Backlog** | [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) |
 | **Burndown** | `pdv-importados/reports/ds-legacy-burndown.json` |
 
-**Sem implementação de tela nesta revisão.** Objetivo: Sprint 0 suficiente para que S1+ só **aplique** padrão único.
+**Sem implementação de tela nesta revisão.** Objetivo: Sprint 0 suficiente para que S1+ só **aplique** componentes **e** comportamentos únicos.
 
 ---
 
@@ -39,6 +40,8 @@
 | Confirm | **`ConfirmDialog`** (S0) | `window.confirm` |
 | Alert inline | **`InlineAlert`** (S0) | Banners amber/emoji soltos |
 | Upload | **`FileDropzone`** (S0) | Dropzones locais novos |
+| Bulk | **`BulkActionBar`** (S0) + selection EntityTable | Toolbars de lote reinventadas |
+| Export | **`ExportAction`** (S0) csv\|pdf | Botões download ad hoc; XLSX fora |
 | Toast painel | `emitToast` + viewport admin | nome Gerente* (alias S0) |
 | Toast PDV | `CaixaToastViewport` | — (exceção aprovada) |
 | Empty / erro | `feedback/EmptyState`, `ErrorState` | empty local / emoji |
@@ -138,20 +141,49 @@ Legenda: **OK** = S0 cobrirá · **GAP** = primitivo a incluir na S0 · **EXC** 
 
 ---
 
-## 3. Gaps que a Sprint 0 ainda precisa incluir
+## 3. Gaps de componente + interação que a Sprint 0 precisa incluir
 
-Além dos itens já listados (PageShell, ConfirmDialog, FilterBar daterange, EntityTable, MoneyText, KeyHint, emitToast, lint, órfãos, contrato Sheet), a cobertura exige:
+### 3.1 Componentes (já na S0)
 
 | ID | Primitivo | Por que sem ele S1+ inventa padrão |
 |----|-----------|-------------------------------------|
-| **UX-S0-13** | **TabNav** | Financeiro, Config, Relatórios, Provisionamento pills |
-| **UX-S0-14** | **Stepper** | NF-e, provisionamento (e evita wizard ad hoc) |
-| **UX-S0-15** | **DetailSheet** | Vendas, Auditoria, Fiscal, Kardex — formaliza S0-12 |
-| **UX-S0-16** | **InlineAlert** | Suspensão, stub fiscal, gates implantação, erros de página |
-| **UX-S0-17** | **FormSection** | Produto, Config, Funcionários — um ritmo de form |
-| **UX-S0-18** | **FileDropzone** | NF-e + import CSV — um dropzone |
+| **UX-S0-13** | **TabNav** | Financeiro, Config, Relatórios |
+| **UX-S0-14** | **Stepper** | NF-e, provisionamento |
+| **UX-S0-15** | **DetailSheet** | Vendas, Auditoria, Fiscal, Kardex |
+| **UX-S0-16** | **InlineAlert** | Suspensão, stub fiscal, gates |
+| **UX-S0-17** | **FormSection** | Produto, Config, forms densos |
+| **UX-S0-18** | **FileDropzone** | NF-e + CSV |
+| **UX-S0-19** | **BulkActionBar** | Catálogo/comissões/fornecedores reinventam lote |
+| **UX-S0-20** | **ExportAction** | CSV/PDF fragmentados; evita 2º botão export |
+| **UX-S0-21** | PaginationBar **`infinite`** | Infinite scroll fora do SSOT |
+| **UX-S0-23** | **EntityLookup** (doc/helper Autocomplete) | Select 500 / combobox paralelo |
 
-Sem esses seis, as sprints de tela **criariam** paradigmas novos — violando o objetivo desta missão.
+### 3.2 Contratos de interação (obrigatórios na S0)
+
+Inventário completo e regras: [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md).
+
+| ID doc | Entrega |
+|--------|---------|
+| **UX-S0-22** | Publicar IDS + DoD S0 exige conformidade IX-* |
+
+Sem componentes §3.1 **e** contratos IX, as sprints de tela criariam paradigmas novos de **comportamento** (confirm, sheet, bulk, export, validação) mesmo com PageShell visualmente correto.
+
+### 3.3 Fluxos mínimos — cabem na S0?
+
+| Fluxo | Cabe? | Observação |
+|-------|-------|------------|
+| Venda PDV | Sim | EXC shell/toast |
+| Cadastro produto | Sim | Exige Bulk+Export+FileDropzone |
+| Entrada estoque | Sim | Autocomplete |
+| Transferência | Sim | Autocomplete (não select) |
+| Compra | Sim | PageShell+EntityTable |
+| Venda admin | Sim | FilterBar+DetailSheet |
+| Financeiro | Sim | TabNav+EntityTable |
+| Fechamento caixa | Sim | EXC PDV confirm |
+| Fiscal | Sim | DetailSheet+InlineAlert |
+| Configurações | Sim | TabNav+FormSection+IX-SUCCESS inline |
+
+**Nenhum fluxo mínimo exige paradigma além da S0 expandida.** Detalhe: IDS §2.
 
 ---
 
@@ -176,8 +208,9 @@ Qualquer exceção nova → processo em [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN
 | Já existe (adotar) | Criar na S0 | Eliminar (órfão/legado) |
 |--------------------|-------------|-------------------------|
 | AdminV2Shell, PageHeader, PageActions, CrudListShell, SectionCard, MetricCard, ChartCard, ListPageSkeleton | PageShell | CadastroPageShell + árvore cadastro órfã |
-| FilterBar, DataTable, PaginationBar, DragonModal, Button, forms/*, feedback/* | EntityTable, ConfirmDialog, TabNav, Stepper, DetailSheet, InlineAlert, FormSection, FileDropzone, MoneyText, KeyHint | GerenteTable (após migração telas), DataTablePage, GerenteFilterBar, GerenteStatusBadge, card.tsx se 0 usos, PendingSubmitButton |
-| StatusChip, badges.tsx, Autocomplete, SearchInput | FilterBar daterange; emitToast alias | `.app-btn-*` / `.admin-v2-btn-*` em código novo |
+| FilterBar, DataTable, PaginationBar, DragonModal, Button, forms/*, feedback/* | EntityTable, ConfirmDialog, TabNav, Stepper, DetailSheet, InlineAlert, FormSection, FileDropzone, BulkActionBar, ExportAction, MoneyText, KeyHint | GerenteTable (após migração), DataTablePage, GerenteFilterBar, GerenteStatusBadge, card.tsx se 0 usos, PendingSubmitButton |
+| StatusChip, badges.tsx, Autocomplete, SearchInput | FilterBar daterange; PaginationBar infinite; emitToast alias; EntityLookup helper | `.app-btn-*` / `.admin-v2-btn-*` em código novo |
+| — | Contratos IX em `INTERACTION_DESIGN_SYSTEM.md` | Comportamentos ad hoc em código novo |
 
 ---
 
@@ -189,6 +222,7 @@ Qualquer exceção nova → processo em [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN
 | Páginas P0 | 6 |
 | Páginas P1 | 12 |
 | Famílias duplicadas vivas | 8 |
+| Padrões de interação duplicados (confirm/sheet/bulk/export/search) | ≥4 famílias com ≥2 impl. |
 | Padrões formulário | 2 |
 | Padrões tabela | 3 |
 | Padrões modal | 2 |
@@ -204,8 +238,9 @@ Fórmula e metas: [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) § Métricas · [`DES
 
 A Sprint 0 só é “base definitiva” quando:
 
-1. Todos os primitivos da §1 (coluna SSOT) **existem e estão exportados**.
-2. Matriz §2 não aponta GAP aberto.
-3. Exceções §4 estão escritas (não implícitas).
-4. Governança PR está linkada e burndown baseline atualizado.
-5. **Nenhuma tela** foi redesenhada na S0 (aplicação = S1+).
+1. Todos os primitivos da §1 (coluna SSOT) **existem e estão exportados** (incl. BulkActionBar, ExportAction, PaginationBar infinite).
+2. Matriz §2 / §3.3 sem GAP aberto; fluxos mínimos “cabem”.
+3. [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) publicado com IX-* e regras.
+4. Exceções §4 estão escritas (não implícitas).
+5. Governança PR (componente **e** interação) linkada; burndown baseline atualizado.
+6. **Nenhuma tela** foi redesenhada na S0 (aplicação = S1+).

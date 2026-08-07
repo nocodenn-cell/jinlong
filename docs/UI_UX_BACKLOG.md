@@ -3,8 +3,8 @@
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-08-07 (S0 expandida pela matriz de cobertura) |
-| **Docs** | [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) · [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) |
-| **Gate** | **Sprint 0 DONE antes de qualquer P0/P1 de tela** |
+| **Docs** | [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) · [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
+| **Gate** | **Sprint 0 DONE (componentes + IX) antes de qualquer P0/P1 de tela** |
 
 ---
 
@@ -55,18 +55,23 @@
 | **UX-S0-17** | **FormSection** | S | Forms densos | Baixo | Field | title + description + grid slot |
 | **UX-S0-18** | **FileDropzone** | M | NF-e / CSV | Médio | — | drag/drop + input file + erro |
 
-### Helpers
+### Helpers / lote / export / lookup / IDS
 
 | ID | Item | Esforço | Impacto | Risco | Depende | Critério de pronto |
 |----|------|---------|---------|-------|---------|-------------------|
 | **UX-S0-08** | **MoneyText** + **KeyHint** (extrair PDV sem mudar layout) | S | Consistência | Baixo | formatBRL | No DS; adoção PDV = S1 |
+| **UX-S0-19** | **BulkActionBar** + selection contract EntityTable | M | Anti-retrabalho lote | Médio | S0-07, CrudListShell | Slot bulkBar documentado; 0 telas migradas |
+| **UX-S0-20** | **ExportAction** (csv \| pdf) | S | Export único | Baixo | — | API + helper download; XLSX fora |
+| **UX-S0-21** | PaginationBar modo **`infinite`** | S | Cadastros/AP | Médio | PaginationBar | Modo documentado + teste |
+| **UX-S0-22** | Publicar **INTERACTION_DESIGN_SYSTEM** + DoD IX | S | Comportamento único | Baixo | — | Doc + governança §2.2 |
+| **UX-S0-23** | **EntityLookup** (contrato/helper sobre Autocomplete) | S | Mata select 500 | Baixo | Autocomplete | Doc IX-LOOKUP + helper opcional |
 
 | Antigo | Novo |
 |--------|------|
 | UX-P1-DS-01..05, UX-P2-13 | Absorvidos em UX-S0-* |
 | UX-S0-12 “contrato Sheet” | **UX-S0-15 DetailSheet** |
 
-**DoD Sprint 0:** [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) §3.3 — todos os checkboxes.
+**DoD Sprint 0:** [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) §3.3 + conformidade IX em [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md).
 
 ---
 
@@ -162,7 +167,7 @@
 
 | Sprint | IDs |
 |--------|-----|
-| **S0** | UX-S0-01..11, 13..18 |
+| **S0** | UX-S0-01..11, 13..23 |
 | **S1** | P0-01..03, P1-02..07, P1-10, P1-21 |
 | **S2** | P0-04..05, P1-11 |
 | **S3** | P0-06..07, P1-09, P1-12 |

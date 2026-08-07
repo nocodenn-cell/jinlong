@@ -2,21 +2,24 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Data** | 2026-08-07 |
+| **Data** | 2026-08-07 (inclui Interaction Design System) |
 | **Status** | Vigente a partir da aceitação da Sprint 0 |
 | **Escopo** | `pdv-importados` (piloto web); `pdv-local` só brand tokens opcional |
-| **Irmãos** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) |
-| **Objetivo** | Impedir retorno da heterogeneidade após consolidação do SSOT |
+| **Irmãos** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) · [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) |
+| **Objetivo** | Impedir retorno da heterogeneidade de **componentes** e de **comportamento** |
 
 ---
 
 ## 1. Princípios
 
-1. **Um paradigma por família** — Button, tabela, FilterBar, modal/confirm, toast painel, empty, paginação.
-2. **Aplicar ≠ inventar** — sprints pós-S0 só consomem SSOT; não criam shells/tabelas/filtros paralelos.
-3. **Exceção é explícita, temporária e medida** — sem exceção silenciosa em PR.
-4. **Burndown não sobe** — hits de legado em arquivos novos = bloqueio.
-5. **Entity-SSoT e arquitetura intactos** — DS não move regra de negócio nem CRUD fora das telas oficiais.
+1. **Um paradigma por família de componente** — Button, tabela, FilterBar, modal/confirm, toast painel, empty, paginação.
+2. **Um paradigma por padrão de interação** — CRUD, busca, filtro, confirm, validação, etc. (ver IDS).
+3. **Componentes e padrões de interação são ativos arquiteturais** — mesma rigidez de ADR/shared-core para superfície.
+4. **Aplicar ≠ inventar** — sprints pós-S0 só consomem SSOT + contratos IX-*; não criam shells/tabelas/filtros/fluxos paralelos.
+5. **Exceção é explícita, temporária e medida** — sem exceção silenciosa em PR.
+6. **Burndown não sobe** — hits de legado em arquivos novos = bloqueio.
+7. **Entity-SSoT e arquitetura intactos** — DS não move regra de negócio nem CRUD fora das telas oficiais.
+8. **Nenhum PR cria novo padrão de interação sem atualizar** [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md).
 
 ---
 
@@ -28,25 +31,31 @@ Todo PR que toque `app/**/*.tsx`, `components/**/*.tsx` ou `styles/**` deve marc
 
 - [ ] Verifiquei no código o estado atual (não só a auditoria).
 - [ ] Reutilizei SSOT de [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) § matriz SSOT.
+- [ ] Comportamento segue [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) (IX-CRUD, IX-FILTER, IX-CONFIRM, IX-FORM, IX-SUCCESS, etc.).
 - [ ] Não introduzi segundo Button / DataTable / FilterBar / Toast / Modal genérico.
+- [ ] Não introduzi segundo padrão de interação (ex.: confirm nativo, sheet `fixed inset-0`, filtro só-URL, select 500).
 - [ ] Não usei `GerenteTable`, `DataTablePage`, `CadastroPageShell`, `.app-btn-*`, `dragon-glass-*` em código **novo**.
 - [ ] Não usei `window.confirm` / `alert()` em hot-path.
 - [ ] Não adicionei `text-[Npx]` arbitrário nem hex em `className` (exceto brand auth já existente).
 - [ ] Empty/erro usam `EmptyState` / `ErrorState` (sem emoji como empty state).
 - [ ] Listagens admin usam `PageShell` + (`CrudListShell` \| slots equivalentes) quando aplicável.
 - [ ] Overlays usam `DragonModal` / `ConfirmDialog` / `DetailSheet` (contrato S0).
+- [ ] Lookups longos usam `Autocomplete` / EntityLookup (não `<select>` massivo).
 - [ ] i18n de superfície: sem hardcode PT em strings de UI novas (exceto demo/interno documentado).
 - [ ] A11y: rótulo em ação por ícone; foco/Esc em modal novo; `aria-*` em combobox/tabela quando aplicável.
 
-### 2.2 Se o PR cria componente em `components/ui/**`
+### 2.2 Se o PR cria componente em `components/ui/**` **ou** novo padrão de interação
 
-- [ ] Justificativa no corpo do PR: por que nenhum SSOT existente cobre o caso.
-- [ ] Nome, props e exemplo de uso documentados (JSDoc ou story).
-- [ ] Teste behavior/unit mínimo.
-- [ ] Atualização da matriz SSOT em `DESIGN_SYSTEM_GAPS.md`.
+- [ ] Justificativa no corpo do PR: por que nenhum SSOT/IX existente cobre o caso.
+- [ ] Nome, props e exemplo de uso documentados (JSDoc ou story) — se componente.
+- [ ] Atualização de [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) (novo IX-* ou alteração de regra) **no mesmo PR**.
+- [ ] Atualização da matriz SSOT em `DESIGN_SYSTEM_GAPS.md` se houver primitivo novo.
+- [ ] Teste behavior/unit mínimo (componente ou contrato crítico).
 - [ ] Aprovação de **DS owner** (ver §6).
 
-### 2.3 Se o PR pede exceção ao DS
+**Sem atualização do IDS, o PR que altera comportamento de interação é rejeitado.**
+
+### 2.3 Se o PR pede exceção ao DS / IDS
 
 - [ ] Issue/ADR curto ou seção no PR: motivo, escopo, prazo de remoção.
 - [ ] Exceção listada em `DESIGN_SYSTEM_GAPS.md` § Exceções aprovadas.
@@ -60,15 +69,15 @@ Todo PR que toque `app/**/*.tsx`, `components/**/*.tsx` ou `styles/**` deve marc
 
 ---
 
-## 3. Regras para criação de novos componentes
+## 3. Regras para criação de novos componentes e padrões de interação
 
 | Situação | Ação |
 |----------|------|
-| Precisa de UI que **já existe** no SSOT | **Reutilizar** — proibido wrap cosmético paralelo |
+| Precisa de UI/comportamento que **já existe** no SSOT/IDS | **Reutilizar** — proibido wrap cosmético ou fluxo paralelo |
 | Precisa de variação visual pequena | Extender props/variants do SSOT (`tone`, `size`, `density`) |
-| Precisa de composição de domínio (ex.: `CatalogoLoteToolbar`) | Componente de **domínio** em `app/.../_components` ou `components/<domínio>`, **usando** SSOT por baixo |
-| Precisa de primitivo genérico novo (ex.: Stepper) | Só na Sprint 0 ou PR dedicado de DS com §2.2 |
-| “Só desta tela” com `fixed inset-0` + classes soltas | **Rejeitar** — usar DragonModal/DetailSheet |
+| Precisa de composição de domínio (ex.: toolbar de lote do catálogo) | Componente de **domínio** usando BulkActionBar/SSOT por baixo |
+| Precisa de primitivo ou IX-* novo | Só na Sprint 0 ou PR dedicado de DS com §2.2 **e** update do IDS |
+| “Só desta tela” com `fixed inset-0` / `window.confirm` / select 500 | **Rejeitar** |
 
 **Onde colocar**
 
@@ -84,9 +93,9 @@ Todo PR que toque `app/**/*.tsx`, `components/**/*.tsx` ou `styles/**` deve marc
 
 ## 4. Quando reutilizar vs. quando compor
 
-1. **Reutilizar puro** — Button, Field, Input, Select, Autocomplete, DataTable/EntityTable, FilterBar, PaginationBar, EmptyState, MetricCard, SectionCard, StatusChip/badges tipados, MoneyText, KeyHint, ConfirmDialog, DragonModal, PageShell, CrudListShell, TabNav, Stepper, InlineAlert, FileDropzone, FormSection, DetailSheet.
-2. **Compor** — tela = PageShell + FilterBar + CrudListShell + EntityTable + PaginationBar; modal de domínio = DragonModal + FormSection + Field.
-3. **Domínio fino** — toolbars de lote, mapas de coluna, labels i18n da página. Não reimplementar tabela/filtro.
+1. **Reutilizar puro** — Button, Field, Input, Select, Autocomplete, DataTable/EntityTable, FilterBar, PaginationBar, EmptyState, MetricCard, SectionCard, StatusChip/badges tipados, MoneyText, KeyHint, ConfirmDialog, DragonModal, PageShell, CrudListShell, TabNav, Stepper, InlineAlert, FileDropzone, FormSection, DetailSheet, BulkActionBar, ExportAction.
+2. **Compor fluxos** — seguir tabelas de fluxo em `INTERACTION_DESIGN_SYSTEM.md` §2 (ex.: Import CSV = FileDropzone + preview EntityTable + ConfirmDialog + toast).
+3. **Domínio fino** — labels i18n, column maps, adapters de EntityLookup. Não reimplementar tabela/filtro/confirm/sheet.
 
 ---
 
@@ -107,9 +116,9 @@ Exceção **só** se **todas** forem verdadeiras:
 
 | Papel | Responsabilidade |
 |-------|------------------|
-| **DS owner** | Aprovar primitivos novos e exceções; atualizar matriz SSOT |
-| **Autor do PR** | Checklist §2; burndown; sem legado novo |
-| **Reviewer** | Recusar segundo paradigma; exigir PageShell em página admin nova/alterada |
+| **DS owner** | Aprovar primitivos **e** IX-* novos; exceções; matriz SSOT + IDS |
+| **Autor do PR** | Checklist §2; burndown; IDS atualizado se comportamento mudar |
+| **Reviewer** | Recusar segundo paradigma de componente **ou** interação; exigir PageShell/IDS |
 | **Sponsor freeze** | Unificação total de tokens / redesign amplo |
 
 ---
@@ -137,8 +146,10 @@ score = 0.20 * (páginasAdminComPageShell / páginasAdminOperacionais)
 
 - Novo import de `GerenteTable` / `DataTablePage` / `.app-btn-*`.
 - Novo `fixed inset-0` role=dialog fora de DragonModal/DetailSheet.
+- Novo `window.confirm` / `<select>` com lista longa / filtro sem UI.
 - Aderência cai &gt; 3 pp entre sprints.
-- PR cria componente em `components/ui` sem §2.2.
+- PR cria componente em `components/ui` ou novo fluxo de interação sem §2.2 / sem update do IDS.
+- Duas telas do mesmo padrão (ex.: confirm) com comportamentos diferentes em código **novo**.
 
 ### 7.4 Artefatos
 
