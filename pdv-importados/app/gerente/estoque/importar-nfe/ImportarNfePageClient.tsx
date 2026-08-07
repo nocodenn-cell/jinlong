@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { PageShell, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { FileDropzone } from '@/components/ui/FileDropzone'
+import { Stepper } from '@/components/ui/Stepper'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Button } from '@/components/ui/button'
 import { formatBRL } from '@/lib/format/money'
@@ -69,8 +71,8 @@ export function ImportarNfePageClient({ idioma }: Props) {
   const [atualizarGlobal, setAtualizarGlobal] = useState(true)
   const atualizarGlobalRef = useRef(true)
   atualizarGlobalRef.current = atualizarGlobal
-  const [dragOver, setDragOver] = useState(false)
   const [draftNovos, setDraftNovos] = useState<number | null>(null)
+  const [dropError, setDropError] = useState<string | null>(null)
 
   // FLX-05: importar só registra para conferência — nada foi creditado ainda.
   // A conferência (quantidade fisicamente contada) é uma etapa separada,
@@ -171,8 +173,10 @@ export function ImportarNfePageClient({ idioma }: Props) {
   const onFile = useCallback(
     (file: File) => {
       if (!file.name.toLowerCase().endsWith('.xml')) {
+        setDropError(mi.drop_erro_xml)
         return
       }
+      setDropError(null)
       const reader = new FileReader()
       reader.onload = () => {
         const t = typeof reader.result === 'string' ? reader.result : ''
@@ -181,18 +185,16 @@ export function ImportarNfePageClient({ idioma }: Props) {
       }
       reader.readAsText(file, 'UTF-8')
     },
-    [previewMut],
+    [mi.drop_erro_xml, previewMut],
   )
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setDragOver(false)
-      const f = e.dataTransfer.files[0]
-      if (f) onFile(f)
-    },
-    [onFile],
-  )
+  const nfeStep = conferenciaConcluida
+    ? 'concluido'
+    : importacaoId
+      ? 'conferencia'
+      : parsed
+        ? 'preview'
+        : 'upload'
 
   const custoUnit = (l: LinhaEditavel) => {
     if (!l.fator || l.fator <= 0) return 0
@@ -255,7 +257,18 @@ export function ImportarNfePageClient({ idioma }: Props) {
     setParsed(null)
     setLinhas([])
     setDraftNovos(null)
+    setDropError(null)
+    setImportacaoId(null)
+    setLinhasConferencia([])
+    setConferenciaConcluida(false)
   }
+
+  const stepLabels = [
+    { id: 'upload', label: mi.step_upload },
+    { id: 'preview', label: mi.step_preview },
+    { id: 'conferencia', label: mi.step_conferencia },
+    { id: 'concluido', label: mi.step_concluido },
+  ] as const
 
   const reconhecidosColumns: Column<LinhaComIndice>[] = useMemo(
     () => [
@@ -457,48 +470,42 @@ export function ImportarNfePageClient({ idioma }: Props) {
   )
 
   return (
-    <div className={`admin-v2-page space-y-4 ${fontClass}`}>
-      <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
+    <PageShell
+      title={mi.titulo}
+      subtitle={mi.subtitulo}
+      className={fontClass || undefined}
+      filters={
+        <nav aria-label="Breadcrumb" className="text-caption text-fg-muted">
+          <Link href={ROUTES.admin.estoque} className="font-medium text-fg hover:underline">
+            {m.estoque.titulo}
+          </Link>
+          <span aria-hidden className="mx-1.5">
+            /
+          </span>
+          <span className="text-fg">{mi.titulo}</span>
+        </nav>
+      }
+    >
+      <Stepper steps={stepLabels} current={nfeStep} />
 
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {mi.voltar}
-      </Link>
-
-      <section
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragOver(true)
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        className={`admin-v2-section-card rounded-xl border-2 border-dashed p-6 transition-colors ${
-          dragOver
-            ? 'border-[var(--color-warning-border)] bg-[var(--color-warning-bg)]'
-            : 'border-[var(--color-border)]'
-        }`}
-      >
-        <p className="mb-3 text-center text-body text-fg-muted">{mi.drop_hint}</p>
-        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-          <input
-            type="file"
-            accept=".xml,text/xml,application/xml"
-            className="hidden"
-            id="xml-upload"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) onFile(f)
-            }}
-          />
-          <Button asChild variant="outline" size="sm">
-            <label htmlFor="xml-upload" className="cursor-pointer">
-              XML
-            </label>
-          </Button>
+      <SectionCard title={mi.drop_hint}>
+        <FileDropzone
+          accept=".xml,text/xml,application/xml"
+          label={mi.drop_label}
+          hint={mi.drop_hint}
+          error={dropError}
+          disabled={previewLoading || !!importacaoId}
+          onFiles={(files) => {
+            const f = files[0]
+            if (f) onFile(f)
+          }}
+        />
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="primary"
             size="sm"
-            disabled={!xmlText.trim() || previewLoading}
+            disabled={!xmlText.trim() || previewLoading || !!importacaoId}
             loading={previewLoading}
             onClick={() => void previewMut(xmlText)}
           >
@@ -514,8 +521,9 @@ export function ImportarNfePageClient({ idioma }: Props) {
           placeholder="XML (opcional colar conteúdo)"
           className="mt-4 h-24 font-mono text-caption"
           spellCheck={false}
+          disabled={!!importacaoId}
         />
-      </section>
+      </SectionCard>
 
       {parsed ? (
         <SectionCard title={mi.emitente}>
@@ -677,7 +685,7 @@ export function ImportarNfePageClient({ idioma }: Props) {
           )}
         </SectionCard>
       ) : null}
-    </div>
+    </PageShell>
   )
 }
 

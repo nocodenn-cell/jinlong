@@ -5,13 +5,13 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { Upload } from 'lucide-react'
+import { ArrowLeftRight, PackageCheck, Printer, Upload } from 'lucide-react'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { PaginationBar, clampPage } from '@/components/ui/PaginationBar'
 import {
-  PageHeader,
   PageActions,
+  PageShell,
   CrudListShell,
 } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
@@ -184,22 +184,38 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={m.estoque.titulo}
-        subtitle={m.estoque.subtitulo}
-        actions={
-          <PageActions>
-            <Button asChild variant="secondary" size="sm" className="gap-1.5">
-              <Link href={ROUTES.admin.importNfe}>
-                <Upload className="h-4 w-4" aria-hidden />
-                {ui.catalogo_importar_nfe}
-              </Link>
-            </Button>
-          </PageActions>
-        }
-      />
-
+    <PageShell
+      title={m.estoque.titulo}
+      subtitle={m.estoque.subtitulo}
+      actions={
+        <PageActions>
+          <Button asChild variant="secondary" size="sm" className="gap-1.5">
+            <Link href={ROUTES.admin.importNfe}>
+              <Upload className="h-4 w-4" aria-hidden />
+              {ui.catalogo_importar_nfe}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm" className="gap-1.5">
+            <Link href={ROUTES.admin.estoqueRecebimento}>
+              <PackageCheck className="h-4 w-4" aria-hidden />
+              {m.gerente.recebimento_page.titulo}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm" className="gap-1.5">
+            <Link href={ROUTES.admin.estoqueTransferencias}>
+              <ArrowLeftRight className="h-4 w-4" aria-hidden />
+              {m.gerente.nav_transferencias}
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="gap-1.5">
+            <Link href={ROUTES.admin.estoqueImprimirEtiquetas}>
+              <Printer className="h-4 w-4" aria-hidden />
+              {ui.estoque_etiquetas}
+            </Link>
+          </Button>
+        </PageActions>
+      }
+    >
       <CrudListShell
         title={ui.estoque_saldos_titulo}
         meta={
@@ -295,6 +311,6 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           />
         )}
       </CrudListShell>
-    </div>
+    </PageShell>
   )
 }

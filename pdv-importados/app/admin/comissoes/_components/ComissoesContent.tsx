@@ -10,7 +10,9 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { MetricCard, SectionCard } from '@/components/ui/admin-v2'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Button } from '@/components/ui/button'
+import { EntityTable, type EntityColumn } from '@/components/ui/EntityTable'
+import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import type { ComissaoResumoRow, ComissaoDetalheRow, FiltroComissoes } from '@/app/gerente/comissoes/actions'
 import {
@@ -130,15 +132,16 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
     .filter((r) => r.status === 'pendente' && selecionados.has(r.comissao_id))
     .reduce((s, r) => s + r.valor_comissao, 0)
 
-  const columns: Column<ComissaoResumoRow>[] = [
+  const columns: EntityColumn<ComissaoResumoRow>[] = [
     {
       key: 'operador',
       header: labels.colOperador,
       sortValue: (r) => r.operador_nome,
       cell: (r) => (
         <button
-          onClick={() => abrirDetalhe(r)}
-          className="font-medium text-jl-accent transition-colors hover:text-amber-300"
+          type="button"
+          onClick={() => void abrirDetalhe(r)}
+          className="font-medium text-brand transition-colors hover:underline"
         >
           {r.operador_nome}
         </button>
@@ -149,36 +152,25 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       header: labels.colVendas,
       align: 'right',
       sortValue: (r) => r.total_vendas,
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.total_vendas}</span>,
+      cell: (r) => <span className="text-body text-fg-muted tabular-nums">{r.total_vendas}</span>,
     },
     {
       key: 'comissao_total',
       header: labels.colTotal,
-      align: 'right',
-      sortValue: (r) => r.total_comissao,
-      cell: (r) => (
-        <span className="text-[12px] font-medium text-jl-fg-1">
-          {formatBRL(r.total_comissao)}
-        </span>
-      ),
+      money: (r) => r.total_comissao,
+      moneyLocale: labels.locale,
     },
     {
       key: 'comissao_pago',
       header: labels.colPago,
-      align: 'right',
-      sortValue: (r) => r.total_pago,
-      cell: (r) => (
-        <span className="text-[12px] text-emerald-400">{formatBRL(r.total_pago)}</span>
-      ),
+      money: (r) => r.total_pago,
+      moneyLocale: labels.locale,
     },
     {
       key: 'comissao_pendente',
       header: labels.colPendente,
-      align: 'right',
-      sortValue: (r) => r.total_pendente,
-      cell: (r) => (
-        <span className="text-[12px] text-amber-400">{formatBRL(r.total_pendente)}</span>
-      ),
+      money: (r) => r.total_pendente,
+      moneyLocale: labels.locale,
     },
   ]
 
@@ -186,46 +178,36 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      {error && (
-        <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">
-          {error}
-        </div>
-      )}
+      {error ? <ErrorState dense title={error} /> : null}
 
       <SectionCard
         title={labels.operadoresTitulo.replace('{{n}}', String(rows.length))}
         subtitle={`${labels.periodoLabel}: ${filtroInicial.de}${labels.aSeparator}${filtroInicial.ate} · ${labels.statusLabel}: ${statusDisplay}`}
       >
-        <DataTable
+        <EntityTable
           data={rows}
           columns={columns}
           rowKey={(r) => r.operador_id}
-          emptyState={
-            <div className="flex flex-col items-center gap-2 py-12 text-center">
-              <span className="text-3xl text-jl-fg-3" aria-hidden>
-                💼
-              </span>
-              <p className="text-[12px] text-jl-fg-3">
-                {labels.vazioComissoes}
-              </p>
-            </div>
-          }
+          onRowClick={(r) => void abrirDetalhe(r)}
+          emptyState={<EmptyState title={labels.vazioComissoes} />}
           className="rounded-none border-x-0 border-[var(--color-border-secondary)]"
         />
       </SectionCard>
 
-      {detalheOperador && (
+      {detalheOperador ? (
         <SectionCard
           title={detalheOperador.operador_nome}
           subtitle={`${formatBRL(detalheOperador.total_pendente)} ${labels.emPendenciaSuffix}`}
           action={
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setDetalheOperador(null)}
-              className="admin-v2-btn-secondary px-2 py-1"
               aria-label={labels.fecharDetalhe}
             >
               ✕
-            </button>
+            </Button>
           }
         >
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -253,24 +235,24 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
           ) : detalheRows.length > 0 ? (
             <>
               <div className="mb-4 flex flex-wrap items-center gap-3 border-t border-[var(--color-border-secondary)] pt-4">
-                <button
-                  onClick={toggleTodos}
-                  className="text-[12px] text-jl-accent transition-colors hover:text-amber-300"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={toggleTodos}>
                   {selecionados.size === detalheRows.filter((r) => r.status === 'pendente').length
                     ? labels.desselecionarTodas
                     : labels.selecionarPendentes}
-                </button>
-                {selecionados.size > 0 && (
-                  <button
-                    onClick={marcarPagas}
-                    className="admin-v2-btn-primary ml-auto"
+                </Button>
+                {selecionados.size > 0 ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => void marcarPagas()}
                   >
                     {labels.marcarComoPagoBtn
                       .replace('{{n}}', String(selecionados.size))
                       .replace('{{valor}}', formatBRL(totalPendente))}
-                  </button>
-                )}
+                  </Button>
+                ) : null}
               </div>
 
               <div className="max-h-[300px] overflow-y-auto rounded-lg border border-[var(--color-border-secondary)]">
@@ -315,12 +297,10 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
               </div>
             </>
           ) : (
-            <div className="border-t border-[var(--color-border-secondary)] py-4 text-center text-[12px] text-jl-fg-3">
-              {labels.semComissoes}
-            </div>
+            <EmptyState title={labels.semComissoes} className="py-8" />
           )}
         </SectionCard>
-      )}
+      ) : null}
     </div>
   )
 }

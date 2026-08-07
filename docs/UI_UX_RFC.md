@@ -127,3 +127,48 @@
 | **Problema** | Empty do carrinho lista Enter/Ctrl+B/F4 mas omite F3 (consulta) — operador não descobre o atalho no momento de idle. |
 | **Decisão** | Incluir F3 nos chips do empty. Sem mudar contrato de teclado (RFC-005). |
 | **IDs** | polish S2 |
+
+---
+
+## RFC-UX-011 — Compras: fim do dragon-glass / GerenteTable
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 3 |
+| **Problema** | Lista de OC vive em `GerenteTable` + `dragon-glass-card` + `app-btn-*` + empty com glifo Han — terceira pele no admin. |
+| **Consolidar?** | Tela permanece (job: ordens de compra ≠ recebimento ≠ NF-e). Não fundir com Financeiro. |
+| **Arquitetura** | `PageShell` + `MetricCard` + filtros/chips DS + `EntityTable` + `EmptyState` + `Button`/`PaginationBar`. Modais OC já em DragonModal (S0). |
+| **IDs** | UX-P0-06 |
+
+---
+
+## RFC-UX-012 — Comissões: FilterBar daterange + status na URL
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 3 |
+| **Problema** | Página lê `de`/`ate`/`status` da URL mas **não expõe FilterBar** — operador não muda período sem hack. Empty com emoji. |
+| **Arquitetura** | `PageShell` + `FilterBar` (`daterange` + pills status) + `EntityTable`/`EmptyState`. Detalhe permanece na mesma página (sheet/card) — sem rota nova. |
+| **IDs** | UX-P0-07 |
+
+---
+
+## RFC-UX-013 — Importar NF-e: Stepper + FileDropzone
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 3 |
+| **Problema** | Dropzone ad hoc + sem progresso de fases (upload → preview → conferência → concluído). |
+| **Arquitetura** | `PageShell` + breadcrumb Estoque + `Stepper` + `FileDropzone` SSOT; lógica de import/conferência intacta. |
+| **IDs** | UX-P1-09 |
+
+---
+
+## RFC-UX-014 — Estoque: hub de ações no header
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 3 |
+| **Problema** | Só “Importar NF-e” no header; Recebimento/Transferências/Etiquetas exigem navegação lateral. |
+| **Arquitetura** | `PageShell` + `PageActions`: primary implícito na lista; secondary links para NF-e, Recebimento, Transferências, Etiquetas. Sem nova tela hub. |
+| **IDs** | UX-P1-12 |

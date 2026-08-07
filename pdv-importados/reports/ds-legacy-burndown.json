@@ -4,10 +4,9 @@
     {
       "id": "app_btn",
       "label": ".app-btn-* (classes)",
-      "files": 4,
-      "hits": 8,
+      "files": 3,
+      "hits": 6,
       "samples": [
-        "app/gerente/compras/ComprasGerentePageClient.tsx (2)",
         "app/gerente/idioma/LanguageToggle.tsx (2)",
         "components/caixa/CaixaLoadingStates.tsx (3)",
         "components/gerente/cadastro/CadastroFormModal.tsx (1)"
@@ -16,11 +15,10 @@
     {
       "id": "gerente_table",
       "label": "GerenteTable import",
-      "files": 4,
-      "hits": 4,
+      "files": 3,
+      "hits": 3,
       "samples": [
         "app/admin/funcionarios/FuncionariosListClient.tsx (1)",
-        "app/gerente/compras/ComprasGerentePageClient.tsx (1)",
         "components/gerente/DataTableSkeleton.tsx (1)",
         "components/gerente/cadastro/TabelaCadastroPadrao.tsx (1)"
       ]
@@ -35,13 +33,13 @@
     {
       "id": "text_arbitrary_px",
       "label": "text-[Npx] arbitrário",
-      "files": 62,
-      "hits": 245,
+      "files": 61,
+      "hits": 232,
       "samples": [
         "app/admin/auditoria/_components/AuditoriaTimeline.tsx (13)",
         "app/admin/auditoria/page.tsx (4)",
         "app/admin/categorias-financeiras/_components/CategoriasFinanceirasContent.tsx (8)",
-        "app/admin/comissoes/_components/ComissoesContent.tsx (13)",
+        "app/admin/comissoes/_components/ComissoesContent.tsx (5)",
         "app/admin/configuracoes/_components/ConfiguracoesContent.tsx (11)",
         "app/admin/diagnostico-caixa/_components/DiagnosticoCaixaContent.tsx (13)",
         "app/admin/financeiro/_components/FinanceiroReceberExtras.tsx (2)",

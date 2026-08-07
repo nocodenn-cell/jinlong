@@ -108,7 +108,7 @@
 | **UX-P1-06** | Catálogo | 1 primary + menu Importar | S | S0 | ✅ S1 |
 | **UX-P1-07** | Catálogo | PageShell + CrudListShell | M | S0-04 | ✅ S1 |
 | **UX-P1-08** | Produto | Atacado pós-salvar | M | — | S4 |
-| **UX-P1-09** | NF-e | Stepper fases + FileDropzone | M | S0-14,18 | S3 |
+| **UX-P1-09** | NF-e | Stepper fases + FileDropzone | M | S0-14,18 | ✅ S3 |
 | **UX-P1-10** | Recebimento | PageShell + breadcrumb | S | S0-04 | ✅ S1 |
 | **UX-P1-11** | Contas a pagar | Alias da tab pagar | M | P0-04 | ✅ S2 |
 | **UX-P1-12** | Estoque | Hub ações header | S | S0 | S3 |

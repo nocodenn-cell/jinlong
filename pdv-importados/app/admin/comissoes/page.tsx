@@ -1,14 +1,11 @@
 /**
- * FastProduct Admin — Comissões (Fase 8)
- *
- * Server Component. Reutiliza action `carregarResumoComissoes` de /gerente/comissoes.
- * Passa para client component que renderiza tabela com detalhe modal.
- *
- * Zero query nova — reutiliza RPCs existentes de /gerente/comissoes.
+ * FastProduct Admin — Comissões (Sprint 3 / RFC-UX-012)
+ * FilterBar daterange + status URL-driven.
  */
 
 import { Suspense } from 'react'
-import { PageHeader } from '@/components/ui/admin-v2'
+import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
+import { PageShell } from '@/components/ui/admin-v2'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
@@ -29,6 +26,10 @@ const TRINTA_DIAS_ATRAS = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   .toISOString()
   .slice(0, 10)
 
+function oneOf<T extends string>(raw: string | undefined, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(raw as T) ? (raw as T) : fallback
+}
+
 export default async function AdminComissoesPage({ searchParams }: PageProps) {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.comissoes,
@@ -41,18 +42,42 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
   const sp = (await searchParams) ?? {}
   const de = sp.de ?? TRINTA_DIAS_ATRAS
   const ate = sp.ate ?? TODAY
-  const status = (sp.status as 'todos' | 'pendente' | 'pago' | undefined) ?? 'todos'
+  const status = oneOf(sp.status, ['todos', 'pendente', 'pago'] as const, 'todos')
 
   const res = await carregarResumoComissoes({ de, ate, status })
   const dados = res.success ? res.data : []
 
-  return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={ui.comissoes_titulo}
-        subtitle={ui.comissoes_subtitulo}
-      />
+  const filters: FilterDef[] = [
+    {
+      type: 'daterange',
+      keyFrom: 'de',
+      keyTo: 'ate',
+      label: ui.comissoes_periodo_label,
+      fromLabel: ui.comissoes_periodo_label,
+      toLabel: ui.comissoes_a_separator,
+    },
+    {
+      type: 'pills',
+      key: 'status',
+      defaultValue: 'todos',
+      options: [
+        { value: 'todos', label: ui.comissoes_status_todos },
+        { value: 'pendente', label: ui.comissoes_status_pendente },
+        { value: 'pago', label: ui.comissoes_status_pago },
+      ],
+    },
+  ]
 
+  return (
+    <PageShell
+      title={ui.comissoes_titulo}
+      subtitle={ui.comissoes_subtitulo}
+      filters={
+        <Suspense fallback={<div className="h-9" />}>
+          <FilterBar filters={filters} clearLabel={m.comum.limpar_filtros} />
+        </Suspense>
+      }
+    >
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
         <ComissoesContent
           dados={dados}
@@ -87,6 +112,6 @@ export default async function AdminComissoesPage({ searchParams }: PageProps) {
           }}
         />
       </Suspense>
-    </div>
+    </PageShell>
   )
 }

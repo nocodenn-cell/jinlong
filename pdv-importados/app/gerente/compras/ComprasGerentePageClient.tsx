@@ -1,15 +1,17 @@
 'use client'
 
 /**
- * @legacy Gerente shell — migrado para Admin V2 (`/admin/estoque/recebimento`).
- * Evidência de migração; remover após 1–2 releases estáveis.
- * NÃO reutilizar em fluxos novos.
+ * Compras — Admin V2 (Sprint 3 / RFC-UX-011).
+ * Lista OC: PageShell + MetricCard + EntityTable (zero dragon-glass).
  */
 
-import { useCallback, useEffect, useState } from 'react'
-import { Plus, FilterX } from 'lucide-react'
-import { GerenteTable } from '@/components/gerente/GerenteTable'
-import { GerenteStickyToolbar } from '@/components/gerente/GerenteStickyToolbar'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { EntityTable, type EntityColumn } from '@/components/ui/EntityTable'
+import { EmptyState } from '@/components/ui/feedback'
+import { MetricCard, PageActions, PageShell, SectionCard } from '@/components/ui/admin-v2'
+import { Input } from '@/components/ui/forms'
 import { emitToast } from '@/lib/gerente/toast'
 import { getMessages } from '@/i18n/getMessages'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -36,14 +38,6 @@ type Props = Readonly<{
   produtos: Array<{ id: string; nome: string; unidade_medida: string }>
 }>
 
-const STATUS_CORES: Record<StatusOC, string> = {
-  RASCUNHO: 'bg-white/[0.09] text-jl-fg-3',
-  CONFIRMADA: 'bg-blue-500/20 text-blue-300',
-  EM_TRANSITO: 'bg-amber-400/20 text-amber-300',
-  RECEBIDA: 'bg-emerald-500/20 text-emerald-300',
-  CANCELADA: 'bg-red-500/20 text-red-300',
-}
-
 function fmtData(d: string | null): string {
   if (!d) return '—'
   return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -53,7 +47,13 @@ function idCurto(id: string): string {
   return id.slice(0, 8).toUpperCase()
 }
 
-export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornecedores, produtos }: Props) {
+export function ComprasGerentePageClient({
+  idioma,
+  kpisIniciais,
+  inicial,
+  fornecedores,
+  produtos,
+}: Props) {
   const m = getMessages(idioma)
   const c = m.compras
 
@@ -95,11 +95,6 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
 
   const totalPages = Math.max(1, Math.ceil(dados.total / LIMITE_PAG))
 
-  function mudarPagina(nova: number) {
-    setPagina(nova)
-    void carregar(nova)
-  }
-
   function limparFiltros() {
     setStatusFiltro('')
     setBusca('')
@@ -132,11 +127,6 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
     void carregar(pagina)
   }
 
-  const chipBase =
-    'rounded-full px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400'
-  const chipActive = 'bg-amber-400 text-black'
-  const chipInactive = 'bg-white/[0.09] text-jl-fg-2 hover:bg-white/[0.14]'
-
   const statusOpcoes: Array<{ value: StatusOC | ''; label: string }> = [
     { value: '', label: c.filtro_todos_status },
     { value: 'RASCUNHO', label: c.status_RASCUNHO },
@@ -146,157 +136,181 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
     { value: 'CANCELADA', label: c.status_CANCELADA },
   ]
 
-  return (
-    <>
-      {/* KPIs */}
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{c.kpi_rascunho}</div>
-          <div className="mt-1 text-xl font-bold leading-tight tabular-nums text-jl-fg-1">{kpisIniciais.total_rascunho}</div>
-        </div>
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{c.kpi_confirmadas}</div>
-          <div className="mt-1 text-xl font-bold leading-tight tabular-nums text-blue-300">{kpisIniciais.total_confirmadas}</div>
-        </div>
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{c.kpi_em_transito}</div>
-          <div className={cn('mt-1 text-xl font-bold leading-tight tabular-nums', kpisIniciais.total_em_transito > 0 ? 'text-amber-300' : 'text-jl-fg-1')}>
-            {kpisIniciais.total_em_transito}
-          </div>
-        </div>
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">{c.kpi_valor_transito}</div>
-          <div className={cn('mt-1 text-xl font-bold leading-tight tabular-nums', kpisIniciais.valor_em_transito > 0 ? 'text-amber-300' : 'text-jl-fg-1')}>
-            {formatBRL(kpisIniciais.valor_em_transito)}
-          </div>
-        </div>
-      </div>
+  const columns: EntityColumn<OcListaDTO>[] = useMemo(
+    () => [
+      {
+        key: 'id',
+        header: c.col_id,
+        cell: (row) => (
+          <span className="font-mono text-caption text-fg-subtle">{idCurto(row.id)}</span>
+        ),
+      },
+      {
+        key: 'fornecedor',
+        header: c.col_fornecedor,
+        cell: (row) => <span className="font-medium text-fg">{row.fornecedor_nome ?? '—'}</span>,
+      },
+      {
+        key: 'status',
+        header: c.col_status,
+        status: (row) => ({
+          status: row.status,
+          label: String(c[`status_${row.status}` as keyof typeof c] ?? row.status),
+        }),
+      },
+      {
+        key: 'emissao',
+        header: c.col_emissao,
+        cell: (row) => (
+          <span className="tabular-nums text-caption">{fmtData(row.data_emissao)}</span>
+        ),
+      },
+      {
+        key: 'previsto',
+        header: c.col_previsto,
+        cell: (row) => (
+          <span className="tabular-nums text-caption text-fg-subtle">
+            {fmtData(row.data_prevista_chegada)}
+          </span>
+        ),
+      },
+      {
+        key: 'itens',
+        header: c.col_itens,
+        align: 'right',
+        cell: (row) => <span className="tabular-nums">{row.total_itens}</span>,
+      },
+      {
+        key: 'total',
+        header: c.col_total,
+        money: (row) => row.valor_total,
+      },
+    ],
+    [c],
+  )
 
-      {/* Toolbar */}
-      <GerenteStickyToolbar className="mb-4">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Status chips */}
-          <div className="flex flex-wrap gap-1.5">
+  return (
+    <PageShell
+      title={c.titulo}
+      subtitle={c.subtitulo}
+      actions={
+        <PageActions>
+          <Button type="button" variant="primary" size="sm" className="gap-1.5" onClick={abrirNova}>
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            {c.nova_oc}
+          </Button>
+        </PageActions>
+      }
+      kpi={
+        <>
+          <MetricCard
+            label={c.kpi_rascunho}
+            value={String(kpisIniciais.total_rascunho)}
+            icon="list-filter"
+            tone="gold"
+          />
+          <MetricCard
+            label={c.kpi_confirmadas}
+            value={String(kpisIniciais.total_confirmadas)}
+            icon="file-check-2"
+            tone="success"
+          />
+          <MetricCard
+            label={c.kpi_em_transito}
+            value={String(kpisIniciais.total_em_transito)}
+            icon="package"
+            tone={kpisIniciais.total_em_transito > 0 ? 'warning' : 'gold'}
+          />
+          <MetricCard
+            label={c.kpi_valor_transito}
+            value={formatBRL(kpisIniciais.valor_em_transito)}
+            icon="dollar-sign"
+            tone={kpisIniciais.valor_em_transito > 0 ? 'warning' : 'gold'}
+          />
+        </>
+      }
+    >
+      <SectionCard title={c.titulo}>
+        <div className="mb-3 flex w-full flex-col gap-2.5 border-b border-[var(--color-border-secondary)] pb-3">
+          <div className="flex flex-wrap items-center gap-1.5">
             {statusOpcoes.map((op) => (
               <button
-                key={op.value}
+                key={op.value || 'all'}
                 type="button"
                 onClick={() => setStatusFiltro(op.value)}
-                className={cn(chipBase, statusFiltro === op.value ? chipActive : chipInactive)}
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-caption font-medium transition-colors',
+                  statusFiltro === op.value
+                    ? 'border-brand bg-[var(--color-info-bg)] text-brand'
+                    : 'border-[var(--color-border)] text-fg-muted hover:text-fg',
+                )}
               >
                 {op.label}
               </button>
             ))}
           </div>
-
-          {/* Busca */}
-          <input
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder={c.busca_placeholder}
-            className="app-input h-8 w-48 rounded-md px-2.5 text-xs sm:w-56"
-          />
-
-          <button
-            type="button"
-            onClick={limparFiltros}
-            className="inline-flex items-center gap-1 text-xs text-jl-fg-3 hover:text-jl-fg-1"
-          >
-            <FilterX className="h-3 w-3" aria-hidden />
-            {m.comum.limpar_filtros}
-          </button>
-
-          <div className="flex-1" />
-
-          <button
-            type="button"
-            onClick={abrirNova}
-            className="app-btn-primary inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-            {c.nova_oc}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder={c.busca_placeholder}
+              aria-label={c.busca_placeholder}
+              className="min-w-[14rem] flex-1"
+            />
+            {(statusFiltro || busca) && (
+              <Button type="button" variant="ghost" size="sm" onClick={limparFiltros}>
+                {m.comum.limpar_filtros}
+              </Button>
+            )}
+          </div>
         </div>
-      </GerenteStickyToolbar>
 
-      {/* Tabela */}
-      <GerenteTable
-        tone="dragon"
-        compact
-        columns={[
-          { key: 'id', header: c.col_id },
-          { key: 'fornecedor', header: c.col_fornecedor, priority: 'primary' },
-          { key: 'status', header: c.col_status },
-          { key: 'emissao', header: c.col_emissao },
-          { key: 'previsto', header: c.col_previsto, priority: 'contextual' },
-          { key: 'itens', header: c.col_itens, numeric: true },
-          { key: 'total', header: c.col_total, numeric: true },
-        ]}
-      >
-        {dados.rows.map((row: OcListaDTO) => (
-          <tr
-            key={row.id}
-            className="gerente-fin-row-hover cursor-pointer"
-            onClick={() => setDetalheId(row.id)}
-          >
-            <td className="gerente-fin-cell px-3 py-2 font-mono text-xs text-jl-fg-3">{idCurto(row.id)}</td>
-            <td className="gerente-fin-cell px-3 py-2 font-medium">{row.fornecedor_nome ?? '—'}</td>
-            <td className="gerente-fin-cell px-3 py-2">
-              <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', STATUS_CORES[row.status])}>
-                {c[`status_${row.status}` as keyof typeof c]}
-              </span>
-            </td>
-            <td className="gerente-fin-cell px-3 py-2 text-xs tabular-nums">{fmtData(row.data_emissao)}</td>
-            <td className="gerente-fin-cell px-3 py-2 text-xs tabular-nums text-jl-fg-3">{fmtData(row.data_prevista_chegada)}</td>
-            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">{row.total_itens}</td>
-            <td className="gerente-fin-cell px-3 py-2 text-right tabular-nums">{formatBRL(row.valor_total)}</td>
-          </tr>
-        ))}
-        {dados.rows.length === 0 && !loading && (
-          <tr>
-            <td colSpan={7} className="gerente-fin-empty px-4 py-12 text-center">
-              <div className="text-5xl text-amber-400/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
-                購
-              </div>
-              <div className="mt-3 text-sm font-semibold text-jl-fg-1">{c.vazio_titulo}</div>
-              <div className="mt-1 text-xs text-jl-fg-3">{c.vazio_sub}</div>
-            </td>
-          </tr>
-        )}
-      </GerenteTable>
+        <EntityTable
+          data={dados.rows}
+          columns={columns}
+          rowKey={(r) => r.id}
+          loading={loading && dados.rows.length === 0}
+          onRowClick={(row) => setDetalheId(row.id)}
+          emptyState={<EmptyState title={c.vazio_titulo} description={c.vazio_sub} />}
+        />
 
-      {loading && (
-        <p className="mt-4 text-center text-sm opacity-60">{m.comum.carregando}</p>
-      )}
+        {totalPages > 1 ? (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={pagina === 0 || loading}
+              onClick={() => {
+                const next = pagina - 1
+                setPagina(next)
+                void carregar(next)
+              }}
+            >
+              {c.pag_prev}
+            </Button>
+            <span className="text-caption text-fg-subtle">
+              {pagina + 1} / {totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={pagina >= totalPages - 1 || loading}
+              onClick={() => {
+                const next = pagina + 1
+                setPagina(next)
+                void carregar(next)
+              }}
+            >
+              {c.pag_next}
+            </Button>
+          </div>
+        ) : null}
+      </SectionCard>
 
-      {/* Paginação */}
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            disabled={pagina === 0}
-            onClick={() => mudarPagina(pagina - 1)}
-            className="app-btn-neutral rounded-md px-3 py-1.5 text-xs disabled:opacity-40"
-          >
-            {c.pag_prev}
-          </button>
-          <span className="text-xs text-jl-fg-3">
-            {pagina + 1} / {totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={pagina >= totalPages - 1}
-            onClick={() => mudarPagina(pagina + 1)}
-            className="app-btn-neutral rounded-md px-3 py-1.5 text-xs disabled:opacity-40"
-          >
-            {c.pag_next}
-          </button>
-        </div>
-      )}
-
-      {/* Modais */}
-      {formAberto && (
+      {formAberto ? (
         <OcFormModal
           idioma={idioma}
           ocInicial={ocParaEditar}
@@ -305,9 +319,9 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
           onClose={fecharForm}
           onSaved={aoSalvar}
         />
-      )}
+      ) : null}
 
-      {detalheId && (
+      {detalheId ? (
         <OcDetalheModal
           idioma={idioma}
           ocId={detalheId}
@@ -315,7 +329,7 @@ export function ComprasGerentePageClient({ idioma, kpisIniciais, inicial, fornec
           onEditar={abrirEditar}
           onStatusChanged={aoAtualizarStatus}
         />
-      )}
-    </>
+      ) : null}
+    </PageShell>
   )
 }
