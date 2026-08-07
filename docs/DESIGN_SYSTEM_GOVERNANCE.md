@@ -76,7 +76,7 @@ Todo PR que toque `app/**/*.tsx`, `components/**/*.tsx` ou `styles/**` deve marc
 
 ### 2.5 Gate Sprint 1
 
-Nenhum PR de aplicação de tela (Sprint 1+) pode mergear enquanto a matriz de prontidão S0 em [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) estiver **REPROVADA**.
+Nenhum PR de aplicação de tela (Sprint 1+) pode mergear enquanto a matriz de prontidão S0 em [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) não estiver **aceita pelo sponsor** (implementação técnica sozinha não libera S1).
 
 ---
 
