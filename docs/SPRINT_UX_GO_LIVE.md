@@ -29,6 +29,20 @@ Relatório: `docs/FECHAMENTO_ONDA_2_5.md`. **P0: 0 · P1: 2 · P2: 7**, todos co
 
 Em ordem de impacto operacional, derivadas da auditoria.
 
+### Verificação item a item antes de executar (2026-08-07)
+
+Ao começar a execução, passei a **verificar cada item no código antes de trabalhá-lo**, em vez de confiar na auditoria. Três dos itens planejados já estavam resolvidos:
+
+| Item planejado | Verificação | Situação |
+|---|---|---|
+| `P0-01` — `--accent` quebrado por cascata | `tailwind.config.js:55` mapeia `var(--color-brand)` **sem** `hsl()`; `hsl(var(--accent))` não existe mais no repo | ✅ **já corrigido** |
+| P1.1 — "nenhum botão exibe seu atalho" | `CaixaPdvOperacoesMenu` **já exibia** (`shortcut` por item, renderizado). O gap real era a barra de finalização | ⚠️ **parcialmente falso** |
+| P1.2 — seção fiscal empilhada | `FiscalSection` já usa `<details>` sem `open` — os 6 campos já estão atrás de disclosure | ✅ **já corrigido** |
+
+**Causa:** a auditoria foi feita por leitura estática, sem executar a aplicação, e em vários pontos descreveu o código como pior do que está. Isso não invalida os achados estruturais (duplicação, contratos, fluxo), que foram verificados com evidência — mas invalida a confiança em afirmações visuais não conferidas.
+
+**Regra adotada para o resto da sprint:** nenhum item entra em execução sem verificação prévia no código. Itens verificados e confirmados como reais: P1.3, P1.4, P1.5.
+
 ### P1 — Clareza operacional (era a Onda 3)
 
 | # | Item | Tela | Por quê |
