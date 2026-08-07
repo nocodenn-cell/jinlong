@@ -55,16 +55,35 @@ function isEmptyArray(body) {
   return Array.isArray(body) && body.length === 0
 }
 
-function decodeSub(jwt) {
+function decodeClaims(jwt) {
   try {
     const part = jwt.split(".")[1]
     if (!part) return null
     const json = Buffer.from(part.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8")
-    const p = JSON.parse(json)
-    return typeof p.sub === "string" ? p.sub : null
+    return JSON.parse(json)
   } catch {
     return null
   }
+}
+
+function decodeSub(jwt) {
+  const p = decodeClaims(jwt)
+  return p && typeof p.sub === "string" ? p.sub : null
+}
+
+/**
+ * JWT de teste guardado em secret expira — e um JWT expirado ainda tem `sub`
+ * válido, então o smoke seguia adiante e o PostgREST devolvia 401 em TODAS as
+ * requisições, inclusive nas que deveriam dar 200. O relatório resultante
+ * parecia regressão de RLS quando era só credencial vencida.
+ *
+ * Devolve a data de expiração quando o token já venceu, ou null se está válido
+ * (ou se não dá para saber).
+ */
+function expiradoEm(jwt) {
+  const p = decodeClaims(jwt)
+  if (!p || typeof p.exp !== "number") return null
+  return p.exp * 1000 <= Date.now() ? new Date(p.exp * 1000).toISOString() : null
 }
 
 async function main() {
@@ -128,6 +147,25 @@ async function main() {
     process.exit(0)
   }
 
+  // Falha cedo e com o motivo certo: credencial vencida não é falha de RLS.
+  const vencidos = [
+    ["RLS_SMOKE_JWT_PAINEL", expiradoEm(jp)],
+    ["RLS_SMOKE_JWT_CAIXA", expiradoEm(jc)],
+  ].filter(([, quando]) => quando !== null)
+
+  if (vencidos.length > 0) {
+    payload.ok = false
+    payload.error = "jwt_expirado"
+    payload.expirados = vencidos.map(([nome, quando]) => ({ secret: nome, expirou_em: quando }))
+    payload.message =
+      "Credencial de CI vencida, não regressão de RLS: " +
+      vencidos.map(([nome, quando]) => `${nome} expirou em ${quando}`).join("; ") +
+      ". Gere um novo access_token e atualize o secret no repositório."
+    if (opts.json) console.log(JSON.stringify(payload, null, 2))
+    else console.error(payload.message + "\n" + payload.hint)
+    process.exit(2)
+  }
+
   const subPainel = decodeSub(jp)
   if (!subPainel) {
     payload.ok = false
@@ -152,14 +190,16 @@ async function main() {
   for (const t of painelPaths) {
     const r = await restGet(t.path, jp)
     const pass = r.status === 200 && Array.isArray(r.body)
-    payload.checks.push({ token: "PAINEL", ...t, status: r.status, pass })
+    // Em falha, carrega a resposta do PostgREST: distingue "Invalid API key"
+    // de "JWT expired" de uma negativa real de policy.
+    payload.checks.push({ token: "PAINEL", ...t, status: r.status, pass, ...(pass ? {} : { body: r.body }) })
     if (!pass) payload.ok = false
   }
 
   for (const t of operadorMustBeEmpty) {
     const r = await restGet(t.path, jc)
     const pass = r.status === 200 && isEmptyArray(r.body)
-    payload.checks.push({ token: "CAIXA", ...t, status: r.status, pass, note: "esperado []" })
+    payload.checks.push({ token: "CAIXA", ...t, status: r.status, pass, note: "esperado []", ...(pass ? {} : { body: r.body }) })
     if (!pass) payload.ok = false
   }
 
