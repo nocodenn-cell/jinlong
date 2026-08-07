@@ -225,3 +225,50 @@ retornar 200 (`PAINEL/vendas_select`, `PAINEL/usuarios_self`). Um 401 uniforme
 antes de qualquer avaliação de policy indica token de CI inválido/expirado, não
 regressão de RLS. Não alterado: mexer nisso exige rotacionar secret, fora do
 escopo autorizado.
+
+## CI-01 — Credenciais de teste inválidas: o gate de RLS e o e2e estão cegos
+
+**Data:** 2026-08-07 · **Commits:** `8e08f255`, `0f61323c`
+
+Cadeia completa, cada elo comprovado por log de CI:
+
+1. **`build-and-test` quebrado desde a subida do `@supabase/auth-js@2.110.5`**
+   (exige node >=22; `ci-pdv-local.yml` pinava 20). `npm ci` morria em ~1s.
+
+2. **Os jobs de e2e dependem dele** (`needs: build-and-test` em
+   `ci-pdv-importados.yml:74,169`). Com o `build-and-test` vermelho, **o e2e
+   nunca chegou a rodar**.
+
+3. **Os JWTs do `rls-rest-gate` venceram em 2026-05-17** — quase três meses de
+   um gate marcado como obrigatório (`CI_RLS_SMOKE_REQUIRED=true`) reprovando
+   sem validar nada. Passou despercebido porque a mensagem acusava regressão de
+   RLS ("operador deve receber [] em recursos só-gerente"), e não credencial
+   vencida. Ninguém investiga um gate que parece reprovar por motivo legítimo.
+
+4. **As credenciais de login do e2e também são inválidas.** Com o gate passando
+   a emitir o token na hora, o erro real apareceu:
+
+       PAINEL: login falhou (HTTP 400): {"error_code":"invalid_credentials"}
+       CAIXA:  login falhou (HTTP 400): {"error_code":"invalid_credentials"}
+
+   Ou seja: `PLAYWRIGHT_TEST_EMAIL`/`PLAYWRIGHT_TEST_PASSWORD` e
+   `PLAYWRIGHT_CAIXA_TEST_EMAIL`/`PLAYWRIGHT_CAIXA_TEST_PASSWORD` não autenticam
+   contra o projeto apontado por `PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL`.
+
+**Consequência para o Go-Live:** duas camadas de validação — smoke de RLS por
+perfil e e2e de fluxo autenticado — estão sem cobertura real há meses. Não é
+defeito de produto: é ausência de verificação. Mas significa que qualquer
+afirmação do tipo "o e2e está passando" é falsa hoje.
+
+**O que já foi corrigido no código** (commits acima):
+- `build-and-test` desbloqueado (Node 22 nos dois workflows que faltavam).
+- `p0-rls-rest-smoke.mjs` checa `exp` do JWT e falha com o nome do secret e a
+  data, em vez de simular falha de RLS.
+- O token passa a ser emitido a cada execução via
+  `POST /auth/v1/token?grant_type=password`, encerrando o ciclo de expiração.
+  Sem secret novo — usa as credenciais que o e2e já usa.
+
+**O que depende de ação humana:** restaurar as credenciais de teste. Ou os
+usuários de teste foram removidos do projeto, ou as senhas mudaram, ou os
+secrets apontam para outro projeto. Enquanto isso, o `rls-rest-gate` continua
+vermelho — agora dizendo a verdade sobre o porquê.
