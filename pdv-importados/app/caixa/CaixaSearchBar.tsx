@@ -1,7 +1,7 @@
 "use client"
 
 import { forwardRef, useCallback, useEffect, useRef, type FormEvent, type MutableRefObject } from "react"
-import { Volume2, VolumeX } from "lucide-react"
+import { ScanBarcode, Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/forms"
 import type { Mensagens } from "@/i18n/getMessages"
@@ -94,7 +94,14 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
         onSubmit={onSubmit}
         className={cn("flex flex-col sm:flex-row", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-3")}
       >
-        <div className="flex-1">
+        <div className="relative flex-1">
+          <ScanBarcode
+            className={cn(
+              "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle",
+              compact ? "h-4 w-4" : "h-5 w-5",
+            )}
+            aria-hidden
+          />
           <Input
             ref={setRef}
             value={codigo}
@@ -104,7 +111,7 @@ export const CaixaSearchBar = forwardRef<HTMLInputElement, Props>(function Caixa
             disabled={busy}
             data-caixa-busca="true"
             className={cn(
-              "w-full",
+              "w-full pl-10",
               compact ? "py-1.5 text-body" : "h-14 text-subtitle",
             )}
             role={navegacaoResultados ? "combobox" : undefined}

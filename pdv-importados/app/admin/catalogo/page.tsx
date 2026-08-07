@@ -25,7 +25,8 @@ import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { PaginationBar, clampPage } from '@/components/ui/PaginationBar'
 import { ErrorState } from '@/components/ui/feedback'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { InlineAlert } from '@/components/ui/InlineAlert'
+import { CrudListShell, PageShell } from '@/components/ui/admin-v2'
 import {
   buscarProdutosComFiltros,
   listarOpcoesFiltrosProdutos,
@@ -259,59 +260,87 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
   )
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader
-        title={ui.catalogo_titulo}
-        subtitle={ui.catalogo_subtitulo}
-        filters={headerActions}
-      />
+    <PageShell
+      title={ui.catalogo_titulo}
+      subtitle={ui.catalogo_subtitulo}
+      actions={headerActions}
+    >
+      <InlineAlert tone="info">{ui.catalogo_hint_volume}</InlineAlert>
 
-      <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-3">
-        <Suspense fallback={<div className="h-9" />}>
-          <FilterBar filters={filters} />
-        </Suspense>
-
-        {chips.length > 0 ? (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            {chips.map((chip) => (
-              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
-                {chip.label}
-                <span aria-hidden className="text-fg-subtle">
-                  ✕
-                </span>
-              </Link>
-            ))}
+      <CrudListShell
+        title={m.produtos.lista_produtos}
+        meta={countBadge}
+        toolbar={
+          <div className="flex w-full flex-col gap-2.5">
+            <Suspense fallback={<div className="h-9" />}>
+              <FilterBar filters={filters} clearLabel={m.comum.limpar_filtros} />
+            </Suspense>
+            {chips.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {chips.map((chip) => (
+                  <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
+                    {chip.label}
+                    <span aria-hidden className="text-fg-subtle">
+                      ✕
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
-
-      {loadError ? (
-        <ErrorState dense description={loadError} className="mb-4 items-start text-left" />
-      ) : null}
-
-      <SectionCard title={m.produtos.lista_produtos} action={countBadge}>
-        <Suspense fallback={<div className="admin-v2-panel h-24 animate-pulse rounded-lg" />}>
-          <CatalogoTable
-            produtos={produtos}
-            labels={{ produto: m.estoque.col_produto, varejo: ui.catalogo_col_varejo, atacado: ui.catalogo_col_atacado, estoque: m.estoque.titulo, origem: m.produtos.origem_label, status: m.produtos.status, rascunho: ui.catalogo_status_rascunho, publicado: ui.catalogo_status_publicado, inativo: m.produtos.inativo, publicar: ui.catalogo_publicar, inativar: m.produtos.inativar, vazioTitulo: ui.catalogo_vazio_titulo, vazioSub: ui.catalogo_vazio_sub, cadastroRapido: m.produtos.cadastro_produto, origemChina: ui.estoque_origem_china, origemBrasilNf: ui.estoque_origem_brasil_nf, origemBrasil: ui.estoque_origem_brasil, acaoEditar: ui.catalogo_acao_editar, acaoDuplicar: ui.catalogo_acao_duplicar, acaoVerEstoque: ui.catalogo_acao_ver_estoque, acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha, reativar: ui.catalogo_acao_reativar }}
-            m={m}
-            opcoes={opcoes}
-            idioma={idioma}
+        }
+        footer={
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            pageHref={pageHref}
+            label={m.produtos.pag_info
+              .replace('{{atual}}', String(page))
+              .replace('{{total}}', String(totalPages))}
+            anteriorLabel={ui.paginacao_anterior}
+            proximaLabel={ui.paginacao_proxima}
           />
-        </Suspense>
-      </SectionCard>
-
-      <PaginationBar
-        className="mt-4"
-        page={page}
-        totalPages={totalPages}
-        pageHref={pageHref}
-        label={m.produtos.pag_info
-          .replace('{{atual}}', String(page))
-          .replace('{{total}}', String(totalPages))}
-        anteriorLabel={ui.paginacao_anterior}
-        proximaLabel={ui.paginacao_proxima}
-      />
-    </div>
+        }
+      >
+        {loadError ? (
+          <div className="p-4">
+            <ErrorState dense description={loadError} className="items-start text-left" />
+          </div>
+        ) : (
+          <Suspense fallback={<div className="admin-v2-panel h-24 animate-pulse rounded-lg" />}>
+            <CatalogoTable
+              produtos={produtos}
+              labels={{
+                produto: m.estoque.col_produto,
+                varejo: ui.catalogo_col_varejo,
+                atacado: ui.catalogo_col_atacado,
+                estoque: m.estoque.titulo,
+                origem: m.produtos.origem_label,
+                status: m.produtos.status,
+                rascunho: ui.catalogo_status_rascunho,
+                publicado: ui.catalogo_status_publicado,
+                inativo: m.produtos.inativo,
+                publicar: ui.catalogo_publicar,
+                inativar: m.produtos.inativar,
+                vazioTitulo: ui.catalogo_vazio_titulo,
+                vazioSub: ui.catalogo_vazio_sub,
+                cadastroRapido: m.produtos.cadastro_produto,
+                origemChina: ui.estoque_origem_china,
+                origemBrasilNf: ui.estoque_origem_brasil_nf,
+                origemBrasil: ui.estoque_origem_brasil,
+                acaoEditar: ui.catalogo_acao_editar,
+                acaoDuplicar: ui.catalogo_acao_duplicar,
+                acaoVerEstoque: ui.catalogo_acao_ver_estoque,
+                acaoSelecionarLinha: ui.catalogo_acao_selecionar_linha,
+                reativar: ui.catalogo_acao_reativar,
+              }}
+              m={m}
+              opcoes={opcoes}
+              idioma={idioma}
+            />
+          </Suspense>
+        )}
+      </CrudListShell>
+    </PageShell>
   )
 }

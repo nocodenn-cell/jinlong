@@ -74,6 +74,54 @@ export async function executarTransferencia(input: {
   )
 }
 
+export type ProdutoTransferenciaBusca = {
+  id: string
+  nome: string
+  unidade_medida: string
+  codigo_barras: string | null
+}
+
+/** Busca async de produto para Transferências (IX-LOOKUP — sem payload 500). */
+export async function buscarProdutosTransferencia(
+  termo: string,
+): Promise<
+  | { success: true; data: ProdutoTransferenciaBusca[] }
+  | { success: false; error: string }
+> {
+  const auth = await assertGerenteSession()
+  if (!auth.ok) return { success: false, error: auth.error }
+
+  const t = (termo ?? '').replace(/[,()%_\\]/g, ' ').trim().slice(0, 120)
+  if (t.length < 2) return { success: true, data: [] }
+
+  const supabase = await createClient()
+  const digitos = t.replace(/\D/g, '')
+  const ors = [`nome.ilike.%${t}%`, `codigo_interno.ilike.%${t}%`]
+  if (digitos) ors.push(`codigo_barras.like.%${digitos}%`)
+
+  const { data, error } = await supabase
+    .from('produtos')
+    .select('id, nome, unidade_medida, codigo_barras')
+    .eq('ativo', true)
+    .or(ors.join(','))
+    .order('nome', { ascending: true })
+    .limit(20)
+
+  if (error) {
+    return { success: false, error: mensagemErroComSecao('Produtos', error.message) }
+  }
+
+  return {
+    success: true,
+    data: (data ?? []).map((p) => ({
+      id: p.id,
+      nome: p.nome,
+      unidade_medida: p.unidade_medida ?? 'UN',
+      codigo_barras: p.codigo_barras,
+    })),
+  }
+}
+
 /** Quantidade atual na origem (para validação de UI antes da RPC). */
 export async function obterEstoqueDisponivelTransferencia(
   lojaId: string,

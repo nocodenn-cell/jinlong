@@ -267,7 +267,7 @@ Uma ação → **um** canal primário de sucesso (não toast + inline + banner j
 | **Cadastro produto** | Parcial (bulk/export/upload ad hoc) | Parcial | FornecedorCombobox (não expandir) | **Sim** se S0-18/19/20/05 |
 | **Compras** | **Não** (GerenteTable/dark) | Divergente overlay | Não | **Sim** se PageShell+EntityTable+Confirm |
 | **Estoque** | Quase (PageHeader+CrudListShell+DataTable) | Parcial | Etiquetas 2-col OK | **Sim** |
-| **Transferências** | **Não** (select 500) | **IX-LOOKUP divergente** | Não | **Só com UX-S0-24 async** |
+| **Transferências** | **Sim** (EntityLookup + `buscarProdutosTransferencia`) | **IX-LOOKUP Confirmado** (S1) | Não | — |
 | **Vendas** | Parcial (sheet/empty/filtros locais) | SHEET/EMPTY/FILTER parciais | Não | **Sim** com DetailSheet+FilterBar |
 | **Financeiro** | **Não** (TabNav local, GerenteTable AP) | Parcial | Infinite AP = EXC-04 | **Sim** com TabNav+EntityTable+S0-21 |
 | **Fiscal** | **Não** (sheet ad hoc) | SHEET divergente | Timeline domínio OK | **Sim** com DetailSheet |

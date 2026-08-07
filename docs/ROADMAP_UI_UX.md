@@ -4,8 +4,8 @@
 |--------|--------|
 | **Data** | 2026-08-07 (Sprint 0 = base definitiva) |
 | **Docs** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
-| **Estado** | **Sprint 0 PRONTA PARA ACEITE** (Engineering Loop 2026-08-07) · Sprint 1 **bloqueada até aceite** |
-| **Validação** | [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md) |
+| **Estado** | **Sprint 0 ACEITA / ENCERRADA** · **Sprint 1 FECHADA** (2026-08-07) · Sprint 2 bloqueada até próximo aceite |
+| **Validação** | [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md) · RFCs: [`UI_UX_RFC.md`](./UI_UX_RFC.md) |
 | **Princípio** | S0 consolida SSOT → S1+ só aplica → zero novos paradigmas |
 
 ---
@@ -143,9 +143,9 @@ A Sprint 0 só é **DONE** se **todos** os itens abaixo forem verdadeiros:
 
 #### Gate para S1
 
-- [ ] DS owner (ou sponsor UX) assina DoD S0.
+- [x] DS owner (ou sponsor UX) assina DoD S0 — **aceite explícito 2026-08-07** (“Aceite da Sprint 0”).
 - [x] Nenhum PR de tela S1 mergeado antes desse aceite.
-- [x] Matriz §10 = todos ✅ técnicos (sponsor pendente).
+- [x] Matriz §10 = todos ✅ técnicos + sponsor.
 
 ---
 
@@ -179,23 +179,27 @@ A Sprint 0 só é **DONE** se **todos** os itens abaixo forem verdadeiros:
 
 ### 4.4 Obrigatório antes da Sprint 1
 
-Aceite do sponsor no DoD §3.3. Em seguida abrir Sprint 1 (aplicação em telas).
+~~Aceite do sponsor no DoD §3.3.~~ **Cumprido 2026-08-07.**
 
 ### 4.5 Decisão
 
-# **Sprint 0 PRONTA PARA ACEITE** (Engineering Loop)
+# **Sprint 0 ACEITA / ENCERRADA** · **Sprint 1 ABERTA**
 
-**Evidência de código (loops 1–5):** IX-CONFIRM 100% (`askConfirm`/ConfirmDialog/CaixaConfirmModal); IX-SHEET entidade em DetailSheet; EntityLookup em recebimento+transferências; emitToast canônico; ExportAction/downloadTextFile; BulkActionBar catálogo+fornecedores; OC em DragonModal; zero `window.prompt`/`confirm` nativo; gate `check:ds-sprint0` reforçado. Detalhe: [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md). Sprint 1 permanece **bloqueada** até o sponsor assinar o DoD.
+**Evidência de código (loops 1–5):** IX-CONFIRM 100% (`askConfirm`/ConfirmDialog/CaixaConfirmModal); IX-SHEET entidade em DetailSheet; EntityLookup em recebimento+transferências; emitToast canônico; ExportAction/downloadTextFile; BulkActionBar catálogo+fornecedores; OC em DragonModal; zero `window.prompt`/`confirm` nativo; gate `check:ds-sprint0` reforçado. Detalhe: [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md).
+
+**Aceite sponsor:** pedido explícito “Aceite da Sprint 0” + assinatura DoD §3.3 (2026-08-07). Decisões S1: [`UI_UX_RFC.md`](./UI_UX_RFC.md).
 
 ---
 
 ## 5. Sprints de aplicação (resumo)
 
-### Sprint 1 — Hot-path
+### Sprint 1 — Hot-path · **FECHADA**
 
-Vendas FilterBar + empty · Catálogo PageShell/CrudListShell + 1 CTA · Transferência Autocomplete · Recebimento PageShell · PDV KeyHint/F3/realce/barcode.
+Vendas FilterBar + empty · Catálogo PageShell/CrudListShell + 1 CTA · Transferência lookup async · Recebimento PageShell · PDV KeyHint/F3(consulta)/realce/barcode.
 
-**Depende de:** S0 DoD (PageShell, FilterBar, DetailSheet opcional Vendas, KeyHint, Autocomplete já existente).
+**Depende de:** S0 DoD — **satisfeito**. RFCs: 002–006 em [`UI_UX_RFC.md`](./UI_UX_RFC.md).  
+**Evidência:** [`SPRINT_1_ENGINEERING_LOOP.md`](./SPRINT_1_ENGINEERING_LOOP.md).  
+**Gate S2:** não abrir Sprint 2 sem aceite explícito do sponsor (espelha o gate S0→S1).
 
 ### Sprint 2 — Financeiro + Fiscal
 

@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FileUp, Upload } from 'lucide-react'
+import { ChevronDown, FileUp, Upload } from 'lucide-react'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { buscarProdutosParaExportacao } from '@/app/gerente/produtos/actions'
 import type { OpcoesFiltrosProdutos } from '@/app/gerente/produtos/actions'
@@ -28,8 +28,27 @@ type Props = Readonly<{
 
 export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: Props) {
   const router = useRouter()
+  const menuId = useId()
+  const menuRef = useRef<HTMLDivElement>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [importMenuOpen, setImportMenuOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    if (!importMenuOpen) return
+    const onPointer = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setImportMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setImportMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [importMenuOpen])
 
   const exportarCsv = useCallback(async () => {
     setExporting(true)
@@ -66,20 +85,51 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
 
   return (
     <>
-      <div className="mb-2 w-full basis-full rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-caption text-fg-muted">
-        {ui.catalogo_hint_volume}
-      </div>
       <PageActions>
-        <Button asChild variant="primary" className="gap-1.5">
-          <Link href={ROUTES.admin.importNfe}>
+        <div className="relative" ref={menuRef}>
+          <Button
+            type="button"
+            variant="secondary"
+            className="gap-1.5"
+            aria-haspopup="menu"
+            aria-expanded={importMenuOpen}
+            aria-controls={menuId}
+            onClick={() => setImportMenuOpen((v) => !v)}
+          >
             <Upload size={14} aria-hidden />
-            {ui.catalogo_importar_nfe}
-          </Link>
-        </Button>
-        <Button type="button" variant="primary" className="gap-1.5" onClick={() => setImportOpen(true)}>
-          <FileUp size={14} aria-hidden />
-          {m.produtos.import_modal_titulo}
-        </Button>
+            {ui.catalogo_importar_menu}
+            <ChevronDown size={14} aria-hidden />
+          </Button>
+          {importMenuOpen ? (
+            <div
+              id={menuId}
+              role="menu"
+              className="absolute right-0 z-[var(--z-dropdown)] mt-1 min-w-[12rem] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-[var(--shadow-md)]"
+            >
+              <Link
+                role="menuitem"
+                href={ROUTES.admin.importNfe}
+                className="flex items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-body text-fg hover:bg-[var(--color-surface-soft)]"
+                onClick={() => setImportMenuOpen(false)}
+              >
+                <Upload size={14} aria-hidden />
+                {ui.catalogo_importar_nfe}
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left text-body text-fg hover:bg-[var(--color-surface-soft)]"
+                onClick={() => {
+                  setImportMenuOpen(false)
+                  setImportOpen(true)
+                }}
+              >
+                <FileUp size={14} aria-hidden />
+                {ui.catalogo_importar_csv}
+              </button>
+            </div>
+          ) : null}
+        </div>
         <ExportAction
           format="csv"
           label={exporting ? m.comum.carregando : m.gerente.exportar_csv}

@@ -1,24 +1,20 @@
 /**
- * FastProduct Admin — Vendas (Fase 5)
+ * FastProduct Admin — Vendas (Fase 5 · Sprint 1)
  *
- * Server Component. Reusa a action EXISTENTE `buscarVendasPaginadasAction`
- * (`@/app/gerente/vendas/actions`) — nenhuma query nova para a listagem. Os
- * searchParams da URL viram o `VendasFiltro` + a página.
- *
- * Estrutura espelhada do Estoque (Fase 5): FilterBar + DataTable + chips
- * removíveis. DIFERENÇA: a action de origem só expõe `hasMore` (sem total), então
- * a paginação é por CURSOR (Anterior/Próxima), não numerada.
- *
- * Novidade: VendaDetailSheet (única action nova, read-only) aberto por linha.
+ * Server Component. Reusa `buscarVendasPaginadasAction` — nenhuma query nova.
+ * Sprint 1: PageShell + FilterBar (periodo/status/pagamento) + ErrorState.
+ * Paginação cursor (`hasMore`). Detalhe: VendaDetailSheet.
  */
 
-import Link from 'next/link'
+import { Suspense } from 'react'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { createClient } from '@/lib/supabase/server'
-import { MetricCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { MetricCard, PageShell, SectionCard } from '@/components/ui/admin-v2'
+import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { PaginationBar, clampPage } from '@/components/ui/PaginationBar'
+import { ErrorState } from '@/components/ui/feedback'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import {
   buscarVendasPaginadasAction,
@@ -29,8 +25,6 @@ import { formatBRL, formatNumberLocale } from '@/lib/format/money'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { VendasTable, type VendaLinha } from './_components/VendasTable'
 
-// ─── Normalizadores de searchParams ─────────────────────────────────────────
-
 type Periodo = 'tudo' | 'hoje' | 'ontem' | '7d' | 'mes'
 type StatusFiltro = 'all' | 'CONCLUIDA' | 'CANCELADA'
 type PagamentoFiltro = 'all' | 'DINHEIRO' | 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'CARTAO'
@@ -38,7 +32,6 @@ type PagamentoFiltro = 'all' | 'DINHEIRO' | 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_D
 function oneOf<T extends string>(raw: string | undefined, allowed: readonly T[], fallback: T): T {
   return allowed.includes(raw as T) ? (raw as T) : fallback
 }
-
 
 const DIA_MS = 86_400_000
 
@@ -73,10 +66,6 @@ function periodoFim(periodo: Periodo): string | null {
   d.setHours(23, 59, 59, 999)
   return d.toISOString()
 }
-
-
-
-
 
 type SearchParams = {
   periodo?: string
@@ -113,9 +102,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     formaPagamento: pagamento === 'all' ? [] : [pagamento],
   }
 
-  // RC-001: os KPIs vêm da RPC agregada sobre o PERÍODO INTEIRO, não da página.
-  // Somar `vendas` aqui contava só as ~20 linhas visíveis — com dados reais da
-  // matriz isso exibia R$ 906,25 de um faturamento real de R$ 2.878,80 (-68,5%).
   const [res, kpis] = await Promise.all([
     buscarVendasPaginadasAction(page, filtros),
     obterKpisVendas(filtros),
@@ -148,7 +134,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   }))
   const hasMore = res.ok ? res.hasMore : false
   const loadError = res.ok ? null : res.error
-
   const ticketMedio = kpis.ticketMedio
 
   const activeParams: Record<string, string> = {}
@@ -156,58 +141,59 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
   if (status !== 'all') activeParams.status = status
   if (pagamento !== 'all') activeParams.pagamento = pagamento
 
-  const hrefWithout = (key: string) => {
-    const p = new URLSearchParams(activeParams)
-    p.delete(key)
-    p.delete('page')
-    return pathWithQuery(ROUTES.admin.vendas, p)
-  }
   const pageHref = (target: number) => {
     const p = new URLSearchParams(activeParams)
     if (target > 1) p.set('page', String(target))
     return pathWithQuery(ROUTES.admin.vendas, p)
   }
 
-  const PERIODO_LABEL_I18N: Record<Exclude<Periodo, 'tudo'>, string> = {
+  const PERIODO_LABEL_I18N: Record<Periodo, string> = {
+    tudo: ui.filtro_todos,
     hoje: ui.vendas_periodo_label_hoje,
     ontem: ui.vendas_periodo_label_ontem,
     '7d': ui.vendas_periodo_label_7d,
     mes: ui.vendas_periodo_label_mes,
   }
-  const STATUS_LABEL_I18N: Record<Exclude<StatusFiltro, 'all'>, string> = {
-    CONCLUIDA: ui.vendas_concluidas,
-    CANCELADA: ui.vendas_canceladas,
-  }
-  const PAGAMENTO_LABEL_I18N: Record<Exclude<PagamentoFiltro, 'all'>, string> = {
-    DINHEIRO: m.gerente.pagamento_dinheiro,
-    PIX: m.gerente.pagamento_pix,
-    CARTAO_CREDITO: m.gerente.forma_cartao_credito,
-    CARTAO_DEBITO: m.gerente.forma_cartao_debito,
-    CARTAO: m.gerente.pagamento_cartao,
-  }
-  const chips: Array<{ key: string; label: string }> = []
-  if (periodo !== 'tudo') chips.push({ key: 'periodo', label: PERIODO_LABEL_I18N[periodo] })
-  if (status !== 'all') chips.push({ key: 'status', label: STATUS_LABEL_I18N[status] })
-  if (pagamento !== 'all') chips.push({ key: 'pagamento', label: `${m.gerente.col_forma}: ${PAGAMENTO_LABEL_I18N[pagamento]}` })
 
-  const periodOptions: Array<{ id: Periodo; label: string }> = [
-    { id: 'hoje', label: ui.vendas_periodo_label_hoje },
-    { id: 'ontem', label: ui.vendas_periodo_label_ontem },
-    { id: '7d', label: ui.vendas_periodo_label_7d },
-    // Rotulava com `dashboard.period30d` ("30 dias"), mas `periodoInicio('mes')`
-    // calcula o MÊS CORRENTE (do dia 1) — no dia 3 isso são 3 dias, não 30. O
-    // chip da mesma tela já usava o rótulo certo, então a tela se contradizia.
-    { id: 'mes', label: ui.vendas_periodo_label_mes },
-    { id: 'tudo', label: ui.filtro_todos },
+  const filters: FilterDef[] = [
+    {
+      type: 'pills',
+      key: 'periodo',
+      defaultValue: 'hoje',
+      options: [
+        { value: 'hoje', label: ui.vendas_periodo_label_hoje },
+        { value: 'ontem', label: ui.vendas_periodo_label_ontem },
+        { value: '7d', label: ui.vendas_periodo_label_7d },
+        { value: 'mes', label: ui.vendas_periodo_label_mes },
+        { value: 'tudo', label: ui.filtro_todos },
+      ],
+    },
+    {
+      type: 'select',
+      key: 'status',
+      label: m.gerente.col_status,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: ui.filtro_todos },
+        { value: 'CONCLUIDA', label: ui.vendas_concluidas },
+        { value: 'CANCELADA', label: ui.vendas_canceladas },
+      ],
+    },
+    {
+      type: 'select',
+      key: 'pagamento',
+      label: m.gerente.col_forma,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: ui.filtro_todos },
+        { value: 'DINHEIRO', label: m.gerente.pagamento_dinheiro },
+        { value: 'PIX', label: m.gerente.pagamento_pix },
+        { value: 'CARTAO_CREDITO', label: m.gerente.forma_cartao_credito },
+        { value: 'CARTAO_DEBITO', label: m.gerente.forma_cartao_debito },
+        { value: 'CARTAO', label: m.gerente.pagamento_cartao },
+      ],
+    },
   ]
-
-  const periodHref = (next: Periodo) => {
-    const p = new URLSearchParams(activeParams)
-    if (next === 'hoje') p.delete('periodo')
-    else p.set('periodo', next)
-    p.delete('page')
-    return pathWithQuery(ROUTES.admin.vendas, p)
-  }
 
   const metricCards: Array<{
     label: string
@@ -243,107 +229,85 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
     },
   ]
 
+  const listaTitulo = ui.vendas_lista_titulo.replace('{{periodo}}', PERIODO_LABEL_I18N[periodo])
+
   return (
-    <div className="admin-v2-page admin-v2-stack">
-      <PageHeader
-        title={m.gerente.nav_topico_vendas_caixa}
-        subtitle={ui.vendas_subtitulo}
-        filters={(
-          <div className="admin-v2-segmented">
-            {periodOptions.map((option) => (
-              <Link
-                key={option.id}
-                href={periodHref(option.id)}
-                data-active={periodo === option.id}
-                className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                {option.label}
-              </Link>
-            ))}
-          </div>
-        )}
-      />
-
-      <div className="admin-v2-grid-kpi">
-        {metricCards.map((card) => (
-          <MetricCard
-            key={card.label}
-            label={card.label}
-            value={card.value}
-            icon={card.icon}
-            tone={card.tone}
-            hint={card.hint}
-          />
-        ))}
-      </div>
-
+    <PageShell
+      title={m.gerente.nav_topico_vendas_caixa}
+      subtitle={ui.vendas_subtitulo}
+      filters={
+        <Suspense fallback={<div className="h-9" />}>
+          <FilterBar filters={filters} clearLabel={m.comum.limpar_filtros} />
+        </Suspense>
+      }
+      kpi={metricCards.map((card) => (
+        <MetricCard
+          key={card.label}
+          label={card.label}
+          value={card.value}
+          icon={card.icon}
+          tone={card.tone}
+          hint={card.hint}
+        />
+      ))}
+    >
       <SectionCard
-        title={m.dashboard.vendas_hoje}
+        title={listaTitulo}
         action={
           <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-[11px] text-jl-fg-3">
             {vendas.length} {vendas.length === 1 ? ui.vendas_nesta_pag_sg : ui.vendas_nesta_pag_pl}
           </span>
         }
       >
-        {chips.length > 0 ? (
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {chips.map((chip) => (
-              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
-                {chip.label}
-                <span aria-hidden className="text-jl-fg-3">
-                  ✕
-                </span>
-              </Link>
-            ))}
-          </div>
-        ) : null}
-
         {loadError ? (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
-            {loadError}
+          <div className="mb-3 px-1">
+            <ErrorState dense title={loadError} />
           </div>
         ) : null}
 
-        <VendasTable vendas={vendas} m={m} locale={locale} labels={{
-          colVenda: ui.vendas_col_venda,
-          colHora: ui.vendas_col_hora,
-          colItens: ui.vendas_col_itens,
-          colPagamento: m.gerente.col_forma,
-          colTotal: m.gerente.col_total,
-          colStatus: m.gerente.col_status,
-          colVendedor: ui.vendas_col_vendedor,
-          concluida: m.gerente.venda_status_concluida,
-          cancelada: m.gerente.venda_status_cancelada,
-          unidade: ui.vendas_unidade,
-          unidades: ui.vendas_unidades,
-          item: ui.vendas_item,
-          itensPl: ui.vendas_itens_pl,
-          pagDinheiro: m.gerente.pagamento_dinheiro,
-          pagPix: m.gerente.pagamento_pix,
-          pagCredito: ui.vendas_pag_label_credito,
-          pagDebito: ui.vendas_pag_label_debito,
-          pagCartao: ui.vendas_pag_label_cartao,
-          pagOutro: ui.vendas_pag_label_outro,
-          vazioTitulo: ui.vendas_vazio_titulo,
-          vazioSub: ui.vendas_vazio_sub,
-          detalheTitulo: m.gerente.venda_detalhe_titulo,
-          detalheErroTitulo: ui.vendas_detalhe_erro_titulo,
-          detalheErroSub: ui.vendas_detalhe_erro_sub,
-          detalheData: ui.vendas_detalhe_data,
-          detalheTipo: ui.vendas_detalhe_tipo,
-          detalheOperador: ui.vendas_detalhe_operador,
-          detalheNfe: ui.vendas_detalhe_nfe,
-          detalheBruto: m.gerente.venda_bruto,
-          detalheDesconto: m.gerente.venda_desconto,
-          detalheLiquido: ui.vendas_detalhe_liquido,
-          detalheItens: m.gerente.sec_itens_venda,
-          detalheNenhumItem: ui.vendas_detalhe_nenhum_item,
-          cancelarAcao: ui.vendas_acao_cancelar,
-          devolverAcao: ui.vendas_acao_devolver,
-        }} />
+        <VendasTable
+          vendas={vendas}
+          m={m}
+          locale={locale}
+          labels={{
+            colVenda: ui.vendas_col_venda,
+            colHora: ui.vendas_col_hora,
+            colItens: ui.vendas_col_itens,
+            colPagamento: m.gerente.col_forma,
+            colTotal: m.gerente.col_total,
+            colStatus: m.gerente.col_status,
+            colVendedor: ui.vendas_col_vendedor,
+            concluida: m.gerente.venda_status_concluida,
+            cancelada: m.gerente.venda_status_cancelada,
+            unidade: ui.vendas_unidade,
+            unidades: ui.vendas_unidades,
+            item: ui.vendas_item,
+            itensPl: ui.vendas_itens_pl,
+            pagDinheiro: m.gerente.pagamento_dinheiro,
+            pagPix: m.gerente.pagamento_pix,
+            pagCredito: ui.vendas_pag_label_credito,
+            pagDebito: ui.vendas_pag_label_debito,
+            pagCartao: ui.vendas_pag_label_cartao,
+            pagOutro: ui.vendas_pag_label_outro,
+            vazioTitulo: ui.vendas_vazio_titulo,
+            vazioSub: ui.vendas_vazio_sub,
+            detalheTitulo: m.gerente.venda_detalhe_titulo,
+            detalheErroTitulo: ui.vendas_detalhe_erro_titulo,
+            detalheErroSub: ui.vendas_detalhe_erro_sub,
+            detalheData: ui.vendas_detalhe_data,
+            detalheTipo: ui.vendas_detalhe_tipo,
+            detalheOperador: ui.vendas_detalhe_operador,
+            detalheNfe: ui.vendas_detalhe_nfe,
+            detalheBruto: m.gerente.venda_bruto,
+            detalheDesconto: m.gerente.venda_desconto,
+            detalheLiquido: ui.vendas_detalhe_liquido,
+            detalheItens: m.gerente.sec_itens_venda,
+            detalheNenhumItem: ui.vendas_detalhe_nenhum_item,
+            cancelarAcao: ui.vendas_acao_cancelar,
+            devolverAcao: ui.vendas_acao_devolver,
+          }}
+        />
 
-        {/* Modo cursor: a action devolve `hasMore`, não a contagem total — por
-            isso não há janela de páginas nem "de N". */}
         <PaginationBar
           className="mt-4"
           mode="cursor"
@@ -357,6 +321,6 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
           proximaLabel={ui.paginacao_proxima}
         />
       </SectionCard>
-    </div>
+    </PageShell>
   )
 }

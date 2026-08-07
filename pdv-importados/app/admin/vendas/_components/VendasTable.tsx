@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, Ban } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { EmptyState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
 import type { Mensagens } from '@/i18n/getMessages'
 import { VendaCancelarModal } from '@/app/gerente/vendas/VendaCancelarModal'
@@ -255,11 +256,7 @@ export function VendasTable({
         columns={columns}
         rowKey={(r) => r.id}
         emptyState={
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <span className="text-4xl text-jl-fg-3" aria-hidden>🧾</span>
-            <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
-            <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
-          </div>
+          <EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />
         }
         className="rounded-none border-x-0 border-b-0"
         onRowClick={(r) => setAlvo({ id: r.id })}

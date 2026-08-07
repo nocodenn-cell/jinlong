@@ -2,35 +2,32 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { emitToast } from '@/lib/gerente/toast'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { Button } from '@/components/ui/button'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { PageShell, SectionCard } from '@/components/ui/admin-v2'
+import { InlineAlert } from '@/components/ui/InlineAlert'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { EntityLookup, Field, Input, Select } from '@/components/ui/forms'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
 import { transferenciaActionResultToLegacy } from '@/lib/observability/actionResultAdapters'
-import { executarTransferencia, obterEstoqueDisponivelTransferencia } from './actions'
+import {
+  buscarProdutosTransferencia,
+  executarTransferencia,
+  obterEstoqueDisponivelTransferencia,
+} from './actions'
 import { caixaFmt } from '@/app/caixa/caixaI18n'
 import { ROUTES } from '@shared-core/navigation/routes'
 
 export type TransferenciaLojaRow = { id: string; nome: string; codigo: string }
-export type TransferenciaProdutoOpt = {
-  id: string
-  nome: string
-  unidade_medida: string
-  limite_transferencia_sem_observacao: number | null
-}
-
 type Props = Readonly<{
   idioma: Idioma
   lojas: TransferenciaLojaRow[]
-  produtos: TransferenciaProdutoOpt[]
 }>
 
-export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Props) {
+export function TransferenciasGerentePageClient({ idioma, lojas }: Props) {
   const m = getMessages(idioma)
   const t = m.gerente.transferencias_page
   const router = useRouter()
@@ -39,7 +36,8 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
   const podeTransferir = lojas.length >= 2
   const [origemId, setOrigemId] = useState(() => (lojas[0]?.id ?? '') as string)
   const [destinoId, setDestinoId] = useState(() => (lojas[1]?.id ?? lojas[0]?.id ?? '') as string)
-  const [produtoId, setProdutoId] = useState(() => produtos[0]?.id ?? '')
+  const [produtoId, setProdutoId] = useState('')
+  const [produtoLabel, setProdutoLabel] = useState('')
   const [quantidadeStr, setQuantidadeStr] = useState('')
   const [observacao, setObservacao] = useState('')
   const [estoqueOrigem, setEstoqueOrigem] = useState<number | null>(null)
@@ -118,11 +116,7 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
   const observacaoObrigatoria = qtdValida && qtd > limiteObs && observacao.trim().length === 0
 
   const nomeLoja = useCallback((id: string) => lojas.find((l) => l.id === id)?.nome ?? '—', [lojas])
-  const produtoSelecionado = useMemo(
-    () => produtos.find((p) => p.id === produtoId) ?? null,
-    [produtos, produtoId],
-  )
-  const nomeProduto = produtoSelecionado?.nome ?? '—'
+  const nomeProduto = produtoLabel || '—'
   const saldoProjetado =
     estoqueOrigem !== null && qtdValida ? Math.max(0, estoqueOrigem - qtd) : null
 
@@ -198,24 +192,30 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
         })
 
   return (
-    <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
-      <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />
-
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {m.gerente.inicio}
-      </Link>
-
+    <PageShell
+      title={m.gerente.nav_transferencias}
+      subtitle={t.intro}
+      className={idioma === 'pt' ? undefined : 'font-chinese'}
+      filters={
+        <nav aria-label="Breadcrumb" className="text-caption text-fg-muted">
+          <Link href={ROUTES.admin.estoque} className="font-medium text-fg hover:underline">
+            {m.estoque.titulo}
+          </Link>
+          <span aria-hidden className="mx-1.5">
+            /
+          </span>
+          <span className="text-fg">{m.gerente.nav_transferencias}</span>
+        </nav>
+      }
+    >
       {!podeTransferir ? (
-        <div
-          className="mt-6 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-4 text-body leading-relaxed text-[var(--color-warning-strong)]"
-          role="status"
-        >
-          <strong>{t.uma_loja_aviso_titulo}</strong> {t.uma_loja_aviso_texto}
-        </div>
+        <InlineAlert tone="warning" title={t.uma_loja_aviso_titulo}>
+          {t.uma_loja_aviso_texto}
+        </InlineAlert>
       ) : null}
 
       {podeTransferir ? (
-        <SectionCard className="mt-6">
+        <SectionCard>
           <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field id="transferencia-origem" label={t.resumo_origem} required>
               <Select
@@ -284,23 +284,29 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
                 <input type="hidden" name="produto_id" value={produtoId} readOnly />
                 <EntityLookup
                   value={produtoId || null}
-                  selectedLabel={produtoSelecionado?.nome}
+                  selectedLabel={produtoLabel || undefined}
                   aria-label={t.resumo_produto}
-                  onSelect={(opt) => setProdutoId(opt?.value ?? '')}
-                  onSearch={async (query) => {
-                    const q = query.trim().toLowerCase()
-                    return produtos
-                      .filter((p) => p.nome.toLowerCase().includes(q))
-                      .slice(0, 40)
-                      .map((p) => ({
-                        value: p.id,
-                        label: p.nome,
-                        description: p.unidade_medida,
-                      }))
+                  onSelect={(opt) => {
+                    setProdutoId(opt?.value ?? '')
+                    setProdutoLabel(opt?.label ?? '')
                   }}
-                  minChars={1}
-                  debounceMs={200}
-                  emptyLabel="Nenhum produto"
+                  onSearch={async (query) => {
+                    const r = await buscarProdutosTransferencia(query)
+                    if (!r.success) {
+                      emitToast({ kind: 'error', message: r.error })
+                      return []
+                    }
+                    return r.data.map((p) => ({
+                      value: p.id,
+                      label: p.nome,
+                      description: p.codigo_barras
+                        ? `${p.unidade_medida} · ${p.codigo_barras}`
+                        : p.unidade_medida,
+                    }))
+                  }}
+                  minChars={2}
+                  debounceMs={250}
+                  emptyLabel={m.admin_ui.catalogo_vazio_titulo}
                 />
               </div>
             </Field>
@@ -430,6 +436,6 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
       >
         <p className="text-body text-fg-muted">{modalDescricao}</p>
       </DragonModal>
-    </div>
+    </PageShell>
   )
 }

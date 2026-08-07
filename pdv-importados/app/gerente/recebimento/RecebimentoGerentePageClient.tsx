@@ -13,9 +13,10 @@ import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import type { Idioma } from '@/idioma/normalizeIdioma'
 import { getMessages } from '@/i18n/getMessages'
-import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { PageShell, SectionCard } from '@/components/ui/admin-v2'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
+import { InlineAlert } from '@/components/ui/InlineAlert'
 import { StatusChip } from '@/components/ui/StatusChip'
 import { Field, Input } from '@/components/ui/forms'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -138,38 +139,40 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
   )
 
   return (
-    <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
-      <PageHeader
-        title={r.titulo}
-        subtitle={r.subtitulo}
-        filters={
-          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 text-caption font-semibold text-fg-muted">
+    <PageShell
+      title={r.titulo}
+      subtitle={r.subtitulo}
+      className={idioma === 'pt' ? undefined : 'font-chinese'}
+      filters={
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-caption text-fg-muted">
+          <span>
+            <Link href={ROUTES.admin.estoque} className="font-medium text-fg hover:underline">
+              {m.estoque.titulo}
+            </Link>
+            <span aria-hidden className="mx-1.5">
+              /
+            </span>
+            <span className="text-fg">{r.titulo}</span>
+          </span>
+          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-0.5 font-semibold">
             {r.badge}
           </span>
-        }
-      />
-
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {m.gerente.inicio}
-      </Link>
-
+        </nav>
+      }
+    >
       {semProdutos ? (
-        <div
-          className="mt-8 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-5 text-[var(--color-warning-strong)] shadow-sm"
-          role="status"
-        >
-          <p className="font-semibold">{r.sem_produtos_titulo}</p>
-          <p className="mt-2 text-body">{r.sem_produtos_texto}</p>
+        <InlineAlert tone="warning" title={r.sem_produtos_titulo}>
+          <p>{r.sem_produtos_texto}</p>
           <Link
             href={ROUTES.admin.catalogo}
-            className="mt-4 inline-flex text-body font-semibold underline decoration-current/60 underline-offset-2"
+            className="mt-2 inline-flex text-body font-semibold underline decoration-current/60 underline-offset-2"
           >
             {r.link_produtos}
           </Link>
-        </div>
+        </InlineAlert>
       ) : null}
 
-      <CadastroRapidoBlock title={r.sec_formulario} defaultOpen className="mt-8">
+      <CadastroRapidoBlock title={r.sec_formulario} defaultOpen>
         <form
           id="recebimento-form"
           className="space-y-0"
@@ -287,7 +290,7 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         </form>
       </CadastroRapidoBlock>
 
-      <SectionCard title={r.sec_recentes} subtitle={r.sec_recentes_ajuda} className="mt-10">
+      <SectionCard title={r.sec_recentes} subtitle={r.sec_recentes_ajuda}>
         <DataTable
           columns={remessaColumns}
           data={remessasRecentes}
@@ -304,6 +307,6 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
           }
         />
       </SectionCard>
-    </div>
+    </PageShell>
   )
 }

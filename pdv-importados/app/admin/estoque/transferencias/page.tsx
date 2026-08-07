@@ -4,7 +4,6 @@ import { ROUTES } from '@shared-core/navigation/routes'
 import {
   TransferenciasGerentePageClient,
   type TransferenciaLojaRow,
-  type TransferenciaProdutoOpt,
 } from '@/app/gerente/transferencias/TransferenciasGerentePageClient'
 
 export default async function AdminEstoqueTransferenciasPage() {
@@ -15,19 +14,12 @@ export default async function AdminEstoqueTransferenciasPage() {
   const { idioma } = session
   const supabase = await createClient()
 
-  const [{ data: lojasRaw }, { data: produtosRaw }] = await Promise.all([
-    supabase
-      .from('lojas')
-      .select('id, nome, codigo')
-      .eq('ativo', true)
-      .order('nome'),
-    supabase
-      .from('produtos')
-      .select('id, nome, unidade_medida, limite_transferencia_sem_observacao')
-      .eq('ativo', true)
-      .order('nome')
-      .limit(500),
-  ])
+  // Sprint 1 / RFC-UX-004: produtos vêm via EntityLookup async — não pré-carregar 500.
+  const { data: lojasRaw } = await supabase
+    .from('lojas')
+    .select('id, nome, codigo')
+    .eq('ativo', true)
+    .order('nome')
 
   const lojas: TransferenciaLojaRow[] = (lojasRaw ?? []).map((l) => ({
     id: l.id,
@@ -35,18 +27,5 @@ export default async function AdminEstoqueTransferenciasPage() {
     codigo: l.codigo ?? '',
   }))
 
-  const produtos: TransferenciaProdutoOpt[] = (produtosRaw ?? []).map((p) => ({
-    id: p.id,
-    nome: p.nome,
-    unidade_medida: p.unidade_medida,
-    limite_transferencia_sem_observacao: p.limite_transferencia_sem_observacao,
-  }))
-
-  return (
-    <TransferenciasGerentePageClient
-      idioma={idioma}
-      lojas={lojas}
-      produtos={produtos}
-    />
-  )
+  return <TransferenciasGerentePageClient idioma={idioma} lojas={lojas} />
 }

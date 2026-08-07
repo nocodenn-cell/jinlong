@@ -76,7 +76,7 @@
 | UX-S0-12 “contrato Sheet” | **UX-S0-15 DetailSheet** |
 | UX-S0-23 thin helper | **UX-S0-24** EntityLookup async |
 
-**Revalidação 2026-08-07:** UX-S0-01..27 **entregues no código** (primitivos + gates) → Sprint 0 **IMPLEMENTADA — aguardando aceite** (ver roadmap). Sprint 1 permanece bloqueada até o sponsor assinar o DoD.
+**Revalidação 2026-08-07:** UX-S0-01..27 **entregues**; Sprint 0 **ACEITA / ENCERRADA** (DoD §3.3). Sprint 1 **em andamento** — ver [`UI_UX_RFC.md`](./UI_UX_RFC.md).
 
 **DoD Sprint 0:** [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) §3.3 + IX sem Divergente + S0-24..26.
 
@@ -86,9 +86,9 @@
 
 | ID | Tela | Item | Esforço | Depende | Critério de pronto |
 |----|------|------|---------|---------|-------------------|
-| **UX-P0-01** | Vendas | FilterBar status/pagamento | S | **S0 DONE** | Filtro na UI |
-| **UX-P0-02** | Vendas | Título período + Empty/Error DS | S | S0 | Sem emoji empty |
-| **UX-P0-03** | Transferências | Autocomplete produto | M | S0 | Sem select 500 |
+| **UX-P0-01** | Vendas | FilterBar status/pagamento | S | **S0 DONE** | ✅ S1 |
+| **UX-P0-02** | Vendas | Título período + Empty/Error DS | S | S0 | ✅ S1 |
+| **UX-P0-03** | Transferências | Lookup async (sem payload 500) | M | S0 | ✅ S1 |
 | **UX-P0-04** | Financeiro | Hub 3 abas TabNav + EntityTable pagar | L | S0-04,07,13,16 | Uma pele visual |
 | **UX-P0-05** | Documento fiscal | PageShell + DetailSheet/InlineAlert | M | S0-04,05,15,16 | Sem copy migration |
 | **UX-P0-06** | Compras | PageShell + EntityTable (zero dark/glass) | L | S0-04,07 | Zero dragon-glass |
@@ -101,15 +101,15 @@
 | ID | Tela | Item | Esforço | Depende | Sprint |
 |----|------|------|---------|---------|--------|
 | **UX-P1-01** | PDV | Drawer mobile Operações/Em aberto | M | S0 | S4 |
-| **UX-P1-02** | PDV | Adotar KeyHint na Finalizar | S | S0-08 | S1 |
-| **UX-P1-03** | PDV | F3 → adicionar ao carrinho | S | S0 | S1 |
-| **UX-P1-04** | PDV | Realce linha carrinho | S | — | S1 |
-| **UX-P1-05** | PDV | Ícone barcode busca | S | — | S1 |
-| **UX-P1-06** | Catálogo | 1 primary + menu Importar | S | S0 | S1 |
-| **UX-P1-07** | Catálogo | PageShell + CrudListShell | M | S0-04 | S1 |
+| **UX-P1-02** | PDV | Adotar KeyHint na Finalizar | S | S0-08 | ✅ S1 |
+| **UX-P1-03** | PDV | F3 = consulta rápida (contrato vigente; **não** add-to-cart) | S | S0 | ✅ S1 · RFC-005 |
+| **UX-P1-04** | PDV | Realce linha carrinho | S | — | ✅ S1 |
+| **UX-P1-05** | PDV | Ícone barcode busca | S | — | ✅ S1 |
+| **UX-P1-06** | Catálogo | 1 primary + menu Importar | S | S0 | ✅ S1 |
+| **UX-P1-07** | Catálogo | PageShell + CrudListShell | M | S0-04 | ✅ S1 |
 | **UX-P1-08** | Produto | Atacado pós-salvar | M | — | S4 |
 | **UX-P1-09** | NF-e | Stepper fases + FileDropzone | M | S0-14,18 | S3 |
-| **UX-P1-10** | Recebimento | PageShell + breadcrumb | S | S0-04 | S1 |
+| **UX-P1-10** | Recebimento | PageShell + breadcrumb | S | S0-04 | ✅ S1 |
 | **UX-P1-11** | Contas a pagar | Alias da tab pagar | M | P0-04 | S2 |
 | **UX-P1-12** | Estoque | Hub ações header | S | S0 | S3 |
 | **UX-P1-13** | Funcionários | CrudListShell + EntityTable + FilterBar | M | S0-04,07 | S4 |

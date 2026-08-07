@@ -1,7 +1,8 @@
 "use client"
 
-import React, { memo } from "react"
+import React, { memo, useEffect, useState } from "react"
 import { Minus, Plus } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -158,6 +159,7 @@ type CartRowProps = {
   item: ItemCarrinhoComPreco
   moeda: string
   locale: string
+  destaque?: boolean
   onAlterarQuantidade: (itemId: string, quantidade: number) => void
   onRemover: (itemId: string) => void
 }
@@ -167,13 +169,17 @@ const CartRowDesktop = memo(function CartRowDesktop({
   item,
   moeda,
   locale,
+  destaque = false,
   onAlterarQuantidade,
   onRemover,
 }: CartRowProps) {
   const res = resultadoLinha(item)
   return (
     <li
-      className="grid grid-cols-[minmax(0,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center hover:bg-accent/50 transition-colors"
+      className={cn(
+        "grid grid-cols-[minmax(0,2.55fr)_8.5rem_5rem_5.5rem_5.5rem] gap-2 px-3 py-3 items-center transition-colors hover:bg-accent/50",
+        destaque && "bg-primary/10 ring-1 ring-inset ring-primary/30",
+      )}
     >
       <div className="flex flex-col min-w-0 gap-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -248,12 +254,18 @@ const CartCardMobile = memo(function CartCardMobile({
   item,
   moeda,
   locale,
+  destaque = false,
   onAlterarQuantidade,
   onRemover,
 }: CartRowProps) {
   const res = resultadoLinha(item)
   return (
-    <li className="p-4 space-y-3 hover:bg-accent/50 transition-colors">
+    <li
+      className={cn(
+        "space-y-3 p-4 transition-colors hover:bg-accent/50",
+        destaque && "bg-primary/10 ring-1 ring-inset ring-primary/30",
+      )}
+    >
       <div className="flex justify-between gap-2 min-w-0">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2 min-w-0">
@@ -345,6 +357,18 @@ function CaixaCartListInner({
   onRemover,
 }: Props) {
   const locale = listLocale(idioma)
+  const lastItemId = itens[itens.length - 1]?.id ?? null
+  const [destaqueId, setDestaqueId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!lastItemId) {
+      setDestaqueId(null)
+      return
+    }
+    setDestaqueId(lastItemId)
+    const timer = window.setTimeout(() => setDestaqueId(null), 1600)
+    return () => window.clearTimeout(timer)
+  }, [lastItemId, itens.length])
 
   if (itens.length === 0) {
     if (listEmptyVariant === "pdv_classic") {
@@ -411,6 +435,7 @@ function CaixaCartListInner({
               item={item}
               moeda={moeda}
               locale={locale}
+              destaque={item.id === destaqueId}
               onAlterarQuantidade={onAlterarQuantidade}
               onRemover={onRemover}
             />
@@ -427,6 +452,7 @@ function CaixaCartListInner({
             item={item}
             moeda={moeda}
             locale={locale}
+            destaque={item.id === destaqueId}
             onAlterarQuantidade={onAlterarQuantidade}
             onRemover={onRemover}
           />
