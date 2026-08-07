@@ -4,7 +4,7 @@ import { getAdminContext } from '@/lib/admin/context/adminContext'
 import { resolveAdminSession } from '@/lib/admin/auth/resolveAdminSession'
 import type { AdminSession } from '@/lib/admin/auth/types'
 import { AdminV2Shell } from '@/components/ui/admin-v2'
-import { GerenteToastViewport } from '@/components/gerente/GerenteToastViewport'
+import { AdminToastViewport } from '@/components/ui/AdminToastViewport'
 import { ConfirmDialogHost } from '@/components/ui/ConfirmDialogHost'
 import { createClient } from '@/lib/supabase/server'
 
@@ -52,7 +52,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <AdminV2Shell session={adminContext.session} stockAlertCount={stockAlertCount}>
         {children}
       </AdminV2Shell>
-      <GerenteToastViewport />
+      <AdminToastViewport />
       <ConfirmDialogHost />
     </>
   )

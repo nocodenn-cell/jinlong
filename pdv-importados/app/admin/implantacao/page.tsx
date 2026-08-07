@@ -1,4 +1,5 @@
-import { PageHeader } from '@/components/ui/admin-v2'
+import { PageShell } from '@/components/ui/admin-v2'
+import { InlineAlert } from '@/components/ui/InlineAlert'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { ROUTES } from '@shared-core/navigation/routes'
@@ -26,9 +27,18 @@ export default async function AdminImplantacaoPage({ searchParams }: PageProps) 
   const podeAutorizarGo = session.perfil === 'DONO' || session.perfil === 'ADMIN'
 
   const secoes = Object.fromEntries(
-    (['ambiente', 'loja', 'usuarios', 'cadastro', 'operacao', 'financeiro', 'fiscal', 'homologacao'] as ImplantacaoSecao[]).map(
-      (s) => [s, ui.secoes[s]],
-    ),
+    (
+      [
+        'ambiente',
+        'loja',
+        'usuarios',
+        'cadastro',
+        'operacao',
+        'financeiro',
+        'fiscal',
+        'homologacao',
+      ] as ImplantacaoSecao[]
+    ).map((s) => [s, ui.secoes[s]]),
   ) as Record<ImplantacaoSecao, string>
 
   const itens = Object.fromEntries(
@@ -41,12 +51,9 @@ export default async function AdminImplantacaoPage({ searchParams }: PageProps) 
       : ui.subtitulo
 
   return (
-    <div className="admin-v2-page">
-      <PageHeader title={ui.titulo} subtitle={subtitle} />
+    <PageShell title={ui.titulo} subtitle={subtitle}>
       {!loaded.ok ? (
-        <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {loaded.error}
-        </p>
+        <InlineAlert tone="danger">{loaded.error}</InlineAlert>
       ) : (
         <ImplantacaoChecklistClient
           inicial={loaded.data}
@@ -88,6 +95,6 @@ export default async function AdminImplantacaoPage({ searchParams }: PageProps) 
           }}
         />
       )}
-    </div>
+    </PageShell>
   )
 }

@@ -51,8 +51,8 @@
 - [x] RFCs 011–014
 - [x] Gates verdes
 - [x] Relatório + métricas
-- [x] **Sprint 4 bloqueada** até aceite explícito
+- [x] **Sprint 4** — autorizada e **FECHADA** (ver [`SPRINT_4_ENGINEERING_LOOP.md`](./SPRINT_4_ENGINEERING_LOOP.md))
 
-## Fora de escopo (S4+)
+## Sucesso em S4
 
-- Funcionários EntityTable, Config TabNav, Suspensão ConfirmDialog, toast rename, burndown a zero.
+- Funcionários EntityTable, Config TabNav, Suspensão ConfirmDialog, toast rename — entregues na S4.

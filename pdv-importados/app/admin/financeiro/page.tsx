@@ -5,9 +5,11 @@
 
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { WalletCards } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
-import { MetricCard, PageShell } from '@/components/ui/admin-v2'
+import { Button } from '@/components/ui/button'
+import { MetricCard, PageActions, PageShell } from '@/components/ui/admin-v2'
 import {
   fetchContasReceberListagem,
   fetchFinanceiroTitulosKpis,
@@ -216,7 +218,20 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     ) : null
 
   return (
-    <PageShell title={ui.financeiro_titulo} subtitle={ui.financeiro_subtitulo}>
+    <PageShell
+      title={ui.financeiro_titulo}
+      subtitle={ui.financeiro_subtitulo}
+      actions={
+        <PageActions>
+          <Button asChild variant="outline" size="sm">
+            <Link href={ROUTES.admin.categoriasFinanceiras}>
+              <WalletCards className="mr-1.5 h-4 w-4" aria-hidden />
+              {ui.financeiro_link_categorias}
+            </Link>
+          </Button>
+        </PageActions>
+      }
+    >
       <FinanceiroContent
         activeTab={activeTab}
         contas={contas}

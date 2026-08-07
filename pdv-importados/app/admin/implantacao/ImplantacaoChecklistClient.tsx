@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { InlineAlert, type InlineAlertTone } from '@/components/ui/InlineAlert'
 import { emitToast } from '@/lib/gerente/toast'
-import { cn } from '@/lib/utils'
 import {
   autorizarGoLiveAction,
   atualizarItemImplantacaoAction,
@@ -65,10 +65,10 @@ type Props = {
   locale: string
 }
 
-function gateTone(gate: GateStatus): string {
-  if (gate === 'GO_LIVE') return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800'
-  if (gate === 'PRONTO_PENDENCIAS') return 'border-amber-500/40 bg-amber-500/10 text-amber-900'
-  return 'border-red-500/40 bg-red-500/10 text-red-800'
+function gateAlertTone(gate: GateStatus): InlineAlertTone {
+  if (gate === 'GO_LIVE') return 'success'
+  if (gate === 'PRONTO_PENDENCIAS') return 'warning'
+  return 'danger'
 }
 
 function gateLabel(gate: GateStatus, L: ImplantacaoLabels): string {
@@ -200,20 +200,19 @@ export function ImplantacaoChecklistClient({
 
   return (
     <div className="space-y-6">
-      <div className={cn('rounded-xl border px-4 py-4', gateTone(snap.gate))}>
-        <p className="text-lg font-semibold tracking-tight">{gateLabel(snap.gate, L)}</p>
+      <InlineAlert tone={gateAlertTone(snap.gate)} title={gateLabel(snap.gate, L)}>
         {snap.bloqueios.length > 0 ? (
-          <p className="mt-1 text-sm opacity-90">
+          <p>
             {L.bloqueiosTitulo}: {snap.bloqueios.length}
           </p>
         ) : null}
         {snap.goAutorizadoEm ? (
-          <p className="mt-1 text-xs opacity-80">
+          <p className="text-caption">
             {fmtData(snap.goAutorizadoEm, locale)}
             {snap.goObservacao ? ` · ${snap.goObservacao}` : ''}
           </p>
         ) : null}
-      </div>
+      </InlineAlert>
 
       <ImplantacaoTimeline
         titulo={L.timelineTitulo}

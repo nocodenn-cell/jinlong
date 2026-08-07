@@ -15,10 +15,9 @@
     {
       "id": "gerente_table",
       "label": "GerenteTable import",
-      "files": 3,
-      "hits": 3,
+      "files": 2,
+      "hits": 2,
       "samples": [
-        "app/admin/funcionarios/FuncionariosListClient.tsx (1)",
         "components/gerente/DataTableSkeleton.tsx (1)",
         "components/gerente/cadastro/TabelaCadastroPadrao.tsx (1)"
       ]
@@ -33,17 +32,17 @@
     {
       "id": "text_arbitrary_px",
       "label": "text-[Npx] arbitrário",
-      "files": 61,
-      "hits": 232,
+      "files": 59,
+      "hits": 202,
       "samples": [
         "app/admin/auditoria/_components/AuditoriaTimeline.tsx (13)",
         "app/admin/auditoria/page.tsx (4)",
-        "app/admin/categorias-financeiras/_components/CategoriasFinanceirasContent.tsx (8)",
         "app/admin/comissoes/_components/ComissoesContent.tsx (5)",
-        "app/admin/configuracoes/_components/ConfiguracoesContent.tsx (11)",
+        "app/admin/configuracoes/_components/ConfiguracoesContent.tsx (1)",
         "app/admin/diagnostico-caixa/_components/DiagnosticoCaixaContent.tsx (13)",
         "app/admin/financeiro/_components/FinanceiroReceberExtras.tsx (2)",
-        "app/admin/financeiro/_components/ReprocessarDocumentoButton.tsx (1)"
+        "app/admin/financeiro/_components/ReprocessarDocumentoButton.tsx (1)",
+        "app/admin/funcionarios/FuncionarioEditarModal.tsx (4)"
       ]
     },
     {

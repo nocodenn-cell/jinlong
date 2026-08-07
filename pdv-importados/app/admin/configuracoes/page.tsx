@@ -14,15 +14,28 @@ import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { ROUTES } from '@shared-core/navigation/routes'
-import { ConfiguracoesContent, type ConfigDados } from './_components/ConfiguracoesContent'
+import {
+  ConfiguracoesContent,
+  type ConfigDados,
+  type ConfigTab,
+} from './_components/ConfiguracoesContent'
 
-export default async function AdminConfiguracoes() {
+type PageProps = { searchParams?: Promise<{ tab?: string }> }
+
+function parseTab(raw: string | undefined): ConfigTab {
+  if (raw === 'impostos' || raw === 'preferencias') return raw
+  return 'loja'
+}
+
+export default async function AdminConfiguracoes({ searchParams }: PageProps) {
   const { session } = await loadAdminContext({
     pathname: ROUTES.admin.configuracoes,
     resource: `route:${ROUTES.admin.configuracoes}`,
   })
   const m = getMessages(session.idioma)
   const ui = m.admin_ui
+  const sp = (await searchParams) ?? {}
+  const tab = parseTab(sp.tab)
 
   const supabase = await createClient()
 
@@ -59,6 +72,7 @@ export default async function AdminConfiguracoes() {
   return (
     <ConfiguracoesContent
       dados={dados}
+      tab={tab}
       labels={{
         titulo: ui.configuracoes_titulo,
         subtitulo: ui.configuracoes_subtitulo,

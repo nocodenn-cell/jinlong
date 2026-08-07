@@ -112,14 +112,14 @@
 | **UX-P1-10** | Recebimento | PageShell + breadcrumb | S | S0-04 | ✅ S1 |
 | **UX-P1-11** | Contas a pagar | Alias da tab pagar | M | P0-04 | ✅ S2 |
 | **UX-P1-12** | Estoque | Hub ações header | S | S0 | ✅ S3 |
-| **UX-P1-13** | Funcionários | CrudListShell + EntityTable + FilterBar | M | S0-04,07 | S4 |
-| **UX-P1-14** | Cat. financeiras | Paridade categorias-produto | M | S0 | S4 |
-| **UX-P1-15** | Relatórios | TabNav seções + EmptyState + donut honesto | M | S0-06,13 | S4 |
-| **UX-P1-16** | Suspensão | ConfirmDialog + InlineAlert | S | S0-05,16 | S4 |
-| **UX-P1-17** | Implantação | InlineAlert gate + FormSection/SectionCard | M | S0-04,16 | S4 |
-| **UX-P1-18** | /gerente | Redirect sem flash | S | — | S4 |
-| **UX-P1-19** | Toast | Rename viewport admin | S | S0-09 | S4 |
-| **UX-P1-20** | Config | TabNav + FormSection | M | S0-13,17 | S4 |
+| **UX-P1-13** | Funcionários | CrudListShell + EntityTable + FilterBar | M | S0-04,07 | ✅ S4 |
+| **UX-P1-14** | Cat. financeiras | Paridade categorias-produto | M | S0 | ✅ S4 |
+| **UX-P1-15** | Relatórios | TabNav seções + EmptyState + donut honesto | M | S0-06,13 | ✅ S4 |
+| **UX-P1-16** | Suspensão | ConfirmDialog + InlineAlert | S | S0-05,16 | ✅ S4 |
+| **UX-P1-17** | Implantação | InlineAlert gate + FormSection/SectionCard | M | S0-04,16 | ✅ S4 |
+| **UX-P1-18** | /gerente | Redirect sem flash | S | — | ✅ S4 |
+| **UX-P1-19** | Toast | Rename viewport admin | S | S0-09 | ✅ S4 |
+| **UX-P1-20** | Config | TabNav + FormSection | M | S0-13,17 | ✅ S4 |
 | **UX-P1-21** | Vendas detalhe | Migrar sheet → DetailSheet | S | S0-15 | S1/S2 |
 | **UX-P1-22** | Provisionamento | Stepper SSOT | S | S0-14 | S4 |
 

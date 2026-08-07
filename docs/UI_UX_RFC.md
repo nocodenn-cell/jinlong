@@ -172,3 +172,96 @@
 | **Problema** | Só “Importar NF-e” no header; Recebimento/Transferências/Etiquetas exigem navegação lateral. |
 | **Arquitetura** | `PageShell` + `PageActions`: primary implícito na lista; secondary links para NF-e, Recebimento, Transferências, Etiquetas. Sem nova tela hub. |
 | **IDs** | UX-P1-12 |
+
+---
+
+## RFC-UX-015 — Funcionários: CrudListShell + EntityTable + confirmação
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 4 |
+| **Problema** | Shell legado (`DataTablePage` + `GerenteTable`), filtros ad hoc, desativar sem `ConfirmDialog`, erro em `<p>` raw. |
+| **Custo atual** | Último CRUD operacional com paradigma de tabela pré-S0; risco de desativar conta sem confirmação; inconsistência visual vs Clientes/Fornecedores. |
+| **Proposta** | `PageShell` + `FilterBar` (busca + situação) + `CrudListShell` + `EntityTable` + `EmptyState`/`ErrorState`; desativar/reativar via `askConfirm`; feedback via `emitToast`. |
+| **Consolidar?** | **Não** fundir com Configurações — Funcionários é cadastro de identidade/permissão (SSoT próprio), Config é loja/PDV. |
+| **Impacto** | −1 `GerenteTable`; permissões (`funcionarioPolicies`) intactas. |
+| **Risco** | Baixo — actions inalteradas. |
+| **Ganho operacional** | Mesmo padrão de lista; desativação consciente; filtros URL compartilháveis. |
+| **IDs** | UX-P1-13 |
+
+---
+
+## RFC-UX-016 — Categorias financeiras: taxonomia + paridade + atalho no hub
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 4 |
+| **Problema** | UI sem tipo (RECEITA/DESPESA/AMBOS) apesar do schema exigir; strings hardcoded; emoji empty; `admin-v2-btn-*`; filtros de situação/tipo ignorados. |
+| **Custo atual** | Criar categoria pode falhar validação; operador não entende taxonomia; tela “irmã pobre” vs categorias-produto. |
+| **Proposta** | Paridade com categorias-produto (`PageShell`/`CrudListShell`/`DataTable`/i18n); filtros `tipo` + `situacao` + busca; create/edit com select de tipo; link secundário no hub Financeiro → `/admin/categorias-financeiras` (sem segundo CRUD). |
+| **Consolidar?** | **Não** virar aba do Financeiro — taxonomia é cadastro de referência (como categorias de produto fora do Catálogo lista). Hub só aponta. |
+| **Impacto** | Taxonomia legível; create alinhado ao schema. |
+| **Risco** | Baixo. |
+| **Ganho operacional** | Categorias corretas na origem; menos ida/volta lateral sem contexto. |
+| **IDs** | UX-P1-14 |
+
+---
+
+## RFC-UX-017 — Relatórios: TabNav por domínio + FilterBar + donut honesto
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 4 |
+| **Problema** | Scroll infinito de seções; form de período ad hoc; empty com emoji; donut “pagamentos” com fatia **Ajustes** fabricada (`concluidas * 0.08`). |
+| **Custo atual** | Operador perde contexto; confiança nos números erodida; export ok mas filtros fora do contrato. |
+| **Proposta** | `PageShell` + `FilterBar` daterange + `ExportAction`; `TabNav` URL (`sec=vendas\|estoque\|margem`); `EmptyState`/`ErrorState`/`InlineAlert`; donut = apenas concluídas vs canceladas (rótulo honesto). |
+| **Consolidar?** | **Não** fundir com Dashboard — Dashboard = snapshot do dia; Relatórios = análise por período. |
+| **Impacto** | Menos scroll; números honestos; FilterBar canônico. |
+| **Risco** | Baixo — mesma action `carregarDadosRelatoriosGerente`. |
+| **Ganho operacional** | Achados por domínio sem sair do período; CSV no header. |
+| **IDs** | UX-P1-15 |
+
+---
+
+## RFC-UX-018 — Suspensão: rota própria (não fundir em Config) + IX-CONFIRM
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 4 |
+| **Problema** | Alerts ad hoc; banner de sucesso paralelo; salvar suspensão sem confirmação; sem `PageShell`. |
+| **Custo atual** | Ação de emergência altamente arriscada parece “form comum”; feedback fora de `emitToast`. |
+| **Proposta** | Manter `/admin/suspensao` (visibilidade lateral para emergência). `PageShell` + `InlineAlert` de status + `askConfirm` ao suspender + `emitToast`. **Não** enterrar como aba de Config (modelo mental diferente: loja/PDV vs kill-switch operacional). |
+| **Impacto** | Confirmação obrigatória ao suspender; feedback global. |
+| **Risco** | Baixo — actions iguais. |
+| **Ganho operacional** | Menos suspensão acidental; status óbvio. |
+| **IDs** | UX-P1-16 |
+
+---
+
+## RFC-UX-019 — Toast viewport admin + fim de banners de sucesso paralelos (Config/Suspensão)
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 4 |
+| **Problema** | Viewport ainda `GerenteToastViewport` no layout admin; Config/Suspensão usam banners verdes locais. |
+| **Custo atual** | Dual naming; dois canais de sucesso no painel. |
+| **Proposta** | Renomear para `AdminToastViewport` (alias deprecated `GerenteToastViewport`); Config e Suspensão → `emitToast` (PDV permanece EXC-02). |
+| **Impacto** | Um canal de toast no admin. |
+| **Risco** | Baixo — alias preserva imports. |
+| **Ganho operacional** | Feedback previsível. |
+| **IDs** | UX-P1-19 (+ superfície Config/Suspensão) |
+
+---
+
+## RFC-UX-020 — Config: TabNav URL + FormSection; /gerente sem flash
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 4 |
+| **Problema** | Tabs locais (não `TabNav`); sucesso inline; `/gerente` ainda montava `GerenteLayoutShell` antes do redirect. |
+| **Custo atual** | Deep-link de aba impossível; flash visual legado. |
+| **Proposta** | Config: `PageShell` + `TabNav` `?tab=` + `FormSection` + `InlineAlert` erro + `emitToast` sucesso. `/gerente/*`: redirect no middleware (e layout sem shell) via `legacyGerenteRedirect`. |
+| **Impacto** | Abas bookmarkable; zero flash gerente. |
+| **Risco** | Médio-baixo no middleware — cobrir com mapa LEGACY existente. |
+| **Ganho operacional** | Config compartilhável por aba; bookmarks `/gerente` caem direto no admin. |
+| **IDs** | UX-P1-20, UX-P1-18 |
