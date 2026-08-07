@@ -187,3 +187,41 @@ referencia (`pg_proc.prosrc` sem ocorrências) e nenhum código da aplicação a
 (só aparece em `database.types.ts`). Aplicá-la agora acrescentaria triggers no
 caminho de escrita financeiro às vésperas do Go-Live sem benefício algum.
 Registrada como drift conhecido, a decidir depois do Go-Live.
+
+## D-11 — `migration-remote-drift`: 228/231/244/248 são o espelho do D-9
+
+**Data:** 2026-08-07
+
+O gate falha com `228, 231, 244, 248 (remote_ausente)`. Verifiquei os **18
+objetos** que essas 4 migrations declaram (tabelas, views e funções) contra
+produção: **todos os 18 existem**.
+
+| Migration | Objetos | Em produção |
+|---|---|---|
+| 228 venda_eventos_ledger | `venda_eventos` + 5 funções | 6/6 |
+| 231 gerente_venda_eventos_rpcs | 2 funções | 2/2 |
+| 244 consistencia_vendas_auditoria | 1 view + 2 funções | 3/3 |
+| 248 devolver_ou_trocar_venda | 3 tabelas, 1 view, 3 funções | 7/7 |
+
+Ou seja: é o **espelho exato do D-9**. Lá o ledger dizia "aplicada" e o objeto
+não existia; aqui o objeto existe e falta a linha no ledger. As features estão
+no ar — só a escrituração está faltando.
+
+**Não executei `migration repair --status applied`.** A verificação acima é
+por *nome* de objeto, e o D-9 provou que presença por nome não é prova de
+execução completa: a 288 tinha `retomar_venda_em_espera` presente e mesmo assim
+não havia rodado (era a versão antiga da 24703). Antes de tocar no ledger é
+preciso comparar corpo de função, colunas, índices, policies e grants —
+especialmente da 248, que tem 624 linhas e mexe em `cancelar_venda_transacional`.
+
+**Próximo passo:** verificação profunda dessas 4 migrations e, se limpa,
+`repair` das 4 versões. Enquanto isso o gate fica vermelho por escrituração,
+não por defeito funcional.
+
+## `rls-rest-gate` — falha de credencial, não de RLS
+
+O job retorna **401 em todas as requisições**, inclusive nas que deveriam
+retornar 200 (`PAINEL/vendas_select`, `PAINEL/usuarios_self`). Um 401 uniforme
+antes de qualquer avaliação de policy indica token de CI inválido/expirado, não
+regressão de RLS. Não alterado: mexer nisso exige rotacionar secret, fora do
+escopo autorizado.
