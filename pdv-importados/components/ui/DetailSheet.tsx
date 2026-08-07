@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button'
 type DetailSheetProps = {
   open: boolean
   onClose: () => void
-  title: string
-  subtitle?: string
+  title: ReactNode
+  subtitle?: ReactNode
   children: ReactNode
   footer?: ReactNode
   closeLabel?: string
+  /** Classes no painel (ex.: max-w-md). */
   className?: string
 }
 

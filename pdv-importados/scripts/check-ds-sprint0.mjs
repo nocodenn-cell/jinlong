@@ -41,12 +41,10 @@ const REQUIRED_EXPORTS = [
 const CONFIRM_ALLOWLIST = new Set()
 
 const FIXED_DIALOG_ALLOWLIST = new Set([
+  // SSOT overlays
   'components/ui/DetailSheet.tsx',
   'components/ui/DragonModal.tsx',
-  // Sheets de entidade legados — migrar para DetailSheet em S1+
-  'app/admin/financeiro/_components/DocumentoFiscalDetailSheet.tsx',
-  'app/admin/auditoria/_components/AuditoriaTimeline.tsx',
-  'app/admin/vendas/_components/VendaDetailSheet.tsx',
+  // Modais OC ainda ad hoc (→ DragonModal em ciclo seguinte)
   'app/gerente/compras/OcFormModal.tsx',
   'app/gerente/compras/OcDetalheModal.tsx',
   // PDV / nav (EXC drawer) — não são DetailSheet de entidade

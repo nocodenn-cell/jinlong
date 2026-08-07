@@ -1,18 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   AlertTriangle,
   Package,
   Percent,
   RotateCcw,
   ShoppingCart,
-  X,
   XCircle,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatBRL } from '@/lib/format/money'
+import { DetailSheet } from '@/components/ui/DetailSheet'
 import type { AuditoriaEvento, AuditoriaTipo } from '../actions'
 
 const dtFmt = new Intl.DateTimeFormat('pt-BR', {
@@ -186,83 +186,54 @@ function AuditoriaDetailSheet({
   evento: AuditoriaEvento
   onClose: () => void
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
-  }, [onClose])
-
   const visual = TIPO_VISUAL[evento.tipo]
   const entradas = Object.entries(evento.detalhe).filter(([, v]) => v != null && v !== '')
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="auditoria-detalhe-titulo">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-md flex-col">
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border-secondary)] px-5 py-4">
-          <div className="min-w-0">
-            <h2 id="auditoria-detalhe-titulo" className="text-[15px] font-semibold text-jl-fg-1">
-              {evento.resumo}
-            </h2>
-            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-jl-fg-2">
-              <span
-                className={cn(
-                  'inline-flex items-center rounded-full px-2 py-[1px] text-[10px] font-medium leading-none',
-                  visual.chipClass,
-                )}
-              >
-                {visual.label}
-              </span>
-              <span>{dtFmt.format(new Date(evento.ocorridoEm))}</span>
-              {evento.operadorNome ? <span>· {evento.operadorNome}</span> : null}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="-mr-1 -mt-1 rounded-lg p-1.5 text-jl-fg-3 transition-colors hover:bg-white/[0.06]"
-          >
-            <X size={16} aria-hidden />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
-          {evento.valor != null ? (
-            <div className="admin-v2-panel mb-3 rounded-[10px] p-3">
-              <div className="text-[11px] text-jl-fg-3">Valor</div>
-              <div className="text-[18px] font-semibold tabular-nums text-jl-fg-1">
-                {formatBRL(evento.valor)}
-              </div>
-            </div>
-          ) : null}
-
-          <dl className="flex flex-col">
-            {entradas.length === 0 ? (
-              <p className="py-4 text-center text-[12px] text-jl-fg-3">Sem detalhes adicionais.</p>
-            ) : (
-              entradas.map(([chave, valor]) => (
-                <div
-                  key={chave}
-                  className="flex items-start justify-between gap-3 border-t border-[var(--color-border-secondary)] py-2 first:border-t-0"
-                >
-                  <dt className="text-[11px] text-jl-fg-3">{DETALHE_LABELS[chave] ?? chave}</dt>
-                  <dd className="max-w-[60%] break-words text-right text-[12px] text-jl-fg-1">
-                    {detalheValor(chave, valor)}
-                  </dd>
-                </div>
-              ))
+    <DetailSheet
+      open
+      onClose={onClose}
+      className="max-w-md"
+      title={evento.resumo}
+      subtitle={
+        <span className="flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2 py-[1px] text-[10px] font-medium leading-none',
+              visual.chipClass,
             )}
-          </dl>
+          >
+            {visual.label}
+          </span>
+          <span>{dtFmt.format(new Date(evento.ocorridoEm))}</span>
+          {evento.operadorNome ? <span>· {evento.operadorNome}</span> : null}
+        </span>
+      }
+    >
+      {evento.valor != null ? (
+        <div className="admin-v2-panel mb-3 rounded-[10px] p-3">
+          <div className="text-[11px] text-fg-subtle">Valor</div>
+          <div className="text-[18px] font-semibold tabular-nums text-fg">{formatBRL(evento.valor)}</div>
         </div>
-      </aside>
-    </div>
+      ) : null}
+
+      <dl className="flex flex-col">
+        {entradas.length === 0 ? (
+          <p className="py-4 text-center text-[12px] text-fg-subtle">Sem detalhes adicionais.</p>
+        ) : (
+          entradas.map(([chave, valor]) => (
+            <div
+              key={chave}
+              className="flex items-start justify-between gap-3 border-t border-[var(--color-border)] py-2 first:border-t-0"
+            >
+              <dt className="text-[11px] text-fg-subtle">{DETALHE_LABELS[chave] ?? chave}</dt>
+              <dd className="max-w-[60%] break-words text-right text-[12px] text-fg">
+                {detalheValor(chave, valor)}
+              </dd>
+            </div>
+          ))
+        )}
+      </dl>
+    </DetailSheet>
   )
 }
