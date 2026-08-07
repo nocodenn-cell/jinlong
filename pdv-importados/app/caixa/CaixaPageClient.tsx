@@ -215,6 +215,9 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const totalLiquido = cartMounted ? totalLiquidoStore : 0
   // Ações têm referência estável no zustand — selecionadas individualmente, nunca causam re-render.
   const setRegras = useCarrinhoStore((s) => s.setRegras)
+  const setMaxDescontoManualItemPercentual = useCarrinhoStore(
+    (s) => s.setMaxDescontoManualItemPercentual,
+  )
   const setCartOwnerForSession = useCarrinhoStore((s) => s.setCartOwnerForSession)
   const adicionarItem = useCarrinhoStore((s) => s.adicionarItem)
   const alterarQuantidade = useCarrinhoStore((s) => s.alterarQuantidade)
@@ -427,6 +430,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
     setLimiteSangriaSemGerente,
     setConfigCaixaWeb,
+    setMaxDescontoManualItemPercentual,
   })
 
   const handleAdicionar = useCallback(

@@ -24,7 +24,19 @@ export type CotacaoUsdBrlResult =
   | { ok: false }
 
 export type CarregarRegrasResult =
-  | { ok: true; regras: RegraPreco[]; pricingContext: PricingContext }
+  | {
+      ok: true
+      regras: RegraPreco[]
+      pricingContext: PricingContext
+      /**
+       * Teto de desconto manual por item, lido de
+       * `pdv_config.max_desconto_manual_item_percentual` via
+       * `pdv_config_para_caixa_web()` (migration 313). O cliente usa isto
+       * apenas como pré-validação de UX — quem recusa a venda é o trigger
+       * `trg_fn_itens_venda_limite_desconto`.
+       */
+      maxDescontoManualItemPercentual: number
+    }
   | { ok: false; error: string }
 
 export type BuscarProdutoResult =

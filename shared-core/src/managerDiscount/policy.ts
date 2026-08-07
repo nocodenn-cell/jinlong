@@ -14,6 +14,20 @@ import type {
  */
 export const DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL = 20
 
+/**
+ * Teto padrão (em %) de desconto manual que o operador aplica em UM item, sem
+ * autorização de gerente.
+ *
+ * Fonte autoritativa: `pdv_config.max_desconto_manual_item_percentual`, aplicada
+ * pelo trigger `trg_fn_itens_venda_limite_desconto` (migration 122) e entregue ao
+ * caixa web por `pdv_config_para_caixa_web()` (migration 313).
+ *
+ * Esta constante NÃO é o limite: é só o fallback para quando a configuração não
+ * pôde ser lida (PDV offline, `pdv_config` sem linha). O valor espelha o default
+ * da coluna — 122:26 `DEFAULT 15.00`.
+ */
+export const DEFAULT_MAX_DESCONTO_MANUAL_ITEM_PERCENTUAL = 15
+
 function roundMoney(valor: number): number {
   return Math.round(valor * 100) / 100
 }

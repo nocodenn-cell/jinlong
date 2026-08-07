@@ -4,6 +4,8 @@ import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 type PdvConfigCaixaWebRow = {
   quantidade_minima_atacado_padrao: number
   blind_closure: boolean
+  /** Teto de desconto manual por item (migration 313). Autoridade: trigger no banco. */
+  max_desconto_manual_item_percentual: number
 }
 
 /** Campos não sensíveis de `pdv_config` (migration 058 — tabela sem SELECT direto para authenticated). */

@@ -13,6 +13,7 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useCartStore } from './unifiedCartStore'
+import { DEFAULT_MAX_DESCONTO_MANUAL_ITEM_PERCENTUAL } from '../managerDiscount/policy'
 
 function reset() {
   useCartStore.getState().limparCarrinho()
@@ -121,5 +122,71 @@ describe('unifiedCartStore — idempotência da venda', () => {
     expect(useCartStore.getState().vendaIdempotencyKey).toBeNull()
     expect(useCartStore.getState().vendaFinalizacaoPendente).toBe(false)
     expect(useCartStore.getState().garantirVendaIdempotencyKey()).not.toBe(anterior)
+  })
+})
+
+/**
+ * Regressão de Single Source of Truth: o teto de desconto manual por item era
+ * um literal no store (`const maxPermitido = 15`), enquanto a autoridade real
+ * é `pdv_config.max_desconto_manual_item_percentual`, aplicada pelo trigger
+ * `trg_fn_itens_venda_limite_desconto` (migration 122) e entregue ao caixa web
+ * por `pdv_config_para_caixa_web()` (migration 313).
+ *
+ * Com o literal, mudar o limite no banco alterava o servidor e não o PDV: o
+ * operador só descobria a divergência quando o trigger recusava a venda.
+ */
+describe('unifiedCartStore — teto de desconto manual vem da configuração', () => {
+  const item = {
+    id: 'item-1',
+    produtoId: 'prod-1',
+    nome: 'Produto teste',
+    quantidade: 1,
+    precoOriginal: 100,
+    precoUnitario: 100,
+    precoVariejo: 100,
+  }
+
+  beforeEach(() => {
+    reset()
+    useCartStore.getState().setMaxDescontoManualItemPercentual(
+      DEFAULT_MAX_DESCONTO_MANUAL_ITEM_PERCENTUAL,
+    )
+  })
+
+  it('usa o default (15%) enquanto a configuração não chegou', () => {
+    expect(useCartStore.getState().maxDescontoManualItemPercentual).toBe(15)
+
+    useCartStore.getState().adicionarItem(item)
+    expect(() => useCartStore.getState().aplicarDescontoManual('item-1', 20)).toThrow(
+      /limite permitido \(15%\)/,
+    )
+  })
+
+  it('passa a recusar no teto configurado quando o banco manda um valor menor', () => {
+    useCartStore.getState().setMaxDescontoManualItemPercentual(5)
+    useCartStore.getState().adicionarItem(item)
+
+    // 10% passaria com o literal antigo de 15 e tem de ser recusado agora.
+    expect(() => useCartStore.getState().aplicarDescontoManual('item-1', 10)).toThrow(
+      /limite permitido \(5%\)/,
+    )
+  })
+
+  it('passa a aceitar acima de 15% quando o banco autoriza um teto maior', () => {
+    useCartStore.getState().setMaxDescontoManualItemPercentual(30)
+    useCartStore.getState().adicionarItem(item)
+
+    // 25% era barrado pelo literal antigo; com o teto configurado tem de passar.
+    expect(() => useCartStore.getState().aplicarDescontoManual('item-1', 25)).not.toThrow()
+    expect(useCartStore.getState().totalDesconto).toBeGreaterThan(0)
+  })
+
+  it('ignora valor inválido e preserva o teto vigente', () => {
+    useCartStore.getState().setMaxDescontoManualItemPercentual(30)
+    useCartStore.getState().setMaxDescontoManualItemPercentual(Number.NaN)
+    expect(useCartStore.getState().maxDescontoManualItemPercentual).toBe(30)
+
+    useCartStore.getState().setMaxDescontoManualItemPercentual(-1)
+    expect(useCartStore.getState().maxDescontoManualItemPercentual).toBe(30)
   })
 })

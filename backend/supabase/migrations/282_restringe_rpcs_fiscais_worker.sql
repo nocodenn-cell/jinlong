@@ -96,13 +96,13 @@ GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolea
 -- silencioso onde ela nunca existiu, que é o caso de qualquer rebuild limpo.
 DO $restringe_overload_d1$
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
-      AND p.proname = 'fiscal_reprocessar_documento'
-      AND pg_get_function_identity_arguments(p.oid) = 'uuid, text'
-  ) THEN
+  -- `to_regprocedure` resolve pela assinatura de tipos e devolve NULL quando a
+  -- função não existe — sem erro. NÃO usar
+  -- `pg_get_function_identity_arguments(p.oid) = 'uuid, text'`: essa função
+  -- devolve os argumentos COM os nomes dos parâmetros ('p_documento_id uuid'),
+  -- então a comparação com a lista de tipos puros nunca casa e o guard viraria
+  -- um no-op silencioso — exatamente o oposto do que ele existe para fazer.
+  IF to_regprocedure('public.fiscal_reprocessar_documento(uuid,text)') IS NOT NULL THEN
     EXECUTE 'REVOKE ALL ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) FROM PUBLIC, anon, authenticated';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) TO service_role';
     RAISE NOTICE '282 — overload (uuid,text) presente: acesso restrito a service_role';

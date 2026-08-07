@@ -4,6 +4,7 @@ import { mapRegraPrecoRow, type RegraPrecoRow } from '@/core/caixa/mapRegrasPrec
 import { buildRegrasPrecoValidadeOrFilter } from '@/core/caixa/regrasPrecoValidadeFilter'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
 import { DEFAULT_PRICING_CONTEXT } from '@shared/pricing/types'
+import { DEFAULT_MAX_DESCONTO_MANUAL_ITEM_PERCENTUAL } from '@/stores/managerDiscount'
 import { variantesChaveLeitura } from '@/core/caixa/variantesChaveLeitura'
 import { mensagemErroDeExcecao, mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import {
@@ -76,11 +77,18 @@ export async function carregarRegrasPrecoCaixaImpl(): Promise<CarregarRegrasResu
       ? Number(cfgRes.row.quantidade_minima_atacado_padrao)
       : DEFAULT_PRICING_CONTEXT.quantidadeMinimaAtacadoPadrao
 
+    // Teto de desconto manual por item: vem de pdv_config (migration 313). O
+    // fallback só cobre a ausência de linha em pdv_config — nunca substitui a
+    // configuração, que é a fonte única.
+    const maxDescontoManualItem = Number(cfgRes.row?.max_desconto_manual_item_percentual)
     const regras = (data as RegraPrecoRow[] | null)?.map(mapRegraPrecoRow) ?? []
     return {
       ok: true,
       regras,
       pricingContext: { quantidadeMinimaAtacadoPadrao: minAtacado },
+      maxDescontoManualItemPercentual: Number.isFinite(maxDescontoManualItem)
+        ? maxDescontoManualItem
+        : DEFAULT_MAX_DESCONTO_MANUAL_ITEM_PERCENTUAL,
     }
   } catch (e) {
     return {

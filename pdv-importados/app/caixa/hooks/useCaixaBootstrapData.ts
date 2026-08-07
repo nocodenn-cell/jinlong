@@ -13,6 +13,8 @@ type Params = {
   setCaixaMensagem: (mensagem: string | null) => void
   setLimiteSangriaSemGerente: (value: number) => void
   setConfigCaixaWeb: (value: Record<string, string>) => void
+  /** Teto de desconto manual por item vindo de pdv_config (migration 313). */
+  setMaxDescontoManualItemPercentual: (value: number) => void
 }
 
 export function useCaixaBootstrapData({
@@ -22,6 +24,7 @@ export function useCaixaBootstrapData({
   setCaixaMensagem,
   setLimiteSangriaSemGerente,
   setConfigCaixaWeb,
+  setMaxDescontoManualItemPercentual,
 }: Params) {
   useEffect(() => {
     let cancelado = false
@@ -31,6 +34,7 @@ export function useCaixaBootstrapData({
       if (cancelado) return
       if (res.ok) {
         setRegras(res.regras)
+        setMaxDescontoManualItemPercentual(res.maxDescontoManualItemPercentual)
         setCaixaMensagem(null)
       } else {
         setCaixaMensagem(`${regrasErroPrefixo} ${res.error}`)
@@ -41,7 +45,13 @@ export function useCaixaBootstrapData({
     return () => {
       cancelado = true
     }
-  }, [regrasErroPrefixo, setCarregandoRegras, setRegras, setCaixaMensagem])
+  }, [
+    regrasErroPrefixo,
+    setCarregandoRegras,
+    setRegras,
+    setCaixaMensagem,
+    setMaxDescontoManualItemPercentual,
+  ])
 
   useEffect(() => {
     let cancelado = false

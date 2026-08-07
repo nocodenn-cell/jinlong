@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { DEFAULT_PRICING_CONTEXT, type PricingContext } from '../pricing/types'
 import {
   DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL,
+  DEFAULT_MAX_DESCONTO_MANUAL_ITEM_PERCENTUAL,
   aplicarDescontoGerenteSobreTotal,
   clampPercentualDesconto,
 } from '../managerDiscount/policy'
@@ -44,6 +45,13 @@ export interface CarrinhoState {
   descontoGerenteValor: number
   descontoGerenteToken: string | null
   maxDescontoGerentePercentual: number
+  /**
+   * Teto de desconto manual por item, lido de
+   * `pdv_config.max_desconto_manual_item_percentual` (migration 122) e entregue
+   * pela RPC `pdv_config_para_caixa_web()` (migration 313). Nunca é um literal
+   * nesta camada — o valor default só cobre PDV offline / config ausente.
+   */
+  maxDescontoManualItemPercentual: number
   /** Última linha removida (não persistida) — buffer para desfazer (Ctrl+Z). */
   ultimoRemovido: { item: ItemCarrinho; index: number } | null
   /**
@@ -78,6 +86,7 @@ export interface CarrinhoState {
   aplicarDescontoManual: (id: string, descontoValor: number, motivo?: string) => void
   aplicarDescontoGerente: (percentual: number, token?: string | null, maxClamp?: number | null) => void
   setMaxDescontoGerentePercentual: (valor: number) => void
+  setMaxDescontoManualItemPercentual: (valor: number) => void
   /** Devolve a chave do cupom, criando-a na primeira chamada. Nunca a troca. */
   garantirVendaIdempotencyKey: () => string
   /** Marca que a finalização foi disparada e o desfecho ainda é desconhecido. */
@@ -274,6 +283,7 @@ export const useCartStore = create<CarrinhoState>()(
       descontoGerenteValor: 0,
       descontoGerenteToken: null,
       maxDescontoGerentePercentual: DEFAULT_MAX_DESCONTO_GERENTE_PERCENTUAL,
+      maxDescontoManualItemPercentual: DEFAULT_MAX_DESCONTO_MANUAL_ITEM_PERCENTUAL,
       ultimoRemovido: null,
       vendaIdempotencyKey: null,
       vendaFinalizacaoPendente: false,
@@ -369,7 +379,10 @@ export const useCartStore = create<CarrinhoState>()(
           // ✅ VALIDAÇÃO ADICIONADA: Rejeita desconto > limite permitido antes de aplicar
           const precoOriginal = item.precoOriginal ?? item.precoVariejo ?? item.precoUnitario ?? 0
           const descontoPercentual = precoOriginal > 0 ? (descontoValor / precoOriginal) * 100 : 0
-          const maxPermitido = 15 // Default limit for non-ATACADO
+          // Teto vindo de pdv_config (migration 313). Esta checagem é apenas
+          // pré-validação de UX — quem recusa a venda é o trigger
+          // `trg_fn_itens_venda_limite_desconto` no banco.
+          const maxPermitido = state.maxDescontoManualItemPercentual
 
           if (descontoPercentual > maxPermitido && item.resultado?.tipoPreco !== 'ATACADO') {
             throw new Error(
@@ -416,6 +429,12 @@ export const useCartStore = create<CarrinhoState>()(
             descontoGerenteToken: descontoAtivo ? state.descontoGerenteToken : null,
           }
         }),
+
+      setMaxDescontoManualItemPercentual: (valor) =>
+        set((state) => ({
+          maxDescontoManualItemPercentual:
+            Number.isFinite(valor) && valor >= 0 ? valor : state.maxDescontoManualItemPercentual,
+        })),
 
       alterarQuantidade: (id, quantidade) =>
         set((state) => commitItensComTotais(state, updateItemQuantity(state.itens, id, quantidade))),
@@ -475,6 +494,7 @@ export const useCartStore = create<CarrinhoState>()(
         descontoGerenteValor: state.descontoGerenteValor,
         descontoGerenteToken: state.descontoGerenteToken,
         maxDescontoGerentePercentual: state.maxDescontoGerentePercentual,
+        maxDescontoManualItemPercentual: state.maxDescontoManualItemPercentual,
         // Persistidos junto do carrinho por serem a proteção contra venda
         // duplicada após F5 / queda de energia / fechamento da aplicação.
         vendaIdempotencyKey: state.vendaIdempotencyKey,

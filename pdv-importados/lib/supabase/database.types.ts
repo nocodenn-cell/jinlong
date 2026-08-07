@@ -536,6 +536,7 @@ export type Database = {
         Row: {
           actor_role: string | null
           actor_user_id: string | null
+          correlation_id: string
           created_at: string
           documento_id: string
           evento_tipo: string
@@ -548,6 +549,7 @@ export type Database = {
         Insert: {
           actor_role?: string | null
           actor_user_id?: string | null
+          correlation_id?: string
           created_at?: string
           documento_id: string
           evento_tipo: string
@@ -560,6 +562,7 @@ export type Database = {
         Update: {
           actor_role?: string | null
           actor_user_id?: string | null
+          correlation_id?: string
           created_at?: string
           documento_id?: string
           evento_tipo?: string
@@ -596,6 +599,7 @@ export type Database = {
       documentos_fiscais_pendentes: {
         Row: {
           chave_fiscal: string | null
+          correlation_id: string
           created_at: string
           deleted_at: string | null
           fiscal_action_hint: string | null
@@ -623,6 +627,7 @@ export type Database = {
         }
         Insert: {
           chave_fiscal?: string | null
+          correlation_id?: string
           created_at?: string
           deleted_at?: string | null
           fiscal_action_hint?: string | null
@@ -650,6 +655,7 @@ export type Database = {
         }
         Update: {
           chave_fiscal?: string | null
+          correlation_id?: string
           created_at?: string
           deleted_at?: string | null
           fiscal_action_hint?: string | null
@@ -2649,6 +2655,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      converter_venda_em_espera: {
+        Args: { p_id: string }
+        Returns: Json
+      }
       dashboard_gerente_resumo: {
         Args: { p_loja_id: string; p_tz?: string }
         Returns: Json
@@ -2829,6 +2839,7 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           chave_fiscal: string | null
+          correlation_id: string
           created_at: string
           deleted_at: string | null
           fiscal_action_hint: string | null
