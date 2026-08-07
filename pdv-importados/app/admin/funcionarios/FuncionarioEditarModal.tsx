@@ -5,7 +5,48 @@ import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/passwordPolicy'
+import { capacidadesDoPerfil } from '@/lib/auth/capacidadesPerfil'
 import { cn } from '@/lib/utils'
+
+/**
+ * Resumo do que o perfil selecionado concede — somente leitura.
+ *
+ * Existe porque hoje se atribui "GERENTE" vendo apenas a palavra: quem promove
+ * alguém para liberar um desconto concede junto cancelamento de venda, ajuste
+ * de estoque e acesso ao financeiro, sem que a tela diga isso.
+ *
+ * Não autoriza nada e não é consultado por nenhuma decisão de permissão — a
+ * autoridade continua sendo a RLS. Se divergir, a RLS está certa.
+ */
+function CapacidadesDoPerfil({ perfil }: { perfil: string }) {
+  const caps = capacidadesDoPerfil(perfil)
+  if (!caps) return null
+
+  return (
+    <div
+      className="rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3"
+      data-testid="capacidades-perfil"
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-jl-fg-3">
+        O que este perfil permite
+      </p>
+      <ul className="mt-1.5 space-y-0.5">
+        {caps.permite.map((item) => (
+          <li key={item} className="flex gap-1.5 text-[11px] leading-snug text-jl-fg-2">
+            <span aria-hidden className="text-[var(--color-success-strong)]">✓</span>
+            <span>{item}</span>
+          </li>
+        ))}
+        {caps.naoPermite.map((item) => (
+          <li key={item} className="flex gap-1.5 text-[11px] leading-snug text-jl-fg-3">
+            <span aria-hidden className="text-[var(--color-danger-strong)]">✕</span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 import {
   atualizarFuncionarioAction,
   criarFuncionarioAction,
@@ -185,6 +226,8 @@ export function FuncionarioEditarModal({
             </select>
           </div>
         </div>
+
+        <CapacidadesDoPerfil perfil={perfil} />
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="func-senha" className="text-xs font-medium text-jl-fg-3">
