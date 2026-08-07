@@ -26,6 +26,38 @@ const anonKey = () =>
 
 const jwtPainel = () => process.env.RLS_SMOKE_JWT_PAINEL || ""
 const jwtCaixa = () => process.env.RLS_SMOKE_JWT_CAIXA || ""
+
+/**
+ * Emite um access_token na hora, a partir de e-mail/senha do usuário de teste.
+ *
+ * Guardar o JWT pronto num secret é um desenho que sempre vence: os dois
+ * secrets `RLS_SMOKE_JWT_*` expiraram em 2026-05-17 e o gate — que é
+ * obrigatório (CI_RLS_SMOKE_REQUIRED=true) — passou quase três meses reprovando
+ * por credencial vencida enquanto o relatório dizia "operador deve receber []
+ * em recursos só-gerente", ou seja, acusando regressão de RLS.
+ *
+ * As credenciais usadas aqui já existem como secret e já alimentam o e2e
+ * (PLAYWRIGHT_TEST_EMAIL/PASSWORD e PLAYWRIGHT_CAIXA_TEST_EMAIL/PASSWORD).
+ * Nenhum secret novo é necessário.
+ */
+async function loginParaJwt(email, senha) {
+  if (!email || !senha) return null
+  const res = await fetch(`${baseUrl()}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: anonKey(), "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password: senha }),
+  })
+  const text = await res.text()
+  if (!res.ok) {
+    return { erro: `login falhou (HTTP ${res.status}): ${text.slice(0, 200)}` }
+  }
+  try {
+    const token = JSON.parse(text)?.access_token
+    return typeof token === "string" && token ? { token } : { erro: "resposta sem access_token" }
+  } catch {
+    return { erro: "resposta de login não é JSON" }
+  }
+}
 const requiredInCi = () => (process.env.CI_RLS_SMOKE_REQUIRED || "").trim().toLowerCase() === "true"
 
 function readArgs(argv) {
@@ -90,13 +122,29 @@ async function main() {
   const opts = readArgs(process.argv.slice(2))
   const url = baseUrl()
   const key = anonKey()
-  const jp = jwtPainel()
-  const jc = jwtCaixa()
+  // Preferência: emitir na hora. Fallback: o secret estático (compatibilidade
+  // com quem roda localmente exportando RLS_SMOKE_JWT_*).
+  const errosLogin = []
+  const painelLogin = await loginParaJwt(
+    process.env.RLS_SMOKE_EMAIL_PAINEL,
+    process.env.RLS_SMOKE_PASSWORD_PAINEL,
+  )
+  const caixaLogin = await loginParaJwt(
+    process.env.RLS_SMOKE_EMAIL_CAIXA,
+    process.env.RLS_SMOKE_PASSWORD_CAIXA,
+  )
+  if (painelLogin?.erro) errosLogin.push(`PAINEL: ${painelLogin.erro}`)
+  if (caixaLogin?.erro) errosLogin.push(`CAIXA: ${caixaLogin.erro}`)
+
+  const jp = painelLogin?.token || jwtPainel()
+  const jc = caixaLogin?.token || jwtCaixa()
+  const origemJwt = painelLogin?.token && caixaLogin?.token ? "login_em_tempo_de_execucao" : "secret_estatico"
 
   const payload = {
     ok: true,
     skipped: false,
     checks: [],
+    origem_jwt: origemJwt,
     hint:
       "Defina RLS_SMOKE_JWT_PAINEL e RLS_SMOKE_JWT_CAIXA (access_token após login). Ver também backend/supabase/scripts/smoke_rls_painel_gerente.sql",
   }
@@ -160,7 +208,10 @@ async function main() {
     payload.message =
       "Credencial de CI vencida, não regressão de RLS: " +
       vencidos.map(([nome, quando]) => `${nome} expirou em ${quando}`).join("; ") +
-      ". Gere um novo access_token e atualize o secret no repositório."
+      ". Saída definitiva: defina RLS_SMOKE_EMAIL_PAINEL/RLS_SMOKE_PASSWORD_PAINEL e " +
+      "RLS_SMOKE_EMAIL_CAIXA/RLS_SMOKE_PASSWORD_CAIXA para o token ser emitido a cada " +
+      "execução, em vez de guardar um JWT que sempre volta a vencer." +
+      (errosLogin.length ? ` (tentativa de login falhou — ${errosLogin.join("; ")})` : "")
     if (opts.json) console.log(JSON.stringify(payload, null, 2))
     else console.error(payload.message + "\n" + payload.hint)
     process.exit(2)

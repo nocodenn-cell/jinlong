@@ -238,6 +238,14 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           RLS_SMOKE_JWT_PAINEL: ${{ secrets.RLS_SMOKE_JWT_PAINEL }}
           RLS_SMOKE_JWT_CAIXA: ${{ secrets.RLS_SMOKE_JWT_CAIXA }}
+          # Credenciais já existentes (mesmas do e2e). Com elas o script emite o
+          # access_token a cada execução e os secrets RLS_SMOKE_JWT_* deixam de
+          # ser o caminho principal — eles venceram em 2026-05-17 e derrubaram
+          # este gate obrigatório por quase três meses.
+          RLS_SMOKE_EMAIL_PAINEL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+          RLS_SMOKE_PASSWORD_PAINEL: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          RLS_SMOKE_EMAIL_CAIXA: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+          RLS_SMOKE_PASSWORD_CAIXA: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
         run: node backend/scripts/p0-rls-rest-smoke.mjs
 
   migration-remote-drift:
