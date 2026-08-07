@@ -235,3 +235,34 @@ PR #258 tem 2 checks vermelhos (`Supabase local RLS smoke`, `Test RLS scope by p
 | Testes | 937 ✅ |
 | Guards | 9/9 ✅ |
 | Árvore de trabalho | limpa |
+
+---
+
+## 11. Preparação dos merges (2026-08-07) — correção do §3.1
+
+Ao preparar os merges, verifiquei `mergeStateStatus` e o CI de cada PR. **Minha estimativa de "4 merges necessários" no §3.1 estava otimista:** eu classifiquei por `mergeable`, que só indica ausência de conflito textual, não prontidão.
+
+Estado real:
+
+| PR | mergeState | CI | Tamanho | Pronta? |
+|---|---|---|---|---|
+| **#257** | `MERGEABLE` | ✅ 9/9 guards, 937 testes locais | 31 commits | ✅ **sim — só falta review** |
+| #258 | **`BLOCKED`** | ❌ 5 falhando: E2E crítico, RLS smoke, RLS scope, migration-drift, rls-rest-gate | +3904/−96 em 44 arquivos | ❌ não |
+| #187 | **`BEHIND`** | ❌ 8 falhando **em 2–3 segundos** — assinatura de falha de infra, não de teste | +168/−0 em 2 arquivos | ❌ não |
+| #131 | **`BEHIND`** | ❌ 4 falhando (execuções reais de 2–3 min), run de ~1 mês atrás | +556/−3 em 3 arquivos | ❌ não |
+
+### O que cada uma precisa antes de mergear
+
+**#257** — apenas review. Foi renomeada para refletir o conteúdo real e o branch foi empurrado (antes disso a PR não continha os 22 commits das Ondas 1–2.5, que existiam só localmente).
+
+**#258** — 5 checks vermelhos, sendo `E2E crítico (sistema de risco)` o mais sério. É a frente fiscal (D-1/D-2/D-3), com 44 arquivos alterados. Não é revisável junto com o resto.
+
+**#187** — todos os checks falham em 2–3 segundos. Isso não é teste quebrado: é setup/infra abortando na largada, coerente com o período de bloqueio de billing do GitHub Actions registrado em `GITHUB_ACTIONS_BILLING_UNBLOCK.md`. **Precisa de rebase e nova execução antes de qualquer conclusão sobre o mérito.** São 2 arquivos — provavelmente barato depois disso.
+
+**#131** — `BEHIND` e com run de ~1 mês. Falhas de RLS em execuções reais. Precisa rebase + re-run; só então dá para saber se as falhas são do PR ou do baseline da época.
+
+### Consequência para o sequenciamento
+
+**Só a #257 está pronta.** As outras três são todas de backend/RLS/fiscal — exatamente a frente que a próxima sprint não vai tocar. Elas não bloqueiam a sprint de UI/UX, mas **bloqueiam o Go-Live** e precisam de dono na frente de backend.
+
+Ordem recomendada: **#257 → fechar #256 → (frente backend assume #187 → #131 → #258)**.
