@@ -2396,6 +2396,8 @@
     "financeiro_col_vencimento": "到期日",
     "financeiro_col_pago": "已付",
     "financeiro_col_aberto": "未结",
+    "financeiro_col_tipo_doc": "类型",
+    "financeiro_col_quando": "时间",
     "financeiro_status_aberto": "未结",
     "financeiro_status_parcial": "部分",
     "financeiro_status_quitado": "已结清",

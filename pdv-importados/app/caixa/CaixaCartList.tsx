@@ -384,6 +384,9 @@ function CaixaCartListInner({
               Enter · {m.caixa.adicionar_enter}
             </span>
             <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+              F3 · {m.caixa.operacoes_consulta_rapida}
+            </span>
+            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
               Ctrl+B · {m.caixa.empty_shortcut_focus}
             </span>
             <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
@@ -403,6 +406,9 @@ function CaixaCartListInner({
           <div className="flex flex-wrap justify-center gap-2 pt-1 opacity-60">
             <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
               Enter · {m.caixa.adicionar_enter}
+            </span>
+            <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
+              F3 · {m.caixa.operacoes_consulta_rapida}
             </span>
             <span className="rounded-full border border-jl-border-1 bg-jl-surface-soft px-2.5 py-1 text-xs text-jl-fg-2">
               Ctrl+B · {m.caixa.empty_shortcut_focus}

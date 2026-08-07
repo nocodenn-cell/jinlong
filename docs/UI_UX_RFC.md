@@ -80,3 +80,50 @@
 | **Consolidar?** | Não fundir no Estoque (formulário + remessas recentes tem job próprio). Breadcrumb aponta Estoque. |
 | **Arquitetura** | `PageShell` + link breadcrumb Estoque → Recebimento; `InlineAlert` warning quando sem produtos (CTA Catálogo Entity-SSOT). |
 | **IDs** | UX-P1-10 |
+
+---
+
+## RFC-UX-007 — Financeiro: um hub, três abas, um paradigma
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 2 |
+| **Problema** | Três paradigmas convivem: (1) tabs locais ad hoc, (2) Contas a Pagar em `GerenteTable`/`DataTablePage`/`dragon-glass`/`app-btn-*`, (3) Receber com `DataTable` + fila fiscal duplicada na lateral. Rota `/admin/financeiro/contas-pagar` é segunda porta para o mesmo job. |
+| **Consolidar?** | **Sim.** `/contas-pagar` → redirect canônico `?tab=pagar`. Fila fiscal **sai** da aba Receber (só vive em `tab=fiscal`) — uma fonte, um lugar. |
+| **Arquitetura** | `PageShell` + `TabNav` URL (`tab=receber\|pagar\|fiscal`) · fetch por aba · Receber: FilterBar + EntityTable · Pagar: EntityTable + MetricCard + ExportAction (sem GerenteTable) · Fiscal: InlineAlert stub + lista/EmptyState + DetailSheet. |
+| **Impacto / risco / ganho** | Médio (migração visual + redirect). Alto ganho: zero dual-track financeiro; menos cliques; menos carga (dados só da aba ativa). |
+| **IDs** | UX-P0-04, UX-P1-11 |
+
+---
+
+## RFC-UX-008 — Documento fiscal: PageShell + InlineAlert (fim do dragon-glass)
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 2 |
+| **Problema** | Detalhe de documento usa `dragon-glass-card`, `GerenteStatusBadge`, `app-btn-danger` — pele legado dentro do admin. |
+| **Consolidar?** | Página permanece (timeline auditável precisa de URL estável). Lista continua via DetailSheet no hub. |
+| **Arquitetura** | `PageShell` + `SectionCard` + `StatusChip` + `InlineAlert` (erro) + `ConfirmActionButton`/`ConfirmDialog` para reprocessar. |
+| **IDs** | UX-P0-05 |
+
+---
+
+## RFC-UX-009 — Catálogo S2: contratos S0 já no hot-path (sem nova tela)
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 2 |
+| **Problema** | Risco de reintroduzir CTAs/bulk/export paralelos fora do SSOT. |
+| **Decisão** | Manter PageShell/CrudListShell + 1 primary + menu Importar (S1). Bulk = `BulkActionBar`; export = `ExportAction`. Sem GerenteTable/DataTablePage no catálogo. Sem nova rota. |
+| **IDs** | UX-P1-06/07 (confirmação S2) |
+
+---
+
+## RFC-UX-010 — PDV S2: atalho F3 visível no empty (só polish com ganho)
+
+| | |
+|--|--|
+| **Status** | Aceito · Sprint 2 |
+| **Problema** | Empty do carrinho lista Enter/Ctrl+B/F4 mas omite F3 (consulta) — operador não descobre o atalho no momento de idle. |
+| **Decisão** | Incluir F3 nos chips do empty. Sem mudar contrato de teclado (RFC-005). |
+| **IDs** | polish S2 |

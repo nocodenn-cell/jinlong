@@ -1,7 +1,10 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import type { ReactNode } from 'react'
 import { SectionCard } from '@/components/ui/admin-v2'
+import { EmptyState } from '@/components/ui/feedback'
+import { EntityTable, type EntityColumn } from '@/components/ui/EntityTable'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
 import { FinanceiroReceberExtras } from './FinanceiroReceberExtras'
@@ -11,13 +14,14 @@ import { FiscalStubNotice } from './FiscalStubNotice'
 import { ContasPagarListClient } from '@/app/gerente/financeiro/contas-pagar/ContasPagarListClient'
 import type { ContaPagarRow } from '@/app/gerente/financeiro/contas-pagar/actions'
 import type { Idioma } from '@/idioma/normalizeIdioma'
-import type { ReactNode } from 'react'
 
 export type DocumentoFiscalPendenteRow = {
   id: string
   tipoDoc: string
   status: string
   criadoEm: string | null
+  tentativas?: number
+  ultimoErro?: string | null
 }
 
 type ClienteOpt = { id: string; nome: string }
@@ -34,6 +38,9 @@ type Props = {
     filaFiscalVazioSub: string
     fiscalStubTitulo: string
     fiscalStubSub: string
+    fiscalColTipo: string
+    fiscalColStatus: string
+    fiscalColQuando: string
     locale: string
   }
   clientesOpts: ClienteOpt[]
@@ -45,12 +52,12 @@ type Props = {
     fornecedoresOpts: Array<{ id: string; nome: string }>
     statusInicial: string
     periodoInicial: string
-  }
+  } | null
   filterSection: ReactNode
   kpiSection: ReactNode
 }
 
-function FiscalList({
+function FiscalTable({
   fiscal,
   labels,
   onSelect,
@@ -59,36 +66,38 @@ function FiscalList({
   labels: Props['panelLabels']
   onSelect: (id: string) => void
 }) {
-  if (fiscal.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2 py-10 text-center">
-        <span className="text-3xl text-jl-fg-3" aria-hidden>
-          🧾
+  const columns: EntityColumn<DocumentoFiscalPendenteRow>[] = [
+    {
+      key: 'tipo',
+      header: labels.fiscalColTipo,
+      cell: (r) => <span className="text-body font-medium text-fg">{r.tipoDoc}</span>,
+    },
+    {
+      key: 'quando',
+      header: labels.fiscalColQuando,
+      cell: (r) => (
+        <span className="text-caption text-fg-muted">
+          {formatDateTimeOrDash(r.criadoEm, labels.locale)}
         </span>
-        <p className="text-[13px] font-medium text-jl-fg-2">{labels.filaFiscalVazioTitulo}</p>
-        <p className="text-[11px] text-jl-fg-3">{labels.filaFiscalVazioSub}</p>
-      </div>
-    )
-  }
+      ),
+    },
+    {
+      key: 'status',
+      header: labels.fiscalColStatus,
+      status: (r) => ({ status: r.status }),
+    },
+  ]
 
   return (
-    <ul className="space-y-2">
-      {fiscal.map((item) => (
-        <li key={item.id}>
-          <button
-            type="button"
-            onClick={() => onSelect(item.id)}
-            className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft px-3 py-2 text-left transition hover:bg-jl-surface-elev"
-          >
-            <div>
-              <p className="text-xs font-medium text-jl-fg-1">{item.tipoDoc}</p>
-              <p className="text-[11px] text-jl-fg-3">{formatDateTimeOrDash(item.criadoEm, labels.locale)}</p>
-            </div>
-            <span className="admin-v2-badge-muted rounded-full px-2 py-1 text-[11px]">{item.status}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
+    <EntityTable
+      data={fiscal}
+      columns={columns}
+      rowKey={(r) => r.id}
+      onRowClick={(r) => onSelect(r.id)}
+      emptyState={
+        <EmptyState title={labels.filaFiscalVazioTitulo} description={labels.filaFiscalVazioSub} />
+      }
+    />
   )
 }
 
@@ -115,19 +124,14 @@ export function FinanceiroContent({
         <>
           {kpiSection}
           {filterSection}
-          <div className="admin-v2-grid-2">
-            <SectionCard title={panelLabels.titulosEmAberto}>
-              <ContasReceberTable contas={contas} labels={contasLabels} />
-              <FinanceiroReceberExtras contas={contas} clientesIniciais={clientesOpts} />
-            </SectionCard>
-            <SectionCard title={panelLabels.filaFiscal}>
-              <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
-            </SectionCard>
-          </div>
+          <SectionCard title={panelLabels.titulosEmAberto}>
+            <ContasReceberTable contas={contas} labels={contasLabels} />
+            <FinanceiroReceberExtras contas={contas} clientesIniciais={clientesOpts} />
+          </SectionCard>
         </>
       ) : null}
 
-      {activeTab === 'pagar' ? (
+      {activeTab === 'pagar' && contasPagar ? (
         <ContasPagarListClient
           idioma={contasPagar.idioma}
           locale={contasPagar.locale}
@@ -136,6 +140,7 @@ export function FinanceiroContent({
           fornecedoresOpts={contasPagar.fornecedoresOpts}
           statusInicial={contasPagar.statusInicial}
           periodoInicial={contasPagar.periodoInicial}
+          embedded
         />
       ) : null}
 
@@ -145,7 +150,7 @@ export function FinanceiroContent({
             titulo={panelLabels.fiscalStubTitulo}
             subtitulo={panelLabels.fiscalStubSub}
           />
-          <FiscalList fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
+          <FiscalTable fiscal={fiscal} labels={panelLabels} onSelect={setFiscalDetalheId} />
         </SectionCard>
       ) : null}
 

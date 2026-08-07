@@ -1,44 +1,39 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
-import { cn } from '@/lib/utils'
+import { TabNav } from '@/components/ui/admin-v2'
 import { FINANCEIRO_TABS as TABS, type FinanceiroTabId } from './financeiroTabs'
 
-// Reexport do tipo para não quebrar quem já importa daqui.
 export type { FinanceiroTabId }
 
+/** TabNav SSOT do hub Financeiro (RFC-UX-007). */
 export function FinanceiroTabNav({ activeTab }: { activeTab: FinanceiroTabId }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  function hrefFor(tab: FinanceiroTabId): string {
+  const items = TABS.map((t) => {
     const p = new URLSearchParams(searchParams.toString())
-    p.set('tab', tab)
-    return pathWithQuery(pathname || ROUTES.admin.financeiro, p)
-  }
+    p.set('tab', t.id)
+    // Troca de aba limpa filtros da aba anterior (menos estado fantasma).
+    if (t.id !== 'receber') {
+      p.delete('q')
+      p.delete('opcao')
+      p.delete('cliente')
+      p.delete('de')
+      p.delete('ate')
+      p.delete('limite')
+    }
+    if (t.id !== 'pagar') {
+      p.delete('status')
+      p.delete('periodo')
+    }
+    return {
+      id: t.id,
+      label: t.label,
+      href: pathWithQuery(pathname || ROUTES.admin.financeiro, p),
+    }
+  })
 
-  return (
-    <nav aria-label="Abas financeiro" className="flex flex-wrap gap-1 border-b border-[var(--color-border-secondary)] pb-2">
-      {TABS.map((t) => (
-        <Link
-          key={t.id}
-          href={hrefFor(t.id)}
-          className={cn(
-            'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-            activeTab === t.id
-              ? 'bg-jl-surface-elev text-jl-fg-1 shadow-sm'
-              : 'text-jl-fg-3 hover:bg-jl-surface-soft hover:text-jl-fg-1',
-          )}
-          aria-current={activeTab === t.id ? 'page' : undefined}
-        >
-          {t.label}
-        </Link>
-      ))}
-    </nav>
-  )
+  return <TabNav items={items} value={activeTab} aria-label="Abas financeiro" />
 }
-
-// parseFinanceiroTab saiu deste arquivo: é consumida pelo Server Component
-// (page.tsx) e não pode viver num módulo 'use client'. Ver ./financeiroTabs.ts.

@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { Search, Plus, FileText, XCircle, DollarSign, FilterX } from 'lucide-react'
-import { GerenteTable } from '@/components/gerente/GerenteTable'
-import { DataTablePage } from '@/components/gerente/DataTablePage'
+import { DollarSign, FileText, Plus, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DragonModal } from '@/components/ui/DragonModal'
 import { ExportAction } from '@/components/ui/ExportAction'
-import { Field, Input } from '@/components/ui/forms'
+import { EntityTable, type EntityColumn } from '@/components/ui/EntityTable'
+import { EmptyState } from '@/components/ui/feedback'
+import { MetricCard, PageActions, SectionCard } from '@/components/ui/admin-v2'
+import { PaginationBar } from '@/components/ui/PaginationBar'
+import { Field, Input, Select } from '@/components/ui/forms'
 import { emitToast } from '@/lib/gerente/toast'
 import { downloadCsvBrowser } from '@/lib/gerente/gerenteCadastroUi'
 import { fmtGerenteBRL, fmtGerenteDateTime } from '@/lib/format/gerenteValues'
@@ -34,6 +36,8 @@ type Props = Readonly<{
   fornecedoresOpts: Array<{ id: string; nome: string }>
   statusInicial: string
   periodoInicial: string
+  /** Quando true, omite título próprio (já está no hub Financeiro). */
+  embedded?: boolean
 }>
 
 const STATUS_LIST = ['todos', 'pendente', 'parcial', 'atrasado', 'pago', 'cancelado'] as const
@@ -42,6 +46,7 @@ function fmtDate(iso: string | null, locale: string): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
+
 function relativoVenc(iso: string | null, locale: string): string {
   if (!iso) return ''
   const ms = new Date(iso).getTime() - Date.now()
@@ -52,21 +57,6 @@ function relativoVenc(iso: string | null, locale: string): string {
   return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(dias, 'day')
 }
 
-function statusClass(s: string): string {
-  switch (s.toUpperCase()) {
-    case 'PAGO':
-      return 'app-badge-positive'
-    case 'PARCIAL':
-      return 'app-badge-warn'
-    case 'ATRASADO':
-      return 'app-badge-danger'
-    case 'CANCELADO':
-      return 'app-badge-neutral line-through'
-    default:
-      return 'app-badge-neutral'
-  }
-}
-
 export function ContasPagarListClient({
   idioma,
   locale,
@@ -75,6 +65,7 @@ export function ContasPagarListClient({
   fornecedoresOpts,
   statusInicial,
   periodoInicial,
+  embedded = false,
 }: Props) {
   const m = getMessages(idioma)
   const [contas, setContas] = useState<ContaPagarRow[]>(contasIniciais)
@@ -82,21 +73,17 @@ export function ContasPagarListClient({
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  // Filtros
   const [termo, setTermo] = useState('')
   const [status, setStatus] = useState<string>(statusInicial)
   const [fornecedorId, setFornecedorId] = useState('')
   const [periodo, setPeriodo] = useState(periodoInicial)
 
-  // Modais
   const [emPagamento, setEmPagamento] = useState<ContaPagarRow | null>(null)
   const [cancelando, setCancelando] = useState<ContaPagarRow | null>(null)
   const [motivoCancel, setMotivoCancel] = useState('')
   const [cancelPending, setCancelPending] = useState(false)
 
   const pageRef = useRef(1)
-  const sentinelRef = useRef<HTMLDivElement>(null)
-
   const stateRef = useRef({ hasMore, loading })
   useEffect(() => {
     stateRef.current = { hasMore, loading }
@@ -132,22 +119,8 @@ export function ContasPagarListClient({
     }
   }, [filtersDebounced])
 
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) void carregarProxima()
-      },
-      { rootMargin: '300px' },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [carregarProxima])
-
   const skipMountRefetch = useRef(true)
 
-  // Filtros — dispara após debounce
   useEffect(() => {
     if (skipMountRefetch.current) {
       skipMountRefetch.current = false
@@ -156,7 +129,7 @@ export function ContasPagarListClient({
     let cancelled = false
     setLoading(true)
     pageRef.current = 1
-    buscarContasPagarAction(1, filtersDebounced).then((r) => {
+    void buscarContasPagarAction(1, filtersDebounced).then((r) => {
       if (cancelled) return
       if (!r.ok) {
         emitToast({ kind: 'error', message: r.error })
@@ -167,16 +140,13 @@ export function ContasPagarListClient({
       setHasMore(r.hasMore)
       setLoading(false)
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [filtersDebounced])
 
   function aplicarPagamentoLocal(c: ContaPagarRow) {
     setContas((cur) => cur.map((x) => (x.id === c.id ? c : x)))
-  }
-
-  function onCancelar(c: ContaPagarRow) {
-    setMotivoCancel('')
-    setCancelando(c)
   }
 
   async function confirmarCancelamento() {
@@ -239,19 +209,11 @@ export function ContasPagarListClient({
     }
   }
 
-  function limparFiltros() {
-    setTermo('')
-    setStatus('todos')
-    setFornecedorId('')
-    setPeriodo('')
-  }
-
-  // KPIs (sobre o que está carregado + agregados completos pelos filtros)
   const kpis = useMemo(() => {
-    let totalAbertos = 0,
-      qtdAbertos = 0,
-      totalAtrasados = 0,
-      qtdAtrasados = 0
+    let totalAbertos = 0
+    let qtdAbertos = 0
+    let totalAtrasados = 0
+    let qtdAtrasados = 0
     for (const c of contas) {
       const aberto = c.valor_total - c.valor_pago
       if (c.status === 'PENDENTE' || c.status === 'PARCIAL') {
@@ -266,122 +228,169 @@ export function ContasPagarListClient({
     return { totalAbertos, qtdAbertos, totalAtrasados, qtdAtrasados }
   }, [contas])
 
-  const algumFiltroAtivo = termo || status !== 'todos' || fornecedorId || periodo
+  const columns: EntityColumn<ContaPagarRow>[] = useMemo(
+    () => [
+      {
+        key: 'fornecedor',
+        header: m.contas_pagar.col_fornecedor,
+        cell: (c) => (
+          <strong className="text-body text-fg">{c.fornecedor_nome ?? '—'}</strong>
+        ),
+      },
+      {
+        key: 'descricao',
+        header: m.contas_pagar.col_descricao,
+        cell: (c) => (
+          <div>
+            <div className="font-medium text-fg">{c.descricao}</div>
+            <div className="mt-0.5 text-caption text-fg-subtle">
+              {m.contas_pagar.lancado_em} {fmtGerenteDateTime(c.criado_em, locale)}
+            </div>
+            {c.nfe_numero ? (
+              <Link
+                href={
+                  c.nfe_importacao_id
+                    ? `${ROUTES.admin.importNfe}?id=${c.nfe_importacao_id}`
+                    : '#'
+                }
+                onClick={(e) => {
+                  if (!c.nfe_importacao_id) e.preventDefault()
+                }}
+                className="mt-1 inline-flex items-center gap-1 font-mono text-caption text-[var(--color-warning-strong)] hover:underline"
+              >
+                <FileText className="h-3 w-3" aria-hidden />
+                NF-e #{c.nfe_numero}
+              </Link>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: 'venc',
+        header: m.contas_pagar.col_vencimento,
+        cell: (c) => {
+          const podePagar = c.status !== 'PAGO' && c.status !== 'CANCELADO'
+          const ms = c.vencimento ? new Date(c.vencimento).getTime() - Date.now() : 0
+          const dias = Math.round(ms / 86400000)
+          const vencCls = !podePagar
+            ? ''
+            : dias < 0
+              ? 'font-semibold text-[var(--color-danger-strong)]'
+              : dias <= 7
+                ? 'text-[var(--color-warning)]'
+                : 'text-fg-muted'
+          return (
+            <div className={cn('tabular-nums', vencCls)}>
+              {fmtDate(c.vencimento, locale)}
+              {podePagar ? (
+                <div className="mt-0.5 text-[10px] uppercase tracking-wide opacity-85">
+                  {relativoVenc(c.vencimento, locale)}
+                </div>
+              ) : null}
+            </div>
+          )
+        },
+      },
+      {
+        key: 'valor',
+        header: m.contas_pagar.col_valor,
+        align: 'right',
+        cell: (c) => {
+          const aberto = c.valor_total - c.valor_pago
+          const pct = c.valor_total > 0 ? (c.valor_pago / c.valor_total) * 100 : 0
+          return (
+            <div>
+              <div className="text-right text-body font-bold tabular-nums text-fg">
+                {fmtGerenteBRL(c.valor_total, locale)}
+              </div>
+              {c.valor_pago > 0 && c.status !== 'CANCELADO' ? (
+                <>
+                  <div className="mt-0.5 text-right text-caption tabular-nums text-fg-subtle">
+                    {m.contas_pagar.pago_label} {fmtGerenteBRL(c.valor_pago, locale)}
+                    {aberto > 0.001 ? (
+                      <>
+                        {' · '}
+                        {m.contas_pagar.aberto_label}{' '}
+                        <strong className="text-[var(--color-warning-strong)]">
+                          {fmtGerenteBRL(aberto, locale)}
+                        </strong>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-[var(--color-surface-soft)]">
+                    <div
+                      className={cn(
+                        'h-full transition-[width]',
+                        c.status === 'PARCIAL' ? 'bg-amber-500' : 'bg-emerald-600',
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </>
+              ) : null}
+            </div>
+          )
+        },
+      },
+      {
+        key: 'status',
+        header: m.contas_pagar.col_status,
+        align: 'center',
+        status: (c) => ({
+          status: c.status,
+          label:
+            (m.contas_pagar[
+              `status_${c.status.toLowerCase()}` as keyof typeof m.contas_pagar
+            ] as string) ?? c.status,
+        }),
+      },
+    ],
+    [locale, m],
+  )
 
   return (
     <>
-      <DataTablePage
-        kpis={
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="dragon-glass-card rounded-xl border border-[var(--color-warning-border)] p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
-            {m.contas_pagar.kpi_em_aberto}
-          </div>
-          <div className="mt-1 text-xl font-bold leading-tight text-[var(--color-warning-strong)] tabular-nums">
-            {fmtGerenteBRL(kpis.totalAbertos, locale)}
-          </div>
-          <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
-            {kpis.qtdAbertos} {kpis.qtdAbertos === 1 ? m.contas_pagar.conta_sg : m.contas_pagar.conta_pl}
-          </div>
-        </div>
-        <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
-            {m.contas_pagar.kpi_atrasadas}
-          </div>
-          <div className="mt-1 text-xl font-bold leading-tight text-[var(--color-danger-strong)] tabular-nums">
-            {fmtGerenteBRL(kpis.totalAtrasados, locale)}
-          </div>
-          <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
-            {kpis.qtdAtrasados} {m.contas_pagar.atrasadas}
-          </div>
-        </div>
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
-            {m.contas_pagar.kpi_filtrado}
-          </div>
-          <div className="mt-1 text-xl font-bold leading-tight text-jl-fg-1 tabular-nums">
-            {contas.length}
-          </div>
-          <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
-            {m.contas_pagar.contas_carregadas}
-          </div>
-        </div>
-        <div className="dragon-glass-card flex flex-col items-start justify-between rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
+      <div className="admin-v2-grid-kpi">
+        <MetricCard
+          label={m.contas_pagar.kpi_em_aberto}
+          value={fmtGerenteBRL(kpis.totalAbertos, locale)}
+          icon="wallet-cards"
+          tone="warning"
+          hint={`${kpis.qtdAbertos} ${kpis.qtdAbertos === 1 ? m.contas_pagar.conta_sg : m.contas_pagar.conta_pl}`}
+        />
+        <MetricCard
+          label={m.contas_pagar.kpi_atrasadas}
+          value={fmtGerenteBRL(kpis.totalAtrasados, locale)}
+          icon="x-circle"
+          tone="danger"
+          hint={`${kpis.qtdAtrasados} ${m.contas_pagar.atrasadas}`}
+        />
+        <MetricCard
+          label={m.contas_pagar.kpi_filtrado}
+          value={String(contas.length)}
+          icon="list-filter"
+          tone="gold"
+          hint={m.contas_pagar.contas_carregadas}
+        />
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="text-caption font-semibold uppercase tracking-wide text-fg-subtle">
             {m.contas_pagar.acoes_rapidas}
-          </div>
-          <Button type="button" className="app-btn-accent mt-2 gap-1.5" asChild>
-            <Link href={ROUTES.admin.importNfe}>
-              <Plus className="h-4 w-4" aria-hidden /> {m.contas_pagar.lancar}
-            </Link>
-          </Button>
-          <p className="mt-2 text-[11px] leading-snug text-jl-fg-3">{m.contas_pagar.origem_nfe_hint}</p>
+          </p>
+          <PageActions className="mt-2">
+            <Button type="button" variant="primary" size="sm" className="gap-1.5" asChild>
+              <Link href={ROUTES.admin.importNfe}>
+                <Plus className="h-4 w-4" aria-hidden />
+                {m.contas_pagar.lancar}
+              </Link>
+            </Button>
+          </PageActions>
+          <p className="mt-2 text-caption leading-snug text-fg-subtle">{m.contas_pagar.origem_nfe_hint}</p>
         </div>
       </div>
-        }
-        filters={
-          <div className="dragon-glass-card flex w-full flex-wrap items-center gap-2 rounded-xl p-3">
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
-          <input
-            type="search"
-            value={termo}
-            onChange={(e) => setTermo(e.target.value)}
-            placeholder={m.contas_pagar.placeholder_busca}
-            aria-label={m.contas_pagar.placeholder_busca}
-            className="app-input h-9 w-full rounded-md pl-9 pr-3 text-sm shadow-inner"
-          />
-        </div>
 
-        <input
-          type="month"
-          value={periodo}
-          onChange={(e) => setPeriodo(e.target.value)}
-          aria-label={m.contas_pagar.filtro_periodo}
-          className="app-input h-9 rounded-md px-3 text-sm tabular-nums"
-        />
-
-        <select
-          value={fornecedorId}
-          onChange={(e) => setFornecedorId(e.target.value)}
-          aria-label={m.contas_pagar.filtro_fornecedor}
-          className="app-select h-9 min-w-[180px] rounded-md px-3 text-sm"
-        >
-          <option value="">{m.contas_pagar.todos_fornecedores}</option>
-          {fornecedoresOpts.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nome}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          {STATUS_LIST.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatus(s)}
-              className={cn(
-                'app-chip rounded-full px-2.5 py-1 text-[11px] font-medium',
-                status === s && 'app-chip-active',
-              )}
-            >
-              {m.contas_pagar[`status_${s}` as keyof typeof m.contas_pagar] as string}
-            </button>
-          ))}
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          {algumFiltroAtivo && (
-            <button
-              type="button"
-              onClick={limparFiltros}
-              className="inline-flex items-center gap-1 text-xs text-jl-fg-3 hover:text-jl-fg-1"
-            >
-              <FilterX className="h-3 w-3" aria-hidden />
-              {m.contas_pagar.limpar_filtros}
-            </button>
-          )}
+      <SectionCard
+        title={embedded ? m.contas_pagar.titulo : undefined}
+        action={
           <ExportAction
             format="csv"
             label={exporting ? m.comum.carregando : m.gerente.exportar_csv}
@@ -389,148 +398,110 @@ export function ContasPagarListClient({
             disabled={exporting || contas.length === 0}
             onExport={() => void onExportar()}
           />
-        </div>
-          </div>
         }
-        pagination={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
-
-      <GerenteTable
-        tone="dragon"
-        compact
-        loading={loading && contas.length === 0}
-        columns={[
-          { key: 'fornecedor', header: m.contas_pagar.col_fornecedor, priority: 'primary'     },
-          { key: 'descricao',  header: m.contas_pagar.col_descricao                            },
-          { key: 'venc',       header: m.contas_pagar.col_vencimento, width: 140               },
-          { key: 'valor',      header: m.contas_pagar.col_valor,      width: 200, numeric: true, priority: 'primary' },
-          { key: 'status',     header: m.contas_pagar.col_status,     width: 110, align: 'center'                     },
-          { key: 'acoes',      header: <span className="sr-only">{m.contas_pagar.col_acoes}</span>, width: 150, align: 'right', priority: 'contextual' },
-        ]}
-      >
-        {contas.map((c) => {
-          const aberto = c.valor_total - c.valor_pago
-          const pct = c.valor_total > 0 ? (c.valor_pago / c.valor_total) * 100 : 0
-          const podePagar = c.status !== 'PAGO' && c.status !== 'CANCELADO'
-          const ms = c.vencimento ? new Date(c.vencimento).getTime() - Date.now() : 0
-          const dias = Math.round(ms / 86400000)
-          const vencCls = !podePagar
-            ? ''
-            : dias < 0
-              ? 'text-[var(--color-danger-strong)] font-semibold'
-              : dias <= 7
-                ? 'text-[var(--color-warning)]'
-                : 'text-jl-fg-1/80'
-
-          return (
-            <tr key={c.id} className="gerente-fin-row-hover transition-colors">
-              <td className="gerente-fin-cell px-3 py-2">
-                <strong className="text-jl-fg-1">{c.fornecedor_nome ?? '—'}</strong>
-              </td>
-              <td className="px-3 py-2">
-                <div className="font-medium text-jl-fg-1">{c.descricao}</div>
-                <div className="mt-0.5 text-[11px] text-jl-fg-3">
-                  {m.contas_pagar.lancado_em} {fmtGerenteDateTime(c.criado_em, locale)}
-                </div>
-                {c.nfe_numero && (
-                  <Link
-                    href={c.nfe_importacao_id ? `/gerente/estoque/importar-nfe?id=${c.nfe_importacao_id}` : '#'}
-                    onClick={(e) => !c.nfe_importacao_id && e.preventDefault()}
-                    className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] text-[var(--color-warning-strong)] hover:underline"
-                  >
-                    <FileText className="h-3 w-3" aria-hidden />
-                    NF-e #{c.nfe_numero}
-                  </Link>
+        <div className="mb-3 flex w-full flex-col gap-2.5 border-b border-[var(--color-border-secondary)] pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              value={termo}
+              onChange={(e) => setTermo(e.target.value)}
+              placeholder={m.contas_pagar.placeholder_busca}
+              aria-label={m.contas_pagar.placeholder_busca}
+              className="min-w-[14rem] flex-1"
+            />
+            <Input
+              type="month"
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
+              aria-label={m.contas_pagar.filtro_periodo}
+              className="w-auto"
+            />
+            <Select
+              value={fornecedorId}
+              onChange={(e) => setFornecedorId(e.target.value)}
+              aria-label={m.contas_pagar.filtro_fornecedor}
+              className="min-w-[11rem]"
+            >
+              <option value="">{m.contas_pagar.todos_fornecedores}</option>
+              {fornecedoresOpts.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {STATUS_LIST.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatus(s)}
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-caption font-medium transition-colors',
+                  status === s
+                    ? 'border-brand bg-[var(--color-info-bg)] text-brand'
+                    : 'border-[var(--color-border)] text-fg-muted hover:text-fg',
                 )}
-              </td>
-              <td className={cn('gerente-fin-cell px-3 py-2 tabular-nums', vencCls)}>
-                {fmtDate(c.vencimento, locale)}
-                {podePagar && (
-                  <div className="mt-0.5 text-[10px] uppercase tracking-[0.10em] opacity-85">
-                    {relativoVenc(c.vencimento, locale)}
-                  </div>
-                )}
-              </td>
-              <td className="px-3 py-2">
-                <div className="text-right text-sm font-bold tabular-nums text-jl-fg-1">
-                  {fmtGerenteBRL(c.valor_total, locale)}
-                </div>
-                {c.valor_pago > 0 && c.status !== 'CANCELADO' && (
-                  <>
-                    <div className="mt-0.5 text-right text-[11px] tabular-nums text-jl-fg-3">
-                      {m.contas_pagar.pago_label} {fmtGerenteBRL(c.valor_pago, locale)}
-                      {aberto > 0.001 && (
-                        <>
-                          {' · '}
-                          {m.contas_pagar.aberto_label}{' '}
-                          <strong className="text-[var(--color-warning-strong)]">{fmtGerenteBRL(aberto, locale)}</strong>
-                        </>
-                      )}
-                    </div>
-                    <div className="mt-1 h-1 overflow-hidden rounded-full bg-jl-surface-soft">
-                      <div
-                        className={cn(
-                          'h-full transition-[width] duration-200',
-                          c.status === 'PARCIAL'
-                            ? 'bg-gradient-to-r from-amber-400 to-amber-700'
-                            : 'bg-gradient-to-r from-emerald-400 to-emerald-700',
-                        )}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </>
-                )}
-              </td>
-              <td className="px-3 py-2 text-center">
-                <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold', statusClass(c.status))}>
-                  {m.contas_pagar[`status_${c.status.toLowerCase()}` as keyof typeof m.contas_pagar] as string ?? c.status}
-                </span>
-              </td>
-              <td className="px-3 py-2 text-right">
-                <div className="gerente-row-actions flex items-center justify-end gap-2">
-                  {podePagar && (
-                    <button
-                      type="button"
-                      onClick={() => setEmPagamento(c)}
-                      className="app-btn-accent inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold"
-                      aria-label={`${m.contas_pagar.registrar_pagamento} — ${c.descricao}`}
-                    >
-                      <DollarSign className="h-3 w-3" aria-hidden />
-                      {m.contas_pagar.btn_pagar}
-                    </button>
-                  )}
-                  {podePagar && (
-                    <button
-                      type="button"
-                      onClick={() => void onCancelar(c)}
-                      aria-label={`${m.contas_pagar.cancelar} — ${c.descricao}`}
-                      title={m.contas_pagar.cancelar}
-                      className="app-btn-neutral inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-danger-strong)] transition-colors hover:border-[var(--color-danger-strong)]/50 hover:text-[var(--color-danger-strong)]"
-                    >
-                      <XCircle className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          )
-        })}
+              >
+                {m.contas_pagar[`status_${s}` as keyof typeof m.contas_pagar] as string}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {contas.length === 0 && !loading && (
-          <tr>
-            <td colSpan={6} className="gerente-fin-empty px-4 py-12 text-center">
-              <div className="font-serif text-5xl text-[var(--color-warning-strong)]/60" style={{ fontFamily: 'var(--font-serif-han)' }}>
-                应
+        <EntityTable
+          data={contas}
+          columns={columns}
+          rowKey={(c) => c.id}
+          loading={loading && contas.length === 0}
+          emptyState={
+            <EmptyState title={m.contas_pagar.vazio_titulo} description={m.contas_pagar.vazio_sub} />
+          }
+          rowActions={(c) => {
+            const podePagar = c.status !== 'PAGO' && c.status !== 'CANCELADO'
+            if (!podePagar) return null
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  className="gap-1"
+                  onClick={() => setEmPagamento(c)}
+                  aria-label={`${m.contas_pagar.registrar_pagamento} — ${c.descricao}`}
+                >
+                  <DollarSign className="h-3 w-3" aria-hidden />
+                  {m.contas_pagar.btn_pagar}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setMotivoCancel('')
+                    setCancelando(c)
+                  }}
+                  aria-label={`${m.contas_pagar.cancelar} — ${c.descricao}`}
+                  title={m.contas_pagar.cancelar}
+                >
+                  <XCircle className="h-3.5 w-3.5 text-[var(--color-danger-strong)]" aria-hidden />
+                </Button>
               </div>
-              <div className="mt-3 text-sm font-semibold text-jl-fg-1">{m.contas_pagar.vazio_titulo}</div>
-              <div className="mt-1 text-xs text-jl-fg-3">{m.contas_pagar.vazio_sub}</div>
-            </td>
-          </tr>
-        )}
-      </GerenteTable>
-      </DataTablePage>
+            )
+          }}
+        />
 
-      {emPagamento && (
+        <PaginationBar
+          className="mt-3"
+          mode="infinite"
+          hasMore={hasMore}
+          onLoadMore={() => void carregarProxima()}
+          loadMoreLabel={loading ? m.comum.carregando : 'Carregar mais'}
+        />
+      </SectionCard>
+
+      {emPagamento ? (
         <PagamentoModal
           key={emPagamento.id}
           idioma={idioma}
@@ -542,7 +513,7 @@ export function ContasPagarListClient({
             setEmPagamento(null)
           }}
         />
-      )}
+      ) : null}
 
       <DragonModal
         open={cancelando != null}

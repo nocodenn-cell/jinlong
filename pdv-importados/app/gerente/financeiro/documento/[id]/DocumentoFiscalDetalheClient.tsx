@@ -3,8 +3,11 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
-import { GerenteStatusBadge } from '@/components/gerente/GerenteStatusBadge'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
+import { PageShell, SectionCard } from '@/components/ui/admin-v2'
+import { InlineAlert } from '@/components/ui/InlineAlert'
+import { StatusChip } from '@/components/ui/StatusChip'
+import { EmptyState } from '@/components/ui/feedback'
 import { useGerenteMutation } from '@/lib/hooks/useGerenteMutation'
 import { reprocessarDocumentoFiscal } from '../../actions'
 import {
@@ -51,7 +54,7 @@ export function DocumentoFiscalDetalheClient({
   doc,
   eventos,
   voltarLabel,
-  voltarHref = '/gerente/financeiro',
+  voltarHref = '/admin/financeiro?tab=fiscal',
   locale,
 }: Props) {
   const router = useRouter()
@@ -70,103 +73,111 @@ export function DocumentoFiscalDetalheClient({
   const podeReprocessar = doc.status === 'ERRO' || doc.status === 'PENDENTE'
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-      <Link href={voltarHref} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {voltarLabel}
-      </Link>
-      <h1 className="gerente-fin-page-title mt-4 text-2xl font-semibold tracking-tight">Documento fiscal</h1>
-      <p className="gerente-fin-muted mb-6 text-sm leading-relaxed">
-        Timeline auditável (quem/o quê/quando conforme dados gravados no backend).
-      </p>
-
-      <section className="dragon-glass-card mb-6 rounded-xl p-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <GerenteStatusBadge status={doc.status} />
-          <span className="gerente-fin-cell text-sm">
-            <strong>Tipo:</strong> {doc.tipo_doc}
+    <PageShell
+      title="Documento fiscal"
+      subtitle="Timeline auditável (quem/o quê/quando conforme dados gravados no backend)."
+      filters={
+        <nav aria-label="Breadcrumb" className="text-caption text-fg-muted">
+          <Link href={voltarHref} className="font-medium text-fg hover:underline">
+            {voltarLabel}
+          </Link>
+          <span aria-hidden className="mx-1.5">
+            /
           </span>
-        </div>
-        <dl className="mt-3 grid gap-2 text-sm">
+          <span className="font-mono text-fg">{doc.id.slice(0, 8)}…</span>
+        </nav>
+      }
+    >
+      <SectionCard
+        title="Resumo"
+        action={<StatusChip status={doc.status} />}
+      >
+        <dl className="grid gap-2 text-body">
           <div>
-            <dt className="gerente-fin-muted inline">Venda </dt>
-            <dd className="inline font-mono text-xs">{doc.venda_id}</dd>
+            <dt className="inline text-fg-subtle">Tipo · </dt>
+            <dd className="inline text-fg">{doc.tipo_doc}</dd>
           </div>
           <div>
-            <dt className="gerente-fin-muted inline">Tentativas </dt>
-            <dd className="gerente-fin-cell inline">{Number(doc.tentativas ?? 0)}</dd>
+            <dt className="inline text-fg-subtle">Venda · </dt>
+            <dd className="inline font-mono text-caption">{doc.venda_id}</dd>
+          </div>
+          <div>
+            <dt className="inline text-fg-subtle">Tentativas · </dt>
+            <dd className="inline tabular-nums">{Number(doc.tentativas ?? 0)}</dd>
           </div>
           {doc.proxima_tentativa_em ? (
             <div>
-              <dt className="gerente-fin-muted inline">Próxima tentativa </dt>
-              <dd className="gerente-fin-cell inline">{doc.proxima_tentativa_em}</dd>
+              <dt className="inline text-fg-subtle">Próxima tentativa · </dt>
+              <dd className="inline">{doc.proxima_tentativa_em}</dd>
             </div>
           ) : null}
           {doc.ultima_tentativa_em ? (
             <div>
-              <dt className="gerente-fin-muted inline">Última tentativa </dt>
-              <dd className="gerente-fin-cell inline">{doc.ultima_tentativa_em}</dd>
-            </div>
-          ) : null}
-          {doc.ultimo_erro ? (
-            <div>
-              <dt className="inline app-badge-danger rounded px-1 py-0.5">Erro atual </dt>
-              <dd className="inline app-badge-danger rounded px-1 py-0.5">{doc.ultimo_erro}</dd>
-            </div>
-          ) : null}
-          {doc.fiscal_error_code ? (
-            <div>
-              <dt className="gerente-fin-muted inline">Código fiscal </dt>
-              <dd className="gerente-fin-cell inline">{doc.fiscal_error_code}</dd>
+              <dt className="inline text-fg-subtle">Última tentativa · </dt>
+              <dd className="inline">{doc.ultima_tentativa_em}</dd>
             </div>
           ) : null}
           {doc.chave_fiscal ? (
             <div>
-              <dt className="gerente-fin-muted inline">Chave </dt>
-              <dd className="inline font-mono text-xs">{doc.chave_fiscal}</dd>
+              <dt className="inline text-fg-subtle">Chave · </dt>
+              <dd className="inline font-mono text-caption">{doc.chave_fiscal}</dd>
             </div>
           ) : null}
           <div>
-            <dt className="gerente-fin-muted inline">Criado em </dt>
-            <dd className="gerente-fin-cell inline">{doc.created_at}</dd>
+            <dt className="inline text-fg-subtle">Criado · </dt>
+            <dd className="inline">{doc.created_at}</dd>
           </div>
           <div>
-            <dt className="gerente-fin-muted inline">Atualizado em </dt>
-            <dd className="gerente-fin-cell inline">{doc.updated_at}</dd>
+            <dt className="inline text-fg-subtle">Atualizado · </dt>
+            <dd className="inline">{doc.updated_at}</dd>
           </div>
         </dl>
+
+        {doc.ultimo_erro ? (
+          <InlineAlert tone="danger" title="Erro atual" className="mt-4">
+            {doc.ultimo_erro}
+            {doc.fiscal_error_code ? (
+              <span className="mt-1 block text-caption">Código: {doc.fiscal_error_code}</span>
+            ) : null}
+          </InlineAlert>
+        ) : null}
+
         {podeReprocessar ? (
           <ConfirmActionButton
             type="button"
             disabled={loadReprocessar}
             confirmMessage={`Confirma reprocessar o documento ${doc.id.slice(0, 8)}…? O item voltará para a fila fiscal.`}
             onClick={() => void mutReprocessar(null)}
-            className="mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold shadow-md transition-[filter] disabled:cursor-not-allowed disabled:opacity-70 app-btn-danger"
+            className="mt-4"
+            variant="danger"
           >
             {loadReprocessar ? 'Reprocessando...' : 'Reprocessar manualmente'}
           </ConfirmActionButton>
         ) : null}
-      </section>
+      </SectionCard>
 
-      <section className="dragon-glass-card rounded-xl p-5">
-        <h2 className="gerente-section-accent mb-4 text-base font-semibold">Timeline</h2>
+      <SectionCard title="Timeline">
         {eventos.length === 0 ? (
-          <p className="gerente-fin-muted text-sm">Nenhum evento registrado (aplique a migration 066).</p>
+          <EmptyState
+            title="Nenhum evento registrado"
+            description="Aplique a migration 066 se a timeline estiver vazia em ambiente novo."
+          />
         ) : (
-          <ol className="m-0 flex list-decimal flex-col gap-4 pl-5 text-sm">
+          <ol className="m-0 flex list-decimal flex-col gap-4 pl-5 text-body">
             {eventos.map((e) => {
               const detalhes = linhasDescricaoPayloadGenerico(e.evento_tipo, e.payload, locale)
               return (
                 <li key={e.id}>
-                  <div className="gerente-fin-cell font-semibold">{labelFiscalEventoTipo(e.evento_tipo)}</div>
-                  <div className="gerente-fin-muted mt-0.5 text-xs">
+                  <div className="font-semibold text-fg">{labelFiscalEventoTipo(e.evento_tipo)}</div>
+                  <div className="mt-0.5 text-caption text-fg-muted">
                     {e.created_at}
                     {e.status_antes || e.status_depois
                       ? ` · ${e.status_antes ?? '—'} → ${e.status_depois ?? '—'}`
                       : ''}
                   </div>
-                  <div className="gerente-fin-muted mt-0.5 text-xs">Origem: {e.origem_acao}</div>
+                  <div className="mt-0.5 text-caption text-fg-muted">Origem: {e.origem_acao}</div>
                   {detalhes.length > 0 ? (
-                    <ul className="gerente-fin-cell mt-2 list-disc space-y-1 pl-4 text-xs">
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-caption text-fg">
                       {detalhes.map((line, i) => (
                         <li key={i}>{line}</li>
                       ))}
@@ -177,7 +188,7 @@ export function DocumentoFiscalDetalheClient({
             })}
           </ol>
         )}
-      </section>
-    </div>
+      </SectionCard>
+    </PageShell>
   )
 }

@@ -54,7 +54,7 @@ export default async function AdminDocumentoFiscalPage({ params }: PageProps) {
       doc={doc}
       eventos={eventos}
       voltarLabel="Financeiro"
-      voltarHref={ROUTES.admin.financeiro}
+      voltarHref={`${ROUTES.admin.financeiro}?tab=fiscal`}
       locale={localeFromIdioma(session.idioma)}
     />
   )

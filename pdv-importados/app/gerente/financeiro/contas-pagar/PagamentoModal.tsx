@@ -144,10 +144,10 @@ export function PagamentoModal({ idioma, locale, conta, onClose, onPagamentoRegi
       closeLabel={m.comum.fechar ?? 'Fechar'}
       footer={
         <>
-          <Button type="button" variant="secondary" className="app-btn-neutral" onClick={fechar} disabled={salvando}>
+          <Button type="button" variant="secondary" onClick={fechar} disabled={salvando}>
             {m.comum.cancelar}
           </Button>
-          <Button type="submit" form="pg-form" className="app-btn-accent" disabled={salvando || !valorNum}>
+          <Button type="submit" form="pg-form" variant="primary" disabled={salvando || !valorNum}>
             {salvando
               ? m.comum.carregando ?? '…'
               : quita

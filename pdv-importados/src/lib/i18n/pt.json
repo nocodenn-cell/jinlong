@@ -2213,6 +2213,8 @@
     "financeiro_col_vencimento": "Vencimento",
     "financeiro_col_pago": "Pago",
     "financeiro_col_aberto": "Aberto",
+    "financeiro_col_tipo_doc": "Tipo",
+    "financeiro_col_quando": "Quando",
     "financeiro_status_aberto": "Aberto",
     "financeiro_status_parcial": "Parcial",
     "financeiro_status_quitado": "Quitado",

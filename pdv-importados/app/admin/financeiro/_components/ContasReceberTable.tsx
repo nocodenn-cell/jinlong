@@ -1,17 +1,12 @@
 'use client'
 
 /**
- * FastProduct Admin — ContasReceberTable (Fase 6)
- *
- * Tabela de contas a receber. Usa o DataTable genérico (Fase 2). A LISTAGEM é
- * server-side (limitada em `limite`); esta tabela só renderiza os dados que
- * chegam, e o sort dos headers ordena localmente (client-side).
+ * Contas a receber — EntityTable SSOT (Sprint 2 / RFC-UX-007).
  */
 
-import { DataTable, type Column } from '@/components/ui/DataTable'
-import { formatBRL } from '@/lib/format/money'
+import { EntityTable, type EntityColumn } from '@/components/ui/EntityTable'
+import { EmptyState } from '@/components/ui/feedback'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
-import { cn } from '@/lib/utils'
 
 export type ContaLinha = {
   id: string
@@ -39,30 +34,25 @@ export type ContasLabels = {
   locale: string
 }
 
-function StatusPill({ status, labels }: { status: string; labels: ContasLabels }) {
-  const isAberto = String(status).toUpperCase() === 'ABERTO'
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none',
-        isAberto ? 'admin-v2-badge-warning' : 'admin-v2-badge-gold',
-      )}
-    >
-      {isAberto ? labels.statusAberto : labels.statusParcial}
-    </span>
-  )
+function statusLabel(status: string, labels: ContasLabels): string {
+  const s = String(status).toUpperCase()
+  if (s === 'ABERTO') return labels.statusAberto
+  if (s === 'QUITADO' || s === 'PAGO') return labels.statusQuitado
+  return labels.statusParcial
 }
 
 export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; labels: ContasLabels }) {
-  const columns: Column<ContaLinha>[] = [
+  const columns: EntityColumn<ContaLinha>[] = [
     {
       key: 'cliente',
       header: labels.colCliente,
       sortValue: (r) => r.cliente_nome,
       cell: (r) => (
         <div className="min-w-0">
-          <p className="max-w-[240px] truncate text-[12px] font-medium text-jl-fg-1">{r.cliente_nome}</p>
-          {r.descricao ? <p className="max-w-[240px] truncate text-[10px] text-jl-fg-3">{r.descricao}</p> : null}
+          <p className="max-w-[240px] truncate text-body font-medium text-fg">{r.cliente_nome}</p>
+          {r.descricao ? (
+            <p className="max-w-[240px] truncate text-caption text-fg-subtle">{r.descricao}</p>
+          ) : null}
         </div>
       ),
     },
@@ -71,7 +61,7 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
       header: labels.colVencimento,
       sortValue: (r) => r.vencimento ?? '',
       cell: (r) => (
-        <span className="whitespace-nowrap text-[12px] text-jl-fg-2">
+        <span className="whitespace-nowrap text-body text-fg-muted">
           {formatDateTimeOrDash(r.vencimento, labels.locale, 'short')}
         </span>
       ),
@@ -79,54 +69,38 @@ export function ContasReceberTable({ contas, labels }: { contas: ContaLinha[]; l
     {
       key: 'total',
       header: labels.colTotal,
-      align: 'right',
-      sortValue: (r) => r.valor_total,
-      cell: (r) => <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.valor_total)}</span>,
+      money: (r) => r.valor_total,
+      moneyLocale: labels.locale,
     },
     {
       key: 'pago',
       header: labels.colPago,
-      align: 'right',
-      sortValue: (r) => r.valor_pago,
-      cell: (r) =>
-        r.valor_pago > 0 ? (
-          <span className="text-[12px] font-medium text-emerald-400">{formatBRL(r.valor_pago)}</span>
-        ) : (
-          <span className="text-[12px] text-jl-fg-3">—</span>
-        ),
+      money: (r) => r.valor_pago,
+      moneyLocale: labels.locale,
     },
     {
       key: 'aberto',
       header: labels.colAberto,
-      align: 'right',
-      sortValue: (r) => r.valor_aberto,
-      cell: (r) =>
-        r.valor_aberto > 0 ? (
-          <span className="text-[12px] font-medium text-red-400">{formatBRL(r.valor_aberto)}</span>
-        ) : (
-          <span className="text-[12px] text-emerald-400">{labels.statusQuitado}</span>
-        ),
+      money: (r) => r.valor_aberto,
+      moneyLocale: labels.locale,
     },
     {
       key: 'status',
       header: labels.colStatus,
       align: 'center',
-      cell: (r) => <StatusPill status={r.status} labels={labels} />,
+      status: (r) => ({
+        status: String(r.status).toUpperCase(),
+        label: statusLabel(r.status, labels),
+      }),
     },
   ]
 
   return (
-    <DataTable
+    <EntityTable
       data={contas}
       columns={columns}
       rowKey={(r) => r.id}
-      emptyState={
-        <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <span className="text-4xl text-jl-fg-3" aria-hidden>📋</span>
-          <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
-          <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
-        </div>
-      }
+      emptyState={<EmptyState title={labels.vazioTitulo} description={labels.vazioSub} />}
       className="rounded-none border-x-0 border-b-0"
     />
   )

@@ -1,11 +1,13 @@
 /**
  * FastProduct Admin — Financeiro unificado (Receber + Pagar + Fiscal)
+ * Sprint 2 / RFC-UX-007: PageShell + TabNav + fetch por aba.
  */
 
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
-import { MetricCard, PageHeader } from '@/components/ui/admin-v2'
+import { MetricCard, PageShell } from '@/components/ui/admin-v2'
 import {
   fetchContasReceberListagem,
   fetchFinanceiroTitulosKpis,
@@ -19,7 +21,6 @@ import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 import { ROUTES, pathWithQuery } from '@shared-core/navigation/routes'
-import Link from 'next/link'
 import { type ContaLinha } from './_components/ContasReceberTable'
 import { FinanceiroContent } from './_components/FinanceiroContent'
 import { parseFinanceiroTab } from './_components/financeiroTabs'
@@ -56,19 +57,38 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   const statusPagar = sp.status ?? 'todos'
   const periodoPagar = sp.periodo ?? ''
 
+  const emptyContas: ContaLinha[] = []
+  const emptyFiscal: Array<{
+    id: string
+    vendaId: string
+    tipoDoc: string
+    status: string
+    tentativas: number
+    ultimoErro: string | null
+    criadoEm: string
+  }> = []
+
   const [listaRes, kpisRes, fiscalRes, clientesRes, pagarRes, fornRes] = await Promise.all([
-    fetchContasReceberListagem(supabase, filters, limite),
-    fetchFinanceiroTitulosKpis(supabase),
-    supabase
-      .from('documentos_fiscais_pendentes')
-      .select('id, venda_id, tipo_doc, status, tentativas, ultimo_erro, created_at')
-      .in('status', ['PENDENTE', 'ERRO'])
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    buscarClientesPaginadosAction(1),
-    buscarContasPagarAction(1, { status: statusPagar, periodo: periodoPagar || undefined }),
-    buscarFornecedoresPaginadosAction(1, { status: 'ativos' }),
+    activeTab === 'receber'
+      ? fetchContasReceberListagem(supabase, filters, limite)
+      : Promise.resolve({ titulos: [], capped: false }),
+    activeTab === 'receber' ? fetchFinanceiroTitulosKpis(supabase) : Promise.resolve(null),
+    activeTab === 'fiscal'
+      ? supabase
+          .from('documentos_fiscais_pendentes')
+          .select('id, venda_id, tipo_doc, status, tentativas, ultimo_erro, created_at')
+          .in('status', ['PENDENTE', 'ERRO'])
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(50)
+      : Promise.resolve({ data: null }),
+    activeTab === 'receber' ? buscarClientesPaginadosAction(1) : Promise.resolve({ ok: false as const }),
+    activeTab === 'pagar'
+      ? buscarContasPagarAction(1, { status: statusPagar, periodo: periodoPagar || undefined })
+      : Promise.resolve({ ok: false as const }),
+    activeTab === 'pagar'
+      ? buscarFornecedoresPaginadosAction(1, { status: 'ativos' })
+      : Promise.resolve({ ok: false as const }),
   ])
 
   const fiscal = (fiscalRes.data ?? []).map((row) => ({
@@ -81,18 +101,24 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
     criadoEm: row.created_at,
   }))
 
-  const contas: ContaLinha[] = listaRes.titulos.map((t) => ({
-    id: t.id,
-    cliente_nome: t.cliente_nome ?? '—',
-    valor_total: t.valor_total,
-    valor_aberto: t.valor_aberto,
-    valor_pago: t.valor_total - t.valor_aberto,
-    status: t.status,
-    vencimento: t.vencimento,
-    descricao: t.descricao,
-  }))
+  const contas: ContaLinha[] =
+    activeTab === 'receber'
+      ? listaRes.titulos.map((t) => ({
+          id: t.id,
+          cliente_nome: t.cliente_nome ?? '—',
+          valor_total: t.valor_total,
+          valor_aberto: t.valor_aberto,
+          valor_pago: t.valor_total - t.valor_aberto,
+          status: t.status,
+          vencimento: t.vencimento,
+          descricao: t.descricao,
+        }))
+      : emptyContas
 
-  const clientesOpts = clientesRes.ok ? clientesRes.clientes.map((c) => ({ id: c.id, nome: c.nome })) : []
+  const clientesOpts =
+    clientesRes.ok && 'clientes' in clientesRes
+      ? clientesRes.clientes.map((c) => ({ id: c.id, nome: c.nome }))
+      : []
 
   const filterDefs: FilterDef[] = [
     { type: 'search', key: 'q', placeholder: ui.financeiro_filtro_placeholder },
@@ -127,109 +153,119 @@ export default async function AdminFinanceiroPage({ searchParams }: PageProps) {
   }
 
   const chips: Array<{ key: string; label: string }> = []
-  if (filters.nomeCliente) chips.push({ key: 'cliente', label: ui.financeiro_chip_cliente.replace('{{nome}}', filters.nomeCliente) })
+  if (filters.nomeCliente) {
+    chips.push({ key: 'cliente', label: ui.financeiro_chip_cliente.replace('{{nome}}', filters.nomeCliente) })
+  }
   if (filters.de) chips.push({ key: 'de', label: ui.financeiro_chip_de.replace('{{data}}', filters.de) })
   if (filters.ate) chips.push({ key: 'ate', label: ui.financeiro_chip_ate.replace('{{data}}', filters.ate) })
   if (filters.opcao !== 'mix') chips.push({ key: 'opcao', label: statusChipLabel[filters.opcao] ?? filters.opcao })
 
-  const kpiSection = (
-    <div className="admin-v2-grid-kpi">
-      <MetricCard label={ui.financeiro_kpi_titulos} value={String(kpisRes.titulosAbertosCount)} icon="wallet-cards" tone="gold" />
-      <MetricCard
-        label={ui.financeiro_kpi_valor_aberto}
-        value={formatBRL(kpisRes.valorAbertoTotal)}
-        icon="dollar-sign"
-        tone="gold"
-        hint={
-          kpisRes.kpiValorTruncado
-            ? ui.financeiro_kpi_hint_capped.replace('{{n}}', String(kpisRes.titulosAbertosCount))
-            : undefined
-        }
-      />
-      <MetricCard
-        label={ui.financeiro_kpi_registros}
-        value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
-        icon="list-filter"
-        tone="gold"
-        // Truncagem já era detectada e sinalizada com "N+". O que faltava era
-        // dizer o que fazer: os filtros de busca/cliente/vencimento acima já
-        // estreitam o conjunto. Paginação real depende de revisão da ADR-010.
-        hint={
-          listaRes.capped
-            ? ui.financeiro_kpi_truncado.replace('{{n}}', String(contas.length))
-            : undefined
-        }
-      />
-      <MetricCard label={ui.financeiro_kpi_docs_fiscais} value={String(fiscal.length)} icon="file-check-2" tone="warning" />
-    </div>
-  )
-
-  const filterSection = (
-    <div className="border-b border-[var(--color-border-secondary)] pb-3">
-      <Suspense fallback={<div className="h-9" />}>
-        <FilterBar filters={filterDefs} />
-      </Suspense>
-      {chips.length > 0 ? (
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          {chips.map((chip) => (
-            <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
-              {chip.label}
-              <span aria-hidden className="text-jl-fg-3">
-                ✕
-              </span>
-            </Link>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
-
-  return (
-    <div className="admin-v2-page">
-      <PageHeader title={ui.financeiro_titulo} subtitle={ui.financeiro_subtitulo} />
-
-      <div className="admin-v2-stack">
-        <FinanceiroContent
-          activeTab={activeTab}
-          contas={contas}
-          fiscal={fiscal}
-          clientesOpts={clientesOpts}
-          filterSection={filterSection}
-          kpiSection={kpiSection}
-          panelLabels={{
-            titulosEmAberto: ui.financeiro_section_titulos,
-            filaFiscal: ui.financeiro_section_fila,
-            filaFiscalVazioTitulo: ui.financeiro_fila_fiscal_vazio_titulo,
-            filaFiscalVazioSub: ui.financeiro_fila_fiscal_vazio_sub,
-            fiscalStubTitulo: ui.financeiro_fiscal_stub_titulo,
-            fiscalStubSub: ui.financeiro_fiscal_stub_sub,
-            locale,
-          }}
-          contasLabels={{
-            colCliente: ui.financeiro_col_cliente,
-            colVencimento: ui.financeiro_col_vencimento,
-            colTotal: m.gerente.col_total,
-            colPago: ui.financeiro_col_pago,
-            colAberto: ui.financeiro_col_aberto,
-            colStatus: m.gerente.col_status,
-            statusAberto: ui.financeiro_status_aberto,
-            statusParcial: ui.financeiro_status_parcial,
-            statusQuitado: ui.financeiro_status_quitado,
-            vazioTitulo: ui.financeiro_vazio_titulo,
-            vazioSub: ui.financeiro_vazio_sub,
-            locale,
-          }}
-          contasPagar={{
-            idioma: session.idioma,
-            locale,
-            contasIniciais: pagarRes.ok ? pagarRes.contas : [],
-            hasMoreInicial: pagarRes.ok ? pagarRes.hasMore : false,
-            fornecedoresOpts: fornRes.ok ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome })) : [],
-            statusInicial: statusPagar,
-            periodoInicial: periodoPagar,
-          }}
+  const kpiSection =
+    activeTab === 'receber' && kpisRes ? (
+      <div className="admin-v2-grid-kpi">
+        <MetricCard
+          label={ui.financeiro_kpi_titulos}
+          value={String(kpisRes.titulosAbertosCount)}
+          icon="wallet-cards"
+          tone="gold"
+        />
+        <MetricCard
+          label={ui.financeiro_kpi_valor_aberto}
+          value={formatBRL(kpisRes.valorAbertoTotal)}
+          icon="dollar-sign"
+          tone="gold"
+          hint={
+            kpisRes.kpiValorTruncado
+              ? ui.financeiro_kpi_hint_capped.replace('{{n}}', String(kpisRes.titulosAbertosCount))
+              : undefined
+          }
+        />
+        <MetricCard
+          label={ui.financeiro_kpi_registros}
+          value={listaRes.capped ? `${contas.length}+` : String(contas.length)}
+          icon="list-filter"
+          tone="gold"
+          hint={
+            listaRes.capped
+              ? ui.financeiro_kpi_truncado.replace('{{n}}', String(contas.length))
+              : undefined
+          }
         />
       </div>
-    </div>
+    ) : null
+
+  const filterSection =
+    activeTab === 'receber' ? (
+      <div className="border-b border-[var(--color-border-secondary)] pb-3">
+        <Suspense fallback={<div className="h-9" />}>
+          <FilterBar filters={filterDefs} clearLabel={m.comum.limpar_filtros} />
+        </Suspense>
+        {chips.length > 0 ? (
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            {chips.map((chip) => (
+              <Link key={chip.key} href={hrefWithout(chip.key)} className="admin-v2-chip">
+                {chip.label}
+                <span aria-hidden className="text-jl-fg-3">
+                  ✕
+                </span>
+              </Link>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    ) : null
+
+  return (
+    <PageShell title={ui.financeiro_titulo} subtitle={ui.financeiro_subtitulo}>
+      <FinanceiroContent
+        activeTab={activeTab}
+        contas={contas}
+        fiscal={activeTab === 'fiscal' ? fiscal : emptyFiscal}
+        clientesOpts={clientesOpts}
+        filterSection={filterSection}
+        kpiSection={kpiSection}
+        panelLabels={{
+          titulosEmAberto: ui.financeiro_section_titulos,
+          filaFiscal: ui.financeiro_section_fila,
+          filaFiscalVazioTitulo: ui.financeiro_fila_fiscal_vazio_titulo,
+          filaFiscalVazioSub: ui.financeiro_fila_fiscal_vazio_sub,
+          fiscalStubTitulo: ui.financeiro_fiscal_stub_titulo,
+          fiscalStubSub: ui.financeiro_fiscal_stub_sub,
+          fiscalColTipo: ui.financeiro_col_tipo_doc,
+          fiscalColStatus: m.gerente.col_status,
+          fiscalColQuando: ui.financeiro_col_quando,
+          locale,
+        }}
+        contasLabels={{
+          colCliente: ui.financeiro_col_cliente,
+          colVencimento: ui.financeiro_col_vencimento,
+          colTotal: m.gerente.col_total,
+          colPago: ui.financeiro_col_pago,
+          colAberto: ui.financeiro_col_aberto,
+          colStatus: m.gerente.col_status,
+          statusAberto: ui.financeiro_status_aberto,
+          statusParcial: ui.financeiro_status_parcial,
+          statusQuitado: ui.financeiro_status_quitado,
+          vazioTitulo: ui.financeiro_vazio_titulo,
+          vazioSub: ui.financeiro_vazio_sub,
+          locale,
+        }}
+        contasPagar={
+          activeTab === 'pagar' && pagarRes.ok
+            ? {
+                idioma: session.idioma,
+                locale,
+                contasIniciais: pagarRes.contas,
+                hasMoreInicial: pagarRes.hasMore,
+                fornecedoresOpts: fornRes.ok
+                  ? fornRes.fornecedores.map((f) => ({ id: f.id, nome: f.nome }))
+                  : [],
+                statusInicial: statusPagar,
+                periodoInicial: periodoPagar,
+              }
+            : null
+        }
+      />
+    </PageShell>
   )
 }
