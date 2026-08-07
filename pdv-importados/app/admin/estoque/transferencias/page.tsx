@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
+import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
 import {
   TransferenciasGerentePageClient,
   type TransferenciaLojaRow,
@@ -43,10 +44,13 @@ export default async function AdminEstoqueTransferenciasPage() {
   }))
 
   return (
-    <TransferenciasGerentePageClient
-      idioma={idioma}
-      lojas={lojas}
-      produtos={produtos}
-    />
+    <div className="admin-v2-page">
+      <EstoqueHubNav />
+      <TransferenciasGerentePageClient
+        idioma={idioma}
+        lojas={lojas}
+        produtos={produtos}
+      />
+    </div>
   )
 }

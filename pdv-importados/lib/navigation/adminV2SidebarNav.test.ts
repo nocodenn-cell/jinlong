@@ -33,21 +33,29 @@ describe('menu admin — sanidade estrutural', () => {
       expect(item.labelOverridePt ?? item.labelPt ?? item.dictKey).toBeTruthy()
     }
   })
+
+  it('CORE tem no máximo 10 itens (Sprint 6 — redução de carga cognitiva)', () => {
+    expect(ADMIN_V2_CORE_ITEMS.length).toBeLessThanOrEqual(10)
+  })
 })
 
-describe('menu admin — cadastros de apoio alcançáveis (fluxo de categorias)', () => {
-  it('categorias de produtos está no menu para qualquer perfil gerencial', () => {
+describe('menu admin — hubs (Sprint 6)', () => {
+  it('categorias e marcas de produto não são entradas separadas na sidebar', () => {
     const visiveis = hrefs(itensVisiveis(false))
-    expect(visiveis).toContain(ROUTES.admin.categoriasProdutos)
+    expect(visiveis).not.toContain(ROUTES.admin.categoriasProdutos)
+    expect(visiveis).not.toContain(ROUTES.admin.marcasProdutos)
+    expect(visiveis).toContain(ROUTES.admin.catalogo)
   })
 
-  it('categorias financeiras está no menu para qualquer perfil gerencial', () => {
+  it('recebimento e transferências não são entradas separadas na sidebar', () => {
     const visiveis = hrefs(itensVisiveis(false))
-    expect(visiveis).toContain(ROUTES.admin.categoriasFinanceiras)
+    expect(visiveis).not.toContain(ROUTES.admin.estoqueRecebimento)
+    expect(visiveis).not.toContain(ROUTES.admin.estoqueTransferencias)
+    expect(visiveis).toContain(ROUTES.admin.estoque)
   })
 
-  it('categorias de produtos acompanha o Catálogo no grupo CORE', () => {
-    expect(hrefs(ADMIN_V2_CORE_ITEMS)).toContain(ROUTES.admin.categoriasProdutos)
+  it('categorias financeiras não aparecem em "Mais"', () => {
+    expect(hrefs(ADMIN_V2_EXPANDED_ITEMS)).not.toContain(ROUTES.admin.categoriasFinanceiras)
   })
 })
 
@@ -89,13 +97,8 @@ describe('menu admin — nomenclatura', () => {
 })
 
 describe('menu admin — tarefas diárias não ficam escondidas', () => {
-  it('recebimento e relatórios estão no CORE, não atrás de "Mais"', () => {
-    const core = hrefs(ADMIN_V2_CORE_ITEMS)
-    expect(core).toContain(ROUTES.admin.estoqueRecebimento)
-    expect(core).toContain(ROUTES.admin.relatorios)
-    const expandido = hrefs(ADMIN_V2_EXPANDED_ITEMS)
-    expect(expandido).not.toContain(ROUTES.admin.estoqueRecebimento)
-    expect(expandido).not.toContain(ROUTES.admin.relatorios)
+  it('relatórios permanecem no CORE', () => {
+    expect(hrefs(ADMIN_V2_CORE_ITEMS)).toContain(ROUTES.admin.relatorios)
   })
 
   it('atalho para o PDV permanece disponível a todos os perfis gerenciais', () => {

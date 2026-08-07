@@ -1,5 +1,5 @@
 {
-  "asOf": "2026-07-19",
+  "asOf": "2026-08-07",
   "screens": {
     "total": 12,
     "migrated": 6,
@@ -78,13 +78,13 @@
       "app/admin/fornecedores",
       "app/gerente/fornecedores"
     ],
-    "tsxTotal": 12,
-    "filesWithDsImport": 10,
-    "pct": 83
+    "tsxTotal": 13,
+    "filesWithDsImport": 11,
+    "pct": 85
   },
   "exclusiveComponents": {
     "objective": "tendendo a zero",
-    "total": 6,
+    "total": 8,
     "byModule": [
       {
         "id": "clientes",
@@ -93,8 +93,9 @@
       },
       {
         "id": "catalogo",
-        "count": 1,
+        "count": 2,
         "samples": [
+          "app/admin/catalogo/_components/CatalogoLoteToolbar.tsx",
           "app/admin/catalogo/_components/catalogoNovoProdutoFluxo.test-helpers.tsx"
         ]
       },
@@ -111,15 +112,17 @@
       },
       {
         "id": "estoque",
-        "count": 0,
-        "samples": []
+        "count": 1,
+        "samples": [
+          "app/gerente/recebimento/ProdutoRecebimentoAutocomplete.tsx"
+        ]
       }
     ]
   },
   "dsImports": {
-    "appTsxTotal": 159,
-    "filesWithDsImport": 78,
-    "pct": 49
+    "appTsxTotal": 165,
+    "filesWithDsImport": 86,
+    "pct": 52
   },
   "approvedExceptions": [
     {

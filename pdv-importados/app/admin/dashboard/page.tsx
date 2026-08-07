@@ -1,11 +1,14 @@
 import React from 'react'
+import Link from 'next/link'
 import { ActivityFeed, type ActivityItem } from '@/components/ui/ActivityFeed'
 import {
   ChartCard,
   MetricCard,
   PageHeader,
+  PageActions,
   SectionCard,
 } from '@/components/ui/admin-v2'
+import { Button } from '@/components/ui/button'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
 import { ErrorState } from '@/components/ui/feedback'
@@ -430,6 +433,13 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         title={L.pageTitle[lk]}
         subtitle={`${L.newUsers[lk]}: ${formatNumberLocale(novosUsuariosAtual, locale)} (${novosTrend.label})`}
         filters={<DashboardFilters options={periodOptions} />}
+        actions={
+          <PageActions>
+            <Button asChild variant="secondary" size="sm">
+              <Link href={ROUTES.admin.relatorios}>{ui.relatorios_titulo}</Link>
+            </Button>
+          </PageActions>
+        }
       />
 
       {periodSalesFailed ? (
