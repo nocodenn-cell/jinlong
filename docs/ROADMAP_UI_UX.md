@@ -4,8 +4,8 @@
 |--------|--------|
 | **Data** | 2026-08-07 (Sprint 0 = base definitiva) |
 | **Docs** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
-| **Estado** | **S0+S1 ENCERRADAS** · **Sprint 2 FECHADA** (2026-08-07) · Sprint 3 bloqueada até aceite |
-| **Validação** | [`SPRINT_0_ENGINEERING_LOOP.md`](./SPRINT_0_ENGINEERING_LOOP.md) · [`SPRINT_1_ENGINEERING_LOOP.md`](./SPRINT_1_ENGINEERING_LOOP.md) · [`SPRINT_2_ENGINEERING_LOOP.md`](./SPRINT_2_ENGINEERING_LOOP.md) · RFCs: [`UI_UX_RFC.md`](./UI_UX_RFC.md) |
+| **Estado** | **S0–S2 ENCERRADAS** · **Sprint 3 FECHADA** (2026-08-07) · Sprint 4 bloqueada até aceite |
+| **Validação** | S0–S3 Engineering Loop docs · RFCs: [`UI_UX_RFC.md`](./UI_UX_RFC.md) |
 | **Princípio** | S0 consolida SSOT → S1+ só aplica → zero novos paradigmas |
 
 ---
@@ -207,13 +207,15 @@ TabNav hub · EntityTable pagar/receber/fiscal · PageShell documento · InlineA
 
 **Depende de:** TabNav, EntityTable, PageShell, InlineAlert, ConfirmDialog, DetailSheet — **satisfeito**.  
 **Evidência:** [`SPRINT_2_ENGINEERING_LOOP.md`](./SPRINT_2_ENGINEERING_LOOP.md) · RFCs 007–010.  
-**Gate S3:** não abrir Sprint 3 sem aceite explícito do sponsor.
+**Gate S3:** ~~bloqueada~~ — **autorizada e FECHADA** 2026-08-07.
 
-### Sprint 3 — Estoque satélites + Compras + Comissões
+### Sprint 3 — Estoque satélites + Compras + Comissões · **FECHADA**
 
 Stepper NF-e · FileDropzone · hub ações estoque · Compras PageShell+EntityTable · Comissões daterange.
 
-**Depende de:** Stepper, FileDropzone, EntityTable, FilterBar daterange, PageShell.
+**Depende de:** Stepper, FileDropzone, EntityTable, FilterBar daterange, PageShell — **satisfeito**.  
+**Evidência:** [`SPRINT_3_ENGINEERING_LOOP.md`](./SPRINT_3_ENGINEERING_LOOP.md) · RFCs 011–014.  
+**Gate S4:** não abrir Sprint 4 sem aceite explícito do sponsor.
 
 ### Sprint 4 — Cadastros / Relatórios / Config / Admin
 
@@ -232,15 +234,15 @@ Detalhe IDs: [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md).
 | Indicador | Baseline (2026-08-07 medido) | Pós-S0 | Pós-S1 | Pós-S2 | Pós-S3 | Pós-S4 | Pós-S5 | Meta |
 |-----------|-----------------------------:|-------:|-------:|-------:|-------:|-------:|-------:|-----:|
 | Páginas auditadas | 41 | 41 | 41 | 41 | | | | 41 |
-| Páginas P0 | 6 | 6 | ≤4 | **≤2** | ≤1 | 0 | 0 | 0 |
-| Páginas P1 | 12 | 12 | ≤10 | **≤8** | ≤5 | ≤3 | ≤2 | ≤3 |
-| Famílias duplicadas vivas | 8 | ≤5 | ≤5 | **≤4** | ≤3 | ≤2 | ≤2 | ≤2 |
+| Páginas P0 | 6 | 6 | ≤4 | **≤2** | **≤1** | 0 | 0 | 0 |
+| Páginas P1 | 12 | 12 | ≤10 | **≤8** | **≤5** | ≤3 | ≤2 | ≤3 |
+| Famílias duplicadas vivas | 8 | ≤5 | ≤5 | **≤4** | **≤3** | ≤2 | ≤2 | ≤2 |
 | Padrões formulário | 2 | 2 | 2 | 2 | 1–2 | 1 | 1 | 1 |
-| Padrões tabela | 3 | 3* | ≤3 | **≤2** (fin=EntityTable) | ≤2 | 1+raw | 1+raw | 1+raw |
+| Padrões tabela | 3 | 3* | ≤3 | **≤2** | **≤2** (Compras migrado) | 1+raw | 1+raw | 1+raw |
 | Padrões modal | 2 | 1+PDV† | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV |
 | Padrões toast | 2 canais | 2 / 1 API (`emitToast`) | 2 | 2 | 2 | 2 | 2 | 2 |
 | Padrões FilterBar | 1+N | 1+daterange+page reset | 1 | 1 | 1 | 1 | 1 | 1 |
-| Aderência DS (%) | **~55** (estrita) | ~55* (primitivos prontos) | ~75 | **~80** | ~85 | ≥85 | ≥85 | ≥85 |
+| Aderência DS (%) | **~55** (estrita) | ~55* (primitivos prontos) | ~75 | **~80** | **~85** | ≥85 | ≥85 | ≥85 |
 | Cobertura IX (%) | **~88** (3 Divergentes) | **100 sem Divergente** | 100 | 100 | 100 | 100 | 100 | 100 |
 
 \* EntityTable criado; GerenteTable pode existir até S3.  

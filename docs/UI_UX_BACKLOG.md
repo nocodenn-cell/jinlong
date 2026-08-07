@@ -91,8 +91,8 @@
 | **UX-P0-03** | Transferências | Lookup async (sem payload 500) | M | S0 | ✅ S1 |
 | **UX-P0-04** | Financeiro | Hub 3 abas TabNav + EntityTable pagar | L | S0-04,07,13,16 | ✅ S2 |
 | **UX-P0-05** | Documento fiscal | PageShell + DetailSheet/InlineAlert | M | S0-04,05,15,16 | ✅ S2 |
-| **UX-P0-06** | Compras | PageShell + EntityTable (zero dark/glass) | L | S0-04,07 | Zero dragon-glass |
-| **UX-P0-07** | Comissões | FilterBar daterange + status | M | S0-06 | Período na UI |
+| **UX-P0-06** | Compras | PageShell + EntityTable (zero dark/glass) | L | S0-04,07 | ✅ S3 |
+| **UX-P0-07** | Comissões | FilterBar daterange + status | M | S0-06 | ✅ S3 |
 
 ---
 
@@ -111,7 +111,7 @@
 | **UX-P1-09** | NF-e | Stepper fases + FileDropzone | M | S0-14,18 | ✅ S3 |
 | **UX-P1-10** | Recebimento | PageShell + breadcrumb | S | S0-04 | ✅ S1 |
 | **UX-P1-11** | Contas a pagar | Alias da tab pagar | M | P0-04 | ✅ S2 |
-| **UX-P1-12** | Estoque | Hub ações header | S | S0 | S3 |
+| **UX-P1-12** | Estoque | Hub ações header | S | S0 | ✅ S3 |
 | **UX-P1-13** | Funcionários | CrudListShell + EntityTable + FilterBar | M | S0-04,07 | S4 |
 | **UX-P1-14** | Cat. financeiras | Paridade categorias-produto | M | S0 | S4 |
 | **UX-P1-15** | Relatórios | TabNav seções + EmptyState + donut honesto | M | S0-06,13 | S4 |
