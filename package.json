@@ -9,7 +9,7 @@
     "shared-core"
   ],
   "engines": {
-    "node": ">=20.0.0 <25.0.0"
+    "node": ">=22.0.0 <25.0.0"
   },
   "scripts": {
     "build": "turbo run build --filter=pdv-importados",
