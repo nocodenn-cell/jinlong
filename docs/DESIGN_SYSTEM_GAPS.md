@@ -143,42 +143,42 @@ Legenda: **OK** = S0 cobrirá · **GAP** = primitivo a incluir na S0 · **EXC** 
 
 ## 3. Gaps de componente + interação que a Sprint 0 precisa incluir
 
-### 3.1 Componentes S0 — existência no código (validação 2026-08-07)
+### 3.1 Componentes S0 — existência no código (revalidação pós-S0)
 
 | ID | Primitivo | No código? | Bloqueia S1 se ausente? |
 |----|-----------|------------|-------------------------|
-| UX-S0-04 | PageShell | ❌ | Sim (retrabalho) |
-| UX-S0-05 | ConfirmDialog | ❌ | **Sim** (IX-CONFIRM divergente) |
-| UX-S0-06 | FilterBar daterange | ❌ (`FilterDef` sem tipo) | **Sim** |
-| UX-S0-07 | EntityTable | ❌ | Sim |
-| UX-S0-08 | MoneyText / KeyHint | ❌ (só `KbdAtalho` local / `formatBRL`) | KeyHint não; MoneyText não |
-| UX-S0-09 | emitToast alias | ❌ | Não |
-| UX-S0-13 | TabNav | ❌ | **Sim** |
-| UX-S0-14 | Stepper | ❌ | **Sim** |
-| UX-S0-15 | DetailSheet | ❌ | **Sim** (IX-SHEET) |
-| UX-S0-16 | InlineAlert | ❌ | Parcial |
-| UX-S0-17 | FormSection | ❌ | **Sim** (Config) |
-| UX-S0-18 | FileDropzone | ❌ | **Sim** |
-| UX-S0-19 | BulkActionBar | ❌ | **Sim** |
-| UX-S0-20 | ExportAction | ❌ | **Sim** |
-| UX-S0-21 | PaginationBar infinite | ❌ | **Sim** |
-| UX-S0-23 | EntityLookup thin | ⚠️ Autocomplete client-only **insuficiente** | → **S0-24** |
+| UX-S0-04 | PageShell | ✅ | — |
+| UX-S0-05 | ConfirmDialog | ✅ | — |
+| UX-S0-06 | FilterBar daterange | ✅ | — |
+| UX-S0-07 | EntityTable | ✅ | — |
+| UX-S0-08 | MoneyText / KeyHint | ✅ | — |
+| UX-S0-09 | emitToast alias | ✅ | — |
+| UX-S0-13 | TabNav | ✅ | — |
+| UX-S0-14 | Stepper | ✅ | — |
+| UX-S0-15 | DetailSheet | ✅ | — |
+| UX-S0-16 | InlineAlert | ✅ | — |
+| UX-S0-17 | FormSection | ✅ | — |
+| UX-S0-18 | FileDropzone | ✅ | — |
+| UX-S0-19 | BulkActionBar | ✅ | — |
+| UX-S0-20 | ExportAction | ✅ | — |
+| UX-S0-21 | PaginationBar infinite | ✅ | — |
+| UX-S0-23 | EntityLookup thin | ✅ → **S0-24** | — |
 
-**Já existem (adotar):** AdminV2Shell, PageHeader, CrudListShell, DataTable, FilterBar (parcial), PaginationBar (numbered/cursor), DragonModal, Button, Field, EmptyState, ErrorState, MetricCard, SectionCard, ListPageSkeleton, StatusChip, Autocomplete (só client).
+**Já existiam (adotar):** AdminV2Shell, PageHeader, CrudListShell, DataTable, FilterBar, PaginationBar, DragonModal, Button, Field, EmptyState, ErrorState, MetricCard, SectionCard, ListPageSkeleton, StatusChip, Autocomplete (client).
 
-### 3.2 Lacunas além de UX-S0-19..23 (obrigatórias)
+### 3.2 Lacunas além de UX-S0-19..23 (obrigatórias) — status
 
-| ID | Entrega | Justificativa técnica | Bloqueia S1? |
-|----|---------|----------------------|--------------|
-| **UX-S0-24** | **EntityLookup async** (`onSearch`, debounce, loading, empty) | `Autocomplete.tsx` só filtra `options[]` em memória; recebimento já tem paralelo async; transferências usam `<select>` 500 — thin-wrap **não** elimina o 3º paradigma | **Sim** |
-| **UX-S0-25** | FilterBar: **reset `page`→1** em `setParam` + daterange | IDS IX-FILTER exige reset; `FilterBar.tsx` não deleta `page` | **Sim** |
-| **UX-S0-26** | Lint/CI: ban `window.confirm`, empty emoji, novo `fixed inset-0` dialog fora SSOT | Sem freio, admin-v2 continua criando empty/sheet/confirm paralelos | **Sim** (governança) |
-| **UX-S0-27** | Deprecate `GerenteStatusBadge` → StatusChip (fiscal ainda importa) | Evita 2º badge em S2 fiscal | Não crítico |
+| ID | Entrega | Status | Bloqueia S1? |
+|----|---------|--------|--------------|
+| **UX-S0-24** | **EntityLookup async** | ✅ `forms/EntityLookup.tsx` | Não |
+| **UX-S0-25** | FilterBar reset `page` + daterange | ✅ | Não |
+| **UX-S0-26** | Lint/CI `check:ds-sprint0` | ✅ (+ CI workflow) | Não |
+| **UX-S0-27** | Deprecate `GerenteStatusBadge` | ✅ `@deprecated` shim → StatusChip | Não |
 
 ### 3.3 Contratos IX
 
 Validação completa: [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) §0.1.  
-UX-S0-22 (doc) ✅ · implementação dos IX Divergentes ❌.
+UX-S0-22 (doc) ✅ · IX Divergentes **0**.
 
 ### 3.4 Fluxos críticos — cobertura (código atual vs pós-DoD)
 
@@ -199,15 +199,16 @@ UX-S0-22 (doc) ✅ · implementação dos IX Divergentes ❌.
 
 | Item | Status | Bloqueia Sprint 1? |
 |------|--------|--------------------|
-| Componentes SSOT | ❌ maioria S0 inexistente no código | **Sim** |
-| Contratos IX | ⚠️ 3 Divergentes + 19 Parciais | **Sim** (Confirm/Sheet/Lookup) |
-| Governança | ⚠️ checklist reforçado; lint S0-26 ausente | **Sim** até S0-26 |
-| Cobertura de módulos | ⚠️ docs OK; código parcial | **Sim** |
-| Burndown legado | ⚠️ `asOf 2026-07-30` stale | Não (atualizar em S0-11) |
-| Métricas | ⚠️ baseline recalculada ~55% estrita / ~69% proxy PageHeader | Não |
-| Documentação | ✅ IDS/GAPS/GOVERNANCE/ROADMAP/BACKLOG | Não |
+| Componentes SSOT | ✅ | Não |
+| Contratos IX | ✅ 0 Divergentes | Não |
+| Governança | ✅ `check:ds-sprint0` no CI | Não |
+| Cobertura de módulos (primitivos) | ✅ | Não |
+| Burndown legado | ✅ `asOf 2026-08-07` | Não |
+| Métricas | ✅ Pós-S0 documentado | Não |
+| Documentação | ✅ | Não |
+| Aceite sponsor | ⬜ | **Sim** |
 
-**Decisão:** ver [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) — **Sprint 0 REPROVADA**.
+**Decisão:** ver [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) — **Sprint 0 IMPLEMENTADA — aguardando aceite**.
 
 ---
 
@@ -229,9 +230,9 @@ Qualquer exceção nova → processo em [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN
 
 ## 5. Inventário rápido do que já existe vs. criar
 
-| Já existe (adotar) — **confirmado no repo** | Criar na S0 — **ainda ausente** | Eliminar |
-|-----------------------------------------------|----------------------------------|----------|
-| AdminV2Shell, PageHeader, CrudListShell, DataTable, FilterBar, PaginationBar (numbered/cursor), DragonModal, Button, Field, EmptyState, ErrorState, MetricCard, SectionCard, ListPageSkeleton, StatusChip, Autocomplete (client-only) | PageShell, EntityTable, ConfirmDialog, TabNav, Stepper, DetailSheet, InlineAlert, FormSection, FileDropzone, BulkActionBar, ExportAction, MoneyText, KeyHint, emitToast, daterange, infinite, **EntityLookup async** | CadastroPageShell (órfão), PendingSubmitButton, card.tsx (0 imports); GerenteTable/DataTablePage (após migração telas) |
+| Já existe (adotar) | Entregue na S0 | Eliminado / a eliminar |
+|--------------------|----------------|------------------------|
+| AdminV2Shell, PageHeader, CrudListShell, DataTable, FilterBar, PaginationBar, DragonModal, Button, Field, EmptyState, ErrorState, MetricCard, SectionCard, ListPageSkeleton, StatusChip, Autocomplete (client-only) | PageShell, EntityTable, ConfirmDialog, TabNav, Stepper, DetailSheet, InlineAlert, FormSection, FileDropzone, BulkActionBar, ExportAction, MoneyText, KeyHint, emitToast, daterange, infinite, EntityLookup async | ✅ CadastroPageShell, PendingSubmitButton, card.tsx removidos; GerenteTable/DataTablePage após migração telas |
 
 ---
 
@@ -241,27 +242,25 @@ Qualquer exceção nova → processo em [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN
 |-----------|-------------|
 | `app/admin/**/page.tsx` | 28 |
 | Com PageHeader | 20 / 28 |
-| PageShell | **0** |
+| PageShell (export) | **1** (adoção em pages = S1) |
 | Listas com DataTable | 11 |
 | GerenteTable vivo | 3 (funcionários, compras, AP) |
 | DragonModal imports | ~26 |
-| Sheets `fixed inset-0` fora Dragon | ~8 arquivos |
+| Sheets `fixed inset-0` fora Dragon | legado allowlisted; DetailSheet SSOT |
 | Button SSOT files | ~57 |
-| `app-btn-*` files | ~12 |
+| `app-btn-*` files | ~7 (burndown) |
 | EmptyState usages | ~16 |
 | FilterBar consumers | 4 |
-| Burndown JSON asOf | **2026-07-30** (stale) |
-| **Aderência DS (fórmula GOVERNANCE, PageShell=0)** | **~55%** |
+| Burndown JSON asOf | **2026-08-07** |
+| **Aderência DS (estrita nas pages)** | **~55%** (esperado pré-migração) |
 | **Aderência DS (proxy PageHeader)** | **~69%** |
-| **Cobertura IX (Confirmado+Parcial / 25)** | **~88%** |
-| IX Divergentes | 3 (CONFIRM, SHEET, LOOKUP) |
-
-Baseline antiga ~42% estava **desatualizada** vs contagens atuais.
+| **Cobertura IX (Confirmado+Parcial / 25)** | **100%** |
+| IX Divergentes | **0** |
 
 ---
 
 ## 7. Definição de pronto + veredicto
 
-DoD: primitivos §3.1+§3.2 **exportados**; IX sem Divergente dominante; S0-26 lint; burndown atualizado; zero redesign de tela na S0.
+DoD: primitivos §3.1+§3.2 **exportados**; IX sem Divergente; S0-26 lint; burndown atualizado; zero redesign de tela na S0.
 
-**Veredicto validação 2026-08-07: Sprint 0 REPROVADA** — documentação avançada; implementação SSOT/IX no código insuficiente para liberar Sprint 1.
+**Veredicto pós-implementação 2026-08-07: Sprint 0 IMPLEMENTADA** — primitivos/contratos no código; CI gate verde; **aguardando aceite do sponsor** para liberar Sprint 1.

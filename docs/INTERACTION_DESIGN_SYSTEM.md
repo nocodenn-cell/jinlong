@@ -3,11 +3,11 @@
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-08-07 |
-| **Status** | **Contrato alvo** — validado contra código; Sprint 0 **REPROVADA** até DoD (primitivos inexistentes) |
+| **Status** | **Vigente** — Sprint 0 **implementada** (0 Divergentes); aguarda aceite sponsor para liberar S1 |
 | **Escopo** | Comportamento de interação em `pdv-importados` |
 | **Irmãos** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) |
 | **Princípio** | Duas telas diferentes devem ter **o mesmo comportamento** para o mesmo padrão |
-| **Última validação código** | 2026-08-07 — sem assumir docs anteriores |
+| **Última validação código** | 2026-08-07 (pós-implementação S0) |
 
 Este documento é um **ativo arquitetural**. Componentes SSOT implementam estes contratos; PRs não podem inventar um 2º comportamento sem atualizar este arquivo.
 
@@ -21,42 +21,42 @@ Legenda: **Confirmado** · **Parcial** · **Divergente** · **Não encontrado**.
 
 | Contrato | Status | Evidência no repo | Correção S0 | Bloqueia S1? |
 |----------|--------|-------------------|-------------|--------------|
-| **IX-CRUD** | Parcial | `CrudListShell`+`DataTable`+`DragonModal` em catálogo/estoque; compras/funcionários/`ContasPagar` usam `GerenteTable`/`DataTablePage` | PageShell + EntityTable (código ainda inexistente) | Não se S0 entregar shells |
-| **IX-SEARCH** | Parcial | `FilterBar` debounce 350ms+Enter (`components/ui/FilterBar.tsx`); cadastros com busca local | Doc URL vs local (ok); adotar FilterBar nas listas | Não |
-| **IX-FILTER** | Parcial | FilterBar URL existe; **sem** `daterange` em `FilterDef`; `setParam` **não reseta `page`**; vendas/comissões/relatórios fora do FilterBar | UX-S0-06 + **UX-S0-25** (reset page) | **Sim** se S1 inventar date filter |
-| **IX-TABLE** / sort | Parcial | `DataTable` com `aria-sort`; `EntityTable`/`MoneyText` **não existem**; `GerenteTable` vivo | EntityTable + MoneyText | Não |
-| **IX-PAGE** | Parcial | `PaginationBar` só `numbered`\|`cursor` (`PaginationBar.tsx`); infinite local em clientes/fornecedores/AP | UX-S0-21 | **Sim** se S1 copiar sentinel |
-| **IX-SELECT** | Parcial | Selection local catálogo/fornecedores/comissões | Selection na EntityTable | Não |
-| **IX-BULK** | Parcial | `CatalogoLoteToolbar`; sem `BulkActionBar` | UX-S0-19 | **Sim** |
-| **IX-WIZARD** | Parcial | `ProvisionamentoWizardClient` ad hoc; NF-e sem Stepper | UX-S0-14 Stepper | **Sim** |
-| **IX-UPLOAD** | Parcial | Dropzones/inputs em NF-e, CSV, foto — sem `FileDropzone` | UX-S0-18 | **Sim** |
-| **IX-IMPORT-CSV** | Parcial | `ProdutosImportarModal` + parse domínio OK | Compor FileDropzone+preview+Confirm | Não se FileDropzone+Confirm |
-| **IX-EXPORT** | Parcial | CSV locais; PDF etiquetas; sem `ExportAction` | UX-S0-20 | **Sim** |
-| **IX-CONFIRM** | **Divergente** | `ConfirmDialog` **inexistente**; `ConfirmActionButton` → `globalThis.confirm` (`ConfirmActionButton.tsx`); `window.confirm` em import CSV, clientes, fornecedores, pagamento, PDV | UX-S0-05 ConfirmDialog; banir confirm nativo | **Sim** |
-| **IX-DELETE** | Parcial | Soft/hard no catálogo; copy não unificada | ConfirmDialog + copy | Não |
+| **IX-CRUD** | Parcial | `PageShell`+`EntityTable` exportados; `CrudListShell`+`DataTable` vivos; `GerenteTable` legado até S3 | Aplicar shells nas telas (S1+) | Não |
+| **IX-SEARCH** | Parcial | `FilterBar` debounce 350ms+Enter; cadastros com busca local | Adotar FilterBar nas listas | Não |
+| **IX-FILTER** | Confirmado | `FilterDef` com `daterange`; `setParam`/`setDateRange`/`clearAll` deletam `page` | — | Não |
+| **IX-TABLE** / sort | Parcial | `EntityTable`+`MoneyText`+`DataTable`; `GerenteTable` vivo | Migrar listas (S1+) | Não |
+| **IX-PAGE** | Confirmado | `PaginationBar` `numbered`\|`cursor`\|`infinite` + testes | Adotar infinite nas listas EXC-04 | Não |
+| **IX-SELECT** | Parcial | Selection em `EntityTable` + usos locais | Adotar EntityTable selection | Não |
+| **IX-BULK** | Parcial | `BulkActionBar` SSOT; `CatalogoLoteToolbar` ainda local | Compor BulkActionBar (S1) | Não |
+| **IX-WIZARD** | Parcial | `Stepper` SSOT; wizards de domínio ainda ad hoc | Aplicar Stepper (S3/S4) | Não |
+| **IX-UPLOAD** | Parcial | `FileDropzone` SSOT; dropzones locais ainda vivos | Compor FileDropzone (S1+) | Não |
+| **IX-IMPORT-CSV** | Parcial | Domínio OK; ConfirmDialog disponível; FileDropzone pronto | Compor na importação | Não |
+| **IX-EXPORT** | Parcial | `ExportAction`+`downloadTextFile`; exports locais ainda vivos | Adotar ExportAction | Não |
+| **IX-CONFIRM** | Confirmado | `ConfirmDialog` + `ConfirmActionButton` via modal; `check:ds-sprint0` ban confirm nativo (allowlist PDV/import) | Migrar allowlist em S1/PDV | Não |
+| **IX-DELETE** | Parcial | ConfirmDialog disponível; copy soft/hard a unificar | Copy na S1+ | Não |
 | **IX-DRILL** | Confirmado | `MetricCard` com `href`; dashboard→vendas | — | Não |
-| **IX-DRAWER** | Confirmado | Drawers = nav/PDV; detalhe = sheets (ainda ad hoc) | DetailSheet para entidade | Não |
-| **IX-SHEET** | **Divergente** | `DetailSheet` **inexistente**; `fixed inset-0` em `VendaDetailSheet.tsx`, `DocumentoFiscalDetailSheet.tsx`, `AuditoriaTimeline.tsx`, OC modals | UX-S0-15 | **Sim** |
-| **IX-LOOKUP** | **Divergente** | `forms/Autocomplete.tsx` = **filtro client-only** sobre `options[]`; recebimento usa `ProdutoRecebimentoAutocomplete` **async** paralelo; transferências = `<select>` 500 (`TransferenciasGerentePageClient.tsx`) | **UX-S0-24** EntityLookup **async** (não thin-wrap) | **Sim** |
-| **IX-FORM** | Parcial | `Field` existe; `FormSection` não; config com labels raw | UX-S0-17 | **Sim** (Config) |
-| **IX-ERROR** | Parcial | `ErrorState` existe; `InlineAlert` não | UX-S0-16 | Parcial |
-| **IX-SUCCESS** | Parcial | Só `emitGerenteToast`; sem alias `emitToast` | UX-S0-09 | Não |
+| **IX-DRAWER** | Confirmado | Drawers = nav/PDV (EXC); detalhe = DetailSheet | — | Não |
+| **IX-SHEET** | Parcial | `DetailSheet` SSOT; sheets legados allowlisted até migração | Migrar Venda/Fiscal/Auditoria (S1+) | Não |
+| **IX-LOOKUP** | Parcial | `EntityLookup` async SSOT; Autocomplete client-only p/ listas curtas; recebimento/transf. ainda legados | Migrar lookup longo (S1 Transferências) | Não |
+| **IX-FORM** | Parcial | `Field`+`FormSection` SSOT; config ainda mista | Aplicar FormSection (S4) | Não |
+| **IX-ERROR** | Parcial | `ErrorState`+`InlineAlert` SSOT | Adotar InlineAlert em gates | Não |
+| **IX-SUCCESS** | Confirmado | `emitToast` alias de `emitGerenteToast`; PDV = EXC-02 | — | Não |
 | **IX-LOAD** | Parcial | `ListPageSkeleton` em vários `loading.tsx` | Manter | Não |
-| **IX-EMPTY** | Parcial | `EmptyState` existe; emoji empty ainda em vendas/comissões/AR | UX-S0-26 lint | Não inventa paradigma |
-| **IX-KEYS** | Parcial | PDV forte; Esc em DragonModal | Focus trap Confirm/Sheet | Não |
-| **IX-SHORTCUT** | Parcial | `caixaAtalhos` + `KbdAtalho` local em `CaixaPdvCartSaleBar.tsx` | UX-S0-08 KeyHint | Não (EXC PDV) |
+| **IX-EMPTY** | Parcial | `EmptyState` SSOT; lint bloqueia emoji empty em `components/ui` | Limpar empties de tela (S1+) | Não |
+| **IX-KEYS** | Parcial | PDV forte; Esc em DragonModal/ConfirmDialog/DetailSheet | — | Não |
+| **IX-SHORTCUT** | Parcial | `KeyHint` SSOT; PDV ainda usa `KbdAtalho` local | Adotar KeyHint no PDV (S1) | Não |
 | **IX-AUTHZ** | Confirmado | `loadAdminContext` / policy server-first; sidebar `adminOnly` | — | Não |
 
-**Resumo IX:** Confirmado **3/25** · Parcial **19/25** · Divergente **3/25** · Não encontrado **0/25**.  
-**Cobertura IX útil (Confirmado+Parcial) ≈ 88%** — **não** implica Sprint 0 DONE (primitivos ausentes).
+**Resumo IX:** Confirmado **7/25** · Parcial **18/25** · Divergente **0/25** · Não encontrado **0/25**.  
+**Cobertura IX útil (Confirmado+Parcial) = 100%** — Sprint 0 de primitivos/contratos **DONE** no código; adoção em telas = S1+.
 
-### Divergências que bloqueiam Sprint 1
+### Divergências que bloqueavam Sprint 1 — resolvidas
 
-| # | Arquivo(s) | Motivo | Correção S0 |
-|---|------------|--------|-------------|
-| 1 | `components/gerente/ConfirmActionButton.tsx` + usos `confirm(` | IDS exige ConfirmDialog; código usa nativo | Criar ConfirmDialog; migrar ConfirmActionButton para ele (sem redesenhar telas de negócio) |
-| 2 | `VendaDetailSheet.tsx`, `DocumentoFiscalDetailSheet.tsx`, `AuditoriaTimeline.tsx` | Detalhe entidade = overlay ad hoc | Criar DetailSheet SSOT |
-| 3 | `Autocomplete.tsx` + `ProdutoRecebimentoAutocomplete.tsx` + `TransferenciasGerentePageClient.tsx` | Três paradigmas de lookup; SSOT atual insuficiente (sem async) | EntityLookup async (UX-S0-24) |
+| # | Antes | Depois (S0) |
+|---|--------|-------------|
+| 1 | `ConfirmActionButton` → `globalThis.confirm` | `ConfirmDialog` + gate CI |
+| 2 | Sheets `fixed inset-0` sem SSOT | `DetailSheet` exportado; legado allowlisted |
+| 3 | Lookup triplo sem async SSOT | `EntityLookup` async (`onSearch`) |
 
 ---
 

@@ -36,6 +36,7 @@
     "check:caixa-pre-producao": "node scripts/check-caixa-pre-producao.mjs",
     "check:ds-burndown": "node scripts/ds-legacy-burndown.mjs",
     "check:ds-coverage": "node scripts/ds-coverage.mjs",
+    "check:ds-sprint0": "node scripts/check-ds-sprint0.mjs",
     "guard:design-system": "node ../scripts/design-guard.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

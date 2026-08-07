@@ -4,45 +4,56 @@ import { cn } from '@/lib/utils'
 /**
  * PaginationBar — única API de paginação do Design System.
  *
- * Criada no 1º uso real conforme `docs/LAYOUT_KERNEL_ERP.md`, substituindo três
- * cópias locais de `PageLink`/`pageWindow` (catálogo, estoque, vendas) que
- * divergiam em raio, token de borda e escala tipográfica.
- *
- * Dois modos, porque as telas paginam de formas legitimamente diferentes:
- *
- * - `numbered` — a fonte sabe o total (RPC devolve contagem). Mostra janela de
- *   páginas com elipse.
- * - `cursor` — a fonte só sabe se **existe** próxima página (paginação por
- *   cursor, como vendas). Mostra apenas Anterior/Próxima.
- *
- * Não decide nada sobre os dados: recebe `page`, o total (ou `hasMore`) e uma
- * função que monta a URL. Navegação continua server-side via `?page=`.
+ * Modos:
+ * - `numbered` — total conhecido
+ * - `cursor` — só sabe se existe próxima
+ * - `infinite` — load-more (Sprint 0 / UX-S0-21)
  */
 
-type PaginationBarBaseProps = {
-  /** Página atual, 1-based. */
-  page: number
-  /** Monta o href de uma página — a tela decide quais filtros preservar. */
-  pageHref: (page: number) => string
-  /** Rótulo já formatado (ex.: "Página 2 de 7"). i18n fica na tela. */
+type PaginationBarCommon = {
   label?: string
-  anteriorLabel: string
-  proximaLabel: string
   className?: string
 }
 
-type PaginationBarProps = PaginationBarBaseProps &
+type PaginationBarProps = PaginationBarCommon &
   (
-    | { mode?: 'numbered'; totalPages: number; hasMore?: never }
-    | { mode: 'cursor'; hasMore: boolean; totalPages?: never }
+    | {
+        mode?: 'numbered'
+        page: number
+        pageHref: (page: number) => string
+        totalPages: number
+        anteriorLabel: string
+        proximaLabel: string
+        hasMore?: never
+        onLoadMore?: never
+        loadMoreLabel?: never
+      }
+    | {
+        mode: 'cursor'
+        page: number
+        pageHref: (page: number) => string
+        hasMore: boolean
+        anteriorLabel: string
+        proximaLabel: string
+        totalPages?: never
+        onLoadMore?: never
+        loadMoreLabel?: never
+      }
+    | {
+        mode: 'infinite'
+        hasMore: boolean
+        onLoadMore: () => void
+        loadMoreLabel: string
+        page?: never
+        pageHref?: never
+        totalPages?: never
+        anteriorLabel?: never
+        proximaLabel?: never
+      }
   )
 
 /**
  * Lê `?page=` da URL com o mesmo critério em toda tela paginada.
- *
- * Mora aqui porque é o contrato irmão da barra: quem renderiza a paginação e
- * quem interpreta o parâmetro precisam concordar sobre o que é página válida.
- * Estava copiado em catálogo, estoque e vendas.
  */
 export function clampPage(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? '1', 10)
@@ -64,13 +75,31 @@ export function pageWindow(current: number, total: number): Array<number | 'gap'
 }
 
 export function PaginationBar(props: PaginationBarProps) {
-  const { page, pageHref, label, anteriorLabel, proximaLabel, className } = props
-  const cursorMode = props.mode === 'cursor'
+  const { label, className } = props
 
+  if (props.mode === 'infinite') {
+    if (!props.hasMore) return null
+    return (
+      <nav
+        aria-label={label ?? 'Paginação'}
+        className={cn('flex w-full items-center justify-center gap-3', className)}
+      >
+        <button
+          type="button"
+          onClick={props.onLoadMore}
+          className="rounded-control border border-[var(--color-border)] px-3 py-1.5 text-caption text-fg-muted transition-colors hover:bg-[var(--color-surface-soft)] hover:text-fg"
+        >
+          {props.loadMoreLabel}
+        </button>
+      </nav>
+    )
+  }
+
+  const { page, pageHref, anteriorLabel, proximaLabel } = props
+  const cursorMode = props.mode === 'cursor'
   const semAnterior = page <= 1
   const semProxima = cursorMode ? !props.hasMore : page >= props.totalPages
 
-  // Uma página só e sem próxima: a barra não tem função — não renderiza.
   if (semAnterior && semProxima) return null
 
   return (

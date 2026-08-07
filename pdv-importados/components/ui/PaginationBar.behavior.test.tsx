@@ -91,6 +91,33 @@ describe('PaginationBar — modo cursor', () => {
   })
 })
 
+describe('PaginationBar — modo infinite', () => {
+  it('não renderiza quando hasMore=false', () => {
+    const el = render(
+      <PaginationBar mode="infinite" hasMore={false} onLoadMore={() => {}} loadMoreLabel="Carregar mais" />,
+    )
+    expect(el.textContent).toBe('')
+  })
+
+  it('mostra botão load-more quando hasMore', () => {
+    let clicked = false
+    const el = render(
+      <PaginationBar
+        mode="infinite"
+        hasMore
+        loadMoreLabel="Carregar mais"
+        onLoadMore={() => {
+          clicked = true
+        }}
+      />,
+    )
+    const btn = el.querySelector('button')
+    expect(btn?.textContent).toBe('Carregar mais')
+    btn?.click()
+    expect(clicked).toBe(true)
+  })
+})
+
 describe('pageWindow', () => {
   it('sem elipse quando todas as páginas cabem', () => {
     expect(pageWindow(2, 4)).toEqual([1, 2, 3, 4])

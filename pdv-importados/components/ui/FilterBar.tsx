@@ -35,6 +35,15 @@ export type FilterDef =
       placeholder?: string
       debounceMs?: number
     }
+  | {
+      /** Intervalo de datas (from/to) — Sprint 0 / IX-FILTER. */
+      type: 'daterange'
+      keyFrom: string
+      keyTo: string
+      label?: string
+      fromLabel?: string
+      toLabel?: string
+    }
 
 type FilterBarProps = {
   filters: FilterDef[]
@@ -61,6 +70,24 @@ export function FilterBar({
       } else {
         params.set(key, value)
       }
+      // IX-FILTER / UX-S0-25: mudança de filtro reseta página.
+      params.delete('page')
+      const qs = params.toString()
+      const url = qs ? `${pathname}?${qs}` : pathname
+      if (replace) router.replace(url, { scroll: false })
+      else router.push(url, { scroll: false })
+    },
+    [router, pathname, searchParams],
+  )
+
+  const setDateRange = useCallback(
+    (keyFrom: string, keyTo: string, from: string, to: string, replace: boolean) => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (!from) params.delete(keyFrom)
+      else params.set(keyFrom, from)
+      if (!to) params.delete(keyTo)
+      else params.set(keyTo, to)
+      params.delete('page')
       const qs = params.toString()
       const url = qs ? `${pathname}?${qs}` : pathname
       if (replace) router.replace(url, { scroll: false })
@@ -70,6 +97,9 @@ export function FilterBar({
   )
 
   const hasActive = filters.some((f) => {
+    if (f.type === 'daterange') {
+      return Boolean(searchParams.get(f.keyFrom) || searchParams.get(f.keyTo))
+    }
     const current = searchParams.get(f.key)
     if (current === null) return false
     if (f.type !== 'search' && current === f.defaultValue) return false
@@ -78,7 +108,15 @@ export function FilterBar({
 
   const clearAll = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString())
-    for (const f of filters) params.delete(f.key)
+    for (const f of filters) {
+      if (f.type === 'daterange') {
+        params.delete(f.keyFrom)
+        params.delete(f.keyTo)
+      } else {
+        params.delete(f.key)
+      }
+    }
+    params.delete('page')
     const qs = params.toString()
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }, [filters, searchParams, router, pathname])
@@ -116,6 +154,18 @@ export function FilterBar({
                 filter={filter}
                 current={searchParams.get(filter.key) ?? ''}
                 onCommit={(v) => setParam(filter.key, v, undefined, true)}
+              />
+            )
+          case 'daterange':
+            return (
+              <DateRangeControl
+                key={`${filter.keyFrom}-${filter.keyTo}`}
+                filter={filter}
+                from={searchParams.get(filter.keyFrom) ?? ''}
+                to={searchParams.get(filter.keyTo) ?? ''}
+                onCommit={(from, to) =>
+                  setDateRange(filter.keyFrom, filter.keyTo, from, to, true)
+                }
               />
             )
           default:
@@ -202,6 +252,50 @@ function SelectControl({
         </option>
       ))}
     </Select>
+  )
+}
+
+function DateRangeControl({
+  filter,
+  from,
+  to,
+  onCommit,
+}: {
+  filter: Extract<FilterDef, { type: 'daterange' }>
+  from: string
+  to: string
+  onCommit: (from: string, to: string) => void
+}) {
+  return (
+    <div
+      className="inline-flex flex-wrap items-center gap-1.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2 py-1"
+      role="group"
+      aria-label={filter.label ?? 'Período'}
+    >
+      <label className="flex items-center gap-1 text-caption text-fg-subtle">
+        <span className="sr-only">{filter.fromLabel ?? 'De'}</span>
+        <input
+          type="date"
+          value={from}
+          aria-label={filter.fromLabel ?? 'Data inicial'}
+          onChange={(e) => onCommit(e.target.value, to)}
+          className="fp-focus-ring bg-transparent text-caption text-fg outline-none"
+        />
+      </label>
+      <span aria-hidden className="text-fg-subtle">
+        –
+      </span>
+      <label className="flex items-center gap-1 text-caption text-fg-subtle">
+        <span className="sr-only">{filter.toLabel ?? 'Até'}</span>
+        <input
+          type="date"
+          value={to}
+          aria-label={filter.toLabel ?? 'Data final'}
+          onChange={(e) => onCommit(from, e.target.value)}
+          className="fp-focus-ring bg-transparent text-caption text-fg outline-none"
+        />
+      </label>
+    </div>
   )
 }
 

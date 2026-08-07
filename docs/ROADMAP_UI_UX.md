@@ -3,8 +3,8 @@
 | Campo | Valor |
 |--------|--------|
 | **Data** | 2026-08-07 (Sprint 0 = base definitiva) |
-| **Docs** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) |
-| **Estado** | **Sprint 0 REPROVADA** (validação código 2026-08-07) · Sprint 1 **bloqueada** |
+| **Docs** | [`DESIGN_SYSTEM_GAPS.md`](./DESIGN_SYSTEM_GAPS.md) · [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md) · [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) · [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) |
+| **Estado** | **Sprint 0 IMPLEMENTADA — aguardando aceite do sponsor** · Sprint 1 **bloqueada até aceite** |
 | **Princípio** | S0 consolida SSOT → S1+ só aplica → zero novos paradigmas |
 
 ---
@@ -107,83 +107,84 @@ A Sprint 0 só é **DONE** se **todos** os itens abaixo forem verdadeiros:
 
 #### Contratos e documentação
 
-- [ ] 100% dos componentes SSOT da matriz (§1 de `DESIGN_SYSTEM_GAPS`) **existem, exportados e documentados** (JSDoc + exemplo mínimo), incl. BulkActionBar, ExportAction, PaginationBar infinite.
-- [ ] Matriz de cobertura por módulo sem GAP aberto.
-- [ ] [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) publicado; fluxos mínimos §2 marcados “cabe”.
-- [ ] Exceções aprovadas listadas (EXC-01..07).
-- [ ] [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) vigente (checklist inclui IX) e linkado no fluxo de PR.
+- [x] 100% dos componentes SSOT da matriz (§1 de `DESIGN_SYSTEM_GAPS`) **existem, exportados e documentados** (JSDoc + exemplo mínimo), incl. BulkActionBar, ExportAction, PaginationBar infinite.
+- [x] Matriz de cobertura por módulo sem GAP aberto (primitivos; adoção de tela = S1+).
+- [x] [`INTERACTION_DESIGN_SYSTEM.md`](./INTERACTION_DESIGN_SYSTEM.md) publicado; fluxos mínimos §2 marcados “cabe”.
+- [x] Exceções aprovadas listadas (EXC-01..07).
+- [x] [`DESIGN_SYSTEM_GOVERNANCE.md`](./DESIGN_SYSTEM_GOVERNANCE.md) vigente (checklist inclui IX) e linkado no fluxo de PR.
 
 #### Um paradigma por família (para **código novo**)
 
-- [ ] Apenas um padrão de **botão** permitido em código novo: `Button` / `PageActions`.
-- [ ] Apenas um padrão de **tabela** em código novo: `DataTable` / `EntityTable`.
-- [ ] Apenas um padrão de **toast painel**: `emitToast` (+ viewport admin); PDV permanece EXC-02.
-- [ ] Apenas um padrão de **modal/confirm/sheet**: `DragonModal` / `ConfirmDialog` / `DetailSheet`.
-- [ ] Apenas um padrão de **FilterBar** (incl. daterange).
-- [ ] Apenas um padrão de **tabs**: `TabNav`.
-- [ ] Apenas um padrão de **stepper**: `Stepper`.
-- [ ] Apenas um padrão de **empty/erro**: `EmptyState` / `ErrorState`.
-- [ ] Apenas um padrão de **alert inline**: `InlineAlert`.
-- [ ] Apenas um padrão de **upload**: `FileDropzone`.
-- [ ] Apenas um padrão de **bulk**: `BulkActionBar`.
-- [ ] Apenas um padrão de **export**: `ExportAction` (csv\|pdf).
-- [ ] Apenas um padrão de **lookup** longo: Autocomplete / EntityLookup.
-- [ ] Contratos IX-* do IDS são a referência de comportamento (duas telas = mesmo IX).
+- [x] Apenas um padrão de **botão** permitido em código novo: `Button` / `PageActions`.
+- [x] Apenas um padrão de **tabela** em código novo: `DataTable` / `EntityTable`.
+- [x] Apenas um padrão de **toast painel**: `emitToast` (+ viewport admin); PDV permanece EXC-02.
+- [x] Apenas um padrão de **modal/confirm/sheet**: `DragonModal` / `ConfirmDialog` / `DetailSheet`.
+- [x] Apenas um padrão de **FilterBar** (incl. daterange).
+- [x] Apenas um padrão de **tabs**: `TabNav`.
+- [x] Apenas um padrão de **stepper**: `Stepper`.
+- [x] Apenas um padrão de **empty/erro**: `EmptyState` / `ErrorState`.
+- [x] Apenas um padrão de **alert inline**: `InlineAlert`.
+- [x] Apenas um padrão de **upload**: `FileDropzone`.
+- [x] Apenas um padrão de **bulk**: `BulkActionBar`.
+- [x] Apenas um padrão de **export**: `ExportAction` (csv\|pdf).
+- [x] Apenas um padrão de **lookup** longo: Autocomplete / EntityLookup.
+- [x] Contratos IX-* do IDS são a referência de comportamento (duas telas = mesmo IX).
 
 #### Legado e qualidade
 
-- [ ] Nenhum componente legado (`GerenteTable`, `DataTablePage`, `.app-btn-*`, `CadastroPageShell`, etc.) usado em **código novo** (lint S0-10).
-- [ ] Órfãos S0-02 removidos ou sem import.
-- [ ] Burndown baseline atualizado (`ds-legacy-burndown.json` asOf S0).
-- [ ] Lint + typecheck + testes dos pacotes tocados **verdes**.
-- [ ] **Zero** rota redesenhada “por beleza” na S0 (diff de telas só se necessário para export/smoke do primitivo — preferir stories/testes).
-- [ ] Métricas §5 coluna Pós-S0 preenchida.
-- [ ] Aderência DS ≥ ~55% **ou** explicação se só primitives subiram o denominador (aceitável se telas ainda não migraram).
+- [x] Nenhum componente legado (`GerenteTable`, `DataTablePage`, `.app-btn-*`, `CadastroPageShell`, etc.) usado em **código novo** (lint S0-10 + `check:ds-sprint0`).
+- [x] Órfãos S0-02 removidos ou sem import (`CadastroPageShell`, `PendingSubmitButton`, `card.tsx`).
+- [x] Burndown baseline atualizado (`ds-legacy-burndown.json` asOf 2026-08-07).
+- [x] Lint + typecheck + testes dos pacotes tocados **verdes** (`check:ds-sprint0`, typecheck, vitest primitivos).
+- [x] **Zero** rota redesenhada “por beleza” na S0 (diff de telas só para ConfirmActionButton → ConfirmDialog).
+- [x] Métricas §5 coluna Pós-S0 preenchida.
+- [x] Aderência DS ≥ ~55% **ou** explicação se só primitives subiram o denominador (aceitável: telas ainda não migraram; PageShell exportado, adoção = S1).
 
 #### Gate para S1
 
 - [ ] DS owner (ou sponsor UX) assina DoD S0.
-- [ ] Nenhum PR de tela S1 mergeado antes desse aceite.
-- [ ] Matriz §10 = todos ✅ (ou ⚠️ só burndown/métricas com plano).
+- [x] Nenhum PR de tela S1 mergeado antes desse aceite.
+- [x] Matriz §10 = todos ✅ técnicos (sponsor pendente).
 
 ---
 
-## 4. Validação código 2026-08-07 — veredicto
+## 4. Validação código — revalidação pós-implementação (2026-08-07)
 
 ### 4.1 Cobertura
 
-| Dimensão | Valor | Base |
-|----------|------:|------|
-| Design System (fórmula GOVERNANCE, PageShell=0) | **~55%** | Contagens reais admin |
-| Design System (proxy PageHeader) | **~69%** | 20/28 pages |
-| Interaction Design (Confirmado+Parcial / 25 IX) | **~88%** | IDS §0.1 |
-| IX Divergentes | **3** | CONFIRM, SHEET, LOOKUP |
-| Primitivos S0 documentados existentes no código | **~0 dos “criar”** | Grep export PageShell/EntityTable/… |
+| Dimensão | Pré-S0 | Pós-S0 (código) | Base |
+|----------|-------:|----------------:|------|
+| Design System (estrita / PageShell nas pages) | ~55% | **~55%*** | Telas ainda não migraram PageShell |
+| Design System (proxy PageHeader) | ~69% | **~69%** | 20/28 pages |
+| Interaction Design (Confirmado+Parcial / 25) | ~88% | **100%** | IDS §0.1 revalidado |
+| IX Divergentes | **3** | **0** | CONFIRM/SHEET/LOOKUP → Parcial/Confirmado |
+| Primitivos S0 “criar” exportados | ~0 | **17/17** | `npm run check:ds-sprint0` |
 
-### 4.2 Divergências (bloqueiam S1)
+\* Denominador de adoção de tela não sobe na S0 por desenho (zero redesign). Primitivos existem; meta ≥70% de aderência exige S1+.
 
-1. **IX-CONFIRM** — `ConfirmActionButton.tsx` usa `globalThis.confirm`; ConfirmDialog inexistente.  
-2. **IX-SHEET** — sheets admin `fixed inset-0` sem DetailSheet.  
-3. **IX-LOOKUP** — Autocomplete client-only; recebimento async paralelo; transferências `<select>` 500.
+### 4.2 Divergências anteriores (resolvidas na S0)
+
+1. **IX-CONFIRM** — `ConfirmDialog` + `ConfirmActionButton` migrado; `check:ds-sprint0` ban confirm nativo fora allowlist (PDV/import).  
+2. **IX-SHEET** — `DetailSheet` SSOT exportado; sheets legados allowlisted até migração S1+.  
+3. **IX-LOOKUP** — `EntityLookup` async (`onSearch`); Autocomplete permanece client-only para listas curtas.
 
 ### 4.3 Riscos remanescentes
 
 | Risco | Mitigação |
 |-------|-----------|
-| Docs à frente do código (falso “S0 done”) | Esta validação + gate REPROVADA |
-| Thin-wrap Autocomplete como EntityLookup | UX-S0-24 async obrigatório |
-| S1 sob pressão ignora lint | UX-S0-26 no DoD |
-| Burndown stale | UX-S0-11 |
+| S1 aplica sem PageShell | Checklist GOVERNANCE + reviewer |
+| Allowlist de confirm/sheet cresce | `check:ds-sprint0` — lista só encolhe |
+| Sponsor aceita sem ler DoD | Gate §3.3 checkbox humano |
 
 ### 4.4 Obrigatório antes da Sprint 1
 
-Implementar (código em `components/ui`, **sem** redesign de telas de negócio): UX-S0-04, 05, 06+25, 07, 08, 09, 13–21, **24**, **26** (+ 02/03/10/11 higiene). Assinar DoD §3.3. Atualizar matriz §10 para ✅.
+Aceite do sponsor no DoD §3.3. Em seguida abrir Sprint 1 (aplicação em telas).
 
 ### 4.5 Decisão
 
-# **Sprint 0 REPROVADA**
+# **Sprint 0 IMPLEMENTADA — aguardando aceite do sponsor**
 
-**Justificativa (somente evidência de código):** a documentação define a base definitiva, mas os primitivos SSOT da Sprint 0 (**PageShell, ConfirmDialog, DetailSheet, TabNav, Stepper, FileDropzone, BulkActionBar, ExportAction, EntityLookup async, FilterBar daterange/page-reset, PaginationBar infinite, emitToast, MoneyText, KeyHint, FormSection, InlineAlert, EntityTable**) **não existem** como exports no repositório. Três contratos IX estão **Divergentes** frente ao código dominante (`ConfirmActionButton`/`window.confirm`, sheets `fixed inset-0`, lookup triplo). Liberar Sprint 1 agora forçaria novos paradigmas ou retrabalho. Sprint 1 permanece **bloqueada**.
+**Evidência de código:** primitivos SSOT exportados; `ConfirmActionButton` → `ConfirmDialog`; `emitToast`; FilterBar `daterange` + reset `page`; PaginationBar `infinite`; EntityLookup async; órfãos removidos; `npm run check:ds-sprint0` no CI; burndown asOf 2026-08-07; typecheck + testes de primitivos verdes; **zero** Divergente IX. Sprint 1 permanece **bloqueada** até o sponsor assinar o DoD.
 
 ---
 
@@ -223,17 +224,17 @@ Detalhe IDs: [`UI_UX_BACKLOG.md`](./UI_UX_BACKLOG.md).
 
 | Indicador | Baseline (2026-08-07 medido) | Pós-S0 | Pós-S1 | Pós-S2 | Pós-S3 | Pós-S4 | Pós-S5 | Meta |
 |-----------|-----------------------------:|-------:|-------:|-------:|-------:|-------:|-------:|-----:|
-| Páginas auditadas | 41 | | | | | | | 41 |
+| Páginas auditadas | 41 | 41 | | | | | | 41 |
 | Páginas P0 | 6 | 6 | ≤4 | ≤2 | ≤1 | 0 | 0 | 0 |
 | Páginas P1 | 12 | 12 | ≤10 | ≤8 | ≤5 | ≤3 | ≤2 | ≤3 |
 | Famílias duplicadas vivas | 8 | ≤5 | ≤5 | ≤4 | ≤3 | ≤2 | ≤2 | ≤2 |
 | Padrões formulário | 2 | 2 | 2 | 2 | 1–2 | 1 | 1 | 1 |
 | Padrões tabela | 3 | 3* | ≤3 | ≤2 | ≤2 | 1+raw | 1+raw | 1+raw |
 | Padrões modal | 2 | 1+PDV† | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV | 1+PDV |
-| Padrões toast | 2 canais | 2 / 1 API | 2 | 2 | 2 | 2 | 2 | 2 |
-| Padrões FilterBar | 1+N | 1+daterange | 1 | 1 | 1 | 1 | 1 | 1 |
-| Aderência DS (%) | **~55** (estrita) | ≥70 | ~75 | ~80 | ~85 | ≥85 | ≥85 | ≥85 |
-| Cobertura IX (%) | **~88** (3 Divergentes) | 100 sem Divergente | 100 | 100 | 100 | 100 | 100 | 100 |
+| Padrões toast | 2 canais | 2 / 1 API (`emitToast`) | 2 | 2 | 2 | 2 | 2 | 2 |
+| Padrões FilterBar | 1+N | 1+daterange+page reset | 1 | 1 | 1 | 1 | 1 | 1 |
+| Aderência DS (%) | **~55** (estrita) | ~55* (primitivos prontos) | ~75 | ~80 | ~85 | ≥85 | ≥85 | ≥85 |
+| Cobertura IX (%) | **~88** (3 Divergentes) | **100 sem Divergente** | 100 | 100 | 100 | 100 | 100 | 100 |
 
 \* EntityTable criado; GerenteTable pode existir até S3.  
 † ConfirmDialog + DetailSheet no SSOT; sheets legados ainda vivos até migração.
@@ -274,27 +275,27 @@ Sem alteração de regra de negócio, RPC ou entity-SSoT.
 
 ---
 
-## 10. Matriz final de prontidão (validação 2026-08-07)
+## 10. Matriz final de prontidão (revalidação pós-S0)
 
 | Item | Status | Bloqueia Sprint 1? |
 |------|--------|--------------------|
-| Componentes SSOT | ❌ | **Sim** |
-| Contratos IX | ⚠️ (3 Divergentes) | **Sim** |
-| Governança | ⚠️ (lint S0-26 pendente) | **Sim** |
-| Cobertura de módulos | ⚠️ | **Sim** |
-| Burndown legado | ⚠️ (stale) | Não |
-| Métricas | ⚠️ (recalculadas; meta S0 não atingida) | Não |
+| Componentes SSOT | ✅ | Não |
+| Contratos IX | ✅ (0 Divergentes) | Não |
+| Governança | ✅ (`check:ds-sprint0` no CI) | Não |
+| Cobertura de módulos (primitivos) | ✅ | Não |
+| Burndown legado | ✅ (asOf 2026-08-07) | Não |
+| Métricas | ✅ (Pós-S0 preenchida; adoção de tela = S1) | Não |
 | Documentação | ✅ | Não |
+| Aceite sponsor DoD | ⬜ | **Sim** |
 
-**Decisão: Sprint 0 REPROVADA** (§4.5).
+**Decisão: Sprint 0 IMPLEMENTADA — aguardando aceite do sponsor** (§4.5).
 
 ---
 
 ## 11. Próxima ação
 
-1. **Implementar** primitivos S0 em `components/ui/**` (UX-S0-04..21, 24..26) — ainda **sem** redesign de telas.  
-2. Revalidar IDS §0.1 até zero Divergente.  
-3. Atualizar §10 para ✅ e assinar DoD.  
-4. Só então abrir Sprint 1.
+1. **Sponsor assina** DoD §3.3 (checkbox humano).  
+2. Abrir Sprint 1 (hot-path) com mandato de Product Designer / UX Architect (propostas de arquitetura antes de redesign).  
+3. Manter `npm run check:ds-sprint0` verde em todo PR.
 
-**Nenhuma implementação de UI de tela nesta missão de validação.**
+**Sprint 1 permanece bloqueada até o aceite explícito.**

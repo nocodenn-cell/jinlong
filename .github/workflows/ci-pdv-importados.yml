@@ -54,6 +54,9 @@ jobs:
       - name: Architecture Lock (core rules, PDV flow, routes)
         run: npm run guard:all
 
+      - name: Design System Sprint 0 gate (UX-S0-26)
+        run: npm run check:ds-sprint0 --workspace=pdv-importados
+
       - name: Lint, typecheck e unit tests
         run: npx turbo run lint typecheck test --filter=pdv-importados
 

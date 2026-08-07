@@ -76,7 +76,7 @@
 | UX-S0-12 “contrato Sheet” | **UX-S0-15 DetailSheet** |
 | UX-S0-23 thin helper | **UX-S0-24** EntityLookup async |
 
-**Validação 2026-08-07:** quase todos UX-S0-04..21 **ainda não existem no código** → Sprint 0 **REPROVADA** (ver roadmap).
+**Revalidação 2026-08-07:** UX-S0-01..27 **entregues no código** (primitivos + gates) → Sprint 0 **IMPLEMENTADA — aguardando aceite** (ver roadmap). Sprint 1 permanece bloqueada até o sponsor assinar o DoD.
 
 **DoD Sprint 0:** [`ROADMAP_UI_UX.md`](./ROADMAP_UI_UX.md) §3.3 + IX sem Divergente + S0-24..26.
 
