@@ -96,26 +96,13 @@ Ajuste de teste: `admin-auth-resilience.test.ts` mock `AdminToastViewport`.
 
 ---
 
-## 6. Estado Vercel (investigação)
+## 6. Estado Vercel (investigação 2026-08-08)
 
-**Projeto:** `pdv-importados` (`prj_UPGWQN4TmzDQRYm5IB80a8ZxOslO`, team Jinlong)
+**Relatório completo:** [`docs/VERCEL_PREVIEW_PROVISIONING_INVESTIGATION_20260808.md`](./VERCEL_PREVIEW_PROVISIONING_INVESTIGATION_20260808.md)
 
-**Observação:** os **20 deployments recentes listados** estão em `state: ERROR` (preview de branches agent: reconciliação Supabase, estoque/compras, sprint 6/7, feat/sprint-ux-go-live).
+**Resumo:** falha **global de provisioning** na Vercel (`Resource provisioning failed`, ~700 ms, **zero build logs**) desde ~2026-08-07; **não** é regressão de `next build` nos commits UI (`14b73bd`, `4b73a2d`, etc.). Último Preview **Ready:** `dpl_4znhvKr7EGUMUvZacJZQZGpe6UP3` (`826b52d2`). Supabase `jinlong` **ACTIVE_HEALTHY**. Correção provável: **painel Vercel** (billing, integrações, Build Machine/cache) ou suporte — ver §6 do relatório.
 
-**Deployment analisado:** `dpl_39DDuYTczrtJ1YkQXnhiH6APvLWv` (branch `cursor/reconciliacao-supabase-audit-633a`)
-
-| Campo | Valor |
-|-------|--------|
-| `readyState` | ERROR |
-| `errorCode` | **BUILD_FAILED** |
-| `errorMessage` | **Resource provisioning failed** |
-| Build logs (MCP) | **vazios** — sem linha de compilação Next/npm |
-
-**Interpretação (evidência):**
-
-- **Não** é falha reproduzível de `next build` nesta missão (build local **verde** na mesma base + alterações UI).
-- Indica **falha de provisionamento de recurso na Vercel** (plataforma/cota/região/build image), não erro de runtime da app nem env missing no log.
-- **Não** alterar produção sem logs; próximo passo operacional: re-deploy manual / suporte Vercel / verificar limites do plano e região `gru1`.
+**UI/UX:** pausado até Preview **Ready** ponta a ponta.
 
 ---
 
