@@ -92,6 +92,7 @@ export default async function AdminRelatoriosPage({ searchParams }: PageProps) {
         vazioEstoque: ui.relatorios_vazio_estoque,
         tooltipFaturado: ui.relatorios_tooltip_faturado,
         noDataLabel: ui.relatorios_vazio_produtos,
+        linkVisaoGeral: ui.relatorios_link_visao_geral,
         filtros: {
           de: ui.relatorios_filtro_de,
           ate: ui.relatorios_filtro_ate,

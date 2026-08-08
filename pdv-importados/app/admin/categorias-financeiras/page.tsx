@@ -3,11 +3,15 @@
  *
  * Server Component. Carrega lista de categorias financeiras.
  * Zero query nova — reutiliza actions existentes de /gerente/categorias-financeiras.
+ * Sprint 6: abas do hub financeiro (não item isolado na sidebar).
  */
 
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
+import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
 import { listarCategoriasFinanceiras } from '@/app/gerente/categorias-financeiras/actions'
+import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { CategoriasFinanceirasContent } from './_components/CategoriasFinanceirasContent'
 
 type SearchParams = {
@@ -18,6 +22,11 @@ type SearchParams = {
 type PageProps = { searchParams?: Promise<SearchParams> }
 
 export default async function AdminCategoriasFinanceirasPage({ searchParams }: PageProps) {
+  await loadAdminContext({
+    pathname: ROUTES.admin.categoriasFinanceiras,
+    resource: `route:${ROUTES.admin.categoriasFinanceiras}`,
+  })
+
   const sp = (await searchParams) ?? {}
   const page = parseInt(sp.page ?? '1', 10)
   const busca = sp.q ?? ''
@@ -33,9 +42,11 @@ export default async function AdminCategoriasFinanceirasPage({ searchParams }: P
   return (
     <div className="admin-v2-page">
       <PageHeader
-        title="Categorias Financeiras"
-        subtitle="Gerenciar categorias de receitas e despesas"
+        title="Financeiro"
+        subtitle="Categorias de receitas e despesas usadas nos lançamentos"
       />
+
+      <FinanceiroHubNavShell activeTab="receber" />
 
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
         <CategoriasFinanceirasContent dados={dados} />

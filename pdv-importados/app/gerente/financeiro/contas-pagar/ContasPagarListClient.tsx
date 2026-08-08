@@ -31,6 +31,8 @@ type Props = Readonly<{
   fornecedoresOpts: Array<{ id: string; nome: string }>
   statusInicial: string
   periodoInicial: string
+  /** Superfície unificada `/admin/financeiro?tab=pagar` — tokens Admin V2. */
+  adminV2Surface?: boolean
 }>
 
 const STATUS_LIST = ['todos', 'pendente', 'parcial', 'atrasado', 'pago', 'cancelado'] as const
@@ -72,6 +74,7 @@ export function ContasPagarListClient({
   fornecedoresOpts,
   statusInicial,
   periodoInicial,
+  adminV2Surface = false,
 }: Props) {
   const m = getMessages(idioma)
   const [contas, setContas] = useState<ContaPagarRow[]>(contasIniciais)
@@ -249,59 +252,70 @@ export function ContasPagarListClient({
 
   const algumFiltroAtivo = termo || status !== 'todos' || fornecedorId || periodo
 
+  const kpiCardCls = adminV2Surface
+    ? 'rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-4'
+    : 'dragon-glass-card rounded-xl p-4'
+
   return (
     <>
       <DataTablePage
         kpis={
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="dragon-glass-card rounded-xl border border-[var(--color-warning-border)] p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
+        <div className={cn(kpiCardCls, 'border-[var(--color-warning-border)]')}>
+          <div className="text-caption font-bold uppercase tracking-wide text-jl-fg-3">
             {m.contas_pagar.kpi_em_aberto}
           </div>
           <div className="mt-1 text-xl font-bold leading-tight text-[var(--color-warning-strong)] tabular-nums">
             {fmtGerenteBRL(kpis.totalAbertos, locale)}
           </div>
-          <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
+          <div className="mt-1.5 text-caption tabular-nums text-jl-fg-3">
             {kpis.qtdAbertos} {kpis.qtdAbertos === 1 ? m.contas_pagar.conta_sg : m.contas_pagar.conta_pl}
           </div>
         </div>
-        <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
+        <div className="rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4">
+          <div className="text-caption font-bold uppercase tracking-wide text-jl-fg-3">
             {m.contas_pagar.kpi_atrasadas}
           </div>
           <div className="mt-1 text-xl font-bold leading-tight text-[var(--color-danger-strong)] tabular-nums">
             {fmtGerenteBRL(kpis.totalAtrasados, locale)}
           </div>
-          <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
+          <div className="mt-1.5 text-caption tabular-nums text-jl-fg-3">
             {kpis.qtdAtrasados} {m.contas_pagar.atrasadas}
           </div>
         </div>
-        <div className="dragon-glass-card rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
+        <div className={kpiCardCls}>
+          <div className="text-caption font-bold uppercase tracking-wide text-jl-fg-3">
             {m.contas_pagar.kpi_filtrado}
           </div>
           <div className="mt-1 text-xl font-bold leading-tight text-jl-fg-1 tabular-nums">
             {contas.length}
           </div>
-          <div className="mt-1.5 text-[11px] tabular-nums text-jl-fg-3">
+          <div className="mt-1.5 text-caption tabular-nums text-jl-fg-3">
             {m.contas_pagar.contas_carregadas}
           </div>
         </div>
-        <div className="dragon-glass-card flex flex-col items-start justify-between rounded-xl p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-jl-fg-3">
+        <div className={cn(kpiCardCls, 'flex flex-col items-start justify-between')}>
+          <div className="text-caption font-bold uppercase tracking-wide text-jl-fg-3">
             {m.contas_pagar.acoes_rapidas}
           </div>
-          <Button type="button" className="app-btn-accent mt-2 gap-1.5" asChild>
+          <Button type="button" className="mt-2 gap-1.5" asChild>
             <Link href={ROUTES.admin.importNfe}>
               <Plus className="h-4 w-4" aria-hidden /> {m.contas_pagar.lancar}
             </Link>
           </Button>
-          <p className="mt-2 text-[11px] leading-snug text-jl-fg-3">{m.contas_pagar.origem_nfe_hint}</p>
+          <p className="mt-2 text-caption leading-snug text-jl-fg-3">{m.contas_pagar.origem_nfe_hint}</p>
         </div>
       </div>
         }
         filters={
-          <div className="dragon-glass-card flex w-full flex-wrap items-center gap-2 rounded-xl p-3">
+          <div
+            className={cn(
+              'flex w-full flex-wrap items-center gap-2 rounded-lg p-3',
+              adminV2Surface
+                ? 'border border-[var(--color-border-secondary)] bg-jl-surface-soft'
+                : 'dragon-glass-card rounded-xl',
+            )}
+          >
         <div className="relative min-w-[240px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-jl-fg-3" aria-hidden />
           <input
@@ -368,7 +382,9 @@ export function ContasPagarListClient({
             disabled={exporting || contas.length === 0}
             onClick={() => void onExportar()}
             className={cn(
-              'app-btn-neutral inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              adminV2Surface
+                ? 'inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-soft px-3 text-small font-medium transition-colors hover:bg-jl-surface-elev focus-visible:shadow-focus'
+                : 'app-btn-neutral inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
               (exporting || contas.length === 0) && 'cursor-not-allowed opacity-45',
             )}
           >
@@ -382,7 +398,7 @@ export function ContasPagarListClient({
       >
 
       <GerenteTable
-        tone="dragon"
+        tone={adminV2Surface ? 'paper' : 'dragon'}
         compact
         loading={loading && contas.length === 0}
         columns={[
