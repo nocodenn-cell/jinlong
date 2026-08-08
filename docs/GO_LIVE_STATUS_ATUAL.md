@@ -1,30 +1,51 @@
 # Go-Live — status atual (PR #267)
 
 **Atualizado:** 2026-08-08 (UTC) · branch `cursor/reconciliacao-supabase-audit-633a`  
-**Decisão:** ver seção 6 — revalidar após CI verde em `supabase db reset` + E2E crítico.
+**Decisão:** ver seção 6.
 
 ---
 
-## 1. P0 — Greenfield `supabase db reset`
+## 1. Auditoria estrutural greenfield (P0.1)
 
-| Item | Status | Evidência |
-|------|--------|-----------|
-| Ordem SSOT 270–289 antes backports `202608*` | **DONE** | Renomeação → `20260731200300`…`20260731202200` (20 arquivos) |
-| Mig `298` DROP overload inexistente | **DONE** | `DROP FUNCTION IF EXISTS` (21 e 20 args) |
-| Mig `295` / `304` DROP sem IF EXISTS | **DONE** | `DROP FUNCTION IF EXISTS` |
-| Terminadores `;` backports (ex. `20260801120000`) | **DONE** | commits anteriores + `08ff4fb7` |
-| Mig `20260730093000` guards replace | **DONE** | `4f8d88ab` |
-| `db reset --local` agente cloud | **BLOCKED** | Overlay Docker indisponível no pod (whiteout) |
-| `db reset` CI GitHub Actions | **P0** | Aguardar run pós-commit de reordenação |
+### Causa raiz comum
 
-**Causa raiz ordem:** migrations `270_*` … `289_*` ordenavam **depois** dos timestamps `202608*` (comparação lexicográfica `"272" > "202608"`). Backports assumiam estado pós-272/274.
+`supabase db reset` aplica arquivos por **ordem lexicográfica do nome**.
 
-**Fase 3.2:** `20260808130200_*` **inalterada**. Drift **informativo** (`p0-migration-status.mjs`). **HUMAN GATE** produção — não aplicar via agente.
+| Prefixo | Ordena relativamente a `2026…` |
+|---------|--------------------------------|
+| `001`–`201` | antes |
+| `2026…` (timestamps) | meio |
+| `205`–`269`, `24701`–`24703` | **depois de todos os `202608*`** (`"205" > "202608"` na 2ª posição) |
 
-### Piloto vs Fase 3.2
+Os numerics `205`–`269` foram aplicados em produção **antes** dos backports `202608*` (história cronológica). No greenfield eles rodavam **por último**, depois de migrations que já:
 
-- **Primeiro piloto comercial:** não depende do apply remoto da 3.2 se objetos `venda_finance_context` continuarem ausentes em prod (decisão 3.1: manter + idempotentizar **quando** houver janela).
-- **Recomendação:** aplicar 3.2 em **janela controlada pós-piloto** ou quando espelho financeiro for requisito explícito do cliente — não bloqueia caixa/venda/estoque do piloto se app não consome a view hoje.
+- `DROP POLICY` / recriaram RLS (ex.: `294` fornecedores, `265` clientes);
+- reaplicaram funções/observabilidade (`311`);
+- alteraram overloads/grants.
+
+Isso gera a classe de erro: `policy/function … does not exist` a cada CI — não bugs isolados.
+
+### Correção SSOT (menor conjunto)
+
+1. **Reordenar** `205`–`269` + `24701`–`24703` → timestamps `20260621000100`…`20260621005700`  
+   (gap após `20260620222629`, antes de `20260707000000`) — espelho do que já foi feito com `270`–`289` → `20260731200300`….
+2. **Idempotizar** `CREATE POLICY` bare nos near-duplicates de julho que passam a rodar *depois* do bloco reordenado:
+   - `20260707000000` (`venda_eventos_select_loja`)
+   - `20260710163032` (3 policies `vendas_em_espera_*`)
+3. **Drift gate** (`p0-migration-status.mjs`): reordenação SSOT + remote-only numeric `205`–`289` / `24701`–`03` = informativo (não bloqueia).
+
+**Não alterado:** `20260808130200_*` (Fase 3.2 HUMAN GATE). Sem `db push` prod. Sem bypass do greenfield gate.
+
+### Migrations afetadas vs intocadas
+
+| Grupo | Ação |
+|-------|------|
+| 57 arquivos `205`–`269` / `24701`–`03` | rename (conteúdo intacto) |
+| 2 backports julho (policy) | `DROP POLICY IF EXISTS` antes do `CREATE` |
+| `p0-migration-status.mjs` | classificar drift da reordenação |
+| Demais `202608*` / Fase 3.2 / app | sem mudança de negócio |
+
+Guards anteriores em `224` / `278` / `282` / `275` permanecem como defesa; com a nova ordem a maioria torna-se no-op quando o objeto existe.
 
 ---
 
@@ -32,62 +53,42 @@
 
 | Item | Status | Evidência |
 |------|--------|-----------|
-| Causa `UNAUTHORIZED` smoke sync | **DONE** | Nonce não-UUID + HMAC sem `device` → `7b8c0f7b`, `14928ef8` |
-| `smoke:sync-edge` PASS no CI | **P0** | Revalidar run pós-fix (run `31267812923` inconcluso no fechamento anterior) |
-| Playwright caixa/sync pós-smoke | **P1** | Depende de smoke + secrets staging (`docs/E2E.md`) |
+| Causa `UNAUTHORIZED` smoke sync | **DONE** | Nonce UUID + HMAC com `device` |
+| `smoke:sync-edge` PASS | **DONE** (runs recentes) | `[smoke-sync] OK` / `[pipeline] OK: smoke:sync-edge` |
+| Playwright sync-fluxo pós-smoke | **P0** | `EVENT_PROCESSING_FAILED` — seed produto/operador em ajuste; revalidar após greenfield PASS |
 
 ---
 
-## 3. CI / gates PR #267
+## 3. CI / gates
 
-| Gate | Último estado conhecido | Classificação |
-|------|-------------------------|---------------|
-| `migration-remote-drift` | PASS (retry pooler) | P0 |
-| `anti-replay-diagnostic-gate` | PASS | P1 |
-| `Supabase local gates (RLS + scope + REST)` | FAIL → correções pushed | **P0** |
-| `build-and-test` (pdv-importados) | PASS | P0 |
-| E2E crítico | FAIL / inconcluso | **P0** |
-| Fase 3.2 validate (git) | OK | P2 |
+| Gate | Classificação |
+|------|---------------|
+| `migration-remote-drift` | independente — PASS esperado (reorder informativo) |
+| `smoke:sync-edge` (pipeline E2E) | independente |
+| `Supabase local gates` | **P0** — próximo CI deve passar de `001→HEAD` sem a classe ALTER/DROP invertida |
+| Fase 3.2 | **P2** HUMAN GATE |
 
 ---
 
-## 4. Checklist integração Go-Live (manual)
+## 4. Fase 3.2 HUMAN GATE
 
-Executar **somente após** CI local gates + E2E crítico verdes.
-
-| Fluxo | Status |
-|-------|--------|
-| Auth / RBAC | **P1** — não certificado nesta rodada |
-| Cadastro produto (`/admin/catalogo`) | **P1** |
-| Venda / caixa | **P1** |
-| Estoque | **P1** |
-| Financeiro | **P1** |
-| Outbox / sync / `SYNC_KEY` | **P1** — anti-replay OK; smoke E2E pendente PASS |
-| Edge Functions | **P2** — typecheck OK |
-| Fiscal / NF-e piloto | **P2** — ambiente-dependent |
+`20260808130200_*` **intocada**. Piloto comercial **não** exige apply imediato se o app não consome `venda_finance_context`. Aplicar em janela controlada pós-piloto.
 
 ---
 
-## 5. Pendências por prioridade
+## 5. Pendências
 
 | ID | Prioridade | Descrição |
 |----|------------|-----------|
-| GF-RESET | **P0** | CI `supabase start` + reset até HEAD sem erro SQL |
-| E2E-SMOKE | **P0** | Log CI com `[smoke-sync] OK` |
-| BP-PROTECT | **P1** | Confirmar required checks apontam para job consolidado `Supabase local gates…` |
-| INT-MANUAL | **P1** | Roteiro manual pós-CI |
-| F32-HUMAN | **P2** | Decisão humana apply `20260808130200` em prod |
-| GATE-PDV | **P1** | `npm run gate:pdv` (bloqueante go-live, fora Playwright) |
+| GF-RESET | **P0** | Evidência CI: local gates success após reorder 205–269 |
+| E2E-SYNC | **P0** | Playwright sync-fluxo PASS (smoke já OK) |
+| INT-MANUAL | **P1** | Checklist integração pós-CI |
+| F32-HUMAN | **P2** | Apply 3.2 em prod |
 
 ---
 
 ## 6. Decisão objetiva
 
-**`BLOCKED`** até evidência:
+**`BLOCKED`** até local gates + E2E crítico verdes com evidência de run.
 
-1. Run CI: job **Supabase local gates** = success (incl. RLS smoke + `test:rls-scope` + REST local).
-2. Run CI: **E2E crítico** = success com `smoke:sync-edge` OK.
-
-Quando (1)+(2) verdes e checklist P1 executado → reclassificar **`NOT READY`** (piloto com riscos P1 documentados) ou **`READY`** se gate PDV + integração manual OK.
-
-**Não declarar `READY` enquanto P0 acima estiver vermelho.**
+Não declarar `READY` com P0 aberto.

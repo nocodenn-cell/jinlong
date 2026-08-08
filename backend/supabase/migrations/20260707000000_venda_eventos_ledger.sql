@@ -44,6 +44,8 @@ GRANT SELECT ON TABLE public.venda_eventos TO authenticated;
 
 GRANT SELECT, INSERT ON TABLE public.venda_eventos TO service_role;
 
+-- Greenfield: numeric 228 (reordered to 20260621*) may already have created this policy.
+DROP POLICY IF EXISTS venda_eventos_select_loja ON public.venda_eventos;
 CREATE POLICY venda_eventos_select_loja ON public.venda_eventos
   FOR SELECT TO authenticated
   USING (

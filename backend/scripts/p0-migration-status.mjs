@@ -43,21 +43,28 @@ function isLegacyNumericMirrorDrift(entry) {
   return false;
 }
 
-/** Reordenação greenfield: ex-270..289 renumerados para timestamps (aplicam antes dos backports 202608*). */
+/** Reordenação greenfield SSOT: numerics legados movidos para timestamps (antes dos backports 202608*). */
 function isGreenfieldSsotReorderDrift(entry) {
   if (entry.reason !== "remote_ausente") return false;
   const n = Number(entry.version);
-  if (!Number.isFinite(n) || n < 20260731200300 || n > 20260731202200) {
-    return false;
+  if (!Number.isFinite(n)) return false;
+  // ex-205..269 (+24701-03) → 20260621000100..20260621005700
+  if (n >= 20260621000100 && n <= 20260621005700) {
+    return (n - 20260621000100) % 100 === 0;
   }
-  return (n - 20260731200300) % 100 === 0;
+  // ex-270..289 → 20260731200300..20260731202200
+  if (n >= 20260731200300 && n <= 20260731202200) {
+    return (n - 20260731200300) % 100 === 0;
+  }
+  return false;
 }
 
 function isLegacyRemoteOnlyNumeric(version) {
   const raw = String(version).replace(/^0+/, "") || version;
+  if (/^2470[1-3]$/.test(raw)) return true;
   if (!/^\d{1,3}$/.test(raw)) return false;
   const n = Number(raw);
-  return n >= 270 && n <= 289;
+  return n >= 205 && n <= 289;
 }
 
 function isPhase32GitOnlyDrift(entry) {
