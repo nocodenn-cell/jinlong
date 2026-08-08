@@ -175,11 +175,13 @@ async function ensureUsersAndSeed() {
     3
   );
 
+  -- uq_caixas_operador_aberto: no máximo 1 caixa ABERTO por operador_id (mig 288/310).
+  -- Caixa da filial usa ADMIN para não colidir com o ABERTO do OPERADOR na loja matriz.
   INSERT INTO public.caixas (id, operador_id, valor_inicial, status, loja_id)
   VALUES
     ('${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
     ('${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
-    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
+    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.ADMIN}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, loja_id = EXCLUDED.loja_id, status = 'ABERTO';
 
   UPDATE public.pricing_config_versions
