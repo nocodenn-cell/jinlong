@@ -147,13 +147,21 @@ export async function listarVendasEmEsperaImpl(): Promise<ListarEmEsperaResult> 
   }
 }
 
+/** Traduz códigos de claim da RPC de retomada para mensagem de operador. */
+export function mensagemErroRetomarEmEspera(raw: string): string {
+  if (raw.includes('venda_em_espera_em_uso')) {
+    return 'Este pedido em espera já está em uso em outro terminal.'
+  }
+  return mensagemErroParaUsuario(raw)
+}
+
 export async function retomarVendaEmEsperaImpl(id: string): Promise<RetomarEmEsperaResult> {
   try {
     const { userId } = await getUsuarioAtual()
     if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
     const supabase = await createClient()
     const { data, error } = await supabase.rpc('retomar_venda_em_espera', { p_id: id })
-    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
+    if (error) return { ok: false, error: mensagemErroRetomarEmEspera(error.message) }
     const row = asRecord(data)
     if (!row?.id) return { ok: false, error: 'Venda em espera não encontrada.' }
     return {
@@ -173,8 +181,7 @@ export async function retomarVendaEmEsperaImpl(id: string): Promise<RetomarEmEsp
 
 /**
  * Consome o pedido em espera DEPOIS que a venda foi realmente finalizada.
- * Separado da retomada de propósito: se o operador retomar o cupom errado e
- * desistir, o pedido continua na lista em vez de sumir (migration 288).
+ * A retomada só clama (RETOMADA); a baixa terminal é CONVERTIDA aqui.
  */
 export async function converterVendaEmEsperaImpl(
   id: string,
@@ -190,6 +197,28 @@ export async function converterVendaEmEsperaImpl(
     return {
       ok: false,
       error: mensagemErroDeExcecao(e, 'Não foi possível baixar a venda em espera.'),
+    }
+  }
+}
+
+/**
+ * Devolve RETOMADA → EM_ESPERA quando o operador desiste do cupom retomado
+ * sem vender (preserva o cupom na lista — P2 da certificação operacional).
+ */
+export async function devolverVendaEmEsperaImpl(
+  id: string,
+): Promise<DescartarEmEsperaResult> {
+  try {
+    const { userId } = await getUsuarioAtual()
+    if (!userId) return { ok: false, error: 'Sessão expirada. Faça login novamente.' }
+    const supabase = await createClient()
+    const { error } = await supabase.rpc('devolver_venda_em_espera', { p_id: id })
+    if (error) return { ok: false, error: mensagemErroParaUsuario(error.message) }
+    return { ok: true }
+  } catch (e) {
+    return {
+      ok: false,
+      error: mensagemErroDeExcecao(e, 'Não foi possível devolver a venda em espera.'),
     }
   }
 }

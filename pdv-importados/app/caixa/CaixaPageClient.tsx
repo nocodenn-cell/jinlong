@@ -11,6 +11,7 @@ import {
   validarGerenteDesconto,
   obterDetalheHistoricoVendaCaixa,
   converterVendaEmEsperaCaixa,
+  devolverVendaEmEsperaCaixa,
 } from "@/app/caixa/actions"
 import { historicoDetalheParaRecibo } from "@/app/caixa/caixaHistoricoRecibo"
 import type { MovimentacaoCaixaDTO } from "@/app/caixa/caixaMovimentacaoTypes"
@@ -228,6 +229,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
   const resolverFinalizacaoPendente = useCarrinhoStore((s) => s.resolverFinalizacaoPendente)
   const concluirVendaIdempotencyKey = useCarrinhoStore((s) => s.concluirVendaIdempotencyKey)
   const vendaFinalizacaoPendenteStore = useCarrinhoStore((s) => s.vendaFinalizacaoPendente)
+  const vendaEmEsperaOrigemId = useCarrinhoStore((s) => s.vendaEmEsperaOrigemId)
+  const setVendaEmEsperaOrigemId = useCarrinhoStore((s) => s.setVendaEmEsperaOrigemId)
   const vendaFinalizacaoPendente = cartMounted ? vendaFinalizacaoPendenteStore : false
 
   const descontoGerenteAplicado = aplicarDescontoGerenteSobreTotal({
@@ -267,9 +270,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
    */
   const [vendaPendenteModalAberto, setVendaPendenteModalAberto] = useState(false)
   const [verificandoVendaPendente, setVerificandoVendaPendente] = useState(false)
-  /** Pedido em espera que originou o cupom atual; baixado só quando a venda conclui. */
-  const [vendaEmEsperaOrigemId, setVendaEmEsperaOrigemId] = useState<string | null>(null)
-
   const cupomSessionIdRef = useRef<string>(newCupomSessionId())
   const lastScanItemRef = useRef<{ codigo: string; itemId: string; produtoId: string; ts: number } | null>(null)
   const lastReciboRef = useRef<ReciboVenda | null>(null)
@@ -548,6 +548,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     }
     flushLeiturasPendentes({ reason: "new_cupom" })
     cupomSessionIdRef.current = newCupomSessionId()
+    // Captura antes de limparCarrinho: o store zera o origemId no empty cart.
+    const origemAbandonada = useCarrinhoStore.getState().vendaEmEsperaOrigemId
     limparCarrinho()
     resetPagamentos()
     setMetodoPagamento("dinheiro")
@@ -557,9 +559,11 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     limparEstadoDescontoGerente()
     setClienteId(null)  // Reset cliente selecionado para evitar vazar entre cupons
     setClienteNome(null)
-    // Cupom abandonado: solta o vínculo, mas NÃO baixa o pedido em espera — ele
-    // volta a ficar disponível na lista, que é justamente o ponto do P2.
-    setVendaEmEsperaOrigemId(null)
+    // Cupom abandonado: devolve RETOMADA → EM_ESPERA para o pedido voltar à lista
+    // (P2). Sem isso o claim da retomada deixaria o cupom invisível para sempre.
+    if (origemAbandonada) {
+      void devolverVendaEmEsperaCaixa(origemAbandonada).catch(() => {})
+    }
     focarCampoBusca()
   }, [
     flushLeiturasPendentes,
@@ -935,6 +939,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         }
         setCheckoutHint(null)
         setReimprimirModalAberto(true)
+        // Captura antes de limpar: empty cart zera vendaEmEsperaOrigemId no store.
+        const origemConvertida = useCarrinhoStore.getState().vendaEmEsperaOrigemId
         concluirVendaIdempotencyKey()
         limparCarrinho()
         limparEstadoDescontoGerente()
@@ -944,10 +950,10 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         // Agora sim o pedido em espera saiu: virou venda. Escrituração acessória —
         // nunca pode derrubar o caminho de sucesso e cair no catch de "pendente"
         // com a venda já concluída e a chave já descartada (isso reabriria a
-        // porta da venda duplicada). Falhando, o pedido só fica na lista.
-        if (vendaEmEsperaOrigemId) {
-          void converterVendaEmEsperaCaixa(vendaEmEsperaOrigemId).catch(() => {})
-          setVendaEmEsperaOrigemId(null)
+        // porta da venda duplicada). Falhando, o pedido fica RETOMADA (não
+        // revendável) até correção manual — melhor que estoque em dobro.
+        if (origemConvertida) {
+          void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
         }
         setTurnoRefreshToken((t) => t + 1)
         setCaixaMensagemVendaOk(
@@ -1037,7 +1043,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     marcarFinalizacaoPendente,
     resolverFinalizacaoPendente,
     concluirVendaIdempotencyKey,
-    vendaEmEsperaOrigemId,
   ])
 
   /**
@@ -1059,6 +1064,7 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
       if (res.ok) {
         // Venda gravada: encerra o cupom exatamente como no caminho de sucesso.
         lastReciboRef.current = historicoDetalheParaRecibo(res.detalhe, m.caixa.moeda_prefixo)
+        const origemConvertida = useCarrinhoStore.getState().vendaEmEsperaOrigemId
         concluirVendaIdempotencyKey()
         limparCarrinho()
         limparEstadoDescontoGerente()
@@ -1066,9 +1072,8 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
         setClienteId(null)
         setClienteNome(null)
         // Acessório, como no caminho de sucesso: não pode derrubar a recuperação.
-        if (vendaEmEsperaOrigemId) {
-          void converterVendaEmEsperaCaixa(vendaEmEsperaOrigemId).catch(() => {})
-          setVendaEmEsperaOrigemId(null)
+        if (origemConvertida) {
+          void converterVendaEmEsperaCaixa(origemConvertida).catch(() => {})
         }
         setVendaPendenteModalAberto(false)
         setCheckoutHint(null)
@@ -1105,7 +1110,6 @@ export function CaixaPageClient({ messages: m, idioma, operadorLabel, perfil, us
     setCaixaMensagem,
     setCaixaMensagemVendaOk,
     tocarFeedback,
-    vendaEmEsperaOrigemId,
     m,
   ])
 

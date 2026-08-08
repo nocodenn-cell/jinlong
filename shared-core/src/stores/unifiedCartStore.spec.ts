@@ -122,4 +122,23 @@ describe('unifiedCartStore — idempotência da venda', () => {
     expect(useCartStore.getState().vendaFinalizacaoPendente).toBe(false)
     expect(useCartStore.getState().garantirVendaIdempotencyKey()).not.toBe(anterior)
   })
+
+  it('persiste vendaEmEsperaOrigemId com o carrinho (anti double-sell pós-F5)', () => {
+    const esperaId = '11111111-2222-4333-8444-555555555555'
+    useCartStore.getState().setVendaEmEsperaOrigemId(esperaId)
+
+    const partialize = (useCartStore as unknown as {
+      persist: { getOptions: () => { partialize?: (s: unknown) => unknown } }
+    }).persist?.getOptions().partialize
+    expect(partialize).toBeTypeOf('function')
+
+    const persistido = partialize!(useCartStore.getState()) as Record<string, unknown>
+    expect(persistido.vendaEmEsperaOrigemId).toBe(esperaId)
+
+    useCartStore.getState().limparCarrinho()
+    expect(useCartStore.getState().vendaEmEsperaOrigemId).toBeNull()
+
+    useCartStore.setState(persistido as never)
+    expect(useCartStore.getState().vendaEmEsperaOrigemId).toBe(esperaId)
+  })
 })

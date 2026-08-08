@@ -59,6 +59,7 @@ import {
   colocarVendaEmEsperaImpl,
   converterVendaEmEsperaImpl,
   descartarVendaEmEsperaImpl,
+  devolverVendaEmEsperaImpl,
   listarHistoricoOperadorImpl,
   listarVendasEmEsperaImpl,
   obterDetalheHistoricoVendaImpl,
@@ -242,6 +243,11 @@ export async function descartarVendaEmEsperaCaixa(id: string, motivo?: string) {
 /** Baixa o pedido em espera só depois que a venda foi de fato finalizada. */
 export async function converterVendaEmEsperaCaixa(id: string) {
   return converterVendaEmEsperaImpl(id)
+}
+
+/** Devolve claim RETOMADA → EM_ESPERA ao desistir do cupom retomado. */
+export async function devolverVendaEmEsperaCaixa(id: string) {
+  return devolverVendaEmEsperaImpl(id)
 }
 
 export async function listarHistoricoOperadorCaixa(input?: {
