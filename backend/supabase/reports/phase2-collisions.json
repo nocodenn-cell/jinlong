@@ -1,0 +1,155 @@
+{
+  "generatedAt": "2026-08-08T00:00:00.000Z",
+  "source": "Supabase MCP execute_sql md5(statements) + repo inventory (read-only)",
+  "collisions": [
+    {
+      "versao": "113",
+      "arquivoRepo": "113_descontos_venda_auditoria_operador.sql",
+      "versaoProd": "20260618011821",
+      "trackingProd": "113_rls_audit_fixes",
+      "sqlEquivalente": false,
+      "objetoCriado": "Colunas auditoria descontos (113) + hardening RLS (timestamp); ambos applied",
+      "recomendacao": "Não reaplicar; backport/capture timestamp já no repo; prevalece timestamp para hotfix RLS"
+    },
+    {
+      "versao": "114",
+      "arquivoRepo": "114_fiscal_enqueue_loja_validation.sql",
+      "versaoProd": "20260618011922",
+      "trackingProd": "114_pdv_config_loja_backfill",
+      "sqlEquivalente": false,
+      "objetoCriado": "Fiscal enqueue (114 numérico) vs backfill pdv_config (timestamp); ambos applied",
+      "recomendacao": "Documentar colisão histórica; não re-run numérico 114; arquivo capture timestamp é SSOT prod"
+    },
+    {
+      "versao": "245",
+      "arquivoRepo": "245_calcular_preco_produto_precedence_comment.sql",
+      "versaoProd": "20260620222629",
+      "trackingProd": "245_remover_venda_fiado",
+      "sqlEquivalente": false,
+      "objetoCriado": "COMMENT função preço (245) vs DROP tabelas venda_fiado (timestamp); objetos distintos",
+      "recomendacao": "Nunca confundir prefixos; fiado já removido via 246 + timestamp"
+    },
+    {
+      "versao": "246",
+      "arquivoRepo": "246_remover_venda_fiado.sql",
+      "versaoProd": "20260620222629",
+      "trackingProd": "245_remover_venda_fiado",
+      "sqlEquivalente": false,
+      "objetoCriado": "RPC/CHECK anti-FIADO (246) + DROP legado (timestamp); complementares",
+      "recomendacao": "Não reaplicar; manter ambos no histórico"
+    },
+    {
+      "versao": "253",
+      "arquivoRepo": "253_clientes_tipo_endereco_e_view_gerente.sql",
+      "versaoProd": "20260620200253",
+      "trackingProd": "244_clientes_tipo_endereco_e_view_gerente",
+      "sqlEquivalente": false,
+      "objetoCriado": "Duas migrations applied com numeração divergente (253 vs 244 no slug timestamp)",
+      "recomendacao": "Investigar diff SQL Fase 3; não replay"
+    },
+    {
+      "versao": "255",
+      "arquivoRepo": "255_grant_baseline_tabelas_authenticated.sql",
+      "versaoProd": "20260710163032",
+      "trackingProd": "255_vendas_em_espera_e_consulta_rapida",
+      "sqlEquivalente": false,
+      "objetoCriado": "Grants baseline (255 numérico) vs vendas em espera (timestamp); ambos applied",
+      "recomendacao": "Renomear/documentar; prevalece timestamp para feature espera"
+    },
+    {
+      "versao": "24703",
+      "arquivoRepo": "24703_vendas_em_espera_e_consulta_rapida.sql",
+      "versaoProd": "20260710163032",
+      "trackingProd": "255_vendas_em_espera_e_consulta_rapida",
+      "sqlEquivalente": false,
+      "objetoCriado": "Duplicata lógica numérica 24703 vs timestamp 255_*",
+      "recomendacao": "Arquivar equivalência git Fase 3; prod rastreia timestamp"
+    },
+    {
+      "versao": "268",
+      "arquivoRepo": "268_reconcile_finalizar_venda_v4_single_overload.sql",
+      "versaoProd": "20260713174909",
+      "trackingProd": "268_drop_v4_overloads",
+      "sqlEquivalente": false,
+      "objetoCriado": "Reconcile overload v4 (268) + drop overloads (timestamp); cadeia v4",
+      "recomendacao": "Não reaplicar; fn v4 presente em prod"
+    },
+    {
+      "versao": "278",
+      "arquivoRepo": "278_revoke_anon_authenticated_funcoes_sem_uso_publico.sql",
+      "versaoProd": "20260717033836",
+      "trackingProd": "278_fix_v_clientes_gerente_ultima_compra",
+      "sqlEquivalente": false,
+      "objetoCriado": "Revokes amplos (278) vs fix view clientes (timestamp)",
+      "recomendacao": "Colisão de número; prevalece timestamp para fix view"
+    },
+    {
+      "versao": "228",
+      "arquivoRepo": "228_venda_eventos_ledger.sql",
+      "versaoProd": "20260707000000",
+      "trackingProd": "venda_eventos_ledger",
+      "sqlEquivalente": "nao_medido_repo_vs_prod",
+      "objetoCriado": "venda_eventos (to_regclass true); prod só rastreia timestamp",
+      "recomendacao": "Repo-only chave 228; usar backport timestamp; não executar 228 em prod"
+    },
+    {
+      "versao": "231",
+      "arquivoRepo": "231_gerente_venda_eventos_rpcs.sql",
+      "versaoProd": "20260707010000",
+      "trackingProd": "gerente_venda_eventos_rpcs",
+      "sqlEquivalente": "nao_medido_repo_vs_prod",
+      "objetoCriado": "RPCs eventos; prod rastreia timestamp",
+      "recomendacao": "Repo-only chave 231; equivalência documentada"
+    },
+    {
+      "versao": "244",
+      "arquivoRepo": "244_consistencia_vendas_auditoria.sql",
+      "versaoProd": "20260707020000",
+      "trackingProd": "consistencia_vendas_auditoria",
+      "sqlEquivalente": "nao_medido_repo_vs_prod",
+      "objetoCriado": "Auditoria consistência vendas",
+      "recomendacao": "Repo-only chave 244; backport timestamp prevalece"
+    },
+    {
+      "versao": "248",
+      "arquivoRepo": "248_devolver_ou_trocar_venda.sql",
+      "versaoProd": "20260717031500",
+      "trackingProd": "248_devolver_ou_trocar_venda",
+      "sqlEquivalente": "nao_medido_repo_vs_prod",
+      "objetoCriado": "RPC devolver/trocar + fixes 248_* timestamps",
+      "recomendacao": "Repo-only chave 248; prod rastreia timestamp + patches grant"
+    },
+    {
+      "versao": "243",
+      "arquivoRepo": "243_finalizar_venda_canonica_v4_captura.sql",
+      "versaoProd": "243",
+      "trackingProd": "finalizar_venda_canonica_v4_captura",
+      "sqlEquivalente": true,
+      "objetoCriado": "finalizar_venda_transacional_canonica_v4 (presente)",
+      "recomendacao": "Cadeia v4: seguir 24702 → 268 → 20260713174909 → 277/301; não replay"
+    },
+    {
+      "versao": "24702",
+      "arquivoRepo": "24702_finalizar_venda_v4_contas_receber_automatico.sql",
+      "versaoProd": "24702",
+      "trackingProd": "finalizar_venda_v4_contas_receber_automatico",
+      "sqlEquivalente": true,
+      "objetoCriado": "v4 + contas_receber automático",
+      "recomendacao": "Nucleo v4; dependência lógica 252 (espelho ausente — não bloqueante runtime)"
+    }
+  ],
+  "v4ChainProdVersions": [
+    "20260619174508",
+    "20260619234314",
+    "20260620004913",
+    "20260620020436",
+    "243",
+    "24702",
+    "268",
+    "20260713174909",
+    "277",
+    "301"
+  ],
+  "collisionPairCount": 13,
+  "lineageCollisionRows": 15
+}

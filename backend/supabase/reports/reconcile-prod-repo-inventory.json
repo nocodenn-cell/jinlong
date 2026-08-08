@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-08-08T01:42:37.900Z",
+  "counts": {
+    "repoFiles": 267,
+    "prodTracked": 263,
+    "onlyRepo": 4,
+    "onlyProd": 0,
+    "nameMismatch": 0
+  },
+  "onlyRepo": [
+    {
+      "version": "228",
+      "file": "228_venda_eventos_ledger.sql",
+      "sha12": "3d52d801a8ad"
+    },
+    {
+      "version": "231",
+      "file": "231_gerente_venda_eventos_rpcs.sql",
+      "sha12": "fe1008477e82"
+    },
+    {
+      "version": "244",
+      "file": "244_consistencia_vendas_auditoria.sql",
+      "sha12": "e059906104c0"
+    },
+    {
+      "version": "248",
+      "file": "248_devolver_ou_trocar_venda.sql",
+      "sha12": "f9c2783b486c"
+    }
+  ],
+  "onlyProd": [],
+  "nameMismatch": [],
+  "numericGapsInProdSequence": [
+    247,
+    257,
+    259,
+    260,
+    261,
+    262,
+    263,
+    264,
+    265,
+    266,
+    267
+  ]
+}

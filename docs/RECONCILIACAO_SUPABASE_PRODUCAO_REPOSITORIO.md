@@ -12,8 +12,8 @@
 
 | Métrica | Repositório | Produção (`schema_migrations`) |
 |--------|-------------|--------------------------------|
-| Arquivos `.sql` | **237** | **263** versões registradas |
-| Paridade por **chave de versão** | 233 versões com par | **30 só produção**, **4 só repo** (ver §4) |
+| Arquivos `.sql` | **267** (pós-Fase 1) | **263** versões registradas |
+| Paridade por **chave de versão** | **263** versões com par | **0 só produção**, **4 só repo** (ver §13.2) |
 | Formato | Numérico `001`…`288` + timestamps `2026…` | Numérico + timestamps intercalados |
 
 **Conclusão:** o drift de junho/2026 **evoluiu**. Produção **não está “atrás” do repo** no núcleo operacional — em vários clusters está **à frente** (pacote `20260805`…`313_*`). O risco P0 continua sendo **determinismo do tracking**: a mesma versão numérica pode significar conteúdos diferentes; reaplicar cegamente quebra dados ou falha com PK duplicada.
@@ -253,7 +253,7 @@ Sequência numérica salta `120`–`121`, `128`–`204`, `228`, `231`, `244`, `2
 
 ---
 
-*Fim do relatório read-only. **Fase 1 (backport git-only)** executada em 2026-08-08 — ver §12.*
+*Fase 1 (backport git-only) executada em 2026-08-08 — ver §12. **Fase 2 (forense read-only)** executada em 2026-08-08 — ver §13.*
 
 ---
 
@@ -382,6 +382,105 @@ Checksums completos: `backend/supabase/reports/backport-phase1-manifest.json` (`
 | `build-backport-phase1-manifest.mjs` | SHA256 dos arquivos backport |
 | `validate-phase1-backport.mjs` | Gate 30 versões §4.2 |
 | `write-prod-snapshot-from-list.mjs` | Snapshot a partir de `list_migrations` |
+
+---
+
+## 13. Fase 2 executada — forense read-only (sem mutação em prod)
+
+**Escopo:** fechar mapa `repo ↔ schema_migrations ↔ catálogo prod` antes de qualquer DDL/DML.  
+**Produção:** **100% intocada** — apenas `list_migrations`, `execute_sql` (`SELECT`, `pg_catalog`, leitura de `statements`).
+
+### 13.1 Fotografia final (2026-08-08 UTC)
+
+| # | Métrica | Valor |
+|---|---------|--------|
+| 1 | Total arquivos `.sql` no repo | **267** |
+| 2 | Total `schema_migrations` (prod) | **263** |
+| 3 | Prod-only restante (chave sem arquivo) | **0** |
+| 4 | Repo-only restante (arquivo sem chave prod) | **4** (`228`, `231`, `244`, `248`) |
+| 5 | Colisões de lineage documentadas | **13 pares** (+ cadeia v4 — §13.4) |
+| 6 | **252 / venda_finance_context** | Applied + SQL em `statements`; **objetos ausentes** → §13.3 |
+| 7 | Objetos críticos divergentes | `venda_finance_context` (espelho); demais P0 (`venda_eventos`, `system_alerts`, `finalizar_venda_transacional_canonica_v4`) **presentes** |
+| 8 | Riscos | Replay cego de colisões; falso “applied” em 252; CI drift se reintroduzir hotfix sem arquivo |
+| 9 | Recomendação Fase 3 | Migration timestamp **idempotente** para espelho 252 **ou** descarte formal; higiene git (arquivar numéricos 228/231/244/248); **não** `repair`/`db push` em massa |
+
+**Divergências restantes (contagem operacional):** **5** = 4 repo-only + 1 drift tracking×schema (252).  
+**Colisões (pares numérico×timestamp / mesmo número histórias diferentes):** **13** (detalhe em `backend/supabase/reports/phase2-collisions.json`).
+
+Artefatos:
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `reports/prod_schema_migrations.snapshot.json` | Snapshot 263 versões (read-only) |
+| `reports/reconcile-prod-repo-inventory.json` | Diff mecânico repo×prod |
+| `reports/phase2-forensic-252.json` | Forense 252 |
+| `reports/phase2-collisions.json` | Mapa colisões |
+| `reports/phase2-prod-only-inventory.json` | Prod-only pós-Fase 1 |
+| `scripts/write-prod-snapshot-from-tsv.mjs` | Regenerar snapshot a partir de export TSV |
+
+### 13.2 Repo-only e prod-only
+
+**Repo-only (4)** — conteúdo aplicado em prod sob **timestamp** (Fase 1 backport); chave numérica **não** está em `schema_migrations`:
+
+| Versão repo | Arquivo | Tracking prod |
+|-------------|---------|---------------|
+| `228` | `228_venda_eventos_ledger.sql` | `20260707000000` |
+| `231` | `231_gerente_venda_eventos_rpcs.sql` | `20260707010000` |
+| `244` | `244_consistencia_vendas_auditoria.sql` | `20260707020000` |
+| `248` | `248_devolver_ou_trocar_venda.sql` | `20260717031500` (+ patches `20260717031639`…) |
+
+**Prod-only por chave:** **nenhum** após Fase 1. Hotfixes `20260618011821` / `20260618011922` já possuem arquivos **capture** no repo (fora do manifesto dos 30 backports) — classificação **necessária para SSOT** (`phase2-prod-only-inventory.json`).
+
+### 13.3 Forense **252 / venda_finance_context**
+
+| Evidência | Resultado |
+|-----------|-----------|
+| Repo | `252_venda_finance_context_mirror.sql` (SHA256 `96f45cd6…`) |
+| Prod `schema_migrations` | Versão **252**, name `venda_finance_context_mirror`, **22** statements |
+| SQL registrado | Header e blocos batem com repo; MD5 agregado **≠** arquivo (CRLF + split em 22 statements) |
+| Catálogo prod | Tabela, funções, triggers, policy, índices: **todos ausentes** |
+| DROP posterior versionado | **Não** (busca em `statements` de todas migrations) |
+| Outras migrations citando espelho | `24702`, `268`, `272`, `274` (comentários PASSO 7 — **não** provam objeto) |
+| Uso app | **Zero** runtime |
+
+**Conclusão forense (recomendação, sem ação mutadora):** **`reconstruir`** — em Fase 3, aplicar DDL idempotente via **nova** migration timestamp (ou descarte formal de produto). **Não** “aplicar 252” de novo (já tracked). **Não** declarar paridade 100% enquanto tracking diz applied e catálogo diz ausente.
+
+### 13.4 Mapa colisões (amostra pedida)
+
+Formato: `versão | arquivo repo | versão prod | tracking | SQL equivalente? | objeto criado | recomendação`
+
+| versão | arquivo repo | versão prod | tracking | SQL equivalente? | objeto criado | recomendação |
+|--------|--------------|-------------|----------|------------------|---------------|--------------|
+| `113` | `113_descontos_venda_auditoria_operador.sql` | `20260618011821` | `113_rls_audit_fixes` | **Não** (md5) | Auditoria descontos + RLS hotfix | Prevalece timestamp; não re-run 113 |
+| `114` | `114_fiscal_enqueue_loja_validation.sql` | `20260618011922` | `114_pdv_config_loja_backfill` | **Não** | Fiscal vs backfill pdv_config | Documentar; capture timestamp = SSOT |
+| `245` | `245_calcular_preco_produto_precedence_comment.sql` | `20260620222629` | `245_remover_venda_fiado` | **Não** | COMMENT vs DROP fiado legado | Não confundir prefixos |
+| `246` | `246_remover_venda_fiado.sql` | `20260620222629` | `245_remover_venda_fiado` | **Não** | Anti-FIADO RPC + DROP legado | Não reaplicar |
+| `253` | `253_clientes_tipo_endereco_e_view_gerente.sql` | `20260620200253` | `244_clientes_tipo…` | **Não** | Clientes/endereço/view | Diff SQL Fase 3 |
+| `255` | `255_grant_baseline_tabelas_authenticated.sql` | `20260710163032` | `255_vendas_em_espera…` | **Não** | Grants vs vendas em espera | Prevalece timestamp feature |
+| `24703` | `24703_vendas_em_espera_e_consulta_rapida.sql` | `20260710163032` | idem | **Não** | Duplicata lógica | Arquivar equivalência git |
+| `268` | `268_reconcile_finalizar_venda_v4_single_overload.sql` | `20260713174909` | `268_drop_v4_overloads` | **Não** | v4 reconcile + drop overloads | Cadeia v4; fn v4 OK |
+| `278` | `278_revoke_anon_…sql` | `20260717033836` | `278_fix_v_clientes_…` | **Não** | Revokes vs fix view | Prevalece timestamp fix |
+| `228` | `228_venda_eventos_ledger.sql` | `20260707000000` | `venda_eventos_ledger` | Par lógico (não byte) | `venda_eventos` **existe** | Não executar 228 |
+| `231` | `231_gerente_venda_eventos_rpcs.sql` | `20260707010000` | `gerente_venda_eventos_rpcs` | Par lógico | RPCs eventos | Idem |
+| `244` | `244_consistencia_vendas_auditoria.sql` | `20260707020000` | `consistencia_vendas_auditoria` | Par lógico | Auditoria vendas | Idem |
+| `248` | `248_devolver_ou_trocar_venda.sql` | `20260717031500` | `248_devolver_ou_trocar_venda` | Par lógico | Devolução/troca | Idem + grants |
+
+**Cadeia v4 (prod):** `20260619174508` → block/stub v2/v3 → `243` → `24702` → `268` + `20260713174909` → `277` / `301` — objetos **presentes**; risco é **replay**, não ausência.
+
+### 13.5 Gates Fase 2 (locais, read-only)
+
+| Gate | Comando | Resultado |
+|------|---------|-----------|
+| Backport Fase 1 | `node backend/supabase/scripts/validate-phase1-backport.mjs` | **30/30** |
+| Sequência migrations | `npm run guard:migrations` | **OK** |
+| Inventário | `node backend/supabase/scripts/reconcile-prod-repo-inventory.mjs` | **267 / 263 / onlyRepo=4 / onlyProd=0** |
+
+### 13.6 Produção intocada (confirmação)
+
+- **Utilizado:** Supabase MCP `list_migrations`, `execute_sql` (somente leitura de metadados, catálogo e `statements`).
+- **Não utilizado:** `apply_migration`, `db push`, `db reset`, `migration repair`, DDL/DML mutador, criação/renome/remoção de arquivos de migration além de documentação/artefatos de auditoria.
+
+**Fase 3 não iniciada** — parar após esta fotografia e recomendações.
 
 ---
 
