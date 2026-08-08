@@ -4,33 +4,33 @@
     {
       "id": "app_btn",
       "label": ".app-btn-* (classes)",
-      "files": 22,
-      "hits": 38,
+      "files": 21,
+      "hits": 36,
       "samples": [
         "app/gerente/categorias-financeiras/CategoriasFinanceirasPageClient.tsx (1)",
         "app/gerente/categorias-produtos/CategoriasProdutosPageClient.tsx (1)",
         "app/gerente/comissoes/ComissoesPageClient.tsx (2)",
-        "app/gerente/compras/ComprasGerentePageClient.tsx (2)",
         "app/gerente/configuracoes/ConfiguracoesClient.tsx (3)",
         "app/gerente/configuracoes/ConfiguracoesGerentePageClient.tsx (1)",
         "app/gerente/financeiro/FinanceiroGerentePageClient.tsx (3)",
-        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (4)"
+        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (4)",
+        "app/gerente/financeiro/contas-pagar/PagamentoModal.tsx (2)"
       ]
     },
     {
       "id": "gerente_table",
       "label": "GerenteTable import",
-      "files": 13,
-      "hits": 13,
+      "files": 12,
+      "hits": 12,
       "samples": [
         "app/admin/funcionarios/FuncionariosListClient.tsx (1)",
         "app/gerente/comissoes/ComissoesPageClient.tsx (1)",
-        "app/gerente/compras/ComprasGerentePageClient.tsx (1)",
         "app/gerente/financeiro/FinanceiroGerentePageClient.tsx (1)",
         "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (1)",
         "app/gerente/produtos/ProdutosGerentePageClient.tsx (1)",
         "app/gerente/relatorios/RelatoriosGerentePageClient.tsx (1)",
-        "app/gerente/relatorios/sem-giro/RelatoriosSemGiroPageClient.tsx (1)"
+        "app/gerente/relatorios/sem-giro/RelatoriosSemGiroPageClient.tsx (1)",
+        "app/gerente/relatorios/vendas/RelatorioVendasClient.tsx (1)"
       ]
     },
     {
@@ -43,8 +43,8 @@
     {
       "id": "text_arbitrary_px",
       "label": "text-[Npx] arbitrário",
-      "files": 73,
-      "hits": 331,
+      "files": 72,
+      "hits": 326,
       "samples": [
         "app/admin/auditoria/_components/AuditoriaTimeline.tsx (15)",
         "app/admin/auditoria/page.tsx (4)",

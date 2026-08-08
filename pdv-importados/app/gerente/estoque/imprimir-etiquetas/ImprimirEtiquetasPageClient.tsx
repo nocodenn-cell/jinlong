@@ -25,6 +25,7 @@ type Props = {
   idioma: Idioma
   initialCodigo?: string
   initialProdutoId?: string
+  embeddedInAdminHub?: boolean
 }
 
 const LABELS = {
@@ -80,6 +81,7 @@ export function ImprimirEtiquetasPageClient({
   idioma,
   initialCodigo,
   initialProdutoId,
+  embeddedInAdminHub = false,
 }: Props) {
   const t = LABELS[idioma]
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
@@ -268,7 +270,13 @@ export function ImprimirEtiquetasPageClient({
   const totalEtiquetas = carrinho.reduce((sum, item) => sum + item.quantidade, 0)
 
   return (
-    <div className="admin-v2-page mx-auto max-w-[1100px]">
+    <div
+      className={
+        embeddedInAdminHub
+          ? 'mx-auto max-w-[1100px] space-y-6'
+          : 'admin-v2-page mx-auto max-w-[1100px]'
+      }
+    >
       <PageHeader title={t.titulo} />
 
       <div className="grid gap-6 lg:grid-cols-2">

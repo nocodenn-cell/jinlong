@@ -21,6 +21,7 @@ export default async function AdminImprimirEtiquetasPage({ searchParams }: PageP
         idioma={session.idioma}
         initialCodigo={typeof sp.codigo === 'string' ? sp.codigo : undefined}
         initialProdutoId={typeof sp.produto === 'string' ? sp.produto : undefined}
+        embeddedInAdminHub
       />
     </div>
   )
