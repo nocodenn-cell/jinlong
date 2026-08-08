@@ -29,13 +29,18 @@ function readArgs(argv) {
   };
 }
 
-/** Chaves numéricas legadas no repo; remoto usa timestamps equivalentes (reconciliação Fase 1). */
+/** Chaves numéricas legadas no repo; remoto usa timestamps equivalentes (reconciliação Fase 1 / SSOT). */
 function isLegacyNumericMirrorDrift(entry) {
   if (entry.reason !== "remote_ausente") return false;
   const raw = entry.version.replace(/^0+/, "") || entry.version;
-  if (!/^\d{1,3}$/.test(raw)) return false;
-  const n = Number(raw);
-  return n >= 205 && n <= 289;
+  if (/^\d{1,3}$/.test(raw)) {
+    const n = Number(raw);
+    return n >= 205 && n <= 289;
+  }
+  if (/^2470[1-3]$/.test(raw)) {
+    return true;
+  }
+  return false;
 }
 
 function isPhase32GitOnlyDrift(entry) {

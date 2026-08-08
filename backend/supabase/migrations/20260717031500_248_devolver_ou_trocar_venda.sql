@@ -161,9 +161,9 @@ SELECT
   COALESCE(m.venda_id, m.id) AS referencia_id,
   m.usuario_id,
   m.observacao
-FROM public.movimentos_estoque_log m;
+FROM public.movimentos_estoque_log m
 
-UNION ALL;
+UNION ALL
 
 SELECT
   ('eb:' || eb.venda_id::text || ':' || eb.produto_id::text)::text AS evento_id,
@@ -189,9 +189,9 @@ WHERE NOT EXISTS (
   WHERE mel.venda_id = eb.venda_id
     AND mel.produto_id = eb.produto_id
     AND mel.tipo_codigo = 'SAIDA_VENDA'
-);
+)
 
-UNION ALL;
+UNION ALL
 
 SELECT
   ('erc:' || erc.venda_id::text || ':' || erc.produto_id::text)::text AS evento_id,
@@ -207,9 +207,9 @@ SELECT
 FROM public.estoque_reposicoes_cancelamento erc
 INNER JOIN public.vendas v ON v.id = erc.venda_id
 INNER JOIN public.caixas c ON c.id = v.caixa_id
-LEFT JOIN public.vendas_canceladas_auditoria vca ON vca.venda_id = erc.venda_id;
+LEFT JOIN public.vendas_canceladas_auditoria vca ON vca.venda_id = erc.venda_id
 
-UNION ALL;
+UNION ALL
 
 SELECT
   ('erd:' || erd.operacao_id::text || ':' || erd.produto_id::text)::text AS evento_id,

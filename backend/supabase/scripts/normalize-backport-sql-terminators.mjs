@@ -7,6 +7,8 @@
  * Uso:
  *   node supabase/scripts/normalize-backport-sql-terminators.mjs [--write]
  * Sem --write: apenas lista arquivos alteráveis.
+ *
+ * Limitação: não use em arquivos com CREATE VIEW … UNION ALL (revisão manual).
  */
 import fs from "node:fs";
 import path from "node:path";

@@ -132,7 +132,22 @@ jobs:
           {
             printf 'SYNC_ENDPOINT=%s\n' "$SYNC_EP"
             printf 'SYNC_KEY=%s\n' "$SYNC_K"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$PW_ANON"
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$PW_URL"
           } > pdv-local/.env
+
+      - name: Seed usuários E2E no Supabase de staging
+        env:
+          SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PLAYWRIGHT_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SEED_DEV_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+          PLAYWRIGHT_CAIXA_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_PASSWORD }}
+          SEED_GERENTE_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+          SEED_OPERADOR_EMAIL: ${{ secrets.PLAYWRIGHT_CAIXA_TEST_EMAIL }}
+        run: node pdv-importados/scripts/seed-dev-users.mjs
 
       - name: Pipeline E2E crítico
         env:

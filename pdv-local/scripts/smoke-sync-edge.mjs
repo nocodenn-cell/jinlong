@@ -44,12 +44,15 @@ async function executarSmoke() {
   })
   let text = await res.text()
 
-  // Alguns gateways/proxies de Functions exigem Authorization + apikey.
-  if (
+  const needsAnonGateway =
     res.status === 401 &&
     anonKey &&
-    /authorization/i.test(text)
-  ) {
+    (/authorization/i.test(text) ||
+      /UNAUTHORIZED/i.test(text) ||
+      /invalid.*jwt/i.test(text))
+
+  // Alguns gateways/proxies de Functions exigem Authorization + apikey.
+  if (needsAnonGateway) {
     res = await fetch(endpoint, {
       method: 'POST',
       headers: {
