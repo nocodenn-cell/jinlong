@@ -175,3 +175,5 @@ Ver pull request aberto a partir de `cursor/sprint-6-ux-simplify-633a` → `main
 - Hub **Análises** (Dashboard + Relatórios) com critério de não duplicar queries pesadas.
 - Polish visual dos PageClients legados dentro dos hubs estoque.
 - Remoção arquivada de `app/gerente/*` após janela de estabilidade.
+
+**Pós-S7:** ver inventário **`docs/AUDITORIA_FECHAMENTO_S0_S7.md`**.

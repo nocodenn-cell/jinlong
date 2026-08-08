@@ -137,3 +137,9 @@ Draft PR a partir de `cursor/sprint-7-hub-ux-633a` → `main` (inclui base Sprin
 
 - PageClients legados mantêm densidade visual diferente do admin-v2 “puro”.
 - Sticky hub pode sobrepor conteúdo se z-index conflitar com modais (não observado em testes unitários).
+
+---
+
+## 11. Fechamento S0–S7
+
+Inventário consolidado de resíduos UX, duplicações, DS, Go-Live e próxima frente: **`docs/AUDITORIA_FECHAMENTO_S0_S7.md`** (2026-08-08). Sprint 8 **não** aberta.
