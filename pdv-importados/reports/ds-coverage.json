@@ -2,8 +2,8 @@
   "asOf": "2026-08-08",
   "screens": {
     "total": 12,
-    "migrated": 8,
-    "pct": 67,
+    "migrated": 12,
+    "pct": 100,
     "list": [
       {
         "id": "login",
@@ -42,7 +42,7 @@
         "id": "financeiro",
         "path": "app/admin/financeiro",
         "migrated": true,
-        "note": "UX-08 pagar DataTable; receber/fiscal parcial"
+        "note": "UX-08 pagar; UX-10 receber tipografia DS"
       },
       {
         "id": "funcionarios",
@@ -52,23 +52,26 @@
       {
         "id": "configuracoes",
         "path": "app/admin/configuracoes",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-10 tipografia + alerts DS"
       },
       {
         "id": "implantacao",
         "path": "app/admin/implantacao",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-10 fp-control checklist"
       },
       {
         "id": "provisionamento",
         "path": "app/admin/provisionamento",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-10 wizard fp-control"
       },
       {
         "id": "pdv-polish",
         "path": "app/caixa",
-        "migrated": false,
-        "note": "polish final"
+        "migrated": true,
+        "note": "UX-PDV-01–03 + selo text-primary"
       }
     ]
   },
@@ -122,8 +125,8 @@
   },
   "dsImports": {
     "appTsxTotal": 166,
-    "filesWithDsImport": 87,
-    "pct": 52
+    "filesWithDsImport": 90,
+    "pct": 54
   },
   "approvedExceptions": [
     {

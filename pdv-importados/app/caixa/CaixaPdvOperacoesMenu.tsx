@@ -305,7 +305,7 @@ function CaixaPdvOperacoesMenuImpl({
           <ImperialSealIcon
             className={cn(
               "h-4 w-4 shrink-0",
-              classic ? "text-primary drop-shadow-sm" : "app-accent-text",
+              classic ? "text-primary drop-shadow-sm" : "text-primary",
             )}
             title={m.caixa.aria_selo_gerente}
             pulse

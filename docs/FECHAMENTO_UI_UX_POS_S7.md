@@ -11,7 +11,7 @@
 
 | Métrica | Doc S0–S7 (ago/2026) | Código **antes** desta missão (`main`) | Código **depois** (branch) |
 |---------|----------------------|----------------------------------------|----------------------------|
-| Telas DS migradas (12 alvos) | 6/12 (50%) | 6/12 | **8/12 (67%)** — funcionários + financeiro (pagar) |
+| Telas DS migradas (12 alvos) | 6/12 (50%) | 6/12 | **12/12 (100%)** — UX-10 + receber + pdv-polish |
 | `GerenteTable` em `app/admin/**` | 2+ (compras, funcionários) | compras + funcionários | **0** |
 | Hub Estoque/Financeiro/Catálogo | “só na branch S7” | ausente em `main` | **presente** (S6/S7 cherry-pick) |
 | Toast admin | `GerenteToastViewport` | sim | **`AdminToastViewport`** |
@@ -29,14 +29,14 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 |----|------------|----------------|---------------|---------|----------------|------|
 | UX-01 | Compras | `app/admin/compras/page.tsx` | Renderizava só `ComprasGerentePageClient` + `GerenteTable` | Operador vê chrome legado fora do DS | `ComprasContent` + DataTable | **Implementado** |
 | UX-02 | Estoque hub | `app/admin/estoque/*/page.tsx` | Back link + shell duplicado vs hub | Cliques/confusão navegação | `EstoqueHubNav` + `embeddedInAdminHub` | **Implementado** (S7) |
-| UX-03 | Financeiro | `FinanceiroContent.tsx`, aba receber/fiscal | KPI/fila fiscal fora do padrão lista única | Inconsistência entre abas | Hub nav + tokens DS | **Implementado** (receber parcial) |
+| UX-03 | Financeiro | `FinanceiroContent.tsx`, aba receber/fiscal | KPI/fila fiscal fora do padrão lista única | Inconsistência entre abas | Hub nav + tokens DS | **Implementado** — receber: `ContasReceberTable` + `FinanceiroReceberExtras` tipografia/`fp-control` |
 | UX-04 | Admin shell | `app/admin/layout.tsx` | `GerenteToastViewport` (estilo claro fixo) | Feedback fora do tema admin | `AdminToastViewport` | **Implementado** |
 | UX-05 | Funcionários | `FuncionariosListClient.tsx` | `GerenteTable` tone dragon | Lista admin inconsistente | `CrudListShell` + `DataTable` | **Implementado** |
 | UX-06 | Catálogo | `app/admin/fornecedores/page.tsx` | Sem `CatalogoHubNav` (produtos/categorias tinham) | Navegação quebrada entre abas SSOT | `CatalogoHubNav` | **Implementado** |
 | UX-07 | Relatórios | `RelatoriosContent.tsx` | `text-[11px]` / `text-[12px]` em tabelas e badges | Tipografia fora do contrato | `text-caption` / `text-small` | **Implementado** (arquivo) |
 | UX-08 | Financeiro | `ContasPagarListClient` → `/admin/financeiro?tab=pagar` | `GerenteTable`, `DataTablePage`, `app-input`/`app-chip`/`app-btn-*` | Aba AP crítica com chrome legado | `CrudListShell` + `MetricCard` + `DataTable` + forms DS | **Implementado** |
 | UX-09 | Vendas | `VendasTable.tsx`, `VendaDetailSheet.tsx` | Dezenas de `text-[10–12px]` | Hierarquia inconsistente | tokens tipográficos DS | **Implementado** (tipografia `text-caption` / `text-small` / `text-body`) |
-| UX-10 | Config / Implantação / Provisionamento | `ds-coverage.json` | `migrated: false` | Telas operacionais secundárias | PageShell DS | **Backlog P2** |
+| UX-10 | Config / Implantação / Provisionamento | `ds-coverage.json` | `migrated: false` | Telas operacionais secundárias | PageShell DS + tipografia + `fp-control` | **Implementado** (2026-08-08) |
 | UX-11 | Modais produto | `components/gerente/produtos/*` | Modais gerente no catálogo admin | Dialog inconsistente | DragonModal + `fp-control` DS | **Implementado** |
 | UX-12 | Documento fiscal | `app/admin/financeiro/documento/[id]` | Client gerente dedicado | Detalhe fora do hub | PageShell + sheet DS | **Implementado** — hub fiscal + `SectionCard` DS |
 
@@ -75,8 +75,8 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 |------|--------|
 | Migração modais OC para tokens admin-v2 | Comportamento preservado; só visual |
 | Vendas tipografia completa | Alto volume; sem bloqueio operacional imediato |
-| Configurações / Implantação / Provisionamento | P2 pós go-live assistido |
-| Aba receber financeiro → DataTable unificado | Comportamento OK; `ContasReceberTable` dedicada |
+| Configurações / Implantação / Provisionamento | — | **UX-10** fechado nesta branch |
+| Aba receber financeiro → DataTable unificado | Comportamento OK; `ContasReceberTable` dedicada | Tipografia/forms DS; sem mudança de RPC |
 | Remoção global `app/gerente/*` | Proibido pela governança |
 
 ---
@@ -117,11 +117,11 @@ Critérios do contrato DS (`DESIGN_SYSTEM_CONTRACT.md` + hubs S6 IDS):
 | Hubs Catálogo/Estoque/Financeiro | **Alta** na branch | Fornecedores alinhado ao hub |
 | Zero `GerenteTable` em admin | **100%** em `app/admin/**` | |
 | Toast admin DS | **Sim** | Viewport `AdminToastViewport`; API `emitGerenteToast` mantida |
-| 12 telas-alvo migradas | **8/12 (67%)** | Faltam config, implantação, provisionamento, pdv-polish |
+| 12 telas-alvo migradas | **12/12 (100%)** | `check:ds-coverage` 2026-08-08 |
 
-**Percentual global honesto (UX operacional admin): ~74%** — hubs + listas núcleo + AP DataTable (alto); receber parcial + vendas tipografia (médio); config/implantação (baixo).
+**Percentual global honesto (UX operacional admin): ~88%** — 12/12 telas-alvo DS; exceções residuais: tabela HTML implantação (aceita), gerente financeiro legado, charts dashboard.
 
-Não se declara 100%: exceções em §4 e UX-09–UX-12.
+Não se declara 100% app-wide: exceções em §4, charts, `app/gerente/*` compartilhado.
 
 ---
 
@@ -143,10 +143,37 @@ Não se declara 100%: exceções em §4 e UX-09–UX-12.
 
 ## 9. Resíduos restantes (prioridade)
 
-1. **P2:** Configurações, Implantação, Provisionamento (UX-10)
-2. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
+1. **P3:** Unificar tabela checklist implantação em `DataTable` (cosmético; comportamento estável)
+2. **P3:** Tipografia densa em `app/gerente/financeiro/*` (redirects admin; não bloqueia operação)
 
-**Próxima superfície recomendada:** **UX-10** (config/implantação) ou polish PDV `app-accent-text`.
+**Onda UI/UX pós-S7:** considerada **fechada** nesta PR (#268) para escopo acordado (12 telas + hubs + modais catálogo + PDV polish).
+
+### 9.3 UX-10 — config / implantação / provisionamento (2026-08-08)
+
+| Superfície | Alteração |
+|------------|-----------|
+| `ConfiguracoesContent.tsx` | `text-caption` / `text-small` em labels, alerts e seções |
+| `ImplantacaoChecklistClient.tsx` | `fp-control` em inputs/selects; cabeçalho tabela `text-caption` |
+| `ProvisionamentoWizardClient.tsx` | inputs/select `fp-control w-full text-small` |
+
+Gates: typecheck OK; Vitest implantacao/provisionamento **20/20**.
+
+### 9.4 Financeiro — aba Receber (2026-08-08)
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `ContasReceberTable.tsx` | Paridade tipográfica com vendas (`text-caption` / `text-small` / `text-body`) |
+| `FinanceiroReceberExtras.tsx` | Formulários `fp-control`; links warning token; headings `text-caption` |
+
+Sem alteração de actions/RPC (`criarTituloReceber`, `liquidarTitulo`).
+
+### 9.5 Auditoria visual autenticada (limitação agente)
+
+Preview Vercel (`pdv-importados-*.vercel.app`) exige **Vercel SSO**; smoke HTTP confirma ausência de 500, mas **fluxos logados** (catálogo modal, financeiro receber, config) dependem de credenciais do tenant — não disponíveis neste ambiente.
+
+**Recomendação humana pós-merge:** login preview → `/admin/financeiro?tab=receber`, `/admin/configuracoes`, `/admin/catalogo` (modal produto), `/caixa` (selo gerente).
+
+Evidência automatizada nesta branch: gates §5 + `pdv-importados/docs/PREVIEW_VALIDATION_20260808.md`.
 
 ### 9.2 UX-11 — modais catálogo (fechado 2026-08-08)
 
@@ -159,6 +186,7 @@ Ver `pdv-importados/docs/UX-11_MODAIS_CATALOGO_AUDIT.md`. Gates: typecheck OK; V
 | UX-PDV-01 | `app/caixa/error.tsx` com botões Tailwind crus (`blue-600` / `slate`) fora do DS | Falha no PDV = tela alienada, baixa legibilidade, foco inconsistente | **Implementado** — `ErrorState` + `Button` DS, root `caixa-oriental-root` |
 | UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico / chrome PDV | Turno longo, leitura à distância | **Fechado + Preview** — commit `26dca96a`; Preview `dpl_2k6BB4z` READY |
 | UX-PDV-03 | Skeletons caixa ainda usam classes `app-*` legadas | Loading visual inconsistente | **Implementado** — commit `c4c92af8`; `CaixaLoadingStates.tsx` tokens DS |
+| UX-PDV-04 | `app-accent-text` no selo gerente (menu + modal) | Accent legado fora do token `text-primary` | **Implementado** — `CaixaPdvOperacoesMenu` + `CaixaGerenteModal` |
 
 **Gates UX-PDV-02** (`26dca96a`):
 
