@@ -81,7 +81,7 @@ Guards anteriores em `224` / `278` / `282` / `275` permanecem como defesa; com a
 
 | ID | Prioridade | Descrição |
 |----|------------|-----------|
-| GF-RESET | **P0** | Evidência CI: local gates success após reorder 205–269 |
+| GF-RESET | **P0** | Migrations 001→HEAD PASS no CI (`Start`+`Reset`); RLS scope seed ajustado |
 | E2E-SYNC | **P0** | Playwright sync-fluxo PASS (smoke já OK) |
 | INT-MANUAL | **P1** | Checklist integração pós-CI |
 | F32-HUMAN | **P2** | Apply 3.2 em prod |
