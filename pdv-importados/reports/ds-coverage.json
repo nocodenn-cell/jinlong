@@ -2,8 +2,8 @@
   "asOf": "2026-08-08",
   "screens": {
     "total": 12,
-    "migrated": 6,
-    "pct": 50,
+    "migrated": 8,
+    "pct": 67,
     "list": [
       {
         "id": "login",
@@ -41,12 +41,13 @@
       {
         "id": "financeiro",
         "path": "app/admin/financeiro",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-08 pagar DataTable; receber/fiscal parcial"
       },
       {
         "id": "funcionarios",
         "path": "app/admin/funcionarios",
-        "migrated": false
+        "migrated": true
       },
       {
         "id": "configuracoes",

@@ -137,7 +137,6 @@ export function FinanceiroContent({
           fornecedoresOpts={contasPagar.fornecedoresOpts}
           statusInicial={contasPagar.statusInicial}
           periodoInicial={contasPagar.periodoInicial}
-          adminV2Surface
         />
       ) : null}
 

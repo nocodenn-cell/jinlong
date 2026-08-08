@@ -11,7 +11,7 @@
 
 | Métrica | Doc S0–S7 (ago/2026) | Código **antes** desta missão (`main`) | Código **depois** (branch) |
 |---------|----------------------|----------------------------------------|----------------------------|
-| Telas DS migradas (12 alvos) | 6/12 (50%) | 6/12 | **7/12 (58%)** — funcionários |
+| Telas DS migradas (12 alvos) | 6/12 (50%) | 6/12 | **8/12 (67%)** — funcionários + financeiro (pagar) |
 | `GerenteTable` em `app/admin/**` | 2+ (compras, funcionários) | compras + funcionários | **0** |
 | Hub Estoque/Financeiro/Catálogo | “só na branch S7” | ausente em `main` | **presente** (S6/S7 cherry-pick) |
 | Toast admin | `GerenteToastViewport` | sim | **`AdminToastViewport`** |
@@ -29,12 +29,12 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 |----|------------|----------------|---------------|---------|----------------|------|
 | UX-01 | Compras | `app/admin/compras/page.tsx` | Renderizava só `ComprasGerentePageClient` + `GerenteTable` | Operador vê chrome legado fora do DS | `ComprasContent` + DataTable | **Implementado** |
 | UX-02 | Estoque hub | `app/admin/estoque/*/page.tsx` | Back link + shell duplicado vs hub | Cliques/confusão navegação | `EstoqueHubNav` + `embeddedInAdminHub` | **Implementado** (S7) |
-| UX-03 | Financeiro | `FinanceiroContent.tsx`, `ContasPagarListClient` | Aba pagar: `dragon-glass`, `app-btn-*`, fiscal `text-[11px]` | Inconsistência diária gerente/dono | Hub nav + tokens DS + `adminV2Surface` | **Implementado** (parcial pagar) |
+| UX-03 | Financeiro | `FinanceiroContent.tsx`, aba receber/fiscal | KPI/fila fiscal fora do padrão lista única | Inconsistência entre abas | Hub nav + tokens DS | **Implementado** (receber parcial) |
 | UX-04 | Admin shell | `app/admin/layout.tsx` | `GerenteToastViewport` (estilo claro fixo) | Feedback fora do tema admin | `AdminToastViewport` | **Implementado** |
 | UX-05 | Funcionários | `FuncionariosListClient.tsx` | `GerenteTable` tone dragon | Lista admin inconsistente | `CrudListShell` + `DataTable` | **Implementado** |
 | UX-06 | Catálogo | `app/admin/fornecedores/page.tsx` | Sem `CatalogoHubNav` (produtos/categorias tinham) | Navegação quebrada entre abas SSOT | `CatalogoHubNav` | **Implementado** |
 | UX-07 | Relatórios | `RelatoriosContent.tsx` | `text-[11px]` / `text-[12px]` em tabelas e badges | Tipografia fora do contrato | `text-caption` / `text-small` | **Implementado** (arquivo) |
-| UX-08 | Financeiro | `ContasPagarListClient` (aba admin) | Ainda `GerenteTable` + `app-input`/`app-chip` | Visual legado na aba crítica | DataTable + forms DS | **Não implementado** (escopo/risco) |
+| UX-08 | Financeiro | `ContasPagarListClient` → `/admin/financeiro?tab=pagar` | `GerenteTable`, `DataTablePage`, `app-input`/`app-chip`/`app-btn-*` | Aba AP crítica com chrome legado | `CrudListShell` + `MetricCard` + `DataTable` + forms DS | **Implementado** |
 | UX-09 | Vendas | `VendasTable.tsx`, `VendaDetailSheet.tsx` | Dezenas de `text-[10–12px]` | Hierarquia inconsistente | tokens tipográficos DS | **Backlog P1** |
 | UX-10 | Config / Implantação / Provisionamento | `ds-coverage.json` | `migrated: false` | Telas operacionais secundárias | PageShell DS | **Backlog P2** |
 | UX-11 | Modais produto | `components/gerente/produtos/*` | Modais gerente no catálogo admin | Dialog inconsistente | DragonModal / DS modal | **Backlog P1** (sem mudança negócio) |
@@ -54,7 +54,7 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 
 - `ComprasContent` + page `admin-v2-page`
 - `embeddedInAdminHub` recebimento, NF-e, transferências, etiquetas
-- Financeiro: hub nav, fiscal list DS, `adminV2Surface` em contas a pagar
+- Financeiro: hub nav, fiscal list DS; **UX-08** contas a pagar → `DataTable` + `CrudListShell`
 
 ### Lote C — P1 consistência
 
@@ -63,16 +63,20 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 - Fornecedores → `CatalogoHubNav`
 - Relatórios → tipografia DS (substituição em massa no content)
 
+### Lote D — UX-08 (contas a pagar)
+
+- `ContasPagarListClient`: removidos `GerenteTable`, `DataTablePage`, classes `app-*`; KPIs `MetricCard`; filtros `SearchInput`/`Input`/`Select`; lista `DataTable` + `rowActions`; prop `adminV2Surface` removida (rota gerente só redireciona)
+
 ---
 
 ## 4. Deliberadamente não implementado
 
 | Item | Motivo |
 |------|--------|
-| Reescrita completa `ContasPagarListClient` → DataTable | ~500 linhas; risco regressão pagamento/export; surface admin já sem dragon-glass KPI |
 | Migração modais OC para tokens admin-v2 | Comportamento preservado; só visual |
 | Vendas tipografia completa | Alto volume; sem bloqueio operacional imediato |
 | Configurações / Implantação / Provisionamento | P2 pós go-live assistido |
+| Aba receber financeiro → DataTable unificado | Comportamento OK; `ContasReceberTable` dedicada |
 | Remoção global `app/gerente/*` | Proibido pela governança |
 
 ---
@@ -82,7 +86,7 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 | Gate | Resultado |
 |------|-----------|
 | `npm run typecheck` (pdv-importados) | OK |
-| `npm run lint` | OK (3 warnings e2e pré-existentes) |
+| `npm run lint` | OK (4 warnings: 1 hooks contas-pagar resolvível; 3 e2e pré-existentes) |
 | `npm test` (Vitest) | **858** OK |
 | `npm run check:ds-sprint0` | OK |
 | `npm run check:entity-ssot` | OK (6 avisos legado) |
@@ -121,48 +125,64 @@ Critérios do contrato DS (`DESIGN_SYSTEM_CONTRACT.md` + hubs S6 IDS):
 
 | Critério | Aderência | Notas |
 |----------|-----------|--------|
-| Tokens + primitivos Button/Forms/DataTable/feedback | **Alta** em superfícies tocadas | Legado persiste em contas pagar (inputs app-*) |
+| Tokens + primitivos Button/Forms/DataTable/feedback | **Alta** em superfícies tocadas | Aba pagar alinhada; receber ainda tabela dedicada |
 | Tipografia sem `text-[Npx]` em código novo | **Média** | Relatórios corrigidos; vendas ainda denso |
 | Hubs Catálogo/Estoque/Financeiro | **Alta** na branch | Fornecedores alinhado ao hub |
 | Zero `GerenteTable` em admin | **100%** em `app/admin/**` | |
-| Toast admin DS | **Sim** | Bus toast inalterado |
-| 12 telas-alvo migradas | **7/12 (58%)** | Faltam financeiro “completo”, config, implantação, provisionamento, pdv-polish |
+| Toast admin DS | **Sim** | Viewport `AdminToastViewport`; API `emitGerenteToast` mantida |
+| 12 telas-alvo migradas | **8/12 (67%)** | Faltam config, implantação, provisionamento, pdv-polish |
 
-**Percentual global honesto (UX operacional admin): ~68%** — média ponderada: hubs+núcleo lista (alto) vs financeiro pagar+relatórios+vendas (médio) vs config/implantação (baixo).
+**Percentual global honesto (UX operacional admin): ~74%** — hubs + listas núcleo + AP DataTable (alto); receber parcial + vendas tipografia (médio); config/implantação (baixo).
 
-Não se declara 100%: exceções inventariadas em §4 e UX-08–UX-12.
-
----
-
-## 8. Resíduos restantes (prioridade)
-
-1. **P0/P1:** `ContasPagarListClient` → DataTable + FilterBar (financeiro)
-2. **P1:** Vendas — tipografia e badges DS
-3. **P1:** Documento fiscal detalhe — shell admin
-4. **P1:** Modais catálogo/produto
-5. **P2:** Configurações, Implantação, Provisionamento
-6. **P2:** Recebimento/transfer — forms gerente internos (sem GerenteTable)
-
-**Próxima superfície recomendada:** **`/admin/financeiro?tab=pagar`** (maior tempo operacional + maior contraste visual restante).
+Não se declara 100%: exceções em §4 e UX-09–UX-12.
 
 ---
 
-## 9. Arquivos principais alterados
+## 8. Varredura `app/admin/**` (pós UX-08)
 
-Ver commit na branch `cursor/fechamento-ui-ux-633a`. Resumo:
+| Padrão | Ocorrências em admin | Classificação | Ação nesta missão |
+|--------|----------------------|---------------|-------------------|
+| `GerenteTable` | **0** | — | — |
+| `GerenteStickyToolbar` | **0** | — | — |
+| `dragon-glass-card` | **0** | — | — |
+| `app-btn-*` | **0** | — | — |
+| `emitGerenteToast` | vários arquivos | **Justificado** | API de toast compartilhada; viewport admin já é DS |
+| `text-[10–12px]` | vendas, suspensão, implantação, relatórios filtros | **P1 backlog** | Não refatorado (UX-09+) |
+| Tabela HTML manual | `ImplantacaoChecklistClient` | **P2** | Fora de P0/P1 |
+
+**Regressões UX-08:** nenhuma detectada nos gates automatizados; matriz P0 (`p0-roteiro-operacional`, `p0-venda-homologacao`) continua verde.
+
+---
+
+## 9. Resíduos restantes (prioridade)
+
+1. **P1:** Vendas — tipografia e badges DS (`VendasTable`, `VendaDetailSheet`, `vendas/page.tsx`)
+2. **P1:** Documento fiscal detalhe — shell admin (UX-12)
+3. **P1:** Modais catálogo/produto (UX-11)
+4. **P2:** Configurações, Implantação, Provisionamento (UX-10)
+5. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
+
+**Próxima superfície recomendada:** **`/admin/vendas`** (tipografia densa + tempo diário do operador).
+
+---
+
+## 10. Arquivos principais alterados
+
+Ver commits na branch `cursor/fechamento-ui-ux-633a`. Resumo (incl. UX-08):
 
 - Hubs/navegação S6/S7 (`components/ui/admin-v2/*Hub*`, `lib/navigation/*`)
 - `app/admin/compras/_components/ComprasContent.tsx`
 - `app/admin/layout.tsx`, `AdminToastViewport.tsx`
 - `app/admin/financeiro/_components/FinanceiroContent.tsx`
-- `app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx` (`adminV2Surface`)
+- `app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx` (**UX-08:** DataTable + CrudListShell)
 - `app/admin/funcionarios/FuncionariosListClient.tsx`
 - `app/admin/fornecedores/page.tsx`
 - `app/admin/relatorios/_components/RelatoriosContent.tsx`
-- `reports/ds-coverage.json`, `docs/MISSAO_ADMIN_V2_UI_UX.md`
+- `scripts/ds-coverage.mjs`, `reports/ds-coverage.json`, `reports/ds-legacy-burndown.json`
+- `docs/FECHAMENTO_UI_UX_POS_S7.md`, `docs/MISSAO_ADMIN_V2_UI_UX.md`
 
 ---
 
-## 10. Supabase / domínio
+## 11. Supabase / domínio
 
 **Nenhuma** migration, RPC, ou regra de negócio alterada nesta missão UI/UX.
