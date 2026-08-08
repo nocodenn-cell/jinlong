@@ -95,7 +95,7 @@ function HistoricoLista({ vendas, selecionadoId, m, onSelect }: ListaProps) {
   return (
     <div className="min-h-0 flex-1 overflow-auto">
       <table className="w-full text-left text-xs">
-        <thead className="sticky top-0 z-[1] bg-jl-surface-elev text-[10px] uppercase tracking-wide text-jl-fg-3">
+        <thead className="sticky top-0 z-[1] bg-jl-surface-elev text-caption uppercase tracking-wide text-jl-fg-3">
           <tr className="border-b border-jl-border-1">
             <th className="px-2 py-1.5 font-semibold">{m.caixa.historico_col_numero}</th>
             <th className="px-2 py-1.5 font-semibold">{m.caixa.historico_col_hora}</th>
@@ -128,7 +128,7 @@ function HistoricoLista({ vendas, selecionadoId, m, onSelect }: ListaProps) {
                 <td className="px-2 py-2">
                   <span
                     className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                      "rounded-full px-1.5 py-0.5 text-caption font-semibold",
                       cancelada
                         ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-strong)]"
                         : "bg-[var(--color-success-bg)] text-[var(--color-success-strong)]",
@@ -195,7 +195,7 @@ function HistoricoDetalhe({ detalhe, carregando, m }: DetalheProps) {
           <p className="text-sm italic text-jl-fg-3">{m.caixa.historico_itens_indisponiveis}</p>
         ) : (
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-jl-surface-elev text-[10px] uppercase text-jl-fg-3">
+            <thead className="sticky top-0 bg-jl-surface-elev text-caption uppercase text-jl-fg-3">
               <tr className="border-b border-jl-border-1">
                 <th className="px-2 py-1.5">{m.caixa.historico_item_produto}</th>
                 <th className="px-2 py-1.5 text-right">{m.caixa.historico_item_qtd}</th>
@@ -276,7 +276,7 @@ function HistoricoFerramentas({
   const btnClass = "h-9 w-full justify-start text-xs"
   return (
     <aside className="flex w-44 shrink-0 flex-col gap-2 border-l border-jl-border-1 px-3 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-jl-fg-3">
+      <p className="text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
         {m.caixa.historico_ferramentas}
       </p>
       <Button

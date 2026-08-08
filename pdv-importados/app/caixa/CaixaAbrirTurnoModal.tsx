@@ -79,7 +79,7 @@ export function CaixaAbrirTurnoModal({
     >
       <div className="space-y-3" data-caixa-atalho-bloqueado="true">
         <div>
-          <p className="text-[11px] uppercase tracking-wide text-jl-fg-3">
+          <p className="text-small uppercase tracking-wide text-jl-fg-3">
             {m.caixa.abrir_turno_operador}
           </p>
           <p className="mt-0.5 font-semibold">{operadorLabel}</p>

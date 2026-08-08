@@ -158,7 +158,7 @@ Não se declara 100%: exceções em §4 e UX-09–UX-12.
 | ID | Problema | Impacto | Status |
 |----|----------|---------|--------|
 | UX-PDV-01 | `app/caixa/error.tsx` com botões Tailwind crus (`blue-600` / `slate`) fora do DS | Falha no PDV = tela alienada, baixa legibilidade, foco inconsistente | **Implementado** — `ErrorState` + `Button` DS, root `caixa-oriental-root` |
-| UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico | Turno longo, leitura à distância | Backlog |
+| UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico / chrome PDV | Turno longo, leitura à distância | **Implementado** — `text-caption` / `text-small` em 11 arquivos `app/caixa/*` |
 | UX-PDV-03 | Skeletons caixa ainda usam classes `app-*` legadas | Loading visual inconsistente | Backlog |
 
 ---

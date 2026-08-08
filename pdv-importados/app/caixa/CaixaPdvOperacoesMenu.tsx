@@ -229,7 +229,7 @@ function CaixaPdvOperacoesMenuImpl({
             <p
               id={tituloId}
               className={cn(
-                "mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide",
+                "mb-1.5 px-2 text-small font-semibold uppercase tracking-wide",
                 classic ? "text-muted-foreground" : "text-jl-fg-3",
               )}
             >
@@ -273,7 +273,7 @@ function CaixaPdvOperacoesMenuImpl({
                     {item.shortcut ? (
                       <span
                         className={cn(
-                          "shrink-0 text-[10px] font-normal tabular-nums",
+                          "shrink-0 text-caption font-normal tabular-nums",
                           classic ? "text-muted-foreground" : "text-jl-fg-3",
                         )}
                       >

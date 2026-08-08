@@ -131,7 +131,7 @@ export function CaixaConsultaRapidaModal({ open, onOpenChange, m, termoInicial =
         {resultado ? (
           <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
             <div className="col-span-2">
-              <dt className="text-[11px] uppercase tracking-wide text-jl-fg-3">
+              <dt className="text-small uppercase tracking-wide text-jl-fg-3">
                 {m.caixa.consulta_rapida_produto}
               </dt>
               <dd className="font-semibold leading-snug">{resultado.nome}</dd>
@@ -184,7 +184,7 @@ function Campo({
 }) {
   return (
     <div className={cn(className)}>
-      <dt className="text-[11px] uppercase tracking-wide text-jl-fg-3">{label}</dt>
+      <dt className="text-small uppercase tracking-wide text-jl-fg-3">{label}</dt>
       <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   )
