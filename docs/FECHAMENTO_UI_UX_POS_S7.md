@@ -38,7 +38,7 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 | UX-09 | Vendas | `VendasTable.tsx`, `VendaDetailSheet.tsx` | Dezenas de `text-[10–12px]` | Hierarquia inconsistente | tokens tipográficos DS | **Implementado** (tipografia `text-caption` / `text-small` / `text-body`) |
 | UX-10 | Config / Implantação / Provisionamento | `ds-coverage.json` | `migrated: false` | Telas operacionais secundárias | PageShell DS | **Backlog P2** |
 | UX-11 | Modais produto | `components/gerente/produtos/*` | Modais gerente no catálogo admin | Dialog inconsistente | DragonModal / DS modal | **Backlog P1** (sem mudança negócio) |
-| UX-12 | Documento fiscal | `app/admin/financeiro/documento/[id]` | Client gerente dedicado | Detalhe fora do hub | PageShell + sheet DS | **Backlog P1** |
+| UX-12 | Documento fiscal | `app/admin/financeiro/documento/[id]` | Client gerente dedicado | Detalhe fora do hub | PageShell + sheet DS | **Implementado** — hub fiscal + `SectionCard` DS |
 
 ---
 
@@ -157,15 +157,16 @@ Não se declara 100%: exceções em §4 e UX-09–UX-12.
 | ID | Problema | Impacto | Status |
 |----|----------|---------|--------|
 | UX-PDV-01 | `app/caixa/error.tsx` com botões Tailwind crus (`blue-600` / `slate`) fora do DS | Falha no PDV = tela alienada, baixa legibilidade, foco inconsistente | **Implementado** — `ErrorState` + `Button` DS, root `caixa-oriental-root` |
-| UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico / chrome PDV | Turno longo, leitura à distância | **Fechado** — commit `26dca96a`; gates abaixo |
+| UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico / chrome PDV | Turno longo, leitura à distância | **Fechado + Preview** — commit `26dca96a`; Preview `dpl_2k6BB4z` READY |
 | UX-PDV-03 | Skeletons caixa ainda usam classes `app-*` legadas | Loading visual inconsistente | **Implementado** — commit `c4c92af8`; `CaixaLoadingStates.tsx` tokens DS |
 
 **Gates UX-PDV-02** (`26dca96a`):
 
-| Comando | Resultado (2026-08-08) |
+| Comando / evidência | Resultado (2026-08-08) |
 |---------|------------------------|
 | `npm run typecheck` (pdv-importados) | OK |
-| `npm test -- --run CaixaCartList` | 4/4 OK (`CaixaCartList.behavior.test.tsx`) |
+| `npm test -- --run CaixaCartList` | 4/4 OK |
+| Vercel Preview (árvore 26dca96) | `dpl_2k6BB4z` **READY** — ver `pdv-importados/docs/PREVIEW_VALIDATION_20260808.md` |
 
 **Gates UX-PDV-03** (`c4c92af8`):
 
