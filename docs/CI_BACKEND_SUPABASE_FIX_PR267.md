@@ -6,13 +6,13 @@
 2. **`migration-remote-drift`:** `p0-migration-status.mjs` classifica drift bloqueante vs informativo (Fase 3.2 git-only `20260808130200`, espelhos numéricos 205–289).
 3. **`rls-rest-gate`:** smoke REST contra **stack Supabase local** + JWTs obtidos via `fetch-rls-smoke-jwts.mjs` após `seed-dev-users.mjs` (secret `PLAYWRIGHT_TEST_PASSWORD`).
 
-## E2E crítico (workflow separado — run `31258997317`)
+## E2E crítico (workflow `ci-pdv-importados`)
 
 | Evidência | Detalhe |
 |-----------|---------|
-| Step | `Pipeline E2E crítico` |
-| Causa | Secrets presentes (`missing=()`), falha `UNAUTHORIZED` durante `test:e2e:critical` — credenciais/ambiente Supabase do Preview não autorizam o fluxo |
-| Ação | **Não corrigido neste PR** — configurar secrets listados em `docs/E2E.md` / mensagem `::error::E2E crítico: defina os secrets ...` |
+| Step | `smoke:sync-edge` dentro de `test:e2e:critical` |
+| Causa (corrigida) | `smoke-sync-edge.mjs` usava nonce hex (não UUID) → `INVALID_NONCE` mascarado como `UNAUTHORIZED` por `authErrorForClientResponse`; assinatura HMAC omitia `device` no payload (`ts.nonce.body` vs contrato `ts.nonce.device.body`) |
+| Ação | UUID + payload alinhado ao Edge; mesmo ajuste em `e2e/sync-fluxo-gerente.spec.ts` |
 
 ## Gates locais (agente cloud)
 
