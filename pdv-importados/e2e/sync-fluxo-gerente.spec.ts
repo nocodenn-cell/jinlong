@@ -26,6 +26,7 @@ async function garantirProdutoEEstoqueParaTeste() {
   const { data: prod, error: prodErr } = await admin
     .from('produtos')
     .insert({
+      loja_id: LOJA_MATRIZ_ID,
       nome,
       codigo_barras: codigo,
       preco_varejo: 9.9,

@@ -82,9 +82,16 @@ REVOKE ALL ON FUNCTION public.auth_usuario_gerencial_loja(uuid) FROM anon;
 GRANT EXECUTE ON FUNCTION public.auth_usuario_gerencial_loja(uuid) TO authenticated, service_role;
 
 -- 3 chamadas autenticadas no app. authenticated PRESERVADO.
-REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM anon;
-GRANT EXECUTE ON FUNCTION public.pdv_config_flags_visuais() TO authenticated, service_role;
+-- Greenfield: `235_*` (criação) ordena depois desta migration; 311 reaplica grants.
+DO $278_pdv_flags$
+BEGIN
+  IF to_regprocedure('public.pdv_config_flags_visuais()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM anon;
+    GRANT EXECUTE ON FUNCTION public.pdv_config_flags_visuais() TO authenticated, service_role;
+  END IF;
+END
+$278_pdv_flags$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- GRUPO B — CRUD de funcionários: app usa service_role exclusivamente
