@@ -74,37 +74,45 @@ DECLARE
   v_novo text;
   v_decl_de text := $frag$
   v_estoque_inicial boolean;$frag$;
-  v_bloco_de text := $frag$  v_estoque_inicial := p_motivo_codigo = 'ACERTO_INVENTARIO'
+  v_assign_de text := $frag$
+  v_estoque_inicial :=
+    p_motivo_codigo = 'ACERTO_INVENTARIO'
     AND COALESCE(BTRIM(p_observacao), '') = 'Estoque inicial no cadastro de produto';
+$frag$;
+  v_if_de text := $frag$
   IF v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN')
      AND NOT (v_perfil = 'OPERADOR' AND v_estoque_inicial) THEN
     RAISE EXCEPTION 'AJUSTE_ESTOQUE_PERFIL';
   END IF;$frag$;
-  v_bloco_para text := $frag$  IF v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN RAISE EXCEPTION 'AJUSTE_ESTOQUE_PERFIL'; END IF;$frag$;
+  v_if_para text := $frag$
+  IF v_perfil NOT IN ('GERENTE', 'DONO', 'ADMIN') THEN
+    RAISE EXCEPTION 'AJUSTE_ESTOQUE_PERFIL';
+  END IF;$frag$;
 BEGIN
   v_def := pg_get_functiondef(
     'public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure
   );
 
-  IF position(v_bloco_de IN v_def) = 0 THEN
-    IF position('OPERADOR' IN v_def) = 0 THEN
+  IF position(v_if_de IN v_def) = 0 THEN
+    IF position(v_if_para IN v_def) > 0 THEN
       RAISE NOTICE 'ajustar_estoque_manual: exceção de OPERADOR já ausente — nada a fazer.';
       RETURN;
     END IF;
     RAISE EXCEPTION 'MIG_GATE_AJUSTE_NAO_ENCONTRADO: bloco de perfil não casou; revisar manualmente.';
   END IF;
 
-  v_novo := replace(v_def, v_bloco_de, v_bloco_para);
+  v_novo := replace(v_def, v_if_de, v_if_para);
+  v_novo := replace(v_novo, v_assign_de, '');
   v_novo := replace(v_novo, v_decl_de, '');
   EXECUTE v_novo;
 
   v_def := pg_get_functiondef(
     'public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure
   );
-  IF position(v_bloco_de IN v_def) > 0 THEN
+  IF position(v_if_de IN v_def) > 0 THEN
     RAISE EXCEPTION 'MIG_AJUSTE_AINDA_CITA_OPERADOR: replace não surtiu efeito.';
   END IF;
-  IF position(v_bloco_para IN v_def) = 0 THEN
+  IF position(v_if_para IN v_def) = 0 THEN
     RAISE EXCEPTION 'MIG_AJUSTE_GATE_AUSENTE: gate GERENTE+ não encontrado após replace.';
   END IF;
   -- Guarda-corpo: o resto do corpo tem de continuar íntegro.
