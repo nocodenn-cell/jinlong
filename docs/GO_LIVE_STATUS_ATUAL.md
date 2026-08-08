@@ -60,15 +60,15 @@ Guards anteriores em `224` / `278` / `282` / `275` permanecem como defesa; com a
 
 ---
 
-## 3. CI / gates (evidência run `31283399273` / SHA `3b7271e7`)
+## 3. CI / gates (evidência run `31283967809` / SHA `0cf41704`)
 
 | Gate | Resultado |
 |------|-----------|
 | `migration-remote-drift` | **PASS** (reorder informativo; gate independente) |
 | Start Supabase + **Reset + seed** 001→HEAD | **PASS** — classe lex invertida eliminada |
 | Smoke SQL RLS | **PASS** |
-| `Test RLS scope by profile` | **FAIL** — classe **diferente** (seed/asserts vs schema pós-reorder; não é `policy does not exist`) |
-| Auth seed + REST smoke | skipped (dependem do RLS scope) |
+| `Test RLS scope by profile` | **PASS** — seed via `psql -f` + asserts alinhados (Onda B / grants / overloads) |
+| Auth seed + REST smoke | **PASS** |
 | `smoke:sync-edge` | **PASS** em runs recentes (gate independente) |
 | Fase 3.2 | **P2** HUMAN GATE — intocada |
 
@@ -87,7 +87,7 @@ Auditoria local pós-fix: **0** prefixes curtos (`NNN_` / `247NN_`) após o prim
 | ID | Prioridade | Descrição |
 |----|------------|-----------|
 | GF-RESET | **DONE** | Migrations 001→HEAD PASS (`Start`+`Reset`+Smoke SQL) |
-| RLS-SCOPE | **P0** | Ajustar `test-rls-scope` / seed (caixa único, grants, pricing, remessa, overloads) — **não** é dependência histórica de migration |
+| RLS-SCOPE | **DONE** | Local gates completos PASS (RLS scope + Auth seed + REST) — run `31283967809` |
 | E2E-SYNC | **P0** | Playwright sync-fluxo PASS (smoke já OK) |
 | INT-MANUAL | **P1** | Checklist integração pós-CI |
 | F32-HUMAN | **P2** | Apply 3.2 em prod |
@@ -96,6 +96,6 @@ Auditoria local pós-fix: **0** prefixes curtos (`NNN_` / `247NN_`) após o prim
 
 ## 6. Decisão objetiva
 
-**`BLOCKED`** até RLS-SCOPE + E2E crítico verdes com evidência de run.
+**`BLOCKED`** até E2E crítico (Playwright sync-fluxo) verde com evidência de run.
 
-Não declarar `READY` com P0 aberto. A classe greenfield “objeto inexistente por ordem lex” está **fechada**.
+Não declarar `READY` com P0 aberto. Classes greenfield lex + seed RLS scope estão **fechadas**.

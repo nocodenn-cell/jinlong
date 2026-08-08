@@ -99,7 +99,7 @@ describe('consolidação pós-audit — jornadas críticas (contrato estático)'
   })
 
   it('J3 Cancelamento: RPC transacional restaura estoque e ajusta caixa', () => {
-    const rpc = read('../backend/supabase/migrations/229_venda_eventos_rpc_hooks.sql')
+    const rpc = read('../backend/supabase/migrations/20260621002500_229_venda_eventos_rpc_hooks.sql')
     expect(rpc).toContain('cancelar_venda_transacional')
     expect(rpc).toContain('quantidade_atual = e.quantidade_atual + v_item.quantidade')
     expect(rpc).toContain('saldo_atual')
