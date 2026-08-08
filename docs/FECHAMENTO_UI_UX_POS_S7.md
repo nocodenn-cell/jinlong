@@ -35,7 +35,7 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 | UX-06 | Catálogo | `app/admin/fornecedores/page.tsx` | Sem `CatalogoHubNav` (produtos/categorias tinham) | Navegação quebrada entre abas SSOT | `CatalogoHubNav` | **Implementado** |
 | UX-07 | Relatórios | `RelatoriosContent.tsx` | `text-[11px]` / `text-[12px]` em tabelas e badges | Tipografia fora do contrato | `text-caption` / `text-small` | **Implementado** (arquivo) |
 | UX-08 | Financeiro | `ContasPagarListClient` → `/admin/financeiro?tab=pagar` | `GerenteTable`, `DataTablePage`, `app-input`/`app-chip`/`app-btn-*` | Aba AP crítica com chrome legado | `CrudListShell` + `MetricCard` + `DataTable` + forms DS | **Implementado** |
-| UX-09 | Vendas | `VendasTable.tsx`, `VendaDetailSheet.tsx` | Dezenas de `text-[10–12px]` | Hierarquia inconsistente | tokens tipográficos DS | **Backlog P1** |
+| UX-09 | Vendas | `VendasTable.tsx`, `VendaDetailSheet.tsx` | Dezenas de `text-[10–12px]` | Hierarquia inconsistente | tokens tipográficos DS | **Implementado** (tipografia `text-caption` / `text-small` / `text-body`) |
 | UX-10 | Config / Implantação / Provisionamento | `ds-coverage.json` | `migrated: false` | Telas operacionais secundárias | PageShell DS | **Backlog P2** |
 | UX-11 | Modais produto | `components/gerente/produtos/*` | Modais gerente no catálogo admin | Dialog inconsistente | DragonModal / DS modal | **Backlog P1** (sem mudança negócio) |
 | UX-12 | Documento fiscal | `app/admin/financeiro/documento/[id]` | Client gerente dedicado | Detalhe fora do hub | PageShell + sheet DS | **Backlog P1** |
@@ -113,7 +113,7 @@ Critérios do contrato DS (`DESIGN_SYSTEM_CONTRACT.md` + hubs S6 IDS):
 | Critério | Aderência | Notas |
 |----------|-----------|--------|
 | Tokens + primitivos Button/Forms/DataTable/feedback | **Alta** em superfícies tocadas | Aba pagar alinhada; receber ainda tabela dedicada |
-| Tipografia sem `text-[Npx]` em código novo | **Média** | Relatórios corrigidos; vendas ainda denso |
+| Tipografia sem `text-[Npx]` em código novo | **Média–alta** | Relatórios + vendas admin corrigidos; implantação/suspensão ainda denso |
 | Hubs Catálogo/Estoque/Financeiro | **Alta** na branch | Fornecedores alinhado ao hub |
 | Zero `GerenteTable` em admin | **100%** em `app/admin/**` | |
 | Toast admin DS | **Sim** | Viewport `AdminToastViewport`; API `emitGerenteToast` mantida |
@@ -143,23 +143,43 @@ Não se declara 100%: exceções em §4 e UX-09–UX-12.
 
 ## 9. Resíduos restantes (prioridade)
 
-1. **P1:** Vendas — tipografia e badges DS (`VendasTable`, `VendaDetailSheet`, `vendas/page.tsx`)
-2. **P1:** Documento fiscal detalhe — shell admin (UX-12)
-3. **P1:** Modais catálogo/produto (UX-11)
-4. **P2:** Configurações, Implantação, Provisionamento (UX-10)
-5. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
+1. **P1:** Documento fiscal detalhe — shell admin (UX-12)
+2. **P1:** Modais catálogo/produto (UX-11)
+3. **P2:** Configurações, Implantação, Provisionamento (UX-10)
+4. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
 
-**Próxima superfície recomendada (admin):** **`/admin/vendas`** (tipografia densa).
+**Próxima superfície recomendada (admin):** **`/admin/financeiro/documento/[id]`** (UX-12) ou modais catálogo (UX-11).
 
-**PDV (prioridade operacional):** polish Onda 12 — ver §9.1.
+**PDV:** residual `app-accent-text` pontual em `CaixaGerenteModal` / `CaixaPdvOperacoesMenu` (fora do escopo skeletons); ver §9.1.
 
 ### 9.1 PDV — polish (Onda 12, em andamento)
 
 | ID | Problema | Impacto | Status |
 |----|----------|---------|--------|
 | UX-PDV-01 | `app/caixa/error.tsx` com botões Tailwind crus (`blue-600` / `slate`) fora do DS | Falha no PDV = tela alienada, baixa legibilidade, foco inconsistente | **Implementado** — `ErrorState` + `Button` DS, root `caixa-oriental-root` |
-| UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico / chrome PDV | Turno longo, leitura à distância | **Implementado** — `text-caption` / `text-small` em 11 arquivos `app/caixa/*` |
-| UX-PDV-03 | Skeletons caixa ainda usam classes `app-*` legadas | Loading visual inconsistente | Backlog |
+| UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico / chrome PDV | Turno longo, leitura à distância | **Fechado** — commit `26dca96a`; gates abaixo |
+| UX-PDV-03 | Skeletons caixa ainda usam classes `app-*` legadas | Loading visual inconsistente | **Implementado** — commit `c4c92af8`; `CaixaLoadingStates.tsx` tokens DS |
+
+**Gates UX-PDV-02** (`26dca96a`):
+
+| Comando | Resultado (2026-08-08) |
+|---------|------------------------|
+| `npm run typecheck` (pdv-importados) | OK |
+| `npm test -- --run CaixaCartList` | 4/4 OK (`CaixaCartList.behavior.test.tsx`) |
+
+**Gates UX-PDV-03** (`c4c92af8`):
+
+| Comando | Resultado (2026-08-08) |
+|---------|------------------------|
+| `npm run typecheck` | OK |
+| `npm test -- --run CaixaCartList` | 4/4 OK |
+
+**Gates UX-09** (tipografia vendas admin):
+
+| Comando | Resultado (2026-08-08) |
+|---------|------------------------|
+| `npm run typecheck` | OK |
+| `npm test -- --run Vendas` | 7/7 OK (actions + parse forms gerente) |
 
 ---
 
