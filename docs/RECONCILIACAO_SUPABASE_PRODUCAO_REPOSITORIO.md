@@ -480,7 +480,20 @@ Formato: `versão | arquivo repo | versão prod | tracking | SQL equivalente? | 
 - **Utilizado:** Supabase MCP `list_migrations`, `execute_sql` (somente leitura de metadados, catálogo e `statements`).
 - **Não utilizado:** `apply_migration`, `db push`, `db reset`, `migration repair`, DDL/DML mutador, criação/renome/remoção de arquivos de migration além de documentação/artefatos de auditoria.
 
-**Fase 3 não iniciada** — parar após esta fotografia e recomendações.
+**Fases 1–2 encerradas** — fotografia e forense concluídas (§13).
+
+---
+
+## 14. Fase 3 — status (2026-08-08)
+
+| Item | Status |
+|------|--------|
+| Plano de execução | **`docs/FASE_3_RECONCILIACAO_SUPABASE_PLANO.md`** |
+| Produção | **Intocada** (continua read-only até gate humano) |
+| Gates baseline revalidados | validate-phase1 **30/30** · `guard:migrations` **OK** · inventário **onlyRepo=4** |
+| Próximo bloqueio | Decisão produto **3.1** (`venda_finance_context` manter vs descartar) |
+
+Trilho UI/UX Admin V2 fechado separadamente — PR **#268** (`cursor/fechamento-ui-ux-633a`); não misturar escopos nesta PR **#267**.
 
 ---
 

@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-08-08T12:57:19.989Z",
+  "count": 15,
+  "summaries": [
+    {
+      "versaoRepo": "113",
+      "arquivoRepo": "113_descontos_venda_auditoria_operador.sql",
+      "versaoProd": "20260618011821",
+      "trackingProd": "113_rls_audit_fixes",
+      "recomendacao": "Não reaplicar; backport/capture timestamp já no repo; prevalece timestamp para hotfix RLS",
+      "repoSha256": "48e8c3fbe73b45febeae4c2f73b4544dcfd2f1c43dae40c277429b66f8f6a7e1",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "114",
+      "arquivoRepo": "114_fiscal_enqueue_loja_validation.sql",
+      "versaoProd": "20260618011922",
+      "trackingProd": "114_pdv_config_loja_backfill",
+      "recomendacao": "Documentar colisão histórica; não re-run numérico 114; arquivo capture timestamp é SSOT prod",
+      "repoSha256": "6ceea1942ddec5c018c1ce8971fcaea7d334c3a8dbb25db81cb0a8456fa1b5ef",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "245",
+      "arquivoRepo": "245_calcular_preco_produto_precedence_comment.sql",
+      "versaoProd": "20260620222629",
+      "trackingProd": "245_remover_venda_fiado",
+      "recomendacao": "Nunca confundir prefixos; fiado já removido via 246 + timestamp",
+      "repoSha256": "42985572f42a935296660f31c3b7ad5d5c56c1a0fc01a6cae971acbda0732a3a",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "246",
+      "arquivoRepo": "246_remover_venda_fiado.sql",
+      "versaoProd": "20260620222629",
+      "trackingProd": "245_remover_venda_fiado",
+      "recomendacao": "Não reaplicar; manter ambos no histórico",
+      "repoSha256": "b8b97d6697aa6a8aba977a1366ee5546b3ede6ee414f31e31310c19f934d2da1",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "253",
+      "arquivoRepo": "253_clientes_tipo_endereco_e_view_gerente.sql",
+      "versaoProd": "20260620200253",
+      "trackingProd": "244_clientes_tipo_endereco_e_view_gerente",
+      "recomendacao": "Investigar diff SQL Fase 3; não replay",
+      "repoSha256": "f4b7a43e4e64616a18842ba72d1444671399ec73a61a7b52d315f40d1c3b5b67",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "255",
+      "arquivoRepo": "255_grant_baseline_tabelas_authenticated.sql",
+      "versaoProd": "20260710163032",
+      "trackingProd": "255_vendas_em_espera_e_consulta_rapida",
+      "recomendacao": "Renomear/documentar; prevalece timestamp para feature espera",
+      "repoSha256": "31ebd9f0def23f0ed8867dc1709d66834ec22c9d1dbf76288dec53901f18a7a8",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "24703",
+      "arquivoRepo": "24703_vendas_em_espera_e_consulta_rapida.sql",
+      "versaoProd": "20260710163032",
+      "trackingProd": "255_vendas_em_espera_e_consulta_rapida",
+      "recomendacao": "Arquivar equivalência git Fase 3; prod rastreia timestamp",
+      "repoSha256": "8380d2d26da05609122e6444b25dc2657b8d6026c73f744ea38ee1ab3d1b55cb",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "268",
+      "arquivoRepo": "268_reconcile_finalizar_venda_v4_single_overload.sql",
+      "versaoProd": "20260713174909",
+      "trackingProd": "268_drop_v4_overloads",
+      "recomendacao": "Não reaplicar; fn v4 presente em prod",
+      "repoSha256": "e41592389a0e34b7009d7f532ae7c8ca3cd91e7048be06bb08e2007c5652a437",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "278",
+      "arquivoRepo": "278_revoke_anon_authenticated_funcoes_sem_uso_publico.sql",
+      "versaoProd": "20260717033836",
+      "trackingProd": "278_fix_v_clientes_gerente_ultima_compra",
+      "recomendacao": "Colisão de número; prevalece timestamp para fix view",
+      "repoSha256": "e82ae778573925e27c5b73a83f12dfac5def1c7798f75daa3e7200765f4aba1c",
+      "sqlEquivalente": false
+    },
+    {
+      "versaoRepo": "228",
+      "arquivoRepo": "228_venda_eventos_ledger.sql",
+      "versaoProd": "20260707000000",
+      "trackingProd": "venda_eventos_ledger",
+      "recomendacao": "Repo-only chave 228; usar backport timestamp; não executar 228 em prod",
+      "repoSha256": "3d52d801a8add1ad51cfb30b5d88bd25b4f0dad34a848bf2dcd17ca267dafde5",
+      "sqlEquivalente": "nao_medido_repo_vs_prod"
+    },
+    {
+      "versaoRepo": "231",
+      "arquivoRepo": "231_gerente_venda_eventos_rpcs.sql",
+      "versaoProd": "20260707010000",
+      "trackingProd": "gerente_venda_eventos_rpcs",
+      "recomendacao": "Repo-only chave 231; equivalência documentada",
+      "repoSha256": "fe1008477e82ce31420bc0149daf6b4fe264082a571e43b4813b26fc1a4746fc",
+      "sqlEquivalente": "nao_medido_repo_vs_prod"
+    },
+    {
+      "versaoRepo": "244",
+      "arquivoRepo": "244_consistencia_vendas_auditoria.sql",
+      "versaoProd": "20260707020000",
+      "trackingProd": "consistencia_vendas_auditoria",
+      "recomendacao": "Repo-only chave 244; backport timestamp prevalece",
+      "repoSha256": "e059906104c054a42caeaca7194f08cef87f3474dda9e0c0cc12a79d52d5cae3",
+      "sqlEquivalente": "nao_medido_repo_vs_prod"
+    },
+    {
+      "versaoRepo": "248",
+      "arquivoRepo": "248_devolver_ou_trocar_venda.sql",
+      "versaoProd": "20260717031500",
+      "trackingProd": "248_devolver_ou_trocar_venda",
+      "recomendacao": "Repo-only chave 248; prod rastreia timestamp + patches grant",
+      "repoSha256": "f9c2783b486c7d20313bc50a63d7f01e8b35ec6889f99344c4f3bf88e6658362",
+      "sqlEquivalente": "nao_medido_repo_vs_prod"
+    },
+    {
+      "versaoRepo": "243",
+      "arquivoRepo": "243_finalizar_venda_canonica_v4_captura.sql",
+      "versaoProd": "243",
+      "trackingProd": "finalizar_venda_canonica_v4_captura",
+      "recomendacao": "Cadeia v4: seguir 24702 → 268 → 20260713174909 → 277/301; não replay",
+      "repoSha256": "9980538071963e327e59df5a1a12ccae0f9b51bc3f93dc751848c49572ace81a",
+      "sqlEquivalente": true
+    },
+    {
+      "versaoRepo": "24702",
+      "arquivoRepo": "24702_finalizar_venda_v4_contas_receber_automatico.sql",
+      "versaoProd": "24702",
+      "trackingProd": "finalizar_venda_v4_contas_receber_automatico",
+      "recomendacao": "Nucleo v4; dependência lógica 252 (espelho ausente — não bloqueante runtime)",
+      "repoSha256": "bb4561ba1c23cd099148aefcfa2b46d29495e069df7e3dd9d1ca6c443bcc3d75",
+      "sqlEquivalente": true
+    }
+  ]
+}
