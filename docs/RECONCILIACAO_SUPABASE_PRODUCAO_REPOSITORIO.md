@@ -2,7 +2,7 @@
 
 > **Missão P0 governança** · **Somente leitura** — nenhum `db push`, nenhuma alteração em produção, nenhuma migration nova criada nesta entrega.  
 > **Data da evidência:** 2026-08-08 (UTC)  
-> **Projeto:** Supabase `jinlong` (ref interno — ver dashboard; Postgres 17, `sa-east-1`)  
+> **Projeto:** Supabase de produção FastProduct (nome no dashboard: jinlong)  
 > **SSOT de migrations no repo:** `backend/supabase/migrations/`  
 > **Documentos relacionados:** `AUDITORIA_DRIFT_PRODUCAO_REPOSITORIO.md` (2026-06-20), `backend/supabase/MIGRATIONS_DRIFT_CLASSIFICATION.md`
 
@@ -253,4 +253,135 @@ Sequência numérica salta `120`–`121`, `128`–`204`, `228`, `231`, `244`, `2
 
 ---
 
-*Fim do relatório read-only. Próximo passo: autorização explícita para Fase 1 (backport git-only das 26 migrations prod-only).*
+*Fim do relatório read-only. **Fase 1 (backport git-only)** executada em 2026-08-08 — ver §12.*
+
+---
+
+## 12. Fase 1 executada — backport git-only (PR #267)
+
+**Escopo:** somente recuperar SSOT no Git a partir de `supabase_migrations.schema_migrations.statements`.  
+**Produção:** **intocada** — operações usadas foram `list_migrations`, `execute_sql` (SELECT) e leitura de `statements`; **nenhum** `apply_migration`, `db push`, `db reset`, `migration repair`, DDL ou DML mutador.
+
+### 12.1 Resultado quantitativo
+
+| Métrica | Valor |
+|--------|------|
+| Migrations backportadas (Fase 1) | **30** |
+| Arquivos `.sql` no repo (após Fase 1) | **267** (= 237 legado + 30 backport) |
+| Manifesto SHA256 | `backend/supabase/reports/backport-phase1-manifest.json` |
+
+### 12.2 Origem do SQL
+
+| Fonte | Uso |
+|-------|-----|
+| `schema_migrations.statements` (prod) | Corpo de cada arquivo backport |
+| Export MCP `execute_sql` | Lotes iniciais (dumps em `reports/mcp-dumps/` — artefato local de missão, não SSOT) |
+| Export MCP `json_agg` / linha única | Migrations 305–313 e `289` (lote final) |
+
+Cabeçalho padrão em cada arquivo:
+
+```sql
+-- Backport Fase 1 (Git-only) from supabase_migrations.schema_migrations.statements
+```
+
+### 12.3 Lista completa dos arquivos backportados (30)
+
+| Versão prod | Arquivo repo | SHA256 (arquivo completo) |
+|-------------|--------------|---------------------------|
+| `20260707000000` | `20260707000000_venda_eventos_ledger.sql` | ver manifest |
+| `20260707010000` | `20260707010000_gerente_venda_eventos_rpcs.sql` | ver manifest |
+| `20260707020000` | `20260707020000_consistencia_vendas_auditoria.sql` | ver manifest |
+| `20260717031500` | `20260717031500_248_devolver_ou_trocar_venda.sql` | ver manifest |
+| `20260801090000` | `20260801090000_v_estoque_ledger_divergencia.sql` | ver manifest |
+| `20260801120000` | `20260801120000_recebimento_conferencia_explicita.sql` | ver manifest |
+| `20260805151822` | `20260805151822_289_hardening_autorizacao_rpcs_p0.sql` | ver manifest |
+| `20260805185445` | `20260805185445_291_estoque_baixas_integridade.sql` | ver manifest |
+| `20260805185458` | `20260805185458_293_documentos_fiscais_dlq_enable_rls.sql` | ver manifest |
+| `20260805190920` | `20260805190920_294_fornecedores_multi_tenant.sql` | ver manifest |
+| `20260805193920` | `20260805193920_295_ordem_compra_conferencia.sql` | ver manifest |
+| `20260805213357` | `20260805213357_296_nfe_conferencia.sql` | ver manifest |
+| `20260806000032` | `20260806000032_297_configuracoes_gerais_whitelist.sql` | ver manifest |
+| `20260806002522` | `20260806002522_298_br01_limite_credito_por_modo_loja.sql` | ver manifest |
+| `20260806002925` | `20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo.sql` | ver manifest |
+| `20260806004637` | `20260806004637_300_br03_custo_unitario_snap_servidor.sql` | ver manifest |
+| `20260806005804` | `20260806005804_301_revoke_anon_execute_finalizar_venda_v4_pos_br01.sql` | ver manifest |
+| `20260806011719` | `20260806011719_302_f1_05_formas_pagamento_parametrizavel.sql` | ver manifest |
+| `20260806090414` | `20260806090414_303_ssot04_kardex_cancelamento_devolucao.sql` | ver manifest |
+| `20260806090531` | `20260806090531_304_ssot04_drop_baixar_estoque_venda.sql` | ver manifest |
+| `20260806134834` | `20260806134834_305_d1_drop_fiscal_reprocessar_documento_overload.sql` | ver manifest |
+| `20260806135106` | `20260806135106_306_d2_maquina_estados_fiscal.sql` | ver manifest |
+| `20260806135429` | `20260806135429_307_d3_reaper_fiscal_em_processamento.sql` | ver manifest |
+| `20260806140528` | `20260806140528_308_hardening_tg_documentos_fiscais_estado.sql` | ver manifest |
+| `20260806235913` | `20260806235913_309_reaplica_091_fiscal_correlation_id.sql` | ver manifest |
+| `20260807000105` | `20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico.sql` | ver manifest |
+| `20260807000138` | `20260807000138_311_reaplica_235_236_237_observabilidade_e_system_alerts.sql` | ver manifest |
+| `20260807000157` | `20260807000157_312_rls_backup_schema_migrations.sql` | ver manifest |
+| `20260807000525` | `20260807000525_313_pdv_config_caixa_web_limite_desconto_manual.sql` | ver manifest |
+| `289` | `289_314_reafirma_grants_pos_venda_apos_248.sql` | ver manifest |
+
+Checksums completos: `backend/supabase/reports/backport-phase1-manifest.json` (`sha256` por arquivo).
+
+### 12.4 Correspondências / colisões (documentadas, não alteradas na Fase 1)
+
+| Versão prod (timestamp) | Arquivo numérico “irmão” no repo | Ação Fase 1 |
+|-------------------------|----------------------------------|-------------|
+| `20260707000000` | `228_venda_eventos_ledger.sql` | Backport timestamp; **não** remover `228_*` |
+| `20260707010000` | `231_gerente_venda_eventos_rpcs.sql` | idem |
+| `20260707020000` | `244_consistencia_vendas_auditoria.sql` | idem |
+| `20260717031500` | `248_devolver_ou_trocar_venda.sql` | idem |
+| `20260805151822` (`289_hardening…`) vs `289` (`314_reafirma…`) | **Duas versões distintas** — nomes contêm “289” mas chaves diferem | Ambas backportadas |
+
+### 12.5 Deliberadamente **não** reconciliados nesta fase
+
+| Item | Motivo |
+|------|--------|
+| **252 / `venda_finance_context`** | Drift tracking × schema; **fora** do escopo Fase 1 |
+| Cadeias **001–288**, **272**, **245/246**, block/stub **v4**, **311** (conteúdo vs repo numérico) | Sem replay/repair; apenas backport onde faltava arquivo |
+| Arquivos numéricos **228/231/244/248** sem linha homônima em prod | Mantidos; prod rastreia timestamps equivalentes |
+| Prod-only **fora** do pacote §4.2 (ex.: `20260618011821`, `20260618011922`) | Não incluídos nos 30; permanecem para fase posterior |
+| Conteúdo byte-a-byte numérico vs timestamp | Não diffado; prevalece `statements` prod na chave timestamp backportada |
+
+### 12.6 Estado `252 / venda_finance_context` (evidência read-only pós-Fase 1)
+
+| Check | Resultado |
+|-------|-----------|
+| `schema_migrations` versão **252** | **Registrada** (`venda_finance_context_mirror`) |
+| `to_regclass('public.venda_finance_context')` | **false** |
+| Função `sincronizar_finance_context_venda` | **Ausente** |
+| Alteração em prod na Fase 1 | **Nenhuma** |
+
+### 12.7 Divergências restantes (esperadas)
+
+1. **4 arquivos repo-only por chave numérica** (`228`, `231`, `244`, `248`) — par lógico timestamp backportado.  
+2. **Prod-only timestamps** históricos (ex. `20260618011821`, `20260618011922`) — ainda sem arquivo com mesma chave.  
+3. **252** — migration applied vs objeto ausente.  
+4. **Colisões de numeração** (§5) — inalteradas; não reaplicar cegamente.
+
+### 12.8 Gates locais (read-only)
+
+| Gate | Comando | Resultado Fase 1 |
+|------|---------|------------------|
+| Backport completo | `node backend/supabase/scripts/validate-phase1-backport.mjs` | **OK** (30/30) |
+| Manifesto | `node backend/supabase/scripts/build-backport-phase1-manifest.mjs` | **30** entradas |
+| Sequência migrations | `npm run guard:migrations` (raiz) | **OK** |
+| Inventário prod×repo | `node backend/supabase/scripts/reconcile-prod-repo-inventory.mjs` | Requer `reports/prod_schema_migrations.snapshot.json` atualizado via `list_migrations` / `write-prod-snapshot-from-list.mjs` |
+
+### 12.9 Evidência — produção intocada
+
+- Ferramentas Supabase MCP utilizadas: **`list_migrations`**, **`execute_sql`** com queries `SELECT` / leitura de metadados apenas.  
+- **Não** utilizados: `apply_migration`, CLI `db push`, `db reset`, `migration repair`, ou qualquer DDL/DML de correção.  
+- Os arquivos backportados são **espelho Git** do SQL já aplicado; **não** devem ser reexecutados manualmente em produção.
+
+### 12.10 Scripts adicionados (Fase 1)
+
+| Script | Função |
+|--------|--------|
+| `backport-from-mcp-dumps.mjs` | Parser dumps MCP (`statements` em lote) |
+| `backport-from-mcp-row-dump.mjs` | Uma migration por dump MCP |
+| `backport-from-mcp-jsonagg-dump.mjs` | Lote `json_agg` |
+| `build-backport-phase1-manifest.mjs` | SHA256 dos arquivos backport |
+| `validate-phase1-backport.mjs` | Gate 30 versões §4.2 |
+| `write-prod-snapshot-from-list.mjs` | Snapshot a partir de `list_migrations` |
+
+---
+
