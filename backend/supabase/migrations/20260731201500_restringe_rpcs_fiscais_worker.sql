@@ -58,40 +58,65 @@
 
 BEGIN;
 
--- ═══════════════════════════════════════════════════════════════════════════
--- Worker-only → apenas service_role
--- ═══════════════════════════════════════════════════════════════════════════
+-- Greenfield: overloads fiscais adicionados em migrations posteriores (ordem lex numérica)
+-- são ignorados aqui; REVOKE/GRANT só quando to_regprocedure encontra a assinatura.
 
-REVOKE ALL ON FUNCTION public.fiscal_claim_documentos(integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_claim_documentos(integer) TO service_role;
+DO $guard_fiscal_worker$
+BEGIN
+  IF to_regprocedure('public.fiscal_claim_documentos(integer)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.fiscal_claim_documentos(integer) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.fiscal_claim_documentos(integer) TO service_role;
+  END IF;
 
--- A mais crítica: grava status EMITIDO + chave_fiscal + protocolo.
-REVOKE ALL ON FUNCTION public.fiscal_marcar_emitido(uuid,text,text,text,jsonb) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_marcar_emitido(uuid,text,text,text,jsonb) TO service_role;
+  IF to_regprocedure('public.fiscal_marcar_emitido(uuid,text,text,text,jsonb)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.fiscal_marcar_emitido(uuid,text,text,text,jsonb) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.fiscal_marcar_emitido(uuid,text,text,text,jsonb) TO service_role;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean) TO service_role;
+  IF to_regprocedure('public.fiscal_marcar_erro(uuid,text,boolean)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean) TO service_role;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean,text,jsonb,boolean) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean,text,jsonb,boolean) TO service_role;
+  IF to_regprocedure('public.fiscal_marcar_erro(uuid,text,boolean,text,jsonb,boolean)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean,text,jsonb,boolean) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro(uuid,text,boolean,text,jsonb,boolean) TO service_role;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,jsonb,boolean) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,jsonb,boolean) TO service_role;
+  IF to_regprocedure('public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,jsonb,boolean)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,jsonb,boolean) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,jsonb,boolean) TO service_role;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,text,text,boolean,text,jsonb) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,text,text,boolean,text,jsonb) TO service_role;
+  IF to_regprocedure('public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,text,text,boolean,text,jsonb)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,text,text,boolean,text,jsonb) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.fiscal_marcar_erro_normalizado(uuid,text,boolean,text,text,text,boolean,text,jsonb) TO service_role;
+  END IF;
 
--- Overload do D-1, sem chamador no código.
-REVOKE ALL ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) TO service_role;
+  IF to_regprocedure('public.fiscal_reprocessar_documento(uuid,text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid,text) TO service_role;
+  END IF;
+END
+$guard_fiscal_worker$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Chamadas pela aplicação → authenticated PRESERVADO (reafirmado)
 -- ═══════════════════════════════════════════════════════════════════════════
 
-GRANT EXECUTE ON FUNCTION public.fiscal_enfileirar_documento_venda(uuid,text,jsonb) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.fiscal_registrar_evento_enqueue_erro(uuid,text,text,jsonb) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid) TO authenticated, service_role;
+DO $guard_fiscal_app_grants$
+BEGIN
+  IF to_regprocedure('public.fiscal_enfileirar_documento_venda(uuid,text,jsonb)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION public.fiscal_enfileirar_documento_venda(uuid,text,jsonb) TO authenticated, service_role;
+  END IF;
+  IF to_regprocedure('public.fiscal_registrar_evento_enqueue_erro(uuid,text,text,jsonb)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION public.fiscal_registrar_evento_enqueue_erro(uuid,text,text,jsonb) TO authenticated, service_role;
+  END IF;
+  IF to_regprocedure('public.fiscal_reprocessar_documento(uuid)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION public.fiscal_reprocessar_documento(uuid) TO authenticated, service_role;
+  END IF;
+END
+$guard_fiscal_app_grants$;
 
 NOTIFY pgrst, 'reload schema';
 
