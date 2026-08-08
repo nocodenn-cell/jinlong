@@ -27,12 +27,13 @@ Isso gera a classe de erro: `policy/function … does not exist` a cada CI — n
 
 ### Correção SSOT (menor conjunto)
 
-1. **Reordenar** `205`–`269` + `24701`–`24703` → timestamps `20260621000100`…`20260621005700`  
-   (gap após `20260620222629`, antes de `20260707000000`) — espelho do que já foi feito com `270`–`289` → `20260731200300`….
-2. **Idempotizar** `CREATE POLICY` bare nos near-duplicates de julho que passam a rodar *depois* do bloco reordenado:
+1. **Reordenar** `205`–`269` + `24703` → `20260621000100`…`20260621005700`  
+   (gap após `20260620222629`, antes de `20260707000000`) — espelho do SSOT `270`–`289`.
+2. **`24701`/`24702`** → `20260710212310`/`20` **após** `264` (evita `cannot change return type` da v4).
+3. **Idempotizar** `CREATE POLICY` bare nos near-duplicates de julho:
    - `20260707000000` (`venda_eventos_select_loja`)
    - `20260710163032` (3 policies `vendas_em_espera_*`)
-3. **Drift gate** (`p0-migration-status.mjs`): reordenação SSOT + remote-only numeric `205`–`289` / `24701`–`03` = informativo (não bloqueia).
+4. **Drift gate**: reordenação SSOT + remote-only numeric `205`–`289` / `24701`–`03` = informativo.
 
 **Não alterado:** `20260808130200_*` (Fase 3.2 HUMAN GATE). Sem `db push` prod. Sem bypass do greenfield gate.
 
