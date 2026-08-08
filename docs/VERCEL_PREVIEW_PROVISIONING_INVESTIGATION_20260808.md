@@ -2,160 +2,177 @@
 
 **Projeto:** `pdv-importados` (`prj_UPGWQN4TmzDQRYm5IB80a8ZxOslO`)  
 **Team:** NatureCode / `jinlong` (`team_C1mGhbvpvDlAAEm05epmTKR0`)  
-**Branch em foco:** `cursor/fechamento-ui-ux-633a`  
-**Método:** API Vercel (MCP) + config no repositório + comparação de deployments. **Sem alteração de env de produção, Supabase ou painel.**
+**Método:** API Vercel (MCP) + config no repositório + redeploy controlado. **Sem alteração de env, desconexão de integração, migrations ou Supabase.**
 
 ---
 
-## 1. Veredito
+## 1. Veredito (atualizado pós-redeploy)
 
 | Pergunta | Resposta |
 |----------|----------|
-| Falha é `next build` / TypeScript? | **Não** — o build **nunca inicia** na Vercel. |
-| Falha é Root Directory / `npm ci`? | **Não evidenciado** — último deploy OK usou `npm ci` + `next build` com sucesso (~2 min). |
-| Falha é commit específico (14b73bd, 4b73a2d, …)? | **Não** — commits **só docs** também falham igual; padrão é **global desde ~2026-08-07**. |
-| Classe da falha | **Pré-build:** `BUILD_FAILED` + `Resource provisioning failed` (~600–700 ms, **zero linhas de log**). |
-| Correção via código no repo? | **Não comprovada** nesta investigação — exige **painel Vercel** (integrações / backend do projeto / billing) ou **suporte Vercel**. |
+| Falha é `next build` / TypeScript? | **Não** — o build **nunca inicia** (zero eventos em `get_deployment_build_logs`). |
+| Falha é commit / diff de app? | **Não** — redeploy na árvore **`826b52d2`** falhou igual (§9). |
+| Classe da falha | **Pré-build:** `BUILD_FAILED` + `Resource provisioning failed` (~**632–696 ms**). |
+| Conclusão A/B/C | **B** — bloqueio **fora do código** (configuração Vercel / integrações / backend do projeto). Subcausa exata da integração **não confirmada via API** (MCP não expõe installations); hipótese **Provisioning Integrations → Supabase** (§5–§6). |
+| UI/UX pode retomar? | **Não** — nenhum Preview **READY** após a regressão. |
 
 ---
 
-## 2. Configuração (medida + documentada)
+## 2. Configuração efetiva conhecida
 
-### 2.1 Painel Vercel (referência `docs/GO_LIVE_FASE2_RELATORIO_FINAL.md`, jul/2026)
+### 2.1 API Vercel (`get_project`, 2026-08-08)
+
+| Campo | Valor |
+|-------|--------|
+| Framework | `nextjs` |
+| Node.js | **24.x** |
+| `live` | `false` |
+| SSO Preview | `ssoProtection.enabled: true` (`all_except_custom_domains`) |
+| Região (deploy ERROR/READY recentes) | **`gru1`** nos metadados de deployment |
+
+**Não exposto pelo MCP:** Root Directory, Install/Build Command, lista de integrações, env vars (nomes/escopos).
+
+### 2.2 Painel (referência jul/2026 — `docs/GO_LIVE_FASE2_RELATORIO_FINAL.md`)
 
 | Campo | Valor documentado |
 |-------|-------------------|
-| Framework | Next.js |
 | **Root Directory** | `pdv-importados` |
-| Install Command | `npm ci` |
-| Build Command | (default / `npm run build` no workspace) |
-| Output Directory | `.next` (relativo a `pdv-importados`) |
-| Node.js | **24.x** (API projeto) |
-| Região (funções) | `gru1` (`pdv-importados/vercel.json`) |
-| `project.live` | `false` (produção não “live” no sentido Vercel; **não** explica log vazio) |
+| Install | `npm ci` |
+| Output | `.next` |
+| Região funções | `gru1` (`pdv-importados/vercel.json`) |
 
-### 2.2 Repositório (monorepo)
+### 2.3 Repositório (sem mudança em `vercel.json` entre READY e ERROR)
 
-| Artefato | Conteúdo relevante |
-|----------|-------------------|
-| Raiz `package.json` | workspaces: `pdv-importados`, `pdv-local`, `backend`, `shared-core`; `build` → `turbo run build --filter=pdv-importados` |
-| Raiz `vercel.json` | `installCommand: npm ci`, `buildCommand: npm run build`, `outputDirectory: .next` — alinhado à **Opção A** em `docs/DEPLOY_VERCEL.md` (**só aplica se Root Directory = `.`** no painel) |
+| Artefato | Nota |
+|----------|------|
+| Raiz `vercel.json` | Opção A se Root = `.`; painel documentado usa **Opção B** (`pdv-importados`) |
 | `pdv-importados/vercel.json` | `"regions": ["gru1"]` |
-| `.nvmrc` (raiz) | `20` (painel reporta Node **24.x** — divergência conhecida, **não** explica falha instantânea sem log) |
-| `package-lock.json` | **Só na raiz** (correto para workspaces) |
-| CI | `.github/workflows/ci-pdv-importados.yml` — **não faz deploy**; deploy só via GitHub App Vercel |
-
-**Opção B (legado painel):** `docs/DEPLOY_VERCEL.md` recomenda `Install: cd .. && npm ci` se Root = `pdv-importados`. O último deploy **OK** rodou `npm ci` **sem** `cd ..` e instalou pacotes — comportamento aceito pelo npm workspaces.
+| Diff `826b52d2` → primeiro ERROR `7d26339a` | **Zero** diff em `vercel.json` / `pdv-importados/vercel.json` |
 
 ---
 
-## 3. Deployments analisados (SHAs pedidos)
+## 3. Vercel ↔ Supabase (somente leitura)
 
-Todos com o **mesmo** par `errorCode` / `errorMessage` e **sem build logs**:
+### 3.1 Supabase (MCP)
 
-| Commit (curto) | Deployment ID | Branch | Estado | Δ ready−building |
-|----------------|---------------|--------|--------|------------------|
-| `14b73bdc` | `dpl_F5Xpdtavyo3B42YKYZuu78UdKSZr` | `cursor/fechamento-ui-ux-633a` | ERROR | ~689 ms |
-| `4b73a2dc` | `dpl_EuPF4WNBwDjguyFBLb9ezNvfw9RC` | `cursor/fechamento-ui-ux-633a` | ERROR | ~ms |
-| `e362c389` | `dpl_39DDuYTczrtJ1YkQXnhiH6APvLWv` | `cursor/reconciliacao-supabase-audit-633a` | ERROR | ~575 ms |
-| `25a155ab` | `dpl_5j3mYvCEw3E47Zw7459ubQ6KPQE8` | `cursor/reconciliacao-supabase-audit-633a` | ERROR | ~ms |
-| `6e3f9f79` | `dpl_CKNGytiAN5W1QC3hNCe8YNZ5c1Zx` | `cursor/estoque-compras-admin-v2-633a` | ERROR | ~ms |
+| Campo | Valor |
+|-------|--------|
+| Projeto | prod sa-east-1 (ref redigido; MCP ACTIVE_HEALTHY) |
+| Região | `sa-east-1` |
+| Status | **ACTIVE_HEALTHY** |
+| Branches | 1 (`main`) — **não** pausado |
 
-**Mensagem exata (API):** `errorMessage: "Resource provisioning failed"`, `errorCode: "BUILD_FAILED"`.
+### 3.2 Integrações (evidência indireta — não desconectadas)
 
----
+| Camada | Evidência |
+|--------|-----------|
+| **GitHub** | Apps: Vercel + **Supabase**; check `Supabase Preview` (`docs/ENCERRAMENTO_CICD_GO_NOGO.md`) |
+| **Vercel (relato proprietário)** | Integração **Supabase** instalada no marketplace, **produto** vinculado ao projeto |
+| **Env manuais (audit jul/2026, `vercel env ls`)** | Chaves Supabase (públicas + service role + Postgres) em **Production + Preview** — mesmo DB prod (P0-3/P1-1) |
 
-## 4. Último deployment saudável (comparação)
+### 3.3 Conflito plausível (hipótese, não provada sem painel)
 
-| Campo | Último **READY** | Deployments **ERROR** (atual) |
-|-------|------------------|-------------------------------|
-| ID | `dpl_4znhvKr7EGUMUvZacJZQZGpe6UP3` | ex. `dpl_F5Xpdt…` |
-| Commit | `826b52d2` (docs migrations/UI audit) | vários (UI, docs, Supabase audit) |
-| Data (API ms) | `1786065421665` | ≥ `1786132919926` |
-| Duração até ready | **~170 s** (build real) | **~0,7 s** |
-| Build logs | Sim — clone, `npm ci`, `next build`, deploy | **Nenhum evento** |
-| Região deploy | `gru1` | `gru1` |
-| Build machine (log) | **Washington iad1**, 4 cores / 8 GB | (não chega a alocar) |
+Integrações Supabase na Vercel costumam, em cada Preview:
 
-Trecho do log OK (início):
+1. **Provisionar** recurso (branch DB / credenciais) na fase **Provisioning Integrations**.
+2. **Sincronizar** env (prefixos Postgres / URL / keys) para o escopo Preview.
 
-```text
-Running build in Washington, D.C., USA (East) – iad1
-Running "install" command: `npm ci`...
-Running "npm run build" > next build
-Build Completed in /vercel/output [2m]
-Deployment completed
-```
+Com **vars manuais** já definidas para Preview (audit), a fase de provisioning/sync pode falhar e surfacear **`Resource provisioning failed`** **antes** do clone — padrão [comunidade Vercel #32451](https://community.vercel.com/t/vercel-deployments-failing-with-resource-provisioning-failed-and-0ms-build-time/32451).
 
-**Conclusão:** a configuração que **funcionou** em `826b52d2` é a mesma família (Root `pdv-importados`, `npm ci`, Next 15). A regressão **não** correlaciona com diff de aplicação nos SHAs listados.
+**Checagem pendente no painel (sem desconectar):**
+
+- Project → **Integrations** → Supabase → produto/recurso, ambientes (**Preview** ligado?), opção “branch per preview” / sync env.
+- Project → **Settings → Environment Variables** → listar **nomes + escopos**; marcar duplicatas entre vars manuais e integração (Postgres / URL).
 
 ---
 
-## 5. Causa raiz provável (evidência externa + sintoma)
+## 4. Linha do tempo
 
-Padrão idêntico ao documentado na [comunidade Vercel](https://community.vercel.com/t/vercel-deployments-failing-with-resource-provisioning-failed-and-0ms-build-time/32451):
+| Evento | Deployment | Commit | Estado | Δ ms |
+|--------|------------|--------|--------|------|
+| Último **READY** | `dpl_4znhvKr7EGUMUvZacJZQZGpe6UP3` | `826b52d2` | READY | ~173 s |
+| **Primeiro ERROR** (série atual) | `dpl_B2vGH9n1GNj1vZkrXb74ytD9ofBh` | `7d26339a` (docs) | ERROR | **696** |
+| Exemplo UI | `dpl_F5Xpdtavyo3B42YKYZuu78UdKSZr` | `14b73bdc` | ERROR | ~689 |
+| Redeploy árvore 826b52d | `dpl_FNJESiM1RcDZ42NKHVuVoEUJqsH6` | `187bfe9e` | ERROR | **632** |
+| Empty commit (skip monorepo) | `dpl_CpchJmsagMrSuXjYQpGLFqhAd8pi` | `69bf2c22` | **CANCELED** | 0 — [skip unaffected](https://vercel.com/docs/monorepos#skipping-unaffected-projects) |
 
-1. **Integrações de marketplace** (Supabase / Neon / Upstash / etc.) falham na fase **“Provisioning Integrations”** **antes** do clone/build → log vazio.
-2. **Configuração legacy do backend do projeto** incompatível com o plano (ex.: `functionDefaultTimeout`, Fluid / Active CPU) após downgrade — ver [tópico Hobby + legacy backend](https://community.vercel.com/t/hobby-project-stuck-on-resource-provisioning-failed-legacy-backend-settings/42915).
-
-**Checagens feitas nesta sessão:**
-
-| Hipótese | Resultado |
-|----------|-----------|
-| Supabase `jinlong` pausado | **Descartada** — MCP: `ACTIVE_HEALTHY`, 1 branch |
-| Limite de branches Supabase | **Descartada** — 1/10 |
-| `GerenteTable` / build local | **Irrelevante** — build local verde; Vercel não compila |
-| GitHub billing (Actions) | **Paralelo** — CI pode estar parado; **não** impede Git push → Vercel hook |
-
-**Não medido via API (requer dono no painel):** integrações Vercel conectadas, Build Machine / Fluid Compute, spending limit **da conta Vercel**, cache de build corrompido (695 MB no último OK).
+**Janela da regressão:** entre `createdAt` **1786065421665** (READY) e **1786132919926** (primeiro ERROR) — **~19 h**, **sem** mudança de `vercel.json` no repo.
 
 ---
 
-## 6. Ações manuais recomendadas (ordem)
+## 5. Etapa da falha (inferência técnica)
 
-1. **Vercel → Team `jinlong` → Settings → Billing**  
-   - Confirmar pagamento / spending limit (mesma classe de problema que GitHub Actions P0-1, mas **conta Vercel**).
+| Fase pipeline Vercel | Evidência |
+|---------------------|-----------|
+| Webhook / criação deployment | OK — deployments aparecem na API |
+| **Provisioning Integrations / recursos** | **Falha provável** — mensagem `Resource provisioning failed`, duração sub-segundo, **sem** logs de clone/install/build |
+| Clone / `npm ci` / `next build` | **Não executados** em ERROR (logs vazios; contrastar READY §4) |
 
-2. **Vercel → Project `pdv-importados` → Settings → Integrations**  
-   - Listar integrações (Supabase, Sentry, Upstash, …).  
-   - Se existir **Supabase Integration** com provisionamento por Preview: **reautenticar**, **desconectar** (env vars manuais já documentadas) ou corrigir recurso upstream.  
-   - Redeploy de um commit conhecido (`826b52d2` ou `main`).
-
-3. **Settings → General → Build & Development**  
-   - **Build Machine:** padrão do plano (não Enhanced incompatível).  
-   - **Node.js:** alinhar com `.nvmrc` / CI (**22** em Actions, **20** em `.nvmrc`) — **só após** provisioning voltar; não é a causa do log zero.  
-   - **Clear Build Cache** (último cache ~696 MB no deploy OK).
-
-4. **Settings → Functions** (se disponível)  
-   - Verificar timeout default / Fluid; se projeto já teve Pro e caiu para Hobby, pedir suporte para limpar flags backend (`isUsingActiveCPU`, `SKIP_NAMESPACE_QUEUE`) — padrão community #42915.
-
-5. **Suporte Vercel** (se 1–4 não resolverem em 1 redeploy)  
-   - Enviar IDs: `dpl_F5Xpdtavyo3B42YKYZuu78UdKSZr`, `dpl_4znhvKr7EGUMUvZacJZQZGpe6UP3`, mensagem `Resource provisioning failed`, zero logs.  
-   - Pedir detalhe da fase **Provisioning Integrations** / backend settings.
-
-6. **Validação pós-correção**  
-   - Deployment **Ready** + URL Preview (SSO: `ssoProtection.enabled: true` — usar share link ou login team).  
-   - `GET /api/health` na URL Preview.  
-   - Gates locais inalterados: `typecheck`, `lint`, `test`, `check:ds-sprint0`, `check:entity-ssot`, `build`.
+Alternativa secundária (menor prioridade): flags **legacy backend** pós-mudança de plano ([community #42915](https://community.vercel.com/t/hobby-project-stuck-on-resource-provisioning-failed-legacy-backend-settings/42915)). Billing Vercel Pro descartado pelo proprietário.
 
 ---
 
-## 7. O que **não** fazer (pedido explícito)
+## 6. Redeploy controlado (critério pedido)
 
-- Não alterar Node para 24 “só para testar” no repo.  
-- Não mudar Root Directory sem confirmar no painel.  
-- Não rotacionar / expor secrets de produção.  
-- Não `db push`, migration, repair ou DDL Supabase.  
-- Não continuar sprint UI/UX até Preview **Ready** ponta a ponta.
+**Branch:** `cursor/vercel-redeploy-826b52d-633a`  
+**Base de código:** ancestral **`826b52d2e2cf2e0f8a91bc0aae734a4060950001`** (mesmo SHA do último READY).
+
+| Tentativa | Deployment | Resultado |
+|-----------|------------|-----------|
+| Empty commit | `dpl_CpchJmsagMrSuXjYQpGLFqhAd8pi` | **CANCELED** (monorepo — sem diff em `pdv-importados`) |
+| Touch `pdv-importados/docs/SUPABASE_ENV.md` only | `dpl_FNJESiM1RcDZ42NKHVuVoEUJqsH6` | **ERROR** — `Resource provisioning failed`, **632 ms**, **zero build logs** |
+
+**Diff app vs READY:** 1 arquivo doc, +2 linhas — **não** explica falha de provisioning.
+
+**Conclusão:** problema **comprovadamente externo** à árvore de código que já buildou em `dpl_4znhvKr7`.
 
 ---
 
-## 8. Estado desta missão
+## 7. Pacote para suporte Vercel (B)
+
+Incluir:
+
+- **Team:** `team_C1mGhbvpvDlAAEm05epmTKR0` (jinlong) · **Project:** `prj_UPGWQN4TmzDQRYm5IB80a8ZxOslO`
+- **READY de referência:** `dpl_4znhvKr7EGUMUvZacJZQZGpe6UP3` · SHA `826b52d2` · build ~2 min · logs completos
+- **ERROR pós-regressão:** `dpl_B2vGH9n1GNj1vZkrXb74ytD9ofBh` (primeiro), `dpl_FNJESiM1RcDZ42NKHVuVoEUJqsH6` (redeploy árvore good)
+- **Mensagem:** `errorCode: BUILD_FAILED`, `errorMessage: Resource provisioning failed`
+- **Pedido:** `readyStateReason` / logs internos da fase **Provisioning Integrations**; listar integrações ativas no projeto; verificar conflito env manual × Supabase marketplace em **Preview**
+
+Inspectors:
+
+- https://vercel.com/jinlong/pdv-importados/4znhvKr7EGUMUvZacJZQZGpe6UP3
+- https://vercel.com/jinlong/pdv-importados/FNJESiM1RcDZ42NKHVuVoEUJqsH6
+
+---
+
+## 8. Ações manuais recomendadas (ordem — reversíveis)
+
+1. **Integrations → Supabase** (somente inspeção): ambientes Preview, sync env, branch provisioning; screenshot config.
+2. Se Preview estiver provisionando branch/recurso e vars manuais já existem: **desabilitar provisionamento Preview na integração** ou **Preview-only env** via staging (P0-3) — **só após** evidência no painel; rollback = reverter toggle / `vercel env add`.
+3. **Clear Build Cache** (último OK subiu ~696 MB cache).
+4. Abrir ticket §7 se provisioning interno falhar sem causa visível.
+
+---
+
+## 9. O que **não** foi feito (pedido explícito)
+
+- Desconectar/reconectar integração Supabase  
+- Alterar env vars de Production/Preview  
+- Migrations / `db push` / repair Supabase  
+- Mudanças de UI/UX na app  
+
+---
+
+## 10. Estado da missão
 
 | Critério | Status |
 |----------|--------|
-| Causa identificada com log de build | **Parcial** — classe **provisioning**; subcausa exata **no painel/suporte** |
-| Correção commitada no repo | **Nenhuma** (sem causa comprovada em código) |
-| Preview Ready + app acessível | **Bloqueado** — aguarda ação manual §6 |
+| Causa exata (qual integração/recurso) | **Hipótese Supabase provisioning** — confirmar no painel |
+| Código / config repo | **Descartado** como causa (§6) |
+| Preview READY + `/api/health` | **Bloqueado** |
+| Retomar UI/UX | **Não** |
 
-**Próximo passo operacional:** executar §6 (1–2) no painel; após um deploy **Ready**, retomar UI/UX (`/admin/vendas`).
+**Deployment de validação mais recente:** `dpl_FNJESiM1RcDZ42NKHVuVoEUJqsH6` — **ERROR**  
+**URL:** https://pdv-importados-qqqaiblnk-jinlong.vercel.app (inacessível — build não completou)
+
+**Último Preview funcional (histórico):** `dpl_4znhvKr7` — https://pdv-importados-61umtux8c-jinlong.vercel.app (SSO; health exige login/share válido)
