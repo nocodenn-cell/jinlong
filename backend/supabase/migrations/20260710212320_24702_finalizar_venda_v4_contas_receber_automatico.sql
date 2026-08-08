@@ -37,6 +37,13 @@ DROP FUNCTION IF EXISTS public.finalizar_venda_transacional_canonica_v4(
   jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text
 );
 
+-- Greenfield: 264 cria a assinatura com p_cliente_id sem contas_receber_id no RETURNS.
+-- Mudança de return type exige DROP (CREATE OR REPLACE não altera RETURNS).
+DROP FUNCTION IF EXISTS public.finalizar_venda_transacional_canonica_v4(
+  uuid, uuid, uuid, uuid, text, numeric, numeric, numeric,
+  jsonb, jsonb, text, numeric, boolean, boolean, text, text, text, text, uuid
+);
+
 CREATE OR REPLACE FUNCTION public.finalizar_venda_transacional_canonica_v4(
   p_venda_id uuid,
   p_caixa_id uuid,
