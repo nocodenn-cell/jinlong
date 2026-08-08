@@ -37,7 +37,7 @@ Formato: `ID | superfície | arquivo/rota | problema real | impacto | padrão co
 | UX-08 | Financeiro | `ContasPagarListClient` → `/admin/financeiro?tab=pagar` | `GerenteTable`, `DataTablePage`, `app-input`/`app-chip`/`app-btn-*` | Aba AP crítica com chrome legado | `CrudListShell` + `MetricCard` + `DataTable` + forms DS | **Implementado** |
 | UX-09 | Vendas | `VendasTable.tsx`, `VendaDetailSheet.tsx` | Dezenas de `text-[10–12px]` | Hierarquia inconsistente | tokens tipográficos DS | **Implementado** (tipografia `text-caption` / `text-small` / `text-body`) |
 | UX-10 | Config / Implantação / Provisionamento | `ds-coverage.json` | `migrated: false` | Telas operacionais secundárias | PageShell DS | **Backlog P2** |
-| UX-11 | Modais produto | `components/gerente/produtos/*` | Modais gerente no catálogo admin | Dialog inconsistente | DragonModal / DS modal | **Backlog P1** (sem mudança negócio) |
+| UX-11 | Modais produto | `components/gerente/produtos/*` | Modais gerente no catálogo admin | Dialog inconsistente | DragonModal + `fp-control` DS | **Implementado** |
 | UX-12 | Documento fiscal | `app/admin/financeiro/documento/[id]` | Client gerente dedicado | Detalhe fora do hub | PageShell + sheet DS | **Implementado** — hub fiscal + `SectionCard` DS |
 
 ---
@@ -143,13 +143,14 @@ Não se declara 100%: exceções em §4 e UX-09–UX-12.
 
 ## 9. Resíduos restantes (prioridade)
 
-1. **P1:** Modais catálogo/produto (UX-11)
-2. **P2:** Configurações, Implantação, Provisionamento (UX-10)
-3. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
+1. **P2:** Configurações, Implantação, Provisionamento (UX-10)
+2. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
 
-**Próxima superfície recomendada (admin):** modais catálogo (UX-11).
+**Próxima superfície recomendada:** **UX-10** (config/implantação) ou polish PDV `app-accent-text`.
 
-**PDV:** residual `app-accent-text` pontual em `CaixaGerenteModal` / `CaixaPdvOperacoesMenu` (fora do escopo skeletons); ver §9.1.
+### 9.2 UX-11 — modais catálogo (fechado 2026-08-08)
+
+Ver `pdv-importados/docs/UX-11_MODAIS_CATALOGO_AUDIT.md`. Gates: typecheck OK; Vitest `components/gerente/produtos` **69/69**.
 
 ### 9.1 PDV — polish (Onda 12, em andamento)
 

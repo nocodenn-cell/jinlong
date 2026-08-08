@@ -108,7 +108,7 @@ export function ProdutoForm(props: Props) {
     props.readOnly.produtoId !== null ? (
       <FaixasAtacadoEditor produtoId={props.readOnly.produtoId} p={p} />
     ) : (
-      <p className="text-[11px] text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>
+      <p className="text-caption text-jl-fg-3">{p.hint_faixas_apos_salvar}</p>
     )
 
   return (
@@ -128,7 +128,7 @@ export function ProdutoForm(props: Props) {
             />
             <div>
               <p className="text-xs font-medium text-jl-fg-2">{p.foto_form_label}</p>
-              <p className="text-[10px] text-jl-fg-3">{p.hint_foto_form}</p>
+              <p className="text-caption text-jl-fg-3">{p.hint_foto_form}</p>
             </div>
           </div>
         ) : null}

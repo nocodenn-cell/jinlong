@@ -28,7 +28,7 @@ export function FiscalSection() {
                 onChange={(e) => ctx.setNcm(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 disabled={disabled}
               />
-              <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_ncm}</span>
+              <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_ncm}</span>
             </label>
             <label className="block text-xs font-medium text-jl-fg-3">
               {p.field_cfop_produto}

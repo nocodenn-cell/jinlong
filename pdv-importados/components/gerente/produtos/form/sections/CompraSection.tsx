@@ -29,7 +29,7 @@ export function CompraSection() {
           <p className="mt-1 text-sm font-medium text-jl-fg-1">
             {readOnly.custoMedio !== null ? formatBRL(readOnly.custoMedio) : '—'}
           </p>
-          <p className="mt-0.5 text-[10px] text-jl-fg-3">{p.custo_medio_hint}</p>
+          <p className="mt-0.5 text-caption text-jl-fg-3">{p.custo_medio_hint}</p>
         </div>
       </div>
     </section>

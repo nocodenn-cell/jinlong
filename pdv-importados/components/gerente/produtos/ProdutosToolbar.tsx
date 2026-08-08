@@ -78,8 +78,8 @@ export function ProdutosToolbar({
         className={cn(
           btnBase,
           fotoDisabled
-            ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
-            : 'app-border app-surface-soft text-jl-fg-1 hover:bg-white/[0.06]',
+            ? 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+            : 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]',
         )}
         title={p.toolbar_foto_title}
         aria-label={p.toolbar_foto_aria}
@@ -95,8 +95,8 @@ export function ProdutosToolbar({
         className={cn(
           btnBase,
           printDisabled
-            ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
-            : 'app-border app-surface-soft text-jl-fg-1 hover:bg-white/[0.06]',
+            ? 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+            : 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]',
         )}
         title={p.toolbar_imprimir_title}
         aria-label={p.toolbar_imprimir_aria}
@@ -114,8 +114,8 @@ export function ProdutosToolbar({
             className={cn(
               btnBase,
               ativarLoteLoading
-                ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
-                : 'app-border app-surface-soft text-jl-fg-1 hover:bg-green-500/15',
+                ? 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+                : 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-green-500/15',
             )}
             title={p.lote_ativar_title}
             aria-label={p.lote_ativar_aria}
@@ -131,8 +131,8 @@ export function ProdutosToolbar({
             className={cn(
               btnBase,
               inativarLoteLoading
-                ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
-                : 'app-border app-surface-soft text-jl-fg-1 hover:bg-amber-500/15',
+                ? 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+                : 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-amber-500/15',
             )}
             title={p.lote_inativar_title}
             aria-label={p.lote_inativar_aria}
@@ -148,8 +148,8 @@ export function ProdutosToolbar({
             className={cn(
               btnBase,
               categoriaLoteLoading
-                ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
-                : 'app-border app-surface-soft text-jl-fg-1 hover:bg-blue-500/15',
+                ? 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+                : 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-blue-500/15',
             )}
             title={p.lote_categoria_title}
             aria-label={p.lote_categoria_aria}
@@ -167,8 +167,8 @@ export function ProdutosToolbar({
         className={cn(
           btnBase,
           exclusaoDisabled || exclusaoLoading
-            ? 'app-border app-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
-            : 'app-border app-surface-soft text-jl-fg-1 hover:bg-destructive/15 hover:border-destructive/40',
+            ? 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-3 opacity-60 cursor-not-allowed'
+            : 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-destructive/15 hover:border-destructive/40',
         )}
         title={p.toolbar_excluir_title}
         aria-label={p.toolbar_excluir_aria}
@@ -180,7 +180,7 @@ export function ProdutosToolbar({
       <button
         type="button"
         onClick={onImport}
-        className={cn(btnBase, 'app-border app-surface-soft text-jl-fg-1 hover:bg-white/[0.06]')}
+        className={cn(btnBase, 'border-jl-border-1 bg-jl-surface-soft text-jl-fg-1 hover:bg-white/[0.06]')}
         aria-label={p.toolbar_importar_aria}
       >
         <UploadCloud className="h-4 w-4 shrink-0 text-[color:var(--accent)]" aria-hidden />

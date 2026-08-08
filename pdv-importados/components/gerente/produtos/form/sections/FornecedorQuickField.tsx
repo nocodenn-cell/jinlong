@@ -35,7 +35,7 @@ export function FornecedorQuickField({ idioma }: Props) {
           idioma={idioma}
         />
       </div>
-      <p className="mt-0.5 text-[10px] text-jl-fg-3">{p.hint_fornecedor_rastreio}</p>
+      <p className="mt-0.5 text-caption text-jl-fg-3">{p.hint_fornecedor_rastreio}</p>
     </div>
   )
 }
