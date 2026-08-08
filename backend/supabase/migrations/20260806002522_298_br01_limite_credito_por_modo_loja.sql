@@ -51,6 +51,26 @@
 
 BEGIN;
 
+-- Dependência: migrações numéricas 272_* aplicam depois das timestamp em `db reset`
+-- (ordem lexicográfica 270 > 202608…). Garantir tipo antes do DROP/CREATE da v4.
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'motivo_desconto_enum_tipo'
+      AND typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+  ) THEN
+    CREATE TYPE public.motivo_desconto_enum_tipo AS ENUM (
+      'NAO_ESPECIFICADO',
+      'ERRO_DIGITACAO',
+      'NEGOCIACAO',
+      'CLIENTE_PREFERENCIAL',
+      'DANO_PRODUTO',
+      'AUTORIZACAO_COMERCIAL',
+      'OUTROS'
+    );
+  END IF;
+END $$;
+
 -- ============================================================================
 -- 1. pdv_config ganha o modo de crédito — por loja, não por cliente/venda.
 -- ============================================================================
