@@ -15,6 +15,19 @@ function hmacSha256Hex(secret: string, content: string): string {
   return crypto.createHmac('sha256', secret).update(content).digest('hex')
 }
 
+async function resolveOperadorIdE2E(admin: ReturnType<typeof createClient>) {
+  const email =
+    process.env.PLAYWRIGHT_CAIXA_TEST_EMAIL?.trim() || 'e2e-operador@localhost.test'
+  for (let page = 1; page <= 5; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) throw error
+    const found = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
+    if (found?.id) return found.id
+    if ((data.users?.length ?? 0) < 200) break
+  }
+  throw new Error(`Operador E2E não encontrado (rode seed E2E): ${email}`)
+}
+
 async function garantirProdutoEEstoqueParaTeste() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!.trim()
@@ -55,15 +68,31 @@ async function garantirProdutoEEstoqueParaTeste() {
 }
 
 async function enviarVendaViaSync(params: { produtoId: string; preco: number }) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!.trim()
+  const admin = createClient(url, serviceRole)
+  const operadorId = await resolveOperadorIdE2E(admin)
+
   const vendaId = crypto.randomUUID()
   const eventId = crypto.randomUUID()
   const caixaId = crypto.randomUUID()
   const total = Math.round(params.preco * 100) / 100
 
+  const { error: caixaErr } = await admin.from('caixas').insert({
+    id: caixaId,
+    operador_id: operadorId,
+    loja_id: LOJA_MATRIZ_ID,
+    valor_inicial: 0,
+    status: 'ABERTO',
+  })
+  if (caixaErr && !String(caixaErr.message).includes('duplicate')) {
+    throw new Error(`Falha ao preparar caixa E2E: ${caixaErr.message}`)
+  }
+
   const payload = {
     venda_id: vendaId,
     caixa_id: caixaId,
-    operador_id: null,
+    operador_id: operadorId,
     troco_inicial_caixa: 0,
     forma_pagamento: 'DINHEIRO',
     total_bruto: total,
@@ -110,6 +139,7 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
       'X-SYNC-NONCE': nonce,
       'X-SYNC-SIGNATURE': signature,
       'x-device-fingerprint': device,
+      'x-loja-id': LOJA_MATRIZ_ID,
     },
     body: reqBody,
   })
@@ -123,7 +153,10 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
 
   expect(syncRes.ok, `sync-outbox HTTP ${syncRes.status}: ${JSON.stringify(syncJson)}`).toBe(true)
   expect(syncJson.ok).toBe(true)
-  expect(syncJson.failed ?? []).toHaveLength(0)
+  expect(
+    syncJson.failed ?? [],
+    `eventos com falha: ${JSON.stringify(syncJson.failed)}`,
+  ).toHaveLength(0)
   expect(syncJson.processed ?? []).toContain(eventId)
 
   return { vendaId }

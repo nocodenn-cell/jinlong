@@ -83,7 +83,7 @@ GRANT EXECUTE ON FUNCTION public.auth_usuario_gerencial_loja(uuid) TO authentica
 
 -- 3 chamadas autenticadas no app. authenticated PRESERVADO.
 -- Greenfield: `235_*` (criação) ordena depois desta migration; 311 reaplica grants.
-DO $278_pdv_flags$
+DO $guard_pdv_config_flags$
 BEGIN
   IF to_regprocedure('public.pdv_config_flags_visuais()') IS NOT NULL THEN
     REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM PUBLIC;
@@ -91,7 +91,7 @@ BEGIN
     GRANT EXECUTE ON FUNCTION public.pdv_config_flags_visuais() TO authenticated, service_role;
   END IF;
 END
-$278_pdv_flags$;
+$guard_pdv_config_flags$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- GRUPO B — CRUD de funcionários: app usa service_role exclusivamente
