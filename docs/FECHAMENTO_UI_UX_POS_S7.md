@@ -143,12 +143,11 @@ Não se declara 100%: exceções em §4 e UX-09–UX-12.
 
 ## 9. Resíduos restantes (prioridade)
 
-1. **P1:** Documento fiscal detalhe — shell admin (UX-12)
-2. **P1:** Modais catálogo/produto (UX-11)
-3. **P2:** Configurações, Implantação, Provisionamento (UX-10)
-4. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
+1. **P1:** Modais catálogo/produto (UX-11)
+2. **P2:** Configurações, Implantação, Provisionamento (UX-10)
+3. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
 
-**Próxima superfície recomendada (admin):** **`/admin/financeiro/documento/[id]`** (UX-12) ou modais catálogo (UX-11).
+**Próxima superfície recomendada (admin):** modais catálogo (UX-11).
 
 **PDV:** residual `app-accent-text` pontual em `CaixaGerenteModal` / `CaixaPdvOperacoesMenu` (fora do escopo skeletons); ver §9.1.
 
