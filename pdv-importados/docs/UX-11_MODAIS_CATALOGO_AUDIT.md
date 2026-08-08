@@ -29,9 +29,9 @@ Escopo: `components/gerente/produtos/*` consumidos em `/admin/catalogo` (SSOT pr
 
 | Gate | Resultado |
 |------|-----------|
-| `npm run typecheck` | OK |
-| Vitest `components/gerente/produtos` | **69/69** OK |
-| Preview Vercel PR #268 | (registrar após deploy READY) |
+| Preview Vercel PR #268 | `dpl_Bp166tUa5ieybjJ4MReDpnrLYuUu` **READY** — `fd6b695c` — https://pdv-importados-m9pds1zez-jinlong.vercel.app |
+| `catalogoNovoProdutoEntradas.behavior` | **3/3** OK |
+| `p0-venda-homologacao` | **11/11** OK |
 
 ## Resíduos UX-11
 
