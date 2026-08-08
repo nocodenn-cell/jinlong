@@ -44,14 +44,14 @@ LEFT JOIN (
 ) l
   ON l.produto_id = e.produto_id
  AND l.loja_id    = e.loja_id
-WHERE e.quantidade_atual <> COALESCE(l.soma_delta, 0)
+WHERE e.quantidade_atual <> COALESCE(l.soma_delta, 0);
 
 COMMENT ON VIEW public.v_estoque_ledger_divergencia IS
   'Onda A — linhas de estoque cujo saldo não é explicado pela soma de movimentos_estoque_log. '
   'Ausência de movimento conta como soma zero. Vazia = ledger fecha. '
-  'security_invoker: herda a RLS de estoque/produtos do usuário que consulta.'
+  'security_invoker: herda a RLS de estoque/produtos do usuário que consulta.';
 
 -- Leitura pela mesma superfície das demais views de auditoria.
-GRANT SELECT ON public.v_estoque_ledger_divergencia TO authenticated
+GRANT SELECT ON public.v_estoque_ledger_divergencia TO authenticated;
 
-GRANT SELECT ON public.v_estoque_ledger_divergencia TO service_role
+GRANT SELECT ON public.v_estoque_ledger_divergencia TO service_role;

@@ -22,27 +22,27 @@ CREATE TABLE IF NOT EXISTS public.venda_eventos (
   source           text NOT NULL,
   idempotency_key  text NOT NULL,
   CONSTRAINT venda_eventos_idempotency_key_uniq UNIQUE (idempotency_key)
-)
+);
 
 CREATE INDEX IF NOT EXISTS idx_venda_eventos_loja_occurred
-  ON public.venda_eventos (loja_id, occurred_at DESC)
+  ON public.venda_eventos (loja_id, occurred_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_venda_eventos_caixa_occurred
-  ON public.venda_eventos (caixa_id, occurred_at DESC)
+  ON public.venda_eventos (caixa_id, occurred_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_venda_eventos_sale_id
-  ON public.venda_eventos (sale_id)
+  ON public.venda_eventos (sale_id);
 
 COMMENT ON TABLE public.venda_eventos IS
-  'Ledger append-only de vendas. Fonte única de leitura do painel gerente.'
+  'Ledger append-only de vendas. Fonte única de leitura do painel gerente.';
 
-ALTER TABLE public.venda_eventos ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.venda_eventos ENABLE ROW LEVEL SECURITY;
 
-REVOKE ALL ON TABLE public.venda_eventos FROM anon
+REVOKE ALL ON TABLE public.venda_eventos FROM anon;
 
-GRANT SELECT ON TABLE public.venda_eventos TO authenticated
+GRANT SELECT ON TABLE public.venda_eventos TO authenticated;
 
-GRANT SELECT, INSERT ON TABLE public.venda_eventos TO service_role
+GRANT SELECT, INSERT ON TABLE public.venda_eventos TO service_role;
 
 CREATE POLICY venda_eventos_select_loja ON public.venda_eventos
   FOR SELECT TO authenticated
@@ -54,7 +54,7 @@ CREATE POLICY venda_eventos_select_loja ON public.venda_eventos
       SELECT 1 FROM public.usuarios u
       WHERE u.id = auth.uid() AND u.perfil = 'ADMIN'
     )
-  )
+  );
 
 -- Chave global: {source}:{sale_id} ou {source}:cancel:{sale_id}
 CREATE OR REPLACE FUNCTION public.venda_evento_idempotency_key(
@@ -70,7 +70,7 @@ AS $$
     WHEN p_cancelled THEN btrim(p_source) || ':cancel:' || p_sale_id::text
     ELSE btrim(p_source) || ':' || p_sale_id::text
   END;
-$$
+$$;
 
 CREATE OR REPLACE FUNCTION public.venda_eventos_items_from_sale(p_sale_id uuid)
 RETURNS jsonb
@@ -95,7 +95,7 @@ AS $$
   FROM public.itens_venda iv
   JOIN public.produtos p ON p.id = iv.produto_id
   WHERE iv.venda_id = p_sale_id;
-$$
+$$;
 
 CREATE OR REPLACE FUNCTION public.venda_eventos_items_from_payload(p_itens jsonb)
 RETURNS jsonb
@@ -124,7 +124,7 @@ AS $$
   FROM jsonb_array_elements(COALESCE(p_itens, '[]'::jsonb))
     WITH ORDINALITY AS t(elem, ord)
   LEFT JOIN public.produtos p ON p.id = (elem->>'produto_id')::uuid;
-$$
+$$;
 
 CREATE OR REPLACE FUNCTION public.registrar_venda_evento(
   p_event_type       text,
@@ -193,15 +193,15 @@ BEGIN
 
   RETURN v_event_id;
 END;
-$$
+$$;
 
 REVOKE ALL ON FUNCTION public.registrar_venda_evento(
   text, uuid, text, uuid, uuid, uuid, jsonb, numeric, numeric, text, boolean
-) FROM PUBLIC
+) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.registrar_venda_evento(
   text, uuid, text, uuid, uuid, uuid, jsonb, numeric, numeric, text, boolean
-) TO service_role
+) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.ensure_venda_evento_registrado(
   p_sale_id  uuid,
@@ -239,11 +239,11 @@ BEGIN
     false
   );
 END;
-$$
+$$;
 
-REVOKE ALL ON FUNCTION public.ensure_venda_evento_registrado(uuid, text) FROM PUBLIC
+REVOKE ALL ON FUNCTION public.ensure_venda_evento_registrado(uuid, text) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION public.ensure_venda_evento_registrado(uuid, text) TO service_role
+GRANT EXECUTE ON FUNCTION public.ensure_venda_evento_registrado(uuid, text) TO service_role;
 
 -- Backfill idempotente (pode rodar N vezes).
 INSERT INTO public.venda_eventos (
@@ -266,7 +266,7 @@ SELECT
 FROM public.vendas v
 JOIN public.caixas c ON c.id = v.caixa_id
 WHERE v.status = 'CONCLUIDA'
-ON CONFLICT (idempotency_key) DO NOTHING
+ON CONFLICT (idempotency_key) DO NOTHING;
 
 INSERT INTO public.venda_eventos (
   event_type, sale_id, caixa_id, operador_id, loja_id,
@@ -288,4 +288,4 @@ SELECT
 FROM public.vendas v
 JOIN public.caixas c ON c.id = v.caixa_id
 WHERE v.status = 'CANCELADA'
-ON CONFLICT (idempotency_key) DO NOTHING
+ON CONFLICT (idempotency_key) DO NOTHING;

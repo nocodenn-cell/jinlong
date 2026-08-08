@@ -34,13 +34,13 @@ CREATE TABLE IF NOT EXISTS public.venda_pos_venda_operacoes (
   contas_receber_id uuid REFERENCES public.contas_receber (id),
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_venda_pos_venda_operacoes_idempotency UNIQUE (idempotency_key)
-)
+);
 
 CREATE INDEX IF NOT EXISTS idx_venda_pos_venda_operacoes_venda
-  ON public.venda_pos_venda_operacoes (venda_id, created_at DESC)
+  ON public.venda_pos_venda_operacoes (venda_id, created_at DESC);
 
 COMMENT ON TABLE public.venda_pos_venda_operacoes IS
-  'Operações pós-venda (devolução parcial ou troca) com idempotência e trilha financeira.'
+  'Operações pós-venda (devolução parcial ou troca) com idempotência e trilha financeira.';
 
 CREATE TABLE IF NOT EXISTS public.venda_pos_venda_itens (
   operacao_id uuid NOT NULL REFERENCES public.venda_pos_venda_operacoes (id) ON DELETE CASCADE,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS public.venda_pos_venda_itens (
   preco_unitario numeric(10, 2) NOT NULL CHECK (preco_unitario >= 0),
   subtotal numeric(10, 2) NOT NULL CHECK (subtotal >= 0),
   PRIMARY KEY (operacao_id, item_venda_id)
-)
+);
 
 CREATE TABLE IF NOT EXISTS public.estoque_reposicoes_devolucao (
   operacao_id uuid NOT NULL REFERENCES public.venda_pos_venda_operacoes (id) ON DELETE CASCADE,
@@ -58,15 +58,15 @@ CREATE TABLE IF NOT EXISTS public.estoque_reposicoes_devolucao (
   quantidade numeric(10, 3) NOT NULL CHECK (quantidade > 0),
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (operacao_id, produto_id)
-)
+);
 
-ALTER TABLE public.venda_pos_venda_operacoes ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.venda_pos_venda_operacoes ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE public.venda_pos_venda_itens ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.venda_pos_venda_itens ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE public.estoque_reposicoes_devolucao ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.estoque_reposicoes_devolucao ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "venda_pos_venda_operacoes_select_loja" ON public.venda_pos_venda_operacoes
+DROP POLICY IF EXISTS "venda_pos_venda_operacoes_select_loja" ON public.venda_pos_venda_operacoes;
 
 CREATE POLICY "venda_pos_venda_operacoes_select_loja"
   ON public.venda_pos_venda_operacoes FOR SELECT TO authenticated
@@ -78,9 +78,9 @@ CREATE POLICY "venda_pos_venda_operacoes_select_loja"
       WHERE c.id = venda_pos_venda_operacoes.caixa_id
         AND c.loja_id = u.loja_id
     )
-  )
+  );
 
-DROP POLICY IF EXISTS "venda_pos_venda_itens_select_loja" ON public.venda_pos_venda_itens
+DROP POLICY IF EXISTS "venda_pos_venda_itens_select_loja" ON public.venda_pos_venda_itens;
 
 CREATE POLICY "venda_pos_venda_itens_select_loja"
   ON public.venda_pos_venda_itens FOR SELECT TO authenticated
@@ -93,9 +93,9 @@ CREATE POLICY "venda_pos_venda_itens_select_loja"
       WHERE o.id = venda_pos_venda_itens.operacao_id
         AND c.loja_id = u.loja_id
     )
-  )
+  );
 
-DROP POLICY IF EXISTS "estoque_reposicoes_devolucao_select_loja" ON public.estoque_reposicoes_devolucao
+DROP POLICY IF EXISTS "estoque_reposicoes_devolucao_select_loja" ON public.estoque_reposicoes_devolucao;
 
 CREATE POLICY "estoque_reposicoes_devolucao_select_loja"
   ON public.estoque_reposicoes_devolucao FOR SELECT TO authenticated
@@ -108,31 +108,31 @@ CREATE POLICY "estoque_reposicoes_devolucao_select_loja"
       WHERE o.id = estoque_reposicoes_devolucao.operacao_id
         AND c.loja_id = u.loja_id
     )
-  )
+  );
 
 -- devolucoes: vínculo opcional com operação (permite múltiplas devoluções parciais)
 ALTER TABLE public.devolucoes
-  ADD COLUMN IF NOT EXISTS operacao_id uuid REFERENCES public.venda_pos_venda_operacoes (id) ON DELETE SET NULL
+  ADD COLUMN IF NOT EXISTS operacao_id uuid REFERENCES public.venda_pos_venda_operacoes (id) ON DELETE SET NULL;
 
-DROP INDEX IF EXISTS public.uq_devolucoes_venda_dinheiro
+DROP INDEX IF EXISTS public.uq_devolucoes_venda_dinheiro;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_devolucoes_venda_dinheiro_legacy
   ON public.devolucoes (venda_id)
-  WHERE forma_pagamento = 'DINHEIRO' AND operacao_id IS NULL
+  WHERE forma_pagamento = 'DINHEIRO' AND operacao_id IS NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_devolucoes_operacao_forma
   ON public.devolucoes (operacao_id, forma_pagamento)
-  WHERE operacao_id IS NOT NULL
+  WHERE operacao_id IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
 -- 2. Ledger: evento SALE_PARTIAL_RETURN
 -- ---------------------------------------------------------------------------
 
-ALTER TABLE public.venda_eventos DROP CONSTRAINT IF EXISTS venda_eventos_event_type_check
+ALTER TABLE public.venda_eventos DROP CONSTRAINT IF EXISTS venda_eventos_event_type_check;
 
 ALTER TABLE public.venda_eventos
   ADD CONSTRAINT venda_eventos_event_type_check
-  CHECK (event_type IN ('SALE_REGISTERED', 'SALE_CANCELLED', 'SALE_PARTIAL_RETURN'))
+  CHECK (event_type IN ('SALE_REGISTERED', 'SALE_CANCELLED', 'SALE_PARTIAL_RETURN'));
 
 -- ---------------------------------------------------------------------------
 -- 3. Kardex: entradas por devolução parcial
@@ -143,9 +143,9 @@ INSERT INTO public.tipos_movimento_estoque (
 )
 VALUES
   ('ENTRADA_DEVOLUCAO_CLIENTE', 'Devolução de cliente (pós-venda)', true, true, false)
-ON CONFLICT (codigo) DO NOTHING
+ON CONFLICT (codigo) DO NOTHING;
 
-DROP VIEW IF EXISTS public.v_kardex_unificado
+DROP VIEW IF EXISTS public.v_kardex_unificado;
 
 CREATE VIEW public.v_kardex_unificado
 WITH (security_invoker = true)
@@ -161,9 +161,9 @@ SELECT
   COALESCE(m.venda_id, m.id) AS referencia_id,
   m.usuario_id,
   m.observacao
-FROM public.movimentos_estoque_log m
+FROM public.movimentos_estoque_log m;
 
-UNION ALL
+UNION ALL;
 
 SELECT
   ('eb:' || eb.venda_id::text || ':' || eb.produto_id::text)::text AS evento_id,
@@ -189,9 +189,9 @@ WHERE NOT EXISTS (
   WHERE mel.venda_id = eb.venda_id
     AND mel.produto_id = eb.produto_id
     AND mel.tipo_codigo = 'SAIDA_VENDA'
-)
+);
 
-UNION ALL
+UNION ALL;
 
 SELECT
   ('erc:' || erc.venda_id::text || ':' || erc.produto_id::text)::text AS evento_id,
@@ -207,9 +207,9 @@ SELECT
 FROM public.estoque_reposicoes_cancelamento erc
 INNER JOIN public.vendas v ON v.id = erc.venda_id
 INNER JOIN public.caixas c ON c.id = v.caixa_id
-LEFT JOIN public.vendas_canceladas_auditoria vca ON vca.venda_id = erc.venda_id
+LEFT JOIN public.vendas_canceladas_auditoria vca ON vca.venda_id = erc.venda_id;
 
-UNION ALL
+UNION ALL;
 
 SELECT
   ('erd:' || erd.operacao_id::text || ':' || erd.produto_id::text)::text AS evento_id,
@@ -224,14 +224,14 @@ SELECT
   o.motivo AS observacao
 FROM public.estoque_reposicoes_devolucao erd
 INNER JOIN public.venda_pos_venda_operacoes o ON o.id = erd.operacao_id
-INNER JOIN public.caixas c ON c.id = o.caixa_id
+INNER JOIN public.caixas c ON c.id = o.caixa_id;
 
 COMMENT ON VIEW public.v_kardex_unificado IS
-  'Kardex: movimentos_estoque_log + baixas legadas + cancelamento + devolução parcial.'
+  'Kardex: movimentos_estoque_log + baixas legadas + cancelamento + devolução parcial.';
 
-GRANT SELECT ON public.v_kardex_unificado TO authenticated
+GRANT SELECT ON public.v_kardex_unificado TO authenticated;
 
-GRANT SELECT ON public.v_kardex_unificado TO service_role
+GRANT SELECT ON public.v_kardex_unificado TO service_role;
 
 -- ---------------------------------------------------------------------------
 -- 4. Helper: quantidade já devolvida por item
@@ -248,7 +248,7 @@ AS $$
   FROM public.venda_pos_venda_itens vpi
   INNER JOIN public.venda_pos_venda_operacoes o ON o.id = vpi.operacao_id
   WHERE vpi.item_venda_id = p_item_venda_id;
-$$
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 5. RPC canônica: devolver_ou_trocar_venda
@@ -502,22 +502,22 @@ BEGIN
   RETURN QUERY
   SELECT v_operacao_id, p_venda_id, v_tipo, v_valor_estorno, v_valor_caixa, 'CONCLUIDA'::text;
 END;
-$$
+$$;
 
 REVOKE ALL ON FUNCTION public.devolver_ou_trocar_venda(
   uuid, text, text, text, jsonb, numeric, text, uuid, uuid
-) FROM PUBLIC
+) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.devolver_ou_trocar_venda(
   uuid, text, text, text, jsonb, numeric, text, uuid, uuid
-) TO authenticated
+) TO authenticated;
 
 GRANT EXECUTE ON FUNCTION public.devolver_ou_trocar_venda(
   uuid, text, text, text, jsonb, numeric, text, uuid, uuid
-) TO service_role
+) TO service_role;
 
 COMMENT ON FUNCTION public.devolver_ou_trocar_venda IS
-  'Devolução parcial ou troca pós-venda: estoque, devolucoes, caixa/contas_receber, kardex e ledger. Idempotente.'
+  'Devolução parcial ou troca pós-venda: estoque, devolucoes, caixa/contas_receber, kardex e ledger. Idempotente.';
 
 -- ---------------------------------------------------------------------------
 -- 6. Patch cancelar_venda: estornar contas_receber
@@ -637,4 +637,4 @@ BEGIN
 
   RETURN QUERY SELECT p_venda_id, 'CANCELADA'::text, v_valor_estornado;
 END;
-$$
+$$;

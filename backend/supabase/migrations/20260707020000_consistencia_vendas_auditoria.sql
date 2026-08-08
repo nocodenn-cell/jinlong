@@ -65,10 +65,10 @@ WHERE v.status = 'CONCLUIDA'
     OR eventos.evento_count > 1
     OR pagamentos.pagamento_count = 0
     OR ABS(COALESCE(pagamentos.pagamentos_total, 0) - v.total_liquido) > 0.01
-  )
+  );
 
 COMMENT ON VIEW public.v_venda_consistencia_anomalias IS
-  'Vendas CONCLUIDAS com lacunas de consistência. Resultado vazio = sistema saudável.'
+  'Vendas CONCLUIDAS com lacunas de consistência. Resultado vazio = sistema saudável.';
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- FUNCTION: diagnóstico unitário de uma venda
@@ -156,14 +156,14 @@ BEGIN
     v_pag_total,
     v_venda.total_liquido;
 END;
-$$
+$$;
 
 COMMENT ON FUNCTION public.verificar_consistencia_venda IS
-  'Verifica contrato de consistência de uma venda. Retorna anomalias[] vazio se OK.'
+  'Verifica contrato de consistência de uma venda. Retorna anomalias[] vazio se OK.';
 
-REVOKE ALL ON FUNCTION public.verificar_consistencia_venda FROM PUBLIC
+REVOKE ALL ON FUNCTION public.verificar_consistencia_venda FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION public.verificar_consistencia_venda TO authenticated, service_role
+GRANT EXECUTE ON FUNCTION public.verificar_consistencia_venda TO authenticated, service_role;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- FUNCTION: relatório de consistência por período (responde "quantas falharam?")
@@ -235,11 +235,11 @@ SELECT
   p_from                                                    AS periodo_inicio,
   p_to                                                      AS periodo_fim
 FROM flags;
-$$
+$$;
 
 COMMENT ON FUNCTION public.relatorio_consistencia_vendas IS
-  'Relatório agregado de consistência. taxa_consistencia_pct = 100 é o objetivo.'
+  'Relatório agregado de consistência. taxa_consistencia_pct = 100 é o objetivo.';
 
-REVOKE ALL ON FUNCTION public.relatorio_consistencia_vendas FROM PUBLIC
+REVOKE ALL ON FUNCTION public.relatorio_consistencia_vendas FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION public.relatorio_consistencia_vendas TO authenticated, service_role
+GRANT EXECUTE ON FUNCTION public.relatorio_consistencia_vendas TO authenticated, service_role;

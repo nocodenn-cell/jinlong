@@ -154,17 +154,17 @@ BEGIN
 
   RETURN QUERY SELECT v_novo_status, v_conferidos, v_divergentes;
 END;
-$$
+$$;
 
-REVOKE ALL ON FUNCTION public.registrar_conferencia_remessa(uuid, jsonb, text) FROM PUBLIC
+REVOKE ALL ON FUNCTION public.registrar_conferencia_remessa(uuid, jsonb, text) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION public.registrar_conferencia_remessa(uuid, jsonb, text) TO authenticated
+GRANT EXECUTE ON FUNCTION public.registrar_conferencia_remessa(uuid, jsonb, text) TO authenticated;
 
-GRANT EXECUTE ON FUNCTION public.registrar_conferencia_remessa(uuid, jsonb, text) TO service_role
+GRANT EXECUTE ON FUNCTION public.registrar_conferencia_remessa(uuid, jsonb, text) TO service_role;
 
 COMMENT ON FUNCTION public.registrar_conferencia_remessa IS
   'Onda B — registra a contagem fisica. Status derivado dos itens: EM_CONFERENCIA (falta contar), '
-  'DIVERGENTE (contado <> esperado) ou CONFERIDO. Aceita recontagem.'
+  'DIVERGENTE (contado <> esperado) ou CONFERIDO. Aceita recontagem.';
 
 -- ---------------------------------------------------------------------------
 -- 3. confirmar_remessa_entrada — agora exige conferência
@@ -256,14 +256,14 @@ BEGIN
   SET status = 'CONCLUIDA', finalized_at = now()
   WHERE id = p_remessa_id;
 END;
-$$
+$$;
 
-REVOKE ALL ON FUNCTION public.confirmar_remessa_entrada(uuid) FROM PUBLIC
+REVOKE ALL ON FUNCTION public.confirmar_remessa_entrada(uuid) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION public.confirmar_remessa_entrada(uuid) TO authenticated
+GRANT EXECUTE ON FUNCTION public.confirmar_remessa_entrada(uuid) TO authenticated;
 
-GRANT EXECUTE ON FUNCTION public.confirmar_remessa_entrada(uuid) TO service_role
+GRANT EXECUTE ON FUNCTION public.confirmar_remessa_entrada(uuid) TO service_role;
 
 COMMENT ON FUNCTION public.confirmar_remessa_entrada IS
   'Onda B — unico ponto que move saldo no recebimento. Exige status CONFERIDO ou DIVERGENTE e '
-  'todos os itens contados. Da entrada na quantidade CONTADA (sem COALESCE com a esperada).'
+  'todos os itens contados. Da entrada na quantidade CONTADA (sem COALESCE com a esperada).';

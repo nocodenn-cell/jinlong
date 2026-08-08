@@ -35,7 +35,15 @@ const header = `-- Backport Fase 1 (Git-only) from supabase_migrations.schema_mi
 
 `;
 
-const body = statements.join('\n\n');
+const body = statements
+  .map((s) => {
+    const t = String(s).trimEnd();
+    if (!t) return "";
+    if (t.endsWith(";")) return t;
+    return `${t};`;
+  })
+  .filter(Boolean)
+  .join("\n\n");
 const sql = header + body;
 const filename = `${version}_${name}.sql`;
 const outPath = path.join(MIG_DIR, filename);

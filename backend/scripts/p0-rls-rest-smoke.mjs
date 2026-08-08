@@ -67,6 +67,40 @@ function decodeSub(jwt) {
   }
 }
 
+function decodeJwtPayload(jwt) {
+  try {
+    const part = jwt.split(".")[1]
+    if (!part) return null
+    const json = Buffer.from(part.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8")
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
+
+function assertJwtUsable(jwt, label, supabaseUrl) {
+  const p = decodeJwtPayload(jwt)
+  if (!p?.sub) {
+    return `${label} inválido (sem claim sub).`
+  }
+  if (typeof p.exp === "number" && p.exp * 1000 < Date.now() + 60_000) {
+    const when = new Date(p.exp * 1000).toISOString()
+    return `${label} expirado (exp=${when}). Regenerar via login/seed ou usar gate local no CI.`
+  }
+  if (supabaseUrl && typeof p.iss === "string") {
+    try {
+      const host = new URL(supabaseUrl).hostname
+      const ref = host.split(".")[0]
+      if (ref && !p.iss.includes(ref)) {
+        return `${label} emitido para outro projeto (iss=${p.iss}, esperado ref ~${ref}). Alinhe SUPABASE_URL aos secrets.`
+      }
+    } catch {
+      /* ignore URL parse */
+    }
+  }
+  return null
+}
+
 async function main() {
   const opts = readArgs(process.argv.slice(2))
   const url = baseUrl()
@@ -128,12 +162,32 @@ async function main() {
     process.exit(0)
   }
 
+  const jwtPainelErr = assertJwtUsable(jp, "RLS_SMOKE_JWT_PAINEL", url)
+  if (jwtPainelErr) {
+    payload.ok = false
+    payload.error = "jwt_painel_invalid"
+    payload.message = jwtPainelErr
+    if (opts.json) console.log(JSON.stringify(payload, null, 2))
+    else console.error(jwtPainelErr)
+    process.exit(2)
+  }
+
   const subPainel = decodeSub(jp)
   if (!subPainel) {
     payload.ok = false
     payload.error = "jwt_painel_invalid"
     if (opts.json) console.log(JSON.stringify(payload, null, 2))
     else console.error("RLS_SMOKE_JWT_PAINEL inválido (sem claim sub).")
+    process.exit(2)
+  }
+
+  const jwtCaixaErr = assertJwtUsable(jc, "RLS_SMOKE_JWT_CAIXA", url)
+  if (jwtCaixaErr) {
+    payload.ok = false
+    payload.error = "jwt_caixa_invalid"
+    payload.message = jwtCaixaErr
+    if (opts.json) console.log(JSON.stringify(payload, null, 2))
+    else console.error(jwtCaixaErr)
     process.exit(2)
   }
 
@@ -164,8 +218,10 @@ async function main() {
   }
 
   if (!payload.ok) {
-    payload.message =
-      "RLS_REST_SMOKE_FAIL: operador deve receber [] em recursos só-gerente, ou painel não obteve 200 nas leituras esperadas."
+    const all401 = payload.checks.every((c) => !c.pass && c.status === 401)
+    payload.message = all401
+      ? "RLS_REST_SMOKE_FAIL: HTTP 401 em todas as rotas — JWT inválido/expirado ou SUPABASE_URL/ANON_KEY não correspondem ao emissor do token."
+      : "RLS_REST_SMOKE_FAIL: operador deve receber [] em recursos só-gerente, ou painel não obteve 200 nas leituras esperadas."
     if (opts.json) console.log(JSON.stringify(payload, null, 2))
     else {
       console.error(payload.message)

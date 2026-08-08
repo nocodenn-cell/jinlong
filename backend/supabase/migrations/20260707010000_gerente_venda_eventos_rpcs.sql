@@ -61,7 +61,7 @@ AS $$
   ORDER BY e.occurred_at DESC
   OFFSET GREATEST(p_offset, 0)
   LIMIT GREATEST(p_limit, 1);
-$$
+$$;
 
 CREATE OR REPLACE FUNCTION public.kpis_venda_eventos_gerente(
   p_loja_id uuid,
@@ -100,12 +100,12 @@ AS $$
     AND (p_inicio IS NULL OR e.occurred_at >= p_inicio)
     AND (p_fim IS NULL OR e.occurred_at <= p_fim)
     AND (p_formas_pagamento IS NULL OR e.forma_pagamento = ANY(p_formas_pagamento));
-$$
+$$;
 
-REVOKE ALL ON FUNCTION public.listar_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[], text[], integer, integer) FROM PUBLIC
+REVOKE ALL ON FUNCTION public.listar_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[], text[], integer, integer) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION public.listar_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[], text[], integer, integer) TO authenticated
+GRANT EXECUTE ON FUNCTION public.listar_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[], text[], integer, integer) TO authenticated;
 
-REVOKE ALL ON FUNCTION public.kpis_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[]) FROM PUBLIC
+REVOKE ALL ON FUNCTION public.kpis_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[]) FROM PUBLIC;
 
-GRANT EXECUTE ON FUNCTION public.kpis_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[]) TO authenticated
+GRANT EXECUTE ON FUNCTION public.kpis_venda_eventos_gerente(uuid, timestamptz, timestamptz, text[]) TO authenticated;
