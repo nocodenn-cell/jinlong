@@ -489,9 +489,11 @@ Formato: `versão | arquivo repo | versão prod | tracking | SQL equivalente? | 
 | Item | Status |
 |------|--------|
 | Plano de execução | **`docs/FASE_3_RECONCILIACAO_SUPABASE_PLANO.md`** |
-| Produção | **Intocada** (continua read-only até gate humano) |
+| **Decisão 3.1** | **`docs/FASE_3_1_DECISAO_VENDA_FINANCE_CONTEXT.md`** · **`reports/phase3-1-decision-venda-finance-context.json`** |
+| Decisão | **MANTER + idempotentizar** (Fase 3.2 — nova migration timestamp; **não** replay `252`) |
+| Produção | **Intocada** (continua read-only até gate humano pós-staging) |
 | Gates baseline revalidados | validate-phase1 **30/30** · `guard:migrations` **OK** · inventário **onlyRepo=4** |
-| Próximo bloqueio | Decisão produto **3.1** (`venda_finance_context` manter vs descartar) |
+| Próximo passo | **Fase 3.2** — DDL idempotente em git + validação staging |
 
 Trilho UI/UX Admin V2 fechado separadamente — PR **#268** (`cursor/fechamento-ui-ux-633a`); não misturar escopos nesta PR **#267**.
 
