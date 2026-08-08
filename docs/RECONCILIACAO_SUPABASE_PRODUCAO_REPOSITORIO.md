@@ -489,11 +489,12 @@ Formato: `versão | arquivo repo | versão prod | tracking | SQL equivalente? | 
 | Item | Status |
 |------|--------|
 | Plano de execução | **`docs/FASE_3_RECONCILIACAO_SUPABASE_PLANO.md`** |
-| **Decisão 3.1** | **`docs/FASE_3_1_DECISAO_VENDA_FINANCE_CONTEXT.md`** · **`reports/phase3-1-decision-venda-finance-context.json`** |
-| Decisão | **MANTER + idempotentizar** (Fase 3.2 — nova migration timestamp; **não** replay `252`) |
-| Produção | **Intocada** (continua read-only até gate humano pós-staging) |
-| Gates baseline revalidados | validate-phase1 **30/30** · `guard:migrations` **OK** · inventário **onlyRepo=4** |
-| Próximo passo | **Fase 3.2** — DDL idempotente em git + validação staging |
+| **Decisão 3.1** | **`docs/FASE_3_1_DECISAO_VENDA_FINANCE_CONTEXT.md`** |
+| **Entrega 3.2 (git)** | **`docs/FASE_3_2_REAPPLY_VENDA_FINANCE_CONTEXT.md`** · migration `20260808130200_24704_reapply_venda_finance_context_idempotent.sql` |
+| Decisão 3.1 | **MANTER + idempotentizar** |
+| Produção | **Intocada** — apply **`20260808130200`** só após **HUMAN GATE** (doc 3.2 §4) |
+| Gates 3.2 | `validate-phase3-2.mjs` OK · P0 **23/23** · catálogo smoke **10/10** (stub) |
+| Próximo passo | `db reset` local/CI + review PR #267 → apply prod supervisionado |
 
 Trilho UI/UX Admin V2 fechado separadamente — PR **#268** (`cursor/fechamento-ui-ux-633a`); não misturar escopos nesta PR **#267**.
 

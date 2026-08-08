@@ -29,7 +29,7 @@ const pairs = raw.collisions ?? []
 
 const summaries = []
 for (const entry of pairs) {
-  const repoVer = String(entry.versaoRepo ?? entry.repoVersion ?? entry.versao ?? '')
+  const repoVer = String(entry.versao ?? entry.versaoRepo ?? entry.repoVersion ?? '')
   const path = repoVer ? fileForVersion(repoVer) : null
   let repoSha = null
   let repoFile = null

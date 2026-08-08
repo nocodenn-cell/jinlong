@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-08-08T13:04:27.119Z",
+  "phase": "3.2",
+  "environment": "staging_isolated_neon_stub",
+  "note": "FK stubs + roles authenticated/service_role; NOT full db reset. Full reset requires Docker (supabase start + db reset).",
+  "migrationFile": "20260808130200_24704_reapply_venda_finance_context_idempotent.sql",
+  "source252": "252_venda_finance_context_mirror.sql",
+  "doubleApply": true,
+  "allOk": true,
+  "checks": {
+    "table_venda_finance_context": { "expected": true, "actual": true, "ok": true },
+    "fn_sincronizar": { "expected": true, "actual": true, "ok": true },
+    "fn_trg_pagamento": { "expected": true, "actual": true, "ok": true },
+    "fn_trg_conta": { "expected": true, "actual": true, "ok": true },
+    "trg_pagamento": { "expected": true, "actual": true, "ok": true },
+    "trg_conta": { "expected": true, "actual": true, "ok": true },
+    "policy_select": { "expected": true, "actual": true, "ok": true },
+    "idx_loja": { "expected": true, "actual": true, "ok": true },
+    "idx_status": { "expected": true, "actual": true, "ok": true },
+    "idx_conta": { "expected": true, "actual": true, "ok": true }
+  },
+  "residualDrift": {
+    "production": "252 tracked, objetos ausentes — corrigido apenas após HUMAN GATE apply desta migration em prod",
+    "localDbReset": "Pendente validação CI/dev com Docker — agente cloud sem docker",
+    "repo252": "Permanece no replay sequencial; 24704 é no-op idempotente se objetos já existem"
+  }
+}

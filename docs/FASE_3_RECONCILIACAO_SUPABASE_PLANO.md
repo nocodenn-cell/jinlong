@@ -16,11 +16,11 @@ Fechar o drift **tracking × catálogo** e consolidar SSOT git para o pacote pro
 | # | Entrega | Tipo | Bloqueio |
 |---|---------|------|----------|
 | 3.1 | Decisão produto: **manter** ou **descartar** `venda_finance_context` | Governança | **Concluída** — ver `docs/FASE_3_1_DECISAO_VENDA_FINANCE_CONTEXT.md` (**MANTER + idempotentizar**) |
-| 3.2 | Se manter: **nova** migration timestamp com DDL idempotente derivado de `252_venda_finance_context_mirror.sql` (nunca reexecutar chave `252` em prod) | Git + staging | **Desbloqueada** (aguarda implementação; gate humano prod) |
+| 3.2 | Se manter: **nova** migration timestamp com DDL idempotente derivado de `252_venda_finance_context_mirror.sql` (nunca reexecutar chave `252` em prod) | Git + staging | **Concluída (git)** — ver `FASE_3_2_REAPPLY_VENDA_FINANCE_CONTEXT.md`; prod **HUMAN GATE** |
 | 3.3 | Se descartar: ADR + `migration repair` / nota em runbook (somente após aprovação) | Doc + ops | 3.1 |
 | 3.4 | Classificar captures `20260618011821` / `20260618011922` no manifesto SSOT | Git/doc | — |
 | 3.5 | Diff SQL automatizado para pares em `phase2-collisions.json` (253/255/268/278…) | Script read-only | — |
-| 3.6 | Staging: `supabase db reset` + smoke RPCs P0 (venda, estoque, fiscal) pós-3.2 | CI/local | 3.2 |
+| 3.6 | Staging: `supabase db reset` + smoke RPCs P0 pós-3.2 | CI/local | **Parcial** — smoke isolado 10/10; `db reset` full requer Docker |
 
 ## 3. Forense 252 (resumo)
 
@@ -45,6 +45,7 @@ Fechar o drift **tracking × catálogo** e consolidar SSOT git para o pacote pro
 ## 6. Próximo passo imediato (agente)
 
 1. ~~Obter decisão **3.1** (manter vs descartar espelho).~~ **Feito** — **MANTER + idempotentizar** (`docs/FASE_3_1_DECISAO_VENDA_FINANCE_CONTEXT.md`).
-2. Implementar **3.2** (migration timestamp idempotente) + **3.5** / **3.4** em paralelo conforme capacidade — staging antes de prod.
+2. ~~Implementar **3.2** (migration timestamp idempotente)~~ **Feito em git** — ver `docs/FASE_3_2_REAPPLY_VENDA_FINANCE_CONTEXT.md`. **Apply prod:** HUMAN GATE §4.
+3. Validar **`db reset` completo** em dev/CI com Docker antes do apply remoto.
 
 ---

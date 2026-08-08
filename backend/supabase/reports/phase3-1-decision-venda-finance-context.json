@@ -4,7 +4,7 @@
   "decision": "MANTER_IDEMPOTENTIZAR",
   "decisionLabel": "Manter espelho no SSOT; aplicar DDL idempotente apenas via nova migration timestamp (Fase 3.2). Não replay da chave 252.",
   "productionTouched": false,
-  "projectName": "jinlong",
+  "productionProjectNote": "FastProduct prod — ref omitido no artefato",
   "repo": {
     "file": "backend/supabase/migrations/252_venda_finance_context_mirror.sql",
     "sha256": "96f45cd68c54521ee5ce557a2cd172ba73c556c2458f1f0d23327a3eac2ac295",

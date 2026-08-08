@@ -2,7 +2,7 @@
 
 **Data:** 2026-08-08 (UTC)  
 **Branch / PR:** `cursor/reconciliacao-supabase-audit-633a` · [#267](https://github.com/nocodenn-cell/fastproduct/pull/267)  
-**Projeto Supabase prod:** jinlong (ref omitido — dashboard Supabase)  
+**Projeto Supabase prod:** FastProduct produção (identificador omitido — ver dashboard)  
 **Modo:** análise read-only — **produção não alterada** · **sem replay da migration 252**
 
 ---
