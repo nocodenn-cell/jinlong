@@ -29,3 +29,16 @@ Registro read-only pós-remoção da integração `supabase-pink-village` (`vrkw
 | `/api/health` (prod) | 200 — `gitSha` `825bf235…` |
 
 Sem alteração de env Supabase jinlong/biak.
+
+## Fechamento onda — UX-10 / Receber / ds-coverage (branch tip pós-push)
+
+| Gate | Resultado |
+|------|-----------|
+| `npm run check:ds-coverage` | **12/12 (100%)** |
+| `npm run typecheck` | OK |
+| Vitest implantacao/provisionamento | 20/20 |
+| P0 matrices | 23/23 |
+
+**Auditoria visual autenticada:** não executada no agente (Preview SSO + credenciais tenant). Checklist humano: `/admin/financeiro?tab=receber`, `/admin/configuracoes`, `/admin/implantacao`, `/admin/provisionamento`, `/caixa`.
+
+Atualizar linha Deployment Preview após CI Vercel no SHA final desta entrega.
