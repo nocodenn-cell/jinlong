@@ -9,8 +9,8 @@
 -- itens_venda falhava para TODA venda (não só promocionais) por referenciar coluna
 -- inexistente.
 --
--- Correção: adicionar as 2 colunas faltantes, restaurando exatamente o schema pretendido
--- pela migration 235 original. Aditivo, nullable, sem migração de dados.
+-- Correção: adicionar as colunas faltantes (greenfield: 235_* ordena depois deste bloco),
+-- restaurando o schema pretendido pela migration 235 original. Aditivo, nullable.
 --
 -- Aplicada em regime de urgência diretamente ao ambiente de validação BL-2
 -- (ver docs/BL2_RELATORIO_STAGING.md) durante a validação da migration 274, antes de ser
@@ -19,9 +19,12 @@
 BEGIN;
 
 ALTER TABLE public.itens_venda
+  ADD COLUMN IF NOT EXISTS custo_unitario_snap numeric(10,2),
   ADD COLUMN IF NOT EXISTS tipo_preco_fonte text,
   ADD COLUMN IF NOT EXISTS regra_aplicada_id uuid;
 
+COMMENT ON COLUMN public.itens_venda.custo_unitario_snap IS
+  'Snapshot visual de produtos.preco_custo no momento da venda. Não usado em cálculo de preço/estoque. Restaurado na migration 275 (drift / greenfield antes de 235_*).';
 COMMENT ON COLUMN public.itens_venda.tipo_preco_fonte IS
   'Cópia descritiva do tipo de preço aplicado (mesma origem de tipo_preco), para exibição (PriceTooltip). Restaurado na migration 275 (drift de migration 235).';
 COMMENT ON COLUMN public.itens_venda.regra_aplicada_id IS
