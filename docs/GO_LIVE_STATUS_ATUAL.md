@@ -60,14 +60,19 @@ Guards anteriores em `224` / `278` / `282` / `275` permanecem como defesa; com a
 
 ---
 
-## 3. CI / gates
+## 3. CI / gates (evidência run `31283399273` / SHA `3b7271e7`)
 
-| Gate | Classificação |
-|------|---------------|
-| `migration-remote-drift` | independente — PASS esperado (reorder informativo) |
-| `smoke:sync-edge` (pipeline E2E) | independente |
-| `Supabase local gates` | **P0** — próximo CI deve passar de `001→HEAD` sem a classe ALTER/DROP invertida |
-| Fase 3.2 | **P2** HUMAN GATE |
+| Gate | Resultado |
+|------|-----------|
+| `migration-remote-drift` | **PASS** (reorder informativo; gate independente) |
+| Start Supabase + **Reset + seed** 001→HEAD | **PASS** — classe lex invertida eliminada |
+| Smoke SQL RLS | **PASS** |
+| `Test RLS scope by profile` | **FAIL** — classe **diferente** (seed/asserts vs schema pós-reorder; não é `policy does not exist`) |
+| Auth seed + REST smoke | skipped (dependem do RLS scope) |
+| `smoke:sync-edge` | **PASS** em runs recentes (gate independente) |
+| Fase 3.2 | **P2** HUMAN GATE — intocada |
+
+Auditoria local pós-fix: **0** prefixes curtos (`NNN_` / `247NN_`) após o primeiro `202*`.
 
 ---
 
@@ -81,7 +86,8 @@ Guards anteriores em `224` / `278` / `282` / `275` permanecem como defesa; com a
 
 | ID | Prioridade | Descrição |
 |----|------------|-----------|
-| GF-RESET | **P0** | Migrations 001→HEAD PASS no CI (`Start`+`Reset`); RLS scope seed ajustado |
+| GF-RESET | **DONE** | Migrations 001→HEAD PASS (`Start`+`Reset`+Smoke SQL) |
+| RLS-SCOPE | **P0** | Ajustar `test-rls-scope` / seed (caixa único, grants, pricing, remessa, overloads) — **não** é dependência histórica de migration |
 | E2E-SYNC | **P0** | Playwright sync-fluxo PASS (smoke já OK) |
 | INT-MANUAL | **P1** | Checklist integração pós-CI |
 | F32-HUMAN | **P2** | Apply 3.2 em prod |
@@ -90,6 +96,6 @@ Guards anteriores em `224` / `278` / `282` / `275` permanecem como defesa; com a
 
 ## 6. Decisão objetiva
 
-**`BLOCKED`** até local gates + E2E crítico verdes com evidência de run.
+**`BLOCKED`** até RLS-SCOPE + E2E crítico verdes com evidência de run.
 
-Não declarar `READY` com P0 aberto.
+Não declarar `READY` com P0 aberto. A classe greenfield “objeto inexistente por ordem lex” está **fechada**.
