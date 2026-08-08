@@ -10,6 +10,7 @@ import {
 import { loginGerente } from './helpers/login'
 import { gotoApp } from './helpers/url'
 import { LOJA_MATRIZ_ID } from '@/lib/auth/lojaUsuario'
+import { e2eProdutoCodigoBarras } from './helpers/env'
 
 function hmacSha256Hex(secret: string, content: string): string {
   return crypto.createHmac('sha256', secret).update(content).digest('hex')
@@ -22,7 +23,18 @@ async function resolveOperadorIdE2E(admin: ReturnType<typeof createClient>) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 })
     if (error) throw error
     const found = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
-    if (found?.id) return found.id
+    if (found?.id) {
+      const { data: usuario, error: usuarioErr } = await admin
+        .from('usuarios')
+        .select('id')
+        .eq('id', found.id)
+        .maybeSingle()
+      if (usuarioErr) throw usuarioErr
+      if (!usuario?.id) {
+        throw new Error(`Operador E2E sem linha em public.usuarios (FK vendas): ${email}`)
+      }
+      return usuario.id as string
+    }
     if ((data.users?.length ?? 0) < 200) break
   }
   throw new Error(`Operador E2E não encontrado (rode seed E2E): ${email}`)
@@ -33,31 +45,22 @@ async function garantirProdutoEEstoqueParaTeste() {
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!.trim()
   const admin = createClient(url, serviceRole)
 
-  const codigo = `E2E-SYNC-${Date.now()}`
-  const nome = `Produto E2E Sync ${new Date().toISOString().slice(11, 19)}`
-
+  const codigo = e2eProdutoCodigoBarras()
   const { data: prod, error: prodErr } = await admin
     .from('produtos')
-    .insert({
-      loja_id: LOJA_MATRIZ_ID,
-      nome,
-      codigo_barras: codigo,
-      preco_varejo: 9.9,
-      preco_atacado: null,
-      origem: 'china_manual',
-      tem_nf: false,
-      unidade_medida: 'UN',
-      ativo: true,
-    })
-    .select('id, preco_varejo')
-    .single()
+    .select('id, preco_varejo, loja_id')
+    .eq('codigo_barras', codigo)
+    .maybeSingle()
 
-  if (prodErr || !prod) {
-    throw new Error(`Falha ao criar produto E2E: ${prodErr?.message ?? 'sem retorno'}`)
+  if (prodErr || !prod?.id) {
+    throw new Error(
+      `Produto seed «${codigo}» não encontrado: ${prodErr?.message ?? 'sem retorno'} (migration 027 / PLAYWRIGHT_E2E_PRODUTO_CODIGO).`,
+    )
   }
 
+  const lojaId = (prod.loja_id as string | null) ?? LOJA_MATRIZ_ID
   const { error: estqErr } = await admin.from('estoque').upsert({
-    loja_id: LOJA_MATRIZ_ID,
+    loja_id: lojaId,
     produto_id: prod.id,
     quantidade_atual: 25,
     estoque_minimo: 0,
