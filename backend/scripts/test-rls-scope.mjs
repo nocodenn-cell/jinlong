@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import { createClient } from "@supabase/supabase-js";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Nomes alinhados ao `supabase status -o env` (CLI recente) + aliases usados em docs/CI antigos.
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.API_URL ?? "";
@@ -157,7 +160,6 @@ async function ensureUsersAndSeed() {
   DELETE FROM public.remessa_itens WHERE remessa_id = '${IDS.remessaConferencia}'::uuid;
   DELETE FROM public.remessas WHERE id = '${IDS.remessaConferencia}'::uuid;
 
-  /* Onda B (20260801120000): confirmar_remessa exige CONFERIDO|DIVERGENTE. */
   INSERT INTO public.remessas (id, loja_id, origem_descricao, status, created_by, conferido_por, conferido_em)
   VALUES (
     '${IDS.remessaConferencia}'::uuid,
@@ -178,8 +180,6 @@ async function ensureUsersAndSeed() {
     3
   );
 
-  /* uq_caixas_operador_aberto: 1 ABERTO/operador. Filial=ADMIN para nao colidir com OPERADOR.
-     Nao usar comentarios "--": o seed vira uma unica linha via psql -c. */
   INSERT INTO public.caixas (id, operador_id, valor_inicial, status, loja_id)
   VALUES
     ('${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
@@ -238,21 +238,26 @@ async function ensureUsersAndSeed() {
     status = 'ABERTO',
     loja_id = EXCLUDED.loja_id;
 `;
-  // Strip line comments BEFORE collapsing newlines — "--" would otherwise
-  // comment-out the remainder of the entire -c script.
-  const sqlOneLine = sql
-    .split("\n")
-    .map((line) => line.replace(/--.*$/, ""))
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const psqlCmd = process.env.PSQL_CMD?.trim();
-  const execLine = psqlCmd
-    ? `${psqlCmd} -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`
-    : process.platform === "win32"
-      ? `docker exec -i supabase_db_fastproduct psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`
-      : `psql "${POSTGRES_URL}" -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`;
-  execSync(execLine, { stdio: "inherit", shell: true });
+  // Arquivo temporário + psql -f: evita -c em uma linha (comentarios "--" e aspas no shell).
+  const dir = mkdtempSync(join(tmpdir(), "rls-scope-seed-"));
+  const sqlPath = join(dir, "seed.sql");
+  writeFileSync(sqlPath, sql, "utf8");
+  try {
+    const psqlCmd = process.env.PSQL_CMD?.trim();
+    if (psqlCmd) {
+      execFileSync(psqlCmd, ["-v", "ON_ERROR_STOP=1", "-f", sqlPath], { stdio: "inherit" });
+    } else if (process.platform === "win32") {
+      execFileSync(
+        "docker",
+        ["exec", "-i", "supabase_db_fastproduct", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-f", "-"],
+        { stdio: ["pipe", "inherit", "inherit"], input: sql },
+      );
+    } else {
+      execFileSync("psql", [POSTGRES_URL, "-v", "ON_ERROR_STOP=1", "-f", sqlPath], { stdio: "inherit" });
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
   return authByPerfil;
 }
 
