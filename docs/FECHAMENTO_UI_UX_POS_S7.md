@@ -212,7 +212,37 @@ Ver `pdv-importados/docs/UX-11_MODAIS_CATALOGO_AUDIT.md`. Gates: typecheck OK; V
 
 ---
 
-## 10. Arquivos principais alterados
+## 12. Certificado de fechamento — Fase UI/UX pós-S7
+
+**Status:** **ENCERRADA** (2026-08-08 UTC)  
+**Branch / PR:** `cursor/fechamento-ui-ux-633a` · [#268](https://github.com/nocodenn-cell/fastproduct/pull/268)  
+**Política:** nenhum polish ou escopo UI/UX adicional nesta fase; merge via review humano + proteção da `main`.
+
+### Checklist objetivo
+
+| Critério | Evidência | Resultado |
+|----------|-----------|-----------|
+| Implementação do escopo acordado (UX-01…12, hubs, PDV polish lote) | §2–§3 deste doc + commits na branch | **Concluída** |
+| UX-09 (vendas tipografia) | `app/admin/vendas/*` sem `text-[10–12px]`; Vitest Vendas 7/7 (commit `825bf235`) | **Encerrada** |
+| UX-10 (config / implantação / provisionamento) | commits `ab3468b3`; `fp-control` + tipografia DS | **Encerrada** |
+| UX-11 (modais catálogo) | `UX-11_MODAIS_CATALOGO_AUDIT.md`; Vitest produtos **69/69** | **Encerrada** |
+| UX-12 (documento fiscal) | commit `b0fab6fa`; hub + SectionCard | **Encerrada** |
+| DS coverage 12/12 | `npm run check:ds-coverage` → `reports/ds-coverage.json` | **12/12 (100%)** |
+| Gates locais (tip `83340165`) | typecheck OK; lint 0 errors (3 warnings e2e legado); `check:entity-ssot` OK; `check:ds-sprint0` OK; P0 23/23; produtos 69/69 | **Verdes** |
+| PR pronta review/merge | `gh pr view 268` → `state=OPEN`, `isDraft=false` | **Sim** |
+| Novo polish nesta fase | Nenhum commit de polish após `83340165` | **Confirmado** |
+
+### Limitação declarada (fora do escopo desta fase)
+
+- Auditoria visual **autenticada** no Preview Vercel (SSO): checklist humano §9.5.
+- Cobertura DS **app-wide** (~54% TSX com import DS) ≠ meta das 12 telas; não bloqueia fechamento desta onda.
+
+### Próxima fase do roadmap (pós-merge recomendado)
+
+**Reconciliação Supabase produção × repositório — Fase 3** (branch existente `cursor/reconciliacao-supabase-audit-633a`; Fases 1–2 read-only concluídas). Ver `docs/RECONCILIACAO_SUPABASE_PRODUCAO_REPOSITORIO.md` §13.3+. **Sem** bypass da `main`; **sem** alteração mutadora em produção sem gate de governança.
+
+---
+
 
 Ver commits na branch `cursor/fechamento-ui-ux-633a`. Resumo (incl. UX-08):
 
