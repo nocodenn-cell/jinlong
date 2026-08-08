@@ -28,28 +28,28 @@
 -- 1. Estados e colunas de auditoria
 -- ---------------------------------------------------------------------------
 
-ALTER TABLE public.remessas DROP CONSTRAINT IF EXISTS remessas_status_check
+ALTER TABLE public.remessas DROP CONSTRAINT IF EXISTS remessas_status_check;
 
 ALTER TABLE public.remessas ADD CONSTRAINT remessas_status_check
-  CHECK (status IN ('RASCUNHO', 'EM_CONFERENCIA', 'CONFERIDO', 'DIVERGENTE', 'CONCLUIDA', 'CANCELADA'))
+  CHECK (status IN ('RASCUNHO', 'EM_CONFERENCIA', 'CONFERIDO', 'DIVERGENTE', 'CONCLUIDA', 'CANCELADA'));
 
 ALTER TABLE public.remessas
   ADD COLUMN IF NOT EXISTS origem_tipo text NOT NULL DEFAULT 'SEM_DOCUMENTO',
   ADD COLUMN IF NOT EXISTS origem_ref text,
   ADD COLUMN IF NOT EXISTS conferido_por uuid REFERENCES public.usuarios(id),
   ADD COLUMN IF NOT EXISTS conferido_em timestamptz,
-  ADD COLUMN IF NOT EXISTS divergencia_motivo text
+  ADD COLUMN IF NOT EXISTS divergencia_motivo text;
 
-ALTER TABLE public.remessas DROP CONSTRAINT IF EXISTS remessas_origem_tipo_check
+ALTER TABLE public.remessas DROP CONSTRAINT IF EXISTS remessas_origem_tipo_check;
 
 ALTER TABLE public.remessas ADD CONSTRAINT remessas_origem_tipo_check
-  CHECK (origem_tipo IN ('NFE', 'ORDEM_COMPRA', 'SEM_DOCUMENTO'))
+  CHECK (origem_tipo IN ('NFE', 'ORDEM_COMPRA', 'SEM_DOCUMENTO'));
 
 COMMENT ON COLUMN public.remessas.origem_tipo IS
-  'Origem da expectativa do que deveria chegar. Determina o pre-preenchimento, nunca o comportamento.'
+  'Origem da expectativa do que deveria chegar. Determina o pre-preenchimento, nunca o comportamento.';
 
 COMMENT ON COLUMN public.remessas.origem_ref IS
-  'Chave da NF-e, id da ordem de compra, ou NULL quando nao ha documento.'
+  'Chave da NF-e, id da ordem de compra, ou NULL quando nao ha documento.';
 
 -- ---------------------------------------------------------------------------
 -- 2. registrar_conferencia_remessa — a etapa que faltava
@@ -164,7 +164,7 @@ GRANT EXECUTE ON FUNCTION public.registrar_conferencia_remessa(uuid, jsonb, text
 
 COMMENT ON FUNCTION public.registrar_conferencia_remessa IS
   'Onda B — registra a contagem fisica. Status derivado dos itens: EM_CONFERENCIA (falta contar), '
-  'DIVERGENTE (contado <> esperado) ou CONFERIDO. Aceita recontagem.';
+  'DIVERGENTE (contado <> esperado) ou CONFERIDO. Aceita recontagem.';;
 
 -- ---------------------------------------------------------------------------
 -- 3. confirmar_remessa_entrada — agora exige conferência
@@ -266,4 +266,4 @@ GRANT EXECUTE ON FUNCTION public.confirmar_remessa_entrada(uuid) TO service_role
 
 COMMENT ON FUNCTION public.confirmar_remessa_entrada IS
   'Onda B — unico ponto que move saldo no recebimento. Exige status CONFERIDO ou DIVERGENTE e '
-  'todos os itens contados. Da entrada na quantidade CONTADA (sem COALESCE com a esperada).';
+  'todos os itens contados. Da entrada na quantidade CONTADA (sem COALESCE com a esperada).';;
