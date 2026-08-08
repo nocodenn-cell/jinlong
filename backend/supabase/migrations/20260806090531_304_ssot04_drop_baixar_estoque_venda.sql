@@ -4,7 +4,7 @@
 -- source: production read-only export (schema_migrations)
 -- Applied in production: yes (do NOT re-run on production).
 
-DROP FUNCTION public.baixar_estoque_venda(uuid, jsonb);
+DROP FUNCTION IF EXISTS public.baixar_estoque_venda(uuid, jsonb);
 
 DO $verify$
 DECLARE

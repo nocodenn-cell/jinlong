@@ -43,6 +43,23 @@ function isLegacyNumericMirrorDrift(entry) {
   return false;
 }
 
+/** Reordenação greenfield: ex-270..289 renumerados para timestamps (aplicam antes dos backports 202608*). */
+function isGreenfieldSsotReorderDrift(entry) {
+  if (entry.reason !== "remote_ausente") return false;
+  const n = Number(entry.version);
+  if (!Number.isFinite(n) || n < 20260731200300 || n > 20260731202200) {
+    return false;
+  }
+  return (n - 20260731200300) % 100 === 0;
+}
+
+function isLegacyRemoteOnlyNumeric(version) {
+  const raw = String(version).replace(/^0+/, "") || version;
+  if (!/^\d{1,3}$/.test(raw)) return false;
+  const n = Number(raw);
+  return n >= 270 && n <= 289;
+}
+
 function isPhase32GitOnlyDrift(entry) {
   return (
     entry.reason === "remote_ausente" &&
@@ -54,16 +71,19 @@ function classifyDriftEntries(drift) {
   const blocking = [];
   const phase32GitOnly = [];
   const legacyNumericMirror = [];
+  const greenfieldSsotReorder = [];
   for (const d of drift) {
     if (isPhase32GitOnlyDrift(d)) {
       phase32GitOnly.push(d);
+    } else if (isGreenfieldSsotReorderDrift(d)) {
+      greenfieldSsotReorder.push(d);
     } else if (isLegacyNumericMirrorDrift(d)) {
       legacyNumericMirror.push(d);
     } else {
       blocking.push(d);
     }
   }
-  return { blocking, phase32GitOnly, legacyNumericMirror };
+  return { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder };
 }
 
 function listMigrationVersionsFromDisk() {
@@ -234,9 +254,14 @@ function main() {
   }
 
   const { drift, missingInList, extraInList, maxDisk } = analyze(rows, diskVersions);
-  const { blocking, phase32GitOnly, legacyNumericMirror } = classifyDriftEntries(drift);
+  const { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder } =
+    classifyDriftEntries(drift);
+  const extraLegacyRemote = extraInList.filter(isLegacyRemoteOnlyNumeric);
+  const extraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
   const aligned =
-    blocking.length === 0 && missingInList.length === 0 && extraInList.length === 0;
+    blocking.length === 0 &&
+    missingInList.length === 0 &&
+    extraBlocking.length === 0;
 
   const payload = {
     ok: aligned,
@@ -264,6 +289,12 @@ function main() {
       reason: d.reason,
       note: "Espelho numérico no repo; remoto registra timestamp equivalente (reconciliação SSOT)",
     })),
+    driftGreenfieldSsotReorder: greenfieldSsotReorder.map((d) => ({
+      version: d.version,
+      reason: d.reason,
+      note: "Reordenação greenfield 270–289 → timestamps; remoto pode registrar chave numérica legada",
+    })),
+    extraLegacyRemoteOnlyNumeric: extraLegacyRemote,
     missingInCliTable: missingInList,
     extraInCliTableNotOnDisk: extraInList,
   };

@@ -99,9 +99,15 @@ COMMENT ON COLUMN public.pdv_config.modo_limite_credito IS
 -- armadilha que o FLX-04 já documentou para `receber_ordem_compra`.
 -- ============================================================================
 
-DROP FUNCTION public.finalizar_venda_transacional_canonica_v4(
+DROP FUNCTION IF EXISTS public.finalizar_venda_transacional_canonica_v4(
   uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric,
   boolean, boolean, text, text, text, text, uuid, motivo_desconto_enum_tipo, text
+);
+
+-- Greenfield: overload anterior (ex.: migration 264) pode ainda existir sem motivo_desconto.
+DROP FUNCTION IF EXISTS public.finalizar_venda_transacional_canonica_v4(
+  uuid, uuid, uuid, uuid, text, numeric, numeric, numeric, jsonb, jsonb, text, numeric,
+  boolean, boolean, text, text, text, text, uuid
 );
 
 CREATE FUNCTION public.finalizar_venda_transacional_canonica_v4(

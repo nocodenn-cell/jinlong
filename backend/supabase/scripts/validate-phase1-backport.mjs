@@ -39,7 +39,7 @@ const PHASE1_VERSIONS = [
   '20260807000138',
   '20260807000157',
   '20260807000525',
-  '289',
+  '20260731202200',
 ];
 
 const files = fs.readdirSync(MIG_DIR).filter((f) => f.endsWith('.sql'));

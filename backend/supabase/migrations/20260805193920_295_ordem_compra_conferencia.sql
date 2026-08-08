@@ -121,7 +121,7 @@ REVOKE ALL ON FUNCTION public.registrar_conferencia_ordem_compra(uuid, jsonb) FR
 GRANT EXECUTE ON FUNCTION public.registrar_conferencia_ordem_compra(uuid, jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.registrar_conferencia_ordem_compra(uuid, jsonb) TO service_role;
 
-DROP FUNCTION public.receber_ordem_compra(uuid, jsonb);
+DROP FUNCTION IF EXISTS public.receber_ordem_compra(uuid, jsonb);
 
 CREATE FUNCTION public.receber_ordem_compra(p_oc_id uuid)
 RETURNS void

@@ -12,8 +12,8 @@
 -- Correção: adicionar as 2 colunas faltantes, restaurando exatamente o schema pretendido
 -- pela migration 235 original. Aditivo, nullable, sem migração de dados.
 --
--- Aplicada em regime de urgência diretamente ao ambiente de staging
--- (kbabmewnahysfvlybiak) durante a validação da migration 274, antes de ser
+-- Aplicada em regime de urgência diretamente ao ambiente de validação BL-2
+-- (ver docs/BL2_RELATORIO_STAGING.md) durante a validação da migration 274, antes de ser
 -- commitada neste arquivo — ver docs/BL2_RELATORIO_STAGING.md para o relato completo.
 
 BEGIN;
