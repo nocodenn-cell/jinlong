@@ -7,7 +7,10 @@
  * tabelas de vendas por dia, top produtos e estoque baixo. Usa DataTable (Fase 2).
  */
 
-import { ChartCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { ChartCard, PageHeader, PageActions, SectionCard } from '@/components/ui/admin-v2'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import type {
@@ -76,6 +79,7 @@ export type RelatoriosLabels = {
   vazioEstoque: string
   tooltipFaturado: string
   noDataLabel: string
+  linkVisaoGeral: string
   filtros: RelatoriosFiltrosLabels
   locale: string
 }
@@ -254,7 +258,17 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
 
   return (
     <div className="admin-v2-page">
-      <PageHeader title={labels.titulo} subtitle={periodoSubtitle} />
+      <PageHeader
+        title={labels.titulo}
+        subtitle={periodoSubtitle}
+        actions={
+          <PageActions>
+            <Button asChild variant="secondary" size="sm">
+              <Link href={ROUTES.admin.dashboard}>{labels.linkVisaoGeral}</Link>
+            </Button>
+          </PageActions>
+        }
+      />
 
       {dados.rpcErro ? (
         <div className="admin-v2-alert-danger mb-6 rounded-lg px-4 py-3 text-[12px]">

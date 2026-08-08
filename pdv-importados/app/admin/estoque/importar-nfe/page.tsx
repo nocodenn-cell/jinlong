@@ -12,7 +12,7 @@ export default async function AdminEstoqueImportarNfePage() {
   return (
     <div className="admin-v2-page">
       <EstoqueHubNav />
-      <ImportarNfePageClient idioma={session.idioma} />
+      <ImportarNfePageClient idioma={session.idioma} embeddedInAdminHub />
     </div>
   )
 }

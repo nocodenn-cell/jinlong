@@ -62,6 +62,7 @@ export default async function AdminEstoqueRecebimentoPage() {
         idioma={idioma}
         produtos={produtos}
         remessasRecentes={remessasRecentes}
+        embeddedInAdminHub
       />
     </div>
   )

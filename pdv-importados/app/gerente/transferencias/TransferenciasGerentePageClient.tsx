@@ -28,9 +28,15 @@ type Props = Readonly<{
   idioma: Idioma
   lojas: TransferenciaLojaRow[]
   produtos: TransferenciaProdutoOpt[]
+  embeddedInAdminHub?: boolean
 }>
 
-export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Props) {
+export function TransferenciasGerentePageClient({
+  idioma,
+  lojas,
+  produtos,
+  embeddedInAdminHub = false,
+}: Props) {
   const m = getMessages(idioma)
   const t = m.gerente.transferencias_page
   const router = useRouter()
@@ -198,12 +204,22 @@ export function TransferenciasGerentePageClient({ idioma, lojas, produtos }: Pro
         })
 
   return (
-    <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+    <div
+      className={
+        embeddedInAdminHub
+          ? idioma === 'pt'
+            ? ''
+            : 'font-chinese'
+          : `admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`
+      }
+    >
       <PageHeader title={m.gerente.nav_transferencias} subtitle={t.intro} />
 
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {m.gerente.inicio}
-      </Link>
+      {!embeddedInAdminHub ? (
+        <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
+          ← {m.gerente.inicio}
+        </Link>
+      ) : null}
 
       {!podeTransferir ? (
         <div

@@ -436,7 +436,9 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         actions={
           <PageActions>
             <Button asChild variant="secondary" size="sm">
-              <Link href={ROUTES.admin.relatorios}>{ui.relatorios_titulo}</Link>
+              <Link href={ROUTES.admin.relatorios} title={ui.dashboard_link_relatorios_hint}>
+                {ui.relatorios_titulo}
+              </Link>
             </Button>
           </PageActions>
         }

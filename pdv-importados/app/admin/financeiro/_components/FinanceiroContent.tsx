@@ -5,7 +5,7 @@ import { SectionCard } from '@/components/ui/admin-v2'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
 import { FinanceiroReceberExtras } from './FinanceiroReceberExtras'
-import { FinanceiroHubNav } from '@/components/ui/admin-v2/AdminHubTabNav'
+import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
 import type { FinanceiroTabId } from './financeiroTabs'
 import { DocumentoFiscalDetailSheet } from './DocumentoFiscalDetailSheet'
 import { FiscalStubNotice } from './FiscalStubNotice'
@@ -109,9 +109,7 @@ export function FinanceiroContent({
   return (
     <>
       <Suspense fallback={<div className="h-9" />}>
-        <Suspense fallback={<div className="mb-4 h-9" />}>
-          <FinanceiroHubNav activeTab={activeTab} />
-        </Suspense>
+        <FinanceiroHubNavShell activeTab={activeTab} />
       </Suspense>
 
       {activeTab === 'receber' ? (

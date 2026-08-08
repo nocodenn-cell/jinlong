@@ -50,6 +50,7 @@ export default async function AdminEstoqueTransferenciasPage() {
         idioma={idioma}
         lojas={lojas}
         produtos={produtos}
+        embeddedInAdminHub
       />
     </div>
   )
