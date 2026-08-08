@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react'
 import * as Sentry from '@sentry/nextjs'
+import { Button } from '@/components/ui/button'
+import { ErrorState } from '@/components/ui/feedback'
 
 export default function CaixaError({
   error,
@@ -21,27 +23,22 @@ export default function CaixaError({
   }, [error])
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-      <h1 className="text-xl font-semibold">Erro no ponto de venda</h1>
-      <p className="max-w-sm text-sm opacity-70">
-        Ocorreu um erro inesperado no PDV. Seus dados no carrinho não foram perdidos.
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={() => reset()}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Tentar de novo
-        </button>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100"
-        >
-          Recarregar página
-        </button>
-      </div>
+    <div className="caixa-oriental-root flex min-h-[100dvh] flex-col items-center justify-center gap-4 px-4 py-8">
+      <ErrorState
+        title="Erro no ponto de venda"
+        description="Ocorreu um erro inesperado no PDV. O carrinho costuma permanecer no navegador — se o problema persistir, recarregue a página ou chame o gerente."
+        onRetry={() => reset()}
+        retryLabel="Tentar de novo"
+        className="w-full max-w-md"
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => window.location.reload()}
+        className="fp-focus-ring"
+      >
+        Recarregar página
+      </Button>
     </div>
   )
 }

@@ -149,7 +149,17 @@ Não se declara 100%: exceções em §4 e UX-09–UX-12.
 4. **P2:** Configurações, Implantação, Provisionamento (UX-10)
 5. **P2:** Financeiro aba receber — unificar visual com DS (sem mudar RPCs)
 
-**Próxima superfície recomendada:** **`/admin/vendas`** (tipografia densa + tempo diário do operador).
+**Próxima superfície recomendada (admin):** **`/admin/vendas`** (tipografia densa).
+
+**PDV (prioridade operacional):** polish Onda 12 — ver §9.1.
+
+### 9.1 PDV — polish (Onda 12, em andamento)
+
+| ID | Problema | Impacto | Status |
+|----|----------|---------|--------|
+| UX-PDV-01 | `app/caixa/error.tsx` com botões Tailwind crus (`blue-600` / `slate`) fora do DS | Falha no PDV = tela alienada, baixa legibilidade, foco inconsistente | **Implementado** — `ErrorState` + `Button` DS, root `caixa-oriental-root` |
+| UX-PDV-02 | Tipografia `text-[10–11px]` densa no carrinho / histórico | Turno longo, leitura à distância | Backlog |
+| UX-PDV-03 | Skeletons caixa ainda usam classes `app-*` legadas | Loading visual inconsistente | Backlog |
 
 ---
 
