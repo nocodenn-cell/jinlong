@@ -48,9 +48,13 @@ function isGreenfieldSsotReorderDrift(entry) {
   if (entry.reason !== "remote_ausente") return false;
   const n = Number(entry.version);
   if (!Number.isFinite(n)) return false;
-  // ex-205..269 (+24701-03) → 20260621000100..20260621005700
+  // ex-205..269 (+24703) → 20260621000100..20260621005700
   if (n >= 20260621000100 && n <= 20260621005700) {
     return (n - 20260621000100) % 100 === 0;
+  }
+  // ex-24701/24702 → após 264 (dependem da evolução da v4)
+  if (n === 20260710212310 || n === 20260710212320) {
+    return true;
   }
   // ex-270..289 → 20260731200300..20260731202200
   if (n >= 20260731200300 && n <= 20260731202200) {
