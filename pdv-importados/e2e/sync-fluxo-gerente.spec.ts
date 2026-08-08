@@ -95,8 +95,9 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
   })
 
   const ts = Math.floor(Date.now() / 1000).toString()
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const toSign = `${ts}.${nonce}.${reqBody}`
+  const nonce = crypto.randomUUID()
+  const device = 'e2e-sync-fluxo'
+  const toSign = `${ts}.${nonce}.${device}.${reqBody}`
   const signature = hmacSha256Hex(process.env.SYNC_KEY!.trim(), toSign)
 
   const syncRes = await fetch(process.env.SYNC_ENDPOINT!.trim(), {
@@ -107,7 +108,7 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
       'X-SYNC-TS': ts,
       'X-SYNC-NONCE': nonce,
       'X-SYNC-SIGNATURE': signature,
-      'x-device-fingerprint': 'e2e-sync-fluxo',
+      'x-device-fingerprint': device,
     },
     body: reqBody,
   })

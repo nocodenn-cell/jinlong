@@ -150,23 +150,45 @@ function analyze(rows, diskVersions) {
   return { drift, fromCli, missingInList, extraInList, maxDisk, diskSet };
 }
 
+function runMigrationListWithRetry(maxAttempts) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return execSync("npx supabase migration list 2>&1", {
+        cwd: BACKEND_ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 10 * 1024 * 1024,
+      });
+    } catch (e) {
+      lastErr = e;
+      const merged =
+        (e.stdout?.toString?.() ?? String(e.stdout ?? "")) ||
+        (e.stderr?.toString?.() ?? String(e.stderr ?? ""));
+      const transient =
+        /auth_query secret check timed out|failed to connect to postgres|connection reset/i.test(
+          merged,
+        );
+      if (!transient || attempt === maxAttempts) {
+        throw e;
+      }
+      const waitMs = attempt * 8000;
+      console.warn(
+        `migration list tentativa ${attempt}/${maxAttempts} falhou (transiente); aguardando ${waitMs}ms…`,
+      );
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitMs);
+    }
+  }
+  throw lastErr;
+}
+
 function main() {
   const opts = readArgs(process.argv.slice(2));
 
   let stdout;
   let stderr = "";
   try {
-    // Redireciona stderr→stdout: alguns CLIs Go (supabase-cli incluído, em
-    // certas versões/terminais) escrevem a tabela de dados no stderr mesmo em
-    // execução bem-sucedida, só usando stdout para JSON/máquina. Sem isso,
-    // `execSync` descarta o stderr no caminho de sucesso e o parser via zero
-    // linhas mesmo com o CLI funcionando corretamente.
-    stdout = execSync("npx supabase migration list 2>&1", {
-      cwd: BACKEND_ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    stdout = runMigrationListWithRetry(3);
   } catch (e) {
     // Com `2>&1` no comando, o stderr do CLI já vem mesclado em e.stdout —
     // e.stderr tende a ficar vazio. Usa o que existir.

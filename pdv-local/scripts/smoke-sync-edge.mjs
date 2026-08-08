@@ -24,8 +24,9 @@ if (!endpoint || !syncKey) {
 async function executarSmoke() {
   const body = JSON.stringify({ events: [] })
   const ts = Math.floor(Date.now() / 1000).toString()
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const payload = `${ts}.${nonce}.${body}`
+  const nonce = crypto.randomUUID()
+  const device = 'smoke-local'
+  const payload = `${ts}.${nonce}.${device}.${body}`
   const signature = crypto.createHmac('sha256', syncKey).update(payload).digest('hex')
 
   const baseHeaders = {
@@ -34,7 +35,7 @@ async function executarSmoke() {
     'X-SYNC-TS': ts,
     'X-SYNC-NONCE': nonce,
     'X-SYNC-SIGNATURE': signature,
-    'x-device-fingerprint': 'smoke-local',
+    'x-device-fingerprint': device,
   }
 
   let res = await fetch(endpoint, {

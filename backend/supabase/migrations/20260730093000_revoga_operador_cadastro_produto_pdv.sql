@@ -53,9 +53,14 @@ BEGIN
   v_novo := replace(v_def, v_de, v_para);
   EXECUTE v_novo;
 
-  IF position('OPERADOR' IN pg_get_functiondef(
-       'public.criar_produto_com_estoque_inicial(jsonb,uuid,uuid)'::regprocedure)) > 0 THEN
+  v_def := pg_get_functiondef(
+    'public.criar_produto_com_estoque_inicial(jsonb,uuid,uuid)'::regprocedure
+  );
+  IF position(v_de IN v_def) > 0 THEN
     RAISE EXCEPTION 'MIG_CRIAR_PRODUTO_AINDA_CITA_OPERADOR: replace não surtiu efeito.';
+  END IF;
+  IF position(v_para IN v_def) = 0 THEN
+    RAISE EXCEPTION 'MIG_CRIAR_PRODUTO_GATE_AUSENTE: gate GERENTE+ não encontrado após replace.';
   END IF;
 END
 $mig$;
@@ -96,8 +101,11 @@ BEGIN
   v_def := pg_get_functiondef(
     'public.ajustar_estoque_manual(uuid,uuid,numeric,numeric,text,text,uuid)'::regprocedure
   );
-  IF position('OPERADOR' IN v_def) > 0 OR position('v_estoque_inicial' IN v_def) > 0 THEN
+  IF position(v_bloco_de IN v_def) > 0 THEN
     RAISE EXCEPTION 'MIG_AJUSTE_AINDA_CITA_OPERADOR: replace não surtiu efeito.';
+  END IF;
+  IF position(v_bloco_para IN v_def) = 0 THEN
+    RAISE EXCEPTION 'MIG_AJUSTE_GATE_AUSENTE: gate GERENTE+ não encontrado após replace.';
   END IF;
   -- Guarda-corpo: o resto do corpo tem de continuar íntegro.
   IF position('AJUSTE_ESTOQUE_LINHA_NAO_ENCONTRADA' IN v_def) = 0
