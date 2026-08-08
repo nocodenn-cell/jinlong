@@ -102,7 +102,7 @@ Ajuste de teste: `admin-auth-resilience.test.ts` mock `AdminToastViewport`.
 
 **Resumo:** conclusão **B** — bloqueio **fora do código**. Redeploy na árvore `826b52d2` (`dpl_FNJESiM1`, branch `cursor/vercel-redeploy-826b52d-633a`) falhou igual (~632 ms, zero logs). Etapa provável: **Provisioning Integrations** (hipótese integração Supabase × env manual Preview). Último **Ready:** `dpl_4znhvKr7` (`826b52d2`). Pacote suporte: relatório §7.
 
-**UI/UX:** **pausado** — nenhum Preview READY após a regressão; `/api/health` indisponível em novos deploys.
+**UI/UX:** retomado após remoção da integração legada `supabase-pink-village` no painel Vercel (2026-08-08). Preview/Production voltam a completar build (~3m46s observado em redeploy).
 
 ---
 
