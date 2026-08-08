@@ -88,7 +88,7 @@ Auditoria local pós-fix: **0** prefixes curtos (`NNN_` / `247NN_`) após o prim
 |----|------------|-----------|
 | GF-RESET | **DONE** | Migrations 001→HEAD PASS (`Start`+`Reset`+Smoke SQL) |
 | RLS-SCOPE | **DONE** | Local gates completos PASS (RLS scope + Auth seed + REST) — run `31283967809` |
-| E2E-SYNC | **P0** | Playwright sync-fluxo PASS (smoke já OK) |
+| E2E-SYNC | **P0** | Playwright sync-fluxo: smoke OK; fix upsert estoque (`onConflict loja_id,produto_id`) em validação |
 | INT-MANUAL | **P1** | Checklist integração pós-CI |
 | F32-HUMAN | **P2** | Apply 3.2 em prod |
 
