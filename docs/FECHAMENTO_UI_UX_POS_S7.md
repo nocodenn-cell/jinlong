@@ -100,9 +100,9 @@ Ajuste de teste: `admin-auth-resilience.test.ts` mock `AdminToastViewport`.
 
 **Relatório completo:** [`docs/VERCEL_PREVIEW_PROVISIONING_INVESTIGATION_20260808.md`](./VERCEL_PREVIEW_PROVISIONING_INVESTIGATION_20260808.md)
 
-**Resumo:** falha **global de provisioning** na Vercel (`Resource provisioning failed`, ~700 ms, **zero build logs**) desde ~2026-08-07; **não** é regressão de `next build` nos commits UI (`14b73bd`, `4b73a2d`, etc.). Último Preview **Ready:** `dpl_4znhvKr7EGUMUvZacJZQZGpe6UP3` (`826b52d2`). Supabase `jinlong` **ACTIVE_HEALTHY**. Correção provável: **painel Vercel** (billing, integrações, Build Machine/cache) ou suporte — ver §6 do relatório.
+**Resumo:** conclusão **B** — bloqueio **fora do código**. Redeploy na árvore `826b52d2` (`dpl_FNJESiM1`, branch `cursor/vercel-redeploy-826b52d-633a`) falhou igual (~632 ms, zero logs). Etapa provável: **Provisioning Integrations** (hipótese integração Supabase × env manual Preview). Último **Ready:** `dpl_4znhvKr7` (`826b52d2`). Pacote suporte: relatório §7.
 
-**UI/UX:** pausado até Preview **Ready** ponta a ponta.
+**UI/UX:** **pausado** — nenhum Preview READY após a regressão; `/api/health` indisponível em novos deploys.
 
 ---
 
