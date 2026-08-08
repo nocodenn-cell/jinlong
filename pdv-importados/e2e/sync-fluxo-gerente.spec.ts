@@ -59,12 +59,15 @@ async function garantirProdutoEEstoqueParaTeste() {
   }
 
   const lojaId = (prod.loja_id as string | null) ?? LOJA_MATRIZ_ID
-  const { error: estqErr } = await admin.from('estoque').upsert({
-    loja_id: lojaId,
-    produto_id: prod.id,
-    quantidade_atual: 25,
-    estoque_minimo: 0,
-  })
+  const { error: estqErr } = await admin.from('estoque').upsert(
+    {
+      loja_id: lojaId,
+      produto_id: prod.id,
+      quantidade_atual: 25,
+      estoque_minimo: 0,
+    },
+    { onConflict: 'loja_id,produto_id' },
+  )
   if (estqErr) throw new Error(`Falha ao preparar estoque E2E: ${estqErr.message}`)
 
   return { produtoId: prod.id as string, preco: Number(prod.preco_varejo ?? 9.9) }
