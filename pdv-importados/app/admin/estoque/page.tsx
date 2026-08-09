@@ -128,9 +128,10 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
   const loadError = listaRes.ok ? null : listaRes.error
 
   const totalAtual = lista.total
-  const totalSibling = siblingRes.ok ? siblingRes.data.total : 0
-  const totalGeral = visao === 'geral' ? totalAtual : totalSibling
-  const totalCritico = visao === 'critico' ? totalAtual : totalSibling
+  // Sibling falhou → não inventar 0 no KPI (confiança operacional).
+  const totalSibling = siblingRes.ok ? siblingRes.data.total : null
+  const totalGeral: number | null = visao === 'geral' ? totalAtual : totalSibling
+  const totalCritico: number | null = visao === 'critico' ? totalAtual : totalSibling
 
   const linhas: EstoqueLinha[] = lista.rows.map((r) => ({
     id: r.id,

@@ -220,8 +220,8 @@ export function EstoqueTable({ linhas, labels }: { linhas: EstoqueLinha[]; label
                 })
               }}
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">{labels.ajusteAcao}</span>
+              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {labels.ajusteAcao}
             </Button>
             <Button
               type="button"

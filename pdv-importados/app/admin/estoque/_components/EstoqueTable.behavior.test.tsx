@@ -110,9 +110,13 @@ describe('EstoqueTable', () => {
     })
     expect(container.textContent).toContain('Caneta azul')
     expect(container.textContent).toContain('789')
+    expect(container.textContent).toContain('Ajustar')
     expect(container.querySelector('[aria-label="Ajustar saldo Caneta azul"]')).toBeTruthy()
     expect(container.querySelector('[aria-label="Kardex Caneta azul"]')).toBeTruthy()
     expect(container.textContent).not.toContain('Déficit')
+    const zeroSpan = [...container.querySelectorAll('span')].find((el) => el.textContent === '0')
+    expect(zeroSpan?.className ?? '').toContain('text-fg-muted')
+    expect(zeroSpan?.className ?? '').not.toContain('danger')
   })
 
   it('mostra Déficit quando há valor positivo', () => {
