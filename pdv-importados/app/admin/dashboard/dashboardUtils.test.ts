@@ -4,13 +4,16 @@ import {
   getPeriodRange,
   normalizePeriod,
   normalizeStatus,
+  shortOrderId,
 } from './dashboardUtils'
 
 describe('dashboardUtils', () => {
   it('normaliza filtros de período e status com fallback seguro', () => {
     expect(normalizePeriod('TODAY')).toBe('TODAY')
+    expect(normalizePeriod('7D')).toBe('7D')
     expect(normalizePeriod('30D')).toBe('30D')
-    expect(normalizePeriod('INV')).toBe('7D')
+    expect(normalizePeriod(undefined)).toBe('TODAY')
+    expect(normalizePeriod('INV')).toBe('TODAY')
 
     expect(normalizeStatus('CONCLUIDA')).toBe('CONCLUIDA')
     expect(normalizeStatus('CANCELADA')).toBe('CANCELADA')
@@ -35,7 +38,20 @@ describe('dashboardUtils', () => {
   it('formata tendência percentual com variações', () => {
     expect(formatTrendPercent(120, 100)).toEqual({ up: true, label: '+20.0%' })
     expect(formatTrendPercent(80, 100)).toEqual({ up: false, label: '-20.0%' })
-    expect(formatTrendPercent(0, 0)).toEqual({ up: true, label: '0%' })
+    expect(formatTrendPercent(50, 0, { newLabel: 'novo', flatLabel: '—' })).toEqual({
+      up: true,
+      label: 'novo',
+      neutral: true,
+    })
+    expect(formatTrendPercent(0, 0, { newLabel: 'novo', flatLabel: '—' })).toEqual({
+      up: true,
+      label: '—',
+      neutral: true,
+    })
+  })
+
+  it('encurta id de pedido preservando prefixo', () => {
+    expect(shortOrderId('abc')).toBe('abc')
+    expect(shortOrderId('12345678-90ab-cdef')).toBe('12345678…')
   })
 })
-

@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 import { ActivityFeed, type ActivityItem } from '@/components/ui/ActivityFeed'
 import {
   ChartCard,
@@ -8,7 +9,7 @@ import {
 } from '@/components/ui/admin-v2'
 import type { MetricCardIconKey } from '@/components/ui/admin-v2/MetricCard'
 import type { SparkTone } from '@/components/ui/admin-v2/sparkline'
-import { ErrorState } from '@/components/ui/feedback'
+import { EmptyState, ErrorState } from '@/components/ui/feedback'
 import { createClient } from '@/lib/supabase/server'
 import { SalesTrendChartLazy } from './SalesTrendChartLazy'
 import { PaymentDonutChartLazy } from './PaymentDonutChartLazy'
@@ -32,7 +33,6 @@ import { ROUTES } from '@shared-core/navigation/routes'
 import { getMessages } from '@/i18n/getMessages'
 import { localeFromIdioma } from '@/lib/idioma/localeFromIdioma'
 
-
 type SalesPoint = {
   label: string
   total: number
@@ -41,12 +41,22 @@ type SalesPoint = {
 type Metric = {
   label: string
   value: string
-  delta?: { value: string; up: boolean }
+  delta?: { value: string; up: boolean; neutral?: boolean }
   icon: MetricCardIconKey
   sparkData?: number[]
   tone?: SparkTone
   deltaPositiveIsGood?: boolean
   hint?: string
+  href?: string
+  labelWrap?: boolean
+  sparkAriaLabel?: string
+}
+
+function fillTemplate(template: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce(
+    (acc, [key, value]) => acc.replaceAll(`{{${key}}}`, value),
+    template,
+  )
 }
 
 type VendaStatus = 'CONCLUIDA' | 'CANCELADA'
@@ -347,10 +357,11 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const ticketAtual = pedidosAtual > 0 ? totalAtual / pedidosAtual : 0
   const ticketPrev = pedidosPrev > 0 ? totalPrev / pedidosPrev : 0
 
-  const totalTrend = formatTrendPercent(totalAtual, totalPrev)
-  const pedidosTrend = formatTrendPercent(pedidosAtual, pedidosPrev)
-  const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev)
-  const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev)
+  const trendLabels = { newLabel: L.trendNew[lk], flatLabel: dash.emDash }
+  const totalTrend = formatTrendPercent(totalAtual, totalPrev, trendLabels)
+  const pedidosTrend = formatTrendPercent(pedidosAtual, pedidosPrev, trendLabels)
+  const ticketTrend = formatTrendPercent(ticketAtual, ticketPrev, trendLabels)
+  const novosTrend = formatTrendPercent(novosUsuariosAtual, novosUsuariosPrev, trendLabels)
 
   const unavail = adminUi.common.unavailable[lk]
 
@@ -362,41 +373,78 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   }
 
   const stockValue = estoqueBaixoRes.error ? dash.emDash : formatNumberLocale(estoqueBaixoCount, locale)
+  const sparkAria = L.sparkTrendAria[lk]
+  const hasSalesInPeriod = !periodSalesFailed && chartData.some((point) => point.total > 0)
+  const hasHourlySales = !periodSalesFailed && peakValueRaw > 0
 
   const metrics: Metric[] = [
     {
       label: L.metricTotalSales[lk],
       value: periodSalesFailed ? dash.emDash : formatBRL(totalAtual, locale),
-      delta: periodSalesFailed ? undefined : { value: totalTrend.label, up: totalTrend.up },
+      delta: periodSalesFailed
+        ? undefined
+        : { value: totalTrend.label, up: totalTrend.up, neutral: totalTrend.neutral },
       icon: 'dollar-sign',
       sparkData: periodSalesFailed ? undefined : salesSpark,
       tone: 'gold',
+      labelWrap: true,
+      sparkAriaLabel: sparkAria,
     },
     {
       label: L.metricOrders[lk],
       value: periodSalesFailed ? dash.emDash : formatNumberLocale(pedidosAtual, locale),
-      delta: periodSalesFailed ? undefined : { value: pedidosTrend.label, up: pedidosTrend.up },
+      delta: periodSalesFailed
+        ? undefined
+        : { value: pedidosTrend.label, up: pedidosTrend.up, neutral: pedidosTrend.neutral },
       icon: 'package',
       sparkData: periodSalesFailed ? undefined : ordersSpark,
       tone: 'success',
+      labelWrap: true,
+      sparkAriaLabel: sparkAria,
     },
     {
       label: L.metricTicket[lk],
       value: periodSalesFailed ? dash.emDash : formatBRL(ticketAtual, locale),
-      delta: periodSalesFailed ? undefined : { value: ticketTrend.label, up: ticketTrend.up },
+      delta: periodSalesFailed
+        ? undefined
+        : { value: ticketTrend.label, up: ticketTrend.up, neutral: ticketTrend.neutral },
       icon: 'shopping-bag',
       sparkData: periodSalesFailed ? undefined : ticketSpark,
       tone: 'gold',
+      labelWrap: true,
+      sparkAriaLabel: sparkAria,
     },
     {
       label: L.metricStock[lk],
       value: stockValue,
-      delta: estoqueBaixoRes.error ? undefined : { value: stockTrendLabel, up: estoqueBaixoCount === 0 },
+      delta: estoqueBaixoRes.error
+        ? undefined
+        : { value: stockTrendLabel, up: estoqueBaixoCount === 0, neutral: true },
       icon: 'alert-circle',
       tone: estoqueBaixoCount > 0 ? 'warning' : 'success',
       deltaPositiveIsGood: true,
+      href: ROUTES.admin.estoque,
+      hint: L.metricStockHint[lk],
+      labelWrap: true,
     },
   ]
+
+  const salesTrendSummary = fillTemplate(L.salesTrendSummary[lk], {
+    points: chartData.map((point) => `${point.label} ${formatBRL(point.total, locale)}`).join('; '),
+  })
+  const hourlySummary = fillTemplate(L.hourlyChartSummary[lk], {
+    title: L.hourlyChartTitle[lk],
+    peakLabel: L.hourlyChartPeak[lk],
+    peakValue: formatBRL(peakValueRaw, locale),
+    peakHour,
+    subtitle: L.hourlyChartSubtitle[lk],
+  })
+  const paymentsSummary = fillTemplate(L.paymentsSummary[lk], {
+    label: L.paymentDistribution[lk],
+    parts: paymentDonutData
+      .map((entry) => `${entry.name} ${formatBRL(entry.value, locale)}`)
+      .join('; '),
+  })
 
   const latestOrders: OrderRow[] = recentOrdersRaw.map((o) => ({
     id: o.id,
@@ -450,9 +498,22 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       />
 
       <div className="admin-v2-grid-kpi">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
-        ))}
+        {metrics.map((metric) => {
+          const { href, ...cardProps } = metric
+          if (!href) {
+            return <MetricCard key={metric.label} {...cardProps} />
+          }
+          return (
+            <Link
+              key={metric.label}
+              href={href}
+              className="block rounded-card focus-visible:outline-none focus-visible:shadow-focus"
+              aria-label={`${metric.label}: ${metric.value}. ${metric.hint ?? ''}`.trim()}
+            >
+              <MetricCard {...cardProps} />
+            </Link>
+          )
+        })}
       </div>
 
       <div className="admin-v2-grid-3-main">
@@ -465,9 +526,17 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               className="h-full"
             />
           </ChartCard>
+        ) : hasSalesInPeriod ? (
+          <ChartCard title={L.chartTitle[lk]} className="admin-v2-chart-area">
+            <SalesTrendChartLazy
+              data={chartData}
+              variant="default"
+              summary={salesTrendSummary}
+            />
+          </ChartCard>
         ) : (
           <ChartCard title={L.chartTitle[lk]} className="admin-v2-chart-area">
-            <SalesTrendChartLazy data={chartData} variant="default" />
+            <EmptyState title={L.chartEmpty[lk]} className="h-full py-8" />
           </ChartCard>
         )}
 
@@ -479,7 +548,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               description={adminUi.errors.chartUnavailable[lk]}
               className="h-full"
             />
-          ) : (
+          ) : hasHourlySales ? (
             <DashboardChart
               titleLabel={L.hourlyChartTitle[lk]}
               subtitleLabel={L.hourlyChartSubtitle[lk]}
@@ -488,7 +557,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
               data={hourlySeries.map((item) => item.total)}
               peakHour={peakHour}
               peakValue={formatBRL(peakValueRaw, locale)}
+              summary={hourlySummary}
             />
+          ) : (
+            <EmptyState title={L.hourlyChartEmpty[lk]} className="h-full py-8" />
           )}
         </SectionCard>
 
@@ -498,6 +570,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             total={totalAtual}
             noDataLabel={L.paymentNoData[lk]}
             distributionLabel={L.paymentDistribution[lk]}
+            summary={paymentsSummary}
           />
         </SectionCard>
       </div>
@@ -510,16 +583,30 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
 
       <div className="admin-v2-grid-2">
         <SectionCard title={L.lowStockTitle[lk]} subtitle={L.lowStockSubtitle[lk]}>
-          <div className="flex items-end gap-2">
-            <span className="text-h1 font-bold tabular-nums text-[var(--color-chart-warm)]">
+          <div className="flex items-end justify-between gap-3">
+            <Link
+              href={ROUTES.admin.estoque}
+              className="text-h1 font-bold tabular-nums text-[var(--color-chart-warm)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
+            >
               {formatNumberLocale(estoqueBaixoCount, locale)}
-            </span>
+            </Link>
+            <Link
+              href={ROUTES.admin.estoque}
+              className="shrink-0 text-small font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
+            >
+              {L.lowStockCta[lk]}
+            </Link>
           </div>
+          {estoqueBaixoCount === 0 && !estoqueBaixoRes.error ? (
+            <p className="mt-3 text-caption text-fg-subtle">{L.lowStockEmpty[lk]}</p>
+          ) : null}
           {showStockAlerts && estoqueBaixoLista.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-3">
               {estoqueBaixoLista.map((item) => (
                 <li key={item.nome} className="flex items-center justify-between text-caption">
-                  <span className="truncate text-fg-muted">{item.nome}</span>
+                  <span className="truncate text-fg-muted" title={item.nome}>
+                    {item.nome}
+                  </span>
                   <span className="shrink-0 tabular-nums text-[var(--color-warning-fg)]">
                     {item.quantidade_atual} / {item.estoque_minimo}
                   </span>
@@ -548,6 +635,8 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             statusDone: L.statusDone[lk],
             statusCancelled: L.statusCancelled[lk],
             empty: L.tableEmpty[lk],
+            emptyDescription: L.tableEmptyDescription[lk],
+            openOrdersAria: L.openOrdersAria[lk],
             loadFailed: adminUi.errors.tableLoadFailed[lk],
           }}
         />

@@ -1370,13 +1370,37 @@
       "chartTitle": { "cn": "销售趋势", "pt": "Tendência de vendas" },
       "tableTitle": { "cn": "最近订单", "pt": "Últimos pedidos" },
       "tableEmpty": { "cn": "此筛选条件下没有订单。", "pt": "Nenhum pedido encontrado para este filtro." },
+      "tableEmptyDescription": {
+        "cn": "调整时间范围，或前往销售页查看完整历史。",
+        "pt": "Ajuste o período ou abra Vendas para ver o histórico completo."
+      },
+      "openOrdersAria": { "cn": "打开销售页", "pt": "Abrir página de vendas" },
       "footer": { "cn": "生意兴隆 · 财源广进", "pt": "Prosperidade nos negócios" },
       "metricTotalSales": { "cn": "总销售额", "pt": "Vendas totais no período" },
       "metricOrders": { "cn": "订单量", "pt": "Pedidos registrados" },
       "metricTicket": { "cn": "客单价", "pt": "Ticket médio" },
       "metricStock": { "cn": "库存预警", "pt": "Alertas de estoque baixo" },
+      "metricStockHint": { "cn": "点击查看库存", "pt": "Clique para abrir Estoque" },
+      "trendNew": { "cn": "新增", "pt": "novo" },
       "trendStockOk": { "cn": "正常", "pt": "OK" },
       "trendStockWarn": { "cn": "注意", "pt": "Atenção" },
+      "sparkTrendAria": { "cn": "期间趋势图", "pt": "Sparkline de tendência no período" },
+      "chartEmpty": { "cn": "本期暂无销售数据。", "pt": "Sem vendas no período selecionado." },
+      "hourlyChartEmpty": { "cn": "本期暂无按小时数据。", "pt": "Sem faturamento por hora no período." },
+      "lowStockEmpty": { "cn": "当前没有低于最低库存的商品。", "pt": "Nenhum item abaixo do mínimo recomendado." },
+      "lowStockCta": { "cn": "查看库存", "pt": "Ver estoque" },
+      "salesTrendSummary": {
+        "cn": "销售趋势：{{points}}",
+        "pt": "Tendência de vendas: {{points}}"
+      },
+      "hourlyChartSummary": {
+        "cn": "{{title}}. {{peakLabel}}: {{peakValue}}, {{peakHour}}. {{subtitle}}",
+        "pt": "{{title}}. {{peakLabel}}: {{peakValue}}, {{peakHour}}. {{subtitle}}"
+      },
+      "paymentsSummary": {
+        "cn": "{{label}}: {{parts}}",
+        "pt": "{{label}}: {{parts}}"
+      },
       "tableColId": { "cn": "编号", "pt": "ID" },
       "tableColOperador": { "cn": "操作员", "pt": "Operador" },
       "tableColData": { "cn": "日期", "pt": "Data" },

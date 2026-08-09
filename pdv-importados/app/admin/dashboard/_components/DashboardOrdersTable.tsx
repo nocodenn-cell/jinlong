@@ -1,8 +1,12 @@
 'use client'
 
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState, ErrorState } from '@/components/ui/feedback'
+import { ROUTES } from '@shared-core/navigation/routes'
+import { shortOrderId } from '../dashboardUtils'
 
 export type DashboardOrderRow = {
   id: string
@@ -23,7 +27,9 @@ type Labels = {
   statusDone: string
   statusCancelled: string
   empty: string
+  emptyDescription?: string
   loadFailed: string
+  openOrdersAria: string
 }
 
 type Props = {
@@ -48,6 +54,8 @@ function statusBadge(
  * Tabela de pedidos recentes — DataTable canônica (substitui &lt;table&gt; raw).
  */
 export function DashboardOrdersTable({ orders, labels, loadFailed }: Props) {
+  const router = useRouter()
+
   if (loadFailed) {
     return <ErrorState title={labels.loadFailed} description={labels.loadFailed} />
   }
@@ -58,9 +66,15 @@ export function DashboardOrdersTable({ orders, labels, loadFailed }: Props) {
       header: labels.colId,
       priority: 'contextual',
       cell: (row) => (
-        <span className="max-w-[120px] truncate font-medium text-fg" title={row.id}>
-          {row.id}
-        </span>
+        <Link
+          href={ROUTES.admin.vendas}
+          className="max-w-[120px] truncate font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focus"
+          title={row.id}
+          aria-label={`${labels.openOrdersAria}: ${row.id}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {shortOrderId(row.id)}
+        </Link>
       ),
     },
     {
@@ -110,7 +124,10 @@ export function DashboardOrdersTable({ orders, labels, loadFailed }: Props) {
       columns={columns}
       data={orders}
       rowKey={(row) => row.id}
-      emptyState={<EmptyState title={labels.empty} />}
+      onRowClick={() => router.push(ROUTES.admin.vendas)}
+      emptyState={
+        <EmptyState title={labels.empty} description={labels.emptyDescription} />
+      }
     />
   )
 }

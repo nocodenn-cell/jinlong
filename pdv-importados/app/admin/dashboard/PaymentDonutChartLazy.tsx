@@ -18,6 +18,7 @@ export type PaymentDonutChartLazyProps = {
   total: number
   noDataLabel: string
   distributionLabel: string
+  summary?: string
 }
 
 export function PaymentDonutChartLazy(props: PaymentDonutChartLazyProps) {
