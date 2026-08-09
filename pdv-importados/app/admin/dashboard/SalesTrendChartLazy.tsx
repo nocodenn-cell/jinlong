@@ -15,6 +15,7 @@ const SalesTrendChartDynamic = dynamic(
 export type SalesTrendChartLazyProps = {
   data: Array<{ label: string; total: number }>
   variant?: 'default' | 'oriental'
+  summary?: string
 }
 
 export function SalesTrendChartLazy(props: SalesTrendChartLazyProps) {

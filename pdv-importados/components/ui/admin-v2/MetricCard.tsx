@@ -40,10 +40,14 @@ type MetricCardProps = {
   value: string
   sparkData?: number[]
   tone?: SparkTone
-  delta?: { value: string; up: boolean }
+  delta?: { value: string; up: boolean; neutral?: boolean }
   deltaPositiveIsGood?: boolean
   icon?: MetricCardIconKey
   hint?: string
+  /** Permite até 2 linhas no label (opt-in; default continua truncate). */
+  labelWrap?: boolean
+  /** Texto alternativo do sparkline (opt-in). */
+  sparkAriaLabel?: string
   className?: string
 }
 
@@ -60,6 +64,8 @@ export function MetricCard({
   deltaPositiveIsGood = true,
   icon,
   hint,
+  labelWrap = false,
+  sparkAriaLabel,
   className,
 }: MetricCardProps) {
   const Icon = icon ? METRIC_ICONS[icon] : null
@@ -83,6 +89,12 @@ export function MetricCard({
       : !delta.up
     : false
 
+  const deltaAria = delta
+    ? delta.neutral
+      ? `${label}: ${delta.value}`
+      : `${label}: ${delta.up ? 'alta' : 'baixa'} ${delta.value}`
+    : undefined
+
   return (
     <div
       className={cn(
@@ -90,40 +102,59 @@ export function MetricCard({
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className={cn('flex gap-2', labelWrap ? 'items-start' : 'items-center justify-between')}>
+        <div className={cn('flex min-w-0 gap-2', labelWrap ? 'flex-1 items-start' : 'items-center')}>
           {Icon ? (
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-[var(--color-info-bg)] text-brand">
               <Icon size={16} strokeWidth={2} aria-hidden />
             </span>
           ) : null}
-          <span className="truncate text-caption font-semibold uppercase tracking-[var(--letter-spacing-wide)] text-fg-subtle">
+          <span
+            title={label}
+            className={cn(
+              'text-caption font-semibold uppercase tracking-[var(--letter-spacing-wide)] text-fg-subtle',
+              labelWrap
+                ? 'min-w-0 flex-1 whitespace-normal break-words [overflow-wrap:anywhere] line-clamp-2'
+                : 'truncate',
+            )}
+          >
             {label}
           </span>
         </div>
         {delta ? (
           <span
+            aria-label={deltaAria}
             className={cn(
               'shrink-0 text-small font-semibold tabular-nums',
-              deltaGood
-                ? 'text-[var(--color-success-strong)]'
-                : 'text-[var(--color-danger-strong)]',
+              labelWrap && 'pt-0.5',
+              delta.neutral
+                ? 'text-fg-subtle'
+                : deltaGood
+                  ? 'text-[var(--color-success-strong)]'
+                  : 'text-[var(--color-danger-strong)]',
             )}
           >
-            {delta.up ? '↑' : '↓'} {delta.value}
+            {delta.neutral ? null : delta.up ? '↑ ' : '↓ '}
+            {delta.value}
           </span>
         ) : null}
       </div>
 
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-h2 font-semibold leading-none tabular-nums text-fg md:text-h1">
+          <div
+            title={value}
+            className="truncate text-h2 font-semibold leading-none tabular-nums text-fg md:text-h1"
+          >
             {value}
           </div>
         </div>
         <div className="flex h-11 w-24 shrink-0 items-center justify-center">
           {sparkData.length >= 2 ? (
-            <canvas ref={canvasRef} className="h-11 w-24 shrink-0" aria-hidden />
+            <>
+              {sparkAriaLabel ? <span className="sr-only">{sparkAriaLabel}</span> : null}
+              <canvas ref={canvasRef} className="h-11 w-24 shrink-0" aria-hidden />
+            </>
           ) : (
             <div className="h-11 w-24" aria-hidden />
           )}

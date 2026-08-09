@@ -17,6 +17,8 @@ interface DashboardChartProps {
   titleLabel: string
   subtitleLabel: string
   peakLabel: string
+  /** Alternativa textual (opt-in). */
+  summary?: string
 }
 
 function compactBRL(reais: number): string {
@@ -27,7 +29,16 @@ function compactBRL(reais: number): string {
   return `R$${reais.toFixed(0)}`
 }
 
-export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, subtitleLabel, peakLabel }: DashboardChartProps) {
+export function DashboardChart({
+  labels,
+  data,
+  peakHour,
+  peakValue,
+  titleLabel,
+  subtitleLabel,
+  peakLabel,
+  summary,
+}: DashboardChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
@@ -119,6 +130,9 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
     }
   }, [labels, data])
 
+  const chartSummary =
+    summary ?? `${titleLabel}. ${peakLabel}: ${peakValue}, ${peakHour}. ${subtitleLabel}`
+
   return (
     <div className="overflow-hidden rounded-card border border-[var(--color-border)]">
       <div className="flex items-start justify-between px-5 py-4">
@@ -134,7 +148,8 @@ export function DashboardChart({ labels, data, peakHour, peakValue, titleLabel, 
         </div>
       </div>
       <div className="px-4 pb-4" style={{ height: 160 }}>
-        <canvas ref={canvasRef} aria-label={titleLabel} />
+        <p className="sr-only">{chartSummary}</p>
+        <canvas ref={canvasRef} aria-label={chartSummary} />
       </div>
     </div>
   )
