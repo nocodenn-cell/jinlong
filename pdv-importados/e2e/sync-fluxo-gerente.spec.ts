@@ -73,6 +73,33 @@ async function garantirProdutoEEstoqueParaTeste() {
   return { produtoId: prod.id as string, preco: Number(prod.preco_varejo ?? 9.9) }
 }
 
+async function ensureCaixaAbertoOperador(
+  admin: ReturnType<typeof createClient>,
+  operadorId: string,
+): Promise<string> {
+  // uq_caixas_operador_aberto (mig 288/310): no máximo 1 ABERTO por operador.
+  // Reutilizar evita INSERT silencioso ignorado + caixa_id fantasma no payload.
+  const { data: aberto, error: selErr } = await admin
+    .from('caixas')
+    .select('id')
+    .eq('operador_id', operadorId)
+    .eq('status', 'ABERTO')
+    .maybeSingle()
+  if (selErr) throw new Error(`Falha ao buscar caixa ABERTO E2E: ${selErr.message}`)
+  if (aberto?.id) return aberto.id as string
+
+  const caixaId = crypto.randomUUID()
+  const { error: caixaErr } = await admin.from('caixas').insert({
+    id: caixaId,
+    operador_id: operadorId,
+    loja_id: LOJA_MATRIZ_ID,
+    valor_inicial: 0,
+    status: 'ABERTO',
+  })
+  if (caixaErr) throw new Error(`Falha ao preparar caixa E2E: ${caixaErr.message}`)
+  return caixaId
+}
+
 async function enviarVendaViaSync(params: { produtoId: string; preco: number }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!.trim()
@@ -81,19 +108,8 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
 
   const vendaId = crypto.randomUUID()
   const eventId = crypto.randomUUID()
-  const caixaId = crypto.randomUUID()
+  const caixaId = await ensureCaixaAbertoOperador(admin, operadorId)
   const total = Math.round(params.preco * 100) / 100
-
-  const { error: caixaErr } = await admin.from('caixas').insert({
-    id: caixaId,
-    operador_id: operadorId,
-    loja_id: LOJA_MATRIZ_ID,
-    valor_inicial: 0,
-    status: 'ABERTO',
-  })
-  if (caixaErr && !String(caixaErr.message).includes('duplicate')) {
-    throw new Error(`Falha ao preparar caixa E2E: ${caixaErr.message}`)
-  }
 
   const payload = {
     venda_id: vendaId,
