@@ -1,5 +1,5 @@
 /**
- * Contrato estático: guard de escopo da finalizar_venda v4 (migration 289).
+ * Contrato estático: guard de escopo da finalizar_venda v4.
  *
  * Garante que a correção não seja anulada por ordem lexical (como o PR #187
  * com timestamp 20260714*, anterior a 274_*) nem por assinatura pré-272.
@@ -12,14 +12,18 @@ import { describe, expect, it } from 'vitest'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = path.resolve(ROOT, '../backend/supabase/migrations')
 const GUARD = '20260809120100_finalize_v4_scope_guard.sql'
-const BODY_RECREATE = '274_bl2_promocao_rpc_e_precedencia.sql'
+const BODY_CANDIDATES = [
+  '274_bl2_promocao_rpc_e_precedencia.sql',
+  '20260731200700_bl2_promocao_rpc_e_precedencia.sql',
+]
 
-describe('finalize v4 scope guard (migration 289)', () => {
-  it('migration 289 existe e ordena depois da recriação 274', () => {
+describe('finalize v4 scope guard', () => {
+  it('guard existe e ordena depois da recriação BL-2 (ex-274)', () => {
     const files = fs.readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()
+    const body = BODY_CANDIDATES.find((n) => files.includes(n))
     expect(files).toContain(GUARD)
-    expect(files).toContain(BODY_RECREATE)
-    expect(files.indexOf(GUARD)).toBeGreaterThan(files.indexOf(BODY_RECREATE))
+    expect(body).toBeTruthy()
+    expect(files.indexOf(GUARD)).toBeGreaterThan(files.indexOf(body!))
   })
 
   it('wrapper valida loja/caixa/operador e usa assinatura 21 args', () => {
