@@ -82,4 +82,28 @@ Produção de código já está em `2afa14ca` (#286); o merge do #287 só altera
 
 ---
 
+## 7. Higiene (Passo 8) — concluída 2026-08-09
+
+| Ação | Resultado |
+|---|---|
+| PRs legados #90–#229 | **35 fechados** |
+| PRs Dependabot #240–#249 | **9 fechados** |
+| Branches removidas | **199** |
+| `CHECKLIST_IMPLANTACAO_CLIENTE.md` | URL → `https://pdv-importados.vercel.app` + links GO |
+
+### PRs fechados (44)
+
+#90, #91, #98, #107, #120, #121, #122, #126, #127, #131, #133, #148, #149, #150, #152, #155, #165, #173, #175, #177, #178, #179, #187, #188, #197, #198, #201, #203, #207, #208, #209, #225, #227, #228, #229, #240, #241, #242, #243, #244, #245, #246, #247, #249
+
+Comentário padrão: *Arquivado - conteúdo não mais necessário ou substituído*
+
+### Branches removidas (199)
+
+Por prefixo: `backup/*`×11, `claude/*`×129, `cursor/*`×44, `loop/*`×15
+
+Lista completa em artefato da sessão (`/tmp/deleted-branches.txt`); tip remoto pós-higiene sem `claude/*` / `loop/*` / `backup/*` órfãos.
+
+
+---
+
 # ✅ READY FOR GO-LIVE

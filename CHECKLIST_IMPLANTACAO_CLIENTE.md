@@ -20,10 +20,17 @@
 ### 1. Abrir aplicação no navegador
 
 ```bash
-# Informar ao cliente:
-Acesse https://jinlong-v1.vercel.app
-# (ou domínio específico do cliente)
+# Informar ao cliente (produção canônica):
+Acesse https://pdv-importados.vercel.app
+# Domínio customizado do cliente, se já configurado na Vercel
 ```
+
+**Guia de implantação / GO-LIVE:**
+- Checklist em app: `/admin/implantacao`
+- Certificação: [`GO_LIVE_CERTIFICATION_REPORT.md`](./GO_LIVE_CERTIFICATION_REPORT.md)
+- Resumo executivo: [`GO_LIVE_EXECUTIVO_RESUMO.md`](./GO_LIVE_EXECUTIVO_RESUMO.md)
+- Status final: [`docs/GO_LIVE_STATUS_FINAL.md`](./docs/GO_LIVE_STATUS_FINAL.md)
+- Assinatura GO 09/08/2026: [`docs/GO_LIVE_ASSINATURA_2026-08-09.md`](./docs/GO_LIVE_ASSINATURA_2026-08-09.md)
 
 - [ ] Página carrega em < 5 segundos
 - [ ] Logo Jīn Lóng exibida sem erros
