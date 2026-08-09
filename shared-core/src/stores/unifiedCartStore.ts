@@ -59,6 +59,13 @@ export interface CarrinhoState {
    * voltar para «novo cupom» sem antes consultar o desfecho.
    */
   vendaFinalizacaoPendente: boolean
+  /**
+   * Pedido em espera que originou o cupom atual. Persistido com o carrinho:
+   * após retomar, o RPC clama o pedido (RETOMADA); se F5 apagar só o React
+   * state, a finalização não chama `converter` e o claim fica órfão — ou, no
+   * modelo antigo sem claim, o mesmo pedido era vendido de novo.
+   */
+  vendaEmEsperaOrigemId: string | null
   adicionarItem: (item: ItemCarrinho) => void
   removerItem: (id: string) => void
   /** Repõe a última linha removida na posição original; no-op se buffer vazio. */
@@ -86,6 +93,8 @@ export interface CarrinhoState {
   resolverFinalizacaoPendente: () => void
   /** Venda confirmada como gravada: encerra o cupom e descarta a chave. */
   concluirVendaIdempotencyKey: () => void
+  /** Liga/desliga o vínculo do cupom com o pedido em espera claimado. */
+  setVendaEmEsperaOrigemId: (id: string | null) => void
 }
 
 type CartDiscountSlice = Pick<
@@ -204,6 +213,7 @@ function emptyCartFields(ctx: CartPersistedContext): Partial<CarrinhoState> {
     ultimoRemovido: null,
     vendaIdempotencyKey: null,
     vendaFinalizacaoPendente: false,
+    vendaEmEsperaOrigemId: null,
   }
 }
 
@@ -277,6 +287,9 @@ export const useCartStore = create<CarrinhoState>()(
       ultimoRemovido: null,
       vendaIdempotencyKey: null,
       vendaFinalizacaoPendente: false,
+      vendaEmEsperaOrigemId: null,
+
+      setVendaEmEsperaOrigemId: (id) => set({ vendaEmEsperaOrigemId: id }),
 
       garantirVendaIdempotencyKey: () => {
         const atual = get().vendaIdempotencyKey
@@ -337,6 +350,7 @@ export const useCartStore = create<CarrinhoState>()(
             descontoGerenteToken: null,
             ultimoRemovido: null,
             // Cupom novo (venda em espera retomada) → chave nova.
+            // `vendaEmEsperaOrigemId` é setado à parte pelo fluxo de retomada.
             vendaIdempotencyKey: null,
             vendaFinalizacaoPendente: false,
           }
@@ -479,6 +493,7 @@ export const useCartStore = create<CarrinhoState>()(
         // duplicada após F5 / queda de energia / fechamento da aplicação.
         vendaIdempotencyKey: state.vendaIdempotencyKey,
         vendaFinalizacaoPendente: state.vendaFinalizacaoPendente,
+        vendaEmEsperaOrigemId: state.vendaEmEsperaOrigemId,
       }),
     },
   ),

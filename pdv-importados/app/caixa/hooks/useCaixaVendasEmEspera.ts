@@ -42,9 +42,9 @@ export type UseCaixaVendasEmEsperaDeps = Readonly<{
   setClienteId: (id: string | null) => void
   setClienteNome: (nome: string | null) => void
   /**
-   * De qual pedido em espera veio o cupom atual (null se digitado do zero). O
-   * pedido só é baixado quando a venda finaliza de fato — desistir da retomada
-   * não pode apagá-lo.
+   * De qual pedido em espera veio o cupom atual (null se digitado do zero).
+   * Retomar clama o pedido (RETOMADA); CONVERTIDA só na finalização; desistir
+   * devolve via `devolver_venda_em_espera` (P2).
    */
   vendaEmEsperaOrigemId: string | null
   setVendaEmEsperaOrigemId: (id: string | null) => void
@@ -83,9 +83,8 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
 
   /**
    * Colocar em espera cria uma linha nova. Se o cupom atual já tinha vindo de um
-   * pedido em espera (que agora permanece EM_ESPERA até a venda concluir), a
-   * linha de origem precisa sair da lista — senão o mesmo pedido apareceria duas
-   * vezes para o operador.
+   * pedido claimado (RETOMADA), a origem precisa ser descartada — senão ficaria
+   * órfã claimada e o operador veria dois pedidos aparentes.
    */
   const baixarOrigemAposReparcar = useCallback(async () => {
     if (!vendaEmEsperaOrigemId) return
@@ -189,7 +188,7 @@ export function useCaixaVendasEmEspera(deps: UseCaixaVendasEmEsperaDeps) {
       // Token de gerente não é restaurado: exige nova autorização se precisar desconto.
       limparEstadoDescontoGerente()
       substituirCarrinho(res.itens)
-      // O pedido continua EM_ESPERA no banco; a baixa acontece na finalização.
+      // Claim RETOMADA no banco; CONVERTIDA só na finalização (anti double-sell).
       setVendaEmEsperaOrigemId(res.id)
       // Restaura o cliente vinculado. `vendas_em_espera` guarda só o id, então o
       // nome do chip é resolvido depois — sem bloquear a retomada do cupom.
