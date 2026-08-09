@@ -1,13 +1,9 @@
 /**
- * FastProduct Admin — Configurações (Fase 7)
+ * FastProduct Admin — Configurações
  *
- * Server Component. Carrega dados da loja + PDV config das tabelas (inline, no gerente
- * faz assim). Passa para client component que renderiza 3 abas:
- *   - Loja (dados gerais, endereço, logo) — reusa `atualizarDadosLojaAction`
- *   - PDV (fiscal, preferências) — reusa `atualizarConfiguracoesPdvAction`
- *   - Cadastros (modal rápido p/ cliente, links p/ categoria/marca/fornecedor)
- *
- * Zero query nova — reutiliza ações existentes de /gerente/configuracoes.
+ * Server Component. Carrega dados da loja + PDV config.
+ * Client: 3 abas (Loja, Impostos e fiscal, Preferências).
+ * Reutiliza actions de /gerente/configuracoes — sem contrato novo.
  */
 
 import { createClient } from '@/lib/supabase/server'
@@ -36,7 +32,7 @@ export default async function AdminConfiguracoes() {
         endereco_bairro, endereco_cidade, endereco_uf, endereco_cep,
         razao_social, nome_fantasia, cnae,
         numero_serie_nfce, numero_serie_nfe
-      `
+      `,
       )
       .maybeSingle(),
     supabase
@@ -46,7 +42,7 @@ export default async function AdminConfiguracoes() {
         loja_id, cfop_padrao, cst_padrao, regime_tributario,
         auto_enqueue_fiscal, idioma_padrao, tema_padrao,
         imprimir_cupom_auto, formato_impressao
-      `
+      `,
       )
       .maybeSingle(),
   ])
@@ -62,20 +58,31 @@ export default async function AdminConfiguracoes() {
       labels={{
         titulo: ui.configuracoes_titulo,
         subtitulo: ui.configuracoes_subtitulo,
+        subtituloLoja: ui.configuracoes_subtitulo_loja,
+        subtituloImpostos: ui.configuracoes_subtitulo_impostos,
+        subtituloPreferencias: ui.configuracoes_subtitulo_preferencias,
+        tabsAria: ui.configuracoes_tabs_aria,
+        unsavedWarn: ui.configuracoes_unsaved_warn,
+        salvando: ui.configuracoes_salvando,
         tabLoja: ui.configuracoes_tab_loja,
         tabImpostos: ui.configuracoes_tab_impostos,
         tabPreferencias: ui.configuracoes_tab_preferencias,
         loja: {
           secDados: ui.configuracoes_loja_sec_dados,
+          secIdentidade: ui.configuracoes_loja_sec_identidade,
           secContato: ui.configuracoes_loja_sec_contato,
           secEndereco: ui.configuracoes_loja_sec_endereco,
           secSerieFiscal: ui.configuracoes_loja_sec_serie_fiscal,
+          hintIdentidade: ui.configuracoes_loja_hint_identidade,
+          hintEndereco: ui.configuracoes_loja_hint_endereco,
+          hintSerie: ui.configuracoes_loja_hint_serie,
           nome: ui.configuracoes_loja_nome,
           cnpj: ui.configuracoes_loja_cnpj,
           razaoSocial: ui.configuracoes_loja_razao_social,
           nomeFantasia: ui.configuracoes_loja_nome_fantasia,
           inscricaoEstadual: ui.configuracoes_loja_inscricao_estadual,
           cnae: ui.configuracoes_loja_cnae,
+          hintCnae: ui.configuracoes_loja_hint_cnae,
           telefone: ui.configuracoes_loja_telefone,
           email: ui.configuracoes_loja_email,
           logradouro: ui.configuracoes_loja_logradouro,
@@ -87,30 +94,40 @@ export default async function AdminConfiguracoes() {
           cep: ui.configuracoes_loja_cep,
           nfce: ui.configuracoes_loja_nfce,
           nfe: ui.configuracoes_loja_nfe,
+          logo: ui.configuracoes_loja_logo,
+          hintLogo: ui.configuracoes_loja_hint_logo,
+          btnUploadLogo: ui.configuracoes_loja_btn_upload_logo,
+          removerLogo: ui.configuracoes_loja_remover_logo,
+          logoPreviewAlt: ui.configuracoes_loja_logo_preview_alt,
           phCnpj: ui.configuracoes_loja_ph_cnpj,
           phCnae: ui.configuracoes_loja_ph_cnae,
           phCep: ui.configuracoes_loja_ph_cep,
+          phTel: ui.configuracoes_loja_ph_tel,
           sucesso: ui.configuracoes_loja_sucesso,
           btnSalvar: ui.configuracoes_loja_btn_salvar,
         },
         fiscal: {
           sec: ui.configuracoes_fiscal_sec,
+          hint: ui.configuracoes_fiscal_hint,
           regime: ui.configuracoes_fiscal_regime,
           cfop: ui.configuracoes_fiscal_cfop,
           cst: ui.configuracoes_fiscal_cst,
+          hintCfop: ui.configuracoes_fiscal_hint_cfop,
+          hintCst: ui.configuracoes_fiscal_hint_cst,
+          autoFiscal: ui.configuracoes_fiscal_auto,
+          hintAutoFiscal: ui.configuracoes_fiscal_hint_auto,
           phCfop: ui.configuracoes_fiscal_ph_cfop,
-          phCst: ui.configuracoes_fiscal_ph_cst,
           warnSalveLoja: ui.configuracoes_fiscal_warn_salve_loja,
           sucesso: ui.configuracoes_fiscal_sucesso,
           btnSalvar: ui.configuracoes_fiscal_btn_salvar,
         },
         prefs: {
           sec: ui.configuracoes_prefs_sec,
+          hint: ui.configuracoes_prefs_hint,
           idioma: ui.configuracoes_prefs_idioma,
-          tema: ui.configuracoes_prefs_tema,
           formato: ui.configuracoes_prefs_formato,
-          checkLembrete: ui.configuracoes_prefs_check_lembrete,
-          checkResumo: ui.configuracoes_prefs_check_resumo,
+          imprimirAuto: ui.configuracoes_prefs_imprimir_auto,
+          hintImprimirAuto: ui.configuracoes_prefs_hint_imprimir_auto,
           sucesso: ui.configuracoes_prefs_sucesso,
           btnSalvar: ui.configuracoes_prefs_btn_salvar,
         },
@@ -124,10 +141,6 @@ export default async function AdminConfiguracoes() {
           idiomas: {
             pt: ui.configuracoes_enum_idioma_pt,
             zh: ui.configuracoes_enum_idioma_zh,
-          },
-          temas: {
-            noturno: ui.configuracoes_enum_tema_noturno,
-            novem: ui.configuracoes_enum_tema_novem,
           },
           formatos: {
             TERMICA: ui.configuracoes_enum_formato_termica,
