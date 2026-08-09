@@ -75,7 +75,7 @@ export function SelectComCadastroRapido({
           </button>
         </div>
         {hint ? (
-          <span className="mt-0.5 block text-[10px] text-[var(--color-warning-strong)]">
+          <span className="mt-0.5 block text-caption text-[var(--color-warning-strong)]">
             {hint}
           </span>
         ) : null}

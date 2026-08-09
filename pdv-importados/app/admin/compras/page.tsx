@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { ROUTES } from '@shared-core/navigation/routes'
 import { obterKpisCompras, listarOrdensCompra } from '@/app/gerente/compras/actions'
-import { ComprasGerentePageClient } from '@/app/gerente/compras/ComprasGerentePageClient'
+import { ComprasContent } from './_components/ComprasContent'
 
 const LIMITE_PAG = 20
 
@@ -29,12 +29,14 @@ export default async function AdminComprasPage() {
   }))
 
   return (
-    <ComprasGerentePageClient
-      idioma={session.idioma}
-      kpisIniciais={kpisIniciais}
-      inicial={inicial}
-      fornecedores={fornecedores}
-      produtos={produtos}
-    />
+    <div className="admin-v2-page">
+      <ComprasContent
+        idioma={session.idioma}
+        kpisIniciais={kpisIniciais}
+        inicial={inicial}
+        fornecedores={fornecedores}
+        produtos={produtos}
+      />
+    </div>
   )
 }

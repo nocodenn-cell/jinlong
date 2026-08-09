@@ -1,4 +1,6 @@
+import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
+import { CatalogoHubNav } from '@/components/ui/admin-v2/CatalogoHubNav'
 import { buscarFornecedoresPaginadosAction } from '@/app/gerente/fornecedores/actions'
 import { FornecedoresListClient } from '@/app/gerente/fornecedores/FornecedoresListClient'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
@@ -22,6 +24,9 @@ export default async function AdminFornecedoresPage() {
         title={m.fornecedores.titulo}
         subtitle="Cadastro e gestão de fornecedores"
       />
+      <Suspense fallback={<div className="h-9" aria-hidden />}>
+        <CatalogoHubNav />
+      </Suspense>
       <FornecedoresListClient
         idioma={session.idioma}
         fornecedoresIniciais={fornecedoresIniciais}

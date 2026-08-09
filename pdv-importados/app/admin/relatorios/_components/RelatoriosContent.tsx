@@ -7,7 +7,10 @@
  * tabelas de vendas por dia, top produtos e estoque baixo. Usa DataTable (Fase 2).
  */
 
-import { ChartCard, PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { ChartCard, PageHeader, PageActions, SectionCard } from '@/components/ui/admin-v2'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { ROUTES } from '@shared-core/navigation/routes'
 import { formatBRL } from '@/lib/format/money'
 import { formatDayMonthInLocale, formatDateTimeOrDash } from '@/lib/format/datetime'
 import type {
@@ -76,6 +79,7 @@ export type RelatoriosLabels = {
   vazioEstoque: string
   tooltipFaturado: string
   noDataLabel: string
+  linkVisaoGeral: string
   filtros: RelatoriosFiltrosLabels
   locale: string
 }
@@ -84,7 +88,7 @@ function OrigemBadgeRelatorio({ origem, labelChina, labelBrasil }: { origem: str
   const isChina = String(origem).toLowerCase().includes('china')
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none ${
+      className={`inline-flex items-center rounded-full px-2 py-[2px] text-caption font-medium leading-none ${
         isChina ? 'admin-v2-badge-gold' : 'admin-v2-badge-muted'
       }`}
     >
@@ -129,13 +133,13 @@ function EstoqueReposicaoList({ baixo, labels }: { baixo: RelatorioEstoqueBaixoD
         >
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-jl-fg-1">{item.nome}</p>
-            <p className="text-[11px] text-jl-fg-3">
+            <p className="text-caption text-jl-fg-3">
               {labels.saldoMinTemplate
                 .replace('{{atual}}', String(item.quantidade_atual))
                 .replace('{{min}}', String(item.estoque_minimo))}
             </p>
           </div>
-          <span className="admin-v2-badge-warning rounded-full px-2 py-1 text-[11px]">
+          <span className="admin-v2-badge-warning rounded-full px-2 py-1 text-caption">
             {labels.reporTemplate.replace('{{n}}', String(item.deficit))}
           </span>
         </div>
@@ -148,9 +152,9 @@ function EstoqueReposicaoList({ baixo, labels }: { baixo: RelatorioEstoqueBaixoD
 function MargemPorVendaList({ vendas, labels }: { vendas: RelatorioMargemVendaDTO[]; labels: RelatoriosLabels }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[12px]">
+      <table className="w-full text-small">
         <thead>
-          <tr className="border-b border-[var(--color-border-secondary)] text-left text-[11px] text-jl-fg-3">
+          <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
             <th className="py-1.5 pr-3 font-medium">{labels.margemVendaColData}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.margemVendaColLiquido}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.margemVendaColCusto}</th>
@@ -190,9 +194,9 @@ const CLASSE_ABC_BADGE: Record<'A' | 'B' | 'C', string> = {
 function CurvaAbcList({ produtos, labels }: { produtos: RelatorioCurvaAbcDTO[]; labels: RelatoriosLabels }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[12px]">
+      <table className="w-full text-small">
         <thead>
-          <tr className="border-b border-[var(--color-border-secondary)] text-left text-[11px] text-jl-fg-3">
+          <tr className="border-b border-[var(--color-border-secondary)] text-left text-caption text-jl-fg-3">
             <th className="py-1.5 pr-3 font-medium">{labels.curvaAbcColNome}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.curvaAbcColValor}</th>
             <th className="py-1.5 pr-3 font-medium text-right">{labels.curvaAbcColAcumulado}</th>
@@ -206,7 +210,7 @@ function CurvaAbcList({ produtos, labels }: { produtos: RelatorioCurvaAbcDTO[]; 
               <td className="py-1.5 pr-3 text-right text-jl-fg-2">{formatBRL(p.totalValor)}</td>
               <td className="py-1.5 pr-3 text-right text-jl-fg-3">{p.percentualAcumulado.toFixed(1)}%</td>
               <td className="py-1.5 pr-3 text-right">
-                <span className={`inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none ${CLASSE_ABC_BADGE[p.classeAbc]}`}>
+                <span className={`inline-flex items-center rounded-full px-2 py-[2px] text-caption font-medium leading-none ${CLASSE_ABC_BADGE[p.classeAbc]}`}>
                   {p.classeAbc}
                 </span>
               </td>
@@ -223,7 +227,7 @@ function CoberturaEstoqueList({ itens, labels }: { itens: RelatorioCoberturaEsto
   const comCobertura = itens.filter((i) => i.diasCobertura != null).slice(0, 15)
   return (
     <div className="space-y-2">
-      <p className="text-[11px] italic text-jl-fg-3">{labels.coberturaEstoqueHint}</p>
+      <p className="text-caption italic text-jl-fg-3">{labels.coberturaEstoqueHint}</p>
       {comCobertura.map((i) => (
         <div
           key={`${i.produtoId}-${i.lojaId}`}
@@ -231,12 +235,12 @@ function CoberturaEstoqueList({ itens, labels }: { itens: RelatorioCoberturaEsto
         >
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-jl-fg-1">{i.nome}</p>
-            <p className="text-[11px] text-jl-fg-3">
+            <p className="text-caption text-jl-fg-3">
               {labels.coberturaEstoqueColAtual}: {i.quantidadeAtual} · {labels.coberturaEstoqueColMedia}: {i.mediaDiariaVendida.toFixed(2)}/dia
             </p>
           </div>
           {/* Badge neutro/informativo: indicador histórico, não alerta decisório. */}
-          <span className="admin-v2-badge-muted shrink-0 rounded-full px-2 py-1 text-[11px]">
+          <span className="admin-v2-badge-muted shrink-0 rounded-full px-2 py-1 text-caption">
             ~{Math.round(i.diasCobertura ?? 0)} {labels.coberturaEstoqueColDias}
           </span>
         </div>
@@ -254,10 +258,20 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
 
   return (
     <div className="admin-v2-page">
-      <PageHeader title={labels.titulo} subtitle={periodoSubtitle} />
+      <PageHeader
+        title={labels.titulo}
+        subtitle={periodoSubtitle}
+        actions={
+          <PageActions>
+            <Button asChild variant="secondary" size="sm">
+              <Link href={ROUTES.admin.dashboard}>{labels.linkVisaoGeral}</Link>
+            </Button>
+          </PageActions>
+        }
+      />
 
       {dados.rpcErro ? (
-        <div className="admin-v2-alert-danger mb-6 rounded-lg px-4 py-3 text-[12px]">
+        <div className="admin-v2-alert-danger mb-6 rounded-lg px-4 py-3 text-small">
           {dados.rpcErro}
         </div>
       ) : null}
@@ -277,7 +291,7 @@ export function RelatoriosContent({ dados, labels }: { dados: RelatoriosDados; l
         />
 
         {!dados.resumoExecutivo.custo_confiavel ? (
-          <p className="admin-v2-alert-warning mb-6 rounded-lg px-3 py-2 text-[11px]">
+          <p className="admin-v2-alert-warning mb-6 rounded-lg px-3 py-2 text-caption">
             {labels.custoNaoConfiavel}
           </p>
         ) : null}
@@ -339,7 +353,7 @@ function EmptyState({ msg }: { msg: string }) {
       <span className="text-3xl text-jl-fg-3" aria-hidden>
         📊
       </span>
-      <p className="text-[12px] text-jl-fg-3">{msg}</p>
+      <p className="text-small text-jl-fg-3">{msg}</p>
     </div>
   )
 }

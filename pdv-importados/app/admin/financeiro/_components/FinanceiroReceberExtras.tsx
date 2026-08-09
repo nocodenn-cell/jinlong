@@ -18,6 +18,9 @@ type Props = {
 
 const FORMAS = ['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'] as const
 
+const LINK_MUTED =
+  'text-caption font-medium text-[var(--color-warning-strong)] hover:underline'
+
 export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -72,7 +75,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
     <div className="admin-v2-stack mt-4">
       {abertas.length > 0 ? (
         <div className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-jl-fg-3">
+          <h3 className="mb-2 text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
             Liquidar título
           </h3>
           <ul className="space-y-2">
@@ -81,7 +84,7 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
                 key={c.id}
                 className="flex flex-col gap-2 rounded-md border border-[var(--color-border-secondary)] bg-jl-surface-base p-2 sm:flex-row sm:items-center"
               >
-                <div className="min-w-0 flex-1 text-xs">
+                <div className="min-w-0 flex-1 text-small">
                   <span className="font-medium text-jl-fg-1">{c.cliente_nome}</span>
                   <span className="ml-2 text-jl-fg-3">{formatBRL(c.valor_aberto)} em aberto</span>
                 </div>
@@ -98,17 +101,22 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
                     min={0.01}
                     step="0.01"
                     defaultValue={c.valor_aberto}
-                    className="admin-v2-input w-24 text-right text-xs"
+                    className="fp-control fp-control--sm w-24 text-right text-small"
                     aria-label="Valor a liquidar"
                   />
-                  <select name="forma" className="admin-v2-input text-xs" defaultValue="DINHEIRO" aria-label="Forma de pagamento">
+                  <select
+                    name="forma"
+                    className="fp-control fp-control--sm text-small"
+                    defaultValue="DINHEIRO"
+                    aria-label="Forma de pagamento"
+                  >
                     {FORMAS.map((f) => (
                       <option key={f} value={f}>
                         {f}
                       </option>
                     ))}
                   </select>
-                  <button type="submit" disabled={pending} className="admin-v2-btn-secondary text-xs">
+                  <button type="submit" disabled={pending} className="admin-v2-btn-secondary text-small">
                     Liquidar
                   </button>
                 </form>
@@ -120,13 +128,15 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
 
       <div className="rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-jl-fg-3">Novo título a receber</h3>
-          <Link href={ROUTES.admin.clientes} className="text-[11px] font-medium text-amber-400 hover:underline">
+          <h3 className="text-caption font-semibold uppercase tracking-wide text-jl-fg-3">
+            Novo título a receber
+          </h3>
+          <Link href={ROUTES.admin.clientes} className={LINK_MUTED}>
             Gerenciar clientes
           </Link>
         </div>
         <form className="grid gap-2 sm:grid-cols-2" onSubmit={handleNovoTitulo}>
-          <select name="cliente_id" required className="admin-v2-input text-sm sm:col-span-2">
+          <select name="cliente_id" required className="fp-control text-small sm:col-span-2">
             <option value="">Selecione o cliente</option>
             {clientesIniciais.map((c) => (
               <option key={c.id} value={c.id}>
@@ -141,27 +151,27 @@ export function FinanceiroReceberExtras({ contas, clientesIniciais }: Props) {
             step="0.01"
             required
             placeholder="Valor total"
-            className="admin-v2-input text-sm"
+            className="fp-control text-small"
           />
-          <input name="vencimento" type="date" className="admin-v2-input text-sm" />
+          <input name="vencimento" type="date" className="fp-control text-small" />
           <input
             name="descricao"
             type="text"
             placeholder="Descrição (opcional)"
-            className="admin-v2-input text-sm sm:col-span-2"
+            className="fp-control text-small sm:col-span-2"
           />
           <button
             type="submit"
             disabled={pending || clientesIniciais.length === 0}
-            className="admin-v2-btn-primary text-sm sm:col-span-2 sm:justify-self-end"
+            className="admin-v2-btn-primary text-small sm:col-span-2 sm:justify-self-end"
           >
             Criar título
           </button>
         </form>
         {clientesIniciais.length === 0 ? (
-          <p className="mt-2 text-[11px] text-jl-fg-3">
+          <p className="mt-2 text-caption text-jl-fg-3">
             Cadastre um cliente em{' '}
-            <Link href={ROUTES.admin.clientes} className="text-amber-400 hover:underline">
+            <Link href={ROUTES.admin.clientes} className={LINK_MUTED}>
               Clientes
             </Link>{' '}
             antes de lançar títulos.

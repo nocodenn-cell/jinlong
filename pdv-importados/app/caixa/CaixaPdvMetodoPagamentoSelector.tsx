@@ -71,7 +71,7 @@ function CaixaPdvMetodoPagamentoSelectorImpl({
             <span
               aria-hidden
               className={cn(
-                "absolute right-1 top-1 text-[10px] font-bold tabular-nums",
+                "absolute right-1 top-1 text-caption font-bold tabular-nums",
                 selected ? "text-primary/70" : "text-jl-fg-3",
               )}
             >

@@ -33,7 +33,7 @@ export function EssencialSection({
   return (
     <section aria-labelledby="produto-secao-essencial">
       <ProdutoFormSectionHeading title={p.secao_essencial} />
-      <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_cadastro_scanner}</p>
+      <p className="mt-1 text-caption text-jl-fg-3">{p.hint_cadastro_scanner}</p>
       <div id="produto-secao-essencial" className="mt-3 space-y-3">
         <label className="block text-xs font-medium text-jl-fg-3">
           {p.codigo_barras}
@@ -52,7 +52,7 @@ export function EssencialSection({
           />
           <CampoErroMsg mensagem={erroBarras} />
           {sugestaoHint ? (
-            <span className="mt-1 block text-[10px] font-medium text-jl-accent">{sugestaoHint}</span>
+            <span className="mt-1 block text-caption font-medium text-jl-accent">{sugestaoHint}</span>
           ) : null}
         </label>
 

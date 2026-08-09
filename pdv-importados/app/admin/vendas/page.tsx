@@ -286,7 +286,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
       <SectionCard
         title={m.dashboard.vendas_hoje}
         action={
-          <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-[11px] text-jl-fg-3">
+          <span className="rounded-full border border-[var(--color-border-secondary)] bg-jl-surface-soft px-2.5 py-0.5 text-caption text-jl-fg-3">
             {vendas.length} {vendas.length === 1 ? ui.vendas_nesta_pag_sg : ui.vendas_nesta_pag_pl}
           </span>
         }
@@ -305,7 +305,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
         ) : null}
 
         {loadError ? (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] text-destructive">
+          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-small text-destructive">
             {loadError}
           </div>
         ) : null}
@@ -350,7 +350,7 @@ export default async function AdminVendasPage({ searchParams }: PageProps) {
 
         {page > 1 || hasMore ? (
           <div className="mt-4 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-jl-fg-3">{m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', '…')}</span>
+            <span className="text-caption text-jl-fg-3">{m.produtos.pag_info.replace('{{atual}}', String(page)).replace('{{total}}', '…')}</span>
             <div className="flex items-center gap-1">
               <PageLink href={pageHref(page - 1)} disabled={page <= 1}>
                 {ui.paginacao_anterior}
@@ -377,7 +377,7 @@ function PageLink({
 }) {
   if (disabled) {
     return (
-      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-3 opacity-50">
+      <span className="cursor-not-allowed rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-jl-fg-3 opacity-50">
         {children}
       </span>
     )
@@ -385,7 +385,7 @@ function PageLink({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-[11px] text-jl-fg-2 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
+      className="rounded-lg border border-[var(--color-border-secondary)] px-2.5 py-1 text-caption text-jl-fg-2 transition-colors hover:bg-jl-surface-elev hover:text-jl-fg-1"
     >
       {children}
     </Link>

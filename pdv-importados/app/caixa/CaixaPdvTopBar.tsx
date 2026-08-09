@@ -80,7 +80,7 @@ export function CaixaPdvTopBar({
         >
           金龍
         </span>
-        <span className="truncate text-[10px] font-medium uppercase tracking-[0.22em] text-jl-fg-3">
+        <span className="truncate text-caption font-medium uppercase tracking-[0.22em] text-jl-fg-3">
           Jinlong
         </span>
       </div>

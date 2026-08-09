@@ -321,7 +321,7 @@ export function ProdutosImportarModal({
           <label className="flex cursor-pointer items-center gap-2 text-xs text-jl-fg-1">
             <input
               type="checkbox"
-              className="h-3.5 w-3.5 rounded app-border app-surface-soft"
+              className="h-3.5 w-3.5 rounded border border-jl-border-1 bg-jl-surface-soft accent-[var(--color-brand)]"
               checked={atualizarPorId}
               disabled={isPending}
               onChange={(e) => setAtualizarPorId(e.target.checked)}
@@ -331,7 +331,7 @@ export function ProdutosImportarModal({
           <label className="flex cursor-pointer items-center gap-2 text-xs text-jl-fg-1">
             <input
               type="checkbox"
-              className="h-3.5 w-3.5 rounded app-border app-surface-soft"
+              className="h-3.5 w-3.5 rounded border border-jl-border-1 bg-jl-surface-soft accent-[var(--color-brand)]"
               checked={somenteErros}
               disabled={isPending}
               onChange={(e) => setSomenteErros(e.target.checked)}

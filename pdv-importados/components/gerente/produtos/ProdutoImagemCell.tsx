@@ -112,7 +112,7 @@ export function ProdutoImagemCell({
           aria-label={p.foto_remover_aria}
           title={p.foto_remover_aria}
           onClick={remover}
-          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-destructive/30 bg-jl-surface-base text-[10px] font-bold text-destructive opacity-0 shadow transition hover:bg-destructive/10 group-hover:opacity-100"
+          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-destructive/30 bg-jl-surface-base text-caption font-bold text-destructive opacity-0 shadow transition hover:bg-destructive/10 group-hover:opacity-100"
         >
           <X className="h-3 w-3" aria-hidden />
         </button>

@@ -25,6 +25,7 @@ import { mensagemErroParaUsuario } from '@/lib/errors/mensagemErroUsuario'
 import { FilterBar, type FilterDef } from '@/components/ui/FilterBar'
 import { ErrorState } from '@/components/ui/feedback'
 import { PageHeader, SectionCard } from '@/components/ui/admin-v2'
+import { CatalogoHubNav } from '@/components/ui/admin-v2/CatalogoHubNav'
 import {
   buscarProdutosComFiltros,
   listarOpcoesFiltrosProdutos,
@@ -268,6 +269,8 @@ export default async function AdminCatalogoPage({ searchParams }: PageProps) {
         subtitle={ui.catalogo_subtitulo}
         filters={headerActions}
       />
+
+      <CatalogoHubNav />
 
       <div className="mb-4 border-b border-[var(--color-border-secondary)] pb-3">
         <Suspense fallback={<div className="h-9" />}>

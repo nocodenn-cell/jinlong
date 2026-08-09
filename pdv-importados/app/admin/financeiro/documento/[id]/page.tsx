@@ -8,6 +8,7 @@ import {
   type DocumentoFiscalDetalheDoc,
   type DocumentoFiscalDetalheEvento,
 } from '@/app/gerente/financeiro/documento/[id]/DocumentoFiscalDetalheClient'
+import { FinanceiroHubNavShell, PageHeader } from '@/components/ui/admin-v2'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -50,12 +51,18 @@ export default async function AdminDocumentoFiscalPage({ params }: PageProps) {
   }))
 
   return (
-    <DocumentoFiscalDetalheClient
-      doc={doc}
-      eventos={eventos}
-      voltarLabel="Financeiro"
-      voltarHref={ROUTES.admin.financeiro}
-      locale={localeFromIdioma(session.idioma)}
-    />
+    <div className="admin-v2-page">
+      <PageHeader title="Financeiro" subtitle="Detalhe do documento na fila fiscal" />
+      <div className="admin-v2-stack">
+        <FinanceiroHubNavShell activeTab="fiscal" />
+        <DocumentoFiscalDetalheClient
+          doc={doc}
+          eventos={eventos}
+          voltarLabel="Financeiro"
+          voltarHref={ROUTES.admin.financeiro}
+          locale={localeFromIdioma(session.idioma)}
+        />
+      </div>
+    </div>
   )
 }

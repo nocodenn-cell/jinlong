@@ -33,12 +33,12 @@ const SCREENS = [
     migrated: true,
     note: 'Teste definitivo DS — movimentos + kardex',
   },
-  { id: 'financeiro', path: 'app/admin/financeiro', migrated: false },
-  { id: 'funcionarios', path: 'app/admin/funcionarios', migrated: false },
-  { id: 'configuracoes', path: 'app/admin/configuracoes', migrated: false },
-  { id: 'implantacao', path: 'app/admin/implantacao', migrated: false },
-  { id: 'provisionamento', path: 'app/admin/provisionamento', migrated: false },
-  { id: 'pdv-polish', path: 'app/caixa', migrated: false, note: 'polish final' },
+  { id: 'financeiro', path: 'app/admin/financeiro', migrated: true, note: 'UX-08 pagar; UX-10 receber tipografia DS' },
+  { id: 'funcionarios', path: 'app/admin/funcionarios', migrated: true },
+  { id: 'configuracoes', path: 'app/admin/configuracoes', migrated: true, note: 'UX-10 tipografia + alerts DS' },
+  { id: 'implantacao', path: 'app/admin/implantacao', migrated: true, note: 'UX-10 fp-control checklist' },
+  { id: 'provisionamento', path: 'app/admin/provisionamento', migrated: true, note: 'UX-10 wizard fp-control' },
+  { id: 'pdv-polish', path: 'app/caixa', migrated: true, note: 'UX-PDV-01–03 + selo text-primary' },
 ]
 
 /** Superfícies do módulo Catálogo. */

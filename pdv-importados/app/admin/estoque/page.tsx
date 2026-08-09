@@ -13,6 +13,7 @@ import {
   PageActions,
   CrudListShell,
 } from '@/components/ui/admin-v2'
+import { EstoqueHubNav } from '@/components/ui/admin-v2/EstoqueHubNav'
 import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/ui/feedback'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
@@ -203,6 +204,8 @@ export default async function AdminEstoquePage({ searchParams }: PageProps) {
           </PageActions>
         }
       />
+
+      <EstoqueHubNav />
 
       <CrudListShell
         title={ui.estoque_saldos_titulo}

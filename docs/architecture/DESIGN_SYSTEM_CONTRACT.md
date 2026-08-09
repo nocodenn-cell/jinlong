@@ -73,6 +73,18 @@ Governança: `DS_MIGRATION_GOVERNANCE.md`
 Burndown: `npm run check:ds-burndown`  
 Cobertura: `npm run check:ds-coverage`
 
+## Hubs de navegação (Sprint 6 · IDS)
+
+Telas que tratam o **mesmo domínio operacional** compartilham abas horizontais (`AdminHubTabNav` / `FinanceiroHubNav`), definidas em `lib/navigation/*HubNav.ts`. A sidebar lista só o **hub** (ex.: Catálogo, Estoque, Financeiro); taxonomias e fluxos satélite ficam nas abas — **sem** alterar rotas SSOT nem CRUD oficial.
+
+| Hub | Abas | Rotas canônicas (inalteradas) |
+|-----|------|-------------------------------|
+| Catálogo | Produtos · Categorias · Marcas | `/admin/catalogo`, `/admin/categorias-produtos`, `/admin/marcas-produtos` |
+| Estoque | Saldos · Recebimento · Transferências · NF-e · Etiquetas | `/admin/estoque/*` |
+| Financeiro | A receber · A pagar · Fila fiscal · Categorias | `/admin/financeiro?tab=*`, `/admin/categorias-financeiras` |
+
+Componentes: `CatalogoHubNav`, `EstoqueHubNav`, `FinanceiroHubNavShell` em `components/ui/admin-v2/`.
+
 ## Estados obrigatórios em todo primitivo
 
 Loading · Disabled · Error · Success · Readonly (onde aplicável) · Focus · Hover · Active

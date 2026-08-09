@@ -156,7 +156,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                 type="button"
                 onClick={() => onRemoverParcela(idx)}
                 aria-label={caixaFmt(m.caixa.aria_remover_parcela, { n: idx + 1 })}
-                className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[10px] font-semibold text-destructive transition hover:bg-destructive/20"
+                className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-caption font-semibold text-destructive transition hover:bg-destructive/20"
               >
                 ✕
               </button>
@@ -168,19 +168,19 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
                 type="button"
                 onClick={() => onAdicionarParcela()}
                 aria-label={m.caixa.aria_adicionar_parcela}
-                className="rounded-md border border-dashed border-border px-2 py-1 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+                className="rounded-md border border-dashed border-border px-2 py-1 text-small font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
               >
                 + {m.caixa.pdv_pgto_adicionar_forma}
               </button>
             ) : (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-caption text-muted-foreground">
                 {m.caixa.pdv_pgto_max_parcelas}
               </span>
             )}
             <button
               type="button"
               onClick={onAutoCompletar}
-              className="rounded-md border border-border bg-muted/60 px-2 py-1 text-[11px] font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
+              className="rounded-md border border-border bg-muted/60 px-2 py-1 text-small font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground"
             >
               {m.caixa.pdv_pgto_auto_completar}
             </button>
@@ -231,7 +231,7 @@ const PagamentoPanelImpl = forwardRef(function PagamentoPanelImpl(
           type="button"
           onClick={() => onAdicionarParcela()}
           aria-label={m.caixa.aria_adicionar_parcela}
-          className="self-start text-[11px] font-medium text-muted-foreground underline underline-offset-2 transition hover:text-foreground"
+          className="self-start text-small font-medium text-muted-foreground underline underline-offset-2 transition hover:text-foreground"
         >
           {m.caixa.pdv_pgto_dividir}
         </button>

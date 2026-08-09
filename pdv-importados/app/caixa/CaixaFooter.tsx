@@ -141,7 +141,7 @@ function CaixaFooterImpl({
               </div>
             )}
             <div className="text-right min-w-[7rem]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
+              <div className="text-small font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
                 {m.caixa.total_pagar}
               </div>
               <div
@@ -242,7 +242,7 @@ function CaixaFooterImpl({
           {/* #12: total dominante — eyebrow uppercase tracked-out + número maior
               p/ não competir com bruto/descontos (que já estão adjacentes). */}
           <div className="text-right min-w-[7rem]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
+            <div className="text-small font-semibold uppercase tracking-[0.14em] text-jl-fg-3">
               {m.caixa.total_pagar}
             </div>
             <div

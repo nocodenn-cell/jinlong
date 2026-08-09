@@ -19,7 +19,7 @@ export function CampoErroMsg({ mensagem }: Readonly<{ mensagem: string | null }>
   return (
     <span
       role="alert"
-      className="mt-1 block text-[10px] font-semibold text-[var(--color-danger-strong)]"
+      className="mt-1 block text-caption font-semibold text-[var(--color-danger-strong)]"
     >
       {mensagem}
     </span>

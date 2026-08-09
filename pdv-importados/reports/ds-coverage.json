@@ -1,9 +1,9 @@
 {
-  "asOf": "2026-07-19",
+  "asOf": "2026-08-08",
   "screens": {
     "total": 12,
-    "migrated": 6,
-    "pct": 50,
+    "migrated": 12,
+    "pct": 100,
     "list": [
       {
         "id": "login",
@@ -41,33 +41,37 @@
       {
         "id": "financeiro",
         "path": "app/admin/financeiro",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-08 pagar; UX-10 receber tipografia DS"
       },
       {
         "id": "funcionarios",
         "path": "app/admin/funcionarios",
-        "migrated": false
+        "migrated": true
       },
       {
         "id": "configuracoes",
         "path": "app/admin/configuracoes",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-10 tipografia + alerts DS"
       },
       {
         "id": "implantacao",
         "path": "app/admin/implantacao",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-10 fp-control checklist"
       },
       {
         "id": "provisionamento",
         "path": "app/admin/provisionamento",
-        "migrated": false
+        "migrated": true,
+        "note": "UX-10 wizard fp-control"
       },
       {
         "id": "pdv-polish",
         "path": "app/caixa",
-        "migrated": false,
-        "note": "polish final"
+        "migrated": true,
+        "note": "UX-PDV-01–03 + selo text-primary"
       }
     ]
   },
@@ -78,13 +82,13 @@
       "app/admin/fornecedores",
       "app/gerente/fornecedores"
     ],
-    "tsxTotal": 12,
-    "filesWithDsImport": 10,
-    "pct": 83
+    "tsxTotal": 13,
+    "filesWithDsImport": 11,
+    "pct": 85
   },
   "exclusiveComponents": {
     "objective": "tendendo a zero",
-    "total": 6,
+    "total": 8,
     "byModule": [
       {
         "id": "clientes",
@@ -93,8 +97,9 @@
       },
       {
         "id": "catalogo",
-        "count": 1,
+        "count": 2,
         "samples": [
+          "app/admin/catalogo/_components/CatalogoLoteToolbar.tsx",
           "app/admin/catalogo/_components/catalogoNovoProdutoFluxo.test-helpers.tsx"
         ]
       },
@@ -111,15 +116,17 @@
       },
       {
         "id": "estoque",
-        "count": 0,
-        "samples": []
+        "count": 1,
+        "samples": [
+          "app/gerente/recebimento/ProdutoRecebimentoAutocomplete.tsx"
+        ]
       }
     ]
   },
   "dsImports": {
-    "appTsxTotal": 159,
-    "filesWithDsImport": 78,
-    "pct": 49
+    "appTsxTotal": 166,
+    "filesWithDsImport": 90,
+    "pct": 54
   },
   "approvedExceptions": [
     {

@@ -237,7 +237,7 @@ export function CaixaReciboModal({
                 <span className="ml-1 text-amber-500" aria-hidden="true">福</span>
               </h1>
               <p className="text-muted-foreground">{fmtData(venda.data)}</p>
-              <p className="recibo-id text-muted-foreground/70 text-[10px]">
+              <p className="recibo-id text-muted-foreground/70 text-caption">
                 #{venda.vendaId.slice(0, 8).toUpperCase()}
               </p>
             </div>
@@ -292,7 +292,7 @@ export function CaixaReciboModal({
 
             {/* Pagamentos */}
             <div className="recibo-pgto flex flex-col gap-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
                 {labels.pagamento}
               </p>
               {venda.pagamentos.map((p, i) => (

@@ -123,10 +123,10 @@ export function VendaDetailSheet({
       <aside className="admin-v2-sheet relative z-10 flex h-full w-full max-w-lg flex-col">
         <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border-secondary)] px-5 py-4">
           <div className="min-w-0">
-            <h2 id="venda-detalhe-titulo" className="text-[15px] font-semibold text-jl-fg-1">
+            <h2 id="venda-detalhe-titulo" className="text-body font-semibold text-jl-fg-1">
               {labels.titulo}
             </h2>
-            <p className="mt-0.5 truncate font-mono text-[11px] text-jl-fg-3">{alvo.id}</p>
+            <p className="mt-0.5 truncate font-mono text-caption text-jl-fg-3">{alvo.id}</p>
           </div>
           <button
             type="button"
@@ -148,8 +148,8 @@ export function VendaDetailSheet({
           ) : erro || !venda ? (
             <div className="flex flex-col items-center gap-2 py-16 text-center">
               <span className="text-3xl text-jl-fg-3" aria-hidden>⚠️</span>
-              <p className="text-[13px] font-medium text-jl-fg-2">{labels.erroTitulo}</p>
-              <p className="text-[11px] text-jl-fg-3">{labels.erroSub}</p>
+              <p className="text-small font-medium text-jl-fg-2">{labels.erroTitulo}</p>
+              <p className="text-caption text-jl-fg-3">{labels.erroSub}</p>
             </div>
           ) : (
             <>
@@ -157,7 +157,7 @@ export function VendaDetailSheet({
                 {status ? (
                   <StatusBadge status={status} />
                 ) : venda.status ? (
-                  <span className="admin-v2-badge-muted inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium leading-none">
+                  <span className="admin-v2-badge-muted inline-flex items-center rounded-full px-2 py-[2px] text-caption font-medium leading-none">
                     {venda.status}
                   </span>
                 ) : null}
@@ -179,11 +179,11 @@ export function VendaDetailSheet({
                 <Linha label={labels.liquido} valor={formatBRL(venda.total_liquido)} strong />
               </div>
 
-              <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
+              <h3 className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">
                 {labels.itens} ({venda.itens.length})
               </h3>
               {venda.itens.length === 0 ? (
-                <p className="text-[12px] text-jl-fg-3">{labels.nenhumItem}</p>
+                <p className="text-small text-jl-fg-3">{labels.nenhumItem}</p>
               ) : (
                 <ul className="flex flex-col">
                   {venda.itens.map((it) => (
@@ -192,7 +192,7 @@ export function VendaDetailSheet({
                       className="flex items-start justify-between gap-3 border-t border-[var(--color-border-secondary)] py-2.5"
                     >
                       <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 truncate text-[12px] font-medium text-jl-fg-1">
+                        <p className="flex items-center gap-1.5 truncate text-small font-medium text-jl-fg-1">
                           {it.nome}
                           {venda.showPrecoFonte ? (
                             <PriceTooltip
@@ -204,7 +204,7 @@ export function VendaDetailSheet({
                             />
                           ) : null}
                         </p>
-                        <p className="font-mono text-[10px] text-jl-fg-3">
+                        <p className="font-mono text-caption text-jl-fg-3">
                           {it.codigo_barras ?? '—'} · {it.quantidade} × {formatBRL(it.preco_unitario)}
                           {it.quantidade_devolvida > 0
                             ? ` · devolvido ${it.quantidade_devolvida}`
@@ -212,7 +212,7 @@ export function VendaDetailSheet({
                           {it.desconto_unitario > 0 ? ` · desc. ${formatBRL(it.desconto_unitario)}` : ''}
                         </p>
                         {venda.showMargemVisual ? (
-                          <p className="mt-0.5 text-[10px]">
+                          <p className="mt-0.5 text-caption">
                             <MargemCell
                               precoUnitario={it.preco_unitario}
                               custoUnitarioSnap={it.custo_unitario_snap}
@@ -220,7 +220,7 @@ export function VendaDetailSheet({
                           </p>
                         ) : null}
                       </div>
-                      <span className="shrink-0 text-[12px] font-medium tabular-nums text-jl-fg-1">
+                      <span className="shrink-0 text-small font-medium tabular-nums text-jl-fg-1">
                         {formatBRL(it.subtotal)}
                       </span>
                     </li>
@@ -287,8 +287,8 @@ export function VendaDetailSheet({
 function Info({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{label}</dt>
-      <dd className="mt-0.5 truncate text-[12px] text-jl-fg-2">{children}</dd>
+      <dt className="text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{label}</dt>
+      <dd className="mt-0.5 truncate text-small text-jl-fg-2">{children}</dd>
     </div>
   )
 }
@@ -306,10 +306,10 @@ function Linha({
 }) {
   return (
     <div className="flex items-center justify-between py-0.5">
-      <span className="text-[12px] text-jl-fg-3">{label}</span>
+      <span className="text-small text-jl-fg-3">{label}</span>
       <span
         className={cn(
-          'text-[12px] tabular-nums',
+          'text-small tabular-nums',
           muted ? 'text-jl-fg-3' : 'text-jl-fg-1',
           strong && 'font-semibold',
         )}

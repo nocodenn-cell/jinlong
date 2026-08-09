@@ -11,7 +11,7 @@ function LeituraCampo({ label, value, hint }: { label: string; value: string; hi
     <div>
       <p className="text-xs font-medium text-jl-fg-3">{label}</p>
       <p className="mt-1 text-sm font-medium text-jl-fg-1">{value}</p>
-      {hint ? <p className="mt-0.5 text-[10px] text-jl-fg-3">{hint}</p> : null}
+      {hint ? <p className="mt-0.5 text-caption text-jl-fg-3">{hint}</p> : null}
     </div>
   )
 }
@@ -58,7 +58,7 @@ export function EstoqueSection({
               {/* Unidade no rótulo: sem ela o operador digita "10" sem saber se
                   são 10 unidades, 10 caixas ou 10 quilos. */}
               {p.estoque_inicial_label}{' '}
-              <span className="font-mono text-[10px] text-jl-fg-2">
+              <span className="font-mono text-caption text-jl-fg-2">
                 ({ctx.unidadeMedida})
               </span>
               <input
@@ -83,7 +83,7 @@ export function EstoqueSection({
                     : undefined
                 }
               />
-              <span className="mt-0.5 block text-[10px] text-jl-fg-3">
+              <span className="mt-0.5 block text-caption text-jl-fg-3">
                 {p.hint_estoque_inicial}
               </span>
             </label>
@@ -107,7 +107,7 @@ export function EstoqueSection({
         ) : (
           <>
             {estoqueZero ? (
-              <p className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-800">
+              <p className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-caption text-amber-800">
                 {p.aviso_estoque_zero}
               </p>
             ) : null}
@@ -128,7 +128,7 @@ export function EstoqueSection({
             </div>
             <Link
               href={ROUTES.admin.estoque}
-              className="inline-flex text-[11px] font-medium text-jl-accent hover:underline"
+              className="inline-flex text-caption font-medium text-jl-accent hover:underline"
             >
               {p.estoque_minimo_link}
             </Link>

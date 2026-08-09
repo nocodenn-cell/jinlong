@@ -5,7 +5,8 @@ import { SectionCard } from '@/components/ui/admin-v2'
 import { formatDateTimeOrDash } from '@/lib/format/datetime'
 import { ContasReceberTable, type ContaLinha, type ContasLabels } from './ContasReceberTable'
 import { FinanceiroReceberExtras } from './FinanceiroReceberExtras'
-import { FinanceiroTabNav, type FinanceiroTabId } from './FinanceiroTabNav'
+import { FinanceiroHubNavShell } from '@/components/ui/admin-v2/FinanceiroHubNavShell'
+import type { FinanceiroTabId } from './financeiroTabs'
 import { DocumentoFiscalDetailSheet } from './DocumentoFiscalDetailSheet'
 import { FiscalStubNotice } from './FiscalStubNotice'
 import { ContasPagarListClient } from '@/app/gerente/financeiro/contas-pagar/ContasPagarListClient'
@@ -65,8 +66,8 @@ function FiscalList({
         <span className="text-3xl text-jl-fg-3" aria-hidden>
           🧾
         </span>
-        <p className="text-[13px] font-medium text-jl-fg-2">{labels.filaFiscalVazioTitulo}</p>
-        <p className="text-[11px] text-jl-fg-3">{labels.filaFiscalVazioSub}</p>
+        <p className="text-subtitle font-medium text-jl-fg-2">{labels.filaFiscalVazioTitulo}</p>
+        <p className="text-caption text-jl-fg-3">{labels.filaFiscalVazioSub}</p>
       </div>
     )
   }
@@ -78,13 +79,13 @@ function FiscalList({
           <button
             type="button"
             onClick={() => onSelect(item.id)}
-            className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft px-3 py-2 text-left transition hover:bg-jl-surface-elev"
+            className="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft px-3 py-2 text-left transition hover:bg-jl-surface-elev focus-visible:outline-none focus-visible:shadow-focus"
           >
             <div>
-              <p className="text-xs font-medium text-jl-fg-1">{item.tipoDoc}</p>
-              <p className="text-[11px] text-jl-fg-3">{formatDateTimeOrDash(item.criadoEm, labels.locale)}</p>
+              <p className="text-small font-medium text-jl-fg-1">{item.tipoDoc}</p>
+              <p className="text-caption text-jl-fg-3">{formatDateTimeOrDash(item.criadoEm, labels.locale)}</p>
             </div>
-            <span className="admin-v2-badge-muted rounded-full px-2 py-1 text-[11px]">{item.status}</span>
+            <span className="admin-v2-badge-muted rounded-full px-2 py-1 text-caption">{item.status}</span>
           </button>
         </li>
       ))}
@@ -108,7 +109,7 @@ export function FinanceiroContent({
   return (
     <>
       <Suspense fallback={<div className="h-9" />}>
-        <FinanceiroTabNav activeTab={activeTab} />
+        <FinanceiroHubNavShell activeTab={activeTab} />
       </Suspense>
 
       {activeTab === 'receber' ? (

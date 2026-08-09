@@ -50,7 +50,7 @@ export function PrecosSection({
   return (
     <section aria-labelledby="produto-secao-precos">
       <ProdutoFormSectionHeading title={p.secao_precificacao} />
-      <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_precos_publicar}</p>
+      <p className="mt-1 text-caption text-jl-fg-3">{p.hint_precos_publicar}</p>
       <div id="produto-secao-precos" className="mt-3 space-y-3">
         {/* Custo e venda SEMPRE lado a lado — a margem precisa estar visível no
             momento em que o preço é digitado, não atrás de "Mais detalhes". */}
@@ -138,12 +138,12 @@ export function PrecosSection({
             </span>
           </div>
           {alerta ? (
-            <p className="mt-1 flex items-start gap-1.5 text-[11px] font-semibold">
+            <p className="mt-1 flex items-start gap-1.5 text-caption font-semibold">
               <AlertTriangle size={13} className="mt-px shrink-0" aria-hidden />
               {alerta}
             </p>
           ) : margem.tom === 'indefinida' ? (
-            <p className="mt-1 text-[10px] text-jl-fg-3">{p.margem_sem_custo}</p>
+            <p className="mt-1 text-caption text-jl-fg-3">{p.margem_sem_custo}</p>
           ) : null}
         </div>
 
@@ -159,7 +159,7 @@ export function PrecosSection({
               disabled={disabled}
               placeholder="—"
             />
-            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_atacado_faixa}</span>
+            <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_atacado_faixa}</span>
           </label>
         ) : null}
       </div>
