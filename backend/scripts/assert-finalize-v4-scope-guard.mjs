@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Assert estático (sem DB): migration 289 fecha o bypass de escopo da v4
- * e ordena depois da recriação do corpo em 274.
+ * Assert estático (sem DB): scope-guard fecha o bypass de escopo da v4
+ * e ordena depois da recriação do corpo BL-2 (ex-274).
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -10,11 +10,16 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const migrationsDir = path.join(root, 'supabase/migrations')
 const guardName = '20260809120100_finalize_v4_scope_guard.sql'
-const bodyName = '274_bl2_promocao_rpc_e_precedencia.sql'
+/** Pós-#267 o arquivo 274_* foi timestampado; aceita ambos os nomes. */
+const bodyCandidates = [
+  '274_bl2_promocao_rpc_e_precedencia.sql',
+  '20260731200700_bl2_promocao_rpc_e_precedencia.sql',
+]
 
 const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()
 const guardIdx = files.indexOf(guardName)
-const bodyIdx = files.indexOf(bodyName)
+const bodyName = bodyCandidates.find((n) => files.includes(n))
+const bodyIdx = bodyName ? files.indexOf(bodyName) : -1
 
 function fail(msg) {
   console.error(`[assert-finalize-v4-scope-guard] FAIL — ${msg}`)
@@ -22,7 +27,7 @@ function fail(msg) {
 }
 
 if (guardIdx < 0) fail(`${guardName} ausente`)
-if (bodyIdx < 0) fail(`${bodyName} ausente`)
+if (bodyIdx < 0) fail(`corpo BL-2 (274) ausente — tentou: ${bodyCandidates.join(', ')}`)
 if (guardIdx <= bodyIdx) fail(`${guardName} deve ordenar depois de ${bodyName}`)
 
 const src = fs.readFileSync(path.join(migrationsDir, guardName), 'utf8')
@@ -42,4 +47,6 @@ for (const needle of required) {
   if (!src.includes(needle)) fail(`migration não contém: ${needle}`)
 }
 
-console.log('[assert-finalize-v4-scope-guard] OK — guard 289 após 274, assinatura 21 args')
+console.log(
+  `[assert-finalize-v4-scope-guard] OK — guard após ${bodyName}, assinatura 21 args`,
+)
