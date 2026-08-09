@@ -169,6 +169,17 @@ jobs:
           AUTO_ENQUEUE_FISCAL_ON_SALE: 'true'
         run: npm run test:e2e:critical -w pdv-importados
 
+      # Harness: preservar trace.zip / error-context.md quando o E2E crítico falha.
+      - name: Upload Playwright test-results (E2E crítico)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-critical-test-results
+          path: |
+            pdv-importados/test-results/**
+          if-no-files-found: ignore
+          retention-days: 7
+
   # Deploy de produção: responsabilidade exclusiva da integração nativa da Vercel
   # (GitHub App). O job `deploy` com amondnet/vercel-action foi removido — ver
   # docs/REMEDIACAO_ETAPA1_VALIDACAO.md §2 e docs/PLANO_REMEDIACAO_CICD.md §2.

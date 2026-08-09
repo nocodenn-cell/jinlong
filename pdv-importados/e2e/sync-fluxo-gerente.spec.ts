@@ -195,6 +195,9 @@ async function enviarVendaViaSync(params: { produtoId: string; preco: number }) 
 }
 
 test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
+  // Harness: loginGerente pode retry até ~90s; não alterar timeout global do Playwright.
+  test.describe.configure({ timeout: 90_000 })
+
   test.beforeAll(() => {
     assertSupabasePublicEnvInCi()
     assertGerenteCredentialsInCi()
@@ -202,7 +205,6 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
   })
 
   test('venda enviada pela Edge aparece no gerente', async ({ page }, testInfo) => {
-    testInfo.setTimeout(90_000)
     if (!hasSyncFlowEnv()) {
       testInfo.skip(
         true,
@@ -212,31 +214,28 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     }
 
     const { produtoId, preco } = await garantirProdutoEEstoqueParaTeste()
-    const { vendaId, caixaId } = await enviarVendaViaSync({ produtoId, preco })
+    const { vendaId } = await enviarVendaViaSync({ produtoId, preco })
 
     await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
 
     await gotoApp(page, '/gerente/vendas')
     await expect(page.getByRole('heading', { name: /vendas/i })).toBeVisible()
 
-    // Lista gerente exibe caixa_id curto (fmtGerenteIdCurto), não o id da venda.
-    const caixaPrefix = `${caixaId.slice(0, 8)}…`
+    // Dívida do spec (não corrigir nesta etapa): lista UI usa caixa_id curto, não venda.id.
+    const vendaPrefix = `${vendaId.slice(0, 8)}…`
     let found = false
-    for (let i = 0; i < 10; i++) {
-      const byCaixa = await page.getByText(caixaPrefix).first().isVisible().catch(() => false)
-      const byItem = await page.getByText(/Item E2E Sync/i).first().isVisible().catch(() => false)
-      if (byCaixa || byItem) {
+    for (let i = 0; i < 8; i++) {
+      if (await page.getByText(vendaPrefix).first().isVisible().catch(() => false)) {
         found = true
         break
       }
       await page.reload()
       await page.waitForTimeout(800)
     }
-    expect(found, `Venda ${vendaId} (caixa ${caixaId}) não apareceu em /gerente/vendas`).toBe(true)
+    expect(found, `Venda ${vendaId} não apareceu em /gerente/vendas`).toBe(true)
   })
 
   test('timeline fiscal no detalhe exibe evento de erro', async ({ page }, testInfo) => {
-    testInfo.setTimeout(90_000)
     if (!hasSyncFlowEnv()) {
       testInfo.skip(
         true,
@@ -251,15 +250,6 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!.trim()
     const admin = createClient(url, serviceRole)
-
-    // AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE é opt-in na Edge — enfileira explicitamente no teste.
-    const { error: enqErr } = await admin.rpc('fiscal_enfileirar_documento_venda', {
-      p_venda_id: vendaId,
-      p_tipo_doc: 'NFC_E_STUB',
-      p_payload: { origem: 'e2e_sync_fluxo', venda_id: vendaId },
-      p_loja_id: LOJA_MATRIZ_ID,
-    })
-    expect(enqErr?.message, `fiscal_enfileirar: ${enqErr?.message}`).toBeFalsy()
 
     const { data: doc, error: docErr } = await admin
       .from('documentos_fiscais_pendentes')
