@@ -216,7 +216,8 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     const { produtoId, preco } = await garantirProdutoEEstoqueParaTeste()
     const { vendaId } = await enviarVendaViaSync({ produtoId, preco })
 
-    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
+    // Artifact CI #1100: GERENTE autentica e a app redireciona para /admin/dashboard.
+    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente|admin)/ })
 
     await gotoApp(page, '/gerente/vendas')
     await expect(page.getByRole('heading', { name: /vendas/i })).toBeVisible()
@@ -253,12 +254,12 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
 
     // Contratos distintos: workflow seta AUTO_ENQUEUE_FISCAL_ON_SALE (caixa web);
     // Edge pós-sync usa AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE (opt-in, default off).
-    // Harness do teste: enfileira via RPC (service_role) sem alterar Edge/prod.
+    // Harness: enfileira via RPC 3-arg (schema cache staging; types sem p_loja_id).
+    // Artifact CI #1101: 4-arg com p_loja_id → "not found in the schema cache".
     const { error: enqErr } = await admin.rpc('fiscal_enfileirar_documento_venda', {
       p_venda_id: vendaId,
       p_tipo_doc: 'NFC_E_STUB',
       p_payload: { origem: 'e2e_sync_fluxo', venda_id: vendaId },
-      p_loja_id: LOJA_MATRIZ_ID,
     })
     expect(enqErr?.message, `fiscal_enfileirar: ${enqErr?.message}`).toBeFalsy()
 
@@ -272,10 +273,11 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     expect(docErr?.message).toBeFalsy()
     expect(doc?.id, 'Documento fiscal não encontrado para a venda criada no teste.').toBeTruthy()
 
+    // Assinatura canônica: p_erro / p_transitorio (não p_mensagem / p_retryable).
     const { error: errRpc } = await admin.rpc('fiscal_marcar_erro', {
       p_documento_id: doc!.id,
-      p_mensagem: 'E2E_TIMELINE_ERRO',
-      p_retryable: true,
+      p_erro: 'E2E_TIMELINE_ERRO',
+      p_transitorio: true,
     })
     expect(errRpc?.message).toBeFalsy()
 
