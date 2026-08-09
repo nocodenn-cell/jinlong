@@ -251,6 +251,17 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!.trim()
     const admin = createClient(url, serviceRole)
 
+    // Contratos distintos: workflow seta AUTO_ENQUEUE_FISCAL_ON_SALE (caixa web);
+    // Edge pós-sync usa AUTO_ENQUEUE_FISCAL_ON_SYNCED_SALE (opt-in, default off).
+    // Harness do teste: enfileira via RPC (service_role) sem alterar Edge/prod.
+    const { error: enqErr } = await admin.rpc('fiscal_enfileirar_documento_venda', {
+      p_venda_id: vendaId,
+      p_tipo_doc: 'NFC_E_STUB',
+      p_payload: { origem: 'e2e_sync_fluxo', venda_id: vendaId },
+      p_loja_id: LOJA_MATRIZ_ID,
+    })
+    expect(enqErr?.message, `fiscal_enfileirar: ${enqErr?.message}`).toBeFalsy()
+
     const { data: doc, error: docErr } = await admin
       .from('documentos_fiscais_pendentes')
       .select('id')
@@ -268,7 +279,7 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     })
     expect(errRpc?.message).toBeFalsy()
 
-    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente)/ })
+    await loginGerente(page, { postLoginUrl: /\/(caixa|gerente|admin)/ })
 
     await gotoApp(page, '/gerente/financeiro')
     await expect(page.getByRole('heading', { name: /financeiro/i })).toBeVisible()
