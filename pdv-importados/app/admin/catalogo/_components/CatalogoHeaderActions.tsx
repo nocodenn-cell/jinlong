@@ -25,6 +25,10 @@ type Props = Readonly<{
   idioma: Idioma
 }>
 
+/**
+ * CTAs do Catálogo — hierarquia: Importar CSV (volume) = primary;
+ * NF-e / Exportar / Cadastro rápido = secondary.
+ */
 export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: Props) {
   const router = useRouter()
   const [importOpen, setImportOpen] = useState(false)
@@ -65,19 +69,16 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
 
   return (
     <>
-      <div className="mb-2 w-full basis-full rounded-md border border-primary/25 bg-primary/5 px-3 py-2 text-caption text-fg-muted">
-        {ui.catalogo_hint_volume}
-      </div>
       <PageActions>
-        <Button asChild variant="primary" className="gap-1.5">
+        <Button type="button" variant="primary" className="gap-1.5" onClick={() => setImportOpen(true)}>
+          <FileUp size={14} aria-hidden />
+          {m.produtos.import_modal_titulo}
+        </Button>
+        <Button asChild variant="secondary" className="gap-1.5">
           <Link href={ROUTES.admin.importNfe}>
             <Upload size={14} aria-hidden />
             {ui.catalogo_importar_nfe}
           </Link>
-        </Button>
-        <Button type="button" variant="primary" className="gap-1.5" onClick={() => setImportOpen(true)}>
-          <FileUp size={14} aria-hidden />
-          {m.produtos.import_modal_titulo}
         </Button>
         <Button
           type="button"
@@ -91,6 +92,7 @@ export function CatalogoHeaderActions({ m, ui, opcoes, filtrosExport, idioma }: 
         </Button>
         <CatalogoNovoButton
           label={m.produtos.cadastro_rapido}
+          titleHint={ui.catalogo_atalho_novo}
           m={m}
           opcoes={opcoes}
           idioma={idioma}

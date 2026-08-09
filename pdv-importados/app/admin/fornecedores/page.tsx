@@ -17,12 +17,13 @@ export default async function AdminFornecedoresPage() {
   const inicial = await buscarFornecedoresPaginadosAction(1, { status: 'todos' })
   const fornecedoresIniciais = inicial.ok ? inicial.fornecedores : []
   const hasMoreInicial = inicial.ok ? inicial.hasMore : false
+  const erroInicial = inicial.ok ? null : inicial.error
 
   return (
     <div className="admin-v2-page">
       <PageHeader
         title={m.fornecedores.titulo}
-        subtitle="Cadastro e gestão de fornecedores"
+        subtitle={m.fornecedores.subtitulo}
       />
       <Suspense fallback={<div className="h-9" aria-hidden />}>
         <CatalogoHubNav />
@@ -31,6 +32,7 @@ export default async function AdminFornecedoresPage() {
         idioma={session.idioma}
         fornecedoresIniciais={fornecedoresIniciais}
         hasMoreInicial={hasMoreInicial}
+        erroInicial={erroInicial}
       />
     </div>
   )

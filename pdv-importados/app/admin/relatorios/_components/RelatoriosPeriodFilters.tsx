@@ -1,15 +1,21 @@
 'use client'
 
-import { Download, FileSpreadsheet } from 'lucide-react'
+import Link from 'next/link'
+import { Download } from 'lucide-react'
 import { useMemo } from 'react'
+import { defaultUltimosDiasNoFuso } from '@/lib/relatorios/periodoRelatorio'
+import { ROUTES } from '@shared-core/navigation/routes'
 
 export type RelatoriosFiltrosLabels = {
   de: string
   ate: string
   aplicar: string
   exportarCsv: string
-  xlsx: string
   csvFilename: string
+  preset7: string
+  preset15: string
+  preset30: string
+  presetsAria: string
 }
 
 type RelatoriosPeriodFiltersProps = {
@@ -17,6 +23,7 @@ type RelatoriosPeriodFiltersProps = {
   ate?: string
   csvRows: Array<Record<string, string | number>>
   labels: RelatoriosFiltrosLabels
+  tab?: string
 }
 
 function escapeCsv(value: string | number): string {
@@ -43,36 +50,90 @@ function downloadCsv(filename: string, rows: Array<Record<string, string | numbe
   URL.revokeObjectURL(url)
 }
 
-export function RelatoriosPeriodFilters({ de, ate, csvRows, labels }: RelatoriosPeriodFiltersProps) {
+function presetHref(dias: number, tab?: string): string {
+  const { de, ate } = defaultUltimosDiasNoFuso(dias)
+  const q = new URLSearchParams({ de, ate })
+  if (tab && tab !== 'visao') q.set('tab', tab)
+  return `${ROUTES.admin.relatorios}?${q.toString()}`
+}
+
+function isPresetActive(dias: number, de?: string, ate?: string): boolean {
+  const preset = defaultUltimosDiasNoFuso(dias)
+  return de === preset.de && ate === preset.ate
+}
+
+export function RelatoriosPeriodFilters({
+  de,
+  ate,
+  csvRows,
+  labels,
+  tab,
+}: RelatoriosPeriodFiltersProps) {
   const deDefault = useMemo(() => de ?? '', [de])
   const ateDefault = useMemo(() => ate ?? '', [ate])
+  const presets = [
+    { dias: 7, label: labels.preset7 },
+    { dias: 15, label: labels.preset15 },
+    { dias: 30, label: labels.preset30 },
+  ] as const
 
   return (
-    <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3">
-      <label className="flex flex-col gap-1 text-[11px] text-jl-fg-3">
-        {labels.de}
-        <input name="de" type="date" defaultValue={deDefault} className="admin-v2-input px-2 py-1.5 text-xs" />
-      </label>
-      <label className="flex flex-col gap-1 text-[11px] text-jl-fg-3">
-        {labels.ate}
-        <input name="ate" type="date" defaultValue={ateDefault} className="admin-v2-input px-2 py-1.5 text-xs" />
-      </label>
-      <button type="submit" className="admin-v2-btn-primary">
-        {labels.aplicar}
-      </button>
-      <button
-        type="button"
-        className="admin-v2-btn-secondary"
-        onClick={() => downloadCsv(labels.csvFilename, csvRows)}
-        disabled={csvRows.length === 0}
+    <form
+      method="get"
+      className="sticky top-0 z-10 flex flex-col gap-3 rounded-lg border border-[var(--color-border-secondary)] bg-jl-surface-soft p-3"
+    >
+      {tab && tab !== 'visao' ? <input type="hidden" name="tab" value={tab} /> : null}
+
+      <div
+        className="admin-v2-segmented flex flex-wrap gap-1"
+        role="group"
+        aria-label={labels.presetsAria}
       >
-        <Download size={14} aria-hidden />
-        {labels.exportarCsv}
-      </button>
-      <button type="button" className="admin-v2-btn-secondary opacity-60" disabled>
-        <FileSpreadsheet size={14} aria-hidden />
-        {labels.xlsx}
-      </button>
+        {presets.map((preset) => (
+          <Link
+            key={preset.dias}
+            href={presetHref(preset.dias, tab)}
+            data-active={isPresetActive(preset.dias, de, ate)}
+            className="admin-v2-filter-pill rounded-full px-3 py-1.5 text-caption font-medium transition-colors"
+          >
+            {preset.label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1 text-caption text-jl-fg-3">
+          {labels.de}
+          <input
+            name="de"
+            type="date"
+            defaultValue={deDefault}
+            className="admin-v2-input px-2 py-1.5 text-small"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-caption text-jl-fg-3">
+          {labels.ate}
+          <input
+            name="ate"
+            type="date"
+            defaultValue={ateDefault}
+            className="admin-v2-input px-2 py-1.5 text-small"
+          />
+        </label>
+        <button type="submit" className="admin-v2-btn-primary">
+          {labels.aplicar}
+        </button>
+        <button
+          type="button"
+          className="admin-v2-btn-secondary"
+          onClick={() => downloadCsv(labels.csvFilename, csvRows)}
+          disabled={csvRows.length === 0}
+          aria-label={labels.exportarCsv}
+        >
+          <Download size={14} aria-hidden />
+          {labels.exportarCsv}
+        </button>
+      </div>
     </form>
   )
 }

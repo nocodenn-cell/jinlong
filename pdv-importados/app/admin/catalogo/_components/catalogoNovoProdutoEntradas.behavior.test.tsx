@@ -69,10 +69,23 @@ const labels = {
   inativar: 'Inativar',
   vazioTitulo: 'Nenhum produto',
   vazioSub: 'Cadastre o primeiro',
+  vazioFiltrosTitulo: 'Nenhum com filtros',
+  vazioFiltrosSub: 'Limpe os filtros',
+  limparFiltros: 'Limpar filtros',
   cadastroRapido: m.produtos.cadastro_produto,
   origemChina: 'China',
   origemBrasilNf: 'Brasil NF',
   origemBrasil: 'Brasil',
+  acaoEditar: 'Editar {{nome}}',
+  acaoDuplicar: 'Duplicar {{nome}}',
+  acaoVerEstoque: 'Ver estoque',
+  acaoSelecionarLinha: 'Selecionar {{nome}}',
+  reativar: 'Reativar',
+  inativarConfirmTitulo: 'Inativar produto',
+  inativarConfirmTexto: 'Inativar "{{nome}}"?',
+  confirmar: 'Confirmar',
+  cancelar: 'Cancelar',
+  fechar: 'Fechar',
 }
 
 let container: HTMLDivElement
@@ -104,7 +117,9 @@ function modalAberto() {
 
 describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => {
   it('entrada header (CatalogoNovoButton): salvar fecha modal e envia gatilho', async () => {
-    render(<CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} />)
+    render(
+      <CatalogoNovoButton label={m.produtos.cadastro_produto} m={m} opcoes={opcoes} idioma="pt" />,
+    )
 
     const abrir = Array.from(container.querySelectorAll('button')).find((el) =>
       el.textContent?.includes(m.produtos.cadastro_produto),
@@ -120,7 +135,7 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
   })
 
   it('entrada empty state (CatalogoTable): salvar fecha modal', async () => {
-    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} />)
+    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} idioma="pt" />)
 
     const abrir = Array.from(container.querySelectorAll('button')).find((el) =>
       el.textContent?.includes(m.produtos.cadastro_produto),
@@ -134,7 +149,7 @@ describe('Cadastro produto — entradas alinhadas ao CatalogoNovoButton', () => 
 
   it('entrada deep-link ?modal=novo (CatalogoTable): abre modal e salva', async () => {
     setMockSearchParams('modal=novo')
-    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} />)
+    render(<CatalogoTable produtos={[]} labels={labels} m={m} opcoes={opcoes} idioma="pt" />)
 
     await vi.waitFor(() => expect(modalAberto()).toBe(true))
     await preencherESalvarProdutoDemo(container, m, criarProdutoMock)

@@ -43,9 +43,12 @@ const THEMES = {
 export default function SalesTrendChart({
   data,
   variant = 'default',
+  summary,
 }: {
   data: SalesPoint[]
   variant?: keyof typeof THEMES
+  /** Alternativa textual para leitores de tela (opt-in). */
+  summary?: string
 }) {
   const [ready, setReady] = useState(false)
   const { idioma } = useIdioma()
@@ -67,35 +70,38 @@ export default function SalesTrendChart({
   }
 
   return (
-    <ChartLayoutGate>
-      <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} className={idioma === 'zh' ? 'font-noto-sc' : ''}>
-        <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={t.stop} stopOpacity={0.2} />
-            <stop offset="95%" stopColor={t.stop} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.grid} />
-        <XAxis
-          dataKey="label"
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: t.tick, fontSize: 12 }}
-        />
-        <YAxis axisLine={false} tickLine={false} tick={{ fill: t.tick, fontSize: 12 }} />
-        <Tooltip formatter={(v) => formatNumberLocale(Number(v), 'pt-BR')} />
-        <Area
-          type="monotone"
-          dataKey="total"
-          stroke={t.stroke}
-          strokeWidth={2}
-          fillOpacity={1}
-          fill={`url(#${gradId})`}
-        />
-      </AreaChart>
-      </ResponsiveContainer>
-    </ChartLayoutGate>
+    <div className="h-full w-full" role="img" aria-label={summary}>
+      {summary ? <p className="sr-only">{summary}</p> : null}
+      <ChartLayoutGate>
+        <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} className={idioma === 'zh' ? 'font-noto-sc' : ''}>
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={t.stop} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={t.stop} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={t.grid} />
+          <XAxis
+            dataKey="label"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: t.tick, fontSize: 12 }}
+          />
+          <YAxis axisLine={false} tickLine={false} tick={{ fill: t.tick, fontSize: 12 }} />
+          <Tooltip formatter={(v) => formatNumberLocale(Number(v), 'pt-BR')} />
+          <Area
+            type="monotone"
+            dataKey="total"
+            stroke={t.stroke}
+            strokeWidth={2}
+            fillOpacity={1}
+            fill={`url(#${gradId})`}
+          />
+        </AreaChart>
+        </ResponsiveContainer>
+      </ChartLayoutGate>
+    </div>
   )
 }
 

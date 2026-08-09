@@ -1,19 +1,19 @@
 'use client'
 
 /**
- * Fornecedores — listagem Admin (Catálogo Onda 5).
- * Mesmo contrato CRUD: toolbar · bulk · DataTable · empty/loading · modal.
+ * Fornecedores — listagem Admin (Catálogo Onda 5 + UX audit 2026-08).
+ * Mesmo contrato CRUD: toolbar · bulk · DataTable · empty/loading/error · modal.
  * Lógica de busca/paginação/lote preservada; chrome visual no DS.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 import { Pencil, Trash2, Plus, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox, SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/badge'
-import { EmptyState, Loading } from '@/components/ui/feedback'
+import { EmptyState, ErrorState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
 import { ConfirmActionButton } from '@/components/gerente/ConfirmActionButton'
 import { emitGerenteToast } from '@/lib/gerente/toast'
@@ -28,14 +28,20 @@ import {
   type FornecedorListRow,
 } from './actions'
 import { FornecedorEditarModal } from './FornecedorEditarModal'
+import {
+  filtrosFornecedorAtivos,
+  montarTituloContagem,
+  type StatusFiltroFornecedor,
+} from './fornecedoresListUi'
 
 type Props = Readonly<{
   idioma: Idioma
   fornecedoresIniciais: FornecedorListRow[]
   hasMoreInicial: boolean
+  erroInicial?: string | null
 }>
 
-type StatusFiltro = 'todos' | 'ativos' | 'inativos'
+type StatusFiltro = StatusFiltroFornecedor
 
 function maskCNPJ(d: string): string {
   const x = (d ?? '').replace(/\D/g, '')
@@ -58,11 +64,13 @@ export function FornecedoresListClient({
   idioma,
   fornecedoresIniciais,
   hasMoreInicial,
+  erroInicial = null,
 }: Props) {
   const m = getMessages(idioma)
   const [fornecedores, setFornecedores] = useState<FornecedorListRow[]>(fornecedoresIniciais)
   const [hasMore, setHasMore] = useState(hasMoreInicial)
   const [loading, setLoading] = useState(false)
+  const [erroLista, setErroLista] = useState<string | null>(erroInicial)
   const [termo, setTermo] = useState('')
   const [statusF, setStatusF] = useState<StatusFiltro>('todos')
   const [modalAberto, setModalAberto] = useState(false)
@@ -116,6 +124,24 @@ export function FornecedoresListClient({
 
   const skipMountRefetch = useRef(true)
 
+  const aplicarResultadoPagina = useCallback(
+    (r: Awaited<ReturnType<typeof buscarFornecedoresPaginadosAction>>) => {
+      if (!r.ok) {
+        setErroLista(r.error)
+        setFornecedores([])
+        setHasMore(false)
+        setLoading(false)
+        return
+      }
+      setErroLista(null)
+      setFornecedores(r.fornecedores)
+      setHasMore(r.hasMore)
+      setSelecionados(new Set())
+      setLoading(false)
+    },
+    [],
+  )
+
   useEffect(() => {
     if (skipMountRefetch.current) {
       skipMountRefetch.current = false
@@ -123,26 +149,35 @@ export function FornecedoresListClient({
     }
     let cancelled = false
     setLoading(true)
+    setErroLista(null)
     pageRef.current = 1
     buscarFornecedoresPaginadosAction(1, {
       termo: termoDebounced || undefined,
       status: statusFDebounced,
     }).then((r) => {
       if (cancelled) return
-      if (!r.ok) {
-        emitGerenteToast({ kind: 'error', message: r.error })
-        setLoading(false)
-        return
-      }
-      setFornecedores(r.fornecedores)
-      setHasMore(r.hasMore)
-      setSelecionados(new Set())
-      setLoading(false)
+      aplicarResultadoPagina(r)
     })
     return () => {
       cancelled = true
     }
-  }, [termoDebounced, statusFDebounced])
+  }, [termoDebounced, statusFDebounced, aplicarResultadoPagina])
+
+  async function recarregarPrimeiraPagina() {
+    setLoading(true)
+    setErroLista(null)
+    pageRef.current = 1
+    const r = await buscarFornecedoresPaginadosAction(1, {
+      termo: termoDebounced || undefined,
+      status: statusFDebounced,
+    })
+    aplicarResultadoPagina(r)
+  }
+
+  function limparFiltros() {
+    setTermo('')
+    setStatusF('todos')
+  }
 
   function abrirNovo() {
     setEmEdicao(null)
@@ -228,6 +263,7 @@ export function FornecedoresListClient({
   const idsPagina = fornecedores.map((f) => f.id)
   const todosNaPag = idsPagina.length > 0 && idsPagina.every((id) => selecionados.has(id))
   const algumNaPag = idsPagina.some((id) => selecionados.has(id))
+  const filtrosAtivos = filtrosFornecedorAtivos(termo, statusF)
 
   const headerRef = useCallback(
     (el: HTMLInputElement | null) => {
@@ -236,11 +272,23 @@ export function FornecedoresListClient({
     [algumNaPag, todosNaPag],
   )
 
+  const colHideMd = 'hidden md:table-cell'
+
   const columns: Column<FornecedorListRow>[] = [
     {
       key: 'sel',
-      header: '',
+      header: m.fornecedores.aria_selecionar_pagina,
       width: '40px',
+      headerCell: () =>
+        fornecedores.length === 0 ? null : (
+          <Checkbox
+            ref={headerRef}
+            checked={todosNaPag}
+            onChange={togglePagina}
+            aria-label={m.fornecedores.aria_selecionar_pagina}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
       cell: (f) => (
         <Checkbox
           checked={selecionados.has(f.id)}
@@ -289,11 +337,15 @@ export function FornecedoresListClient({
       key: 'tel',
       header: m.fornecedores.col_telefone,
       priority: 'contextual',
+      headerClassName: colHideMd,
+      className: colHideMd,
       cell: (f) => <span className="tabular-nums text-caption">{maskTel(f.telefone)}</span>,
     },
     {
       key: 'email',
       header: m.fornecedores.col_email,
+      headerClassName: colHideMd,
+      className: colHideMd,
       cell: (f) =>
         f.email ? (
           <a
@@ -327,11 +379,82 @@ export function FornecedoresListClient({
   ]
 
   const statusOptions: StatusFiltro[] = ['todos', 'ativos', 'inativos']
+  const tituloLista = montarTituloContagem(fornecedores.length, hasMore, {
+    mostrando: m.fornecedores.mostrando,
+    ha_mais: m.fornecedores.ha_mais,
+  })
+
+  const emptyState = filtrosAtivos ? (
+    <EmptyState
+      title={m.fornecedores.vazio_filtrado_titulo}
+      description={m.fornecedores.vazio_filtrado_sub}
+      actionLabel={m.comum.limpar_filtros}
+      onAction={limparFiltros}
+    />
+  ) : (
+    <EmptyState
+      title={m.fornecedores.vazio_titulo}
+      description={m.fornecedores.vazio_sub}
+      actionLabel={m.fornecedores.novo}
+      onAction={abrirNovo}
+    />
+  )
+
+  let listBody: ReactNode
+  if (loading && fornecedores.length === 0) {
+    listBody = <Loading label={m.comum.carregando} className="min-h-0 py-16" size="sm" />
+  } else if (erroLista && fornecedores.length === 0) {
+    listBody = (
+      <ErrorState
+        title={m.fornecedores.erro_titulo}
+        description={m.fornecedores.erro_descricao}
+        retryLabel={m.fornecedores.tentar_novamente}
+        onRetry={() => void recarregarPrimeiraPagina()}
+        className="m-4"
+      />
+    )
+  } else {
+    listBody = (
+      <DataTable
+        columns={columns}
+        data={fornecedores}
+        rowKey={(f) => f.id}
+        loading={loading && fornecedores.length > 0}
+        onRowClick={abrirEditar}
+        emptyState={emptyState}
+        rowActions={(f) => (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => abrirEditar(f)}
+              aria-label={`${m.fornecedores.editar} — ${f.nome}`}
+              title={m.fornecedores.editar}
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden />
+            </Button>
+            <ConfirmActionButton
+              type="button"
+              confirmMessage={`${m.fornecedores.confirmar_exclusao} "${f.nome}"?`}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-control text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
+              onClick={() => void onExcluir(f)}
+              aria-label={`${m.fornecedores.excluir} — ${f.nome}`}
+              title={m.fornecedores.excluir}
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            </ConfirmActionButton>
+          </div>
+        )}
+        className="rounded-none border-x-0 border-b-0"
+      />
+    )
+  }
 
   return (
     <>
       <CrudListShell
-        title={`${fornecedores.length} ${m.fornecedores.contagem}`}
+        title={tituloLista}
         toolbar={
           <>
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -347,6 +470,7 @@ export function FornecedoresListClient({
               <div
                 className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
                 role="group"
+                aria-label={m.fornecedores.col_status}
               >
                 {statusOptions.map((s) => (
                   <button
@@ -365,6 +489,11 @@ export function FornecedoresListClient({
                   </button>
                 ))}
               </div>
+              {filtrosAtivos ? (
+                <Button type="button" size="sm" variant="ghost" onClick={limparFiltros}>
+                  {m.comum.limpar_filtros}
+                </Button>
+              ) : null}
             </div>
             <PageActions>
               <Button type="button" variant="primary" onClick={abrirNovo} className="gap-1.5">
@@ -400,60 +529,7 @@ export function FornecedoresListClient({
         }
         footer={<div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
       >
-        <div className="mb-2 flex items-center gap-2 px-1">
-          <Checkbox
-            ref={headerRef}
-            checked={todosNaPag}
-            onChange={togglePagina}
-            disabled={fornecedores.length === 0}
-            aria-label={m.fornecedores.aria_selecionar_pagina}
-          />
-          <span className="text-caption text-fg-subtle">{m.fornecedores.aria_selecionar_pagina}</span>
-        </div>
-
-        {loading && fornecedores.length === 0 ? (
-          <Loading label={m.comum.carregando} className="min-h-0 py-16" size="sm" />
-        ) : (
-          <DataTable
-            columns={columns}
-            data={fornecedores}
-            rowKey={(f) => f.id}
-            loading={loading && fornecedores.length > 0}
-            emptyState={
-              <EmptyState
-                title={m.fornecedores.vazio_titulo}
-                description={m.fornecedores.vazio_sub}
-                actionLabel={m.fornecedores.novo}
-                onAction={abrirNovo}
-              />
-            }
-            rowActions={(f) => (
-              <div className="flex items-center justify-end gap-1">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => abrirEditar(f)}
-                  aria-label={`${m.fornecedores.editar} — ${f.nome}`}
-                  title={m.fornecedores.editar}
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden />
-                </Button>
-                <ConfirmActionButton
-                  type="button"
-                  confirmMessage={`${m.fornecedores.confirmar_exclusao} "${f.nome}"?`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-control text-[var(--color-danger-strong)] hover:bg-[var(--color-danger-bg)]"
-                  onClick={() => void onExcluir(f)}
-                  aria-label={`${m.fornecedores.excluir} — ${f.nome}`}
-                  title={m.fornecedores.excluir}
-                >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                </ConfirmActionButton>
-              </div>
-            )}
-            className="rounded-none border-x-0 border-b-0"
-          />
-        )}
+        {listBody}
       </CrudListShell>
 
       {modalAberto && (

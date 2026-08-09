@@ -38,6 +38,7 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [categoriaModal, setCategoriaModal] = useState(false)
+  const [inativarModal, setInativarModal] = useState(false)
   const [categoriaId, setCategoriaId] = useState('')
 
   if (ids.length === 0) return null
@@ -114,12 +115,7 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
           disabled={pending}
           title={p.lote_inativar_title}
           aria-label={p.lote_inativar_aria}
-          onClick={() =>
-            run(async () => {
-              const r = await alterarAtivoLoteProdutos(alvo, false)
-              return r.success ? { success: true } : { success: false, error: r.error }
-            }, m.comum.sucesso)
-          }
+          onClick={() => setInativarModal(true)}
         >
           <ToggleLeft size={14} aria-hidden />
           {p.lote_inativar}
@@ -165,6 +161,52 @@ export function CatalogoLoteToolbar({ ids, m, ui, opcoes, onLimpar, onExcluir }:
           {ui.catalogo_lote_limpar}
         </Button>
       </div>
+
+      <DragonModal
+        open={inativarModal}
+        onClose={() => {
+          if (!pending) setInativarModal(false)
+        }}
+        variant="danger"
+        size="sm"
+        icon={ToggleLeft}
+        title={ui.catalogo_lote_inativar_confirm_titulo}
+        dismissable={!pending}
+        closeLabel={m.comum.fechar}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={pending}
+              onClick={() => setInativarModal(false)}
+            >
+              {m.comum.cancelar}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={pending}
+              loading={pending}
+              onClick={() => {
+                setInativarModal(false)
+                run(async () => {
+                  const r = await alterarAtivoLoteProdutos(alvo, false)
+                  return r.success ? { success: true } : { success: false, error: r.error }
+                }, m.comum.sucesso)
+              }}
+            >
+              {m.comum.confirmar}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body text-fg-muted">
+          {interpolateTemplate(ui.catalogo_lote_inativar_confirm_texto, {
+            n: String(ids.length),
+          })}
+        </p>
+      </DragonModal>
 
       <DragonModal
         open={categoriaModal}

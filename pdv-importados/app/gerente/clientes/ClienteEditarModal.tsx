@@ -340,9 +340,8 @@ export function ClienteEditarModal({
                 aria-describedby={erros.consentimento_lgpd ? 'err-lgpd' : undefined}
                 className="mt-0.5"
               />
-              <span className="select-none text-caption leading-relaxed text-fg-subtle">
-                Confirmo que os dados pessoais acima foram coletados com o consentimento do titular
-                em conformidade com a LGPD.
+              <span className="select-none text-caption leading-relaxed text-fg-muted">
+                {m.clientes.lgpd_consentimento}
                 <span className="ml-0.5 text-brand">*</span>
               </span>
             </label>

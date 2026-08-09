@@ -1,10 +1,12 @@
 export type DashboardPeriod = 'TODAY' | '7D' | '30D'
 export type DashboardStatus = 'ALL' | 'CONCLUIDA' | 'CANCELADA'
 
+/** Default alinhado ao FilterBar do dashboard (`defaultValue: 'TODAY'`). */
 export function normalizePeriod(raw?: string): DashboardPeriod {
-  if (raw === 'TODAY') return 'TODAY'
+  if (raw === '7D') return '7D'
   if (raw === '30D') return '30D'
-  return '7D'
+  if (raw === 'TODAY') return 'TODAY'
+  return 'TODAY'
 }
 
 export function normalizeStatus(raw?: string): DashboardStatus {
@@ -35,12 +37,32 @@ export function getPeriodRange(period: DashboardPeriod, now = new Date()) {
   return { start, end, previousStart, previousEnd }
 }
 
-export function formatTrendPercent(current: number, previous: number) {
+export type TrendPercent = {
+  up: boolean
+  label: string
+  /** Sem baseline anterior — não tratar como alta/baixa. */
+  neutral?: boolean
+}
+
+type TrendLabels = {
+  newLabel: string
+  flatLabel: string
+}
+
+/**
+ * Variação percentual. Sem período anterior comparável: "novo" ou flat (—),
+ * nunca +100% artificial.
+ */
+export function formatTrendPercent(
+  current: number,
+  previous: number,
+  labels?: TrendLabels,
+): TrendPercent {
   if (previous <= 0) {
-    return {
-      up: current >= 0,
-      label: current > 0 ? '+100%' : '0%',
+    if (current > 0) {
+      return { up: true, label: labels?.newLabel ?? 'novo', neutral: true }
     }
+    return { up: true, label: labels?.flatLabel ?? '0%', neutral: true }
   }
   const pct = ((current - previous) / previous) * 100
   const rounded = Math.abs(Math.round(pct * 10) / 10).toFixed(1)
@@ -54,3 +76,9 @@ export function dateKey(date: Date) {
   return date.toISOString().slice(0, 10)
 }
 
+/** Prefixo curto de UUID/id para tabela; valor completo fica no title. */
+export function shortOrderId(id: string, keep = 8): string {
+  const trimmed = id.trim()
+  if (trimmed.length <= keep) return trimmed
+  return `${trimmed.slice(0, keep)}…`
+}

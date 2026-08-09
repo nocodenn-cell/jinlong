@@ -61,22 +61,38 @@ type PaymentDonutChartRechartsProps = {
   total: number
   noDataLabel: string
   distributionLabel: string
+  /** Alternativa textual (opt-in). */
+  summary?: string
 }
 
 /** Donut recharts — carregado via PaymentDonutChartLazy no dashboard. */
-export default function PaymentDonutChartRecharts({ data, total, noDataLabel, distributionLabel }: PaymentDonutChartRechartsProps) {
+export default function PaymentDonutChartRecharts({
+  data,
+  total,
+  noDataLabel,
+  distributionLabel,
+  summary,
+}: PaymentDonutChartRechartsProps) {
   const hasData = data.some((entry) => entry.value > 0)
 
   if (!hasData) {
     return (
-      <div className="flex h-full items-center justify-center rounded-md border border-dashed border-jl-border-1 bg-jl-surface-soft px-4 text-center text-sm text-jl-fg-3">
+      <div
+        role="status"
+        className="flex h-full items-center justify-center rounded-md border border-dashed border-jl-border-1 bg-jl-surface-soft px-4 text-center text-sm text-jl-fg-3"
+      >
         {noDataLabel}
       </div>
     )
   }
 
+  const legendSummary =
+    summary ??
+    `${distributionLabel}: ${data.map((entry) => `${entry.name} ${formatBRL(entry.value)}`).join('; ')}`
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" role="img" aria-label={legendSummary}>
+      <p className="sr-only">{legendSummary}</p>
       <div className="mb-3 flex items-end justify-between">
         <p className="text-xs text-jl-fg-3">{distributionLabel}</p>
         <p className="text-xs font-medium text-[var(--color-chart-gold)]">{formatBRL(total)}</p>

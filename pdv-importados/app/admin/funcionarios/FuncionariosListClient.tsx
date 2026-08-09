@@ -1,11 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Plus, Pencil, UserX, UserCheck } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { Input, Select } from '@/components/ui/forms'
-import { CrudListShell } from '@/components/ui/admin-v2'
+import { EmptyState } from '@/components/ui/feedback'
+import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
@@ -13,7 +16,15 @@ import {
   type FuncionarioListRow,
 } from './actions'
 import { FuncionarioEditarModal, type FuncionarioModalLabels } from './FuncionarioEditarModal'
-import { podeDesativarAlvo, podeEditarAlvo } from './funcionarioPolicies'
+import { FuncionarioRowActions } from './FuncionarioRowActions'
+import { podeDesativarAlvo } from './funcionarioPolicies'
+import {
+  agruparFuncionarios,
+  isTypingTarget,
+  motivoBloqueioEditar,
+  motivoBloqueioToggle,
+  type FuncionarioGrupoId,
+} from './funcionarioUi'
 
 export type FuncionariosListLabels = {
   contagem: string
@@ -22,12 +33,15 @@ export type FuncionariosListLabels = {
   colNome: string
   colEmail: string
   colPerfil: string
-  colIdioma: string
   colStatus: string
   colAcoes: string
   ativo: string
   inativo: string
-  vazio: string
+  vazioTitulo: string
+  vazioSub: string
+  vazioBuscaTitulo: string
+  vazioBuscaSub: string
+  limparFiltros: string
   ativar: string
   desativar: string
   editar: string
@@ -35,9 +49,25 @@ export type FuncionariosListLabels = {
   perfilGerente: string
   perfilDono: string
   perfilAdmin: string
+  filtroStatusLabel: string
   filtroTodos: string
   filtroAtivos: string
   filtroInativos: string
+  confirmarDesativar: string
+  confirmarReativar: string
+  confirmarTituloDesativar: string
+  confirmarTituloReativar: string
+  confirmarAcao: string
+  somenteLeitura: string
+  bloqueioDonoAdmin: string
+  bloqueioSemPermissao: string
+  bloqueioSiMesmo: string
+  atalhoBusca: string
+  atalhoNovo: string
+  grupoEquipe: string
+  grupoEquipeSub: string
+  grupoProtegido: string
+  grupoProtegidoSub: string
   modal: FuncionarioModalLabels
 }
 
@@ -48,6 +78,8 @@ type Props = {
   labels: FuncionariosListLabels
 }
 
+type StatusFiltro = 'todos' | 'ativos' | 'inativos'
+
 function labelPerfil(perfil: string, L: FuncionariosListLabels): string {
   if (perfil === 'OPERADOR') return L.perfilOperador
   if (perfil === 'GERENTE') return L.perfilGerente
@@ -56,13 +88,39 @@ function labelPerfil(perfil: string, L: FuncionariosListLabels): string {
   return perfil
 }
 
+function perfilBadgeClass(perfil: string): string {
+  if (perfil === 'OPERADOR') {
+    return 'border border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-brand'
+  }
+  if (perfil === 'GERENTE') {
+    return 'border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-strong)]'
+  }
+  return 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-subtle'
+}
+
+function statusBadgeClass(ativo: boolean): string {
+  return ativo
+    ? 'border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-strong)]'
+    : 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-subtle'
+}
+
+function grupoTitulo(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
+  return id === 'equipe' ? L.grupoEquipe : L.grupoProtegido
+}
+
+function grupoSub(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
+  return id === 'equipe' ? L.grupoEquipeSub : L.grupoProtegidoSub
+}
+
 export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L }: Props) {
   const [rows, setRows] = useState(iniciais)
   const [termo, setTermo] = useState('')
-  const [statusF, setStatusF] = useState<'todos' | 'ativos' | 'inativos'>('todos')
+  const [statusF, setStatusF] = useState<StatusFiltro>('todos')
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<FuncionarioListRow | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [confirmRow, setConfirmRow] = useState<FuncionarioListRow | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const filtrados = useMemo(() => {
     const q = termo.trim().toLowerCase()
@@ -73,18 +131,43 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       return (
         r.nome.toLowerCase().includes(q) ||
         (r.email ?? '').toLowerCase().includes(q) ||
-        r.perfil.toLowerCase().includes(q)
+        r.perfil.toLowerCase().includes(q) ||
+        labelPerfil(r.perfil, L).toLowerCase().includes(q)
       )
     })
-  }, [rows, termo, statusF])
+  }, [rows, termo, statusF, L])
 
+  const grupos = useMemo(() => agruparFuncionarios(filtrados), [filtrados])
+  const temFiltroAtivo = termo.trim().length > 0 || statusF !== 'todos'
   const ator = { id: atorId, perfil: atorPerfil }
+  const statusOptions: StatusFiltro[] = ['todos', 'ativos', 'inativos']
+  const confirmBusy = !!confirmRow && busyId === confirmRow.id
+
+  function abrirNovo() {
+    setEmEdicao(null)
+    setModalAberto(true)
+  }
+
+  function abrirEditar(row: FuncionarioListRow) {
+    const bloqueio = motivoBloqueioEditar(ator, row, L)
+    if (bloqueio) {
+      emitGerenteToast({ kind: 'error', message: bloqueio })
+      return
+    }
+    setEmEdicao(row)
+    setModalAberto(true)
+  }
+
+  function limparFiltros() {
+    setTermo('')
+    setStatusF('todos')
+  }
 
   async function toggleAtivo(row: FuncionarioListRow) {
     if (!podeDesativarAlvo(ator, row)) {
       emitGerenteToast({
         kind: 'error',
-        message: row.ativo ? 'Não é possível desativar esta conta.' : 'Não é possível reativar esta conta.',
+        message: motivoBloqueioToggle(ator, row, L) ?? L.bloqueioSemPermissao,
       })
       return
     }
@@ -96,125 +179,286 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
         return
       }
       setRows((cur) => cur.map((x) => (x.id === row.id ? { ...x, ativo: r.data.ativo } : x)))
+      setConfirmRow(null)
     } finally {
       setBusyId(null)
     }
   }
 
-  const columns: Column<FuncionarioListRow>[] = useMemo(
-    () => [
-      { key: 'nome', header: L.colNome, cell: (row) => <span className="font-medium">{row.nome}</span> },
-      { key: 'email', header: L.colEmail, cell: (row) => row.email ?? '—' },
-      {
-        key: 'perfil',
-        header: L.colPerfil,
-        cell: (row) => labelPerfil(row.perfil, L),
-      },
-      {
-        key: 'idioma',
-        header: L.colIdioma,
-        width: '80px',
-        cell: (row) => <span className="uppercase">{row.idioma_preferido}</span>,
-      },
-      {
-        key: 'status',
-        header: L.colStatus,
-        width: '100px',
-        cell: (row) => (
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-caption font-medium',
-              row.ativo ? 'bg-emerald-500/15 text-emerald-700' : 'bg-jl-surface-soft text-jl-fg-3',
-            )}
-          >
-            {row.ativo ? L.ativo : L.inativo}
-          </span>
-        ),
-      },
-    ],
-    [L],
-  )
+  function pedirToggle(row: FuncionarioListRow) {
+    const bloqueio = motivoBloqueioToggle(ator, row, L)
+    if (bloqueio) {
+      emitGerenteToast({ kind: 'error', message: bloqueio })
+      return
+    }
+    setConfirmRow(row)
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (modalAberto || confirmRow) return
+      if (e.key === '/' && !isTypingTarget(e.target)) {
+        e.preventDefault()
+        searchRef.current?.focus()
+        return
+      }
+      if ((e.key === 'n' || e.key === 'N') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (isTypingTarget(e.target)) return
+        e.preventDefault()
+        setEmEdicao(null)
+        setModalAberto(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [modalAberto, confirmRow])
+
+  const filtroLabel = (s: StatusFiltro) => {
+    if (s === 'ativos') return L.filtroAtivos
+    if (s === 'inativos') return L.filtroInativos
+    return L.filtroTodos
+  }
+
+  const columns: Column<FuncionarioListRow>[] = [
+    {
+      key: 'nome',
+      header: L.colNome,
+      priority: 'primary',
+      sortValue: (row) => row.nome.toLocaleLowerCase(),
+      cell: (row) => (
+        <span className={cn('font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</span>
+      ),
+    },
+    {
+      key: 'email',
+      header: L.colEmail,
+      sortValue: (row) => (row.email ?? '').toLocaleLowerCase(),
+      cell: (row) => <span className="text-caption text-fg-muted">{row.email ?? '—'}</span>,
+    },
+    {
+      key: 'perfil',
+      header: L.colPerfil,
+      width: '120px',
+      sortValue: (row) => labelPerfil(row.perfil, L),
+      cell: (row) => (
+        <Badge className={perfilBadgeClass(row.perfil)}>{labelPerfil(row.perfil, L)}</Badge>
+      ),
+    },
+    {
+      key: 'status',
+      header: L.colStatus,
+      width: '100px',
+      sortValue: (row) => (row.ativo ? 1 : 0),
+      cell: (row) => (
+        <Badge className={statusBadgeClass(row.ativo)}>{row.ativo ? L.ativo : L.inativo}</Badge>
+      ),
+    },
+  ]
+
+  const emptyState =
+    rows.length === 0 ? (
+      <EmptyState
+        title={L.vazioTitulo}
+        description={L.vazioSub}
+        actionLabel={L.novo}
+        onAction={abrirNovo}
+      />
+    ) : (
+      <EmptyState
+        title={L.vazioBuscaTitulo}
+        description={L.vazioBuscaSub}
+        actionLabel={temFiltroAtivo ? L.limparFiltros : undefined}
+        onAction={temFiltroAtivo ? limparFiltros : undefined}
+      />
+    )
+
+  const actionsProps = {
+    ator,
+    labels: L,
+    onEditar: abrirEditar,
+    onToggle: pedirToggle,
+  }
+
+  const confirmTitle = confirmRow
+    ? confirmRow.ativo
+      ? L.confirmarTituloDesativar
+      : L.confirmarTituloReativar
+    : ''
+  const confirmBody = confirmRow
+    ? (confirmRow.ativo ? L.confirmarDesativar : L.confirmarReativar).replace(
+        '{nome}',
+        confirmRow.nome,
+      )
+    : ''
 
   return (
     <>
       <CrudListShell
-        meta={<span className="text-caption text-fg-subtle">{`${filtrados.length} ${L.contagem}`}</span>}
+        title={`${filtrados.length} ${L.contagem}`}
         toolbar={
           <>
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <Input
-                type="search"
-                value={termo}
-                onChange={(e) => setTermo(e.target.value)}
-                placeholder={L.buscaPlaceholder}
-                aria-label={L.buscaPlaceholder}
-                className="min-w-[220px] flex-1"
-              />
-              <Select
-                value={statusF}
-                onChange={(e) => setStatusF(e.target.value as typeof statusF)}
-                aria-label={L.filtroTodos}
-                className="min-w-[140px]"
-              >
-                <option value="todos">{L.filtroTodos}</option>
-                <option value="ativos">{L.filtroAtivos}</option>
-                <option value="inativos">{L.filtroInativos}</option>
-              </Select>
+              <div className="min-w-[200px] max-w-[420px] flex-1">
+                <SearchInput
+                  ref={searchRef}
+                  value={termo}
+                  onChange={(e) => setTermo(e.target.value)}
+                  placeholder={L.buscaPlaceholder}
+                  aria-label={`${L.buscaPlaceholder} (${L.atalhoBusca})`}
+                  title={L.atalhoBusca}
+                  controlSize="sm"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-caption font-medium text-fg-muted">{L.filtroStatusLabel}</span>
+                <div
+                  className="inline-flex items-center gap-0.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-0.5"
+                  role="group"
+                  aria-label={L.filtroStatusLabel}
+                >
+                  {statusOptions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setStatusF(s)}
+                      aria-pressed={statusF === s}
+                      className={cn(
+                        'fp-focus-ring rounded-sm px-2.5 py-1 text-caption font-medium',
+                        statusF === s
+                          ? 'bg-[var(--color-info-bg)] text-brand'
+                          : 'text-fg-subtle hover:text-fg',
+                      )}
+                    >
+                      {filtroLabel(s)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                setEmEdicao(null)
-                setModalAberto(true)
-              }}
-            >
-              <Plus className="mr-1 h-4 w-4" aria-hidden />
-              {L.novo}
-            </Button>
+            <PageActions>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={abrirNovo}
+                className="gap-1.5"
+                title={L.atalhoNovo}
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                {L.novo}
+              </Button>
+            </PageActions>
           </>
         }
       >
-        <DataTable
-          columns={columns}
-          data={filtrados}
-          rowKey={(row) => row.id}
-          compact
-          emptyTitle={L.vazio}
-          rowActions={(row) => {
-            const podeEditar = podeEditarAlvo(ator, row)
-            const podeToggle = podeDesativarAlvo(ator, row)
-            return (
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={!podeEditar}
-                  title={L.editar}
-                  aria-label={L.editar}
-                  onClick={() => {
-                    setEmEdicao(row)
-                    setModalAberto(true)
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={!podeToggle || busyId === row.id}
-                  title={row.ativo ? L.desativar : L.ativar}
-                  aria-label={row.ativo ? L.desativar : L.ativar}
-                  onClick={() => void toggleAtivo(row)}
-                >
-                  {row.ativo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                </Button>
-              </div>
-            )
-          }}
-        />
+        {filtrados.length === 0 ? (
+          emptyState
+        ) : (
+          <>
+            <div className="hidden space-y-6 md:block">
+              {grupos.map((grupo) => (
+                <section key={grupo.id} className="space-y-2">
+                  <header className="px-1">
+                    <h3 className="text-small font-semibold text-fg">
+                      {grupoTitulo(grupo.id, L)}
+                      <span className="ml-2 text-caption font-normal text-fg-subtle">
+                        {grupo.rows.length}
+                      </span>
+                    </h3>
+                    <p className="text-caption text-fg-subtle">{grupoSub(grupo.id, L)}</p>
+                  </header>
+                  <DataTable
+                    columns={columns}
+                    data={grupo.rows}
+                    rowKey={(row) => row.id}
+                    compact
+                    stickyHeader
+                    onRowClick={abrirEditar}
+                    rowActions={(row) => (
+                      <FuncionarioRowActions
+                        row={row}
+                        busy={busyId === row.id}
+                        compactLabels
+                        {...actionsProps}
+                      />
+                    )}
+                    className="rounded-none border-x-0 border-b-0"
+                  />
+                </section>
+              ))}
+            </div>
+
+            <div className="space-y-5 md:hidden">
+              {grupos.map((grupo) => (
+                <section key={grupo.id} className="space-y-2">
+                  <header>
+                    <h3 className="text-small font-semibold text-fg">
+                      {grupoTitulo(grupo.id, L)}
+                      <span className="ml-2 text-caption font-normal text-fg-subtle">
+                        {grupo.rows.length}
+                      </span>
+                    </h3>
+                    <p className="text-caption text-fg-subtle">{grupoSub(grupo.id, L)}</p>
+                  </header>
+                  <ul className="flex flex-col gap-2">
+                    {grupo.rows.map((row) => {
+                      const bloqueio = motivoBloqueioEditar(ator, row, L)
+                      return (
+                        <li key={row.id}>
+                          <article
+                            className={cn(
+                              'rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3',
+                              !bloqueio && 'fp-focus-ring cursor-pointer hover:bg-[var(--color-surface-soft)]',
+                              !row.ativo && 'opacity-80',
+                            )}
+                            tabIndex={bloqueio ? undefined : 0}
+                            role={bloqueio ? undefined : 'button'}
+                            aria-label={
+                              bloqueio
+                                ? `${row.nome} — ${bloqueio}`
+                                : `${L.editar} — ${row.nome}`
+                            }
+                            onClick={() => {
+                              if (!bloqueio) abrirEditar(row)
+                            }}
+                            onKeyDown={(e) => {
+                              if (bloqueio) return
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                abrirEditar(row)
+                              }
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-fg">{row.nome}</p>
+                                <p className="truncate text-caption text-fg-muted">
+                                  {row.email ?? '—'}
+                                </p>
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  <Badge className={perfilBadgeClass(row.perfil)}>
+                                    {labelPerfil(row.perfil, L)}
+                                  </Badge>
+                                  <Badge className={statusBadgeClass(row.ativo)}>
+                                    {row.ativo ? L.ativo : L.inativo}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <FuncionarioRowActions
+                                row={row}
+                                busy={busyId === row.id}
+                                {...actionsProps}
+                              />
+                            </div>
+                          </article>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </>
+        )}
       </CrudListShell>
 
       {modalAberto ? (
@@ -236,6 +480,43 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
             })
           }}
         />
+      ) : null}
+
+      {confirmRow ? (
+        <DragonModal
+          open
+          onClose={() => {
+            if (!confirmBusy) setConfirmRow(null)
+          }}
+          title={confirmTitle}
+          variant={confirmRow.ativo ? 'danger' : 'default'}
+          icon={AlertTriangle}
+          size="sm"
+          dismissable={!confirmBusy}
+          data-testid="funcionario-confirm-toggle"
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={confirmBusy}
+                onClick={() => setConfirmRow(null)}
+              >
+                {L.modal.cancelar}
+              </Button>
+              <Button
+                type="button"
+                variant={confirmRow.ativo ? 'danger' : 'primary'}
+                disabled={confirmBusy}
+                onClick={() => void toggleAtivo(confirmRow)}
+              >
+                {confirmBusy ? L.modal.salvando : L.confirmarAcao}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-body text-fg-muted">{confirmBody}</p>
+        </DragonModal>
       ) : null}
     </>
   )

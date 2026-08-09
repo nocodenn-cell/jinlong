@@ -81,6 +81,11 @@ const legacyAdminUi = {
       cn: '此筛选条件下没有订单。',
       pt: 'Nenhum pedido encontrado para este filtro.',
     } satisfies BilingualLine,
+    tableEmptyDescription: {
+      cn: '调整时间范围，或前往销售页查看完整历史。',
+      pt: 'Ajuste o período ou abra Vendas para ver o histórico completo.',
+    } satisfies BilingualLine,
+    openOrdersAria: { cn: '打开销售页', pt: 'Abrir página de vendas' } satisfies BilingualLine,
     footer: {
       cn: '生意兴隆 · 财源广进',
       pt: 'Prosperidade nos negócios',
@@ -88,9 +93,34 @@ const legacyAdminUi = {
     metricTotalSales: { cn: '总销售额', pt: 'Vendas totais no período' } satisfies BilingualLine,
     metricOrders: { cn: '订单量', pt: 'Pedidos registrados' } satisfies BilingualLine,
     metricTicket: { cn: '客单价', pt: 'Ticket médio' } satisfies BilingualLine,
-    metricStock: { cn: '库存预警', pt: 'Alertas de estoque baixo' } satisfies BilingualLine,
+    metricStock: { cn: '库存预警', pt: 'Estoque baixo' } satisfies BilingualLine,
+    metricStockHint: { cn: '点击查看库存', pt: 'Clique para abrir Estoque' } satisfies BilingualLine,
+    trendNew: { cn: '新增', pt: 'novo' } satisfies BilingualLine,
     trendStockOk: { cn: '正常', pt: 'OK' } satisfies BilingualLine,
     trendStockWarn: { cn: '注意', pt: 'Atenção' } satisfies BilingualLine,
+    sparkTrendAria: { cn: '期间趋势图', pt: 'Sparkline de tendência no período' } satisfies BilingualLine,
+    chartEmpty: { cn: '本期暂无销售数据。', pt: 'Sem vendas no período selecionado.' } satisfies BilingualLine,
+    hourlyChartEmpty: {
+      cn: '本期暂无按小时数据。',
+      pt: 'Sem faturamento por hora no período.',
+    } satisfies BilingualLine,
+    lowStockEmpty: {
+      cn: '当前没有低于最低库存的商品。',
+      pt: 'Nenhum item abaixo do mínimo recomendado.',
+    } satisfies BilingualLine,
+    lowStockCta: { cn: '查看库存', pt: 'Ver estoque' } satisfies BilingualLine,
+    salesTrendSummary: {
+      cn: '销售趋势：{{points}}',
+      pt: 'Tendência de vendas: {{points}}',
+    } satisfies BilingualLine,
+    hourlyChartSummary: {
+      cn: '{{title}}. {{peakLabel}}: {{peakValue}}, {{peakHour}}. {{subtitle}}',
+      pt: '{{title}}. {{peakLabel}}: {{peakValue}}, {{peakHour}}. {{subtitle}}',
+    } satisfies BilingualLine,
+    paymentsSummary: {
+      cn: '{{label}}: {{parts}}',
+      pt: '{{label}}: {{parts}}',
+    } satisfies BilingualLine,
     tableColId: { cn: '编号', pt: 'ID' } satisfies BilingualLine,
     tableColOperador: { cn: '操作员', pt: 'Operador' } satisfies BilingualLine,
     tableColData: { cn: '日期', pt: 'Data' } satisfies BilingualLine,
