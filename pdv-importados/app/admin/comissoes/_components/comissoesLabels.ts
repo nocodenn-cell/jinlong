@@ -1,0 +1,34 @@
+export type ComissoesLabels = {
+  colOperador: string
+  colVendas: string
+  colTotal: string
+  colPago: string
+  colPendente: string
+  colAcoes: string
+  verDetalhes: string
+  operadoresTitulo: string
+  periodoLabel: string
+  aSeparator: string
+  statusLabel: string
+  statusTodos: string
+  statusPendente: string
+  statusPago: string
+  vazioComissoes: string
+  vazioComissoesSub: string
+  vazioCta: string
+  emPendenciaSuffix: string
+  fecharDetalhe: string
+  metricTotal: string
+  metricPago: string
+  metricPendente: string
+  carregando: string
+  desselecionarTodas: string
+  selecionarPendentes: string
+  selecionarItem: string
+  marcarComoPagoBtn: string
+  marcadoSucesso: string
+  vendaPrefix: string
+  semComissoes: string
+  erroPagarFallback: string
+  locale: string
+}
