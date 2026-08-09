@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-08-08T00:00:00.000Z",
+  "scope": "Prod-only fora do pacote Fase 1 (30 backports) — por chave version em schema_migrations",
+  "prodOnlyOutsidePhase1Backport": [],
+  "note": "Após Fase 1 + arquivos capture 20260618011821 / 20260618011922, não resta versão prod sem arquivo homônimo (onlyProd=0).",
+  "captureFilesNotInPhase1Manifest": [
+    {
+      "version": "20260618011821",
+      "file": "20260618011821_113_rls_audit_fixes.sql",
+      "classificacao": "necessária para SSOT",
+      "motivo": "Hotfix prod-only; SQL capture no repo; colide numericamente com 113"
+    },
+    {
+      "version": "20260618011922",
+      "file": "20260618011922_114_pdv_config_loja_backfill.sql",
+      "classificacao": "necessária para SSOT",
+      "motivo": "Hotfix prod-only; colide com 114_fiscal_enqueue_loja_validation.sql"
+    }
+  ],
+  "repoOnlyNumericShadows": [
+    { "version": "228", "classificacao": "duplicata/equivalente", "prodTracking": "20260707000000" },
+    { "version": "231", "classificacao": "duplicata/equivalente", "prodTracking": "20260707010000" },
+    { "version": "244", "classificacao": "duplicata/equivalente", "prodTracking": "20260707020000" },
+    { "version": "248", "classificacao": "duplicata/equivalente", "prodTracking": "20260717031500" }
+  ]
+}

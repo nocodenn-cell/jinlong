@@ -24,8 +24,9 @@ if (!endpoint || !syncKey) {
 async function executarSmoke() {
   const body = JSON.stringify({ events: [] })
   const ts = Math.floor(Date.now() / 1000).toString()
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const payload = `${ts}.${nonce}.${body}`
+  const nonce = crypto.randomUUID()
+  const device = 'smoke-local'
+  const payload = `${ts}.${nonce}.${device}.${body}`
   const signature = crypto.createHmac('sha256', syncKey).update(payload).digest('hex')
 
   const baseHeaders = {
@@ -34,7 +35,7 @@ async function executarSmoke() {
     'X-SYNC-TS': ts,
     'X-SYNC-NONCE': nonce,
     'X-SYNC-SIGNATURE': signature,
-    'x-device-fingerprint': 'smoke-local',
+    'x-device-fingerprint': device,
   }
 
   let res = await fetch(endpoint, {
@@ -44,12 +45,15 @@ async function executarSmoke() {
   })
   let text = await res.text()
 
-  // Alguns gateways/proxies de Functions exigem Authorization + apikey.
-  if (
+  const needsAnonGateway =
     res.status === 401 &&
     anonKey &&
-    /authorization/i.test(text)
-  ) {
+    (/authorization/i.test(text) ||
+      /UNAUTHORIZED/i.test(text) ||
+      /invalid.*jwt/i.test(text))
+
+  // Alguns gateways/proxies de Functions exigem Authorization + apikey.
+  if (needsAnonGateway) {
     res = await fetch(endpoint, {
       method: 'POST',
       headers: {

@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import { createClient } from "@supabase/supabase-js";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Nomes alinhados ao `supabase status -o env` (CLI recente) + aliases usados em docs/CI antigos.
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.API_URL ?? "";
@@ -157,13 +160,15 @@ async function ensureUsersAndSeed() {
   DELETE FROM public.remessa_itens WHERE remessa_id = '${IDS.remessaConferencia}'::uuid;
   DELETE FROM public.remessas WHERE id = '${IDS.remessaConferencia}'::uuid;
 
-  INSERT INTO public.remessas (id, loja_id, origem_descricao, status, created_by)
+  INSERT INTO public.remessas (id, loja_id, origem_descricao, status, created_by, conferido_por, conferido_em)
   VALUES (
     '${IDS.remessaConferencia}'::uuid,
     '${IDS.loja2}'::uuid,
-    'Seed remessa RLS (conferência)',
-    'EM_CONFERENCIA',
-    '${authByPerfil.GERENTE}'::uuid
+    'Seed remessa RLS (conferencia)',
+    'CONFERIDO',
+    '${authByPerfil.GERENTE}'::uuid,
+    '${authByPerfil.GERENTE}'::uuid,
+    now()
   );
 
   INSERT INTO public.remessa_itens (id, remessa_id, produto_id, quantidade_esperada, quantidade_conferida)
@@ -179,7 +184,7 @@ async function ensureUsersAndSeed() {
   VALUES
     ('${IDS.caixaOperador}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
     ('${IDS.caixaGerente}'::uuid, '${authByPerfil.GERENTE}'::uuid, 100, 'ABERTO', '${IDS.loja}'::uuid),
-    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.OPERADOR}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
+    ('${IDS.caixaFilial}'::uuid, '${authByPerfil.ADMIN}'::uuid, 100, 'ABERTO', '${IDS.loja2}'::uuid)
   ON CONFLICT (id) DO UPDATE SET operador_id = EXCLUDED.operador_id, loja_id = EXCLUDED.loja_id, status = 'ABERTO';
 
   UPDATE public.pricing_config_versions
@@ -233,14 +238,26 @@ async function ensureUsersAndSeed() {
     status = 'ABERTO',
     loja_id = EXCLUDED.loja_id;
 `;
-  const sqlOneLine = sql.replace(/\n/g, " ");
-  const psqlCmd = process.env.PSQL_CMD?.trim();
-  const execLine = psqlCmd
-    ? `${psqlCmd} -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`
-    : process.platform === "win32"
-      ? `docker exec -i supabase_db_fastproduct psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`
-      : `psql "${POSTGRES_URL}" -v ON_ERROR_STOP=1 -c "${sqlOneLine}"`;
-  execSync(execLine, { stdio: "inherit", shell: true });
+  // Arquivo temporário + psql -f: evita -c em uma linha (comentarios "--" e aspas no shell).
+  const dir = mkdtempSync(join(tmpdir(), "rls-scope-seed-"));
+  const sqlPath = join(dir, "seed.sql");
+  writeFileSync(sqlPath, sql, "utf8");
+  try {
+    const psqlCmd = process.env.PSQL_CMD?.trim();
+    if (psqlCmd) {
+      execFileSync(psqlCmd, ["-v", "ON_ERROR_STOP=1", "-f", sqlPath], { stdio: "inherit" });
+    } else if (process.platform === "win32") {
+      execFileSync(
+        "docker",
+        ["exec", "-i", "supabase_db_fastproduct", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-f", "-"],
+        { stdio: ["pipe", "inherit", "inherit"], input: sql },
+      );
+    } else {
+      execFileSync("psql", [POSTGRES_URL, "-v", "ON_ERROR_STOP=1", "-f", sqlPath], { stdio: "inherit" });
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
   return authByPerfil;
 }
 
@@ -392,8 +409,9 @@ async function main() {
     }, "PRICING_VERSION_VENDA_SEM_PERMISSAO");
   });
 
-  await run("RPC finalizar_venda_transacional (itens inválidos)", async () => {
-    await assertRpcErrorContains(operador, "finalizar_venda_transacional", {
+  // Legacy finalizar_venda_transacional: EXECUTE revogado de authenticated (hardening).
+  await run("RPC finalizar_venda_transacional negada a authenticated", async () => {
+    await assertRpcDenied(operador, "finalizar_venda_transacional", {
       p_venda_id: IDS.vendaOperador,
       p_caixa_id: IDS.caixaOperador,
       p_forma_pagamento: "PIX",
@@ -401,7 +419,7 @@ async function main() {
       p_total_desconto: 0,
       p_total_liquido: 1,
       p_itens: [],
-    }, "FINALIZAR_VENDA_ITENS_INVALIDOS");
+    });
   });
 
   await run("RPC fiscal_enfileirar_documento_venda", async () => {
@@ -508,34 +526,27 @@ async function main() {
 
   // ajustar_estoque_manual e service_role-only: o server action gerente/estoque/actions.ts
   // a chama via admin client. Nenhuma role JWT (OPERADOR/ADMIN/GERENTE) pode chama-la direto.
+  // p_ator_id desambigua overload 6 vs 7 args no PostgREST (ambas service_role-only).
+  const ajustarEstoqueArgs = {
+    p_produto_id: IDS.produto,
+    p_loja_id: IDS.loja,
+    p_quantidade_atual: 100,
+    p_estoque_minimo: 5,
+    p_motivo_codigo: "ACERTO_INVENTARIO",
+    p_observacao: null,
+    p_ator_id: null,
+  };
+
   await run("RPC ajustar_estoque_manual negado a OPERADOR", async () => {
-    await assertRpcDenied(operador, "ajustar_estoque_manual", {
-      p_produto_id: IDS.produto,
-      p_loja_id: IDS.loja,
-      p_quantidade_atual: 100,
-      p_estoque_minimo: 5,
-      p_motivo_codigo: "ACERTO_INVENTARIO",
-    });
+    await assertRpcDenied(operador, "ajustar_estoque_manual", ajustarEstoqueArgs);
   });
 
   await run("RPC ajustar_estoque_manual negado a ADMIN", async () => {
-    await assertRpcDenied(admin, "ajustar_estoque_manual", {
-      p_produto_id: IDS.produto,
-      p_loja_id: IDS.loja,
-      p_quantidade_atual: 100,
-      p_estoque_minimo: 5,
-      p_motivo_codigo: "ACERTO_INVENTARIO",
-    });
+    await assertRpcDenied(admin, "ajustar_estoque_manual", ajustarEstoqueArgs);
   });
 
   await run("RPC ajustar_estoque_manual negado a GERENTE direto (usa service_role)", async () => {
-    await assertRpcDenied(gerente, "ajustar_estoque_manual", {
-      p_produto_id: IDS.produto,
-      p_loja_id: IDS.loja,
-      p_quantidade_atual: 100,
-      p_estoque_minimo: 5,
-      p_motivo_codigo: "ACERTO_INVENTARIO",
-    });
+    await assertRpcDenied(gerente, "ajustar_estoque_manual", ajustarEstoqueArgs);
   });
 
   await run("RPC confirmar_remessa_entrada negado a OPERADOR", async () => {
@@ -544,18 +555,18 @@ async function main() {
     }, "REMESSA_PERFIL");
   });
 
-  await run("RPC confirmar_remessa_entrada (status inválido / id inexistente)", async () => {
+  await run("RPC confirmar_remessa_entrada (id inexistente)", async () => {
     await assertRpcErrorContains(admin, "confirmar_remessa_entrada", {
       p_remessa_id: randomUUID(),
-    }, "REMESSA_STATUS_INVALIDO");
+    }, "RECEBIMENTO_NAO_ENCONTRADO");
   });
 
   await run("RPC confirmar_remessa_entrada (sucesso)", async () => {
     const remessaQtd = 3;
     const { data: r0, error: er0 } = await dono.from("remessas").select("status").eq("id", IDS.remessaConferencia).single();
     if (er0) throw new Error(er0.message);
-    if (r0?.status !== "EM_CONFERENCIA") {
-      throw new Error(`remessa seed: esperado EM_CONFERENCIA, veio ${r0?.status}`);
+    if (r0?.status !== "CONFERIDO") {
+      throw new Error(`remessa seed: esperado CONFERIDO, veio ${r0?.status}`);
     }
     const { data: e0, error: ee0 } = await dono
       .from("estoque")

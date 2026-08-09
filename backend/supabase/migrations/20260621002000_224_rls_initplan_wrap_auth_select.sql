@@ -96,13 +96,27 @@ ALTER POLICY "clientes_select_loja" ON public.clientes
    FROM usuarios u
   WHERE ((u.id = (select auth.uid())) AND ((u.perfil = 'ADMIN'::text) OR (u.loja_id = clientes.loja_id))))));
 
-ALTER POLICY "clientes_write_gerente_loja" ON public.clientes
-  USING ((EXISTS ( SELECT 1
-   FROM usuarios u
-  WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = 'ADMIN'::text) OR (u.loja_id = clientes.loja_id))))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM usuarios u
-  WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = 'ADMIN'::text) OR (u.loja_id = clientes.loja_id))))));
+-- GUARD: migration 265 substitui clientes_write_gerente_loja por insert/update/delete (ordem lex 202607* antes de 224).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'clientes' AND policyname = 'clientes_write_gerente_loja'
+  ) THEN
+    EXECUTE $sql$
+    ALTER POLICY "clientes_write_gerente_loja" ON public.clientes
+      USING ((EXISTS ( SELECT 1
+       FROM usuarios u
+      WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = 'ADMIN'::text) OR (u.loja_id = clientes.loja_id))))))
+      WITH CHECK ((EXISTS ( SELECT 1
+       FROM usuarios u
+      WHERE ((u.id = (select auth.uid())) AND (u.perfil = ANY (ARRAY['GERENTE'::text, 'DONO'::text, 'ADMIN'::text])) AND ((u.perfil = 'ADMIN'::text) OR (u.loja_id = clientes.loja_id))))));
+    $sql$;
+  ELSE
+    RAISE NOTICE 'policy clientes_write_gerente_loja ausente — ALTER pulado (substituída pela 265).';
+  END IF;
+END;
+$$;
 
 ALTER POLICY "comissoes_select_gerencial" ON public.comissoes_vendedores
   USING ((EXISTS ( SELECT 1

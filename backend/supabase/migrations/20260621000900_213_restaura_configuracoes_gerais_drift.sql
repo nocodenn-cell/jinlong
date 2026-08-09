@@ -3,7 +3,7 @@
 -- Contexto:
 --   As migrations 087 (configuracoes_gerais) e 105 (chaves de suspensão + versão nova
 --   da RPC) constam APLICADAS em supabase_migrations.schema_migrations, mas seus objetos
---   NUNCA materializaram no prod (kbabmewnahysfvlybiak) — mesmo padrão de drift do
+--   NUNCA materializaram no prod (SEU-PROJECT-REF) — mesmo padrão de drift do
 --   movimentos_caixa (corrigido na 212). Verificado em 2026-06-01:
 --     - to_regclass('public.configuracoes_gerais') IS NULL
 --     - função configuracoes_para_caixa_web() ausente

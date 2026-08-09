@@ -11,7 +11,8 @@
     "check:edge": "deno check supabase/functions/sync-outbox/index.ts && deno check supabase/functions/validar-gerente/index.ts && deno check --config supabase/functions/fiscal-worker/deno.json supabase/functions/fiscal-worker/index.ts",
     "smoke:rls-rest": "node scripts/p0-rls-rest-smoke.mjs",
     "test:rls-policies": "node scripts/test-rls-policies.mjs",
-    "test:rls-scope": "node scripts/test-rls-scope.mjs"
+    "test:rls-scope": "node scripts/test-rls-scope.mjs",
+    "check:phase3-2": "node supabase/scripts/validate-phase3-2.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",

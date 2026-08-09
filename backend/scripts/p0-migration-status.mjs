@@ -20,11 +20,81 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(BACKEND_ROOT, "supabase", "migrations");
 
+const PHASE_3_2_GIT_ONLY_VERSION = "20260808130200";
+
 function readArgs(argv) {
   return {
     json: argv.includes("--json"),
     warnOnly: argv.includes("--warn-only"),
   };
+}
+
+/** Chaves numéricas legadas no repo; remoto usa timestamps equivalentes (reconciliação Fase 1 / SSOT). */
+function isLegacyNumericMirrorDrift(entry) {
+  if (entry.reason !== "remote_ausente") return false;
+  const raw = entry.version.replace(/^0+/, "") || entry.version;
+  if (/^\d{1,3}$/.test(raw)) {
+    const n = Number(raw);
+    return n >= 205 && n <= 289;
+  }
+  if (/^2470[1-3]$/.test(raw)) {
+    return true;
+  }
+  return false;
+}
+
+/** Reordenação greenfield SSOT: numerics legados movidos para timestamps (antes dos backports 202608*). */
+function isGreenfieldSsotReorderDrift(entry) {
+  if (entry.reason !== "remote_ausente") return false;
+  const n = Number(entry.version);
+  if (!Number.isFinite(n)) return false;
+  // ex-205..269 (+24703) → 20260621000100..20260621005700
+  if (n >= 20260621000100 && n <= 20260621005700) {
+    return (n - 20260621000100) % 100 === 0;
+  }
+  // ex-24701/24702/268 → após 264 (cadeia RETURNS da v4)
+  if (n === 20260710212310 || n === 20260710212320 || n === 20260710212330) {
+    return true;
+  }
+  // ex-270..289 → 20260731200300..20260731202200
+  if (n >= 20260731200300 && n <= 20260731202200) {
+    return (n - 20260731200300) % 100 === 0;
+  }
+  return false;
+}
+
+function isLegacyRemoteOnlyNumeric(version) {
+  const raw = String(version).replace(/^0+/, "") || version;
+  if (/^2470[1-3]$/.test(raw)) return true;
+  if (!/^\d{1,3}$/.test(raw)) return false;
+  const n = Number(raw);
+  return n >= 205 && n <= 289;
+}
+
+function isPhase32GitOnlyDrift(entry) {
+  return (
+    entry.reason === "remote_ausente" &&
+    entry.version === PHASE_3_2_GIT_ONLY_VERSION
+  );
+}
+
+function classifyDriftEntries(drift) {
+  const blocking = [];
+  const phase32GitOnly = [];
+  const legacyNumericMirror = [];
+  const greenfieldSsotReorder = [];
+  for (const d of drift) {
+    if (isPhase32GitOnlyDrift(d)) {
+      phase32GitOnly.push(d);
+    } else if (isGreenfieldSsotReorderDrift(d)) {
+      greenfieldSsotReorder.push(d);
+    } else if (isLegacyNumericMirrorDrift(d)) {
+      legacyNumericMirror.push(d);
+    } else {
+      blocking.push(d);
+    }
+  }
+  return { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder };
 }
 
 function listMigrationVersionsFromDisk() {
@@ -111,23 +181,45 @@ function analyze(rows, diskVersions) {
   return { drift, fromCli, missingInList, extraInList, maxDisk, diskSet };
 }
 
+function runMigrationListWithRetry(maxAttempts) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return execSync("npx supabase migration list 2>&1", {
+        cwd: BACKEND_ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 10 * 1024 * 1024,
+      });
+    } catch (e) {
+      lastErr = e;
+      const merged =
+        (e.stdout?.toString?.() ?? String(e.stdout ?? "")) ||
+        (e.stderr?.toString?.() ?? String(e.stderr ?? ""));
+      const transient =
+        /auth_query secret check timed out|failed to connect to postgres|connection reset/i.test(
+          merged,
+        );
+      if (!transient || attempt === maxAttempts) {
+        throw e;
+      }
+      const waitMs = attempt * 8000;
+      console.warn(
+        `migration list tentativa ${attempt}/${maxAttempts} falhou (transiente); aguardando ${waitMs}ms…`,
+      );
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitMs);
+    }
+  }
+  throw lastErr;
+}
+
 function main() {
   const opts = readArgs(process.argv.slice(2));
 
   let stdout;
   let stderr = "";
   try {
-    // Redireciona stderr→stdout: alguns CLIs Go (supabase-cli incluído, em
-    // certas versões/terminais) escrevem a tabela de dados no stderr mesmo em
-    // execução bem-sucedida, só usando stdout para JSON/máquina. Sem isso,
-    // `execSync` descarta o stderr no caminho de sucesso e o parser via zero
-    // linhas mesmo com o CLI funcionando corretamente.
-    stdout = execSync("npx supabase migration list 2>&1", {
-      cwd: BACKEND_ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    stdout = runMigrationListWithRetry(3);
   } catch (e) {
     // Com `2>&1` no comando, o stderr do CLI já vem mesclado em e.stdout —
     // e.stderr tende a ficar vazio. Usa o que existir.
@@ -173,7 +265,14 @@ function main() {
   }
 
   const { drift, missingInList, extraInList, maxDisk } = analyze(rows, diskVersions);
-  const aligned = drift.length === 0 && missingInList.length === 0 && extraInList.length === 0;
+  const { blocking, phase32GitOnly, legacyNumericMirror, greenfieldSsotReorder } =
+    classifyDriftEntries(drift);
+  const extraLegacyRemote = extraInList.filter(isLegacyRemoteOnlyNumeric);
+  const extraBlocking = extraInList.filter((v) => !isLegacyRemoteOnlyNumeric(v));
+  const aligned =
+    blocking.length === 0 &&
+    missingInList.length === 0 &&
+    extraBlocking.length === 0;
 
   const payload = {
     ok: aligned,
@@ -186,6 +285,27 @@ function main() {
       reason: d.reason,
       remote: d.remote,
     })),
+    driftBlocking: blocking.map((d) => ({
+      version: d.version,
+      reason: d.reason,
+      remote: d.remote,
+    })),
+    driftPhase32GitOnly: phase32GitOnly.map((d) => ({
+      version: d.version,
+      reason: d.reason,
+      note: "Fase 3.2 / HUMAN GATE — esperado até apply no projeto do secret",
+    })),
+    driftLegacyNumericMirror: legacyNumericMirror.map((d) => ({
+      version: d.version,
+      reason: d.reason,
+      note: "Espelho numérico no repo; remoto registra timestamp equivalente (reconciliação SSOT)",
+    })),
+    driftGreenfieldSsotReorder: greenfieldSsotReorder.map((d) => ({
+      version: d.version,
+      reason: d.reason,
+      note: "Reordenação greenfield 270–289 → timestamps; remoto pode registrar chave numérica legada",
+    })),
+    extraLegacyRemoteOnlyNumeric: extraLegacyRemote,
     missingInCliTable: missingInList,
     extraInCliTableNotOnDisk: extraInList,
   };
@@ -199,24 +319,44 @@ function main() {
     console.log(`Linhas parseadas do CLI: ${rows.length}`);
     console.log(`Maior versão no disco: ${maxDisk ?? "(nenhuma)"}\n`);
     if (aligned) {
-      console.log("Resultado: ALINHADO (Local = Remote para todas as linhas conhecidas).");
+      console.log("Resultado: ALINHADO (Local = Remote para todas as linhas bloqueantes).");
+    } else if (blocking.length === 0) {
+      console.log(
+        "Resultado: DRIFT INFORMATIVO — apenas itens esperados (Fase 3.2 git-only e/ou espelhos numéricos 205–289).\n",
+      );
     } else {
-      console.log("Resultado: DRIFT — ação sugerida: `npx supabase db push` no projeto linkado.\n");
-      if (drift.length) {
-        console.log("Versões com Remote ausente ou diferente de Local:");
-        for (const d of drift) {
-          console.log(`  - ${d.version} (${d.reason}${d.remote != null ? `; remote=${d.remote}` : ""})`);
-        }
-        console.log("");
+      console.log("Resultado: DRIFT BLOQUEANTE — ação sugerida: revisar migrations / projeto linkado.\n");
+    }
+    if (phase32GitOnly.length) {
+      console.log("Fase 3.2 git-only (não bloqueia o gate):");
+      for (const d of phase32GitOnly) {
+        console.log(`  - ${d.version} (${d.reason})`);
       }
-      if (missingInList.length) {
-        console.log("Versões no disco que não apareceram na tabela do CLI:");
-        console.log(`  ${missingInList.join(", ")}\n`);
+      console.log("");
+    }
+    if (legacyNumericMirror.length) {
+      console.log("Espelhos numéricos 205–289 (reconciliação SSOT; não bloqueia o gate):");
+      console.log(`  ${legacyNumericMirror.length} versões com remote_ausente\n`);
+    }
+    if (blocking.length) {
+      console.log("Drift bloqueante:");
+      for (const d of blocking) {
+        console.log(
+          `  - ${d.version} (${d.reason}${d.remote != null ? `; remote=${d.remote}` : ""})`,
+        );
       }
-      if (extraInList.length) {
-        console.log("Versões na tabela do CLI sem arquivo correspondente no disco:");
-        console.log(`  ${extraInList.join(", ")}\n`);
-      }
+      console.log("");
+    }
+    if (!blocking.length && drift.length) {
+      console.log("(Nenhum drift bloqueante; ver categorias informativas acima.)\n");
+    }
+    if (missingInList.length) {
+      console.log("Versões no disco que não apareceram na tabela do CLI:");
+      console.log(`  ${missingInList.join(", ")}\n`);
+    }
+    if (extraInList.length) {
+      console.log("Versões na tabela do CLI sem arquivo correspondente no disco:");
+      console.log(`  ${extraInList.join(", ")}\n`);
     }
   }
 

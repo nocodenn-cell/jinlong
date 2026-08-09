@@ -1,0 +1,217 @@
+{
+  "generatedAt": "2026-08-08T01:34:07.510Z",
+  "count": 30,
+  "source": "backend/supabase/migrations (Backport Fase 1 header)",
+  "migrations": [
+    {
+      "version": "20260707000000",
+      "name": "venda_eventos_ledger",
+      "file": "20260707000000_venda_eventos_ledger.sql",
+      "sha256": "0730406db252f2a91a1caeb40834638527fa1a9519ed8c3dcd33cc8f16c04658",
+      "bytes": 7902
+    },
+    {
+      "version": "20260707010000",
+      "name": "gerente_venda_eventos_rpcs",
+      "file": "20260707010000_gerente_venda_eventos_rpcs.sql",
+      "sha256": "8ea536a545abb9554586ffb06471cb368be1dd839c7df4ec6a460de7246e64ef",
+      "bytes": 3752
+    },
+    {
+      "version": "20260707020000",
+      "name": "consistencia_vendas_auditoria",
+      "file": "20260707020000_consistencia_vendas_auditoria.sql",
+      "sha256": "84c269f9e6ef09797985c629a98c6ef883e5f6e1e6be8c171fbc281ac2668f4a",
+      "bytes": 10285
+    },
+    {
+      "version": "20260717031500",
+      "name": "248_devolver_ou_trocar_venda",
+      "file": "20260717031500_248_devolver_ou_trocar_venda.sql",
+      "sha256": "51bcb42bc473360b855b4b9057188abcf425a94fbb766761ad83b74b2df3ccc6",
+      "bytes": 25284
+    },
+    {
+      "version": "20260801090000",
+      "name": "v_estoque_ledger_divergencia",
+      "file": "20260801090000_v_estoque_ledger_divergencia.sql",
+      "sha256": "4ab4e91a2c03680bc9bc41d13d4775368c72bc8d0e7168b5e1ca59e06b33ed8d",
+      "bytes": 2438
+    },
+    {
+      "version": "20260801120000",
+      "name": "recebimento_conferencia_explicita",
+      "file": "20260801120000_recebimento_conferencia_explicita.sql",
+      "sha256": "db19aea685134dbb239ae4c6fad40a310e9ab4afd8397b2a7295177e2b306968",
+      "bytes": 9449
+    },
+    {
+      "version": "20260805151822",
+      "name": "289_hardening_autorizacao_rpcs_p0",
+      "file": "20260805151822_289_hardening_autorizacao_rpcs_p0.sql",
+      "sha256": "e03a6c03d292cfcb82801a5c91332f67189c53e353a7f2fba37542b4b0650544",
+      "bytes": 13150
+    },
+    {
+      "version": "20260805185445",
+      "name": "291_estoque_baixas_integridade",
+      "file": "20260805185445_291_estoque_baixas_integridade.sql",
+      "sha256": "f9da8447a2204be95973e8c4a0d414198edbf4e567865d6949d7492fbfa7b031",
+      "bytes": 10658
+    },
+    {
+      "version": "20260805185458",
+      "name": "293_documentos_fiscais_dlq_enable_rls",
+      "file": "20260805185458_293_documentos_fiscais_dlq_enable_rls.sql",
+      "sha256": "17e6950be727cfbbdb0eb9fad2f5746d9f1318c455be938e6dffe8b2503f3bb2",
+      "bytes": 1960
+    },
+    {
+      "version": "20260805190920",
+      "name": "294_fornecedores_multi_tenant",
+      "file": "20260805190920_294_fornecedores_multi_tenant.sql",
+      "sha256": "e7148ceb2f15902f48c8592ff259069ac5bf2441632a82edfbf62231e8ed8da3",
+      "bytes": 13084
+    },
+    {
+      "version": "20260805193920",
+      "name": "295_ordem_compra_conferencia",
+      "file": "20260805193920_295_ordem_compra_conferencia.sql",
+      "sha256": "5c68ef0dfe9f9c95aeb03ec1fc15c6eaf2287786431d778f32ebd40879572654",
+      "bytes": 9694
+    },
+    {
+      "version": "20260805213357",
+      "name": "296_nfe_conferencia",
+      "file": "20260805213357_296_nfe_conferencia.sql",
+      "sha256": "3f8f0b7784d69760ab99ade2a81de803880b6937564f42a433ebf18cdf741331",
+      "bytes": 32010
+    },
+    {
+      "version": "20260806000032",
+      "name": "297_configuracoes_gerais_whitelist",
+      "file": "20260806000032_297_configuracoes_gerais_whitelist.sql",
+      "sha256": "b06813e3373b15d5b79900d3d1de7c81c9063914b4c32ae3c856f8e347b9704a",
+      "bytes": 1589
+    },
+    {
+      "version": "20260806002522",
+      "name": "298_br01_limite_credito_por_modo_loja",
+      "file": "20260806002522_298_br01_limite_credito_por_modo_loja.sql",
+      "sha256": "dedaf3b64b98c173ea592e25aba62deef3a8554771af79fcd77ef5fbb47aebdb",
+      "bytes": 27781
+    },
+    {
+      "version": "20260806002925",
+      "name": "299_tb07_pagamento_contas_pagar_limite_saldo",
+      "file": "20260806002925_299_tb07_pagamento_contas_pagar_limite_saldo.sql",
+      "sha256": "727518301000bbcaed4b5d04b5dcacc40367f606362c015687fca8631c34f1e1",
+      "bytes": 5736
+    },
+    {
+      "version": "20260806004637",
+      "name": "300_br03_custo_unitario_snap_servidor",
+      "file": "20260806004637_300_br03_custo_unitario_snap_servidor.sql",
+      "sha256": "585e71380599dc7924d7f83e8d7a709fe5112c46ea2c481363286c1a47f92cf9",
+      "bytes": 23846
+    },
+    {
+      "version": "20260806005804",
+      "name": "301_revoke_anon_execute_finalizar_venda_v4_pos_br01",
+      "file": "20260806005804_301_revoke_anon_execute_finalizar_venda_v4_pos_br01.sql",
+      "sha256": "f256a9bc425220150b6ccaae1bebaf44e5bf7ead8b1d2e27163312252a326ca0",
+      "bytes": 1749
+    },
+    {
+      "version": "20260806011719",
+      "name": "302_f1_05_formas_pagamento_parametrizavel",
+      "file": "20260806011719_302_f1_05_formas_pagamento_parametrizavel.sql",
+      "sha256": "44970d877b25ada11cf9b1f81cacbbf885f32005b9c7ad9f6831767992a64e30",
+      "bytes": 25456
+    },
+    {
+      "version": "20260806090414",
+      "name": "303_ssot04_kardex_cancelamento_devolucao",
+      "file": "20260806090414_303_ssot04_kardex_cancelamento_devolucao.sql",
+      "sha256": "90eb5c58775b90f806fe8f6c63ca1cf28da124a4d3b0e7ad46a89da35a3922b1",
+      "bytes": 16379
+    },
+    {
+      "version": "20260806090531",
+      "name": "304_ssot04_drop_baixar_estoque_venda",
+      "file": "20260806090531_304_ssot04_drop_baixar_estoque_venda.sql",
+      "sha256": "af125447227cca785ddde141da44c853826f85ab835f7c185087ac918e69e480",
+      "bytes": 1003
+    },
+    {
+      "version": "20260806134834",
+      "name": "305_d1_drop_fiscal_reprocessar_documento_overload",
+      "file": "20260806134834_305_d1_drop_fiscal_reprocessar_documento_overload.sql",
+      "sha256": "4c05e23063c573ec6c829f276ea0a709b541e5289807bfc71a5f1d967a682267",
+      "bytes": 1337
+    },
+    {
+      "version": "20260806135106",
+      "name": "306_d2_maquina_estados_fiscal",
+      "file": "20260806135106_306_d2_maquina_estados_fiscal.sql",
+      "sha256": "bdfec50911f01ee74c6e430e066683e5cf5b791d6d0aad6df470c9022b965386",
+      "bytes": 4457
+    },
+    {
+      "version": "20260806135429",
+      "name": "307_d3_reaper_fiscal_em_processamento",
+      "file": "20260806135429_307_d3_reaper_fiscal_em_processamento.sql",
+      "sha256": "3c0188333d471d8f980748a924fe9cff9fd75ba312bca33960dc5405128df87d",
+      "bytes": 11312
+    },
+    {
+      "version": "20260806140528",
+      "name": "308_hardening_tg_documentos_fiscais_estado",
+      "file": "20260806140528_308_hardening_tg_documentos_fiscais_estado.sql",
+      "sha256": "2a875279b888bc3df9e675e56458cde6f3b962fe855d4939895f369324dede05",
+      "bytes": 1542
+    },
+    {
+      "version": "20260806235913",
+      "name": "309_reaplica_091_fiscal_correlation_id",
+      "file": "20260806235913_309_reaplica_091_fiscal_correlation_id.sql",
+      "sha256": "74d7ac31e3ca275a6d2c805fe43158b2238262119455e039fbad7dbe0e242f6e",
+      "bytes": 3165
+    },
+    {
+      "version": "20260807000105",
+      "name": "310_reaplica_288_venda_em_espera_e_caixa_unico",
+      "file": "20260807000105_310_reaplica_288_venda_em_espera_e_caixa_unico.sql",
+      "sha256": "996d597174923353ffc6eb01aa94d5d9dd252f1ec4c0dcd5b5558d4f28262216",
+      "bytes": 5326
+    },
+    {
+      "version": "20260807000138",
+      "name": "311_reaplica_235_236_237_observabilidade_e_system_alerts",
+      "file": "20260807000138_311_reaplica_235_236_237_observabilidade_e_system_alerts.sql",
+      "sha256": "6d22fd4662106c57daa82146f552495abe8a5f7a7408fe7f1f4286e0e2b5b305",
+      "bytes": 6531
+    },
+    {
+      "version": "20260807000157",
+      "name": "312_rls_backup_schema_migrations",
+      "file": "20260807000157_312_rls_backup_schema_migrations.sql",
+      "sha256": "a24cb764c8a9c496a61b6c04e5ff0d60c6030c751204ac131e9985ebfc058f33",
+      "bytes": 2169
+    },
+    {
+      "version": "20260807000525",
+      "name": "313_pdv_config_caixa_web_limite_desconto_manual",
+      "file": "20260807000525_313_pdv_config_caixa_web_limite_desconto_manual.sql",
+      "sha256": "fd7ae57da99f0b9173f6c13353c009c96951ef0759c647890c7a8067a12f9ab2",
+      "bytes": 2446
+    },
+    {
+      "version": "289",
+      "name": "314_reafirma_grants_pos_venda_apos_248",
+      "file": "289_314_reafirma_grants_pos_venda_apos_248.sql",
+      "sha256": "64a0dec21ec47397b4fa53e35468f3b473a9d282b316a8b66eefa1e22b3f9870",
+      "bytes": 2334
+    }
+  ]
+}

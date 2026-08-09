@@ -82,9 +82,16 @@ REVOKE ALL ON FUNCTION public.auth_usuario_gerencial_loja(uuid) FROM anon;
 GRANT EXECUTE ON FUNCTION public.auth_usuario_gerencial_loja(uuid) TO authenticated, service_role;
 
 -- 3 chamadas autenticadas no app. authenticated PRESERVADO.
-REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM anon;
-GRANT EXECUTE ON FUNCTION public.pdv_config_flags_visuais() TO authenticated, service_role;
+-- Greenfield: `235_*` (criação) ordena depois desta migration; 311 reaplica grants.
+DO $guard_pdv_config_flags$
+BEGIN
+  IF to_regprocedure('public.pdv_config_flags_visuais()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.pdv_config_flags_visuais() FROM anon;
+    GRANT EXECUTE ON FUNCTION public.pdv_config_flags_visuais() TO authenticated, service_role;
+  END IF;
+END
+$guard_pdv_config_flags$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- GRUPO B — CRUD de funcionários: app usa service_role exclusivamente
@@ -133,28 +140,47 @@ GRANT EXECUTE ON FUNCTION public.calcular_promocao_aplicavel(uuid,uuid,numeric,t
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- GRUPO E — RPCs legadas de venda (corpo LEGACY_DISABLED_USE_V4)
+-- Greenfield: overloads ausentes (ex. 7 args substituído na 023) são ignorados.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional(uuid,uuid,text,numeric,numeric,numeric,jsonb) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional(uuid,uuid,text,numeric,numeric,numeric,jsonb) FROM anon, authenticated;
+DO $guard_grupo_e$
+BEGIN
+  IF to_regprocedure('public.finalizar_venda_transacional(uuid,uuid,text,numeric,numeric,numeric,jsonb)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional(uuid,uuid,text,numeric,numeric,numeric,jsonb) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional(uuid,uuid,text,numeric,numeric,numeric,jsonb) FROM anon, authenticated;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2() FROM anon, authenticated;
+  IF to_regprocedure('public.finalizar_venda_transacional_canonica_v2()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2() FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2() FROM anon, authenticated;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,jsonb,jsonb,numeric,numeric,numeric,text,numeric,text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,jsonb,jsonb,numeric,numeric,numeric,text,numeric,text) FROM anon, authenticated;
+  IF to_regprocedure('public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,jsonb,jsonb,numeric,numeric,numeric,text,numeric,text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,jsonb,jsonb,numeric,numeric,numeric,text,numeric,text) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,jsonb,jsonb,numeric,numeric,numeric,text,numeric,text) FROM anon, authenticated;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean) FROM anon, authenticated;
+  IF to_regprocedure('public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean) FROM anon, authenticated;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,text) FROM anon, authenticated;
+  IF to_regprocedure('public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,text) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v2(uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,text) FROM anon, authenticated;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3() FROM anon, authenticated;
+  IF to_regprocedure('public.finalizar_venda_transacional_canonica_v3()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3() FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3() FROM anon, authenticated;
+  END IF;
 
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text) FROM anon, authenticated;
+  IF to_regprocedure('public.finalizar_venda_transacional_canonica_v3(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v3(uuid,uuid,uuid,uuid,text,numeric,numeric,numeric,jsonb,jsonb,text,numeric,boolean,boolean,text,text,text,text) FROM anon, authenticated;
+  END IF;
+END
+$guard_grupo_e$;
 
 NOTIFY pgrst, 'reload schema';
 

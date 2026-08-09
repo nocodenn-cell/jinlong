@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-08-08T00:00:00.000Z",
+  "source": "Supabase MCP execute_sql + pg_catalog (read-only)",
+  "project": "jinlong (Supabase prod — project ref omitido no artefato)",
+  "version": "252",
+  "name": "venda_finance_context_mirror",
+  "repoFile": "backend/supabase/migrations/252_venda_finance_context_mirror.sql",
+  "repoSha256": "96f45cd68c54521ee5ce557a2cd172ba73c556c2458f1f0d23327a3eac2ac295",
+  "prod": {
+    "stmtCount": 22,
+    "statementsMd5Lf": "b543dd785ab5b1ba5d2f241f3119cb2b",
+    "statementsMd5NoCr": "40b582886f63cba515e026ed0596f09e",
+    "repoFileMd5Lf": "c7e1ee4f8af9cc646a8acddb515ff78a",
+    "byteIdenticalToRepo": false,
+    "byteIdenticalNote": "Prod armazena statements com CRLF e split em 22 blocos; MD5 agregado difere do arquivo repo (LF). Conteúdo semântico alinhado: stmt[1] contém CREATE TABLE (len 2577), stmt[12] função sincronizar, stmt[16] trg pagamento, stmt[22] DO backfill."
+  },
+  "expectedObjects": [
+    "public.venda_finance_context (table)",
+    "idx_venda_finance_context_loja|status|conta",
+    "RLS policy venda_finance_context_select_loja",
+    "public.sincronizar_finance_context_venda(uuid)",
+    "public.trg_finance_context_via_pagamento()",
+    "public.trg_finance_context_via_conta()",
+    "trigger trg_finance_context_pagamento ON vendas_pagamentos",
+    "trigger trg_finance_context_conta ON contas_receber"
+  ],
+  "catalogProd20260808": {
+    "table_venda_finance_context": false,
+    "func_sincronizar": false,
+    "func_trg_pagamento": false,
+    "func_trg_conta": false,
+    "trg_pagamento": false,
+    "trg_conta": false,
+    "policy_select": false
+  },
+  "migrationsReferencingName": [
+    { "version": "24702", "name": "finalizar_venda_v4_contas_receber_automatico", "kind": "comment PASSO 7" },
+    { "version": "252", "name": "venda_finance_context_mirror", "kind": "source" },
+    { "version": "268", "name": "reconcile_finalizar_venda_v4_single_overload", "kind": "comment PASSO 7" },
+    { "version": "272", "name": "reconciliacao_bl1_descontos_token_auditoria_motivo", "kind": "comment PASSO 7" },
+    { "version": "274", "name": "bl2_promocao_rpc_e_precedencia", "kind": "comment PASSO 7" }
+  ],
+  "dropEvidenceInProdStatements": {
+    "laterMigrationDropsTableOrFunction": false,
+    "note": "Nenhuma migration posterior contém DROP TABLE/FUNCTION de venda_finance_context/sincronizar (252 só DROP POLICY/TRIGGER IF EXISTS idempotentes)."
+  },
+  "appRuntimeUsage": "Nenhum (apenas database.types.ts gerado)",
+  "forensicConclusion": "reconstruir",
+  "forensicRationale": "252 consta como applied com SQL completo em schema_migrations.statements, porém zero objetos no catálogo. Não há evidência de rollback versionado. Hipótese principal: linha de tracking inserida/repair sem execução efetiva do DDL, ou remoção manual não rastreada. Reaplicar a chave 252 em prod é inválido (PK). Fase 3: migration timestamp idempotente OU descarte formal de produto — não replay cego de 252.",
+  "alternativesRejected": {
+    "aplicar_252": "Já registrada em schema_migrations; replay quebra PK ou é no-op parcial.",
+    "descartar_sem_decisao": "Comentários em 268/272/274 assumem espelho; requer decisão de produto.",
+    "investigar_mais": "Opcional: logs Supabase/dashboard de jun/2026; não bloqueia plano idempotente."
+  }
+}
