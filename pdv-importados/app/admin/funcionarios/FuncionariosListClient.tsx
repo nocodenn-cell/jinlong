@@ -1,13 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Plus, Pencil } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { EmptyState } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
@@ -15,8 +16,15 @@ import {
   type FuncionarioListRow,
 } from './actions'
 import { FuncionarioEditarModal, type FuncionarioModalLabels } from './FuncionarioEditarModal'
+import { FuncionarioRowActions } from './FuncionarioRowActions'
 import { podeDesativarAlvo } from './funcionarioPolicies'
-import { motivoBloqueioEditar, motivoBloqueioToggle } from './funcionarioUi'
+import {
+  agruparFuncionarios,
+  isTypingTarget,
+  motivoBloqueioEditar,
+  motivoBloqueioToggle,
+  type FuncionarioGrupoId,
+} from './funcionarioUi'
 
 export type FuncionariosListLabels = {
   contagem: string
@@ -47,10 +55,19 @@ export type FuncionariosListLabels = {
   filtroInativos: string
   confirmarDesativar: string
   confirmarReativar: string
+  confirmarTituloDesativar: string
+  confirmarTituloReativar: string
+  confirmarAcao: string
   somenteLeitura: string
   bloqueioDonoAdmin: string
   bloqueioSemPermissao: string
   bloqueioSiMesmo: string
+  atalhoBusca: string
+  atalhoNovo: string
+  grupoEquipe: string
+  grupoEquipeSub: string
+  grupoProtegido: string
+  grupoProtegidoSub: string
   modal: FuncionarioModalLabels
 }
 
@@ -87,6 +104,14 @@ function statusBadgeClass(ativo: boolean): string {
     : 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg-subtle'
 }
 
+function grupoTitulo(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
+  return id === 'equipe' ? L.grupoEquipe : L.grupoProtegido
+}
+
+function grupoSub(id: FuncionarioGrupoId, L: FuncionariosListLabels): string {
+  return id === 'equipe' ? L.grupoEquipeSub : L.grupoProtegidoSub
+}
+
 export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L }: Props) {
   const [rows, setRows] = useState(iniciais)
   const [termo, setTermo] = useState('')
@@ -94,6 +119,8 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<FuncionarioListRow | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [confirmRow, setConfirmRow] = useState<FuncionarioListRow | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const filtrados = useMemo(() => {
     const q = termo.trim().toLowerCase()
@@ -110,12 +137,24 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     })
   }, [rows, termo, statusF, L])
 
+  const grupos = useMemo(() => agruparFuncionarios(filtrados), [filtrados])
   const temFiltroAtivo = termo.trim().length > 0 || statusF !== 'todos'
   const ator = { id: atorId, perfil: atorPerfil }
   const statusOptions: StatusFiltro[] = ['todos', 'ativos', 'inativos']
+  const confirmBusy = !!confirmRow && busyId === confirmRow.id
 
   function abrirNovo() {
     setEmEdicao(null)
+    setModalAberto(true)
+  }
+
+  function abrirEditar(row: FuncionarioListRow) {
+    const bloqueio = motivoBloqueioEditar(ator, row, L)
+    if (bloqueio) {
+      emitGerenteToast({ kind: 'error', message: bloqueio })
+      return
+    }
+    setEmEdicao(row)
     setModalAberto(true)
   }
 
@@ -140,6 +179,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
         return
       }
       setRows((cur) => cur.map((x) => (x.id === row.id ? { ...x, ativo: r.data.ativo } : x)))
+      setConfirmRow(null)
     } finally {
       setBusyId(null)
     }
@@ -151,10 +191,27 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       emitGerenteToast({ kind: 'error', message: bloqueio })
       return
     }
-    const msg = (row.ativo ? L.confirmarDesativar : L.confirmarReativar).replace('{nome}', row.nome)
-    if (!globalThis.confirm(msg)) return
-    void toggleAtivo(row)
+    setConfirmRow(row)
   }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (modalAberto || confirmRow) return
+      if (e.key === '/' && !isTypingTarget(e.target)) {
+        e.preventDefault()
+        searchRef.current?.focus()
+        return
+      }
+      if ((e.key === 'n' || e.key === 'N') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (isTypingTarget(e.target)) return
+        e.preventDefault()
+        setEmEdicao(null)
+        setModalAberto(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [modalAberto, confirmRow])
 
   const filtroLabel = (s: StatusFiltro) => {
     if (s === 'ativos') return L.filtroAtivos
@@ -167,6 +224,7 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       key: 'nome',
       header: L.colNome,
       priority: 'primary',
+      sortValue: (row) => row.nome.toLocaleLowerCase(),
       cell: (row) => (
         <span className={cn('font-medium text-fg', !row.ativo && 'text-fg-subtle')}>{row.nome}</span>
       ),
@@ -174,12 +232,14 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     {
       key: 'email',
       header: L.colEmail,
+      sortValue: (row) => (row.email ?? '').toLocaleLowerCase(),
       cell: (row) => <span className="text-caption text-fg-muted">{row.email ?? '—'}</span>,
     },
     {
       key: 'perfil',
       header: L.colPerfil,
       width: '120px',
+      sortValue: (row) => labelPerfil(row.perfil, L),
       cell: (row) => (
         <Badge className={perfilBadgeClass(row.perfil)}>{labelPerfil(row.perfil, L)}</Badge>
       ),
@@ -188,11 +248,48 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
       key: 'status',
       header: L.colStatus,
       width: '100px',
+      sortValue: (row) => (row.ativo ? 1 : 0),
       cell: (row) => (
         <Badge className={statusBadgeClass(row.ativo)}>{row.ativo ? L.ativo : L.inativo}</Badge>
       ),
     },
   ]
+
+  const emptyState =
+    rows.length === 0 ? (
+      <EmptyState
+        title={L.vazioTitulo}
+        description={L.vazioSub}
+        actionLabel={L.novo}
+        onAction={abrirNovo}
+      />
+    ) : (
+      <EmptyState
+        title={L.vazioBuscaTitulo}
+        description={L.vazioBuscaSub}
+        actionLabel={temFiltroAtivo ? L.limparFiltros : undefined}
+        onAction={temFiltroAtivo ? limparFiltros : undefined}
+      />
+    )
+
+  const actionsProps = {
+    ator,
+    labels: L,
+    onEditar: abrirEditar,
+    onToggle: pedirToggle,
+  }
+
+  const confirmTitle = confirmRow
+    ? confirmRow.ativo
+      ? L.confirmarTituloDesativar
+      : L.confirmarTituloReativar
+    : ''
+  const confirmBody = confirmRow
+    ? (confirmRow.ativo ? L.confirmarDesativar : L.confirmarReativar).replace(
+        '{nome}',
+        confirmRow.nome,
+      )
+    : ''
 
   return (
     <>
@@ -201,12 +298,14 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
         toolbar={
           <>
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <div className="min-w-[240px] max-w-[420px] flex-1">
+              <div className="min-w-[200px] max-w-[420px] flex-1">
                 <SearchInput
+                  ref={searchRef}
                   value={termo}
                   onChange={(e) => setTermo(e.target.value)}
                   placeholder={L.buscaPlaceholder}
-                  aria-label={L.buscaPlaceholder}
+                  aria-label={`${L.buscaPlaceholder} (${L.atalhoBusca})`}
+                  title={L.atalhoBusca}
                   controlSize="sm"
                 />
               </div>
@@ -237,7 +336,13 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
               </div>
             </div>
             <PageActions>
-              <Button type="button" variant="primary" onClick={abrirNovo} className="gap-1.5">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={abrirNovo}
+                className="gap-1.5"
+                title={L.atalhoNovo}
+              >
                 <Plus className="h-4 w-4" aria-hidden />
                 {L.novo}
               </Button>
@@ -245,95 +350,115 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
           </>
         }
       >
-        <DataTable
-          columns={columns}
-          data={filtrados}
-          rowKey={(row) => row.id}
-          compact
-          emptyState={
-            rows.length === 0 ? (
-              <EmptyState
-                title={L.vazioTitulo}
-                description={L.vazioSub}
-                actionLabel={L.novo}
-                onAction={abrirNovo}
-              />
-            ) : (
-              <EmptyState
-                title={L.vazioBuscaTitulo}
-                description={L.vazioBuscaSub}
-                actionLabel={temFiltroAtivo ? L.limparFiltros : undefined}
-                onAction={temFiltroAtivo ? limparFiltros : undefined}
-              />
-            )
-          }
-          rowActions={(row) => {
-            const bloqueioEditar = motivoBloqueioEditar(ator, row, L)
-            const bloqueioToggle = motivoBloqueioToggle(ator, row, L)
-            const podeEditar = !bloqueioEditar
-            const podeToggle = !bloqueioToggle
-            const toggleLabel = row.ativo ? L.desativar : L.ativar
+        {filtrados.length === 0 ? (
+          emptyState
+        ) : (
+          <>
+            <div className="hidden space-y-6 md:block">
+              {grupos.map((grupo) => (
+                <section key={grupo.id} className="space-y-2">
+                  <header className="px-1">
+                    <h3 className="text-small font-semibold text-fg">
+                      {grupoTitulo(grupo.id, L)}
+                      <span className="ml-2 text-caption font-normal text-fg-subtle">
+                        {grupo.rows.length}
+                      </span>
+                    </h3>
+                    <p className="text-caption text-fg-subtle">{grupoSub(grupo.id, L)}</p>
+                  </header>
+                  <DataTable
+                    columns={columns}
+                    data={grupo.rows}
+                    rowKey={(row) => row.id}
+                    compact
+                    stickyHeader
+                    onRowClick={abrirEditar}
+                    rowActions={(row) => (
+                      <FuncionarioRowActions
+                        row={row}
+                        busy={busyId === row.id}
+                        compactLabels
+                        {...actionsProps}
+                      />
+                    )}
+                    className="rounded-none border-x-0 border-b-0"
+                  />
+                </section>
+              ))}
+            </div>
 
-            if (!podeEditar && !podeToggle) {
-              return (
-                <span
-                  className="text-caption text-fg-subtle"
-                  title={bloqueioEditar ?? L.somenteLeitura}
-                  aria-label={bloqueioEditar ?? L.somenteLeitura}
-                >
-                  {L.somenteLeitura}
-                </span>
-              )
-            }
-
-            return (
-              <div className="flex flex-wrap items-center justify-end gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={!podeEditar}
-                  title={bloqueioEditar ?? L.editar}
-                  aria-label={
-                    bloqueioEditar ? `${L.editar}: ${bloqueioEditar}` : `${L.editar} — ${row.nome}`
-                  }
-                  onClick={() => {
-                    if (bloqueioEditar) {
-                      emitGerenteToast({ kind: 'error', message: bloqueioEditar })
-                      return
-                    }
-                    setEmEdicao(row)
-                    setModalAberto(true)
-                  }}
-                  className="gap-1"
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden />
-                  {L.editar}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={!podeToggle || busyId === row.id}
-                  title={bloqueioToggle ?? toggleLabel}
-                  aria-label={
-                    bloqueioToggle
-                      ? `${toggleLabel}: ${bloqueioToggle}`
-                      : `${toggleLabel} — ${row.nome}`
-                  }
-                  onClick={() => pedirToggle(row)}
-                  className={cn(
-                    'gap-1',
-                    row.ativo && podeToggle && 'text-[var(--color-danger-strong)]',
-                  )}
-                >
-                  {toggleLabel}
-                </Button>
-              </div>
-            )
-          }}
-          className="rounded-none border-x-0 border-b-0"
-        />
+            <div className="space-y-5 md:hidden">
+              {grupos.map((grupo) => (
+                <section key={grupo.id} className="space-y-2">
+                  <header>
+                    <h3 className="text-small font-semibold text-fg">
+                      {grupoTitulo(grupo.id, L)}
+                      <span className="ml-2 text-caption font-normal text-fg-subtle">
+                        {grupo.rows.length}
+                      </span>
+                    </h3>
+                    <p className="text-caption text-fg-subtle">{grupoSub(grupo.id, L)}</p>
+                  </header>
+                  <ul className="flex flex-col gap-2">
+                    {grupo.rows.map((row) => {
+                      const bloqueio = motivoBloqueioEditar(ator, row, L)
+                      return (
+                        <li key={row.id}>
+                          <article
+                            className={cn(
+                              'rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3',
+                              !bloqueio && 'fp-focus-ring cursor-pointer hover:bg-[var(--color-surface-soft)]',
+                              !row.ativo && 'opacity-80',
+                            )}
+                            tabIndex={bloqueio ? undefined : 0}
+                            role={bloqueio ? undefined : 'button'}
+                            aria-label={
+                              bloqueio
+                                ? `${row.nome} — ${bloqueio}`
+                                : `${L.editar} — ${row.nome}`
+                            }
+                            onClick={() => {
+                              if (!bloqueio) abrirEditar(row)
+                            }}
+                            onKeyDown={(e) => {
+                              if (bloqueio) return
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                abrirEditar(row)
+                              }
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-fg">{row.nome}</p>
+                                <p className="truncate text-caption text-fg-muted">
+                                  {row.email ?? '—'}
+                                </p>
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  <Badge className={perfilBadgeClass(row.perfil)}>
+                                    {labelPerfil(row.perfil, L)}
+                                  </Badge>
+                                  <Badge className={statusBadgeClass(row.ativo)}>
+                                    {row.ativo ? L.ativo : L.inativo}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <FuncionarioRowActions
+                                row={row}
+                                busy={busyId === row.id}
+                                {...actionsProps}
+                              />
+                            </div>
+                          </article>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </>
+        )}
       </CrudListShell>
 
       {modalAberto ? (
@@ -355,6 +480,43 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
             })
           }}
         />
+      ) : null}
+
+      {confirmRow ? (
+        <DragonModal
+          open
+          onClose={() => {
+            if (!confirmBusy) setConfirmRow(null)
+          }}
+          title={confirmTitle}
+          variant={confirmRow.ativo ? 'danger' : 'default'}
+          icon={AlertTriangle}
+          size="sm"
+          dismissable={!confirmBusy}
+          data-testid="funcionario-confirm-toggle"
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={confirmBusy}
+                onClick={() => setConfirmRow(null)}
+              >
+                {L.modal.cancelar}
+              </Button>
+              <Button
+                type="button"
+                variant={confirmRow.ativo ? 'danger' : 'primary'}
+                disabled={confirmBusy}
+                onClick={() => void toggleAtivo(confirmRow)}
+              >
+                {confirmBusy ? L.modal.salvando : L.confirmarAcao}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-body text-fg-muted">{confirmBody}</p>
+        </DragonModal>
       ) : null}
     </>
   )

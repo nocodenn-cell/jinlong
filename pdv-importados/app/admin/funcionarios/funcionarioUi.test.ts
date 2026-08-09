@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { motivoBloqueioEditar, motivoBloqueioToggle } from './funcionarioUi'
+import {
+  agruparFuncionarios,
+  isPerfilProtegido,
+  isTypingTarget,
+  motivoBloqueioEditar,
+  motivoBloqueioToggle,
+} from './funcionarioUi'
 
 const L = {
   bloqueioDonoAdmin: 'dono-admin',
@@ -24,5 +30,30 @@ describe('funcionarioUi bloqueios', () => {
     expect(motivoBloqueioEditar(dono, { id: 'o1', perfil: 'OPERADOR' }, L)).toBeNull()
     expect(motivoBloqueioToggle(dono, dono, L)).toBe('si-mesmo')
     expect(motivoBloqueioToggle(dono, { id: 'o1', perfil: 'OPERADOR' }, L)).toBeNull()
+  })
+})
+
+describe('funcionarioUi agrupamento', () => {
+  it('separa equipe de contas protegidas e omite vazios', () => {
+    const rows = [
+      { perfil: 'OPERADOR' },
+      { perfil: 'DONO' },
+      { perfil: 'GERENTE' },
+      { perfil: 'ADMIN' },
+    ]
+    expect(isPerfilProtegido('DONO')).toBe(true)
+    expect(isPerfilProtegido('OPERADOR')).toBe(false)
+    expect(agruparFuncionarios(rows)).toEqual([
+      { id: 'equipe', rows: [{ perfil: 'OPERADOR' }, { perfil: 'GERENTE' }] },
+      { id: 'protegido', rows: [{ perfil: 'DONO' }, { perfil: 'ADMIN' }] },
+    ])
+    expect(agruparFuncionarios([{ perfil: 'OPERADOR' }])).toEqual([
+      { id: 'equipe', rows: [{ perfil: 'OPERADOR' }] },
+    ])
+  })
+
+  it('ignora alvos sem HTMLElement (atalhos)', () => {
+    expect(isTypingTarget(null)).toBe(false)
+    expect(isTypingTarget({})).toBe(false)
   })
 })
