@@ -8,13 +8,14 @@
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
-import { Pencil, Trash2, Plus } from 'lucide-react'
+import { AlertTriangle, Pencil, Trash2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SearchInput } from '@/components/ui/forms'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState, ErrorState, Loading } from '@/components/ui/feedback'
 import { CrudListShell, PageActions } from '@/components/ui/admin-v2'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { fmtGerenteBRL } from '@/lib/format/gerenteValues'
 import type { Idioma } from '@/idioma/normalizeIdioma'
@@ -26,7 +27,6 @@ import {
   type ClienteListRow,
 } from '@/app/admin/clientes/actions'
 import { ClienteEditarModal } from './ClienteEditarModal'
-import { ClienteExcluirDialog } from './ClienteExcluirDialog'
 import {
   clienteInitials,
   formatContagemClientes,
@@ -442,20 +442,42 @@ export function ClientesListClient({
         />
       )}
 
-      <ClienteExcluirDialog
+      <DragonModal
         open={excluirAlvo !== null}
-        nome={excluirAlvo?.nome ?? ''}
-        loading={excluindo}
-        title={m.clientes.confirmar_exclusao_titulo}
-        description={m.clientes.confirmar_exclusao_texto}
-        cancelLabel={m.comum.cancelar}
-        confirmLabel={m.clientes.excluir}
-        confirmingLabel={m.clientes.excluindo}
-        onCancel={() => {
+        onClose={() => {
           if (!excluindo) setExcluirAlvo(null)
         }}
-        onConfirm={() => void confirmarExclusao()}
-      />
+        variant="danger"
+        size="sm"
+        icon={AlertTriangle}
+        title={m.clientes.confirmar_exclusao_titulo}
+        dismissable={!excluindo}
+        closeLabel={m.comum.cancelar}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setExcluirAlvo(null)}
+              disabled={excluindo}
+            >
+              {m.comum.cancelar}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => void confirmarExclusao()}
+              disabled={excluindo}
+            >
+              {excluindo ? m.clientes.excluindo : m.clientes.excluir}
+            </Button>
+          </>
+        }
+      >
+        <p className="pb-1 text-body text-fg-muted">
+          {m.clientes.confirmar_exclusao_texto.replace('{{nome}}', excluirAlvo?.nome ?? '')}
+        </p>
+      </DragonModal>
     </>
   )
 }

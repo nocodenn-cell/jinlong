@@ -1,5 +1,5 @@
 {
-  "asOf": "2026-07-30",
+  "asOf": "2026-08-09",
   "results": [
     {
       "id": "app_btn",
@@ -13,8 +13,8 @@
         "app/gerente/compras/ComprasGerentePageClient.tsx (2)",
         "app/gerente/configuracoes/ConfiguracoesClient.tsx (3)",
         "app/gerente/configuracoes/ConfiguracoesGerentePageClient.tsx (1)",
-        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (4)",
-        "app/gerente/financeiro/contas-pagar/PagamentoModal.tsx (2)"
+        "app/gerente/financeiro/FinanceiroGerentePageClient.tsx (3)",
+        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (4)"
       ]
     },
     {
@@ -26,8 +26,8 @@
         "app/admin/funcionarios/FuncionariosListClient.tsx (1)",
         "app/gerente/comissoes/ComissoesPageClient.tsx (1)",
         "app/gerente/compras/ComprasGerentePageClient.tsx (1)",
-        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (1)",
         "app/gerente/financeiro/FinanceiroGerentePageClient.tsx (1)",
+        "app/gerente/financeiro/contas-pagar/ContasPagarListClient.tsx (1)",
         "app/gerente/produtos/ProdutosGerentePageClient.tsx (1)",
         "app/gerente/relatorios/RelatoriosGerentePageClient.tsx (1)",
         "app/gerente/relatorios/sem-giro/RelatoriosSemGiroPageClient.tsx (1)"
@@ -43,11 +43,11 @@
     {
       "id": "text_arbitrary_px",
       "label": "text-[Npx] arbitrário",
-      "files": 69,
-      "hits": 328,
+      "files": 73,
+      "hits": 331,
       "samples": [
-        "app/admin/auditoria/page.tsx (4)",
         "app/admin/auditoria/_components/AuditoriaTimeline.tsx (15)",
+        "app/admin/auditoria/page.tsx (4)",
         "app/admin/categorias-financeiras/_components/CategoriasFinanceirasContent.tsx (8)",
         "app/admin/comissoes/_components/ComissoesContent.tsx (13)",
         "app/admin/configuracoes/_components/ConfiguracoesContent.tsx (11)",
