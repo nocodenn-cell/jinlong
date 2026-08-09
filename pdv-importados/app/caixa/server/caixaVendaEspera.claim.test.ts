@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mensagemErroRetomarEmEspera } from '@/app/caixa/server/caixaVendaEspera.impl'
 
 /**
- * Contrato do claim anti-duplicata (migration 20260808120000):
+ * Contrato do claim anti-duplicata (migration 20260809120659):
  * - retomar: EM_ESPERA → RETOMADA (2ª retomada → venda_em_espera_em_uso)
  * - devolver: RETOMADA → EM_ESPERA (abandono sem venda)
  * - converter: EM_ESPERA|RETOMADA → CONVERTIDA (após finalizar)

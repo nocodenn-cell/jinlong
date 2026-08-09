@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const migrationsDir = path.join(root, 'supabase/migrations')
-const guardName = '20260809120100_finalize_v4_scope_guard.sql'
+const guardName = '20260809120837_finalize_v4_scope_guard_22args.sql'
 /** Pós-#267 o arquivo 274_* foi timestampado; aceita ambos os nomes. */
 const bodyCandidates = [
   '274_bl2_promocao_rpc_e_precedencia.sql',
@@ -40,6 +40,7 @@ const required = [
   'p_motivo_desconto',
   'p_motivo_descricao',
   'motivo_desconto_enum_tipo',
+  'p_limite_credito_gerente_token',
   'REVOKE ALL ON FUNCTION public.finalizar_venda_transacional_canonica_v4_unscoped',
 ]
 
@@ -48,5 +49,5 @@ for (const needle of required) {
 }
 
 console.log(
-  `[assert-finalize-v4-scope-guard] OK — guard após ${bodyName}, assinatura 21 args`,
+  `[assert-finalize-v4-scope-guard] OK — guard após ${bodyName}, assinatura 22 args`,
 )

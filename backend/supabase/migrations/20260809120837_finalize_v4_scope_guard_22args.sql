@@ -9,8 +9,9 @@
 --
 -- O PR #187 tentou o mesmo guard com timestamp 20260714110959 e assinatura de
 -- 19 args (pré-272). Em main isso é inócuo: 274 recria a função DEPOIS (ordem
--- lexical `274_*` > `20260714*`) e a assinatura vigente tem 21 args
--- (+ motivo_desconto / motivo_descricao).
+-- lexical `274_*` > `20260714*`). A assinatura vigente em produção jinlong tem
+-- 22 args (+ motivo_desconto / motivo_descricao + p_limite_credito_gerente_token).
+-- Versão alinhada ao schema_migrations de prod (MCP apply 20260809120837).
 --
 -- CORREÇÃO
 -- --------

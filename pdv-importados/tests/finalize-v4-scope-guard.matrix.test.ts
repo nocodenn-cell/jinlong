@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MIGRATIONS = path.resolve(ROOT, '../backend/supabase/migrations')
-const GUARD = '20260809120100_finalize_v4_scope_guard.sql'
+const GUARD = '20260809120837_finalize_v4_scope_guard_22args.sql'
 const BODY_CANDIDATES = [
   '274_bl2_promocao_rpc_e_precedencia.sql',
   '20260731200700_bl2_promocao_rpc_e_precedencia.sql',
@@ -26,7 +26,7 @@ describe('finalize v4 scope guard', () => {
     expect(files.indexOf(GUARD)).toBeGreaterThan(files.indexOf(body!))
   })
 
-  it('wrapper valida loja/caixa/operador e usa assinatura 21 args', () => {
+  it('wrapper valida loja/caixa/operador e usa assinatura 22 args', () => {
     const src = fs.readFileSync(path.join(MIGRATIONS, GUARD), 'utf8')
     expect(src).toContain('finalizar_venda_transacional_canonica_v4_unscoped')
     expect(src).toContain('FINALIZAR_VENDA_CANONICA_LOJA_INVALIDA')
@@ -36,6 +36,7 @@ describe('finalize v4 scope guard', () => {
     expect(src).toContain('p_motivo_desconto')
     expect(src).toContain('p_motivo_descricao')
     expect(src).toContain('motivo_desconto_enum_tipo')
+    expect(src).toContain('p_limite_credito_gerente_token')
     expect(src).toMatch(/REVOKE ALL ON FUNCTION public\.finalizar_venda_transacional_canonica_v4_unscoped/)
   })
 })
