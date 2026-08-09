@@ -1,56 +1,47 @@
 'use client'
 
 /**
- * FastProduct Admin — ComissoesContent (Fase 8)
+ * FastProduct Admin — ComissoesContent
  *
- * Client component com tabela de resumo de comissões + sheet detalhe.
- * Reutiliza actions de /gerente/comissoes (resumo, detalhe, marcar pago).
+ * Resumo por operador + sheet de detalhe + marcar como pago.
+ * Reutiliza actions de /gerente/comissoes (sem alterar contratos).
  */
 
-import { useState, useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Percent } from 'lucide-react'
 import { MetricCard, SectionCard } from '@/components/ui/admin-v2'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { EmptyState } from '@/components/ui/feedback'
 import { formatBRL } from '@/lib/format/money'
+import { emitGerenteToast } from '@/lib/gerente/toast'
 import type { ComissaoResumoRow, ComissaoDetalheRow, FiltroComissoes } from '@/app/gerente/comissoes/actions'
 import {
   carregarDetalheComissoes,
   marcarComissoesPagas,
 } from '@/app/gerente/comissoes/actions'
+import { ComissoesDetailSheet } from './ComissoesDetailSheet'
+import type { ComissoesLabels } from './comissoesLabels'
 
-export type ComissoesLabels = {
-  colOperador: string
-  colVendas: string
-  colTotal: string
-  colPago: string
-  colPendente: string
-  operadoresTitulo: string
-  periodoLabel: string
-  aSeparator: string
-  statusLabel: string
-  statusTodos: string
-  statusPendente: string
-  statusPago: string
-  vazioComissoes: string
-  emPendenciaSuffix: string
-  fecharDetalhe: string
-  metricTotal: string
-  metricPago: string
-  metricPendente: string
-  carregando: string
-  desselecionarTodas: string
-  selecionarPendentes: string
-  marcarComoPagoBtn: string
-  vendaPrefix: string
-  semComissoes: string
-  erroPagarFallback: string
-  locale: string
-}
+export type { ComissoesLabels } from './comissoesLabels'
 
 type Props = {
   dados: ComissaoResumoRow[]
   filtroInicial: FiltroComissoes
   labels: ComissoesLabels
+}
+
+function focusFiltros() {
+  const root = document.getElementById('comissoes-filtros')
+  if (!root) return
+  root.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const first = root.querySelector<HTMLElement>('input, select, button, a')
+  first?.focus()
+}
+
+function moneyStatusClass(kind: 'pago' | 'pendente'): string {
+  if (kind === 'pago') return 'text-[12px] text-[var(--color-success-strong)]'
+  return 'text-[12px] font-medium text-[var(--color-warning-strong)]'
 }
 
 export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
@@ -62,29 +53,51 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
 
+  const kpis = useMemo(() => {
+    return rows.reduce(
+      (acc, r) => {
+        acc.total += r.total_comissao
+        acc.pago += r.total_pago
+        acc.pendente += r.total_pendente
+        return acc
+      },
+      { total: 0, pago: 0, pendente: 0 },
+    )
+  }, [rows])
+
   const statusDisplayMap: Record<string, string> = {
     todos: labels.statusTodos,
     pendente: labels.statusPendente,
     pago: labels.statusPago,
   }
 
-  const abrirDetalhe = useCallback(async (row: ComissaoResumoRow) => {
-    setDetalheOperador(row)
-    setDetalheLoading(true)
-    setSelecionados(new Set())
-    setError(null)
+  const abrirDetalhe = useCallback(
+    async (row: ComissaoResumoRow) => {
+      setDetalheOperador(row)
+      setDetalheLoading(true)
+      setSelecionados(new Set())
+      setError(null)
 
-    try {
-      const res = await carregarDetalheComissoes(row.operador_id, filtroInicial)
-      if (!res.success) {
-        setError(res.error)
-        return
+      try {
+        const res = await carregarDetalheComissoes(row.operador_id, filtroInicial)
+        if (!res.success) {
+          setError(res.error)
+          emitGerenteToast({ kind: 'error', message: res.error })
+          return
+        }
+        setDetalheRows(res.data)
+      } finally {
+        setDetalheLoading(false)
       }
-      setDetalheRows(res.data)
-    } finally {
-      setDetalheLoading(false)
-    }
-  }, [filtroInicial])
+    },
+    [filtroInicial],
+  )
+
+  const fecharDetalhe = useCallback(() => {
+    setDetalheOperador(null)
+    setDetalheRows([])
+    setSelecionados(new Set())
+  }, [])
 
   const marcarPagas = async () => {
     if (!detalheOperador || selecionados.size === 0) return
@@ -97,14 +110,18 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       })
       if (!res.success) {
         setError(res.error)
+        emitGerenteToast({ kind: 'error', message: res.error })
         return
       }
 
       setSelecionados(new Set())
+      emitGerenteToast({ kind: 'success', message: labels.marcadoSucesso })
       await abrirDetalhe(detalheOperador)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : labels.erroPagarFallback)
+      const msg = err instanceof Error ? err.message : labels.erroPagarFallback
+      setError(msg)
+      emitGerenteToast({ kind: 'error', message: msg })
     }
   }
 
@@ -122,11 +139,11 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       .filter((r) => r.status === 'pendente')
       .map((r) => r.comissao_id)
     setSelecionados((prev) =>
-      prev.size === pendentes.length ? new Set() : new Set(pendentes)
+      prev.size === pendentes.length ? new Set() : new Set(pendentes),
     )
   }
 
-  const totalPendente = detalheRows
+  const totalPendenteSelecionado = detalheRows
     .filter((r) => r.status === 'pendente' && selecionados.has(r.comissao_id))
     .reduce((s, r) => s + r.valor_comissao, 0)
 
@@ -134,11 +151,16 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
     {
       key: 'operador',
       header: labels.colOperador,
+      priority: 'primary',
       sortValue: (r) => r.operador_nome,
       cell: (r) => (
         <button
-          onClick={() => abrirDetalhe(r)}
-          className="font-medium text-jl-accent transition-colors hover:text-amber-300"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            void abrirDetalhe(r)
+          }}
+          className="font-medium text-jl-accent underline-offset-2 transition-colors hover:underline"
         >
           {r.operador_nome}
         </button>
@@ -168,159 +190,108 @@ export function ComissoesContent({ dados, filtroInicial, labels }: Props) {
       align: 'right',
       sortValue: (r) => r.total_pago,
       cell: (r) => (
-        <span className="text-[12px] text-emerald-400">{formatBRL(r.total_pago)}</span>
+        <span className={moneyStatusClass('pago')}>{formatBRL(r.total_pago)}</span>
       ),
     },
     {
       key: 'comissao_pendente',
       header: labels.colPendente,
       align: 'right',
+      priority: 'primary',
       sortValue: (r) => r.total_pendente,
       cell: (r) => (
-        <span className="text-[12px] text-amber-400">{formatBRL(r.total_pendente)}</span>
+        <span className={moneyStatusClass('pendente')}>{formatBRL(r.total_pendente)}</span>
+      ),
+    },
+    {
+      key: 'acoes',
+      header: labels.colAcoes,
+      align: 'right',
+      priority: 'contextual',
+      cell: (r) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            void abrirDetalhe(r)
+          }}
+          className="admin-v2-btn-secondary px-2.5 py-1 text-[11px]"
+        >
+          {labels.verDetalhes}
+        </button>
       ),
     },
   ]
 
   const statusDisplay = statusDisplayMap[filtroInicial.status] ?? filtroInicial.status
+  const periodoSub = `${labels.periodoLabel}: ${filtroInicial.de}${labels.aSeparator}${filtroInicial.ate} · ${labels.statusLabel}: ${statusDisplay}`
 
   return (
     <div className="flex flex-col gap-6">
-      {error && (
-        <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">
+      {error && !detalheOperador ? (
+        <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]" role="alert">
           {error}
         </div>
-      )}
+      ) : null}
+
+      <div className="admin-v2-grid-kpi">
+        <MetricCard
+          label={labels.metricTotal}
+          value={formatBRL(kpis.total)}
+          icon="dollar-sign"
+          tone="gold"
+        />
+        <MetricCard
+          label={labels.metricPago}
+          value={formatBRL(kpis.pago)}
+          icon="file-check-2"
+          tone="success"
+        />
+        <MetricCard
+          label={labels.metricPendente}
+          value={formatBRL(kpis.pendente)}
+          icon="alert-circle"
+          tone="warning"
+        />
+      </div>
 
       <SectionCard
         title={labels.operadoresTitulo.replace('{{n}}', String(rows.length))}
-        subtitle={`${labels.periodoLabel}: ${filtroInicial.de}${labels.aSeparator}${filtroInicial.ate} · ${labels.statusLabel}: ${statusDisplay}`}
+        subtitle={periodoSub}
       >
         <DataTable
           data={rows}
           columns={columns}
           rowKey={(r) => r.operador_id}
+          onRowClick={(r) => void abrirDetalhe(r)}
           emptyState={
-            <div className="flex flex-col items-center gap-2 py-12 text-center">
-              <span className="text-3xl text-jl-fg-3" aria-hidden>
-                💼
-              </span>
-              <p className="text-[12px] text-jl-fg-3">
-                {labels.vazioComissoes}
-              </p>
-            </div>
+            <EmptyState
+              title={labels.vazioComissoes}
+              description={labels.vazioComissoesSub}
+              icon={<Percent className="h-6 w-6" aria-hidden />}
+              actionLabel={labels.vazioCta}
+              onAction={focusFiltros}
+            />
           }
           className="rounded-none border-x-0 border-[var(--color-border-secondary)]"
         />
       </SectionCard>
 
-      {detalheOperador && (
-        <SectionCard
-          title={detalheOperador.operador_nome}
-          subtitle={`${formatBRL(detalheOperador.total_pendente)} ${labels.emPendenciaSuffix}`}
-          action={
-            <button
-              onClick={() => setDetalheOperador(null)}
-              className="admin-v2-btn-secondary px-2 py-1"
-              aria-label={labels.fecharDetalhe}
-            >
-              ✕
-            </button>
-          }
-        >
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <MetricCard
-              label={labels.metricTotal}
-              value={formatBRL(detalheOperador.total_comissao)}
-              tone="gold"
-            />
-            <MetricCard
-              label={labels.metricPago}
-              value={formatBRL(detalheOperador.total_pago)}
-              tone="success"
-            />
-            <MetricCard
-              label={labels.metricPendente}
-              value={formatBRL(detalheOperador.total_pendente)}
-              tone="gold"
-            />
-          </div>
-
-          {detalheLoading ? (
-            <div className="border-t border-[var(--color-border-secondary)] py-3 text-center text-[12px] text-jl-fg-3">
-              {labels.carregando}
-            </div>
-          ) : detalheRows.length > 0 ? (
-            <>
-              <div className="mb-4 flex flex-wrap items-center gap-3 border-t border-[var(--color-border-secondary)] pt-4">
-                <button
-                  onClick={toggleTodos}
-                  className="text-[12px] text-jl-accent transition-colors hover:text-amber-300"
-                >
-                  {selecionados.size === detalheRows.filter((r) => r.status === 'pendente').length
-                    ? labels.desselecionarTodas
-                    : labels.selecionarPendentes}
-                </button>
-                {selecionados.size > 0 && (
-                  <button
-                    onClick={marcarPagas}
-                    className="admin-v2-btn-primary ml-auto"
-                  >
-                    {labels.marcarComoPagoBtn
-                      .replace('{{n}}', String(selecionados.size))
-                      .replace('{{valor}}', formatBRL(totalPendente))}
-                  </button>
-                )}
-              </div>
-
-              <div className="max-h-[300px] overflow-y-auto rounded-lg border border-[var(--color-border-secondary)]">
-                {detalheRows.map((row) => {
-                  const isPendente = row.status === 'pendente'
-                  return (
-                    <div
-                      key={row.comissao_id}
-                      className="flex items-center gap-3 border-b border-[var(--color-border-secondary)] px-4 py-3 last:border-b-0 hover:bg-white/[0.03]"
-                    >
-                      {isPendente && (
-                        <input
-                          type="checkbox"
-                          checked={selecionados.has(row.comissao_id)}
-                          onChange={() => toggleSelecionado(row.comissao_id)}
-                          className="h-4 w-4 rounded border-[var(--color-border-secondary)] bg-transparent accent-jl-accent"
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[12px] text-jl-fg-1">
-                          {labels.vendaPrefix} {row.venda_id.slice(0, 8)}…
-                        </p>
-                        <p className="text-[11px] text-jl-fg-3">
-                          {new Date(row.created_at).toLocaleDateString(labels.locale)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[12px] font-medium text-jl-fg-1">
-                          {formatBRL(row.valor_comissao)}
-                        </p>
-                        <p
-                          className={`text-[11px] ${
-                            isPendente ? 'text-amber-400' : 'text-emerald-400'
-                          }`}
-                        >
-                          {isPendente ? labels.statusPendente : labels.statusPago}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          ) : (
-            <div className="border-t border-[var(--color-border-secondary)] py-4 text-center text-[12px] text-jl-fg-3">
-              {labels.semComissoes}
-            </div>
-          )}
-        </SectionCard>
-      )}
+      {detalheOperador ? (
+        <ComissoesDetailSheet
+          operador={detalheOperador}
+          rows={detalheRows}
+          loading={detalheLoading}
+          error={error}
+          selecionados={selecionados}
+          totalPendenteSelecionado={totalPendenteSelecionado}
+          labels={labels}
+          onClose={fecharDetalhe}
+          onToggle={toggleSelecionado}
+          onToggleTodos={toggleTodos}
+          onMarcarPagas={() => void marcarPagas()}
+        />
+      ) : null}
     </div>
   )
 }
