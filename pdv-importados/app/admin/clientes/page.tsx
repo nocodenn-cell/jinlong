@@ -19,16 +19,22 @@ export default async function AdminClientesPage() {
   const inicial = await buscarClientesPaginadosAction(1)
   const clientesIniciais = inicial.ok ? inicial.clientes : []
   const hasMoreInicial = inicial.ok ? inicial.hasMore : false
+  const erroCargaInicial = inicial.ok ? null : inicial.error
 
   return (
     <div className="admin-v2-page" data-locale={locale}>
-      <PageHeader title={messages.clientes.titulo} subtitle={messages.clientes.subtitulo} />
+      <PageHeader
+        title={messages.clientes.titulo}
+        subtitle={messages.clientes.subtitulo}
+        className="mb-3 border-b border-[var(--color-border)] pb-3"
+      />
       <ClientesListClient
         idioma={legacyIdioma}
         locale={locale}
         messages={messages}
         clientesIniciais={clientesIniciais}
         hasMoreInicial={hasMoreInicial}
+        erroCargaInicial={erroCargaInicial}
       />
     </div>
   )
