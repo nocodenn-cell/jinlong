@@ -9,6 +9,7 @@
 
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui/admin-v2'
+import { CatalogoHubNav } from '@/components/ui/admin-v2/CatalogoHubNav'
 import { listarCategoriasProdutos } from '@/app/gerente/categorias-produtos/actions'
 import { loadAdminContext } from '@/lib/admin/auth/loadAdminContext'
 import { getMessages } from '@/i18n/getMessages'
@@ -47,6 +48,8 @@ export default async function AdminCategoriasProdutosPage({ searchParams }: Page
   return (
     <div className="admin-v2-page">
       <PageHeader title={m.categorias_produtos.titulo} subtitle={m.categorias_produtos.cadastro_rapido_hint} />
+
+      <CatalogoHubNav />
 
       <Suspense fallback={<div className="admin-v2-panel h-12 animate-pulse rounded-lg" />}>
         <CategoriasProdutosContent

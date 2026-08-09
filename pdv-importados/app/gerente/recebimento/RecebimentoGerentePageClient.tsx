@@ -39,9 +39,16 @@ type Props = Readonly<{
   idioma: Idioma
   produtos: RecebimentoProdutoOpt[]
   remessasRecentes: RemessaRecenteRow[]
+  /** Admin hub S6: oculta link “voltar” redundante com abas de estoque. */
+  embeddedInAdminHub?: boolean
 }>
 
-export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecentes }: Props) {
+export function RecebimentoGerentePageClient({
+  idioma,
+  produtos,
+  remessasRecentes,
+  embeddedInAdminHub = false,
+}: Props) {
   const m = getMessages(idioma)
   const r = m.gerente.recebimento_page
   const locale = useMemo(() => localeFromIdioma(idioma), [idioma])
@@ -138,7 +145,15 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
   )
 
   return (
-    <div className={`admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`}>
+    <div
+      className={
+        embeddedInAdminHub
+          ? idioma === 'pt'
+            ? ''
+            : 'font-chinese'
+          : `admin-v2-page ${idioma === 'pt' ? '' : 'font-chinese'}`
+      }
+    >
       <PageHeader
         title={r.titulo}
         subtitle={r.subtitulo}
@@ -149,9 +164,11 @@ export function RecebimentoGerentePageClient({ idioma, produtos, remessasRecente
         }
       />
 
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {m.gerente.inicio}
-      </Link>
+      {!embeddedInAdminHub ? (
+        <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
+          ← {m.gerente.inicio}
+        </Link>
+      ) : null}
 
       {semProdutos ? (
         <div

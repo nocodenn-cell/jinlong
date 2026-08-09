@@ -234,7 +234,7 @@ export function ImplantacaoChecklistClient({
           >
             {busyDados ? L.validandoDados : L.validarDados}
           </Button>
-          <p className="text-[11px] text-jl-fg-3">{L.evidenciaHint}</p>
+          <p className="text-caption text-jl-fg-3">{L.evidenciaHint}</p>
         </div>
       ) : null}
 
@@ -250,7 +250,7 @@ export function ImplantacaoChecklistClient({
                 value={goObs}
                 onChange={(e) => setGoObs(e.target.value)}
                 rows={2}
-                className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2 text-sm"
+                className="fp-control w-full text-small"
               />
               <Button
                 type="button"
@@ -269,7 +269,7 @@ export function ImplantacaoChecklistClient({
                 id="go-revogar"
                 value={revogarMotivo}
                 onChange={(e) => setRevogarMotivo(e.target.value)}
-                className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2 text-sm"
+                className="fp-control w-full text-small"
               />
               <Button
                 type="button"
@@ -299,7 +299,7 @@ export function ImplantacaoChecklistClient({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-jl-border-1 text-left text-[10px] uppercase tracking-wide text-jl-fg-3">
+                  <tr className="border-b border-jl-border-1 text-left text-caption uppercase tracking-wide text-jl-fg-3">
                     <th className="px-3 py-2">{L.colItem}</th>
                     <th className="px-3 py-2 w-36">{L.colStatus}</th>
                     <th className="px-3 py-2 w-40">{L.colResponsavel}</th>
@@ -317,7 +317,7 @@ export function ImplantacaoChecklistClient({
                       <tr key={def.key} className="border-b border-jl-border-1/50 align-top">
                         <td className="px-3 py-2.5">
                           <div className="font-medium text-jl-fg-1">{L.itens[def.key] ?? def.key}</div>
-                          <div className="text-[11px] text-jl-fg-3">
+                          <div className="text-caption text-jl-fg-3">
                             {meta.obrigatorio || meta.grupo ? L.obrigatorio : L.opcional}
                           </div>
                         </td>
@@ -334,7 +334,7 @@ export function ImplantacaoChecklistClient({
                                 },
                               }))
                             }
-                            className="w-full rounded-md border border-jl-border-1 bg-background px-2 py-1.5 text-xs"
+                            className="fp-control fp-control--sm w-full text-small"
                           >
                             <option value="PENDENTE">{L.statusPendente}</option>
                             <option value="CONCLUIDO">{L.statusConcluido}</option>
@@ -351,7 +351,7 @@ export function ImplantacaoChecklistClient({
                                 [def.key]: { ...draft, responsavel: e.target.value },
                               }))
                             }
-                            className="w-full rounded-md border border-jl-border-1 bg-background px-2 py-1.5 text-xs"
+                            className="fp-control fp-control--sm w-full text-small"
                           />
                         </td>
                         <td className="px-3 py-2.5 text-xs text-jl-fg-3 tabular-nums">
@@ -367,7 +367,7 @@ export function ImplantacaoChecklistClient({
                                 [def.key]: { ...draft, observacoes: e.target.value },
                               }))
                             }
-                            className="w-full rounded-md border border-jl-border-1 bg-background px-2 py-1.5 text-xs"
+                            className="fp-control fp-control--sm w-full text-small"
                           />
                         </td>
                         <td className="px-3 py-2.5">

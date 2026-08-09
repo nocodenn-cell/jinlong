@@ -77,17 +77,21 @@ describe('SidebarNav — perfil DONO/GERENTE (cliente)', () => {
     expect(hrefs).not.toContain(ROUTES.admin.provisionamento)
   })
 
-  it('alcança categorias de produtos sem abrir a gaveta "Mais"', () => {
-    expect(renderMenu(false)).toContain(ROUTES.admin.categoriasProdutos)
-  })
-
-  it('alcança categorias financeiras pela navegação normal', () => {
-    expect(renderMenuComMaisAberto(false)).toContain(ROUTES.admin.categoriasFinanceiras)
-  })
-
-  it('vê recebimento e relatórios sem abrir a gaveta "Mais"', () => {
+  it('alcança catálogo e estoque no CORE (taxonomias via hub, não sidebar)', () => {
     const hrefs = renderMenu(false)
-    expect(hrefs).toContain(ROUTES.admin.estoqueRecebimento)
+    expect(hrefs).toContain(ROUTES.admin.catalogo)
+    expect(hrefs).not.toContain(ROUTES.admin.categoriasProdutos)
+    expect(hrefs).not.toContain(ROUTES.admin.marcasProdutos)
+    expect(hrefs).toContain(ROUTES.admin.estoque)
+    expect(hrefs).not.toContain(ROUTES.admin.estoqueRecebimento)
+  })
+
+  it('categorias financeiras não aparecem em "Mais" (aba do hub financeiro)', () => {
+    expect(renderMenuComMaisAberto(false)).not.toContain(ROUTES.admin.categoriasFinanceiras)
+  })
+
+  it('vê relatórios no CORE sem abrir a gaveta "Mais"', () => {
+    const hrefs = renderMenu(false)
     expect(hrefs).toContain(ROUTES.admin.relatorios)
   })
 

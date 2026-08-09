@@ -22,7 +22,7 @@ import {
   previewImportacaoNfe,
 } from './actions'
 
-type Props = Readonly<{ idioma: Idioma }>
+type Props = Readonly<{ idioma: Idioma; embeddedInAdminHub?: boolean }>
 
 type LinhaEditavel = LinhaPreviewNfe & {
   fator: number
@@ -49,7 +49,7 @@ function linhaResolvida(l: LinhaEditavel): boolean {
   return l.acao === 'VINCULAR' && !!l.produto_id_destino
 }
 
-export function ImportarNfePageClient({ idioma }: Props) {
+export function ImportarNfePageClient({ idioma, embeddedInAdminHub = false }: Props) {
   const m = getMessages(idioma)
   const mi = m.estoque.import_nfe
   const locale = localeFromIdioma(idioma)
@@ -396,12 +396,20 @@ export function ImportarNfePageClient({ idioma }: Props) {
   )
 
   return (
-    <div className={`admin-v2-page space-y-4 ${fontClass}`}>
+    <div
+      className={
+        embeddedInAdminHub
+          ? `space-y-4 ${fontClass}`
+          : `admin-v2-page space-y-4 ${fontClass}`
+      }
+    >
       <PageHeader title={mi.titulo} subtitle={mi.subtitulo} />
 
-      <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
-        ← {mi.voltar}
-      </Link>
+      {!embeddedInAdminHub ? (
+        <Link href={ROUTES.admin.estoque} className="gerente-nav-back text-sm font-medium hover:underline">
+          ← {mi.voltar}
+        </Link>
+      ) : null}
 
       <section
         onDragOver={(e) => {

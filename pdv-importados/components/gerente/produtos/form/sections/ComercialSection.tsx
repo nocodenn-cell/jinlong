@@ -9,6 +9,7 @@ import {
 import { SelectComCadastroRapido } from '../fields/SelectComCadastroRapido'
 import { ProdutoFormSectionHeading } from '../ProdutoFormSectionHeading'
 import { useProdutoFormContext } from '../ProdutoFormContext'
+import { FIN_TEXTAREA } from '../produtoFormStyles'
 import type { OrigemCode } from '../produtoForm.types'
 
 type Props = Readonly<{
@@ -33,7 +34,7 @@ export function ComercialSection({ faixasSlot }: Props) {
   return (
     <section aria-labelledby="produto-secao-comercial">
       <ProdutoFormSectionHeading title={p.secao_classificacao} />
-      <p className="mt-1 text-[11px] text-jl-fg-3">{p.hint_classificacao_recomendados}</p>
+      <p className="mt-1 text-caption text-jl-fg-3">{p.hint_classificacao_recomendados}</p>
       <div id="produto-secao-comercial" className="mt-3 space-y-3">
         {/* Categoria e fornecedor saíram daqui para a área sempre visível
             (CategoriaQuickField / FornecedorQuickField). Marca segue aqui. */}
@@ -73,7 +74,7 @@ export function ComercialSection({ faixasSlot }: Props) {
               <option value="brasil_nf">{p.origem_brasil_nf}</option>
               <option value="brasil_sem_nf">{p.origem_brasil_sem_nf}</option>
             </select>
-            <span className="mt-0.5 block text-[10px] text-jl-fg-3">{p.hint_origem_tem_nf}</span>
+            <span className="mt-0.5 block text-caption text-jl-fg-3">{p.hint_origem_tem_nf}</span>
           </label>
         </div>
 
@@ -99,7 +100,7 @@ export function ComercialSection({ faixasSlot }: Props) {
               placeholder={p.nome}
               autoComplete="off"
             />
-            <span className="mt-0.5 block text-[10px] text-jl-fg-3">
+            <span className="mt-0.5 block text-caption text-jl-fg-3">
               {p.nome_reduzido_pdv_hint}
             </span>
           </label>
@@ -109,7 +110,7 @@ export function ComercialSection({ faixasSlot }: Props) {
           {p.observacao}
           <textarea
             rows={2}
-            className="mt-1 w-full resize-none rounded-md px-3 py-2 text-xs app-input !bg-white/[.08] !border-white/[.18]"
+            className={FIN_TEXTAREA}
             value={ctx.observacao}
             onChange={(e) => ctx.setObservacao(e.target.value)}
             disabled={disabled}
@@ -118,10 +119,10 @@ export function ComercialSection({ faixasSlot }: Props) {
         </label>
 
         <div className="rounded-md border border-[var(--color-border-secondary)] bg-white/[.03] p-3">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+          <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-jl-fg-3">
             {p.titulo_faixas_atacado}
           </p>
-          <p className="mb-2 text-[11px] text-jl-fg-3">{p.hint_faixas_atacado}</p>
+          <p className="mb-2 text-caption text-jl-fg-3">{p.hint_faixas_atacado}</p>
           {faixasSlot}
         </div>
       </div>

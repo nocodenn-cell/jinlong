@@ -119,6 +119,7 @@ vi.mock('@/lib/admin/auth/resolveAdminSession', () => ({
 
 vi.mock('@/components/ui/admin-v2', () => ({
   AdminV2Shell: ({ children }: { children: unknown }) => children,
+  AdminToastViewport: () => null,
 }))
 
 async function runLayoutGate(): Promise<PipelineOutcome> {

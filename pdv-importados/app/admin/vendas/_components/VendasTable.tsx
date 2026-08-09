@@ -105,7 +105,7 @@ function StatusCell({ status, labels }: { status: string | null; labels: VendasL
           ? 'admin-v2-badge-danger'
           : 'admin-v2-badge-muted'
     return (
-      <span className={`${pillClass} inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-medium leading-none`}>
+      <span className={`${pillClass} inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-caption font-medium leading-none`}>
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
         {label}
       </span>
@@ -113,7 +113,7 @@ function StatusCell({ status, labels }: { status: string | null; labels: VendasL
   }
   if (status) {
     return (
-      <span className="admin-v2-badge-muted inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-medium leading-none">
+      <span className="admin-v2-badge-muted inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-caption font-medium leading-none">
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
         {status}
       </span>
@@ -136,8 +136,8 @@ function ItensCell({ row, labels }: { row: VendaLinha; labels: VendasLabels }) {
   const extras = row.qtd_itens_distintos - 1
   return (
     <div className="min-w-0">
-      <p className="max-w-[260px] truncate text-[12px] text-jl-fg-1">{row.primeiro_produto ?? '—'}</p>
-      <p className="text-[10px] text-jl-fg-3">
+      <p className="max-w-[260px] truncate text-small text-jl-fg-1">{row.primeiro_produto ?? '—'}</p>
+      <p className="text-caption text-jl-fg-3">
         {row.qtd_itens_total} {row.qtd_itens_total === 1 ? labels.unidade : labels.unidades}
         {extras > 0 ? ` · +${extras} ${extras === 1 ? labels.item : labels.itensPl}` : ''}
       </p>
@@ -150,7 +150,7 @@ function HoraCell({ data }: { data: string | null }) {
   const d = new Date(data)
   if (Number.isNaN(d.getTime())) return <span className="text-jl-fg-3">—</span>
   return (
-    <span className="whitespace-nowrap text-[12px] text-jl-fg-2">
+    <span className="whitespace-nowrap text-small text-jl-fg-2">
       {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
     </span>
   )
@@ -221,7 +221,7 @@ export function VendasTable({
     {
       key: 'pagamento',
       header: labels.colPagamento,
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{paymentLabel(r.forma_pagamento, labels)}</span>,
+      cell: (r) => <span className="text-small text-jl-fg-2">{paymentLabel(r.forma_pagamento, labels)}</span>,
     },
     {
       key: 'total',
@@ -232,7 +232,7 @@ export function VendasTable({
         r.total_liquido == null ? (
           <span className="text-jl-fg-3">—</span>
         ) : (
-          <span className="text-[12px] font-medium text-jl-fg-1">{formatBRL(r.total_liquido)}</span>
+          <span className="text-small font-medium text-jl-fg-1">{formatBRL(r.total_liquido)}</span>
         ),
     },
     {
@@ -244,7 +244,7 @@ export function VendasTable({
     {
       key: 'vendedor',
       header: labels.colVendedor,
-      cell: (r) => <span className="text-[12px] text-jl-fg-2">{r.vendedor_nome ?? '—'}</span>,
+      cell: (r) => <span className="text-small text-jl-fg-2">{r.vendedor_nome ?? '—'}</span>,
     },
   ]
 
@@ -257,8 +257,8 @@ export function VendasTable({
         emptyState={
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <span className="text-4xl text-jl-fg-3" aria-hidden>🧾</span>
-            <p className="text-[14px] font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
-            <p className="text-[12px] text-jl-fg-3">{labels.vazioSub}</p>
+            <p className="text-body font-medium text-jl-fg-2">{labels.vazioTitulo}</p>
+            <p className="text-small text-jl-fg-3">{labels.vazioSub}</p>
           </div>
         }
         className="rounded-none border-x-0 border-b-0"

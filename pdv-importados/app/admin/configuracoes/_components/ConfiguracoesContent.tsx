@@ -249,7 +249,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secContato}</h3>
+            <h3 className="text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secContato}</h3>
             <div className="grid grid-cols-2 gap-3">
               <FormField label={labels.loja.telefone}>
                 <input name="telefone" type="tel" defaultValue={dados.loja?.telefone ?? ''} className={inputClass} />
@@ -259,7 +259,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secEndereco}</h3>
+            <h3 className="text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secEndereco}</h3>
             <FormField label={labels.loja.logradouro}>
               <input name="endereco_logradouro" type="text" defaultValue={dados.loja?.endereco_logradouro ?? ''} className={inputClass} />
             </FormField>
@@ -292,7 +292,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secSerieFiscal}</h3>
+            <h3 className="text-caption font-semibold uppercase tracking-[0.06em] text-jl-fg-3">{labels.loja.secSerieFiscal}</h3>
             <div className="grid grid-cols-2 gap-3">
               <FormField label={labels.loja.nfce}>
                 <input
@@ -316,9 +316,9 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            {lojaErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{lojaErro}</div>}
+            {lojaErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-small">{lojaErro}</div>}
             {lojaSucesso && (
-              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.loja.sucesso}</div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-small">{labels.loja.sucesso}</div>
             )}
 
             <div className="flex gap-2">
@@ -334,7 +334,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
         <SectionCard title={labels.fiscal.sec}>
           <form onSubmit={handlePdvSubmit} className="space-y-4">
             {!dados.loja?.id && (
-              <div className="admin-v2-alert-warning rounded-lg px-3 py-2 text-[12px]">
+              <div className="admin-v2-alert-warning rounded-lg px-3 py-2 text-small">
                 {labels.fiscal.warnSalveLoja}
               </div>
             )}
@@ -390,9 +390,9 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </FormField>
             </div>
 
-            {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
+            {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-small">{pdvErro}</div>}
             {pdvSucesso && (
-              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.fiscal.sucesso}</div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-small">{labels.fiscal.sucesso}</div>
             )}
 
             <div className="flex gap-2">
@@ -455,9 +455,9 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
               </CheckboxLabel>
             </div>
 
-            {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-[12px]">{pdvErro}</div>}
+            {pdvErro && <div className="admin-v2-alert-danger rounded-lg px-3 py-2 text-small">{pdvErro}</div>}
             {pdvSucesso && (
-              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-[12px]">{labels.prefs.sucesso}</div>
+              <div className="admin-v2-alert-success rounded-lg px-3 py-2 text-small">{labels.prefs.sucesso}</div>
             )}
 
             <button type="submit" className="admin-v2-btn-primary" disabled={!dados.loja?.id}>
@@ -473,7 +473,7 @@ export function ConfiguracoesContent({ dados, labels }: { dados: ConfigDados; la
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] font-medium text-jl-fg-3">{label}</span>
+      <span className="text-caption font-medium text-jl-fg-3">{label}</span>
       {children}
     </label>
   )
@@ -481,7 +481,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 
 function CheckboxLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-jl-fg-2 [&_input]:accent-jl-accent">
+    <label className="flex items-center gap-2 text-small text-jl-fg-2 [&_input]:accent-jl-accent">
       {children}
     </label>
   )

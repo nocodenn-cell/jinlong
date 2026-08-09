@@ -165,7 +165,7 @@ export function CaixaGerenteModal({
         <span className="flex items-center gap-2">
           {passo === "senha" ? (
             <ImperialSealIcon
-              className="h-6 w-6 shrink-0 app-accent-text"
+              className="h-6 w-6 shrink-0 text-primary"
               title={m.caixa.aria_selo_gerente}
               pulse
             />

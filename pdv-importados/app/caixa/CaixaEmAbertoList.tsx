@@ -53,13 +53,13 @@ function CaixaEmAbertoListImpl({
                   {m.caixa.moeda_prefixo} {formatDecimalBRL(v.totalLiquido)}
                 </span>
               </div>
-              <p className={cn("mt-0.5 text-[11px]", muted)}>
+              <p className={cn("mt-0.5 text-small", muted)}>
                 {v.qtdItens} {v.qtdItens === 1 ? m.caixa.em_aberto_item : m.caixa.em_aberto_itens}
               </p>
             </button>
             <button
               type="button"
-              className="mt-1 text-[11px] underline-offset-2 hover:underline text-destructive"
+              className="mt-1 text-small underline-offset-2 hover:underline text-destructive"
               onClick={() => onDescartar(v.id)}
             >
               {m.caixa.em_aberto_descartar}

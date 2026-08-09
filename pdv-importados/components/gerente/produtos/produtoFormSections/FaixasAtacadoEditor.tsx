@@ -19,7 +19,7 @@ type Props = Readonly<{
   p: Mensagens['produtos']
 }>
 
-const IN = 'h-8 w-full rounded-md px-2 text-xs app-input !bg-white/[.08] !border-white/[.18] font-mono'
+const IN = 'fp-control fp-control--sm h-8 w-full font-mono text-caption'
 
 function validarFaixa(
   quantidade: number | null,
@@ -187,7 +187,7 @@ export function FaixasAtacadoEditor({ produtoId, p }: Props) {
 
   return (
     <div>
-      <div className="mb-2 grid grid-cols-[1fr_1fr_auto] gap-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-jl-fg-3">
+      <div className="mb-2 grid grid-cols-[1fr_1fr_auto] gap-2 px-2 text-caption font-semibold uppercase tracking-wider text-jl-fg-3">
         <span>{p.faixa_col_quantidade}</span>
         <span>{p.faixa_col_preco}</span>
         <span />

@@ -123,7 +123,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
               data-testid="prov-loja-nome"
               value={lojaNome}
               onChange={(e) => setLojaNome(e.target.value)}
-              className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2"
+              className="fp-control w-full text-small"
               autoComplete="organization"
             />
           </label>
@@ -133,7 +133,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
               data-testid="prov-loja-codigo"
               value={lojaCodigo}
               onChange={(e) => setLojaCodigo(e.target.value)}
-              className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2"
+              className="fp-control w-full text-small"
               placeholder="OPCIONAL"
             />
             <span className="text-xs text-jl-fg-3">{L.fieldLojaCodigoHint}</span>
@@ -157,7 +157,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
               data-testid="prov-dono-nome"
               value={donoNome}
               onChange={(e) => setDonoNome(e.target.value)}
-              className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2"
+              className="fp-control w-full text-small"
               autoComplete="name"
             />
           </label>
@@ -168,7 +168,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
               type="email"
               value={donoEmail}
               onChange={(e) => setDonoEmail(e.target.value)}
-              className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2"
+              className="fp-control w-full text-small"
               autoComplete="email"
             />
           </label>
@@ -179,7 +179,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
               type="password"
               value={donoSenha}
               onChange={(e) => setDonoSenha(e.target.value)}
-              className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2"
+              className="fp-control w-full text-small"
               autoComplete="new-password"
             />
             <span className="text-xs text-jl-fg-3">
@@ -192,7 +192,7 @@ export function ProvisionamentoWizardClient({ labels: L }: Props) {
               data-testid="prov-dono-idioma"
               value={idioma}
               onChange={(e) => setIdioma(e.target.value as 'pt' | 'zh')}
-              className="w-full rounded-md border border-jl-border-1 bg-background px-3 py-2"
+              className="fp-control w-full text-small"
             >
               <option value="zh">{L.idiomaZh}</option>
               <option value="pt">{L.idiomaPt}</option>

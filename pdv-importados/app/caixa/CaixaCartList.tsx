@@ -178,7 +178,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           {res.tipoPreco === "ATACADO" ? (
             <Badge
               variant="outline"
-              className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
+              className={`shrink-0 px-1.5 py-0 text-caption font-semibold ${CAIXA_CHIP_SUCCESS}`}
             >
               {m.relatorios.atacado}
             </Badge>
@@ -201,7 +201,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 px-1 text-[11px] text-muted-foreground hover:text-primary"
+          className="h-8 px-1 text-small text-muted-foreground hover:text-primary"
           onClick={() => onRemover(item.id)}
         >
           {m.caixa.remover}
@@ -229,7 +229,7 @@ const CartRowDesktop = memo(function CartRowDesktop({
           {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
         </div>
         {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-          <div className="text-success text-[10px]">
+          <div className="text-success text-caption">
             ↓ {moeda}{" "}
             {formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)}
           </div>
@@ -258,7 +258,7 @@ const CartCardMobile = memo(function CartCardMobile({
             {res.tipoPreco === "ATACADO" ? (
               <Badge
                 variant="outline"
-                className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold ${CAIXA_CHIP_SUCCESS}`}
+                className={`shrink-0 px-1.5 py-0 text-caption font-semibold ${CAIXA_CHIP_SUCCESS}`}
               >
                 {m.relatorios.atacado}
               </Badge>
@@ -299,7 +299,7 @@ const CartCardMobile = memo(function CartCardMobile({
             <span className="tabular-nums">
               {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
                 <span className="block space-y-0.5">
-                  <span className="line-through text-foreground/55 text-[10px] block">
+                  <span className="line-through text-foreground/55 text-caption block">
                     {moeda} {formatDecimal2(res.precoOriginal, locale)}
                   </span>
                   <span>
@@ -320,7 +320,7 @@ const CartCardMobile = memo(function CartCardMobile({
               {formatDecimal2(res.precoUnitario * item.quantidade, locale)}
             </span>
             {res.tipoPreco === "ATACADO" && res.precoOriginal > res.precoUnitario ? (
-              <span className="text-success text-[10px] block">
+              <span className="text-success text-caption block">
                 ↓ {moeda}{" "}
                 {formatDecimal2((res.precoOriginal - res.precoUnitario) * item.quantidade, locale)}
               </span>
@@ -353,13 +353,13 @@ function CaixaCartListInner({
           </p>
           {/* Atalhos de teclado: rodapé, linha única, opacidade reduzida */}
           <div className="flex flex-wrap items-center gap-1.5 opacity-60">
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-caption leading-tight text-jl-fg-2">
               Enter · {m.caixa.adicionar_enter}
             </span>
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-caption leading-tight text-jl-fg-2">
               Ctrl+B · {m.caixa.empty_shortcut_focus}
             </span>
-            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-[10px] leading-tight text-jl-fg-2">
+            <span className="inline-flex shrink-0 rounded border border-jl-border-1 bg-jl-surface-soft px-1.5 py-0.5 text-caption leading-tight text-jl-fg-2">
               F4 · {m.caixa.finalizar_venda}
             </span>
           </div>

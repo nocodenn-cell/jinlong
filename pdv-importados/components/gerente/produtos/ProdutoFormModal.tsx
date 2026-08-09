@@ -505,7 +505,7 @@ export function ProdutoFormModal({
             caixa recusa a venda. Chamar de "opcional" mandava o operador
             embora achando que o produto já vendia. */}
         {!posSalvar.estoqueInicialFalhou ? (
-          <p className="mt-2 text-xs text-jl-fg-3">
+          <p className="mt-2 text-caption text-jl-fg-3">
             {estoquePendenteParaVender
               ? p.pos_salvar_hint_estoque_obrigatorio
               : p.pos_salvar_hint}

@@ -3,8 +3,9 @@
 import { useMemo, useState } from 'react'
 import { Plus, Pencil, UserX, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DataTablePage } from '@/components/gerente/DataTablePage'
-import { GerenteTable } from '@/components/gerente/GerenteTable'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Input, Select } from '@/components/ui/forms'
+import { CrudListShell } from '@/components/ui/admin-v2'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 import { cn } from '@/lib/utils'
 import {
@@ -100,127 +101,121 @@ export function FuncionariosListClient({ atorId, atorPerfil, iniciais, labels: L
     }
   }
 
+  const columns: Column<FuncionarioListRow>[] = useMemo(
+    () => [
+      { key: 'nome', header: L.colNome, cell: (row) => <span className="font-medium">{row.nome}</span> },
+      { key: 'email', header: L.colEmail, cell: (row) => row.email ?? '—' },
+      {
+        key: 'perfil',
+        header: L.colPerfil,
+        cell: (row) => labelPerfil(row.perfil, L),
+      },
+      {
+        key: 'idioma',
+        header: L.colIdioma,
+        width: '80px',
+        cell: (row) => <span className="uppercase">{row.idioma_preferido}</span>,
+      },
+      {
+        key: 'status',
+        header: L.colStatus,
+        width: '100px',
+        cell: (row) => (
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-caption font-medium',
+              row.ativo ? 'bg-emerald-500/15 text-emerald-700' : 'bg-jl-surface-soft text-jl-fg-3',
+            )}
+          >
+            {row.ativo ? L.ativo : L.inativo}
+          </span>
+        ),
+      },
+    ],
+    [L],
+  )
+
   return (
     <>
-      <DataTablePage
-        meta={`${filtrados.length} ${L.contagem}`}
-        filters={
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="search"
-              value={termo}
-              onChange={(e) => setTermo(e.target.value)}
-              placeholder={L.buscaPlaceholder}
-              className="min-w-[220px] flex-1 rounded-md border border-jl-border-1 bg-jl-surface-soft px-3 py-2 text-sm"
-            />
-            <select
-              value={statusF}
-              onChange={(e) => setStatusF(e.target.value as typeof statusF)}
-              className="rounded-md border border-jl-border-1 bg-jl-surface-soft px-3 py-2 text-sm"
+      <CrudListShell
+        meta={<span className="text-caption text-fg-subtle">{`${filtrados.length} ${L.contagem}`}</span>}
+        toolbar={
+          <>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <Input
+                type="search"
+                value={termo}
+                onChange={(e) => setTermo(e.target.value)}
+                placeholder={L.buscaPlaceholder}
+                aria-label={L.buscaPlaceholder}
+                className="min-w-[220px] flex-1"
+              />
+              <Select
+                value={statusF}
+                onChange={(e) => setStatusF(e.target.value as typeof statusF)}
+                aria-label={L.filtroTodos}
+                className="min-w-[140px]"
+              >
+                <option value="todos">{L.filtroTodos}</option>
+                <option value="ativos">{L.filtroAtivos}</option>
+                <option value="inativos">{L.filtroInativos}</option>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setEmEdicao(null)
+                setModalAberto(true)
+              }}
             >
-              <option value="todos">{L.filtroTodos}</option>
-              <option value="ativos">{L.filtroAtivos}</option>
-              <option value="inativos">{L.filtroInativos}</option>
-            </select>
-          </div>
-        }
-        actions={
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              setEmEdicao(null)
-              setModalAberto(true)
-            }}
-          >
-            <Plus className="mr-1 h-4 w-4" aria-hidden />
-            {L.novo}
-          </Button>
+              <Plus className="mr-1 h-4 w-4" aria-hidden />
+              {L.novo}
+            </Button>
+          </>
         }
       >
-        <GerenteTable
-          tone="dragon"
+        <DataTable
+          columns={columns}
+          data={filtrados}
+          rowKey={(row) => row.id}
           compact
-          columns={[
-            { key: 'nome', header: L.colNome, priority: 'primary' },
-            { key: 'email', header: L.colEmail },
-            { key: 'perfil', header: L.colPerfil },
-            { key: 'idioma', header: L.colIdioma, width: 80 },
-            { key: 'status', header: L.colStatus, width: 100 },
-            {
-              key: 'acoes',
-              header: <span className="sr-only">{L.colAcoes}</span>,
-              width: 100,
-              priority: 'contextual',
-            },
-          ]}
-        >
-          {filtrados.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="px-3 py-8 text-center text-sm text-jl-fg-3">
-                {L.vazio}
-              </td>
-            </tr>
-          ) : (
-            filtrados.map((row) => {
-              const podeEditar = podeEditarAlvo(ator, row)
-              const podeToggle = podeDesativarAlvo(ator, row)
-              return (
-                <tr
-                  key={row.id}
-                  className={cn('gerente-fin-row-hover transition-colors', !row.ativo && 'opacity-60')}
+          emptyTitle={L.vazio}
+          rowActions={(row) => {
+            const podeEditar = podeEditarAlvo(ator, row)
+            const podeToggle = podeDesativarAlvo(ator, row)
+            return (
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!podeEditar}
+                  title={L.editar}
+                  aria-label={L.editar}
+                  onClick={() => {
+                    setEmEdicao(row)
+                    setModalAberto(true)
+                  }}
                 >
-                  <td className="px-3 py-2 text-sm font-medium text-jl-fg-1">{row.nome}</td>
-                  <td className="px-3 py-2 text-sm text-jl-fg-2">{row.email ?? '—'}</td>
-                  <td className="px-3 py-2 text-sm">{labelPerfil(row.perfil, L)}</td>
-                  <td className="px-3 py-2 text-sm uppercase">{row.idioma_preferido}</td>
-                  <td className="px-3 py-2 text-sm">
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs font-medium',
-                        row.ativo
-                          ? 'bg-emerald-500/15 text-emerald-700'
-                          : 'bg-jl-surface-soft text-jl-fg-3',
-                      )}
-                    >
-                      {row.ativo ? L.ativo : L.inativo}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        disabled={!podeEditar}
-                        title={L.editar}
-                        aria-label={L.editar}
-                        onClick={() => {
-                          setEmEdicao(row)
-                          setModalAberto(true)
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        disabled={!podeToggle || busyId === row.id}
-                        title={row.ativo ? L.desativar : L.ativar}
-                        aria-label={row.ativo ? L.desativar : L.ativar}
-                        onClick={() => void toggleAtivo(row)}
-                      >
-                        {row.ativo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })
-          )}
-        </GerenteTable>
-      </DataTablePage>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!podeToggle || busyId === row.id}
+                  title={row.ativo ? L.desativar : L.ativar}
+                  aria-label={row.ativo ? L.desativar : L.ativar}
+                  onClick={() => void toggleAtivo(row)}
+                >
+                  {row.ativo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                </Button>
+              </div>
+            )
+          }}
+        />
+      </CrudListShell>
 
       {modalAberto ? (
         <FuncionarioEditarModal
