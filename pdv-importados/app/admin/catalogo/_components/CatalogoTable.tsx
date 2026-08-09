@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
-import { Copy, ImageIcon, Package, Pencil, Trash2 } from 'lucide-react'
+import { ROUTES, adminEstoqueProdutoQuery } from '@shared-core/navigation/routes'
+import { Copy, FilterX, ImageIcon, Package, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/feedback'
@@ -43,6 +43,9 @@ export type CatalogoLabels = {
   inativar: string
   vazioTitulo: string
   vazioSub: string
+  vazioFiltrosTitulo: string
+  vazioFiltrosSub: string
+  limparFiltros: string
   cadastroRapido: string
   origemChina: string
   origemBrasilNf: string
@@ -52,6 +55,11 @@ export type CatalogoLabels = {
   acaoVerEstoque: string
   acaoSelecionarLinha: string
   reativar: string
+  inativarConfirmTitulo: string
+  inativarConfirmTexto: string
+  confirmar: string
+  cancelar: string
+  fechar: string
 }
 
 /** `{{nome}}` → nome do produto; mantém o rótulo traduzível. */
@@ -77,12 +85,14 @@ export function CatalogoTable({
   m,
   opcoes,
   idioma,
+  hasActiveFilters = false,
 }: {
   produtos: CatalogoProduto[]
   labels: CatalogoLabels
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
   idioma: Idioma
+  hasActiveFilters?: boolean
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -327,24 +337,40 @@ export function CatalogoTable({
         columns={columns}
         rowKey={(r) => r.id}
         emptyState={
-          <EmptyState
-            icon={<Package className="h-6 w-6" aria-hidden />}
-            title={labels.vazioTitulo}
-            description={labels.vazioSub}
-            actionLabel={labels.cadastroRapido}
-            onAction={() => setNovoOpen(true)}
-          />
+          hasActiveFilters ? (
+            <EmptyState
+              icon={<FilterX className="h-6 w-6" aria-hidden />}
+              title={labels.vazioFiltrosTitulo}
+              description={labels.vazioFiltrosSub}
+              actionLabel={labels.limparFiltros}
+              onAction={() => router.push(ROUTES.admin.catalogo)}
+            />
+          ) : (
+            <EmptyState
+              icon={<Package className="h-6 w-6" aria-hidden />}
+              title={labels.vazioTitulo}
+              description={labels.vazioSub}
+              actionLabel={labels.cadastroRapido}
+              onAction={() => setNovoOpen(true)}
+            />
+          )
         }
         className="rounded-none border-x-0 border-b-0"
         rowActions={(row) => (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-end gap-1">
             <CatalogoPublicacaoActions
               produtoId={row.id}
+              produtoNome={row.nome}
               status={row.status_publicacao}
               labels={{
                 publicar: labels.publicar,
                 inativar: labels.inativar,
                 reativar: labels.reativar,
+                confirmarTitulo: labels.inativarConfirmTitulo,
+                confirmarTexto: labels.inativarConfirmTexto,
+                confirmar: labels.confirmar,
+                cancelar: labels.cancelar,
+                fechar: labels.fechar,
               }}
               erroGenerico={m.comum.erro}
             />

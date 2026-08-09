@@ -11,11 +11,14 @@ import { useRouter } from 'next/navigation'
 
 export function CatalogoNovoButton({
   label,
+  titleHint,
   m,
   opcoes,
   idioma,
 }: {
   label: string
+  /** Ex.: “Atalho: N” — aparece no title do botão. */
+  titleHint?: string
   m: Mensagens
   opcoes: OpcoesFiltrosProdutos
   idioma: Idioma
@@ -25,7 +28,13 @@ export function CatalogoNovoButton({
 
   return (
     <>
-      <Button type="button" variant="primary" onClick={() => setOpen(true)} className="gap-1.5">
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setOpen(true)}
+        className="gap-1.5"
+        title={titleHint ? `${label} (${titleHint})` : label}
+      >
         <Plus size={14} aria-hidden />
         {label}
       </Button>

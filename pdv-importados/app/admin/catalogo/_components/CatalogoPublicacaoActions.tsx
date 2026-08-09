@@ -1,7 +1,8 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { ToggleLeft } from 'lucide-react'
 import {
   inativarProduto,
   publicarProduto,
@@ -10,12 +11,23 @@ import {
 import { isInativo, podePublicarProduto } from '@/core/catalog/statusPublicacao'
 import type { StatusPublicacao } from '@/core/ports/produto'
 import { Button } from '@/components/ui/button'
+import { DragonModal } from '@/components/ui/DragonModal'
 import { emitGerenteToast } from '@/lib/gerente/toast'
 
 type Props = Readonly<{
   produtoId: string
+  produtoNome: string
   status: StatusPublicacao
-  labels: { publicar: string; inativar: string; reativar: string }
+  labels: {
+    publicar: string
+    inativar: string
+    reativar: string
+    confirmarTitulo: string
+    confirmarTexto: string
+    confirmar: string
+    cancelar: string
+    fechar: string
+  }
   erroGenerico: string
 }>
 
@@ -23,15 +35,19 @@ type Props = Readonly<{
  * Vocabulário honesto por status (decisão em
  * `Jinlong/decisoes/CATALOGO_CATEGORIA_INATIVA_E_PUBLICAR.md`):
  *   DRAFT     → "Publicar"  (estreia; único caso que `podePublicarProduto` libera)
- *   PUBLICADO → "Inativar"
+ *   PUBLICADO → ícone Inativar + confirmação
  *   INATIVO   → "Reativar"  (retorno, não estreia)
- *
- * Antes a decisão era `ativoFromStatusPublicacao(status)`, que oferecia
- * "Publicar" para INATIVO — contra a regra declarada no core.
  */
-export function CatalogoPublicacaoActions({ produtoId, status, labels, erroGenerico }: Props) {
+export function CatalogoPublicacaoActions({
+  produtoId,
+  produtoNome,
+  status,
+  labels,
+  erroGenerico,
+}: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const run = (acao: 'publicar' | 'inativar' | 'reativar') => {
     startTransition(async () => {
@@ -42,6 +58,7 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels, erroGener
             ? await reativarProduto(produtoId)
             : await inativarProduto(produtoId)
       if (result.success) {
+        setConfirmOpen(false)
         router.refresh()
         return
       }
@@ -68,7 +85,7 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels, erroGener
       <Button
         type="button"
         size="sm"
-        variant="secondary"
+        variant="ghost"
         disabled={pending}
         onClick={() => run('reativar')}
       >
@@ -77,15 +94,55 @@ export function CatalogoPublicacaoActions({ produtoId, status, labels, erroGener
     )
   }
 
+  const confirmTexto = labels.confirmarTexto.replace('{{nome}}', produtoNome)
+
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="danger"
-      disabled={pending}
-      onClick={() => run('inativar')}
-    >
-      {labels.inativar}
-    </Button>
+    <>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        disabled={pending}
+        aria-label={labels.inativar}
+        title={labels.inativar}
+        onClick={() => setConfirmOpen(true)}
+      >
+        <ToggleLeft size={13} aria-hidden />
+      </Button>
+      <DragonModal
+        open={confirmOpen}
+        onClose={() => {
+          if (!pending) setConfirmOpen(false)
+        }}
+        variant="danger"
+        size="sm"
+        title={labels.confirmarTitulo}
+        dismissable={!pending}
+        closeLabel={labels.fechar}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={pending}
+              onClick={() => setConfirmOpen(false)}
+            >
+              {labels.cancelar}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={pending}
+              loading={pending}
+              onClick={() => run('inativar')}
+            >
+              {labels.confirmar}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body text-fg-muted">{confirmTexto}</p>
+      </DragonModal>
+    </>
   )
 }

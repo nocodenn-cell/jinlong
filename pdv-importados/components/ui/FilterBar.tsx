@@ -34,6 +34,10 @@ export type FilterDef =
       label?: string
       placeholder?: string
       debounceMs?: number
+      /** Classe do wrapper do campo de busca (opt-in; default preserva layout atual). */
+      className?: string
+      /** Classe do `<input>` (opt-in; default `w-44`). */
+      inputClassName?: string
     }
 
 type FilterBarProps = {
@@ -41,6 +45,11 @@ type FilterBarProps = {
   clearable?: boolean
   clearLabel?: string
   className?: string
+  /**
+   * Quando true, remove `page` da URL ao mudar/limpar filtros.
+   * Opt-in: o default permanece o comportamento histórico (não reseta página).
+   */
+  resetPageOnChange?: boolean
 }
 
 export function FilterBar({
@@ -48,6 +57,7 @@ export function FilterBar({
   clearable = true,
   clearLabel = 'Limpar',
   className,
+  resetPageOnChange = false,
 }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -61,12 +71,13 @@ export function FilterBar({
       } else {
         params.set(key, value)
       }
+      if (resetPageOnChange) params.delete('page')
       const qs = params.toString()
       const url = qs ? `${pathname}?${qs}` : pathname
       if (replace) router.replace(url, { scroll: false })
       else router.push(url, { scroll: false })
     },
-    [router, pathname, searchParams],
+    [router, pathname, searchParams, resetPageOnChange],
   )
 
   const hasActive = filters.some((f) => {
@@ -79,9 +90,10 @@ export function FilterBar({
   const clearAll = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString())
     for (const f of filters) params.delete(f.key)
+    if (resetPageOnChange) params.delete('page')
     const qs = params.toString()
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [filters, searchParams, router, pathname])
+  }, [filters, searchParams, router, pathname, resetPageOnChange])
 
   return (
     <section
@@ -248,7 +260,12 @@ function SearchControl({
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-1.5">
+    <div
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-soft)] px-2.5 py-1.5',
+        filter.className,
+      )}
+    >
       <Search size={14} strokeWidth={2} aria-hidden className="text-fg-subtle" />
       <input
         type="text"
@@ -259,7 +276,10 @@ function SearchControl({
         onKeyDown={(e) => {
           if (e.key === 'Enter') flush(value)
         }}
-        className="fp-focus-ring w-44 bg-transparent text-caption text-fg outline-none placeholder:text-fg-subtle"
+        className={cn(
+          'fp-focus-ring bg-transparent text-caption text-fg outline-none placeholder:text-fg-subtle',
+          filter.inputClassName ?? 'w-44',
+        )}
       />
       {value ? (
         <button
