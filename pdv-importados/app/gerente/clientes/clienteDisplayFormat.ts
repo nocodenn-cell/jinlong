@@ -29,6 +29,22 @@ function groupDigitsReadable(digits: string): string {
   return digits.replace(/(\d{2,4})(?=\d)/g, '$1 ').trim()
 }
 
+/**
+ * Máscara de input (até 13 dígitos). Não trunca valores >11 já persistidos.
+ * Persistência continua sendo só dígitos no submit do formulário.
+ */
+export function maskTelefoneInput(raw: string): string {
+  const x = raw.replace(/\D/g, '').slice(0, 13)
+  if (!x) return ''
+  if (x.length < 10) {
+    if (x.length <= 2) return `(${x}`
+    if (x.length <= 6) return x.replace(/(\d{2})(\d{0,4})/, '($1) $2')
+    return x.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+  }
+  const shown = maskTelefoneDisplay(x)
+  return shown === '—' ? x : shown
+}
+
 export function clienteInitials(nome: string): string {
   return nome
     .split(/\s+/)

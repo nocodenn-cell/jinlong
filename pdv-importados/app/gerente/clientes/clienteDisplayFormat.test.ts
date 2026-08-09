@@ -3,6 +3,7 @@ import {
   formatContagemClientes,
   maskDocumentoDisplay,
   maskTelefoneDisplay,
+  maskTelefoneInput,
 } from './clienteDisplayFormat'
 
 describe('maskTelefoneDisplay', () => {
@@ -42,6 +43,17 @@ describe('maskDocumentoDisplay', () => {
   it('mascara CPF e CNPJ', () => {
     expect(maskDocumentoDisplay('99999988852')).toBe('999.999.888-52')
     expect(maskDocumentoDisplay('12345678000199')).toBe('12.345.678/0001-99')
+  })
+})
+
+describe('maskTelefoneInput', () => {
+  it('não trunca telefone persistido com mais de 11 dígitos', () => {
+    const shown = maskTelefoneInput('819886459993')
+    expect(shown.replace(/\D/g, '')).toBe('819886459993')
+  })
+
+  it('formata celular 11 dígitos ao digitar', () => {
+    expect(maskTelefoneInput('81988645999')).toBe('(81) 9 8864-5999')
   })
 })
 

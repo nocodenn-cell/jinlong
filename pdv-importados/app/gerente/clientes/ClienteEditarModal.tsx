@@ -1,13 +1,13 @@
 'use client'
 
 /**
- * Modal create/edit de cliente — chrome DS (Onda 6).
+ * Modal create/edit de cliente — chrome DS (Onda 6 + Engineer Loop).
  * Mesmo padrão de FornecedorEditarModal: Field/Input/Button/DragonModal.
  * Regras LGPD, masks e actions preservadas.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { UserPlus, UserCog } from 'lucide-react'
+import { AlertTriangle, UserPlus, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Checkbox } from '@/components/ui/forms'
 import { DragonModal } from '@/components/ui/DragonModal'
@@ -22,6 +22,7 @@ import {
   criarClienteAction,
 } from '@/app/admin/clientes/actions'
 import { type ClienteListRow, type ClienteInput } from './actions'
+import { maskTelefoneInput } from './clienteDisplayFormat'
 
 type Props = Readonly<{
   idioma: Idioma
@@ -43,12 +44,6 @@ function maskDoc(raw: string, tipo: 'PF' | 'PJ'): string {
   if (x.length === 14) return x.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
   return x
 }
-function maskTel(raw: string): string {
-  const x = raw.replace(/\D/g, '').slice(0, 11)
-  if (x.length === 11) return x.replace(/(\d{2})(\d{1})(\d{4})(\d{4})/, '($1) $2 $3-$4')
-  if (x.length === 10) return x.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-  return x
-}
 
 export function ClienteEditarModal({
   idioma,
@@ -65,7 +60,9 @@ export function ClienteEditarModal({
   const [nome, setNome] = useState(cliente?.nome ?? '')
   const [documento, setDocumento] = useState(cliente ? maskDoc(cliente.documento, cliente.tipo) : '')
   const [email, setEmail] = useState(cliente?.email ?? '')
-  const [telefone, setTelefone] = useState(cliente?.telefone ? maskTel(cliente.telefone) : '')
+  const [telefone, setTelefone] = useState(
+    cliente?.telefone ? maskTelefoneInput(cliente.telefone) : '',
+  )
   const [endereco, setEndereco] = useState(cliente?.endereco ?? '')
   const [limite, setLimite] = useState(
     cliente ? formatDecimalBRL(Number(cliente.limite_crediario)) : '0,00',
@@ -73,6 +70,7 @@ export function ClienteEditarModal({
   const [erros, setErros] = useState<Record<string, string | null>>({})
   const [salvando, setSalvando] = useState(false)
   const [consentimentoLgpd, setConsentimentoLgpd] = useState(false)
+  const [descartarAberto, setDescartarAberto] = useState(false)
 
   const nomeRef = useRef<HTMLInputElement>(null)
 
@@ -94,11 +92,15 @@ export function ClienteEditarModal({
     )
   }
 
-  const fechar = useCallback(() => {
-    if (sujo() && !confirm(m.clientes.confirmar_descartar)) return
+  const pedirFechar = useCallback(() => {
+    if (salvando) return
+    if (sujo()) {
+      setDescartarAberto(true)
+      return
+    }
     onClose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nome, documento, email, telefone, endereco, limite, tipo, cliente, onClose, m])
+  }, [nome, documento, email, telefone, endereco, limite, tipo, cliente, onClose, salvando])
 
   function handleTipo(t: 'PF' | 'PJ') {
     setTipo(t)
@@ -109,7 +111,7 @@ export function ClienteEditarModal({
     if (erros.documento) setErros((x) => ({ ...x, documento: null }))
   }
   function handleTel(e: React.ChangeEvent<HTMLInputElement>) {
-    setTelefone(maskTel(e.target.value))
+    setTelefone(maskTelefoneInput(e.target.value))
     if (erros.telefone) setErros((x) => ({ ...x, telefone: null }))
   }
   function handleLimite(e: React.ChangeEvent<HTMLInputElement>) {
@@ -173,186 +175,217 @@ export function ClienteEditarModal({
   const titulo = editando ? m.clientes.modal_editar_titulo : m.clientes.modal_novo_titulo
 
   return (
-    <DragonModal
-      open
-      onClose={fechar}
-      sheet
-      size="lg"
-      icon={Icon}
-      title={editando ? cliente!.nome : titulo}
-      subtitle={
-        editando && Number(cliente!.saldo_crediario) > 0 ? (
+    <>
+      <DragonModal
+        open
+        onClose={pedirFechar}
+        sheet
+        size="lg"
+        icon={Icon}
+        title={editando ? cliente!.nome : titulo}
+        subtitle={
+          editando && Number(cliente!.saldo_crediario) > 0 ? (
+            <>
+              {m.clientes.saldo_atual}:{' '}
+              <strong className="tabular-nums text-[var(--color-warning-strong)]">
+                {fmtGerenteBRL(Number(cliente!.saldo_crediario), locale)}
+              </strong>
+            </>
+          ) : undefined
+        }
+        dismissable={!salvando && !descartarAberto}
+        closeLabel={m.comum.cancelar}
+        footer={
           <>
-            {m.clientes.saldo_atual}:{' '}
-            <strong className="tabular-nums text-[var(--color-warning-strong)]">
-              {fmtGerenteBRL(Number(cliente!.saldo_crediario), locale)}
-            </strong>
+            <Button type="button" variant="secondary" onClick={pedirFechar} disabled={salvando}>
+              {m.comum.cancelar}
+            </Button>
+            <Button type="submit" form="cliente-form" variant="primary" disabled={salvando}>
+              {salvando
+                ? (m.comum.carregando ?? '…')
+                : editando
+                  ? m.clientes.modal_salvar
+                  : m.clientes.modal_cadastrar}
+            </Button>
           </>
-        ) : undefined
-      }
-      dismissable={!salvando}
-      closeLabel={m.comum.cancelar}
-      footer={
-        <>
-          <Button type="button" variant="secondary" onClick={fechar} disabled={salvando}>
-            {m.comum.cancelar}
-          </Button>
-          <Button type="submit" form="cliente-form" variant="primary" disabled={salvando}>
-            {salvando
-              ? (m.comum.carregando ?? '…')
-              : editando
-                ? m.clientes.modal_salvar
-                : m.clientes.modal_cadastrar}
-          </Button>
-        </>
-      }
-    >
-      <form id="cliente-form" onSubmit={submeter} className="space-y-4 pb-1">
-        <div>
-          <span className="mb-1.5 block text-small font-medium text-fg-subtle">
-            {m.clientes.tipo_label}
-          </span>
-          <div
-            role="radiogroup"
-            aria-label={m.clientes.tipo_label}
-            className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-1"
-          >
-            {(['PF', 'PJ'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="radio"
-                aria-checked={tipo === t}
-                onClick={() => handleTipo(t)}
-                disabled={salvando}
-                className={cn(
-                  'h-8 rounded-md text-caption font-medium transition-colors',
-                  tipo === t
-                    ? 'bg-[var(--color-info-bg)] font-semibold text-brand'
-                    : 'text-fg-subtle hover:text-fg',
-                )}
-              >
-                {t === 'PF' ? m.clientes.tipo_pf : m.clientes.tipo_pj}
-              </button>
-            ))}
+        }
+      >
+        <form id="cliente-form" onSubmit={submeter} className="space-y-4 pb-1">
+          <div>
+            <span className="mb-1.5 block text-small font-medium text-fg-muted">
+              {m.clientes.tipo_label}
+            </span>
+            <div
+              role="radiogroup"
+              aria-label={m.clientes.tipo_label}
+              className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-soft)] p-1"
+            >
+              {(['PF', 'PJ'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={tipo === t}
+                  onClick={() => handleTipo(t)}
+                  disabled={salvando}
+                  className={cn(
+                    'h-8 rounded-md text-caption font-medium transition-colors',
+                    tipo === t
+                      ? 'bg-[var(--color-info-bg)] font-semibold text-brand'
+                      : 'text-fg-muted hover:text-fg',
+                  )}
+                >
+                  {t === 'PF' ? m.clientes.tipo_pf : m.clientes.tipo_pj}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <Field
-          id="cli-nome"
-          label={tipo === 'PJ' ? m.clientes.field_razao_social : m.clientes.field_nome}
-          required
-          error={erros.nome ?? undefined}
-        >
-          <Input
-            ref={nomeRef}
-            value={nome}
-            onChange={(e) => {
-              setNome(e.target.value)
-              if (erros.nome) setErros((x) => ({ ...x, nome: null }))
-            }}
-            disabled={salvando}
-            required
-            maxLength={120}
-          />
-        </Field>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
-            id="cli-doc"
-            label={tipo === 'PF' ? m.clientes.field_cpf : m.clientes.field_cnpj}
+            id="cli-nome"
+            label={tipo === 'PJ' ? m.clientes.field_razao_social : m.clientes.field_nome}
             required
-            error={erros.documento ?? undefined}
+            error={erros.nome ?? undefined}
           >
             <Input
-              inputMode="numeric"
-              value={documento}
-              onChange={handleDoc}
+              ref={nomeRef}
+              value={nome}
+              onChange={(e) => {
+                setNome(e.target.value)
+                if (erros.nome) setErros((x) => ({ ...x, nome: null }))
+              }}
               disabled={salvando}
               required
-              placeholder={tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
-              className="font-mono"
+              maxLength={120}
             />
           </Field>
-          <Field id="cli-tel" label={m.clientes.field_telefone} error={erros.telefone ?? undefined}>
-            <Input
-              type="tel"
-              inputMode="tel"
-              value={telefone}
-              onChange={handleTel}
-              disabled={salvando}
-              placeholder="(11) 9 0000-0000"
-              className="tabular-nums"
-            />
-          </Field>
-        </div>
 
-        <Field id="cli-email" label={m.clientes.field_email} error={erros.email ?? undefined}>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              if (erros.email) setErros((x) => ({ ...x, email: null }))
-            }}
-            disabled={salvando}
-            placeholder="cliente@example.com"
-          />
-        </Field>
-
-        <Field id="cli-end" label={m.clientes.field_endereco}>
-          <Input
-            value={endereco}
-            onChange={(e) => setEndereco(e.target.value)}
-            disabled={salvando}
-            maxLength={180}
-            placeholder={m.clientes.placeholder_endereco}
-          />
-        </Field>
-
-        <Field
-          id="cli-limite"
-          label={m.clientes.field_limite_crediario}
-          hint={m.clientes.hint_limite}
-          error={erros.limite_crediario ?? undefined}
-        >
-          <Input
-            inputMode="decimal"
-            value={limite}
-            onChange={handleLimite}
-            disabled={salvando}
-            placeholder="0,00"
-            className="text-right font-mono tabular-nums"
-          />
-        </Field>
-
-        {!editando ? (
-          <div className="border-t border-[var(--color-border)] pt-3">
-            <label className="flex cursor-pointer items-start gap-2.5">
-              <Checkbox
-                id="lgpd-consent"
-                checked={consentimentoLgpd}
-                onChange={(e) => {
-                  setConsentimentoLgpd(e.target.checked)
-                  if (erros.consentimento_lgpd) setErros((x) => ({ ...x, consentimento_lgpd: null }))
-                }}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field
+              id="cli-doc"
+              label={tipo === 'PF' ? m.clientes.field_cpf : m.clientes.field_cnpj}
+              required
+              error={erros.documento ?? undefined}
+            >
+              <Input
+                inputMode="numeric"
+                value={documento}
+                onChange={handleDoc}
                 disabled={salvando}
-                aria-describedby={erros.consentimento_lgpd ? 'err-lgpd' : undefined}
-                className="mt-0.5"
+                required
+                placeholder={tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
+                className="font-mono"
               />
-              <span className="select-none text-caption leading-relaxed text-fg-muted">
-                {m.clientes.lgpd_consentimento}
-                <span className="ml-0.5 text-brand">*</span>
-              </span>
-            </label>
-            {erros.consentimento_lgpd ? (
-              <p id="err-lgpd" className="mt-1 text-caption text-[var(--color-danger-strong)]" role="alert">
-                {erros.consentimento_lgpd}
-              </p>
-            ) : null}
+            </Field>
+            <Field id="cli-tel" label={m.clientes.field_telefone} error={erros.telefone ?? undefined}>
+              <Input
+                type="tel"
+                inputMode="tel"
+                value={telefone}
+                onChange={handleTel}
+                disabled={salvando}
+                placeholder="(11) 9 0000-0000"
+                className="tabular-nums"
+              />
+            </Field>
           </div>
-        ) : null}
-      </form>
-    </DragonModal>
+
+          <Field id="cli-email" label={m.clientes.field_email} error={erros.email ?? undefined}>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (erros.email) setErros((x) => ({ ...x, email: null }))
+              }}
+              disabled={salvando}
+              placeholder="cliente@example.com"
+            />
+          </Field>
+
+          <Field id="cli-end" label={m.clientes.field_endereco}>
+            <Input
+              value={endereco}
+              onChange={(e) => setEndereco(e.target.value)}
+              disabled={salvando}
+              maxLength={180}
+              placeholder={m.clientes.placeholder_endereco}
+            />
+          </Field>
+
+          <Field
+            id="cli-limite"
+            label={m.clientes.field_limite_crediario}
+            hint={m.clientes.hint_limite}
+            error={erros.limite_crediario ?? undefined}
+          >
+            <Input
+              inputMode="decimal"
+              value={limite}
+              onChange={handleLimite}
+              disabled={salvando}
+              placeholder="0,00"
+              className="text-right font-mono tabular-nums"
+            />
+          </Field>
+
+          {!editando ? (
+            <div className="border-t border-[var(--color-border)] pt-3">
+              <label className="flex cursor-pointer items-start gap-2.5" htmlFor="lgpd-consent">
+                <Checkbox
+                  id="lgpd-consent"
+                  checked={consentimentoLgpd}
+                  onChange={(e) => {
+                    setConsentimentoLgpd(e.target.checked)
+                    if (erros.consentimento_lgpd) setErros((x) => ({ ...x, consentimento_lgpd: null }))
+                  }}
+                  disabled={salvando}
+                  aria-describedby={erros.consentimento_lgpd ? 'err-lgpd' : undefined}
+                  className="mt-0.5"
+                />
+                <span className="select-none text-caption leading-relaxed text-fg-muted">
+                  {m.clientes.lgpd_consentimento}
+                  <span className="ml-0.5 text-brand">*</span>
+                </span>
+              </label>
+              {erros.consentimento_lgpd ? (
+                <p id="err-lgpd" className="mt-1 text-caption text-[var(--color-danger-strong)]" role="alert">
+                  {erros.consentimento_lgpd}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </form>
+      </DragonModal>
+
+      <DragonModal
+        open={descartarAberto}
+        onClose={() => setDescartarAberto(false)}
+        variant="danger"
+        size="sm"
+        icon={AlertTriangle}
+        title={m.clientes.confirmar_descartar_titulo}
+        closeLabel={m.comum.cancelar}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setDescartarAberto(false)}>
+              {m.comum.cancelar}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                setDescartarAberto(false)
+                onClose()
+              }}
+            >
+              {m.clientes.descartar}
+            </Button>
+          </>
+        }
+      >
+        <p className="pb-1 text-body text-fg-muted">{m.clientes.confirmar_descartar_texto}</p>
+      </DragonModal>
+    </>
   )
 }

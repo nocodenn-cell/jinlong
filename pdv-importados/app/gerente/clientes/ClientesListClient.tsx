@@ -214,6 +214,8 @@ export function ClientesListClient({
             <div className="flex flex-wrap items-center gap-1.5">
               <strong className="truncate text-fg">{c.nome}</strong>
               <Badge
+                title={c.tipo === 'PJ' ? m.clientes.tipo_pj : m.clientes.tipo_pf}
+                aria-label={c.tipo === 'PJ' ? m.clientes.tipo_pj : m.clientes.tipo_pf}
                 className={
                   c.tipo === 'PJ'
                     ? 'border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-fg font-semibold'
@@ -255,9 +257,16 @@ export function ClientesListClient({
         const used = Number(c.saldo_crediario)
         const pct = lim > 0 ? Math.min(100, (used / lim) * 100) : 0
         const alerta = pct >= 70
-        if (used === 0 && lim === 0) {
+        if (used === 0) {
           return (
-            <span className="text-caption text-fg-muted">{m.clientes.saldo_sem_aberto}</span>
+            <div className="ml-auto min-w-[9.5rem] text-right">
+              <div className="text-caption text-fg-muted">{m.clientes.saldo_sem_aberto}</div>
+              {lim > 0 ? (
+                <div className="text-caption tabular-nums text-fg-muted">
+                  {m.clientes.limite_label} {fmtGerenteBRL(lim, locale)}
+                </div>
+              ) : null}
+            </div>
           )
         }
         return (
@@ -266,17 +275,12 @@ export function ClientesListClient({
               <span
                 className={cn(
                   'text-caption font-semibold tabular-nums',
-                  used === 0 && 'font-normal text-fg-muted',
-                  used > 0 && alerta && 'text-[var(--color-danger-strong)]',
-                  used > 0 && !alerta && 'text-[var(--color-warning-strong)]',
+                  alerta ? 'text-[var(--color-danger-strong)]' : 'text-[var(--color-warning-strong)]',
                 )}
               >
-                <span className="sr-only">{m.clientes.saldo_em_aberto_label}: </span>
-                {m.clientes.saldo_em_aberto_label}{' '}
-                {fmtGerenteBRL(used, locale)}
+                {m.clientes.saldo_em_aberto_label} {fmtGerenteBRL(used, locale)}
               </span>
               <span className="text-caption tabular-nums text-fg-muted">
-                <span className="sr-only">{m.clientes.limite_label}: </span>
                 {m.clientes.limite_label} {fmtGerenteBRL(lim, locale)}
               </span>
             </div>
@@ -338,7 +342,7 @@ export function ClientesListClient({
         meta={loadError ? undefined : meta}
         toolbar={
           <>
-            <div className="min-w-[240px] max-w-[420px] flex-1">
+            <div className="min-w-0 w-full max-w-[420px] flex-1 sm:min-w-[240px]">
               <SearchInput
                 value={termo}
                 onChange={(e) => setTermo(e.target.value)}

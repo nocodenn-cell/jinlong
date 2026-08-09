@@ -112,6 +112,21 @@ describe('ClientesListClient Fase A', () => {
     expect(container.textContent).toContain('Mostrando 1 cliente')
   })
 
+  it('mostra Sem aberto quando saldo é zero, com limite se houver', () => {
+    render(
+      <ClientesListClient
+        idioma="pt"
+        locale="pt-BR"
+        messages={m}
+        clientesIniciais={[{ ...row, saldo_crediario: 0, limite_crediario: 200 }]}
+        hasMoreInicial={false}
+      />,
+    )
+    expect(container.textContent).toContain(m.clientes.saldo_sem_aberto)
+    expect(container.textContent).toContain(m.clientes.limite_label)
+    expect(container.textContent).not.toContain(`${m.clientes.saldo_em_aberto_label} R$`)
+  })
+
   it('oferece Carregar mais quando hasMore', () => {
     render(
       <ClientesListClient
