@@ -111,8 +111,29 @@ export function FuncionarioEditarModal({
   }
 
   return (
-    <DragonModal open onClose={onClose} title={editando ? L.editar : L.novo} size="md">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="funcionario-form">
+    <DragonModal
+      open
+      onClose={onClose}
+      title={editando ? L.editar : L.novo}
+      size="md"
+      dismissable={!salvando}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={salvando}>
+            {L.cancelar}
+          </Button>
+          <Button type="submit" form="funcionario-form" variant="primary" disabled={salvando}>
+            {salvando ? L.salvando : L.salvar}
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="funcionario-form"
+        onSubmit={onSubmit}
+        className="flex flex-col gap-4 pb-1"
+        data-testid="funcionario-form"
+      >
         <Field id="func-nome" label={L.nome} required>
           <Input
             ref={nomeRef}
@@ -121,6 +142,7 @@ export function FuncionarioEditarModal({
             required
             minLength={2}
             autoComplete="name"
+            disabled={salvando}
           />
         </Field>
 
@@ -135,7 +157,7 @@ export function FuncionarioEditarModal({
             value={email}
             onChange={(ev) => setEmail(ev.target.value)}
             required={!editando}
-            disabled={editando}
+            disabled={editando || salvando}
             readOnly={editando}
             autoComplete="off"
           />
@@ -146,6 +168,7 @@ export function FuncionarioEditarModal({
             <Select
               value={perfil}
               onChange={(ev) => setPerfil(ev.target.value as PerfilFuncionarioUi)}
+              disabled={salvando}
             >
               {perfis.includes('OPERADOR') ? (
                 <option value="OPERADOR">{L.perfilOperador}</option>
@@ -159,6 +182,7 @@ export function FuncionarioEditarModal({
             <Select
               value={idioma}
               onChange={(ev) => setIdioma(ev.target.value as 'pt' | 'zh')}
+              disabled={salvando}
             >
               <option value="pt">{L.idiomaPt}</option>
               <option value="zh">{L.idiomaZh}</option>
@@ -179,17 +203,9 @@ export function FuncionarioEditarModal({
             required={!editando}
             minLength={editando && !senha ? undefined : PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
+            disabled={salvando}
           />
         </Field>
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={salvando}>
-            {L.cancelar}
-          </Button>
-          <Button type="submit" disabled={salvando}>
-            {salvando ? L.salvando : L.salvar}
-          </Button>
-        </div>
       </form>
     </DragonModal>
   )

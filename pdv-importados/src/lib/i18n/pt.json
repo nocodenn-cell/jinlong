@@ -1555,7 +1555,7 @@
     "subtitulo": "Gerencie logins de operadores e gerentes da loja.",
     "contagem": "funcionários",
     "novo": "Novo funcionário",
-    "busca_placeholder": "Buscar por nome, e-mail ou perfil…",
+    "busca_placeholder": "Buscar por nome ou e-mail…",
     "col_nome": "Nome",
     "col_email": "E-mail",
     "col_perfil": "Perfil",

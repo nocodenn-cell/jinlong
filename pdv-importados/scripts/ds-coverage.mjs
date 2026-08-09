@@ -34,7 +34,12 @@ const SCREENS = [
     note: 'Teste definitivo DS — movimentos + kardex',
   },
   { id: 'financeiro', path: 'app/admin/financeiro', migrated: false },
-  { id: 'funcionarios', path: 'app/admin/funcionarios', migrated: false },
+  {
+    id: 'funcionarios',
+    path: 'app/admin/funcionarios',
+    migrated: true,
+    note: 'Lista + modal migrados para CrudListShell/DataTable/SearchInput/Field',
+  },
   { id: 'configuracoes', path: 'app/admin/configuracoes', migrated: false },
   { id: 'implantacao', path: 'app/admin/implantacao', migrated: false },
   { id: 'provisionamento', path: 'app/admin/provisionamento', migrated: false },
