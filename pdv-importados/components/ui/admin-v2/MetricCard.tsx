@@ -102,8 +102,8 @@ export function MetricCard({
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className={cn('flex gap-2', labelWrap ? 'items-start' : 'items-center justify-between')}>
+        <div className={cn('flex min-w-0 gap-2', labelWrap ? 'flex-1 items-start' : 'items-center')}>
           {Icon ? (
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-[var(--color-info-bg)] text-brand">
               <Icon size={16} strokeWidth={2} aria-hidden />
@@ -113,7 +113,9 @@ export function MetricCard({
             title={label}
             className={cn(
               'text-caption font-semibold uppercase tracking-[var(--letter-spacing-wide)] text-fg-subtle',
-              labelWrap ? 'line-clamp-2 whitespace-normal break-words' : 'truncate',
+              labelWrap
+                ? 'min-w-0 flex-1 whitespace-normal break-words [overflow-wrap:anywhere] line-clamp-2'
+                : 'truncate',
             )}
           >
             {label}
@@ -124,6 +126,7 @@ export function MetricCard({
             aria-label={deltaAria}
             className={cn(
               'shrink-0 text-small font-semibold tabular-nums',
+              labelWrap && 'pt-0.5',
               delta.neutral
                 ? 'text-fg-subtle'
                 : deltaGood
