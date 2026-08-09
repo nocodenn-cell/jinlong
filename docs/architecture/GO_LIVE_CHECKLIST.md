@@ -17,7 +17,8 @@
 
 - Login com perfis DONO / GERENTE / OPERADOR
 - Cadastros: clientes, fornecedores, produtos, categorias
-- Estoque: ajuste, recebimento, transferência, import NF-e
+- Estoque: ajuste, recebimento, transferência, import NF-e  
+  - UX Saldos (2026-08-09): subnav do módulo + KPIs + Ajustar com label — PR [#275](https://github.com/nocodenn-cell/fastproduct/pull/275)
 - PDV: abrir caixa, vender, sangria/suprimento, fechar caixa
 - Financeiro: contas a receber/pagar, liquidação, pagamento, cancelamento AP, fila fiscal
 - Comissões, relatórios, auditoria, configurações da loja
