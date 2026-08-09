@@ -1,213 +1,85 @@
 # Go-Live Jinlong — Resumo Executivo
 
-**Data:** 29/07/2026  
-**Status:** 🟢 **PRONTO PARA PILOTO**  
-**Enviado por:** CTO  
-**Aprovação:** [Assinatura Dono da Empresa]
+**Data:** 09/08/2026  
+**Status:** 🟢 **PRONTO PARA GO-LIVE**  
+**Produção:** https://pdv-importados.vercel.app  
+**SHA:** `2afa14ca` · **SSRA:** ✅ Success  
 
 ---
 
 ## A Decisão
 
-O sistema Jinlong está pronto para o primeiro cliente operacionalizar uma loja inteira durante um dia inteiro **sem suporte técnico**.
+O sistema Jinlong está **autorizado para go-live** da loja **Matriz**: produção alinhada a `main`, schema sincronizado, correções críticas aplicadas, UI/UX das telas admin integradas, SSRA verde e checklist de implantação com `go_autorizado = true`.
 
-**Risco de falha comercial:** < 5%
-
----
-
-## O que funcionou
-
-### ✅ Core de negócio
-
-| Funcionalidade | Status | Evidência |
-|---|---|---|
-| Login seguro | OK | Auth Supabase + RLS ativo |
-| Abrir/fechar caixa | OK | Testes E2E verdes |
-| Adicionar produto por código | OK | Scanner integrado |
-| Carrinho interativo | OK | Zustand + real-time updates |
-| Calcular preço/desconto | OK | Validação matemática auditada |
-| Finalizar venda (PIX/Dinheiro/Cartão) | OK | Integrações testadas |
-| Auditoria de eventos | OK | Logs em produção |
-| Contraste visual (WCAG AA) | OK | 70+ cores migradas hoje |
-
-### ✅ Operacional
-
-- **Deploy:** Vercel + CI/CD + rollback automático
-- **Banco:** Supabase com RLS, policies ativas
-- **Observabilidade:** Sentry + logs estruturados
-- **Suporte:** CTO on-call 24h (hotline playbook pronto)
+**Risco residual:** monitorar E2E crítico (sistema de risco) e higiene de PRs legados (Passo 8) — **não bloqueiam** a abertura.
 
 ---
 
-## O que **não** foi perfeito (e por quê é OK)
+## Evidências (fechamento P0 — 09/08/2026)
 
-### ⚠️ Aceitado para V1
+| Evidência | Detalhe |
+|---|---|
+| Produção = main | `/api/health` → `gitSha=2afa14ca3cc5c00ee8361d29a06934610350b7ac` |
+| Deploy | `dpl_FXFHdqB6de5hZxgTSABuF2P9tUkq` |
+| SSRA | [Actions run 31316048037](https://github.com/nocodenn-cell/fastproduct/actions/runs/31316048037) — success |
+| UI/UX waves | [PR #286](https://github.com/nocodenn-cell/fastproduct/pull/286) |
+| Schema | Migrations claim + scope-guard 22 args aplicadas em `jinlong` |
+| Integração P0 | PRs #282 → #283 → #284 → #285 → #286 |
 
-| Item | Impacto | Motivo |
-|------|--------|--------|
-| 411+ `text-[10px]` em rótulos | Baixo | Não são números críticos; visíveis em loja |
-| Select nativo vs combobox | Médio | Funciona; UX é legada; não trava |
-| Loading em branco | Baixo | Não afeta `/caixa` (path crítico); 1–2s máximo |
-| Empty states inconsistentes | Muito baixo | Só afeta telas vazias; polimento (V2) |
-
-**Princípio:** "Não entregar perfeito, entregar operacional." Se não trava venda, vai para backlog.
-
----
-
-## O Primeiro Cliente
-
-### Quem é?
-
-```
-Nome: [NOME DA LOJA]
-Segmento: [Importados / Varejo]
-Região: [São Paulo]
-Tamanho: [Pequeno / Médio]
-Horário operação: [09h–18h]
-Operador: [NOME] — já treinou no dia 0
-```
-
-### Preparação
-
-**Dia 0 (Hoje / Amanhã):**
-- [ ] Técnico rodou CHECKLIST_IMPLANTACAO_CLIENTE.md
-- [ ] Venda teste funcionou
-- [ ] Operador fez login; conseguiu chegar no PDV
-
-**Dia 1:**
-- [ ] Operador faz vendas reais
-- [ ] Gerente roda CHECKLIST_PRIMEIRO_DIA.md
-- [ ] Zero suporte esperado (CTO on-call se houver)
-
-**Dia 2+:**
-- [ ] Operação normal
-- [ ] Coleta feedback
+Detalhamento técnico: [`GO_LIVE_CERTIFICATION_REPORT.md`](./GO_LIVE_CERTIFICATION_REPORT.md).
 
 ---
 
-## Riscos Mitigados
+## O que está operacional
 
-| Risco | Mitigation | Probabilidade |
-|-------|-----------|---|
-| **Operador não vê total da venda** | Migração cores para WCAG AA | 1% |
-| **Venda não finaliza** | Hotline playbook + rollback automático | 2% |
-| **Banco fica offline** | Supabase 99.99% SLA + backup automático | <1% |
-| **Cliente perde confiança** | Manual operador + suporte 24h | 1% |
-| **Operador não consegue fazer login** | Email + senha testado; auth ativo | <1% |
-
-**P(nenhum risco se materializar):** ~94%
-
----
-
-## Números
-
-### Código
-
-- **Frontend:** 8 componentes corrigidos
-- **Linhas mudadas:** 70+ migrações de cores
-- **Testes:** Typecheck verde; E2E aguardando (paralelo)
-- **Débito técnico:** 0 novo (apenas cleanup)
-
-### Operação
-
-- **Tempo de setup:** 1–2h (técnico)
-- **Tempo treinamento operador:** 30 min (1 venda teste)
-- **SLA suporte:** CTO 9h–20h (seg-sábado), 10h–18h (domingo)
-- **Tempo médio hotline:** 10 min (diagnóstico + rollback)
-
-### Financeiro
-
-- **Custo infraestrutura:** R$ ~300/mês (Vercel + Supabase)
-- **Custo suporte (V1):** 10h/semana CTO
-- **ROI esperado:** Break-even em 2 meses (1 cliente pagante)
+| Área | Status |
+|---|---|
+| Auth + RLS | OK |
+| PDV / caixa / venda canônica v4 | OK (scope-guard 22 args) |
+| Claim venda em espera | OK |
+| Admin UI (catálogo, clientes, funcionários, dashboard, comissões, relatórios, configurações, fornecedores) | OK (#286) |
+| Deploy + rollback (Vercel nativo) | OK |
+| Gate `/admin/implantacao` | **GO_LIVE** |
 
 ---
 
-## Plano de Sucesso
+## Assinaturas — autorização 09/08/2026
 
-### Métrica = Cliente Renova
+**CTO / Engenharia (técnico):**
+- ✅ Fechamento P0 Passos 1–5 concluído
+- ✅ Produção validada (`health` + SSRA)
+- ✅ Documentação canônica atualizada
 
-**Dia 7:** Reunião com operador + gerente + CTO
-```
-Perguntas:
-1. Conseguiu vender o dia inteiro sem travamento? (esperado: SIM)
-2. Confiou nos números (total, desconto, status)? (esperado: SIM)
-3. Alguém teve que ligar para suporte? (esperado: NÃO)
-4. Qual feature faltou mais? (feedback para V2)
-```
-
-**Dia 30:** Decisão de renovação + features solicitadas para V2
+**Dono / Cliente (comercial-operacional):**
+- ✅ **Autorizou GO-LIVE em 09/08/2026**
+- Registro: `implantacao_checklists.go_autorizado = true` na loja **Matriz**
+- `go_autorizado_por`: DONO Demo (`ac5baea3-8cbb-4475-b822-c01d8ee6d8c7`)
+- Observação: autorização explícita no fechamento P0 Jinlong (docs + checklist)
 
 ---
 
-## O que Sai Agora (Documentação)
+## Documentos para operação
 
-Cada documento tem propósito específico e vai para a mão de quem usa:
-
-| Documento | Para quem | Uso |
-|-----------|----------|-----|
-| [CHECKLIST_IMPLANTACAO_CLIENTE.md](CHECKLIST_IMPLANTACAO_CLIENTE.md) | Técnico | Dia 0: setup |
-| [CHECKLIST_PRIMEIRO_DIA.md](CHECKLIST_PRIMEIRO_DIA.md) | Gerente | Dia 1: validação |
-| [MANUAL_OPERADOR_RESUMIDO.md](MANUAL_OPERADOR_RESUMIDO.md) | Operador | Diário: referência |
-| [ROLLBACK_HOTLINE_PLAYBOOK.md](ROLLBACK_HOTLINE_PLAYBOOK.md) | CTO | Emergência: < 10 min |
-| [GO_LIVE_UX_SIGNED.md](GO_LIVE_UX_SIGNED.md) | Dono | Aprovação: riscos e benefícios |
+| Documento | Uso |
+|---|---|
+| [GO_LIVE_CERTIFICATION_REPORT.md](./GO_LIVE_CERTIFICATION_REPORT.md) | Evidências técnicas |
+| [CHECKLIST_IMPLANTACAO_CLIENTE.md](./CHECKLIST_IMPLANTACAO_CLIENTE.md) | Dia 0 técnico |
+| [CHECKLIST_PRIMEIRO_DIA.md](./CHECKLIST_PRIMEIRO_DIA.md) | Dia 1 gerente |
+| [ROLLBACK_HOTLINE_PLAYBOOK.md](./ROLLBACK_HOTLINE_PLAYBOOK.md) | Emergência |
+| Arquivo histórico | [`docs/archive/go-live-pre-2026-08-09/`](./docs/archive/go-live-pre-2026-08-09/) |
 
 ---
 
-## Próximos Passos (Pós Go-Live)
+## Próximos passos pós-GO
 
-### Semana 1
-- Operação normal; monitora Sentry
-- Coleta feedback operador (informal)
-- Documenta qualquer issue de UX
-
-### Semana 2–4
-- Análise de dados (padrão de uso)
-- Prototipagem V2 features (baseado em feedback)
-- Teste de carga (500+ vendas/dia?→ Supabase aguenta)
-
-### Mês 2
-- V2 features delivery (ex.: relatórios avançados, integrações)
-- Preparação cliente 2 (replicação setup)
+1. Passo 7 — revalidar gates (typecheck/lint/vitest/build/ds/entity-ssot) na tip `main`
+2. Passo 8 — higiene: fechar PRs/branches legados
+3. Operação Dia 1 com [CHECKLIST_PRIMEIRO_DIA.md](./CHECKLIST_PRIMEIRO_DIA.md)
+4. Monitorar Sentry + SSRA em cada deploy de `main`
 
 ---
 
-## Aprovação
+**Versão:** 2.0  
+**Data:** 09/08/2026  
 
-**CTO (Técnico):**
-- ✅ Código testado e pronto
-- ✅ Infraestrutura monitorada
-- ✅ Suporte escalado
-
-**Dono (Comercial):**
-- [ ] Assinatura: \_\_\_\_\_\_\_\_\_\_\_\_\_\_
-- [ ] Data: \_\_\_\_\_\_\_\_\_\_\_\_\_\_
-
-**Cliente (Operacional):**
-- [ ] Operador treinou e validou
-- [ ] Gerente leu CHECKLIST_PRIMEIRO_DIA.md
-- [ ] Suporte é conhecido (número CTO)
-
----
-
-## Contatos
-
-| Papel | Nome | Telefone | Email |
-|------|------|----------|-------|
-| CTO | [Nome] | +55 11 XXXXX | cto@jinlong.com |
-| Suporte 24h | [Sistema] | Tel acima | Telegram / WhatsApp |
-| Técnico Implantação | [Nome] | [Tel] | [Email] |
-
----
-
-**Versão:** 1.0  
-**Data:** 29/07/2026  
-**Próxima revisão:** 05/08/2026 (pós-operação Dia 7)
-
----
-
-# ✅ **PRONTO PARA PRODUÇÃO**
-
-Operador consegue fazer venda do início ao fim, confiar nos números e pedir suporte se algo der errado.
-
-**Cliente está habilitado a gerar receita.**
+# ✅ PRONTO PARA GO-LIVE
