@@ -10,6 +10,9 @@
 > **SSoT operacional:** o checklist abaixo é referência. O registro de implantação e a
 > autorização de GO-LIVE ocorrem na tela `/admin/implantacao` (status, responsável,
 > data/hora, observações). GO só libera com itens obrigatórios concluídos (+ grupo fiscal).
+>
+> **Inventário do que já está feito na tela** (capacidades + polish UX):  
+> [GO_LIVE_BACKLOG_PRIORIDADES.md § Prioridade 1](./GO_LIVE_BACKLOG_PRIORIDADES.md#prioridade-1--implantação-centro-de-comando-go-live).
 
 ---
 

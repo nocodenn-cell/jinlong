@@ -2,10 +2,12 @@
 
 | Campo | Valor |
 |--------|--------|
-| **Data** | 2026-07-19 |
+| **Data** | 2026-07-19 (atualizado 2026-08-09 — registro UX Implantação) |
 | **Modo atual** | **War Room** — só P0 da homologação |
 | **Aceite** | [GO_LIVE_ACEITE.md](./GO_LIVE_ACEITE.md) |
-| **PR** | [#220](https://github.com/nocodenn-cell/fastproduct/pull/220) |
+| **PR funcional (P1)** | [#220](https://github.com/nocodenn-cell/fastproduct/pull/220) |
+| **PR UX (polish tela)** | [#263](https://github.com/nocodenn-cell/fastproduct/pull/263) — `feat/sprint-ux-go-live` |
+| **Gate UI** | `/admin/implantacao` — SSoT operacional em [GO_LIVE_CHECKLIST.md](./GO_LIVE_CHECKLIST.md) |
 
 > Este doc **congela a ordem de valor** depois do Go-Live.  
 > Durante a War Room: **não** executar P2–P9; P1 só se for fatia mínima que desbloqueie evidência do aceite.
@@ -23,6 +25,12 @@
 
 ## Prioridade 1 — Implantação (centro de comando Go-Live)
 
+**Rota:** `/admin/implantacao` · código em `pdv-importados/app/admin/implantacao/`.
+
+### Já feito nesta tela (inventário)
+
+#### A) Capacidades funcionais (War Room / PR #220) — **fechadas**
+
 | Capacidade | Estado | Onde |
 |------------|--------|------|
 | Checklist persistido | **EXISTS** | `implantacao_checklists` / `_itens` + UI |
@@ -30,13 +38,27 @@
 | Botão Autorizar Go-Live | **EXISTS** | `autorizarGoLiveAction` (DONO/ADMIN) |
 | Revogar GO | **EXISTS** | `revogarGoLiveAction` |
 | Observações por item | **EXISTS** | `observacoes` |
-| Validar dados (P0-DADOS) | **EXISTS** | botão + `homologacao.dados` |
+| Validar dados (P0-DADOS) | **EXISTS** | botão + `homologacao.dados` (`data-testid=implantacao-validar-dados`) |
 | Evidências (texto/ID/log) | **EXISTS** | coluna Evidência = `observacoes`; CONCLUIDO bloqueado sem evidência |
 | Timeline de validações | **EXISTS** | `ImplantacaoTimeline` a partir de `concluido_em` |
 | Histórico execuções #1/#2 | **EXISTS** | itens obrigatórios `homologacao.execucao_1` / `_2` |
+| Gate NAO_PRONTO / PRONTO_PENDENCIAS / GO_LIVE | **EXISTS** | `avaliarGate` + bloqueios na UI |
+| Override de loja (ADMIN) | **EXISTS** | `?lojaId=` em `page.tsx` |
+| i18n pt/zh | **EXISTS** | labels via `getMessages` → `m.implantacao` |
+| Testes unitários | **EXISTS** | `homologacaoDados` · `implantacaoCatalog` · `evidenciaImplantacao` |
 | Upload de arquivo (blob) | **PARK** | pós-Go-Live se necessário |
 
-**P1 gaps técnicos de Implantação: fechados** (sem migration nova; evidência textual auditável).
+#### B) Polish UX / Design System (Sprint UX Go-Live · UX-P1-17 · Sprint 4) — **fechado**
+
+| Item | Estado | Evidência |
+|------|--------|-----------|
+| `PageShell` (título + subtítulo) | **DONE** | `page.tsx` |
+| `InlineAlert` no gate (tone por status) | **DONE** | `ImplantacaoChecklistClient` + erro de load na page |
+| Feedback via `emitToast` (salvar / validar / erros) | **DONE** | client |
+| Sem FormSection/SectionCard no checklist | **N/A** | seções nativas + tabela; backlog UX-P1-17 corrigido para PageShell+InlineAlert |
+
+**P1 gaps técnicos de Implantação: fechados** (sem migration nova; evidência textual auditável).  
+**Pendência restante da tela:** homologação humana (P0-HOM) — executar ACEITE 2× e **autorizar GO** na UI (não é gap de código).
 
 ---
 
@@ -113,9 +135,9 @@
 ## Ordem de execução recomendada
 
 ```
-War Room (ACEITE 2× + zero P0)
+War Room (ACEITE 2× + zero P0)  ← pendência humana atual
     ↓
-P1 gaps Implantação (evidência + timeline + histórico execuções)
+P1 Implantação — gaps técnicos ✅ (funcional #220 + UX-P1-17 #263)
     ↓
 P3 Caixa UX (operador diário)
     ↓
