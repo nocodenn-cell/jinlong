@@ -273,11 +273,15 @@ test.describe('Fluxo crítico sync-outbox -> gerente/vendas', () => {
     expect(docErr?.message).toBeFalsy()
     expect(doc?.id, 'Documento fiscal não encontrado para a venda criada no teste.').toBeTruthy()
 
-    // Assinatura canônica: p_erro / p_transitorio (não p_mensagem / p_retryable).
+    // Artifact CI #1102: 3-arg fiscal_marcar_erro é ambíguo no schema cache
+    // (overload 3 vs 6 args). Desambigua com a assinatura longa.
     const { error: errRpc } = await admin.rpc('fiscal_marcar_erro', {
       p_documento_id: doc!.id,
       p_erro: 'E2E_TIMELINE_ERRO',
       p_transitorio: true,
+      p_erro_normalizado: 'E2E_TIMELINE_ERRO',
+      p_erro_detalhe: { origem: 'e2e_sync_fluxo' },
+      p_retryable: true,
     })
     expect(errRpc?.message).toBeFalsy()
 
